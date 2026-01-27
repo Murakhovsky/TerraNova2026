@@ -1,0 +1,155 @@
+TG_MENU,Меню
+TG_MAIN_MENU,Головне меню
+TG_ARCHIVE,Архів
+TG_RENT,Оренда
+TG_SALE,Продаж
+TG_BY,Купівля
+TG_TO_RENT,Орендується
+TG_TO_SALE,Продається
+TG_CRM,CRM
+TG_LANGUAGE,Мова
+TG_CATEGORY,Категорія
+TG_TYPE,Тип
+TG_SEARCH,Пошук
+TG_FIND,Знайти
+TG_YES,Так
+TG_NO,Ні
+TG_FULL,Повністю
+TG_PART,Частина
+TG_GROUP_ACTIONS,Групові дії
+TG_PRYKHYSTOK,Прихисток
+TG_RUPOR,Рупор
+TG_COLLAPSE,Згорнути
+TG_DEPLOY,Розгорнути
+TG_COMPLETE,Завершити
+TG_COMPLETED,Завершено
+TG_POSTPONE,Перенести
+TG_POSTPONED,Перенесено
+TG_SETTINGS,Налаштуваня
+TG_ANOTHER,Інше
+TG_WEATHER,Погода
+TG_GAMES,Ігри
+TG_GAME,Гра
+TG_REALTOR,Ріелтор
+TG_ADMIN,Адміністратор
+TG_DIRECTOR,Директор філії
+TG_OWNER,Власник
+TG_MANAGER,Менеджер
+TG_RENTER,Орендар
+TG_SELLER,Продавець
+TG_BUYER,Покупець
+TG_STATUS,Статус
+TG_NEW,Новий
+TG_WAITING,Очікується
+TG_IN_PROGRESS,В процесі
+TG_AWAITING_REPORT,Очікується звіт
+TG_PASSED,Пройшов
+TG_ACTUAL,Актуально
+TG_INTERESTED,Зацікавлений
+TG_CALLED,Продзвонено
+TG_IN_WORK,В роботі
+TG_NOT_ACTUAL,Не актуально
+TG_NOT_ACTUALS,Не актуальні
+TG_NOT_CALLED,Не відповідає
+TG_QUERIED,Запит створено
+TG_CLOSED,Завершено
+TG_FREE,Вільний
+TG_RESULT,Результат
+TG_AGREEMENT,Угода
+TG_DEPOSIT,Завдаток
+TG_CONSIDING,Розглядають
+TG_REFUSAL,Відмова
+TG_CANCELED,Скасовано
+TG_CLOSE,Закрити
+TG_DELETE,Видалити
+TG_EDIT,Редагувати
+TG_CREATE,Створити
+TG_TO_ARCHIVE,Перенести в архів
+TG_FROM_ARCHIVE,Вилучити з архіву
+TG_NOT_USE,Не використовувати
+TG_ADD_REMINDER,Нагадати
+TG_SHOW,Показати
+TG_SEND,Надіслати
+TG_SENT,Надіслано
+TG_SENTS,Надіслані
+TG_NOT_SENT,Не надіслано
+TG_NOT_SENTS,Не надіслані
+TG_SAVE,Зберегти
+TG_RELOAD,Оновити
+TG_GET_ALL,Взяти всі
+TG_GET_HALF,Взяти половину
+TG_GET_THIRD,Взяти 1/3
+TG_GET_QUARTER,Взяти 1/4
+TG_CREATE_OBJECT,Створити об’єкт
+TG_NEW_OBJECT,Новий об’єкт
+TG_SHOW_OBJECT,Показати об’єкт
+TG_SHOW_OBJECTS,Показати об’єкти
+TG_SHOW_MY_OBJECT,Показати мої об’єкти
+TG_MY_OBJECTS,Мої об’єкти
+TG_REAMAK_OBJECTS,Об’єкти реамак
+TG_ALL_OBJECTS,Всі об’єкти
+TG_ADD_OBJECT,Додати об’єкт
+TG_ADDED_OBJECTS,Додані об’єкти
+TG_OBJECT_TYPE,Тип об’єкту
+TG_COUNT_ROOMS,К-сть кімнат
+TG_ROOMS,Кімнати
+TG_CITY,Місто
+TG_REGION,Район
+TG_SQUARE,Площа
+TG_FLOOR,Поверх
+TG_PRICE,Ціна
+TG_TERM,Термін
+TG_FLAT,квартира
+TG_HOUSE,будинок
+TG_COMMERCE,комерція
+TG_GROUND,ділянка
+TG_ELSE,інше
+TG_ROOM_ABB,кім
+TG_BEDS_ABB,місць
+TG_SQUARE_ABB,м2
+TG_FLOOR_ABB,пов
+TG_PRICE_ABB,тис. $
+TG_PRICE_ABB_UAH,тис. грн
+TG_COUNT_BEDS,Кількість місць
+TG_YEAR,Рік
+TG_HALF-YEAR,Пів року
+TG_QUARTER,Квартал
+TG_MONTH,Місяць
+TG_WEEK,Тиждень
+TG_DAY,День
+TG_REQUEST,Заявка
+TG_REQUESTS,Заявки
+TG_MY_REQUESTS,Мої заявки
+TG_ALL_REQUESTS,Всі заявки
+TG_SHOW_REQUESTS,Показати заявки
+TG_CREATE_REQUEST,Створити заявку
+TG_LISTS,Списки
+TG_REQUESTS_LIST,Список заявок
+TG_REQUESTS_LISTS,Списки заявок
+TG_SHOW_LISTS,Показати списки
+TG_ADD_TO_LIST,Додати в список
+TG_CREATE_LIST,Створити список
+TG_NEW_LIST,Новий список
+TG_TASKS,Задачі
+TG_NEW_TASK,Нова задача
+TG_REMINDER,Нагадування
+TG_NEW_REMINDER,Нове нагадування
+TG_ONCE,Один раз
+TG_ONCE_AND_REPORT,Один раз + звіт
+TG_DAILY,Що дня
+TG_DAILY_WITHOUT_SUNDAY,"Що дня, крім неділі"
+TG_ADVERT,Реклама
+TG_ADVERTS,Оголошення
+TG_MY_ADVERT,Моя реклама
+TG_MY_ADVERTS,Мої оголошення
+TG_ALL_ADVERT,Вся реклама
+TG_ALL_ADVERTS,Всі оголошення
+TG_PROFILE,Профіль
+TG_ABOUT_ME,Про мене
+TG_WHAT_CAN,Що можу
+TG_WHAT_NEED,Що потребую
+TG_COMPANY,Компанія
+TG_COMPANIES,Компанії
+TG_EMPLOYEES,Співробітники
+TG_KNOWLEDGE_BASE,База знань
+TG_DOCUMENTATION,Документація
