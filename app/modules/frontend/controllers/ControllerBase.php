@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Terra\Modules\Frontend\Controllers;
+namespace Modules\Frontend\Controllers;
 
 use Phalcon\Mvc\Controller;
 

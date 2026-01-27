@@ -6,9 +6,11 @@ use Modules\Users\Listeners\UserEventsListener;
 use Modules\Users\Services\UsersService;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 use Phalcon\Autoload\Loader;
+use Phalcon\Di\DiInterface;
+
 class Module implements ModuleDefinitionInterface
 {
-    public function registerAutoloaders(?\Phalcon\Di\DiInterface $di = null):void {
+    public function registerAutoloaders(?DiInterface $di = null):void {
 
         $loader = new Loader();
         $loader->setNamespaces([
@@ -20,7 +22,7 @@ class Module implements ModuleDefinitionInterface
         $loader->register();
     }
 
-    public function registerServices(\Phalcon\Di\DiInterface $di): void
+    public function registerServices(DiInterface $di): void
     {
         $di->setShared('userService', function () {
             return new UsersService();

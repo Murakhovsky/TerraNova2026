@@ -15,6 +15,7 @@ $loader->setNamespaces([
     'Modules\Games\Template' => APP_PATH . '/modules/games/Template/',
     'Modules\TgAdmin'       => APP_PATH . '/modules/TgAdmin/',
     'Modules\Economy'       => APP_PATH . '/modules/economy/',
+    'Modules\Frontend'       => APP_PATH . '/modules/frontend/',
     'Modules\Users'         => APP_PATH . '/modules/Users/',
     'Common\UI'             => APP_PATH . '/common/UI/',
 ]);

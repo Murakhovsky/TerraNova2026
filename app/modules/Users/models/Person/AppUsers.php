@@ -44,7 +44,6 @@ class AppUsers extends BaseModel
 
 
 
-
     public static function findFirstOrCreate($user_id):AppUsers
     {
         $user = self::findFirst($user_id);

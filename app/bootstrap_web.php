@@ -47,7 +47,7 @@ try {
      */
     $application->registerModules([
         'frontend' => [
-            'className' => 'Terra\Modules\Frontend\Module',
+            'className' => 'Modules\Frontend\Module',
             'path'      => APP_PATH . '/modules/frontend/Module.php',
             'default'   => true
         ],

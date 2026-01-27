@@ -12,7 +12,7 @@ class IndexController extends Controller
     public function indexAction()
     {
         $user = new AppUsers();
-        $user->edit(array("test" => "test1"));
+//        $user->edit(array("test" => "test1"));
 
         $game = $_GET["game"];
         switch ($game){

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Terra\Modules\Frontend;
+namespace Modules\Frontend;
 
 use Phalcon\Di\DiInterface;
 use Phalcon\Autoload\Loader;
@@ -16,13 +16,13 @@ class Module implements ModuleDefinitionInterface
      *
      * @param DiInterface $di
      */
-    public function registerAutoloaders(DiInterface $di = null)
+    public function registerAutoloaders(?DiInterface $di = null):void
     {
         $loader = new Loader();
 
         $loader->setNamespaces([
-            'Terra\Modules\Frontend\Controllers' => __DIR__ . '/controllers/',
-            'Terra\Modules\Frontend\Models' => __DIR__ . '/models/',
+            'Modules\Frontend\Controllers' => __DIR__ . '/controllers/',
+            'Modules\Frontend\Models' => __DIR__ . '/models/',
         ]);
 
         $loader->register();
@@ -44,7 +44,7 @@ class Module implements ModuleDefinitionInterface
             $view->setViewsDir(__DIR__ . '/views/');
 
             $view->registerEngines([
-                '.volt'  => 'voltShared',
+//                '.volt'  => 'voltShared',
                 '.phtml' => PhpEngine::class
             ]);
 

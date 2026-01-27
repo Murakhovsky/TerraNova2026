@@ -8,7 +8,7 @@ use Phalcon\Autoload\Loader;
 
 class Module implements ModuleDefinitionInterface
 {
-    public function registerAutoloaders(DiInterface $di = null) {
+    public function registerAutoloaders(?DiInterface $di = null):void {
         $loader = new Loader();
         $loader->setNamespaces([
             'Modules\Games\Controllers' => __DIR__ . '/Controllers/',

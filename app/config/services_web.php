@@ -14,7 +14,8 @@ use Phalcon\Mvc\Url as UrlResolver;
 // */
 $di->setShared('router', function () {
     $router = new Router();
-    $router->setDefaultModule('economy');
+//    $router->setDefaultModule('economy');
+    $router->setDefaultModule('frontend');
     return $router;
 });
 
