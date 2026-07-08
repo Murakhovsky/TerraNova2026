@@ -35,6 +35,33 @@ class Module implements ModuleDefinitionInterface
      */
     public function registerServices(DiInterface $di)
     {
+        $router = $di->getShared('router');
+        $router->setDefaultNamespace('Modules\Frontend\Controllers');
+        $router->setDefaultController('index');
+        $router->setDefaultAction('index');
+
+        $router->add('/property/:action/:params', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'property',
+            'action' => 1,
+            'params' => 2,
+        ]);
+
+        $router->add('/property/:action', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'property',
+            'action' => 1,
+        ]);
+
+        $router->add('/property', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'property',
+            'action' => 'catalog',
+        ]);
+
         /**
          * Setting up the view component
          */

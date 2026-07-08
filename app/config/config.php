@@ -12,10 +12,10 @@ return new \Phalcon\Config\Config([
 
     'database' => [
         'adapter'  => 'Mysql',
-        'host'     => 'itsige00.mysql.tools', // getenv('DB_HOST'),
-        'username' => 'itsige00_assistant', // getenv('DB_USER'),
-        'password' => '6t5m#%8KLd', //getenv('DB_PASS'),
-        'dbname'   => 'itsige00_assistant', //getenv('DB_NAME'),
+        'host'     => 'topgear1.mysql.tools', // getenv('DB_HOST'),
+        'username' => 'topgear1_tn2026', // getenv('DB_USER'),
+        'password' => 'md%73u3^KS', //getenv('DB_PASS'),
+        'dbname'   => 'topgear1_tn2026', //getenv('DB_NAME'),
         'charset'  => 'utf8',
     ],
 

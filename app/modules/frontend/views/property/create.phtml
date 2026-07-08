@@ -1,0 +1,19 @@
+<header class="tn-header" data-header>
+  <a class="tn-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova CLUB">
+    <span class="tn-logo__mark">TN</span>
+    <span class="tn-logo__text"><strong>Terra Nova</strong><small>CLUB</small></span>
+  </a>
+  <nav class="tn-nav" aria-label="Головне меню">
+    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+    <a href="<?php echo $this->url->get('property/favour'); ?>">Вибрані</a>
+  </nav>
+</header>
+
+<main class="tn-page">
+  <section class="tn-empty-state tn-empty-state--page">
+    <p class="tn-kicker">Property workspace</p>
+    <h1>Додати об'єкт</h1>
+    <p>Тут буде форма створення об'єкта: тип, угода, локація, ціна, характеристики, фото, статус модерації та публікація.</p>
+    <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Назад до каталогу</a>
+  </section>
+</main>

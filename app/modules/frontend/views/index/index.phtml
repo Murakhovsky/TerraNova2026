@@ -1,5 +1,269 @@
-<h1>Congratulations!</h1>
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'Ціна за запитом';
+    }
 
-<p>You're now flying with Phalcon. Great things are about to happen!</p>
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
 
-<p>This page is located at <code>views/index/index.phtml</code></p>
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$dealLabels = [
+    'sale' => 'Продаж',
+    'rent' => 'Оренда',
+    'investment' => 'Інвестиція',
+];
+$featuredProperties = $featuredProperties ?? [];
+$leadStatus = $leadStatus ?? null;
+$catalogStatus = $catalogStatus ?? null;
+?>
+
+<header class="tn-header" data-header>
+  <a class="tn-logo" href="#top" aria-label="Terra Nova CLUB">
+    <span class="tn-logo__mark">TN</span>
+    <span class="tn-logo__text">
+      <strong>Terra Nova</strong>
+      <small>CLUB</small>
+    </span>
+  </a>
+
+  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button>
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
+    <a href="#realty">Нерухомість</a>
+    <a href="#mls">Listing / MLS</a>
+    <a href="#invest">Інвестиції</a>
+    <a href="#realtors">Рієлторам</a>
+    <a href="#developers">Забудовникам</a>
+    <a href="#estatebook">EstateBook CRM</a>
+    <a href="#aida">AIDA / IT</a>
+    <a href="#art">Art</a>
+    <a href="#lead">Контакти</a>
+  </nav>
+
+  <div class="tn-header-actions">
+    <a class="tn-btn tn-btn--ghost" href="#lead">Подати об’єкт</a>
+    <a class="tn-btn tn-btn--dark" href="#estatebook">Увійти</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="tn-hero">
+    <div class="tn-hero__media" role="img" aria-label="Сучасний житловий простір Terra Nova"></div>
+    <div class="tn-hero__shade"></div>
+
+    <div class="tn-hero__content">
+      <p class="tn-kicker">Terra Nova CLUB / Release 0</p>
+      <h1>Нерухомість, інвестиції та технології в одній екосистемі</h1>
+      <p class="tn-hero__lead">Публічний портал для купівлі, продажу, Listing / MLS, роботи з рієлторами, забудовниками, інвесторами, EstateBook CRM та AIDA.</p>
+
+      <div class="tn-hero-actions">
+        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути об’єкти</a>
+        <a class="tn-btn tn-btn--ghost tn-btn--hero" href="#lead">Подати об’єкт</a>
+      </div>
+
+      <form class="tn-search" action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
+        <input type="hidden" name="deal_type" value="sale" data-search-deal-type>
+        <div class="tn-search__tabs" role="tablist" aria-label="Тип операції">
+          <button class="is-active" type="button" data-search-tab data-search-value="sale">Купити</button>
+          <button type="button" data-search-tab data-search-value="rent">Оренда</button>
+          <button type="button" data-search-tab data-search-value="investment">Інвестиції</button>
+        </div>
+        <div class="tn-search__grid">
+          <label>
+            <span>Тип об’єкта</span>
+            <select name="type">
+              <option value="">Усі типи</option>
+              <option value="house">Будинок</option>
+              <option value="apartment">Квартира</option>
+              <option value="cottage">Котедж</option>
+              <option value="land">Земельна ділянка</option>
+              <option value="commercial">Комерційна нерухомість</option>
+              <option value="new_building">Новобудова</option>
+            </select>
+          </label>
+          <label>
+            <span>Локація</span>
+            <select name="location">
+              <option value="">Усі міста</option>
+              <option value="lviv">Львів</option>
+              <option value="kyiv">Київ</option>
+              <option value="ivano-frankivsk">Івано-Франківськ</option>
+              <option value="uzhhorod">Ужгород</option>
+            </select>
+          </label>
+          <label>
+            <span>Бюджет до, USD</span>
+            <input name="price_max" type="number" min="0" step="5000" placeholder="70 000">
+          </label>
+          <button class="tn-btn tn-btn--accent" type="submit">Знайти</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="tn-stats" aria-label="Ключові показники Terra Nova">
+    <article><strong>5 000</strong><span>цільових користувачів на місяць</span></article>
+    <article><strong>$70k</strong><span>орієнтовний середній чек</span></article>
+    <article><strong>4</strong><span>архітектурно закладені мови: UA, EN, PL, FR</span></article>
+    <article><strong>Release 0</strong><span>каталог, заявки, CRM-підготовка та MLS-основа</span></article>
+  </section>
+
+  <section class="tn-section" id="realty">
+    <div class="tn-section__head">
+      <p class="tn-kicker">Каталог</p>
+      <h2>Об’єкти для покупців, інвесторів і партнерських продажів</h2>
+      <p>Стартова структура під власні, партнерські, рієлторські та власницькі об’єкти з ручною модерацією.</p>
+    </div>
+
+    <div class="tn-category-row">
+      <a class="is-active" href="<?php echo $this->url->get('property/catalog'); ?>">Усі</a>
+      <a href="<?php echo $this->url->get('property/catalog?type=apartment'); ?>">Квартири</a>
+      <a href="<?php echo $this->url->get('property/catalog?type=house'); ?>">Будинки</a>
+      <a href="<?php echo $this->url->get('property/catalog?type=cottage'); ?>">Котеджі</a>
+      <a href="<?php echo $this->url->get('property/catalog?type=land'); ?>">Земля</a>
+      <a href="<?php echo $this->url->get('property/catalog?type=commercial'); ?>">Комерція</a>
+      <a href="<?php echo $this->url->get('property/catalog?type=new_building'); ?>">Новобудови</a>
+    </div>
+
+    <?php if ($catalogStatus): ?>
+      <div class="tn-empty-state">
+        <p><?php echo $h($catalogStatus); ?></p>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($featuredProperties): ?>
+      <div class="tn-property-grid">
+        <?php foreach ($featuredProperties as $property): ?>
+          <article class="tn-property-card">
+            <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
+              <img src="<?php echo $h($property['cover_url'] ?: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'); ?>" alt="<?php echo $h($property['title']); ?>">
+            </a>
+            <div class="tn-property-card__body">
+              <div class="tn-card-tags">
+                <span><?php echo $h($dealLabels[$property['deal_type']] ?? $property['deal_type']); ?></span>
+                <span><?php echo $h($property['type_name']); ?></span>
+                <?php if ((int) $property['has_3d_tour'] === 1): ?><span>3D tour</span><?php endif; ?>
+              </div>
+              <h3><a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a></h3>
+              <p><?php echo $h($property['short_description']); ?></p>
+              <div class="tn-property-meta">
+                <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+                <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h((float) $property['area_total']); ?> м²<?php endif; ?></span>
+              </div>
+              <div class="tn-card-actions">
+                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Деталі</a>
+                <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>#lead">Запит</a>
+              </div>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <div class="tn-empty-state">
+        <h3>Каталог готовий до підключення об’єктів</h3>
+        <p>Після застосування міграції та наповнення БД тут автоматично з’являться пріоритетні об’єкти Release 0.</p>
+        <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Відкрити каталог</a>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-map-section" id="mls">
+    <div class="tn-map-section__copy">
+      <p class="tn-kicker">Listing / MLS</p>
+      <h2>Каталог із картою, фільтрами, вибраним і порівнянням</h2>
+      <p>Публічна вітрина для гостей і майбутній робочий режим для рієлторів: статуси, комісії, бронювання, фіксація клієнта та перевірка дублікатів.</p>
+      <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Перейти в каталог</a>
+    </div>
+    <div class="tn-map-mock" aria-label="Макет карти об’єктів">
+      <span class="pin pin-a">$145k</span>
+      <span class="pin pin-b">$82k</span>
+      <span class="pin pin-c">$68k</span>
+    </div>
+  </section>
+
+  <section class="tn-section tn-section--dark" id="ecosystem">
+    <div class="tn-section__head">
+      <p class="tn-kicker">Екосистема</p>
+      <h2>Terra Nova CLUB як бренд-оболонка для кількох напрямів</h2>
+    </div>
+    <div class="tn-ecosystem-grid">
+      <article><span>01</span><h3>Agency</h3><p>Продаж, оренда, рієлтори, власники, заявки, комісії, добірки.</p></article>
+      <article><span>02</span><h3>Terra Nova</h3><p>Девелопмент, власні ЖК, котеджні містечка, будинки, земля, архітектурні та інвестиційні проєкти.</p></article>
+      <article id="art"><span>03</span><h3>Art</h3><p>Мистецтво, інтер’єри, арт-об’єкти, візуальна культура простору.</p></article>
+      <article id="estatebook"><span>04</span><h3>EstateBook CRM</h3><p>Внутрішнє технологічне ядро для об’єктів, лідів, менеджерів і процесів.</p></article>
+      <article id="aida"><span>05</span><h3>AIDA / IT</h3><p>AI-чат, інтелектуальний термінал, n8n, GPT, автоматизація.</p></article>
+      <article><span>06</span><h3>3D-простір</h3><p>Напрям підготовки медіапакетів, турів, генпланів і моделей. Активний розділ повернеться після першої готової сцени.</p></article>
+    </div>
+  </section>
+
+  <section class="tn-section" id="invest">
+    <div class="tn-section__head">
+      <p class="tn-kicker">Аудиторії</p>
+      <h2>Окремі сценарії для покупців, рієлторів, власників, інвесторів і забудовників</h2>
+    </div>
+    <div class="tn-audience-grid">
+      <article><h3>Покупець</h3><p>Вибране, порівняння, історія переглядів, заявки, календар показів, рекомендації.</p></article>
+      <article id="realtors"><h3>Рієлтор</h3><p>Власні об’єкти, модерація, ліди, фіксації клієнтів, комісії, бронювання.</p></article>
+      <article><h3>Власник</h3><p>Статистика, статус продажу, заявки, документи, коментарі менеджера.</p></article>
+      <article><h3>Інвестор</h3><p>Презентаційні матеріали, консультації, збережені об’єкти, майбутні можливості.</p></article>
+      <article id="developers"><h3>Забудовник</h3><p>Проєкти, об’єкти, партнерські заявки, презентації, lead-routing у CRM.</p></article>
+    </div>
+  </section>
+
+  <section class="tn-process">
+    <div>
+      <p class="tn-kicker">Ліди та автоматизація</p>
+      <h2>Форма → CRM → Telegram → AIDA handoff</h2>
+    </div>
+    <ol>
+      <li>Контактні дані, роль, тип звернення, джерело сторінки</li>
+      <li>Збереження заявки в базі Release 0</li>
+      <li>Передача менеджеру в EstateBook CRM після підключення маршрутизації</li>
+      <li>Майбутній AIDA-супровід діалогу та добірки об’єктів</li>
+    </ol>
+  </section>
+
+  <section class="tn-lead" id="lead">
+    <div class="tn-section__head">
+      <p class="tn-kicker">Заявка</p>
+      <h2>Підібрати об’єкт, подати нерухомість або обговорити партнерство</h2>
+    </div>
+    <form class="tn-lead-form" action="<?php echo $this->url->get(); ?>#lead" method="post">
+      <label><span>Ім’я</span><input name="full_name" type="text" autocomplete="name" required></label>
+      <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required></label>
+      <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
+      <label><span>Роль</span><select name="role"><option value="buyer">Покупець</option><option value="realtor">Рієлтор</option><option value="owner">Власник</option><option value="investor">Інвестор</option><option value="developer">Забудовник</option></select></label>
+      <label><span>Тип звернення</span><select name="lead_type"><option value="consultation">Замовити дзвінок</option><option value="sale">Подати об’єкт</option><option value="investment">Заявка інвестора</option><option value="consultation">Партнерство</option></select></label>
+      <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип об’єкта або короткий опис задачі"></textarea></label>
+      <button class="tn-btn tn-btn--dark" type="submit">Надіслати заявку</button>
+      <?php if ($leadStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($leadStatus); ?></p><?php endif; ?>
+    </form>
+  </section>
+</main>
+
+<nav class="tn-mobile-dock" aria-label="Швидкі дії">
+  <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+  <a href="#mls">MLS</a>
+  <a href="#invest">Інвестиції</a>
+  <a href="#lead">Заявка</a>
+</nav>
+
+<footer class="tn-footer">
+  <div>
+    <strong>Terra Nova CLUB</strong>
+    <p>Публічний портал екосистеми навколо нерухомості, девелопменту, технологій, інвестицій та арт-напряму.</p>
+  </div>
+  <div class="tn-footer__links">
+    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+    <a href="#mls">Listing / MLS</a>
+    <a href="#estatebook">EstateBook CRM</a>
+    <a href="#aida">AIDA</a>
+    <a href="#lead">Контакти</a>
+  </div>
+</footer>
