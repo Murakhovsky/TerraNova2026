@@ -9,6 +9,7 @@ $loader = new Loader();
  */
 $loader->setNamespaces([
     'Terra\Models'          => APP_PATH . '/common/models/',
+    'Common\Models'         => APP_PATH . '/common/models/',
     'Terra'                 => APP_PATH . '/common/library/',
     'Common\Services'       => APP_PATH . '/common/services/',
     'Modules\Games'         => APP_PATH . '/modules/games/',

@@ -1,0 +1,221 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$dealLabels = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
+$statusLabels = [
+    'draft' => 'Чернетка',
+    'moderation' => 'Модерація',
+    'published' => 'Опубліковано',
+    'reserved' => 'Резерв',
+    'sold' => 'Продано',
+    'archived' => 'Архів',
+];
+$sourceLabels = [
+    'own' => 'Власний',
+    'partner' => 'Партнер',
+    'realtor' => 'Рієлтор',
+    'owner' => 'Власник',
+    'developer' => 'Девелопер',
+];
+$sortLabels = ['updated' => 'Оновлені', 'newest' => 'Нові', 'price_desc' => 'Ціна спадання', 'price_asc' => 'Ціна зростання'];
+$filters = $filters ?? [];
+$properties = $properties ?? [];
+$types = $types ?? [];
+$locations = $locations ?? [];
+$stats = $stats ?? [];
+$pageStatus = $pageStatus ?? null;
+$actionStatus = $actionStatus ?? null;
+$selected = static fn($current, $expected) => (string) $current === (string) $expected ? 'selected' : '';
+$returnParams = [];
+foreach (['q', 'status', 'deal_type', 'type_id', 'location_id', 'source_type', 'sort'] as $filterKey) {
+    if (($filters[$filterKey] ?? '') !== '' && ($filters[$filterKey] ?? 0) !== 0) {
+        $returnParams[$filterKey] = $filters[$filterKey];
+    }
+}
+$returnUrl = 'property/manage' . ($returnParams ? '?' . http_build_query($returnParams) : '');
+?>
+
+<header class="tn-header" data-header>
+  <a class="tn-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova CLUB">
+    <span class="tn-logo__mark">TN</span>
+    <span class="tn-logo__text"><strong>Terra Nova</strong><small>CLUB</small></span>
+  </a>
+  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button><span></span><span></span><span></span></button>
+  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
+    <a href="<?php echo $this->url->get('property/manage'); ?>">Об’єкти</a>
+    <a href="<?php echo $this->url->get('property/submissions'); ?>">Модерація</a>
+    <a href="<?php echo $this->url->get('client-case'); ?>">Кейси</a>
+    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a>
+  </nav>
+</header>
+
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div>
+      <p class="tn-kicker">Внутрішній каталог</p>
+      <h1>Керування об’єктами</h1>
+      <p>Єдиний список для менеджера: всі статуси, швидка зміна публікації, доступ до редагування картки та медіа.</p>
+    </div>
+    <div class="tn-page-hero__meta">
+      <strong><?php echo (int) ($stats['all'] ?? count($properties)); ?></strong>
+      <span>об’єктів у базі</span>
+    </div>
+  </section>
+
+  <section class="tn-admin-workspace">
+    <?php if ($actionStatus): ?>
+      <div class="tn-form-status is-visible" role="status"><?php echo $h($actionStatus); ?></div>
+    <?php endif; ?>
+
+    <nav class="tn-view-switch" aria-label="Статуси об’єктів">
+      <a class="<?php echo ($filters['status'] ?? '') === '' ? 'is-active' : ''; ?>" href="<?php echo $this->url->get('property/manage'); ?>">Усі · <?php echo (int) ($stats['all'] ?? 0); ?></a>
+      <?php foreach ($statusLabels as $code => $label): ?>
+        <a class="<?php echo ($filters['status'] ?? '') === $code ? 'is-active' : ''; ?>" href="<?php echo $this->url->get('property/manage?status=' . $code); ?>"><?php echo $h($label); ?> · <?php echo (int) ($stats[$code] ?? 0); ?></a>
+      <?php endforeach; ?>
+    </nav>
+
+    <article class="tn-admin-card">
+      <form class="tn-manage-filters" action="<?php echo $this->url->get('property/manage'); ?>" method="get">
+        <label>
+          <span>Пошук</span>
+          <input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="ID, назва, місто, адреса">
+        </label>
+        <label>
+          <span>Статус</span>
+          <select name="status">
+            <option value="">Усі</option>
+            <?php foreach ($statusLabels as $code => $label): ?>
+              <option value="<?php echo $h($code); ?>" <?php echo $selected($filters['status'] ?? '', $code); ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
+          <span>Операція</span>
+          <select name="deal_type">
+            <option value="">Усі</option>
+            <?php foreach ($dealLabels as $code => $label): ?>
+              <option value="<?php echo $h($code); ?>" <?php echo $selected($filters['deal_type'] ?? '', $code); ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
+          <span>Тип</span>
+          <select name="type_id">
+            <option value="0">Усі типи</option>
+            <?php foreach ($types as $type): ?>
+              <option value="<?php echo $h($type['id'] ?? 0); ?>" <?php echo $selected($filters['type_id'] ?? 0, $type['id'] ?? 0); ?>><?php echo $h($type['name_uk'] ?? ''); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
+          <span>Місто</span>
+          <select name="location_id">
+            <option value="0">Усі міста</option>
+            <?php foreach ($locations as $location): ?>
+              <option value="<?php echo $h($location['id'] ?? 0); ?>" <?php echo $selected($filters['location_id'] ?? 0, $location['id'] ?? 0); ?>><?php echo $h($location['city'] ?? ''); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
+          <span>Джерело</span>
+          <select name="source_type">
+            <option value="">Усі</option>
+            <?php foreach ($sourceLabels as $code => $label): ?>
+              <option value="<?php echo $h($code); ?>" <?php echo $selected($filters['source_type'] ?? '', $code); ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
+          <span>Сортування</span>
+          <select name="sort">
+            <?php foreach ($sortLabels as $code => $label): ?>
+              <option value="<?php echo $h($code); ?>" <?php echo $selected($filters['sort'] ?? 'updated', $code); ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <div class="tn-manage-filters__actions">
+          <button class="tn-btn tn-btn--accent" type="submit">Оновити</button>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage'); ?>">Скинути</a>
+        </div>
+      </form>
+    </article>
+
+    <?php if ($pageStatus): ?>
+      <div class="tn-empty-state"><h2>Реєстр недоступний</h2><p><?php echo $h($pageStatus); ?></p></div>
+    <?php elseif (!$properties): ?>
+      <div class="tn-empty-state"><h2>Об’єктів за цими фільтрами немає</h2><p>Змініть фільтр або відкрийте всі статуси.</p></div>
+    <?php else: ?>
+      <div class="tn-listing-table-wrap">
+        <table class="tn-listing-table tn-manage-table">
+          <thead>
+            <tr>
+              <th>Об’єкт</th>
+              <th>Операція</th>
+              <th>Локація</th>
+              <th>Ціна</th>
+              <th>Медіа</th>
+              <th>Статус</th>
+              <th>Оновлено</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($properties as $property): ?>
+              <tr>
+                <td>
+                  <div class="tn-manage-object">
+                    <?php if (!empty($property['cover_url'])): ?>
+                      <img class="tn-manage-thumb" src="<?php echo $h($property['cover_url']); ?>" alt="<?php echo $h($property['title']); ?>">
+                    <?php else: ?>
+                      <span class="tn-manage-thumb tn-manage-thumb--empty">TN</span>
+                    <?php endif; ?>
+                    <div>
+                      <strong><?php echo $h($property['public_id']); ?></strong>
+                      <a class="tn-listing-title" href="<?php echo $this->url->get('property/edit/' . $property['id']); ?>"><?php echo $h($property['title']); ?></a>
+                      <span><?php echo $h($property['type_name']); ?> / <?php echo $h($sourceLabels[$property['source_type']] ?? $property['source_type']); ?></span>
+                    </div>
+                  </div>
+                </td>
+                <td><?php echo $h($dealLabels[$property['deal_type']] ?? $property['deal_type']); ?></td>
+                <td><?php echo $h(trim($property['city'] . ', ' . ($property['region'] ?? ''), ', ')); ?></td>
+                <td>
+                  <?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?>
+                  <span><?php echo $property['area_total'] ? $h((float) $property['area_total']) . ' м²' : 'площа не вказана'; ?></span>
+                </td>
+                <td>
+                  <strong><?php echo (int) $property['image_count']; ?></strong>
+                  <span><?php echo (int) $property['inbound_request_count']; ?> заявок</span>
+                </td>
+                <td>
+                  <form class="tn-inline-status-form" action="<?php echo $this->url->get('property/status/' . $property['id']); ?>" method="post">
+                    <input type="hidden" name="return_url" value="<?php echo $h($returnUrl); ?>">
+                    <select name="status" aria-label="Статус <?php echo $h($property['public_id']); ?>">
+                      <?php foreach ($statusLabels as $code => $label): ?>
+                        <option value="<?php echo $h($code); ?>" <?php echo $selected($property['status'], $code); ?>><?php echo $h($label); ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                    <button type="submit">OK</button>
+                  </form>
+                </td>
+                <td><?php echo $h($property['updated_at']); ?></td>
+                <td class="tn-listing-actions">
+                  <a href="<?php echo $this->url->get('property/edit/' . $property['id']); ?>">Редагувати</a>
+                  <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Перегляд</a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </section>
+</main>

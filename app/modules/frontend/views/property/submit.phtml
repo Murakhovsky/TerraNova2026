@@ -1,0 +1,162 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$selected = static fn($data, $name, $value) => ((string) ($data[$name] ?? '') === (string) $value) ? 'selected' : '';
+$checked = static fn($data, $name) => isset($data[$name]) ? 'checked' : '';
+$field = static fn($data, $name) => htmlspecialchars((string) ($data[$name] ?? ''), ENT_QUOTES, 'UTF-8');
+$types = $types ?? [];
+$formData = $formData ?? [];
+$submissionStatus = $submissionStatus ?? null;
+$pageStatus = $pageStatus ?? null;
+?>
+
+<?php $this->partial('shared/public_header', [
+    'active' => 'submit',
+    'actions' => [
+        ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
+        ['href' => 'cabinet', 'label' => 'Кабінет', 'class' => 'tn-btn--dark'],
+    ],
+]); ?>
+
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--submit">
+    <div>
+      <p class="tn-kicker">Подати об’єкт</p>
+      <h1>Додайте нерухомість у чергу модерації Terra Nova</h1>
+      <p>Опишіть об’єкт, умови продажу або оренди та залиште контакт. Менеджер перевірить дані перед публікацією в каталозі.</p>
+    </div>
+    <div class="tn-page-hero__meta">
+      <strong>24h</strong>
+      <span>первинна обробка заявки</span>
+    </div>
+  </section>
+
+  <?php if ($pageStatus): ?>
+    <section class="tn-empty-state tn-empty-state--page">
+      <h2>Сторінка тимчасово недоступна</h2>
+      <p><?php echo $h($pageStatus); ?></p>
+    </section>
+  <?php else: ?>
+    <section class="tn-submit-layout">
+      <form class="tn-submit-form" action="<?php echo $this->url->get('property/submit'); ?>" method="post" enctype="multipart/form-data">
+        <label class="tn-hp" aria-hidden="true"><span>Website</span><input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+
+        <fieldset>
+          <legend>Контакт</legend>
+          <div class="tn-form-grid">
+            <label><span>Ваше ім’я</span><input name="owner_name" type="text" autocomplete="name" value="<?php echo $field($formData, 'owner_name'); ?>" required></label>
+            <label><span>Телефон</span><input name="owner_phone" type="tel" autocomplete="tel" value="<?php echo $field($formData, 'owner_phone'); ?>" required></label>
+            <label><span>Email</span><input name="owner_email" type="email" autocomplete="email" value="<?php echo $field($formData, 'owner_email'); ?>"></label>
+            <label>
+              <span>Хто подає</span>
+              <select name="source_type">
+                <option value="owner" <?php echo $selected($formData, 'source_type', 'owner'); ?>>Власник</option>
+                <option value="realtor" <?php echo $selected($formData, 'source_type', 'realtor'); ?>>Рієлтор</option>
+                <option value="developer" <?php echo $selected($formData, 'source_type', 'developer'); ?>>Забудовник</option>
+                <option value="partner" <?php echo $selected($formData, 'source_type', 'partner'); ?>>Партнер</option>
+                <option value="other" <?php echo $selected($formData, 'source_type', 'other'); ?>>Інше</option>
+              </select>
+            </label>
+            <label>
+              <span>Зручний контакт</span>
+              <select name="preferred_contact">
+                <option value="any" <?php echo $selected($formData, 'preferred_contact', 'any'); ?>>Будь-який</option>
+                <option value="phone" <?php echo $selected($formData, 'preferred_contact', 'phone'); ?>>Телефон</option>
+                <option value="telegram" <?php echo $selected($formData, 'preferred_contact', 'telegram'); ?>>Telegram</option>
+                <option value="email" <?php echo $selected($formData, 'preferred_contact', 'email'); ?>>Email</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Об’єкт</legend>
+          <div class="tn-form-grid">
+            <label class="is-wide"><span>Назва</span><input name="title" type="text" value="<?php echo $field($formData, 'title'); ?>" placeholder="Наприклад: будинок біля Львова"></label>
+            <label>
+              <span>Операція</span>
+              <select name="deal_type">
+                <option value="sale" <?php echo $selected($formData, 'deal_type', 'sale'); ?>>Продаж</option>
+                <option value="rent" <?php echo $selected($formData, 'deal_type', 'rent'); ?>>Оренда</option>
+                <option value="investment" <?php echo $selected($formData, 'deal_type', 'investment'); ?>>Інвестиція</option>
+              </select>
+            </label>
+            <label>
+              <span>Тип</span>
+              <select name="property_type" required>
+                <option value="">Оберіть тип</option>
+                <?php foreach ($types as $type): ?>
+                  <option value="<?php echo $h($type['code']); ?>" <?php echo $selected($formData, 'property_type', $type['code']); ?>><?php echo $h($type['name_uk']); ?></option>
+                <?php endforeach; ?>
+                <option value="other" <?php echo $selected($formData, 'property_type', 'other'); ?>>Інше</option>
+              </select>
+            </label>
+            <label><span>Місто</span><input name="city" type="text" value="<?php echo $field($formData, 'city'); ?>" required></label>
+            <label><span>Область</span><input name="region" type="text" value="<?php echo $field($formData, 'region'); ?>"></label>
+            <label><span>Район</span><input name="district" type="text" value="<?php echo $field($formData, 'district'); ?>"></label>
+            <label class="is-wide"><span>Адреса або орієнтир</span><input name="address" type="text" value="<?php echo $field($formData, 'address'); ?>"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Параметри</legend>
+          <div class="tn-form-grid">
+            <label><span>Ціна</span><input name="price_amount" type="number" min="0" step="100" value="<?php echo $field($formData, 'price_amount'); ?>"></label>
+            <label>
+              <span>Валюта</span>
+              <select name="price_currency">
+                <option value="USD" <?php echo $selected($formData, 'price_currency', 'USD'); ?>>USD</option>
+                <option value="EUR" <?php echo $selected($formData, 'price_currency', 'EUR'); ?>>EUR</option>
+                <option value="UAH" <?php echo $selected($formData, 'price_currency', 'UAH'); ?>>UAH</option>
+              </select>
+            </label>
+            <label><span>Площа, м²</span><input name="area_total" type="number" min="0" step="0.1" value="<?php echo $field($formData, 'area_total'); ?>"></label>
+            <label><span>Ділянка, сот.</span><input name="land_area" type="number" min="0" step="0.1" value="<?php echo $field($formData, 'land_area'); ?>"></label>
+            <label><span>Кімнат</span><input name="rooms" type="number" min="0" step="0.5" value="<?php echo $field($formData, 'rooms'); ?>"></label>
+            <label><span>Поверх</span><input name="floor" type="number" min="0" step="1" value="<?php echo $field($formData, 'floor'); ?>"></label>
+            <label><span>Поверхів</span><input name="floors" type="number" min="0" step="1" value="<?php echo $field($formData, 'floors'); ?>"></label>
+            <label><span>Рік</span><input name="built_year" type="number" min="1800" max="<?php echo (int) date('Y') + 2; ?>" step="1" value="<?php echo $field($formData, 'built_year'); ?>"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Опис</legend>
+          <div class="tn-form-grid">
+            <label class="is-wide"><span>Короткий опис</span><textarea name="description" rows="5" required placeholder="Стан, планування, документи, переваги, умови показу"><?php echo $field($formData, 'description'); ?></textarea></label>
+            <label class="is-wide"><span>Особливості</span><textarea name="features_text" rows="4" placeholder="Паркінг, тераса, ремонт, вид, комунікації, дохідність"><?php echo $field($formData, 'features_text'); ?></textarea></label>
+            <label class="is-wide"><span>Посилання на фото, відео або 3D</span><textarea name="media_links" rows="3" placeholder="Google Drive, YouTube, Matterport або інші посилання"><?php echo $field($formData, 'media_links'); ?></textarea></label>
+            <label class="tn-checkbox"><input name="has_3d_tour" type="checkbox" value="1" <?php echo $checked($formData, 'has_3d_tour'); ?>><span>Є готовий 3D-тур або модель</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Медіа</legend>
+          <div class="tn-form-grid">
+            <label class="is-wide"><span>Основне фото до 5 MB</span><input name="main_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+            <label class="is-wide"><span>Додаткові фото до 10 MB кожне</span><input name="gallery_photos[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple></label>
+          </div>
+        </fieldset>
+
+        <div class="tn-submit-form__actions">
+          <button class="tn-btn tn-btn--accent" type="submit">Подати на модерацію</button>
+          <?php if ($submissionStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($submissionStatus); ?></p><?php endif; ?>
+        </div>
+      </form>
+
+      <aside class="tn-support-panel">
+        <p class="tn-kicker">Що далі</p>
+        <ol>
+          <li>Заявка зберігається в окремій черзі модерації.</li>
+          <li>Менеджер перевіряє контакти, параметри й матеріали.</li>
+          <li>Після підтвердження об’єкт можна перенести в каталог.</li>
+        </ol>
+        <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути каталог</a>
+      </aside>
+    </section>
+  <?php endif; ?>
+</main>
+
+<?php $this->partial('shared/mobile_dock', ['active' => 'submit']); ?>
+
+<?php $this->partial('shared/public_footer', [
+    'text' => 'Публічна подача об’єктів, ручна модерація, каталог і подальша робота менеджера в CRM.',
+]); ?>

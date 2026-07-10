@@ -1,0 +1,192 @@
+<?php
+$h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$case = $case ?? null;
+$inboundRequests = $inboundRequests ?? [];
+$activities = $activities ?? [];
+$propertyMatches = $propertyMatches ?? [];
+$requestMatches = $requestMatches ?? [];
+$pageStatus = $pageStatus ?? null;
+$actionStatus = $actionStatus ?? null;
+$stageLabels = [
+    'new' => 'Новий',
+    'qualification' => 'Кваліфікація',
+    'need_defined' => 'Потреба визначена',
+    'matching' => 'Підбір',
+    'viewing' => 'Покази',
+    'negotiation' => 'Перемовини',
+    'deal' => 'Угода',
+    'aftercare' => 'Післяугодний супровід',
+    'repeat' => 'Повторний цикл',
+    'paused' => 'Пауза',
+    'lost' => 'Втрачено',
+];
+$typeLabels = ['buy' => 'Купівля', 'sell' => 'Продаж', 'rent' => 'Оренда', 'lease_out' => 'Здача', 'repair' => 'Ремонт', 'investment' => 'Інвестиція', 'management' => 'Управління', 'inheritance' => 'Спадщина', 'other' => 'Інше'];
+$statusLabels = ['active' => 'Активний', 'paused' => 'Пауза', 'closed' => 'Закритий', 'lost' => 'Втрачено'];
+$priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 'high' => 'Високий', 'urgent' => 'Терміновий'];
+$matchStatusLabels = ['suggested' => 'Запропоновано', 'sent' => 'Відправлено', 'interested' => 'Цікавить', 'viewing' => 'Показ', 'rejected' => 'Відхилено', 'deal' => 'Угода'];
+$selected = fn($actual, $expected) => (string) $actual === (string) $expected ? 'selected' : '';
+$checkedValue = fn($value) => $value === null ? '' : (string) $value;
+$money = function ($amount, $currency): string {
+    if ($amount === null || $amount === '') {
+        return 'не задано';
+    }
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . (string) $currency;
+};
+?>
+
+<main class="tn-page tn-admin-page">
+  <nav class="tn-breadcrumbs">
+    <a href="<?php echo $this->url->get(''); ?>">Головна</a>
+    <span>/</span>
+    <a href="<?php echo $this->url->get('client-case'); ?>">Кейси</a>
+    <span>/</span>
+    <span>Картка</span>
+  </nav>
+
+  <?php if (!$case): ?>
+    <section class="tn-empty-state">
+      <h1>Кейс не знайдено</h1>
+      <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться до списку кейсів.'); ?></p>
+      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('client-case'); ?>">До CRM</a>
+    </section>
+  <?php else: ?>
+    <section class="tn-listing-hero">
+      <div>
+        <p class="tn-kicker"><?php echo $h($case['public_id']); ?> / <?php echo $h($case['person_public_id']); ?></p>
+        <h1><?php echo $h($case['title']); ?></h1>
+        <p><?php echo $h($case['full_name']); ?> · <?php echo $h($case['phone'] ?: 'телефон не вказано'); ?><?php if ($case['email']): ?> · <?php echo $h($case['email']); ?><?php endif; ?></p>
+      </div>
+      <div class="tn-hero-metric">
+        <span><?php echo $h($typeLabels[$case['type']] ?? $case['type']); ?></span>
+        <strong><?php echo $h($stageLabels[$case['stage']] ?? $case['stage']); ?></strong>
+      </div>
+    </section>
+
+    <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
+    <?php if ($pageStatus): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
+
+    <section class="tn-crm-detail-grid">
+      <article class="tn-admin-panel">
+        <div class="tn-section-heading">
+          <div><p class="tn-kicker">Кейс і людина</p><h2>Базові дані</h2></div>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case'); ?>">До списку</a>
+        </div>
+        <form class="tn-crm-form" action="<?php echo $this->url->get('client-case/update/' . $case['id']); ?>" method="post">
+          <label><span>Людина</span><input name="full_name" type="text" maxlength="160" required value="<?php echo $h($case['full_name']); ?>"></label>
+          <label><span>Телефон</span><input name="phone" type="tel" maxlength="50" value="<?php echo $h($case['phone']); ?>"></label>
+          <label><span>Email</span><input name="email" type="email" maxlength="160" value="<?php echo $h($case['email']); ?>"></label>
+          <label><span>Telegram</span><input name="telegram" type="text" maxlength="80" value="<?php echo $h($case['telegram']); ?>"></label>
+          <label><span>Назва кейсу</span><input name="title" type="text" maxlength="220" value="<?php echo $h($case['title']); ?>"></label>
+          <label><span>Тип</span><select name="type"><?php foreach ($typeLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['type'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+          <label><span>Статус</span><select name="status"><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['status'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+          <label><span>Етап</span><select name="stage"><?php foreach ($stageLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['stage'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+          <label><span>Пріоритет</span><select name="priority"><?php foreach ($priorityLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['priority'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+          <label><span>Джерело</span><input name="source" type="text" maxlength="120" value="<?php echo $h($case['source']); ?>"></label>
+          <label><span>Бюджет від</span><input name="budget_min" type="number" min="0" step="1000" value="<?php echo $h($checkedValue($case['budget_min'])); ?>"></label>
+          <label><span>Бюджет до</span><input name="budget_max" type="number" min="0" step="1000" value="<?php echo $h($checkedValue($case['budget_max'])); ?>"></label>
+          <label><span>Валюта</span><select name="currency"><option <?php echo $selected($case['currency'], 'USD'); ?>>USD</option><option <?php echo $selected($case['currency'], 'EUR'); ?>>EUR</option><option <?php echo $selected($case['currency'], 'UAH'); ?>>UAH</option></select></label>
+          <label><span>Площа від</span><input name="area_min" type="number" min="0" step="1" value="<?php echo $h($checkedValue($case['area_min'])); ?>"></label>
+          <label><span>Площа до</span><input name="area_max" type="number" min="0" step="1" value="<?php echo $h($checkedValue($case['area_max'])); ?>"></label>
+          <label><span>Наступний контакт</span><input name="next_contact_at" type="datetime-local" value="<?php echo $h($case['next_contact_at'] ? date('Y-m-d\TH:i', strtotime($case['next_contact_at'])) : ''); ?>"></label>
+          <label class="is-wide"><span>Description</span><textarea name="description" rows="5"><?php echo $h($case['description']); ?></textarea></label>
+          <label class="is-wide"><span>Нотатки по людині</span><textarea name="person_notes" rows="3"><?php echo $h($case['person_notes']); ?></textarea></label>
+          <button class="tn-btn tn-btn--dark" type="submit">Зберегти</button>
+        </form>
+      </article>
+
+      <aside class="tn-admin-panel">
+        <h2>Зведення</h2>
+        <div class="tn-admin-stats">
+          <div><span>Заявки</span><strong><?php echo count($inboundRequests); ?></strong></div>
+          <div><span>Підбори</span><strong><?php echo count($propertyMatches); ?></strong></div>
+          <div><span>Бюджет</span><strong><?php echo $h($money($case['budget_max'], $case['currency'])); ?></strong></div>
+          <div><span>Менеджер</span><strong><?php echo $h($case['manager_name'] ?: 'не задано'); ?></strong></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="tn-crm-grid">
+      <article class="tn-admin-panel">
+        <h2>Нова дія</h2>
+        <form class="tn-crm-form" action="<?php echo $this->url->get('client-case/activity/' . $case['id']); ?>" method="post">
+          <label><span>Тип</span><select name="activity_type"><option value="note">Нотатка</option><option value="call">Дзвінок</option><option value="message">Повідомлення</option><option value="meeting">Зустріч</option><option value="viewing">Показ</option><option value="offer">Офер</option><option value="task">Задача</option></select></label>
+          <label><span>Назва</span><input name="title" type="text" maxlength="180" required></label>
+          <label><span>Коли</span><input name="due_at" type="datetime-local"></label>
+          <label class="is-wide"><span>Опис</span><textarea name="body" rows="4"></textarea></label>
+          <label class="tn-checkbox"><input name="completed" type="checkbox" value="1"><span>Виконано зараз</span></label>
+          <button class="tn-btn tn-btn--dark" type="submit">Додати дію</button>
+        </form>
+      </article>
+
+      <article class="tn-admin-panel">
+        <h2>Історія</h2>
+        <?php if (!$activities): ?>
+          <p class="tn-muted">Дій ще немає.</p>
+        <?php else: ?>
+          <div class="tn-crm-timeline">
+            <?php foreach ($activities as $activity): ?>
+              <div>
+                <strong><?php echo $h($activity['title']); ?></strong>
+                <span><?php echo $h($activity['activity_type']); ?> · <?php echo $h($activity['created_at']); ?><?php if ($activity['user_name']): ?> · <?php echo $h($activity['user_name']); ?><?php endif; ?></span>
+                <?php if ($activity['body']): ?><p><?php echo $h($activity['body']); ?></p><?php endif; ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </article>
+    </section>
+
+    <section class="tn-crm-detail-grid">
+      <article class="tn-admin-panel">
+        <h2>Вхідні заявки</h2>
+        <?php if (!$inboundRequests): ?>
+          <p class="tn-muted">До кейсу ще не привʼязано заявок.</p>
+        <?php else: ?>
+          <div class="tn-table-wrap">
+            <table class="tn-listing-table">
+              <thead><tr><th>#</th><th>Тип</th><th>Обʼєкт</th><th>Повідомлення</th><th>Дата</th></tr></thead>
+              <tbody>
+                <?php foreach ($inboundRequests as $inboundRequest): ?>
+                  <tr>
+                    <td>#<?php echo $h($inboundRequest['id']); ?></td>
+                    <td><?php echo $h($inboundRequest['deal_type']); ?></td>
+                    <td><?php if ($inboundRequest['property_slug']): ?><a href="<?php echo $this->url->get('property/show/' . $inboundRequest['property_slug']); ?>"><?php echo $h($inboundRequest['property_title']); ?></a><?php else: ?>без обʼєкта<?php endif; ?></td>
+                    <td><?php echo $h(mb_substr((string) $inboundRequest['message'], 0, 120)); ?></td>
+                    <td><?php echo $h($inboundRequest['created_at']); ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </article>
+
+      <article class="tn-admin-panel">
+        <h2>Підібрані обʼєкти</h2>
+        <?php if (!$propertyMatches): ?>
+          <p class="tn-muted">Підборів ще немає. Додайте обʼєкт у кейс із каталогу або картки обʼєкта.</p>
+        <?php else: ?>
+          <div class="tn-crm-stack">
+            <?php foreach ($propertyMatches as $match): ?>
+              <div>
+                <a href="<?php echo $this->url->get('property/show/' . $match['slug']); ?>">
+                  <strong><?php echo $h($match['title']); ?></strong>
+                  <span><?php echo $h($match['city']); ?> · <?php echo $h($money($match['price_amount'], $match['price_currency'])); ?> · <?php echo $h($matchStatusLabels[$match['match_status']] ?? $match['match_status']); ?><?php if ($match['score'] !== null): ?> · <?php echo (int) $match['score']; ?>%<?php endif; ?></span>
+                </a>
+                <form class="tn-match-form" action="<?php echo $this->url->get('client-case/updatePropertyMatch/' . $match['id']); ?>" method="post">
+                  <select name="match_status" aria-label="Статус підбору">
+                    <?php foreach ($matchStatusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($match['match_status'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?>
+                  </select>
+                  <input name="score" type="number" min="0" max="100" step="5" value="<?php echo $h($match['score']); ?>" placeholder="0-100" aria-label="Оцінка">
+                  <input name="note" type="text" maxlength="500" value="<?php echo $h($match['note']); ?>" placeholder="Нотатка">
+                  <button type="submit">Оновити</button>
+                </form>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </article>
+    </section>
+  <?php endif; ?>
+</main>

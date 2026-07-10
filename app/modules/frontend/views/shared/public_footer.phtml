@@ -1,0 +1,31 @@
+<?php
+$text = $text ?? 'Публічний каталог нерухомості Terra Nova CLUB з медіа, заявками, модерацією та CRM-супроводом.';
+$links = $links ?? [
+    ['path' => '', 'label' => 'Головна'],
+    ['path' => 'property/catalog', 'label' => 'Каталог'],
+    ['path' => 'property/submit', 'label' => 'Подати об’єкт'],
+];
+$href = function (string $path): string {
+    if ($path === '' || $path === '/') {
+        return $this->url->get();
+    }
+
+    if (str_starts_with($path, '#') || str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'tel:') || str_starts_with($path, 'mailto:')) {
+        return $path;
+    }
+
+    return $this->url->get($path);
+};
+?>
+
+<footer class="tn-footer">
+  <div>
+    <strong>Terra Nova CLUB</strong>
+    <p><?php echo $text; ?></p>
+  </div>
+  <div class="tn-footer__links">
+    <?php foreach ($links as $link): ?>
+      <a href="<?php echo $href((string) $link['path']); ?>"><?php echo $link['label']; ?></a>
+    <?php endforeach; ?>
+  </div>
+</footer>

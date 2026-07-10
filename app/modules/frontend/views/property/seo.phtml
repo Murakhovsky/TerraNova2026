@@ -1,0 +1,171 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$number = static fn($value) => $value === null || $value === '' ? '' : rtrim(rtrim(number_format((float) $value, 1, '.', ' '), '0'), '.');
+$absoluteUrl = static function (string $path = '') {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
+
+    return $scheme . '://' . $host . '/' . ltrim($path, '/');
+};
+$dealLabels = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
+$properties = $properties ?? [];
+$filters = $filters ?? [];
+$types = $types ?? [];
+$locations = $locations ?? [];
+$catalogStatus = $catalogStatus ?? null;
+$resultCount = $resultCount ?? count($properties);
+$catalogStats = $catalogStats ?? [];
+$seoKicker = $seoKicker ?? 'Каталог';
+$seoTitle = $seoTitle ?? 'Об’єкти Terra Nova';
+$seoDescription = $seoDescription ?? 'Добірка об’єктів Terra Nova CLUB.';
+$fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80';
+
+foreach ($types as $type) {
+    if (($filters['type'] ?? '') === $type['code']) {
+        $seoTitle .= ': ' . $type['name_uk'];
+        $seoDescription = 'Актуальні об’єкти типу ' . $type['name_uk'] . ' у каталозі Terra Nova CLUB: ціни, площі, медіа, заявки та перехід у повну картку.';
+    }
+}
+foreach ($locations as $location) {
+    if (($filters['location'] ?? '') === $location['slug']) {
+        $seoTitle .= ': ' . $location['city'];
+        $seoDescription = 'Добірка нерухомості у місті ' . $location['city'] . ' з фільтрами, картками об’єктів, цінами та швидким запитом у Terra Nova CLUB.';
+    }
+}
+
+$currentPath = trim((string) ($_SERVER['REQUEST_URI'] ?? 'property/catalog'), '/');
+$breadcrumbJson = [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Головна', 'item' => $absoluteUrl()],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Каталог', 'item' => $absoluteUrl('property/catalog')],
+        ['@type' => 'ListItem', 'position' => 3, 'name' => $seoTitle, 'item' => $absoluteUrl($currentPath)],
+    ],
+];
+$itemList = [
+    '@context' => 'https://schema.org',
+    '@type' => 'ItemList',
+    'name' => $seoTitle,
+    'description' => $seoDescription,
+    'numberOfItems' => count($properties),
+    'itemListElement' => [],
+];
+foreach ($properties as $index => $property) {
+    $itemList['itemListElement'][] = [
+        '@type' => 'ListItem',
+        'position' => $index + 1,
+        'url' => $absoluteUrl('property/show/' . $property['slug']),
+        'name' => $property['title'],
+    ];
+}
+?>
+
+<script type="application/ld+json"><?php echo json_encode($breadcrumbJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+<script type="application/ld+json"><?php echo json_encode($itemList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+
+<?php $this->partial('shared/public_header', [
+    'active' => 'catalog',
+    'actions' => [
+        ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
+        ['href' => 'cabinet', 'label' => 'Кабінет', 'class' => 'tn-btn--dark'],
+    ],
+]); ?>
+
+<main class="tn-page">
+  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
+    <a href="<?php echo $this->url->get(); ?>">Головна</a>
+    <span>/</span>
+    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+    <span>/</span>
+    <span><?php echo $h($seoTitle); ?></span>
+  </nav>
+
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div>
+      <p class="tn-kicker"><?php echo $h($seoKicker); ?></p>
+      <h1><?php echo $h($seoTitle); ?></h1>
+      <p><?php echo $h($seoDescription); ?></p>
+      <div class="tn-seo-links">
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=sale'); ?>">Купити</a>
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=rent'); ?>">Орендувати</a>
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=investment'); ?>">Інвестиції</a>
+      </div>
+    </div>
+    <div class="tn-page-hero__meta">
+      <strong><?php echo (int) $resultCount; ?></strong>
+      <span>об’єктів у добірці</span>
+    </div>
+  </section>
+
+  <section class="tn-catalog-insights" aria-label="Огляд добірки">
+    <div><span>Знайдено</span><strong><?php echo (int) $resultCount; ?></strong></div>
+    <div><span>Від</span><strong><?php echo $h($money($catalogStats['price_min'] ?? null)); ?></strong></div>
+    <div><span>До</span><strong><?php echo $h($money($catalogStats['price_max'] ?? null)); ?></strong></div>
+    <div><span>Середня площа</span><strong><?php echo ($catalogStats['area_avg'] ?? null) ? $h($number($catalogStats['area_avg'])) . ' м²' : '—'; ?></strong></div>
+  </section>
+
+  <section class="tn-favourite-workspace">
+    <?php $this->partial('shared/catalog_viewbar', ['active' => 'catalog']); ?>
+
+    <?php if ($catalogStatus): ?>
+      <div class="tn-empty-state"><h2>Дані тимчасово недоступні</h2><p><?php echo $h($catalogStatus); ?></p></div>
+    <?php elseif (!$properties): ?>
+      <div class="tn-empty-state"><h2>У цій добірці поки немає об’єктів</h2><p>Перегляньте повний каталог або залиште заявку на персональний пошук.</p></div>
+    <?php else: ?>
+      <div class="tn-property-grid tn-property-grid--catalog">
+        <?php foreach ($properties as $property): ?>
+          <article class="tn-property-card" itemscope itemtype="https://schema.org/Product">
+            <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" itemprop="url">
+              <img src="<?php echo $h($property['cover_url'] ?: $fallbackImage); ?>" alt="<?php echo $h($property['title']); ?>" itemprop="image">
+            </a>
+            <div class="tn-property-card__body">
+              <div class="tn-card-tags">
+                <span><?php echo $h($dealLabels[$property['deal_type']] ?? $property['deal_type']); ?></span>
+                <span><?php echo $h($property['type_name']); ?></span>
+                <?php if ((int) $property['has_3d_tour'] === 1): ?><span>3D tour</span><?php endif; ?>
+              </div>
+              <h2 itemprop="name"><a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a></h2>
+              <p itemprop="description"><?php echo $h($property['short_description']); ?></p>
+              <div class="tn-property-meta" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+                <?php if ($property['price_amount']): ?>
+                  <meta itemprop="price" content="<?php echo $h($property['price_amount']); ?>">
+                  <meta itemprop="priceCurrency" content="<?php echo $h($property['price_currency']); ?>">
+                <?php endif; ?>
+                <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h($number($property['area_total'])); ?> м²<?php endif; ?></span>
+              </div>
+              <div class="tn-card-actions">
+                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Деталі</a>
+                <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Вибрати</button>
+              </div>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-seo-panel">
+    <div>
+      <p class="tn-kicker">SEO</p>
+      <h2>Добірка працює як окрема посадкова сторінка</h2>
+    </div>
+    <p>Сторінка має власний заголовок, опис, breadcrumbs, ItemList-розмітку, перелінковку з каталогом, картою, Listing і подачею нового об’єкта.</p>
+  </section>
+</main>
+
+<?php $this->partial('shared/mobile_dock', ['active' => 'catalog']); ?>
+
+<?php $this->partial('shared/public_footer', [
+    'text' => 'SEO-добірки каталогу Terra Nova CLUB для типів нерухомості, міст і сценаріїв пошуку.',
+]); ?>

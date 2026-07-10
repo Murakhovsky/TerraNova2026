@@ -9,10 +9,23 @@ $money = static function ($amount, $currency = 'USD', $period = 'total') {
 
     return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
 };
+$number = static fn($value) => $value === null || $value === '' ? '' : rtrim(rtrim(number_format((float) $value, 1, '.', ' '), '0'), '.');
+$absoluteUrl = static function (string $path = '') {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
+
+    return $scheme . '://' . $host . '/' . ltrim($path, '/');
+};
 $dealLabels = [
     'sale' => 'Продаж',
     'rent' => 'Оренда',
     'investment' => 'Інвестиція',
+];
+$sortLabels = [
+    'newest' => 'Нові спочатку',
+    'price_asc' => 'Ціна за зростанням',
+    'price_desc' => 'Ціна за спаданням',
+    'area_desc' => 'Більша площа',
 ];
 $statusLabels = [
     'published' => 'Опубліковано',
@@ -20,51 +33,165 @@ $statusLabels = [
     'reserved' => 'Резерв',
     'sold' => 'Продано',
 ];
+$sourceLabels = [
+    'own' => 'Terra Nova',
+    'partner' => 'Партнер',
+    'realtor' => 'Рієлтор',
+    'owner' => 'Власник',
+    'developer' => 'Девелопер',
+];
 $filters = $filters ?? [];
 $properties = $properties ?? [];
 $types = $types ?? [];
 $locations = $locations ?? [];
+$catalogStatus = $catalogStatus ?? null;
+$inboundRequestStatus = $inboundRequestStatus ?? null;
+$propertyMatchStatus = $propertyMatchStatus ?? null;
+$managerClientCases = $managerClientCases ?? [];
+$returnUrl = ltrim((string) ($_SERVER['REQUEST_URI'] ?? 'property/catalog'), '/');
+$resultCount = $resultCount ?? count($properties);
+$catalogStats = $catalogStats ?? [];
+$fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80';
+$activeFilters = [];
+
+if (($filters['q'] ?? '') !== '') {
+    $activeFilters[] = 'Пошук: ' . $filters['q'];
+}
+if (($filters['deal_type'] ?? '') !== '') {
+    $activeFilters[] = $dealLabels[$filters['deal_type']] ?? $filters['deal_type'];
+}
+foreach ($types as $type) {
+    if (($filters['type'] ?? '') === $type['code']) {
+        $activeFilters[] = $type['name_uk'];
+    }
+}
+foreach ($locations as $location) {
+    if (($filters['location'] ?? '') === $location['slug']) {
+        $activeFilters[] = $location['city'];
+    }
+}
+if (($filters['price_min'] ?? null) !== null || ($filters['price_max'] ?? null) !== null) {
+    $activeFilters[] = 'Бюджет';
+}
+if (($filters['area_min'] ?? null) !== null) {
+    $activeFilters[] = 'Від ' . $number($filters['area_min']) . ' м²';
+}
+if (($filters['rooms_min'] ?? null) !== null) {
+    $activeFilters[] = 'Від ' . $number($filters['rooms_min']) . ' кімн.';
+}
+
+$itemList = [
+    '@context' => 'https://schema.org',
+    '@type' => 'ItemList',
+    'name' => 'Каталог нерухомості Terra Nova CLUB',
+    'numberOfItems' => count($properties),
+    'itemListElement' => [],
+];
+foreach ($properties as $index => $property) {
+    $itemList['itemListElement'][] = [
+        '@type' => 'ListItem',
+        'position' => $index + 1,
+        'url' => $absoluteUrl('property/show/' . $property['slug']),
+        'name' => $property['title'],
+    ];
+}
+
+$breadcrumbJson = [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Головна', 'item' => $absoluteUrl()],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Каталог', 'item' => $absoluteUrl('property/catalog')],
+    ],
+];
 ?>
 
-<header class="tn-header" data-header>
-  <a class="tn-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova CLUB">
-    <span class="tn-logo__mark">TN</span>
-    <span class="tn-logo__text"><strong>Terra Nova</strong><small>CLUB</small></span>
-  </a>
+<script type="application/ld+json"><?php echo json_encode($breadcrumbJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+<script type="application/ld+json"><?php echo json_encode($itemList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
 
-  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button>
-    <span></span><span></span><span></span>
-  </button>
-
-  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a>
-    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-    <a href="<?php echo $this->url->get('property/catalog?deal_type=investment'); ?>">Інвестиції</a>
-    <a href="#lead">Заявка</a>
-  </nav>
-
-  <div class="tn-header-actions">
-    <a class="tn-btn tn-btn--ghost" href="#lead">Подати об'єкт</a>
-    <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get(); ?>#estatebook">CRM</a>
-  </div>
-</header>
+<?php $this->partial('shared/public_header', [
+    'active' => 'catalog',
+    'actions' => [
+        ['href' => 'cabinet', 'label' => 'Кабінет', 'class' => 'tn-btn--ghost'],
+        ['href' => '#request', 'label' => 'Заявка на підбір', 'class' => 'tn-btn--dark'],
+    ],
+]); ?>
 
 <main class="tn-page">
+  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
+    <a href="<?php echo $this->url->get(); ?>">Головна</a>
+    <span>/</span>
+    <span>Каталог нерухомості</span>
+  </nav>
+
   <section class="tn-page-hero tn-page-hero--catalog">
     <div>
       <p class="tn-kicker">Каталог Terra Nova</p>
-      <h1>Об'єкти для купівлі, оренди та інвестицій</h1>
-      <p>Перший робочий каталог Release 0: дані вже йдуть з MySQL, а структура готова для MLS, CRM і модерації.</p>
+      <h1>Нерухомість для купівлі, оренди та інвестицій</h1>
+      <p>Відібрані квартири, будинки, комерційні площі та інвестиційні об’єкти з медіа, параметрами, швидким запитом і підготовкою до MLS.</p>
+      <div class="tn-hero-search">
+        <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
+          <input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Пошук за містом, назвою, ID або адресою">
+          <button class="tn-btn tn-btn--dark" type="submit">Знайти</button>
+        </form>
+      </div>
+      <div class="tn-catalog-quick-links">
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=sale'); ?>">Купити</a>
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=rent'); ?>">Орендувати</a>
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=investment'); ?>">Інвестиції</a>
+        <a href="<?php echo $this->url->get('property/map'); ?>">На карті</a>
+      </div>
     </div>
     <div class="tn-page-hero__meta">
-      <strong><?php echo count($properties); ?></strong>
-      <span>об'єкти у вибірці</span>
+      <strong><?php echo (int) $resultCount; ?></strong>
+      <span>об’єктів доступно</span>
+    </div>
+  </section>
+
+  <section class="tn-catalog-insights" aria-label="Огляд каталогу">
+    <div>
+      <span>Доступно</span>
+      <strong><?php echo (int) ($catalogStats['total'] ?? $resultCount); ?></strong>
+    </div>
+    <div>
+      <span>Бюджет від</span>
+      <strong><?php echo $h($money($catalogStats['price_min'] ?? null)); ?></strong>
+    </div>
+    <div>
+      <span>Бюджет до</span>
+      <strong><?php echo $h($money($catalogStats['price_max'] ?? null)); ?></strong>
+    </div>
+    <div>
+      <span>Середня площа</span>
+      <strong><?php echo ($catalogStats['area_avg'] ?? null) ? $h($number($catalogStats['area_avg'])) . ' м²' : '—'; ?></strong>
+    </div>
+  </section>
+
+  <?php $this->partial('shared/catalog_viewbar', ['active' => 'catalog']); ?>
+
+  <section class="tn-catalog-section-nav" aria-label="Розділи каталогу">
+    <div>
+      <span>Типи</span>
+      <?php foreach (array_slice($types, 0, 6) as $type): ?>
+        <a href="<?php echo $this->url->get('property/type/' . $type['code']); ?>"><?php echo $h($type['name_uk']); ?></a>
+      <?php endforeach; ?>
+    </div>
+    <div>
+      <span>Міста</span>
+      <?php foreach (array_slice($locations, 0, 5) as $location): ?>
+        <a href="<?php echo $this->url->get('property/city/' . $location['slug']); ?>"><?php echo $h($location['city']); ?></a>
+      <?php endforeach; ?>
     </div>
   </section>
 
   <section class="tn-catalog-layout">
-    <aside class="tn-filter-panel">
+    <aside class="tn-filter-panel" aria-label="Фільтри каталогу">
       <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
+        <label>
+          <span>Пошук</span>
+          <input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Місто, ID, адреса">
+        </label>
+
         <label>
           <span>Операція</span>
           <select name="deal_type">
@@ -90,7 +217,7 @@ $locations = $locations ?? [];
           <select name="location">
             <option value="">Усі міста</option>
             <?php foreach ($locations as $location): ?>
-              <option value="<?php echo $h($location['slug']); ?>" <?php echo ($filters['location'] ?? '') === $location['slug'] ? 'selected' : ''; ?>><?php echo $h($location['city']); ?></option>
+              <option value="<?php echo $h($location['slug']); ?>" <?php echo ($filters['location'] ?? '') === $location['slug'] ? 'selected' : ''; ?>><?php echo $h($location['city']); ?><?php if (!empty($location['region'])): ?>, <?php echo $h($location['region']); ?><?php endif; ?></option>
             <?php endforeach; ?>
           </select>
         </label>
@@ -106,25 +233,68 @@ $locations = $locations ?? [];
           </label>
         </div>
 
+        <div class="tn-filter-panel__range">
+          <label>
+            <span>Площа від</span>
+            <input name="area_min" type="number" min="0" step="5" value="<?php echo $h($filters['area_min'] ?? ''); ?>">
+          </label>
+          <label>
+            <span>Кімнат від</span>
+            <input name="rooms_min" type="number" min="0" step="1" value="<?php echo $h($filters['rooms_min'] ?? ''); ?>">
+          </label>
+        </div>
+
+        <label>
+          <span>Сортування</span>
+          <select name="sort">
+            <?php foreach ($sortLabels as $value => $label): ?>
+              <option value="<?php echo $h($value); ?>" <?php echo (($filters['sort'] ?? '') ?: 'newest') === $value ? 'selected' : ''; ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+
         <button class="tn-btn tn-btn--accent" type="submit">Показати</button>
         <a class="tn-filter-panel__reset" href="<?php echo $this->url->get('property/catalog'); ?>">Скинути фільтри</a>
       </form>
     </aside>
 
-    <section class="tn-catalog-results" aria-label="Список об'єктів">
-      <?php if (!$properties): ?>
+    <section class="tn-catalog-results" aria-label="Список об’єктів">
+      <div class="tn-results-bar">
+        <div>
+          <p class="tn-kicker">Результати</p>
+          <h2><?php echo (int) $resultCount; ?> об’єктів</h2>
+        </div>
+        <?php if ($activeFilters): ?>
+          <div class="tn-active-filters">
+            <?php foreach ($activeFilters as $filter): ?><span><?php echo $h($filter); ?></span><?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
+
+      <?php if ($catalogStatus): ?>
         <div class="tn-empty-state">
-          <h2>За цими фільтрами об'єктів поки немає</h2>
-          <p>Змініть параметри або залиште заявку, і ми підготуємо добірку вручну.</p>
-          <a class="tn-btn tn-btn--dark" href="#lead">Залишити заявку</a>
+          <h2>Каталог тимчасово недоступний</h2>
+          <p><?php echo $h($catalogStatus); ?></p>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($propertyMatchStatus): ?><p class="tn-form-status is-visible"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
+
+      <?php if (!$properties && !$catalogStatus): ?>
+        <div class="tn-empty-state">
+          <h2>За цими фільтрами об’єктів поки немає</h2>
+          <p>Змініть параметри або залиште запит, і ми підготуємо добірку вручну.</p>
+          <a class="tn-btn tn-btn--dark" href="#request">Залишити запит</a>
         </div>
       <?php endif; ?>
 
       <div class="tn-property-grid tn-property-grid--catalog">
         <?php foreach ($properties as $property): ?>
-          <article class="tn-property-card">
-            <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
-              <img src="<?php echo $h($property['cover_url'] ?: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'); ?>" alt="<?php echo $h($property['title']); ?>">
+          <article class="tn-property-card" itemscope itemtype="https://schema.org/Product">
+            <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" itemprop="url">
+              <img src="<?php echo $h($property['cover_url'] ?: $fallbackImage); ?>" alt="<?php echo $h($property['title']); ?>" itemprop="image">
+              <?php if ((int) ($property['is_featured'] ?? 0) === 1): ?><span class="tn-card-badge">Top</span><?php endif; ?>
+              <span class="tn-card-media-badge"><?php echo (int) ($property['image_count'] ?? 0) > 0 ? (int) $property['image_count'] . ' фото' : 'фото готується'; ?></span>
             </a>
             <div class="tn-property-card__body">
               <div class="tn-card-tags">
@@ -132,22 +302,42 @@ $locations = $locations ?? [];
                 <span><?php echo $h($property['type_name']); ?></span>
                 <?php if ((int) $property['has_3d_tour'] === 1): ?><span>3D tour</span><?php endif; ?>
               </div>
-              <h2><a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a></h2>
-              <p><?php echo $h($property['short_description']); ?></p>
+              <h2 itemprop="name"><a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a></h2>
+              <p itemprop="description"><?php echo $h($property['short_description']); ?></p>
               <div class="tn-property-facts">
                 <span><?php echo $h($property['city']); ?></span>
-                <?php if ($property['area_total']): ?><span><?php echo $h((float) $property['area_total']); ?> м²</span><?php endif; ?>
-                <?php if ($property['rooms']): ?><span><?php echo $h((float) $property['rooms']); ?> кімн.</span><?php endif; ?>
+                <?php if ($property['area_total']): ?><span><?php echo $h($number($property['area_total'])); ?> м²</span><?php endif; ?>
+                <?php if ($property['rooms']): ?><span><?php echo $h($number($property['rooms'])); ?> кімн.</span><?php endif; ?>
                 <span><?php echo $h($statusLabels[$property['status']] ?? $property['status']); ?></span>
+                <span><?php echo $h($sourceLabels[$property['source_type']] ?? $property['source_type']); ?></span>
               </div>
-              <div class="tn-property-meta">
+              <div class="tn-property-meta" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+                <?php if ($property['price_amount']): ?>
+                  <meta itemprop="price" content="<?php echo $h($property['price_amount']); ?>">
+                  <meta itemprop="priceCurrency" content="<?php echo $h($property['price_currency']); ?>">
+                <?php endif; ?>
                 <span><?php echo $h($property['public_id']); ?></span>
               </div>
               <div class="tn-card-actions">
                 <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Деталі</a>
-                <button type="button" data-toggle-text="У добірці">В добірку</button>
+                <a class="tn-btn tn-btn--ghost" href="#request">Запит</a>
+                <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Вибрати</button>
               </div>
+              <?php if ($managerClientCases): ?>
+                <form class="tn-card-crm-form" action="<?php echo $this->url->get('client-case/matchProperty'); ?>" method="post">
+                  <input type="hidden" name="property_id" value="<?php echo (int) $property['id']; ?>">
+                  <input type="hidden" name="return_url" value="<?php echo $h($returnUrl); ?>">
+                  <input type="hidden" name="match_status" value="suggested">
+                  <select name="case_id" aria-label="Кейс для підбору" required>
+                    <option value="">Додати в кейс</option>
+                    <?php foreach ($managerClientCases as $clientCase): ?>
+                      <option value="<?php echo (int) $clientCase['id']; ?>"><?php echo $h($clientCase['public_id'] . ' / ' . $clientCase['full_name']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <button type="submit">Додати</button>
+                </form>
+              <?php endif; ?>
             </div>
           </article>
         <?php endforeach; ?>
@@ -155,36 +345,38 @@ $locations = $locations ?? [];
     </section>
   </section>
 
-  <section class="tn-lead" id="lead">
-    <div class="tn-section__head">
-      <p class="tn-kicker">Заявка</p>
-      <h2>Потрібна добірка або хочете подати об'єкт?</h2>
+  <section class="tn-seo-panel">
+    <div>
+      <p class="tn-kicker">Публічна вітрина</p>
+      <h2>Каталог із фільтрами, SEO-сторінками та готовністю до MLS</h2>
     </div>
-    <form class="tn-lead-form" action="<?php echo $this->url->get('property/catalog'); ?>#lead" method="post">
-      <label><span>Ім'я</span><input name="full_name" type="text" autocomplete="name" required></label>
+    <p>Кожен об’єкт має окрему сторінку, медіа, характеристики, заявку, breadcrumbs і структуровані дані. Категорії та міста працюють як окремі посадкові сторінки для органічного трафіку.</p>
+  </section>
+
+  <section class="tn-inbound-request" id="request">
+    <div class="tn-section__head">
+      <p class="tn-kicker">Запит</p>
+      <h2>Потрібна добірка або хочете подати об’єкт?</h2>
+    </div>
+    <form class="tn-inbound-request-form" action="<?php echo $this->url->get('property/catalog'); ?>#request" method="post">
+      <label class="tn-hp" aria-hidden="true"><span>Website</span><input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+      <label><span>Ім’я</span><input name="full_name" type="text" autocomplete="name" required></label>
       <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required></label>
       <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
-      <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип об'єкта або короткий опис задачі"></textarea></label>
+      <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип об’єкта або короткий опис задачі"></textarea></label>
       <button class="tn-btn tn-btn--dark" type="submit">Надіслати заявку</button>
-      <?php if ($leadStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($leadStatus); ?></p><?php endif; ?>
+      <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
     </form>
   </section>
 </main>
 
-<nav class="tn-mobile-dock" aria-label="Швидкі дії">
-  <a href="<?php echo $this->url->get(); ?>">Головна</a>
-  <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-  <a href="#lead">Заявка</a>
-</nav>
+<?php $this->partial('shared/mobile_dock', ['active' => 'catalog']); ?>
 
-<footer class="tn-footer">
-  <div>
-    <strong>Terra Nova CLUB</strong>
-    <p>Каталог, MLS, 3D-презентації, CRM і партнерські продажі в єдиній екосистемі.</p>
-  </div>
-  <div class="tn-footer__links">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a>
-    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-    <a href="#lead">Контакти</a>
-  </div>
-</footer>
+<?php $this->partial('shared/public_footer', [
+    'text' => 'Каталог, MLS, 3D-презентації, CRM і партнерські продажі в єдиній екосистемі.',
+    'links' => [
+        ['path' => '', 'label' => 'Головна'],
+        ['path' => 'property/catalog', 'label' => 'Каталог'],
+        ['path' => '#request', 'label' => 'Контакти'],
+    ],
+]); ?>

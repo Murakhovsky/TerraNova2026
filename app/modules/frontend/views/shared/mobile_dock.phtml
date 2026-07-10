@@ -1,0 +1,22 @@
+<?php
+$active = $active ?? '';
+$items = $items ?? [
+    ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Каталог'],
+    ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
+    ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
+    ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати'],
+];
+$href = function (string $path): string {
+    if (str_starts_with($path, '#') || str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'tel:') || str_starts_with($path, 'mailto:')) {
+        return $path;
+    }
+
+    return $this->url->get($path);
+};
+?>
+
+<nav class="tn-mobile-dock" aria-label="Швидкі дії">
+  <?php foreach ($items as $item): ?>
+    <a class="<?php echo $active === ($item['key'] ?? '') ? 'is-active' : ''; ?>" href="<?php echo $href((string) $item['path']); ?>"><?php echo $item['label']; ?></a>
+  <?php endforeach; ?>
+</nav>

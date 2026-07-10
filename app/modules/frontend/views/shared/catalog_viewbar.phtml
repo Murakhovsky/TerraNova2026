@@ -1,0 +1,16 @@
+<?php
+$active = $active ?? 'catalog';
+$items = [
+    ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Картки'],
+    ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
+    ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
+    ['key' => 'compare', 'path' => 'property/compare', 'label' => 'Порівняння'],
+    ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
+];
+?>
+
+<nav class="tn-catalog-viewbar" aria-label="Режим перегляду каталогу">
+  <?php foreach ($items as $item): ?>
+    <a class="<?php echo $active === $item['key'] ? 'is-active' : ''; ?>" href="<?php echo $this->url->get($item['path']); ?>"><?php echo $item['label']; ?></a>
+  <?php endforeach; ?>
+</nav>

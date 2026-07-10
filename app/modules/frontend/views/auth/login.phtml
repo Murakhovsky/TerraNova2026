@@ -1,0 +1,36 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$field = static fn($data, $name) => htmlspecialchars((string) ($data[$name] ?? ''), ENT_QUOTES, 'UTF-8');
+$formData = $formData ?? [];
+$authStatus = $authStatus ?? null;
+?>
+
+<header class="tn-header" data-header>
+  <a class="tn-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova CLUB">
+    <span class="tn-logo__mark">TN</span>
+    <span class="tn-logo__text"><strong>Terra Nova</strong><small>CLUB</small></span>
+  </a>
+  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button><span></span><span></span><span></span></button>
+  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
+    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+    <a href="<?php echo $this->url->get('property/submit'); ?>">Подати об’єкт</a>
+    <a href="<?php echo $this->url->get('auth/register'); ?>">Реєстрація</a>
+  </nav>
+</header>
+
+<main class="tn-page">
+  <section class="tn-auth-layout">
+    <div class="tn-auth-copy">
+      <p class="tn-kicker">Terra Nova CLUB</p>
+      <h1>Вхід у кабінет</h1>
+      <p>Кабінет зберігає ваші подані об’єкти, заявки, майбутні добірки, перегляди й персональні сценарії Terra Nova.</p>
+    </div>
+    <form class="tn-auth-form" action="<?php echo $this->url->get('auth/login'); ?>" method="post">
+      <label><span>Email</span><input name="email" type="email" autocomplete="email" value="<?php echo $field($formData, 'email'); ?>" required></label>
+      <label><span>Пароль</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="tn-btn tn-btn--accent" type="submit">Увійти</button>
+      <?php if ($authStatus): ?><p class="tn-form-status is-visible"><?php echo $h($authStatus); ?></p><?php endif; ?>
+      <p class="tn-auth-form__note">Ще немає акаунта? <a href="<?php echo $this->url->get('auth/register'); ?>">Зареєструватися</a></p>
+    </form>
+  </section>
+</main>

@@ -1,0 +1,68 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$properties = $properties ?? [];
+$catalogStatus = $catalogStatus ?? null;
+?>
+
+<?php $this->partial('shared/public_header', ['active' => 'map']); ?>
+
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div>
+      <p class="tn-kicker">Карта об’єктів</p>
+      <h1>Географія каталогу Terra Nova</h1>
+      <p>Швидкий огляд локацій, цін і доступних об’єктів. Карта працює як публічна точка входу: з неї можна перейти в картку, порівняння або повернутися до фільтрів каталогу.</p>
+    </div>
+    <div class="tn-page-hero__meta">
+      <strong><?php echo count($properties); ?></strong>
+      <span>точки на карті</span>
+    </div>
+  </section>
+
+  <section class="tn-map-workspace">
+    <?php $this->partial('shared/catalog_viewbar', ['active' => 'map']); ?>
+
+    <?php if ($catalogStatus): ?>
+      <div class="tn-empty-state"><h2>Карта тимчасово недоступна</h2><p><?php echo $h($catalogStatus); ?></p></div>
+    <?php elseif (!$properties): ?>
+      <div class="tn-empty-state"><h2>На карті поки немає об’єктів</h2><p>Поверніться в каталог і змініть фільтри або подайте новий об’єкт на модерацію.</p></div>
+    <?php else: ?>
+      <div class="tn-map-canvas" aria-label="Карта об’єктів Terra Nova">
+        <?php foreach ($properties as $index => $property): ?>
+          <?php
+            $left = 16 + (($index * 29) % 68);
+            $top = 18 + (($index * 23) % 58);
+          ?>
+          <a class="tn-map-pin" style="left: <?php echo $left; ?>%; top: <?php echo $top; ?>%;" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
+            <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+            <span><?php echo $h($property['city']); ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+
+      <div class="tn-map-list">
+        <?php foreach ($properties as $property): ?>
+          <article>
+            <div>
+              <p class="tn-kicker"><?php echo $h($property['public_id']); ?></p>
+              <h2><a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a></h2>
+              <p><?php echo $h($property['city']); ?><?php if ($property['address']): ?> / <?php echo $h($property['address']); ?><?php endif; ?></p>
+            </div>
+            <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </section>
+</main>
+
+<?php $this->partial('shared/mobile_dock', ['active' => 'map']); ?>

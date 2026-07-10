@@ -4,7 +4,10 @@ declare(strict_types=1);
 use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
 use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
 use Phalcon\Mvc\View;
+use Common\Services\AuthService;
+use Common\Services\DatabaseService;
 use Common\Services\EventService;
+use Common\Services\MediaStorageService;
 
 /**
  * Shared configuration service
@@ -33,6 +36,18 @@ $di->setShared('db', function () {
     }
 
     return new $class($params);
+});
+
+$di->setShared('databaseService', function () {
+    return new DatabaseService($this->getConfig()->database);
+});
+
+$di->setShared('mediaStorageService', function () {
+    return new MediaStorageService($this->getShared('databaseService'));
+});
+
+$di->setShared('authService', function () {
+    return new AuthService($this->getShared('databaseService'), $this->getShared('session'));
 });
 
 /**

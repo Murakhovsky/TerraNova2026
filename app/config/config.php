@@ -5,7 +5,8 @@
  */
 defined('BASE_PATH') || define('BASE_PATH', getenv('BASE_PATH') ?: realpath(dirname(__FILE__) . '/../..'));
 defined('APP_PATH') || define('APP_PATH', BASE_PATH . '/app');
-defined('DOMAIN_NAME') || define('DOMAIN_NAME', 'https://' . $_SERVER["HTTP_HOST"]);
+$httpHost = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
+defined('DOMAIN_NAME') || define('DOMAIN_NAME', 'https://' . $httpHost);
 
 return new \Phalcon\Config\Config([
     'version' => '1.0',

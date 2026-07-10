@@ -1,0 +1,80 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$properties = $properties ?? [];
+$catalogStatus = $catalogStatus ?? null;
+?>
+
+<?php $this->partial('shared/public_header', ['active' => 'compare']); ?>
+
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div>
+      <p class="tn-kicker">Порівняння</p>
+      <h1>Параметри об’єктів поруч</h1>
+      <p>Табличний режим для швидкого вибору: ціна, площа, кімнати, поверховість, рік, 3D-готовність і перехід у повну картку.</p>
+    </div>
+    <div class="tn-page-hero__meta">
+      <strong><?php echo count($properties); ?></strong>
+      <span>об’єкти для аналізу</span>
+    </div>
+  </section>
+
+  <section class="tn-compare-workspace">
+    <?php $this->partial('shared/catalog_viewbar', ['active' => 'compare']); ?>
+
+    <?php if ($catalogStatus): ?>
+      <div class="tn-empty-state"><h2>Дані тимчасово недоступні</h2><p><?php echo $h($catalogStatus); ?></p></div>
+    <?php elseif (!$properties): ?>
+      <div class="tn-empty-state"><h2>Немає об’єктів для порівняння</h2><p>Поверніться в каталог або змініть фільтри.</p></div>
+    <?php else: ?>
+      <div class="tn-listing-table-wrap">
+        <table class="tn-listing-table tn-compare-table">
+          <thead>
+            <tr>
+              <th>Об’єкт</th>
+              <th>Місто</th>
+              <th>Тип</th>
+              <th>Ціна</th>
+              <th>Площа</th>
+              <th>Кімнат</th>
+              <th>Поверх</th>
+              <th>Рік</th>
+              <th>3D</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($properties as $property): ?>
+              <tr>
+                <td>
+                  <a class="tn-listing-title" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a>
+                  <span><?php echo $h($property['public_id']); ?></span>
+                </td>
+                <td><?php echo $h($property['city']); ?></td>
+                <td><?php echo $h($property['type_name']); ?></td>
+                <td><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></td>
+                <td><?php echo $property['area_total'] ? $h((float) $property['area_total']) . ' м²' : '—'; ?></td>
+                <td><?php echo $property['rooms'] ? $h((float) $property['rooms']) : '—'; ?></td>
+                <td><?php echo $property['floor'] ? $h($property['floor']) . ' / ' . $h($property['floors'] ?: '—') : '—'; ?></td>
+                <td><?php echo $h($property['built_year'] ?: '—'); ?></td>
+                <td><?php echo (int) $property['has_3d_tour'] === 1 ? 'так' : 'ні'; ?></td>
+                <td><button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Вибрати</button></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </section>
+</main>
+
+<?php $this->partial('shared/mobile_dock', ['active' => 'compare']); ?>

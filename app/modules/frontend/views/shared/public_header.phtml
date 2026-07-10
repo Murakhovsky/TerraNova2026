@@ -1,0 +1,44 @@
+<?php
+$active = $active ?? '';
+$actions = $actions ?? [];
+$navItems = [
+    ['key' => 'home', 'path' => '', 'label' => 'Головна'],
+    ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Каталог'],
+    ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
+    ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
+    ['key' => 'compare', 'path' => 'property/compare', 'label' => 'Порівняння'],
+    ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
+    ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати об’єкт'],
+];
+$href = function (string $path): string {
+    if ($path === '' || $path === '/') {
+        return $this->url->get();
+    }
+
+    if (str_starts_with($path, '#') || str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'tel:') || str_starts_with($path, 'mailto:')) {
+        return $path;
+    }
+
+    return $this->url->get($path);
+};
+?>
+
+<header class="tn-header" data-header>
+  <a class="tn-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova CLUB">
+    <span class="tn-logo__mark">TN</span>
+    <span class="tn-logo__text"><strong>Terra Nova</strong><small>CLUB</small></span>
+  </a>
+  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button><span></span><span></span><span></span></button>
+  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
+    <?php foreach ($navItems as $item): ?>
+      <a class="<?php echo $active === $item['key'] ? 'is-active' : ''; ?>" href="<?php echo $href($item['path']); ?>"><?php echo $item['label']; ?></a>
+    <?php endforeach; ?>
+  </nav>
+  <?php if ($actions): ?>
+    <div class="tn-header-actions">
+      <?php foreach ($actions as $action): ?>
+        <a class="tn-btn <?php echo $action['class'] ?? 'tn-btn--ghost'; ?>" href="<?php echo $href((string) ($action['href'] ?? '')); ?>"><?php echo $action['label'] ?? ''; ?></a>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</header>

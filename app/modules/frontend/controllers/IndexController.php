@@ -10,22 +10,21 @@ class IndexController extends ControllerBase
     public function indexAction(): void
     {
         $this->view->featuredProperties = [];
-        $this->view->leadStatus = null;
+        $this->view->inboundRequestStatus = null;
         $this->view->catalogStatus = null;
 
         try {
-            $pdo = $this->getPdo();
-
             if ($this->request->isPost()) {
-                $this->view->leadStatus = $this->storeLead($pdo);
+                $this->view->inboundRequestStatus = $this->submitInboundRequest();
             }
 
-            $this->view->featuredProperties = $this->fetchFeaturedProperties($pdo, 3);
+            $this->view->featuredProperties = $this->catalogService()->featuredProperties(3);
         } catch (Throwable $e) {
-            $this->view->catalogStatus = 'Каталог тимчасово недоступний. Публічна сторінка працює, а об’єкти підтягнуться після відновлення з’єднання з БД.';
+            $this->logFrontendError('home-page', $e);
+            $this->view->catalogStatus = 'РљР°С‚Р°Р»РѕРі С‚РёРјС‡Р°СЃРѕРІРѕ РЅРµРґРѕСЃС‚СѓРїРЅРёР№. РџСѓР±Р»С–С‡РЅР° СЃС‚РѕСЂС–РЅРєР° РїСЂР°С†СЋС”, Р° РѕР±вЂ™С”РєС‚Рё РїС–РґС‚СЏРіРЅСѓС‚СЊСЃСЏ РїС–СЃР»СЏ РІС–РґРЅРѕРІР»РµРЅРЅСЏ Р·вЂ™С”РґРЅР°РЅРЅСЏ Р· Р‘Р”.';
 
             if ($this->request->isPost()) {
-                $this->view->leadStatus = 'Заявку не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
+                $this->view->inboundRequestStatus = 'Р—Р°СЏРІРєСѓ РЅРµ РІРґР°Р»РѕСЃСЏ Р·Р±РµСЂРµРіС‚Рё. РЎРїСЂРѕР±СѓР№С‚Рµ С‰Рµ СЂР°Р· Р°Р±Рѕ РЅР°РїРёС€С–С‚СЊ РЅР°Рј РЅР°РїСЂСЏРјСѓ.';
             }
         }
     }
