@@ -251,7 +251,7 @@ class ClientCaseService
 
         $orderBy = match ($filters['sort'] ?? 'newest') {
             'next_contact' => 'l.next_contact_at IS NULL, l.next_contact_at ASC, l.created_at DESC',
-            'status' => 'FIELD(l.status, "new", "contacted", "qualified", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC',
+            'status' => 'FIELD(l.status, "new", "contacted", "qualified", "viewing_planned", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC',
             default => 'l.created_at DESC, l.id DESC',
         };
 
@@ -339,7 +339,7 @@ class ClientCaseService
                 : ($request['assigned_user_id'] ?? null);
             $managerNote = $this->nullableText((string) ($input['manager_note'] ?? ($request['manager_note'] ?? '')));
             $nextContactAt = $this->dateTimeOrNull((string) ($input['next_contact_at'] ?? ''));
-            $contactedStatuses = ['contacted', 'qualified', 'viewing', 'negotiation', 'won', 'lost'];
+            $contactedStatuses = ['contacted', 'qualified', 'viewing_planned', 'viewing', 'negotiation', 'won', 'lost'];
             $lastContactedAt = in_array($status, $contactedStatuses, true)
                 ? (($request['last_contacted_at'] ?? null) ?: date('Y-m-d H:i:s'))
                 : ($request['last_contacted_at'] ?? null);
@@ -1192,7 +1192,7 @@ class ClientCaseService
 
     private function leadStatuses(): array
     {
-        return ['new', 'contacted', 'qualified', 'viewing', 'negotiation', 'won', 'lost', 'spam', 'closed'];
+        return ['new', 'contacted', 'qualified', 'viewing_planned', 'viewing', 'negotiation', 'won', 'lost', 'spam', 'closed'];
     }
 
     private function requestIntents(): array
@@ -1211,6 +1211,7 @@ class ClientCaseService
             'new' => 'Нова',
             'contacted' => 'Контакт був',
             'qualified' => 'Кваліфікована',
+            'viewing_planned' => 'Перегляд заплановано',
             'viewing' => 'Перегляд',
             'negotiation' => 'Переговори',
             'won' => 'Успіх',
@@ -1242,6 +1243,7 @@ class ClientCaseService
             'new' => 'new',
             'contacted' => 'qualification',
             'qualified' => 'qualification',
+            'viewing_planned' => 'viewing',
             'viewing' => 'viewing',
             'negotiation' => 'negotiation',
             'won' => 'deal',

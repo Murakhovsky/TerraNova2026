@@ -14,6 +14,9 @@ $dealTypes = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' =
 $sources = ['own' => 'Власний', 'partner' => 'Партнер', 'realtor' => 'Рієлтор', 'owner' => 'Власник', 'developer' => 'Девелопер'];
 $currencies = ['USD' => 'USD', 'EUR' => 'EUR', 'UAH' => 'UAH'];
 $periods = ['total' => 'За об’єкт', 'month' => 'За місяць', 'day' => 'За день'];
+$commissionTypes = ['none' => 'Не задано', 'percent' => '%', 'fixed' => 'Фіксована', 'included' => 'Включена в ціну'];
+$visibilityLabels = ['public' => 'Публічно', 'team' => 'Команда', 'partners' => 'Партнери', 'private' => 'Приватно'];
+$priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 'high' => 'Високий', 'urgent' => 'Терміновий'];
 $stageLabels = [
   'intake' => 'Первинне внесення',
   'verification' => 'Перевірка даних',
@@ -177,6 +180,38 @@ if ($stageRules) {
               <select name="price_period">
                 <?php foreach ($periods as $code => $label): ?>
                   <option value="<?php echo $h($code); ?>" <?php echo $selected('price_period', $code, 'total'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Мінімальна ціна</span>
+              <input name="min_price_amount" type="number" min="0" step="0.01" value="<?php echo $field('min_price_amount'); ?>">
+            </label>
+            <label>
+              <span>Тип комісії</span>
+              <select name="commission_type">
+                <?php foreach ($commissionTypes as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('commission_type', $code, 'none'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Комісія</span>
+              <input name="commission_value" type="number" min="0" step="0.01" value="<?php echo $field('commission_value'); ?>">
+            </label>
+            <label>
+              <span>Видимість</span>
+              <select name="visibility">
+                <?php foreach ($visibilityLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('visibility', $code, 'public'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Пріоритет продажу</span>
+              <select name="sale_priority">
+                <?php foreach ($priorityLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('sale_priority', $code, 'normal'); ?>><?php echo $h($label); ?></option>
                 <?php endforeach; ?>
               </select>
             </label>

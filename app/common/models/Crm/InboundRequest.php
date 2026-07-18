@@ -29,6 +29,8 @@ class InboundRequest extends Model
     public $utm_source;
     public $utm_medium;
     public $utm_campaign;
+    public $utm_content;
+    public $utm_term;
     public $created_at;
     public $updated_at;
 

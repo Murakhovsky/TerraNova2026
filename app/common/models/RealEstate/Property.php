@@ -21,6 +21,15 @@ class Property extends Model
     public $price_amount;
     public $price_currency;
     public $price_period;
+    public $min_price_amount;
+    public $commission_type;
+    public $commission_value;
+    public $visibility;
+    public $sale_priority;
+    public $reserved_until;
+    public $reserved_by_case_id;
+    public $fixed_client_case_id;
+    public $view_count;
     public $area_total;
     public $area_living;
     public $land_area;

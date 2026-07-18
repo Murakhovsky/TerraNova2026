@@ -141,7 +141,7 @@ class Module implements ModuleDefinitionInterface
         });
 
         $di->setShared('frontendInboundRequestService', function () {
-            return new InboundRequestService($this->getShared('frontendClientCaseService'));
+            return new InboundRequestService($this->getShared('frontendClientCaseService'), $this->getShared('databaseService'));
         });
 
         $di->setShared('frontendPropertySubmissionService', function () {

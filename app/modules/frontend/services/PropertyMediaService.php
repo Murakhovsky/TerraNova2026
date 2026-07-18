@@ -213,7 +213,7 @@ class PropertyMediaService
             SELECT g.*,
                    l.city, l.region,
                    COUNT(p.id) AS property_count,
-                   SUM(p.status = "published") AS published_count,
+                   SUM(p.status IN ("published", "active")) AS published_count,
                    SUM(p.status = "draft") AS draft_count,
                    SUM(p.status = "reserved") AS reserved_count,
                    SUM(p.status = "sold") AS sold_count
@@ -354,7 +354,7 @@ class PropertyMediaService
     {
         return [
             'q' => trim((string) ($query['q'] ?? '')),
-            'status' => $this->allowed((string) ($query['status'] ?? ''), ['draft', 'moderation', 'published', 'reserved', 'sold', 'archived'], ''),
+            'status' => $this->allowed((string) ($query['status'] ?? ''), $this->propertyStatuses(), ''),
             'deal_type' => $this->allowed((string) ($query['deal_type'] ?? ''), ['sale', 'rent', 'investment'], ''),
             'type_id' => max(0, (int) ($query['type_id'] ?? 0)),
             'location_id' => max(0, (int) ($query['location_id'] ?? 0)),
@@ -362,7 +362,9 @@ class PropertyMediaService
             'agent_id' => max(0, (int) ($query['agent_id'] ?? 0)),
             'source_type' => $this->allowed((string) ($query['source_type'] ?? ''), ['own', 'partner', 'realtor', 'owner', 'developer'], ''),
             'operational_stage' => $this->operationalStage((string) ($query['operational_stage'] ?? '')),
-            'quality' => $this->allowed((string) ($query['quality'] ?? ''), ['ready', 'not_ready', 'no_agent', 'no_photo', 'needs_status_note', 'overdue_action', 'no_next_action', 'stage_blocked'], ''),
+            'visibility' => $this->allowed((string) ($query['visibility'] ?? ''), $this->propertyVisibilityOptions(), ''),
+            'sale_priority' => $this->allowed((string) ($query['sale_priority'] ?? ''), $this->salePriorities(), ''),
+            'quality' => $this->allowed((string) ($query['quality'] ?? ''), ['ready', 'not_ready', 'no_agent', 'no_photo', 'no_price', 'no_commission', 'needs_status_note', 'overdue_action', 'no_next_action', 'stage_blocked'], ''),
             'sort' => $this->allowed((string) ($query['sort'] ?? ''), ['newest', 'updated', 'price_desc', 'price_asc', 'next_action'], 'updated'),
         ];
     }
@@ -377,7 +379,7 @@ class PropertyMediaService
             $params['q'] = '%' . $filters['q'] . '%';
         }
 
-        foreach (['status', 'deal_type', 'source_type'] as $field) {
+        foreach (['status', 'deal_type', 'source_type', 'visibility', 'sale_priority'] as $field) {
             if (($filters[$field] ?? '') !== '') {
                 $where[] = 'p.' . $field . ' = :' . $field;
                 $params[$field] = $filters[$field];
@@ -408,7 +410,10 @@ class PropertyMediaService
             SELECT
                 p.id, p.public_id, p.slug, p.title, p.deal_type, p.status, p.source_type,
                 p.type_id, p.location_id, p.property_group_id,
-                p.price_amount, p.price_currency, p.price_period, p.area_total, p.land_area, p.rooms,
+                p.price_amount, p.price_currency, p.price_period, p.min_price_amount,
+                p.commission_type, p.commission_value, p.visibility, p.sale_priority,
+                p.reserved_until, p.reserved_by_case_id, p.fixed_client_case_id, p.view_count,
+                p.area_total, p.land_area, p.rooms,
                 p.short_description, p.description, p.meta_title, p.meta_description,
                 p.manager_note, p.source_note, p.status_note, p.status_changed_at,
                 p.operational_stage, p.next_action_title, p.next_action_due_at, p.next_action_note,
@@ -474,6 +479,8 @@ class PropertyMediaService
             'not_ready' => 0,
             'no_agent' => 0,
             'no_photo' => 0,
+            'no_price' => 0,
+            'no_commission' => 0,
             'needs_status_note' => 0,
             'overdue_action' => 0,
             'no_next_action' => 0,
@@ -481,7 +488,7 @@ class PropertyMediaService
         ];
 
         foreach ($properties as $property) {
-            foreach (['ready', 'not_ready', 'no_agent', 'no_photo', 'needs_status_note', 'overdue_action', 'no_next_action', 'stage_blocked'] as $quality) {
+            foreach (['ready', 'not_ready', 'no_agent', 'no_photo', 'no_price', 'no_commission', 'needs_status_note', 'overdue_action', 'no_next_action', 'stage_blocked'] as $quality) {
                 if ($this->matchesQuality($property, $quality)) {
                     $stats[$quality]++;
                 }
@@ -502,11 +509,15 @@ class PropertyMediaService
         $stats = [
             'all' => 0,
             'draft' => 0,
+            'submitted' => 0,
             'moderation' => 0,
             'published' => 0,
+            'active' => 0,
+            'hidden' => 0,
             'reserved' => 0,
             'sold' => 0,
             'archived' => 0,
+            'needs_update' => 0,
         ];
 
         foreach ($rows as $row) {
@@ -592,6 +603,14 @@ class PropertyMediaService
                 'price_amount' => $this->decimalOrNull($input['price_amount'] ?? null),
                 'price_currency' => $this->allowed((string) ($input['price_currency'] ?? 'USD'), ['USD', 'EUR', 'UAH'], 'USD'),
                 'price_period' => $this->allowed((string) ($input['price_period'] ?? 'total'), ['total', 'month', 'day'], 'total'),
+                'min_price_amount' => $this->decimalOrNull($input['min_price_amount'] ?? null),
+                'commission_type' => $this->allowed((string) ($input['commission_type'] ?? 'none'), $this->commissionTypes(), 'none'),
+                'commission_value' => $this->decimalOrNull($input['commission_value'] ?? null),
+                'visibility' => $this->allowed((string) ($input['visibility'] ?? 'public'), $this->propertyVisibilityOptions(), 'public'),
+                'sale_priority' => $this->allowed((string) ($input['sale_priority'] ?? 'normal'), $this->salePriorities(), 'normal'),
+                'reserved_until' => $this->dateTimeOrNull((string) ($input['reserved_until'] ?? '')),
+                'reserved_by_case_id' => $this->existingCaseId($pdo, (int) ($input['reserved_by_case_id'] ?? 0), null),
+                'fixed_client_case_id' => $this->existingCaseId($pdo, (int) ($input['fixed_client_case_id'] ?? 0), null),
                 'area_total' => $this->decimalOrNull($input['area_total'] ?? null),
                 'land_area' => $this->decimalOrNull($input['land_area'] ?? null),
                 'rooms' => $this->decimalOrNull($input['rooms'] ?? null),
@@ -620,13 +639,19 @@ class PropertyMediaService
                 INSERT INTO tn_properties (
                     public_id, slug, title, deal_type, type_id, status, source_type, location_id, agent_id,
                     property_group_id,
-                    price_amount, price_currency, price_period, area_total, land_area, rooms,
+                    price_amount, price_currency, price_period, min_price_amount,
+                    commission_type, commission_value, visibility, sale_priority,
+                    reserved_until, reserved_by_case_id, fixed_client_case_id,
+                    area_total, land_area, rooms,
                     address, short_description, description, manager_note, source_note,
                     operational_stage, next_action_title, next_action_due_at, next_action_note
                 ) VALUES (
                     :public_id, :slug, :title, :deal_type, :type_id, :status, :source_type, :location_id, :agent_id,
                     :property_group_id,
-                    :price_amount, :price_currency, :price_period, :area_total, :land_area, :rooms,
+                    :price_amount, :price_currency, :price_period, :min_price_amount,
+                    :commission_type, :commission_value, :visibility, :sale_priority,
+                    :reserved_until, :reserved_by_case_id, :fixed_client_case_id,
+                    :area_total, :land_area, :rooms,
                     :address, :short_description, :description, :manager_note, :source_note,
                     :operational_stage, :next_action_title, :next_action_due_at, :next_action_note
                 )
@@ -669,7 +694,7 @@ class PropertyMediaService
 
     public function updateStatus(int $propertyId, string $status, string $note = '', ?int $userId = null): array
     {
-        $status = $this->allowed($status, ['draft', 'moderation', 'published', 'reserved', 'sold', 'archived'], '');
+        $status = $this->allowed($status, $this->propertyStatuses(), '');
         if ($status === '') {
             return ['ok' => false, 'message' => 'Невідомий статус об’єкта.'];
         }
@@ -693,7 +718,7 @@ class PropertyMediaService
 
             $imageCount = $this->imageCount($pdo, $propertyId);
 
-            if ($status === 'published') {
+            if ($this->isPublicStatus($status)) {
                 $readiness = $this->readinessForData($property, $imageCount);
                 if (!$readiness['ready']) {
                     $pdo->rollBack();
@@ -731,7 +756,7 @@ class PropertyMediaService
                     status_changed_at = :status_changed_at,
                     operational_stage = :operational_stage,
                     published_at = CASE
-                        WHEN :status_for_publish = "published" AND published_at IS NULL THEN NOW()
+                        WHEN :status_for_publish IN ("published", "active") AND published_at IS NULL THEN NOW()
                         ELSE published_at
                     END,
                     updated_at = NOW()
@@ -814,7 +839,7 @@ class PropertyMediaService
                 $slug = 'property-' . $propertyId;
             }
 
-            $status = $this->allowed((string) ($input['status'] ?? $property['status']), ['draft', 'moderation', 'published', 'reserved', 'sold', 'archived'], (string) $property['status']);
+            $status = $this->allowed((string) ($input['status'] ?? $property['status']), $this->propertyStatuses(), (string) $property['status']);
             $agentFallback = (int) ($property['agent_id'] ?? 0) > 0 ? (int) $property['agent_id'] : null;
             $agentInput = array_key_exists('agent_id', $input) ? (int) $input['agent_id'] : $agentFallback;
             $locationId = $this->existingLocationId($pdo, (int) ($input['location_id'] ?? 0), (int) $property['location_id']);
@@ -844,6 +869,14 @@ class PropertyMediaService
                 'price_amount' => $this->decimalOrNull($input['price_amount'] ?? null),
                 'price_currency' => $this->allowed((string) ($input['price_currency'] ?? $property['price_currency']), ['USD', 'EUR', 'UAH'], (string) $property['price_currency']),
                 'price_period' => $this->allowed((string) ($input['price_period'] ?? $property['price_period']), ['total', 'month', 'day'], (string) $property['price_period']),
+                'min_price_amount' => $this->decimalOrNull($input['min_price_amount'] ?? null),
+                'commission_type' => $this->allowed((string) ($input['commission_type'] ?? ($property['commission_type'] ?? 'none')), $this->commissionTypes(), (string) ($property['commission_type'] ?? 'none')),
+                'commission_value' => $this->decimalOrNull($input['commission_value'] ?? null),
+                'visibility' => $this->allowed((string) ($input['visibility'] ?? ($property['visibility'] ?? 'public')), $this->propertyVisibilityOptions(), (string) ($property['visibility'] ?? 'public')),
+                'sale_priority' => $this->allowed((string) ($input['sale_priority'] ?? ($property['sale_priority'] ?? 'normal')), $this->salePriorities(), (string) ($property['sale_priority'] ?? 'normal')),
+                'reserved_until' => $this->dateTimeOrNull((string) ($input['reserved_until'] ?? '')),
+                'reserved_by_case_id' => $this->existingCaseId($pdo, (int) ($input['reserved_by_case_id'] ?? 0), (int) ($property['reserved_by_case_id'] ?? 0) ?: null),
+                'fixed_client_case_id' => $this->existingCaseId($pdo, (int) ($input['fixed_client_case_id'] ?? 0), (int) ($property['fixed_client_case_id'] ?? 0) ?: null),
                 'area_total' => $this->decimalOrNull($input['area_total'] ?? null),
                 'area_living' => $this->decimalOrNull($input['area_living'] ?? null),
                 'land_area' => $this->decimalOrNull($input['land_area'] ?? null),
@@ -883,7 +916,7 @@ class PropertyMediaService
             }
 
             $imageCount = $this->imageCount($pdo, $propertyId);
-            if ($data['status'] === 'published') {
+            if ($this->isPublicStatus((string) $data['status'])) {
                 $readiness = $this->readinessForData($data, $imageCount);
                 if (!$readiness['ready']) {
                     $pdo->rollBack();
@@ -919,6 +952,14 @@ class PropertyMediaService
                     price_amount = :price_amount,
                     price_currency = :price_currency,
                     price_period = :price_period,
+                    min_price_amount = :min_price_amount,
+                    commission_type = :commission_type,
+                    commission_value = :commission_value,
+                    visibility = :visibility,
+                    sale_priority = :sale_priority,
+                    reserved_until = :reserved_until,
+                    reserved_by_case_id = :reserved_by_case_id,
+                    fixed_client_case_id = :fixed_client_case_id,
                     area_total = :area_total,
                     area_living = :area_living,
                     land_area = :land_area,
@@ -948,7 +989,7 @@ class PropertyMediaService
                     next_action_due_at = :next_action_due_at,
                     next_action_note = :next_action_note,
                     published_at = CASE
-                        WHEN :status_for_publish = "published" AND published_at IS NULL THEN NOW()
+                        WHEN :status_for_publish IN ("published", "active") AND published_at IS NULL THEN NOW()
                         ELSE published_at
                     END,
                     updated_at = NOW()
@@ -966,6 +1007,14 @@ class PropertyMediaService
                 'property_group_id' => 'група об’єктів',
                 'agent_id' => 'відповідальний агент',
                 'price_amount' => 'ціна',
+                'min_price_amount' => 'мінімальна ціна',
+                'commission_type' => 'тип комісії',
+                'commission_value' => 'комісія',
+                'visibility' => 'видимість',
+                'sale_priority' => 'пріоритет продажу',
+                'reserved_until' => 'термін резерву',
+                'reserved_by_case_id' => 'резерв за кейсом',
+                'fixed_client_case_id' => 'фіксація клієнта',
                 'area_total' => 'площа',
                 'short_description' => 'короткий опис',
                 'description' => 'повний опис',
@@ -1125,7 +1174,7 @@ class PropertyMediaService
         }
 
         if ($action === 'publish') {
-            return $this->updateStatus($propertyId, 'published', (string) ($input['status_note'] ?? ''), $userId);
+            return $this->updateStatus($propertyId, 'active', (string) ($input['status_note'] ?? ''), $userId);
         }
 
         $pdo = $this->database->connection();
@@ -1210,7 +1259,7 @@ class PropertyMediaService
                 return ['ok' => false, 'message' => 'Для цього обʼєкта немає наступного етапу.'];
             }
 
-            if ($nextStage === 'published' && (string) ($property['status'] ?? '') !== 'published') {
+            if ($nextStage === 'published' && !$this->isPublicStatus((string) ($property['status'] ?? ''))) {
                 $pdo->rollBack();
 
                 return ['ok' => false, 'message' => 'Для переходу в роботу на ринку спочатку опублікуйте обʼєкт.'];
@@ -1403,7 +1452,7 @@ class PropertyMediaService
             return $property;
         }
 
-        if ($status === 'published' && $this->operationalStageRank($stage) < $this->operationalStageRank('published')) {
+        if ($this->isPublicStatus($status) && $this->operationalStageRank($stage) < $this->operationalStageRank('published')) {
             $property['operational_stage'] = 'published';
         }
 
@@ -1460,7 +1509,7 @@ class PropertyMediaService
             }
         }
 
-        if (in_array($stage, ['published', 'negotiation'], true) && !in_array($status, ['published', 'reserved', 'sold'], true)) {
+        if (in_array($stage, ['published', 'negotiation'], true) && !in_array($status, ['published', 'active', 'reserved', 'sold'], true)) {
             $issues[] = 'спершу опублікуйте обʼєкт';
         }
 
@@ -1490,6 +1539,8 @@ class PropertyMediaService
             'not_ready' => empty($property['is_ready_to_publish']),
             'no_agent' => (int) ($property['agent_id'] ?? 0) <= 0,
             'no_photo' => (int) ($property['image_count'] ?? 0) <= 0,
+            'no_price' => ($property['price_amount'] ?? null) === null || (float) ($property['price_amount'] ?? 0) <= 0,
+            'no_commission' => !in_array((string) ($property['commission_type'] ?? 'none'), ['percent', 'fixed', 'included'], true),
             'needs_status_note' => $this->requiresStatusNote((string) ($property['status'] ?? ''))
                 && trim((string) ($property['status_note'] ?? '')) === '',
             'overdue_action' => $this->isActionOverdue($property['next_action_due_at'] ?? null),
@@ -1513,6 +1564,14 @@ class PropertyMediaService
 
         if ($this->matchesQuality($property, 'no_photo')) {
             $issues[] = 'без фото';
+        }
+
+        if ($this->matchesQuality($property, 'no_price')) {
+            $issues[] = 'без ціни';
+        }
+
+        if ($this->matchesQuality($property, 'no_commission')) {
+            $issues[] = 'без комісії';
         }
 
         if ($this->matchesQuality($property, 'needs_status_note')) {
@@ -1594,6 +1653,18 @@ class PropertyMediaService
         }
 
         $statement = $pdo->prepare('SELECT id FROM tn_agents WHERE id = :id AND is_active = 1 LIMIT 1');
+        $statement->execute(['id' => $id]);
+
+        return $statement->fetchColumn() ? $id : $fallback;
+    }
+
+    private function existingCaseId(PDO $pdo, ?int $id, ?int $fallback): ?int
+    {
+        if (!$id || $id <= 0) {
+            return null;
+        }
+
+        $statement = $pdo->prepare('SELECT id FROM tn_client_cases WHERE id = :id LIMIT 1');
         $statement->execute(['id' => $id]);
 
         return $statement->fetchColumn() ? $id : $fallback;
@@ -1785,6 +1856,31 @@ class PropertyMediaService
     private function allowed(string $value, array $allowed, string $fallback): string
     {
         return in_array($value, $allowed, true) ? $value : $fallback;
+    }
+
+    private function propertyStatuses(): array
+    {
+        return ['draft', 'submitted', 'moderation', 'published', 'active', 'hidden', 'reserved', 'sold', 'archived', 'needs_update'];
+    }
+
+    private function isPublicStatus(string $status): bool
+    {
+        return in_array($status, ['published', 'active'], true);
+    }
+
+    private function propertyVisibilityOptions(): array
+    {
+        return ['public', 'team', 'partners', 'private'];
+    }
+
+    private function salePriorities(): array
+    {
+        return ['low', 'normal', 'high', 'urgent'];
+    }
+
+    private function commissionTypes(): array
+    {
+        return ['none', 'percent', 'fixed', 'included'];
     }
 
     private function decimalOrNull(mixed $value): ?string

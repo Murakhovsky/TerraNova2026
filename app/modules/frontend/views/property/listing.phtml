@@ -10,7 +10,7 @@ $money = static function ($amount, $currency = 'USD', $period = 'total') {
     return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
 };
 $dealLabels = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
-$statusLabels = ['published' => 'Опубліковано', 'moderation' => 'Модерація', 'reserved' => 'Резерв', 'sold' => 'Продано'];
+$statusLabels = ['published' => 'Опубліковано', 'active' => 'Активний', 'moderation' => 'Модерація', 'reserved' => 'Резерв', 'sold' => 'Продано'];
 $sortLabels = ['newest' => 'Нові спочатку', 'price_asc' => 'Ціна зростає', 'price_desc' => 'Ціна спадає', 'area_desc' => 'Площа спадає'];
 $filters = $filters ?? [];
 $properties = $properties ?? [];

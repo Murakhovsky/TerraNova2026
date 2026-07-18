@@ -12,9 +12,15 @@ $media = $media ?? [];
 $pageStatus = $pageStatus ?? null;
 $statusMessage = (string) $this->request->getQuery('status', 'string', '');
 $statusLabels = [
+    'draft' => 'Чернетка',
+    'submitted' => 'Подана',
     'new' => 'Нова',
     'review' => 'В роботі',
-    'accepted' => 'Опублікована',
+    'in_review' => 'На перевірці',
+    'needs_changes' => 'Потрібні правки',
+    'accepted' => 'Прийнята',
+    'approved' => 'Схвалена',
+    'published' => 'Опублікована',
     'rejected' => 'Відхилена',
     'spam' => 'Спам',
 ];
@@ -99,6 +105,8 @@ $statusLabels = [
         <form class="tn-moderation-form" action="<?php echo $this->url->get('property/moderate/' . $submission['id']); ?>" method="post">
           <label><span>Нотатка менеджера</span><textarea name="review_note" rows="4" placeholder="Причина відхилення або внутрішній коментар"><?php echo $h($submission['review_note'] ?? ''); ?></textarea></label>
           <button class="tn-btn tn-btn--ghost" type="submit" name="moderation_action" value="review">Взяти в роботу</button>
+          <button class="tn-btn tn-btn--ghost" type="submit" name="moderation_action" value="needs_changes">Попросити правки</button>
+          <button class="tn-btn tn-btn--ghost" type="submit" name="moderation_action" value="approve">Схвалити</button>
           <button class="tn-btn tn-btn--accent" type="submit" name="moderation_action" value="publish">Опублікувати</button>
           <button class="tn-btn tn-btn--ghost" type="submit" name="moderation_action" value="reject">Відхилити</button>
           <button class="tn-btn tn-btn--dark" type="submit" name="moderation_action" value="spam">Спам</button>

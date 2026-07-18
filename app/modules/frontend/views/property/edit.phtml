@@ -34,11 +34,15 @@ $absoluteUrl = static function (string $path): string {
 $dealTypes = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
 $statuses = [
   'draft' => 'Чернетка',
+  'submitted' => 'Поданий',
   'moderation' => 'На модерації',
   'published' => 'Опубліковано',
+  'active' => 'Активний продаж',
+  'hidden' => 'Прихований',
   'reserved' => 'Зарезервовано',
   'sold' => 'Продано',
   'archived' => 'Архів',
+  'needs_update' => 'Потребує оновлення',
 ];
 $sources = [
   'own' => 'Власний',
@@ -49,6 +53,9 @@ $sources = [
 ];
 $currencies = ['USD' => 'USD', 'EUR' => 'EUR', 'UAH' => 'UAH'];
 $periods = ['total' => 'За об’єкт', 'month' => 'За місяць', 'day' => 'За день'];
+$commissionTypes = ['none' => 'Не задано', 'percent' => '%', 'fixed' => 'Фіксована', 'included' => 'Включена в ціну'];
+$visibilityLabels = ['public' => 'Публічно', 'team' => 'Команда', 'partners' => 'Партнери', 'private' => 'Приватно'];
+$priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 'high' => 'Високий', 'urgent' => 'Терміновий'];
 $stageLabels = [
   'intake' => 'Первинне внесення',
   'verification' => 'Перевірка даних',
@@ -375,6 +382,22 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
               </select>
             </label>
             <label>
+              <span>Мінімальна ціна</span>
+              <input name="min_price_amount" type="number" min="0" step="0.01" value="<?php echo $h($value('min_price_amount')); ?>">
+            </label>
+            <label>
+              <span>Тип комісії</span>
+              <select name="commission_type">
+                <?php foreach ($commissionTypes as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected($value('commission_type', 'none'), $code); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Комісія</span>
+              <input name="commission_value" type="number" min="0" step="0.01" value="<?php echo $h($value('commission_value')); ?>">
+            </label>
+            <label>
               <span>Загальна площа, м²</span>
               <input name="area_total" type="number" min="0" step="0.01" value="<?php echo $h($value('area_total')); ?>">
             </label>
@@ -497,6 +520,34 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
             <label class="is-wide">
               <span>Причина або контекст статусу</span>
               <input name="status_note" type="text" maxlength="500" value="<?php echo $h($value('status_note')); ?>">
+            </label>
+            <label>
+              <span>Видимість</span>
+              <select name="visibility">
+                <?php foreach ($visibilityLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected($value('visibility', 'public'), $code); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Пріоритет продажу</span>
+              <select name="sale_priority">
+                <?php foreach ($priorityLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected($value('sale_priority', 'normal'), $code); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Резерв до</span>
+              <input name="reserved_until" type="datetime-local" value="<?php echo $h($dateTimeValue($value('reserved_until'))); ?>">
+            </label>
+            <label>
+              <span>ID кейса резерву</span>
+              <input name="reserved_by_case_id" type="number" min="0" step="1" value="<?php echo $h($value('reserved_by_case_id')); ?>">
+            </label>
+            <label>
+              <span>ID зафіксованого кейса</span>
+              <input name="fixed_client_case_id" type="number" min="0" step="1" value="<?php echo $h($value('fixed_client_case_id')); ?>">
             </label>
             <label class="is-wide">
               <span>Примітка щодо джерела</span>

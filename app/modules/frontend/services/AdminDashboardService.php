@@ -17,19 +17,23 @@ class AdminDashboardService
         $property = $this->database->fetchOne('
             SELECT
                 COUNT(*) AS total,
-                SUM(status = "published") AS published,
+                SUM(status IN ("published", "active")) AS published,
+                SUM(status = "needs_update") AS needs_update,
                 SUM(status = "moderation") AS moderation,
                 SUM(status = "draft") AS draft,
-                SUM(status IN ("reserved", "sold")) AS closed_flow
+                SUM(status IN ("reserved", "sold")) AS closed_flow,
+                SUM(price_amount IS NULL OR price_amount <= 0) AS without_price,
+                SUM(agent_id IS NULL OR agent_id = 0) AS without_agent
             FROM tn_properties
         ') ?? [];
 
         $submission = $this->database->fetchOne('
             SELECT
                 COUNT(*) AS total,
-                SUM(status = "new") AS new_items,
-                SUM(status = "review") AS review_items,
-                SUM(status = "accepted") AS accepted_items
+                SUM(status IN ("new", "submitted")) AS new_items,
+                SUM(status IN ("review", "in_review")) AS review_items,
+                SUM(status IN ("accepted", "approved", "published")) AS accepted_items,
+                SUM(status = "needs_changes") AS needs_changes_items
             FROM tn_property_submissions
         ') ?? [];
 
@@ -37,7 +41,7 @@ class AdminDashboardService
             SELECT
                 COUNT(*) AS total,
                 SUM(status = "new") AS new_items,
-                SUM(status IN ("contacted", "qualified", "viewing", "negotiation")) AS contacted_items,
+                SUM(status IN ("contacted", "qualified", "viewing_planned", "viewing", "negotiation")) AS contacted_items,
                 SUM(client_case_id IS NULL) AS unlinked_items
             FROM tn_leads
         ') ?? [];
@@ -57,7 +61,7 @@ class AdminDashboardService
                 SELECT p.id
                 FROM tn_properties p
                 LEFT JOIN tn_property_images i ON i.property_id = p.id
-                WHERE p.status = "published"
+                WHERE p.status IN ("published", "active")
                 GROUP BY p.id
                 HAVING COUNT(i.id) = 0
             ) missing_media
@@ -75,15 +79,19 @@ class AdminDashboardService
             'properties' => [
                 'total' => (int) ($property['total'] ?? 0),
                 'published' => (int) ($property['published'] ?? 0),
+                'needs_update' => (int) ($property['needs_update'] ?? 0),
                 'moderation' => (int) ($property['moderation'] ?? 0),
                 'draft' => (int) ($property['draft'] ?? 0),
                 'closed_flow' => (int) ($property['closed_flow'] ?? 0),
+                'without_price' => (int) ($property['without_price'] ?? 0),
+                'without_agent' => (int) ($property['without_agent'] ?? 0),
             ],
             'submissions' => [
                 'total' => (int) ($submission['total'] ?? 0),
                 'new' => (int) ($submission['new_items'] ?? 0),
                 'review' => (int) ($submission['review_items'] ?? 0),
                 'accepted' => (int) ($submission['accepted_items'] ?? 0),
+                'needs_changes' => (int) ($submission['needs_changes_items'] ?? 0),
             ],
             'requests' => [
                 'total' => (int) ($requests['total'] ?? 0),
@@ -133,7 +141,7 @@ class AdminDashboardService
         return $this->database->fetchAll('
             SELECT id, submission_ref, status, title, city, source_type, created_at
             FROM tn_property_submissions
-            ORDER BY FIELD(status, "new", "review", "accepted", "rejected", "spam"), created_at DESC, id DESC
+            ORDER BY FIELD(status, "new", "submitted", "review", "in_review", "needs_changes", "accepted", "approved", "published", "rejected", "spam"), created_at DESC, id DESC
             LIMIT ' . max(1, min(20, $limit))
         );
     }
@@ -152,7 +160,7 @@ class AdminDashboardService
             FROM tn_leads l
             LEFT JOIN tn_properties p ON p.id = l.property_id
             LEFT JOIN tn_client_cases c ON c.id = l.client_case_id
-            ORDER BY FIELD(l.status, "new", "contacted", "qualified", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC, l.id DESC
+            ORDER BY FIELD(l.status, "new", "contacted", "qualified", "viewing_planned", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC, l.id DESC
             LIMIT ' . max(1, min(20, $limit))
         );
     }
@@ -175,15 +183,20 @@ class AdminDashboardService
     public function attentionProperties(int $limit = 8): array
     {
         return $this->database->fetchAll('
-            SELECT p.id, p.public_id, p.slug, p.title, p.status, p.updated_at, t.name_uk AS type_name, l.city,
+            SELECT p.id, p.public_id, p.slug, p.title, p.status, p.updated_at,
+                   p.price_amount, p.agent_id, t.name_uk AS type_name, l.city,
                    COUNT(i.id) AS image_count
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_images i ON i.property_id = p.id
             GROUP BY p.id
-            HAVING p.status IN ("draft", "moderation") OR image_count = 0
-            ORDER BY FIELD(p.status, "moderation", "draft", "published", "reserved", "sold", "archived"), image_count ASC, p.updated_at DESC
+            HAVING p.status IN ("submitted", "moderation", "needs_update", "draft")
+                OR image_count = 0
+                OR p.price_amount IS NULL
+                OR p.price_amount <= 0
+                OR p.agent_id IS NULL
+            ORDER BY FIELD(p.status, "needs_update", "moderation", "submitted", "draft", "published", "active", "reserved", "sold", "archived"), image_count ASC, p.updated_at DESC
             LIMIT ' . max(1, min(20, $limit))
         );
     }
@@ -195,7 +208,7 @@ class AdminDashboardService
 
     public function activeProperties(int $limit = 6): array
     {
-        return $this->propertyListByStatus('published', $limit);
+        return $this->propertyListByStatuses(['published', 'active'], $limit);
     }
 
     public function recentManagerActivities(int $limit = 8): array
@@ -407,6 +420,37 @@ class AdminDashboardService
             ORDER BY p.updated_at DESC, p.id DESC
             LIMIT ' . max(1, min(20, $limit))
         , ['status' => $status]);
+    }
+
+    private function propertyListByStatuses(array $statuses, int $limit): array
+    {
+        $statuses = array_values(array_filter($statuses, static fn($status) => is_string($status) && $status !== ''));
+        if (!$statuses) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach ($statuses as $index => $status) {
+            $key = 'status_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $status;
+        }
+
+        return $this->database->fetchAll('
+            SELECT p.id, p.public_id, p.slug, p.title, p.status, p.updated_at,
+                   p.price_amount, p.price_currency, p.price_period,
+                   t.name_uk AS type_name, l.city,
+                   COUNT(i.id) AS image_count
+            FROM tn_properties p
+            INNER JOIN tn_property_types t ON t.id = p.type_id
+            INNER JOIN tn_locations l ON l.id = p.location_id
+            LEFT JOIN tn_property_images i ON i.property_id = p.id
+            WHERE p.status IN (' . implode(', ', $placeholders) . ')
+            GROUP BY p.id
+            ORDER BY p.updated_at DESC, p.id DESC
+            LIMIT ' . max(1, min(20, $limit))
+        , $params);
     }
 
     private function countBy(string $table, string $column): array

@@ -27,16 +27,25 @@ $stageLabels = [
 ];
 $statusLabels = [
     'draft' => 'Чернетка',
+    'submitted' => 'Подано',
     'moderation' => 'Модерація',
     'published' => 'Опубліковано',
+    'active' => 'Активний',
+    'hidden' => 'Приховано',
+    'needs_update' => 'Потрібне оновлення',
     'reserved' => 'Резерв',
     'sold' => 'Продано',
     'archived' => 'Архів',
     'new' => 'Нові',
     'review' => 'В роботі',
+    'in_review' => 'На перевірці',
+    'needs_changes' => 'Потрібні правки',
     'accepted' => 'Прийнято',
+    'approved' => 'Схвалено',
     'rejected' => 'Відхилено',
+    'contacted' => 'Контакт був',
     'qualified' => 'Кваліфіковано',
+    'viewing_planned' => 'Перегляд заплановано',
     'viewing' => 'Перегляд',
     'negotiation' => 'Переговори',
     'won' => 'Успіх',
@@ -76,7 +85,7 @@ $intentLabels = [
         <a href="<?php echo $this->url->get('property/manage'); ?>">
           <span>Об’єкти</span>
           <strong><?php echo (int) ($metrics['properties']['total'] ?? 0); ?></strong>
-          <small><?php echo (int) ($metrics['properties']['published'] ?? 0); ?> опубліковано</small>
+          <small><?php echo (int) ($metrics['properties']['published'] ?? 0); ?> активні в каталозі</small>
         </a>
         <a href="<?php echo $this->url->get('property/submissions'); ?>">
           <span>Нові подачі</span>
@@ -93,10 +102,25 @@ $intentLabels = [
           <strong><?php echo (int) ($metrics['cases']['hot'] ?? 0); ?></strong>
           <small><?php echo (int) ($metrics['cases']['due'] ?? 0); ?> потребують контакту</small>
         </a>
-        <a href="<?php echo $this->url->get('property/manage?status=published'); ?>">
+        <a href="<?php echo $this->url->get('property/manage?quality=no_photo'); ?>">
           <span>Без медіа</span>
           <strong><?php echo (int) ($metrics['media']['published_without_cover'] ?? 0); ?></strong>
-          <small>опубліковані без фото</small>
+          <small>активні без фото</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?quality=no_price'); ?>">
+          <span>Без ціни</span>
+          <strong><?php echo (int) ($metrics['properties']['without_price'] ?? 0); ?></strong>
+          <small>потрібно уточнити</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?quality=no_agent'); ?>">
+          <span>Без менеджера</span>
+          <strong><?php echo (int) ($metrics['properties']['without_agent'] ?? 0); ?></strong>
+          <small>треба призначити</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?status=needs_update'); ?>">
+          <span>На оновлення</span>
+          <strong><?php echo (int) ($metrics['properties']['needs_update'] ?? 0); ?></strong>
+          <small>зміни в картці</small>
         </a>
       </section>
 
@@ -219,7 +243,7 @@ $intentLabels = [
               <p class="tn-kicker">Публічний каталог</p>
               <h2>Активні об’єкти</h2>
             </div>
-            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?status=published'); ?>">Відкрити</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?status=active'); ?>">Відкрити</a>
           </div>
           <?php if (!$activeProperties): ?>
             <p class="tn-muted">Активних об’єктів поки немає.</p>

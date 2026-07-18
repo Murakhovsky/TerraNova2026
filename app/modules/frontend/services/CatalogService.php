@@ -20,7 +20,7 @@ class CatalogService
             'deal_type' => $this->allowed((string) ($query['deal_type'] ?? ''), ['sale', 'rent', 'investment']),
             'type' => trim((string) ($query['type'] ?? '')),
             'location' => trim((string) ($query['location'] ?? '')),
-            'status' => $this->allowed((string) ($query['status'] ?? ''), ['published', 'moderation', 'reserved', 'sold']),
+            'status' => $this->allowed((string) ($query['status'] ?? ''), ['published', 'active', 'moderation', 'reserved', 'sold']),
             'price_min' => $this->positiveNumber($query['price_min'] ?? null),
             'price_max' => $this->positiveNumber($query['price_max'] ?? null),
             'area_min' => $this->positiveNumber($query['area_min'] ?? null),
@@ -53,11 +53,11 @@ class CatalogService
                 ORDER BY i.sort_order, i.id
                 LIMIT 1
             )
-            WHERE p.status = :status
+            WHERE p.status IN ("published", "active")
             GROUP BY p.id
             ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
             LIMIT ' . $limit,
-            ['status' => 'published']
+            []
         );
     }
 
@@ -192,6 +192,45 @@ class CatalogService
         ', ['slug' => $slug]);
     }
 
+    public function recordPropertyView(int $propertyId, array $context = []): void
+    {
+        if ($propertyId <= 0) {
+            return;
+        }
+
+        try {
+            $pdo = $this->database->connection();
+            $pdo->prepare('
+                UPDATE tn_properties
+                SET view_count = view_count + 1
+                WHERE id = :id
+                LIMIT 1
+            ')->execute(['id' => $propertyId]);
+
+            $pdo->prepare('
+                INSERT INTO tn_analytics_events (
+                    event_type, entity_type, entity_id, property_id, source_page,
+                    utm_source, utm_medium, utm_campaign, payload
+                ) VALUES (
+                    "property_view", "property", :entity_id, :property_id, :source_page,
+                    :utm_source, :utm_medium, :utm_campaign, :payload
+                )
+            ')->execute([
+                'entity_id' => $propertyId,
+                'property_id' => $propertyId,
+                'source_page' => $this->limitNullable((string) ($context['source_page'] ?? ''), 255),
+                'utm_source' => $this->limitNullable((string) ($context['utm_source'] ?? ''), 120),
+                'utm_medium' => $this->limitNullable((string) ($context['utm_medium'] ?? ''), 120),
+                'utm_campaign' => $this->limitNullable((string) ($context['utm_campaign'] ?? ''), 160),
+                'payload' => json_encode([
+                    'referer' => (string) ($context['referer'] ?? ''),
+                ], JSON_UNESCAPED_UNICODE),
+            ]);
+        } catch (\Throwable) {
+            // Analytics must never block the public property page.
+        }
+    }
+
     public function groupedProperties(array $property, int $limit = 8): array
     {
         $groupId = (int) ($property['property_group_id'] ?? 0);
@@ -223,7 +262,7 @@ class CatalogService
                 ORDER BY i.sort_order, i.id
                 LIMIT 1
             )
-            WHERE p.status = "published"
+            WHERE p.status IN ("published", "active")
               AND p.property_group_id = :group_id
               AND p.id <> :id
             GROUP BY p.id
@@ -242,7 +281,7 @@ class CatalogService
             SELECT g.*,
                    l.city, l.region, l.country_code,
                    COUNT(p.id) AS property_count,
-                   SUM(p.status = "published") AS published_count
+                   SUM(p.status IN ("published", "active")) AS published_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
             LEFT JOIN tn_properties p ON p.property_group_id = g.id
@@ -283,7 +322,7 @@ class CatalogService
                 ORDER BY i.sort_order, i.id
                 LIMIT 1
             )
-            WHERE p.status = "published"
+            WHERE p.status IN ("published", "active")
               AND p.property_group_id = :group_id
             GROUP BY p.id
             ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
@@ -338,7 +377,7 @@ class CatalogService
                 ORDER BY i.sort_order, i.id
                 LIMIT 1
             )
-            WHERE p.status = "published"
+            WHERE p.status IN ("published", "active")
               AND p.id <> :id
               AND (p.type_id = :type_id OR p.location_id = :location_id OR p.deal_type = :deal_type)
             GROUP BY p.id
@@ -383,7 +422,7 @@ class CatalogService
                 ORDER BY i.sort_order, i.id
                 LIMIT 1
             )
-            WHERE p.status = "published" AND p.id <> :id
+            WHERE p.status IN ("published", "active") AND p.id <> :id
             GROUP BY p.id
             ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
             LIMIT ' . $limit,
@@ -437,8 +476,8 @@ class CatalogService
 
     private function catalogConditions(array $filters): array
     {
-        $where = ['p.status = :published'];
-        $params = ['published' => 'published'];
+        $where = ['p.status IN ("published", "active")'];
+        $params = [];
 
         if (($filters['deal_type'] ?? '') !== '') {
             $where[] = 'p.deal_type = :deal_type';
@@ -463,7 +502,6 @@ class CatalogService
         if (($filters['status'] ?? '') !== '') {
             $where[0] = 'p.status = :status';
             $params['status'] = $filters['status'];
-            unset($params['published']);
         }
 
         if (($filters['price_min'] ?? null) !== null) {
@@ -507,5 +545,12 @@ class CatalogService
         $value = is_numeric($value) ? (int) $value : $default;
 
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    private function limitNullable(string $value, int $limit): ?string
+    {
+        $value = mb_substr(trim($value), 0, $limit);
+
+        return $value === '' ? null : $value;
     }
 }

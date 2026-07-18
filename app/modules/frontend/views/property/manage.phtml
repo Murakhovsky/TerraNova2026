@@ -12,11 +12,15 @@ $money = static function ($amount, $currency = 'USD', $period = 'total') {
 $dealLabels = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
 $statusLabels = [
     'draft' => 'Чернетка',
+    'submitted' => 'Поданий',
     'moderation' => 'Модерація',
     'published' => 'Опубліковано',
+    'active' => 'Активний',
+    'hidden' => 'Прихований',
     'reserved' => 'Резерв',
     'sold' => 'Продано',
     'archived' => 'Архів',
+    'needs_update' => 'Потребує оновлення',
 ];
 $sourceLabels = [
     'own' => 'Власний',
@@ -39,6 +43,9 @@ $stageLabels = [
     'archived' => 'Архів',
 ];
 $sortLabels = ['updated' => 'Оновлені', 'newest' => 'Нові', 'next_action' => 'Наступна дія', 'price_desc' => 'Ціна спадання', 'price_asc' => 'Ціна зростання'];
+$visibilityLabels = ['public' => 'Публічно', 'team' => 'Команда', 'partners' => 'Партнери', 'private' => 'Приватно'];
+$priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 'high' => 'Високий', 'urgent' => 'Терміновий'];
+$commissionLabels = ['none' => 'не задано', 'percent' => '%', 'fixed' => 'фікс.', 'included' => 'в ціні'];
 $filters = $filters ?? [];
 $properties = $properties ?? [];
 $types = $types ?? [];
@@ -61,6 +68,8 @@ $qualityLabels = [
     'not_ready' => 'Не готові',
     'no_agent' => 'Без відповідального',
     'no_photo' => 'Без фото',
+    'no_price' => 'Без ціни',
+    'no_commission' => 'Без комісії',
     'needs_status_note' => 'Без причини статусу',
     'overdue_action' => 'Прострочена дія',
     'no_next_action' => 'Без наступної дії',
@@ -88,7 +97,7 @@ $qualityPath = static function (string $quality) use ($filters): string {
     return 'property/manage' . ($params ? '?' . http_build_query($params) : '');
 };
 $returnParams = [];
-foreach (['q', 'status', 'deal_type', 'type_id', 'location_id', 'property_group_id', 'agent_id', 'source_type', 'operational_stage', 'quality', 'sort'] as $filterKey) {
+foreach (['q', 'status', 'deal_type', 'type_id', 'location_id', 'property_group_id', 'agent_id', 'source_type', 'visibility', 'sale_priority', 'operational_stage', 'quality', 'sort'] as $filterKey) {
     if (($filters[$filterKey] ?? '') !== '' && ($filters[$filterKey] ?? 0) !== 0) {
         $returnParams[$filterKey] = $filters[$filterKey];
     }
@@ -113,7 +122,7 @@ $managerCta = static function (array $property): array {
         return ['href' => $editUrl . '#tn-edit-public', 'label' => 'Доробити', 'class' => 'is-warning'];
     }
 
-    if ((string) ($property['status'] ?? '') !== 'published') {
+    if (!in_array((string) ($property['status'] ?? ''), ['published', 'active'], true)) {
         return ['href' => $editUrl . '#tn-edit-main', 'label' => 'Публікація', 'class' => 'is-ready'];
     }
 
@@ -259,6 +268,24 @@ $managerCta = static function (array $property): array {
           </select>
         </label>
         <label>
+          <span>Видимість</span>
+          <select name="visibility">
+            <option value="">Усі</option>
+            <?php foreach ($visibilityLabels as $code => $label): ?>
+              <option value="<?php echo $h($code); ?>" <?php echo $selected($filters['visibility'] ?? '', $code); ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
+          <span>Пріоритет</span>
+          <select name="sale_priority">
+            <option value="">Усі</option>
+            <?php foreach ($priorityLabels as $code => $label): ?>
+              <option value="<?php echo $h($code); ?>" <?php echo $selected($filters['sale_priority'] ?? '', $code); ?>><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>
           <span>Етап роботи</span>
           <select name="operational_stage">
             <option value="">Усі</option>
@@ -275,6 +302,8 @@ $managerCta = static function (array $property): array {
             <option value="not_ready" <?php echo $selected($filters['quality'] ?? '', 'not_ready'); ?>>Не готові</option>
             <option value="no_agent" <?php echo $selected($filters['quality'] ?? '', 'no_agent'); ?>>Без відповідального</option>
             <option value="no_photo" <?php echo $selected($filters['quality'] ?? '', 'no_photo'); ?>>Без фото</option>
+            <option value="no_price" <?php echo $selected($filters['quality'] ?? '', 'no_price'); ?>>Без ціни</option>
+            <option value="no_commission" <?php echo $selected($filters['quality'] ?? '', 'no_commission'); ?>>Без комісії</option>
             <option value="needs_status_note" <?php echo $selected($filters['quality'] ?? '', 'needs_status_note'); ?>>Без причини статусу</option>
             <option value="overdue_action" <?php echo $selected($filters['quality'] ?? '', 'overdue_action'); ?>>Прострочена дія</option>
             <option value="no_next_action" <?php echo $selected($filters['quality'] ?? '', 'no_next_action'); ?>>Без наступної дії</option>
@@ -348,6 +377,11 @@ $managerCta = static function (array $property): array {
                 <td><?php echo $h(trim($property['city'] . ', ' . ($property['region'] ?? ''), ', ')); ?></td>
                 <td>
                   <?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?>
+                  <?php if (!empty($property['min_price_amount'])): ?><span>мін. <?php echo $h($money($property['min_price_amount'], $property['price_currency'], $property['price_period'])); ?></span><?php endif; ?>
+                  <span>комісія: <?php echo $h($commissionLabels[$property['commission_type'] ?? 'none'] ?? ($property['commission_type'] ?? '')); ?><?php if (!empty($property['commission_value'])): ?> / <?php echo $h((float) $property['commission_value']); ?><?php endif; ?></span>
+                  <span><?php echo $h($visibilityLabels[$property['visibility'] ?? 'public'] ?? ($property['visibility'] ?? '')); ?> / <?php echo $h($priorityLabels[$property['sale_priority'] ?? 'normal'] ?? ($property['sale_priority'] ?? '')); ?></span>
+                  <?php if (!empty($property['reserved_until'])): ?><span>резерв до <?php echo $h($property['reserved_until']); ?></span><?php endif; ?>
+                  <?php if (!empty($property['fixed_client_case_id'])): ?><span>фіксація: кейс #<?php echo (int) $property['fixed_client_case_id']; ?></span><?php endif; ?>
                   <span><?php echo $property['area_total'] ? $h((float) $property['area_total']) . ' м²' : 'площа не вказана'; ?></span>
                 </td>
                 <td>

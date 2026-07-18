@@ -77,6 +77,14 @@ class PropertyController extends ControllerBase
                 return;
             }
 
+            $this->catalogService()->recordPropertyView((int) $property['id'], [
+                'source_page' => $this->request->getURI(),
+                'referer' => (string) ($_SERVER['HTTP_REFERER'] ?? ''),
+                'utm_source' => (string) $this->request->getQuery('utm_source', 'string', ''),
+                'utm_medium' => (string) $this->request->getQuery('utm_medium', 'string', ''),
+                'utm_campaign' => (string) $this->request->getQuery('utm_campaign', 'string', ''),
+            ]);
+
             $this->view->property = $property;
             $this->view->images = $this->catalogService()->propertyImages((int) $property['id']);
             $this->view->features = $this->catalogService()->propertyFeatures((int) $property['id']);
@@ -126,6 +134,14 @@ class PropertyController extends ControllerBase
             $property = $this->catalogService()->propertyBySlug($slug);
 
             if ($property) {
+                $this->catalogService()->recordPropertyView((int) $property['id'], [
+                    'source_page' => $this->request->getURI(),
+                    'referer' => (string) ($_SERVER['HTTP_REFERER'] ?? ''),
+                    'utm_source' => (string) $this->request->getQuery('utm_source', 'string', ''),
+                    'utm_medium' => (string) $this->request->getQuery('utm_medium', 'string', ''),
+                    'utm_campaign' => (string) $this->request->getQuery('utm_campaign', 'string', ''),
+                ]);
+
                 $this->view->property = $property;
                 $this->view->images = $this->catalogService()->propertyImages((int) $property['id']);
                 $this->view->features = $this->catalogService()->propertyFeatures((int) $property['id']);

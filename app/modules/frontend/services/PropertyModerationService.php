@@ -19,7 +19,7 @@ class PropertyModerationService
         $where = '';
         $params = [];
 
-        if ($status !== '' && in_array($status, ['new', 'review', 'accepted', 'rejected', 'spam'], true)) {
+        if ($status !== '' && in_array($status, $this->submissionStatuses(), true)) {
             $where = 'WHERE s.status = :status';
             $params['status'] = $status;
         }
@@ -29,7 +29,7 @@ class PropertyModerationService
             FROM tn_property_submissions s
             ' . $where . '
             ORDER BY
-                FIELD(s.status, "new", "review", "accepted", "rejected", "spam"),
+                FIELD(s.status, "new", "submitted", "review", "in_review", "needs_changes", "accepted", "approved", "published", "rejected", "spam"),
                 s.created_at DESC,
                 s.id DESC
             LIMIT 100
@@ -55,7 +55,7 @@ class PropertyModerationService
             GROUP BY status
         ');
 
-        $counts = ['new' => 0, 'review' => 0, 'accepted' => 0, 'rejected' => 0, 'spam' => 0];
+        $counts = array_fill_keys($this->submissionStatuses(), 0);
         foreach ($rows as $row) {
             $counts[$row['status']] = (int) $row['total'];
         }
@@ -71,7 +71,9 @@ class PropertyModerationService
     public function moderate(int $id, string $action, string $note = ''): array
     {
         return match ($action) {
-            'review' => $this->setStatus($id, 'review', $note),
+            'review' => $this->setStatus($id, 'in_review', $note),
+            'needs_changes' => $this->setStatus($id, 'needs_changes', $note),
+            'approve' => $this->setStatus($id, 'approved', $note),
             'reject' => $this->setStatus($id, 'rejected', $note),
             'spam' => $this->setStatus($id, 'spam', $note),
             'publish' => $this->publish($id, $note),
@@ -143,7 +145,7 @@ class PropertyModerationService
                     address, short_description, description, features_json, is_featured, has_3d_tour, tour_url,
                     meta_title, meta_description, published_at
                 ) VALUES (
-                    :public_id, :slug, :title, :deal_type, :type_id, "published", :source_type, :location_id, :agent_id,
+                    :public_id, :slug, :title, :deal_type, :type_id, "active", :source_type, :location_id, :agent_id,
                     :price_amount, :price_currency, "total", :area_total, :land_area, :rooms, :floor, :floors, :built_year,
                     :address, :short_description, :description, :features_json, 0, :has_3d_tour, :tour_url,
                     :meta_title, :meta_description, NOW()
@@ -209,7 +211,7 @@ class PropertyModerationService
 
             $update = $pdo->prepare('
                 UPDATE tn_property_submissions
-                SET status = "accepted", property_id = :property_id, reviewed_at = NOW(), review_note = :note
+                SET status = "published", property_id = :property_id, reviewed_at = NOW(), review_note = :note
                 WHERE id = :id
                 LIMIT 1
             ');
@@ -411,6 +413,11 @@ class PropertyModerationService
     private function propertySource(string $value): string
     {
         return in_array($value, ['partner', 'realtor', 'owner', 'developer'], true) ? $value : 'owner';
+    }
+
+    private function submissionStatuses(): array
+    {
+        return ['draft', 'submitted', 'new', 'review', 'in_review', 'needs_changes', 'accepted', 'approved', 'published', 'rejected', 'spam'];
     }
 
     private function currency(string $value): string
