@@ -16,6 +16,7 @@ class Property extends Model
     public $status;
     public $source_type;
     public $location_id;
+    public $property_group_id;
     public $agent_id;
     public $price_amount;
     public $price_currency;
@@ -41,6 +42,14 @@ class Property extends Model
     public $video_url;
     public $meta_title;
     public $meta_description;
+    public $manager_note;
+    public $source_note;
+    public $status_note;
+    public $status_changed_at;
+    public $operational_stage;
+    public $next_action_title;
+    public $next_action_due_at;
+    public $next_action_note;
     public $published_at;
     public $created_at;
     public $updated_at;

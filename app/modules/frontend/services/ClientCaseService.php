@@ -21,6 +21,7 @@ class ClientCaseService
             'status' => $this->allowed((string) ($query['status'] ?? ''), ['active', 'paused', 'closed', 'lost'], ''),
             'type' => $this->allowed((string) ($query['type'] ?? ''), $this->types(), ''),
             'priority' => $this->allowed((string) ($query['priority'] ?? ''), ['low', 'normal', 'high', 'urgent'], ''),
+            'assigned_user_id' => max(0, (int) ($query['assigned_user_id'] ?? 0)),
             'sort' => $this->allowed((string) ($query['sort'] ?? ''), ['updated', 'newest', 'next_contact', 'budget'], 'updated'),
         ];
     }
@@ -42,6 +43,11 @@ class ClientCaseService
             }
         }
 
+        if ((int) ($filters['assigned_user_id'] ?? 0) > 0) {
+            $where[] = 'c.assigned_user_id = :assigned_user_id';
+            $params['assigned_user_id'] = (int) $filters['assigned_user_id'];
+        }
+
         $orderBy = match ($filters['sort'] ?? 'updated') {
             'newest' => 'c.id DESC',
             'next_contact' => 'c.next_contact_at IS NULL, c.next_contact_at ASC, c.updated_at DESC',
@@ -58,21 +64,25 @@ class ClientCaseService
                 p.email,
                 p.telegram,
                 u.full_name AS manager_name,
+                pt.name_uk AS property_type_name,
+                l.city AS location_city,
                 (
-                    SELECT COUNT(*) FROM tn_leads l
-                    WHERE l.client_case_id = c.id
+                    SELECT COUNT(*) FROM tn_leads lead_count
+                    WHERE lead_count.client_case_id = c.id
                 ) AS inquiry_count,
                 (
-                    SELECT COUNT(*) FROM tn_client_case_activities a
-                    WHERE a.client_case_id = c.id
+                    SELECT COUNT(*) FROM tn_client_case_activities activity_count
+                    WHERE activity_count.client_case_id = c.id
                 ) AS activity_count,
                 (
-                    SELECT COUNT(*) FROM tn_client_case_property_matches m
-                    WHERE m.client_case_id = c.id
+                    SELECT COUNT(*) FROM tn_client_case_property_matches match_count
+                    WHERE match_count.client_case_id = c.id
                 ) AS match_count
             FROM tn_client_cases c
             INNER JOIN tn_people p ON p.id = c.person_id
             LEFT JOIN tn_users u ON u.id = c.assigned_user_id
+            LEFT JOIN tn_property_types pt ON pt.id = c.property_type_id
+            LEFT JOIN tn_locations l ON l.id = c.location_id
             WHERE ' . implode(' AND ', $where) . '
             ORDER BY ' . $orderBy . '
             LIMIT 150
@@ -196,6 +206,278 @@ class ClientCaseService
         ');
     }
 
+    public function inboundFilters(array $query): array
+    {
+        return [
+            'q' => trim((string) ($query['q'] ?? '')),
+            'status' => $this->allowed((string) ($query['status'] ?? ''), $this->leadStatuses(), ''),
+            'request_intent' => $this->allowed((string) ($query['request_intent'] ?? ''), $this->requestIntents(), ''),
+            'assigned_user_id' => max(0, (int) ($query['assigned_user_id'] ?? 0)),
+            'has_case' => $this->allowed((string) ($query['has_case'] ?? ''), ['yes', 'no'], ''),
+            'sort' => $this->allowed((string) ($query['sort'] ?? ''), ['newest', 'next_contact', 'status'], 'newest'),
+        ];
+    }
+
+    public function inboundInbox(array $filters): array
+    {
+        $where = ['1 = 1'];
+        $params = [];
+
+        if (($filters['q'] ?? '') !== '') {
+            $where[] = '(l.full_name LIKE :q OR l.phone LIKE :q OR l.email LIKE :q OR l.message LIKE :q OR p.public_id LIKE :q OR p.title LIKE :q OR c.public_id LIKE :q)';
+            $params['q'] = '%' . $filters['q'] . '%';
+        }
+
+        if (($filters['status'] ?? '') !== '') {
+            $where[] = 'l.status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        if (($filters['request_intent'] ?? '') !== '') {
+            $where[] = 'l.request_intent = :request_intent';
+            $params['request_intent'] = $filters['request_intent'];
+        }
+
+        if ((int) ($filters['assigned_user_id'] ?? 0) > 0) {
+            $where[] = 'l.assigned_user_id = :assigned_user_id';
+            $params['assigned_user_id'] = (int) $filters['assigned_user_id'];
+        }
+
+        if (($filters['has_case'] ?? '') === 'yes') {
+            $where[] = 'l.client_case_id IS NOT NULL';
+        } elseif (($filters['has_case'] ?? '') === 'no') {
+            $where[] = 'l.client_case_id IS NULL';
+        }
+
+        $orderBy = match ($filters['sort'] ?? 'newest') {
+            'next_contact' => 'l.next_contact_at IS NULL, l.next_contact_at ASC, l.created_at DESC',
+            'status' => 'FIELD(l.status, "new", "contacted", "qualified", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC',
+            default => 'l.created_at DESC, l.id DESC',
+        };
+
+        return $this->database->fetchAll('
+            SELECT
+                l.*,
+                p.public_id AS property_public_id,
+                p.slug AS property_slug,
+                p.title AS property_title,
+                c.public_id AS case_public_id,
+                c.title AS case_title,
+                u.full_name AS manager_name,
+                (
+                    SELECT COUNT(*) FROM tn_lead_activities activity_count
+                    WHERE activity_count.lead_id = l.id
+                ) AS activity_count
+            FROM tn_leads l
+            LEFT JOIN tn_properties p ON p.id = l.property_id
+            LEFT JOIN tn_client_cases c ON c.id = l.client_case_id
+            LEFT JOIN tn_users u ON u.id = l.assigned_user_id
+            WHERE ' . implode(' AND ', $where) . '
+            ORDER BY ' . $orderBy . '
+            LIMIT 150
+        ', $params);
+    }
+
+    public function inboundInboxStats(): array
+    {
+        $statusRows = $this->database->fetchAll('SELECT status, COUNT(*) AS total FROM tn_leads GROUP BY status');
+        $intentRows = $this->database->fetchAll('SELECT request_intent, COUNT(*) AS total FROM tn_leads GROUP BY request_intent');
+        $summary = $this->database->fetchOne('
+            SELECT
+                COUNT(*) AS total,
+                SUM(status = "new") AS new_items,
+                SUM(assigned_user_id IS NULL) AS unassigned_items,
+                SUM(client_case_id IS NULL) AS no_case_items,
+                SUM(next_contact_at IS NOT NULL AND next_contact_at <= NOW() AND status NOT IN ("won", "lost", "spam", "closed")) AS due_items
+            FROM tn_leads
+        ') ?? [];
+
+        $stats = [
+            'total' => (int) ($summary['total'] ?? 0),
+            'new' => (int) ($summary['new_items'] ?? 0),
+            'unassigned' => (int) ($summary['unassigned_items'] ?? 0),
+            'no_case' => (int) ($summary['no_case_items'] ?? 0),
+            'due' => (int) ($summary['due_items'] ?? 0),
+            'status' => array_fill_keys($this->leadStatuses(), 0),
+            'intent' => array_fill_keys($this->requestIntents(), 0),
+        ];
+
+        foreach ($statusRows as $row) {
+            $stats['status'][(string) $row['status']] = (int) $row['total'];
+        }
+
+        foreach ($intentRows as $row) {
+            $stats['intent'][(string) $row['request_intent']] = (int) $row['total'];
+        }
+
+        return $stats;
+    }
+
+    public function leadActivities(int $leadId): array
+    {
+        return $this->database->fetchAll('
+            SELECT a.*, u.full_name AS user_name
+            FROM tn_lead_activities a
+            LEFT JOIN tn_users u ON u.id = a.user_id
+            WHERE a.lead_id = :lead_id
+            ORDER BY a.created_at DESC, a.id DESC
+            LIMIT 40
+        ', ['lead_id' => $leadId]);
+    }
+
+    public function updateInboundRequest(int $requestId, array $input, ?array $user = null): array
+    {
+        $request = $this->inboundRequest($requestId);
+        if (!$request) {
+            return ['ok' => false, 'message' => 'Заявку не знайдено.', 'case_id' => null];
+        }
+
+        try {
+            $status = $this->allowed((string) ($input['status'] ?? $request['status']), $this->leadStatuses(), (string) $request['status']);
+            $assignedUserId = array_key_exists('assigned_user_id', $input)
+                ? $this->managerId($input['assigned_user_id'])
+                : ($request['assigned_user_id'] ?? null);
+            $managerNote = $this->nullableText((string) ($input['manager_note'] ?? ($request['manager_note'] ?? '')));
+            $nextContactAt = $this->dateTimeOrNull((string) ($input['next_contact_at'] ?? ''));
+            $contactedStatuses = ['contacted', 'qualified', 'viewing', 'negotiation', 'won', 'lost'];
+            $lastContactedAt = in_array($status, $contactedStatuses, true)
+                ? (($request['last_contacted_at'] ?? null) ?: date('Y-m-d H:i:s'))
+                : ($request['last_contacted_at'] ?? null);
+
+            $this->database->connection()->prepare('
+                UPDATE tn_leads
+                SET status = :status,
+                    assigned_user_id = :assigned_user_id,
+                    manager_note = :manager_note,
+                    last_contacted_at = :last_contacted_at,
+                    next_contact_at = :next_contact_at,
+                    updated_at = NOW()
+                WHERE id = :id
+            ')->execute([
+                'id' => $requestId,
+                'status' => $status,
+                'assigned_user_id' => $assignedUserId,
+                'manager_note' => $managerNote,
+                'last_contacted_at' => $lastContactedAt,
+                'next_contact_at' => $nextContactAt,
+            ]);
+
+            $activityTitle = $this->limit((string) ($input['activity_title'] ?? 'Заявку оновлено'), 180);
+            $activityBody = $this->nullableText((string) ($input['activity_body'] ?? ''));
+            $activityType = $this->allowed((string) ($input['activity_type'] ?? 'status_change'), $this->leadActivityTypes(), 'status_change');
+            $completedAt = !empty($input['completed']) ? date('Y-m-d H:i:s') : null;
+            $this->addLeadActivity($requestId, [
+                'activity_type' => $activityType,
+                'title' => $activityTitle,
+                'body' => $activityBody ?: $managerNote,
+                'due_at' => $nextContactAt,
+                'completed_at' => $completedAt,
+            ], $user);
+
+            if (!empty($request['client_case_id'])) {
+                $this->syncCaseFromLeadStatus((int) $request['client_case_id'], $status, $assignedUserId, $nextContactAt);
+                $this->addActivity((int) $request['client_case_id'], [
+                    'activity_type' => $activityType === 'viewing' ? 'viewing' : 'note',
+                    'title' => 'Заявку оновлено: ' . $this->leadStatusLabel($status),
+                    'body' => $activityBody ?: $managerNote,
+                    'due_at' => $nextContactAt,
+                    'completed' => $completedAt ? 1 : 0,
+                ], $user);
+            }
+
+            return ['ok' => true, 'message' => 'Заявку оновлено.', 'case_id' => (int) ($request['client_case_id'] ?? 0)];
+        } catch (Throwable $e) {
+            $this->logError('client-case-inbound-update', $e);
+
+            return ['ok' => false, 'message' => 'Заявку не вдалося оновити.', 'case_id' => (int) ($request['client_case_id'] ?? 0)];
+        }
+    }
+
+    public function createCaseFromInboundRequest(int $requestId, array $input = [], ?array $user = null): array
+    {
+        $request = $this->inboundRequest($requestId);
+        if (!$request) {
+            return ['ok' => false, 'message' => 'Заявку не знайдено.', 'case_id' => null];
+        }
+
+        if (!empty($request['client_case_id'])) {
+            return ['ok' => true, 'message' => 'Заявка вже привʼязана до кейса.', 'case_id' => (int) $request['client_case_id']];
+        }
+
+        try {
+            $pdo = $this->database->connection();
+            $pdo->beginTransaction();
+
+            $personId = $this->findOrCreatePerson($pdo, [
+                'full_name' => (string) $request['full_name'],
+                'phone' => $this->nullable((string) ($request['phone'] ?? ''), 50),
+                'email' => $this->nullableEmail((string) ($request['email'] ?? '')),
+                'telegram' => null,
+                'notes' => null,
+            ]);
+
+            $caseId = $this->insertCase($pdo, $personId, [
+                'full_name' => (string) $request['full_name'],
+                'type' => $this->caseTypeFromInbound($request),
+                'title' => $this->caseTitleFromInbound($request, (string) $request['full_name']),
+                'stage' => 'qualification',
+                'status' => 'active',
+                'priority' => $this->allowed((string) ($input['priority'] ?? 'normal'), ['low', 'normal', 'high', 'urgent'], 'normal'),
+                'assigned_user_id' => $input['assigned_user_id'] ?? ($user['id'] ?? null),
+                'source' => $this->nullable((string) ($request['source_page'] ?? 'inbound-request'), 120),
+                'description' => $this->nullableText((string) ($request['message'] ?? '')),
+                'property_type_id' => $request['property_type_id'] ?? null,
+                'location_id' => $request['location_id'] ?? null,
+                'currency' => 'USD',
+            ], $user);
+
+            $pdo->prepare('
+                UPDATE tn_leads
+                SET person_id = :person_id,
+                    client_case_id = :client_case_id,
+                    assigned_user_id = :assigned_user_id,
+                    status = "qualified",
+                    updated_at = NOW()
+                WHERE id = :request_id
+            ')->execute([
+                'person_id' => $personId,
+                'client_case_id' => $caseId,
+                'assigned_user_id' => $this->managerId($input['assigned_user_id'] ?? ($user['id'] ?? null)),
+                'request_id' => $requestId,
+            ]);
+
+            $pdo->prepare('
+                INSERT IGNORE INTO tn_client_case_request_matches (client_case_id, inbound_request_id, relation_type)
+                VALUES (:client_case_id, :request_id, "source")
+            ')->execute(['client_case_id' => $caseId, 'request_id' => $requestId]);
+
+            $pdo->commit();
+
+            $this->addActivity($caseId, [
+                'activity_type' => 'note',
+                'title' => 'Кейс створено із заявки',
+                'body' => $this->nullableText((string) ($request['message'] ?? '')),
+            ], $user);
+
+            if (!empty($request['property_id'])) {
+                $this->addPropertyMatch($caseId, (int) $request['property_id'], [
+                    'match_status' => 'interested',
+                    'note' => 'Обʼєкт із вхідної заявки',
+                ], $user);
+            }
+
+            return ['ok' => true, 'message' => 'Кейс створено із заявки.', 'case_id' => $caseId];
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            $this->logError('client-case-create-from-inbound-request', $e);
+
+            return ['ok' => false, 'message' => 'Кейс із заявки не вдалося створити.', 'case_id' => null];
+        }
+    }
+
     public function openCaseOptions(): array
     {
         return $this->database->fetchAll('
@@ -205,6 +487,17 @@ class ClientCaseService
             WHERE c.status IN ("active", "paused")
             ORDER BY c.updated_at DESC, c.id DESC
             LIMIT 100
+        ');
+    }
+
+    public function managerOptions(): array
+    {
+        return $this->database->fetchAll('
+            SELECT id, full_name, email, role
+            FROM tn_users
+            WHERE status = "active"
+              AND role IN ("manager", "admin")
+            ORDER BY FIELD(role, "admin", "manager"), full_name, email
         ');
     }
 
@@ -288,7 +581,10 @@ class ClientCaseService
                     status = :status,
                     stage = :stage,
                     priority = :priority,
+                    assigned_user_id = :assigned_user_id,
                     source = :source,
+                    property_type_id = :property_type_id,
+                    location_id = :location_id,
                     budget_min = :budget_min,
                     budget_max = :budget_max,
                     currency = :currency,
@@ -307,7 +603,10 @@ class ClientCaseService
                 'status' => $this->allowed((string) ($input['status'] ?? 'active'), ['active', 'paused', 'closed', 'lost'], 'active'),
                 'stage' => $this->allowed((string) ($input['stage'] ?? 'new'), $this->stages(), 'new'),
                 'priority' => $this->allowed((string) ($input['priority'] ?? 'normal'), ['low', 'normal', 'high', 'urgent'], 'normal'),
+                'assigned_user_id' => $this->managerId($input['assigned_user_id'] ?? ($case['assigned_user_id'] ?? null)),
                 'source' => $this->nullable((string) ($input['source'] ?? ''), 120),
+                'property_type_id' => $this->propertyTypeId($input['property_type_id'] ?? ($case['property_type_id'] ?? null)),
+                'location_id' => $this->locationId($input['location_id'] ?? ($case['location_id'] ?? null)),
                 'budget_min' => $this->decimal($input['budget_min'] ?? null),
                 'budget_max' => $this->decimal($input['budget_max'] ?? null),
                 'currency' => $this->currency((string) ($input['currency'] ?? 'USD')),
@@ -334,6 +633,58 @@ class ClientCaseService
             }
 
             $this->logError('client-case-update', $e);
+
+            return ['ok' => false, 'message' => 'Кейс не вдалося оновити.'];
+        }
+    }
+
+    public function quickUpdate(int $caseId, array $input, ?array $user = null): array
+    {
+        try {
+            $case = $this->case($caseId);
+            if (!$case) {
+                return ['ok' => false, 'message' => 'Кейс не знайдено.'];
+            }
+
+            $status = $this->allowed((string) ($input['status'] ?? $case['status']), ['active', 'paused', 'closed', 'lost'], (string) $case['status']);
+            $stage = $this->allowed((string) ($input['stage'] ?? $case['stage']), $this->stages(), (string) $case['stage']);
+            $priority = $this->allowed((string) ($input['priority'] ?? $case['priority']), ['low', 'normal', 'high', 'urgent'], (string) $case['priority']);
+            $assignedUserId = array_key_exists('assigned_user_id', $input)
+                ? $this->managerId($input['assigned_user_id'])
+                : ($case['assigned_user_id'] ?? null);
+            $nextContactAt = array_key_exists('next_contact_at', $input)
+                ? $this->dateTimeOrNull((string) ($input['next_contact_at'] ?? ''))
+                : ($case['next_contact_at'] ?? null);
+
+            $this->database->connection()->prepare('
+                UPDATE tn_client_cases
+                SET status = :status,
+                    stage = :stage,
+                    priority = :priority,
+                    assigned_user_id = :assigned_user_id,
+                    next_contact_at = :next_contact_at,
+                    closed_at = :closed_at,
+                    updated_at = NOW()
+                WHERE id = :id
+            ')->execute([
+                'id' => $caseId,
+                'status' => $status,
+                'stage' => $stage,
+                'priority' => $priority,
+                'assigned_user_id' => $assignedUserId,
+                'next_contact_at' => $nextContactAt,
+                'closed_at' => in_array($status, ['closed', 'lost'], true) ? (($case['closed_at'] ?? null) ?: date('Y-m-d H:i:s')) : null,
+            ]);
+
+            $this->addActivity($caseId, [
+                'activity_type' => 'status_change',
+                'title' => 'Кейс швидко оновлено',
+                'body' => 'Оновлено етап, статус, пріоритет або відповідального менеджера.',
+            ], $user);
+
+            return ['ok' => true, 'message' => 'Кейс оновлено.'];
+        } catch (Throwable $e) {
+            $this->logError('client-case-quick-update', $e);
 
             return ['ok' => false, 'message' => 'Кейс не вдалося оновити.'];
         }
@@ -378,7 +729,7 @@ class ClientCaseService
         }
     }
 
-    public function attachInboundRequest(int $caseId, int $requestId): array
+    public function attachInboundRequest(int $caseId, int $requestId, ?array $user = null): array
     {
         $case = $this->case($caseId);
         if (!$case) {
@@ -393,11 +744,14 @@ class ClientCaseService
                 UPDATE tn_leads
                 SET person_id = :person_id,
                     client_case_id = :client_case_id,
+                    assigned_user_id = COALESCE(:assigned_user_id, assigned_user_id),
+                    status = "qualified",
                     updated_at = NOW()
                 WHERE id = :request_id
             ')->execute([
                 'person_id' => (int) $case['person_id'],
                 'client_case_id' => $caseId,
+                'assigned_user_id' => $user['id'] ?? null,
                 'request_id' => $requestId,
             ]);
 
@@ -407,6 +761,12 @@ class ClientCaseService
             ')->execute(['client_case_id' => $caseId, 'request_id' => $requestId]);
 
             $pdo->commit();
+
+            $this->addActivity($caseId, [
+                'activity_type' => 'note',
+                'title' => 'Заявку привʼязано до кейса',
+                'body' => 'Вхідна заявка #' . $requestId . ' додана як контекст кейса.',
+            ], $user);
 
             return ['ok' => true, 'message' => 'Заявку привʼязано до кейсу.'];
         } catch (Throwable $e) {
@@ -520,9 +880,37 @@ class ClientCaseService
                 INSERT IGNORE INTO tn_client_case_request_matches (client_case_id, inbound_request_id, relation_type)
                 VALUES (:case_id, :request_id, "source")
             ')->execute(['case_id' => $caseId, 'request_id' => $requestId]);
+
+            $request = $this->inboundRequest($requestId);
+            if ($request) {
+                $this->addActivity($caseId, [
+                    'activity_type' => 'note',
+                    'title' => 'Нова заявка: ' . $this->inboundIntentLabel((string) ($request['request_intent'] ?? 'general_contact')),
+                    'body' => $this->nullableText((string) ($request['message'] ?? '')),
+                ]);
+            }
         } catch (Throwable $e) {
             $this->logError('client-case-register-inbound-request', $e);
         }
+    }
+
+    public function addInboundPropertyMatch(int $caseId, int $propertyId): void
+    {
+        if (!$this->propertyContext($propertyId)) {
+            return;
+        }
+
+        $this->addPropertyMatch($caseId, $propertyId, [
+            'match_status' => 'interested',
+            'note' => 'Обʼєкт із вхідної заявки',
+        ]);
+    }
+
+    public function inboundPropertyId(mixed $value): ?int
+    {
+        $propertyId = is_numeric($value) ? (int) $value : 0;
+
+        return $this->propertyContext($propertyId) ? $propertyId : null;
     }
 
     public function ensurePersonAndCaseFromInbound(array $input, ?array $user = null): array
@@ -548,6 +936,7 @@ class ClientCaseService
             ]);
 
             $message = $this->nullableText((string) ($input['message'] ?? $input['comment'] ?? ''));
+            $propertyContext = $this->propertyContext((int) ($input['property_id'] ?? 0));
             $caseId = $this->insertCase($pdo, $personId, [
                 'full_name' => $name,
                 'type' => $this->caseTypeFromInbound($input),
@@ -557,7 +946,10 @@ class ClientCaseService
                 'priority' => 'normal',
                 'source' => 'site-inbound-request',
                 'description' => $message,
-                'currency' => 'USD',
+                'property_type_id' => $propertyContext['type_id'] ?? null,
+                'location_id' => $propertyContext['location_id'] ?? null,
+                'budget_max' => $propertyContext['price_amount'] ?? null,
+                'currency' => $propertyContext['price_currency'] ?? 'USD',
             ], $user);
 
             $pdo->commit();
@@ -579,11 +971,11 @@ class ClientCaseService
         $statement = $pdo->prepare('
             INSERT INTO tn_client_cases (
                 public_id, person_id, type, title, status, stage, priority, assigned_user_id, source,
-                budget_min, budget_max, currency, area_min, area_max, description, parameters_json,
+                property_type_id, location_id, budget_min, budget_max, currency, area_min, area_max, description, parameters_json,
                 started_at, next_contact_at
             ) VALUES (
                 :public_id, :person_id, :type, :title, :status, :stage, :priority, :assigned_user_id, :source,
-                :budget_min, :budget_max, :currency, :area_min, :area_max, :description, :parameters_json,
+                :property_type_id, :location_id, :budget_min, :budget_max, :currency, :area_min, :area_max, :description, :parameters_json,
                 NOW(), :next_contact_at
             )
         ');
@@ -595,8 +987,10 @@ class ClientCaseService
             'status' => $this->allowed((string) ($input['status'] ?? 'active'), ['active', 'paused', 'closed', 'lost'], 'active'),
             'stage' => $this->allowed((string) ($input['stage'] ?? 'new'), $this->stages(), 'new'),
             'priority' => $this->allowed((string) ($input['priority'] ?? 'normal'), ['low', 'normal', 'high', 'urgent'], 'normal'),
-            'assigned_user_id' => $user['id'] ?? null,
+            'assigned_user_id' => $this->managerId($input['assigned_user_id'] ?? ($user['id'] ?? null)),
             'source' => $this->nullable((string) ($input['source'] ?? 'manual'), 120),
+            'property_type_id' => $this->propertyTypeId($input['property_type_id'] ?? null),
+            'location_id' => $this->locationId($input['location_id'] ?? null),
             'budget_min' => $this->decimal($input['budget_min'] ?? null),
             'budget_max' => $this->decimal($input['budget_max'] ?? null),
             'currency' => $this->currency((string) ($input['currency'] ?? 'USD')),
@@ -667,12 +1061,43 @@ class ClientCaseService
         return null;
     }
 
+    private function inboundRequest(int $requestId): ?array
+    {
+        return $this->database->fetchOne('
+            SELECT
+                l.*,
+                p.type_id AS property_type_id,
+                p.location_id,
+                p.public_id AS property_public_id,
+                p.title AS property_title
+            FROM tn_leads l
+            LEFT JOIN tn_properties p ON p.id = l.property_id
+            WHERE l.id = :id
+            LIMIT 1
+        ', ['id' => $requestId]);
+    }
+
     private function property(int $propertyId): ?array
     {
         return $this->database->fetchOne('
             SELECT id, public_id, title, slug
             FROM tn_properties
             WHERE id = :id
+            LIMIT 1
+        ', ['id' => $propertyId]);
+    }
+
+    private function propertyContext(int $propertyId): ?array
+    {
+        if ($propertyId <= 0) {
+            return null;
+        }
+
+        return $this->database->fetchOne('
+            SELECT id, type_id, location_id, price_amount, price_currency
+            FROM tn_properties
+            WHERE id = :id
+              AND status IN ("published", "reserved")
             LIMIT 1
         ', ['id' => $propertyId]);
     }
@@ -726,12 +1151,23 @@ class ClientCaseService
 
     private function caseTitleFromInbound(array $input, string $name): string
     {
+        $intent = $this->inboundIntentLabel((string) ($input['request_intent'] ?? 'general_contact'));
         $propertyId = (int) ($input['property_id'] ?? 0);
         if ($propertyId > 0) {
-            return $this->limit('Запит по обʼєкту #' . $propertyId . ': ' . $name, 220);
+            return $this->limit($intent . ' по обʼєкту #' . $propertyId . ': ' . $name, 220);
         }
 
         return $this->caseTitle(['type' => $this->caseTypeFromInbound($input)], $name);
+    }
+
+    private function inboundIntentLabel(string $intent): string
+    {
+        return [
+            'presentation' => 'Презентація',
+            'viewing' => 'Перегляд',
+            'similar_search' => 'Підбір схожих',
+            'general_contact' => 'Загальний контакт',
+        ][$intent] ?? 'Заявка';
     }
 
     private function caseTypeFromInbound(array $input): string
@@ -740,10 +1176,10 @@ class ClientCaseService
         $dealType = mb_strtolower(trim((string) ($input['deal_type'] ?? $input['request_type'] ?? '')));
 
         if ($dealType === 'rent') {
-            return $role === 'owner' ? 'lease_out' : 'rent';
+            return in_array($role, ['owner', 'seller'], true) ? 'lease_out' : 'rent';
         }
 
-        if (in_array($role, ['owner', 'seller'], true) || $dealType === 'sale') {
+        if (in_array($role, ['owner', 'seller'], true)) {
             return 'sell';
         }
 
@@ -752,6 +1188,150 @@ class ClientCaseService
         }
 
         return 'buy';
+    }
+
+    private function leadStatuses(): array
+    {
+        return ['new', 'contacted', 'qualified', 'viewing', 'negotiation', 'won', 'lost', 'spam', 'closed'];
+    }
+
+    private function requestIntents(): array
+    {
+        return ['general_contact', 'presentation', 'viewing', 'similar_search'];
+    }
+
+    private function leadActivityTypes(): array
+    {
+        return ['note', 'call', 'message', 'status_change', 'task', 'viewing'];
+    }
+
+    private function leadStatusLabel(string $status): string
+    {
+        return [
+            'new' => 'Нова',
+            'contacted' => 'Контакт був',
+            'qualified' => 'Кваліфікована',
+            'viewing' => 'Перегляд',
+            'negotiation' => 'Переговори',
+            'won' => 'Успіх',
+            'lost' => 'Втрачена',
+            'spam' => 'Спам',
+            'closed' => 'Закрита',
+        ][$status] ?? 'Заявка';
+    }
+
+    private function addLeadActivity(int $leadId, array $input, ?array $user = null): void
+    {
+        $this->database->connection()->prepare('
+            INSERT INTO tn_lead_activities (lead_id, user_id, activity_type, title, body, due_at, completed_at)
+            VALUES (:lead_id, :user_id, :activity_type, :title, :body, :due_at, :completed_at)
+        ')->execute([
+            'lead_id' => $leadId,
+            'user_id' => $user['id'] ?? null,
+            'activity_type' => $this->allowed((string) ($input['activity_type'] ?? 'note'), $this->leadActivityTypes(), 'note'),
+            'title' => $this->limit((string) ($input['title'] ?? 'Нотатка'), 180),
+            'body' => $this->nullableText((string) ($input['body'] ?? '')),
+            'due_at' => $this->dateTimeOrNull((string) ($input['due_at'] ?? '')),
+            'completed_at' => $input['completed_at'] ?? null,
+        ]);
+    }
+
+    private function syncCaseFromLeadStatus(int $caseId, string $leadStatus, ?int $assignedUserId, ?string $nextContactAt): void
+    {
+        $stage = [
+            'new' => 'new',
+            'contacted' => 'qualification',
+            'qualified' => 'qualification',
+            'viewing' => 'viewing',
+            'negotiation' => 'negotiation',
+            'won' => 'deal',
+            'lost' => 'lost',
+            'spam' => 'lost',
+            'closed' => 'lost',
+        ][$leadStatus] ?? null;
+
+        if (!$stage) {
+            return;
+        }
+
+        $status = match ($leadStatus) {
+            'won' => 'closed',
+            'lost', 'spam', 'closed' => 'lost',
+            default => 'active',
+        };
+
+        $this->database->connection()->prepare('
+            UPDATE tn_client_cases
+            SET stage = :stage,
+                status = :status,
+                assigned_user_id = COALESCE(:assigned_user_id, assigned_user_id),
+                next_contact_at = :next_contact_at,
+                closed_at = :closed_at,
+                updated_at = NOW()
+            WHERE id = :id
+        ')->execute([
+            'id' => $caseId,
+            'stage' => $stage,
+            'status' => $status,
+            'assigned_user_id' => $assignedUserId,
+            'next_contact_at' => $nextContactAt,
+            'closed_at' => in_array($status, ['closed', 'lost'], true) ? date('Y-m-d H:i:s') : null,
+        ]);
+    }
+
+    private function managerId(mixed $value): ?int
+    {
+        $id = (int) $value;
+        if ($id <= 0) {
+            return null;
+        }
+
+        $row = $this->database->fetchOne('
+            SELECT id
+            FROM tn_users
+            WHERE id = :id
+              AND status = "active"
+              AND role IN ("manager", "admin")
+            LIMIT 1
+        ', ['id' => $id]);
+
+        return $row ? (int) $row['id'] : null;
+    }
+
+    private function propertyTypeId(mixed $value): ?int
+    {
+        $id = (int) $value;
+        if ($id <= 0) {
+            return null;
+        }
+
+        $row = $this->database->fetchOne('
+            SELECT id
+            FROM tn_property_types
+            WHERE id = :id
+              AND is_active = 1
+            LIMIT 1
+        ', ['id' => $id]);
+
+        return $row ? (int) $row['id'] : null;
+    }
+
+    private function locationId(mixed $value): ?int
+    {
+        $id = (int) $value;
+        if ($id <= 0) {
+            return null;
+        }
+
+        $row = $this->database->fetchOne('
+            SELECT id
+            FROM tn_locations
+            WHERE id = :id
+              AND is_active = 1
+            LIMIT 1
+        ', ['id' => $id]);
+
+        return $row ? (int) $row['id'] : null;
     }
 
     private function parametersJson(array $input): ?string

@@ -26,6 +26,8 @@ class CatalogService
             'area_min' => $this->positiveNumber($query['area_min'] ?? null),
             'rooms_min' => $this->positiveNumber($query['rooms_min'] ?? null),
             'sort' => $this->allowed((string) ($query['sort'] ?? ''), ['newest', 'price_asc', 'price_desc', 'area_desc']),
+            'page' => $this->positiveInt($query['page'] ?? null) ?? 1,
+            'per_page' => $this->allowedInt($query['per_page'] ?? null, [12, 24, 60], 60),
         ];
     }
 
@@ -61,54 +63,12 @@ class CatalogService
 
     public function catalogProperties(array $filters): array
     {
-        $where = ['p.status = :published'];
-        $params = ['published' => 'published'];
-
-        if ($filters['deal_type'] !== '') {
-            $where[] = 'p.deal_type = :deal_type';
-            $params['deal_type'] = $filters['deal_type'];
-        }
-
-        if (($filters['q'] ?? '') !== '') {
-            $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.short_description LIKE :q OR p.description LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
-        }
-
-        if ($filters['type'] !== '') {
-            $where[] = 't.code = :type';
-            $params['type'] = $filters['type'];
-        }
-
-        if ($filters['location'] !== '') {
-            $where[] = 'l.slug = :location';
-            $params['location'] = $filters['location'];
-        }
-
-        if ($filters['status'] !== '') {
-            $where[0] = 'p.status = :status';
-            $params['status'] = $filters['status'];
-            unset($params['published']);
-        }
-
-        if ($filters['price_min'] !== null) {
-            $where[] = 'p.price_amount >= :price_min';
-            $params['price_min'] = $filters['price_min'];
-        }
-
-        if ($filters['price_max'] !== null) {
-            $where[] = 'p.price_amount <= :price_max';
-            $params['price_max'] = $filters['price_max'];
-        }
-
-        if (($filters['area_min'] ?? null) !== null) {
-            $where[] = 'p.area_total >= :area_min';
-            $params['area_min'] = $filters['area_min'];
-        }
-
-        if (($filters['rooms_min'] ?? null) !== null) {
-            $where[] = 'p.rooms >= :rooms_min';
-            $params['rooms_min'] = $filters['rooms_min'];
-        }
+        $conditions = $this->catalogConditions($filters);
+        $where = $conditions['where'];
+        $params = $conditions['params'];
+        $perPage = $this->allowedInt($filters['per_page'] ?? null, [12, 24, 60], 60);
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $offset = ($page - 1) * $perPage;
 
         $orderBy = match ($filters['sort'] ?? '') {
             'price_asc' => 'p.price_amount IS NULL, p.price_amount ASC, p.id DESC',
@@ -144,60 +104,15 @@ class CatalogService
             WHERE ' . implode(' AND ', $where) . '
             GROUP BY p.id
             ORDER BY ' . $orderBy . '
-            LIMIT 60
+            LIMIT ' . $perPage . ' OFFSET ' . $offset . '
         ', $params);
     }
 
     public function catalogCount(array $filters): int
     {
-        $where = ['p.status = :published'];
-        $params = ['published' => 'published'];
-
-        if (($filters['q'] ?? '') !== '') {
-            $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.short_description LIKE :q OR p.description LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
-        }
-
-        if (($filters['deal_type'] ?? '') !== '') {
-            $where[] = 'p.deal_type = :deal_type';
-            $params['deal_type'] = $filters['deal_type'];
-        }
-
-        if (($filters['status'] ?? '') !== '') {
-            $where[0] = 'p.status = :status';
-            $params['status'] = $filters['status'];
-            unset($params['published']);
-        }
-
-        if (($filters['type'] ?? '') !== '') {
-            $where[] = 't.code = :type';
-            $params['type'] = $filters['type'];
-        }
-
-        if (($filters['location'] ?? '') !== '') {
-            $where[] = 'l.slug = :location';
-            $params['location'] = $filters['location'];
-        }
-
-        if (($filters['price_min'] ?? null) !== null) {
-            $where[] = 'p.price_amount >= :price_min';
-            $params['price_min'] = $filters['price_min'];
-        }
-
-        if (($filters['price_max'] ?? null) !== null) {
-            $where[] = 'p.price_amount <= :price_max';
-            $params['price_max'] = $filters['price_max'];
-        }
-
-        if (($filters['area_min'] ?? null) !== null) {
-            $where[] = 'p.area_total >= :area_min';
-            $params['area_min'] = $filters['area_min'];
-        }
-
-        if (($filters['rooms_min'] ?? null) !== null) {
-            $where[] = 'p.rooms >= :rooms_min';
-            $params['rooms_min'] = $filters['rooms_min'];
-        }
+        $conditions = $this->catalogConditions($filters);
+        $where = $conditions['where'];
+        $params = $conditions['params'];
 
         $row = $this->database->fetchOne('
             SELECT COUNT(DISTINCT p.id) AS total
@@ -213,54 +128,9 @@ class CatalogService
 
     public function catalogStats(array $filters): array
     {
-        $where = ['p.status = :published'];
-        $params = ['published' => 'published'];
-
-        if (($filters['deal_type'] ?? '') !== '') {
-            $where[] = 'p.deal_type = :deal_type';
-            $params['deal_type'] = $filters['deal_type'];
-        }
-
-        if (($filters['q'] ?? '') !== '') {
-            $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.short_description LIKE :q OR p.description LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
-        }
-
-        if (($filters['status'] ?? '') !== '') {
-            $where[0] = 'p.status = :status';
-            $params['status'] = $filters['status'];
-            unset($params['published']);
-        }
-
-        if (($filters['type'] ?? '') !== '') {
-            $where[] = 't.code = :type';
-            $params['type'] = $filters['type'];
-        }
-
-        if (($filters['location'] ?? '') !== '') {
-            $where[] = 'l.slug = :location';
-            $params['location'] = $filters['location'];
-        }
-
-        if (($filters['price_min'] ?? null) !== null) {
-            $where[] = 'p.price_amount >= :price_min';
-            $params['price_min'] = $filters['price_min'];
-        }
-
-        if (($filters['price_max'] ?? null) !== null) {
-            $where[] = 'p.price_amount <= :price_max';
-            $params['price_max'] = $filters['price_max'];
-        }
-
-        if (($filters['area_min'] ?? null) !== null) {
-            $where[] = 'p.area_total >= :area_min';
-            $params['area_min'] = $filters['area_min'];
-        }
-
-        if (($filters['rooms_min'] ?? null) !== null) {
-            $where[] = 'p.rooms >= :rooms_min';
-            $params['rooms_min'] = $filters['rooms_min'];
-        }
+        $conditions = $this->catalogConditions($filters);
+        $where = $conditions['where'];
+        $params = $conditions['params'];
 
         $row = $this->database->fetchOne('
             SELECT
@@ -283,6 +153,24 @@ class CatalogService
         ];
     }
 
+    public function catalogPagination(array $filters, int $total): array
+    {
+        $perPage = $this->allowedInt($filters['per_page'] ?? null, [12, 24, 60], 60);
+        $totalPages = max(1, (int) ceil(max(0, $total) / $perPage));
+        $currentPage = min(max(1, (int) ($filters['page'] ?? 1)), $totalPages);
+
+        return [
+            'page' => $currentPage,
+            'per_page' => $perPage,
+            'total' => max(0, $total),
+            'total_pages' => $totalPages,
+            'has_previous' => $currentPage > 1,
+            'has_next' => $currentPage < $totalPages,
+            'previous_page' => max(1, $currentPage - 1),
+            'next_page' => min($totalPages, $currentPage + 1),
+        ];
+    }
+
     public function propertyBySlug(string $slug): ?array
     {
         return $this->database->fetchOne('
@@ -290,16 +178,118 @@ class CatalogService
                 p.*,
                 t.name_uk AS type_name,
                 l.city, l.region, l.country_code,
+                g.title AS group_title, g.slug AS group_slug, g.group_type, g.address AS group_address, g.description AS group_description,
                 a.public_name AS agent_name, a.role AS agent_role, a.phone AS agent_phone,
                 a.email AS agent_email, a.telegram AS agent_telegram, a.avatar_url AS agent_avatar,
                 a.bio AS agent_bio
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
+            LEFT JOIN tn_property_groups g ON g.id = p.property_group_id
             LEFT JOIN tn_agents a ON a.id = p.agent_id
             WHERE p.slug = :slug
             LIMIT 1
         ', ['slug' => $slug]);
+    }
+
+    public function groupedProperties(array $property, int $limit = 8): array
+    {
+        $groupId = (int) ($property['property_group_id'] ?? 0);
+        if ($groupId <= 0) {
+            return [];
+        }
+
+        $limit = max(1, min($limit, 12));
+
+        return $this->database->fetchAll('
+            SELECT
+                p.id, p.public_id, p.slug, p.title, p.deal_type, p.status,
+                p.price_amount, p.price_currency, p.price_period, p.area_total, p.rooms,
+                p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
+                t.name_uk AS type_name,
+                l.city, l.region,
+                COALESCE(cover.image_url, first_image.image_url) AS cover_url,
+                (
+                    SELECT COUNT(*) FROM tn_property_images image_count
+                    WHERE image_count.property_id = p.id
+                ) AS image_count
+            FROM tn_properties p
+            INNER JOIN tn_property_types t ON t.id = p.type_id
+            INNER JOIN tn_locations l ON l.id = p.location_id
+            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
+            LEFT JOIN tn_property_images first_image ON first_image.id = (
+                SELECT i.id FROM tn_property_images i
+                WHERE i.property_id = p.id
+                ORDER BY i.sort_order, i.id
+                LIMIT 1
+            )
+            WHERE p.status = "published"
+              AND p.property_group_id = :group_id
+              AND p.id <> :id
+            GROUP BY p.id
+            ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
+            LIMIT ' . $limit,
+            [
+                'group_id' => $groupId,
+                'id' => (int) $property['id'],
+            ]
+        );
+    }
+
+    public function propertyGroupBySlug(string $slug): ?array
+    {
+        return $this->database->fetchOne('
+            SELECT g.*,
+                   l.city, l.region, l.country_code,
+                   COUNT(p.id) AS property_count,
+                   SUM(p.status = "published") AS published_count
+            FROM tn_property_groups g
+            INNER JOIN tn_locations l ON l.id = g.location_id
+            LEFT JOIN tn_properties p ON p.property_group_id = g.id
+            WHERE g.slug = :slug AND g.status = "active"
+            GROUP BY g.id
+            LIMIT 1
+        ', ['slug' => $slug]);
+    }
+
+    public function propertyGroupPresentationProperties(int $groupId, int $limit = 24): array
+    {
+        if ($groupId <= 0) {
+            return [];
+        }
+
+        $limit = max(1, min($limit, 60));
+
+        return $this->database->fetchAll('
+            SELECT
+                p.id, p.public_id, p.slug, p.title, p.deal_type, p.status,
+                p.price_amount, p.price_currency, p.price_period, p.area_total, p.land_area,
+                p.rooms, p.bedrooms, p.bathrooms, p.floor, p.floors,
+                p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
+                t.name_uk AS type_name,
+                l.city, l.region,
+                COALESCE(cover.image_url, first_image.image_url) AS cover_url,
+                (
+                    SELECT COUNT(*) FROM tn_property_images image_count
+                    WHERE image_count.property_id = p.id
+                ) AS image_count
+            FROM tn_properties p
+            INNER JOIN tn_property_types t ON t.id = p.type_id
+            INNER JOIN tn_locations l ON l.id = p.location_id
+            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
+            LEFT JOIN tn_property_images first_image ON first_image.id = (
+                SELECT i.id FROM tn_property_images i
+                WHERE i.property_id = p.id
+                ORDER BY i.sort_order, i.id
+                LIMIT 1
+            )
+            WHERE p.status = "published"
+              AND p.property_group_id = :group_id
+            GROUP BY p.id
+            ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
+            LIMIT ' . $limit,
+            ['group_id' => $groupId]
+        );
     }
 
     public function propertyImages(int $propertyId): array
@@ -445,8 +435,77 @@ class CatalogService
         return in_array($value, $allowed, true) ? $value : '';
     }
 
+    private function catalogConditions(array $filters): array
+    {
+        $where = ['p.status = :published'];
+        $params = ['published' => 'published'];
+
+        if (($filters['deal_type'] ?? '') !== '') {
+            $where[] = 'p.deal_type = :deal_type';
+            $params['deal_type'] = $filters['deal_type'];
+        }
+
+        if (($filters['q'] ?? '') !== '') {
+            $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.short_description LIKE :q OR p.description LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
+            $params['q'] = '%' . $filters['q'] . '%';
+        }
+
+        if (($filters['type'] ?? '') !== '') {
+            $where[] = 't.code = :type';
+            $params['type'] = $filters['type'];
+        }
+
+        if (($filters['location'] ?? '') !== '') {
+            $where[] = 'l.slug = :location';
+            $params['location'] = $filters['location'];
+        }
+
+        if (($filters['status'] ?? '') !== '') {
+            $where[0] = 'p.status = :status';
+            $params['status'] = $filters['status'];
+            unset($params['published']);
+        }
+
+        if (($filters['price_min'] ?? null) !== null) {
+            $where[] = 'p.price_amount >= :price_min';
+            $params['price_min'] = $filters['price_min'];
+        }
+
+        if (($filters['price_max'] ?? null) !== null) {
+            $where[] = 'p.price_amount <= :price_max';
+            $params['price_max'] = $filters['price_max'];
+        }
+
+        if (($filters['area_min'] ?? null) !== null) {
+            $where[] = 'p.area_total >= :area_min';
+            $params['area_min'] = $filters['area_min'];
+        }
+
+        if (($filters['rooms_min'] ?? null) !== null) {
+            $where[] = 'p.rooms >= :rooms_min';
+            $params['rooms_min'] = $filters['rooms_min'];
+        }
+
+        return [
+            'where' => $where,
+            'params' => $params,
+        ];
+    }
+
     private function positiveNumber(mixed $value): ?float
     {
         return is_numeric($value) && (float) $value > 0 ? (float) $value : null;
+    }
+
+    private function positiveInt(mixed $value): ?int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    private function allowedInt(mixed $value, array $allowed, int $default): int
+    {
+        $value = is_numeric($value) ? (int) $value : $default;
+
+        return in_array($value, $allowed, true) ? $value : $default;
     }
 }

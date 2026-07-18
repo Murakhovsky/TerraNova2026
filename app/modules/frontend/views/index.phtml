@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <?php
-      $pageTitle = $metaTitle ?? 'Terra Nova CLUB | Нерухомість, інвестиції, 3D та CRM';
-      $pageDescription = $metaDescription ?? 'Terra Nova CLUB - портал нерухомості, Listing / MLS, девелопменту, інвестицій, 3D-просторів, EstateBook CRM та AIDA.';
+      $pageTitle = $metaTitle ?? 'Terra Nova CLUB | Каталог нерухомості';
+      $pageDescription = $metaDescription ?? 'Terra Nova CLUB - каталог нерухомості для купівлі, оренди, інвестицій, подачі обʼєктів і ручної добірки менеджером.';
       $pageImage = $metaImage ?? $this->url->get('img/terra-nova-og.jpg');
       $pageUrl = $metaUrl ?? $this->url->get();
       $pageType = $metaType ?? 'website';
@@ -23,7 +23,7 @@
 
     <title><?php echo $escape($pageTitle); ?></title>
 
-    <link rel="stylesheet" href="<?php echo $this->url->get('css/terranova-club.css'); ?>">
+    <link rel="stylesheet" href="<?php echo $this->url->get('css/terranova-club.css?v=20260718-p1'); ?>">
     <link rel="shortcut icon" type="image/x-icon" href="<?php echo $this->url->get('img/favicon.ico'); ?>">
 
     <script type="application/ld+json">
@@ -39,6 +39,6 @@
   <body>
     <?php echo $this->getContent(); ?>
 
-    <script src="/js/terranova-club.js?v=20260709" defer></script>
+    <script src="/js/terranova-club.js?v=20260718-p1" defer></script>
   </body>
 </html>

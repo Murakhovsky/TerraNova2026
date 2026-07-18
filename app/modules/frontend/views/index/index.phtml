@@ -9,127 +9,112 @@ $money = static function ($amount, $currency = 'USD', $period = 'total') {
 
     return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
 };
+$number = static fn($value) => $value === null || $value === '' ? '' : rtrim(rtrim(number_format((float) $value, 1, '.', ' '), '0'), '.');
 $dealLabels = [
     'sale' => 'Продаж',
     'rent' => 'Оренда',
     'investment' => 'Інвестиція',
 ];
 $featuredProperties = $featuredProperties ?? [];
+$types = $types ?? [];
+$locations = $locations ?? [];
 $inboundRequestStatus = $inboundRequestStatus ?? null;
 $catalogStatus = $catalogStatus ?? null;
+$fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80';
 ?>
 
-<header class="tn-header" data-header>
-  <a class="tn-logo" href="#top" aria-label="Terra Nova CLUB">
-    <span class="tn-logo__mark">TN</span>
-    <span class="tn-logo__text">
-      <strong>Terra Nova</strong>
-      <small>CLUB</small>
-    </span>
-  </a>
-
-  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button>
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
-    <a href="#realty">Нерухомість</a>
-    <a href="<?php echo $this->url->get('property/listing'); ?>">Listing / MLS</a>
-    <a href="#invest">Інвестиції</a>
-    <a href="#realtors">Рієлторам</a>
-    <a href="#developers">Забудовникам</a>
-    <a href="#estatebook">EstateBook CRM</a>
-    <a href="#aida">AIDA / IT</a>
-    <a href="#art">Art</a>
-    <a href="#request">Контакти</a>
-    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a>
-  </nav>
-
-  <div class="tn-header-actions">
-    <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/submit'); ?>">Подати об’єкт</a>
-    <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('auth/login'); ?>">Увійти</a>
-  </div>
-</header>
+<?php $this->partial('shared/public_header', [
+    'active' => 'home',
+    'actions' => [
+        ['href' => 'property/catalog', 'label' => 'Знайти обʼєкт', 'class' => 'tn-btn--dark'],
+        ['href' => 'property/submit', 'label' => 'Подати обʼєкт', 'class' => 'tn-btn--ghost'],
+    ],
+]); ?>
 
 <main id="top">
-  <section class="tn-hero">
+  <section class="tn-hero tn-home-hero">
     <div class="tn-hero__media" role="img" aria-label="Сучасний житловий простір Terra Nova"></div>
     <div class="tn-hero__shade"></div>
 
     <div class="tn-hero__content">
-      <p class="tn-kicker">Terra Nova CLUB / Release 0</p>
-      <h1>Нерухомість, інвестиції та технології в одній екосистемі</h1>
-      <p class="tn-hero__intro">Публічний портал для купівлі, продажу, Listing / MLS, роботи з рієлторами, забудовниками, інвесторами, EstateBook CRM та AIDA.</p>
+      <p class="tn-kicker">Terra Nova CLUB</p>
+      <h1>Нерухомість, яку зручно вибирати</h1>
+      <p class="tn-hero__intro">Каталог квартир, будинків, землі та комерційних обʼєктів із фільтрами, картками, заявками й ручною добіркою від менеджера.</p>
 
-      <div class="tn-hero-actions">
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути об’єкти</a>
-        <a class="tn-btn tn-btn--ghost tn-btn--hero" href="<?php echo $this->url->get('property/submit'); ?>">Подати об’єкт</a>
-      </div>
-
-      <form class="tn-search" action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
+      <form class="tn-search tn-home-search" action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
         <input type="hidden" name="deal_type" value="sale" data-search-deal-type>
-        <div class="tn-search__tabs" role="tablist" aria-label="Тип операції">
+        <div class="tn-search__tabs" role="tablist" aria-label="Операція">
           <button class="is-active" type="button" data-search-tab data-search-value="sale">Купити</button>
           <button type="button" data-search-tab data-search-value="rent">Оренда</button>
-          <button type="button" data-search-tab data-search-value="investment">Інвестиції</button>
+          <button type="button" data-search-tab data-search-value="investment">Інвестиція</button>
         </div>
         <div class="tn-search__grid">
           <label>
-            <span>Тип об’єкта</span>
+            <span>Що шукаєте</span>
             <select name="type">
-              <option value="">Усі типи</option>
-              <option value="house">Будинок</option>
-              <option value="apartment">Квартира</option>
-              <option value="cottage">Котедж</option>
-              <option value="land">Земельна ділянка</option>
-              <option value="commercial">Комерційна нерухомість</option>
-              <option value="new_building">Новобудова</option>
+              <option value="">Будь-який тип</option>
+              <?php foreach ($types as $type): ?>
+                <option value="<?php echo $h($type['code']); ?>"><?php echo $h($type['name_uk']); ?></option>
+              <?php endforeach; ?>
             </select>
           </label>
           <label>
-            <span>Локація</span>
+            <span>Місто</span>
             <select name="location">
               <option value="">Усі міста</option>
-              <option value="lviv">Львів</option>
-              <option value="kyiv">Київ</option>
-              <option value="ivano-frankivsk">Івано-Франківськ</option>
-              <option value="uzhhorod">Ужгород</option>
+              <?php foreach ($locations as $location): ?>
+                <option value="<?php echo $h($location['slug']); ?>"><?php echo $h($location['city']); ?></option>
+              <?php endforeach; ?>
             </select>
           </label>
           <label>
             <span>Бюджет до, USD</span>
             <input name="price_max" type="number" min="0" step="5000" placeholder="70 000">
           </label>
-          <button class="tn-btn tn-btn--accent" type="submit">Знайти</button>
+          <button class="tn-btn tn-btn--accent" type="submit">Показати</button>
         </div>
       </form>
+
+      <div class="tn-home-hero__links">
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=sale'); ?>">Купити</a>
+        <a href="<?php echo $this->url->get('property/catalog?deal_type=rent'); ?>">Орендувати</a>
+        <a href="<?php echo $this->url->get('property/map'); ?>">На карті</a>
+        <a href="#request">Підібрати вручну</a>
+      </div>
     </div>
   </section>
 
-  <section class="tn-stats" aria-label="Ключові показники Terra Nova">
-    <article><strong>5 000</strong><span>цільових користувачів на місяць</span></article>
-    <article><strong>$70k</strong><span>орієнтовний середній чек</span></article>
-    <article><strong>4</strong><span>архітектурно закладені мови: UA, EN, PL, FR</span></article>
-    <article><strong>Release 0</strong><span>каталог, заявки, CRM-підготовка та MLS-основа</span></article>
+  <section class="tn-home-scenarios" aria-label="Основні сценарії">
+    <a href="<?php echo $this->url->get('property/catalog?deal_type=sale'); ?>">
+      <span>01</span>
+      <strong>Купити нерухомість</strong>
+      <small>Квартири, будинки, земля, комерція</small>
+    </a>
+    <a href="<?php echo $this->url->get('property/catalog?deal_type=rent'); ?>">
+      <span>02</span>
+      <strong>Знайти оренду</strong>
+      <small>Житло й комерційні площі</small>
+    </a>
+    <a href="<?php echo $this->url->get('property/catalog?deal_type=investment'); ?>">
+      <span>03</span>
+      <strong>Підібрати інвестицію</strong>
+      <small>Обʼєкти з потенціалом росту</small>
+    </a>
+    <a href="<?php echo $this->url->get('property/submit'); ?>">
+      <span>04</span>
+      <strong>Подати обʼєкт</strong>
+      <small>Для власників і партнерів</small>
+    </a>
   </section>
 
-  <section class="tn-section" id="realty">
-    <div class="tn-section__head">
-      <p class="tn-kicker">Каталог</p>
-      <h2>Об’єкти для покупців, інвесторів і партнерських продажів</h2>
-      <p>Стартова структура під власні, партнерські, рієлторські та власницькі об’єкти з ручною модерацією.</p>
-    </div>
-
-    <div class="tn-category-row">
-      <a class="is-active" href="<?php echo $this->url->get('property/catalog'); ?>">Усі</a>
-      <a href="<?php echo $this->url->get('property/type/apartment'); ?>">Квартири</a>
-      <a href="<?php echo $this->url->get('property/type/house'); ?>">Будинки</a>
-      <a href="<?php echo $this->url->get('property/type/cottage'); ?>">Котеджі</a>
-      <a href="<?php echo $this->url->get('property/type/land'); ?>">Земля</a>
-      <a href="<?php echo $this->url->get('property/type/commercial'); ?>">Комерція</a>
-      <a href="<?php echo $this->url->get('property/type/new_building'); ?>">Новобудови</a>
+  <section class="tn-section tn-home-featured" id="realty">
+    <div class="tn-section__head tn-section__head--row">
+      <div>
+        <p class="tn-kicker">Каталог</p>
+        <h2>Актуальні обʼєкти</h2>
+        <p>Почніть із відібраних позицій або відкрийте повний каталог із фільтрами.</p>
+      </div>
+      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Весь каталог</a>
     </div>
 
     <?php if ($catalogStatus): ?>
@@ -143,7 +128,8 @@ $catalogStatus = $catalogStatus ?? null;
         <?php foreach ($featuredProperties as $property): ?>
           <article class="tn-property-card">
             <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
-              <img src="<?php echo $h($property['cover_url'] ?: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'); ?>" alt="<?php echo $h($property['title']); ?>">
+              <img src="<?php echo $h($property['cover_url'] ?: $fallbackImage); ?>" alt="<?php echo $h($property['title']); ?>">
+              <span class="tn-card-price-badge"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></span>
             </a>
             <div class="tn-property-card__body">
               <div class="tn-card-tags">
@@ -155,11 +141,12 @@ $catalogStatus = $catalogStatus ?? null;
               <p><?php echo $h($property['short_description']); ?></p>
               <div class="tn-property-meta">
                 <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
-                <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h((float) $property['area_total']); ?> м²<?php endif; ?></span>
+                <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h($number($property['area_total'])); ?> м²<?php endif; ?></span>
               </div>
               <div class="tn-card-actions">
-                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Деталі</a>
-                <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Вибрати</button>
+                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
+                <a class="tn-btn tn-btn--ghost" href="#request">Запит</a>
+                <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному" aria-label="Додати у вибране">♡</button>
               </div>
             </div>
           </article>
@@ -167,105 +154,77 @@ $catalogStatus = $catalogStatus ?? null;
       </div>
     <?php else: ?>
       <div class="tn-empty-state">
-        <h3>Каталог готовий до підключення об’єктів</h3>
-        <p>Після застосування міграції та наповнення БД тут автоматично з’являться пріоритетні об’єкти Release 0.</p>
+        <h3>Каталог готовий до наповнення</h3>
+        <p>Після додавання обʼєктів тут зʼявляться пріоритетні позиції для покупців.</p>
         <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Відкрити каталог</a>
       </div>
     <?php endif; ?>
   </section>
 
-  <section class="tn-map-section" id="mls">
-    <div class="tn-map-section__copy">
-      <p class="tn-kicker">Listing / MLS</p>
-      <h2>Каталог із картою, фільтрами, вибраним і порівнянням</h2>
-      <p>Публічна вітрина для гостей і майбутній робочий режим для рієлторів: статуси, комісії, бронювання, фіксація клієнта та перевірка дублікатів.</p>
-      <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/listing'); ?>">Відкрити Listing</a>
-    </div>
-    <div class="tn-map-mock" aria-label="Макет карти об’єктів">
-      <span class="pin pin-a">$145k</span>
-      <span class="pin pin-b">$82k</span>
-      <span class="pin pin-c">$68k</span>
-    </div>
+  <section class="tn-service-strip" aria-label="Як працює Terra Nova">
+    <article>
+      <span>01</span>
+      <h2>Швидкий пошук</h2>
+      <p>Фільтри за операцією, містом, бюджетом і типом обʼєкта допомагають прибрати зайве.</p>
+    </article>
+    <article>
+      <span>02</span>
+      <h2>Зрозуміла картка</h2>
+      <p>Фото, ціна, локація, площа й заявка на перегляд зібрані в одному місці.</p>
+    </article>
+    <article>
+      <span>03</span>
+      <h2>Добірка менеджера</h2>
+      <p>Якщо потрібен живий відбір, залиште запит і ми підготуємо релевантні варіанти.</p>
+    </article>
   </section>
 
-  <section class="tn-section tn-section--dark" id="ecosystem">
-    <div class="tn-section__head">
-      <p class="tn-kicker">Екосистема</p>
-      <h2>Terra Nova CLUB як бренд-оболонка для кількох напрямів</h2>
-    </div>
-    <div class="tn-ecosystem-grid">
-      <article><span>01</span><h3>Agency</h3><p>Продаж, оренда, рієлтори, власники, заявки, комісії, добірки.</p></article>
-      <article><span>02</span><h3>Terra Nova</h3><p>Девелопмент, власні ЖК, котеджні містечка, будинки, земля, архітектурні та інвестиційні проєкти.</p></article>
-      <article id="art"><span>03</span><h3>Art</h3><p>Мистецтво, інтер’єри, арт-об’єкти, візуальна культура простору.</p></article>
-      <article id="estatebook"><span>04</span><h3>EstateBook CRM</h3><p>Внутрішнє технологічне ядро для об’єктів, лідів, менеджерів і процесів.</p></article>
-      <article id="aida"><span>05</span><h3>AIDA / IT</h3><p>AI-чат, інтелектуальний термінал, n8n, GPT, автоматизація.</p></article>
-      <article><span>06</span><h3>3D-простір</h3><p>Напрям підготовки медіапакетів, турів, генпланів і моделей. Активний розділ повернеться після першої готової сцени.</p></article>
-    </div>
-  </section>
-
-  <section class="tn-section" id="invest">
-    <div class="tn-section__head">
-      <p class="tn-kicker">Аудиторії</p>
-      <h2>Окремі сценарії для покупців, рієлторів, власників, інвесторів і забудовників</h2>
-    </div>
-    <div class="tn-audience-grid">
-      <article><h3>Покупець</h3><p>Вибране, порівняння, історія переглядів, заявки, календар показів, рекомендації.</p></article>
-      <article id="realtors"><h3>Рієлтор</h3><p>Власні об’єкти, модерація, заявки покупців, фіксації клієнтів, комісії, бронювання.</p></article>
-      <article><h3>Власник</h3><p>Статистика, статус продажу, заявки, документи, коментарі менеджера.</p></article>
-      <article><h3>Інвестор</h3><p>Презентаційні матеріали, консультації, збережені об’єкти, майбутні можливості.</p></article>
-      <article id="developers"><h3>Забудовник</h3><p>Проєкти, об’єкти, партнерські заявки, презентації, маршрутизація звернень у CRM.</p></article>
-    </div>
-  </section>
-
-  <section class="tn-process">
+  <section class="tn-home-split" id="owners">
     <div>
-      <p class="tn-kicker">Заявки та автоматизація</p>
-      <h2>Форма → CRM → Telegram → AIDA handoff</h2>
+      <p class="tn-kicker">Для власників</p>
+      <h2>Хочете продати або здати обʼєкт?</h2>
+      <p>Подайте базову інформацію, фото й контакти. Менеджер перевірить дані, допоможе з описом і підготує обʼєкт до публікації.</p>
+      <div class="tn-hero-actions">
+        <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/submit'); ?>">Подати обʼєкт</a>
+        <a class="tn-btn tn-btn--ghost" href="#request">Поставити питання</a>
+      </div>
     </div>
-    <ol>
-      <li>Контактні дані, роль, тип звернення, джерело сторінки</li>
-      <li>Збереження заявки в базі Release 0</li>
-      <li>Передача менеджеру в EstateBook CRM після підключення маршрутизації</li>
-      <li>Майбутній AIDA-супровід діалогу та добірки об’єктів</li>
-    </ol>
+    <div class="tn-owner-steps">
+      <article><span>1</span><strong>Дані</strong><small>Тип, місто, ціна, площа</small></article>
+      <article><span>2</span><strong>Медіа</strong><small>Фото, обкладинка, 3D за наявності</small></article>
+      <article><span>3</span><strong>Публікація</strong><small>Модерація і показ у каталозі</small></article>
+    </div>
   </section>
 
   <section class="tn-inbound-request" id="request">
     <div class="tn-section__head">
-      <p class="tn-kicker">Заявка</p>
-      <h2>Підібрати об’єкт, подати нерухомість або обговорити партнерство</h2>
+      <p class="tn-kicker">Запит</p>
+      <h2>Опишіть, що шукаєте</h2>
+      <p>Місто, бюджет, тип обʼєкта і бажаний формат звʼязку. Менеджер повернеться з добіркою або уточненнями.</p>
     </div>
     <form class="tn-inbound-request-form" action="<?php echo $this->url->get(); ?>#request" method="post">
       <label class="tn-hp" aria-hidden="true"><span>Website</span><input name="website" type="text" tabindex="-1" autocomplete="off"></label>
-      <label><span>Ім’я</span><input name="full_name" type="text" autocomplete="name" required></label>
+      <label><span>Імʼя</span><input name="full_name" type="text" autocomplete="name" required></label>
       <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required></label>
       <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
-      <label><span>Роль</span><select name="role"><option value="buyer">Покупець</option><option value="realtor">Рієлтор</option><option value="owner">Власник</option><option value="investor">Інвестор</option><option value="developer">Забудовник</option></select></label>
-      <label><span>Тип звернення</span><select name="request_type"><option value="consultation">Замовити дзвінок</option><option value="sale">Подати об’єкт</option><option value="investment">Заявка інвестора</option><option value="consultation">Партнерство</option></select></label>
-      <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип об’єкта або короткий опис задачі"></textarea></label>
-      <button class="tn-btn tn-btn--dark" type="submit">Надіслати заявку</button>
+      <label><span>Роль</span><select name="role"><option value="buyer">Покупець</option><option value="owner">Власник</option><option value="investor">Інвестор</option><option value="realtor">Рієлтор</option><option value="developer">Забудовник</option></select></label>
+      <input type="hidden" name="request_intent" value="general_contact" data-request-intent-input>
+      <label><span>Тип звернення</span><select name="request_type"><option value="consultation">Підібрати обʼєкт</option><option value="sale">Подати обʼєкт</option><option value="rent">Оренда</option><option value="investment">Інвестиція</option></select></label>
+      <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип обʼєкта або короткий опис задачі"></textarea></label>
+      <button class="tn-btn tn-btn--dark" type="submit">Надіслати запит</button>
       <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
     </form>
   </section>
 </main>
 
-<nav class="tn-mobile-dock" aria-label="Швидкі дії">
-  <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-  <a href="<?php echo $this->url->get('property/listing'); ?>">MLS</a>
-  <a href="#invest">Інвестиції</a>
-  <a href="<?php echo $this->url->get('property/submit'); ?>">Подати</a>
-</nav>
+<?php $this->partial('shared/mobile_dock', ['active' => 'catalog']); ?>
 
-<footer class="tn-footer">
-  <div>
-    <strong>Terra Nova CLUB</strong>
-    <p>Публічний портал екосистеми навколо нерухомості, девелопменту, технологій, інвестицій та арт-напряму.</p>
-  </div>
-  <div class="tn-footer__links">
-    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-    <a href="<?php echo $this->url->get('property/listing'); ?>">Listing / MLS</a>
-    <a href="#estatebook">EstateBook CRM</a>
-    <a href="#aida">AIDA</a>
-    <a href="#request">Контакти</a>
-  </div>
-</footer>
+<?php $this->partial('shared/public_footer', [
+    'text' => 'Публічний каталог нерухомості, заявки, добірки та подача обʼєктів у Terra Nova CLUB.',
+    'links' => [
+        ['path' => 'property/catalog', 'label' => 'Каталог'],
+        ['path' => 'property/map', 'label' => 'Карта'],
+        ['path' => 'property/submit', 'label' => 'Подати обʼєкт'],
+        ['path' => '#request', 'label' => 'Запит'],
+    ],
+]); ?>

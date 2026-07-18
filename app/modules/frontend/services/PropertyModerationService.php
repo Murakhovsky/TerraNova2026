@@ -130,6 +130,12 @@ class PropertyModerationService
                 $coverUrl = $uploadedCover['public_url'];
             }
 
+            if (!$coverUrl) {
+                $pdo->rollBack();
+
+                return ['ok' => false, 'message' => 'Перед публікацією додайте хоча б одне фото обʼєкта.'];
+            }
+
             $statement = $pdo->prepare('
                 INSERT INTO tn_properties (
                     public_id, slug, title, deal_type, type_id, status, source_type, location_id, agent_id,

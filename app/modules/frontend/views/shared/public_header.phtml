@@ -5,11 +5,14 @@ $navItems = [
     ['key' => 'home', 'path' => '', 'label' => 'Головна'],
     ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Каталог'],
     ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
-    ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
     ['key' => 'compare', 'path' => 'property/compare', 'label' => 'Порівняння'],
     ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
     ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати об’єкт'],
 ];
+$navItems = array_values(array_filter(
+    $navItems,
+    static fn(array $item): bool => !in_array($item['key'], ['compare'], true)
+));
 $href = function (string $path): string {
     if ($path === '' || $path === '/') {
         return $this->url->get();

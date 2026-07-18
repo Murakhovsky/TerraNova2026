@@ -26,6 +26,12 @@ class InboundRequestService
         $phone = trim((string) ($input['phone'] ?? ''));
         $email = trim((string) ($input['email'] ?? ''));
         $message = trim((string) ($input['message'] ?? $input['comment'] ?? ''));
+        $propertyId = $this->clientCases?->inboundPropertyId($input['property_id'] ?? null);
+        if ($propertyId) {
+            $input['property_id'] = $propertyId;
+        } else {
+            unset($input['property_id']);
+        }
 
         if ($name === '' || ($phone === '' && $email === '')) {
             return ['ok' => false, 'message' => self::VALIDATION_MESSAGE];
@@ -45,12 +51,13 @@ class InboundRequestService
             $request->buyer_id = null;
             $request->person_id = $caseContext['person_id'] ?? null;
             $request->client_case_id = $caseContext['client_case_id'] ?? null;
-            $request->property_id = $this->positiveInt($input['property_id'] ?? null);
+            $request->property_id = $propertyId;
             $request->full_name = mb_substr($name, 0, 160);
             $request->phone = $phone !== '' ? mb_substr($phone, 0, 50) : null;
             $request->email = $email !== '' ? mb_substr($email, 0, 160) : null;
             $request->role = $this->requestRole((string) ($input['role'] ?? 'buyer'));
             $request->deal_type = $this->requestDealType((string) ($input['deal_type'] ?? $input['request_type'] ?? 'consultation'));
+            $request->request_intent = $this->requestIntent((string) ($input['request_intent'] ?? $input['intent'] ?? 'general_contact'));
             $request->message = $message !== '' ? mb_substr($message, 0, 4000) : null;
             $request->preferred_contact = 'any';
             $request->source_page = mb_substr($sourcePage, 0, 255);
@@ -64,6 +71,10 @@ class InboundRequestService
 
             if (!empty($caseContext['client_case_id'])) {
                 $this->clientCases?->registerInboundRequest((int) $caseContext['client_case_id'], (int) $request->id);
+
+                if (!empty($request->property_id)) {
+                    $this->clientCases?->addInboundPropertyMatch((int) $caseContext['client_case_id'], (int) $request->property_id);
+                }
             }
         } catch (Throwable $e) {
             $this->logError('inbound-request-exception', $e);
@@ -118,6 +129,25 @@ class InboundRequestService
         ];
 
         return $types[$value] ?? 'consultation';
+    }
+
+    private function requestIntent(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $intents = [
+            'general_contact' => 'general_contact',
+            'contact' => 'general_contact',
+            'consultation' => 'general_contact',
+            'presentation' => 'presentation',
+            'viewing' => 'viewing',
+            'visit' => 'viewing',
+            'showing' => 'viewing',
+            'similar_search' => 'similar_search',
+            'similar' => 'similar_search',
+            'підбір' => 'similar_search',
+        ];
+
+        return $intents[$value] ?? 'general_contact';
     }
 
     private function logError(string $label, Throwable|string $error): void

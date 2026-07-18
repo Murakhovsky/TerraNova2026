@@ -1,13 +1,4 @@
-<header class="tn-header" data-header>
-  <a class="tn-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova CLUB">
-    <span class="tn-logo__mark">TN</span>
-    <span class="tn-logo__text"><strong>Terra Nova</strong><small>CLUB</small></span>
-  </a>
-  <nav class="tn-nav" aria-label="Головне меню">
-    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-    <a href="<?php echo $this->url->get('property/favour'); ?>">Вибрані</a>
-  </nav>
-</header>
+﻿<?php $this->partial('shared/public_header', ['active' => 'submit']); ?>
 
 <main class="tn-page">
   <section class="tn-empty-state tn-empty-state--page">

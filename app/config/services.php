@@ -7,6 +7,7 @@ use Phalcon\Mvc\View;
 use Common\Services\AuthService;
 use Common\Services\DatabaseService;
 use Common\Services\EventService;
+use Common\Services\ImageOptimizerService;
 use Common\Services\MediaStorageService;
 
 /**
@@ -43,7 +44,11 @@ $di->setShared('databaseService', function () {
 });
 
 $di->setShared('mediaStorageService', function () {
-    return new MediaStorageService($this->getShared('databaseService'));
+    return new MediaStorageService($this->getShared('databaseService'), $this->getShared('imageOptimizerService'));
+});
+
+$di->setShared('imageOptimizerService', function () {
+    return new ImageOptimizerService();
 });
 
 $di->setShared('authService', function () {

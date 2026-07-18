@@ -2,11 +2,15 @@
 $active = $active ?? 'catalog';
 $items = [
     ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Картки'],
-    ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
     ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
+    ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
     ['key' => 'compare', 'path' => 'property/compare', 'label' => 'Порівняння'],
     ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
 ];
+$items = array_values(array_filter(
+    $items,
+    static fn(array $item): bool => !in_array($item['key'], ['compare'], true)
+));
 ?>
 
 <nav class="tn-catalog-viewbar" aria-label="Режим перегляду каталогу">

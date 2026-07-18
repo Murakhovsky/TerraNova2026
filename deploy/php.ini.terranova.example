@@ -1,0 +1,16 @@
+; Terra Nova media upload baseline.
+; Use this on a VPS/dedicated server where you can edit the active PHP php.ini.
+; On shared hosting or PHP-FPM per-directory config, use public/.user.ini instead.
+
+file_uploads = On
+upload_max_filesize = 50M
+post_max_size = 220M
+max_file_uploads = 50
+memory_limit = 512M
+max_input_time = 120
+max_execution_time = 120
+
+; Required for media MIME detection.
+; Extension names may differ by OS/PHP build, but these must be enabled.
+extension=fileinfo
+extension=gd

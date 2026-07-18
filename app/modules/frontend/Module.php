@@ -8,6 +8,7 @@ use Phalcon\Autoload\Loader;
 use Phalcon\Mvc\View;
 use Phalcon\Mvc\View\Engine\Php as PhpEngine;
 use Phalcon\Mvc\ModuleDefinitionInterface;
+use Modules\Frontend\Services\AdminDashboardService;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\ClientCaseService;
 use Modules\Frontend\Services\InboundRequestService;
@@ -29,6 +30,7 @@ class Module implements ModuleDefinitionInterface
         $loader->setNamespaces([
             'Modules\Frontend\Controllers' => __DIR__ . '/controllers/',
             'Modules\Frontend\Models' => __DIR__ . '/models/',
+            'Modules\Frontend\Services' => __DIR__ . '/services/',
         ]);
 
         $loader->register();
@@ -103,6 +105,32 @@ class Module implements ModuleDefinitionInterface
             'controller' => 'client_case',
             'action' => 'index',
         ]);
+
+        $router->add('/admin/:action/:params', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'admin',
+            'action' => 1,
+            'params' => 2,
+        ]);
+
+        $router->add('/admin/:action', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'admin',
+            'action' => 1,
+        ]);
+
+        $router->add('/admin', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'admin',
+            'action' => 'index',
+        ]);
+
+        $di->setShared('frontendAdminDashboardService', function () {
+            return new AdminDashboardService($this->getShared('databaseService'));
+        });
 
         $di->setShared('frontendClientCaseService', function () {
             return new ClientCaseService($this->getShared('databaseService'));

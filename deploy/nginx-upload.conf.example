@@ -1,0 +1,8 @@
+# Put this in the nginx server/location that proxies Terra Nova to PHP.
+# It must be >= post_max_size, otherwise nginx rejects the request before PHP sees it.
+
+client_max_body_size 220m;
+
+# After changing nginx config:
+# nginx -t
+# systemctl reload nginx

@@ -14,6 +14,7 @@ class PropertyController extends ControllerBase
         $this->view->filters = $this->catalogService()->filtersFromQuery((array) $this->request->getQuery());
         $this->view->properties = [];
         $this->view->resultCount = 0;
+        $this->view->pagination = [];
         $this->view->catalogStats = [];
         $this->view->managerClientCases = [];
         $this->view->propertyMatchStatus = (string) $this->request->getQuery('status_message', 'string', '');
@@ -28,8 +29,11 @@ class PropertyController extends ControllerBase
 
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
-            $this->view->properties = $this->catalogService()->catalogProperties($this->view->filters);
             $this->view->resultCount = $this->catalogService()->catalogCount($this->view->filters);
+            $this->view->pagination = $this->catalogService()->catalogPagination($this->view->filters, $this->view->resultCount);
+            $this->view->filters['page'] = $this->view->pagination['page'];
+            $this->view->filters['per_page'] = $this->view->pagination['per_page'];
+            $this->view->properties = $this->catalogService()->catalogProperties($this->view->filters);
             $this->view->catalogStats = $this->catalogService()->catalogStats($this->view->filters);
 
             if ($this->authService()->isManager($this->currentUser())) {
@@ -56,6 +60,7 @@ class PropertyController extends ControllerBase
         $this->view->types = [];
         $this->view->locations = [];
         $this->view->features = [];
+        $this->view->groupedProperties = [];
         $this->view->relatedProperties = [];
         $this->view->managerClientCases = [];
         $this->view->propertyMatchStatus = (string) $this->request->getQuery('status_message', 'string', '');
@@ -75,6 +80,7 @@ class PropertyController extends ControllerBase
             $this->view->property = $property;
             $this->view->images = $this->catalogService()->propertyImages((int) $property['id']);
             $this->view->features = $this->catalogService()->propertyFeatures((int) $property['id']);
+            $this->view->groupedProperties = $this->catalogService()->groupedProperties($property);
             $this->view->relatedProperties = $this->catalogService()->relatedProperties($property);
 
             if ($this->authService()->isManager($this->currentUser())) {
@@ -94,6 +100,58 @@ class PropertyController extends ControllerBase
             if ($this->request->isPost()) {
                 $this->view->inboundRequestStatus = 'Заявку не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
             }
+        }
+    }
+
+    public function presentationAction(?string $slug = null): void
+    {
+        $slug = $slug ?: (string) $this->dispatcher->getParam('params');
+        $this->view->property = null;
+        $this->view->images = [];
+        $this->view->features = [];
+        $this->view->relatedProperties = [];
+        $this->view->group = null;
+        $this->view->properties = [];
+        $this->view->inboundRequestStatus = null;
+        $this->view->pageStatus = null;
+        $this->view->metaTitle = 'Презентація об’єкта | Terra Nova CLUB';
+        $this->view->metaDescription = 'Коротка презентація об’єкта Terra Nova CLUB для клієнта.';
+        $this->view->metaUrl = $this->absoluteUrl('property/presentation/' . $slug);
+
+        try {
+            if ($this->request->isPost()) {
+                $this->view->inboundRequestStatus = $this->submitInboundRequest();
+            }
+
+            $property = $this->catalogService()->propertyBySlug($slug);
+
+            if ($property) {
+                $this->view->property = $property;
+                $this->view->images = $this->catalogService()->propertyImages((int) $property['id']);
+                $this->view->features = $this->catalogService()->propertyFeatures((int) $property['id']);
+                $this->view->relatedProperties = $this->catalogService()->relatedProperties($property);
+                $this->view->metaTitle = ($property['meta_title'] ?: $property['title']) . ' | Презентація Terra Nova CLUB';
+                $this->view->metaDescription = $property['meta_description'] ?: ($property['short_description'] ?: 'Коротка презентація об’єкта Terra Nova CLUB з фото, ціною, параметрами та запитом.');
+                $this->view->metaImage = $this->absoluteUrl((string) ($this->view->images[0]['image_url'] ?? 'img/terra-nova-og.jpg'));
+
+                return;
+            }
+
+            $group = $this->catalogService()->propertyGroupBySlug($slug);
+            if (!$group) {
+                $this->response->setStatusCode(404, 'Not Found');
+                return;
+            }
+
+            $properties = $this->catalogService()->propertyGroupPresentationProperties((int) $group['id']);
+            $this->view->group = $group;
+            $this->view->properties = $properties;
+            $this->view->metaTitle = $group['title'] . ' | Презентація Terra Nova CLUB';
+            $this->view->metaDescription = $group['description'] ?: 'Добірка опублікованих об’єктів за однією адресою або в одному проєкті.';
+        } catch (Throwable $e) {
+            $this->logFrontendError('property-presentation-page', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'Презентація тимчасово недоступна. Спробуйте оновити сторінку трохи пізніше.';
         }
     }
 
@@ -136,8 +194,8 @@ class PropertyController extends ControllerBase
 
     public function listingAction(): void
     {
-        $this->view->title = 'Listing / MLS';
-        $this->view->metaTitle = 'Listing / MLS | Terra Nova CLUB';
+        $this->view->title = 'Внутрішній MLS / Listing';
+        $this->view->metaTitle = 'Внутрішній MLS / Listing | Terra Nova CLUB';
         $this->view->metaDescription = 'Табличне представлення каталогу Terra Nova CLUB для швидкої роботи з об’єктами.';
         $this->loadPropertyWorkspace('listing-page');
     }
@@ -152,20 +210,78 @@ class PropertyController extends ControllerBase
         $this->view->filters = $this->propertyMediaService()->adminFilters((array) $this->request->getQuery());
         $this->view->types = [];
         $this->view->locations = [];
+        $this->view->propertyGroups = [];
+        $this->view->agents = [];
         $this->view->properties = [];
         $this->view->stats = [];
+        $this->view->qualityStats = [];
+        $this->view->operationalStageRules = [];
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
 
         try {
+            $this->view->operationalStageRules = $this->propertyMediaService()->operationalStageRules();
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups();
+            $this->view->agents = $this->propertyMediaService()->agents();
             $this->view->properties = $this->propertyMediaService()->adminProperties($this->view->filters);
             $this->view->stats = $this->propertyMediaService()->adminStats();
+            $this->view->qualityStats = $this->propertyMediaService()->adminQualityStats($this->view->filters);
         } catch (Throwable $e) {
             $this->logFrontendError('property-manage-page', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
             $this->view->pageStatus = 'Реєстр об’єктів тимчасово недоступний.';
+        }
+    }
+
+    public function addAction(): void
+    {
+        $user = $this->requireManager();
+        if (!$user) {
+            return;
+        }
+
+        $this->view->title = 'Додати об’єкт';
+        $this->view->types = [];
+        $this->view->locations = [];
+        $this->view->propertyGroups = [];
+        $this->view->agents = [];
+        $this->view->operationalStageRules = [];
+        $this->view->formData = (array) $this->request->getPost();
+        $this->view->pageStatus = null;
+        $this->view->actionStatus = null;
+
+        try {
+            $this->view->operationalStageRules = $this->propertyMediaService()->operationalStageRules();
+            $this->view->types = $this->catalogService()->propertyTypes();
+            $this->view->locations = $this->catalogService()->locations();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups();
+            $this->view->agents = $this->propertyMediaService()->agents();
+
+            if ($this->request->isPost()) {
+                if ($this->isOversizedPost()) {
+                    $this->view->actionStatus = 'Файли завеликі для поточних налаштувань сервера. Максимальний пакет: ' . $this->bytesLabel($this->iniBytes('post_max_size')) . '.';
+                    return;
+                }
+
+                $result = $this->propertyMediaService()->createDraft(
+                    (array) $this->request->getPost(),
+                    (int) ($user['id'] ?? 0),
+                    (array) $_FILES
+                );
+
+                if ($result['ok'] ?? false) {
+                    $this->response->redirect('property/edit/' . (int) $result['property_id'] . '?status=' . rawurlencode((string) $result['message']));
+                    return;
+                }
+
+                $this->view->actionStatus = (string) ($result['message'] ?? 'Об’єкт не вдалося створити.');
+            }
+        } catch (Throwable $e) {
+            $this->logFrontendError('property-add-page', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'Форма створення об’єкта тимчасово недоступна.';
         }
     }
 
@@ -191,7 +307,7 @@ class PropertyController extends ControllerBase
         $this->view->pick('property/seo');
         $this->view->seoKicker = 'Категорія';
         $this->view->seoTitle = 'Об’єкти категорії';
-        $this->view->seoDescription = 'Добірка об’єктів Terra Nova за типом нерухомості з переходом у картку, Listing або подачу нового об’єкта.';
+        $this->view->seoDescription = 'Добірка об’єктів Terra Nova за типом нерухомості з переходом у картку, запит або подачу нового об’єкта.';
         $this->view->metaTitle = 'Об’єкти категорії | Terra Nova CLUB';
         $this->loadPropertyWorkspace('type-page', ['type' => $code]);
     }
@@ -202,7 +318,7 @@ class PropertyController extends ControllerBase
         $this->view->pick('property/seo');
         $this->view->seoKicker = 'Місто';
         $this->view->seoTitle = 'Об’єкти у місті';
-        $this->view->seoDescription = 'Міська сторінка каталогу Terra Nova для локального SEO, підбору об’єктів і майбутніх MLS-фільтрів.';
+        $this->view->seoDescription = 'Міська сторінка каталогу Terra Nova для локальної добірки, фільтрів і підбору об’єктів.';
         $this->view->metaTitle = 'Об’єкти у місті | Terra Nova CLUB';
         $this->loadPropertyWorkspace('city-page', ['location' => $slug]);
     }
@@ -259,6 +375,52 @@ class PropertyController extends ControllerBase
         }
     }
 
+    public function groupAction(?string $id = null): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $groupId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+        $this->view->title = 'Група об’єктів';
+        $this->view->group = null;
+        $this->view->properties = [];
+        $this->view->locations = [];
+        $this->view->pageStatus = null;
+        $this->view->actionStatus = (string) $this->request->getQuery('status', 'string', '');
+
+        if ($groupId <= 0) {
+            $this->response->redirect('property/manage');
+            return;
+        }
+
+        try {
+            if ($this->request->isPost()) {
+                $result = $this->propertyMediaService()->updatePropertyGroup(
+                    $groupId,
+                    (array) $this->request->getPost()
+                );
+
+                $this->response->redirect('property/group/' . $groupId . '?status=' . rawurlencode((string) ($result['message'] ?? '')));
+                return;
+            }
+
+            $group = $this->propertyMediaService()->propertyGroup($groupId);
+            if (!$group) {
+                $this->response->setStatusCode(404, 'Not Found');
+                return;
+            }
+
+            $this->view->group = $group;
+            $this->view->properties = $this->propertyMediaService()->propertyGroupProperties($groupId);
+            $this->view->locations = $this->catalogService()->locations();
+        } catch (Throwable $e) {
+            $this->logFrontendError('property-group-page', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'Група об’єктів тимчасово недоступна.';
+        }
+    }
+
     public function moderateAction(?string $id = null): void
     {
         if (!$this->requireManager()) {
@@ -294,6 +456,14 @@ class PropertyController extends ControllerBase
         $this->view->images = [];
         $this->view->types = [];
         $this->view->locations = [];
+        $this->view->propertyGroups = [];
+        $this->view->agents = [];
+        $this->view->activities = [];
+        $this->view->inboundRequests = [];
+        $this->view->caseMatches = [];
+        $this->view->readiness = [];
+        $this->view->operationalStageRules = [];
+        $this->view->operationalStageCheck = [];
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) $this->request->getQuery('status', 'string', '');
 
@@ -307,8 +477,16 @@ class PropertyController extends ControllerBase
 
             $this->view->property = $property;
             $this->view->images = $this->propertyMediaService()->images($propertyId);
+            $this->view->readiness = $this->propertyMediaService()->readiness($propertyId);
+            $this->view->operationalStageRules = $this->propertyMediaService()->operationalStageRules();
+            $this->view->operationalStageCheck = $this->propertyMediaService()->operationalStageCheck($propertyId);
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups();
+            $this->view->agents = $this->propertyMediaService()->agents();
+            $this->view->activities = $this->propertyMediaService()->activities($propertyId);
+            $this->view->inboundRequests = $this->propertyMediaService()->inboundRequests($propertyId);
+            $this->view->caseMatches = $this->propertyMediaService()->caseMatches($propertyId);
         } catch (Throwable $e) {
             $this->logFrontendError('property-media-edit', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -318,7 +496,8 @@ class PropertyController extends ControllerBase
 
     public function updateAction(?string $id = null): void
     {
-        if (!$this->requireManager()) {
+        $user = $this->requireManager();
+        if (!$user) {
             return;
         }
 
@@ -331,7 +510,8 @@ class PropertyController extends ControllerBase
 
         $result = $this->propertyMediaService()->updateDetails(
             $propertyId,
-            (array) $this->request->getPost()
+            (array) $this->request->getPost(),
+            (int) ($user['id'] ?? 0)
         );
 
         $this->response->redirect('property/edit/' . $propertyId . '?status=' . rawurlencode($result['message']));
@@ -339,7 +519,8 @@ class PropertyController extends ControllerBase
 
     public function statusAction(?string $id = null): void
     {
-        if (!$this->requireManager()) {
+        $user = $this->requireManager();
+        if (!$user) {
             return;
         }
 
@@ -352,7 +533,9 @@ class PropertyController extends ControllerBase
 
         $result = $this->propertyMediaService()->updateStatus(
             $propertyId,
-            (string) $this->request->getPost('status', 'string', '')
+            (string) $this->request->getPost('status', 'string', ''),
+            (string) $this->request->getPost('status_note', 'string', ''),
+            (int) ($user['id'] ?? 0)
         );
 
         $returnUrl = (string) $this->request->getPost('return_url', 'string', '');
@@ -364,9 +547,34 @@ class PropertyController extends ControllerBase
         $this->response->redirect($target . $separator . 'status_message=' . rawurlencode($result['message']));
     }
 
+    public function quickAction(?string $id = null): void
+    {
+        $user = $this->requireManager();
+        if (!$user) {
+            return;
+        }
+
+        $propertyId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+
+        if (!$this->request->isPost() || $propertyId <= 0) {
+            $this->response->redirect('property/manage');
+            return;
+        }
+
+        $result = $this->propertyMediaService()->quickAction(
+            $propertyId,
+            (string) $this->request->getPost('quick_action', 'string', ''),
+            (array) $this->request->getPost(),
+            (int) ($user['id'] ?? 0)
+        );
+
+        $this->response->redirect('property/edit/' . $propertyId . '?status=' . rawurlencode((string) $result['message']));
+    }
+
     public function mediaAction(?string $id = null): void
     {
-        if (!$this->requireManager()) {
+        $user = $this->requireManager();
+        if (!$user) {
             return;
         }
 
@@ -377,13 +585,42 @@ class PropertyController extends ControllerBase
             return;
         }
 
+        if ($this->isOversizedPost()) {
+            $this->response->redirect('property/edit/' . $propertyId . '?status=' . rawurlencode('Файли завеликі для поточних налаштувань сервера. Максимальний пакет: ' . $this->bytesLabel($this->iniBytes('post_max_size')) . '.'));
+            return;
+        }
+
         $result = $this->propertyMediaService()->update(
             $propertyId,
             (array) $this->request->getPost(),
-            (array) $_FILES
+            (array) $_FILES,
+            (int) ($user['id'] ?? 0)
         );
 
         $this->response->redirect('property/edit/' . $propertyId . '?status=' . rawurlencode($result['message']));
+    }
+
+    public function noteAction(?string $id = null): void
+    {
+        $user = $this->requireManager();
+        if (!$user) {
+            return;
+        }
+
+        $propertyId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+
+        if (!$this->request->isPost() || $propertyId <= 0) {
+            $this->response->redirect('property/manage');
+            return;
+        }
+
+        $result = $this->propertyMediaService()->addActivityNote(
+            $propertyId,
+            (array) $this->request->getPost(),
+            (int) ($user['id'] ?? 0)
+        );
+
+        $this->response->redirect('property/edit/' . $propertyId . '?status=' . rawurlencode((string) $result['message']));
     }
 
     public function favourAction(): void
@@ -404,13 +641,17 @@ class PropertyController extends ControllerBase
         $this->view->locations = [];
         $this->view->properties = [];
         $this->view->resultCount = 0;
+        $this->view->pagination = [];
         $this->view->catalogStats = [];
 
         try {
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
-            $this->view->properties = $this->catalogService()->catalogProperties($this->view->filters);
             $this->view->resultCount = $this->catalogService()->catalogCount($this->view->filters);
+            $this->view->pagination = $this->catalogService()->catalogPagination($this->view->filters, $this->view->resultCount);
+            $this->view->filters['page'] = $this->view->pagination['page'];
+            $this->view->filters['per_page'] = $this->view->pagination['per_page'];
+            $this->view->properties = $this->catalogService()->catalogProperties($this->view->filters);
             $this->view->catalogStats = $this->catalogService()->catalogStats($this->view->filters);
         } catch (Throwable $e) {
             $this->logFrontendError($label, $e);
@@ -425,5 +666,40 @@ class PropertyController extends ControllerBase
         $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
 
         return $scheme . '://' . $host . '/' . ltrim($path, '/');
+    }
+
+    private function isOversizedPost(): bool
+    {
+        $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+        $limit = $this->iniBytes('post_max_size');
+
+        return $contentLength > 0 && $limit > 0 && $contentLength > $limit;
+    }
+
+    private function iniBytes(string $key): int
+    {
+        $value = trim((string) ini_get($key));
+        if ($value === '') {
+            return 0;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (float) $value;
+
+        return match ($unit) {
+            'g' => (int) ($number * 1073741824),
+            'm' => (int) ($number * 1048576),
+            'k' => (int) ($number * 1024),
+            default => (int) $number,
+        };
+    }
+
+    private function bytesLabel(int $bytes): string
+    {
+        if ($bytes >= 1048576) {
+            return rtrim(rtrim(number_format($bytes / 1048576, 1, '.', ''), '0'), '.') . ' МБ';
+        }
+
+        return (string) $bytes . ' Б';
     }
 }

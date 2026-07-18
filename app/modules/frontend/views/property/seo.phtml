@@ -23,11 +23,28 @@ $types = $types ?? [];
 $locations = $locations ?? [];
 $catalogStatus = $catalogStatus ?? null;
 $resultCount = $resultCount ?? count($properties);
+$pagination = $pagination ?? [];
 $catalogStats = $catalogStats ?? [];
 $seoKicker = $seoKicker ?? 'Каталог';
 $seoTitle = $seoTitle ?? 'Об’єкти Terra Nova';
 $seoDescription = $seoDescription ?? 'Добірка об’єктів Terra Nova CLUB.';
 $fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80';
+$currentPath = trim((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? 'property/catalog'), PHP_URL_PATH), '/');
+$pageUrl = function (int $page) use ($filters, $currentPath): string {
+    $query = array_filter([
+        'q' => $filters['q'] ?? '',
+        'deal_type' => $filters['deal_type'] ?? '',
+        'price_min' => $filters['price_min'] ?? null,
+        'price_max' => $filters['price_max'] ?? null,
+        'area_min' => $filters['area_min'] ?? null,
+        'rooms_min' => $filters['rooms_min'] ?? null,
+        'sort' => $filters['sort'] ?? '',
+        'per_page' => ($filters['per_page'] ?? 60) !== 60 ? ($filters['per_page'] ?? 60) : null,
+        'page' => $page > 1 ? $page : null,
+    ], static fn($value): bool => $value !== null && $value !== '');
+
+    return $currentPath . ($query ? '?' . http_build_query($query) : '');
+};
 
 foreach ($types as $type) {
     if (($filters['type'] ?? '') === $type['code']) {
@@ -42,7 +59,6 @@ foreach ($locations as $location) {
     }
 }
 
-$currentPath = trim((string) ($_SERVER['REQUEST_URI'] ?? 'property/catalog'), '/');
 $breadcrumbJson = [
     '@context' => 'https://schema.org',
     '@type' => 'BreadcrumbList',
@@ -127,6 +143,7 @@ foreach ($properties as $index => $property) {
           <article class="tn-property-card" itemscope itemtype="https://schema.org/Product">
             <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" itemprop="url">
               <img src="<?php echo $h($property['cover_url'] ?: $fallbackImage); ?>" alt="<?php echo $h($property['title']); ?>" itemprop="image">
+              <span class="tn-card-price-badge"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></span>
             </a>
             <div class="tn-property-card__body">
               <div class="tn-card-tags">
@@ -145,27 +162,39 @@ foreach ($properties as $index => $property) {
                 <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h($number($property['area_total'])); ?> м²<?php endif; ?></span>
               </div>
               <div class="tn-card-actions">
-                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Деталі</a>
-                <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Вибрати</button>
+                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
+                <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Зберегти</button>
               </div>
             </div>
           </article>
         <?php endforeach; ?>
       </div>
+
+      <?php if ((int) ($pagination['total_pages'] ?? 1) > 1): ?>
+        <nav class="tn-card-actions" aria-label="Сторінки добірки">
+          <?php if (!empty($pagination['has_previous'])): ?>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get($pageUrl((int) $pagination['previous_page'])); ?>">Назад</a>
+          <?php endif; ?>
+          <span><?php echo (int) $pagination['page']; ?> / <?php echo (int) $pagination['total_pages']; ?></span>
+          <?php if (!empty($pagination['has_next'])): ?>
+            <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get($pageUrl((int) $pagination['next_page'])); ?>">Далі</a>
+          <?php endif; ?>
+        </nav>
+      <?php endif; ?>
     <?php endif; ?>
   </section>
 
   <section class="tn-seo-panel">
     <div>
-      <p class="tn-kicker">SEO</p>
-      <h2>Добірка працює як окрема посадкова сторінка</h2>
+      <p class="tn-kicker">Добірка</p>
+      <h2>Окрема сторінка для швидкого вибору</h2>
     </div>
-    <p>Сторінка має власний заголовок, опис, breadcrumbs, ItemList-розмітку, перелінковку з каталогом, картою, Listing і подачею нового об’єкта.</p>
+    <p>Тут зібрані об’єкти за конкретним типом, містом або сценарієм. Можна перейти в повну картку, зберегти варіант або повернутись до каталогу для ширшого пошуку.</p>
   </section>
 </main>
 
 <?php $this->partial('shared/mobile_dock', ['active' => 'catalog']); ?>
 
 <?php $this->partial('shared/public_footer', [
-    'text' => 'SEO-добірки каталогу Terra Nova CLUB для типів нерухомості, міст і сценаріїв пошуку.',
+    'text' => 'Добірки каталогу Terra Nova CLUB для типів нерухомості, міст і сценаріїв пошуку.',
 ]); ?>

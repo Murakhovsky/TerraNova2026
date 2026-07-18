@@ -64,6 +64,23 @@ class ControllerBase extends Controller
         return $user;
     }
 
+    protected function requireAdmin(): ?array
+    {
+        $user = $this->requireUser();
+
+        if (!$user) {
+            return null;
+        }
+
+        if (!$this->authService()->isAdmin($user)) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            $this->response->redirect('cabinet');
+            return null;
+        }
+
+        return $user;
+    }
+
     protected function inboundRequestService(): InboundRequestService
     {
         return $this->di->getShared('frontendInboundRequestService');

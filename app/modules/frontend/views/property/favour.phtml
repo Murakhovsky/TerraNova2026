@@ -38,7 +38,7 @@ $catalogStatus = $catalogStatus ?? null;
 
     <div class="tn-empty-state" data-favourite-empty>
       <h2>У вибраному поки порожньо</h2>
-      <p>Відкрийте каталог або Listing і натисніть “Вибрати” біля потрібних об’єктів.</p>
+      <p>Відкрийте каталог і збережіть об’єкти, які хочете переглянути, порівняти або обговорити з менеджером.</p>
       <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Перейти в каталог</a>
     </div>
 
@@ -47,6 +47,7 @@ $catalogStatus = $catalogStatus ?? null;
         <article class="tn-property-card" data-favourite-item="<?php echo $h($property['public_id']); ?>">
           <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
             <img src="<?php echo $h($property['cover_url'] ?: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'); ?>" alt="<?php echo $h($property['title']); ?>">
+            <span class="tn-card-price-badge"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></span>
           </a>
           <div class="tn-property-card__body">
             <div class="tn-card-tags">
@@ -61,8 +62,8 @@ $catalogStatus = $catalogStatus ?? null;
               <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h((float) $property['area_total']); ?> м²<?php endif; ?></span>
             </div>
             <div class="tn-card-actions">
-              <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Деталі</a>
-              <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Вибрати</button>
+              <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
+              <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Зберегти</button>
             </div>
           </div>
         </article>
@@ -72,3 +73,7 @@ $catalogStatus = $catalogStatus ?? null;
 </main>
 
 <?php $this->partial('shared/mobile_dock', ['active' => 'favour']); ?>
+
+<?php $this->partial('shared/public_footer', [
+    'text' => 'Вибране допомагає швидко повернутись до обʼєктів, які варто переглянути або обговорити з менеджером Terra Nova.',
+]); ?>
