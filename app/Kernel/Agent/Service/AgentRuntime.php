@@ -10,6 +10,7 @@ use Kernel\Agent\AgentInvocation;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use Kernel\Agent\Contract\AgentRunRepositoryInterface;
 use Kernel\Agent\Contract\LlmClientInterface;
+use Kernel\Agent\Contract\DecisionRepositoryInterface;
 use Throwable;
 
 final readonly class AgentRuntime
@@ -19,12 +20,14 @@ final readonly class AgentRuntime
         private LlmClientInterface $llm,
         private StructuredDecisionValidator $validator,
         private AgentRunRepositoryInterface $runs,
+        private ?DecisionRepositoryInterface $decisions = null,
     ) {}
 
     public function run(AgentDefinition $agent, AgentInvocation $invocation): AgentExecution
     {
         $runId = bin2hex(random_bytes(16));
         $started = hrtime(true);
+        $failureRecorded = false;
         $context = $this->contexts->build($invocation);
         $this->runs->start($runId, $agent, $invocation, $context);
 
@@ -34,8 +37,11 @@ final readonly class AgentRuntime
                 $result = $this->validator->validate($response->output, $agent);
             } catch (Throwable $exception) {
                 $this->runs->fail($runId, $exception, $this->duration($started), true);
+                $failureRecorded = true;
                 throw $exception;
             }
+
+            $this->decisions?->save($runId, $agent, $invocation, $result);
 
             $proposals = [];
             foreach ($result->proposedActions as $index => $action) {
@@ -57,7 +63,7 @@ final readonly class AgentRuntime
             $this->runs->complete($runId, $result, $response, $this->duration($started));
             return new AgentExecution($runId, $result, $proposals);
         } catch (Throwable $exception) {
-            if (!isset($response)) {
+            if (!$failureRecorded) {
                 $this->runs->fail($runId, $exception, $this->duration($started));
             }
             throw $exception;

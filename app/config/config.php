@@ -15,6 +15,7 @@ return new \Phalcon\Config\Config([
     'database' => [
         'adapter'  => 'Mysql',
         'host'     => getenv('DB_HOST') ?: 'mysql',
+        'port'     => (int) (getenv('DB_PORT') ?: 3306),
         'username' => getenv('DB_USERNAME') ?: 'cos',
         'password' => getenv('DB_PASSWORD') ?: '',
         'dbname'   => getenv('DB_DATABASE') ?: 'cos',
@@ -72,6 +73,7 @@ return new \Phalcon\Config\Config([
         'database' => [
             'adapter'  => 'Mysql',
             'host'     => getenv('DB_TG_HOST') ?: 'mysql',
+            'port'     => (int) (getenv('DB_TG_PORT') ?: (getenv('DB_PORT') ?: 3306)),
             'username' => getenv('DB_TG_USERNAME') ?: (getenv('DB_USERNAME') ?: 'cos'),
             'password' => getenv('DB_TG_PASSWORD') ?: (getenv('DB_PASSWORD') ?: ''),
             'dbname'   => getenv('DB_TG_DATABASE') ?: (getenv('DB_DATABASE') ?: 'cos'),

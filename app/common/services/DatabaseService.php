@@ -22,8 +22,9 @@ class DatabaseService
 
         $this->connection = new PDO(
             sprintf(
-                'mysql:host=%s;dbname=%s;charset=utf8mb4',
+                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
                 (string) $this->config->host,
+                (int) ($this->config->port ?? 3306),
                 (string) $this->config->dbname
             ),
             (string) $this->config->username,

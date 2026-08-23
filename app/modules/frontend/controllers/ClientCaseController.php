@@ -45,6 +45,7 @@ class ClientCaseController extends ControllerBase
         $this->view->activities = [];
         $this->view->propertyMatches = [];
         $this->view->requestMatches = [];
+        $this->view->aiIntelligence = ['decision' => null, 'actions' => []];
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
 
@@ -61,6 +62,11 @@ class ClientCaseController extends ControllerBase
             $this->view->activities = $this->clientCaseService()->activities($caseId);
             $this->view->propertyMatches = $this->clientCaseService()->propertyMatches($caseId);
             $this->view->requestMatches = $this->clientCaseService()->requestMatches($caseId);
+            try {
+                $this->view->aiIntelligence = $this->di->getShared('frontendCosConsoleService')->dealIntelligence($caseId);
+            } catch (Throwable $exception) {
+                $this->logFrontendError('client-case-ai-intelligence', $exception);
+            }
         } catch (Throwable $e) {
             $this->logFrontendError('client-case-show', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');

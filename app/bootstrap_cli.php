@@ -6,6 +6,7 @@ use Phalcon\Cli\Console as ConsoleApp;
 
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
+require APP_PATH . '/config/environment.php';
 
 /**
  * The FactoryDefault Dependency Injector automatically registers the services that

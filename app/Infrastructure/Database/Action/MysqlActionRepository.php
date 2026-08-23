@@ -78,24 +78,47 @@ final readonly class MysqlActionRepository implements ActionRepositoryInterface
 
     public function claimNext(string $workerId): ?Action
     {
+        return $this->claimWhere(
+            "status = 'QUEUED' AND (available_at IS NULL OR available_at <= NOW(6))",
+            [],
+            $workerId,
+        );
+    }
+
+    public function claim(string $organizationId, string $id, string $workerId): ?Action
+    {
+        return $this->claimWhere(
+            "organization_id = :organization_id AND id = :id AND status = 'QUEUED' "
+            . 'AND (available_at IS NULL OR available_at <= NOW(6))',
+            ['organization_id' => $organizationId, 'id' => $id],
+            $workerId,
+        );
+    }
+
+    private function claimWhere(string $where, array $parameters, string $workerId): ?Action
+    {
         $this->connection->beginTransaction();
         try {
-            $row = $this->connection->query(
-                "SELECT * FROM cos_actions WHERE status = 'QUEUED' AND (available_at IS NULL OR available_at <= NOW(6)) "
-                . 'ORDER BY available_at, created_at LIMIT 1 FOR UPDATE SKIP LOCKED'
-            )->fetch(PDO::FETCH_ASSOC);
+            $select = $this->connection->prepare(
+                'SELECT * FROM cos_actions WHERE ' . $where
+                . ' ORDER BY available_at, created_at LIMIT 1 FOR UPDATE SKIP LOCKED'
+            );
+            $select->execute($parameters);
+            $row = $select->fetch(PDO::FETCH_ASSOC);
             if ($row === false) {
                 $this->connection->commit();
                 return null;
             }
 
             $this->connection->prepare(
-                "UPDATE cos_actions SET status = 'RUNNING', started_at = NOW(6) WHERE id = :id AND status = 'QUEUED'"
-            )->execute(['id' => $row['id']]);
-            $attempt = (int) $this->connection->query(
-                "SELECT COALESCE(MAX(attempt), 0) + 1 FROM cos_action_attempts WHERE action_id = "
-                . $this->connection->quote((string) $row['id'])
-            )->fetchColumn();
+                "UPDATE cos_actions SET status = 'RUNNING', started_at = NOW(6) "
+                . "WHERE id = :id AND organization_id = :organization_id AND status = 'QUEUED'"
+            )->execute(['id' => $row['id'], 'organization_id' => $row['organization_id']]);
+            $attemptStatement = $this->connection->prepare(
+                'SELECT COALESCE(MAX(attempt), 0) + 1 FROM cos_action_attempts WHERE action_id = :action_id'
+            );
+            $attemptStatement->execute(['action_id' => $row['id']]);
+            $attempt = (int) $attemptStatement->fetchColumn();
             $this->connection->prepare(
                 "INSERT INTO cos_action_attempts (action_id, organization_id, attempt, worker_id, status, started_at) "
                 . "VALUES (:action_id, :organization_id, :attempt, :worker_id, 'RUNNING', NOW(6))"

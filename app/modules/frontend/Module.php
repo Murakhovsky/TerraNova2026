@@ -10,6 +10,7 @@ use Phalcon\Mvc\View\Engine\Php as PhpEngine;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\ClientCaseService;
+use Modules\Frontend\Services\CosConsoleService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
@@ -104,6 +105,48 @@ class Module implements ModuleDefinitionInterface
             'action' => 'index',
         ]);
 
+        $router->addPost('/cos/action/{id:[a-f0-9]{32}}/execute', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cos',
+            'action' => 'execute',
+        ]);
+
+        $router->addPost('/cos/approval/{id:[a-f0-9]{32}}/approve', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cos',
+            'action' => 'approve',
+        ]);
+
+        $router->addPost('/cos/approval/{id:[a-f0-9]{32}}/reject', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cos',
+            'action' => 'reject',
+        ]);
+
+        $router->add('/cos', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cos',
+            'action' => 'index',
+        ]);
+
+        $router->addPost('/api/approvals/{id:[a-f0-9]{32}}/approve', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'approval',
+            'action' => 'approve',
+        ]);
+
+        $router->addPost('/api/approvals/{id:[a-f0-9]{32}}/reject', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'approval',
+            'action' => 'reject',
+        ]);
+
         $di->setShared('frontendClientCaseService', function () {
             return new ClientCaseService(
                 $this->getShared('databaseService'),
@@ -123,6 +166,13 @@ class Module implements ModuleDefinitionInterface
                 $this->getShared('databaseService'),
                 $this->getShared('eventBus'),
                 $this->getShared('cosTransactionManager'),
+                (string) $this->getConfig()->cos->organizationId,
+            );
+        });
+
+        $di->setShared('frontendCosConsoleService', function () {
+            return new CosConsoleService(
+                $this->getShared('databaseService'),
                 (string) $this->getConfig()->cos->organizationId,
             );
         });

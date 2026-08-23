@@ -19,6 +19,7 @@ app/
 |   |-- Action/            action aggregate, lifecycle and executor
 |   |-- Policy/            AUTO / APPROVAL_REQUIRED / DENIED decision
 |   |-- Approval/          approval state
+|   |-- Queue/             durable jobs, handlers and worker
 |   `-- Audit/             structured audit contract
 |-- Domains/
 |   `-- Sales/
@@ -71,6 +72,12 @@ Apply migrations in filename order after the existing TerraNova migrations:
 4. `20260822_000011_cos_audit_agents.sql`
    - `cos_agent_runs`
    - `cos_audit_log`
+5. `20260822_000012_sales_deterministic_processes.sql` through `20260822_000014_action_policies.sql`
+   - initial Sales rules, integrations and action policies
+6. `20260822_000015_cos_jobs.sql`
+   - `cos_jobs` with retries, leases and dead-letter status
+7. `20260822_000016_call_completed_flow.sql`
+   - the `sales.call.completed` Sales Intelligence rule
 
 All COS records carry `organization_id`. Until a canonical organization table is introduced, this value intentionally has no foreign key to the existing legacy company models.
 
@@ -109,22 +116,32 @@ event_id + rule_id + action_type + target_id
 
 If no policy matches an action, `PolicyEngine` returns `DENIED`. Automatic execution must always be enabled by an explicit active policy.
 
-## First vertical slice
+## Asynchronous execution
 
-The first production flow should be implemented in this order:
+Agent inference and Action execution run only through durable jobs:
 
 ```text
-ClientCase stage changes
--> sales.deal.stage_changed appended to outbox
--> Sales rule context is built
--> Rule Engine matches an active rule
--> sales.create_followup_task Action is persisted
--> Policy Engine returns AUTO
--> CreateFollowupTaskHandler creates tn_client_case_activities row
--> Action result and audit entry are persisted
+AGENT_RUN -> structured decision -> policy -> ACTION_EXECUTION
 ```
 
-AI is deliberately excluded from this first slice. `AgentInterface` and `AgentResult` define the future boundary without granting an agent mutation capabilities.
+`cos_jobs` uses an atomic `FOR UPDATE SKIP LOCKED` claim, a worker lease, exponential retry, and `DEAD` after `max_attempts`. The unique organization/idempotency key makes redelivery safe. Run bounded worker batches through `./run queue run`; a process supervisor should invoke it continuously in production.
+
+## CallCompleted vertical slice
+
+```text
+completed call activity + sales.call.completed (one transaction)
+-> Rule Engine
+-> AGENT_RUN job
+-> SalesIntelligenceAgent structured decision
+-> sales.send_followup Action
+-> AUTO policy
+-> ACTION_EXECUTION job
+-> SendMessageHandler
+-> sales.followup.sent
+-> audit records sharing one correlation_id
+```
+
+The Agent only returns `ActionProposal` values. It has no repository or executor capable of mutating business state.
 
 ## Deterministic Sales processes
 
@@ -152,10 +169,10 @@ The active CRM provider is configured per organization in `cos_integrations`. En
 
 `AidaCrmAdapter` is the first native adapter and is the only class allowed to translate `sales.create_*_task` into an insert in `tn_client_case_activities`. A future external CRM adapter implements the same `CrmPort` without changing the Kernel or Sales rules.
 
-## Next implementation steps
+## Verification
 
-1. Add repositories for rules, actions, policies, and audit records.
-2. Add the outbox worker with row claiming, retry, and dead-letter behavior.
-3. Integrate event append into the existing ClientCase stage-change service.
-4. Add integration tests for transaction rollback and duplicate delivery.
-5. Add the Sales Intelligence agent only after the deterministic loop works end to end.
+`tests/integration/call_completed_flow.php` exercises the complete Event-to-result cycle, including the persisted Decision, with an in-memory database boundary and a fake structured LLM. `tests/smoke/queue_retry.php` verifies that retry exhaustion moves a job to the dead-letter state.
+
+## Minimal operator UI
+
+Managers can open `/cos` to inspect Events, Decisions, proposed Actions, Approvals, execution Results, dead jobs, and Audit records. A Deal card shows its latest AI recommendation, confidence, risk, Action status, and result. `Execute`, `Approve`, and `Reject` are POST-only operations; Execute cannot bypass Policy, and an approved Action plus its `ACTION_EXECUTION` job are persisted in one transaction.

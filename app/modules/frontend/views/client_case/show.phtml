@@ -7,6 +7,10 @@ $propertyMatches = $propertyMatches ?? [];
 $requestMatches = $requestMatches ?? [];
 $pageStatus = $pageStatus ?? null;
 $actionStatus = $actionStatus ?? null;
+$aiIntelligence = $aiIntelligence ?? ['decision' => null, 'actions' => []];
+$aiDecision = $aiIntelligence['decision'] ?? null;
+$aiActions = $aiIntelligence['actions'] ?? [];
+$cosStatusClass = static fn($value) => preg_replace('/[^a-z0-9-]+/', '-', strtolower(str_replace('_', '-', (string) $value)));
 $stageLabels = [
     'new' => 'Новий',
     'qualification' => 'Кваліфікація',
@@ -66,6 +70,51 @@ $money = function ($amount, $currency): string {
     <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
     <?php if ($pageStatus): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
 
+    <section class="tn-ai-deal-card">
+      <div class="tn-ai-deal-card__head">
+        <div><p class="tn-kicker">AI Intelligence</p><h2>Recommendation</h2></div>
+        <?php if ($aiActions): ?><span class="tn-cos-status tn-cos-status--<?php echo $h($cosStatusClass($aiActions[0]['risk_level'])); ?>">Risk: <?php echo $h($aiActions[0]['risk_level']); ?></span><?php endif; ?>
+      </div>
+      <?php if (!$aiDecision && !$aiActions): ?>
+        <p class="tn-muted">AI ще не аналізував цей Deal. Завершіть дзвінок, щоб запустити Sales Intelligence.</p>
+      <?php else: ?>
+        <?php if ($aiDecision): ?>
+          <div class="tn-ai-decision">
+            <strong><?php echo $h($aiDecision['decision']); ?> · <?php echo $h(round((float) ($aiDecision['confidence'] ?? 0) * 100)); ?>%</strong>
+            <p><?php echo $h($aiDecision['reason']); ?></p>
+            <small><?php echo $h(($aiDecision['agent_name'] ?: 'Agent') . ' · ' . ($aiDecision['model'] ?: 'model pending')); ?></small>
+          </div>
+        <?php endif; ?>
+        <div class="tn-ai-action-list">
+          <?php foreach ($aiActions as $aiAction): ?>
+            <article>
+              <div><strong><?php echo $h($aiAction['type']); ?></strong><span class="tn-cos-status tn-cos-status--<?php echo $h($cosStatusClass($aiAction['status'])); ?>"><?php echo $h($aiAction['status']); ?></span></div>
+              <p><?php echo $h($aiAction['decision_reason'] ?: 'Recommended next action for this Deal.'); ?></p>
+              <?php if ($aiAction['result_status']): ?><small>Result: <?php echo $h($aiAction['result_status']); ?><?php if ($aiAction['result_error']): ?> · <?php echo $h($aiAction['result_error']); ?><?php endif; ?></small><?php endif; ?>
+              <div class="tn-cos-inline-actions">
+                <?php if ($aiAction['status'] === 'QUEUED'): ?>
+                  <form action="<?php echo $this->url->get('cos/action/' . $aiAction['id'] . '/execute'); ?>" method="post">
+                    <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
+                    <button class="tn-btn tn-btn--dark" type="submit">Execute</button>
+                  </form>
+                <?php elseif ($aiAction['status'] === 'PENDING_APPROVAL' && $aiAction['approval_status'] === 'PENDING'): ?>
+                  <form action="<?php echo $this->url->get('cos/approval/' . $aiAction['approval_id'] . '/approve'); ?>" method="post">
+                    <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
+                    <button class="tn-btn tn-btn--dark" type="submit">Approve</button>
+                  </form>
+                  <form action="<?php echo $this->url->get('cos/approval/' . $aiAction['approval_id'] . '/reject'); ?>" method="post">
+                    <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
+                    <button class="tn-btn tn-btn--ghost" type="submit">Reject</button>
+                  </form>
+                <?php endif; ?>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+        <p><a class="tn-row-link" href="<?php echo $this->url->get('cos'); ?>">Відкрити повний audit trail →</a></p>
+      <?php endif; ?>
+    </section>
+
     <section class="tn-crm-detail-grid">
       <article class="tn-admin-panel">
         <div class="tn-section-heading">
@@ -113,6 +162,8 @@ $money = function ($amount, $currency): string {
           <label><span>Тип</span><select name="activity_type"><option value="note">Нотатка</option><option value="call">Дзвінок</option><option value="message">Повідомлення</option><option value="meeting">Зустріч</option><option value="viewing">Показ</option><option value="offer">Офер</option><option value="task">Задача</option></select></label>
           <label><span>Назва</span><input name="title" type="text" maxlength="180" required></label>
           <label><span>Коли</span><input name="due_at" type="datetime-local"></label>
+          <label><span>Тривалість дзвінка, сек.</span><input name="duration_seconds" type="number" min="0" step="1"></label>
+          <label><span>Результат дзвінка</span><input name="call_result" type="text" maxlength="100" placeholder="client_thinking"></label>
           <label class="is-wide"><span>Опис</span><textarea name="body" rows="4"></textarea></label>
           <label class="tn-checkbox"><input name="completed" type="checkbox" value="1"><span>Виконано зараз</span></label>
           <button class="tn-btn tn-btn--dark" type="submit">Додати дію</button>

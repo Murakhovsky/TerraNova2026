@@ -6,6 +6,7 @@ namespace Modules\Frontend\Services;
 use Common\Services\DatabaseService;
 use Domains\Sales\Event\ClientCaseChanged;
 use Domains\Sales\Event\ClientCaseCreated;
+use Domains\Sales\Event\CallCompleted;
 use Domains\Sales\Event\DealStageChanged;
 use Domains\Sales\Event\LeadChanged;
 use Infrastructure\Database\Transaction\TransactionManager;
@@ -380,27 +381,55 @@ class ClientCaseService
 
         try {
             $completedAt = !empty($input['completed']) ? date('Y-m-d H:i:s') : null;
-            $this->database->connection()->prepare('
-                INSERT INTO tn_client_case_activities (client_case_id, person_id, user_id, activity_type, title, body, due_at, completed_at)
-                VALUES (:client_case_id, :person_id, :user_id, :activity_type, :title, :body, :due_at, :completed_at)
-            ')->execute([
-                'client_case_id' => $caseId,
-                'person_id' => (int) $case['person_id'],
-                'user_id' => $user['id'] ?? null,
-                'activity_type' => $this->allowed((string) ($input['activity_type'] ?? 'note'), ['note', 'call', 'message', 'meeting', 'viewing', 'offer', 'status_change', 'deal', 'task'], 'note'),
-                'title' => $this->limit((string) ($input['title'] ?? 'Нотатка'), 180),
-                'body' => $this->nullableText((string) ($input['body'] ?? '')),
-                'due_at' => $this->dateTimeOrNull((string) ($input['due_at'] ?? '')),
-                'completed_at' => $completedAt,
-            ]);
+            $activityType = $this->allowed(
+                (string) ($input['activity_type'] ?? 'note'),
+                ['note', 'call', 'message', 'meeting', 'viewing', 'offer', 'status_change', 'deal', 'task'],
+                'note',
+            );
+            $this->transactions->transactional(function () use ($case, $caseId, $input, $user, $completedAt, $activityType): void {
+                $connection = $this->database->connection();
+                $connection->prepare('
+                    INSERT INTO tn_client_case_activities (client_case_id, person_id, user_id, activity_type, title, body, due_at, completed_at)
+                    VALUES (:client_case_id, :person_id, :user_id, :activity_type, :title, :body, :due_at, :completed_at)
+                ')->execute([
+                    'client_case_id' => $caseId,
+                    'person_id' => (int) $case['person_id'],
+                    'user_id' => $user['id'] ?? null,
+                    'activity_type' => $activityType,
+                    'title' => $this->limit((string) ($input['title'] ?? 'Нотатка'), 180),
+                    'body' => $this->nullableText((string) ($input['body'] ?? '')),
+                    'due_at' => $this->dateTimeOrNull((string) ($input['due_at'] ?? '')),
+                    'completed_at' => $completedAt,
+                ]);
+                $activityId = (string) $connection->lastInsertId();
 
-            if ($completedAt) {
-                $this->database->connection()->prepare('
-                    UPDATE tn_client_cases
-                    SET next_contact_at = NULL
-                    WHERE id = :case_id
-                ')->execute(['case_id' => $caseId]);
-            }
+                if ($completedAt) {
+                    $connection->prepare('
+                        UPDATE tn_client_cases
+                        SET next_contact_at = NULL
+                        WHERE id = :case_id
+                    ')->execute(['case_id' => $caseId]);
+                }
+
+                if ($activityType === 'call' && $completedAt !== null) {
+                    $eventId = $this->eventId();
+                    $callResult = $this->limit((string) ($input['call_result'] ?? $input['result'] ?? ''), 100);
+                    $this->eventBus->publish(CallCompleted::create(
+                        $eventId,
+                        $this->organizationId,
+                        (string) $caseId,
+                        max(0, (int) ($input['duration_seconds'] ?? $input['duration'] ?? 0)),
+                        $callResult !== '' ? $callResult : 'completed',
+                        new EventMetadata(
+                            $eventId,
+                            null,
+                            isset($user['id']) ? 'USER' : 'SYSTEM',
+                            isset($user['id']) ? (string) $user['id'] : 'system',
+                        ),
+                        'client-case-activity:' . $activityId,
+                    ));
+                }
+            });
 
             return ['ok' => true, 'message' => 'Дію додано.'];
         } catch (Throwable $e) {

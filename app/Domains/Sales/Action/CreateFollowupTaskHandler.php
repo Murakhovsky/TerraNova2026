@@ -13,6 +13,7 @@ use DateTimeImmutable;
 final readonly class CreateFollowupTaskHandler implements ActionHandlerInterface
 {
     private const TYPES = [
+        'sales.create_task',
         'sales.create_qualification_task',
         'sales.create_followup_task',
         'sales.escalate_overdue_followup',
@@ -57,6 +58,6 @@ final readonly class CreateFollowupTaskHandler implements ActionHandlerInterface
         return ExecutionResult::success([
             'external_id' => $result->externalId,
             ...$result->data,
-        ]);
+        ], ['tasks_created' => 1]);
     }
 }

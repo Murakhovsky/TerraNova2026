@@ -26,10 +26,24 @@ use Kernel\Rule\Service\RuleEngine;
 use Kernel\Rule\Service\RuleEngineEventHandler;
 use Infrastructure\Database\Agent\MysqlAgentRunRepository;
 use Infrastructure\Database\Agent\MysqlSalesAgentContextBuilder;
+use Infrastructure\Database\Agent\MysqlDecisionRepository;
 use Infrastructure\Llm\HttpStructuredLlmClient;
 use Kernel\Agent\Service\AgentRuntime;
 use Kernel\Agent\Service\StructuredDecisionValidator;
 use Domains\Sales\Agent\SalesIntelligenceAgent;
+use Infrastructure\Database\Policy\MysqlPolicyEvaluationRepository;
+use Infrastructure\Database\Policy\MysqlPolicyRepository;
+use Infrastructure\Database\Approval\MysqlApprovalRepository;
+use Kernel\Policy\Service\ActionPolicyService;
+use Kernel\Approval\Service\ApprovalService;
+use Domains\Sales\Action\UpdateDealHandler;
+use Domains\Sales\Action\SendMessageHandler;
+use Domains\Sales\Action\ScheduleFollowupHandler;
+use Infrastructure\Database\Audit\MysqlAuditRepository;
+use Infrastructure\Database\Queue\MysqlJobQueue;
+use Kernel\Queue\Handler\ActionExecutionJobHandler;
+use Kernel\Queue\Handler\AgentRunJobHandler;
+use Kernel\Queue\Service\QueueWorker;
 
 $di->setShared('cosConditionEvaluator', static fn (): ConditionEvaluator => new ConditionEvaluator());
 
@@ -77,7 +91,10 @@ $di->setShared('cosRuleEvaluationRepository', function (): MysqlRuleEvaluationRe
 });
 
 $di->setShared('cosActionProposalSink', function (): MysqlActionProposalSink {
-    return new MysqlActionProposalSink($this->getShared('cosActionService'));
+    return new MysqlActionProposalSink(
+        $this->getShared('cosActionPolicyService'),
+        $this->getShared('cosJobQueue'),
+    );
 });
 
 $di->setShared('cosRuleEngineEventHandler', function (): RuleEngineEventHandler {
@@ -122,7 +139,28 @@ $di->setShared('cosCrmGateway', function (): RoutedCrmGateway {
 });
 
 $di->setShared('cosActionExecutor', function (): ActionExecutor {
-    return new ActionExecutor([$this->getShared('salesTaskActionHandler')]);
+    return new ActionExecutor([
+        $this->getShared('salesTaskActionHandler'),
+        $this->getShared('salesUpdateDealHandler'),
+        $this->getShared('salesSendMessageHandler'),
+        $this->getShared('salesScheduleFollowupHandler'),
+    ]);
+});
+
+$di->setShared('salesUpdateDealHandler', function (): UpdateDealHandler {
+    return new UpdateDealHandler($this->getShared('databaseService'));
+});
+
+$di->setShared('salesSendMessageHandler', function (): SendMessageHandler {
+    return new SendMessageHandler($this->getShared('databaseService'));
+});
+
+$di->setShared('salesScheduleFollowupHandler', function (): ScheduleFollowupHandler {
+    return new ScheduleFollowupHandler($this->getShared('databaseService'));
+});
+
+$di->setShared('cosAuditRepository', function (): MysqlAuditRepository {
+    return new MysqlAuditRepository($this->getShared('databaseService')->connection());
 });
 
 $di->setShared('cosActionRepository', function (): MysqlActionRepository {
@@ -133,6 +171,43 @@ $di->setShared('cosActionService', function (): ActionService {
     return new ActionService(
         $this->getShared('cosActionRepository'),
         $this->getShared('cosActionExecutor'),
+        $this->getShared('eventStore'),
+        $this->getShared('cosAuditRepository'),
+        $this->getShared('cosTransactionManager'),
+    );
+});
+
+$di->setShared('cosPolicyRepository', function (): MysqlPolicyRepository {
+    return new MysqlPolicyRepository($this->getShared('databaseService')->connection());
+});
+
+$di->setShared('cosPolicyEvaluationRepository', function (): MysqlPolicyEvaluationRepository {
+    return new MysqlPolicyEvaluationRepository($this->getShared('databaseService')->connection());
+});
+
+$di->setShared('cosApprovalRepository', function (): MysqlApprovalRepository {
+    return new MysqlApprovalRepository($this->getShared('databaseService')->connection());
+});
+
+$di->setShared('cosActionPolicyService', function (): ActionPolicyService {
+    return new ActionPolicyService(
+        $this->getShared('cosActionService'),
+        $this->getShared('cosPolicyRepository'),
+        $this->getShared('cosPolicyEvaluationRepository'),
+        $this->getShared('cosApprovalRepository'),
+        $this->getShared('cosPolicyEngine'),
+        $this->getShared('cosTransactionManager'),
+        $this->getShared('cosAuditRepository'),
+        $this->getShared('cosJobQueue'),
+    );
+});
+
+$di->setShared('cosApprovalService', function (): ApprovalService {
+    return new ApprovalService(
+        $this->getShared('cosApprovalRepository'),
+        $this->getShared('cosActionService'),
+        $this->getShared('cosTransactionManager'),
+        $this->getShared('cosAuditRepository'),
     );
 });
 
@@ -142,6 +217,10 @@ $di->setShared('cosAgentContextBuilder', function (): MysqlSalesAgentContextBuil
 
 $di->setShared('cosAgentRunRepository', function (): MysqlAgentRunRepository {
     return new MysqlAgentRunRepository($this->getShared('databaseService')->connection());
+});
+
+$di->setShared('cosDecisionRepository', function (): MysqlDecisionRepository {
+    return new MysqlDecisionRepository($this->getShared('databaseService')->connection());
 });
 
 $di->setShared('cosLlmClient', function (): HttpStructuredLlmClient {
@@ -160,7 +239,34 @@ $di->setShared('cosAgentRuntime', function (): AgentRuntime {
         $this->getShared('cosLlmClient'),
         new StructuredDecisionValidator(),
         $this->getShared('cosAgentRunRepository'),
+        $this->getShared('cosDecisionRepository'),
     );
 });
 
 $di->setShared('salesIntelligenceAgent', static fn () => SalesIntelligenceAgent::definition());
+
+$di->setShared('cosJobQueue', function (): MysqlJobQueue {
+    return new MysqlJobQueue($this->getShared('databaseService')->connection());
+});
+
+$di->setShared('cosAgentRunJobHandler', function (): AgentRunJobHandler {
+    return new AgentRunJobHandler(
+        $this->getShared('cosAgentRuntime'),
+        $this->getShared('salesIntelligenceAgent'),
+        $this->getShared('cosActionPolicyService'),
+        $this->getShared('cosJobQueue'),
+    );
+});
+
+$di->setShared('cosActionExecutionJobHandler', function (): ActionExecutionJobHandler {
+    return new ActionExecutionJobHandler(
+        $this->getShared('cosActionService'),
+    );
+});
+
+$di->setShared('cosQueueWorker', function (): QueueWorker {
+    return new QueueWorker($this->getShared('cosJobQueue'), [
+        $this->getShared('cosAgentRunJobHandler'),
+        $this->getShared('cosActionExecutionJobHandler'),
+    ]);
+});
