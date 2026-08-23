@@ -6,6 +6,7 @@ namespace Modules\Frontend\Controllers;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\AnalyticsService;
 use Common\Services\AuthService;
+use Common\Services\TelegramAutomationService;
 use Modules\Frontend\Services\ClientCaseService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
@@ -41,6 +42,11 @@ class ControllerBase extends Controller
     protected function authService(): AuthService
     {
         return $this->di->getShared('authService');
+    }
+
+    protected function telegramAutomationService(): TelegramAutomationService
+    {
+        return $this->di->getShared('telegramAutomationService');
     }
 
     protected function currentUser(): ?array

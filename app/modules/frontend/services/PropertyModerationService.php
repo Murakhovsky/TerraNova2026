@@ -5,13 +5,17 @@ namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
 use Common\Services\MediaStorageService;
+use Common\Services\TelegramAutomationService;
 use PDO;
 use Throwable;
 
 class PropertyModerationService
 {
-    public function __construct(private DatabaseService $database, private MediaStorageService $mediaStorage)
-    {
+    public function __construct(
+        private DatabaseService $database,
+        private MediaStorageService $mediaStorage,
+        private ?TelegramAutomationService $telegram = null
+    ) {
     }
 
     public function submissions(string $status = ''): array
@@ -70,7 +74,7 @@ class PropertyModerationService
 
     public function moderate(int $id, string $action, string $note = ''): array
     {
-        return match ($action) {
+        $result = match ($action) {
             'review' => $this->setStatus($id, 'in_review', $note),
             'needs_changes' => $this->setStatus($id, 'needs_changes', $note),
             'approve' => $this->setStatus($id, 'approved', $note),
@@ -79,6 +83,25 @@ class PropertyModerationService
             'publish' => $this->publish($id, $note),
             default => ['ok' => false, 'message' => 'Невідома дія модерації.'],
         };
+
+        if (!empty($result['ok'])) {
+            $statuses = [
+                'review' => 'in_review',
+                'needs_changes' => 'needs_changes',
+                'approve' => 'approved',
+                'reject' => 'rejected',
+                'spam' => 'spam',
+                'publish' => 'published',
+            ];
+            $this->telegram?->notifySubmissionStatus(
+                $id,
+                $statuses[$action] ?? $action,
+                $note,
+                !empty($result['property_id']) ? (int) $result['property_id'] : null
+            );
+        }
+
+        return $result;
     }
 
     private function setStatus(int $id, string $status, string $note): array

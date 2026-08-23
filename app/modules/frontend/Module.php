@@ -227,34 +227,42 @@ class Module implements ModuleDefinitionInterface
         });
 
         $di->setShared('frontendInboundRequestService', function () {
-            return new InboundRequestService($this->getShared('frontendClientCaseService'), $this->getShared('databaseService'));
+            return new InboundRequestService(
+                $this->getShared('frontendClientCaseService'),
+                $this->getShared('databaseService'),
+                $this->getShared('telegramAutomationService')
+            );
         });
 
         $di->setShared('frontendPropertySubmissionService', function () {
             return new PropertySubmissionService(
                 $this->getShared('mediaStorageService'),
-                $this->getShared('databaseService')
+                $this->getShared('databaseService'),
+                $this->getShared('telegramAutomationService')
             );
         });
 
         $di->setShared('frontendPropertyModerationService', function () {
             return new PropertyModerationService(
                 $this->getShared('databaseService'),
-                $this->getShared('mediaStorageService')
+                $this->getShared('mediaStorageService'),
+                $this->getShared('telegramAutomationService')
             );
         });
 
         $di->setShared('frontendPropertyMediaService', function () {
             return new PropertyMediaService(
                 $this->getShared('databaseService'),
-                $this->getShared('mediaStorageService')
+                $this->getShared('mediaStorageService'),
+                $this->getShared('telegramAutomationService')
             );
         });
 
         $di->setShared('frontendPropertyPresentationService', function () {
             return new PropertyPresentationService(
                 $this->getShared('frontendCatalogService'),
-                $this->getShared('databaseService')
+                $this->getShared('databaseService'),
+                $this->getShared('telegramAutomationService')
             );
         });
 

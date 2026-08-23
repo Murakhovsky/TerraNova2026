@@ -6,6 +6,7 @@ namespace Modules\Frontend\Services;
 use Common\Models\RealEstate\PropertySubmission;
 use Common\Services\DatabaseService;
 use Common\Services\MediaStorageService;
+use Common\Services\TelegramAutomationService;
 use Throwable;
 
 class PropertySubmissionService
@@ -14,8 +15,11 @@ class PropertySubmissionService
     private const VALIDATION_MESSAGE = 'Заповніть контактні дані, місто, тип об’єкта та короткий опис.';
     private const ERROR_MESSAGE = 'Об’єкт не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
 
-    public function __construct(private MediaStorageService $mediaStorage, private ?DatabaseService $database = null)
-    {
+    public function __construct(
+        private MediaStorageService $mediaStorage,
+        private ?DatabaseService $database = null,
+        private ?TelegramAutomationService $telegram = null
+    ) {
     }
 
     public function submit(array $input, string $sourcePage, array $files = []): array
@@ -76,6 +80,7 @@ class PropertySubmissionService
             }
 
             $this->recordPropertySubmit((int) $submission->id, $sourcePage, $input);
+            $this->telegram?->notifyPropertySubmission((int) $submission->id);
 
             try {
                 $stored = $this->mediaStorage->storeUploadedFiles($files, 'property_submission', (int) $submission->id);

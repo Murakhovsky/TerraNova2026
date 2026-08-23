@@ -5,6 +5,7 @@ namespace Modules\Frontend\Services;
 
 use Common\Models\Crm\InboundRequest;
 use Common\Services\DatabaseService;
+use Common\Services\TelegramAutomationService;
 use Throwable;
 
 class InboundRequestService
@@ -13,8 +14,11 @@ class InboundRequestService
     private const VALIDATION_MESSAGE = 'Заповніть імʼя та хоча б один контакт.';
     private const ERROR_MESSAGE = 'Заявку не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
 
-    public function __construct(private ?ClientCaseService $clientCases = null, private ?DatabaseService $database = null)
-    {
+    public function __construct(
+        private ?ClientCaseService $clientCases = null,
+        private ?DatabaseService $database = null,
+        private ?TelegramAutomationService $telegram = null
+    ) {
     }
 
     public function submit(array $input, string $sourcePage): array
@@ -85,6 +89,7 @@ class InboundRequestService
             }
 
             $this->recordLeadSubmit((int) $request->id, $propertyId, $sourcePage, $utm);
+            $this->telegram?->notifyNewInboundRequest((int) $request->id);
         } catch (Throwable $e) {
             $this->logError('inbound-request-exception', $e);
 

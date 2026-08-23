@@ -9,6 +9,7 @@ use Common\Services\DatabaseService;
 use Common\Services\EventService;
 use Common\Services\ImageOptimizerService;
 use Common\Services\MediaStorageService;
+use Common\Services\TelegramAutomationService;
 
 /**
  * Shared configuration service
@@ -41,6 +42,10 @@ $di->setShared('db', function () {
 
 $di->setShared('databaseService', function () {
     return new DatabaseService($this->getConfig()->database);
+});
+
+$di->setShared('telegramAutomationService', function () {
+    return new TelegramAutomationService($this->getShared('databaseService'));
 });
 
 $di->setShared('mediaStorageService', function () {

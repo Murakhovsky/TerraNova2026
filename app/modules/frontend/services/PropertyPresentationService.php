@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
+use Common\Services\TelegramAutomationService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Throwable;
@@ -17,7 +18,8 @@ class PropertyPresentationService
 
     public function __construct(
         private CatalogService $catalog,
-        private DatabaseService $database
+        private DatabaseService $database,
+        private ?TelegramAutomationService $telegram = null
     ) {
     }
 
@@ -229,6 +231,14 @@ class PropertyPresentationService
             ]);
 
             $pdo->commit();
+            if (!empty($document['property_id'])) {
+                $this->telegram?->notifyPresentationShared(
+                    (int) $document['property_id'],
+                    !empty($user['id']) ? (int) $user['id'] : null,
+                    $channel,
+                    $variant
+                );
+            }
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();

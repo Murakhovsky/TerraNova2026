@@ -10,6 +10,7 @@ define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
 
 require BASE_PATH . '/vendor/autoload.php';
+Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 
 try {
     /**

@@ -7,6 +7,9 @@ $submissions = $submissions ?? [];
 $inboundRequests = $inboundRequests ?? [];
 $managerWorkspace = $managerWorkspace ?? [];
 $pageStatus = $pageStatus ?? null;
+$telegramBinding = $telegramBinding ?? null;
+$telegramOutboxStats = $telegramOutboxStats ?? [];
+$telegramStatus = $telegramStatus ?? '';
 $submissionStatusLabels = [
     'draft' => 'Чернетка',
     'submitted' => 'Подана',
@@ -97,6 +100,41 @@ $managerPath = static function (array $params = []) use ($managerScope): string 
     <?php if ($pageStatus): ?>
       <div class="tn-empty-state"><h2>Кабінет тимчасово неповний</h2><p><?php echo $h($pageStatus); ?></p></div>
     <?php endif; ?>
+
+    <?php if ($telegramStatus === 'disconnected'): ?>
+      <div class="tn-form-status is-visible" role="status">Telegram відключено від акаунта.</div>
+    <?php elseif ($telegramStatus === 'connect_error'): ?>
+      <div class="tn-form-status is-visible" role="alert">Не вдалося створити посилання. Перевірте налаштування бота.</div>
+    <?php endif; ?>
+
+    <article class="tn-admin-card">
+      <div class="tn-admin-card__head">
+        <div>
+          <p class="tn-kicker">Сповіщення</p>
+          <h2>Telegram</h2>
+          <?php if ($telegramBinding): ?>
+            <p>
+              Підключено<?php if (!empty($telegramBinding['username'])): ?> як @<?php echo $h($telegramBinding['username']); ?><?php endif; ?>.
+              Заявки, нагадування та зміни статусів надходитимуть у цей чат.
+            </p>
+          <?php else: ?>
+            <p>Підключіть робочий чат одним натисканням. Telegram ID вручну вводити не потрібно.</p>
+          <?php endif; ?>
+        </div>
+        <form method="post" action="<?php echo $this->url->get($telegramBinding ? 'cabinet/telegramDisconnect' : 'cabinet/telegramConnect'); ?>">
+          <button class="tn-btn <?php echo $telegramBinding ? 'tn-btn--ghost' : 'tn-btn--accent'; ?>" type="submit">
+            <?php echo $telegramBinding ? 'Відключити' : 'Підключити Telegram'; ?>
+          </button>
+        </form>
+      </div>
+      <?php if ($isManager && $telegramOutboxStats): ?>
+        <div class="tn-feature-list">
+          <span>В очікуванні: <?php echo (int) ($telegramOutboxStats['pending'] ?? 0); ?></span>
+          <span>Надіслано: <?php echo (int) ($telegramOutboxStats['sent'] ?? 0); ?></span>
+          <span>Помилки: <?php echo (int) ($telegramOutboxStats['failed'] ?? 0); ?></span>
+        </div>
+      <?php endif; ?>
+    </article>
 
     <?php if ($isManager): ?>
       <?php if (!empty($managerWorkspace['scope_notice'])): ?>

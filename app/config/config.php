@@ -26,18 +26,19 @@ return new \Phalcon\Config\Config([
         'migrationsDir'  => APP_PATH . '/migrations/',
         'cacheDir'       => BASE_PATH . '/cache/',
         'baseUri'        => '/',
+        'publicUrl'      => rtrim((string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: DOMAIN_NAME), '/'),
     ],
 
     'telegram' => array(
         // Add you bot's API key and name
-        'api_key'      => '5342562342:AAE1LuntlLHxMja1dc1dW9y9WIfB_Td7mvA', // getenv('TELEGRAM_BOT_TOKEN'),
-        'bot_username' => 'EstateBookAdvertBot', // getenv('TELEGRAM_BOT_NAME'),
+        'api_key'      => (string) ($_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: ''),
+        'bot_username' => (string) ($_ENV['TELEGRAM_BOT_NAME'] ?? getenv('TELEGRAM_BOT_NAME') ?: ''),
 
         // [Manager Only] Secret key required to access the webhook
-        'secret'       => 'super_secret',
+        'secret'       => (string) ($_ENV['TELEGRAM_WEBHOOK_SECRET'] ?? getenv('TELEGRAM_WEBHOOK_SECRET') ?: ''),
 
         'webhook'      => array(
-            'url' => 'https://terra.ai-da.store/tgAdmin_webhook.php',
+            'url' => (string) ($_ENV['TELEGRAM_WEBHOOK_URL'] ?? getenv('TELEGRAM_WEBHOOK_URL') ?: 'https://terra.ai-da.store/tgAdmin_webhook.php'),
         ),
 
         // All command related configs go here

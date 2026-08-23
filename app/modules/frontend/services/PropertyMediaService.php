@@ -5,6 +5,7 @@ namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
 use Common\Services\MediaStorageService;
+use Common\Services\TelegramAutomationService;
 use PDO;
 use Throwable;
 
@@ -82,8 +83,11 @@ class PropertyMediaService
         'archived',
     ];
 
-    public function __construct(private DatabaseService $database, private MediaStorageService $mediaStorage)
-    {
+    public function __construct(
+        private DatabaseService $database,
+        private MediaStorageService $mediaStorage,
+        private ?TelegramAutomationService $telegram = null
+    ) {
     }
 
     public function property(int $id): ?array
@@ -851,6 +855,8 @@ class PropertyMediaService
             }
 
             $pdo->commit();
+
+            $this->telegram?->notifyPropertyStatus($propertyId, $status, (string) ($note ?? ''));
 
             return ['ok' => true, 'message' => 'Статус об’єкта оновлено.'];
         } catch (Throwable $e) {
