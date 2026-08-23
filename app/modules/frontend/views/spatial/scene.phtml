@@ -1,0 +1,13 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$scene = $scene ?? [];
+?>
+<?php $this->partial('shared/public_header', ['active' => 'catalog']); ?>
+<main class="tn-spatial-public">
+  <?php $this->partial('shared/spatial_viewer', ['scene' => $scene]); ?>
+  <section class="tn-spatial-summary">
+    <div><p class="tn-kicker">Про сцену</p><h2><?php echo $h($scene['title']); ?></h2><p><?php echo nl2br($h($scene['description'] ?: 'Інтерактивна просторова презентація об’єкта.')); ?></p></div>
+    <div><strong><?php echo count($scene['hotspots']); ?></strong><span>інтерактивних точок</span><strong><?php echo count($scene['assets']); ?></strong><span>готових assets</span></div>
+  </section>
+</main>
+<?php $this->partial('shared/public_footer'); ?>

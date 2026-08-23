@@ -12,6 +12,7 @@ Audit date: 2026-08-23.
 - n8n outbound: transactional outbox for manual content changes, atomic claiming, five retries and delivery history.
 - Content safety: HTML allowlist, safe link/image protocols, strict JSON schema object and escaped manager output.
 - Operational commands: `bin/integration-worker.php` and `bin/telegram-health.php`.
+- Spatial domain: versioned 3D scenes, captures, assets, property relations, hotspots, processing queue, JWT API, manager workspace and public Three.js/Spark viewer.
 
 ## P2 matrix
 
@@ -25,7 +26,7 @@ Audit date: 2026-08-23.
 | Telegram automation | Code-ready, production blocked | Fix `terra.ai-da.store` DNS/TLS chain, refresh webhook and drain the pending update. |
 | PDF presentations | Ready in code | Verify production fonts/images and business template. |
 | Multilingual content | Deferred by v0.6 | Introduce locale-aware slugs, translations, hreflang and routing later. |
-| 3D | Partial data support only | Media workflow, provider/embed rules and manager validation are absent. |
+| 3D / Spatial | Application core ready | Configure production storage/CDN and Blender/reconstruction workers; build the native RoomPlan capture client and verify large real scenes on target devices. |
 | Investment direction | Partial domain support | No complete public offer, investment calculations or investor workspace. |
 | Payments | Deferred | No production payment provider, orders, callbacks or reconciliation. |
 | Tokenization | Deferred | Legacy economy code is not a production real-estate tokenization product. |
@@ -52,7 +53,7 @@ client cases, manager operations, user roles, catalog, property cards, presentat
 listing view and analytics. The release should not be called production-complete until these
 items are closed:
 
-1. Deploy all migrations through `20260823_000016_content_n8n.sql` to staging and production with a tested backup/rollback procedure.
+1. Deploy all migrations through `20260823_000017_spatial_core.sql` to staging and production with a tested backup/rollback procedure.
 2. Fix production DNS/TLS for Telegram, register the webhook, enable worker schedules and verify a real `/start`, task notification and manager digest.
 3. Configure the actual n8n production webhook and secrets, test both directions and add alerting for failed outbox deliveries.
 4. Run role-based acceptance testing for admin, manager and public user across object creation, media, moderation, lead-to-case and content workflows.
@@ -63,7 +64,7 @@ items are closed:
 9. Configure production monitoring for PHP errors, failed queues, webhook failures, disk usage and database backups.
 10. Load approved catalog and editorial content, verify sitemap/robots/canonical URLs on the production hostname and connect search analytics.
 
-Items explicitly outside the current v0.6 focus remain multilingual support, full 3D, advanced MLS,
+Items explicitly outside the current v0.6 focus remain multilingual support, native 3D capture/reconstruction infrastructure, advanced MLS,
 investment cabinets, payments and tokenization. They should not block the operational sales core.
 
 ## Verification commands
@@ -75,4 +76,7 @@ php tests/integration/content_http.php
 php bin/telegram-worker.php --limit=5
 php bin/telegram-health.php
 php bin/integration-worker.php --schedule-content --limit=5
+php tests/integration/spatial_module.php
+php bin/spatial-worker.php --limit=10
+npm run build:spatial
 ```

@@ -58,6 +58,8 @@ class PropertyController extends ControllerBase
         $this->view->features = [];
         $this->view->groupedProperties = [];
         $this->view->relatedProperties = [];
+        $this->view->spatialScene = null;
+        $this->view->pageModules = [];
         $this->view->managerClientCases = [];
         $this->view->propertyMatchStatus = (string) $this->request->getQuery('status_message', 'string', '');
 
@@ -86,6 +88,12 @@ class PropertyController extends ControllerBase
             $this->view->features = $this->catalogService()->propertyFeatures((int) $property['id']);
             $this->view->groupedProperties = $this->catalogService()->groupedProperties($property);
             $this->view->relatedProperties = $this->catalogService()->relatedProperties($property);
+            $this->view->spatialScene = $this->spatialSceneService()->sceneForProperty((int) $property['id'], true);
+
+            if ($this->view->spatialScene) {
+                $this->view->pageModules[] = 'build/spatial-viewer.js?v=20260823-s2';
+                $this->view->pageStyles = ['build/spatial-viewer.css?v=20260823-s1'];
+            }
 
             if ($this->authService()->isManager($this->currentUser())) {
                 $this->view->managerClientCases = $this->clientCaseService()->openCaseOptions();
@@ -634,6 +642,7 @@ class PropertyController extends ControllerBase
         $this->view->readiness = [];
         $this->view->operationalStageRules = [];
         $this->view->operationalStageCheck = [];
+        $this->view->spatialScene = null;
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) ($this->request->getQuery('status', 'string', '')
             ?: $this->request->getQuery('status_message', 'string', ''));
@@ -659,6 +668,7 @@ class PropertyController extends ControllerBase
             $this->view->inboundRequests = $this->propertyMediaService()->inboundRequests($propertyId);
             $this->view->caseMatches = $this->propertyMediaService()->caseMatches($propertyId);
             $this->view->managerClientCases = $this->clientCaseService()->openCaseOptions();
+            $this->view->spatialScene = $this->spatialSceneService()->sceneForProperty($propertyId, false);
         } catch (Throwable $e) {
             $this->logFrontendError('property-media-edit', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -680,11 +690,13 @@ class PropertyController extends ControllerBase
             return;
         }
 
-        $result = $this->propertyMediaService()->updateDetails(
-            $propertyId,
-            (array) $this->request->getPost(),
-            (int) ($user['id'] ?? 0)
-        );
+        $input = (array) $this->request->getPost();
+        $spatialScene = $this->spatialSceneService()->sceneForProperty($propertyId, true);
+        if ($spatialScene) {
+            $input['has_3d_tour'] = 1;
+            $input['tour_url'] = '/spatial/scene/' . $spatialScene['slug'];
+        }
+        $result = $this->propertyMediaService()->updateDetails($propertyId, $input, (int) ($user['id'] ?? 0));
 
         $returnUrl = (string) $this->request->getPost('return_url', 'string', '');
         $allowedReturn = $returnUrl !== ''

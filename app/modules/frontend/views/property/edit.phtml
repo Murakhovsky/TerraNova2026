@@ -476,6 +476,12 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
               <input type="checkbox" name="has_3d_tour" value="1" <?php echo $checked($property['has_3d_tour']); ?>>
               <span>Є 3D-тур</span>
             </label>
+            <div class="is-wide tn-spatial-property-action">
+              <strong>Spatial / 3D</strong>
+              <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get(!empty($spatialScene['id']) ? 'spatial/edit/' . (int) $spatialScene['id'] : 'spatial/edit?property_id=' . (int) $property['id']); ?>">
+                <?php echo !empty($spatialScene['id']) ? 'Відкрити 3D-сцену' : 'Створити 3D-сцену'; ?>
+              </a>
+            </div>
             <label class="is-wide">
               <span>Короткий опис</span>
               <textarea name="short_description" rows="3" maxlength="500"><?php echo $h($value('short_description')); ?></textarea>

@@ -358,6 +358,9 @@ if ($property) {
           </div>
         <?php endif; ?>
 
+        <?php if (!empty($spatialScene)): ?>
+          <?php $this->partial('shared/spatial_viewer', ['scene' => $spatialScene, 'embedded' => true, 'showHeading' => false]); ?>
+        <?php else: ?>
         <section class="tn-tour-placeholder" id="tour">
           <div>
             <p class="tn-kicker">3D-простір</p>
@@ -372,6 +375,7 @@ if ($property) {
             <span class="tn-tour-placeholder__badge">3D pending</span>
           <?php endif; ?>
         </section>
+        <?php endif; ?>
 
         <section class="tn-location-panel">
           <div>

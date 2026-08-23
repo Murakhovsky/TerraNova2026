@@ -38,6 +38,14 @@ return new \Phalcon\Config\Config([
         ],
     ],
 
+    'spatial' => [
+        'max_upload_bytes' => (int) ($_ENV['SPATIAL_MAX_UPLOAD_BYTES'] ?? getenv('SPATIAL_MAX_UPLOAD_BYTES') ?: 209715200),
+        'jwt_secret' => (string) ($_ENV['SPATIAL_JWT_SECRET'] ?? getenv('SPATIAL_JWT_SECRET') ?: ''),
+        'jwt_ttl' => (int) ($_ENV['SPATIAL_JWT_TTL'] ?? getenv('SPATIAL_JWT_TTL') ?: 28800),
+        'blender_binary' => (string) ($_ENV['SPATIAL_BLENDER_BINARY'] ?? getenv('SPATIAL_BLENDER_BINARY') ?: ''),
+        'gltf_transform_binary' => (string) ($_ENV['SPATIAL_GLTF_TRANSFORM_BINARY'] ?? getenv('SPATIAL_GLTF_TRANSFORM_BINARY') ?: ''),
+    ],
+
     'telegram' => array(
         // Add you bot's API key and name
         'api_key'      => (string) ($_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: ''),

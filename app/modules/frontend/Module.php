@@ -264,6 +264,29 @@ class Module implements ModuleDefinitionInterface
             'action' => 'save',
         ]);
 
+        $router->add('/spatial/manage', [
+            'namespace' => 'Modules\Frontend\Controllers', 'module' => 'frontend',
+            'controller' => 'spatial', 'action' => 'manage',
+        ]);
+        $router->add('/spatial/edit', [
+            'namespace' => 'Modules\Frontend\Controllers', 'module' => 'frontend',
+            'controller' => 'spatial', 'action' => 'edit',
+        ]);
+        $router->add('/spatial/edit/{id:[0-9]+}', [
+            'namespace' => 'Modules\Frontend\Controllers', 'module' => 'frontend',
+            'controller' => 'spatial', 'action' => 'edit',
+        ]);
+        foreach (['save', 'upload', 'external', 'capture', 'hotspot', 'publish'] as $spatialAction) {
+            $router->addPost('/spatial/' . $spatialAction . '/{id:[0-9]+}', [
+                'namespace' => 'Modules\Frontend\Controllers', 'module' => 'frontend',
+                'controller' => 'spatial', 'action' => $spatialAction,
+            ]);
+        }
+        $router->add('/spatial/scene/{slug:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers', 'module' => 'frontend',
+            'controller' => 'spatial', 'action' => 'scene',
+        ]);
+
         $di->setShared('frontendAdminDashboardService', function () {
             return new AdminDashboardService($this->getShared('databaseService'));
         });

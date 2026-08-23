@@ -940,6 +940,155 @@ textarea:focus {
   padding: clamp(34px, 6vw, 72px) clamp(16px, 5vw, 72px) clamp(28px, 4vw, 52px);
 }
 
+.tn-spatial-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.tn-spatial-dropzone {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 210px;
+  padding: 28px;
+  border: 2px dashed #a8afa9;
+  background: #f7f8f5;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.tn-spatial-dropzone input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tn-spatial-dropzone strong,
+.tn-spatial-dropzone span,
+.tn-spatial-dropzone small {
+  pointer-events: none;
+}
+
+.tn-spatial-dropzone strong {
+  font-size: 22px;
+}
+
+.tn-spatial-dropzone span,
+.tn-spatial-dropzone small {
+  display: block;
+  margin-top: 7px;
+  color: #5c655f;
+}
+
+.tn-spatial-dropzone.is-dragging,
+.tn-spatial-dropzone.has-file {
+  border-color: #b8872f;
+  background: #fff8e8;
+}
+
+.tn-spatial-upload-options {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.tn-spatial-upload-options label:not(.tn-checkbox) {
+  display: grid;
+  gap: 6px;
+}
+
+.tn-spatial-upload-progress {
+  position: relative;
+  height: 28px;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #cdd2cd;
+  background: #eef0ec;
+}
+
+.tn-spatial-upload-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #c7953b;
+  transition: width .15s linear;
+}
+
+.tn-spatial-upload-progress strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+}
+
+.tn-spatial-asset-list,
+.tn-spatial-timeline {
+  display: grid;
+  gap: 0;
+}
+
+.tn-spatial-asset-list > div,
+.tn-spatial-timeline > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-top: 1px solid #e0e3df;
+}
+
+.tn-spatial-timeline > div {
+  grid-template-columns: 1fr auto;
+}
+
+.tn-spatial-asset-list small,
+.tn-spatial-timeline small {
+  grid-column: 1 / -1;
+  color: #9b2f38;
+}
+
+.tn-spatial-asset-list a {
+  color: #765415;
+  font-weight: 700;
+}
+
+.tn-spatial-property-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid #e0e3df;
+  border-bottom: 1px solid #e0e3df;
+}
+
+@media (max-width: 920px) {
+  .tn-spatial-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .tn-spatial-upload-options {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .tn-spatial-upload-options,
+  .tn-spatial-asset-list > div,
+  .tn-spatial-timeline > div {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Content and SEO workspace */
 .tn-content-editor {
   display: grid;

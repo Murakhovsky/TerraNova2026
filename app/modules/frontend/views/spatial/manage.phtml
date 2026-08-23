@@ -1,0 +1,49 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$scenes = $scenes ?? [];
+$stats = $stats ?? [];
+$filters = $filters ?? [];
+$statusLabels = ['draft'=>'Чернетка','processing'=>'Обробка','review'=>'Перевірка','published'=>'Опубліковано','failed'=>'Помилка','archived'=>'Архів'];
+$typeLabels = ['model'=>'3D-модель','digital_twin'=>'Digital twin','roomplan'=>'RoomPlan','panorama'=>'360°','gaussian_splat'=>'Gaussian splat','mixed'=>'Змішана'];
+?>
+<?php $this->partial('shared/manager_header', ['active' => 'spatial']); ?>
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div><p class="tn-kicker">Spatial</p><h1>3D-сцени</h1><p>Скани, цифрові двійники, AR-моделі, панорами та їх публікація.</p></div>
+    <div class="tn-page-hero__meta"><strong><?php echo count($scenes); ?></strong><span>сцен у вибірці</span><a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('spatial/edit'); ?>">Нова сцена</a></div>
+  </section>
+  <?php if (!empty($pageStatus)): ?><div class="tn-form-status is-visible" role="status"><?php echo $h($pageStatus); ?></div><?php endif; ?>
+  <section class="tn-admin-metrics" aria-label="Стан 3D-сцен">
+    <a href="?status=processing"><span>Обробка</span><strong><?php echo (int) ($stats['processing'] ?? 0); ?></strong><small>worker працює</small></a>
+    <a href="?status=review"><span>Перевірка</span><strong><?php echo (int) ($stats['review'] ?? 0); ?></strong><small>готові до рішення</small></a>
+    <a href="?status=published"><span>Опубліковано</span><strong><?php echo (int) ($stats['published'] ?? 0); ?></strong><small>видно клієнтам</small></a>
+    <a href="#queue"><span>Завдання</span><strong><?php echo (int) ($stats['pending_jobs'] ?? 0); ?></strong><small>у черзі або retry</small></a>
+  </section>
+  <section class="tn-admin-card">
+    <form class="tn-filter-bar" method="get">
+      <label><span>Пошук</span><input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Сцена або об’єкт"></label>
+      <label><span>Статус</span><select name="status"><option value="">Усі</option><?php foreach ($statusLabels as $code=>$label): ?><option value="<?php echo $code; ?>"<?php echo ($filters['status'] ?? '') === $code ? ' selected' : ''; ?>><?php echo $label; ?></option><?php endforeach; ?></select></label>
+      <button class="tn-btn tn-btn--dark" type="submit">Застосувати</button>
+    </form>
+  </section>
+  <section class="tn-listing-table-wrap" id="queue">
+    <table class="tn-listing-table">
+      <thead><tr><th>Сцена</th><th>Тип</th><th>Об’єкт</th><th>Assets</th><th>Hotspots</th><th>Статус</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($scenes as $scene): ?>
+        <tr>
+          <td><strong><?php echo $h($scene['title']); ?></strong><small><?php echo $h($scene['public_id']); ?> / <?php echo $h($scene['provider']); ?></small></td>
+          <td><?php echo $h($typeLabels[$scene['scene_type']] ?? $scene['scene_type']); ?><small><?php echo $h($scene['viewer_type']); ?></small></td>
+          <td><?php echo $h($scene['property_title'] ?: 'не прив’язано'); ?><?php if (!empty($scene['property_id'])): ?><small><?php echo $h($scene['property_id']); ?></small><?php endif; ?></td>
+          <td><?php echo (int) $scene['ready_asset_count']; ?> / <?php echo (int) $scene['asset_count']; ?></td>
+          <td><?php echo (int) $scene['hotspot_count']; ?></td>
+          <td><span class="tn-status-pill is-<?php echo $h($scene['status']); ?>"><?php echo $h($statusLabels[$scene['status']] ?? $scene['status']); ?></span></td>
+          <td><a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('spatial/edit/' . (int) $scene['id']); ?>">Відкрити</a></td>
+        </tr>
+      <?php endforeach; ?>
+      <?php if (!$scenes): ?><tr><td colspan="7"><div class="tn-empty-state"><p>Spatial сцен ще немає.</p></div></td></tr><?php endif; ?>
+      </tbody>
+    </table>
+  </section>
+</main>
+<?php $this->partial('shared/public_footer'); ?>

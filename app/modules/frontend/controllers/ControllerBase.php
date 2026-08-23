@@ -15,6 +15,7 @@ use Modules\Frontend\Services\PropertyModerationService;
 use Modules\Frontend\Services\PropertyPresentationService;
 use Modules\Frontend\Services\PropertySubmissionService;
 use Modules\Frontend\Services\PublicPageService;
+use Modules\Spatial\Services\SpatialSceneService;
 use Phalcon\Mvc\Controller;
 use Throwable;
 
@@ -43,6 +44,11 @@ class ControllerBase extends Controller
     protected function contentService(): ContentService
     {
         return $this->di->getShared('frontendContentService');
+    }
+
+    protected function spatialSceneService(): SpatialSceneService
+    {
+        return $this->di->getShared('spatialSceneService');
     }
 
     protected function authService(): AuthService

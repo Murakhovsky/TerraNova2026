@@ -66,6 +66,10 @@ try {
             'className' => 'Modules\Users\Module',
             'path'      => APP_PATH . '/modules/Users/Module.php',
         ],
+        'spatial' => [
+            'className' => 'Modules\Spatial\Module',
+            'path'      => APP_PATH . '/modules/spatial/Module.php',
+        ],
     ]);
 
     /**
