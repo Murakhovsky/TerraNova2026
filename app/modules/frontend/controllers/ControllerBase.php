@@ -8,6 +8,7 @@ use Modules\Frontend\Services\AnalyticsService;
 use Common\Services\AuthService;
 use Common\Services\TelegramAutomationService;
 use Modules\Frontend\Services\ClientCaseService;
+use Modules\Frontend\Services\ContentService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
@@ -37,6 +38,11 @@ class ControllerBase extends Controller
     protected function clientCaseService(): ClientCaseService
     {
         return $this->di->getShared('frontendClientCaseService');
+    }
+
+    protected function contentService(): ContentService
+    {
+        return $this->di->getShared('frontendContentService');
     }
 
     protected function authService(): AuthService

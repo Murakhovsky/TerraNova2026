@@ -12,7 +12,9 @@ use Modules\Frontend\Services\AdminDashboardService;
 use Modules\Frontend\Services\AnalyticsService;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\ClientCaseService;
+use Modules\Frontend\Services\ContentService;
 use Modules\Frontend\Services\InboundRequestService;
+use Modules\Frontend\Services\N8nWebhookService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
 use Modules\Frontend\Services\PropertyPresentationService;
@@ -70,6 +72,34 @@ class Module implements ModuleDefinitionInterface
             'module' => 'frontend',
             'controller' => 'analytics',
             'action' => 'track',
+        ]);
+
+        $router->addPost('/webhooks/n8n/content', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'n8n_webhook',
+            'action' => 'content',
+        ]);
+
+        $router->add('/blog', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'blog',
+            'action' => 'index',
+        ]);
+
+        $router->add('/blog/{slug:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'blog',
+            'action' => 'show',
+        ]);
+
+        $router->add('/guide/{slug:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'blog',
+            'action' => 'landing',
         ]);
 
         $router->add('/nerukhomist/{location:[a-z0-9-]+}/{type:[a-z0-9-]+}', [
@@ -206,6 +236,34 @@ class Module implements ModuleDefinitionInterface
             'action' => 'index',
         ]);
 
+        $router->add('/admin/content', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'content',
+            'action' => 'manage',
+        ]);
+
+        $router->add('/admin/content/edit', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'content',
+            'action' => 'edit',
+        ]);
+
+        $router->add('/admin/content/edit/{id:[0-9]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'content',
+            'action' => 'edit',
+        ]);
+
+        $router->addPost('/admin/content/save/{id:[0-9]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'content',
+            'action' => 'save',
+        ]);
+
         $di->setShared('frontendAdminDashboardService', function () {
             return new AdminDashboardService($this->getShared('databaseService'));
         });
@@ -216,6 +274,20 @@ class Module implements ModuleDefinitionInterface
 
         $di->setShared('frontendPublicPageService', function () {
             return new PublicPageService();
+        });
+
+        $di->setShared('frontendContentService', function () {
+            return new ContentService($this->getShared('databaseService'));
+        });
+
+        $di->setShared('frontendN8nWebhookService', function () {
+            $config = $this->getShared('config')->integrations->n8n;
+            return new N8nWebhookService(
+                $this->getShared('databaseService'),
+                $this->getShared('frontendContentService'),
+                (string) $config->inbound_secret,
+                (int) $config->max_clock_skew
+            );
         });
 
         $di->setShared('frontendClientCaseService', function () {

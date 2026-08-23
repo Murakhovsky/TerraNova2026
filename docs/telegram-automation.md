@@ -19,8 +19,9 @@ Do not store bot tokens in PHP configuration or in the repository.
 
 ## Webhook
 
-Configure Telegram to send updates to the public `POST /TgAdmin/webhook` endpoint and pass the
-same `TELEGRAM_WEBHOOK_SECRET` as Telegram's `secret_token`. The webhook
+Configure Telegram to send updates to the public `POST /tgAdmin_webhook.php` endpoint. The legacy
+public script routes the request internally to `POST /TgAdmin/webhook`. Pass the same
+`TELEGRAM_WEBHOOK_SECRET` as Telegram's `secret_token`. The webhook
 uses the existing Longman command loader. A user connects an account from `/cabinet`; `/start`
 consumes the one-time token and creates a binding to `tn_users`.
 
@@ -29,6 +30,15 @@ Register or refresh the webhook after deployment:
 ```bash
 php bin/telegram-webhook.php
 ```
+
+Check the live Telegram configuration and delivery errors without printing the token:
+
+```bash
+php bin/telegram-health.php
+```
+
+`pending_update_count` should normally return to zero and `last_error_message` must be empty. An
+SSL verification error here is a production DNS/certificate-chain problem, not a worker retry.
 
 Available commands:
 

@@ -29,6 +29,15 @@ return new \Phalcon\Config\Config([
         'publicUrl'      => rtrim((string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: DOMAIN_NAME), '/'),
     ],
 
+    'integrations' => [
+        'n8n' => [
+            'inbound_secret' => (string) ($_ENV['N8N_WEBHOOK_SECRET'] ?? getenv('N8N_WEBHOOK_SECRET') ?: ''),
+            'outbound_url' => (string) ($_ENV['N8N_OUTBOUND_URL'] ?? getenv('N8N_OUTBOUND_URL') ?: ''),
+            'outbound_secret' => (string) ($_ENV['N8N_OUTBOUND_SECRET'] ?? getenv('N8N_OUTBOUND_SECRET') ?: ''),
+            'max_clock_skew' => (int) ($_ENV['N8N_MAX_CLOCK_SKEW'] ?? getenv('N8N_MAX_CLOCK_SKEW') ?: 300),
+        ],
+    ],
+
     'telegram' => array(
         // Add you bot's API key and name
         'api_key'      => (string) ($_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: ''),

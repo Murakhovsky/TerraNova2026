@@ -1,0 +1,71 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$items = $items ?? [];
+$stats = $stats ?? [];
+$integrationStats = $integrationStats ?? [];
+$deliveries = $deliveries ?? [];
+$filters = $filters ?? [];
+$pageStatus = $pageStatus ?? null;
+$typeLabels = ['blog_post' => 'Стаття', 'seo_landing' => 'SEO-лендінг'];
+$statusLabels = ['draft' => 'Чернетка', 'review' => 'На перевірці', 'published' => 'Опубліковано', 'archived' => 'Архів'];
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'content']); ?>
+
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div><p class="tn-kicker">Контент</p><h1>Блог і SEO</h1><p>Єдина черга матеріалів, ручного редагування та синхронізації з n8n.</p></div>
+    <div class="tn-page-hero__meta">
+      <strong><?php echo count($items); ?></strong><span>матеріалів у вибірці</span>
+      <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('admin/content/edit'); ?>">Новий матеріал</a>
+    </div>
+  </section>
+
+  <?php if ($pageStatus): ?><div class="tn-empty-state"><p><?php echo $h($pageStatus); ?></p></div><?php endif; ?>
+
+  <section class="tn-admin-metrics" aria-label="Статус контенту">
+    <a href="<?php echo $this->url->get('admin/content?status=draft'); ?>"><span>Чернетки</span><strong><?php echo (int) (($stats['blog_post']['draft'] ?? 0) + ($stats['seo_landing']['draft'] ?? 0)); ?></strong><small>ще не публічні</small></a>
+    <a href="<?php echo $this->url->get('admin/content?status=review'); ?>"><span>На перевірці</span><strong><?php echo (int) (($stats['blog_post']['review'] ?? 0) + ($stats['seo_landing']['review'] ?? 0)); ?></strong><small>потребують рішення</small></a>
+    <a href="<?php echo $this->url->get('admin/content?status=published'); ?>"><span>Опубліковано</span><strong><?php echo (int) (($stats['blog_post']['published'] ?? 0) + ($stats['seo_landing']['published'] ?? 0)); ?></strong><small>видно в sitemap</small></a>
+    <a href="#n8n"><span>n8n у черзі</span><strong><?php echo (int) ($integrationStats['pending'] ?? 0); ?></strong><small><?php echo (int) ($integrationStats['failed'] ?? 0); ?> помилок</small></a>
+  </section>
+
+  <section class="tn-admin-card">
+    <form class="tn-filter-bar" method="get" action="<?php echo $this->url->get('admin/content'); ?>">
+      <label><span>Пошук</span><input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Назва, slug, ключове слово"></label>
+      <label><span>Тип</span><select name="type"><option value="">Усі</option><?php foreach ($typeLabels as $value => $label): ?><option value="<?php echo $value; ?>"<?php echo ($filters['type'] ?? '') === $value ? ' selected' : ''; ?>><?php echo $label; ?></option><?php endforeach; ?></select></label>
+      <label><span>Статус</span><select name="status"><option value="">Усі</option><?php foreach ($statusLabels as $value => $label): ?><option value="<?php echo $value; ?>"<?php echo ($filters['status'] ?? '') === $value ? ' selected' : ''; ?>><?php echo $label; ?></option><?php endforeach; ?></select></label>
+      <button class="tn-btn tn-btn--dark" type="submit">Застосувати</button>
+    </form>
+  </section>
+
+  <section class="tn-listing-table-wrap">
+    <table class="tn-listing-table">
+      <thead><tr><th>Матеріал</th><th>Тип</th><th>Статус</th><th>SEO</th><th>Джерело</th><th>Оновлено</th><th></th></tr></thead>
+      <tbody>
+      <?php if (!$items): ?><tr><td colspan="7">Матеріалів не знайдено.</td></tr><?php endif; ?>
+      <?php foreach ($items as $item): ?>
+        <tr>
+          <td><a class="tn-listing-title" href="<?php echo $this->url->get('admin/content/edit/' . (int) $item['id']); ?>"><?php echo $h($item['title']); ?></a><span><?php echo $h($item['slug']); ?></span></td>
+          <td><?php echo $h($typeLabels[$item['content_type']] ?? $item['content_type']); ?></td>
+          <td><span class="tn-status-pill"><?php echo $h($statusLabels[$item['status']] ?? $item['status']); ?></span></td>
+          <td><strong><?php echo (int) $item['seo_score']; ?>%</strong></td>
+          <td><?php echo $h($item['source']); ?></td>
+          <td><?php echo $h($item['updated_at']); ?></td>
+          <td><a href="<?php echo $this->url->get('admin/content/edit/' . (int) $item['id']); ?>">Редагувати</a></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="tn-admin-card" id="n8n">
+    <div class="tn-admin-card__head"><div><p class="tn-kicker">Інтеграції</p><h2>Останні webhooks</h2></div><span><?php echo (int) ($integrationStats['sent'] ?? 0); ?> доставлено</span></div>
+    <div class="tn-content-deliveries">
+      <?php if (!$deliveries): ?><p>Викликів ще немає.</p><?php endif; ?>
+      <?php foreach ($deliveries as $delivery): ?>
+        <div><strong><?php echo $h($delivery['event_type']); ?></strong><span><?php echo $h($delivery['direction']); ?> / <?php echo $h($delivery['status']); ?> / <?php echo $h($delivery['created_at']); ?></span><?php if (!empty($delivery['error_message'])): ?><small><?php echo $h($delivery['error_message']); ?></small><?php endif; ?></div>
+      <?php endforeach; ?>
+    </div>
+  </section>
+</main>

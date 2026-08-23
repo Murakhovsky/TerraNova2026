@@ -12,6 +12,7 @@ class SeoController extends ControllerBase
             ['loc' => $this->seoAbsoluteUrl(''), 'priority' => '1.0'],
             ['loc' => $this->seoAbsoluteUrl('property/catalog'), 'priority' => '0.9'],
             ['loc' => $this->seoAbsoluteUrl('property/submit'), 'priority' => '0.6'],
+            ['loc' => $this->seoAbsoluteUrl('blog'), 'priority' => '0.7'],
         ];
 
         foreach ($this->publicPageService()->pages() as $page) {
@@ -31,6 +32,14 @@ class SeoController extends ControllerBase
                 'loc' => $this->seoAbsoluteUrl('property/show/' . $property['slug']),
                 'lastmod' => substr((string) $property['updated_at'], 0, 10),
                 'priority' => '0.9',
+            ];
+        }
+        foreach ($this->contentService()->sitemapItems() as $item) {
+            $path = $item['content_type'] === 'blog_post' ? 'blog/' : 'guide/';
+            $urls[] = [
+                'loc' => $this->seoAbsoluteUrl($path . $item['slug']),
+                'lastmod' => substr((string) $item['updated_at'], 0, 10),
+                'priority' => $item['content_type'] === 'seo_landing' ? '0.8' : '0.7',
             ];
         }
 
