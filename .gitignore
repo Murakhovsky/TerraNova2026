@@ -1,7 +1,10 @@
 /vendor/
 /node_modules/
 /.env
+/.env.docker
+*.pem
 .DS_Store
 tmp/
 
 .idea/
+/composer.lock

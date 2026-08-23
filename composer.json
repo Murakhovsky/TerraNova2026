@@ -1,17 +1,36 @@
 {
+  "name": "terranova/cos",
+  "description": "Terra Nova COS SaaS platform",
+  "type": "project",
+  "license": "proprietary",
   "autoload": {
     "psr-4": {
-      "App\\Core\\": "app/Core/",
-      "Modules\\":   "modules/"
+      "Kernel\\": "app/Kernel/",
+      "Domains\\": "app/Domains/",
+      "Infrastructure\\": "app/Infrastructure/",
+      "Interfaces\\": "app/Interfaces/",
+      "Common\\": "app/common/",
+      "Modules\\": "app/modules/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
     }
   },
   "require": {
-    "php": ">=8.2",
-    "vlucas/phpdotenv": "^5.5",
-    "monolog/monolog": "^2.0",
-    "php-amqplib/php-amqplib": "^3.0",
-    "firebase/php-jwt": "^6.0",
-    "zircote/swagger-php": "^4.0",
+    "php": "^8.3",
+    "vlucas/phpdotenv": "^5.6",
+    "monolog/monolog": "^3.10",
+    "php-amqplib/php-amqplib": "^3.7",
+    "kreait/firebase-php": "^8.4",
+    "zircote/swagger-php": "^6.6",
     "longman/telegram-bot": "^0.83.1"
+  },
+  "config": {
+    "platform": {
+      "php": "8.3.33"
+    },
+    "sort-packages": true
   }
 }

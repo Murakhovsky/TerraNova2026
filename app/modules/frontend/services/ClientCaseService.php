@@ -4,13 +4,24 @@ declare(strict_types=1);
 namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
+use Domains\Sales\Event\ClientCaseChanged;
+use Domains\Sales\Event\ClientCaseCreated;
+use Domains\Sales\Event\DealStageChanged;
+use Domains\Sales\Event\LeadChanged;
+use Infrastructure\Database\Transaction\TransactionManager;
+use Kernel\Event\EventBus;
+use Kernel\Event\EventMetadata;
 use PDO;
 use Throwable;
 
 class ClientCaseService
 {
-    public function __construct(private DatabaseService $database)
-    {
+    public function __construct(
+        private DatabaseService $database,
+        private EventBus $eventBus,
+        private TransactionManager $transactions,
+        private string $organizationId,
+    ) {
     }
 
     public function filters(array $query): array
@@ -219,20 +230,26 @@ class ClientCaseService
         }
 
         try {
-            $pdo = $this->database->connection();
-            $pdo->beginTransaction();
+            $caseId = $this->transactions->transactional(function () use ($name, $phone, $email, $input, $user): int {
+                $pdo = $this->database->connection();
+                $personId = $this->findOrCreatePerson($pdo, [
+                    'full_name' => $name,
+                    'phone' => $phone,
+                    'email' => $email,
+                    'telegram' => $this->nullable((string) ($input['telegram'] ?? ''), 80),
+                    'notes' => $this->nullableText((string) ($input['person_notes'] ?? '')),
+                ]);
+                $caseId = $this->insertCase($pdo, $personId, $input, $user);
+                $this->eventBus->publish(ClientCaseCreated::create(
+                    $this->eventId(),
+                    $this->organizationId,
+                    (string) $caseId,
+                    ['person_id' => $personId, 'stage' => (string) ($input['stage'] ?? 'new')],
+                    $this->metadata($user),
+                ));
 
-            $personId = $this->findOrCreatePerson($pdo, [
-                'full_name' => $name,
-                'phone' => $phone,
-                'email' => $email,
-                'telegram' => $this->nullable((string) ($input['telegram'] ?? ''), 80),
-                'notes' => $this->nullableText((string) ($input['person_notes'] ?? '')),
-            ]);
-
-            $caseId = $this->insertCase($pdo, $personId, $input, $user);
-
-            $pdo->commit();
+                return $caseId;
+            });
 
             $this->addActivity($caseId, [
                 'activity_type' => 'note',
@@ -242,10 +259,6 @@ class ClientCaseService
 
             return ['ok' => true, 'message' => 'Кейс створено.', 'case_id' => $caseId];
         } catch (Throwable $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-
             $this->logError('client-case-create', $e);
 
             return ['ok' => false, 'message' => 'Кейс не вдалося створити.'];
@@ -260,8 +273,12 @@ class ClientCaseService
                 return ['ok' => false, 'message' => 'Кейс не знайдено.'];
             }
 
-            $pdo = $this->database->connection();
-            $pdo->beginTransaction();
+            $newStage = $this->allowed((string) ($input['stage'] ?? 'new'), $this->stages(), 'new');
+            $newStatus = $this->allowed((string) ($input['status'] ?? 'active'), ['active', 'paused', 'closed', 'lost'], 'active');
+            $correlationId = $this->eventId();
+
+            $this->transactions->transactional(function () use ($case, $caseId, $input, $user, $newStage, $newStatus, $correlationId): void {
+                $pdo = $this->database->connection();
 
             $personStatement = $pdo->prepare('
                 UPDATE tn_people
@@ -304,8 +321,8 @@ class ClientCaseService
                 'id' => $caseId,
                 'title' => $this->caseTitle($input, (string) ($input['full_name'] ?? $case['full_name'] ?? '')),
                 'type' => $this->allowed((string) ($input['type'] ?? 'buy'), $this->types(), 'buy'),
-                'status' => $this->allowed((string) ($input['status'] ?? 'active'), ['active', 'paused', 'closed', 'lost'], 'active'),
-                'stage' => $this->allowed((string) ($input['stage'] ?? 'new'), $this->stages(), 'new'),
+                'status' => $newStatus,
+                'stage' => $newStage,
                 'priority' => $this->allowed((string) ($input['priority'] ?? 'normal'), ['low', 'normal', 'high', 'urgent'], 'normal'),
                 'source' => $this->nullable((string) ($input['source'] ?? ''), 120),
                 'budget_min' => $this->decimal($input['budget_min'] ?? null),
@@ -316,10 +333,29 @@ class ClientCaseService
                 'description' => $this->nullableText((string) ($input['description'] ?? '')),
                 'parameters_json' => $this->parametersJson($input),
                 'next_contact_at' => $this->dateTimeOrNull((string) ($input['next_contact_at'] ?? '')),
-                'closed_at' => in_array((string) ($input['status'] ?? ''), ['closed', 'lost'], true) ? date('Y-m-d H:i:s') : null,
+                'closed_at' => in_array($newStatus, ['closed', 'lost'], true) ? date('Y-m-d H:i:s') : null,
             ]);
 
-            $pdo->commit();
+                $metadata = $this->metadata($user, $correlationId);
+                $changes = [
+                    'stage' => ['from' => (string) $case['stage'], 'to' => $newStage],
+                    'status' => ['from' => (string) $case['status'], 'to' => $newStatus],
+                ];
+                $this->eventBus->publish(ClientCaseChanged::create(
+                    $this->eventId(), $this->organizationId, (string) $caseId, $changes, $metadata,
+                ));
+
+                if ((string) $case['stage'] !== $newStage) {
+                    $this->eventBus->publish(DealStageChanged::create(
+                        $this->eventId(),
+                        $this->organizationId,
+                        (string) $caseId,
+                        (string) $case['stage'],
+                        $newStage,
+                        $metadata,
+                    ));
+                }
+            });
 
             $this->addActivity($caseId, [
                 'activity_type' => 'status_change',
@@ -329,10 +365,6 @@ class ClientCaseService
 
             return ['ok' => true, 'message' => 'Кейс оновлено.'];
         } catch (Throwable $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-
             $this->logError('client-case-update', $e);
 
             return ['ok' => false, 'message' => 'Кейс не вдалося оновити.'];
@@ -386,10 +418,9 @@ class ClientCaseService
         }
 
         try {
-            $pdo = $this->database->connection();
-            $pdo->beginTransaction();
-
-            $pdo->prepare('
+            $this->transactions->transactional(function () use ($case, $caseId, $requestId): void {
+                $pdo = $this->database->connection();
+                $pdo->prepare('
                 UPDATE tn_leads
                 SET person_id = :person_id,
                     client_case_id = :client_case_id,
@@ -401,19 +432,22 @@ class ClientCaseService
                 'request_id' => $requestId,
             ]);
 
-            $pdo->prepare('
+                $pdo->prepare('
                 INSERT IGNORE INTO tn_client_case_request_matches (client_case_id, inbound_request_id, relation_type)
                 VALUES (:client_case_id, :request_id, "context")
             ')->execute(['client_case_id' => $caseId, 'request_id' => $requestId]);
 
-            $pdo->commit();
+                $this->eventBus->publish(LeadChanged::create(
+                    $this->eventId(),
+                    $this->organizationId,
+                    (string) $requestId,
+                    ['client_case_id' => ['from' => null, 'to' => $caseId]],
+                    $this->metadata(null),
+                ));
+            });
 
             return ['ok' => true, 'message' => 'Заявку привʼязано до кейсу.'];
         } catch (Throwable $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-
             $this->logError('client-case-attach-inbound-request', $e);
 
             return ['ok' => false, 'message' => 'Заявку не вдалося привʼязати.'];
@@ -847,6 +881,23 @@ class ClientCaseService
         $timestamp = strtotime($value);
 
         return $timestamp ? date('Y-m-d H:i:s', $timestamp) : null;
+    }
+
+    private function eventId(): string
+    {
+        return bin2hex(random_bytes(16));
+    }
+
+    private function metadata(?array $user, ?string $correlationId = null): EventMetadata
+    {
+        $actorId = isset($user['id']) ? (string) $user['id'] : 'system';
+
+        return new EventMetadata(
+            $correlationId ?? $this->eventId(),
+            null,
+            isset($user['id']) ? 'USER' : 'SYSTEM',
+            $actorId,
+        );
     }
 
     private function logError(string $label, Throwable|string $error): void

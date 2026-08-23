@@ -105,7 +105,12 @@ class Module implements ModuleDefinitionInterface
         ]);
 
         $di->setShared('frontendClientCaseService', function () {
-            return new ClientCaseService($this->getShared('databaseService'));
+            return new ClientCaseService(
+                $this->getShared('databaseService'),
+                $this->getShared('eventBus'),
+                $this->getShared('cosTransactionManager'),
+                (string) $this->getConfig()->cos->organizationId,
+            );
         });
 
         $di->setShared('frontendCatalogService', function () {
@@ -113,7 +118,13 @@ class Module implements ModuleDefinitionInterface
         });
 
         $di->setShared('frontendInboundRequestService', function () {
-            return new InboundRequestService($this->getShared('frontendClientCaseService'));
+            return new InboundRequestService(
+                $this->getShared('frontendClientCaseService'),
+                $this->getShared('databaseService'),
+                $this->getShared('eventBus'),
+                $this->getShared('cosTransactionManager'),
+                (string) $this->getConfig()->cos->organizationId,
+            );
         });
 
         $di->setShared('frontendPropertySubmissionService', function () {

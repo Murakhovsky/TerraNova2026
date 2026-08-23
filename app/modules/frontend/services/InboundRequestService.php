@@ -3,7 +3,11 @@ declare(strict_types=1);
 
 namespace Modules\Frontend\Services;
 
-use Common\Models\Crm\InboundRequest;
+use Common\Services\DatabaseService;
+use Domains\Sales\Event\LeadCreated;
+use Infrastructure\Database\Transaction\TransactionManager;
+use Kernel\Event\EventBus;
+use Kernel\Event\EventMetadata;
 use Throwable;
 
 class InboundRequestService
@@ -12,8 +16,13 @@ class InboundRequestService
     private const VALIDATION_MESSAGE = 'Заповніть імʼя та хоча б один контакт.';
     private const ERROR_MESSAGE = 'Заявку не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
 
-    public function __construct(private ?ClientCaseService $clientCases = null)
-    {
+    public function __construct(
+        private ?ClientCaseService $clientCases,
+        private DatabaseService $database,
+        private EventBus $eventBus,
+        private TransactionManager $transactions,
+        private string $organizationId,
+    ) {
     }
 
     public function submit(array $input, string $sourcePage): array
@@ -41,30 +50,50 @@ class InboundRequestService
                 'client_case_id' => null,
             ];
 
-            $request = new InboundRequest();
-            $request->buyer_id = null;
-            $request->person_id = $caseContext['person_id'] ?? null;
-            $request->client_case_id = $caseContext['client_case_id'] ?? null;
-            $request->property_id = $this->positiveInt($input['property_id'] ?? null);
-            $request->full_name = mb_substr($name, 0, 160);
-            $request->phone = $phone !== '' ? mb_substr($phone, 0, 50) : null;
-            $request->email = $email !== '' ? mb_substr($email, 0, 160) : null;
-            $request->role = $this->requestRole((string) ($input['role'] ?? 'buyer'));
-            $request->deal_type = $this->requestDealType((string) ($input['deal_type'] ?? $input['request_type'] ?? 'consultation'));
-            $request->message = $message !== '' ? mb_substr($message, 0, 4000) : null;
-            $request->preferred_contact = 'any';
-            $request->source_page = mb_substr($sourcePage, 0, 255);
-            $request->status = 'new';
+            $leadId = $this->transactions->transactional(function () use (
+                $input, $sourcePage, $name, $phone, $email, $message, $caseContext
+            ): int {
+                $statement = $this->database->connection()->prepare('
+                    INSERT INTO tn_leads (
+                        buyer_id, person_id, client_case_id, property_id, full_name, phone, email,
+                        role, deal_type, message, preferred_contact, source_page, status
+                    ) VALUES (
+                        NULL, :person_id, :client_case_id, :property_id, :full_name, :phone, :email,
+                        :role, :deal_type, :message, "any", :source_page, "new"
+                    )
+                ');
+                $statement->execute([
+                    'person_id' => $caseContext['person_id'] ?? null,
+                    'client_case_id' => $caseContext['client_case_id'] ?? null,
+                    'property_id' => $this->positiveInt($input['property_id'] ?? null),
+                    'full_name' => mb_substr($name, 0, 160),
+                    'phone' => $phone !== '' ? mb_substr($phone, 0, 50) : null,
+                    'email' => $email !== '' ? mb_substr($email, 0, 160) : null,
+                    'role' => $this->requestRole((string) ($input['role'] ?? 'buyer')),
+                    'deal_type' => $this->requestDealType((string) ($input['deal_type'] ?? $input['request_type'] ?? 'consultation')),
+                    'message' => $message !== '' ? mb_substr($message, 0, 4000) : null,
+                    'source_page' => mb_substr($sourcePage, 0, 255),
+                ]);
+                $leadId = (int) $this->database->connection()->lastInsertId();
 
-            if (!$request->save()) {
-                $this->logError('inbound-request-validation', implode('; ', $request->getMessages()));
+                if (!empty($caseContext['client_case_id'])) {
+                    $this->clientCases?->registerInboundRequest((int) $caseContext['client_case_id'], $leadId);
+                }
 
-                return ['ok' => false, 'message' => self::ERROR_MESSAGE];
-            }
+                $this->eventBus->publish(LeadCreated::create(
+                    bin2hex(random_bytes(16)),
+                    $this->organizationId,
+                    (string) $leadId,
+                    [
+                        'client_case_id' => $caseContext['client_case_id'] ?? null,
+                        'source_page' => $sourcePage,
+                        'status' => 'new',
+                    ],
+                    new EventMetadata(bin2hex(random_bytes(16)), null, 'SYSTEM', 'public-web'),
+                ));
 
-            if (!empty($caseContext['client_case_id'])) {
-                $this->clientCases?->registerInboundRequest((int) $caseContext['client_case_id'], (int) $request->id);
-            }
+                return $leadId;
+            });
         } catch (Throwable $e) {
             $this->logError('inbound-request-exception', $e);
 

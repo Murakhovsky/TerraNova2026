@@ -8,6 +8,10 @@ $loader = new Loader();
  * Register Namespaces
  */
 $loader->setNamespaces([
+    'Kernel'            => APP_PATH . '/Kernel/',
+    'Domains'           => APP_PATH . '/Domains/',
+    'Infrastructure'    => APP_PATH . '/Infrastructure/',
+    'Interfaces'        => APP_PATH . '/Interfaces/',
     'Terra\Models'          => APP_PATH . '/common/models/',
     'Common\Models'         => APP_PATH . '/common/models/',
     'Terra'                 => APP_PATH . '/common/library/',

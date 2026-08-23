@@ -77,3 +77,5 @@ if (!function_exists('di')) {
         return $service ? $di->getShared($service) : $di;
     }
 }
+
+require APP_PATH . '/config/services_kernel.php';
