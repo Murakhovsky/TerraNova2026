@@ -9,6 +9,7 @@ $agents = $agents ?? [];
 $activities = $activities ?? [];
 $inboundRequests = $inboundRequests ?? [];
 $caseMatches = $caseMatches ?? [];
+$managerClientCases = $managerClientCases ?? [];
 $readiness = $readiness ?? [];
 $stageRules = $operationalStageRules ?? [];
 $stageCheck = $operationalStageCheck ?? [];
@@ -77,6 +78,7 @@ if ($stageRules) {
 }
 $publicPropertyUrl = $property ? $absoluteUrl('property/show/' . (string) ($property['slug'] ?? '')) : '';
 $propertyPresentationUrl = $property ? $absoluteUrl('property/presentation/' . (string) ($property['slug'] ?? '')) : '';
+$propertyPdfUrl = $property ? $absoluteUrl('property/pdf/' . (string) ($property['slug'] ?? '')) : '';
 $groupPresentationUrl = !empty($property['group_slug']) ? $absoluteUrl('property/presentation/' . (string) $property['group_slug']) : '';
 $propertyData = is_array($property) ? $property : [];
 $readinessActionMap = [
@@ -152,6 +154,8 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
         <div class="tn-page-hero__actions">
           <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" target="_blank" rel="noopener">Публічна картка</a>
           <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" target="_blank" rel="noopener">Презентація об’єкта</a>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>" target="_blank" rel="noopener">PDF клієнту</a>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug'] . '?variant=partner'); ?>" target="_blank" rel="noopener">PDF партнеру</a>
           <?php if ($groupPresentationUrl): ?>
             <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/presentation/' . $property['group_slug']); ?>" target="_blank" rel="noopener">Презентація групи</a>
           <?php endif; ?>
@@ -181,13 +185,25 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
         <div class="tn-manager-next__actions">
           <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" target="_blank" rel="noopener">Відкрити картку</a>
           <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" target="_blank" rel="noopener">Відкрити презентацію</a>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>" target="_blank" rel="noopener">PDF клієнту</a>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug'] . '?variant=partner'); ?>" target="_blank" rel="noopener">PDF партнеру</a>
           <button class="tn-btn tn-btn--ghost" type="button" data-copy-value="<?php echo $h($publicPropertyUrl); ?>">Скопіювати посилання</button>
           <button class="tn-btn tn-btn--ghost" type="button" data-copy-value="<?php echo $h($propertyPresentationUrl); ?>">Скопіювати презентацію</button>
+          <button class="tn-btn tn-btn--ghost" type="button" data-copy-value="<?php echo $h($propertyPdfUrl); ?>">Скопіювати PDF</button>
           <form action="<?php echo $this->url->get('property/quick/' . $property['id']); ?>" method="post">
             <input type="hidden" name="quick_action" value="share_link">
             <button class="tn-btn tn-btn--ghost" type="submit">Зафіксувати відправку</button>
           </form>
         </div>
+        <?php if ($managerClientCases): ?>
+          <form class="tn-presentation-share-form" action="<?php echo $this->url->get('property/presentationShare'); ?>" method="post" target="_blank">
+            <input type="hidden" name="slug" value="<?php echo $h($property['slug']); ?>">
+            <input type="hidden" name="return_url" value="property/edit/<?php echo (int) $property['id']; ?>">
+            <label><span>Клієнтський кейс</span><select name="client_case_id" required><option value="">Оберіть клієнта</option><?php foreach ($managerClientCases as $caseOption): ?><option value="<?php echo (int) $caseOption['id']; ?>"><?php echo $h($caseOption['full_name'] . ' / ' . $caseOption['title']); ?></option><?php endforeach; ?></select></label>
+            <label><span>Версія</span><select name="variant"><option value="client">Клієнтська</option><option value="partner">Партнерська</option></select></label>
+            <div class="tn-presentation-share-form__channels"><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="email">Email</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="telegram">Telegram</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="viber">Viber</button></div>
+          </form>
+        <?php endif; ?>
         <div class="tn-manager-next__forms">
           <?php if ($canQuickPublish): ?>
             <form action="<?php echo $this->url->get('property/quick/' . $property['id']); ?>" method="post">

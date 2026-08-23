@@ -10,8 +10,9 @@
     "vlucas/phpdotenv": "^5.5",
     "monolog/monolog": "^2.0",
     "php-amqplib/php-amqplib": "^3.0",
-    "firebase/php-jwt": "^6.0",
+    "firebase/php-jwt": "^7.0",
     "zircote/swagger-php": "^4.0",
-    "longman/telegram-bot": "^0.83.1"
+    "longman/telegram-bot": "^0.83.1",
+    "dompdf/dompdf": "^3.1"
   }
 }

@@ -706,7 +706,7 @@ class ClientCaseService
                 'client_case_id' => $caseId,
                 'person_id' => (int) $case['person_id'],
                 'user_id' => $user['id'] ?? null,
-                'activity_type' => $this->allowed((string) ($input['activity_type'] ?? 'note'), ['note', 'call', 'message', 'meeting', 'viewing', 'offer', 'status_change', 'deal', 'task'], 'note'),
+                'activity_type' => $this->allowed((string) ($input['activity_type'] ?? 'note'), ['note', 'call', 'message', 'meeting', 'viewing', 'offer', 'presentation', 'status_change', 'deal', 'task'], 'note'),
                 'title' => $this->limit((string) ($input['title'] ?? 'Нотатка'), 180),
                 'body' => $this->nullableText((string) ($input['body'] ?? '')),
                 'due_at' => $this->dateTimeOrNull((string) ($input['due_at'] ?? '')),

@@ -10,6 +10,7 @@ use Modules\Frontend\Services\ClientCaseService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
+use Modules\Frontend\Services\PropertyPresentationService;
 use Modules\Frontend\Services\PropertySubmissionService;
 use Modules\Frontend\Services\PublicPageService;
 use Phalcon\Mvc\Controller;
@@ -128,6 +129,11 @@ class ControllerBase extends Controller
     protected function propertyMediaService(): PropertyMediaService
     {
         return $this->di->getShared('frontendPropertyMediaService');
+    }
+
+    protected function propertyPresentationService(): PropertyPresentationService
+    {
+        return $this->di->getShared('frontendPropertyPresentationService');
     }
 
     protected function submitInboundRequest(): string

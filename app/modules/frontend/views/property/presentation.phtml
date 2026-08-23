@@ -73,6 +73,7 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
         <strong class="tn-presentation-price"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
         <div class="tn-hero-actions">
           <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="presentation" data-analytics-event="presentation_request">Отримати цю презентацію</a>
+          <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">Завантажити PDF</a>
           <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Повна картка</a>
           <button type="button" data-copy-value="<?php echo $h($presentationUrl); ?>">Скопіювати посилання</button>
         </div>
@@ -184,6 +185,7 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
       <div class="tn-page-hero__meta">
         <strong><?php echo count($properties); ?></strong>
         <span>доступних об’єктів</span>
+        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/pdf/' . $group['slug']); ?>">Завантажити PDF</a>
       </div>
     </section>
 

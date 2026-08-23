@@ -15,6 +15,7 @@ use Modules\Frontend\Services\ClientCaseService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
+use Modules\Frontend\Services\PropertyPresentationService;
 use Modules\Frontend\Services\PropertySubmissionService;
 use Modules\Frontend\Services\PublicPageService;
 
@@ -247,6 +248,13 @@ class Module implements ModuleDefinitionInterface
             return new PropertyMediaService(
                 $this->getShared('databaseService'),
                 $this->getShared('mediaStorageService')
+            );
+        });
+
+        $di->setShared('frontendPropertyPresentationService', function () {
+            return new PropertyPresentationService(
+                $this->getShared('frontendCatalogService'),
+                $this->getShared('databaseService')
             );
         });
 

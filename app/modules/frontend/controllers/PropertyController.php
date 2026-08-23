@@ -170,6 +170,83 @@ class PropertyController extends ControllerBase
         }
     }
 
+    public function pdfAction(?string $slug = null): \Phalcon\Http\ResponseInterface
+    {
+        $slug = $slug ?: (string) $this->dispatcher->getParam('params');
+        $variant = (string) $this->request->getQuery('variant', 'string', 'client');
+        $variant = $variant === 'partner' ? 'partner' : 'client';
+
+        if ($variant === 'partner' && !$this->requireListingUser()) {
+            $this->view->disable();
+            return $this->response;
+        }
+
+        try {
+            $document = $this->propertyPresentationService()->generate($slug, $variant);
+            if (!$document) {
+                $this->view->disable();
+                $this->response->setStatusCode(404, 'Not Found');
+                $this->response->setContent('Презентацію не знайдено.');
+                return $this->response;
+            }
+
+            $this->propertyPresentationService()->recordDownload(
+                $document,
+                $this->currentUser(),
+                $this->request->getURI()
+            );
+
+            $inline = (int) $this->request->getQuery('inline', 'int', 0) === 1;
+            $this->view->disable();
+            $this->response->setContentType('application/pdf');
+            $this->response->setHeader('Content-Disposition', ($inline ? 'inline' : 'attachment') . '; filename="' . $document['filename'] . '"');
+            $this->response->setHeader('X-Content-Type-Options', 'nosniff');
+            $this->response->setHeader('Cache-Control', $variant === 'partner' ? 'private, no-store' : 'private, max-age=0, must-revalidate');
+            $this->response->setContent($document['bytes']);
+
+            return $this->response;
+        } catch (Throwable $e) {
+            $this->logFrontendError('property-pdf', $e);
+            $this->view->disable();
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->response->setContent('PDF тимчасово недоступний.');
+            return $this->response;
+        }
+    }
+
+    public function presentationShareAction(): void
+    {
+        $user = $this->requireManager();
+        if (!$user) {
+            return;
+        }
+
+        if (!$this->request->isPost()) {
+            $this->response->redirect('property/manage');
+            return;
+        }
+
+        $input = (array) $this->request->getPost();
+        $slug = trim((string) ($input['slug'] ?? ''));
+        $variant = (string) ($input['variant'] ?? 'client') === 'partner' ? 'partner' : 'client';
+        $input['variant'] = $variant;
+        $input['pdf_url'] = $this->absoluteUrl('property/pdf/' . rawurlencode($slug) . '?variant=' . $variant);
+        $input['page_url'] = $this->absoluteUrl('property/presentation/' . rawurlencode($slug));
+        $result = $this->propertyPresentationService()->registerShare($input, $user);
+
+        if (!empty($result['ok']) && !empty($result['redirect_url'])) {
+            $this->response->redirect((string) $result['redirect_url'], true);
+            return;
+        }
+
+        $returnUrl = ltrim((string) ($input['return_url'] ?? 'property/manage'), '/');
+        if (!preg_match('#^(property/(edit|group|manage)|client-case/show)(/|$)#', $returnUrl)) {
+            $returnUrl = 'property/manage';
+        }
+        $separator = str_contains($returnUrl, '?') ? '&' : '?';
+        $this->response->redirect($returnUrl . $separator . 'status_message=' . rawurlencode((string) $result['message']));
+    }
+
     public function createAction(): void
     {
         $this->dispatcher->forward([
@@ -470,8 +547,10 @@ class PropertyController extends ControllerBase
         $this->view->group = null;
         $this->view->properties = [];
         $this->view->locations = [];
+        $this->view->managerClientCases = [];
         $this->view->pageStatus = null;
-        $this->view->actionStatus = (string) $this->request->getQuery('status', 'string', '');
+        $this->view->actionStatus = (string) ($this->request->getQuery('status', 'string', '')
+            ?: $this->request->getQuery('status_message', 'string', ''));
 
         if ($groupId <= 0) {
             $this->response->redirect('property/manage');
@@ -499,6 +578,7 @@ class PropertyController extends ControllerBase
             $this->view->group = $group;
             $this->view->properties = $this->propertyMediaService()->propertyGroupProperties($groupId);
             $this->view->locations = $this->catalogService()->locations();
+            $this->view->managerClientCases = $this->clientCaseService()->openCaseOptions();
         } catch (Throwable $e) {
             $this->logFrontendError('property-group-page', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -550,11 +630,13 @@ class PropertyController extends ControllerBase
         $this->view->activities = [];
         $this->view->inboundRequests = [];
         $this->view->caseMatches = [];
+        $this->view->managerClientCases = [];
         $this->view->readiness = [];
         $this->view->operationalStageRules = [];
         $this->view->operationalStageCheck = [];
         $this->view->pageStatus = null;
-        $this->view->actionStatus = (string) $this->request->getQuery('status', 'string', '');
+        $this->view->actionStatus = (string) ($this->request->getQuery('status', 'string', '')
+            ?: $this->request->getQuery('status_message', 'string', ''));
 
         try {
             $property = $this->propertyMediaService()->property($propertyId);
@@ -576,6 +658,7 @@ class PropertyController extends ControllerBase
             $this->view->activities = $this->propertyMediaService()->activities($propertyId);
             $this->view->inboundRequests = $this->propertyMediaService()->inboundRequests($propertyId);
             $this->view->caseMatches = $this->propertyMediaService()->caseMatches($propertyId);
+            $this->view->managerClientCases = $this->clientCaseService()->openCaseOptions();
         } catch (Throwable $e) {
             $this->logFrontendError('property-media-edit', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');

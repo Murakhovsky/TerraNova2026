@@ -18,6 +18,7 @@ $absoluteUrl = static function (string $path = '') {
 $group = $group ?? null;
 $properties = $properties ?? [];
 $locations = $locations ?? [];
+$managerClientCases = $managerClientCases ?? [];
 $pageStatus = $pageStatus ?? null;
 $actionStatus = $actionStatus ?? null;
 $selected = static fn($current, $expected) => (string) $current === (string) $expected ? 'selected' : '';
@@ -41,6 +42,7 @@ $propertyStatusLabels = [
     'archived' => 'Архів',
 ];
 $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (string) $group['slug']) : '';
+$groupPdfUrl = $group ? $absoluteUrl('property/pdf/' . (string) $group['slug']) : '';
 $groupImage = trim((string) ($group['image_url'] ?? ''));
 ?>
 
@@ -167,12 +169,27 @@ $groupImage = trim((string) ($group['image_url'] ?? ''));
           <div class="tn-cabinet-actions">
             <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage?property_group_id=' . (int) $group['id']); ?>">Відкрити список</a>
             <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/presentation/' . $group['slug']); ?>">Публічна презентація</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $group['slug']); ?>" target="_blank" rel="noopener">PDF клієнту</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $group['slug'] . '?variant=partner'); ?>" target="_blank" rel="noopener">PDF партнеру</a>
             <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/add'); ?>">Додати ще</a>
           </div>
           <label class="tn-auth-form__note">
             <span>Посилання для клієнта</span>
             <input type="url" readonly value="<?php echo $h($publicPresentationUrl); ?>" aria-label="Посилання на публічну презентацію групи">
           </label>
+          <label class="tn-auth-form__note">
+            <span>PDF для клієнта</span>
+            <input type="url" readonly value="<?php echo $h($groupPdfUrl); ?>" aria-label="Посилання на PDF групи">
+          </label>
+          <?php if ($managerClientCases): ?>
+            <form class="tn-presentation-share-form" action="<?php echo $this->url->get('property/presentationShare'); ?>" method="post" target="_blank">
+              <input type="hidden" name="slug" value="<?php echo $h($group['slug']); ?>">
+              <input type="hidden" name="return_url" value="property/group/<?php echo (int) $group['id']; ?>">
+              <label><span>Клієнтський кейс</span><select name="client_case_id" required><option value="">Оберіть клієнта</option><?php foreach ($managerClientCases as $caseOption): ?><option value="<?php echo (int) $caseOption['id']; ?>"><?php echo $h($caseOption['full_name'] . ' / ' . $caseOption['title']); ?></option><?php endforeach; ?></select></label>
+              <label><span>Версія</span><select name="variant"><option value="client">Клієнтська</option><option value="partner">Партнерська</option></select></label>
+              <div class="tn-presentation-share-form__channels"><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="email">Email</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="telegram">Telegram</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="viber">Viber</button></div>
+            </form>
+          <?php endif; ?>
         </article>
       </div>
 

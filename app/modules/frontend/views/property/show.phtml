@@ -214,6 +214,7 @@ if ($property) {
         </div>
         <div class="tn-hero-actions">
           <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" data-analytics-event="presentation_request">Отримати презентацію</a>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">Завантажити PDF</a>
           <a class="tn-btn tn-btn--ghost" href="#request" data-request-intent="similar_search">Підібрати схожий</a>
           <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="viewing">Записатись на перегляд</a>
           <?php if ($phoneHref): ?><a class="tn-btn tn-btn--dark" href="tel:<?php echo $h($phoneHref); ?>">Подзвонити</a><?php endif; ?>
@@ -338,6 +339,7 @@ if ($property) {
             <h2>Отримати коротку презентацію</h2>
             <p>Надішлемо ключові параметри, фото, ціну, локацію та наступні кроки для ухвалення рішення.</p>
             <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" data-analytics-event="presentation_request">Відкрити</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">PDF</a>
           </article>
           <article>
             <p class="tn-kicker">Підбір</p>

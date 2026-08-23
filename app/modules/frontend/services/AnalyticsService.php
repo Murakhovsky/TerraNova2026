@@ -78,6 +78,8 @@ class AnalyticsService
                 SUM(event_type = "telegram_click") AS telegram_clicks,
                 SUM(event_type = "viber_click") AS viber_clicks,
                 SUM(event_type = "presentation_request") AS presentation_requests,
+                SUM(event_type = "presentation_download") AS presentation_downloads,
+                SUM(event_type = "presentation_share") AS presentation_shares,
                 SUM(event_type = "lead_submit") AS leads,
                 SUM(event_type = "property_submit") AS property_submissions
             FROM tn_analytics_events
@@ -100,6 +102,8 @@ class AnalyticsService
                 'telegram_clicks' => (int) ($summary['telegram_clicks'] ?? 0),
                 'viber_clicks' => (int) ($summary['viber_clicks'] ?? 0),
                 'presentation_requests' => (int) ($summary['presentation_requests'] ?? 0),
+                'presentation_downloads' => (int) ($summary['presentation_downloads'] ?? 0),
+                'presentation_shares' => (int) ($summary['presentation_shares'] ?? 0),
                 'leads' => $leads,
                 'property_submissions' => (int) ($summary['property_submissions'] ?? 0),
                 'cta' => $cta,
@@ -121,12 +125,14 @@ class AnalyticsService
                 SELECT p.id, p.public_id, p.slug, p.title,
                        SUM(e.event_type = "property_view") AS property_views,
                        SUM(e.event_type IN ("phone_click", "telegram_click", "viber_click", "presentation_request")) AS cta,
+                       SUM(e.event_type = "presentation_download") AS presentation_downloads,
+                       SUM(e.event_type = "presentation_share") AS presentation_shares,
                        SUM(e.event_type = "lead_submit") AS leads
                 FROM tn_analytics_events e
                 INNER JOIN tn_properties p ON p.id = e.property_id
                 WHERE ' . str_replace('created_at', 'e.created_at', $period) . '
                 GROUP BY p.id
-                ORDER BY leads DESC, cta DESC, property_views DESC
+                ORDER BY leads DESC, presentation_shares DESC, cta DESC, property_views DESC
                 LIMIT 12
             '),
             'sources' => $this->database->fetchAll('

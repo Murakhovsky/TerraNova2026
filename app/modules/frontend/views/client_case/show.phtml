@@ -199,6 +199,16 @@ $money = function ($amount, $currency): string {
                   <input name="note" type="text" maxlength="500" value="<?php echo $h($match['note']); ?>" placeholder="Нотатка">
                   <button type="submit">Оновити</button>
                 </form>
+                <div class="tn-match-presentation-actions">
+                  <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $match['slug']); ?>" target="_blank" rel="noopener">Відкрити PDF</a>
+                  <form class="tn-presentation-share-form tn-presentation-share-form--compact" action="<?php echo $this->url->get('property/presentationShare'); ?>" method="post" target="_blank">
+                    <input type="hidden" name="client_case_id" value="<?php echo (int) $case['id']; ?>">
+                    <input type="hidden" name="slug" value="<?php echo $h($match['slug']); ?>">
+                    <input type="hidden" name="variant" value="client">
+                    <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
+                    <div class="tn-presentation-share-form__channels"><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="email">Email</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="telegram">Telegram</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="viber">Viber</button></div>
+                  </form>
+                </div>
               </div>
             <?php endforeach; ?>
           </div>

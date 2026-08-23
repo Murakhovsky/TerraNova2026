@@ -25,7 +25,7 @@ $pageStatus = $pageStatus ?? null;
       <a href="#properties"><span>Перегляди карток</span><strong><?php echo (int) ($summary['property_views'] ?? 0); ?></strong><small>за період</small></a>
       <a href="#daily"><span>Контактні CTA</span><strong><?php echo (int) ($summary['cta'] ?? 0); ?></strong><small><?php echo $h($summary['view_to_cta'] ?? 0); ?>% від переглядів</small></a>
       <a href="<?php echo $this->url->get('client-case/inbox'); ?>"><span>Заявки</span><strong><?php echo (int) ($summary['leads'] ?? 0); ?></strong><small><?php echo $h($summary['view_to_lead'] ?? 0); ?>% від переглядів</small></a>
-      <a href="#sources"><span>Запити презентації</span><strong><?php echo (int) ($summary['presentation_requests'] ?? 0); ?></strong><small>натискання CTA</small></a>
+      <a href="#sources"><span>Презентації</span><strong><?php echo (int) ($summary['presentation_downloads'] ?? 0); ?></strong><small><?php echo (int) ($summary['presentation_shares'] ?? 0); ?> підготовлено до надсилання</small></a>
     </section>
 
     <section class="tn-admin-dashboard-grid">
@@ -45,11 +45,11 @@ $pageStatus = $pageStatus ?? null;
     </section>
 
     <section class="tn-admin-card" id="properties"><div class="tn-admin-card__head"><div><p class="tn-kicker">Об’єкти</p><h2>Попит за картками</h2></div></div>
-      <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Об’єкт</th><th>Перегляди</th><th>CTA</th><th>Заявки</th><th>Конверсія</th></tr></thead><tbody>
+      <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Об’єкт</th><th>Перегляди</th><th>CTA</th><th>PDF</th><th>Надіслано</th><th>Заявки</th><th>Конверсія</th></tr></thead><tbody>
         <?php foreach ($topProperties as $row): ?><?php $views = (int) $row['property_views']; $leads = (int) $row['leads']; ?>
-          <tr><td><a href="<?php echo $this->url->get('property/show/' . $row['slug']); ?>"><?php echo $h($row['public_id'] . ' / ' . $row['title']); ?></a></td><td><?php echo $views; ?></td><td><?php echo (int) $row['cta']; ?></td><td><?php echo $leads; ?></td><td><?php echo $views > 0 ? $h(round($leads * 100 / $views, 1)) . '%' : '—'; ?></td></tr>
+          <tr><td><a href="<?php echo $this->url->get('property/show/' . $row['slug']); ?>"><?php echo $h($row['public_id'] . ' / ' . $row['title']); ?></a></td><td><?php echo $views; ?></td><td><?php echo (int) $row['cta']; ?></td><td><?php echo (int) $row['presentation_downloads']; ?></td><td><?php echo (int) $row['presentation_shares']; ?></td><td><?php echo $leads; ?></td><td><?php echo $views > 0 ? $h(round($leads * 100 / $views, 1)) . '%' : '—'; ?></td></tr>
         <?php endforeach; ?>
-        <?php if (!$topProperties): ?><tr><td colspan="5">Даних по об’єктах ще немає.</td></tr><?php endif; ?>
+        <?php if (!$topProperties): ?><tr><td colspan="7">Даних по об’єктах ще немає.</td></tr><?php endif; ?>
       </tbody></table></div>
     </section>
   <?php endif; ?>
