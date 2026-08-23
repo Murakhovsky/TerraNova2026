@@ -48,6 +48,21 @@ class Module implements ModuleDefinitionInterface
         $router->setDefaultController('index');
         $router->setDefaultAction('index');
 
+        $router->add('/api/property/:action/:params', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'api',
+            'action' => 1,
+            'params' => 2,
+        ]);
+
+        $router->add('/api/property/:action', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'api',
+            'action' => 1,
+        ]);
+
         $router->add('/submit-property', [
             'namespace' => 'Modules\Frontend\Controllers',
             'module' => 'frontend',
@@ -106,6 +121,28 @@ class Module implements ModuleDefinitionInterface
             'action' => 'index',
         ]);
 
+        $router->add('/cabinet/:action/:params', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cabinet',
+            'action' => 1,
+            'params' => 2,
+        ]);
+
+        $router->add('/cabinet/:action', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cabinet',
+            'action' => 1,
+        ]);
+
+        $router->add('/cabinet', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'cabinet',
+            'action' => 'index',
+        ]);
+
         $router->add('/admin/:action/:params', [
             'namespace' => 'Modules\Frontend\Controllers',
             'module' => 'frontend',
@@ -145,7 +182,10 @@ class Module implements ModuleDefinitionInterface
         });
 
         $di->setShared('frontendPropertySubmissionService', function () {
-            return new PropertySubmissionService($this->getShared('mediaStorageService'));
+            return new PropertySubmissionService(
+                $this->getShared('mediaStorageService'),
+                $this->getShared('databaseService')
+            );
         });
 
         $di->setShared('frontendPropertyModerationService', function () {

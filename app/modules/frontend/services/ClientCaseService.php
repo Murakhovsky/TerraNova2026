@@ -1097,7 +1097,7 @@ class ClientCaseService
             SELECT id, type_id, location_id, price_amount, price_currency
             FROM tn_properties
             WHERE id = :id
-              AND status IN ("published", "reserved")
+              AND status IN ("published", "active", "reserved")
             LIMIT 1
         ', ['id' => $propertyId]);
     }

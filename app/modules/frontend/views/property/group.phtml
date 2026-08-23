@@ -41,6 +41,7 @@ $propertyStatusLabels = [
     'archived' => 'Архів',
 ];
 $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (string) $group['slug']) : '';
+$groupImage = trim((string) ($group['image_url'] ?? ''));
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'objects']); ?>
@@ -49,19 +50,19 @@ $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (strin
   <?php if (!$group): ?>
     <section class="tn-empty-state tn-empty-state--page">
       <h1>Групу не знайдено</h1>
-      <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться до списку об’єктів.'); ?></p>
+        <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться до списку об’єктів.'); ?></p>
       <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage'); ?>">До об’єктів</a>
     </section>
   <?php else: ?>
     <section class="tn-page-hero tn-page-hero--catalog">
       <div>
-        <p class="tn-kicker">Група об’єктів</p>
+        <p class="tn-kicker">Локація</p>
         <h1><?php echo $h($group['title']); ?></h1>
         <p><?php echo $h(trim(($group['city'] ?? '') . ', ' . ($group['region'] ?? ''), ', ')); ?><?php if (!empty($group['address'])): ?> / <?php echo $h($group['address']); ?><?php endif; ?></p>
       </div>
       <div class="tn-page-hero__meta">
         <strong><?php echo (int) ($group['property_count'] ?? count($properties)); ?></strong>
-        <span>об’єктів у групі</span>
+        <span>об’єктів у локації</span>
         <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/add'); ?>">Додати об’єкт</a>
       </div>
     </section>
@@ -78,11 +79,11 @@ $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (strin
         <article class="tn-admin-card">
           <div class="tn-admin-card__head">
             <div>
-              <p class="tn-kicker">Паспорт групи</p>
-              <h2>Загальні дані адреси або проєкту</h2>
+              <p class="tn-kicker">Паспорт локації</p>
+              <h2>Назва, опис, фото і населений пункт</h2>
             </div>
           </div>
-          <form class="tn-property-edit-form" action="<?php echo $this->url->get('property/group/' . (int) $group['id']); ?>" method="post">
+          <form class="tn-property-edit-form" action="<?php echo $this->url->get('property/group/' . (int) $group['id']); ?>" method="post" enctype="multipart/form-data">
             <div class="tn-form-grid">
               <label class="is-wide">
                 <span>Назва</span>
@@ -97,7 +98,7 @@ $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (strin
                 </select>
               </label>
               <label>
-                <span>Локація</span>
+                <span>Населений пункт</span>
                 <select name="location_id">
                   <?php foreach ($locations as $location): ?>
                     <option value="<?php echo $h($location['id'] ?? 0); ?>" <?php echo $selected($group['location_id'] ?? 0, $location['id'] ?? 0); ?>>
@@ -105,6 +106,10 @@ $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (strin
                     </option>
                   <?php endforeach; ?>
                 </select>
+              </label>
+              <label>
+                <span>Порядок</span>
+                <input name="sort_order" type="number" min="0" max="999999" step="10" value="<?php echo $h($group['sort_order'] ?? 100); ?>">
               </label>
               <label>
                 <span>Статус</span>
@@ -119,20 +124,39 @@ $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (strin
                 <input name="address" type="text" maxlength="255" value="<?php echo $h($group['address'] ?? ''); ?>">
               </label>
               <label class="is-wide">
-                <span>Загальний опис для менеджера і презентації</span>
+                <span>Опис локації</span>
                 <textarea name="description" rows="6"><?php echo $h($group['description'] ?? ''); ?></textarea>
               </label>
+              <label class="is-wide">
+                <span>URL фото</span>
+                <input name="image_url" type="url" maxlength="500" value="<?php echo $h($groupImage); ?>" placeholder="/uploads/media/property_group/... або https://...">
+              </label>
+              <div class="tn-location-photo-editor is-wide">
+                <p class="tn-kicker">Фото локації</p>
+                <?php if ($groupImage !== ''): ?>
+                  <div class="tn-gallery__stage">
+                    <img class="tn-gallery__main" src="<?php echo $h($groupImage); ?>" alt="<?php echo $h($group['title']); ?>">
+                  </div>
+                <?php endif; ?>
+                <label class="tn-dropzone" data-dropzone>
+                  <span>Нове фото</span>
+                  <input name="main_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-dropzone-input>
+                  <strong>Перетягніть фото локації сюди</strong>
+                  <small>Після збереження файл стане основним зображенням цієї локації.</small>
+                  <div class="tn-dropzone__preview" data-dropzone-preview></div>
+                </label>
+              </div>
             </div>
             <div class="tn-submit-form__actions">
-              <button class="tn-btn tn-btn--accent" type="submit">Зберегти групу</button>
-              <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?property_group_id=' . (int) $group['id']); ?>">Об’єкти групи</a>
+              <button class="tn-btn tn-btn--accent" type="submit">Зберегти локацію</button>
+              <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?property_group_id=' . (int) $group['id']); ?>">Об’єкти локації</a>
             </div>
           </form>
         </article>
 
         <article class="tn-admin-card">
           <p class="tn-kicker">Зведення</p>
-          <h2>Стан групи</h2>
+          <h2>Стан локації</h2>
           <div class="tn-detail-grid">
             <div><span>Всього</span><strong><?php echo (int) ($group['property_count'] ?? 0); ?></strong></div>
             <div><span>Опубліковано</span><strong><?php echo (int) ($group['published_count'] ?? 0); ?></strong></div>
@@ -156,11 +180,11 @@ $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (strin
         <div class="tn-admin-card__head">
           <div>
             <p class="tn-kicker">Презентація клієнту</p>
-            <h2>Об’єкти цієї групи</h2>
+            <h2>Об’єкти цієї локації</h2>
           </div>
         </div>
         <?php if (!$properties): ?>
-          <p>У цій групі ще немає об’єктів.</p>
+          <p>У цій локації ще немає об’єктів.</p>
         <?php else: ?>
           <div class="tn-listing-table-wrap">
             <table class="tn-listing-table tn-manage-table">

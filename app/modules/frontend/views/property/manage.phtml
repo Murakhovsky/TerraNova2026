@@ -29,6 +29,14 @@ $sourceLabels = [
     'owner' => 'Власник',
     'developer' => 'Девелопер',
 ];
+$groupTypeLabels = [
+    'residential_complex' => 'ЖК',
+    'district' => 'Район',
+    'subdistrict' => 'Підрайон',
+    'street' => 'Вулиця',
+    'community' => 'Громада',
+    'project' => 'Проєкт',
+];
 $stageLabels = [
     'intake' => 'Первинне внесення',
     'verification' => 'Перевірка даних',
@@ -135,9 +143,9 @@ $managerCta = static function (array $property): array {
 <main class="tn-page">
   <section class="tn-page-hero tn-page-hero--catalog">
     <div>
-      <p class="tn-kicker">Внутрішній каталог</p>
-      <h1>Керування об’єктами</h1>
-      <p>Єдиний список для менеджера: всі статуси, швидка зміна публікації, доступ до редагування картки та медіа.</p>
+      <p class="tn-kicker">Менеджер</p>
+      <h1>Об’єкти</h1>
+      <p>Усі статуси, публікація, редагування картки, медіа та локацій.</p>
     </div>
     <div class="tn-page-hero__meta">
       <strong><?php echo (int) ($stats['all'] ?? count($properties)); ?></strong>
@@ -194,6 +202,42 @@ $managerCta = static function (array $property): array {
         <span>6. Опублікувати і вести заявки</span>
         <span>7. Фіксувати резерв, угоду або архів з причиною</span>
       </div>
+    </article>
+
+    <article class="tn-admin-card" id="tn-location-groups">
+      <div class="tn-admin-card__head">
+        <div>
+          <p class="tn-kicker">Локації</p>
+          <h2>Основні локації населених пунктів</h2>
+        </div>
+        <strong><?php echo count($propertyGroups); ?> у базі</strong>
+      </div>
+      <?php if (!$propertyGroups): ?>
+        <p>Локацій ще немає. Після створення групи вона з’явиться тут і на карті головної сторінки.</p>
+      <?php else: ?>
+        <div class="tn-location-admin-list">
+          <?php foreach ($propertyGroups as $group): ?>
+            <article class="tn-location-admin-item">
+              <div>
+                <strong><?php echo $h($group['title'] ?? ''); ?></strong>
+                <span>
+                  <?php echo $h($group['city'] ?? ''); ?>
+                  <?php if (!empty($group['region'])): ?> / <?php echo $h($group['region']); ?><?php endif; ?>
+                  <?php if (!empty($group['group_type'])): ?> / <?php echo $h($groupTypeLabels[$group['group_type']] ?? $group['group_type']); ?><?php endif; ?>
+                </span>
+                <?php if (!empty($group['description'])): ?>
+                  <small><?php echo $h($group['description']); ?></small>
+                <?php endif; ?>
+              </div>
+              <div class="tn-location-admin-item__meta">
+                <span><?php echo (int) ($group['property_count'] ?? 0); ?> об’єктів</span>
+                <a href="<?php echo $this->url->get('property/manage?property_group_id=' . (int) ($group['id'] ?? 0)); ?>">Об’єкти</a>
+                <a href="<?php echo $this->url->get('property/group/' . (int) ($group['id'] ?? 0)); ?>">Редагувати</a>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     </article>
 
     <article class="tn-admin-card">

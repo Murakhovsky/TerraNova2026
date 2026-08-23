@@ -61,6 +61,7 @@ class AdminController extends ControllerBase
         $this->view->filters = [];
         $this->view->users = [];
         $this->view->userStats = [];
+        $this->view->roleCapabilities = $this->authService()->roleCapabilities();
 
         try {
             $dashboard = $this->di->getShared('frontendAdminDashboardService');

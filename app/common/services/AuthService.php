@@ -114,6 +114,17 @@ class AuthService
         $email = (string) $user['email'];
 
         return [
+            'my_properties' => $this->database->fetchAll('
+                SELECT DISTINCT p.id, p.public_id, p.slug, p.title, p.status, p.price_amount, p.price_currency,
+                       p.updated_at, l.city, t.name_uk AS type_name
+                FROM tn_property_submissions s
+                INNER JOIN tn_properties p ON p.id = s.property_id
+                INNER JOIN tn_locations l ON l.id = p.location_id
+                INNER JOIN tn_property_types t ON t.id = p.type_id
+                WHERE s.owner_email = :email
+                ORDER BY p.updated_at DESC, p.id DESC
+                LIMIT 40
+            ', ['email' => $email]),
             'submissions' => $this->database->fetchAll('
                 SELECT s.id, s.submission_ref, s.title, s.status, s.city, s.property_id, s.created_at,
                        p.slug AS property_slug, p.title AS property_title
@@ -147,6 +158,20 @@ class AuthService
         $user = $user ?? $this->currentUser();
 
         return $user && (string) $user['role'] === 'admin';
+    }
+
+    public function roleCapabilities(): array
+    {
+        return [
+            'buyer' => ['catalog' => true, 'cabinet' => true, 'submit_property' => false, 'listing' => false, 'crm' => false, 'admin' => false],
+            'seller' => ['catalog' => true, 'cabinet' => true, 'submit_property' => true, 'listing' => false, 'crm' => false, 'admin' => false],
+            'investor' => ['catalog' => true, 'cabinet' => true, 'submit_property' => false, 'listing' => false, 'crm' => false, 'admin' => false],
+            'realtor' => ['catalog' => true, 'cabinet' => true, 'submit_property' => true, 'listing' => true, 'crm' => false, 'admin' => false],
+            'developer' => ['catalog' => true, 'cabinet' => true, 'submit_property' => true, 'listing' => true, 'crm' => false, 'admin' => false],
+            'partner' => ['catalog' => true, 'cabinet' => true, 'submit_property' => true, 'listing' => true, 'crm' => false, 'admin' => false],
+            'manager' => ['catalog' => true, 'cabinet' => true, 'submit_property' => true, 'listing' => true, 'crm' => true, 'admin' => false],
+            'admin' => ['catalog' => true, 'cabinet' => true, 'submit_property' => true, 'listing' => true, 'crm' => true, 'admin' => true],
+        ];
     }
 
     private function loginById(int $userId): void

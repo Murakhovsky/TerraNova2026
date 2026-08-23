@@ -14,6 +14,7 @@ class PropertyGroup extends Model
     public $location_id;
     public $address;
     public $description;
+    public $image_url;
     public $status;
     public $sort_order;
     public $created_at;

@@ -1,0 +1,125 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$submission = $submission ?? null;
+$media = $media ?? [];
+$formData = $formData ?? [];
+$pageStatus = $pageStatus ?? null;
+$actionStatus = $actionStatus ?? null;
+$value = static fn(string $key, $default = '') => $formData[$key] ?? $default;
+$selected = static fn($actual, $expected) => (string) $actual === (string) $expected ? 'selected' : '';
+$checked = static fn($actual) => (int) $actual === 1 ? 'checked' : '';
+$canEdit = !empty($submission['can_edit']);
+$typeLabels = ['apartment' => 'Квартира', 'house' => 'Будинок', 'cottage' => 'Котедж', 'land' => 'Земля', 'commercial' => 'Комерція', 'new_building' => 'Новобудова', 'other' => 'Інше'];
+$sourceLabels = ['owner' => 'Власник', 'realtor' => 'Рієлтор', 'developer' => 'Забудовник', 'partner' => 'Партнер', 'other' => 'Інше'];
+$dealLabels = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
+$contactLabels = ['phone' => 'Телефон', 'telegram' => 'Telegram', 'email' => 'Email', 'any' => 'Будь-який'];
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'cabinet']); ?>
+
+<main class="tn-page tn-admin-page">
+  <nav class="tn-breadcrumbs">
+    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a>
+    <span>/</span>
+    <span>Поданий об’єкт</span>
+  </nav>
+
+  <?php if ($pageStatus || !$submission): ?>
+    <section class="tn-empty-state tn-empty-state--page">
+      <h1>Заявка недоступна</h1>
+      <p><?php echo $h($pageStatus ?: 'Не вдалося відкрити поданий об’єкт.'); ?></p>
+      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('cabinet'); ?>">Повернутися в кабінет</a>
+    </section>
+  <?php else: ?>
+    <section class="tn-listing-hero">
+      <div>
+        <p class="tn-kicker"><?php echo $h($submission['submission_ref']); ?></p>
+        <h1><?php echo $h($submission['title']); ?></h1>
+        <p><?php echo $canEdit ? 'Можна редагувати до публікації. Після збереження заявка повертається в чергу модерації.' : 'Заявка вже пройшла етап, на якому редагування з кабінету закрите.'; ?></p>
+      </div>
+      <div class="tn-hero-metric">
+        <span>Статус</span>
+        <strong><?php echo $h($submission['status']); ?></strong>
+      </div>
+    </section>
+
+    <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
+
+    <section class="tn-admin-panel">
+      <form class="tn-property-form" action="<?php echo $this->url->get('cabinet/submission/' . (int) $submission['id']); ?>" method="post" enctype="multipart/form-data">
+        <fieldset <?php echo $canEdit ? '' : 'disabled'; ?>>
+          <div class="tn-form-section">
+            <div><p class="tn-kicker">Об’єкт</p><h2>Основні дані</h2></div>
+            <div class="tn-form-grid">
+              <label><span>Назва</span><input name="title" type="text" maxlength="220" value="<?php echo $h($value('title')); ?>"></label>
+              <label><span>Тип</span><select name="property_type"><?php foreach ($typeLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($value('property_type'), $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+              <label><span>Операція</span><select name="deal_type"><?php foreach ($dealLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($value('deal_type'), $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+              <label><span>Джерело</span><select name="source_type"><?php foreach ($sourceLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($value('source_type'), $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+              <label><span>Місто</span><input name="city" type="text" maxlength="120" value="<?php echo $h($value('city')); ?>" required></label>
+              <label><span>Регіон</span><input name="region" type="text" maxlength="120" value="<?php echo $h($value('region')); ?>"></label>
+              <label><span>Район</span><input name="district" type="text" maxlength="120" value="<?php echo $h($value('district')); ?>"></label>
+              <label><span>Адреса</span><input name="address" type="text" maxlength="255" value="<?php echo $h($value('address')); ?>"></label>
+            </div>
+          </div>
+
+          <div class="tn-form-section">
+            <div><p class="tn-kicker">Параметри</p><h2>Ціна та характеристики</h2></div>
+            <div class="tn-form-grid">
+              <label><span>Ціна</span><input name="price_amount" type="number" min="0" step="1000" value="<?php echo $h($value('price_amount')); ?>"></label>
+              <label><span>Валюта</span><select name="price_currency"><option value="USD" <?php echo $selected($value('price_currency'), 'USD'); ?>>USD</option><option value="EUR" <?php echo $selected($value('price_currency'), 'EUR'); ?>>EUR</option><option value="UAH" <?php echo $selected($value('price_currency'), 'UAH'); ?>>UAH</option></select></label>
+              <label><span>Площа</span><input name="area_total" type="number" min="0" step="0.1" value="<?php echo $h($value('area_total')); ?>"></label>
+              <label><span>Ділянка</span><input name="land_area" type="number" min="0" step="0.1" value="<?php echo $h($value('land_area')); ?>"></label>
+              <label><span>Кімнати</span><input name="rooms" type="number" min="0" step="0.5" value="<?php echo $h($value('rooms')); ?>"></label>
+              <label><span>Поверх</span><input name="floor" type="number" min="0" step="1" value="<?php echo $h($value('floor')); ?>"></label>
+              <label><span>Поверхів</span><input name="floors" type="number" min="0" step="1" value="<?php echo $h($value('floors')); ?>"></label>
+              <label><span>Рік</span><input name="built_year" type="number" min="1800" step="1" value="<?php echo $h($value('built_year')); ?>"></label>
+              <label class="tn-checkbox"><input name="has_3d_tour" type="checkbox" value="1" <?php echo $checked($value('has_3d_tour')); ?>><span>Є 3D / відео</span></label>
+            </div>
+          </div>
+
+          <div class="tn-form-section">
+            <div><p class="tn-kicker">Опис</p><h2>Презентація</h2></div>
+            <label><span>Опис</span><textarea name="description" rows="6" required><?php echo $h($value('description')); ?></textarea></label>
+            <label><span>Особливості</span><textarea name="features_text" rows="4"><?php echo $h($value('features_text')); ?></textarea></label>
+            <label><span>Медіа-посилання</span><textarea name="media_links" rows="3"><?php echo $h($value('media_links')); ?></textarea></label>
+            <label><span>Додати файли</span><input name="media_files[]" type="file" multiple accept="image/*,application/pdf"></label>
+          </div>
+
+          <div class="tn-form-section">
+            <div><p class="tn-kicker">Контакт</p><h2>Власник / партнер</h2></div>
+            <div class="tn-form-grid">
+              <label><span>Ім’я</span><input name="owner_name" type="text" maxlength="160" value="<?php echo $h($value('owner_name')); ?>" required></label>
+              <label><span>Телефон</span><input name="owner_phone" type="tel" maxlength="50" value="<?php echo $h($value('owner_phone')); ?>"></label>
+              <label><span>Email</span><input name="owner_email" type="email" maxlength="160" value="<?php echo $h($value('owner_email')); ?>"></label>
+              <label><span>Зручний канал</span><select name="preferred_contact"><?php foreach ($contactLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($value('preferred_contact'), $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+            </div>
+          </div>
+        </fieldset>
+
+        <?php if ($media): ?>
+          <div class="tn-form-section">
+            <div><p class="tn-kicker">Медіа</p><h2>Завантажені файли</h2></div>
+            <div class="tn-media-review-grid">
+              <?php foreach ($media as $asset): ?>
+                <article>
+                  <?php if (($asset['kind'] ?? '') === 'image'): ?>
+                    <img src="<?php echo $h($asset['public_url']); ?>" alt="<?php echo $h($asset['original_name']); ?>">
+                  <?php else: ?>
+                    <a href="<?php echo $h($asset['public_url']); ?>" target="_blank" rel="noopener"><?php echo $h($asset['original_name']); ?></a>
+                  <?php endif; ?>
+                  <span><?php echo $h($asset['role']); ?> / <?php echo $h($asset['mime_type']); ?></span>
+                </article>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <div class="tn-form-actions">
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('cabinet'); ?>">Назад</a>
+          <?php if ($canEdit): ?><button class="tn-btn tn-btn--dark" type="submit">Зберегти заявку</button><?php endif; ?>
+          <?php if (!empty($submission['property_slug'])): ?><a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/show/' . $submission['property_slug']); ?>">Відкрити об’єкт</a><?php endif; ?>
+        </div>
+      </form>
+    </section>
+  <?php endif; ?>
+</main>

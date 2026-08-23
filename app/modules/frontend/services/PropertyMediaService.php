@@ -192,18 +192,20 @@ class PropertyMediaService
         ');
     }
 
-    public function propertyGroups(): array
+    public function propertyGroups(bool $activeOnly = true): array
     {
+        $where = $activeOnly ? 'WHERE g.status = "active"' : '';
+
         return $this->database->fetchAll('
-            SELECT g.id, g.title, g.slug, g.group_type, g.location_id, g.address, g.status,
+            SELECT g.id, g.title, g.slug, g.group_type, g.location_id, g.address, g.description, g.image_url, g.status,
                    l.city, l.region,
                    COUNT(p.id) AS property_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
             LEFT JOIN tn_properties p ON p.property_group_id = g.id
-            WHERE g.status = "active"
+            ' . $where . '
             GROUP BY g.id
-            ORDER BY l.city, g.sort_order, g.title
+            ORDER BY FIELD(g.status, "active") DESC, l.city, g.sort_order, g.title
         ');
     }
 
@@ -238,7 +240,7 @@ class PropertyMediaService
         ]));
     }
 
-    public function updatePropertyGroup(int $groupId, array $input): array
+    public function updatePropertyGroup(int $groupId, array $input, array $files = []): array
     {
         $pdo = $this->database->connection();
 
@@ -273,8 +275,18 @@ class PropertyMediaService
                 'location_id' => $locationId,
                 'address' => $this->nullable((string) ($input['address'] ?? ''), 255),
                 'description' => $this->nullableText((string) ($input['description'] ?? '')),
+                'image_url' => $this->nullable((string) ($input['image_url'] ?? ($group['image_url'] ?? '')), 500),
                 'status' => $this->allowed((string) ($input['status'] ?? $group['status']), ['active', 'archived'], (string) $group['status']),
+                'sort_order' => max(0, min(999999, (int) ($input['sort_order'] ?? ($group['sort_order'] ?? 100)))),
             ];
+
+            $uploaded = $this->mediaStorage->storeUploadedFiles($files, 'property_group', $groupId);
+            foreach ($uploaded as $asset) {
+                if (($asset['role'] ?? '') === 'cover' && !empty($asset['public_url'])) {
+                    $data['image_url'] = (string) $asset['public_url'];
+                    break;
+                }
+            }
 
             $statement = $pdo->prepare('
                 UPDATE tn_property_groups
@@ -284,7 +296,9 @@ class PropertyMediaService
                     location_id = :location_id,
                     address = :address,
                     description = :description,
+                    image_url = :image_url,
                     status = :status,
+                    sort_order = :sort_order,
                     updated_at = NOW()
                 WHERE id = :id
                 LIMIT 1
@@ -391,6 +405,11 @@ class PropertyMediaService
             $params['operational_stage'] = $filters['operational_stage'];
         }
 
+        if (($filters['_visibility_scope'] ?? '') === 'partners') {
+            $where[] = 'p.visibility IN ("public", "partners")';
+            $where[] = 'p.status IN ("published", "active", "reserved")';
+        }
+
         foreach (['type_id', 'location_id', 'property_group_id', 'agent_id'] as $field) {
             if ((int) ($filters[$field] ?? 0) > 0) {
                 $where[] = 'p.' . $field . ' = :' . $field;
@@ -430,7 +449,15 @@ class PropertyMediaService
                 (
                     SELECT COUNT(*) FROM tn_leads inbound_request_count
                     WHERE inbound_request_count.property_id = p.id
-                ) AS inbound_request_count
+                ) AS inbound_request_count,
+                (
+                    SELECT MAX(COALESCE(last_contacted_at, created_at)) FROM tn_leads last_lead
+                    WHERE last_lead.property_id = p.id
+                ) AS last_lead_at,
+                (
+                    SELECT COUNT(*) FROM tn_client_case_property_matches match_count
+                    WHERE match_count.property_id = p.id
+                ) AS case_match_count
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
@@ -466,6 +493,16 @@ class PropertyMediaService
         }
 
         return $properties;
+    }
+
+    public function listingProperties(array $filters, array $user): array
+    {
+        $role = (string) ($user['role'] ?? '');
+        if (!in_array($role, ['manager', 'admin'], true)) {
+            $filters['_visibility_scope'] = 'partners';
+        }
+
+        return $this->adminProperties($filters);
     }
 
     public function adminQualityStats(array $filters): array
@@ -507,7 +544,11 @@ class PropertyMediaService
         ');
 
         $stats = [
+            'total' => 0,
             'all' => 0,
+            'status' => array_fill_keys($this->propertyStatuses(), 0),
+            'visibility' => array_fill_keys($this->propertyVisibilityOptions(), 0),
+            'quality' => [],
             'draft' => 0,
             'submitted' => 0,
             'moderation' => 0,
@@ -526,8 +567,19 @@ class PropertyMediaService
             if (array_key_exists($status, $stats)) {
                 $stats[$status] = $total;
             }
+            $stats['status'][$status] = $total;
             $stats['all'] += $total;
         }
+        $stats['total'] = $stats['all'];
+
+        foreach ($this->database->fetchAll('SELECT visibility, COUNT(*) AS total FROM tn_properties GROUP BY visibility') as $row) {
+            $visibility = (string) ($row['visibility'] ?? '');
+            if (array_key_exists($visibility, $stats['visibility'])) {
+                $stats['visibility'][$visibility] = (int) ($row['total'] ?? 0);
+            }
+        }
+
+        $stats['quality'] = $this->adminQualityStats([]);
 
         return $stats;
     }

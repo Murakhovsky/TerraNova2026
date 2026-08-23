@@ -156,10 +156,10 @@ $breadcrumbJson = [
   <section class="tn-page-hero tn-page-hero--catalog">
     <div>
       <p class="tn-kicker">Каталог Terra Nova</p>
-      <h1>Знайдіть обʼєкт без зайвих дзвінків і хаосу</h1>
-      <p>Фільтруйте за містом, бюджетом і типом нерухомості. Відкрийте картку, збережіть варіант або залиште запит на добірку.</p>
+      <h1>Каталог об’єктів</h1>
+      <p>Фільтр за містом, бюджетом і типом. Відкрийте картку, збережіть варіант або залиште запит.</p>
       <div class="tn-hero-search">
-        <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
+        <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get" data-catalog-form>
           <input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Пошук за містом, назвою, ID або адресою">
           <button class="tn-btn tn-btn--dark" type="submit">Знайти</button>
         </form>
@@ -172,7 +172,7 @@ $breadcrumbJson = [
       </div>
     </div>
     <div class="tn-page-hero__meta">
-      <strong><?php echo (int) $resultCount; ?></strong>
+      <strong data-catalog-count><?php echo (int) $resultCount; ?></strong>
       <span>об’єктів доступно</span>
     </div>
   </section>
@@ -180,19 +180,19 @@ $breadcrumbJson = [
   <section class="tn-catalog-insights" aria-label="Огляд каталогу">
     <div>
       <span>Доступно</span>
-      <strong><?php echo (int) ($catalogStats['total'] ?? $resultCount); ?></strong>
+      <strong data-catalog-stat="total"><?php echo (int) ($catalogStats['total'] ?? $resultCount); ?></strong>
     </div>
     <div>
       <span>Бюджет від</span>
-      <strong><?php echo $h($money($catalogStats['price_min'] ?? null)); ?></strong>
+      <strong data-catalog-stat="price_min"><?php echo $h($money($catalogStats['price_min'] ?? null)); ?></strong>
     </div>
     <div>
       <span>Бюджет до</span>
-      <strong><?php echo $h($money($catalogStats['price_max'] ?? null)); ?></strong>
+      <strong data-catalog-stat="price_max"><?php echo $h($money($catalogStats['price_max'] ?? null)); ?></strong>
     </div>
     <div>
       <span>Середня площа</span>
-      <strong><?php echo ($catalogStats['area_avg'] ?? null) ? $h($number($catalogStats['area_avg'])) . ' м²' : '—'; ?></strong>
+      <strong data-catalog-stat="area_avg"><?php echo ($catalogStats['area_avg'] ?? null) ? $h($number($catalogStats['area_avg'])) . ' м²' : '—'; ?></strong>
     </div>
   </section>
 
@@ -204,7 +204,7 @@ $breadcrumbJson = [
       </div>
       <strong><?php echo (int) $resultCount; ?> знайдено</strong>
     </div>
-    <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get">
+    <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get" data-catalog-form>
       <div class="tn-deal-switch" role="group" aria-label="Операція">
         <label class="<?php echo ($filters['deal_type'] ?? '') === '' ? 'is-active' : ''; ?>"><input name="deal_type" type="radio" value="" <?php echo ($filters['deal_type'] ?? '') === '' ? 'checked' : ''; ?>>Усі</label>
         <?php foreach ($dealLabels as $value => $label): ?>
@@ -338,7 +338,7 @@ $breadcrumbJson = [
       <div class="tn-results-bar">
         <div>
           <p class="tn-kicker">Результати</p>
-          <h2><?php echo (int) $resultCount; ?> об’єктів</h2>
+          <h2 data-catalog-results-title><?php echo (int) $resultCount; ?> об’єктів</h2>
         </div>
         <?php if ($activeFilters): ?>
           <div class="tn-active-filters">
@@ -348,7 +348,7 @@ $breadcrumbJson = [
       </div>
 
       <?php if ($catalogStatus): ?>
-        <div class="tn-empty-state">
+        <div class="tn-empty-state" data-catalog-empty>
           <h2>Каталог тимчасово недоступний</h2>
           <p><?php echo $h($catalogStatus); ?></p>
         </div>
@@ -364,7 +364,7 @@ $breadcrumbJson = [
         </div>
       <?php endif; ?>
 
-      <div class="tn-property-grid tn-property-grid--catalog">
+      <div class="tn-property-grid tn-property-grid--catalog" data-catalog-grid data-api-url="<?php echo $this->url->get('api/property/catalog'); ?>">
         <?php foreach ($properties as $property): ?>
           <article class="tn-property-card" itemscope itemtype="https://schema.org/Product">
             <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" itemprop="url">
@@ -421,7 +421,7 @@ $breadcrumbJson = [
       </div>
 
       <?php if ((int) ($pagination['total_pages'] ?? 1) > 1): ?>
-        <nav class="tn-card-actions" aria-label="Сторінки каталогу">
+        <nav class="tn-card-actions" aria-label="Сторінки каталогу" data-catalog-pagination>
           <?php if (!empty($pagination['has_previous'])): ?>
             <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get($pageUrl((int) $pagination['previous_page'])); ?>">Назад</a>
           <?php endif; ?>
@@ -430,6 +430,8 @@ $breadcrumbJson = [
             <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get($pageUrl((int) $pagination['next_page'])); ?>">Далі</a>
           <?php endif; ?>
         </nav>
+      <?php else: ?>
+        <nav class="tn-card-actions" aria-label="Сторінки каталогу" data-catalog-pagination></nav>
       <?php endif; ?>
     </section>
   </section>

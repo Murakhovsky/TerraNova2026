@@ -9,6 +9,7 @@ class PropertyController extends ControllerBase
 {
     public function catalogAction(): void
     {
+        $this->view->pageScripts = ['js/terranova-catalog-api.js?v=20260718-api2'];
         $this->view->inboundRequestStatus = null;
         $this->view->catalogStatus = null;
         $this->view->filters = $this->catalogService()->filtersFromQuery((array) $this->request->getQuery());
@@ -29,12 +30,6 @@ class PropertyController extends ControllerBase
 
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
-            $this->view->resultCount = $this->catalogService()->catalogCount($this->view->filters);
-            $this->view->pagination = $this->catalogService()->catalogPagination($this->view->filters, $this->view->resultCount);
-            $this->view->filters['page'] = $this->view->pagination['page'];
-            $this->view->filters['per_page'] = $this->view->pagination['per_page'];
-            $this->view->properties = $this->catalogService()->catalogProperties($this->view->filters);
-            $this->view->catalogStats = $this->catalogService()->catalogStats($this->view->filters);
 
             if ($this->authService()->isManager($this->currentUser())) {
                 $this->view->managerClientCases = $this->clientCaseService()->openCaseOptions();
@@ -53,6 +48,7 @@ class PropertyController extends ControllerBase
     public function showAction(?string $slug = null): void
     {
         $slug = $slug ?: (string) $this->dispatcher->getParam('slug');
+        $this->view->pageScripts = ['js/terranova-property-gallery.js?v=20260718-split1'];
         $this->view->inboundRequestStatus = null;
         $this->view->pageStatus = null;
         $this->view->property = null;
@@ -114,6 +110,7 @@ class PropertyController extends ControllerBase
     public function presentationAction(?string $slug = null): void
     {
         $slug = $slug ?: (string) $this->dispatcher->getParam('params');
+        $this->view->pageScripts = ['js/terranova-copy.js?v=20260718-split1'];
         $this->view->property = null;
         $this->view->images = [];
         $this->view->features = [];
@@ -210,10 +207,39 @@ class PropertyController extends ControllerBase
 
     public function listingAction(): void
     {
+        $user = $this->requireListingUser();
+        if (!$user) {
+            return;
+        }
+
         $this->view->title = 'Внутрішній MLS / Listing';
         $this->view->metaTitle = 'Внутрішній MLS / Listing | Terra Nova CLUB';
         $this->view->metaDescription = 'Табличне представлення каталогу Terra Nova CLUB для швидкої роботи з об’єктами.';
-        $this->loadPropertyWorkspace('listing-page');
+        $this->view->filters = $this->propertyMediaService()->adminFilters((array) $this->request->getQuery());
+        $this->view->types = [];
+        $this->view->locations = [];
+        $this->view->propertyGroups = [];
+        $this->view->agents = [];
+        $this->view->managerClientCases = [];
+        $this->view->properties = [];
+        $this->view->stats = [];
+        $this->view->pageStatus = null;
+        $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
+        $this->view->canEditListing = $this->authService()->isManager($user);
+
+        try {
+            $this->view->types = $this->catalogService()->propertyTypes();
+            $this->view->locations = $this->catalogService()->locations();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups(!$this->authService()->isManager($user));
+            $this->view->agents = $this->propertyMediaService()->agents();
+            $this->view->managerClientCases = $this->clientCaseService()->openCaseOptions();
+            $this->view->properties = $this->propertyMediaService()->listingProperties($this->view->filters, $user);
+            $this->view->stats = $this->propertyMediaService()->adminStats();
+        } catch (Throwable $e) {
+            $this->logFrontendError('listing-page', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'Внутрішній Listing тимчасово недоступний.';
+        }
     }
 
     public function manageAction(): void
@@ -239,7 +265,7 @@ class PropertyController extends ControllerBase
             $this->view->operationalStageRules = $this->propertyMediaService()->operationalStageRules();
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
-            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups(false);
             $this->view->agents = $this->propertyMediaService()->agents();
             $this->view->properties = $this->propertyMediaService()->adminProperties($this->view->filters);
             $this->view->stats = $this->propertyMediaService()->adminStats();
@@ -258,6 +284,7 @@ class PropertyController extends ControllerBase
             return;
         }
 
+        $this->view->pageScripts = ['js/terranova-media-manager.js?v=20260718-split1'];
         $this->view->title = 'Додати об’єкт';
         $this->view->types = [];
         $this->view->locations = [];
@@ -272,7 +299,7 @@ class PropertyController extends ControllerBase
             $this->view->operationalStageRules = $this->propertyMediaService()->operationalStageRules();
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
-            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups(false);
             $this->view->agents = $this->propertyMediaService()->agents();
 
             if ($this->request->isPost()) {
@@ -398,7 +425,8 @@ class PropertyController extends ControllerBase
         }
 
         $groupId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
-        $this->view->title = 'Група об’єктів';
+        $this->view->pageScripts = ['js/terranova-media-manager.js?v=20260718-split1'];
+        $this->view->title = 'Локація';
         $this->view->group = null;
         $this->view->properties = [];
         $this->view->locations = [];
@@ -414,7 +442,8 @@ class PropertyController extends ControllerBase
             if ($this->request->isPost()) {
                 $result = $this->propertyMediaService()->updatePropertyGroup(
                     $groupId,
-                    (array) $this->request->getPost()
+                    (array) $this->request->getPost(),
+                    $_FILES
                 );
 
                 $this->response->redirect('property/group/' . $groupId . '?status=' . rawurlencode((string) ($result['message'] ?? '')));
@@ -466,6 +495,10 @@ class PropertyController extends ControllerBase
             return;
         }
 
+        $this->view->pageScripts = [
+            'js/terranova-media-manager.js?v=20260718-split1',
+            'js/terranova-copy.js?v=20260718-split1',
+        ];
         $propertyId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
         $this->view->title = 'Редагувати медіа об’єкта';
         $this->view->property = null;
@@ -498,7 +531,7 @@ class PropertyController extends ControllerBase
             $this->view->operationalStageCheck = $this->propertyMediaService()->operationalStageCheck($propertyId);
             $this->view->types = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
-            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups();
+            $this->view->propertyGroups = $this->propertyMediaService()->propertyGroups(false);
             $this->view->agents = $this->propertyMediaService()->agents();
             $this->view->activities = $this->propertyMediaService()->activities($propertyId);
             $this->view->inboundRequests = $this->propertyMediaService()->inboundRequests($propertyId);
@@ -530,7 +563,13 @@ class PropertyController extends ControllerBase
             (int) ($user['id'] ?? 0)
         );
 
-        $this->response->redirect('property/edit/' . $propertyId . '?status=' . rawurlencode($result['message']));
+        $returnUrl = (string) $this->request->getPost('return_url', 'string', '');
+        $allowedReturn = $returnUrl !== ''
+            && (str_starts_with($returnUrl, 'property/listing') || str_starts_with($returnUrl, 'property/manage'));
+        $target = $allowedReturn ? $returnUrl : 'property/edit/' . $propertyId;
+        $separator = str_contains($target, '?') ? '&' : '?';
+
+        $this->response->redirect($target . $separator . 'status_message=' . rawurlencode((string) $result['message']));
     }
 
     public function statusAction(?string $id = null): void

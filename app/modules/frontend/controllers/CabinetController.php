@@ -18,6 +18,7 @@ class CabinetController extends ControllerBase
         $this->view->title = 'Кабінет';
         $this->view->user = $user;
         $this->view->isManager = $this->authService()->isManager($user);
+        $this->view->myProperties = [];
         $this->view->submissions = [];
         $this->view->inboundRequests = [];
         $this->view->managerWorkspace = [];
@@ -25,6 +26,7 @@ class CabinetController extends ControllerBase
 
         try {
             $data = $this->authService()->cabinetData($user);
+            $this->view->myProperties = $data['my_properties'] ?? [];
             $this->view->submissions = $data['submissions'];
             $this->view->inboundRequests = $data['inbound_requests'];
 
@@ -34,6 +36,54 @@ class CabinetController extends ControllerBase
         } catch (Throwable $e) {
             $this->logFrontendError('cabinet-page', $e);
             $this->view->pageStatus = 'Дані кабінету тимчасово недоступні. Спробуйте оновити сторінку трохи пізніше.';
+        }
+    }
+
+    public function submissionAction(?string $id = null): void
+    {
+        $user = $this->requireUser();
+        if (!$user) {
+            return;
+        }
+
+        $submissionId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+        $this->view->title = 'Редагування поданого об’єкта';
+        $this->view->submission = null;
+        $this->view->media = [];
+        $this->view->pageStatus = null;
+        $this->view->actionStatus = null;
+        $this->view->formData = [];
+
+        if ($submissionId <= 0) {
+            $this->response->redirect('cabinet');
+            return;
+        }
+
+        try {
+            if ($this->request->isPost()) {
+                $result = $this->propertySubmissionService()->updateForUser(
+                    $submissionId,
+                    $user,
+                    (array) $this->request->getPost(),
+                    (array) $_FILES
+                );
+                $this->view->actionStatus = (string) ($result['message'] ?? '');
+            }
+
+            $submission = $this->propertySubmissionService()->submissionForUser($submissionId, $user);
+            if (!$submission) {
+                $this->response->setStatusCode(404, 'Not Found');
+                $this->view->pageStatus = 'Заявку не знайдено або вона належить іншому користувачу.';
+                return;
+            }
+
+            $this->view->submission = $submission;
+            $this->view->formData = array_merge($submission, (array) $this->request->getPost());
+            $this->view->media = $this->di->getShared('mediaStorageService')->assetsFor('property_submission', $submissionId);
+        } catch (Throwable $e) {
+            $this->logFrontendError('cabinet-submission', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'Редагування заявки тимчасово недоступне.';
         }
     }
 
@@ -73,6 +123,7 @@ class CabinetController extends ControllerBase
             ],
             'attention_properties' => $this->uniqueProperties(array_merge($overdue, $noNextAction, $noPhoto, $notReady), 8),
             'recent_properties' => array_slice($properties, 0, 6),
+            'property_groups' => $propertyService->propertyGroups(false),
         ];
     }
 

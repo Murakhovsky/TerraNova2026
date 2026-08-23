@@ -64,6 +64,23 @@ class ControllerBase extends Controller
         return $user;
     }
 
+    protected function requireListingUser(): ?array
+    {
+        $user = $this->requireUser();
+
+        if (!$user) {
+            return null;
+        }
+
+        if (!in_array((string) ($user['role'] ?? ''), ['admin', 'manager', 'realtor', 'partner', 'developer'], true)) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            $this->response->redirect('cabinet');
+            return null;
+        }
+
+        return $user;
+    }
+
     protected function requireAdmin(): ?array
     {
         $user = $this->requireUser();
@@ -132,5 +149,15 @@ class ControllerBase extends Controller
 
         $entry = sprintf("[%s] %s: %s%s", date('Y-m-d H:i:s'), $label, $error->getMessage(), PHP_EOL);
         @file_put_contents($directory . '/frontend.log', $entry, FILE_APPEND);
+    }
+
+    protected function json(array $payload, int $statusCode = 200): \Phalcon\Http\ResponseInterface
+    {
+        $this->view->disable();
+        $this->response->setStatusCode($statusCode);
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        return $this->response;
     }
 }
