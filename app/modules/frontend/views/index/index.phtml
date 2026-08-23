@@ -187,11 +187,11 @@ $projects = [
   <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button><span></span><span></span><span></span></button>
   <nav class="tn-visual-nav" id="site-menu" aria-label="Головне меню">
     <a href="<?php echo $this->url->get('property/catalog'); ?>">Нерухомість</a>
-    <a href="#locations">Локації</a>
-    <a href="#projects">Проєкти</a>
-    <a href="#partners">Для партнерів</a>
-    <a href="#about">Про нас</a>
-    <a href="#contacts">Контакти</a>
+    <a href="<?php echo $this->url->get('services'); ?>">Послуги</a>
+    <a href="<?php echo $this->url->get('terra-nova'); ?>">Про нас</a>
+    <a href="<?php echo $this->url->get('partners'); ?>">Партнерам</a>
+    <a href="<?php echo $this->url->get('cases'); ?>">Кейси</a>
+    <a href="<?php echo $this->url->get('contacts'); ?>">Контакти</a>
   </nav>
   <a class="tn-visual-btn tn-visual-btn--outline" href="<?php echo $this->url->get('property/catalog'); ?>">Підібрати об'єкт <span>→</span></a>
 </header>
@@ -357,8 +357,9 @@ $projects = [
   </div>
   <nav>
     <a href="<?php echo $this->url->get('property/catalog'); ?>">Нерухомість</a>
-    <a href="#locations">Локації</a>
-    <a href="#projects">Проєкти</a>
+    <a href="<?php echo $this->url->get('services'); ?>">Послуги</a>
+    <a href="<?php echo $this->url->get('partners'); ?>">Партнерам</a>
+    <a href="<?php echo $this->url->get('contacts'); ?>">Контакти</a>
     <a href="<?php echo $this->url->get('property/submit'); ?>">Подати об'єкт</a>
   </nav>
   <div>

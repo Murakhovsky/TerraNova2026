@@ -9,12 +9,14 @@ use Phalcon\Mvc\View;
 use Phalcon\Mvc\View\Engine\Php as PhpEngine;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 use Modules\Frontend\Services\AdminDashboardService;
+use Modules\Frontend\Services\AnalyticsService;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\ClientCaseService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
 use Modules\Frontend\Services\PropertySubmissionService;
+use Modules\Frontend\Services\PublicPageService;
 
 class Module implements ModuleDefinitionInterface
 {
@@ -47,6 +49,44 @@ class Module implements ModuleDefinitionInterface
         $router->setDefaultNamespace('Modules\Frontend\Controllers');
         $router->setDefaultController('index');
         $router->setDefaultAction('index');
+
+        $router->add('/sitemap.xml', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'seo',
+            'action' => 'sitemap',
+        ]);
+
+        $router->add('/robots.txt', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'seo',
+            'action' => 'robots',
+        ]);
+
+        $router->add('/analytics/track', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'analytics',
+            'action' => 'track',
+        ]);
+
+        $router->add('/nerukhomist/{location:[a-z0-9-]+}/{type:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'property',
+            'action' => 'landing',
+        ]);
+
+        foreach (array_keys((new PublicPageService())->pages()) as $pageSlug) {
+            $router->add('/' . $pageSlug, [
+                'namespace' => 'Modules\Frontend\Controllers',
+                'module' => 'frontend',
+                'controller' => 'page',
+                'action' => 'show',
+                'slug' => $pageSlug,
+            ]);
+        }
 
         $router->add('/api/property/:action/:params', [
             'namespace' => 'Modules\Frontend\Controllers',
@@ -167,6 +207,14 @@ class Module implements ModuleDefinitionInterface
 
         $di->setShared('frontendAdminDashboardService', function () {
             return new AdminDashboardService($this->getShared('databaseService'));
+        });
+
+        $di->setShared('frontendAnalyticsService', function () {
+            return new AnalyticsService($this->getShared('databaseService'));
+        });
+
+        $di->setShared('frontendPublicPageService', function () {
+            return new PublicPageService();
         });
 
         $di->setShared('frontendClientCaseService', function () {

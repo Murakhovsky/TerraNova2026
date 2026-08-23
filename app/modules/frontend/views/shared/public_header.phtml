@@ -2,17 +2,13 @@
 $active = $active ?? '';
 $actions = $actions ?? [];
 $navItems = [
-    ['key' => 'home', 'path' => '', 'label' => 'Головна'],
     ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Каталог'],
-    ['key' => 'map', 'path' => 'property/map', 'label' => 'Карта'],
-    ['key' => 'compare', 'path' => 'property/compare', 'label' => 'Порівняння'],
-    ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
+    ['key' => 'services', 'path' => 'services', 'label' => 'Послуги'],
+    ['key' => 'about', 'path' => 'terra-nova', 'label' => 'Про нас'],
+    ['key' => 'partners', 'path' => 'partners', 'label' => 'Партнерам'],
+    ['key' => 'cases', 'path' => 'cases', 'label' => 'Кейси'],
     ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати об’єкт'],
 ];
-$navItems = array_values(array_filter(
-    $navItems,
-    static fn(array $item): bool => !in_array($item['key'], ['compare'], true)
-));
 $href = function (string $path): string {
     if ($path === '' || $path === '/') {
         return $this->url->get();

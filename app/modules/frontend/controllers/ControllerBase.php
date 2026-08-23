@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Modules\Frontend\Controllers;
 
 use Modules\Frontend\Services\CatalogService;
+use Modules\Frontend\Services\AnalyticsService;
 use Common\Services\AuthService;
 use Modules\Frontend\Services\ClientCaseService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
 use Modules\Frontend\Services\PropertySubmissionService;
+use Modules\Frontend\Services\PublicPageService;
 use Phalcon\Mvc\Controller;
 use Throwable;
 
@@ -18,6 +20,16 @@ class ControllerBase extends Controller
     protected function catalogService(): CatalogService
     {
         return $this->di->getShared('frontendCatalogService');
+    }
+
+    protected function analyticsService(): AnalyticsService
+    {
+        return $this->di->getShared('frontendAnalyticsService');
+    }
+
+    protected function publicPageService(): PublicPageService
+    {
+        return $this->di->getShared('frontendPublicPageService');
     }
 
     protected function clientCaseService(): ClientCaseService

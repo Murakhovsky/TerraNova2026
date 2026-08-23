@@ -75,6 +75,8 @@ class PropertySubmissionService
                 return ['ok' => false, 'message' => self::ERROR_MESSAGE];
             }
 
+            $this->recordPropertySubmit((int) $submission->id, $sourcePage, $input);
+
             try {
                 $stored = $this->mediaStorage->storeUploadedFiles($files, 'property_submission', (int) $submission->id);
 
@@ -93,6 +95,37 @@ class PropertySubmissionService
         }
 
         return ['ok' => true, 'message' => self::SUCCESS_MESSAGE];
+    }
+
+    private function recordPropertySubmit(int $submissionId, string $sourcePage, array $input): void
+    {
+        if (!$this->database || $submissionId <= 0) {
+            return;
+        }
+
+        try {
+            $query = [];
+            $parts = parse_url($sourcePage);
+            if (!empty($parts['query'])) {
+                parse_str((string) $parts['query'], $query);
+            }
+
+            $this->database->connection()->prepare('
+                INSERT INTO tn_analytics_events (
+                    event_type, entity_type, entity_id, source_page, utm_source, utm_medium, utm_campaign
+                ) VALUES (
+                    "property_submit", "submission", :entity_id, :source_page, :utm_source, :utm_medium, :utm_campaign
+                )
+            ')->execute([
+                'entity_id' => $submissionId,
+                'source_page' => mb_substr($sourcePage, 0, 255),
+                'utm_source' => $this->nullableText($input['utm_source'] ?? $query['utm_source'] ?? null, 120),
+                'utm_medium' => $this->nullableText($input['utm_medium'] ?? $query['utm_medium'] ?? null, 120),
+                'utm_campaign' => $this->nullableText($input['utm_campaign'] ?? $query['utm_campaign'] ?? null, 160),
+            ]);
+        } catch (Throwable $e) {
+            $this->logError('property-submit-analytics', $e);
+        }
     }
 
     public function submissionForUser(int $id, array $user): ?array

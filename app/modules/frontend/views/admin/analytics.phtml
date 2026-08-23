@@ -1,0 +1,56 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$report = $report ?? [];
+$summary = $report['summary'] ?? [];
+$daily = $report['daily'] ?? [];
+$topProperties = $report['top_properties'] ?? [];
+$sources = $report['sources'] ?? [];
+$pageStatus = $pageStatus ?? null;
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'analytics']); ?>
+
+<main class="tn-page tn-admin-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div><p class="tn-kicker">Аналітика</p><h1>Попит і конверсії</h1><p>Перегляди об’єктів, контактні дії та заявки за вибраний період.</p></div>
+    <form class="tn-analytics-period" method="get">
+      <label><span>Період</span><select name="days" onchange="this.form.submit()">
+        <?php foreach ([7, 30, 90, 365] as $option): ?><option value="<?php echo $option; ?>" <?php echo (int) ($report['days'] ?? 30) === $option ? 'selected' : ''; ?>><?php echo $option; ?> днів</option><?php endforeach; ?>
+      </select></label>
+    </form>
+  </section>
+
+  <?php if ($pageStatus): ?><section class="tn-empty-state"><h2>Звіт недоступний</h2><p><?php echo $h($pageStatus); ?></p></section><?php else: ?>
+    <section class="tn-admin-metrics">
+      <a href="#properties"><span>Перегляди карток</span><strong><?php echo (int) ($summary['property_views'] ?? 0); ?></strong><small>за період</small></a>
+      <a href="#daily"><span>Контактні CTA</span><strong><?php echo (int) ($summary['cta'] ?? 0); ?></strong><small><?php echo $h($summary['view_to_cta'] ?? 0); ?>% від переглядів</small></a>
+      <a href="<?php echo $this->url->get('client-case/inbox'); ?>"><span>Заявки</span><strong><?php echo (int) ($summary['leads'] ?? 0); ?></strong><small><?php echo $h($summary['view_to_lead'] ?? 0); ?>% від переглядів</small></a>
+      <a href="#sources"><span>Запити презентації</span><strong><?php echo (int) ($summary['presentation_requests'] ?? 0); ?></strong><small>натискання CTA</small></a>
+    </section>
+
+    <section class="tn-admin-dashboard-grid">
+      <article class="tn-admin-card" id="daily"><div class="tn-admin-card__head"><div><p class="tn-kicker">Динаміка</p><h2>Останні дні</h2></div></div>
+        <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Дата</th><th>Перегляди</th><th>CTA</th><th>Заявки</th></tr></thead><tbody>
+          <?php foreach ($daily as $row): ?><tr><td><?php echo $h($row['event_date']); ?></td><td><?php echo (int) $row['property_views']; ?></td><td><?php echo (int) $row['cta']; ?></td><td><?php echo (int) $row['leads']; ?></td></tr><?php endforeach; ?>
+          <?php if (!$daily): ?><tr><td colspan="4">Подій за цей період ще немає.</td></tr><?php endif; ?>
+        </tbody></table></div>
+      </article>
+
+      <article class="tn-admin-card" id="sources"><div class="tn-admin-card__head"><div><p class="tn-kicker">Джерела</p><h2>UTM та прямі переходи</h2></div></div>
+        <div class="tn-dashboard-bars">
+          <?php foreach ($sources as $row): ?><div><span><?php echo $h($row['source']); ?></span><strong><?php echo (int) $row['events']; ?> / <?php echo (int) $row['leads']; ?> лідів</strong></div><?php endforeach; ?>
+          <?php if (!$sources): ?><p>Джерела ще не зафіксовані.</p><?php endif; ?>
+        </div>
+      </article>
+    </section>
+
+    <section class="tn-admin-card" id="properties"><div class="tn-admin-card__head"><div><p class="tn-kicker">Об’єкти</p><h2>Попит за картками</h2></div></div>
+      <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Об’єкт</th><th>Перегляди</th><th>CTA</th><th>Заявки</th><th>Конверсія</th></tr></thead><tbody>
+        <?php foreach ($topProperties as $row): ?><?php $views = (int) $row['property_views']; $leads = (int) $row['leads']; ?>
+          <tr><td><a href="<?php echo $this->url->get('property/show/' . $row['slug']); ?>"><?php echo $h($row['public_id'] . ' / ' . $row['title']); ?></a></td><td><?php echo $views; ?></td><td><?php echo (int) $row['cta']; ?></td><td><?php echo $leads; ?></td><td><?php echo $views > 0 ? $h(round($leads * 100 / $views, 1)) . '%' : '—'; ?></td></tr>
+        <?php endforeach; ?>
+        <?php if (!$topProperties): ?><tr><td colspan="5">Даних по об’єктах ще немає.</td></tr><?php endif; ?>
+      </tbody></table></div>
+    </section>
+  <?php endif; ?>
+</main>

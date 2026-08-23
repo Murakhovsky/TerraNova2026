@@ -469,6 +469,30 @@ class CatalogService
         return $items;
     }
 
+    public function sitemapProperties(): array
+    {
+        return $this->database->fetchAll('
+            SELECT slug, updated_at
+            FROM tn_properties
+            WHERE status IN ("published", "active")
+            ORDER BY updated_at DESC, id DESC
+        ');
+    }
+
+    public function seoLandingPairs(): array
+    {
+        return $this->database->fetchAll('
+            SELECT l.slug AS location_slug, t.code AS type_code, COUNT(*) AS property_count
+            FROM tn_properties p
+            INNER JOIN tn_locations l ON l.id = p.location_id
+            INNER JOIN tn_property_types t ON t.id = p.type_id
+            WHERE p.status IN ("published", "active")
+            GROUP BY l.slug, t.code
+            HAVING COUNT(*) > 0
+            ORDER BY property_count DESC, l.slug, t.code
+        ');
+    }
+
     private function allowed(string $value, array $allowed): string
     {
         return in_array($value, $allowed, true) ? $value : '';

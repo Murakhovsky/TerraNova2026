@@ -16,21 +16,33 @@ class IndexController extends ControllerBase
         $this->view->locations = [];
         $this->view->inboundRequestStatus = null;
         $this->view->catalogStatus = null;
+        $this->view->metaTitle = 'Terra Nova CLUB | Нерухомість у Львові та області';
+        $this->view->metaDescription = 'Каталог об’єктів Terra Nova у Львові, Брюховичах, Ременові та інших локаціях: продаж, оренда, підбір і подача нерухомості.';
+        $this->view->metaUrl = $this->homeAbsoluteUrl();
 
         try {
             if ($this->request->isPost()) {
                 $this->view->inboundRequestStatus = $this->submitInboundRequest();
             }
 
-            $this->view->types = [];
-            $this->view->locations = [];
+            $this->view->featuredProperties = $this->catalogService()->featuredProperties(6);
+            $this->view->types = $this->catalogService()->propertyTypes();
+            $this->view->locations = $this->catalogService()->locations();
         } catch (Throwable $e) {
             $this->logFrontendError('home-page', $e);
-            $this->view->catalogStatus = 'РљР°С‚Р°Р»РѕРі С‚РёРјС‡Р°СЃРѕРІРѕ РЅРµРґРѕСЃС‚СѓРїРЅРёР№. РџСѓР±Р»С–С‡РЅР° СЃС‚РѕСЂС–РЅРєР° РїСЂР°С†СЋС”, Р° РѕР±вЂ™С”РєС‚Рё РїС–РґС‚СЏРіРЅСѓС‚СЊСЃСЏ РїС–СЃР»СЏ РІС–РґРЅРѕРІР»РµРЅРЅСЏ Р·вЂ™С”РґРЅР°РЅРЅСЏ Р· Р‘Р”.';
+            $this->view->catalogStatus = 'Каталог тимчасово недоступний. Об’єкти з’являться після відновлення з’єднання з базою даних.';
 
             if ($this->request->isPost()) {
-                $this->view->inboundRequestStatus = 'Р—Р°СЏРІРєСѓ РЅРµ РІРґР°Р»РѕСЃСЏ Р·Р±РµСЂРµРіС‚Рё. РЎРїСЂРѕР±СѓР№С‚Рµ С‰Рµ СЂР°Р· Р°Р±Рѕ РЅР°РїРёС€С–С‚СЊ РЅР°Рј РЅР°РїСЂСЏРјСѓ.';
+                $this->view->inboundRequestStatus = 'Заявку не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
             }
         }
+    }
+
+    private function homeAbsoluteUrl(): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
+
+        return $scheme . '://' . $host . '/';
     }
 }

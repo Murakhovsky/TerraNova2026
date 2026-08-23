@@ -72,7 +72,7 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
         <p><?php echo $h($property['short_description'] ?: $property['description']); ?></p>
         <strong class="tn-presentation-price"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
         <div class="tn-hero-actions">
-          <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="presentation">Отримати цю презентацію</a>
+          <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="presentation" data-analytics-event="presentation_request">Отримати цю презентацію</a>
           <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Повна картка</a>
           <button type="button" data-copy-value="<?php echo $h($presentationUrl); ?>">Скопіювати посилання</button>
         </div>

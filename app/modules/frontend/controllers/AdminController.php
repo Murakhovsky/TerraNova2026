@@ -75,6 +75,27 @@ class AdminController extends ControllerBase
         }
     }
 
+    public function analyticsAction(): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $days = (int) $this->request->getQuery('days', 'int', 30);
+        $this->view->metaTitle = 'Аналітика продажів | Terra Nova CLUB';
+        $this->view->metaRobots = 'noindex,nofollow';
+        $this->view->pageStatus = null;
+        $this->view->report = [];
+
+        try {
+            $this->view->report = $this->analyticsService()->report($days);
+        } catch (Throwable $e) {
+            $this->logFrontendError('admin-analytics', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'Аналітика тимчасово недоступна. Деталі записано в лог.';
+        }
+    }
+
     public function createUserAction(): void
     {
         if (!$this->requireAdmin()) {

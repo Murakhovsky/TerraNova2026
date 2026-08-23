@@ -96,6 +96,7 @@ class PropertyController extends ControllerBase
             $this->view->metaImage = $this->absoluteUrl((string) ($this->view->images[0]['image_url'] ?? 'img/terra-nova-og.jpg'));
             $this->view->metaUrl = $this->absoluteUrl('property/show/' . $property['slug']);
             $this->view->metaType = 'article';
+            $this->view->analyticsPropertyId = (int) $property['id'];
         } catch (Throwable $e) {
             $this->logFrontendError('property-page', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -146,6 +147,7 @@ class PropertyController extends ControllerBase
                 $this->view->metaTitle = ($property['meta_title'] ?: $property['title']) . ' | Презентація Terra Nova CLUB';
                 $this->view->metaDescription = $property['meta_description'] ?: ($property['short_description'] ?: 'Коротка презентація об’єкта Terra Nova CLUB з фото, ціною, параметрами та запитом.');
                 $this->view->metaImage = $this->absoluteUrl((string) ($this->view->images[0]['image_url'] ?? 'img/terra-nova-og.jpg'));
+                $this->view->analyticsPropertyId = (int) $property['id'];
 
                 return;
             }
@@ -353,6 +355,14 @@ class PropertyController extends ControllerBase
         $this->view->seoDescription = 'Добірка об’єктів Terra Nova за типом нерухомості з переходом у картку, запит або подачу нового об’єкта.';
         $this->view->metaTitle = 'Об’єкти категорії | Terra Nova CLUB';
         $this->loadPropertyWorkspace('type-page', ['type' => $code]);
+        $type = $this->findCatalogItem($this->view->types, 'code', $code);
+        if (!$type) {
+            $this->response->setStatusCode(404, 'Not Found');
+            return;
+        }
+        $this->view->metaTitle = $type['name_uk'] . ' — купити або орендувати | Terra Nova CLUB';
+        $this->view->metaDescription = 'Актуальні об’єкти типу ' . $type['name_uk'] . ': ціни, площі, фото та прямий запит менеджеру Terra Nova.';
+        $this->view->metaUrl = $this->absoluteUrl('property/type/' . $code);
     }
 
     public function cityAction(?string $slug = null): void
@@ -364,6 +374,36 @@ class PropertyController extends ControllerBase
         $this->view->seoDescription = 'Міська сторінка каталогу Terra Nova для локальної добірки, фільтрів і підбору об’єктів.';
         $this->view->metaTitle = 'Об’єкти у місті | Terra Nova CLUB';
         $this->loadPropertyWorkspace('city-page', ['location' => $slug]);
+        $location = $this->findCatalogItem($this->view->locations, 'slug', $slug);
+        if (!$location) {
+            $this->response->setStatusCode(404, 'Not Found');
+            return;
+        }
+        $this->view->metaTitle = 'Нерухомість у місті ' . $location['city'] . ' | Terra Nova CLUB';
+        $this->view->metaDescription = 'Купити або орендувати нерухомість у місті ' . $location['city'] . ': актуальні картки, ціни, фото та підбір менеджером.';
+        $this->view->metaUrl = $this->absoluteUrl('property/city/' . $slug);
+    }
+
+    public function landingAction(?string $location = null, ?string $type = null): void
+    {
+        $location = $location ?: (string) $this->dispatcher->getParam('location');
+        $type = $type ?: (string) $this->dispatcher->getParam('type');
+        $this->view->pick('property/seo');
+        $this->view->seoKicker = 'Локальна добірка';
+        $this->view->seoTitle = 'Нерухомість';
+        $this->view->seoDescription = 'Добірка актуальних об’єктів за типом і локацією.';
+        $this->loadPropertyWorkspace('seo-landing-page', ['location' => $location, 'type' => $type]);
+
+        $locationItem = $this->findCatalogItem($this->view->locations, 'slug', $location);
+        $typeItem = $this->findCatalogItem($this->view->types, 'code', $type);
+        if (!$locationItem || !$typeItem) {
+            $this->response->setStatusCode(404, 'Not Found');
+            return;
+        }
+
+        $this->view->metaTitle = $typeItem['name_uk'] . ' у місті ' . $locationItem['city'] . ' | Terra Nova CLUB';
+        $this->view->metaDescription = 'Актуальні ' . mb_strtolower((string) $typeItem['name_uk']) . ' у місті ' . $locationItem['city'] . ': ціни, площі, фото та запит на перегляд.';
+        $this->view->metaUrl = $this->absoluteUrl('nerukhomist/' . $location . '/' . $type);
     }
 
     public function submissionsAction(): void
@@ -721,6 +761,17 @@ class PropertyController extends ControllerBase
         $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
 
         return $scheme . '://' . $host . '/' . ltrim($path, '/');
+    }
+
+    private function findCatalogItem(array $items, string $key, string $value): ?array
+    {
+        foreach ($items as $item) {
+            if ((string) ($item[$key] ?? '') === $value) {
+                return $item;
+            }
+        }
+
+        return null;
     }
 
     private function isOversizedPost(): bool
