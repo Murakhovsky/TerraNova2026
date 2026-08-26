@@ -28,6 +28,7 @@ return new \Phalcon\Config\Config([
         'migrationsDir'  => APP_PATH . '/migrations/',
         'cacheDir'       => BASE_PATH . '/cache/',
         'baseUri'        => '/',
+        'publicUrl'      => rtrim((string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: DOMAIN_NAME), '/'),
     ],
 
     'cos' => [
@@ -45,6 +46,23 @@ return new \Phalcon\Config\Config([
         'inputRetentionDays' => (int) (getenv('AGENT_INPUT_RETENTION_DAYS') ?: 30),
     ],
 
+    'integrations' => [
+        'n8n' => [
+            'inbound_secret' => (string) ($_ENV['N8N_WEBHOOK_SECRET'] ?? getenv('N8N_WEBHOOK_SECRET') ?: ''),
+            'outbound_url' => (string) ($_ENV['N8N_OUTBOUND_URL'] ?? getenv('N8N_OUTBOUND_URL') ?: ''),
+            'outbound_secret' => (string) ($_ENV['N8N_OUTBOUND_SECRET'] ?? getenv('N8N_OUTBOUND_SECRET') ?: ''),
+            'max_clock_skew' => (int) ($_ENV['N8N_MAX_CLOCK_SKEW'] ?? getenv('N8N_MAX_CLOCK_SKEW') ?: 300),
+        ],
+    ],
+
+    'spatial' => [
+        'max_upload_bytes' => (int) ($_ENV['SPATIAL_MAX_UPLOAD_BYTES'] ?? getenv('SPATIAL_MAX_UPLOAD_BYTES') ?: 209715200),
+        'jwt_secret' => (string) ($_ENV['SPATIAL_JWT_SECRET'] ?? getenv('SPATIAL_JWT_SECRET') ?: ''),
+        'jwt_ttl' => (int) ($_ENV['SPATIAL_JWT_TTL'] ?? getenv('SPATIAL_JWT_TTL') ?: 28800),
+        'blender_binary' => (string) ($_ENV['SPATIAL_BLENDER_BINARY'] ?? getenv('SPATIAL_BLENDER_BINARY') ?: ''),
+        'gltf_transform_binary' => (string) ($_ENV['SPATIAL_GLTF_TRANSFORM_BINARY'] ?? getenv('SPATIAL_GLTF_TRANSFORM_BINARY') ?: ''),
+    ],
+
     'telegram' => array(
         // Add you bot's API key and name
         'api_key'      => getenv('TELEGRAM_BOT_TOKEN') ?: '',
@@ -54,7 +72,7 @@ return new \Phalcon\Config\Config([
         'secret'       => getenv('TELEGRAM_WEBHOOK_SECRET') ?: '',
 
         'webhook'      => array(
-            'url' => 'https://terra.ai-da.store/tgAdmin_webhook.php',
+            'url' => (string) ($_ENV['TELEGRAM_WEBHOOK_URL'] ?? getenv('TELEGRAM_WEBHOOK_URL') ?: 'https://terra.ai-da.store/tgAdmin_webhook.php'),
         ),
 
         // All command related configs go here

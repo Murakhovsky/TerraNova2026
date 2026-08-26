@@ -1,26 +1,23 @@
 <?php
+declare(strict_types=1);
 
-// app/modules/bot/controllers/WebhookController.php
-namespace Modules\tgAdmin\Controllers;
+namespace Modules\TgAdmin\Controllers;
 
-use Phalcon\Mvc\Controller;
-use Core\ControllerBase;
 use Phalcon\Http\Response;
+use Phalcon\Mvc\Controller;
 
 class WebhookController extends Controller
 {
     public function indexAction(): Response
     {
-        // зчитуємо сирі дані від Telegram
-        $raw = file_get_contents('php://input');
-        $update = json_decode($raw, true);
+        $expectedSecret = (string) $this->di->getShared('config')->telegram->secret;
+        $providedSecret = (string) $this->request->getHeader('X-Telegram-Bot-Api-Secret-Token');
+        if ($expectedSecret !== '' && !hash_equals($expectedSecret, $providedSecret)) {
+            return (new Response())->setStatusCode(403, 'Forbidden');
+        }
 
-        // делегуємо обробку в TelegramService
-        $result = $this->di->getShared('telegramService')
-            ->handleUpdate($update);
+        $this->di->getShared('telegramBot')->handle();
 
-        // Telegram чекає HTTP 200
-        $response = new Response();
-        return $response->setStatusCode(200, 'OK');
+        return (new Response())->setStatusCode(200, 'OK');
     }
 }

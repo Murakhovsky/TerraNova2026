@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:spatial": "vite build"
+  },
+  "dependencies": {
+    "@sparkjsdev/spark": "^2.1.0",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1",
+    "pngjs": "^7.0.0",
+    "vite": "^8.2.2"
+  }
+}

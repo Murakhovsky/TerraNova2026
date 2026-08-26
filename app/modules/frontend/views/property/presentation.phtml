@@ -1,0 +1,245 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'ціна за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$number = static fn($value) => $value === null || $value === '' ? '' : rtrim(rtrim(number_format((float) $value, 1, '.', ' '), '0'), '.');
+$absoluteUrl = static function (string $path = '') {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
+
+    return $scheme . '://' . $host . '/' . ltrim($path, '/');
+};
+$property = $property ?? null;
+$images = $images ?? [];
+$features = $features ?? [];
+$relatedProperties = $relatedProperties ?? [];
+$group = $group ?? null;
+$properties = $properties ?? [];
+$pageStatus = $pageStatus ?? null;
+$inboundRequestStatus = $inboundRequestStatus ?? null;
+$fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80';
+$dealLabels = [
+    'sale' => 'Продаж',
+    'rent' => 'Оренда',
+    'investment' => 'Інвестиція',
+];
+$presentationUrl = $property
+    ? $absoluteUrl('property/presentation/' . (string) $property['slug'])
+    : ($group ? $absoluteUrl('property/presentation/' . (string) $group['slug']) : '');
+$coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbackImage;
+?>
+
+<?php $this->partial('shared/public_header', [
+    'active' => 'catalog',
+    'actions' => [
+        ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
+        ['href' => '#request', 'label' => 'Запит', 'class' => 'tn-btn--dark'],
+    ],
+]); ?>
+
+<main class="tn-page tn-presentation-page">
+  <?php if (!$property && !$group): ?>
+    <section class="tn-empty-state tn-empty-state--page">
+      <h1>Презентацію не знайдено</h1>
+      <p><?php echo $h($pageStatus ?: 'Можливо, посилання змінилося або об’єкт ще не опублікований.'); ?></p>
+      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">До каталогу</a>
+    </section>
+  <?php elseif ($property): ?>
+    <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
+      <a href="<?php echo $this->url->get(); ?>">Головна</a>
+      <span>/</span>
+      <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+      <span>/</span>
+      <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Картка</a>
+      <span>/</span>
+      <span>Презентація</span>
+    </nav>
+
+    <section class="tn-presentation-hero">
+      <div class="tn-presentation-hero__media">
+        <img src="<?php echo $h($coverImage); ?>" alt="<?php echo $h($property['title']); ?>">
+      </div>
+      <div class="tn-presentation-hero__copy">
+        <p class="tn-kicker"><?php echo $h($property['public_id']); ?> / <?php echo $h($dealLabels[$property['deal_type']] ?? $property['deal_type']); ?></p>
+        <h1><?php echo $h($property['title']); ?></h1>
+        <p><?php echo $h($property['short_description'] ?: $property['description']); ?></p>
+        <strong class="tn-presentation-price"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+        <div class="tn-hero-actions">
+          <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="presentation" data-analytics-event="presentation_request">Отримати цю презентацію</a>
+          <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">Завантажити PDF</a>
+          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Повна картка</a>
+          <button type="button" data-copy-value="<?php echo $h($presentationUrl); ?>">Скопіювати посилання</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tn-property-detail-layout">
+      <article class="tn-property-detail">
+        <p class="tn-kicker">Ключові параметри</p>
+        <div class="tn-detail-grid">
+          <div><span>Тип</span><strong><?php echo $h($property['type_name']); ?></strong></div>
+          <div><span>Локація</span><strong><?php echo $h($property['city']); ?><?php if (!empty($property['region'])): ?>, <?php echo $h($property['region']); ?><?php endif; ?></strong></div>
+          <?php if ($property['area_total']): ?><div><span>Площа</span><strong><?php echo $h($number($property['area_total'])); ?> м²</strong></div><?php endif; ?>
+          <?php if ($property['rooms']): ?><div><span>Кімнати</span><strong><?php echo $h($number($property['rooms'])); ?></strong></div><?php endif; ?>
+          <?php if ($property['floor'] || $property['floors']): ?><div><span>Поверх</span><strong><?php echo $h($property['floor'] ?: '-'); ?> / <?php echo $h($property['floors'] ?: '-'); ?></strong></div><?php endif; ?>
+          <?php if ($property['land_area']): ?><div><span>Ділянка</span><strong><?php echo $h($number($property['land_area'])); ?> сот.</strong></div><?php endif; ?>
+          <?php if ($property['built_year']): ?><div><span>Рік</span><strong><?php echo $h($property['built_year']); ?></strong></div><?php endif; ?>
+          <?php if (!empty($property['group_title'])): ?><div><span>Група</span><strong><?php echo $h($property['group_title']); ?></strong></div><?php endif; ?>
+        </div>
+
+        <h2>Опис</h2>
+        <p><?php echo nl2br($h($property['description'] ?: $property['short_description'])); ?></p>
+
+        <?php if ($features): ?>
+          <h2>Деталі</h2>
+          <div class="tn-feature-list">
+            <?php foreach ($features as $feature): ?>
+              <span><?php echo $h($feature['feature_key']); ?>: <?php echo $h($feature['feature_value']); ?></span>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </article>
+
+      <aside class="tn-agent-card" id="request">
+        <p class="tn-kicker">Запит</p>
+        <h2>Отримати презентацію або домовитись про перегляд</h2>
+        <p>Залиште контакт, і менеджер повернеться з актуальністю, деталями по документах та наступним кроком.</p>
+        <form class="tn-object-form" action="#request" method="post">
+          <input type="hidden" name="property_id" value="<?php echo (int) $property['id']; ?>">
+          <input type="hidden" name="role" value="buyer">
+          <input type="hidden" name="deal_type" value="<?php echo $h($property['deal_type'] ?: 'consultation'); ?>">
+          <input type="hidden" name="request_intent" value="presentation" data-request-intent-input>
+          <label class="tn-hp" aria-hidden="true"><span>Website</span><input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+          <label><span>Ім’я</span><input name="full_name" type="text" autocomplete="name" required></label>
+          <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel"></label>
+          <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
+          <label><span>Повідомлення</span><textarea name="message" rows="4" placeholder="Хочу отримати презентацію цього об’єкта"></textarea></label>
+          <button class="tn-btn tn-btn--accent" type="submit">Надіслати запит</button>
+          <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+        </form>
+      </aside>
+    </section>
+
+    <?php if (count($images) > 1): ?>
+      <section class="tn-related-section">
+        <div class="tn-section__head">
+          <p class="tn-kicker">Медіа</p>
+          <h2>Фото об’єкта</h2>
+        </div>
+        <div class="tn-presentation-gallery">
+          <?php foreach (array_slice($images, 1, 8) as $image): ?>
+            <img src="<?php echo $h($image['image_url']); ?>" alt="<?php echo $h($image['alt_text'] ?: $property['title']); ?>">
+          <?php endforeach; ?>
+        </div>
+      </section>
+    <?php endif; ?>
+
+    <?php if ($relatedProperties): ?>
+      <section class="tn-related-section" id="related">
+        <div class="tn-section__head">
+          <p class="tn-kicker">Альтернативи</p>
+          <h2>Схожі об’єкти для порівняння</h2>
+        </div>
+        <div class="tn-property-grid tn-property-grid--catalog">
+          <?php foreach ($relatedProperties as $related): ?>
+            <article class="tn-property-card">
+              <a class="tn-property-card__image" href="<?php echo $this->url->get('property/presentation/' . $related['slug']); ?>">
+                <img src="<?php echo $h($related['cover_url'] ?: $fallbackImage); ?>" alt="<?php echo $h($related['title']); ?>">
+                <span class="tn-card-price-badge"><?php echo $h($money($related['price_amount'], $related['price_currency'], $related['price_period'])); ?></span>
+              </a>
+              <div class="tn-property-card__body">
+                <div class="tn-card-tags">
+                  <span><?php echo $h($dealLabels[$related['deal_type']] ?? $related['deal_type']); ?></span>
+                  <span><?php echo $h($related['type_name']); ?></span>
+                </div>
+                <h2><a href="<?php echo $this->url->get('property/presentation/' . $related['slug']); ?>"><?php echo $h($related['title']); ?></a></h2>
+                <p><?php echo $h($related['short_description']); ?></p>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </section>
+    <?php endif; ?>
+  <?php else: ?>
+    <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
+      <a href="<?php echo $this->url->get(); ?>">Головна</a>
+      <span>/</span>
+      <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
+      <span>/</span>
+      <span><?php echo $h($group['title']); ?></span>
+    </nav>
+
+    <section class="tn-page-hero tn-page-hero--catalog">
+      <div>
+        <p class="tn-kicker">Презентація об’єктів</p>
+        <h1><?php echo $h($group['title']); ?></h1>
+        <p><?php echo $h(trim(($group['city'] ?? '') . ', ' . ($group['region'] ?? ''), ', ')); ?><?php if (!empty($group['address'])): ?> / <?php echo $h($group['address']); ?><?php endif; ?></p>
+      </div>
+      <div class="tn-page-hero__meta">
+        <strong><?php echo count($properties); ?></strong>
+        <span>доступних об’єктів</span>
+        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/pdf/' . $group['slug']); ?>">Завантажити PDF</a>
+      </div>
+    </section>
+
+    <?php if (!$properties): ?>
+      <section class="tn-empty-state">
+        <h2>Опублікованих об’єктів у презентації поки немає</h2>
+        <p>Менеджер може додати об’єкти до групи й опублікувати їх після перевірки картки.</p>
+      </section>
+    <?php else: ?>
+      <section class="tn-related-section">
+        <div class="tn-section__head">
+          <p class="tn-kicker">Об’єкти</p>
+          <h2>Актуальні варіанти у цій групі</h2>
+        </div>
+        <div class="tn-property-grid tn-property-grid--catalog">
+          <?php foreach ($properties as $item): ?>
+            <article class="tn-property-card">
+              <a class="tn-property-card__image" href="<?php echo $this->url->get('property/presentation/' . $item['slug']); ?>">
+                <img src="<?php echo $h($item['cover_url'] ?: $fallbackImage); ?>" alt="<?php echo $h($item['title']); ?>">
+                <span class="tn-card-price-badge"><?php echo $h($money($item['price_amount'], $item['price_currency'], $item['price_period'])); ?></span>
+              </a>
+              <div class="tn-property-card__body">
+                <div class="tn-card-tags">
+                  <span><?php echo $h($dealLabels[$item['deal_type']] ?? $item['deal_type']); ?></span>
+                  <span><?php echo $h($item['type_name']); ?></span>
+                </div>
+                <h2><a href="<?php echo $this->url->get('property/presentation/' . $item['slug']); ?>"><?php echo $h($item['title']); ?></a></h2>
+                <p><?php echo $h($item['short_description']); ?></p>
+                <div class="tn-property-meta">
+                  <strong><?php echo $h($money($item['price_amount'], $item['price_currency'], $item['price_period'])); ?></strong>
+                  <span><?php echo $h($item['city']); ?><?php if ($item['area_total']): ?> / <?php echo $h($number($item['area_total'])); ?> м²<?php endif; ?></span>
+                </div>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </section>
+    <?php endif; ?>
+  <?php endif; ?>
+</main>
+
+<?php $this->partial('shared/mobile_dock', [
+    'items' => [
+        ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Каталог'],
+        ['key' => 'card', 'path' => $property ? 'property/show/' . $property['slug'] : '#', 'label' => 'Картка'],
+        ['key' => 'request', 'path' => '#request', 'label' => 'Запит'],
+    ],
+]); ?>
+
+<?php $this->partial('shared/public_footer', [
+    'text' => 'Презентація об’єкта Terra Nova CLUB для швидкого рішення клієнта.',
+    'links' => [
+        ['path' => '', 'label' => 'Головна'],
+        ['path' => 'property/catalog', 'label' => 'Каталог'],
+        ['path' => '#request', 'label' => 'Контакти'],
+    ],
+]); ?>

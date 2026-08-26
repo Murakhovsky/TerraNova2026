@@ -1,49 +1,44 @@
 <?php
+declare(strict_types=1);
 
 namespace Modules\TgAdmin;
 
-//use Phalcon\Di\DiInterface;
-use Modules\Economy\Listeners\UserEventsListener;
-use Modules\TgAdmin\Commands\UserCommands\MenuCommand;
-use Modules\TgAdmin\Listeners\WalletEventsListener;
-use Phalcon\Mvc\ModuleDefinitionInterface;
 use Phalcon\Autoload\Loader;
+use Phalcon\Di\DiInterface;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Mvc\ModuleDefinitionInterface;
 
 class Module implements ModuleDefinitionInterface
 {
-    public function registerAutoloaders(?\Phalcon\Di\DiInterface $di = null):void {
+    public function registerAutoloaders(?DiInterface $di = null): void
+    {
         $loader = new Loader();
         $loader->setNamespaces([
             'Modules\TgAdmin\Controllers' => __DIR__ . '/controllers/',
             'Modules\TgAdmin\Models' => __DIR__ . '/models/',
-            'Modules\TgAdmin\Services'    => __DIR__ . '/services/',
+            'Modules\TgAdmin\Services' => __DIR__ . '/services/',
         ]);
         $loader->register();
     }
 
-
-
-    public function registerServices(\Phalcon\Di\DiInterface $di):void
+    public function registerServices(DiInterface $di): void
     {
-        // Налаштовуємо dispatcher для цього модуля
-        $di->setShared('dispatcher', function() {
-            $dispatcher = new \Phalcon\Mvc\Dispatcher();
+        $di->getShared('router')->addPost('/TgAdmin/webhook', [
+            'namespace' => 'Modules\TgAdmin\Controllers',
+            'module' => 'TgAdmin',
+            'controller' => 'webhook',
+            'action' => 'index',
+        ]);
+
+        $di->setShared('dispatcher', function () {
+            $dispatcher = new Dispatcher();
             $dispatcher->setDefaultNamespace('Modules\TgAdmin\Controllers');
             return $dispatcher;
         });
 
-
-        // Сервіс для Telegram API
-        $di->setShared('telegramService', function() {
+        $di->setShared('telegramBot', function () {
             $config = $this->getConfig();
-            return new Services\TelegramService(
-                $config->telegram->botToken,
-                $config->telegram->botName
-            );
+            return new TelegramBotEB($config->telegram, $config->telegram->database, $this);
         });
-
-        $eventService = $di->getShared('eventService');
-//        $eventService->attach('wallet:coinAdded', new WalletEventsListener());
-
     }
 }

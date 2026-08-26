@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Modules\Frontend\Services;
 
 use Common\Models\RealEstate\PropertySubmission;
+use Common\Services\DatabaseService;
 use Common\Services\MediaStorageService;
+use Common\Services\TelegramAutomationService;
 use Throwable;
 
 class PropertySubmissionService
@@ -13,8 +15,11 @@ class PropertySubmissionService
     private const VALIDATION_MESSAGE = 'Заповніть контактні дані, місто, тип об’єкта та короткий опис.';
     private const ERROR_MESSAGE = 'Об’єкт не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
 
-    public function __construct(private MediaStorageService $mediaStorage)
-    {
+    public function __construct(
+        private MediaStorageService $mediaStorage,
+        private ?DatabaseService $database = null,
+        private ?TelegramAutomationService $telegram = null
+    ) {
     }
 
     public function submit(array $input, string $sourcePage, array $files = []): array
@@ -74,6 +79,9 @@ class PropertySubmissionService
                 return ['ok' => false, 'message' => self::ERROR_MESSAGE];
             }
 
+            $this->recordPropertySubmit((int) $submission->id, $sourcePage, $input);
+            $this->telegram?->notifyPropertySubmission((int) $submission->id);
+
             try {
                 $stored = $this->mediaStorage->storeUploadedFiles($files, 'property_submission', (int) $submission->id);
 
@@ -92,6 +100,185 @@ class PropertySubmissionService
         }
 
         return ['ok' => true, 'message' => self::SUCCESS_MESSAGE];
+    }
+
+    private function recordPropertySubmit(int $submissionId, string $sourcePage, array $input): void
+    {
+        if (!$this->database || $submissionId <= 0) {
+            return;
+        }
+
+        try {
+            $query = [];
+            $parts = parse_url($sourcePage);
+            if (!empty($parts['query'])) {
+                parse_str((string) $parts['query'], $query);
+            }
+
+            $this->database->connection()->prepare('
+                INSERT INTO tn_analytics_events (
+                    event_type, entity_type, entity_id, source_page, utm_source, utm_medium, utm_campaign
+                ) VALUES (
+                    "property_submit", "submission", :entity_id, :source_page, :utm_source, :utm_medium, :utm_campaign
+                )
+            ')->execute([
+                'entity_id' => $submissionId,
+                'source_page' => mb_substr($sourcePage, 0, 255),
+                'utm_source' => $this->nullableText($input['utm_source'] ?? $query['utm_source'] ?? null, 120),
+                'utm_medium' => $this->nullableText($input['utm_medium'] ?? $query['utm_medium'] ?? null, 120),
+                'utm_campaign' => $this->nullableText($input['utm_campaign'] ?? $query['utm_campaign'] ?? null, 160),
+            ]);
+        } catch (Throwable $e) {
+            $this->logError('property-submit-analytics', $e);
+        }
+    }
+
+    public function submissionForUser(int $id, array $user): ?array
+    {
+        if (!$this->database || $id <= 0) {
+            return null;
+        }
+
+        $email = mb_strtolower(trim((string) ($user['email'] ?? '')));
+        if ($email === '') {
+            return null;
+        }
+
+        $submission = $this->database->fetchOne('
+            SELECT s.*, p.slug AS property_slug, p.title AS property_title
+            FROM tn_property_submissions s
+            LEFT JOIN tn_properties p ON p.id = s.property_id
+            WHERE s.id = :id
+              AND LOWER(s.owner_email) = :email
+            LIMIT 1
+        ', ['id' => $id, 'email' => $email]);
+
+        if ($submission) {
+            $submission['can_edit'] = $this->canEditSubmission($submission) ? 1 : 0;
+        }
+
+        return $submission ?: null;
+    }
+
+    public function updateForUser(int $id, array $user, array $input, array $files = []): array
+    {
+        if (!$this->database) {
+            return ['ok' => false, 'message' => 'Сервіс заявок тимчасово недоступний.'];
+        }
+
+        $submission = $this->submissionForUser($id, $user);
+        if (!$submission) {
+            return ['ok' => false, 'message' => 'Заявку не знайдено або вона належить іншому користувачу.'];
+        }
+
+        if (!$this->canEditSubmission($submission)) {
+            return ['ok' => false, 'message' => 'Цю заявку вже не можна редагувати з кабінету.'];
+        }
+
+        $ownerName = trim((string) ($input['owner_name'] ?? $submission['owner_name'] ?? ''));
+        $ownerPhone = trim((string) ($input['owner_phone'] ?? $submission['owner_phone'] ?? ''));
+        $ownerEmail = trim((string) ($input['owner_email'] ?? $submission['owner_email'] ?? ''));
+        $propertyType = trim((string) ($input['property_type'] ?? $submission['property_type'] ?? ''));
+        $city = trim((string) ($input['city'] ?? $submission['city'] ?? ''));
+        $description = trim((string) ($input['description'] ?? $submission['description'] ?? ''));
+
+        if ($ownerName === '' || ($ownerPhone === '' && $ownerEmail === '') || $propertyType === '' || $city === '' || $description === '') {
+            return ['ok' => false, 'message' => self::VALIDATION_MESSAGE];
+        }
+
+        if ($ownerEmail !== '' && !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+            return ['ok' => false, 'message' => 'Вкажіть коректний email або залиште поле порожнім.'];
+        }
+
+        $accountEmail = mb_strtolower(trim((string) ($user['email'] ?? '')));
+        if ($accountEmail !== '' && mb_strtolower($ownerEmail) !== $accountEmail) {
+            return ['ok' => false, 'message' => 'Email власника має збігатися з email вашого акаунта.'];
+        }
+
+        try {
+            $this->database->connection()->prepare('
+                UPDATE tn_property_submissions
+                SET status = "submitted",
+                    source_type = :source_type,
+                    deal_type = :deal_type,
+                    property_type = :property_type,
+                    title = :title,
+                    city = :city,
+                    region = :region,
+                    district = :district,
+                    address = :address,
+                    price_amount = :price_amount,
+                    price_currency = :price_currency,
+                    area_total = :area_total,
+                    land_area = :land_area,
+                    rooms = :rooms,
+                    floor = :floor,
+                    floors = :floors,
+                    built_year = :built_year,
+                    has_3d_tour = :has_3d_tour,
+                    media_links = :media_links,
+                    description = :description,
+                    features_text = :features_text,
+                    owner_name = :owner_name,
+                    owner_phone = :owner_phone,
+                    owner_email = :owner_email,
+                    preferred_contact = :preferred_contact,
+                    reviewed_at = NULL,
+                    review_note = NULL,
+                    updated_at = NOW()
+                WHERE id = :id
+                LIMIT 1
+            ')->execute([
+                'id' => $id,
+                'source_type' => $this->sourceType((string) ($input['source_type'] ?? $submission['source_type'] ?? 'owner')),
+                'deal_type' => $this->dealType((string) ($input['deal_type'] ?? $submission['deal_type'] ?? 'sale')),
+                'property_type' => $this->propertyType($propertyType),
+                'title' => $this->nullableText($input['title'] ?? $submission['title'] ?? null, 220) ?: $this->fallbackTitle($propertyType, $city),
+                'city' => $this->requiredText($city, 120),
+                'region' => $this->nullableText($input['region'] ?? $submission['region'] ?? null, 120),
+                'district' => $this->nullableText($input['district'] ?? $submission['district'] ?? null, 120),
+                'address' => $this->nullableText($input['address'] ?? $submission['address'] ?? null, 255),
+                'price_amount' => $this->decimalOrNull($input['price_amount'] ?? $submission['price_amount'] ?? null),
+                'price_currency' => $this->currency((string) ($input['price_currency'] ?? $submission['price_currency'] ?? 'USD')),
+                'area_total' => $this->decimalOrNull($input['area_total'] ?? $submission['area_total'] ?? null),
+                'land_area' => $this->decimalOrNull($input['land_area'] ?? $submission['land_area'] ?? null),
+                'rooms' => $this->decimalOrNull($input['rooms'] ?? $submission['rooms'] ?? null),
+                'floor' => $this->positiveInt($input['floor'] ?? $submission['floor'] ?? null),
+                'floors' => $this->positiveInt($input['floors'] ?? $submission['floors'] ?? null),
+                'built_year' => $this->builtYear($input['built_year'] ?? $submission['built_year'] ?? null),
+                'has_3d_tour' => isset($input['has_3d_tour']) ? 1 : 0,
+                'media_links' => $this->nullableText($input['media_links'] ?? $submission['media_links'] ?? null, 2000),
+                'description' => $this->requiredText($description, 5000),
+                'features_text' => $this->nullableText($input['features_text'] ?? $submission['features_text'] ?? null, 3000),
+                'owner_name' => $this->requiredText($ownerName, 160),
+                'owner_phone' => $this->nullableText($ownerPhone, 50),
+                'owner_email' => $this->nullableText($ownerEmail, 160),
+                'preferred_contact' => $this->preferredContact((string) ($input['preferred_contact'] ?? $submission['preferred_contact'] ?? 'any')),
+            ]);
+
+            try {
+                $this->mediaStorage->storeUploadedFiles($files, 'property_submission', $id);
+            } catch (Throwable $mediaError) {
+                $this->logError('property-submission-update-media', $mediaError);
+
+                return ['ok' => true, 'message' => 'Заявку оновлено, але частину медіа не вдалося додати.'];
+            }
+        } catch (Throwable $e) {
+            $this->logError('property-submission-update', $e);
+
+            return ['ok' => false, 'message' => self::ERROR_MESSAGE];
+        }
+
+        return ['ok' => true, 'message' => 'Заявку оновлено і повернуто в чергу модерації.'];
+    }
+
+    private function canEditSubmission(array $submission): bool
+    {
+        if (!empty($submission['property_id'])) {
+            return false;
+        }
+
+        return in_array((string) ($submission['status'] ?? ''), ['draft', 'submitted', 'new', 'review', 'in_review', 'needs_changes'], true);
     }
 
     private function submissionRef(): string

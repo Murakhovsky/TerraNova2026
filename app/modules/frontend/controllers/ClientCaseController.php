@@ -18,6 +18,10 @@ class ClientCaseController extends ControllerBase
         $this->view->cases = [];
         $this->view->stats = [];
         $this->view->unlinkedInboundRequests = [];
+        $this->view->openCaseOptions = [];
+        $this->view->managerOptions = [];
+        $this->view->propertyTypes = [];
+        $this->view->locations = [];
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
 
@@ -25,10 +29,41 @@ class ClientCaseController extends ControllerBase
             $this->view->cases = $this->clientCaseService()->cases($this->view->filters);
             $this->view->stats = $this->clientCaseService()->stats();
             $this->view->unlinkedInboundRequests = $this->clientCaseService()->unlinkedInboundRequests();
+            $this->view->openCaseOptions = $this->clientCaseService()->openCaseOptions();
+            $this->view->managerOptions = $this->clientCaseService()->managerOptions();
+            $this->view->propertyTypes = $this->catalogService()->propertyTypes();
+            $this->view->locations = $this->catalogService()->locations();
         } catch (Throwable $e) {
             $this->logFrontendError('client-case-index', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
             $this->view->pageStatus = 'CRM кейсів тимчасово недоступна.';
+        }
+    }
+
+    public function inboxAction(): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $this->view->title = 'CRM заявки';
+        $this->view->filters = $this->clientCaseService()->inboundFilters((array) $this->request->getQuery());
+        $this->view->inboundRequests = [];
+        $this->view->inboundStats = [];
+        $this->view->openCaseOptions = [];
+        $this->view->managerOptions = [];
+        $this->view->pageStatus = null;
+        $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
+
+        try {
+            $this->view->inboundRequests = $this->clientCaseService()->inboundInbox($this->view->filters);
+            $this->view->inboundStats = $this->clientCaseService()->inboundInboxStats();
+            $this->view->openCaseOptions = $this->clientCaseService()->openCaseOptions();
+            $this->view->managerOptions = $this->clientCaseService()->managerOptions();
+        } catch (Throwable $e) {
+            $this->logFrontendError('client-case-inbox', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->pageStatus = 'CRM заявки тимчасово недоступні.';
         }
     }
 
@@ -71,6 +106,9 @@ class ClientCaseController extends ControllerBase
             } catch (Throwable $exception) {
                 $this->logFrontendError('client-case-ai-intelligence', $exception);
             }
+            $this->view->managerOptions = $this->clientCaseService()->managerOptions();
+            $this->view->propertyTypes = $this->catalogService()->propertyTypes();
+            $this->view->locations = $this->catalogService()->locations();
         } catch (Throwable $e) {
             $this->logFrontendError('client-case-show', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -113,6 +151,26 @@ class ClientCaseController extends ControllerBase
         $this->response->redirect('client-case/show/' . $caseId . '?status_message=' . rawurlencode($result['message']));
     }
 
+    public function quickUpdateAction(?string $id = null): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $caseId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+        if (!$this->request->isPost() || $caseId <= 0) {
+            $this->response->redirect('client-case');
+            return;
+        }
+
+        $result = $this->clientCaseService()->quickUpdate($caseId, (array) $this->request->getPost(), $this->currentUser());
+        $returnUrl = $this->safeReturnUrl((string) $this->request->getPost('return_url', 'string', ''));
+        $target = $returnUrl ?: 'client-case';
+        $separator = str_contains($target, '?') ? '&' : '?';
+
+        $this->response->redirect($target . $separator . 'status_message=' . rawurlencode($result['message']));
+    }
+
     public function activityAction(?string $id = null): void
     {
         if (!$this->requireManager()) {
@@ -143,8 +201,51 @@ class ClientCaseController extends ControllerBase
             return;
         }
 
-        $result = $this->clientCaseService()->attachInboundRequest($caseId, $requestId);
+        $result = $this->clientCaseService()->attachInboundRequest($caseId, $requestId, $this->currentUser());
         $this->response->redirect('client-case/show/' . $caseId . '?status_message=' . rawurlencode($result['message']));
+    }
+
+    public function linkInboundRequestAction(): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $caseId = (int) $this->request->getPost('case_id', 'int', 0);
+        $requestId = (int) $this->request->getPost('request_id', 'int', 0);
+        $returnUrl = $this->safeReturnUrl((string) $this->request->getPost('return_url', 'string', ''));
+
+        if (!$this->request->isPost() || $caseId <= 0 || $requestId <= 0) {
+            $this->response->redirect($returnUrl ?: 'client-case');
+            return;
+        }
+
+        $result = $this->clientCaseService()->attachInboundRequest($caseId, $requestId, $this->currentUser());
+        $target = $returnUrl ?: 'client-case';
+        $separator = str_contains($target, '?') ? '&' : '?';
+        $this->response->redirect($target . $separator . 'status_message=' . rawurlencode($result['message']));
+    }
+
+    public function createFromInboundRequestAction(?string $id = null): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $requestId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+        $returnUrl = $this->safeReturnUrl((string) $this->request->getPost('return_url', 'string', ''));
+        if (!$this->request->isPost() || $requestId <= 0) {
+            $this->response->redirect($returnUrl ?: 'client-case');
+            return;
+        }
+
+        $result = $this->clientCaseService()->createCaseFromInboundRequest($requestId, (array) $this->request->getPost(), $this->currentUser());
+        $target = $returnUrl ?: (!empty($result['case_id'])
+            ? 'client-case/show/' . $result['case_id']
+            : 'client-case');
+        $separator = str_contains($target, '?') ? '&' : '?';
+
+        $this->response->redirect($target . $separator . 'status_message=' . rawurlencode($result['message']));
     }
 
     public function matchPropertyAction(): void
@@ -186,6 +287,27 @@ class ClientCaseController extends ControllerBase
         $target = $caseId > 0 ? 'client-case/show/' . $caseId : 'client-case';
 
         $this->response->redirect($target . '?status_message=' . rawurlencode($result['message']));
+    }
+
+    public function updateInboundRequestAction(?string $id = null): void
+    {
+        if (!$this->requireManager()) {
+            return;
+        }
+
+        $requestId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
+        $returnUrl = $this->safeReturnUrl((string) $this->request->getPost('return_url', 'string', ''));
+
+        if (!$this->request->isPost() || $requestId <= 0) {
+            $this->response->redirect($returnUrl ?: 'client-case/inbox');
+            return;
+        }
+
+        $result = $this->clientCaseService()->updateInboundRequest($requestId, (array) $this->request->getPost(), $this->currentUser());
+        $target = $returnUrl ?: 'client-case/inbox';
+        $separator = str_contains($target, '?') ? '&' : '?';
+
+        $this->response->redirect($target . $separator . 'status_message=' . rawurlencode($result['message']));
     }
 
     private function safeReturnUrl(string $value): string

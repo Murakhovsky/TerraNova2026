@@ -8,12 +8,18 @@ use Phalcon\Autoload\Loader;
 use Phalcon\Mvc\View;
 use Phalcon\Mvc\View\Engine\Php as PhpEngine;
 use Phalcon\Mvc\ModuleDefinitionInterface;
+use Modules\Frontend\Services\AdminDashboardService;
+use Modules\Frontend\Services\AnalyticsService;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\ClientCaseService;
+use Modules\Frontend\Services\ContentService;
 use Modules\Frontend\Services\InboundRequestService;
+use Modules\Frontend\Services\N8nWebhookService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
+use Modules\Frontend\Services\PropertyPresentationService;
 use Modules\Frontend\Services\PropertySubmissionService;
+use Modules\Frontend\Services\PublicPageService;
 
 class Module implements ModuleDefinitionInterface
 {
@@ -29,6 +35,7 @@ class Module implements ModuleDefinitionInterface
         $loader->setNamespaces([
             'Modules\Frontend\Controllers' => __DIR__ . '/controllers/',
             'Modules\Frontend\Models' => __DIR__ . '/models/',
+            'Modules\Frontend\Services' => __DIR__ . '/services/',
         ]);
 
         $loader->register();
@@ -45,6 +52,87 @@ class Module implements ModuleDefinitionInterface
         $router->setDefaultNamespace('Modules\Frontend\Controllers');
         $router->setDefaultController('index');
         $router->setDefaultAction('index');
+
+        $router->add('/sitemap.xml', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'seo',
+            'action' => 'sitemap',
+        ]);
+
+        $router->add('/robots.txt', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'seo',
+            'action' => 'robots',
+        ]);
+
+        $router->add('/analytics/track', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'analytics',
+            'action' => 'track',
+        ]);
+
+        $router->addPost('/webhooks/n8n/content', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'n8n_webhook',
+            'action' => 'content',
+        ]);
+
+        $router->add('/blog', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'blog',
+            'action' => 'index',
+        ]);
+
+        $router->add('/blog/{slug:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'blog',
+            'action' => 'show',
+        ]);
+
+        $router->add('/guide/{slug:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'blog',
+            'action' => 'landing',
+        ]);
+
+        $router->add('/nerukhomist/{location:[a-z0-9-]+}/{type:[a-z0-9-]+}', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'property',
+            'action' => 'landing',
+        ]);
+
+        foreach (array_keys((new PublicPageService())->pages()) as $pageSlug) {
+            $router->add('/' . $pageSlug, [
+                'namespace' => 'Modules\Frontend\Controllers',
+                'module' => 'frontend',
+                'controller' => 'page',
+                'action' => 'show',
+                'slug' => $pageSlug,
+            ]);
+        }
+
+        $router->add('/api/property/:action/:params', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'api',
+            'action' => 1,
+            'params' => 2,
+        ]);
+
+        $router->add('/api/property/:action', [
+            'namespace' => 'Modules\Frontend\Controllers',
+            'module' => 'frontend',
+            'controller' => 'api',
+            'action' => 1,
+        ]);
 
         $router->add('/submit-property', [
             'namespace' => 'Modules\Frontend\Controllers',
@@ -208,13 +296,18 @@ class Module implements ModuleDefinitionInterface
 
 
         $di->setShared('frontendPropertySubmissionService', function () {
-            return new PropertySubmissionService($this->getShared('mediaStorageService'));
+            return new PropertySubmissionService(
+                $this->getShared('mediaStorageService'),
+                $this->getShared('databaseService'),
+                $this->getShared('telegramAutomationService')
+            );
         });
 
         $di->setShared('frontendPropertyModerationService', function () {
             return new PropertyModerationService(
                 $this->getShared('databaseService'),
-                $this->getShared('mediaStorageService')
+                $this->getShared('mediaStorageService'),
+                $this->getShared('telegramAutomationService')
             );
         });
 
@@ -223,6 +316,14 @@ class Module implements ModuleDefinitionInterface
                 $this->getShared('databaseService'),
                 $this->getShared('mediaStorageService'),
                 $this->getShared('organizationContext')->id(),
+            );
+        });
+
+        $di->setShared('frontendPropertyPresentationService', function () {
+            return new PropertyPresentationService(
+                $this->getShared('frontendCatalogService'),
+                $this->getShared('databaseService'),
+                $this->getShared('telegramAutomationService')
             );
         });
 

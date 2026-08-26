@@ -1,0 +1,300 @@
+﻿<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$formData = $formData ?? [];
+$types = $types ?? [];
+$locations = $locations ?? [];
+$propertyGroups = $propertyGroups ?? [];
+$agents = $agents ?? [];
+$stageRules = $operationalStageRules ?? [];
+$pageStatus = $pageStatus ?? null;
+$actionStatus = $actionStatus ?? null;
+$field = static fn(string $name, string $fallback = '') => htmlspecialchars((string) ($formData[$name] ?? $fallback), ENT_QUOTES, 'UTF-8');
+$selected = static fn(string $name, $value, $fallback = '') => (string) ($formData[$name] ?? $fallback) === (string) $value ? 'selected' : '';
+$dealTypes = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
+$sources = ['own' => 'Власний', 'partner' => 'Партнер', 'realtor' => 'Рієлтор', 'owner' => 'Власник', 'developer' => 'Девелопер'];
+$currencies = ['USD' => 'USD', 'EUR' => 'EUR', 'UAH' => 'UAH'];
+$periods = ['total' => 'За об’єкт', 'month' => 'За місяць', 'day' => 'За день'];
+$commissionTypes = ['none' => 'Не задано', 'percent' => '%', 'fixed' => 'Фіксована', 'included' => 'Включена в ціну'];
+$visibilityLabels = ['public' => 'Публічно', 'team' => 'Команда', 'partners' => 'Партнери', 'private' => 'Приватно'];
+$priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 'high' => 'Високий', 'urgent' => 'Терміновий'];
+$stageLabels = [
+  'intake' => 'Первинне внесення',
+  'verification' => 'Перевірка даних',
+  'media_needed' => 'Потрібні медіа',
+  'pricing' => 'Узгодження ціни',
+  'ready_to_publish' => 'Готовий до публікації',
+  'published' => 'В роботі на ринку',
+  'negotiation' => 'Переговори',
+  'reserved' => 'Резерв',
+  'deal' => 'Угода',
+  'aftercare' => 'Післяугодний супровід',
+  'archived' => 'Архів',
+];
+if ($stageRules) {
+  $stageLabels = [];
+  foreach ($stageRules as $code => $rule) {
+    $stageLabels[$code] = $rule['label'] ?? $code;
+  }
+}
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'add']); ?>
+
+<main class="tn-page">
+  <?php if ($pageStatus): ?>
+    <section class="tn-empty-state tn-empty-state--page">
+      <h1>Форма недоступна</h1>
+      <p><?php echo $h($pageStatus); ?></p>
+      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage'); ?>">До об’єктів</a>
+    </section>
+  <?php else: ?>
+    <section class="tn-page-hero tn-page-hero--catalog">
+      <div>
+        <p class="tn-kicker">Чернетка</p>
+        <h1>Новий об’єкт</h1>
+        <p>Базові дані й фото. Після збереження відкриється повний редактор.</p>
+      </div>
+      <div class="tn-page-hero__meta">
+        <strong>draft</strong>
+        <span>публікація після перевірки</span>
+      </div>
+    </section>
+
+    <section class="tn-admin-workspace">
+      <?php if ($actionStatus): ?>
+        <div class="tn-form-status is-visible" role="status"><?php echo $h($actionStatus); ?></div>
+      <?php endif; ?>
+
+      <form class="tn-property-edit-form" action="<?php echo $this->url->get('property/add'); ?>" method="post" enctype="multipart/form-data">
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Основа</p>
+              <h2>Картка об’єкта</h2>
+            </div>
+            <div class="tn-cabinet-actions">
+              <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage'); ?>">До списку</a>
+            </div>
+          </div>
+
+          <div class="tn-form-grid">
+            <label class="is-wide">
+              <span>Назва</span>
+              <input name="title" type="text" maxlength="220" required value="<?php echo $field('title'); ?>">
+            </label>
+            <label>
+              <span>Операція</span>
+              <select name="deal_type">
+                <?php foreach ($dealTypes as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('deal_type', $code, 'sale'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Тип об’єкта</span>
+              <select name="type_id" required>
+                <option value="0">Оберіть тип</option>
+                <?php foreach ($types as $type): ?>
+                  <option value="<?php echo $h($type['id'] ?? 0); ?>" <?php echo $selected('type_id', $type['id'] ?? 0); ?>><?php echo $h($type['name_uk'] ?? ''); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Локація</span>
+              <select name="location_id" required>
+                <option value="0">Оберіть локацію</option>
+                <?php foreach ($locations as $location): ?>
+                  <option value="<?php echo $h($location['id'] ?? 0); ?>" <?php echo $selected('location_id', $location['id'] ?? 0); ?>>
+                    <?php echo $h(trim(($location['city'] ?? '') . ', ' . ($location['region'] ?? ''), ', ')); ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Група / адреса</span>
+              <select name="property_group_id">
+                <option value="0">Без групи</option>
+                <?php foreach ($propertyGroups as $group): ?>
+                  <option value="<?php echo $h($group['id'] ?? 0); ?>" <?php echo $selected('property_group_id', $group['id'] ?? 0); ?>>
+                    <?php echo $h(trim(($group['city'] ?? '') . ' / ' . ($group['title'] ?? ''), ' /')); ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label class="is-wide">
+              <span>Нова група, якщо її ще немає</span>
+              <input name="new_group_title" type="text" maxlength="220" value="<?php echo $field('new_group_title'); ?>" placeholder="Наприклад: Львів, вул. Франка 12">
+            </label>
+            <label>
+              <span>Джерело</span>
+              <select name="source_type">
+                <?php foreach ($sources as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('source_type', $code, 'own'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Відповідальний</span>
+              <select name="agent_id">
+                <option value="0">Не призначено</option>
+                <?php foreach ($agents as $agent): ?>
+                  <option value="<?php echo $h($agent['id'] ?? 0); ?>" <?php echo $selected('agent_id', $agent['id'] ?? 0); ?>><?php echo $h($agent['public_name'] ?? ''); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Етап роботи</span>
+              <select name="operational_stage">
+                <?php foreach ($stageLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('operational_stage', $code, 'intake'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <?php if ($stageRules): ?>
+              <div class="tn-form-note is-wide">
+                <strong>Правило етапів</strong>
+                <span>Новий обʼєкт зазвичай стартує з первинного внесення. Для наступних етапів система перевірить відповідального, адресу, ціну, дедлайн наступної дії та готовність до публікації.</span>
+              </div>
+            <?php endif; ?>
+          </div>
+        </article>
+
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Параметри</p>
+          <h2>Початкові дані</h2>
+          <div class="tn-form-grid">
+            <label>
+              <span>Ціна</span>
+              <input name="price_amount" type="number" min="0" step="0.01" value="<?php echo $field('price_amount'); ?>">
+            </label>
+            <label>
+              <span>Валюта</span>
+              <select name="price_currency">
+                <?php foreach ($currencies as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('price_currency', $code, 'USD'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Період</span>
+              <select name="price_period">
+                <?php foreach ($periods as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('price_period', $code, 'total'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Мінімальна ціна</span>
+              <input name="min_price_amount" type="number" min="0" step="0.01" value="<?php echo $field('min_price_amount'); ?>">
+            </label>
+            <label>
+              <span>Тип комісії</span>
+              <select name="commission_type">
+                <?php foreach ($commissionTypes as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('commission_type', $code, 'none'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Комісія</span>
+              <input name="commission_value" type="number" min="0" step="0.01" value="<?php echo $field('commission_value'); ?>">
+            </label>
+            <label>
+              <span>Видимість</span>
+              <select name="visibility">
+                <?php foreach ($visibilityLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('visibility', $code, 'public'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Пріоритет продажу</span>
+              <select name="sale_priority">
+                <?php foreach ($priorityLabels as $code => $label): ?>
+                  <option value="<?php echo $h($code); ?>" <?php echo $selected('sale_priority', $code, 'normal'); ?>><?php echo $h($label); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label>
+              <span>Площа, м2</span>
+              <input name="area_total" type="number" min="0" step="0.01" value="<?php echo $field('area_total'); ?>">
+            </label>
+            <label>
+              <span>Ділянка</span>
+              <input name="land_area" type="number" min="0" step="0.01" value="<?php echo $field('land_area'); ?>">
+            </label>
+            <label>
+              <span>Кімнати</span>
+              <input name="rooms" type="number" min="0" step="0.5" value="<?php echo $field('rooms'); ?>">
+            </label>
+            <label class="is-wide">
+              <span>Адреса або орієнтир</span>
+              <input name="address" type="text" maxlength="255" value="<?php echo $field('address'); ?>">
+            </label>
+          </div>
+        </article>
+
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Медіа</p>
+          <h2>Фото об’єкта</h2>
+          <div class="tn-form-grid tn-dropzone-grid">
+            <label class="tn-dropzone" data-dropzone>
+              <span>Головне фото</span>
+              <input name="main_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-dropzone-input>
+              <strong>Перетягніть головне фото сюди</strong>
+              <small>Або натисніть, щоб вибрати файл. Сайт сам підготує фото після завантаження.</small>
+              <div class="tn-dropzone__preview" data-dropzone-preview></div>
+            </label>
+            <label class="tn-dropzone" data-dropzone>
+              <span>Галерея</span>
+              <input name="gallery_photos[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-dropzone-input>
+              <strong>Перетягніть фото галереї сюди</strong>
+              <small>Можна вибрати кілька файлів. Нові фото додадуться до галереї об’єкта.</small>
+              <div class="tn-dropzone__preview" data-dropzone-preview></div>
+            </label>
+          </div>
+          <p class="tn-auth-form__note">Медіа збережуться разом із новим об’єктом. Головне фото автоматично стане cover у каталозі.</p>
+        </article>
+
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Описи</p>
+          <h2>Публічний і службовий контекст</h2>
+          <div class="tn-form-grid">
+            <label class="is-wide">
+              <span>Короткий опис</span>
+              <textarea name="short_description" rows="3" maxlength="500"><?php echo $field('short_description'); ?></textarea>
+            </label>
+            <label class="is-wide">
+              <span>Повний опис</span>
+              <textarea name="description" rows="6"><?php echo $field('description'); ?></textarea>
+            </label>
+            <label class="is-wide">
+              <span>Наступна дія по об’єкту</span>
+              <input name="next_action_title" type="text" maxlength="180" value="<?php echo $field('next_action_title'); ?>">
+            </label>
+            <label>
+              <span>Дедлайн наступної дії</span>
+              <input name="next_action_due_at" type="datetime-local" value="<?php echo $field('next_action_due_at'); ?>">
+            </label>
+            <label class="is-wide">
+              <span>Примітка до наступної дії</span>
+              <input name="next_action_note" type="text" maxlength="500" value="<?php echo $field('next_action_note'); ?>">
+            </label>
+            <label class="is-wide">
+              <span>Примітка щодо джерела</span>
+              <input name="source_note" type="text" maxlength="500" value="<?php echo $field('source_note'); ?>">
+            </label>
+            <label class="is-wide">
+              <span>Внутрішня нотатка</span>
+              <textarea name="manager_note" rows="4"><?php echo $field('manager_note'); ?></textarea>
+            </label>
+          </div>
+          <div class="tn-submit-form__actions">
+            <button class="tn-btn tn-btn--accent" type="submit">Створити об’єкт</button>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage'); ?>">Скасувати</a>
+          </div>
+        </article>
+      </form>
+    </section>
+  <?php endif; ?>
+</main>

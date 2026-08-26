@@ -7,6 +7,7 @@ use Phalcon\Mvc\View;
 use Common\Services\AuthService;
 use Common\Services\DatabaseService;
 use Common\Services\EventService;
+use Common\Services\ImageOptimizerService;
 use Common\Services\MediaStorageService;
 use Interfaces\Web\Tenant\SessionOrganizationContext;
 use Interfaces\Web\Security\CsrfTokenManager;
@@ -45,8 +46,16 @@ $di->setShared('databaseService', function () {
     return new DatabaseService($this->getConfig()->database);
 });
 
+$di->setShared('telegramAutomationService', function () {
+    return new TelegramAutomationService($this->getShared('databaseService'));
+});
+
 $di->setShared('mediaStorageService', function () {
-    return new MediaStorageService($this->getShared('databaseService'));
+    return new MediaStorageService($this->getShared('databaseService'), $this->getShared('imageOptimizerService'));
+});
+
+$di->setShared('imageOptimizerService', function () {
+    return new ImageOptimizerService();
 });
 
 $di->setShared('authService', function () {

@@ -4,12 +4,18 @@ declare(strict_types=1);
 namespace Modules\Frontend\Controllers;
 
 use Modules\Frontend\Services\CatalogService;
+use Modules\Frontend\Services\AnalyticsService;
 use Common\Services\AuthService;
+use Common\Services\TelegramAutomationService;
 use Modules\Frontend\Services\ClientCaseService;
+use Modules\Frontend\Services\ContentService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
+use Modules\Frontend\Services\PropertyPresentationService;
 use Modules\Frontend\Services\PropertySubmissionService;
+use Modules\Frontend\Services\PublicPageService;
+use Modules\Spatial\Services\SpatialSceneService;
 use Phalcon\Mvc\Controller;
 use Throwable;
 
@@ -20,14 +26,39 @@ class ControllerBase extends Controller
         return $this->di->getShared('frontendCatalogService');
     }
 
+    protected function analyticsService(): AnalyticsService
+    {
+        return $this->di->getShared('frontendAnalyticsService');
+    }
+
+    protected function publicPageService(): PublicPageService
+    {
+        return $this->di->getShared('frontendPublicPageService');
+    }
+
     protected function clientCaseService(): ClientCaseService
     {
         return $this->di->getShared('frontendClientCaseService');
     }
 
+    protected function contentService(): ContentService
+    {
+        return $this->di->getShared('frontendContentService');
+    }
+
+    protected function spatialSceneService(): SpatialSceneService
+    {
+        return $this->di->getShared('spatialSceneService');
+    }
+
     protected function authService(): AuthService
     {
         return $this->di->getShared('authService');
+    }
+
+    protected function telegramAutomationService(): TelegramAutomationService
+    {
+        return $this->di->getShared('telegramAutomationService');
     }
 
     protected function currentUser(): ?array
@@ -64,6 +95,40 @@ class ControllerBase extends Controller
         return $user;
     }
 
+    protected function requireListingUser(): ?array
+    {
+        $user = $this->requireUser();
+
+        if (!$user) {
+            return null;
+        }
+
+        if (!in_array((string) ($user['role'] ?? ''), ['admin', 'manager', 'realtor', 'partner', 'developer'], true)) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            $this->response->redirect('cabinet');
+            return null;
+        }
+
+        return $user;
+    }
+
+    protected function requireAdmin(): ?array
+    {
+        $user = $this->requireUser();
+
+        if (!$user) {
+            return null;
+        }
+
+        if (!$this->authService()->isAdmin($user)) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            $this->response->redirect('cabinet');
+            return null;
+        }
+
+        return $user;
+    }
+
     protected function inboundRequestService(): InboundRequestService
     {
         return $this->di->getShared('frontendInboundRequestService');
@@ -82,6 +147,11 @@ class ControllerBase extends Controller
     protected function propertyMediaService(): PropertyMediaService
     {
         return $this->di->getShared('frontendPropertyMediaService');
+    }
+
+    protected function propertyPresentationService(): PropertyPresentationService
+    {
+        return $this->di->getShared('frontendPropertyPresentationService');
     }
 
     protected function submitInboundRequest(): string
@@ -115,5 +185,15 @@ class ControllerBase extends Controller
 
         $entry = sprintf("[%s] %s: %s%s", date('Y-m-d H:i:s'), $label, $error->getMessage(), PHP_EOL);
         @file_put_contents($directory . '/frontend.log', $entry, FILE_APPEND);
+    }
+
+    protected function json(array $payload, int $statusCode = 200): \Phalcon\Http\ResponseInterface
+    {
+        $this->view->disable();
+        $this->response->setStatusCode($statusCode);
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        return $this->response;
     }
 }

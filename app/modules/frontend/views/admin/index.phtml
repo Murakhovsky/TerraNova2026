@@ -1,0 +1,313 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$metrics = $metrics ?? [];
+$propertyStatus = $propertyStatus ?? [];
+$submissionStatus = $submissionStatus ?? [];
+$caseStages = $caseStages ?? [];
+$recentSubmissions = $recentSubmissions ?? [];
+$recentRequests = $recentRequests ?? [];
+$activeCases = $activeCases ?? [];
+$attentionProperties = $attentionProperties ?? [];
+$moderationProperties = $moderationProperties ?? [];
+$activeProperties = $activeProperties ?? [];
+$recentManagerActivities = $recentManagerActivities ?? [];
+$pageStatus = $pageStatus ?? null;
+$stageLabels = [
+    'new' => 'Новий',
+    'qualification' => 'Кваліфікація',
+    'need_defined' => 'Запит визначено',
+    'matching' => 'Підбір',
+    'viewing' => 'Показ',
+    'negotiation' => 'Переговори',
+    'deal' => 'Угода',
+    'aftercare' => 'Після угоди',
+    'repeat' => 'Повторний',
+    'paused' => 'Пауза',
+    'lost' => 'Втрачено',
+];
+$statusLabels = [
+    'draft' => 'Чернетка',
+    'submitted' => 'Подано',
+    'moderation' => 'Модерація',
+    'published' => 'Опубліковано',
+    'active' => 'Активний',
+    'hidden' => 'Приховано',
+    'needs_update' => 'Потрібне оновлення',
+    'reserved' => 'Резерв',
+    'sold' => 'Продано',
+    'archived' => 'Архів',
+    'new' => 'Нові',
+    'review' => 'В роботі',
+    'in_review' => 'На перевірці',
+    'needs_changes' => 'Потрібні правки',
+    'accepted' => 'Прийнято',
+    'approved' => 'Схвалено',
+    'rejected' => 'Відхилено',
+    'contacted' => 'Контакт був',
+    'qualified' => 'Кваліфіковано',
+    'viewing_planned' => 'Перегляд заплановано',
+    'viewing' => 'Перегляд',
+    'negotiation' => 'Переговори',
+    'won' => 'Успіх',
+    'lost' => 'Втрачено',
+    'closed' => 'Закрито',
+    'spam' => 'Спам',
+];
+$priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 'high' => 'Високий', 'urgent' => 'Терміново'];
+$intentLabels = [
+    'general_contact' => 'Загальний контакт',
+    'presentation' => 'Презентація',
+    'viewing' => 'Перегляд',
+    'similar_search' => 'Підібрати схожий',
+];
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'admin', 'brandSuffix' => 'ADMIN']); ?>
+
+<main class="tn-page">
+  <section class="tn-page-hero tn-page-hero--catalog">
+    <div>
+      <p class="tn-kicker">Admin / CRM</p>
+      <h1>Центр керування</h1>
+      <p>Каталог, модерація, заявки, кейси й об’єкти, які потребують уваги.</p>
+    </div>
+    <div class="tn-page-hero__meta">
+      <strong><?php echo (int) ($metrics['cases']['active'] ?? 0); ?></strong>
+      <span>активні кейси</span>
+    </div>
+  </section>
+
+  <section class="tn-admin-workspace">
+    <?php if ($pageStatus): ?>
+      <div class="tn-empty-state"><h2>Панель недоступна</h2><p><?php echo $h($pageStatus); ?></p></div>
+    <?php else: ?>
+      <section class="tn-admin-metrics" aria-label="Ключові показники">
+        <a href="<?php echo $this->url->get('property/manage'); ?>">
+          <span>Об’єкти</span>
+          <strong><?php echo (int) ($metrics['properties']['total'] ?? 0); ?></strong>
+          <small><?php echo (int) ($metrics['properties']['published'] ?? 0); ?> активні в каталозі</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/submissions'); ?>">
+          <span>Нові подачі</span>
+          <strong><?php echo (int) ($metrics['submissions']['new'] ?? 0); ?></strong>
+          <small><?php echo (int) ($metrics['submissions']['review'] ?? 0); ?> в роботі</small>
+        </a>
+        <a href="<?php echo $this->url->get('client-case/inbox?status=new'); ?>">
+          <span>Заявки</span>
+          <strong><?php echo (int) ($metrics['requests']['new'] ?? 0); ?></strong>
+          <small><?php echo (int) ($metrics['requests']['unlinked'] ?? 0); ?> без кейса</small>
+        </a>
+        <a href="<?php echo $this->url->get('client-case'); ?>">
+          <span>Гарячі кейси</span>
+          <strong><?php echo (int) ($metrics['cases']['hot'] ?? 0); ?></strong>
+          <small><?php echo (int) ($metrics['cases']['due'] ?? 0); ?> потребують контакту</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?quality=no_photo'); ?>">
+          <span>Без медіа</span>
+          <strong><?php echo (int) ($metrics['media']['published_without_cover'] ?? 0); ?></strong>
+          <small>активні без фото</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?quality=no_price'); ?>">
+          <span>Без ціни</span>
+          <strong><?php echo (int) ($metrics['properties']['without_price'] ?? 0); ?></strong>
+          <small>потрібно уточнити</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?quality=no_agent'); ?>">
+          <span>Без менеджера</span>
+          <strong><?php echo (int) ($metrics['properties']['without_agent'] ?? 0); ?></strong>
+          <small>треба призначити</small>
+        </a>
+        <a href="<?php echo $this->url->get('property/manage?status=needs_update'); ?>">
+          <span>На оновлення</span>
+          <strong><?php echo (int) ($metrics['properties']['needs_update'] ?? 0); ?></strong>
+          <small>зміни в картці</small>
+        </a>
+      </section>
+
+      <section class="tn-admin-dashboard-grid">
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Черга</p>
+              <h2>Подачі об’єктів</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/submissions'); ?>">Відкрити</a>
+          </div>
+          <?php if (!$recentSubmissions): ?>
+            <p class="tn-muted">Нових подач немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($recentSubmissions as $submission): ?>
+                <a href="<?php echo $this->url->get('property/submission/' . $submission['id']); ?>">
+                  <strong><?php echo $h($submission['title']); ?></strong>
+                  <span><?php echo $h($submission['submission_ref']); ?> / <?php echo $h($submission['city']); ?> / <?php echo $h($statusLabels[$submission['status']] ?? $submission['status']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">CRM</p>
+              <h2>Нові заявки</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case/inbox'); ?>">Заявки</a>
+          </div>
+          <?php if (!$recentRequests): ?>
+            <p class="tn-muted">Заявок поки немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($recentRequests as $request): ?>
+                <a href="<?php echo !empty($request['case_id']) ? $this->url->get('client-case/show/' . $request['case_id']) : $this->url->get('client-case/inbox'); ?>">
+                  <strong><?php echo $h($request['full_name']); ?></strong>
+                  <span><?php echo $h($intentLabels[$request['request_intent'] ?? 'general_contact'] ?? ($request['request_intent'] ?? 'Заявка')); ?> / <?php echo $h($request['phone'] ?: $request['email'] ?: 'контакт не вказано'); ?> / <?php echo $h($statusLabels[$request['status']] ?? $request['status']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Воронка</p>
+              <h2>Активні кейси</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case'); ?>">Всі кейси</a>
+          </div>
+          <?php if (!$activeCases): ?>
+            <p class="tn-muted">Активних кейсів немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($activeCases as $case): ?>
+                <a href="<?php echo $this->url->get('client-case/show/' . $case['id']); ?>">
+                  <strong><?php echo $h($case['public_id'] . ' / ' . $case['full_name']); ?></strong>
+                  <span><?php echo $h($stageLabels[$case['stage']] ?? $case['stage']); ?> / <?php echo $h($priorityLabels[$case['priority']] ?? $case['priority']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Каталог</p>
+              <h2>Потребують уваги</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage'); ?>">Об’єкти</a>
+          </div>
+          <?php if (!$attentionProperties): ?>
+            <p class="tn-muted">Критичних задач по каталогу немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($attentionProperties as $property): ?>
+                <a href="<?php echo $this->url->get('property/edit/' . $property['id']); ?>">
+                  <strong><?php echo $h($property['public_id'] . ' / ' . $property['title']); ?></strong>
+                  <span><?php echo $h($statusLabels[$property['status']] ?? $property['status']); ?> / <?php echo (int) $property['image_count']; ?> фото / <?php echo $h($property['city']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+      </section>
+
+      <section class="tn-admin-dashboard-grid">
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Модерація</p>
+              <h2>Об’єкти на модерації</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?status=moderation'); ?>">Відкрити</a>
+          </div>
+          <?php if (!$moderationProperties): ?>
+            <p class="tn-muted">Об’єктів на модерації немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($moderationProperties as $property): ?>
+                <a href="<?php echo $this->url->get('property/edit/' . $property['id']); ?>">
+                  <strong><?php echo $h($property['public_id'] . ' / ' . $property['title']); ?></strong>
+                  <span><?php echo $h($property['city']); ?> / <?php echo (int) $property['image_count']; ?> фото / <?php echo $h($property['updated_at']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Публічний каталог</p>
+              <h2>Активні об’єкти</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?status=active'); ?>">Відкрити</a>
+          </div>
+          <?php if (!$activeProperties): ?>
+            <p class="tn-muted">Активних об’єктів поки немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($activeProperties as $property): ?>
+                <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
+                  <strong><?php echo $h($property['public_id'] . ' / ' . $property['title']); ?></strong>
+                  <span><?php echo $h($property['city']); ?> / <?php echo (int) $property['image_count']; ?> фото / <?php echo $h($property['updated_at']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Команда</p>
+              <h2>Останні дії менеджерів</h2>
+            </div>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage'); ?>">Об’єкти</a>
+          </div>
+          <?php if (!$recentManagerActivities): ?>
+            <p class="tn-muted">Дій менеджерів ще немає.</p>
+          <?php else: ?>
+            <div class="tn-dashboard-list">
+              <?php foreach ($recentManagerActivities as $activity): ?>
+                <a href="<?php echo $this->url->get('property/edit/' . (int) $activity['property_id']); ?>">
+                  <strong><?php echo $h(($activity['user_name'] ?: 'Система') . ' / ' . $activity['title']); ?></strong>
+                  <span><?php echo $h($activity['public_id'] . ' / ' . $activity['property_title'] . ' / ' . $activity['created_at']); ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </article>
+      </section>
+
+      <section class="tn-admin-dashboard-grid tn-admin-dashboard-grid--compact">
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Статуси об’єктів</p>
+          <div class="tn-dashboard-bars">
+            <?php foreach ($propertyStatus as $row): ?>
+              <div><span><?php echo $h($statusLabels[$row['item']] ?? $row['item']); ?></span><strong><?php echo (int) $row['total']; ?></strong></div>
+            <?php endforeach; ?>
+          </div>
+        </article>
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Статуси подач</p>
+          <div class="tn-dashboard-bars">
+            <?php foreach ($submissionStatus as $row): ?>
+              <div><span><?php echo $h($statusLabels[$row['item']] ?? $row['item']); ?></span><strong><?php echo (int) $row['total']; ?></strong></div>
+            <?php endforeach; ?>
+          </div>
+        </article>
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Етапи кейсів</p>
+          <div class="tn-dashboard-bars">
+            <?php foreach ($caseStages as $row): ?>
+              <div><span><?php echo $h($stageLabels[$row['stage']] ?? $row['stage']); ?></span><strong><?php echo (int) $row['total']; ?></strong></div>
+            <?php endforeach; ?>
+          </div>
+        </article>
+      </section>
+    <?php endif; ?>
+  </section>
+</main>

@@ -10,6 +10,9 @@ define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
 require APP_PATH . '/config/environment.php';
 
+require BASE_PATH . '/vendor/autoload.php';
+Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
+
 try {
     /**
      * The FactoryDefault Dependency Injector automatically registers the services that
@@ -63,6 +66,10 @@ try {
         'users' => [
             'className' => 'Modules\Users\Module',
             'path'      => APP_PATH . '/modules/Users/Module.php',
+        ],
+        'spatial' => [
+            'className' => 'Modules\Spatial\Module',
+            'path'      => APP_PATH . '/modules/spatial/Module.php',
         ],
     ]);
 

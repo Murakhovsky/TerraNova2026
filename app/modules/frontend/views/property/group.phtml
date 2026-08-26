@@ -1,0 +1,259 @@
+﻿<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$absoluteUrl = static function (string $path = '') {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8001';
+
+    return $scheme . '://' . $host . '/' . ltrim($path, '/');
+};
+$group = $group ?? null;
+$properties = $properties ?? [];
+$locations = $locations ?? [];
+$managerClientCases = $managerClientCases ?? [];
+$pageStatus = $pageStatus ?? null;
+$actionStatus = $actionStatus ?? null;
+$selected = static fn($current, $expected) => (string) $current === (string) $expected ? 'selected' : '';
+$groupTypes = [
+    'address' => 'Адреса',
+    'building' => 'Будинок',
+    'complex' => 'Комплекс',
+    'project' => 'Проєкт',
+    'location' => 'Локація',
+];
+$statusLabels = [
+    'active' => 'Активна',
+    'archived' => 'Архів',
+];
+$propertyStatusLabels = [
+    'draft' => 'Чернетка',
+    'moderation' => 'Модерація',
+    'published' => 'Опубліковано',
+    'reserved' => 'Резерв',
+    'sold' => 'Продано',
+    'archived' => 'Архів',
+];
+$publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (string) $group['slug']) : '';
+$groupPdfUrl = $group ? $absoluteUrl('property/pdf/' . (string) $group['slug']) : '';
+$groupImage = trim((string) ($group['image_url'] ?? ''));
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'objects']); ?>
+
+<main class="tn-page">
+  <?php if (!$group): ?>
+    <section class="tn-empty-state tn-empty-state--page">
+      <h1>Групу не знайдено</h1>
+        <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться до списку об’єктів.'); ?></p>
+      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage'); ?>">До об’єктів</a>
+    </section>
+  <?php else: ?>
+    <section class="tn-page-hero tn-page-hero--catalog">
+      <div>
+        <p class="tn-kicker">Локація</p>
+        <h1><?php echo $h($group['title']); ?></h1>
+        <p><?php echo $h(trim(($group['city'] ?? '') . ', ' . ($group['region'] ?? ''), ', ')); ?><?php if (!empty($group['address'])): ?> / <?php echo $h($group['address']); ?><?php endif; ?></p>
+      </div>
+      <div class="tn-page-hero__meta">
+        <strong><?php echo (int) ($group['property_count'] ?? count($properties)); ?></strong>
+        <span>об’єктів у локації</span>
+        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/add'); ?>">Додати об’єкт</a>
+      </div>
+    </section>
+
+    <section class="tn-admin-workspace">
+      <?php if ($actionStatus): ?>
+        <div class="tn-form-status is-visible" role="status"><?php echo $h($actionStatus); ?></div>
+      <?php endif; ?>
+      <?php if ($pageStatus): ?>
+        <div class="tn-form-status is-visible" role="status"><?php echo $h($pageStatus); ?></div>
+      <?php endif; ?>
+
+      <div class="tn-cabinet-grid">
+        <article class="tn-admin-card">
+          <div class="tn-admin-card__head">
+            <div>
+              <p class="tn-kicker">Паспорт локації</p>
+              <h2>Назва, опис, фото і населений пункт</h2>
+            </div>
+          </div>
+          <form class="tn-property-edit-form" action="<?php echo $this->url->get('property/group/' . (int) $group['id']); ?>" method="post" enctype="multipart/form-data">
+            <div class="tn-form-grid">
+              <label class="is-wide">
+                <span>Назва</span>
+                <input name="title" type="text" maxlength="220" required value="<?php echo $h($group['title'] ?? ''); ?>">
+              </label>
+              <label>
+                <span>Тип групи</span>
+                <select name="group_type">
+                  <?php foreach ($groupTypes as $code => $label): ?>
+                    <option value="<?php echo $h($code); ?>" <?php echo $selected($group['group_type'] ?? 'address', $code); ?>><?php echo $h($label); ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>
+                <span>Населений пункт</span>
+                <select name="location_id">
+                  <?php foreach ($locations as $location): ?>
+                    <option value="<?php echo $h($location['id'] ?? 0); ?>" <?php echo $selected($group['location_id'] ?? 0, $location['id'] ?? 0); ?>>
+                      <?php echo $h(trim(($location['city'] ?? '') . ', ' . ($location['region'] ?? ''), ', ')); ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>
+                <span>Порядок</span>
+                <input name="sort_order" type="number" min="0" max="999999" step="10" value="<?php echo $h($group['sort_order'] ?? 100); ?>">
+              </label>
+              <label>
+                <span>Статус</span>
+                <select name="status">
+                  <?php foreach ($statusLabels as $code => $label): ?>
+                    <option value="<?php echo $h($code); ?>" <?php echo $selected($group['status'] ?? 'active', $code); ?>><?php echo $h($label); ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label class="is-wide">
+                <span>Адреса / орієнтир</span>
+                <input name="address" type="text" maxlength="255" value="<?php echo $h($group['address'] ?? ''); ?>">
+              </label>
+              <label class="is-wide">
+                <span>Опис локації</span>
+                <textarea name="description" rows="6"><?php echo $h($group['description'] ?? ''); ?></textarea>
+              </label>
+              <label class="is-wide">
+                <span>URL фото</span>
+                <input name="image_url" type="url" maxlength="500" value="<?php echo $h($groupImage); ?>" placeholder="/uploads/media/property_group/... або https://...">
+              </label>
+              <div class="tn-location-photo-editor is-wide">
+                <p class="tn-kicker">Фото локації</p>
+                <?php if ($groupImage !== ''): ?>
+                  <div class="tn-gallery__stage">
+                    <img class="tn-gallery__main" src="<?php echo $h($groupImage); ?>" alt="<?php echo $h($group['title']); ?>">
+                  </div>
+                <?php endif; ?>
+                <label class="tn-dropzone" data-dropzone>
+                  <span>Нове фото</span>
+                  <input name="main_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-dropzone-input>
+                  <strong>Перетягніть фото локації сюди</strong>
+                  <small>Після збереження файл стане основним зображенням цієї локації.</small>
+                  <div class="tn-dropzone__preview" data-dropzone-preview></div>
+                </label>
+              </div>
+            </div>
+            <div class="tn-submit-form__actions">
+              <button class="tn-btn tn-btn--accent" type="submit">Зберегти локацію</button>
+              <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/manage?property_group_id=' . (int) $group['id']); ?>">Об’єкти локації</a>
+            </div>
+          </form>
+        </article>
+
+        <article class="tn-admin-card">
+          <p class="tn-kicker">Зведення</p>
+          <h2>Стан локації</h2>
+          <div class="tn-detail-grid">
+            <div><span>Всього</span><strong><?php echo (int) ($group['property_count'] ?? 0); ?></strong></div>
+            <div><span>Опубліковано</span><strong><?php echo (int) ($group['published_count'] ?? 0); ?></strong></div>
+            <div><span>Чернетки</span><strong><?php echo (int) ($group['draft_count'] ?? 0); ?></strong></div>
+            <div><span>Резерв</span><strong><?php echo (int) ($group['reserved_count'] ?? 0); ?></strong></div>
+            <div><span>Продано</span><strong><?php echo (int) ($group['sold_count'] ?? 0); ?></strong></div>
+          </div>
+          <div class="tn-cabinet-actions">
+            <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage?property_group_id=' . (int) $group['id']); ?>">Відкрити список</a>
+            <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/presentation/' . $group['slug']); ?>">Публічна презентація</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $group['slug']); ?>" target="_blank" rel="noopener">PDF клієнту</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $group['slug'] . '?variant=partner'); ?>" target="_blank" rel="noopener">PDF партнеру</a>
+            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/add'); ?>">Додати ще</a>
+          </div>
+          <label class="tn-auth-form__note">
+            <span>Посилання для клієнта</span>
+            <input type="url" readonly value="<?php echo $h($publicPresentationUrl); ?>" aria-label="Посилання на публічну презентацію групи">
+          </label>
+          <label class="tn-auth-form__note">
+            <span>PDF для клієнта</span>
+            <input type="url" readonly value="<?php echo $h($groupPdfUrl); ?>" aria-label="Посилання на PDF групи">
+          </label>
+          <?php if ($managerClientCases): ?>
+            <form class="tn-presentation-share-form" action="<?php echo $this->url->get('property/presentationShare'); ?>" method="post" target="_blank">
+              <input type="hidden" name="slug" value="<?php echo $h($group['slug']); ?>">
+              <input type="hidden" name="return_url" value="property/group/<?php echo (int) $group['id']; ?>">
+              <label><span>Клієнтський кейс</span><select name="client_case_id" required><option value="">Оберіть клієнта</option><?php foreach ($managerClientCases as $caseOption): ?><option value="<?php echo (int) $caseOption['id']; ?>"><?php echo $h($caseOption['full_name'] . ' / ' . $caseOption['title']); ?></option><?php endforeach; ?></select></label>
+              <label><span>Версія</span><select name="variant"><option value="client">Клієнтська</option><option value="partner">Партнерська</option></select></label>
+              <div class="tn-presentation-share-form__channels"><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="email">Email</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="telegram">Telegram</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="viber">Viber</button></div>
+            </form>
+          <?php endif; ?>
+        </article>
+      </div>
+
+      <article class="tn-admin-card">
+        <div class="tn-admin-card__head">
+          <div>
+            <p class="tn-kicker">Презентація клієнту</p>
+            <h2>Об’єкти цієї локації</h2>
+          </div>
+        </div>
+        <?php if (!$properties): ?>
+          <p>У цій локації ще немає об’єктів.</p>
+        <?php else: ?>
+          <div class="tn-listing-table-wrap">
+            <table class="tn-listing-table tn-manage-table">
+              <thead>
+                <tr>
+                  <th>Об’єкт</th>
+                  <th>Статус</th>
+                  <th>Ціна</th>
+                  <th>Медіа</th>
+                  <th>Посилання</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($properties as $property): ?>
+                  <?php $presentationUrl = $absoluteUrl('property/show/' . (string) $property['slug']); ?>
+                  <tr>
+                    <td>
+                      <strong><?php echo $h($property['public_id']); ?></strong>
+                      <a class="tn-listing-title" href="<?php echo $this->url->get('property/edit/' . (int) $property['id']); ?>"><?php echo $h($property['title']); ?></a>
+                      <span><?php echo $h($property['type_name']); ?> / <?php echo $h($property['city']); ?></span>
+                    </td>
+                    <td><span class="tn-status-pill"><?php echo $h($propertyStatusLabels[$property['status']] ?? $property['status']); ?></span></td>
+                    <td>
+                      <?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?>
+                      <span><?php echo $property['area_total'] ? $h((float) $property['area_total']) . ' м²' : 'площа не вказана'; ?></span>
+                    </td>
+                    <td>
+                      <strong><?php echo (int) ($property['image_count'] ?? 0); ?></strong>
+                      <span><?php echo !empty($property['is_ready_to_publish']) ? 'готовий' : 'не готовий: ' . (int) ($property['readiness_missing_count'] ?? 0); ?></span>
+                    </td>
+                    <td>
+                      <?php if (($property['status'] ?? '') === 'published'): ?>
+                        <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Публічна картка</a>
+                        <input type="url" readonly value="<?php echo $h($presentationUrl); ?>" aria-label="Посилання на презентацію">
+                      <?php else: ?>
+                        <span>Публічна презентація після публікації</span>
+                      <?php endif; ?>
+                    </td>
+                    <td class="tn-listing-actions">
+                      <a href="<?php echo $this->url->get('property/edit/' . (int) $property['id']); ?>">Редагувати</a>
+                      <?php if (($property['status'] ?? '') === 'published'): ?>
+                        <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Перегляд</a>
+                      <?php endif; ?>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </article>
+    </section>
+  <?php endif; ?>
+</main>

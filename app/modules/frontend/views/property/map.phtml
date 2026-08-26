@@ -18,9 +18,9 @@ $catalogStatus = $catalogStatus ?? null;
 <main class="tn-page">
   <section class="tn-page-hero tn-page-hero--catalog">
     <div>
-      <p class="tn-kicker">Карта об’єктів</p>
-      <h1>Географія каталогу Terra Nova</h1>
-      <p>Швидкий огляд локацій, цін і доступних об’єктів. Карта працює як публічна точка входу: з неї можна перейти в картку, порівняння або повернутися до фільтрів каталогу.</p>
+      <p class="tn-kicker">Карта</p>
+      <h1>Об’єкти поруч</h1>
+      <p>Локації, ціни й доступні варіанти з переходом у картку або фільтри каталогу.</p>
     </div>
     <div class="tn-page-hero__meta">
       <strong><?php echo count($properties); ?></strong>
@@ -66,3 +66,7 @@ $catalogStatus = $catalogStatus ?? null;
 </main>
 
 <?php $this->partial('shared/mobile_dock', ['active' => 'map']); ?>
+
+<?php $this->partial('shared/public_footer', [
+    'text' => 'Карта доповнює каталог і допомагає швидко оцінити локацію перед запитом або переглядом.',
+]); ?>

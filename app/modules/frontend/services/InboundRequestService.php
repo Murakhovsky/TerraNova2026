@@ -35,6 +35,12 @@ class InboundRequestService
         $phone = trim((string) ($input['phone'] ?? ''));
         $email = trim((string) ($input['email'] ?? ''));
         $message = trim((string) ($input['message'] ?? $input['comment'] ?? ''));
+        $propertyId = $this->clientCases?->inboundPropertyId($input['property_id'] ?? null);
+        if ($propertyId) {
+            $input['property_id'] = $propertyId;
+        } else {
+            unset($input['property_id']);
+        }
 
         if ($name === '' || ($phone === '' && $email === '')) {
             return ['ok' => false, 'message' => self::VALIDATION_MESSAGE];
@@ -104,9 +110,68 @@ class InboundRequestService
         return ['ok' => true, 'message' => self::SUCCESS_MESSAGE];
     }
 
+    private function recordLeadSubmit(int $leadId, ?int $propertyId, string $sourcePage, array $utm): void
+    {
+        if (!$this->database || $leadId <= 0) {
+            return;
+        }
+
+        try {
+            $this->database->connection()->prepare('
+                INSERT INTO tn_analytics_events (
+                    event_type, entity_type, entity_id, property_id, lead_id, source_page,
+                    utm_source, utm_medium, utm_campaign, payload
+                ) VALUES (
+                    "lead_submit", "lead", :entity_id, :property_id, :lead_id, :source_page,
+                    :utm_source, :utm_medium, :utm_campaign, :payload
+                )
+            ')->execute([
+                'entity_id' => $leadId,
+                'property_id' => $propertyId,
+                'lead_id' => $leadId,
+                'source_page' => $this->nullable($sourcePage, 255),
+                'utm_source' => $utm['utm_source'] ?? null,
+                'utm_medium' => $utm['utm_medium'] ?? null,
+                'utm_campaign' => $utm['utm_campaign'] ?? null,
+                'payload' => json_encode([
+                    'utm_content' => $utm['utm_content'] ?? null,
+                    'utm_term' => $utm['utm_term'] ?? null,
+                ], JSON_UNESCAPED_UNICODE),
+            ]);
+        } catch (Throwable $e) {
+            $this->logError('lead-submit-analytics', $e);
+        }
+    }
+
     private function positiveInt(mixed $value): ?int
     {
         return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    private function utmValues(array $input, string $sourcePage): array
+    {
+        $query = [];
+        $parts = parse_url($sourcePage);
+        if (!empty($parts['query'])) {
+            parse_str((string) $parts['query'], $query);
+        }
+
+        $value = fn(string $key, int $limit): ?string => $this->nullable((string) ($input[$key] ?? $query[$key] ?? ''), $limit);
+
+        return [
+            'utm_source' => $value('utm_source', 120),
+            'utm_medium' => $value('utm_medium', 120),
+            'utm_campaign' => $value('utm_campaign', 160),
+            'utm_content' => $value('utm_content', 160),
+            'utm_term' => $value('utm_term', 160),
+        ];
+    }
+
+    private function nullable(string $value, int $limit): ?string
+    {
+        $value = trim($value);
+
+        return $value !== '' ? mb_substr($value, 0, $limit) : null;
     }
 
     private function requestRole(string $value): string
@@ -148,6 +213,25 @@ class InboundRequestService
         ];
 
         return $types[$value] ?? 'consultation';
+    }
+
+    private function requestIntent(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $intents = [
+            'general_contact' => 'general_contact',
+            'contact' => 'general_contact',
+            'consultation' => 'general_contact',
+            'presentation' => 'presentation',
+            'viewing' => 'viewing',
+            'visit' => 'viewing',
+            'showing' => 'viewing',
+            'similar_search' => 'similar_search',
+            'similar' => 'similar_search',
+            'підбір' => 'similar_search',
+        ];
+
+        return $intents[$value] ?? 'general_contact';
     }
 
     private function logError(string $label, Throwable|string $error): void

@@ -1,0 +1,148 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$filters = $filters ?? [];
+$users = $users ?? [];
+$userStats = $userStats ?? [];
+$roleCapabilities = $roleCapabilities ?? [];
+$pageStatus = $pageStatus ?? null;
+$actionStatus = $actionStatus ?? null;
+$selected = static fn($actual, $expected) => (string) $actual === (string) $expected ? 'selected' : '';
+$roleLabels = [
+    'buyer' => 'Покупець',
+    'seller' => 'Власник',
+    'investor' => 'Інвестор',
+    'realtor' => 'Рієлтор',
+    'developer' => 'Забудовник',
+    'partner' => 'Партнер',
+    'manager' => 'Менеджер',
+    'admin' => 'Адмін',
+];
+$statusLabels = [
+    'active' => 'Активний',
+    'pending' => 'Очікує',
+    'blocked' => 'Заблокований',
+];
+?>
+
+<?php $this->partial('shared/manager_header', ['active' => 'users', 'brandSuffix' => 'ADMIN']); ?>
+
+<main class="tn-page tn-admin-page">
+  <nav class="tn-breadcrumbs">
+    <a href="<?php echo $this->url->get(''); ?>">Головна</a>
+    <span>/</span>
+    <a href="<?php echo $this->url->get('admin'); ?>">Огляд</a>
+    <span>/</span>
+    <span>Користувачі</span>
+  </nav>
+
+  <section class="tn-listing-hero">
+    <div>
+      <p class="tn-kicker">Доступи</p>
+      <h1>Користувачі</h1>
+      <p>Акаунти, ролі, менеджери й блокування доступу без ручної роботи в БД.</p>
+    </div>
+    <div class="tn-hero-metric">
+      <span>Команда</span>
+      <strong><?php echo (int) ($userStats['team'] ?? 0); ?></strong>
+    </div>
+  </section>
+
+  <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
+  <?php if ($pageStatus): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
+
+  <section class="tn-admin-metrics" aria-label="Зведення користувачів">
+    <a href="<?php echo $this->url->get('admin/users'); ?>"><span>Всього</span><strong><?php echo (int) ($userStats['total'] ?? 0); ?></strong><small>усі акаунти</small></a>
+    <a href="<?php echo $this->url->get('admin/users?status=active'); ?>"><span>Активні</span><strong><?php echo (int) ($userStats['active'] ?? 0); ?></strong><small>можуть входити</small></a>
+    <a href="<?php echo $this->url->get('admin/users?role=manager'); ?>"><span>Менеджери</span><strong><?php echo (int) ($userStats['roles']['manager'] ?? 0); ?></strong><small>робочий доступ</small></a>
+    <a href="<?php echo $this->url->get('admin/users?role=admin'); ?>"><span>Адміни</span><strong><?php echo (int) ($userStats['roles']['admin'] ?? 0); ?></strong><small>повний доступ</small></a>
+    <a href="<?php echo $this->url->get('admin/users?status=blocked'); ?>"><span>Блок</span><strong><?php echo (int) ($userStats['blocked'] ?? 0); ?></strong><small>доступ закрито</small></a>
+  </section>
+
+  <section class="tn-admin-panel">
+    <form class="tn-crm-form" action="<?php echo $this->url->get('admin/users'); ?>" method="get">
+      <label><span>Пошук</span><input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Імʼя, email, телефон"></label>
+      <label><span>Роль</span><select name="role"><option value="">Усі</option><?php foreach ($roleLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['role'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+      <label><span>Статус</span><select name="status"><option value="">Усі</option><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['status'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+      <label><span>Сортування</span><select name="sort"><option value="newest" <?php echo $selected($filters['sort'] ?? '', 'newest'); ?>>Нові</option><option value="name" <?php echo $selected($filters['sort'] ?? '', 'name'); ?>>Імʼя</option><option value="role" <?php echo $selected($filters['sort'] ?? '', 'role'); ?>>Роль</option><option value="last_login" <?php echo $selected($filters['sort'] ?? '', 'last_login'); ?>>Останній вхід</option></select></label>
+      <button class="tn-btn tn-btn--dark" type="submit">Показати</button>
+      <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('admin/users'); ?>">Скинути</a>
+    </form>
+  </section>
+
+  <section class="tn-admin-panel">
+    <div class="tn-section-heading">
+      <div><p class="tn-kicker">Рольова модель</p><h2>Права доступу</h2></div>
+    </div>
+    <div class="tn-listing-table-wrap">
+      <table class="tn-listing-table">
+        <thead>
+          <tr><th>Роль</th><th>Каталог</th><th>Кабінет</th><th>Подати об’єкт</th><th>Listing</th><th>CRM</th><th>Admin</th></tr>
+        </thead>
+        <tbody>
+          <?php foreach ($roleLabels as $role => $label): ?>
+            <?php $capabilities = $roleCapabilities[$role] ?? []; ?>
+            <tr>
+              <td><strong><?php echo $h($label); ?></strong><span><?php echo $h($role); ?></span></td>
+              <?php foreach (['catalog', 'cabinet', 'submit_property', 'listing', 'crm', 'admin'] as $capability): ?>
+                <td><span class="tn-status-pill"><?php echo !empty($capabilities[$capability]) ? 'так' : 'ні'; ?></span></td>
+              <?php endforeach; ?>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tn-admin-panel">
+    <div class="tn-section-heading">
+      <div><p class="tn-kicker">Новий доступ</p><h2>Створити користувача</h2></div>
+    </div>
+    <form class="tn-crm-form" action="<?php echo $this->url->get('admin/createUser'); ?>" method="post">
+      <label><span>Імʼя</span><input name="full_name" type="text" maxlength="160" required></label>
+      <label><span>Email</span><input name="email" type="email" maxlength="160" required></label>
+      <label><span>Телефон</span><input name="phone" type="tel" maxlength="50"></label>
+      <label><span>Пароль</span><input name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+      <label><span>Роль</span><select name="role"><?php foreach ($roleLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $code === 'manager' ? 'selected' : ''; ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+      <label><span>Статус</span><select name="status"><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $code === 'active' ? 'selected' : ''; ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
+      <button class="tn-btn tn-btn--dark" type="submit">Створити</button>
+    </form>
+  </section>
+
+  <section class="tn-admin-panel">
+    <div class="tn-section-heading">
+      <div><p class="tn-kicker">Список</p><h2>Акаунти</h2></div>
+      <span class="tn-status-pill"><?php echo count($users); ?> у вибірці</span>
+    </div>
+
+    <?php if (!$users): ?>
+      <p class="tn-muted">Користувачів за цими фільтрами не знайдено.</p>
+    <?php else: ?>
+      <div class="tn-listing-table-wrap">
+        <table class="tn-listing-table tn-users-table">
+          <thead>
+            <tr><th>Користувач</th><th>Роль</th><th>Статус</th><th>Останній вхід</th><th>Оновити</th></tr>
+          </thead>
+          <tbody>
+            <?php foreach ($users as $user): ?>
+              <tr>
+                <td>
+                  <form id="user-form-<?php echo (int) $user['id']; ?>" action="<?php echo $this->url->get('admin/updateUser/' . (int) $user['id']); ?>" method="post"></form>
+                  <input form="user-form-<?php echo (int) $user['id']; ?>" name="full_name" type="text" maxlength="160" value="<?php echo $h($user['full_name']); ?>" aria-label="Імʼя">
+                  <span><?php echo $h($user['email']); ?><?php if ($user['phone']): ?> / <?php echo $h($user['phone']); ?><?php endif; ?></span>
+                  <input form="user-form-<?php echo (int) $user['id']; ?>" name="phone" type="tel" maxlength="50" value="<?php echo $h($user['phone']); ?>" aria-label="Телефон">
+                </td>
+                <td><select form="user-form-<?php echo (int) $user['id']; ?>" name="role" aria-label="Роль"><?php foreach ($roleLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($user['role'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></td>
+                <td><select form="user-form-<?php echo (int) $user['id']; ?>" name="status" aria-label="Статус"><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($user['status'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></td>
+                <td>
+                  <span><?php echo $h($user['last_login_at'] ?: 'ще не входив'); ?></span>
+                  <input form="user-form-<?php echo (int) $user['id']; ?>" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="Новий пароль" aria-label="Новий пароль">
+                </td>
+                <td><button class="tn-btn tn-btn--dark" form="user-form-<?php echo (int) $user['id']; ?>" type="submit">Зберегти</button></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </section>
+</main>

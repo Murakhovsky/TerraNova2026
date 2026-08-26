@@ -84,16 +84,7 @@ class TelegramBotEB
 
         }
         catch (TelegramException $e) {
-            $result = Request::sendMessage(array(
-                'chat_id' => 522625209,
-                'text'    => $e->getMessage(),
-            ));
-
-            // Log telegram errors
             TelegramLog::error($e);
-
-            // Uncomment this to output any errors (ONLY FOR DEVELOPMENT!)
-//            echo $e;
         }
         catch (TelegramLogException $e) {
             // Uncomment this to output log initialisation errors (ONLY FOR DEVELOPMENT!)
@@ -108,35 +99,6 @@ class TelegramBotEB
 
     public function handle(){
         return $this->bot->handle();
-
-        $inputData = Request::getInput();
-
-        $post = json_decode($inputData, true);
-        $oUpdate = new Update($post, 'yuramurahovsky');
-
-
-        $inputDataArr = $this->messageToArray($inputData);
-
-        $yura_id = 522625209;
-        if($inputDataArr["chat_id"] != $yura_id){
-//            $this->saveMessage($inputDataArr);
-        }else {
-//            $this->sendMessage(json_encode($inputDataArr , JSON_UNESCAPED_UNICODE));
-//               $this->sendMediaGroup($yura_id, $inputDataArr["text"]);
-
-//            $result = Request::sendMessage(array(
-//                'chat_id' => 522625209,
-//                'text'    => $inputData,
-//            ));
-
-//          Dice
-//            if(Request::sendDice(array(
-//                'text'    => 'massage',
-//                'chat_id' => 522625209
-//            ))){
-//                $this->sendAction("true");
-//            };
-        }
     }
 
     public function sendMediaGroup($yura_id, $advert_id){

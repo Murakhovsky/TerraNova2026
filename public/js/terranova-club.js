@@ -77,8 +77,11 @@
     }
   };
 
-  document.querySelectorAll('[data-save-property]').forEach((button) => {
-    button.addEventListener('click', () => {
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target.closest('[data-save-property]') : null;
+
+    if (target instanceof HTMLElement) {
+      const button = target;
       const id = button.dataset.saveProperty;
 
       if (!id) {
@@ -94,7 +97,7 @@
       writeSaved([...savedItems]);
       syncSavedButtons();
       syncFavouriteList();
-    });
+    }
   });
 
   document.querySelectorAll('[data-toggle-text]:not([data-save-property])').forEach((button) => {
@@ -107,35 +110,16 @@
     });
   });
 
-  document.querySelectorAll('[data-property-gallery]').forEach((gallery) => {
-    const mainImage = gallery.querySelector('[data-gallery-main]');
-    const openLink = gallery.querySelector('[data-gallery-open]');
-    const thumbs = gallery.querySelectorAll('[data-gallery-thumb]');
+  document.querySelectorAll('[data-request-intent]').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const intent = trigger.getAttribute('data-request-intent');
+      const input = document.querySelector('[data-request-intent-input]');
 
-    thumbs.forEach((button) => {
-      button.addEventListener('click', () => {
-        const image = button.dataset.image;
-        const alt = button.dataset.alt || '';
-
-        if (!image || !mainImage) {
-          return;
-        }
-
-        mainImage.src = image;
-        mainImage.alt = alt;
-
-        if (openLink) {
-          openLink.href = image;
-        }
-
-        thumbs.forEach((item) => item.classList.remove('is-active'));
-        button.classList.add('is-active');
-      });
+      if (intent && input) {
+        input.value = intent;
+      }
     });
   });
-
-  syncSavedButtons();
-  syncFavouriteList();
 
   document.querySelectorAll('[data-inbound-request-form]').forEach((form) => {
     form.addEventListener('submit', (event) => {
@@ -147,4 +131,98 @@
       }
     });
   });
+
+  const analyticsParams = new URLSearchParams(window.location.search);
+  const storedCampaign = (() => {
+    const campaign = {
+      utm_source: analyticsParams.get('utm_source') || '',
+      utm_medium: analyticsParams.get('utm_medium') || '',
+      utm_campaign: analyticsParams.get('utm_campaign') || '',
+    };
+
+    if (campaign.utm_source || campaign.utm_medium || campaign.utm_campaign) {
+      try {
+        sessionStorage.setItem('tn_campaign', JSON.stringify(campaign));
+      } catch (error) {
+        return campaign;
+      }
+    }
+
+    try {
+      return JSON.parse(sessionStorage.getItem('tn_campaign') || 'null') || campaign;
+    } catch (error) {
+      return campaign;
+    }
+  })();
+
+  const analyticsEventFor = (element) => {
+    const explicit = element.getAttribute('data-analytics-event');
+    if (explicit) {
+      return explicit;
+    }
+
+    const href = element.getAttribute('href') || '';
+    if (href.startsWith('tel:')) {
+      return 'phone_click';
+    }
+    if (href.startsWith('viber:')) {
+      return 'viber_click';
+    }
+    if (href.includes('t.me/') || href.startsWith('tg:')) {
+      return 'telegram_click';
+    }
+
+    return '';
+  };
+
+  document.querySelectorAll('form[method="post"], form:not([method])').forEach((form) => {
+    Object.entries(storedCampaign).forEach(([name, value]) => {
+      if (!value || form.querySelector(`[name="${name}"]`)) {
+        return;
+      }
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    const link = event.target instanceof Element ? event.target.closest('a, [data-analytics-event]') : null;
+    if (!(link instanceof HTMLElement)) {
+      return;
+    }
+
+    const eventType = analyticsEventFor(link);
+    if (!eventType) {
+      return;
+    }
+
+    const payload = new FormData();
+    payload.set('event_type', eventType);
+    payload.set('property_id', document.body.dataset.propertyId || '');
+    payload.set('source_page', window.location.pathname + window.location.search);
+    payload.set('target', link.getAttribute('href') || '');
+    payload.set('label', (link.textContent || '').trim());
+    payload.set('utm_source', storedCampaign.utm_source || '');
+    payload.set('utm_medium', storedCampaign.utm_medium || '');
+    payload.set('utm_campaign', storedCampaign.utm_campaign || '');
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/analytics/track', payload);
+      return;
+    }
+
+    fetch('/analytics/track', { method: 'POST', body: payload, credentials: 'same-origin', keepalive: true }).catch(() => {});
+  });
+
+  document.addEventListener('tn:content-updated', () => {
+    syncSavedButtons();
+    syncFavouriteList();
+  });
+
+  syncSavedButtons();
+  syncFavouriteList();
 })();
