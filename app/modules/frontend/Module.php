@@ -129,6 +129,28 @@ class Module implements ModuleDefinitionInterface
         $router->add('/cos', [
             'namespace' => 'Modules\\Frontend\\Controllers',
             'module' => 'frontend',
+            'controller' => 'company_os',
+            'action' => 'index',
+            'lang' => 'en',
+        ]);
+
+        $router->add('/cos/{lang:[a-z]{2}}', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'company_os',
+            'action' => 'index',
+        ]);
+
+        $router->add('/cos/{lang:[a-z]{2}}/domains/{slug:[a-z0-9-]+}', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
+            'controller' => 'company_os',
+            'action' => 'domain',
+        ]);
+
+        $router->add('/cos/control-center', [
+            'namespace' => 'Modules\\Frontend\\Controllers',
+            'module' => 'frontend',
             'controller' => 'cos',
             'action' => 'index',
         ]);

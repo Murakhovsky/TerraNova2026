@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="<?php echo htmlspecialchars((string) ($lang ?? 'uk'), ENT_QUOTES, 'UTF-8'); ?>">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,6 +24,7 @@
     <title><?php echo $escape($pageTitle); ?></title>
 
     <link rel="stylesheet" href="<?php echo $this->url->get('css/terranova-club.css'); ?>">
+    <?php if (!empty($cosSite)): ?><link rel="stylesheet" href="<?php echo $this->url->get('css/cos-site.css'); ?>"><?php endif; ?>
     <link rel="shortcut icon" type="image/x-icon" href="<?php echo $this->url->get('img/favicon.ico'); ?>">
 
     <script type="application/ld+json">
@@ -36,9 +37,10 @@
       }
     </script>
   </head>
-  <body>
+  <body class="<?php echo !empty($cosSite) ? 'cos-site' : ''; ?>">
     <?php echo $this->getContent(); ?>
 
     <script src="/js/terranova-club.js?v=20260709" defer></script>
+    <?php if (!empty($cosSite)): ?><script src="<?php echo $this->url->get('js/cos-site.js'); ?>" defer></script><?php endif; ?>
   </body>
 </html>
