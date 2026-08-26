@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Terra\Modules\Cli\Tasks;
 
 use Kernel\Queue\Service\QueueWorker;
+use Kernel\Queue\Contract\JobQueueInterface;
 use Phalcon\Cli\Task;
 
 final class QueueTask extends Task
@@ -18,5 +19,12 @@ final class QueueTask extends Task
             $processed++;
         }
         echo sprintf('Processed: %d', $processed) . PHP_EOL;
+    }
+
+    public function replayDeadAction(?string $organizationId = null, ?string $jobId = null): void
+    {
+        /** @var JobQueueInterface $queue */
+        $queue = $this->getDI()->getShared('cosJobQueue');
+        echo sprintf('Dead jobs replayed: %d', $queue->replayDead($organizationId ?: null, $jobId ?: null)) . PHP_EOL;
     }
 }

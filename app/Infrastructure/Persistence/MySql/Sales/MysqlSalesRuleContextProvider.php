@@ -22,17 +22,18 @@ final readonly class MysqlSalesRuleContextProvider implements RuleContextProvide
         if (in_array($event->aggregateType, ['deal', 'client_case'], true)) {
             $statement = $this->connection->prepare(
                 'SELECT id, public_id, status, stage, priority, next_contact_at, assigned_user_id, updated_at '
-                . 'FROM tn_client_cases WHERE id = :id LIMIT 1'
+                . 'FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
             );
-            $statement->execute(['id' => $event->aggregateId]);
+            $statement->execute(['id' => $event->aggregateId, 'organization_id' => $event->organizationId]);
             $deal = $statement->fetch(PDO::FETCH_ASSOC) ?: [];
             $context['deal'] = $deal;
             $context['client_case'] = $deal;
         } elseif ($event->aggregateType === 'lead') {
             $statement = $this->connection->prepare(
-                'SELECT id, status, role, deal_type, client_case_id, property_id, updated_at FROM tn_leads WHERE id = :id LIMIT 1'
+                'SELECT id, status, role, deal_type, client_case_id, property_id, updated_at FROM tn_leads '
+                . 'WHERE id = :id AND organization_id = :organization_id LIMIT 1'
             );
-            $statement->execute(['id' => $event->aggregateId]);
+            $statement->execute(['id' => $event->aggregateId, 'organization_id' => $event->organizationId]);
             $context['lead'] = $statement->fetch(PDO::FETCH_ASSOC) ?: [];
         }
         return $context;

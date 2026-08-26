@@ -6,6 +6,7 @@ namespace Domains\Sales\Automation\Rule;
 use Domains\Sales\Automation\Event\DealCreated;
 use Domains\Sales\Automation\Event\DealStageChanged;
 use Domains\Sales\Automation\Event\FollowupOverdue;
+use Domains\Sales\Automation\Event\CallCompleted;
 use Kernel\Rule\Rule;
 
 final class SalesRuleCatalog
@@ -15,7 +16,7 @@ final class SalesRuleCatalog
     {
         return [
             new Rule(
-                'sales-new-deal-qualification-v1', $organizationId, 'Новий Deal потребує кваліфікації', DealCreated::TYPE,
+                $this->id($organizationId, 'sales-new-deal-qualification-v1'), $organizationId, 'Новий Deal потребує кваліфікації', DealCreated::TYPE,
                 [
                     ['field' => 'deal.status', 'operator' => '=', 'value' => 'active'],
                     ['field' => 'deal.stage', 'operator' => '=', 'value' => 'new'],
@@ -29,7 +30,7 @@ final class SalesRuleCatalog
                 priority: 10,
             ),
             new Rule(
-                'sales-stage-without-next-contact-v1', $organizationId, 'Активний Deal без наступного контакту', DealStageChanged::TYPE,
+                $this->id($organizationId, 'sales-stage-without-next-contact-v1'), $organizationId, 'Активний Deal без наступного контакту', DealStageChanged::TYPE,
                 [
                     ['field' => 'deal.status', 'operator' => '=', 'value' => 'active'],
                     ['field' => 'deal.stage', 'operator' => 'IN', 'value' => ['qualification', 'need_defined', 'matching', 'viewing', 'negotiation']],
@@ -44,7 +45,7 @@ final class SalesRuleCatalog
                 priority: 20,
             ),
             new Rule(
-                'sales-overdue-followup-escalation-v1', $organizationId, 'Прострочений follow-up потребує ескалації', FollowupOverdue::TYPE,
+                $this->id($organizationId, 'sales-overdue-followup-escalation-v1'), $organizationId, 'Прострочений follow-up потребує ескалації', FollowupOverdue::TYPE,
                 [
                     ['field' => 'deal.status', 'operator' => '=', 'value' => 'active'],
                     ['field' => 'activity.completed_at', 'operator' => 'IS_NULL'],
@@ -58,6 +59,24 @@ final class SalesRuleCatalog
                 ],
                 priority: 30,
             ),
+            new Rule(
+                $this->id($organizationId, 'rule-call-analysis-v1'), $organizationId, 'Analyze completed sales calls', CallCompleted::TYPE,
+                [],
+                [
+                    'type' => 'CREATE_ACTION', 'action_type' => 'agent.run.sales_intelligence',
+                    'target_type' => '{{event.aggregate_type}}', 'target_id' => '{{event.aggregate_id}}',
+                    'parameters' => ['question' => 'Analyze the completed call and recommend the safest high-value next sales action.'],
+                    'execution_mode' => 'AUTO', 'risk_level' => 'LOW',
+                ],
+                priority: 10,
+            ),
         ];
+    }
+
+    private function id(string $organizationId, string $code): string
+    {
+        return $organizationId === 'default'
+            ? $code
+            : substr(hash('sha256', $organizationId . ':rule:' . $code), 0, 32);
     }
 }

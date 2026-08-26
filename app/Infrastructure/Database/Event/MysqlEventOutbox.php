@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Infrastructure\Database\Event;
 
 use Kernel\Event\Contract\EventOutboxInterface;
-use Kernel\Event\DomainEvent;
+use Kernel\Event\OutboxMessage;
 use PDO;
-use RuntimeException;
+use Throwable;
 
 final readonly class MysqlEventOutbox implements EventOutboxInterface
 {
@@ -14,39 +14,98 @@ final readonly class MysqlEventOutbox implements EventOutboxInterface
     {
     }
 
-    public function append(DomainEvent $event): void
+    public function claim(string $workerId): ?OutboxMessage
     {
-        if (!$this->connection->inTransaction()) {
-            throw new RuntimeException('Outbox events must be appended inside the business transaction.');
+        $this->connection->beginTransaction();
+        try {
+            $row = $this->connection->query(
+                "SELECT * FROM cos_event_outbox WHERE status IN ('PENDING', 'FAILED') AND available_at <= NOW(6) "
+                . 'ORDER BY available_at, id LIMIT 1 FOR UPDATE SKIP LOCKED'
+            )->fetch(PDO::FETCH_ASSOC);
+            if ($row === false) {
+                $this->connection->commit();
+                return null;
+            }
+            $update = $this->connection->prepare(
+                "UPDATE cos_event_outbox SET status = 'PROCESSING', attempts = attempts + 1, "
+                . 'locked_at = NOW(6), locked_by = :worker WHERE id = :id AND status IN (\'PENDING\', \'FAILED\')'
+            );
+            $update->execute(['worker' => $workerId, 'id' => $row['id']]);
+            if ($update->rowCount() !== 1) {
+                $this->connection->rollBack();
+                return null;
+            }
+            $this->connection->commit();
+            return new OutboxMessage(
+                (int) $row['id'],
+                (string) $row['event_id'],
+                (string) $row['organization_id'],
+                (int) $row['attempts'] + 1,
+                $workerId,
+            );
+        } catch (Throwable $error) {
+            if ($this->connection->inTransaction()) {
+                $this->connection->rollBack();
+            }
+            throw $error;
         }
+    }
 
+    public function markPublished(OutboxMessage $message): void
+    {
         $statement = $this->connection->prepare(
-            'INSERT INTO cos_events '
-            . '(id, organization_id, type, aggregate_type, aggregate_id, payload, metadata, schema_version, '
-            . 'correlation_id, causation_id, actor_type, actor_id, occurred_at) '
-            . 'VALUES (:id, :organization_id, :type, :aggregate_type, :aggregate_id, :payload, :metadata, '
-            . ':schema_version, :correlation_id, :causation_id, :actor_type, :actor_id, :occurred_at)'
+            "UPDATE cos_event_outbox SET status = 'PUBLISHED', published_at = NOW(6), locked_at = NULL, "
+            . "locked_by = NULL, last_error = NULL WHERE id = :id AND status = 'PROCESSING' AND locked_by = :worker"
+        );
+        $statement->execute(['id' => $message->id, 'worker' => $message->claimedBy]);
+    }
+
+    public function markFailed(OutboxMessage $message, Throwable $error): void
+    {
+        $dead = $message->attempts >= 10;
+        $delay = min(3600, 5 * (2 ** max(0, $message->attempts - 1)));
+        $statement = $this->connection->prepare(
+            'UPDATE cos_event_outbox SET status = :status, available_at = DATE_ADD(NOW(6), INTERVAL :delay SECOND), '
+            . 'locked_at = NULL, locked_by = NULL, last_error = :error WHERE id = :id AND locked_by = :worker'
         );
         $statement->execute([
-            'id' => $event->id,
-            'organization_id' => $event->organizationId,
-            'type' => $event->type,
-            'aggregate_type' => $event->aggregateType,
-            'aggregate_id' => $event->aggregateId,
-            'payload' => json_encode($event->payload, JSON_THROW_ON_ERROR),
-            'metadata' => json_encode($event->metadata, JSON_THROW_ON_ERROR),
-            'schema_version' => $event->metadata->schemaVersion,
-            'correlation_id' => $event->metadata->correlationId,
-            'causation_id' => $event->metadata->causationId,
-            'actor_type' => $event->metadata->actorType,
-            'actor_id' => $event->metadata->actorId,
-            'occurred_at' => $event->occurredAt->format('Y-m-d H:i:s.u'),
+            'status' => $dead ? 'DEAD' : 'FAILED',
+            'delay' => $dead ? 0 : $delay,
+            'error' => mb_substr($error->getMessage(), 0, 65535),
+            'id' => $message->id,
+            'worker' => $message->claimedBy,
         ]);
+    }
 
-        $outbox = $this->connection->prepare(
-            "INSERT INTO cos_event_outbox (event_id, organization_id, status, available_at) "
-            . "VALUES (:event_id, :organization_id, 'PENDING', NOW(6))"
+    public function recoverTimedOut(int $leaseSeconds = 300): int
+    {
+        $leaseSeconds = max(30, min($leaseSeconds, 86400));
+        $statement = $this->connection->prepare(
+            "UPDATE cos_event_outbox SET status = CASE WHEN attempts >= 10 THEN 'DEAD' ELSE 'FAILED' END, "
+            . "available_at = NOW(6), locked_at = NULL, locked_by = NULL, last_error = 'Publisher lease timed out' "
+            . "WHERE status = 'PROCESSING' AND locked_at < DATE_SUB(NOW(6), INTERVAL :lease SECOND)"
         );
-        $outbox->execute(['event_id' => $event->id, 'organization_id' => $event->organizationId]);
+        $statement->execute(['lease' => $leaseSeconds]);
+        return $statement->rowCount();
+    }
+
+    public function replay(?string $organizationId = null, ?string $eventId = null): int
+    {
+        $where = ["status IN ('PUBLISHED', 'FAILED', 'DEAD')"];
+        $params = [];
+        if ($organizationId !== null) {
+            $where[] = 'organization_id = :organization_id';
+            $params['organization_id'] = $organizationId;
+        }
+        if ($eventId !== null) {
+            $where[] = 'event_id = :event_id';
+            $params['event_id'] = $eventId;
+        }
+        $statement = $this->connection->prepare(
+            "UPDATE cos_event_outbox SET status = 'PENDING', attempts = 0, available_at = NOW(6), published_at = NULL, "
+            . 'locked_at = NULL, locked_by = NULL, last_error = NULL WHERE ' . implode(' AND ', $where)
+        );
+        $statement->execute($params);
+        return $statement->rowCount();
     }
 }

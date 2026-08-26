@@ -10,7 +10,11 @@ use Throwable;
 
 class PropertyMediaService
 {
-    public function __construct(private DatabaseService $database, private MediaStorageService $mediaStorage)
+    public function __construct(
+        private DatabaseService $database,
+        private MediaStorageService $mediaStorage,
+        private string $organizationId,
+    )
     {
     }
 
@@ -56,7 +60,7 @@ class PropertyMediaService
     public function adminProperties(array $filters): array
     {
         $where = ['1 = 1'];
-        $params = [];
+        $params = ['organization_id' => $this->organizationId];
 
         if (($filters['q'] ?? '') !== '') {
             $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.slug LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
@@ -99,6 +103,7 @@ class PropertyMediaService
                 (
                     SELECT COUNT(*) FROM tn_leads inbound_request_count
                     WHERE inbound_request_count.property_id = p.id
+                      AND inbound_request_count.organization_id = :organization_id
                 ) AS inbound_request_count
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id

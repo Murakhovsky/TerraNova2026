@@ -25,6 +25,9 @@ final class StructuredDecisionValidator
         if (!is_array($actions)) {
             throw new InvalidArgumentException('Agent proposed_actions must be an array.');
         }
+        if (count($actions) > 10) {
+            throw new InvalidArgumentException('Agent may propose at most 10 actions.');
+        }
 
         $validated = [];
         foreach ($actions as $index => $action) {
@@ -38,6 +41,15 @@ final class StructuredDecisionValidator
             if (isset($action['parameters']) && !is_array($action['parameters'])) {
                 throw new InvalidArgumentException(sprintf('Action %s parameters must be an object.', $type));
             }
+            $encodedParameters = json_encode($action['parameters'] ?? [], JSON_THROW_ON_ERROR);
+            if (strlen($encodedParameters) > 32768) {
+                throw new InvalidArgumentException(sprintf('Action %s parameters are too large.', $type));
+            }
+            foreach (['target_type', 'target_id'] as $targetField) {
+                if (isset($action[$targetField]) && !is_string($action[$targetField])) {
+                    throw new InvalidArgumentException(sprintf('Action %s %s must be a string.', $type, $targetField));
+                }
+            }
             $validated[] = [
                 'type' => $type,
                 'parameters' => $action['parameters'] ?? [],
@@ -46,12 +58,17 @@ final class StructuredDecisionValidator
             ];
         }
 
+        $evidence = $output['evidence'] ?? [];
+        if (!is_array($evidence) || count($evidence) > 20) {
+            throw new InvalidArgumentException('Agent evidence must contain at most 20 items.');
+        }
+
         return new AgentResult(
             $decision,
             $reason,
             (float) $confidence,
             $validated,
-            is_array($output['evidence'] ?? null) ? $output['evidence'] : [],
+            $evidence,
         );
     }
 }

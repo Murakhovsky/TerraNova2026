@@ -27,9 +27,14 @@ use Kernel\Approval\Contract\ApprovalRepositoryInterface;
 use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Event\Contract\EventStoreInterface;
+use Kernel\Event\Contract\EventOutboxInterface;
+use Kernel\Event\Contract\EventConsumptionRepositoryInterface;
 use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
+use Kernel\Event\OutboxMessage;
+use Kernel\Event\Service\DurableEventDispatcher;
+use Kernel\Event\Service\OutboxPublisher;
 use Kernel\Action\Event\ActionExecutionFinished;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Module\DomainModuleRegistry;
@@ -68,9 +73,15 @@ spl_autoload_register(static function (string $class) use ($root): void {
 $pdo = new PDO('sqlite::memory:');
 $transactions = new TransactionManager($pdo);
 
-$eventStore = new class implements EventStoreInterface {
+$outboxRecords = [];
+$eventStore = new class($outboxRecords) implements EventStoreInterface {
     /** @var list<DomainEvent> */ public array $events = [];
-    public function append(DomainEvent $event): void { $this->events[] = $event; }
+    public function __construct(private array &$outboxRecords) {}
+    public function append(DomainEvent $event): void {
+        $this->events[] = $event;
+        $id = count($this->outboxRecords) + 1;
+        $this->outboxRecords[$id] = ['event' => $event, 'status' => 'PENDING', 'attempts' => 0];
+    }
     public function find(string $eventId): ?DomainEvent { foreach ($this->events as $event) if ($event->id === $eventId) return $event; return null; }
     public function findByAggregate(string $organizationId, string $aggregateType, string $aggregateId, int $limit = 100): array {
         return array_slice(array_values(array_filter($this->events, static fn (DomainEvent $event): bool =>
@@ -161,6 +172,7 @@ $queue = new class implements JobQueueInterface {
     public function complete(Job $job): void { $this->jobs[$job->id]['status'] = 'COMPLETED'; }
     public function fail(Job $job, string $error): void { $this->jobs[$job->id]['status'] = $job->attempts >= $job->maxAttempts ? 'DEAD' : 'FAILED'; $this->jobs[$job->id]['error'] = $error; }
     public function recoverTimedOut(): int { return 0; }
+    public function replayDead(?string $organizationId = null, ?string $jobId = null): int { return 0; }
 };
 
 $agentRuns = [];
@@ -241,13 +253,39 @@ $worker = new QueueWorker($queue, [
     new ActionExecutionJobHandler($actionService),
 ]);
 $bus = new EventBus($eventStore, $transactions);
-$bus->subscribe(CallCompleted::TYPE, $ruleHandler);
+$outbox = new class($outboxRecords) implements EventOutboxInterface {
+    public function __construct(private array &$records) {}
+    public function claim(string $workerId): ?OutboxMessage {
+        foreach ($this->records as $id => &$record) {
+            if (!in_array($record['status'], ['PENDING', 'FAILED'], true)) continue;
+            $record['status'] = 'PROCESSING'; $record['attempts']++;
+            return new OutboxMessage($id, $record['event']->id, $record['event']->organizationId, $record['attempts'], $workerId);
+        }
+        return null;
+    }
+    public function markPublished(OutboxMessage $message): void { $this->records[$message->id]['status'] = 'PUBLISHED'; }
+    public function markFailed(OutboxMessage $message, Throwable $error): void { $this->records[$message->id]['status'] = 'FAILED'; }
+    public function recoverTimedOut(int $leaseSeconds = 300): int { return 0; }
+    public function replay(?string $organizationId = null, ?string $eventId = null): int { return 0; }
+};
+$consumptions = new class implements EventConsumptionRepositoryInterface {
+    private array $completed = [];
+    public function begin(DomainEvent $event, string $consumerName): bool { return !isset($this->completed[$event->id . ':' . $consumerName]); }
+    public function complete(DomainEvent $event, string $consumerName): void { $this->completed[$event->id . ':' . $consumerName] = true; }
+    public function fail(DomainEvent $event, string $consumerName, Throwable $error): void {}
+    public function reset(?string $organizationId = null, ?string $eventId = null): int { $this->completed = []; return 0; }
+};
+$publisher = new OutboxPublisher(
+    $outbox,
+    $eventStore,
+    new DurableEventDispatcher($consumptions, ['kernel.rule-engine.v1' => $ruleHandler]),
+);
 
 $bus->publish(CallCompleted::create(
     'event-call-1', 'default', 'deal-184', 421, 'client_thinking',
     new EventMetadata('correlation-184', null, 'USER', 'manager-7'), 'transcript-9',
 ));
-while ($worker->runOne($workerId)) {}
+while ($publisher->runOne($workerId . '-events') || $worker->runOne($workerId)) {}
 
 $eventTypes = array_map(static fn (DomainEvent $event): string => $event->type, $eventStore->events);
 $jobStatuses = array_values(array_map(static fn (array $record): string => $record['status'], $queue->jobs));

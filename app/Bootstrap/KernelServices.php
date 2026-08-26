@@ -6,10 +6,16 @@ use Kernel\Action\Service\ActionService;
 use Kernel\Agent\Service\AgentRuntime;
 use Kernel\Agent\Service\RoutedAgentContextBuilder;
 use Kernel\Agent\Service\StructuredDecisionValidator;
+use Kernel\Agent\Service\SensitiveContextRedactor;
 use Kernel\Approval\Service\ApprovalService;
+use Kernel\Configuration\Service\ConfigurationProvisioner;
+use Kernel\Configuration\Service\ConfigurationValidator;
 use Kernel\Event\EventBus;
-use Kernel\Event\Service\EventDispatcher;
+use Kernel\Event\Service\DurableEventDispatcher;
+use Kernel\Event\Service\OutboxPublisher;
+use Kernel\Event\Service\OutboxReplayService;
 use Kernel\Module\DomainModuleRegistry;
+use Kernel\Operations\Service\WorkerSupervisor;
 use Kernel\Policy\Service\ActionPolicyService;
 use Kernel\Policy\Service\PolicyEngine;
 use Kernel\Queue\Handler\ActionExecutionJobHandler;
@@ -19,17 +25,20 @@ use Kernel\Rule\Service\ConditionEvaluator;
 use Kernel\Rule\Service\DeterministicProcessEngine;
 use Kernel\Rule\Service\QueuedActionProposalSink;
 use Kernel\Rule\Service\RoutedRuleContextProvider;
-use Kernel\Rule\Service\RuleEngine;
 use Kernel\Rule\Service\RuleEngineEventHandler;
 
 $di->setShared('cosDomainModules', fn (): array => [$this->getShared('salesDomainModule')]);
 $di->setShared('cosDomainRegistry', fn (): DomainModuleRegistry => new DomainModuleRegistry($this->getShared('cosDomainModules')));
+$di->setShared('cosConfigurationValidator', fn (): ConfigurationValidator => new ConfigurationValidator($this->getShared('cosDomainRegistry')));
+$di->setShared('cosConfigurationProvisioner', fn (): ConfigurationProvisioner => new ConfigurationProvisioner(
+    $this->getShared('cosDomainRegistry'),
+    $this->getShared('cosConfigurationValidator'),
+    $this->getShared('cosConfigurationStore'),
+));
 
 $di->setShared('cosConditionEvaluator', fn (): ConditionEvaluator => new ConditionEvaluator());
-$di->setShared('cosRuleEngine', fn (): RuleEngine => new RuleEngine($this->getShared('cosConditionEvaluator')));
 $di->setShared('cosDeterministicProcessEngine', fn (): DeterministicProcessEngine => new DeterministicProcessEngine($this->getShared('cosConditionEvaluator')));
 $di->setShared('cosPolicyEngine', fn (): PolicyEngine => new PolicyEngine($this->getShared('cosConditionEvaluator')));
-$di->setShared('cosEventDispatcher', fn (): EventDispatcher => new EventDispatcher());
 
 $di->setShared('cosRuleContextProvider', fn (): RoutedRuleContextProvider => new RoutedRuleContextProvider($this->getShared('cosDomainRegistry')));
 $di->setShared('cosActionProposalSink', fn (): QueuedActionProposalSink => new QueuedActionProposalSink(
@@ -44,11 +53,26 @@ $di->setShared('cosRuleEngineEventHandler', fn (): RuleEngineEventHandler => new
     $this->getShared('cosDeterministicProcessEngine'),
 ));
 
-$di->setShared('eventBus', function (): EventBus {
-    $bus = new EventBus($this->getShared('eventStore'), $this->getShared('cosTransactionManager'));
-    $bus->subscribe('*', $this->getShared('cosRuleEngineEventHandler'));
-    return $bus;
-});
+$di->setShared('eventBus', fn (): EventBus => new EventBus(
+    $this->getShared('eventStore'),
+    $this->getShared('cosTransactionManager'),
+));
+$di->setShared('cosDurableEventDispatcher', fn (): DurableEventDispatcher => new DurableEventDispatcher(
+    $this->getShared('cosEventConsumptions'),
+    ['kernel.rule-engine.v1' => $this->getShared('cosRuleEngineEventHandler')],
+));
+$di->setShared('cosOutboxPublisher', fn (): OutboxPublisher => new OutboxPublisher(
+    $this->getShared('cosEventOutbox'),
+    $this->getShared('eventStore'),
+    $this->getShared('cosDurableEventDispatcher'),
+    $this->getShared('cosMetrics'),
+    $this->getShared('cosLogger'),
+));
+$di->setShared('cosOutboxReplay', fn (): OutboxReplayService => new OutboxReplayService(
+    $this->getShared('cosEventOutbox'),
+    $this->getShared('cosEventConsumptions'),
+    $this->getShared('cosTransactionManager'),
+));
 
 $di->setShared('cosActionExecutor', fn (): ActionExecutor => new ActionExecutor($this->getShared('cosDomainRegistry')->actionHandlers()));
 $di->setShared('cosActionService', fn (): ActionService => new ActionService(
@@ -82,6 +106,7 @@ $di->setShared('cosAgentRuntime', fn (): AgentRuntime => new AgentRuntime(
     new StructuredDecisionValidator(),
     $this->getShared('cosAgentRunRepository'),
     $this->getShared('cosDecisionRepository'),
+    new SensitiveContextRedactor(),
 ));
 $di->setShared('cosAgentRunJobHandler', fn (): AgentRunJobHandler => new AgentRunJobHandler(
     $this->getShared('cosAgentRuntime'),
@@ -93,4 +118,11 @@ $di->setShared('cosActionExecutionJobHandler', fn (): ActionExecutionJobHandler 
 $di->setShared('cosQueueWorker', fn (): QueueWorker => new QueueWorker($this->getShared('cosJobQueue'), [
     $this->getShared('cosAgentRunJobHandler'),
     $this->getShared('cosActionExecutionJobHandler'),
-]));
+    $this->getShared('salesCrmInboxJobHandler'),
+], $this->getShared('cosMetrics'), $this->getShared('cosLogger')));
+$di->setShared('cosWorkerSupervisor', fn (): WorkerSupervisor => new WorkerSupervisor(
+    $this->getShared('cosOutboxPublisher'),
+    $this->getShared('cosQueueWorker'),
+    $this->getShared('cosMetrics'),
+    $this->getShared('cosLogger'),
+));

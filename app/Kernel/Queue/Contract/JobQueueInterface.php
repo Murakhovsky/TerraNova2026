@@ -11,4 +11,5 @@ interface JobQueueInterface
     public function complete(Job $job): void;
     public function fail(Job $job, string $error): void;
     public function recoverTimedOut(): int;
+    public function replayDead(?string $organizationId = null, ?string $jobId = null): int;
 }

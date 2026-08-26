@@ -4,12 +4,13 @@ declare(strict_types=1);
 namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
+use Domains\Sales\Application\DTO\RecordCompletedCallCommand;
+use Domains\Sales\Application\UseCase\CompleteSalesCall;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
 use Domains\Sales\Automation\Event\ClientCaseCreated;
-use Domains\Sales\Automation\Event\CallCompleted;
 use Domains\Sales\Automation\Event\DealStageChanged;
 use Domains\Sales\Automation\Event\LeadChanged;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use PDO;
@@ -20,8 +21,9 @@ class ClientCaseService
     public function __construct(
         private DatabaseService $database,
         private EventBus $eventBus,
-        private TransactionManager $transactions,
+        private TransactionManagerInterface $transactions,
         private string $organizationId,
+        private CompleteSalesCall $completeSalesCall,
     ) {
     }
 
@@ -40,7 +42,7 @@ class ClientCaseService
     public function cases(array $filters): array
     {
         $where = ['1 = 1'];
-        $params = [];
+        $params = ['organization_id' => $this->organizationId];
 
         if (($filters['q'] ?? '') !== '') {
             $where[] = '(c.public_id LIKE :q OR c.title LIKE :q OR p.full_name LIKE :q OR p.phone LIKE :q OR p.email LIKE :q OR p.telegram LIKE :q)';
@@ -72,20 +74,20 @@ class ClientCaseService
                 u.full_name AS manager_name,
                 (
                     SELECT COUNT(*) FROM tn_leads l
-                    WHERE l.client_case_id = c.id
+                    WHERE l.client_case_id = c.id AND l.organization_id = c.organization_id
                 ) AS inquiry_count,
                 (
                     SELECT COUNT(*) FROM tn_client_case_activities a
-                    WHERE a.client_case_id = c.id
+                    WHERE a.client_case_id = c.id AND a.organization_id = c.organization_id
                 ) AS activity_count,
                 (
                     SELECT COUNT(*) FROM tn_client_case_property_matches m
-                    WHERE m.client_case_id = c.id
+                    WHERE m.client_case_id = c.id AND m.organization_id = c.organization_id
                 ) AS match_count
             FROM tn_client_cases c
-            INNER JOIN tn_people p ON p.id = c.person_id
-            LEFT JOIN tn_users u ON u.id = c.assigned_user_id
-            WHERE ' . implode(' AND ', $where) . '
+            INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id
+            LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id
+            WHERE c.organization_id = :organization_id AND ' . implode(' AND ', $where) . '
             ORDER BY ' . $orderBy . '
             LIMIT 150
         ', $params);
@@ -96,8 +98,9 @@ class ClientCaseService
         $rows = $this->database->fetchAll('
             SELECT stage, COUNT(*) AS total
             FROM tn_client_cases
+            WHERE organization_id = :organization_id
             GROUP BY stage
-        ');
+        ', ['organization_id' => $this->organizationId]);
 
         $stats = ['all' => 0];
         foreach ($this->stages() as $stage) {
@@ -131,13 +134,13 @@ class ClientCaseService
                 pt.name_uk AS property_type_name,
                 l.city AS location_city
             FROM tn_client_cases c
-            INNER JOIN tn_people p ON p.id = c.person_id
-            LEFT JOIN tn_users u ON u.id = c.assigned_user_id
+            INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id
+            LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id
             LEFT JOIN tn_property_types pt ON pt.id = c.property_type_id
             LEFT JOIN tn_locations l ON l.id = c.location_id
-            WHERE c.id = :id
+            WHERE c.id = :id AND c.organization_id = :organization_id
             LIMIT 1
-        ', ['id' => $id]);
+        ', ['id' => $id, 'organization_id' => $this->organizationId]);
     }
 
     public function inboundRequests(int $caseId): array
@@ -146,9 +149,9 @@ class ClientCaseService
             SELECT l.*, pr.public_id AS property_public_id, pr.slug AS property_slug, pr.title AS property_title
             FROM tn_leads l
             LEFT JOIN tn_properties pr ON pr.id = l.property_id
-            WHERE l.client_case_id = :case_id
+            WHERE l.client_case_id = :case_id AND l.organization_id = :organization_id
             ORDER BY l.created_at DESC, l.id DESC
-        ', ['case_id' => $caseId]);
+        ', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
     }
 
     public function activities(int $caseId): array
@@ -156,11 +159,11 @@ class ClientCaseService
         return $this->database->fetchAll('
             SELECT a.*, u.full_name AS user_name
             FROM tn_client_case_activities a
-            LEFT JOIN tn_users u ON u.id = a.user_id
-            WHERE a.client_case_id = :case_id
+            LEFT JOIN tn_users u ON u.id = a.user_id AND u.organization_id = a.organization_id
+            WHERE a.client_case_id = :case_id AND a.organization_id = :organization_id
             ORDER BY a.created_at DESC, a.id DESC
             LIMIT 80
-        ', ['case_id' => $caseId]);
+        ', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
     }
 
     public function propertyMatches(int $caseId): array
@@ -180,9 +183,9 @@ class ClientCaseService
                 ORDER BY i.sort_order, i.id
                 LIMIT 1
             )
-            WHERE m.client_case_id = :case_id
+            WHERE m.client_case_id = :case_id AND m.organization_id = :organization_id
             ORDER BY FIELD(m.match_status, "interested", "viewing", "sent", "suggested", "deal", "rejected"), m.updated_at DESC
-        ', ['case_id' => $caseId]);
+        ', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
     }
 
     public function requestMatches(int $caseId): array
@@ -190,10 +193,10 @@ class ClientCaseService
         return $this->database->fetchAll('
             SELECT rm.*, l.full_name, l.phone, l.email, l.deal_type, l.status, l.created_at AS request_created_at
             FROM tn_client_case_request_matches rm
-            INNER JOIN tn_leads l ON l.id = rm.inbound_request_id
-            WHERE rm.client_case_id = :case_id
+            INNER JOIN tn_leads l ON l.id = rm.inbound_request_id AND l.organization_id = rm.organization_id
+            WHERE rm.client_case_id = :case_id AND rm.organization_id = :organization_id
             ORDER BY rm.created_at DESC, rm.id DESC
-        ', ['case_id' => $caseId]);
+        ', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
     }
 
     public function unlinkedInboundRequests(): array
@@ -202,10 +205,10 @@ class ClientCaseService
             SELECT l.*, p.public_id AS property_public_id, p.title AS property_title
             FROM tn_leads l
             LEFT JOIN tn_properties p ON p.id = l.property_id
-            WHERE l.client_case_id IS NULL
+            WHERE l.client_case_id IS NULL AND l.organization_id = :organization_id
             ORDER BY l.created_at DESC, l.id DESC
             LIMIT 80
-        ');
+        ', ['organization_id' => $this->organizationId]);
     }
 
     public function openCaseOptions(): array
@@ -213,11 +216,11 @@ class ClientCaseService
         return $this->database->fetchAll('
             SELECT c.id, c.public_id, c.title, c.type, c.stage, p.full_name
             FROM tn_client_cases c
-            INNER JOIN tn_people p ON p.id = c.person_id
-            WHERE c.status IN ("active", "paused")
+            INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id
+            WHERE c.status IN ("active", "paused") AND c.organization_id = :organization_id
             ORDER BY c.updated_at DESC, c.id DESC
             LIMIT 100
-        ');
+        ', ['organization_id' => $this->organizationId]);
     }
 
     public function create(array $input, ?array $user = null): array
@@ -288,10 +291,11 @@ class ClientCaseService
                     email = :email,
                     telegram = :telegram,
                     notes = :notes
-                WHERE id = :id
+                WHERE id = :id AND organization_id = :organization_id
             ');
             $personStatement->execute([
                 'id' => (int) $case['person_id'],
+                'organization_id' => $this->organizationId,
                 'full_name' => $this->limit((string) ($input['full_name'] ?? $case['full_name']), 160),
                 'phone' => $this->nullable((string) ($input['phone'] ?? ''), 50),
                 'email' => $this->nullableEmail((string) ($input['email'] ?? '')),
@@ -316,10 +320,11 @@ class ClientCaseService
                     parameters_json = :parameters_json,
                     next_contact_at = :next_contact_at,
                     closed_at = :closed_at
-                WHERE id = :id
+                WHERE id = :id AND organization_id = :organization_id
             ');
             $caseStatement->execute([
                 'id' => $caseId,
+                'organization_id' => $this->organizationId,
                 'title' => $this->caseTitle($input, (string) ($input['full_name'] ?? $case['full_name'] ?? '')),
                 'type' => $this->allowed((string) ($input['type'] ?? 'buy'), $this->types(), 'buy'),
                 'status' => $newStatus,
@@ -386,12 +391,32 @@ class ClientCaseService
                 ['note', 'call', 'message', 'meeting', 'viewing', 'offer', 'status_change', 'deal', 'task'],
                 'note',
             );
+            if ($activityType === 'call' && $completedAt !== null) {
+                $eventId = $this->eventId();
+                $callResult = $this->limit((string) ($input['call_result'] ?? $input['result'] ?? ''), 100);
+                $this->completeSalesCall->execute(new RecordCompletedCallCommand(
+                    $this->organizationId,
+                    (string) $caseId,
+                    (string) $case['person_id'],
+                    isset($user['id']) ? (string) $user['id'] : null,
+                    $this->limit((string) ($input['title'] ?? 'Дзвінок'), 180),
+                    $this->nullableText((string) ($input['body'] ?? '')),
+                    max(0, (int) ($input['duration_seconds'] ?? $input['duration'] ?? 0)),
+                    $callResult !== '' ? $callResult : 'completed',
+                    $eventId,
+                    $eventId,
+                    isset($user['id']) ? 'USER' : 'SYSTEM',
+                    isset($user['id']) ? (string) $user['id'] : 'system',
+                ));
+                return ['ok' => true, 'message' => 'Дію додано.'];
+            }
             $this->transactions->transactional(function () use ($case, $caseId, $input, $user, $completedAt, $activityType): void {
                 $connection = $this->database->connection();
                 $connection->prepare('
-                    INSERT INTO tn_client_case_activities (client_case_id, person_id, user_id, activity_type, title, body, due_at, completed_at)
-                    VALUES (:client_case_id, :person_id, :user_id, :activity_type, :title, :body, :due_at, :completed_at)
+                    INSERT INTO tn_client_case_activities (organization_id, client_case_id, person_id, user_id, activity_type, title, body, due_at, completed_at)
+                    VALUES (:organization_id, :client_case_id, :person_id, :user_id, :activity_type, :title, :body, :due_at, :completed_at)
                 ')->execute([
+                    'organization_id' => $this->organizationId,
                     'client_case_id' => $caseId,
                     'person_id' => (int) $case['person_id'],
                     'user_id' => $user['id'] ?? null,
@@ -407,28 +432,10 @@ class ClientCaseService
                     $connection->prepare('
                         UPDATE tn_client_cases
                         SET next_contact_at = NULL
-                        WHERE id = :case_id
-                    ')->execute(['case_id' => $caseId]);
+                        WHERE id = :case_id AND organization_id = :organization_id
+                    ')->execute(['case_id' => $caseId, 'organization_id' => $this->organizationId]);
                 }
 
-                if ($activityType === 'call' && $completedAt !== null) {
-                    $eventId = $this->eventId();
-                    $callResult = $this->limit((string) ($input['call_result'] ?? $input['result'] ?? ''), 100);
-                    $this->eventBus->publish(CallCompleted::create(
-                        $eventId,
-                        $this->organizationId,
-                        (string) $caseId,
-                        max(0, (int) ($input['duration_seconds'] ?? $input['duration'] ?? 0)),
-                        $callResult !== '' ? $callResult : 'completed',
-                        new EventMetadata(
-                            $eventId,
-                            null,
-                            isset($user['id']) ? 'USER' : 'SYSTEM',
-                            isset($user['id']) ? (string) $user['id'] : 'system',
-                        ),
-                        'client-case-activity:' . $activityId,
-                    ));
-                }
             });
 
             return ['ok' => true, 'message' => 'Дію додано.'];
@@ -454,17 +461,18 @@ class ClientCaseService
                 SET person_id = :person_id,
                     client_case_id = :client_case_id,
                     updated_at = NOW()
-                WHERE id = :request_id
+                WHERE id = :request_id AND organization_id = :organization_id
             ')->execute([
                 'person_id' => (int) $case['person_id'],
                 'client_case_id' => $caseId,
                 'request_id' => $requestId,
+                'organization_id' => $this->organizationId,
             ]);
 
                 $pdo->prepare('
-                INSERT IGNORE INTO tn_client_case_request_matches (client_case_id, inbound_request_id, relation_type)
-                VALUES (:client_case_id, :request_id, "context")
-            ')->execute(['client_case_id' => $caseId, 'request_id' => $requestId]);
+                INSERT IGNORE INTO tn_client_case_request_matches (organization_id, client_case_id, inbound_request_id, relation_type)
+                VALUES (:organization_id, :client_case_id, :request_id, "context")
+            ')->execute(['organization_id' => $this->organizationId, 'client_case_id' => $caseId, 'request_id' => $requestId]);
 
                 $this->eventBus->publish(LeadChanged::create(
                     $this->eventId(),
@@ -501,14 +509,15 @@ class ClientCaseService
             $score = $this->score($input['score'] ?? null);
 
             $this->database->connection()->prepare('
-                INSERT INTO tn_client_case_property_matches (client_case_id, property_id, match_status, score, note)
-                VALUES (:client_case_id, :property_id, :match_status, :score, :note)
+                INSERT INTO tn_client_case_property_matches (organization_id, client_case_id, property_id, match_status, score, note)
+                VALUES (:organization_id, :client_case_id, :property_id, :match_status, :score, :note)
                 ON DUPLICATE KEY UPDATE
                     match_status = VALUES(match_status),
                     score = VALUES(score),
                     note = VALUES(note),
                     updated_at = NOW()
             ')->execute([
+                'organization_id' => $this->organizationId,
                 'client_case_id' => $caseId,
                 'property_id' => $propertyId,
                 'match_status' => $status,
@@ -548,9 +557,10 @@ class ClientCaseService
                     score = :score,
                     note = :note,
                     updated_at = NOW()
-                WHERE id = :id
+                WHERE id = :id AND organization_id = :organization_id
             ')->execute([
                 'id' => $matchId,
+                'organization_id' => $this->organizationId,
                 'match_status' => $status,
                 'score' => $score,
                 'note' => $note,
@@ -572,20 +582,16 @@ class ClientCaseService
 
     public function registerInboundRequest(int $caseId, int $requestId): void
     {
-        try {
-            $this->database->connection()->prepare('
-                UPDATE tn_client_cases
-                SET inbound_request_id = COALESCE(inbound_request_id, :request_id)
-                WHERE id = :case_id
-            ')->execute(['case_id' => $caseId, 'request_id' => $requestId]);
+        $this->database->connection()->prepare('
+            UPDATE tn_client_cases
+            SET inbound_request_id = COALESCE(inbound_request_id, :request_id)
+            WHERE id = :case_id AND organization_id = :organization_id
+        ')->execute(['case_id' => $caseId, 'request_id' => $requestId, 'organization_id' => $this->organizationId]);
 
-            $this->database->connection()->prepare('
-                INSERT IGNORE INTO tn_client_case_request_matches (client_case_id, inbound_request_id, relation_type)
-                VALUES (:case_id, :request_id, "source")
-            ')->execute(['case_id' => $caseId, 'request_id' => $requestId]);
-        } catch (Throwable $e) {
-            $this->logError('client-case-register-inbound-request', $e);
-        }
+        $this->database->connection()->prepare('
+            INSERT IGNORE INTO tn_client_case_request_matches (organization_id, client_case_id, inbound_request_id, relation_type)
+            VALUES (:organization_id, :case_id, :request_id, "source")
+        ')->execute(['organization_id' => $this->organizationId, 'case_id' => $caseId, 'request_id' => $requestId]);
     }
 
     public function ensurePersonAndCaseFromInbound(array $input, ?array $user = null): array
@@ -599,38 +605,39 @@ class ClientCaseService
         }
 
         try {
-            $pdo = $this->database->connection();
-            $pdo->beginTransaction();
+            return $this->transactions->transactional(function () use ($name, $phone, $email, $input, $user): array {
+                $pdo = $this->database->connection();
+                $personId = $this->findOrCreatePerson($pdo, [
+                    'full_name' => $name,
+                    'phone' => $phone,
+                    'email' => $email,
+                    'telegram' => $this->nullable((string) ($input['telegram'] ?? ''), 80),
+                    'notes' => null,
+                ]);
 
-            $personId = $this->findOrCreatePerson($pdo, [
-                'full_name' => $name,
-                'phone' => $phone,
-                'email' => $email,
-                'telegram' => $this->nullable((string) ($input['telegram'] ?? ''), 80),
-                'notes' => null,
-            ]);
+                $message = $this->nullableText((string) ($input['message'] ?? $input['comment'] ?? ''));
+                $caseId = $this->insertCase($pdo, $personId, [
+                    'full_name' => $name,
+                    'type' => $this->caseTypeFromInbound($input),
+                    'title' => $this->caseTitleFromInbound($input, $name),
+                    'stage' => 'new',
+                    'status' => 'active',
+                    'priority' => 'normal',
+                    'source' => 'site-inbound-request',
+                    'description' => $message,
+                    'currency' => 'USD',
+                ], $user);
+                $this->eventBus->publish(ClientCaseCreated::create(
+                    $this->eventId(),
+                    $this->organizationId,
+                    (string) $caseId,
+                    ['person_id' => $personId, 'stage' => 'new', 'source' => 'site-inbound-request'],
+                    $this->metadata($user),
+                ));
 
-            $message = $this->nullableText((string) ($input['message'] ?? $input['comment'] ?? ''));
-            $caseId = $this->insertCase($pdo, $personId, [
-                'full_name' => $name,
-                'type' => $this->caseTypeFromInbound($input),
-                'title' => $this->caseTitleFromInbound($input, $name),
-                'stage' => 'new',
-                'status' => 'active',
-                'priority' => 'normal',
-                'source' => 'site-inbound-request',
-                'description' => $message,
-                'currency' => 'USD',
-            ], $user);
-
-            $pdo->commit();
-
-            return ['person_id' => $personId, 'client_case_id' => $caseId];
+                return ['person_id' => $personId, 'client_case_id' => $caseId];
+            });
         } catch (Throwable $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-
             $this->logError('client-case-ensure-from-inbound', $e);
 
             return ['person_id' => null, 'client_case_id' => null];
@@ -641,16 +648,17 @@ class ClientCaseService
     {
         $statement = $pdo->prepare('
             INSERT INTO tn_client_cases (
-                public_id, person_id, type, title, status, stage, priority, assigned_user_id, source,
+                organization_id, public_id, person_id, type, title, status, stage, priority, assigned_user_id, source,
                 budget_min, budget_max, currency, area_min, area_max, description, parameters_json,
                 started_at, next_contact_at
             ) VALUES (
-                :public_id, :person_id, :type, :title, :status, :stage, :priority, :assigned_user_id, :source,
+                :organization_id, :public_id, :person_id, :type, :title, :status, :stage, :priority, :assigned_user_id, :source,
                 :budget_min, :budget_max, :currency, :area_min, :area_max, :description, :parameters_json,
                 NOW(), :next_contact_at
             )
         ');
         $statement->execute([
+            'organization_id' => $this->organizationId,
             'public_id' => $this->nextPublicId($pdo, 'tn_client_cases', 'CC'),
             'person_id' => $personId,
             'type' => $this->allowed((string) ($input['type'] ?? 'buy'), $this->types(), 'buy'),
@@ -683,9 +691,10 @@ class ClientCaseService
                     phone = COALESCE(:phone, phone),
                     email = COALESCE(:email, email),
                     telegram = COALESCE(:telegram, telegram)
-                WHERE id = :id
+                WHERE id = :id AND organization_id = :organization_id
             ')->execute([
                 'id' => (int) $existing['id'],
+                'organization_id' => $this->organizationId,
                 'full_name' => $input['full_name'] ?? '',
                 'phone' => $input['phone'] ?: null,
                 'email' => $input['email'] ?: null,
@@ -696,10 +705,11 @@ class ClientCaseService
         }
 
         $statement = $pdo->prepare('
-            INSERT INTO tn_people (public_id, full_name, phone, email, telegram, notes)
-            VALUES (:public_id, :full_name, :phone, :email, :telegram, :notes)
+            INSERT INTO tn_people (organization_id, public_id, full_name, phone, email, telegram, notes)
+            VALUES (:organization_id, :public_id, :full_name, :phone, :email, :telegram, :notes)
         ');
         $statement->execute([
+            'organization_id' => $this->organizationId,
             'public_id' => $this->nextPublicId($pdo, 'tn_people', 'PN'),
             'full_name' => $this->limit((string) ($input['full_name'] ?? ''), 160),
             'phone' => $input['phone'] ?: null,
@@ -717,14 +727,20 @@ class ClientCaseService
         $phone = trim($phone);
 
         if ($email !== '') {
-            $person = $this->database->fetchOne('SELECT id FROM tn_people WHERE email = :email LIMIT 1', ['email' => $email]);
+            $person = $this->database->fetchOne(
+                'SELECT id FROM tn_people WHERE email = :email AND organization_id = :organization_id LIMIT 1',
+                ['email' => $email, 'organization_id' => $this->organizationId],
+            );
             if ($person) {
                 return $person;
             }
         }
 
         if ($phone !== '') {
-            return $this->database->fetchOne('SELECT id FROM tn_people WHERE phone = :phone LIMIT 1', ['phone' => $phone]);
+            return $this->database->fetchOne(
+                'SELECT id FROM tn_people WHERE phone = :phone AND organization_id = :organization_id LIMIT 1',
+                ['phone' => $phone, 'organization_id' => $this->organizationId],
+            );
         }
 
         return null;
@@ -746,19 +762,24 @@ class ClientCaseService
             SELECT m.*, p.public_id, p.title
             FROM tn_client_case_property_matches m
             INNER JOIN tn_properties p ON p.id = m.property_id
-            WHERE m.id = :id
+            WHERE m.id = :id AND m.organization_id = :organization_id
             LIMIT 1
-        ', ['id' => $matchId]);
+        ', ['id' => $matchId, 'organization_id' => $this->organizationId]);
     }
 
     private function nextPublicId(PDO $pdo, string $table, string $prefix): string
     {
-        $statement = $pdo->query(sprintf(
-            "SELECT COALESCE(MAX(CAST(SUBSTRING(public_id, %d) AS UNSIGNED)), 0) + 1 FROM %s WHERE public_id LIKE '%s-%%'",
+        if (!in_array($table, ['tn_client_cases', 'tn_people'], true)) {
+            throw new \InvalidArgumentException('Unsupported public id table.');
+        }
+        $statement = $pdo->prepare(sprintf(
+            "SELECT COALESCE(MAX(CAST(SUBSTRING(public_id, %d) AS UNSIGNED)), 0) + 1 FROM %s "
+            . "WHERE public_id LIKE '%s-%%' AND organization_id = :organization_id",
             strlen($prefix) + 2,
             $table,
             $prefix
         ));
+        $statement->execute(['organization_id' => $this->organizationId]);
         $number = (int) $statement->fetchColumn();
 
         return sprintf('%s-%05d', $prefix, $number);

@@ -121,6 +121,27 @@ final readonly class MysqlJobQueue implements JobQueueInterface
         return $statement->rowCount();
     }
 
+    public function replayDead(?string $organizationId = null, ?string $jobId = null): int
+    {
+        $where = ["status = 'DEAD'"];
+        $params = [];
+        if ($organizationId !== null) {
+            $where[] = 'organization_id = :organization_id';
+            $params['organization_id'] = $organizationId;
+        }
+        if ($jobId !== null) {
+            $where[] = 'id = :job_id';
+            $params['job_id'] = $jobId;
+        }
+        $statement = $this->connection->prepare(
+            "UPDATE cos_jobs SET status = 'PENDING', attempts = 0, available_at = NOW(6), "
+            . 'locked_at = NULL, locked_by = NULL, completed_at = NULL, last_error = NULL WHERE '
+            . implode(' AND ', $where)
+        );
+        $statement->execute($params);
+        return $statement->rowCount();
+    }
+
     private function hydrate(array $row): Job
     {
         return new Job(

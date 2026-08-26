@@ -75,7 +75,15 @@ try {
     require APP_PATH . '/config/routes.php';
 
     echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
-} catch (\Exception $e) {
-    echo $e->getMessage() . '<br>';
-    echo '<pre>' . $e->getTraceAsString() . '</pre>';
+} catch (\Throwable $e) {
+    if (isset($di) && $di->has('cosLogger')) {
+        $di->getShared('cosLogger')->log('error', 'Unhandled Telegram exception.', [
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+        ]);
+    } else {
+        error_log('Unhandled Telegram exception: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo 'Internal Server Error';
 }

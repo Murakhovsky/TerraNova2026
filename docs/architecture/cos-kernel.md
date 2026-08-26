@@ -3,8 +3,9 @@
 COS is implemented as a modular monolith with hexagonal boundaries. MVC remains a delivery pattern for HTTP interfaces; it is not the architecture of the business core.
 
 ```text
-Event -> Context -> Rule / Agent -> Action -> Policy -> Approval / Queue
-      -> Execution -> Result Event -> Audit
+Business transaction -> Event + Outbox -> durable consumer -> Context
+    -> Rule / Agent -> Action -> Policy -> Approval / Queue
+    -> Execution -> Result Event -> Audit + Metric
 ```
 
 ## Architectural levels
@@ -43,7 +44,7 @@ Domain -X-> Infrastructure, Interfaces, Phalcon, PDO, legacy Common services
 Infrastructure -X-> MVC controllers and views
 ```
 
-`tests/architecture/layer_dependencies.php` enforces the two core rules automatically.
+`tests/architecture/layer_dependencies.php` enforces Kernel, Domain, Interface, and persistence boundaries automatically.
 
 ## Source layout
 
@@ -59,6 +60,10 @@ app/
 |   |-- Queue/
 |   |-- Audit/
 |   |-- Transaction/
+|   |-- Configuration/
+|   |-- Tenant/
+|   |-- Operations/
+|   |-- Observability/
 |   `-- Module/
 |
 |-- Domains/
@@ -66,12 +71,14 @@ app/
 |       |-- Model/                 business values and invariants
 |       |-- Application/
 |       |   |-- Contract/          outbound ports
-|       |   `-- DTO/               port commands and results
+|       |   |-- DTO/               port commands and results
+|       |   `-- UseCase/           transactional application orchestration
 |       |-- Automation/
 |       |   |-- Event/
 |       |   |-- Rule/
 |       |   |-- Agent/
 |       |   |-- Action/
+|       |   |-- Job/
 |       |   `-- Policy/
 |       `-- Bootstrap/
 |           `-- SalesDomainModule.php
@@ -80,9 +87,14 @@ app/
 |   |-- Database/                  generic Kernel persistence
 |   |-- Persistence/MySql/Sales/   Sales port implementations
 |   |-- Integration/Crm/           routed CRM integrations
+|   |-- ReadModel/                 query-only projections for delivery
+|   |-- Operations/                metrics
+|   |-- Observability/             structured logging
 |   `-- Llm/
 |
-|-- Interfaces/                    target location for new delivery adapters
+|-- Interfaces/
+|   |-- Web/                       MVC controllers, CSRF, tenant context
+|   `-- Api/                       health, approvals, CRM webhook
 |-- Bootstrap/
 |   |-- InfrastructureServices.php
 |   |-- SalesServices.php
@@ -108,6 +120,9 @@ The Kernel owns mechanisms and lifecycles, never business vocabulary:
 - `Audit`: explanation and result trail.
 - `Transaction`: an interface used by Kernel services; PDO is an Infrastructure detail.
 - `Module`: the standard extension boundary for Domains.
+- `Configuration`: validates Domain manifests before provisioning rules and policies.
+- `Tenant`: exposes the active organization without coupling the core to sessions.
+- `Operations`: owns worker lifecycle plus health and metric contracts.
 
 Kernel execution emits `cos.action.completed` or `cos.action.failed`. A Domain emits its own business event when its business state changes; the Kernel does not invent a Sales, Finance, or Inventory event.
 
@@ -185,11 +200,16 @@ The old monolithic service file is split by role:
 ## Persistence and execution guarantees
 
 - MySQL remains the source of truth; COS is not Event Sourcing.
-- Business state and its event are stored in one transaction.
+- Business state, immutable Event, and Outbox row are stored in one transaction.
+- Consumers record their own durable state; delivery is at-least-once and side effects are idempotent.
+- Replay resets the selected Outbox rows and their consumer checkpoints together.
+- Every business query and mutation is scoped by `organization_id`.
 - Agents cannot access Action executors or infrastructure adapters.
+- Agent input is redacted before storage and transmission and is removed by a retention job.
 - Every Action passes Policy before execution.
 - Actions and integration calls use organization-scoped idempotency keys.
 - LLM work and mutations execute through durable jobs.
+- CRM webhooks use HMAC verification, a durable inbox, retry/dead-letter handling, and explicit external-reference mapping.
 - Default Policy behavior is deny when no explicit policy matches.
 
 ## Verification
@@ -197,10 +217,12 @@ The old monolithic service file is split by role:
 The executable checks cover:
 
 - architectural dependency direction;
-- Event transaction and post-commit dispatch;
+- Event transaction, durable retry, consumer idempotency, and replay;
 - deterministic Sales rules;
-- external CRM routing;
-- Agent structured-output safety;
+- outbound CRM routing plus inbound webhook HMAC/idempotency;
+- Agent redaction and structured-output safety;
+- configuration ownership and provisioning;
+- production MySQL schema and tenant isolation;
 - Policy and Approval behavior;
 - queue retry/dead-letter behavior;
 - the complete CallCompleted flow.

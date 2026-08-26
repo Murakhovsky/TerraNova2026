@@ -27,15 +27,18 @@ services:
       DB_DATABASE: ${MYSQL_DATABASE}
       DB_USERNAME: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    volumes:
-      - ./:/var/www/html
+      COS_ORGANIZATION_ID: ${COS_ORGANIZATION_ID:-default}
+      LLM_ENDPOINT: ${LLM_ENDPOINT:-}
+      LLM_TOKEN: ${LLM_TOKEN:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-http}
+      AGENT_INPUT_RETENTION_DAYS: ${AGENT_INPUT_RETENTION_DAYS:-30}
+      CRM_WEBHOOK_SECRET_DEFAULT_AIDA: ${CRM_WEBHOOK_SECRET_DEFAULT_AIDA:-}
     depends_on:
       mysql:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "php-fpm -t"]
       interval: 15s
@@ -43,6 +46,61 @@ services:
       retries: 5
     networks:
       - frontend
+      - backend
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    command: ["php", "app/bootstrap_cli.php", "worker", "run"]
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      COS_ORGANIZATION_ID: ${COS_ORGANIZATION_ID:-default}
+      LLM_ENDPOINT: ${LLM_ENDPOINT:-}
+      LLM_TOKEN: ${LLM_TOKEN:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-http}
+      AGENT_INPUT_RETENTION_DAYS: ${AGENT_INPUT_RETENTION_DAYS:-30}
+      CRM_WEBHOOK_SECRET_DEFAULT_AIDA: ${CRM_WEBHOOK_SECRET_DEFAULT_AIDA:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    stop_grace_period: 30s
+    networks:
+      - backend
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: "no"
+    command: ["php", "app/bootstrap_cli.php", "migration", "up"]
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      COS_ORGANIZATION_ID: ${COS_ORGANIZATION_ID:-default}
+      LLM_ENDPOINT: ${LLM_ENDPOINT:-}
+      LLM_TOKEN: ${LLM_TOKEN:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-http}
+      AGENT_INPUT_RETENTION_DAYS: ${AGENT_INPUT_RETENTION_DAYS:-30}
+      CRM_WEBHOOK_SECRET_DEFAULT_AIDA: ${CRM_WEBHOOK_SECRET_DEFAULT_AIDA:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
       - backend
 
   mysql:
@@ -67,23 +125,8 @@ services:
     networks:
       - backend
 
-  redis:
-    image: redis:7.4-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - backend
-
 volumes:
   mysql_data:
-  redis_data:
 
 networks:
   frontend:

@@ -141,6 +141,7 @@ $approvalQueue = new class implements JobQueueInterface {
     public function complete(Job $job): void {}
     public function fail(Job $job, string $error): void {}
     public function recoverTimedOut(): int { return 0; }
+    public function replayDead(?string $organizationId = null, ?string $jobId = null): int { return 0; }
 };
 $approvalService = new ApprovalService($approvalRepository, $service, new TransactionManager($pdo), null, $approvalQueue);
 $approvalService->approve('default', $approval->id, 'manager-1', 'Approved');

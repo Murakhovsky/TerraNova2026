@@ -10,7 +10,6 @@ use Phalcon\Mvc\View\Engine\Php as PhpEngine;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 use Modules\Frontend\Services\CatalogService;
 use Modules\Frontend\Services\ClientCaseService;
-use Modules\Frontend\Services\CosConsoleService;
 use Modules\Frontend\Services\InboundRequestService;
 use Modules\Frontend\Services\PropertyMediaService;
 use Modules\Frontend\Services\PropertyModerationService;
@@ -106,21 +105,21 @@ class Module implements ModuleDefinitionInterface
         ]);
 
         $router->addPost('/cos/action/{id:[a-f0-9]{32}}/execute', [
-            'namespace' => 'Modules\\Frontend\\Controllers',
+            'namespace' => 'Interfaces\\Web\\Controller',
             'module' => 'frontend',
             'controller' => 'cos',
             'action' => 'execute',
         ]);
 
         $router->addPost('/cos/approval/{id:[a-f0-9]{32}}/approve', [
-            'namespace' => 'Modules\\Frontend\\Controllers',
+            'namespace' => 'Interfaces\\Web\\Controller',
             'module' => 'frontend',
             'controller' => 'cos',
             'action' => 'approve',
         ]);
 
         $router->addPost('/cos/approval/{id:[a-f0-9]{32}}/reject', [
-            'namespace' => 'Modules\\Frontend\\Controllers',
+            'namespace' => 'Interfaces\\Web\\Controller',
             'module' => 'frontend',
             'controller' => 'cos',
             'action' => 'reject',
@@ -149,24 +148,38 @@ class Module implements ModuleDefinitionInterface
         ]);
 
         $router->add('/cos/control-center', [
-            'namespace' => 'Modules\\Frontend\\Controllers',
+            'namespace' => 'Interfaces\\Web\\Controller',
             'module' => 'frontend',
             'controller' => 'cos',
             'action' => 'index',
         ]);
 
         $router->addPost('/api/approvals/{id:[a-f0-9]{32}}/approve', [
-            'namespace' => 'Modules\\Frontend\\Controllers',
+            'namespace' => 'Interfaces\\Api\\Controller',
             'module' => 'frontend',
             'controller' => 'approval',
             'action' => 'approve',
         ]);
 
         $router->addPost('/api/approvals/{id:[a-f0-9]{32}}/reject', [
-            'namespace' => 'Modules\\Frontend\\Controllers',
+            'namespace' => 'Interfaces\\Api\\Controller',
             'module' => 'frontend',
             'controller' => 'approval',
             'action' => 'reject',
+        ]);
+
+        $router->addGet('/api/health', [
+            'namespace' => 'Interfaces\\Api\\Controller',
+            'module' => 'frontend',
+            'controller' => 'health',
+            'action' => 'index',
+        ]);
+
+        $router->addPost('/api/integrations/{organization:[a-zA-Z0-9_-]+}/crm/{provider:[a-zA-Z0-9_-]+}/webhook', [
+            'namespace' => 'Interfaces\\Api\\Controller',
+            'module' => 'frontend',
+            'controller' => 'crm_webhook',
+            'action' => 'receive',
         ]);
 
         $di->setShared('frontendClientCaseService', function () {
@@ -174,7 +187,8 @@ class Module implements ModuleDefinitionInterface
                 $this->getShared('databaseService'),
                 $this->getShared('eventBus'),
                 $this->getShared('cosTransactionManager'),
-                (string) $this->getConfig()->cos->organizationId,
+                $this->getShared('organizationContext')->id(),
+                $this->getShared('salesCompleteCall'),
             );
         });
 
@@ -188,16 +202,10 @@ class Module implements ModuleDefinitionInterface
                 $this->getShared('databaseService'),
                 $this->getShared('eventBus'),
                 $this->getShared('cosTransactionManager'),
-                (string) $this->getConfig()->cos->organizationId,
+                $this->getShared('organizationContext')->id(),
             );
         });
 
-        $di->setShared('frontendCosConsoleService', function () {
-            return new CosConsoleService(
-                $this->getShared('databaseService'),
-                (string) $this->getConfig()->cos->organizationId,
-            );
-        });
 
         $di->setShared('frontendPropertySubmissionService', function () {
             return new PropertySubmissionService($this->getShared('mediaStorageService'));
@@ -213,7 +221,8 @@ class Module implements ModuleDefinitionInterface
         $di->setShared('frontendPropertyMediaService', function () {
             return new PropertyMediaService(
                 $this->getShared('databaseService'),
-                $this->getShared('mediaStorageService')
+                $this->getShared('mediaStorageService'),
+                $this->getShared('organizationContext')->id(),
             );
         });
 

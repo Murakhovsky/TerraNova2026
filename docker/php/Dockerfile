@@ -9,5 +9,11 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-cos.ini
 
 WORKDIR /var/www/html
 
+COPY --chown=phalcon:phalcon composer.json composer.lock ./
+
 USER phalcon
+
+RUN composer install --no-dev --no-interaction --prefer-dist --classmap-authoritative
+
+COPY --chown=phalcon:phalcon . .
 

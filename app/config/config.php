@@ -41,6 +41,10 @@ return new \Phalcon\Config\Config([
         'provider' => getenv('LLM_PROVIDER') ?: 'http',
     ],
 
+    'agent' => [
+        'inputRetentionDays' => (int) (getenv('AGENT_INPUT_RETENTION_DAYS') ?: 30),
+    ],
+
     'telegram' => array(
         // Add you bot's API key and name
         'api_key'      => getenv('TELEGRAM_BOT_TOKEN') ?: '',

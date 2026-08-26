@@ -8,6 +8,7 @@ use Throwable;
 class AuthService
 {
     private const SESSION_KEY = 'tn_auth_user_id';
+    private const ORGANIZATION_SESSION_KEY = 'cos_organization_id';
 
     public function __construct(private DatabaseService $database, private mixed $session)
     {
@@ -22,7 +23,7 @@ class AuthService
         }
 
         return $this->database->fetchOne('
-            SELECT id, email, full_name, phone, role, status, last_login_at, created_at
+            SELECT id, organization_id, email, full_name, phone, role, status, last_login_at, created_at
             FROM tn_users
             WHERE id = :id AND status = "active"
             LIMIT 1
@@ -59,11 +60,15 @@ class AuthService
                 return ['ok' => false, 'message' => 'Користувач із таким email уже існує.'];
             }
 
-            $statement = $this->database->connection()->prepare('
-                INSERT INTO tn_users (email, password_hash, full_name, phone, role, status)
-                VALUES (:email, :password_hash, :full_name, :phone, :role, "active")
+            $connection = $this->database->connection();
+            $organizationId = getenv('COS_ORGANIZATION_ID') ?: 'default';
+            $connection->beginTransaction();
+            $statement = $connection->prepare('
+                INSERT INTO tn_users (organization_id, email, password_hash, full_name, phone, role, status)
+                VALUES (:organization_id, :email, :password_hash, :full_name, :phone, :role, "active")
             ');
             $statement->execute([
+                'organization_id' => $organizationId,
                 'email' => $email,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 'full_name' => mb_substr($name, 0, 160),
@@ -71,8 +76,23 @@ class AuthService
                 'role' => $role,
             ]);
 
-            $this->loginById((int) $this->database->connection()->lastInsertId());
+            $userId = (int) $connection->lastInsertId();
+            $membership = $connection->prepare(
+                'INSERT INTO cos_organization_memberships (organization_id, user_id, role, status) '
+                . 'VALUES (:organization_id, :user_id, :role, "ACTIVE")'
+            );
+            $membership->execute([
+                'organization_id' => $organizationId,
+                'user_id' => $userId,
+                'role' => $role,
+            ]);
+            $connection->commit();
+            $this->loginById($userId);
         } catch (Throwable $e) {
+            $connection = $this->database->connection();
+            if ($connection->inTransaction()) {
+                $connection->rollBack();
+            }
             $this->logError('auth-register', $e);
 
             return ['ok' => false, 'message' => 'Реєстрацію не вдалося завершити. Спробуйте ще раз.'];
@@ -107,11 +127,45 @@ class AuthService
     public function logout(): void
     {
         $this->session->remove(self::SESSION_KEY);
+        $this->session->remove(self::ORGANIZATION_SESSION_KEY);
+    }
+
+    public function currentOrganizationId(): ?string
+    {
+        $user = $this->currentUser();
+        if ($user === null) {
+            return null;
+        }
+        $selected = trim((string) ($this->session->get(self::ORGANIZATION_SESSION_KEY) ?? ''));
+        if ($selected !== '' && $this->hasOrganizationAccess((int) $user['id'], $selected)) {
+            return $selected;
+        }
+        $home = (string) $user['organization_id'];
+        if ($this->hasOrganizationAccess((int) $user['id'], $home)) {
+            return $home;
+        }
+        $membership = $this->database->fetchOne(
+            'SELECT organization_id FROM cos_organization_memberships '
+            . 'WHERE user_id = :user_id AND status = "ACTIVE" ORDER BY created_at LIMIT 1',
+            ['user_id' => (int) $user['id']],
+        );
+        return isset($membership['organization_id']) ? (string) $membership['organization_id'] : null;
+    }
+
+    public function selectOrganization(string $organizationId): bool
+    {
+        $user = $this->currentUser();
+        if ($user === null || !$this->hasOrganizationAccess((int) $user['id'], $organizationId)) {
+            return false;
+        }
+        $this->session->set(self::ORGANIZATION_SESSION_KEY, $organizationId);
+        return true;
     }
 
     public function cabinetData(array $user): array
     {
         $email = (string) $user['email'];
+        $organizationId = $this->currentOrganizationId() ?? (string) $user['organization_id'];
 
         return [
             'submissions' => $this->database->fetchAll('
@@ -128,25 +182,25 @@ class AuthService
                        p.slug AS property_slug, p.title AS property_title
                 FROM tn_leads l
                 LEFT JOIN tn_properties p ON p.id = l.property_id
-                WHERE l.email = :email
+                WHERE l.organization_id = :organization_id AND l.email = :email
                 ORDER BY l.created_at DESC, l.id DESC
                 LIMIT 20
-            ', ['email' => $email]),
+            ', ['organization_id' => $organizationId, 'email' => $email]),
         ];
     }
 
     public function isManager(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-
-        return $user && in_array((string) $user['role'], ['manager', 'admin'], true);
+        if (!$user) return false;
+        return in_array($this->organizationRole((int) $user['id']), ['manager', 'admin'], true);
     }
 
     public function isAdmin(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
 
-        return $user && (string) $user['role'] === 'admin';
+        return $user && $this->organizationRole((int) $user['id']) === 'admin';
     }
 
     private function loginById(int $userId): void
@@ -161,6 +215,27 @@ class AuthService
             UPDATE tn_users SET last_login_at = NOW() WHERE id = :id LIMIT 1
         ');
         $statement->execute(['id' => $userId]);
+    }
+
+    private function hasOrganizationAccess(int $userId, string $organizationId): bool
+    {
+        return $this->database->fetchOne(
+            'SELECT 1 FROM cos_organization_memberships WHERE user_id = :user_id '
+            . 'AND organization_id = :organization_id AND status = "ACTIVE" LIMIT 1',
+            ['user_id' => $userId, 'organization_id' => $organizationId],
+        ) !== null;
+    }
+
+    private function organizationRole(int $userId): string
+    {
+        $organizationId = $this->currentOrganizationId();
+        if ($organizationId === null) return '';
+        $membership = $this->database->fetchOne(
+            'SELECT role FROM cos_organization_memberships WHERE user_id = :user_id '
+            . 'AND organization_id = :organization_id AND status = "ACTIVE" LIMIT 1',
+            ['user_id' => $userId, 'organization_id' => $organizationId],
+        );
+        return (string) ($membership['role'] ?? '');
     }
 
     private function findByEmail(string $email): ?array

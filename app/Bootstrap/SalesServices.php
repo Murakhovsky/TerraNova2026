@@ -1,21 +1,39 @@
 <?php
 declare(strict_types=1);
 
-use Domains\Sales\Automation\Agent\SalesIntelligenceAgent;
-use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
-use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Domains\Sales\Bootstrap\SalesDomainModule;
+use Domains\Sales\Application\UseCase\CompleteSalesCall;
+use Domains\Sales\Application\UseCase\ProcessCrmInbox;
+use Domains\Sales\Application\UseCase\ReceiveCrmWebhook;
+use Domains\Sales\Automation\Job\CrmInboxJobHandler;
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
     $this->getShared('cosCrmGateway'),
-    $this->getShared('salesDealRepository'),
-    $this->getShared('salesMessageGateway'),
-    $this->getShared('salesFollowupRepository'),
+    $this->getShared('cosCrmGateway'),
+    $this->getShared('cosCrmGateway'),
+    $this->getShared('cosCrmGateway'),
     $this->getShared('salesRuleContextProvider'),
     $this->getShared('salesAgentContextBuilder'),
 ));
 
-// Compatibility service names for existing CLI/UI consumers during the modular migration.
-$di->setShared('salesDeterministicProcessCatalog', fn (): SalesRuleCatalog => new SalesRuleCatalog());
-$di->setShared('salesPolicyCatalog', fn (): SalesPolicyCatalog => new SalesPolicyCatalog());
-$di->setShared('salesIntelligenceAgent', fn () => SalesIntelligenceAgent::definition());
+$di->setShared('salesCompleteCall', fn (): CompleteSalesCall => new CompleteSalesCall(
+    $this->getShared('salesActivityRepository'),
+    $this->getShared('eventBus'),
+    $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesReceiveCrmWebhook', fn (): ReceiveCrmWebhook => new ReceiveCrmWebhook(
+    $this->getShared('cosCrmWebhookSecrets'),
+    $this->getShared('cosCrmInbox'),
+    $this->getShared('cosJobQueue'),
+    $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesProcessCrmInbox', fn (): ProcessCrmInbox => new ProcessCrmInbox(
+    $this->getShared('cosCrmInbox'),
+    $this->getShared('cosCrmInboundApplier'),
+    $this->getShared('cosDomainRegistry'),
+    $this->getShared('eventBus'),
+    $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesCrmInboxJobHandler', fn (): CrmInboxJobHandler => new CrmInboxJobHandler(
+    $this->getShared('salesProcessCrmInbox'),
+));

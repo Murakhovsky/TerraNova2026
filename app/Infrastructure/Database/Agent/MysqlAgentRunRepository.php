@@ -13,17 +13,17 @@ use Throwable;
 
 final readonly class MysqlAgentRunRepository implements AgentRunRepositoryInterface
 {
-    public function __construct(private PDO $connection) {}
+    public function __construct(private PDO $connection, private int $retentionDays = 30) {}
 
     public function start(string $runId, AgentDefinition $agent, AgentInvocation $invocation, array $context): void
     {
         $statement = $this->connection->prepare(
             'INSERT INTO cos_agent_runs '
             . '(id, organization_id, agent_name, agent_version, provider, model, prompt_version, schema_version, '
-            . 'subject_type, subject_id, status, context_reference, input_snapshot, correlation_id, started_at) '
+            . 'subject_type, subject_id, status, context_reference, input_snapshot, input_redacted, input_expires_at, correlation_id, started_at) '
             . "VALUES (:id, :organization_id, :agent_name, :agent_version, 'pending', 'pending', :prompt_version, "
-            . ":schema_version, :subject_type, :subject_id, 'RUNNING', :context_reference, :input_snapshot, "
-            . ':correlation_id, NOW(6))'
+            . ":schema_version, :subject_type, :subject_id, 'RUNNING', :context_reference, :input_snapshot, 1, "
+            . ':input_expires_at, :correlation_id, NOW(6))'
         );
         $statement->execute([
             'id' => $runId,
@@ -36,6 +36,7 @@ final readonly class MysqlAgentRunRepository implements AgentRunRepositoryInterf
             'subject_id' => $invocation->subjectId,
             'context_reference' => json_encode($invocation->contextReferences, JSON_THROW_ON_ERROR),
             'input_snapshot' => json_encode($context, JSON_THROW_ON_ERROR),
+            'input_expires_at' => (new \DateTimeImmutable())->modify('+' . max(1, $this->retentionDays) . ' days')->format('Y-m-d H:i:s.u'),
             'correlation_id' => $invocation->correlationId,
         ]);
     }

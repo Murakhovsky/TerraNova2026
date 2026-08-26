@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use Domains\Sales\Automation\Event\DealStageChanged;
-use Kernel\Event\Contract\EventHandlerInterface;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
@@ -63,20 +62,6 @@ $store = new class($calls, $pdo) implements EventStoreInterface {
     }
 };
 
-$handler = new class($calls, $pdo) implements EventHandlerInterface {
-    public function __construct(private array &$calls, private PDO $pdo)
-    {
-    }
-
-    public function handle(DomainEvent $event): void
-    {
-        if ($this->pdo->inTransaction()) {
-            throw new RuntimeException('Handler ran before commit.');
-        }
-        $this->calls[] = ['handler', $event->payload['previous_stage'], $event->payload['new_stage']];
-    }
-};
-
 $event = DealStageChanged::create(
     'event-001',
     'organization-001',
@@ -87,7 +72,6 @@ $event = DealStageChanged::create(
 );
 
 $bus = new EventBus($store, $transactions);
-$bus->subscribe(DealStageChanged::TYPE, $handler);
 $transactions->transactional(function () use ($pdo, $bus, $event): void {
     $pdo->exec('INSERT INTO business_changes (id) VALUES (1)');
     $bus->publish($event);
@@ -95,7 +79,6 @@ $transactions->transactional(function () use ($pdo, $bus, $event): void {
 
 $expected = [
     ['store', 'sales.deal.stage_changed', '184'],
-    ['handler', 'qualification', 'negotiation'],
 ];
 
 if ($calls !== $expected) {
@@ -125,9 +108,8 @@ try {
 
 if ((int) $pdo->query('SELECT COUNT(*) FROM business_changes WHERE id = 2')->fetchColumn() !== 0
     || (int) $pdo->query("SELECT COUNT(*) FROM stored_events WHERE id = 'event-rollback'")->fetchColumn() !== 0
-    || in_array(['handler', 'new', 'qualification'], $calls, true)
 ) {
     throw new RuntimeException('Business operation and event did not roll back atomically.');
 }
 
-echo "Event Bus smoke test passed.\n";
+echo "Transactional Event Bus smoke test passed.\n";

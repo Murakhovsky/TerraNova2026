@@ -19,6 +19,7 @@ $shortId = static fn($value) => substr((string) $value, 0, 8);
 $statusClass = static fn($status) => 'tn-cos-status tn-cos-status--' . preg_replace('/[^a-z0-9-]+/', '-', strtolower(str_replace('_', '-', (string) $status)));
 $actionStatus = $actionStatus ?? null;
 $pageStatus = $pageStatus ?? null;
+$csrfToken = $csrfToken ?? '';
 ?>
 
 <main class="tn-page tn-admin-page tn-cos-page">
@@ -86,7 +87,7 @@ $pageStatus = $pageStatus ?? null;
         <td><span class="<?php echo $statusClass($action['status']); ?>"><?php echo $h($action['status']); ?></span><span>Risk: <?php echo $h($action['risk_level']); ?></span></td>
         <td><details><summary>JSON</summary><pre><?php echo $h($json($action['parameters'])); ?></pre></details></td>
         <td class="tn-cos-actions">
-          <?php if ($action['status'] === 'QUEUED'): ?><form action="<?php echo $this->url->get('cos/action/' . $action['id'] . '/execute'); ?>" method="post"><button class="tn-btn tn-btn--dark" type="submit">Execute</button></form><?php endif; ?>
+          <?php if ($action['status'] === 'QUEUED'): ?><form action="<?php echo $this->url->get('cos/action/' . $action['id'] . '/execute'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-btn tn-btn--dark" type="submit">Execute</button></form><?php endif; ?>
           <?php if ($action['status'] === 'PENDING_APPROVAL' && $action['approval_status'] === 'PENDING'): ?><a class="tn-row-link" href="#approval-<?php echo $h($action['approval_id']); ?>">Approve</a><?php endif; ?>
         </td>
       </tr><?php endforeach; ?>
@@ -102,8 +103,8 @@ $pageStatus = $pageStatus ?? null;
         <h3><?php echo $h($approval['action_type']); ?></h3><p><?php echo $h($approval['reason'] ?: 'Потрібне рішення менеджера.'); ?></p>
         <small><?php echo $h(($approval['target_type'] ?: 'target') . ' #' . ($approval['target_id'] ?: '—')); ?></small>
         <?php if ($approval['status'] === 'PENDING'): ?><div class="tn-cos-inline-actions">
-          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/approve'); ?>" method="post"><button class="tn-btn tn-btn--dark" type="submit">Approve</button></form>
-          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/reject'); ?>" method="post"><button class="tn-btn tn-btn--ghost" type="submit">Reject</button></form>
+          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/approve'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-btn tn-btn--dark" type="submit">Approve</button></form>
+          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/reject'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-btn tn-btn--ghost" type="submit">Reject</button></form>
         </div><?php endif; ?>
       </article><?php endforeach; ?>
       <?php if (!$approvals): ?><p class="tn-muted">Approval-запитів ще немає.</p><?php endif; ?>

@@ -5,7 +5,7 @@ namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
 use Domains\Sales\Automation\Event\LeadCreated;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Throwable;
@@ -20,7 +20,7 @@ class InboundRequestService
         private ?ClientCaseService $clientCases,
         private DatabaseService $database,
         private EventBus $eventBus,
-        private TransactionManager $transactions,
+        private TransactionManagerInterface $transactions,
         private string $organizationId,
     ) {
     }
@@ -55,14 +55,15 @@ class InboundRequestService
             ): int {
                 $statement = $this->database->connection()->prepare('
                     INSERT INTO tn_leads (
-                        buyer_id, person_id, client_case_id, property_id, full_name, phone, email,
+                        organization_id, buyer_id, person_id, client_case_id, property_id, full_name, phone, email,
                         role, deal_type, message, preferred_contact, source_page, status
                     ) VALUES (
-                        NULL, :person_id, :client_case_id, :property_id, :full_name, :phone, :email,
+                        :organization_id, NULL, :person_id, :client_case_id, :property_id, :full_name, :phone, :email,
                         :role, :deal_type, :message, "any", :source_page, "new"
                     )
                 ');
                 $statement->execute([
+                    'organization_id' => $this->organizationId,
                     'person_id' => $caseContext['person_id'] ?? null,
                     'client_case_id' => $caseContext['client_case_id'] ?? null,
                     'property_id' => $this->positiveInt($input['property_id'] ?? null),

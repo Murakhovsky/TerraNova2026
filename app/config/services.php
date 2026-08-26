@@ -8,6 +8,8 @@ use Common\Services\AuthService;
 use Common\Services\DatabaseService;
 use Common\Services\EventService;
 use Common\Services\MediaStorageService;
+use Interfaces\Web\Tenant\SessionOrganizationContext;
+use Interfaces\Web\Security\CsrfTokenManager;
 
 /**
  * Shared configuration service
@@ -50,6 +52,15 @@ $di->setShared('mediaStorageService', function () {
 $di->setShared('authService', function () {
     return new AuthService($this->getShared('databaseService'), $this->getShared('session'));
 });
+
+$di->setShared('organizationContext', function () {
+    return new SessionOrganizationContext(
+        $this->getShared('authService'),
+        (string) $this->getConfig()->cos->organizationId,
+    );
+});
+
+$di->setShared('csrfTokenManager', fn () => new CsrfTokenManager($this->getShared('session')));
 
 /**
  * If the configuration specify the use of metadata adapter use it or use memory otherwise

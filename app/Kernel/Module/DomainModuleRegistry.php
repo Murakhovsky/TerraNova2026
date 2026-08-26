@@ -27,6 +27,9 @@ final class DomainModuleRegistry
     /** @var array<string, AgentContextBuilderInterface> */
     private array $agentContexts = [];
 
+    /** @var list<ActionHandlerInterface> */
+    private array $handlers = [];
+
     /** @param iterable<DomainModuleInterface> $modules */
     public function __construct(iterable $modules)
     {
@@ -63,6 +66,7 @@ final class DomainModuleRegistry
                 ));
             }
         }
+        array_push($this->handlers, ...$handlers);
         foreach ($module->agents() as $agentName => $definition) {
             if ($agentName !== $definition->name) {
                 throw new InvalidArgumentException(sprintf('Agent registry key %s must equal definition name %s.', $agentName, $definition->name));
@@ -100,11 +104,7 @@ final class DomainModuleRegistry
     /** @return list<ActionHandlerInterface> */
     public function actionHandlers(): array
     {
-        $handlers = [];
-        foreach ($this->modules as $module) {
-            array_push($handlers, ...$module->actionHandlers());
-        }
-        return $handlers;
+        return $this->handlers;
     }
 
     public function agent(string $name): AgentDefinition
@@ -119,10 +119,25 @@ final class DomainModuleRegistry
 
     public function ruleContextProviderFor(string $eventType): RuleContextProviderInterface
     {
-        $moduleName = $this->events[$eventType] ?? strstr($eventType, '.', true);
+        $moduleName = $this->events[$eventType] ?? null;
         $module = is_string($moduleName) ? ($this->modules[$moduleName] ?? null) : null;
         return $module?->ruleContextProvider()
             ?? throw new RuntimeException(sprintf('No rule context provider for event: %s.', $eventType));
+    }
+
+    public function ownsEvent(string $domainName, string $eventType): bool
+    {
+        return ($this->events[$eventType] ?? null) === $domainName;
+    }
+
+    public function ownsAction(string $domainName, string $actionType): bool
+    {
+        return ($this->actions[$actionType] ?? null) === $domainName;
+    }
+
+    public function hasAgent(string $agentName): bool
+    {
+        return isset($this->agents[$agentName]);
     }
 
     /** @param array<string, string> $registry */

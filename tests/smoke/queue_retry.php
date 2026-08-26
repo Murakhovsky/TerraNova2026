@@ -25,6 +25,7 @@ $queue = new class implements JobQueueInterface {
     public function complete(Job $job): void { $this->status = 'COMPLETED'; }
     public function fail(Job $job, string $error): void { $this->error = $error; $this->status = $job->attempts >= $job->maxAttempts ? 'DEAD' : 'FAILED'; }
     public function recoverTimedOut(): int { return 0; }
+    public function replayDead(?string $organizationId = null, ?string $jobId = null): int { if ($this->status !== 'DEAD') return 0; $this->status = 'PENDING'; $this->attempts = 0; $this->error = null; return 1; }
 };
 $handler = new class implements JobHandlerInterface {
     public function supports(string $type): bool { return true; }
@@ -35,5 +36,9 @@ for ($i = 0; $i < 4; $i++) $worker->runOne('retry-worker');
 
 if ($queue->attempts !== 3 || $queue->status !== 'DEAD' || $queue->error !== 'temporary upstream failure') {
     throw new RuntimeException('Retry/dead-letter lifecycle failed.');
+}
+$replayed = $queue->replayDead('default', 'retry-job');
+if ($replayed !== 1 || $queue->status !== 'PENDING' || $queue->attempts !== 0) {
+    throw new RuntimeException('Dead job replay failed.');
 }
 echo "Queue retry/dead-letter smoke test passed.\n";

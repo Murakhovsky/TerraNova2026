@@ -11,6 +11,7 @@ use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use Kernel\Agent\Contract\AgentRunRepositoryInterface;
 use Kernel\Agent\Contract\LlmClientInterface;
 use Kernel\Agent\Contract\DecisionRepositoryInterface;
+use Kernel\Agent\Contract\ContextRedactorInterface;
 use Throwable;
 
 final readonly class AgentRuntime
@@ -21,6 +22,7 @@ final readonly class AgentRuntime
         private StructuredDecisionValidator $validator,
         private AgentRunRepositoryInterface $runs,
         private ?DecisionRepositoryInterface $decisions = null,
+        private ?ContextRedactorInterface $redactor = null,
     ) {}
 
     public function run(AgentDefinition $agent, AgentInvocation $invocation): AgentExecution
@@ -29,10 +31,22 @@ final readonly class AgentRuntime
         $started = hrtime(true);
         $failureRecorded = false;
         $context = $this->contexts->build($invocation);
+        $context = $this->redactor?->redact($context) ?? $context;
         $this->runs->start($runId, $agent, $invocation, $context);
 
         try {
             $response = $this->llm->structured($agent, $invocation->question, $context);
+            if ($this->redactor !== null) {
+                $response = new \Kernel\Agent\LlmResponse(
+                    $this->redactor->redact($response->output),
+                    $response->provider,
+                    $response->model,
+                    $response->inputTokens,
+                    $response->outputTokens,
+                    $response->costAmount,
+                    $response->costCurrency,
+                );
+            }
             try {
                 $result = $this->validator->validate($response->output, $agent);
             } catch (Throwable $exception) {

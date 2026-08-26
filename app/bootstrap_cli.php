@@ -85,8 +85,15 @@ try {
     if (isset($config["printNewLine"]) && $config["printNewLine"]) {
         echo PHP_EOL;
     }
-} catch (Exception $e) {
-    echo $e->getMessage() . PHP_EOL;
-    echo $e->getTraceAsString() . PHP_EOL;
+} catch (Throwable $e) {
+    if ($di->has('cosLogger')) {
+        $di->getShared('cosLogger')->log('error', 'Unhandled CLI exception.', [
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+            'task' => $arguments['task'] ?? null,
+            'action' => $arguments['action'] ?? null,
+        ]);
+    }
+    echo "Command failed. See the structured application log for details." . PHP_EOL;
     exit(255);
 }

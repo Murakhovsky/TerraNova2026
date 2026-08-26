@@ -33,16 +33,28 @@ final readonly class MysqlFollowupRepository implements FollowupRepositoryInterf
             }
 
             $dueAt = $command->dueAt->format('Y-m-d H:i:s');
-            $this->connection->prepare('UPDATE tn_client_cases SET next_contact_at = :due_at WHERE id = :id')
-                ->execute(['id' => $command->dealReference, 'due_at' => $dueAt]);
+            $this->connection->prepare(
+                'UPDATE tn_client_cases SET next_contact_at = :due_at '
+                . 'WHERE id = :id AND organization_id = :organization_id'
+            )->execute([
+                'id' => $command->dealReference,
+                'due_at' => $dueAt,
+                'organization_id' => $command->organizationId,
+            ]);
             $statement = $this->connection->prepare(
-                "INSERT INTO tn_client_case_activities (client_case_id, activity_type, title, body, due_at) "
-                . "VALUES (:id, 'task', :title, :body, :due_at)"
+                "INSERT INTO tn_client_case_activities (organization_id, client_case_id, activity_type, title, body, due_at) "
+                . "SELECT :organization_id, id, 'task', :title, :body, :due_at FROM tn_client_cases "
+                . 'WHERE id = :id AND organization_id = :organization_scope'
             );
             $statement->execute([
                 'id' => $command->dealReference, 'title' => $command->title,
                 'body' => $command->body, 'due_at' => $dueAt,
+                'organization_id' => $command->organizationId,
+                'organization_scope' => $command->organizationId,
             ]);
+            if ($statement->rowCount() !== 1) {
+                throw new \RuntimeException('Deal was not found in the current organization.');
+            }
             $externalId = (string) $this->connection->lastInsertId();
             $mapping = $this->connection->prepare(
                 "INSERT INTO cos_external_references (organization_id, provider, entity_type, external_id, cos_reference, last_synced_at) "

@@ -72,7 +72,16 @@ try {
     require APP_PATH . '/config/routes.php';
 
     echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
-} catch (\Exception $e) {
-    echo $e->getMessage() . '<br>';
-    echo '<pre>' . $e->getTraceAsString() . '</pre>';
+} catch (\Throwable $e) {
+    if (isset($di) && $di->has('cosLogger')) {
+        $di->getShared('cosLogger')->log('error', 'Unhandled web exception.', [
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+            'request_uri' => $_SERVER['REQUEST_URI'] ?? null,
+        ]);
+    } else {
+        error_log('Unhandled web exception: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo 'Internal Server Error';
 }

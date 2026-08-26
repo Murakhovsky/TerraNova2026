@@ -35,6 +35,24 @@ function assertNoDependencies(string $directory, array $forbiddenPrefixes): void
 
 assertNoDependencies($root . '/app/Kernel', ['Domains', 'Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
 assertNoDependencies($root . '/app/Domains', ['Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
+assertNoDependencies($root . '/app/Interfaces', ['Infrastructure', 'Modules']);
+
+foreach (phpFiles($root . '/app/Kernel') as $file) {
+    $source = file_get_contents($file);
+    if (preg_match('/^use\s+PDO\s*;/m', $source)
+        || str_contains($source, 'new PDO(')
+        || str_contains($source, 'new \\PDO(')
+    ) {
+        throw new RuntimeException('Kernel must access persistence through contracts: ' . $file);
+    }
+}
+
+foreach (phpFiles($root . '/app/Interfaces/Api/Controller') as $file) {
+    $source = (string) file_get_contents($file);
+    if (preg_match('/public\s+function\s+\w+Action\s*\([^)]*\)\s*:\s*void/', $source)) {
+        throw new RuntimeException('API actions must return the Phalcon response so JSON bodies reach HTTP clients: ' . $file);
+    }
+}
 
 $requiredSalesAreas = ['Application', 'Automation', 'Bootstrap', 'Model'];
 foreach ($requiredSalesAreas as $area) {

@@ -6,6 +6,12 @@ namespace Infrastructure\Integration\Crm\Aida;
 use Domains\Sales\Application\Contract\CrmProviderInterface;
 use Domains\Sales\Application\DTO\CreateTaskCommand;
 use Domains\Sales\Application\DTO\OperationResult;
+use Domains\Sales\Application\DTO\SendMessageCommand;
+use Domains\Sales\Application\DTO\ScheduleFollowupCommand;
+use Domains\Sales\Model\DealChangeSet;
+use Infrastructure\Persistence\MySql\Sales\MysqlDealRepository;
+use Infrastructure\Persistence\MySql\Sales\MysqlFollowupRepository;
+use Infrastructure\Persistence\MySql\Sales\MysqlMessageGateway;
 use PDO;
 use Throwable;
 
@@ -38,13 +44,19 @@ final readonly class AidaCrmAdapter implements CrmProviderInterface
             }
 
             $statement = $this->connection->prepare(
-                "INSERT INTO tn_client_case_activities (client_case_id, activity_type, title, body, due_at) "
-                . "VALUES (:client_case_id, 'task', :title, :body, :due_at)"
+                "INSERT INTO tn_client_case_activities (organization_id, client_case_id, activity_type, title, body, due_at) "
+                . "SELECT :organization_id, id, 'task', :title, :body, :due_at FROM tn_client_cases "
+                . 'WHERE id = :client_case_id AND organization_id = :organization_scope'
             );
             $statement->execute([
                 'client_case_id' => $command->dealReference, 'title' => $command->title,
                 'body' => $command->body, 'due_at' => $command->dueAt?->format('Y-m-d H:i:s'),
+                'organization_id' => $command->organizationId,
+                'organization_scope' => $command->organizationId,
             ]);
+            if ($statement->rowCount() !== 1) {
+                throw new \RuntimeException('Deal was not found in the current organization.');
+            }
             $externalId = (string) $this->connection->lastInsertId();
             $mapping = $this->connection->prepare(
                 "INSERT INTO cos_external_references (organization_id, provider, entity_type, external_id, cos_reference, last_synced_at) "
@@ -57,5 +69,20 @@ final readonly class AidaCrmAdapter implements CrmProviderInterface
             if ($ownsTransaction && $this->connection->inTransaction()) $this->connection->rollBack();
             return OperationResult::failure($exception->getMessage(), ['provider' => $this->provider()]);
         }
+    }
+
+    public function send(SendMessageCommand $command): OperationResult
+    {
+        return (new MysqlMessageGateway($this->connection))->send($command);
+    }
+
+    public function schedule(ScheduleFollowupCommand $command): OperationResult
+    {
+        return (new MysqlFollowupRepository($this->connection))->schedule($command);
+    }
+
+    public function update(string $organizationId, string $dealReference, DealChangeSet $changes): OperationResult
+    {
+        return (new MysqlDealRepository($this->connection))->update($organizationId, $dealReference, $changes);
     }
 }

@@ -18,14 +18,24 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface
     public function update(string $organizationId, string $dealReference, DealChangeSet $changes): OperationResult
     {
         try {
+            $exists = $this->connection->prepare(
+                'SELECT 1 FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
+            );
+            $exists->execute(['id' => $dealReference, 'organization_id' => $organizationId]);
+            if ($exists->fetchColumn() === false) {
+                return OperationResult::failure('Deal was not found in the current organization.');
+            }
             $values = $changes->toArray();
             $sets = [];
-            $parameters = ['id' => $dealReference];
+            $parameters = ['id' => $dealReference, 'organization_id' => $organizationId];
             foreach ($values as $field => $value) {
                 $sets[] = $field . ' = :' . $field;
                 $parameters[$field] = $value;
             }
-            $statement = $this->connection->prepare('UPDATE tn_client_cases SET ' . implode(', ', $sets) . ' WHERE id = :id');
+            $statement = $this->connection->prepare(
+                'UPDATE tn_client_cases SET ' . implode(', ', $sets)
+                . ' WHERE id = :id AND organization_id = :organization_id'
+            );
             $statement->execute($parameters);
 
             return OperationResult::success($dealReference, [

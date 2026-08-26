@@ -35,6 +35,12 @@ $di->setShared('url', function () {
  * Starts the session the first time some component requests the session service
  */
 $di->setShared('session', function () {
+    session_set_cookie_params([
+        'httponly' => true,
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'samesite' => 'Lax',
+        'path' => '/',
+    ]);
     $session = new SessionManager();
     $files = new SessionAdapter([
         'savePath' => sys_get_temp_dir(),

@@ -63,7 +63,11 @@ class ClientCaseController extends ControllerBase
             $this->view->propertyMatches = $this->clientCaseService()->propertyMatches($caseId);
             $this->view->requestMatches = $this->clientCaseService()->requestMatches($caseId);
             try {
-                $this->view->aiIntelligence = $this->di->getShared('frontendCosConsoleService')->dealIntelligence($caseId);
+                $this->view->aiIntelligence = $this->di->getShared('cosOperationsReadModel')->dealIntelligence(
+                    $this->di->getShared('organizationContext')->id(),
+                    $caseId,
+                );
+                $this->view->csrfToken = $this->di->getShared('csrfTokenManager')->token();
             } catch (Throwable $exception) {
                 $this->logFrontendError('client-case-ai-intelligence', $exception);
             }
