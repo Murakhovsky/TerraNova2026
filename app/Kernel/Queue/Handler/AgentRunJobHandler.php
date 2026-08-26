@@ -5,13 +5,13 @@ namespace Kernel\Queue\Handler;
 
 use Kernel\Action\ActionStatus;
 use Kernel\Action\ActionProposal;
-use Kernel\Agent\AgentDefinition;
 use Kernel\Agent\AgentInvocation;
 use Kernel\Agent\Service\AgentRuntime;
 use Kernel\Policy\Service\ActionPolicyService;
 use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Job;
+use Kernel\Module\DomainModuleRegistry;
 use RuntimeException;
 
 final readonly class AgentRunJobHandler implements JobHandlerInterface
@@ -20,7 +20,7 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
 
     public function __construct(
         private AgentRuntime $runtime,
-        private AgentDefinition $agent,
+        private DomainModuleRegistry $domains,
         private ActionPolicyService $policies,
         private JobQueueInterface $queue,
     ) {}
@@ -35,17 +35,20 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         $subjectType = (string) ($job->payload['subject_type'] ?? '');
         $subjectId = (string) ($job->payload['subject_id'] ?? '');
         $question = (string) ($job->payload['question'] ?? '');
-        if ($subjectType === '' || $subjectId === '' || $question === '') {
-            throw new RuntimeException('AGENT_RUN job requires subject_type, subject_id and question.');
+        $agentName = (string) ($job->payload['agent_name'] ?? '');
+        if ($agentName === '' || $subjectType === '' || $subjectId === '' || $question === '') {
+            throw new RuntimeException('AGENT_RUN job requires agent_name, subject_type, subject_id and question.');
         }
 
-        $execution = $this->runtime->run($this->agent, new AgentInvocation(
+        $agent = $this->domains->agent($agentName);
+        $execution = $this->runtime->run($agent, new AgentInvocation(
             $job->organizationId,
             $subjectType,
             $subjectId,
             $question,
             $job->correlationId,
             is_array($job->payload['context_references'] ?? null) ? $job->payload['context_references'] : [],
+            $agentName,
         ));
 
         foreach ($execution->proposals as $index => $proposal) {

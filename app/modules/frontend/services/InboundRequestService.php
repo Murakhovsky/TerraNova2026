@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
-use Domains\Sales\Event\LeadCreated;
+use Domains\Sales\Automation\Event\LeadCreated;
 use Infrastructure\Database\Transaction\TransactionManager;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;

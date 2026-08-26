@@ -1,9 +1,8 @@
 <?php
 declare(strict_types=1);
 
-use Domains\Sales\Agent\SalesIntelligenceAgent;
-use Domains\Sales\Event\CallCompleted;
-use Infrastructure\Database\Rule\MysqlActionProposalSink;
+use Domains\Sales\Automation\Agent\SalesIntelligenceAgent;
+use Domains\Sales\Automation\Event\CallCompleted;
 use Infrastructure\Database\Transaction\TransactionManager;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
@@ -31,6 +30,9 @@ use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
+use Kernel\Action\Event\ActionExecutionFinished;
+use Kernel\Module\DomainModuleInterface;
+use Kernel\Module\DomainModuleRegistry;
 use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\Contract\PolicyEvaluationRepositoryInterface;
 use Kernel\Policy\Contract\PolicyRepositoryInterface;
@@ -51,6 +53,7 @@ use Kernel\Rule\Rule;
 use Kernel\Rule\Service\ConditionEvaluator;
 use Kernel\Rule\Service\DeterministicProcessEngine;
 use Kernel\Rule\Service\RuleEngineEventHandler;
+use Kernel\Rule\Service\QueuedActionProposalSink;
 
 $root = dirname(__DIR__, 2);
 spl_autoload_register(static function (string $class) use ($root): void {
@@ -205,12 +208,36 @@ $ruleEvaluationRepository = new class($ruleEvaluations) implements RuleEvaluatio
     public function __construct(private array &$items) {}
     public function save(DomainEvent $event, ProcessEvaluation $evaluation, array $context): void { $this->items[] = $evaluation; }
 };
-$sink = new MysqlActionProposalSink($policyService, $queue);
+$sink = new QueuedActionProposalSink($policyService, $queue);
 $ruleHandler = new RuleEngineEventHandler($ruleRepository, $ruleContexts, $ruleEvaluationRepository, $sink, new DeterministicProcessEngine(new ConditionEvaluator()));
 
 $workerId = 'integration-worker';
+$salesAgent = SalesIntelligenceAgent::definition();
+$domainRegistry = new DomainModuleRegistry([
+    new class($salesAgent, $contextBuilder, $ruleContexts) implements DomainModuleInterface {
+        public function __construct(
+            private AgentDefinition $agent,
+            private AgentContextBuilderInterface $contexts,
+            private RuleContextProviderInterface $ruleContexts,
+        ) {}
+        public function name(): string { return 'sales'; }
+        public function eventTypes(): array { return [CallCompleted::TYPE]; }
+        public function actionTypes(): array { return $this->agent->allowedActionTypes; }
+        public function actionHandlers(): array {
+            return [new class implements ActionHandlerInterface {
+                public function supports(string $actionType): bool { return str_starts_with($actionType, 'sales.'); }
+                public function execute(Action $action): ExecutionResult { return ExecutionResult::success(); }
+            }];
+        }
+        public function agents(): array { return [$this->agent->name => $this->agent]; }
+        public function agentContextBuilders(): array { return [$this->agent->name => $this->contexts]; }
+        public function ruleContextProvider(): RuleContextProviderInterface { return $this->ruleContexts; }
+        public function rules(string $organizationId): array { return []; }
+        public function policies(string $organizationId): array { return []; }
+    },
+]);
 $worker = new QueueWorker($queue, [
-    new AgentRunJobHandler($agentRuntime, SalesIntelligenceAgent::definition(), $policyService, $queue),
+    new AgentRunJobHandler($agentRuntime, $domainRegistry, $policyService, $queue),
     new ActionExecutionJobHandler($actionService),
 ]);
 $bus = new EventBus($eventStore, $transactions);
@@ -227,7 +254,7 @@ $jobStatuses = array_values(array_map(static fn (array $record): string => $reco
 $action = array_values($actionRepository->actions)[0] ?? null;
 $auditCategories = array_map(static fn (AuditEntry $entry): string => $entry->category, $audit->entries);
 
-if ($eventTypes !== ['sales.call.completed', 'sales.followup.sent']) throw new RuntimeException('Expected CallCompleted and FollowupSent events.');
+if ($eventTypes !== ['sales.call.completed', ActionExecutionFinished::COMPLETED]) throw new RuntimeException('Expected CallCompleted and generic ActionCompleted events.');
 if ($jobStatuses !== ['COMPLETED', 'COMPLETED']) throw new RuntimeException('Agent and Action jobs did not complete: ' . json_encode($queue->jobs));
 if (count($ruleEvaluations) !== 1 || !$ruleEvaluations[0]->matched) throw new RuntimeException('Rule did not match.');
 if ($agentRuns !== ['RUNNING', 'COMPLETED'] || $llm->calls !== 1) throw new RuntimeException('Agent did not complete exactly once.');

@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace Modules\Frontend\Services;
 
 use Common\Services\DatabaseService;
-use Domains\Sales\Event\ClientCaseChanged;
-use Domains\Sales\Event\ClientCaseCreated;
-use Domains\Sales\Event\CallCompleted;
-use Domains\Sales\Event\DealStageChanged;
-use Domains\Sales\Event\LeadChanged;
+use Domains\Sales\Automation\Event\ClientCaseChanged;
+use Domains\Sales\Automation\Event\ClientCaseCreated;
+use Domains\Sales\Automation\Event\CallCompleted;
+use Domains\Sales\Automation\Event\DealStageChanged;
+use Domains\Sales\Automation\Event\LeadChanged;
 use Infrastructure\Database\Transaction\TransactionManager;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;

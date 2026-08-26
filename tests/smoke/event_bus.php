@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use Domains\Sales\Event\DealStageChanged;
+use Domains\Sales\Automation\Event\DealStageChanged;
 use Kernel\Event\Contract\EventHandlerInterface;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;

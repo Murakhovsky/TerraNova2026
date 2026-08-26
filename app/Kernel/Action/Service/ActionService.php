@@ -11,11 +11,11 @@ use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionRepositoryInterface;
 use Kernel\Action\ExecutionResult;
 use Throwable;
-use Domains\Sales\Event\ActionExecuted;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Kernel\Action\Event\ActionExecutionFinished;
 use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Event\Contract\EventStoreInterface;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class ActionService
 {
@@ -24,7 +24,7 @@ final readonly class ActionService
         private ActionExecutor $executor,
         private ?EventStoreInterface $events = null,
         private ?AuditRepositoryInterface $audit = null,
-        private ?TransactionManager $transactions = null,
+        private ?TransactionManagerInterface $transactions = null,
     ) {}
 
     public function propose(
@@ -110,7 +110,7 @@ final readonly class ActionService
         }
         $finish = function () use ($action, $result, $workerId): void {
             $this->actions->finish($action, $result);
-            $event = ActionExecuted::create($action, $result, $workerId);
+            $event = ActionExecutionFinished::create($action, $result, $workerId);
             $this->events?->append($event);
             $this->audit?->append(new AuditEntry(
                 bin2hex(random_bytes(16)), $action->organizationId, 'ACTION_EXECUTION', 'WORKER', $workerId,

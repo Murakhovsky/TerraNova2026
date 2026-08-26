@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-use Domains\Sales\Event\DealCreated;
-use Domains\Sales\Event\DealStageChanged;
-use Domains\Sales\Event\FollowupOverdue;
-use Domains\Sales\Rule\SalesDeterministicProcessCatalog;
+use Domains\Sales\Automation\Event\DealCreated;
+use Domains\Sales\Automation\Event\DealStageChanged;
+use Domains\Sales\Automation\Event\FollowupOverdue;
+use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
+use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionHandlerInterface;
@@ -36,8 +37,9 @@ spl_autoload_register(static function (string $class) use ($root): void {
 
 $metadata = new EventMetadata('correlation-1', null, 'SYSTEM', 'smoke-test');
 $engine = new DeterministicProcessEngine(new ConditionEvaluator());
-$catalog = new SalesDeterministicProcessCatalog();
-$rules = $catalog->rules();
+$catalog = new SalesRuleCatalog();
+$rules = $catalog->rules('default');
+$policies = (new SalesPolicyCatalog())->policies('default');
 $policyEngine = new PolicyEngine(new ConditionEvaluator());
 $executor = new ActionExecutor([
     new class implements ActionHandlerInterface {
@@ -71,7 +73,7 @@ foreach ($scenarios as $index => [$type, $dealId, $context, $expectedAction]) {
     }
 
     $proposal = $matched[0]->proposal;
-    $policy = $policyEngine->decide($proposal->type, ['action' => ['risk_level' => $proposal->riskLevel]], $catalog->policies());
+    $policy = $policyEngine->decide($proposal->type, ['action' => ['risk_level' => $proposal->riskLevel]], $policies);
     if ($policy !== PolicyDecision::Auto) {
         throw new RuntimeException(sprintf('Scenario %s was not allowed by an AUTO policy.', $type));
     }

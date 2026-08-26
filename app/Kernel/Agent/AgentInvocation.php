@@ -12,5 +12,6 @@ final readonly class AgentInvocation
         public string $question,
         public string $correlationId,
         public array $contextReferences = [],
+        public string $agentName = '',
     ) {}
 }

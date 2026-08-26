@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Kernel\Approval\Service;
 
 use DomainException;
-use Infrastructure\Database\Transaction\TransactionManager;
 use Kernel\Action\Service\ActionService;
 use Kernel\Approval\ApprovalStatus;
 use Kernel\Approval\Contract\ApprovalRepositoryInterface;
@@ -12,13 +11,14 @@ use DateTimeImmutable;
 use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class ApprovalService
 {
     public function __construct(
         private ApprovalRepositoryInterface $approvals,
         private ActionService $actions,
-        private TransactionManager $transactions,
+        private TransactionManagerInterface $transactions,
         private ?AuditRepositoryInterface $audit = null,
         private ?JobQueueInterface $queue = null,
     ) {}

@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 namespace Infrastructure\Database\Transaction;
 
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 use PDO;
 use Throwable;
 
-final class TransactionManager
+final class TransactionManager implements TransactionManagerInterface
 {
     /** @var list<callable(): void> */
     private array $afterCommit = [];

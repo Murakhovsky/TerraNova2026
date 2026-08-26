@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-use Domains\Sales\Action\CreateFollowupTaskHandler;
-use Domains\Sales\Crm\Contract\CrmPort;
-use Domains\Sales\Crm\Contract\OrganizationCrmResolverInterface;
-use Domains\Sales\Crm\CreateTaskCommand;
-use Domains\Sales\Crm\ExternalResult;
-use Infrastructure\Crm\CrmRegistry;
-use Infrastructure\Crm\RoutedCrmGateway;
+use Domains\Sales\Application\Contract\CrmProviderInterface;
+use Domains\Sales\Application\Contract\OrganizationCrmResolverInterface;
+use Domains\Sales\Application\DTO\CreateTaskCommand;
+use Domains\Sales\Application\DTO\OperationResult;
+use Domains\Sales\Automation\Action\CreateFollowupTaskHandler;
+use Infrastructure\Integration\Crm\CrmRegistry;
+use Infrastructure\Integration\Crm\RoutedCrmGateway;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Service\ActionExecutor;
@@ -29,7 +29,7 @@ spl_autoload_register(static function (string $class) use ($root): void {
     }
 });
 
-$adapter = new class implements CrmPort {
+$adapter = new class implements CrmProviderInterface {
     public ?CreateTaskCommand $received = null;
 
     public function provider(): string
@@ -37,10 +37,10 @@ $adapter = new class implements CrmPort {
         return 'external-test-crm';
     }
 
-    public function createTask(CreateTaskCommand $command): ExternalResult
+    public function createTask(CreateTaskCommand $command): OperationResult
     {
         $this->received = $command;
-        return ExternalResult::success('external-task-42', ['provider' => $this->provider()]);
+        return OperationResult::success('external-task-42', ['provider' => $this->provider()]);
     }
 };
 

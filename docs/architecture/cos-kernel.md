@@ -1,178 +1,206 @@
-# COS Kernel v0.1
+# COS Kernel: canonical architecture
 
-COS Kernel implements the reusable business loop inside the existing TerraNova/AIDA application:
+COS is implemented as a modular monolith with hexagonal boundaries. MVC remains a delivery pattern for HTTP interfaces; it is not the architecture of the business core.
 
 ```text
-Event -> Context -> Rule/Decision -> Action -> Policy -> Execution -> Result -> Audit
+Event -> Context -> Rule / Agent -> Action -> Policy -> Approval / Queue
+      -> Execution -> Result Event -> Audit
 ```
 
-The Kernel does not contain Sales entities such as `Deal`, `Lead`, or `ClientCase`. Domain-specific event factories and action handlers live under `app/Domains`.
+## Architectural levels
+
+```text
+Interfaces (Web / API / CLI / Telegram / Webhook)
+    -> Domain Application / Kernel use cases
+
+Domains (Sales / Finance / Inventory / ...)
+    -> Kernel contracts and domain-owned outbound ports
+
+Infrastructure (MySQL / CRM / LLM / messaging / queue)
+    -> implements Domain and Kernel contracts
+
+Bootstrap (composition root)
+    -> is the only level allowed to assemble every concrete dependency
+```
+
+There is no class inheritance relationship between a Domain and the Kernel. A Domain implements Kernel contracts and contributes a `DomainModuleInterface` descriptor through composition.
+
+## Dependency rules
+
+```text
+Kernel         -> PHP only
+Domain         -> Kernel + the same Domain
+Infrastructure -> Kernel and Domain contracts
+Interfaces     -> Application/Kernel services exposed for delivery
+Bootstrap      -> all levels, because it assembles the application
+```
+
+Forbidden dependencies:
+
+```text
+Kernel -X-> Domains, Infrastructure, Interfaces, Phalcon, PDO
+Domain -X-> Infrastructure, Interfaces, Phalcon, PDO, legacy Common services
+Infrastructure -X-> MVC controllers and views
+```
+
+`tests/architecture/layer_dependencies.php` enforces the two core rules automatically.
 
 ## Source layout
 
 ```text
 app/
 |-- Kernel/
-|   |-- Event/             event envelope, outbox contract and dispatcher
-|   |-- Rule/              deterministic condition evaluation
-|   |-- Agent/             agent contract and structured result
-|   |-- Action/            action aggregate, lifecycle and executor
-|   |-- Policy/            AUTO / APPROVAL_REQUIRED / DENIED decision
-|   |-- Approval/          approval state
-|   |-- Queue/             durable jobs, handlers and worker
-|   `-- Audit/             structured audit contract
+|   |-- Event/
+|   |-- Rule/
+|   |-- Agent/
+|   |-- Action/
+|   |-- Policy/
+|   |-- Approval/
+|   |-- Queue/
+|   |-- Audit/
+|   |-- Transaction/
+|   `-- Module/
+|
 |-- Domains/
 |   `-- Sales/
-|       |-- Event/         Sales event factories
-|       `-- Action/        Sales action handlers
+|       |-- Model/                 business values and invariants
+|       |-- Application/
+|       |   |-- Contract/          outbound ports
+|       |   `-- DTO/               port commands and results
+|       |-- Automation/
+|       |   |-- Event/
+|       |   |-- Rule/
+|       |   |-- Agent/
+|       |   |-- Action/
+|       |   `-- Policy/
+|       `-- Bootstrap/
+|           `-- SalesDomainModule.php
+|
 |-- Infrastructure/
-|   |-- Database/
-|   |   |-- Event/         MySQL transactional outbox
-|   |   `-- Transaction/   PDO transaction boundary
-|   `-- Crm/
-|       |-- CrmRegistry.php
-|       |-- RoutedCrmGateway.php
-|       `-- Aida/           native AIDA CRM adapter
-|-- common/                existing shared and legacy code
-|-- modules/               existing Phalcon delivery modules
-|-- config/
-|   `-- services_kernel.php
-`-- migrations/
+|   |-- Database/                  generic Kernel persistence
+|   |-- Persistence/MySql/Sales/   Sales port implementations
+|   |-- Integration/Crm/           routed CRM integrations
+|   `-- Llm/
+|
+|-- Interfaces/                    target location for new delivery adapters
+|-- Bootstrap/
+|   |-- InfrastructureServices.php
+|   |-- SalesServices.php
+|   `-- KernelServices.php
+|
+|-- modules/                       legacy Phalcon delivery modules
+`-- config/services_kernel.php     compatibility entrypoint to Bootstrap
 ```
 
-## Dependency rules
+Folders are created when a responsibility exists. A Domain must not contain ceremonial empty `Service`, `Repository`, or `Factory` folders.
+
+## Kernel responsibilities
+
+The Kernel owns mechanisms and lifecycles, never business vocabulary:
+
+- `Event`: immutable event envelope and publication.
+- `Rule`: deterministic condition evaluation.
+- `Agent`: structured LLM decision runtime; it produces proposals only.
+- `Action`: controlled mutation lifecycle and execution.
+- `Policy`: `AUTO`, `APPROVAL_REQUIRED`, or `DENIED` gate.
+- `Approval`: human decision lifecycle.
+- `Queue`: durable asynchronous jobs, retries, leases, and dead letters.
+- `Audit`: explanation and result trail.
+- `Transaction`: an interface used by Kernel services; PDO is an Infrastructure detail.
+- `Module`: the standard extension boundary for Domains.
+
+Kernel execution emits `cos.action.completed` or `cos.action.failed`. A Domain emits its own business event when its business state changes; the Kernel does not invent a Sales, Finance, or Inventory event.
+
+## Standard Domain module
+
+Every Domain implements `Kernel\Module\DomainModuleInterface` and declares:
+
+- owned event types;
+- owned action types and their handlers;
+- agent definitions and context builders;
+- rule context provider;
+- rule and policy catalogs.
+
+`Kernel\Module\DomainModuleRegistry` validates unique ownership and routes execution without hard-coded `if sales`, `if finance`, or `if inventory` conditions in the Kernel.
+
+Adding a Domain follows the same path:
 
 ```text
-Phalcon modules -> Sales domain -> Kernel
-Infrastructure  -> domain/kernel contracts
-Kernel          -X-> Sales, Phalcon, OpenAI, Telegram, PDO
-Agent           -X-> ActionExecutor or external integrations
+1. Create Domains/<Name>/{Model,Application,Automation,Bootstrap}
+2. Define outbound ports in Application/Contract
+3. Implement events, rules, agents, actions, and policies in Automation
+4. Implement <Name>DomainModule
+5. Implement physical adapters in Infrastructure
+6. Register the module in Bootstrap services
 ```
 
-Infrastructure classes may depend on PDO, Phalcon, RabbitMQ, OpenAI, and Telegram. Kernel classes must remain framework-independent.
+## Sales example
 
-## Database migrations
-
-Apply migrations in filename order after the existing TerraNova migrations:
-
-1. `20260822_000008_cos_events.sql`
-   - `cos_events`
-   - `cos_event_outbox`
-   - `cos_event_consumptions`
-2. `20260822_000009_cos_decisioning.sql`
-   - `cos_rules`
-   - `cos_rule_evaluations`
-   - `cos_decisions`
-3. `20260822_000010_cos_execution.sql`
-   - `cos_actions`
-   - `cos_action_attempts`
-   - `cos_policies`
-   - `cos_policy_evaluations`
-   - `cos_approvals`
-4. `20260822_000011_cos_audit_agents.sql`
-   - `cos_agent_runs`
-   - `cos_audit_log`
-5. `20260822_000012_sales_deterministic_processes.sql` through `20260822_000014_action_policies.sql`
-   - initial Sales rules, integrations and action policies
-6. `20260822_000015_cos_jobs.sql`
-   - `cos_jobs` with retries, leases and dead-letter status
-7. `20260822_000016_call_completed_flow.sql`
-   - the `sales.call.completed` Sales Intelligence rule
-
-All COS records carry `organization_id`. Until a canonical organization table is introduced, this value intentionally has no foreign key to the existing legacy company models.
-
-## Transactional event publishing
-
-Business state and its event must be persisted in the same PDO transaction:
-
-```php
-$transactionManager->transactional(function () use ($deal, $event): void {
-    $dealRepository->save($deal);
-    $eventOutbox->append($event);
-});
-```
-
-`MysqlEventOutbox` rejects writes outside a transaction. It writes the immutable event and dispatch record together. A worker will later claim `cos_event_outbox` rows and dispatch them.
-
-Consumers use `cos_event_consumptions` with the unique `(event_id, consumer_name)` key so redelivery cannot repeat a logical result.
-
-## Action lifecycle
+Sales supplies meaning to the generic loop:
 
 ```text
-PROPOSED -> PENDING_APPROVAL -> QUEUED -> RUNNING -> COMPLETED
-    |               |                       `-----> FAILED -> QUEUED
-    `---------------`-----> REJECTED
+sales.call.completed
+-> Sales rule context
+-> agent.run.sales_intelligence
+-> Sales agent context
+-> sales.send_followup proposal
+-> generic policy and queue
+-> Sales MessageGatewayInterface
+-> MySQL or external CRM adapter
+-> cos.action.completed
+-> audit
 ```
 
-Only the `Action` aggregate changes its status. Agents return proposals; they cannot execute actions.
+Sales action handlers never execute SQL. They depend on ports such as:
 
-An action idempotency key is unique inside an organization. A recommended key for a rule-created action is:
+- `DealRepositoryInterface`;
+- `MessageGatewayInterface`;
+- `FollowupRepositoryInterface`;
+- `CrmGatewayInterface`.
+
+MySQL and CRM implementations live under `Infrastructure` and can be replaced per organization without modifying Sales rules or Kernel code.
+
+## MVC and Phalcon modules
+
+MVC remains valid inside a Web interface:
 
 ```text
-event_id + rule_id + action_type + target_id
+HTTP -> Controller -> Application/Kernel service -> ViewModel -> View
 ```
 
-## Default policy behavior
+Controllers must not contain policies, SQL, domain transitions, or external integration selection. Existing `app/modules` remains a compatibility delivery layer while new or migrated endpoints should be placed under `Interfaces/Web`, `Interfaces/Api`, `Interfaces/Cli`, and similar entrypoint-oriented namespaces.
 
-If no policy matches an action, `PolicyEngine` returns `DENIED`. Automatic execution must always be enabled by an explicit active policy.
+Business areas must not be modeled as Phalcon modules. `Sales`, `Finance`, and `Inventory` are Domains because the same logic can be called from Web, API, CLI, Telegram, a queue worker, or an external CRM webhook.
 
-## Asynchronous execution
+## Composition root
 
-Agent inference and Action execution run only through durable jobs:
+The old monolithic service file is split by role:
 
-```text
-AGENT_RUN -> structured decision -> policy -> ACTION_EXECUTION
-```
+- `Bootstrap/InfrastructureServices.php` creates concrete adapters;
+- `Bootstrap/SalesServices.php` assembles the Sales Domain module;
+- `Bootstrap/KernelServices.php` assembles Kernel runtimes from registered modules.
 
-`cos_jobs` uses an atomic `FOR UPDATE SKIP LOCKED` claim, a worker lease, exponential retry, and `DEAD` after `max_attempts`. The unique organization/idempotency key makes redelivery safe. Run bounded worker batches through `./run queue run`; a process supervisor should invoke it continuously in production.
+`config/services_kernel.php` only includes these files so existing Phalcon bootstraps remain compatible.
 
-## CallCompleted vertical slice
+## Persistence and execution guarantees
 
-```text
-completed call activity + sales.call.completed (one transaction)
--> Rule Engine
--> AGENT_RUN job
--> SalesIntelligenceAgent structured decision
--> sales.send_followup Action
--> AUTO policy
--> ACTION_EXECUTION job
--> SendMessageHandler
--> sales.followup.sent
--> audit records sharing one correlation_id
-```
-
-The Agent only returns `ActionProposal` values. It has no repository or executor capable of mutating business state.
-
-## Deterministic Sales processes
-
-The first process catalog is implemented by `Domains\Sales\Rule\SalesDeterministicProcessCatalog` and seeded by migration `20260822_000012_sales_deterministic_processes.sql`:
-
-1. `sales.deal.created` creates a qualification task for an active Deal in the `new` stage.
-2. `sales.deal.stage_changed` creates a follow-up task when an active working-stage Deal has no `next_contact_at`.
-3. `sales.followup.overdue` creates an urgent escalation task for an unfinished overdue activity.
-
-All three actions use an explicit `AUTO` policy and only create internal CRM tasks. They do not send messages or mutate deal stages.
-
-## CRM boundary
-
-Sales action handlers do not write CRM tables and do not select a provider. They send commands through `CrmGatewayInterface`:
-
-```text
-CreateFollowupTaskHandler
--> RoutedCrmGateway
--> organization CRM resolver
--> CrmRegistry
--> Aida / HubSpot / Pipedrive adapter
-```
-
-The active CRM provider is configured per organization in `cos_integrations`. Entity mappings and outbound idempotency references are stored in `cos_external_references`; synchronization progress belongs to `cos_sync_state`.
-
-`AidaCrmAdapter` is the first native adapter and is the only class allowed to translate `sales.create_*_task` into an insert in `tn_client_case_activities`. A future external CRM adapter implements the same `CrmPort` without changing the Kernel or Sales rules.
+- MySQL remains the source of truth; COS is not Event Sourcing.
+- Business state and its event are stored in one transaction.
+- Agents cannot access Action executors or infrastructure adapters.
+- Every Action passes Policy before execution.
+- Actions and integration calls use organization-scoped idempotency keys.
+- LLM work and mutations execute through durable jobs.
+- Default Policy behavior is deny when no explicit policy matches.
 
 ## Verification
 
-`tests/integration/call_completed_flow.php` exercises the complete Event-to-result cycle, including the persisted Decision, with an in-memory database boundary and a fake structured LLM. `tests/smoke/queue_retry.php` verifies that retry exhaustion moves a job to the dead-letter state.
+The executable checks cover:
 
-## Minimal operator UI
-
-Managers can open `/cos` to inspect Events, Decisions, proposed Actions, Approvals, execution Results, dead jobs, and Audit records. A Deal card shows its latest AI recommendation, confidence, risk, Action status, and result. `Execute`, `Approve`, and `Reject` are POST-only operations; Execute cannot bypass Policy, and an approved Action plus its `ACTION_EXECUTION` job are persisted in one transaction.
+- architectural dependency direction;
+- Event transaction and post-commit dispatch;
+- deterministic Sales rules;
+- external CRM routing;
+- Agent structured-output safety;
+- Policy and Approval behavior;
+- queue retry/dead-letter behavior;
+- the complete CallCompleted flow.

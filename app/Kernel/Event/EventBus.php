@@ -6,7 +6,7 @@ namespace Kernel\Event;
 use InvalidArgumentException;
 use Kernel\Event\Contract\EventHandlerInterface;
 use Kernel\Event\Contract\EventStoreInterface;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 use Throwable;
 
 final class EventBus
@@ -16,7 +16,7 @@ final class EventBus
 
     public function __construct(
         private readonly EventStoreInterface $store,
-        private readonly TransactionManager $transactions,
+        private readonly TransactionManagerInterface $transactions,
     ) {
     }
 

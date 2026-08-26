@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Kernel\Policy\Service;
 
-use Infrastructure\Database\Transaction\TransactionManager;
 use Kernel\Action\Action;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
@@ -15,6 +14,7 @@ use Kernel\Policy\PolicyDecision;
 use DateTimeImmutable;
 use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class ActionPolicyService
 {
@@ -24,7 +24,7 @@ final readonly class ActionPolicyService
         private PolicyEvaluationRepositoryInterface $evaluations,
         private ApprovalRepositoryInterface $approvals,
         private PolicyEngine $engine,
-        private TransactionManager $transactions,
+        private TransactionManagerInterface $transactions,
         private ?AuditRepositoryInterface $audit = null,
     ) {}
 

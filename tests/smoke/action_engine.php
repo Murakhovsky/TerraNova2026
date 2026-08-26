@@ -9,6 +9,7 @@ use Kernel\Action\Contract\ActionRepositoryInterface;
 use Kernel\Action\ExecutionResult;
 use Kernel\Action\Service\ActionExecutor;
 use Kernel\Action\Service\ActionService;
+use Kernel\Action\Event\ActionExecutionFinished;
 use Kernel\Approval\Approval;
 use Kernel\Approval\ApprovalStatus;
 use Kernel\Approval\Contract\ApprovalRepositoryInterface;
@@ -88,9 +89,9 @@ if ($completed?->status !== ActionStatus::Completed || $nothing !== null || $exe
     throw new RuntimeException('Action was not executed exactly once.');
 }
 $resultWithMetrics = ExecutionResult::success(['message_id' => '1'], ['messages_sent' => 1]);
-$resultEvent = Domains\Sales\Event\ActionExecuted::create($completed, $resultWithMetrics, 'worker-1');
+$resultEvent = ActionExecutionFinished::create($completed, $resultWithMetrics, 'worker-1');
 if ($resultWithMetrics->status() !== 'SUCCESS'
-    || $resultEvent->type !== 'sales.followup.sent'
+    || $resultEvent->type !== ActionExecutionFinished::COMPLETED
     || $resultEvent->payload['metrics']['messages_sent'] !== 1
 ) {
     throw new RuntimeException('Execution Result event is invalid.');
