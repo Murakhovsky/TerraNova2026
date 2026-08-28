@@ -84,11 +84,12 @@ app/
 |           `-- SalesDomainModule.php
 |
 |-- Infrastructure/
-|   |-- Database/                  generic Kernel persistence
-|   |-- Persistence/MySql/Sales/   Sales port implementations
+|   |-- Persistence/
+|   |   |-- MySql/Database/       generic Kernel persistence
+|   |   |-- MySql/<Domain>/       domain port implementations
+|   |   |-- MySql/ReadModel/      query-only delivery projections
+|   |   `-- Phalcon/              Telegram-only ActiveRecord quarantine
 |   |-- Integration/Crm/           routed CRM integrations
-|   |-- ReadModel/                 query-only projections for delivery
-|   |-- Operations/                metrics
 |   |-- Observability/             structured logging
 |   `-- Llm/
 |

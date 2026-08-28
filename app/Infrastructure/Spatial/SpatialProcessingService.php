@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Spatial;
 
 use Domains\Spatial\Application\Contract\SpatialProcessingInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use PDO;
 use RuntimeException;
 use Throwable;

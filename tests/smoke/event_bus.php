@@ -6,7 +6,7 @@ use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
 
 $root = dirname(__DIR__, 2);
 spl_autoload_register(static function (string $class) use ($root): void {

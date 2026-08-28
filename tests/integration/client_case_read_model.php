@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Connection\DatabaseService;
-use Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\ReadModel\MysqlClientCaseReadModel;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');

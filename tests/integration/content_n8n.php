@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Connection\DatabaseService;
-use Infrastructure\Persistence\MySql\Content\ContentService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Domains\Content\Application\Service\ContentService;
 use Infrastructure\Integration\N8n\IntegrationOutboxProcessor;
 use Infrastructure\Integration\N8n\N8nWebhookService;
+use Infrastructure\Persistence\MySql\Content\MysqlContentRepository;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -14,7 +15,7 @@ require APP_PATH . '/config/loader.php';
 $config = require APP_PATH . '/config/config.php';
 $database = new DatabaseService($config->database);
 $pdo = $database->connection();
-$content = new ContentService($database);
+$content = new ContentService(new MysqlContentRepository($database));
 $secret = bin2hex(random_bytes(24));
 $externalId = 'test-n8n-' . bin2hex(random_bytes(6));
 $idempotencyKey = 'test-delivery-' . bin2hex(random_bytes(6));

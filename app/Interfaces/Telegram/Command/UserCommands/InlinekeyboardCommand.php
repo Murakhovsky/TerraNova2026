@@ -45,8 +45,8 @@ use Infrastructure\Persistence\Phalcon\Telegram\Estate\Adverts as RealtyTgAdvert
 use Infrastructure\Persistence\Phalcon\Telegram\Estate\AdvertsDisabled as TelegramEbNotActualAdverts;
 use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects as RealtyTg;
 use Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsArchive as RealtyTgArchive;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\ListIstems as TelegramEbFavouriteItems;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists as TelegramEbFavourite;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems as TelegramEbFavouriteItems;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists as TelegramEbFavourite;
 use Exception as LocalTGException;
 use DateTime;
 

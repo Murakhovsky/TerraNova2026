@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Identity;
 
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use Throwable;
 
 class SessionAuthService implements AuthenticatedUserContextInterface

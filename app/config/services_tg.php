@@ -8,8 +8,8 @@ use Phalcon\Session\Manager as SessionManager;
 use Phalcon\Mvc\Url as UrlResolver;
 use Phalcon\Translate\Adapter\NativeArray;
 use Interfaces\Telegram\Listener\IdentityUserEventsListener;
-use Infrastructure\Persistence\Phalcon\Identity\Service\NotificationService;
-use Infrastructure\Persistence\Phalcon\Identity\Service\TelegramUserService;
+use Infrastructure\Identity\TelegramNotificationService;
+use Infrastructure\Identity\TelegramUserService;
 
 /**
  * Registering a router
@@ -22,7 +22,7 @@ $di->setShared('router', function () {
 
 
 $di->setShared('userService', fn () => new TelegramUserService());
-$di->setShared('notificationService', fn () => new NotificationService());
+$di->setShared('notificationService', fn () => new TelegramNotificationService());
 
 /** @var \Infrastructure\Framework\PhalconEventService $legacyEvents */
 $legacyEvents = $di->getShared('eventService');

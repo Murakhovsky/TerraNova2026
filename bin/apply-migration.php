@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));

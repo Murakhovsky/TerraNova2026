@@ -14,7 +14,7 @@ use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Infrastructure\Persistence\Phalcon\Telegram\Realty\RealtyReamak;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Reminders;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Reminders;
 use Interfaces\Telegram\Command\MyUserCommand;
 use Interfaces\Telegram\Presentation\Buttons;
 use Interfaces\Telegram\Presentation\Messages;

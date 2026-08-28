@@ -15,11 +15,10 @@ use Longman\TelegramBot\Entities\InlineKeyboard;
 use Longman\TelegramBot\Entities\InputMedia\InputMediaPhoto;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
-use Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
+use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
 
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists;
-use Interfaces\Telegram\Presentation\Buttons;
-use Interfaces\Telegram\Presentation\Messages;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Infrastructure\Integration\Telegram\InlineKeyboardFactory;
 
 class ReObjects extends BaseModel
 {
@@ -93,7 +92,6 @@ class ReObjects extends BaseModel
 
         $notes["price"] = $notes["currency"] == 'UAH' ? $this->price_UAH : $this->price_USD;
         $notes["photos_id"] = json_decode($this->photos_id);
-        Messages::sendMeMessage(json_encode($this->photos_url));
         $notes["photos_url"] = json_decode($this->photos_url);
         $notes["photos"] = count(json_decode($this->photos_url));
         $notes["is_private"] = $this->is_private ? 'yes' : 'no';
@@ -392,8 +390,8 @@ class ReObjects extends BaseModel
         $command = 'AdvertTG,' . $this->id . ',AdvertTG,4,as_advert';
         $inline_keyboard[] = [
 //            Buttons::getButton('Зберегти', 'inlinekeyboard;show_card;'  . $params),
-            Buttons::getButton('В обрані', 'inlinekeyboard;setToList;' . $command),
-            Buttons::getButton('Не актуально', 'inlinekeyboard;not_actual;' . $command ),
+            InlineKeyboardFactory::button('В обрані', 'inlinekeyboard;setToList;' . $command),
+            InlineKeyboardFactory::button('Не актуально', 'inlinekeyboard;not_actual;' . $command ),
         ];
 
         return array(

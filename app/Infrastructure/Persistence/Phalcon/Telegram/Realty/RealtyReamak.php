@@ -84,50 +84,6 @@ class RealtyReamak extends Model
 
     }
 
-    public function show()
-    {
-        echo '<br>';
-        var_dump('Tittle: '.$this->tittle); echo '<br>';
-        echo 'Img Link: '.$this->img_links.'<br>';
-        echo ' User ID: '.$this->user_id.'<br>';
-        echo ' Price USD: '.$this->price_USD.'<br>';
-        echo ' Price UAH: '.$this->price_UAH.'<br>';
-        echo ' Count room: '.$this->rooms.'<br>';
-        echo ' Square full: '.$this->square_full.'<br>';
-        echo ' Square dwelling: '.$this->square_dwelling.'<br>';
-        echo ' Square kitchen: '.$this->square_kitchen.'<br>';
-        echo ' Square ground: '.$this->square_ground.'<br>';
-        echo ' Storey: '.$this->floor.'<br>';
-        echo ' Count storeys: '.$this->floors.'<br>';
-        echo ' Type: '.$this->type.'<br>';
-        echo ' Ground type: '.$this->type_ground.'<br>';
-        echo ' Condition: '.$this->condition.'<br>';
-        echo ' Wall material: '.$this->wall_material.'<br>';
-        echo ' Balcony: '.$this->balconies.'<br>';
-        echo ' Is owner: '.$this->is_owner.'<br>';
-        echo ' Params: '.$this->params.'<br>';
-        var_dump(' Description: '.$this->description); echo '<br>';
-        echo ' Location code: '.$this->location_code.'<br>';
-        echo ' City: '.$this->city.'<br>';
-        echo ' Region: '.$this->region.'<br>';
-        echo ' Latitude: '.$this->latitude.'<br>';
-        echo ' Longitude: '.$this->longitude.'<br>';
-        echo ' Advert code: '.$this->advert_code.'<br>';
-        echo ' Published: '.$this->published_at.'<br>';
-        echo ' Update: '.$this->updated_at.'<br>';
-        echo ' Base URL: '.$this->base_url.'<br>';
-        echo ' Advert link: '.$this->advert_link.'<br>';
-        echo ' Contact name: '.$this->contact_name.'<br>';
-        echo ' Contact linc: '.$this->contact_link.'<br>';
-        echo ' Contact phone: '.$this->contact_phone.'<br>';
-        echo ' Contact agency: '.$this->contact_agency.'<br>';
-        echo ' Provider: '.$this->provider.'<br>';
-        echo ' Status: '.$this->status.'<br>';
-        echo ' Status data: '.$this->status_data.'<br>';
-
-//        exit();
-    }
-
     public function getAdvertByID($realty_id){
         $data = array(
             'conditions' => 'id = :id:',
@@ -150,18 +106,24 @@ class RealtyReamak extends Model
             if ($status == '_group_') {
                 $data['group'] = 'status';
             } else {
-                $condition = $condition ?? $condition . ' AND ';
+                if ($condition !== '') {
+                    $condition .= ' AND ';
+                }
                 $condition .= 'status = :s:';
                 $bind['s'] = $status;
             }
         }
         if ($user_id) {
-            $condition = $condition ?? $condition . ' AND ';
+            if ($condition !== '') {
+                $condition .= ' AND ';
+            }
             $condition .= 'user_id = :a_id:';
             $bind['a_id'] = $user_id;
         }
         if ($period != 'all') {
-            $condition = $condition ?? $condition . ' AND ';
+            if ($condition !== '') {
+                $condition .= ' AND ';
+            }
             $condition .= 'added_at > :c_at:';
             $bind['c_at'] = date('Y-m-d H:i:s', strtotime(' -1 ' . $period));
         }

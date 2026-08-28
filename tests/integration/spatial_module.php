@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Domains\Spatial\Application\Service\SpatialSceneService;
 use Infrastructure\Media\SpatialAssetService;
+use Infrastructure\Persistence\MySql\Spatial\MysqlSpatialSceneRepository;
 use Infrastructure\Spatial\SpatialProcessingService;
-use Infrastructure\Persistence\MySql\Spatial\SpatialSceneService;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -36,7 +37,7 @@ if ($cleanupArgument) {
     exit(0);
 }
 $assets = new SpatialAssetService($database, 5 * 1024 * 1024);
-$scenes = new SpatialSceneService($database, $assets);
+$scenes = new SpatialSceneService(new MysqlSpatialSceneRepository($database, $assets));
 $processor = new SpatialProcessingService($database);
 $sceneId = 0;
 $userId = 0;

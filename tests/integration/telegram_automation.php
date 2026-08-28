@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use Infrastructure\Integration\Telegram\TelegramAutomationService;
 use Infrastructure\Integration\Telegram\TelegramAutomationProcessor;
 

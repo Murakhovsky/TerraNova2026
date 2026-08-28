@@ -5,7 +5,7 @@ namespace Infrastructure\Security;
 
 use Domains\Spatial\Application\Contract\SpatialAccessInterface;
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Throwable;

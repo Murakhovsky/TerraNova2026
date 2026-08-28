@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Media;
 
 use Domains\Spatial\Application\Contract\SpatialAssetStorageInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use RuntimeException;
 
 class SpatialAssetService implements SpatialAssetStorageInterface

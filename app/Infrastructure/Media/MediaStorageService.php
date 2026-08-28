@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace Infrastructure\Media;
 
-use Infrastructure\Database\Connection\DatabaseService;
+use Domains\Property\Application\Contract\PropertySubmissionMediaInterface;
+use Domains\Property\Application\Contract\PropertyMediaStorageInterface;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use RuntimeException;
 
-class MediaStorageService
+class MediaStorageService implements PropertySubmissionMediaInterface, PropertyMediaStorageInterface
 {
     private const MAX_IMAGE_BYTES = 52428800;
     private const MAX_MAIN_IMAGE_BYTES = 52428800;

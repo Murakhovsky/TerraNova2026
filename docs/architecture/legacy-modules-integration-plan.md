@@ -4,7 +4,7 @@
 
 Статус виконання станом на 2026-08-28: план завершено для `app/modules`. Каталог `app/modules` і PSR-4 mapping `Modules\\` видалені. Frontend controllers/views перенесені до `Interfaces/Web`, Spatial delivery — до `Interfaces/Api`, CLI tasks — до `Interfaces/Cli`, а 23 Telegram-команди, webhook, rendering і persistence mappings — до `Interfaces/Telegram` та `Infrastructure/Persistence/Phalcon`. Games і його окремі entrypoints видалені. Browser source збирається з `resources/frontend` через Vite multi-entry manifest.
 
-`app/common` більше не має production callers і не входить до Composer/Phalcon autoload. Він залишається лише як фізично неактивний cleanup target; активні реалізації вже розміщені в канонічних шарах. Детальна карта: `legacy-service-migration-ledger.md`.
+`app/common` та `app/Infrastructure/Legacy` також фізично видалені після досягнення нульових production callers. Persistence завершено як окремий зріз: MySQL adapters і read models зведені під `Infrastructure/Persistence/MySql`, а ActiveRecord обмежено активними Telegram/Identity mappings. Детальна карта: `legacy-service-migration-ledger.md` і `persistence.md`.
 
 ## 1. Мета
 
@@ -54,7 +54,8 @@ app/
 |   |-- Persistence/MySql/<Domain>/
 |   |-- Integration/Telegram/
 |   |-- Media/
-|   `-- ReadModel/MySql/
+|   |-- Persistence/MySql/ReadModel/
+|   `-- Persistence/Phalcon/       Telegram-only ActiveRecord mappings
 |-- Interfaces/
 |   |-- Web/Controller/
 |   |-- Api/Controller/
@@ -93,7 +94,7 @@ public/
 | `modules/frontend/services/CatalogService` | розділити на Property query/read model і web facade | P0 |
 | property submission/moderation/media/presentation services | use cases у Property Domain; media/Telegram реалізації в Infrastructure | P1 |
 | content, blog, SEO, n8n | Content Domain/Application + webhook/API Interface | P1 |
-| admin, analytics | query services у Infrastructure/ReadModel; команди через відповідні Domain use cases | P1 |
+| admin, analytics | query services у `Infrastructure/Persistence/MySql/ReadModel`; команди через відповідні Domain use cases | P1 |
 | `common/models/Crm` | зіставити з Sales ports; ActiveRecord залишити тільки adapter/read-model деталлю | P0 |
 | `common/models/RealEstate` | Property persistence adapters; бізнес-правила в Property Domain | P1 |
 | `common/models/Auth` | Identity persistence adapter | P1 |
@@ -141,7 +142,7 @@ public/
 
 - Завершити `ClientCaseService` і `InboundRequestService`, бо вони вже частково делегують у новий Sales use case.
 - Винести решту транзакцій, event emission та tenant scoping у `Domains/Sales/Application`.
-- SQL reads винести в `Infrastructure/ReadModel/MySql/Sales`.
+- SQL reads винести в `Infrastructure/Persistence/MySql/ReadModel`.
 - Залишити старі frontend services тонкими compatibility facades, додати deprecation marker і тест еквівалентності.
 
 Критерій виходу: web, API, worker і webhook використовують ті самі Sales use cases; frontend service не виконує SQL або domain transitions.
@@ -180,7 +181,7 @@ public/
 - Прибрати generic module routes, якщо всі підтримувані URL описані явно.
 - Оновити deployment, runbooks і architecture tests.
 
-Результат: активні entrypoints працюють через `Interfaces`; `Modules\\` і `Common\\` autoload mappings відсутні. `app/common` неактивний і очікує окремого фізичного cleanup.
+Результат: активні entrypoints працюють через `Interfaces`; `Modules\\` і `Common\\` autoload mappings відсутні; фізичні legacy-каталоги видалені.
 
 ## 6. Підготовка frontend
 
@@ -241,7 +242,7 @@ resources/frontend/
 | MIG-008 | Content/Identity/Spatial slices | MIG-004 | решта активного web backend |
 | MIG-009 | Telegram/Users deduplication | MIG-005, MIG-006 | виконано: canonical command/persistence namespaces |
 | MIG-010 | Games/Economy ADR | MIG-001 | виконано: Games і неактивний Economy removed |
-| MIG-011 | Remove compatibility layer | усі відповідні slices | виконано для `app/modules`; `app/common` має нуль callers |
+| MIG-011 | Remove compatibility layer | усі відповідні slices | виконано; `app/modules`, `app/common`, `Infrastructure/Legacy` видалені |
 
 ## 8. Контроль ризиків
 
@@ -260,8 +261,8 @@ resources/frontend/
 - 0 frontend business services виконують raw SQL після завершення відповідного slice.
 - 100% browser source assets збираються з `resources`; `public/build` є відтворюваним output.
 - Критичні web flows покриті Playwright smoke tests.
-- `app/modules` видалено після досягнення нульових production callers; `app/common` також має нуль callers і виключений з autoload.
+- `app/modules`, `app/common` та `app/Infrastructure/Legacy` видалено після досягнення нульових production callers.
 
-## 10. Наступний cleanup
+## 10. Наступний етап
 
-Після окремого підтвердження можна фізично видалити неактивні `app/common` і `app/Infrastructure/Legacy`. До цього вони не входять до autoload і не мають production callers. Подальша frontend-робота має виконуватися лише в `resources/frontend`, `Interfaces/Web/View` та через стабільні `/api/v1` contracts.
+Legacy cleanup завершено. Подальша frontend-робота має виконуватися лише в `resources/frontend`, `Interfaces/Web/View` та через стабільні `/api/v1` contracts. Telegram ActiveRecord quarantine замінюється поступово через Domain ports без створення нових Phalcon models.

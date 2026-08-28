@@ -3,9 +3,6 @@
 
 namespace Infrastructure\Persistence\Phalcon\Telegram\Featuring;
 
-use Longman\TelegramBot\Exception\TelegramException;
-use Interfaces\Telegram\Presentation\Messages;
-
 abstract class PresentationModel extends BaseModel
 {
 //

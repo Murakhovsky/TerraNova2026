@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Connection\DatabaseService;
-use Infrastructure\Persistence\MySql\Content\ContentService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Domains\Content\Application\Service\ContentService;
+use Infrastructure\Persistence\MySql\Content\MysqlContentRepository;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -13,7 +14,7 @@ require APP_PATH . '/config/loader.php';
 $config = require APP_PATH . '/config/config.php';
 $database = new DatabaseService($config->database);
 $pdo = $database->connection();
-$content = new ContentService($database);
+$content = new ContentService(new MysqlContentRepository($database));
 $baseUrl = rtrim((string) ($_ENV['TEST_BASE_URL'] ?? 'http://127.0.0.1:8001'), '/');
 $email = 'content-http-' . bin2hex(random_bytes(5)) . '@example.test';
 $password = 'ContentTest-' . bin2hex(random_bytes(8));

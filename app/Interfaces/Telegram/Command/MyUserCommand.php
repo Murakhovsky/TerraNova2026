@@ -12,7 +12,7 @@
 namespace Interfaces\Telegram\Command;
 
 
-use Infrastructure\Database\Exception\DatabaseOperationFailed;
+use Infrastructure\Persistence\MySql\Database\Exception\DatabaseOperationFailed;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Conversation;
 use Longman\TelegramBot\ConversationDB;

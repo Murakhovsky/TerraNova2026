@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 use Infrastructure\Persistence\MySql\Sales\MysqlClientCaseCommandRepository;
 use Infrastructure\Persistence\MySql\Sales\MysqlInboundLeadRepository;
-use Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
-use Infrastructure\Database\Event\MysqlEventStore;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Infrastructure\Persistence\MySql\ReadModel\MysqlClientCaseReadModel;
+use Infrastructure\Persistence\MySql\Database\Event\MysqlEventStore;
+use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
 use Domains\Sales\Application\UseCase\CreateClientCase;
 use Domains\Sales\Application\UseCase\QuickUpdateClientCase;
 use Domains\Sales\Application\UseCase\UpdateClientCase;

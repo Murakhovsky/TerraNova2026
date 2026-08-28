@@ -9,7 +9,7 @@ use Infrastructure\Persistence\Phalcon\Telegram\Estate\Adverts;
 use Infrastructure\Persistence\Phalcon\Telegram\Realty\RealtyReamak;
 use Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
 use Infrastructure\Persistence\Phalcon\Telegram\Request\Shows;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Companies;
 use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
 use Phalcon\Mvc\Model;

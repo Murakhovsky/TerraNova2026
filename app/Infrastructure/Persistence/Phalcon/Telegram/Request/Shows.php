@@ -5,8 +5,7 @@ namespace Infrastructure\Persistence\Phalcon\Telegram\Request;
 use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
 use Infrastructure\Persistence\Phalcon\Telegram\Featuring\PresentationModel;
 use Longman\TelegramBot\Entities\InlineKeyboard;
-use Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
-use Interfaces\Telegram\Presentation\Buttons;
+use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
 
 
 class Shows extends PresentationModel

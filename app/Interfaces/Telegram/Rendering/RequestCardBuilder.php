@@ -1,7 +1,8 @@
 <?php
 
 namespace Interfaces\Telegram\Rendering;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 class RequestCardBuilder extends BaseCardBuilder
 {
@@ -73,7 +74,7 @@ class RequestCardBuilder extends BaseCardBuilder
             $text .= $this->is_private ? PHP_EOL . '<b>Приватна:</b> ' . $this->t($this->is_private) : ' ';
 
             $favourite_str = '';
-            $favourite_list = ListsItems::find(
+            $favourite_list = ListItems::find(
                 "item_id = '" . $this->id . "'"
             );
             if (count($favourite_list)) {

@@ -5,8 +5,8 @@ use Interfaces\Telegram\Presentation\Messages;
 use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
 use Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsDisabled;
 use Infrastructure\Persistence\Phalcon\Telegram\Featuring\BaseModel;
-use Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists;
+use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 class ObjectCardBuilder extends BaseCardBuilder
 {

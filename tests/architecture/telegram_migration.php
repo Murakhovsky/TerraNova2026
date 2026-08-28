@@ -55,8 +55,18 @@ foreach ($roots as $directory) {
     }
 }
 
-if ($loaded < 80) {
-    throw new RuntimeException('Unexpectedly few migrated Telegram types were loaded: ' . $loaded);
+foreach ([
+    Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers::class,
+    Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees::class,
+    Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects::class,
+    Infrastructure\Persistence\Phalcon\Telegram\Request\Requests::class,
+    Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists::class,
+    Interfaces\Telegram\Rendering\ObjectCardBuilder::class,
+    Interfaces\Telegram\Rendering\RequestCardBuilder::class,
+] as $requiredType) {
+    if (!class_exists($requiredType)) {
+        throw new RuntimeException('Required canonical Telegram type was not loaded: ' . $requiredType);
+    }
 }
 
 require_once $root . '/app/Interfaces/Telegram/Language/language_uk.php';

@@ -4,12 +4,13 @@ declare(strict_types=1);
 namespace Infrastructure\Integration\Telegram;
 
 use Domains\Notification\Application\Contract\TelegramAutomationInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Domains\Property\Application\Contract\PropertyNotificationInterface;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use PDO;
 use RuntimeException;
 use Throwable;
 
-class TelegramAutomationService implements TelegramAutomationInterface
+class TelegramAutomationService implements TelegramAutomationInterface, PropertyNotificationInterface
 {
     public function __construct(private DatabaseService $database)
     {

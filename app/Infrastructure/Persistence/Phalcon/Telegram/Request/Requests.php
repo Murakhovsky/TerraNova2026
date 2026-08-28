@@ -7,8 +7,9 @@ namespace Infrastructure\Persistence\Phalcon\Telegram\Request;
 use Infrastructure\Persistence\Phalcon\Telegram\Featuring\PresentationModel;
 use Longman\TelegramBot\Entities\InlineKeyboard;
 
-use Interfaces\Telegram\Presentation\Buttons;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists;
+use Infrastructure\Integration\Telegram\InlineKeyboardFactory;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 class Requests extends PresentationModel
 {
@@ -69,31 +70,31 @@ class Requests extends PresentationModel
 
         $inline_keyboard = array(
             array(
-                Buttons::getButton('Знайти', $this->search_id, 'switch_inline_query_current_chat'),
-                Buttons::getButton('Знайти  ⤴', $this->search_id, 'switch_inline_query')
+                InlineKeyboardFactory::button('Знайти', $this->search_id, 'switch_inline_query_current_chat'),
+                InlineKeyboardFactory::button('Знайти  ⤴', $this->search_id, 'switch_inline_query')
             ),
             array(
-                Buttons::getButton('Статус', 'inlinekeyboard;inProgress'),
-                Buttons::getButton(TG_ADD_OBJECT,'inlinekeyboard;inProgress')
+                InlineKeyboardFactory::button('Статус', 'inlinekeyboard;inProgress'),
+                InlineKeyboardFactory::button(TG_ADD_OBJECT,'inlinekeyboard;inProgress')
             ),
             array(
-                Buttons::getButton(TG_ADD_TO_LIST, 'inlinekeyboard;inProgress'), //'inlinekeyboard;setFavourite;getList;' . $realty_search_data->id]),
-                Buttons::getButton('Додати нагадування', 'inlinekeyboard;inProgress')
+                InlineKeyboardFactory::button(TG_ADD_TO_LIST, 'inlinekeyboard;inProgress'), //'inlinekeyboard;setFavourite;getList;' . $realty_search_data->id]),
+                InlineKeyboardFactory::button('Додати нагадування', 'inlinekeyboard;inProgress')
             ),
             array(
 //                Buttons::getButton('🗒 ' . TG_OBJECTS, 'inlinekeyboard;inProgress'),
-                Buttons::getButton('🔑 Створити показ', 'showing;command;start;request_id;' . $this->id),
-                Buttons::getButton('🔑 Запит на показ', 'inlinekeyboard;inProgress;'),
+                InlineKeyboardFactory::button('🔑 Створити показ', 'showing;command;start;request_id;' . $this->id),
+                InlineKeyboardFactory::button('🔑 Запит на показ', 'inlinekeyboard;inProgress;'),
             )
         );
 
         if ($user_id == $this->user_id) {
-            $inline_keyboard[] = Buttons::getAdminLine('request', $this->id);
+            $inline_keyboard[] = InlineKeyboardFactory::adminLine('request', $this->id);
 
             $text .= $this->is_private ? PHP_EOL . '<b>Приватна:</b> ' . self::const($this->is_private) : ' ';
 
             $favourite_str = '';
-            $favourite_list = ListsItems::find(
+            $favourite_list = ListItems::find(
                 "item_id = '" . $this->id . "'"
             );
             if (count($favourite_list)) {
@@ -105,7 +106,7 @@ class Requests extends PresentationModel
                 }
             }
         }
-        $inline_keyboard[] = Buttons::getControlLine('request,' . $this->id);
+        $inline_keyboard[] = InlineKeyboardFactory::controlLine('request,' . $this->id);
 
         return array(
             'message_text' => mb_convert_encoding($text, "UTF-8"),

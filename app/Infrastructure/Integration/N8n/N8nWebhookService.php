@@ -5,7 +5,7 @@ namespace Infrastructure\Integration\N8n;
 
 use Domains\Content\Application\Contract\ContentServiceInterface;
 use Domains\Content\Application\Contract\InboundContentWebhookInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use PDOException;
 use Throwable;
 

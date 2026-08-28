@@ -3,9 +3,7 @@
 
 namespace Infrastructure\Persistence\Phalcon\Identity\Telegram;
 
-use Infrastructure\Database\Exception\DatabaseOperationFailed;
-use Longman\TelegramBot\Exception\TelegramException;
-use Interfaces\Telegram\Rendering\Messages;
+use Infrastructure\Persistence\MySql\Database\Exception\DatabaseOperationFailed;
 use Phalcon\Mvc\Model;
 use Phalcon\Mvc\Model\Query;
 use Phalcon\Di\Di;

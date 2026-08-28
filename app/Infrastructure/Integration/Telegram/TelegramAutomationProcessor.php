@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Integration\Telegram;
 
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 use PDO;
 use Throwable;
 

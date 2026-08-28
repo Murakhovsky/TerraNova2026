@@ -18,7 +18,7 @@ use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\PolicyDecision;
 use Kernel\Policy\Service\PolicyEngine;
 use Kernel\Rule\Service\ConditionEvaluator;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Job;
 

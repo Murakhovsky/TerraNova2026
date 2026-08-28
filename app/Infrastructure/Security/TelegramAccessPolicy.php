@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Security;
 
 use Domains\Identity\Application\Contract\TelegramAccessPolicyInterface;
-use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
 
 final readonly class TelegramAccessPolicy implements TelegramAccessPolicyInterface
 {

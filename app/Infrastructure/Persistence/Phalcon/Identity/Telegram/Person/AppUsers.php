@@ -9,10 +9,8 @@
 
 namespace Infrastructure\Persistence\Phalcon\Identity\Telegram\Person;
 
-use Interfaces\Telegram\Presentation\Messages;
+use Infrastructure\Persistence\MySql\Database\Exception\DatabaseOperationFailed;
 use Infrastructure\Persistence\Phalcon\Identity\Telegram\BaseModel;
-use Longman\TelegramBot\Entities\InlineKeyboard;
-use Phalcon\Di\Di;
 class AppUsers extends BaseModel
 {
     public $status;
@@ -49,10 +47,10 @@ class AppUsers extends BaseModel
             $user->status = "public";
             $user->first_name = "user_".$user_id;
             if (!$user->save()) {
-                $messages = $user->getMessages();
-                foreach ($messages as $message) {
-                    Messages::sendMeMessage("❗ Помилка: " . $message );
-                }
+                throw new DatabaseOperationFailed(
+                    'Не вдалося створити Telegram-користувача: '
+                    . implode('; ', array_map(static fn($message): string => (string) $message, $user->getMessages())),
+                );
             }
         }
         return $user;

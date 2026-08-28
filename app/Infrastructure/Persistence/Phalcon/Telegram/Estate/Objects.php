@@ -9,7 +9,7 @@
 namespace Infrastructure\Persistence\Phalcon\Telegram\Estate;
 
 use Infrastructure\Persistence\Phalcon\Telegram\Featuring\ReObjects;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\ListIstems;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
 
 
 class Objects extends ReObjects
@@ -31,7 +31,7 @@ class Objects extends ReObjects
         $phql = "
         SELECT eo.*
         FROM " . self::class . " AS eo
-        JOIN " . ListIstems::class . " AS fi ON fi.item_id = eo.id
+        JOIN " . ListItems::class . " AS fi ON fi.item_id = eo.id
         WHERE fi.list_id = :list_id:
         ORDER BY eo.id DESC";
 

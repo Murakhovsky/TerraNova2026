@@ -6,7 +6,8 @@ namespace Bootstrap;
 use Infrastructure\Security\SpatialAccessService;
 use Infrastructure\Media\SpatialAssetService;
 use Infrastructure\Spatial\SpatialProcessingService;
-use Infrastructure\Persistence\MySql\Spatial\SpatialSceneService;
+use Domains\Spatial\Application\Service\SpatialSceneService;
+use Infrastructure\Persistence\MySql\Spatial\MysqlSpatialSceneRepository;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 
@@ -52,11 +53,14 @@ class SpatialModule implements ModuleDefinitionInterface
                 (int) $this->getShared('config')->spatial->max_upload_bytes
             );
         });
-        $di->setShared('spatialSceneService', function () {
-            return new SpatialSceneService(
+        $di->setShared('spatialSceneRepository', function () {
+            return new MysqlSpatialSceneRepository(
                 $this->getShared('databaseService'),
                 $this->getShared('spatialAssetService')
             );
+        });
+        $di->setShared('spatialSceneService', function () {
+            return new SpatialSceneService($this->getShared('spatialSceneRepository'));
         });
         $di->setShared('spatialProcessingService', function () {
             return new SpatialProcessingService(

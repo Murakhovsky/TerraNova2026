@@ -1,24 +1,24 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Database\Action\MysqlActionRepository;
-use Infrastructure\Database\Agent\MysqlAgentRunRepository;
-use Infrastructure\Database\Agent\MysqlAgentRetention;
-use Infrastructure\Database\Agent\MysqlDecisionRepository;
-use Infrastructure\Database\Approval\MysqlApprovalRepository;
-use Infrastructure\Database\Configuration\MysqlConfigurationStore;
-use Infrastructure\Database\Audit\MysqlAuditRepository;
-use Infrastructure\Database\Event\MysqlEventOutbox;
-use Infrastructure\Database\Event\MysqlEventConsumptionRepository;
-use Infrastructure\Database\Event\MysqlEventStore;
-use Infrastructure\Database\Migration\MigrationRunner;
-use Infrastructure\Database\Migration\SqlStatementSplitter;
-use Infrastructure\Database\Policy\MysqlPolicyEvaluationRepository;
-use Infrastructure\Database\Policy\MysqlPolicyRepository;
-use Infrastructure\Database\Queue\MysqlJobQueue;
-use Infrastructure\Database\Rule\MysqlRuleEvaluationRepository;
-use Infrastructure\Database\Rule\MysqlRuleRepository;
-use Infrastructure\Database\Transaction\TransactionManager;
+use Infrastructure\Persistence\MySql\Database\Action\MysqlActionRepository;
+use Infrastructure\Persistence\MySql\Database\Agent\MysqlAgentRunRepository;
+use Infrastructure\Persistence\MySql\Database\Agent\MysqlAgentRetention;
+use Infrastructure\Persistence\MySql\Database\Agent\MysqlDecisionRepository;
+use Infrastructure\Persistence\MySql\Database\Approval\MysqlApprovalRepository;
+use Infrastructure\Persistence\MySql\Database\Configuration\MysqlConfigurationStore;
+use Infrastructure\Persistence\MySql\Database\Audit\MysqlAuditRepository;
+use Infrastructure\Persistence\MySql\Database\Event\MysqlEventOutbox;
+use Infrastructure\Persistence\MySql\Database\Event\MysqlEventConsumptionRepository;
+use Infrastructure\Persistence\MySql\Database\Event\MysqlEventStore;
+use Infrastructure\Persistence\MySql\Database\Migration\MigrationRunner;
+use Infrastructure\Persistence\MySql\Database\Migration\SqlStatementSplitter;
+use Infrastructure\Persistence\MySql\Database\Policy\MysqlPolicyEvaluationRepository;
+use Infrastructure\Persistence\MySql\Database\Policy\MysqlPolicyRepository;
+use Infrastructure\Persistence\MySql\Database\Queue\MysqlJobQueue;
+use Infrastructure\Persistence\MySql\Database\Rule\MysqlRuleEvaluationRepository;
+use Infrastructure\Persistence\MySql\Database\Rule\MysqlRuleRepository;
+use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
 use Infrastructure\Integration\Crm\Aida\AidaCrmAdapter;
 use Infrastructure\Integration\Crm\CrmRegistry;
 use Infrastructure\Integration\Crm\EnvironmentCrmWebhookSecretResolver;
@@ -28,8 +28,8 @@ use Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver;
 use Infrastructure\Integration\Crm\RoutedCrmGateway;
 use Infrastructure\Llm\HttpStructuredLlmClient;
 use Infrastructure\Observability\JsonFileLogger;
-use Infrastructure\Operations\MysqlMetricsRecorder;
-use Infrastructure\ReadModel\MySql\MysqlOperationsReadModel;
+use Infrastructure\Persistence\MySql\Operations\MysqlMetricsRecorder;
+use Infrastructure\Persistence\MySql\ReadModel\MysqlOperationsReadModel;
 use Infrastructure\Persistence\MySql\Sales\MysqlDealRepository;
 use Infrastructure\Persistence\MySql\Sales\MysqlFollowupRepository;
 use Infrastructure\Persistence\MySql\Sales\MysqlMessageGateway;
@@ -41,7 +41,7 @@ $connection = static fn ($container) => $container->getShared('databaseService')
 
 $di->setShared('cosTransactionManager', fn (): TransactionManager => new TransactionManager($connection($this)));
 $di->setShared('cosMigrationRunner', fn (): MigrationRunner => new MigrationRunner(
-    (new \Infrastructure\Database\Connection\DatabaseService($this->getConfig()->database))->connection(),
+    (new \Infrastructure\Persistence\MySql\Database\Connection\DatabaseService($this->getConfig()->database))->connection(),
     APP_PATH . '/migrations',
     new SqlStatementSplitter(),
 ));

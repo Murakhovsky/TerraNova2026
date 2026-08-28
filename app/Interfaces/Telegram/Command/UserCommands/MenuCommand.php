@@ -24,8 +24,8 @@ use Infrastructure\Persistence\Phalcon\Identity\Telegram\Message\UserMessages;
 use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
 use Phalcon\Di\Di;
 use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Companies as TelegramEbCompany;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Lists as TelegramEbFavourite;
-use Infrastructure\Persistence\Phalcon\Telegram\Service\Settings as TelegramEbSettings;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists as TelegramEbFavourite;
+use Infrastructure\Persistence\Phalcon\Telegram\Preference\Settings as TelegramEbSettings;
 use \Interfaces\Telegram\Rendering\Translator as Tr;
 
 
