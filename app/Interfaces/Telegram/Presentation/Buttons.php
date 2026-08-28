@@ -5,7 +5,7 @@ namespace Interfaces\Telegram\Presentation;
 use Longman\TelegramBot\Entities\InlineKeyboardButton;
 use DateTime;
 use Longman\TelegramBot\Request;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees as TelegramEbEmployees;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Employees as TelegramEbEmployees;
 
 class Buttons{
 

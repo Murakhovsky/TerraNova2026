@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Sales\MysqlClientCaseCommandRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlInboundLeadRepository;
-use Infrastructure\Persistence\MySql\ReadModel\MysqlClientCaseReadModel;
-use Infrastructure\Persistence\MySql\Database\Event\MysqlEventStore;
-use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
+use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
+use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
 use Domains\Sales\Application\UseCase\CreateClientCase;
 use Domains\Sales\Application\UseCase\QuickUpdateClientCase;
 use Domains\Sales\Application\UseCase\UpdateClientCase;

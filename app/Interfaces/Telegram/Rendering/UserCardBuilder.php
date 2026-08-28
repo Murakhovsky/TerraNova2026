@@ -1,8 +1,8 @@
 <?php
 
 namespace Interfaces\Telegram\Rendering;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\UsersLikes;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\UsersLikes;
 
 class UserCardBuilder extends BaseCardBuilder
 {

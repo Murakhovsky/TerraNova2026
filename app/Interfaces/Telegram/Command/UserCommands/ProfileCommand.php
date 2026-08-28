@@ -24,12 +24,12 @@ use Longman\TelegramBot\Entities\Keyboard;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Interfaces\Telegram\Command\MyUserCommand;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Companies;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Companies;
 
 use Interfaces\Telegram\Rendering\UserCardBuilder;
 use Interfaces\Telegram\Rendering\Buttons;
 use Interfaces\Telegram\Rendering\Messages;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
 
 class ProfileCommand extends MyUserCommand
 {

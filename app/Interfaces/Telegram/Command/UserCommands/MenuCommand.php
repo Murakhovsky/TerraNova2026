@@ -20,12 +20,12 @@ use Longman\TelegramBot\Request;
 use Interfaces\Telegram\Rendering\Buttons;
 use Interfaces\Telegram\Presentation\Messages;
 use Domains\Identity\Application\Contract\TelegramAccessPolicyInterface;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Message\UserMessages;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Message\UserMessages;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
 use Phalcon\Di\Di;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Companies as TelegramEbCompany;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists as TelegramEbFavourite;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Settings as TelegramEbSettings;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Companies as TelegramEbCompany;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists as TelegramEbFavourite;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Settings as TelegramEbSettings;
 use \Interfaces\Telegram\Rendering\Translator as Tr;
 
 

@@ -1,24 +1,25 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Database\Action\MysqlActionRepository;
-use Infrastructure\Persistence\MySql\Database\Agent\MysqlAgentRunRepository;
-use Infrastructure\Persistence\MySql\Database\Agent\MysqlAgentRetention;
-use Infrastructure\Persistence\MySql\Database\Agent\MysqlDecisionRepository;
-use Infrastructure\Persistence\MySql\Database\Approval\MysqlApprovalRepository;
-use Infrastructure\Persistence\MySql\Database\Configuration\MysqlConfigurationStore;
-use Infrastructure\Persistence\MySql\Database\Audit\MysqlAuditRepository;
-use Infrastructure\Persistence\MySql\Database\Event\MysqlEventOutbox;
-use Infrastructure\Persistence\MySql\Database\Event\MysqlEventConsumptionRepository;
-use Infrastructure\Persistence\MySql\Database\Event\MysqlEventStore;
-use Infrastructure\Persistence\MySql\Database\Migration\MigrationRunner;
-use Infrastructure\Persistence\MySql\Database\Migration\SqlStatementSplitter;
-use Infrastructure\Persistence\MySql\Database\Policy\MysqlPolicyEvaluationRepository;
-use Infrastructure\Persistence\MySql\Database\Policy\MysqlPolicyRepository;
-use Infrastructure\Persistence\MySql\Database\Queue\MysqlJobQueue;
-use Infrastructure\Persistence\MySql\Database\Rule\MysqlRuleEvaluationRepository;
-use Infrastructure\Persistence\MySql\Database\Rule\MysqlRuleRepository;
-use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
+use Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository;
+use Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRunRepository;
+use Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRetention;
+use Infrastructure\Platform\Persistence\MySql\Agent\MysqlDecisionRepository;
+use Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository;
+use Infrastructure\Platform\Persistence\MySql\Configuration\MysqlConfigurationStore;
+use Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository;
+use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventOutbox;
+use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository;
+use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
+use Infrastructure\Platform\Persistence\MySql\Migration\MigrationRunner;
+use Infrastructure\Platform\Persistence\MySql\Migration\SqlStatementSplitter;
+use Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository;
+use Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository;
+use Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue;
+use Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleEvaluationRepository;
+use Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleRepository;
+use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
+use Infrastructure\Platform\Persistence\MySql\MysqlExternalReferenceStore;
 use Infrastructure\Integration\Crm\Aida\AidaCrmAdapter;
 use Infrastructure\Integration\Crm\CrmRegistry;
 use Infrastructure\Integration\Crm\EnvironmentCrmWebhookSecretResolver;
@@ -28,20 +29,20 @@ use Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver;
 use Infrastructure\Integration\Crm\RoutedCrmGateway;
 use Infrastructure\Llm\HttpStructuredLlmClient;
 use Infrastructure\Observability\JsonFileLogger;
-use Infrastructure\Persistence\MySql\Operations\MysqlMetricsRecorder;
-use Infrastructure\Persistence\MySql\ReadModel\MysqlOperationsReadModel;
-use Infrastructure\Persistence\MySql\Sales\MysqlDealRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlFollowupRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlMessageGateway;
-use Infrastructure\Persistence\MySql\Sales\MysqlSalesAgentContextBuilder;
-use Infrastructure\Persistence\MySql\Sales\MysqlSalesActivityRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlSalesRuleContextProvider;
+use Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder;
+use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlMessageGateway;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesActivityRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesRuleContextProvider;
 
 $connection = static fn ($container) => $container->getShared('databaseService')->connection();
 
 $di->setShared('cosTransactionManager', fn (): TransactionManager => new TransactionManager($connection($this)));
 $di->setShared('cosMigrationRunner', fn (): MigrationRunner => new MigrationRunner(
-    (new \Infrastructure\Persistence\MySql\Database\Connection\DatabaseService($this->getConfig()->database))->connection(),
+    (new \Infrastructure\Platform\Persistence\Pdo\PdoConnection($this->getConfig()->database))->connection(),
     APP_PATH . '/migrations',
     new SqlStatementSplitter(),
 ));
@@ -68,13 +69,20 @@ $di->setShared('cosMetrics', fn (): MysqlMetricsRecorder => new MysqlMetricsReco
 $di->setShared('cosLogger', fn (): JsonFileLogger => new JsonFileLogger(BASE_PATH . '/tmp/logs/cos.jsonl'));
 
 $di->setShared('salesDealRepository', fn (): MysqlDealRepository => new MysqlDealRepository($connection($this)));
-$di->setShared('salesMessageGateway', fn (): MysqlMessageGateway => new MysqlMessageGateway($connection($this)));
-$di->setShared('salesFollowupRepository', fn (): MysqlFollowupRepository => new MysqlFollowupRepository($connection($this)));
+$di->setShared('externalReferenceStore', fn (): MysqlExternalReferenceStore => new MysqlExternalReferenceStore($connection($this)));
+$di->setShared('salesMessageGateway', fn (): MysqlMessageGateway => new MysqlMessageGateway(
+    $connection($this), $this->getShared('externalReferenceStore'),
+));
+$di->setShared('salesFollowupRepository', fn (): MysqlFollowupRepository => new MysqlFollowupRepository(
+    $connection($this), $this->getShared('externalReferenceStore'),
+));
 $di->setShared('salesRuleContextProvider', fn (): MysqlSalesRuleContextProvider => new MysqlSalesRuleContextProvider($connection($this)));
 $di->setShared('salesAgentContextBuilder', fn (): MysqlSalesAgentContextBuilder => new MysqlSalesAgentContextBuilder($connection($this)));
 $di->setShared('salesActivityRepository', fn (): MysqlSalesActivityRepository => new MysqlSalesActivityRepository($connection($this)));
 
-$di->setShared('aidaCrmAdapter', fn (): AidaCrmAdapter => new AidaCrmAdapter($connection($this)));
+$di->setShared('aidaCrmAdapter', fn (): AidaCrmAdapter => new AidaCrmAdapter(
+    $connection($this), $this->getShared('externalReferenceStore'),
+));
 $di->setShared('cosCrmRegistry', fn (): CrmRegistry => new CrmRegistry([$this->getShared('aidaCrmAdapter')]));
 $di->setShared('cosOrganizationCrmResolver', fn (): MysqlOrganizationCrmResolver => new MysqlOrganizationCrmResolver($connection($this)));
 $di->setShared('cosCrmGateway', fn (): RoutedCrmGateway => new RoutedCrmGateway(

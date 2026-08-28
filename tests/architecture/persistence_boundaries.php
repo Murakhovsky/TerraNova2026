@@ -2,12 +2,13 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-$persistence = $root . '/app/Infrastructure/Persistence';
-
 foreach (['Database', 'ReadModel', 'Operations'] as $obsoleteDirectory) {
     if (is_dir($root . '/app/Infrastructure/' . $obsoleteDirectory)) {
         throw new RuntimeException('Obsolete Infrastructure root restored: ' . $obsoleteDirectory);
     }
+}
+if (is_dir($root . '/app/Infrastructure/Persistence/MySql')) {
+    throw new RuntimeException('Centralized Infrastructure/Persistence/MySql root was restored.');
 }
 
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/app'));
@@ -16,20 +17,28 @@ foreach ($iterator as $file) {
     $source = (string) file_get_contents($file->getPathname());
     $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
 
+    $isDomainActiveRecord = preg_match('~^app/Domains/[^/]+/Infrastructure/Persistence/Phalcon/~', $relative) === 1;
+    $isSharedActiveRecordBase = str_starts_with($relative, 'app/Infrastructure/Integration/Telegram/ActiveRecord/');
     if ((str_contains($source, 'use Phalcon\\Mvc\\Model;') || str_contains($source, 'extends Model'))
-        && !str_starts_with($relative, 'app/Infrastructure/Persistence/Phalcon/')
+        && !$isDomainActiveRecord
+        && !$isSharedActiveRecordBase
     ) {
         throw new RuntimeException('Phalcon ActiveRecord escaped its persistence adapter boundary: ' . $relative);
     }
 }
 
-$mysqlIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($persistence . '/MySql'));
-foreach ($mysqlIterator as $file) {
-    if (!$file->isFile() || $file->getExtension() !== 'php') continue;
-    $source = (string) file_get_contents($file->getPathname());
-    foreach (['Interfaces\\', 'Infrastructure\\Media\\', 'Infrastructure\\Integration\\', 'Phalcon\\Mvc\\Model'] as $forbidden) {
-        if (preg_match('/^use\s+' . preg_quote($forbidden, '/') . '/m', $source)) {
-            throw new RuntimeException('MySQL adapter bypasses a domain-owned port: ' . $file->getPathname());
+foreach (array_merge(
+    glob($root . '/app/Domains/*/Infrastructure/Persistence/MySql', GLOB_ONLYDIR) ?: [],
+    [$root . '/app/Infrastructure/Platform/Persistence/MySql'],
+) as $mysqlDirectory) {
+    $mysqlIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($mysqlDirectory));
+    foreach ($mysqlIterator as $file) {
+        if (!$file->isFile() || $file->getExtension() !== 'php') continue;
+        $source = (string) file_get_contents($file->getPathname());
+        foreach (['Interfaces\\', 'Phalcon\\Mvc\\Model'] as $forbidden) {
+            if (preg_match('/^use\s+' . preg_quote($forbidden, '/') . '/m', $source)) {
+                throw new RuntimeException('Persistence adapter bypasses its boundary: ' . $file->getPathname());
+            }
         }
     }
 }
@@ -40,9 +49,10 @@ foreach ([
     'app/Domains/Property/Application/Contract/PropertyMediaStorageInterface.php',
     'app/Domains/Property/Model/PropertyWorkflowPolicy.php',
     'app/Domains/Spatial/Application/Contract/SpatialSceneRepositoryInterface.php',
-    'app/Infrastructure/Persistence/MySql/Content/MysqlContentRepository.php',
-    'app/Infrastructure/Persistence/MySql/Property/MysqlPropertyManagementRepository.php',
-    'app/Infrastructure/Persistence/MySql/Spatial/MysqlSpatialSceneRepository.php',
+    'app/Domains/Content/Infrastructure/Persistence/MySql/MysqlContentRepository.php',
+    'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyManagementRepository.php',
+    'app/Domains/Spatial/Infrastructure/Persistence/MySql/MysqlSpatialSceneRepository.php',
+    'app/Infrastructure/Platform/Persistence/Pdo/PdoConnection.php',
 ] as $requiredFile) {
     if (!is_file($root . '/' . $requiredFile)) {
         throw new RuntimeException('Required persistence boundary is missing: ' . $requiredFile);

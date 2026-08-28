@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Identity;
 
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Throwable;
 
 class SessionAuthService implements AuthenticatedUserContextInterface
@@ -12,7 +12,7 @@ class SessionAuthService implements AuthenticatedUserContextInterface
     private const SESSION_KEY = 'tn_auth_user_id';
     private const ORGANIZATION_SESSION_KEY = 'cos_organization_id';
 
-    public function __construct(private DatabaseService $database, private mixed $session)
+    public function __construct(private PdoConnection $database, private mixed $session)
     {
     }
 

@@ -5,7 +5,7 @@ namespace Infrastructure\Media;
 
 use Domains\Property\Application\Contract\PropertySubmissionMediaInterface;
 use Domains\Property\Application\Contract\PropertyMediaStorageInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use RuntimeException;
 
 class MediaStorageService implements PropertySubmissionMediaInterface, PropertyMediaStorageInterface
@@ -22,7 +22,7 @@ class MediaStorageService implements PropertySubmissionMediaInterface, PropertyM
         'application/pdf' => 'pdf',
     ];
 
-    public function __construct(private DatabaseService $database, private ?ImageOptimizerService $imageOptimizer = null)
+    public function __construct(private PdoConnection $database, private ?ImageOptimizerService $imageOptimizer = null)
     {
         $this->imageOptimizer ??= new ImageOptimizerService();
     }
@@ -113,6 +113,25 @@ class MediaStorageService implements PropertySubmissionMediaInterface, PropertyM
             WHERE id IN (' . $assetPlaceholders . ')
         ');
         $assets->execute($assetIds);
+    }
+
+    public function syncRelationMetadata(string $entityType, int $entityId, array $items): void
+    {
+        $statement = $this->database->connection()->prepare('
+            UPDATE tn_media_relations r
+            INNER JOIN tn_media_assets a ON a.id = r.media_id
+            SET r.role = :role, r.sort_order = :sort_order
+            WHERE r.entity_type = :entity_type AND r.entity_id = :entity_id AND a.public_url = :public_url
+        ');
+        foreach ($items as $item) {
+            $statement->execute([
+                'role' => (string) ($item['role'] ?? 'gallery'),
+                'sort_order' => (int) ($item['sort_order'] ?? 100),
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'public_url' => (string) ($item['public_url'] ?? ''),
+            ]);
+        }
     }
 
     private function storeField(?array $field, string $entityType, int $entityId, string $role, int $maxBytes, int $baseSort): array

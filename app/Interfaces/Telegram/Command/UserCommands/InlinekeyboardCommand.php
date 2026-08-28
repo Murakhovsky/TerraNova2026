@@ -36,17 +36,17 @@ use Interfaces\Telegram\Rendering\Messages;
 
 
 
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\BaseModel;
+use Infrastructure\Integration\Telegram\ActiveRecord\BaseModel;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Companies as TelegramEbCompany;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers as TelegramEbUser;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\UsersLikes as TelegramEbUserLikes;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Adverts as RealtyTgAdvert;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\AdvertsDisabled as TelegramEbNotActualAdverts;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects as RealtyTg;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsArchive as RealtyTgArchive;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems as TelegramEbFavouriteItems;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists as TelegramEbFavourite;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Companies as TelegramEbCompany;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers as TelegramEbUser;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\UsersLikes as TelegramEbUserLikes;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Adverts as RealtyTgAdvert;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsDisabled as TelegramEbNotActualAdverts;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects as RealtyTg;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsArchive as RealtyTgArchive;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems as TelegramEbFavouriteItems;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists as TelegramEbFavourite;
 use Exception as LocalTGException;
 use DateTime;
 
@@ -582,7 +582,7 @@ class InlinekeyboardCommand extends UserCommand
                         }
                         case 'request':{
                             $dell_massage_text = TG_WANT_DELETE_REQUEST;
-                            $model_type = \Infrastructure\Persistence\Phalcon\Telegram\Request\Requests::class;
+                            $model_type = \Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Requests::class;
                             break;
                         }
                         case 'archive':{
@@ -616,7 +616,7 @@ class InlinekeyboardCommand extends UserCommand
                         }
                         case 'showing':{
                             $dell_massage_text = TG_WANT_DELETE_SHOWING;
-                            $model_type = \Infrastructure\Persistence\Phalcon\Telegram\Request\Shows::class;
+                            $model_type = \Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Shows::class;
                             $return_command = 'reloadFavList';
                             break;
                         }

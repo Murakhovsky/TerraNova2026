@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Spatial;
 
 use Domains\Spatial\Application\Contract\SpatialProcessingInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -12,7 +12,7 @@ use Throwable;
 class SpatialProcessingService implements SpatialProcessingInterface
 {
     public function __construct(
-        private DatabaseService $database,
+        private PdoConnection $database,
         private string $blenderBinary = '',
         private string $gltfTransformBinary = ''
     ) {

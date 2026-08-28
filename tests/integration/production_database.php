@@ -5,11 +5,11 @@ use Domains\Sales\Model\DealChangeSet;
 use Domains\Sales\Application\DTO\CrmInboxItem;
 use Domains\Sales\Application\DTO\RecordCompletedCallCommand;
 use Domains\Sales\Application\UseCase\CompleteSalesCall;
-use Infrastructure\Persistence\MySql\Database\Event\MysqlEventStore;
-use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
+use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
+use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
 use Infrastructure\Integration\Crm\MysqlCrmInboundApplier;
-use Infrastructure\Persistence\MySql\Sales\MysqlDealRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlSalesActivityRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesActivityRepository;
 use Kernel\Event\EventBus;
 
 $root = dirname(__DIR__, 2);

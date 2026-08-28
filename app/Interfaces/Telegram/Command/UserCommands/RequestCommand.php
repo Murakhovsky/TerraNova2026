@@ -2,7 +2,7 @@
 
 namespace Interfaces\Telegram\Command\UserCommands;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Employees;
 
 use Longman\TelegramBot\Entities\InlineKeyboardButton;
 use Longman\TelegramBot\Entities\Keyboard;
@@ -10,10 +10,10 @@ use Longman\TelegramBot\Entities\KeyboardButton;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\ColdPhones;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\ColdPhones;
 use Interfaces\Telegram\Command\MyUserCommand;
 use Interfaces\Telegram\Presentation\Messages;
-use Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
+use Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
 use Interfaces\Telegram\Rendering\Buttons;
 use Interfaces\Telegram\Rendering\RequestCardBuilder;
 

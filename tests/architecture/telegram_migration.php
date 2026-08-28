@@ -18,8 +18,10 @@ $roots = [
     $root . '/app/Interfaces/Telegram/Controller',
     $root . '/app/Interfaces/Telegram/Rendering',
     $root . '/app/Interfaces/Telegram/Presentation',
-    $root . '/app/Infrastructure/Persistence/Phalcon/Telegram',
-    $root . '/app/Infrastructure/Persistence/Phalcon/Identity/Telegram',
+    $root . '/app/Infrastructure/Integration/Telegram/ActiveRecord',
+    $root . '/app/Domains/Identity/Infrastructure/Persistence/Phalcon/Telegram',
+    $root . '/app/Domains/Property/Infrastructure/Persistence/Phalcon/Telegram',
+    $root . '/app/Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram',
 ];
 
 $loaded = 0;
@@ -56,11 +58,11 @@ foreach ($roots as $directory) {
 }
 
 foreach ([
-    Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers::class,
-    Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees::class,
-    Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects::class,
-    Infrastructure\Persistence\Phalcon\Telegram\Request\Requests::class,
-    Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists::class,
+    Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers::class,
+    Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Employees::class,
+    Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects::class,
+    Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Requests::class,
+    Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists::class,
     Interfaces\Telegram\Rendering\ObjectCardBuilder::class,
     Interfaces\Telegram\Rendering\RequestCardBuilder::class,
 ] as $requiredType) {

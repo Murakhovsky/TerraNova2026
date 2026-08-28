@@ -5,7 +5,7 @@ namespace Infrastructure\Integration\N8n;
 
 use Domains\Content\Application\Contract\ContentServiceInterface;
 use Domains\Content\Application\Contract\InboundContentWebhookInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use PDOException;
 use Throwable;
 
@@ -14,7 +14,7 @@ class N8nWebhookService implements InboundContentWebhookInterface
     private const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
     public function __construct(
-        private DatabaseService $database,
+        private PdoConnection $database,
         private ContentServiceInterface $content,
         private string $secret,
         private int $maxClockSkew = 300

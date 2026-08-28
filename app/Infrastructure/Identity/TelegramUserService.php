@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Infrastructure\Identity;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Message\UserMessages;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\UsersProgress;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Message\UserMessages;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\UsersProgress;
 
 final class TelegramUserService
 {

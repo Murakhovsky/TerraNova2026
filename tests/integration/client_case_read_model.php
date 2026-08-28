@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
-use Infrastructure\Persistence\MySql\ReadModel\MysqlClientCaseReadModel;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -11,7 +11,7 @@ Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 require APP_PATH . '/config/loader.php';
 
 $config = require APP_PATH . '/config/config.php';
-$database = new DatabaseService($config->database);
+$database = new PdoConnection($config->database);
 $organizationId = (string) ($_ENV['COS_ORGANIZATION_ID'] ?? 'default');
 $readModel = new MysqlClientCaseReadModel($database->connection(), $organizationId);
 

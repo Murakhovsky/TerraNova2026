@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Media;
 
 use Domains\Spatial\Application\Contract\SpatialAssetStorageInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use RuntimeException;
 
 class SpatialAssetService implements SpatialAssetStorageInterface
@@ -32,7 +32,7 @@ class SpatialAssetService implements SpatialAssetStorageInterface
 
     private const ASSET_TYPES = ['source', 'model_web', 'model_ar', 'texture', 'point_cloud', 'gaussian_splat', 'panorama', 'floorplan', 'poster', 'video', 'other'];
 
-    public function __construct(private DatabaseService $database, private int $maxUploadBytes = 209715200)
+    public function __construct(private PdoConnection $database, private int $maxUploadBytes = 209715200)
     {
     }
 

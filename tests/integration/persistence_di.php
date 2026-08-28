@@ -5,10 +5,10 @@ use Domains\Content\Application\Service\ContentService;
 use Domains\Property\Application\Service\PropertyManagementService;
 use Domains\Property\Application\UseCase\PropertyModerationService;
 use Domains\Property\Application\UseCase\PropertySubmissionService;
-use Infrastructure\Persistence\MySql\Content\MysqlContentRepository;
-use Infrastructure\Persistence\MySql\Property\MysqlPropertyManagementRepository;
-use Infrastructure\Persistence\MySql\Property\MysqlPropertyModerationRepository;
-use Infrastructure\Persistence\MySql\Property\MysqlPropertySubmissionRepository;
+use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
 use Interfaces\Web\Module;
 use Phalcon\Di\FactoryDefault;
 

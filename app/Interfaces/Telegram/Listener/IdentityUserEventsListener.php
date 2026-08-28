@@ -1,8 +1,8 @@
 <?php
 namespace Interfaces\Telegram\Listener;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\UsersProgress;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\UsersProgress;
 use Phalcon\Events\Event;
 
 class IdentityUserEventsListener

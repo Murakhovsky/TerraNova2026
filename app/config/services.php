@@ -4,7 +4,7 @@ declare(strict_types=1);
 use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
 use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
 use Phalcon\Mvc\View;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Media\ImageOptimizerService;
 use Infrastructure\Media\MediaStorageService;
 use Infrastructure\Integration\Telegram\TelegramAutomationService;
@@ -46,7 +46,7 @@ $di->setShared('db', function () {
 });
 
 $di->setShared('databaseService', function () {
-    return new DatabaseService($this->getConfig()->database);
+    return new PdoConnection($this->getConfig()->database);
 });
 
 $di->setShared('telegramAutomationService', function () {

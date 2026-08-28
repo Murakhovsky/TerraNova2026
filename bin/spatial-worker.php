@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Spatial\SpatialProcessingService;
 use Phalcon\Di\FactoryDefault;
 
@@ -14,7 +14,7 @@ $di = new FactoryDefault();
 require APP_PATH . '/config/services.php';
 require APP_PATH . '/config/loader.php';
 $database = $di->getShared('databaseService');
-assert($database instanceof DatabaseService);
+assert($database instanceof PdoConnection);
 $config = $di->getShared('config')->spatial;
 $options = getopt('', ['limit::']);
 $limit = isset($options['limit']) ? max(1, min(50, (int) $options['limit'])) : 10;

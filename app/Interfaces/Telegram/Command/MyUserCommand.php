@@ -12,7 +12,7 @@
 namespace Interfaces\Telegram\Command;
 
 
-use Infrastructure\Persistence\MySql\Database\Exception\DatabaseOperationFailed;
+use Infrastructure\Platform\Persistence\MySql\Exception\DatabaseOperationFailed;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Conversation;
 use Longman\TelegramBot\ConversationDB;
@@ -20,8 +20,8 @@ use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
-use Infrastructure\Persistence\Phalcon\Telegram\Realty\Realty;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Realty\Realty;
 use Interfaces\Telegram\Rendering\Buttons;
 use Interfaces\Telegram\Rendering\Messages;
 use Interfaces\Telegram\Rendering\Translator;

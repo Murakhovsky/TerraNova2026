@@ -17,7 +17,7 @@ use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Interfaces\Telegram\Command\MyUserCommand;
 use Interfaces\Telegram\Presentation\Messages;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 /**
  * Start command

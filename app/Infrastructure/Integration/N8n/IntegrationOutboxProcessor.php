@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Integration\N8n;
 
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use PDO;
 use Throwable;
 
@@ -11,7 +11,7 @@ class IntegrationOutboxProcessor
 {
     private \Closure $sender;
 
-    public function __construct(private DatabaseService $database, callable $sender)
+    public function __construct(private PdoConnection $database, callable $sender)
     {
         $this->sender = \Closure::fromCallable($sender);
     }

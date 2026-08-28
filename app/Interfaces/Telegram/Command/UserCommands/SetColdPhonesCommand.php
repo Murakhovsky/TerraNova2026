@@ -2,8 +2,8 @@
 
 namespace Interfaces\Telegram\Command\UserCommands;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\ColdPhones;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Employees;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\ColdPhones;
 use Longman\TelegramBot\Commands\Command;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Conversation;

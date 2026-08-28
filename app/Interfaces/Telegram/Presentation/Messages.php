@@ -6,7 +6,7 @@ use Longman\TelegramBot\Entities\InlineKeyboard;
 use Longman\TelegramBot\Entities\InlineKeyboardButton;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram;
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\BaseModel;
+use Infrastructure\Integration\Telegram\ActiveRecord\BaseModel;
 
 
 class Messages

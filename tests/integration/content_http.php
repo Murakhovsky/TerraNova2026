@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Domains\Content\Application\Service\ContentService;
-use Infrastructure\Persistence\MySql\Content\MysqlContentRepository;
+use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
+use Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -12,9 +13,9 @@ Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 require APP_PATH . '/config/loader.php';
 
 $config = require APP_PATH . '/config/config.php';
-$database = new DatabaseService($config->database);
+$database = new PdoConnection($config->database);
 $pdo = $database->connection();
-$content = new ContentService(new MysqlContentRepository($database));
+$content = new ContentService(new MysqlContentRepository($database, new MysqlContentIntegrationOutbox($database)));
 $baseUrl = rtrim((string) ($_ENV['TEST_BASE_URL'] ?? 'http://127.0.0.1:8001'), '/');
 $email = 'content-http-' . bin2hex(random_bytes(5)) . '@example.test';
 $password = 'ContentTest-' . bin2hex(random_bytes(8));

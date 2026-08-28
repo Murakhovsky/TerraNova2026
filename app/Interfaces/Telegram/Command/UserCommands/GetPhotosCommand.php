@@ -26,7 +26,7 @@ use Longman\TelegramBot\Entities\Keyboard;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects as RealtyTg;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects as RealtyTg;
 
 class GetPhotosCommand extends UserCommand
 {

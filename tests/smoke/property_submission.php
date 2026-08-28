@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Domains\Property\Application\Contract\PropertyNotificationInterface;
+use Domains\Property\Application\Contract\PropertyAnalyticsInterface;
 use Domains\Property\Application\Contract\PropertySubmissionMediaInterface;
 use Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface;
 use Domains\Property\Application\UseCase\PropertySubmissionService;
@@ -28,10 +29,6 @@ $repository = new class($stored, $events) implements PropertySubmissionRepositor
         $this->stored[$id] = ($this->stored[$id] ?? []) + ['id' => $id];
         $this->stored[$id] = array_replace($this->stored[$id], $submission, ['status' => 'submitted']);
     }
-    public function recordSubmitEvent(int $submissionId, array $event): void
-    {
-        $this->events[] = [$submissionId, $event];
-    }
 };
 
 $mediaCalls = [];
@@ -53,7 +50,17 @@ $notifier = new class($notifications) implements PropertyNotificationInterface {
     public function notifyPresentationShared(int $propertyId, ?int $userId, string $channel, string $variant): void {}
 };
 
-$service = new PropertySubmissionService($repository, $media, $notifier);
+$analytics = new class($events) implements PropertyAnalyticsInterface {
+    public function __construct(private array &$events) {}
+    public function recordSubmission(int $submissionId, array $context): void
+    {
+        $this->events[] = [$submissionId, $context];
+    }
+    public function recordView(int $propertyId, array $context): void {}
+    public function recordPresentation(string $eventType, ?int $propertyId, ?int $entityId, ?int $userId, string $sourcePage, array $payload): void {}
+};
+
+$service = new PropertySubmissionService($repository, $media, $notifier, $analytics);
 $invalid = $service->submit(['owner_name' => ''], '/submit');
 if (($invalid['ok'] ?? true) !== false || $stored !== []) {
     throw new RuntimeException('Invalid property submission reached persistence.');

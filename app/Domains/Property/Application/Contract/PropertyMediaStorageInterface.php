@@ -12,4 +12,6 @@ interface PropertyMediaStorageInterface
     public function relateExistingMedia(int $mediaId, string $entityType, int $entityId, string $role, int $sortOrder): void;
 
     public function markDeletedByPublicUrls(string $entityType, int $entityId, array $publicUrls): void;
+
+    public function syncRelationMetadata(string $entityType, int $entityId, array $items): void;
 }

@@ -2,11 +2,11 @@
 namespace Interfaces\Telegram\Rendering;
 use Interfaces\Telegram\Presentation\Buttons;
 use Interfaces\Telegram\Presentation\Messages;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsDisabled;
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\BaseModel;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\ObjectsDisabled;
+use Infrastructure\Integration\Telegram\ActiveRecord\BaseModel;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 class ObjectCardBuilder extends BaseCardBuilder
 {

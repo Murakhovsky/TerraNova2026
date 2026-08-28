@@ -3,10 +3,10 @@
 namespace Interfaces\Telegram\Rendering;
 use Interfaces\Telegram\Presentation\Buttons;
 use Interfaces\Telegram\Presentation\Messages;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\AppUsers;
-use Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\AppUsers;
+use Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 class ShowsCardBuilder extends BaseCardBuilder
 {

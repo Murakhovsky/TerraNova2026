@@ -3,9 +3,9 @@
 namespace Interfaces\Telegram\Command\UserCommands;
 
 use Interfaces\Telegram\Presentation\Messages;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\BaseModel;
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\ReObjects;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
+use Infrastructure\Integration\Telegram\ActiveRecord\BaseModel;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\ReObjects;
 
 
 use Longman\TelegramBot\Entities\InlineKeyboard;
@@ -17,7 +17,7 @@ use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Interfaces\Telegram\Rendering\Buttons;
 use Interfaces\Telegram\Rendering\ObjectCardBuilder;
-use Infrastructure\Persistence\Phalcon\Telegram\Realty\RealtyReamak;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Realty\RealtyReamak;
 use Interfaces\Telegram\Command\MyUserCommand;
 
 

@@ -9,15 +9,16 @@ use Domains\Sales\Application\DTO\OperationResult;
 use Domains\Sales\Application\DTO\SendMessageCommand;
 use Domains\Sales\Application\DTO\ScheduleFollowupCommand;
 use Domains\Sales\Model\DealChangeSet;
-use Infrastructure\Persistence\MySql\Sales\MysqlDealRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlFollowupRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlMessageGateway;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlMessageGateway;
 use PDO;
+use Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface;
 use Throwable;
 
 final readonly class AidaCrmAdapter implements CrmProviderInterface
 {
-    public function __construct(private PDO $connection)
+    public function __construct(private PDO $connection, private ExternalReferenceStoreInterface $references)
     {
     }
 
@@ -32,13 +33,8 @@ final readonly class AidaCrmAdapter implements CrmProviderInterface
         try {
             if ($ownsTransaction) $this->connection->beginTransaction();
             $reference = 'action:' . $command->idempotencyKey;
-            $existing = $this->connection->prepare(
-                "SELECT external_id FROM cos_external_references WHERE organization_id = :organization_id AND provider = 'aida' "
-                . "AND entity_type = 'task' AND cos_reference = :cos_reference LIMIT 1"
-            );
-            $existing->execute(['organization_id' => $command->organizationId, 'cos_reference' => $reference]);
-            $externalId = $existing->fetchColumn();
-            if ($externalId !== false) {
+            $externalId = $this->references->find($command->organizationId, 'aida', 'task', $reference);
+            if ($externalId !== null) {
                 if ($ownsTransaction) $this->connection->commit();
                 return OperationResult::success((string) $externalId, ['duplicate' => true]);
             }
@@ -58,11 +54,7 @@ final readonly class AidaCrmAdapter implements CrmProviderInterface
                 throw new \RuntimeException('Deal was not found in the current organization.');
             }
             $externalId = (string) $this->connection->lastInsertId();
-            $mapping = $this->connection->prepare(
-                "INSERT INTO cos_external_references (organization_id, provider, entity_type, external_id, cos_reference, last_synced_at) "
-                . "VALUES (:organization_id, 'aida', 'task', :external_id, :cos_reference, NOW(6))"
-            );
-            $mapping->execute(['organization_id' => $command->organizationId, 'external_id' => $externalId, 'cos_reference' => $reference]);
+            $this->references->put($command->organizationId, 'aida', 'task', $externalId, $reference);
             if ($ownsTransaction) $this->connection->commit();
             return OperationResult::success($externalId, ['provider' => $this->provider()]);
         } catch (Throwable $exception) {
@@ -73,12 +65,12 @@ final readonly class AidaCrmAdapter implements CrmProviderInterface
 
     public function send(SendMessageCommand $command): OperationResult
     {
-        return (new MysqlMessageGateway($this->connection))->send($command);
+        return (new MysqlMessageGateway($this->connection, $this->references))->send($command);
     }
 
     public function schedule(ScheduleFollowupCommand $command): OperationResult
     {
-        return (new MysqlFollowupRepository($this->connection))->schedule($command);
+        return (new MysqlFollowupRepository($this->connection, $this->references))->schedule($command);
     }
 
     public function update(string $organizationId, string $dealReference, DealChangeSet $changes): OperationResult

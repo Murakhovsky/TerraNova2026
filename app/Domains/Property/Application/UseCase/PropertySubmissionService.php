@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\Property\Application\UseCase;
 
 use Domains\Property\Application\Contract\PropertyNotificationInterface;
+use Domains\Property\Application\Contract\PropertyAnalyticsInterface;
 use Domains\Property\Application\Contract\PropertySubmissionMediaInterface;
 use Domains\Property\Application\Contract\PropertySubmissionInterface;
 use Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface;
@@ -19,6 +20,7 @@ class PropertySubmissionService implements PropertySubmissionInterface
         private PropertySubmissionRepositoryInterface $submissions,
         private PropertySubmissionMediaInterface $mediaStorage,
         private ?PropertyNotificationInterface $notifications = null,
+        private ?PropertyAnalyticsInterface $analytics = null,
     ) {
     }
 
@@ -109,7 +111,7 @@ class PropertySubmissionService implements PropertySubmissionInterface
                 parse_str((string) $parts['query'], $query);
             }
 
-            $this->submissions->recordSubmitEvent($submissionId, [
+            $this->analytics?->recordSubmission($submissionId, [
                 'source_page' => mb_substr($sourcePage, 0, 255),
                 'utm_source' => $this->nullableText($input['utm_source'] ?? $query['utm_source'] ?? null, 120),
                 'utm_medium' => $this->nullableText($input['utm_medium'] ?? $query['utm_medium'] ?? null, 120),

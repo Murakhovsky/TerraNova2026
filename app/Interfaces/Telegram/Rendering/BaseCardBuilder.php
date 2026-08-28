@@ -2,7 +2,7 @@
 namespace Interfaces\Telegram\Rendering;
 
 
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\BaseModel;
+use Infrastructure\Integration\Telegram\ActiveRecord\BaseModel;
 use Telegram\Commands\SystemCommands\InlinequeryCommand;
 
 abstract class BaseCardBuilder{

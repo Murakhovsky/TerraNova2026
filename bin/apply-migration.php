@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));
@@ -13,7 +13,7 @@ $di = new FactoryDefault();
 require APP_PATH . '/config/services.php';
 require APP_PATH . '/config/loader.php';
 $database = $di->getShared('databaseService');
-assert($database instanceof DatabaseService);
+assert($database instanceof PdoConnection);
 
 $name = basename((string) ($argv[1] ?? ''));
 $path = APP_PATH . '/migrations/' . $name;

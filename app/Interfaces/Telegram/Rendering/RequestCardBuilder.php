@@ -1,8 +1,8 @@
 <?php
 
 namespace Interfaces\Telegram\Rendering;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
 
 class RequestCardBuilder extends BaseCardBuilder
 {

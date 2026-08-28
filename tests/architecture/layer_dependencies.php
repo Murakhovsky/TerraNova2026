@@ -34,7 +34,14 @@ function assertNoDependencies(string $directory, array $forbiddenPrefixes): void
 }
 
 assertNoDependencies($root . '/app/Kernel', ['Domains', 'Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
-assertNoDependencies($root . '/app/Domains', ['Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
+foreach (glob($root . '/app/Domains/*', GLOB_ONLYDIR) ?: [] as $domainDirectory) {
+    foreach (['Application', 'Automation', 'Domain', 'Model'] as $coreArea) {
+        $directory = $domainDirectory . '/' . $coreArea;
+        if (is_dir($directory)) {
+            assertNoDependencies($directory, ['Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon', 'PDO']);
+        }
+    }
+}
 assertNoDependencies($root . '/app/Infrastructure', ['Interfaces', 'Modules', 'Common']);
 foreach (['Web', 'Api', 'Cli', 'Shared'] as $interfaceArea) {
     $directory = $root . '/app/Interfaces/' . $interfaceArea;
@@ -47,7 +54,7 @@ foreach (['Web', 'Api', 'Cli', 'Shared'] as $interfaceArea) {
 assertNoDependencies($root . '/app/Interfaces/Telegram', ['Modules', 'Common', 'Infrastructure\\Legacy']);
 
 $clientCaseFacade = (string) file_get_contents($root . '/app/Interfaces/Web/Service/ClientCaseService.php');
-foreach (['DatabaseService', 'PDO', '->prepare(', '->transactional(', 'EventBus', 'ClientCaseCreated::', 'ClientCaseChanged::', 'DealStageChanged::', 'LeadChanged::'] as $forbidden) {
+foreach (['PdoConnection', 'PDO', '->prepare(', '->transactional(', 'EventBus', 'ClientCaseCreated::', 'ClientCaseChanged::', 'DealStageChanged::', 'LeadChanged::'] as $forbidden) {
     if (str_contains($clientCaseFacade, $forbidden)) {
         throw new RuntimeException('ClientCaseService must remain a thin compatibility facade; forbidden dependency: ' . $forbidden);
     }

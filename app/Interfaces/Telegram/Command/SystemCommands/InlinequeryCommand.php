@@ -11,10 +11,10 @@
 
 namespace Interfaces\Telegram\Command\SystemCommands;
 
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Companies;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees;
-use Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
-use Infrastructure\Persistence\Phalcon\Telegram\Featuring\ReObjects;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Companies;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Employees;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Estate\Objects;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\ReObjects;
 use Longman\TelegramBot\Commands\SystemCommand;
 use Longman\TelegramBot\Entities\InlineKeyboard;
 use Longman\TelegramBot\Entities\InlineKeyboardButton;
@@ -22,17 +22,17 @@ use Longman\TelegramBot\Entities\InlineQuery\InlineQueryResultArticle;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Request;
 use Interfaces\Telegram\Rendering\ObjectCardBuilder;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\ColdPhones;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\Contacts;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Person\ContactsRE;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\ColdPhones;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\Contacts;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Person\ContactsRE;
 use Phalcon\Mvc\Model\Query\Builder;
-use Infrastructure\Persistence\Phalcon\Telegram\Realty\Realty;
-use Infrastructure\Persistence\Phalcon\Telegram\Realty\RealtyReamak;
-use Infrastructure\Persistence\Phalcon\Telegram\Request\RequestJoinRealty;
-use Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
-use Infrastructure\Persistence\Phalcon\Telegram\Request\Shows;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
-use Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Realty\Realty;
+use Domains\Property\Infrastructure\Persistence\Phalcon\Telegram\Realty\RealtyReamak;
+use Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\RequestJoinRealty;
+use Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Requests;
+use Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Shows;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\Lists;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Preference\ListItems;
 use Interfaces\Telegram\Presentation\Cards;
 use Interfaces\Telegram\Presentation\Messages;
 

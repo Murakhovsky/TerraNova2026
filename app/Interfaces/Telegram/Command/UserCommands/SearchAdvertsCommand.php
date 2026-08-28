@@ -12,7 +12,7 @@ use Longman\TelegramBot\Entities\KeyboardButton;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
-use Infrastructure\Persistence\Phalcon\Telegram\Request\Requests as TelegramEbRequest;
+use Domains\Sales\Infrastructure\Persistence\Phalcon\Telegram\Request\Requests as TelegramEbRequest;
 use Interfaces\Telegram\Command\MyUserCommand;
 
 /**

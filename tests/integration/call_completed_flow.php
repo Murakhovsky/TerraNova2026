@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 use Domains\Sales\Automation\Agent\SalesIntelligenceAgent;
 use Domains\Sales\Automation\Event\CallCompleted;
-use Infrastructure\Persistence\MySql\Database\Transaction\TransactionManager;
+use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionHandlerInterface;

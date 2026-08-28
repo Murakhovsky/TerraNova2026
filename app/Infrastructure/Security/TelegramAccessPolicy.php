@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Infrastructure\Security;
 
 use Domains\Identity\Application\Contract\TelegramAccessPolicyInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 
 final readonly class TelegramAccessPolicy implements TelegramAccessPolicyInterface
 {
@@ -22,7 +22,7 @@ final readonly class TelegramAccessPolicy implements TelegramAccessPolicyInterfa
         'admin' => [],
     ];
 
-    public function __construct(private DatabaseService $database)
+    public function __construct(private PdoConnection $database)
     {
     }
 

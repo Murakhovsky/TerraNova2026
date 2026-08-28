@@ -5,7 +5,7 @@ namespace Infrastructure\Security;
 
 use Domains\Spatial\Application\Contract\SpatialAccessInterface;
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Throwable;
@@ -15,7 +15,7 @@ class SpatialAccessService implements SpatialAccessInterface
     private const EDIT_ROLES = ['admin', 'manager', 'realtor', 'partner', 'developer'];
 
     public function __construct(
-        private DatabaseService $database,
+        private PdoConnection $database,
         private AuthenticatedUserContextInterface $auth,
         private string $jwtSecret,
         private int $jwtTtl = 28800

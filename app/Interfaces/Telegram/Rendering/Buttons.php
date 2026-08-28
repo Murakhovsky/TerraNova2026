@@ -8,7 +8,7 @@ use Longman\TelegramBot\Entities\Keyboard;
 use Longman\TelegramBot\Entities\KeyboardButton;
 use DateTime;
 use Longman\TelegramBot\Request;
-use Infrastructure\Persistence\Phalcon\Identity\Telegram\Company\Employees as TelegramEbEmployees;
+use Domains\Identity\Infrastructure\Persistence\Phalcon\Telegram\Company\Employees as TelegramEbEmployees;
 
 
 class Buttons{

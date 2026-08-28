@@ -11,5 +11,4 @@ interface PropertySubmissionRepositoryInterface
 
     public function update(int $id, array $submission): void;
 
-    public function recordSubmitEvent(int $submissionId, array $event): void;
 }

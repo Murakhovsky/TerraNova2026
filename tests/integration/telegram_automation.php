@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Persistence\MySql\Database\Connection\DatabaseService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Integration\Telegram\TelegramAutomationService;
 use Infrastructure\Integration\Telegram\TelegramAutomationProcessor;
 
@@ -12,7 +12,7 @@ Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 require APP_PATH . '/config/loader.php';
 
 $config = require APP_PATH . '/config/config.php';
-$database = new DatabaseService($config->database);
+$database = new PdoConnection($config->database);
 $pdo = $database->connection();
 $email = 'telegram-test-' . bin2hex(random_bytes(4)) . '@example.test';
 $dedupe = 'telegram-integration-' . bin2hex(random_bytes(6));

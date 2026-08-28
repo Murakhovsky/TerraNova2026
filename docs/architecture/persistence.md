@@ -2,64 +2,63 @@
 
 Audit date: 2026-08-28.
 
-## Boundary
+## Decision
 
-`Infrastructure/Persistence` contains physical storage adapters only. Business rules and orchestration belong to `Domains`; HTTP, CLI and Telegram delivery belong to `Interfaces`; dependency assembly belongs to `Bootstrap`.
+The project uses PDO as the database driver. Phalcon ActiveRecord is a quarantined compatibility adapter for the remaining legacy Telegram flow; it is not the application persistence API.
+
+Every bounded context is a vertical slice:
+
+```text
+Domains/<Domain>/Application       use cases and ports
+Domains/<Domain>/Model             rules and domain objects
+Domains/<Domain>/Infrastructure    PDO repositories, read models, legacy AR mappings
+```
+
+Shared technical persistence lives in `Infrastructure/Platform/Persistence`. It contains the PDO connection, transaction/migration support, COS repositories and adapters for shared tables. There is no central `Infrastructure/Persistence/MySql/<every-domain>` tree.
 
 The write path is:
 
 ```text
-Interface -> Domain application service -> Domain-owned port -> MySQL/Phalcon adapter
+Interface -> Application use case -> owner-defined port -> owner persistence adapter
 ```
 
-Query-heavy screens may use a dedicated read model:
+Cross-domain writes always call an explicit port implemented by the owner. Current examples are Property analytics, location resolution, media relation synchronization, Spatial tour publication, integration outbox and external-reference storage.
 
-```text
-Interface -> Domain query contract -> Infrastructure/Persistence/MySql/ReadModel
-```
+## Data ownership
 
-## MySQL areas
+`Infrastructure/Platform/Persistence/TableOwnership.php` is the canonical registry. Owners are `Identity`, `Property`, `Sales`, `Content`, `Spatial`, `Analytics`, `Media`, `Reference`, and `Platform`.
 
-| Directory | Responsibility | Files |
-|---|---|---:|
-| `MySql/Database` | Generic Kernel persistence: events/outbox, actions, approvals, policies, rules, agents, queue, configuration, migrations and transactions | 20 |
-| `MySql/Sales` | Implementations of Sales-owned command, activity, deal, follow-up, message and context ports | 8 |
-| `MySql/Property` | Property submission, moderation and management write adapters | 3 |
-| `MySql/Content` | Content repository adapter | 1 |
-| `MySql/Spatial` | Spatial scene repository adapter | 1 |
-| `MySql/ReadModel` | Query-only projections for ClientCase, Operations, Admin, Analytics and Property Catalog | 5 |
-| `MySql/Operations` | Kernel metrics recorder | 1 |
+- A Domain adapter may write only tables owned by that Domain.
+- Reads across tables are temporarily allowed only in dedicated read models. They must remain query-only and are migration seams for future projections/API calls.
+- Shared tables are accessed through narrow Platform adapters, not copied into every Domain.
+- Transactions use the same injected PDO connection, so owner adapters can participate in the caller transaction without global DI lookups.
 
-`DatabaseService` is the low-level PDO gateway. It is not exposed to Domains or new Interface code. Repositories accept it internally and implement contracts declared by the owning Domain or Kernel.
+`tests/architecture/table_ownership.php` extracts SQL write targets from Domain MySQL adapters and rejects foreign ownership.
 
-## Property split
+## PDO foundation
 
-- `PropertySubmissionService` and `PropertyModerationService` own application orchestration.
-- `PropertyManagementService` is the application boundary for management commands and queries.
-- `PropertyWorkflowPolicy` owns publication readiness, status-note requirements, stage transitions and quality rules without PDO or Phalcon.
-- `PropertyMediaStorageInterface` and `PropertyNotificationInterface` prevent MySQL adapters from depending on concrete Media or Telegram implementations.
-- `MysqlProperty*Repository` classes contain transactions, SQL mapping and persistence-specific normalization only.
+`Infrastructure/Platform/Persistence/Pdo/PdoConnection` is the low-level connection gateway. Application services and delivery code do not receive it. Concrete MySQL adapters may use PDO and implement narrow contracts.
 
-## Phalcon ActiveRecord
+PDO was selected over Phalcon ActiveRecord for new persistence because dependencies, SQL, tenant predicates, transaction boundaries and locks remain explicit. This does not prohibit Phalcon as the HTTP framework.
 
-ActiveRecord is retained only for the active legacy Telegram surface:
+## Phalcon ActiveRecord quarantine
 
-| Directory | Responsibility | Files |
-|---|---|---:|
-| `Phalcon/Identity/Telegram` | Telegram user, company, employee, contact, progress and message table mappings | 11 |
-| `Phalcon/Telegram` | Estate, request, showing, preference and Realty table mappings used by 23 Longman command adapters | 17 |
+Remaining AR mappings are located only under:
 
-There are no Property, Sales, Media, Economy or generic Identity ActiveRecord trees anymore. Duplicate Telegram/Identity mappings and dead dialogue/realty classes were removed. Non-model identity helpers live in `Infrastructure/Identity`, not under Persistence.
+- `Domains/Identity/Infrastructure/Persistence/Phalcon/Telegram`
+- `Domains/Property/Infrastructure/Persistence/Phalcon/Telegram`
+- `Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram`
+- `Infrastructure/Integration/Telegram/ActiveRecord` for shared abstract bases
 
-Longman commands remain framework adapters and may access this quarantined canonical ActiveRecord surface. New Web/API/CLI code must use Domain application contracts instead. A future Telegram rewrite can replace these mappings command-by-command without changing the rest of the architecture.
+Duplicate mappings of `estate_objects_disabled` were consolidated into `ObjectsDisabled`. New ActiveRecord models are forbidden. Existing Telegram command callers are the final compatibility surface and are migrated behind command/query gateways incrementally.
 
-## Enforced rules
+## Enforcement
 
-- Domains cannot import Infrastructure, Interfaces, Phalcon or PDO.
-- MySQL adapters cannot import Interfaces or concrete Media/Integration services; they use Domain-owned ports.
-- Phalcon ActiveRecord classes cannot exist outside `Infrastructure/Persistence/Phalcon`.
-- Old top-level `Infrastructure/Database`, `Infrastructure/ReadModel` and `Infrastructure/Operations` roots cannot be restored.
-- `tests/architecture/persistence_boundaries.php` enforces these constraints.
-- `tests/integration/persistence_di.php` verifies that the composition root exposes Domain services backed by the canonical MySQL repositories.
+- Domain Application/Model code cannot import Infrastructure, Interfaces, Phalcon or PDO.
+- MySQL adapters cannot import delivery code or concrete integration services.
+- Domain MySQL write ownership is checked automatically.
+- ActiveRecord cannot exist outside the explicit Telegram quarantine.
+- Old `Infrastructure/Persistence/MySql`, `Infrastructure/Database`, `Infrastructure/ReadModel` and `Infrastructure/Operations` roots cannot be restored.
+- Composition is performed only under `Bootstrap`, CLI entry points and tests.
 
-Current inventory: 39 MySQL adapter files and 28 retained ActiveRecord files.
+Primary checks: `tests/architecture/persistence_boundaries.php`, `tests/architecture/table_ownership.php`, `tests/architecture/layer_dependencies.php`, and `tests/integration/persistence_di.php`.

@@ -16,24 +16,28 @@ use Domains\Sales\Application\UseCase\ResolveInboundProperty;
 use Domains\Sales\Application\UseCase\UpdateClientCase;
 use Domains\Sales\Application\UseCase\UpdateClientCasePropertyMatch;
 use Domains\Sales\Application\UseCase\UpdateInboundClientCaseRequest;
-use Infrastructure\Persistence\MySql\Sales\MysqlInboundLeadRepository;
-use Infrastructure\Persistence\MySql\Sales\MysqlClientCaseCommandRepository;
-use Infrastructure\Persistence\MySql\ReadModel\MysqlClientCaseReadModel;
-use Infrastructure\Persistence\MySql\ReadModel\Admin\AdminDashboardService;
-use Infrastructure\Persistence\MySql\ReadModel\Analytics\AnalyticsService;
-use Infrastructure\Persistence\MySql\ReadModel\Property\CatalogService;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlPresentationSales;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
+use Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService;
+use Domains\Analytics\Infrastructure\ReadModel\MySql\AnalyticsService;
+use Domains\Analytics\Infrastructure\Persistence\MySql\MysqlPropertyAnalytics;
+use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
 use Interfaces\Web\Service\ClientCaseService;
 use Domains\Content\Application\Service\ContentService;
-use Infrastructure\Persistence\MySql\Content\MysqlContentRepository;
+use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
 use Interfaces\Web\Service\InboundRequestService;
 use Infrastructure\Integration\N8n\N8nWebhookService;
 use Domains\Property\Application\Service\PropertyManagementService;
-use Infrastructure\Persistence\MySql\Property\MysqlPropertyManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
 use Domains\Property\Application\UseCase\PropertyModerationService;
-use Infrastructure\Persistence\MySql\Property\MysqlPropertyModerationRepository;
-use Infrastructure\Media\PropertyPresentationService;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
+use Domains\Property\Infrastructure\Presentation\PropertyPresentationService;
 use Domains\Property\Application\UseCase\PropertySubmissionService;
-use Infrastructure\Persistence\MySql\Property\MysqlPropertySubmissionRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
+use Infrastructure\Platform\Persistence\MySql\MysqlLocationReference;
+use Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox;
 use Interfaces\Web\Page\PublicPageService;
 use Phalcon\Di\DiInterface;
 
@@ -44,9 +48,14 @@ final class WebApplicationServices
         $di->setShared('frontendAdminDashboardService', fn() => new AdminDashboardService($di->getShared('databaseService')));
         $di->setShared('frontendAnalyticsService', fn() => new AnalyticsService($di->getShared('databaseService')));
         $di->setShared('frontendPublicPageService', fn() => new PublicPageService());
-        $di->setShared('contentRepository', fn() => new MysqlContentRepository($di->getShared('databaseService')));
+        $di->setShared('contentRepository', fn() => new MysqlContentRepository(
+            $di->getShared('databaseService'), new MysqlContentIntegrationOutbox($di->getShared('databaseService')),
+        ));
         $di->setShared('frontendContentService', fn() => new ContentService($di->getShared('contentRepository')));
-        $di->setShared('frontendCatalogService', fn() => new CatalogService($di->getShared('databaseService')));
+        $di->setShared('propertyAnalytics', fn() => new MysqlPropertyAnalytics($di->getShared('databaseService')));
+        $di->setShared('frontendCatalogService', fn() => new CatalogService(
+            $di->getShared('databaseService'), $di->getShared('propertyAnalytics'),
+        ));
         $di->setShared('salesClientCaseReadModel', fn() => new MysqlClientCaseReadModel(
             $di->getShared('databaseService')->connection(), $di->getShared('organizationContext')->id(),
         ));
@@ -129,10 +138,11 @@ final class WebApplicationServices
         ));
         $di->setShared('frontendPropertySubmissionService', fn() => new PropertySubmissionService(
             $di->getShared('propertySubmissionRepository'), $di->getShared('mediaStorageService'),
-            $di->getShared('telegramAutomationService'),
+            $di->getShared('telegramAutomationService'), $di->getShared('propertyAnalytics'),
         ));
         $di->setShared('propertyModerationRepository', fn() => new MysqlPropertyModerationRepository(
             $di->getShared('databaseService'), $di->getShared('mediaStorageService'),
+            new MysqlLocationReference($di->getShared('databaseService')),
         ));
         $di->setShared('frontendPropertyModerationService', fn() => new PropertyModerationService(
             $di->getShared('propertyModerationRepository'), $di->getShared('telegramAutomationService'),
@@ -144,7 +154,9 @@ final class WebApplicationServices
             $di->getShared('propertyManagementRepository'), $di->getShared('telegramAutomationService'),
         ));
         $di->setShared('frontendPropertyPresentationService', fn() => new PropertyPresentationService(
-            $di->getShared('frontendCatalogService'), $di->getShared('databaseService'), $di->getShared('telegramAutomationService'),
+            $di->getShared('frontendCatalogService'), $di->getShared('databaseService'),
+            $di->getShared('telegramAutomationService'), $di->getShared('propertyAnalytics'),
+            new MysqlPresentationSales($di->getShared('databaseService')),
         ));
         $di->setShared('frontendN8nWebhookService', fn() => new N8nWebhookService(
             $di->getShared('databaseService'), $di->getShared('frontendContentService'),
