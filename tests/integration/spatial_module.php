@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Spatial\Services\SpatialAssetService;
-use Modules\Spatial\Services\SpatialProcessingService;
-use Modules\Spatial\Services\SpatialSceneService;
+use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Media\SpatialAssetService;
+use Infrastructure\Spatial\SpatialProcessingService;
+use Infrastructure\Persistence\MySql\Spatial\SpatialSceneService;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');

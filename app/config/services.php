@@ -4,13 +4,16 @@ declare(strict_types=1);
 use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
 use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
 use Phalcon\Mvc\View;
-use Common\Services\AuthService;
-use Common\Services\DatabaseService;
-use Common\Services\EventService;
-use Common\Services\ImageOptimizerService;
-use Common\Services\MediaStorageService;
+use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Media\ImageOptimizerService;
+use Infrastructure\Media\MediaStorageService;
+use Infrastructure\Integration\Telegram\TelegramAutomationService;
+use Infrastructure\Framework\PhalconEventService;
+use Infrastructure\Identity\SessionAuthService;
 use Interfaces\Web\Tenant\SessionOrganizationContext;
 use Interfaces\Web\Security\CsrfTokenManager;
+use Interfaces\Web\Assets\ViteAssetManifest;
+use Infrastructure\Security\TelegramAccessPolicy;
 
 /**
  * Shared configuration service
@@ -59,7 +62,7 @@ $di->setShared('imageOptimizerService', function () {
 });
 
 $di->setShared('authService', function () {
-    return new AuthService($this->getShared('databaseService'), $this->getShared('session'));
+    return new SessionAuthService($this->getShared('databaseService'), $this->getShared('session'));
 });
 
 $di->setShared('organizationContext', function () {
@@ -70,6 +73,14 @@ $di->setShared('organizationContext', function () {
 });
 
 $di->setShared('csrfTokenManager', fn () => new CsrfTokenManager($this->getShared('session')));
+
+$di->setShared('viteAssetManifest', fn () => new ViteAssetManifest(
+    BASE_PATH . '/public/build/.vite/manifest.json',
+));
+
+$di->setShared('telegramAccessPolicy', fn () => new TelegramAccessPolicy(
+    $this->getShared('databaseService'),
+));
 
 /**
  * If the configuration specify the use of metadata adapter use it or use memory otherwise
@@ -86,8 +97,7 @@ $di->setShared('view', function() {
 });
 
 $di->setShared('eventService', function () use ($di) {
-    $eventService = new EventService();
-//    $eventService->attach('user:profileCompleted', new \Modules\Users\Listeners\UserEventsListener());
+    $eventService = new PhalconEventService();
     return $eventService;
 });
 
@@ -99,4 +109,6 @@ if (!function_exists('di')) {
     }
 }
 
+require_once APP_PATH . '/Bootstrap/InboundCaseResolverAdapter.php';
+require_once APP_PATH . '/Bootstrap/WebApplicationServices.php';
 require APP_PATH . '/config/services_kernel.php';

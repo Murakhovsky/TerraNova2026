@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Spatial\Services\SpatialProcessingService;
+use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Spatial\SpatialProcessingService;
 use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));

@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Frontend\Services\ContentService;
-use Modules\Frontend\Services\IntegrationOutboxProcessor;
-use Modules\Frontend\Services\N8nWebhookService;
+use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Content\ContentService;
+use Infrastructure\Integration\N8n\IntegrationOutboxProcessor;
+use Infrastructure\Integration\N8n\N8nWebhookService;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');

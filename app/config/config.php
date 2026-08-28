@@ -14,17 +14,17 @@ return new \Phalcon\Config\Config([
 
     'database' => [
         'adapter'  => 'Mysql',
-        'host'     => getenv('DB_HOST') ?: 'mysql',
-        'port'     => (int) (getenv('DB_PORT') ?: 3306),
-        'username' => getenv('DB_USERNAME') ?: 'cos',
-        'password' => getenv('DB_PASSWORD') ?: '',
-        'dbname'   => getenv('DB_DATABASE') ?: 'cos',
+        'host'     => (string) ($_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'mysql'),
+        'port'     => (int) ($_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: 3306),
+        'username' => (string) ($_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'cos'),
+        'password' => (string) ($_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: ''),
+        'dbname'   => (string) ($_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: 'cos'),
         'charset'  => 'utf8mb4',
     ],
 
     'application' => [
         'appDir'         => APP_PATH . '/',
-        'modelsDir'      => APP_PATH . '/common/models/',
+        'modelsDir'      => APP_PATH . '/Infrastructure/Persistence/Phalcon/',
         'migrationsDir'  => APP_PATH . '/migrations/',
         'cacheDir'       => BASE_PATH . '/cache/',
         'baseUri'        => '/',
@@ -78,9 +78,8 @@ return new \Phalcon\Config\Config([
         // All command related configs go here
         'commands'     => array(
             'paths'   => array(
-                APP_PATH . '/modules/TgAdmin/Commands/SystemCommands',
-                APP_PATH . '/modules/TgAdmin/Commands/UserCommands',
-                APP_PATH . '/modules/TgAdmin/Commands/AdminCommands',
+                APP_PATH . '/Interfaces/Telegram/Command/SystemCommands',
+                APP_PATH . '/Interfaces/Telegram/Command/UserCommands',
             ),
             // Here you can set any command-specific parameters
             'configs' => array(

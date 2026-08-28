@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Common\Services\TelegramAutomationService;
-use Modules\TgAdmin\Services\TelegramAutomationProcessor;
+use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Integration\Telegram\TelegramAutomationService;
+use Infrastructure\Integration\Telegram\TelegramAutomationProcessor;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');

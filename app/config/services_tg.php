@@ -7,8 +7,9 @@ use Phalcon\Session\Adapter\Stream as SessionAdapter;
 use Phalcon\Session\Manager as SessionManager;
 use Phalcon\Mvc\Url as UrlResolver;
 use Phalcon\Translate\Adapter\NativeArray;
-use Modules\Users\Listeners\UserEventsListener;
-use Common\Services\EventService;
+use Interfaces\Telegram\Listener\IdentityUserEventsListener;
+use Infrastructure\Persistence\Phalcon\Identity\Service\NotificationService;
+use Infrastructure\Persistence\Phalcon\Identity\Service\TelegramUserService;
 
 /**
  * Registering a router
@@ -20,9 +21,18 @@ $di->setShared('router', function () {
 });
 
 
-//$di->setShared('walletService', function () {
-//    return new WalletService();
-//});
+$di->setShared('userService', fn () => new TelegramUserService());
+$di->setShared('notificationService', fn () => new NotificationService());
+
+/** @var \Infrastructure\Framework\PhalconEventService $legacyEvents */
+$legacyEvents = $di->getShared('eventService');
+foreach ([
+    'user:newProfileSaved', 'user:registered', 'user:profileCompleted', 'user:login',
+    'user:loginDaily', 'user:logout', 'user:levelUp', 'user:xpAdded',
+    'user:statusChanged', 'user:referralJoined', 'user:referralActivated',
+] as $eventName) {
+    $legacyEvents->attach($eventName, new IdentityUserEventsListener());
+}
 
 /**
  * The URL component is used to generate all kinds of URLs in the application

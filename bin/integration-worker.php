@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Frontend\Services\ContentService;
-use Modules\Frontend\Services\IntegrationOutboxProcessor;
+use Infrastructure\Database\Connection\DatabaseService;
+use Infrastructure\Persistence\MySql\Content\ContentService;
+use Infrastructure\Integration\N8n\IntegrationOutboxProcessor;
 use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));

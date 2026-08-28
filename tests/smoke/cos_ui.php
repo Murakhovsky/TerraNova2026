@@ -46,7 +46,7 @@ $overview = [
     ]],
 ];
 
-$html = $renderer->render($root . '/app/modules/frontend/views/cos/index.phtml', [
+$html = $renderer->render($root . '/app/Interfaces/Web/View/cos/index.phtml', [
     'overview' => $overview, 'actionStatus' => 'Queued', 'pageStatus' => null,
 ]);
 

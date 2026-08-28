@@ -51,21 +51,9 @@ try {
      */
     $application->registerModules([
         'TgAdmin' =>[
-            'className' => 'Modules\TgAdmin\Module',
-            'path'      => APP_PATH . '/modules/TgAdmin/Module.php',
+            'className' => 'Interfaces\Telegram\Module',
+            'path'      => APP_PATH . '/Interfaces/Telegram/Module.php',
             'default'   => true
-        ],
-        'users' => [
-            'className' => 'Modules\Users\Module',
-            'path'      => APP_PATH . '/modules/Users/Module.php',
-        ],
-        'economy' => [
-            'className' => 'Modules\Economy\Module',
-            'path'      => APP_PATH . '/modules/economy/Module.php',
-        ],
-        'games' => [
-            'className' => 'Modules\Games\Module',
-            'path'      => APP_PATH . '/modules/Games/Module.php',
         ],
     ]);
 

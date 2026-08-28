@@ -51,25 +51,13 @@ try {
      */
     $application->registerModules([
         'frontend' => [
-            'className' => 'Modules\Frontend\Module',
-            'path'      => APP_PATH . '/modules/frontend/Module.php',
+            'className' => 'Interfaces\Web\Module',
+            'path'      => APP_PATH . '/Interfaces/Web/Module.php',
             'default'   => true
         ],
-        'economy' => [
-            'className' => 'Modules\Economy\Module',
-            'path'      => APP_PATH . '/modules/economy/Module.php',
-            ],
-        'games' => [
-            'className' => 'Modules\Games\Module',
-            'path'      => APP_PATH . '/modules/Games/Module.php',
-        ],
-        'users' => [
-            'className' => 'Modules\Users\Module',
-            'path'      => APP_PATH . '/modules/Users/Module.php',
-        ],
         'spatial' => [
-            'className' => 'Modules\Spatial\Module',
-            'path'      => APP_PATH . '/modules/spatial/Module.php',
+            'className' => 'Bootstrap\SpatialModule',
+            'path'      => APP_PATH . '/Bootstrap/SpatialModule.php',
         ],
     ]);
 

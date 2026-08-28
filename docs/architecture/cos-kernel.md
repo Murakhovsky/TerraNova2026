@@ -100,7 +100,6 @@ app/
 |   |-- SalesServices.php
 |   `-- KernelServices.php
 |
-|-- modules/                       legacy Phalcon delivery modules
 `-- config/services_kernel.php     compatibility entrypoint to Bootstrap
 ```
 
@@ -183,7 +182,7 @@ MVC remains valid inside a Web interface:
 HTTP -> Controller -> Application/Kernel service -> ViewModel -> View
 ```
 
-Controllers must not contain policies, SQL, domain transitions, or external integration selection. Existing `app/modules` remains a compatibility delivery layer while new or migrated endpoints should be placed under `Interfaces/Web`, `Interfaces/Api`, `Interfaces/Cli`, and similar entrypoint-oriented namespaces.
+Controllers must not contain policies, SQL, domain transitions, or external integration selection. All endpoints live under `Interfaces/Web`, `Interfaces/Api`, `Interfaces/Telegram`, `Interfaces/Cli`, and similar entrypoint-oriented namespaces; `app/modules` has been removed.
 
 Business areas must not be modeled as Phalcon modules. `Sales`, `Finance`, and `Inventory` are Domains because the same logic can be called from Web, API, CLI, Telegram, a queue worker, or an external CRM webhook.
 

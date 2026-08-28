@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace Infrastructure\Database\Migration;
 
+use Kernel\Database\MigrationRunnerInterface;
 use PDO;
 use RuntimeException;
+use Throwable;
 
-final readonly class MigrationRunner
+final readonly class MigrationRunner implements MigrationRunnerInterface
 {
     public function __construct(
         private PDO $connection,
@@ -24,7 +26,11 @@ final readonly class MigrationRunner
             . 'applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_tn_migrations_migration (migration)) '
             . 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
-        if ((int) $this->connection->query("SELECT GET_LOCK('cos_schema_migrations', 30)")->fetchColumn() !== 1) {
+        $lockStatement = $this->connection->query("SELECT GET_LOCK('cos_schema_migrations', 30)");
+        $lockRows = $lockStatement->fetchAll(PDO::FETCH_NUM);
+        $lockAcquired = (int) ($lockRows[0][0] ?? 0) === 1;
+        $lockStatement->closeCursor();
+        if (!$lockAcquired) {
             throw new RuntimeException('Could not acquire the migration lock.');
         }
         try {
@@ -39,8 +45,24 @@ final readonly class MigrationRunner
                 }
                 $sql = file_get_contents($file);
                 if (!is_string($sql)) throw new RuntimeException('Cannot read migration: ' . $file);
-                foreach ($this->splitter->split($sql) as $statement) {
-                    $this->connection->exec($statement);
+                foreach ($this->splitter->split($sql) as $index => $statement) {
+                    try {
+                        $query = $this->connection->prepare($statement);
+                        $query->execute();
+                        do {
+                            if ($query->columnCount() > 0) {
+                                $query->fetchAll(PDO::FETCH_NUM);
+                            }
+                        } while ($query->nextRowset());
+                        $query->closeCursor();
+                    } catch (Throwable $exception) {
+                        throw new RuntimeException(sprintf(
+                            'Migration %s failed at statement %d: %s',
+                            $name,
+                            $index + 1,
+                            $exception->getMessage(),
+                        ), 0, $exception);
+                    }
                 }
                 if (!$this->isApplied($name)) {
                     $insert = $this->connection->prepare('INSERT INTO tn_migrations (migration) VALUES (:migration)');
@@ -50,7 +72,11 @@ final readonly class MigrationRunner
             }
             return $result;
         } finally {
-            $this->connection->query("SELECT RELEASE_LOCK('cos_schema_migrations')");
+            try {
+                $this->connection->exec("DO RELEASE_LOCK('cos_schema_migrations')");
+            } catch (Throwable) {
+                // Do not mask the migration failure; MySQL releases named locks when this dedicated connection closes.
+            }
         }
     }
 
@@ -65,6 +91,10 @@ final readonly class MigrationRunner
     {
         $statement = $this->connection->prepare('SELECT 1 FROM tn_migrations WHERE migration = :migration LIMIT 1');
         $statement->execute(['migration' => $name]);
-        return $statement->fetchColumn() !== false;
+        $rows = $statement->fetchAll(PDO::FETCH_NUM);
+        $applied = $rows !== [];
+        $statement->closeCursor();
+
+        return $applied;
     }
 }

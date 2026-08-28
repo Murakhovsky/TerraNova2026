@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace Interfaces\Web\Controller;
 
-use Common\Services\AuthService;
+use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
 use Interfaces\Web\Security\CsrfTokenManager;
 use Kernel\Tenant\OrganizationContextInterface;
 use Phalcon\Mvc\Controller;
 
 abstract class WebController extends Controller
 {
-    protected function auth(): AuthService
+    protected function auth(): AuthenticatedUserContextInterface
     {
         return $this->di->getShared('authService');
     }

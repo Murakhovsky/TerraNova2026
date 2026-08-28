@@ -9,8 +9,7 @@
       "Domains\\": "app/Domains/",
       "Infrastructure\\": "app/Infrastructure/",
       "Interfaces\\": "app/Interfaces/",
-      "Common\\": "app/common/",
-      "Modules\\": "app/modules/"
+      "Bootstrap\\": "app/Bootstrap/"
     }
   },
   "autoload-dev": {

@@ -41,7 +41,7 @@ $connection = static fn ($container) => $container->getShared('databaseService')
 
 $di->setShared('cosTransactionManager', fn (): TransactionManager => new TransactionManager($connection($this)));
 $di->setShared('cosMigrationRunner', fn (): MigrationRunner => new MigrationRunner(
-    $connection($this),
+    (new \Infrastructure\Database\Connection\DatabaseService($this->getConfig()->database))->connection(),
     APP_PATH . '/migrations',
     new SqlStatementSplitter(),
 ));

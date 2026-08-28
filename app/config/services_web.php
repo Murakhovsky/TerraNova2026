@@ -71,7 +71,7 @@ $di->set('flash', function () {
 $di->setShared('translator', function(){
     // Дістанемо мову з сесії / GET-параметра / cookie / піддомену
     $lang = 'ua';
-    $file = APP_PATH . "/modules/TgAdmin/Language/{$lang}.php";
+    $file = APP_PATH . "/Interfaces/Telegram/Language/{$lang}.php";
     if (!file_exists($file)) {
         $file = APP_PATH . "/messages/uk.php";
     }

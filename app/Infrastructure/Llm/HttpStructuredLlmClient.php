@@ -24,8 +24,7 @@ final class HttpStructuredLlmClient implements LlmClientInterface
         private readonly int $circuitSeconds = 60,
     ) {}
 
-    public function structured(AgentDefinition $agent, string $question, array $context): LlmResponse
-    {
+    public function structured(AgentDefinition $agent, string $question, array $context): LlmResponse    {
         if ($this->endpoint === '') {
             throw new RuntimeException('LLM_ENDPOINT is not configured.');
         }

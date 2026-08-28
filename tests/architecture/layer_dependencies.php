@@ -35,7 +35,41 @@ function assertNoDependencies(string $directory, array $forbiddenPrefixes): void
 
 assertNoDependencies($root . '/app/Kernel', ['Domains', 'Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
 assertNoDependencies($root . '/app/Domains', ['Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
-assertNoDependencies($root . '/app/Interfaces', ['Infrastructure', 'Modules']);
+foreach (['Web', 'Api', 'Cli', 'Shared'] as $interfaceArea) {
+    $directory = $root . '/app/Interfaces/' . $interfaceArea;
+    if (is_dir($directory)) {
+        assertNoDependencies($directory, ['Infrastructure', 'Modules']);
+    }
+}
+
+// Longman commands are framework adapters and may call canonical persistence/integration adapters.
+// They must never reach back into removed modules or the inactive legacy quarantine.
+assertNoDependencies($root . '/app/Interfaces/Telegram', ['Modules', 'Common', 'Infrastructure\\Legacy']);
+
+foreach (phpFiles($root . '/app/Infrastructure') as $file) {
+    $source = (string) file_get_contents($file);
+    $relative = str_replace('\\', '/', substr($file, strlen($root) + 1));
+    if (!str_starts_with($relative, 'app/Infrastructure/Legacy/')
+        && preg_match('/^use\s+Modules\\\\/m', $source)
+    ) {
+        throw new RuntimeException('Infrastructure must not depend on legacy Modules: ' . $file);
+    }
+}
+
+// Quarantined adapters may still reference legacy ActiveRecord classes until their table mappings move.
+// No code outside Infrastructure/Legacy receives this temporary exception.
+
+$clientCaseFacade = (string) file_get_contents($root . '/app/Interfaces/Web/Service/ClientCaseService.php');
+foreach (['DatabaseService', 'PDO', '->prepare(', '->transactional(', 'EventBus', 'ClientCaseCreated::', 'ClientCaseChanged::', 'DealStageChanged::', 'LeadChanged::'] as $forbidden) {
+    if (str_contains($clientCaseFacade, $forbidden)) {
+        throw new RuntimeException('ClientCaseService must remain a thin compatibility facade; forbidden dependency: ' . $forbidden);
+    }
+}
+
+$inboundResolver = (string) file_get_contents($root . '/app/Bootstrap/InboundCaseResolverAdapter.php');
+if (preg_match('/^use\s+Modules\\\\/m', $inboundResolver)) {
+    throw new RuntimeException('Inbound case resolution must call Sales use cases without routing through legacy Modules.');
+}
 
 foreach (phpFiles($root . '/app/Kernel') as $file) {
     $source = file_get_contents($file);
@@ -61,4 +95,4 @@ foreach ($requiredSalesAreas as $area) {
     }
 }
 
-echo "Architecture boundaries passed: Kernel is independent and Domains use ports only.\n";
+echo "Architecture boundaries passed: Kernel/Domains are independent and Telegram uses canonical adapters only.\n";

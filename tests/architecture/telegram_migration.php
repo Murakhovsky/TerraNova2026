@@ -1,0 +1,93 @@
+<?php
+declare(strict_types=1);
+
+$root = dirname(__DIR__, 2);
+require $root . '/vendor/autoload.php';
+
+if (is_dir($root . '/app/modules')) {
+    throw new RuntimeException('Telegram migration is incomplete: app/modules still exists.');
+}
+
+$configSource = (string) file_get_contents($root . '/app/config/config.php');
+if (str_contains($configSource, '/modules/')) {
+    throw new RuntimeException('Telegram command configuration still points to app/modules.');
+}
+
+$roots = [
+    $root . '/app/Interfaces/Telegram/Command',
+    $root . '/app/Interfaces/Telegram/Controller',
+    $root . '/app/Interfaces/Telegram/Rendering',
+    $root . '/app/Interfaces/Telegram/Presentation',
+    $root . '/app/Infrastructure/Persistence/Phalcon/Telegram',
+    $root . '/app/Infrastructure/Persistence/Phalcon/Identity/Telegram',
+];
+
+$loaded = 0;
+foreach ($roots as $directory) {
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
+    foreach ($iterator as $file) {
+        if (!$file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+
+        $source = (string) file_get_contents($file->getPathname());
+        foreach (['TelegramModels\\', 'Modules\\TgAdmin', 'OpenAIPlugin\\', 'Parser\\Advert\\'] as $forbiddenNamespace) {
+            if (str_contains($source, $forbiddenNamespace)) {
+                throw new RuntimeException(
+                    'Migrated Telegram source still references legacy namespace '
+                    . $forbiddenNamespace . ': ' . $file->getPathname()
+                );
+            }
+        }
+        if (!preg_match('/^namespace\s+([^;]+);/m', $source, $namespace)
+            || !preg_match('/^(?:abstract\s+|final\s+|readonly\s+)*class\s+([A-Za-z_][A-Za-z0-9_]*)|^interface\s+([A-Za-z_][A-Za-z0-9_]*)/m', $source, $type)
+        ) {
+            continue;
+        }
+
+        require_once $file->getPathname();
+        $shortName = ($type[1] ?? '') !== '' ? $type[1] : ($type[2] ?? '');
+        $fqcn = trim($namespace[1]) . '\\' . $shortName;
+        if (!class_exists($fqcn, false) && !interface_exists($fqcn, false)) {
+            throw new RuntimeException('Migrated Telegram type failed to load: ' . $fqcn);
+        }
+        $loaded++;
+    }
+}
+
+if ($loaded < 80) {
+    throw new RuntimeException('Unexpectedly few migrated Telegram types were loaded: ' . $loaded);
+}
+
+require_once $root . '/app/Interfaces/Telegram/Language/language_uk.php';
+$menuButtons = Interfaces\Telegram\Rendering\Buttons::getMainMenu([
+    'xp' => 0,
+    'level' => 0,
+    'msg' => 0,
+]);
+if (count($menuButtons) !== 4) {
+    throw new RuntimeException('Migrated Telegram main menu has an invalid navigation shape.');
+}
+
+$telegram = new Longman\TelegramBot\Telegram('123456:test-token', 'migration_test_bot');
+$telegram->setCommandsPaths([
+    $root . '/app/Interfaces/Telegram/Command/SystemCommands',
+    $root . '/app/Interfaces/Telegram/Command/UserCommands',
+]);
+$commands = $telegram->getCommandsList();
+foreach ([
+    'call', 'company', 'favourite', 'get_photos', 'groups_message', 'hidekb', 'inlinekeyboard',
+    'menu', 'new_object', 'profile', 'request', 'search_adverts', 'set_cold_phones', 'set_reminder',
+    'showing', 'start', 'tasks', 'unban', 'weather', 'callbackquery', 'choseninlineresult',
+    'genericmessage', 'inlinequery',
+] as $requiredCommand) {
+    if (!isset($commands[$requiredCommand])) {
+        throw new RuntimeException(
+            'Migrated Telegram command was not discovered: ' . $requiredCommand
+            . '; discovered: ' . implode(', ', array_keys($commands))
+        );
+    }
+}
+
+echo "Telegram migration passed: {$loaded} types loaded and " . count($commands)
+    . " commands discovered (" . implode(', ', array_keys($commands)) . ").\n";

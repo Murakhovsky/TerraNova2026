@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace Interfaces\Web\Tenant;
 
-use Common\Services\AuthService;
+use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
 use Kernel\Tenant\OrganizationContextInterface;
 use RuntimeException;
 
 final readonly class SessionOrganizationContext implements OrganizationContextInterface
 {
     public function __construct(
-        private AuthService $auth,
+        private AuthenticatedUserContextInterface $auth,
         private string $publicOrganizationId,
     ) {
     }

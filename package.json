@@ -2,7 +2,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:spatial": "vite build"
+    "build": "vite build",
+    "build:spatial": "vite build",
+    "test:frontend": "node tests/frontend/api_client.mjs"
   },
   "dependencies": {
     "@sparkjsdev/spark": "^2.1.0",
