@@ -8,6 +8,9 @@ use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
 use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\Support\ClientCaseEvents;
 use Domains\Sales\Application\Support\ClientCaseInput;
+use Domains\Sales\Model\LeadStatus;
+use Domains\Sales\Model\ClientCaseStatus;
+use Domains\Sales\Model\SalesActivityType;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
 use Domains\Sales\Automation\Event\DealStageChanged;
 use Domains\Sales\Automation\Event\LeadChanged;
@@ -33,7 +36,7 @@ final readonly class UpdateInboundClientCaseRequest
 
         $status = ClientCaseInput::allowed(
             (string) ($input['status'] ?? $request['status']),
-            ClientCaseInput::LEAD_STATUSES,
+            LeadStatus::values(),
             (string) $request['status'],
         );
         $managerId = array_key_exists('assigned_user_id', $input)
@@ -41,12 +44,22 @@ final readonly class UpdateInboundClientCaseRequest
             : (isset($request['assigned_user_id']) ? (int) $request['assigned_user_id'] : null);
         $managerNote = ClientCaseInput::text((string) ($input['manager_note'] ?? ($request['manager_note'] ?? '')));
         $nextContact = ClientCaseInput::dateTime((string) ($input['next_contact_at'] ?? ''));
-        $contacted = ['contacted', 'qualified', 'viewing_planned', 'viewing', 'negotiation', 'won', 'lost'];
+        $contacted = [
+            LeadStatus::Contacted->value,
+            LeadStatus::Qualified->value,
+            LeadStatus::ViewingPlanned->value,
+            LeadStatus::Viewing->value,
+            LeadStatus::Negotiation->value,
+            LeadStatus::Won->value,
+            LeadStatus::Lost->value,
+        ];
         $lastContacted = in_array($status, $contacted, true)
             ? (($request['last_contacted_at'] ?? null) ?: date('Y-m-d H:i:s'))
             : ($request['last_contacted_at'] ?? null);
         $activityType = ClientCaseInput::allowed(
-            (string) ($input['activity_type'] ?? 'status_change'), ClientCaseInput::LEAD_ACTIVITY_TYPES, 'status_change',
+            (string) ($input['activity_type'] ?? SalesActivityType::StatusChange->value),
+            SalesActivityType::values(),
+            SalesActivityType::StatusChange->value,
         );
         $activityBody = ClientCaseInput::text((string) ($input['activity_body'] ?? '')) ?: $managerNote;
         $completedAt = !empty($input['completed']) ? date('Y-m-d H:i:s') : null;
@@ -82,12 +95,14 @@ final readonly class UpdateInboundClientCaseRequest
                 if (!$this->commands->syncCaseFromLead($this->organizationId, $caseId, [
                     'stage' => $state['stage'], 'status' => $state['status'], 'assigned_user_id' => $managerId,
                     'next_contact_at' => $nextContact,
-                    'closed_at' => in_array($state['status'], ['closed', 'lost'], true) ? date('Y-m-d H:i:s') : null,
+                    'closed_at' => ClientCaseStatus::from($state['status'])->isTerminal() ? date('Y-m-d H:i:s') : null,
                 ])) {
                     throw new RuntimeException('Linked client case disappeared during lead synchronization.');
                 }
                 $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
-                    'activity_type' => $activityType === 'viewing' ? 'viewing' : 'note',
+                    'activity_type' => $activityType === SalesActivityType::Viewing->value
+                        ? SalesActivityType::Viewing->value
+                        : SalesActivityType::Note->value,
                     'title' => 'Заявку оновлено: ' . ClientCaseInput::leadStatusLabel($status),
                     'body' => $activityBody, 'due_at' => $nextContact, 'completed_at' => $completedAt,
                 ]);

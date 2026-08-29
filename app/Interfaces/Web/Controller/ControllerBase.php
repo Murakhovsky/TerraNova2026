@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Interfaces\Web\Controller;
 
 use Domains\Property\Application\Contract\PropertyCatalogInterface;
-use Domains\Analytics\Application\Contract\AnalyticsServiceInterface;
+use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
-use Domains\Notification\Application\Contract\TelegramAutomationInterface;
+use Domains\Identity\Application\Contract\TelegramAccountLinkInterface;
 use Interfaces\Web\Service\ClientCaseService;
 use Domains\Content\Application\Contract\ContentServiceInterface;
 use Interfaces\Web\Service\InboundRequestService;
@@ -16,6 +16,7 @@ use Domains\Property\Application\Contract\PropertyPresentationInterface;
 use Domains\Property\Application\Contract\PropertySubmissionInterface;
 use Interfaces\Web\Page\PublicPageService;
 use Domains\Spatial\Application\Contract\SpatialSceneInterface;
+use Kernel\Operations\Contract\NotificationOperationsReadModelInterface;
 use Phalcon\Mvc\Controller;
 use Throwable;
 
@@ -26,7 +27,7 @@ class ControllerBase extends Controller
         return $this->di->getShared('frontendCatalogService');
     }
 
-    protected function analyticsService(): AnalyticsServiceInterface
+    protected function analyticsService(): PropertyFunnelAnalyticsInterface
     {
         return $this->di->getShared('frontendAnalyticsService');
     }
@@ -56,7 +57,12 @@ class ControllerBase extends Controller
         return $this->di->getShared('authService');
     }
 
-    protected function telegramAutomationService(): TelegramAutomationInterface
+    protected function telegramAutomationService(): TelegramAccountLinkInterface
+    {
+        return $this->di->getShared('telegramAutomationService');
+    }
+
+    protected function notificationOperations(): NotificationOperationsReadModelInterface
     {
         return $this->di->getShared('telegramAutomationService');
     }

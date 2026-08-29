@@ -2,7 +2,7 @@
 
 Дата інвентаризації: 2026-08-26.
 
-Статус виконання станом на 2026-08-28: план завершено для `app/modules`. Каталог `app/modules` і PSR-4 mapping `Modules\\` видалені. Frontend controllers/views перенесені до `Interfaces/Web`, Spatial delivery — до `Interfaces/Api`, CLI tasks — до `Interfaces/Cli`, а 23 Telegram-команди, webhook, rendering і persistence mappings — до `Interfaces/Telegram` та `Infrastructure/Persistence/Phalcon`. Games і його окремі entrypoints видалені. Browser source збирається з `resources/frontend` через Vite multi-entry manifest.
+Статус виконання станом на 2026-08-29: план завершено для `app/modules`. Каталог `app/modules` і PSR-4 mapping `Modules\\` видалені. Frontend controllers/views перенесені до `Interfaces/Web`, Spatial delivery — до `Interfaces/Api`, CLI tasks — до `Interfaces/Cli`, а Telegram-команди, webhook і rendering — до `Interfaces/Telegram`. Games і його окремі entrypoints видалені. Browser source збирається з кореневого `frontend` через Vite multi-entry manifest.
 
 `app/common` та `app/Infrastructure/Legacy` також фізично видалені після досягнення нульових production callers. Persistence завершено як окремий зріз: MySQL adapters і read models зведені під `Infrastructure/Persistence/MySql`, а ActiveRecord обмежено активними Telegram/Identity mappings. Детальна карта: `legacy-service-migration-ledger.md` і `persistence.md`.
 
@@ -22,7 +22,7 @@
 - server-rendered frontend: 15 контролерів, 12 сервісів і 49 PHTML-файлів у `app/modules/frontend`;
 - статичні assets та PHP entrypoints у `public`;
 - окремий Vue-проєкт `app/modules/Games/PaintIO`, який не входить до головного Vite pipeline;
-- Vite pipeline, що наразі збирає тільки spatial viewer з `resources/spatial` у `public/build`.
+- Vite pipeline, що збирає всі browser entrypoints з кореневого `frontend` у `public/build`.
 
 Найбільші legacy-зони:
 
@@ -111,7 +111,7 @@ public/
 | `modules/cli` | механічно перенести tasks у `Interfaces/Cli`, bootstrap лишити сумісним | P2 |
 | `modules/Games`, `economy` | окреме рішення keep/extract/archive після перевірки runtime-використання | P3 |
 | `public/webtools.php`, `webtools.config.php`, `games.php`, `tgAdmin_webhook.php` | перевірити зовнішні виклики; замінити route/controller або CLI; прибрати після deprecation window | P0 |
-| `public/js`, `public/css` | перенести source у `resources/frontend`; у `public/build` лишити build output | P1 |
+| `public/js`, `public/css` | перенести source у `frontend`; у `public/build` лишити build output | P1 |
 | `public/uploads` | винести в configured storage/volume; заборонити включення runtime uploads у release | P0 |
 | root `index.html`, `.htrouter.php`, `.htaccess`, `run` | документувати середовища використання; залишити один підтримуваний шлях запуску на середовище | P1 |
 | `LightsailDefaultKey-eu-central-1.pem` | негайно вилучити з репозиторію, відкликати/замінити ключ і перевірити git history | P0 security |
@@ -192,7 +192,7 @@ public/
 ### Структура frontend
 
 ```text
-resources/frontend/
+frontend/
 |-- entrypoints/       public-site.js, cabinet.js, admin.js, property.js
 |-- api/               typed request clients and error normalization
 |-- components/        reusable UI components
@@ -204,7 +204,7 @@ resources/frontend/
 ### Перший frontend backlog
 
 1. Додати Vite multi-entry build поруч зі spatial entrypoint; manifest використовувати для hashed asset URLs.
-2. Перенести `public/js/terranova-*` і `public/css/terranova-*` у `resources/frontend`, не змінюючи поведінку.
+2. Перенести `public/js/terranova-*` і `public/css/terranova-*` у `frontend`, не змінюючи поведінку.
 3. Винести inline scripts/styles із PHTML і заборонити нові inline handlers.
 4. Визначити API conventions: `/api/v1`, JSON envelope/error shape, validation errors, pagination/filter/sort, CSRF для session writes, idempotency key для критичних commands.
 5. Згенерувати або вручну підтримувати API contract (OpenAPI); frontend не повинен знати DB/Phalcon naming.
@@ -265,4 +265,4 @@ resources/frontend/
 
 ## 10. Наступний етап
 
-Legacy cleanup завершено. Подальша frontend-робота має виконуватися лише в `resources/frontend`, `Interfaces/Web/View` та через стабільні `/api/v1` contracts. Telegram ActiveRecord quarantine замінюється поступово через Domain ports без створення нових Phalcon models.
+Legacy cleanup завершено. Подальша frontend-робота має виконуватися лише в `frontend`, `Interfaces/Web/View` та через стабільні `/api/v1` contracts. Telegram ActiveRecord quarantine замінюється поступово через Domain ports без створення нових Phalcon models.

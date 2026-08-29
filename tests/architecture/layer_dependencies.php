@@ -82,7 +82,7 @@ foreach (phpFiles($root . '/app/Interfaces/Api/Controller') as $file) {
     }
 }
 
-$requiredSalesAreas = ['Application', 'Automation', 'Bootstrap', 'Model'];
+$requiredSalesAreas = ['Application', 'Automation', 'Bootstrap', 'Infrastructure', 'Model'];
 foreach ($requiredSalesAreas as $area) {
     if (!is_dir($root . '/app/Domains/Sales/' . $area)) {
         throw new RuntimeException(sprintf('Sales domain is missing its %s area.', $area));

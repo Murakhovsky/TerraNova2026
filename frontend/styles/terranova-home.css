@@ -274,7 +274,7 @@ body:has(.tn-visual-page) {
   background:
     linear-gradient(180deg, rgba(5, 11, 13, 0.1), rgba(5, 11, 13, 0.28)),
     radial-gradient(circle at 53% 53%, rgba(240, 186, 114, 0.14), transparent 15%),
-    url("/img/google_map_black_3.png") center / cover no-repeat,
+    url("../assets/images/google-map-black.png") center / cover no-repeat,
     #081114;
   border: 1px solid var(--v-line-soft);
   border-radius: 14px;

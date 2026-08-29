@@ -4,6 +4,11 @@ declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\ReadModel\MySql;
 
 use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
+use Domains\Sales\Model\ClientCaseStatus;
+use Domains\Sales\Model\ClientCaseType;
+use Domains\Sales\Model\LeadStatus;
+use Domains\Sales\Model\PipelineStage;
+use Domains\Sales\Model\SalesPriority;
 use PDO;
 
 final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInterface
@@ -16,10 +21,10 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         return [
             'q' => trim((string) ($query['q'] ?? '')),
-            'stage' => $this->allowed((string) ($query['stage'] ?? ''), $this->stages(), ''),
-            'status' => $this->allowed((string) ($query['status'] ?? ''), ['active', 'paused', 'closed', 'lost'], ''),
-            'type' => $this->allowed((string) ($query['type'] ?? ''), $this->types(), ''),
-            'priority' => $this->allowed((string) ($query['priority'] ?? ''), ['low', 'normal', 'high', 'urgent'], ''),
+            'stage' => $this->allowed((string) ($query['stage'] ?? ''), PipelineStage::values(), ''),
+            'status' => $this->allowed((string) ($query['status'] ?? ''), ClientCaseStatus::values(), ''),
+            'type' => $this->allowed((string) ($query['type'] ?? ''), ClientCaseType::values(), ''),
+            'priority' => $this->allowed((string) ($query['priority'] ?? ''), SalesPriority::values(), ''),
             'assigned_user_id' => max(0, (int) ($query['assigned_user_id'] ?? 0)),
             'sort' => $this->allowed((string) ($query['sort'] ?? ''), ['updated', 'newest', 'next_contact', 'budget'], 'updated'),
         ];
@@ -68,7 +73,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         $rows = $this->all('SELECT stage, COUNT(*) AS total FROM tn_client_cases
             WHERE organization_id = :organization_id GROUP BY stage', ['organization_id' => $this->organizationId]);
-        $stats = array_fill_keys(['all', ...$this->stages()], 0);
+        $stats = array_fill_keys(['all', ...PipelineStage::values()], 0);
         foreach ($rows as $row) {
             $stage = (string) ($row['stage'] ?? '');
             $total = (int) ($row['total'] ?? 0);
@@ -142,7 +147,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         return [
             'q' => trim((string) ($query['q'] ?? '')),
-            'status' => $this->allowed((string) ($query['status'] ?? ''), $this->leadStatuses(), ''),
+            'status' => $this->allowed((string) ($query['status'] ?? ''), LeadStatus::values(), ''),
             'request_intent' => $this->allowed((string) ($query['request_intent'] ?? ''), $this->requestIntents(), ''),
             'assigned_user_id' => max(0, (int) ($query['assigned_user_id'] ?? 0)),
             'has_case' => $this->allowed((string) ($query['has_case'] ?? ''), ['yes', 'no'], ''),
@@ -185,7 +190,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             FROM tn_leads WHERE organization_id = :organization_id', $params) ?? [];
         $stats = ['total'=>(int)($summary['total']??0),'new'=>(int)($summary['new_items']??0),
             'unassigned'=>(int)($summary['unassigned_items']??0),'no_case'=>(int)($summary['no_case_items']??0),
-            'due'=>(int)($summary['due_items']??0),'status'=>array_fill_keys($this->leadStatuses(),0),'intent'=>array_fill_keys($this->requestIntents(),0)];
+            'due'=>(int)($summary['due_items']??0),'status'=>array_fill_keys(LeadStatus::values(),0),'intent'=>array_fill_keys($this->requestIntents(),0)];
         foreach ($statusRows as $row) $stats['status'][(string)$row['status']] = (int)$row['total'];
         foreach ($intentRows as $row) $stats['intent'][(string)$row['request_intent']] = (int)$row['total'];
         return $stats;
@@ -231,8 +236,5 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     }
 
     private function allowed(string $value, array $allowed, string $default): string { return in_array($value, $allowed, true) ? $value : $default; }
-    private function stages(): array { return ['new','qualification','need_defined','matching','viewing','negotiation','deal','aftercare','repeat','paused','lost']; }
-    private function types(): array { return ['buy','sell','rent','lease_out','repair','investment','management','inheritance','other']; }
-    private function leadStatuses(): array { return ['new','contacted','qualified','viewing_planned','viewing','negotiation','won','lost','spam','closed']; }
     private function requestIntents(): array { return ['general_contact','presentation','viewing','similar_search']; }
 }

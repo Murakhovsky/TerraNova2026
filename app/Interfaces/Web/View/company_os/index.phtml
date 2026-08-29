@@ -47,8 +47,8 @@ $langLabels = ['en' => 'EN', 'de' => 'DE', 'fr' => 'FR', 'pl' => 'PL', 'uk' => '
     <div class="cos-domain-filter" role="toolbar" aria-label="<?php echo $h($copy['nav_domains']); ?>"><button class="is-active" data-domain-filter="all"><?php echo $h($copy['all']); ?></button><?php foreach ($industries as $industryKey => $industryLabel): ?><button data-domain-filter="<?php echo $h($industryKey); ?>"><?php echo $h($industryLabel); ?></button><?php endforeach; ?></div>
     <div class="cos-domain-grid">
       <?php foreach ($domains as $slug => $domain): ?>
-      <a class="cos-domain-card" data-domain-industries="<?php echo $h(implode(' ', $domain['industries'])); ?>" href="<?php echo $this->url->get('cos/' . $lang . '/domains/' . $slug); ?>">
-        <div><span><?php echo $h($domain['id']); ?></span><em>COS · <?php echo $h($copy['nav_domains']); ?></em></div><h3><?php echo $h($domain['title']); ?></h3><p><?php echo $h($domain['summary']); ?></p><strong><?php echo $h($copy['view_domain']); ?> <i>↗</i></strong>
+      <a class="cos-domain-card<?php echo $domain['featured'] ? ' is-featured' : ''; ?>" data-domain-industries="<?php echo $h(implode(' ', $domain['industries'])); ?>" href="<?php echo $this->url->get('cos/' . $lang . '/domains/' . $slug); ?>">
+        <div><span><?php echo $h($domain['id']); ?></span><em><?php echo $domain['featured'] ? $h($featuredLabels['key']) : 'COS · ' . $h($copy['nav_domains']); ?></em></div><h3><?php echo $h($domain['title']); ?></h3><p><?php echo $h($domain['summary']); ?></p><strong><?php echo $h($copy['view_domain']); ?> <i>↗</i></strong>
       </a>
       <?php endforeach; ?>
     </div>

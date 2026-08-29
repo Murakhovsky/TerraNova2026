@@ -7,6 +7,7 @@ use Domains\Sales\Application\Contract\InboundCaseResolverInterface;
 use Domains\Sales\Application\Contract\InboundLeadRepositoryInterface;
 use Domains\Sales\Application\DTO\PublicLeadResult;
 use Domains\Sales\Automation\Event\LeadCreated;
+use Domains\Sales\Model\LeadStatus;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
@@ -62,7 +63,11 @@ final readonly class ReceivePublicLead
             }
             $this->events->publish(LeadCreated::create(
                 bin2hex(random_bytes(16)), $this->organizationId, (string) $leadId,
-                ['client_case_id' => $case['client_case_id'], 'source_page' => $sourcePage, 'status' => 'new'],
+                [
+                    'client_case_id' => $case['client_case_id'],
+                    'source_page' => $sourcePage,
+                    'status' => LeadStatus::New->value,
+                ],
                 new EventMetadata(bin2hex(random_bytes(16)), null, 'SYSTEM', 'public-web'),
             ));
 

@@ -9,6 +9,10 @@ use Domains\Sales\Application\Support\ClientCaseEvents;
 use Domains\Sales\Application\Support\ClientCaseInput;
 use Domains\Sales\Application\Support\ClientCasePeople;
 use Domains\Sales\Automation\Event\ClientCaseCreated;
+use Domains\Sales\Model\ClientCaseStatus;
+use Domains\Sales\Model\PipelineStage;
+use Domains\Sales\Model\SalesCurrency;
+use Domains\Sales\Model\SalesPriority;
 use Kernel\Event\EventBus;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 
@@ -40,16 +44,18 @@ final readonly class EnsureInboundClientCase
                 'full_name' => $name,
                 'type' => ClientCaseInput::caseTypeFromInbound($input),
                 'title' => ClientCaseInput::caseTitleFromInbound($input, $name),
-                'stage' => 'new', 'status' => 'active', 'priority' => 'normal',
+                'stage' => PipelineStage::New->value,
+                'status' => ClientCaseStatus::Active->value,
+                'priority' => SalesPriority::Normal->value,
                 'source' => 'site-inbound-request',
                 'description' => ClientCaseInput::text((string) ($input['message'] ?? $input['comment'] ?? '')),
-                'currency' => 'USD',
+                'currency' => SalesCurrency::Usd->value,
             ];
             $case = ClientCaseInput::caseData($caseInput, $name, null, null, null);
             $caseId = $this->commands->createCase($this->organizationId, $personId, $case);
             $this->events->publish(ClientCaseCreated::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                ['person_id' => $personId, 'stage' => 'new', 'source' => 'site-inbound-request'],
+                ['person_id' => $personId, 'stage' => PipelineStage::New->value, 'source' => 'site-inbound-request'],
                 ClientCaseEvents::metadata($user),
             ));
             return ClientCaseCommandResult::success('created', ['person_id' => $personId, 'client_case_id' => $caseId]);

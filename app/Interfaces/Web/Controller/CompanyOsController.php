@@ -6,6 +6,7 @@ namespace Interfaces\Web\Controller;
 final class CompanyOsController extends ControllerBase
 {
     private const LANGUAGES = ['en', 'de', 'fr', 'pl', 'uk'];
+    private const FEATURED_DOMAINS = ['data-fabric', 'exception-management', 'executive-control'];
 
     public function indexAction(?string $lang = 'en'): void
     {
@@ -13,10 +14,13 @@ final class CompanyOsController extends ControllerBase
         $this->view->lang = $lang;
         $copy = $this->copy()[$lang];
         $this->view->copy = $copy;
-        $this->view->domains = $this->domains($lang);
+        $domains = $this->domains($lang);
+        uasort($domains, static fn(array $a, array $b): int => ($a['featured_rank'] <=> $b['featured_rank']) ?: ($a['id'] <=> $b['id']));
+        $this->view->domains = $domains;
         $this->view->languages = self::LANGUAGES;
         $this->view->systems = $this->systemLabels()[$lang];
         $this->view->industries = $this->industryLabels()[$lang];
+        $this->view->featuredLabels = $this->featuredLabels()[$lang];
         $this->view->cosSite = true;
         $this->view->metaTitle = 'COS — ' . $copy['eyebrow'];
         $this->view->metaDescription = $copy['intro'];
@@ -48,6 +52,8 @@ final class CompanyOsController extends ControllerBase
         $this->view->systems = $this->systemLabels()[$lang];
         $this->view->industries = $this->industryLabels()[$lang];
         $this->view->detail = $this->detailLabels()[$lang];
+        $this->view->featuredLabels = $this->featuredLabels()[$lang];
+        $this->view->presentation = $this->featuredPresentations()[$lang][$slug] ?? null;
         $this->view->cosSite = true;
         $this->view->metaTitle = $domains[$slug]['title'] . ' — COS ' . $copy['nav_domains'];
         $this->view->metaDescription = $domains[$slug]['summary'];
@@ -107,6 +113,9 @@ final class CompanyOsController extends ControllerBase
             ];
             $domain['metrics'] = $detail['metrics'];
             $domain['controls'] = $detail['controls'];
+            $featuredRank = array_search($slug, self::FEATURED_DOMAINS, true);
+            $domain['featured'] = $featuredRank !== false;
+            $domain['featured_rank'] = $featuredRank === false ? 999 : $featuredRank;
         }
         unset($domain);
         return $domains;
@@ -158,6 +167,47 @@ final class CompanyOsController extends ControllerBase
             'pl'=>['manufacturing'=>'Produkcja','wholesale'=>'Handel hurtowy i dystrybucja','retail'=>'Handel detaliczny i e-commerce','dealer'=>'Sieci dealerskie i franczyzowe','construction'=>'Budownictwo i nieruchomości','professional'=>'Usługi profesjonalne','logistics'=>'Logistyka i magazynowanie','financial'=>'Finanse i usługi biznesowe','hospitality'=>'Hotelarstwo i sieci usługowe','technology'=>'Technologia i SaaS'],
             'uk'=>['manufacturing'=>'Виробництво','wholesale'=>'Оптова торгівля та дистрибуція','retail'=>'Роздрібна торгівля та e-commerce','dealer'=>'Дилерські та франчайзингові мережі','construction'=>'Будівництво та нерухомість','professional'=>'Професійні послуги','logistics'=>'Логістика та склад','financial'=>'Фінансові й бізнес-послуги','hospitality'=>'Готельно-ресторанні та сервісні мережі','technology'=>'Технологічні компанії та SaaS'],
         ];
+    }
+
+    private function featuredLabels(): array
+    {
+        return [
+            'en'=>['key'=>'Key COS domain','why'=>'Why this domain matters','pillars'=>'Four capabilities that change the operating model','scenarios'=>'Three executive scenarios','rollout'=>'A controlled 90-day rollout','results'=>'Business results to prove','step'=>'Phase','headline_template'=>'%s as a company-wide capability','problem_template'=>'The organisation cannot scale this capability through more dashboards or manual coordination. %s','generic_pillars'=>['Connect the complete operating context','Apply explicit decision rules and risk limits','Execute across systems with accountable ownership','Verify the result and improve the operating rule'],'generic_scenarios'=>['A high-value signal appears between systems','A process deviates from plan or SLA','A management decision needs evidence and follow-through'],'rollout_items'=>['Weeks 1–2 — select one expensive process and establish the baseline','Weeks 3–4 — connect events, data and accountable owners','Weeks 5–8 — run decisions in recommendation and approval mode','Weeks 9–12 — automate safe actions and verify economic impact'],'result_items'=>['Faster response to critical events','Lower manual coordination load','Fewer missed obligations and exceptions','Clear ownership across teams','Measured financial and operational effect']],
+            'de'=>['key'=>'Zentrale COS-Domain','why'=>'Warum dieser Bereich entscheidend ist','pillars'=>'Vier Fähigkeiten für ein neues Betriebsmodell','scenarios'=>'Drei Führungsszenarien','rollout'=>'Kontrollierte Einführung in 90 Tagen','results'=>'Nachzuweisende Geschäftsergebnisse','step'=>'Phase','headline_template'=>'%s als unternehmensweite Fähigkeit','problem_template'=>'Mehr Dashboards oder manuelle Koordination skalieren diese Fähigkeit nicht. %s','generic_pillars'=>['Vollständigen Betriebskontext verbinden','Entscheidungsregeln und Risikogrenzen anwenden','Systemübergreifend mit klarer Verantwortung handeln','Ergebnis prüfen und Betriebsregel verbessern'],'generic_scenarios'=>['Ein wertvolles Signal entsteht zwischen Systemen','Ein Prozess weicht von Plan oder SLA ab','Eine Managemententscheidung braucht Belege und Nachverfolgung'],'rollout_items'=>['Woche 1–2 — teuren Prozess wählen und Ausgangswert messen','Woche 3–4 — Ereignisse, Daten und Verantwortliche verbinden','Woche 5–8 — Entscheidungen als Empfehlung und Freigabe ausführen','Woche 9–12 — sichere Aktionen automatisieren und Wirkung prüfen'],'result_items'=>['Schnellere Reaktion auf kritische Ereignisse','Weniger manuelle Koordination','Weniger verpasste Pflichten und Ausnahmen','Klare Verantwortung zwischen Teams','Messbarer finanzieller und operativer Effekt']],
+            'fr'=>['key'=>'Domaine COS essentiel','why'=>'Pourquoi ce domaine est décisif','pillars'=>'Quatre capacités qui transforment le modèle opérationnel','scenarios'=>'Trois scénarios de direction','rollout'=>'Déploiement maîtrisé en 90 jours','results'=>'Résultats métier à démontrer','step'=>'Phase','headline_template'=>'%s comme capacité à l’échelle de l’entreprise','problem_template'=>'Cette capacité ne peut pas évoluer avec davantage de tableaux de bord ou de coordination manuelle. %s','generic_pillars'=>['Relier le contexte opérationnel complet','Appliquer des règles de décision et des limites de risque','Agir entre les systèmes avec une responsabilité claire','Vérifier le résultat et améliorer la règle opérationnelle'],'generic_scenarios'=>['Un signal à forte valeur apparaît entre les systèmes','Un processus s’écarte du plan ou du SLA','Une décision de direction exige des preuves et un suivi'],'rollout_items'=>['Semaines 1–2 — choisir un processus coûteux et mesurer la référence','Semaines 3–4 — connecter événements, données et responsables','Semaines 5–8 — exécuter les décisions en mode recommandation et validation','Semaines 9–12 — automatiser les actions sûres et vérifier l’impact'],'result_items'=>['Réaction plus rapide aux événements critiques','Moins de coordination manuelle','Moins d’obligations et d’exceptions manquées','Responsabilités claires entre équipes','Impact financier et opérationnel mesuré']],
+            'pl'=>['key'=>'Kluczowa domena COS','why'=>'Dlaczego ta domena ma znaczenie','pillars'=>'Cztery zdolności zmieniające model operacyjny','scenarios'=>'Trzy scenariusze zarządcze','rollout'=>'Kontrolowane wdrożenie w 90 dni','results'=>'Wyniki biznesowe do potwierdzenia','step'=>'Etap','headline_template'=>'%s jako zdolność całej firmy','problem_template'=>'Tej zdolności nie da się skalować kolejnymi pulpitami ani ręczną koordynacją. %s','generic_pillars'=>['Połączyć pełny kontekst operacyjny','Stosować jawne reguły decyzji i limity ryzyka','Działać między systemami z jasną odpowiedzialnością','Sprawdzać wynik i ulepszać regułę operacyjną'],'generic_scenarios'=>['Sygnał o wysokiej wartości pojawia się między systemami','Proces odchyla się od planu lub SLA','Decyzja zarządcza wymaga dowodów i kontroli wykonania'],'rollout_items'=>['Tydzień 1–2 — wybrać kosztowny proces i ustalić punkt odniesienia','Tydzień 3–4 — połączyć zdarzenia, dane i właścicieli','Tydzień 5–8 — uruchomić decyzje jako rekomendacje i zatwierdzenia','Tydzień 9–12 — automatyzować bezpieczne działania i mierzyć wpływ'],'result_items'=>['Szybsza reakcja na krytyczne zdarzenia','Mniej ręcznej koordynacji','Mniej pominiętych zobowiązań i wyjątków','Jasna odpowiedzialność między zespołami','Zmierzony efekt finansowy i operacyjny']],
+            'uk'=>['key'=>'Ключовий домен COS','why'=>'Чому цей домен є фундаментальним','pillars'=>'Чотири можливості, що змінюють операційну модель','scenarios'=>'Три управлінські сценарії','rollout'=>'Контрольоване впровадження за 90 днів','results'=>'Бізнес-результати, які потрібно довести','step'=>'Етап','headline_template'=>'%s як спільна можливість усієї компанії','problem_template'=>'Цю можливість неможливо масштабувати додатковими дашбордами або ручною координацією. %s','generic_pillars'=>['Об’єднати повний операційний контекст','Застосувати чіткі правила рішень і межі ризику','Діяти між системами з прозорою відповідальністю','Перевірити результат і покращити операційне правило'],'generic_scenarios'=>['Між системами з’являється цінний бізнес-сигнал','Процес відхиляється від плану або SLA','Управлінське рішення потребує доказів і контролю виконання'],'rollout_items'=>['1–2 тиждень — обрати дорогий процес і виміряти базовий стан','3–4 тиждень — під’єднати події, дані та відповідальних','5–8 тиждень — запускати рішення як рекомендації та погодження','9–12 тиждень — автоматизувати безпечні дії й перевірити економічний ефект'],'result_items'=>['Швидша реакція на критичні події','Менше ручної координації','Менше пропущених зобов’язань і винятків','Прозора відповідальність між командами','Вимірюваний фінансовий та операційний ефект']],
+        ];
+    }
+
+    private function featuredPresentations(): array
+    {
+        $presentations = [
+            'en'=>[
+                'data-fabric'=>['headline'=>'One reliable operating context for every decision.','promise'=>'Operational Data Fabric reconciles fragmented records, restores event chronology and gives people and agents the same current view of customers, orders, projects, payments and obligations.','problem'=>'CRM knows the deal, ERP knows the order, finance knows the payment and communication channels know the promise. Without a shared context, every decision begins with manual reconstruction and hidden contradictions.','pillars'=>['Entity resolution across systems','Event chronology and provenance','Missing, stale and conflicting data detection','Context delivery with role-based access'],'scenarios'=>['A customer profile is assembled before a commercial decision','An invoice, order and delivery discrepancy is detected automatically','An AI agent receives only verified, permission-safe context']],
+                'exception-management'=>['headline'=>'Normal work stays quiet. Exceptions trigger action.','promise'=>'Exception Management monitors the expected process, corrects simple deviations automatically and brings people only the cases that require judgement, approval or accountability.','problem'=>'Traditional dashboards describe yesterday’s deviation. COS recognises the deviation while the outcome can still be protected, selects the response and keeps control until the result is verified.','pillars'=>['Expected-process and tolerance modelling','Automatic correction and safe retry','Human escalation with decision context','Recurring-pattern analysis and rule improvement'],'scenarios'=>['A promised follow-up is overdue and revenue is at risk','A supplier delay threatens a production or delivery commitment','A critical policy breach stops the process before damage occurs']],
+                'executive-control'=>['headline'=>'Management attention focused on what changes the outcome.','promise'=>'Executive Control replaces information overload with a daily exception picture, ranked priorities, accountable decisions and verification that management action produced the expected result.','problem'=>'Leaders rarely lack reports. They lack a trustworthy answer to four questions: what changed, why it matters, who must act and whether the intervention worked.','pillars'=>['Daily exception and priority briefing','Plan-versus-actual with causal explanation','Decision journal and accountable ownership','Forecasting, scenarios and result verification'],'scenarios'=>['The month-end forecast deteriorates before the shortfall becomes irreversible','Cross-team delays reveal a structural bottleneck','A management decision is tracked from instruction to measured effect']],
+            ],
+            'uk'=>[
+                'data-fabric'=>['headline'=>'Один надійний операційний контекст для кожного рішення.','promise'=>'Operational Data Fabric узгоджує розпорошені записи, відновлює хронологію подій і дає людям та AI-агентам однаково актуальну картину клієнтів, замовлень, проєктів, платежів і зобов’язань.','problem'=>'CRM знає про угоду, ERP — про замовлення, фінанси — про оплату, а листування — про обіцянку клієнту. Без спільного контексту кожне рішення починається з ручного пошуку та прихованих суперечностей.','pillars'=>['Зіставлення клієнтів, компаній і операцій між системами','Хронологія подій із походженням кожного факту','Виявлення відсутніх, застарілих і суперечливих даних','Передача перевіреного контексту відповідно до ролей і прав'],'scenarios'=>['Повний профіль клієнта формується до комерційного рішення','COS автоматично знаходить розбіжність між рахунком, оплатою та поставкою','AI-агент отримує лише перевірений і дозволений контекст']],
+                'exception-management'=>['headline'=>'Нормальний процес працює тихо. Відхилення запускає дію.','promise'=>'Exception Management контролює очікуваний хід процесу, автоматично виправляє прості відхилення й залучає людину лише там, де потрібні судження, погодження або відповідальність.','problem'=>'Звичайний дашборд показує вчорашнє відхилення. COS бачить його, поки результат ще можна врятувати, обирає реакцію та не знімає контроль до підтвердження результату.','pillars'=>['Модель нормального процесу, допусків і критичних меж','Автоматичне виправлення, повторна спроба або безпечна зупинка','Ескалація людині разом із контекстом і варіантами рішення','Аналіз повторюваних проблем та зміна правила процесу'],'scenarios'=>['Прострочено обіцяний follow-up і угода ризикує зірватися','Затримка постачальника загрожує виробництву або доставці','Критичне порушення політики зупиняє процес до появи збитків']],
+                'executive-control'=>['headline'=>'Увага керівника спрямована лише на те, що змінює результат.','promise'=>'Executive Control замінює інформаційний шум щоденною картиною відхилень, ранжованими пріоритетами, відповідальними рішеннями та перевіркою фактичного ефекту.','problem'=>'Керівникам зазвичай не бракує звітів. Їм бракує надійної відповіді на чотири питання: що змінилося, чому це важливо, хто має діяти і чи спрацювало рішення.','pillars'=>['Щоденний дайджест відхилень і управлінських пріоритетів','План-факт із поясненням причин, а не лише цифрами','Журнал рішень, відповідальних і контрольних строків','Прогнози, сценарії та перевірка фактичного результату'],'scenarios'=>['Прогноз місяця погіршується до того, як втрату вже неможливо компенсувати','Затримки між відділами показують системне вузьке місце','Рішення керівника контролюється від доручення до виміряного ефекту']],
+            ],
+        ];
+
+        $focus = [
+            'de'=>['data-fabric'=>'Eine verlässliche gemeinsame Datenbasis ersetzt widersprüchliche Teilbilder.','exception-management'=>'Abweichungen lösen rechtzeitig eine kontrollierte Reaktion aus.','executive-control'=>'Führungskräfte sehen Prioritäten, Verantwortliche und geprüfte Wirkung statt Informationsrauschen.'],
+            'fr'=>['data-fabric'=>'Un contexte commun fiable remplace les vues partielles contradictoires.','exception-management'=>'Chaque écart déclenche à temps une réponse maîtrisée.','executive-control'=>'La direction voit les priorités, les responsables et l’effet vérifié plutôt que le bruit informationnel.'],
+            'pl'=>['data-fabric'=>'Jeden wiarygodny kontekst zastępuje sprzeczne obrazy z wielu systemów.','exception-management'=>'Każde odchylenie uruchamia na czas kontrolowaną reakcję.','executive-control'=>'Zarząd widzi priorytety, właścicieli i zweryfikowany efekt zamiast szumu informacyjnego.'],
+        ];
+        foreach (['de','fr','pl'] as $lang) {
+            $labels = $this->featuredLabels()[$lang];
+            foreach (self::FEATURED_DOMAINS as $slug) {
+                $title = $this->domainTitles()[$lang][$slug];
+                $presentations[$lang][$slug] = ['headline'=>sprintf($labels['headline_template'], $title),'promise'=>$focus[$lang][$slug],'problem'=>sprintf($labels['problem_template'], $focus[$lang][$slug]),'pillars'=>$labels['generic_pillars'],'scenarios'=>$labels['generic_scenarios']];
+            }
+        }
+        return $presentations;
     }
 
     private function detailLabels(): array

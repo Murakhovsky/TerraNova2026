@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ApiError, requestJson } from '../../resources/frontend/api/client.js';
+import { ApiError, requestJson } from '../../frontend/api/client.js';
 
 const originalFetch = globalThis.fetch;
 

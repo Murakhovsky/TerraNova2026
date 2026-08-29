@@ -9,6 +9,8 @@ use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
+use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
+use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Interfaces\Web\Module;
 use Phalcon\Di\FactoryDefault;
 
@@ -33,6 +35,8 @@ $expected = [
     'frontendPropertyModerationService' => PropertyModerationService::class,
     'propertyManagementRepository' => MysqlPropertyManagementRepository::class,
     'frontendPropertyMediaService' => PropertyManagementService::class,
+    'propertyAnalytics' => MysqlPropertyAnalytics::class,
+    'frontendAnalyticsService' => MysqlPropertyFunnelAnalytics::class,
 ];
 
 foreach ($expected as $serviceId => $class) {

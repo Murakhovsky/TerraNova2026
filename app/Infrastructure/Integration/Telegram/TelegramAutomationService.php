@@ -3,14 +3,18 @@ declare(strict_types=1);
 
 namespace Infrastructure\Integration\Telegram;
 
-use Domains\Notification\Application\Contract\TelegramAutomationInterface;
+use Domains\Identity\Application\Contract\TelegramAccountLinkInterface;
 use Domains\Property\Application\Contract\PropertyNotificationInterface;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Kernel\Operations\Contract\NotificationOperationsReadModelInterface;
 use PDO;
 use RuntimeException;
 use Throwable;
 
-class TelegramAutomationService implements TelegramAutomationInterface, PropertyNotificationInterface
+class TelegramAutomationService implements
+    TelegramAccountLinkInterface,
+    PropertyNotificationInterface,
+    NotificationOperationsReadModelInterface
 {
     public function __construct(private PdoConnection $database)
     {

@@ -27,7 +27,7 @@ MySQL repositories, query projections and generic Kernel persistence are consoli
 
 ## Browser assets
 
-All former `public/js` and `public/css` source files live in `resources/frontend`. Vite builds nine entrypoints, writes hashed files and `.vite/manifest.json` under `public/build`, and the SSR layout resolves scripts and styles through `ViteAssetManifest`.
+All former `public/js` and `public/css` source files live in `frontend`. Vite builds nine entrypoints, writes hashed files and `.vite/manifest.json` under `public/build`, and the SSR layout resolves scripts and styles through `ViteAssetManifest`.
 
 ## Verification contract
 

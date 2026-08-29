@@ -7,6 +7,7 @@ use Domains\Sales\Application\Contract\ClientCaseCommandRepositoryInterface;
 use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
 use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\DTO\RecordCompletedCallCommand;
+use Domains\Sales\Model\SalesActivityType;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class AddClientCaseActivity
@@ -19,7 +20,7 @@ final readonly class AddClientCaseActivity
         $case=$this->readModel->case($caseId);
         if(!$case) return ClientCaseCommandResult::failure('not_found');
         $completedAt=!empty($input['completed'])?date('Y-m-d H:i:s'):null;
-        $type=$this->allowed((string)($input['activity_type']??'note'),['note','call','message','meeting','viewing','offer','status_change','deal','task'],'note');
+        $type=$this->allowed((string)($input['activity_type']??'note'),SalesActivityType::values(),'note');
         if($type==='call' && $completedAt!==null){
             $eventId=bin2hex(random_bytes(16));
             $result=trim(mb_substr((string)($input['call_result']??$input['result']??''),0,100));

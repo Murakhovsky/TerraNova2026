@@ -31,7 +31,6 @@ final class TableOwnership
             'tn_spatial_assets', 'tn_spatial_captures', 'tn_spatial_events', 'tn_spatial_hotspots',
             'tn_spatial_processing_jobs', 'tn_spatial_relations', 'tn_spatial_scenes', 'tn_spatial_versions',
         ],
-        'Analytics' => ['tn_analytics_events'],
         'Media' => ['tn_media_assets', 'tn_media_relations'],
         'Reference' => ['tn_locations'],
         'Platform' => [
@@ -40,6 +39,7 @@ final class TableOwnership
             'cos_rules', 'cos_rule_evaluations', 'cos_agent_runs', 'cos_audit_log', 'cos_decisions',
             'cos_jobs', 'cos_configuration_provisions', 'cos_operational_metrics', 'cos_crm_inbox',
             'cos_external_references', 'cos_integrations', 'cos_sync_state', 'tn_notification_outbox',
+            'tn_analytics_events',
             'tn_integration_outbox', 'tn_webhook_deliveries', 'tn_migrations',
         ],
     ];

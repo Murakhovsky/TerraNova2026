@@ -7,6 +7,7 @@ use Domains\Sales\Application\Contract\ClientCaseCommandRepositoryInterface;
 use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
 use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\Support\ClientCaseInput;
+use Domains\Sales\Model\PropertyMatchStatus;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 use RuntimeException;
 
@@ -27,7 +28,7 @@ final readonly class UpdateClientCasePropertyMatch
         $case = $this->readModel->case((int) $existing['client_case_id']);
         if (!$case) return ClientCaseCommandResult::failure('not_found');
         $match = [
-            'match_status' => ClientCaseInput::allowed((string) ($input['match_status'] ?? 'suggested'), ClientCaseInput::MATCH_STATUSES, 'suggested'),
+            'match_status' => ClientCaseInput::allowed((string) ($input['match_status'] ?? 'suggested'), PropertyMatchStatus::values(), 'suggested'),
             'score' => ClientCaseInput::score($input['score'] ?? null),
             'note' => ClientCaseInput::nullable((string) ($input['note'] ?? ''), 500),
         ];

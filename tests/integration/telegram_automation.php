@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use Domains\Identity\Application\Contract\TelegramAccountLinkInterface;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Integration\Telegram\TelegramAutomationService;
 use Infrastructure\Integration\Telegram\TelegramAutomationProcessor;
@@ -26,6 +27,9 @@ try {
     $userId = (int) $pdo->lastInsertId();
 
     $service = new TelegramAutomationService($database);
+    if (!$service instanceof TelegramAccountLinkInterface) {
+        throw new RuntimeException('Telegram account linking is not exposed through the Identity port.');
+    }
     $link = $service->createUserLink($userId);
     $bound = $service->consumeLinkToken($link['token'], [
         'telegram_user_id' => $telegramUserId,

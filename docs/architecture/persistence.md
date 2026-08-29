@@ -26,7 +26,7 @@ Cross-domain writes always call an explicit port implemented by the owner. Curre
 
 ## Data ownership
 
-`Infrastructure/Platform/Persistence/TableOwnership.php` is the canonical registry. Owners are `Identity`, `Property`, `Sales`, `Content`, `Spatial`, `Analytics`, `Media`, `Reference`, and `Platform`.
+`Infrastructure/Platform/Persistence/TableOwnership.php` is the canonical registry. Owners are `Identity`, `Property`, `Sales`, `Content`, `Spatial`, `Media`, `Reference`, and `Platform`. Technical telemetry (`tn_analytics_events`) is Platform-owned; it is not modeled as a standalone business Domain.
 
 - A Domain adapter may write only tables owned by that Domain.
 - Reads across tables are temporarily allowed only in dedicated read models. They must remain query-only and are migration seams for future projections/API calls.

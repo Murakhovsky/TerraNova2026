@@ -80,16 +80,17 @@ app/
 |       |   |-- Action/
 |       |   |-- Job/
 |       |   `-- Policy/
+|       |-- Infrastructure/
+|       |   |-- Persistence/       implementations of Sales-owned ports
+|       |   `-- ReadModel/         tenant-scoped query projections
 |       `-- Bootstrap/
 |           `-- SalesDomainModule.php
 |
 |-- Infrastructure/
-|   |-- Persistence/
-|   |   |-- MySql/Database/       generic Kernel persistence
-|   |   |-- MySql/<Domain>/       domain port implementations
-|   |   |-- MySql/ReadModel/      query-only delivery projections
-|   |   `-- Phalcon/              Telegram-only ActiveRecord quarantine
+|   |-- Platform/Persistence/      shared Kernel/platform persistence
+|   |-- Platform/Analytics/        shared technical telemetry/read models
 |   |-- Integration/Crm/           routed CRM integrations
+|   |-- Integration/Telegram/      delivery and notification adapters
 |   |-- Observability/             structured logging
 |   `-- Llm/
 |
@@ -128,7 +129,7 @@ Kernel execution emits `cos.action.completed` or `cos.action.failed`. A Domain e
 
 ## Standard Domain module
 
-Every Domain implements `Kernel\Module\DomainModuleInterface` and declares:
+A Domain that participates in the COS Event -> Decision -> Action loop implements `Kernel\Module\DomainModuleInterface` and declares:
 
 - owned event types;
 - owned action types and their handlers;
@@ -145,7 +146,7 @@ Adding a Domain follows the same path:
 2. Define outbound ports in Application/Contract
 3. Implement events, rules, agents, actions, and policies in Automation
 4. Implement <Name>DomainModule
-5. Implement physical adapters in Infrastructure
+5. Implement Domain-owned persistence/read adapters in `Domains/<Name>/Infrastructure`; shared technical adapters stay in root `Infrastructure`
 6. Register the module in Bootstrap services
 ```
 
@@ -173,7 +174,9 @@ Sales action handlers never execute SQL. They depend on ports such as:
 - `FollowupRepositoryInterface`;
 - `CrmGatewayInterface`.
 
-MySQL and CRM implementations live under `Infrastructure` and can be replaced per organization without modifying Sales rules or Kernel code.
+Sales-owned MySQL implementations live under `Domains/Sales/Infrastructure`; shared CRM routing and provider adapters live under root `Infrastructure/Integration/Crm`. Both can be replaced without modifying Sales rules or Kernel code.
+
+The approved bounded contexts and the criteria for creating a new one are recorded in `docs/architecture/domain-boundaries.md`. Technical capabilities such as Telegram delivery, notifications and telemetry must not become ceremonial Domains.
 
 ## MVC and Phalcon modules
 

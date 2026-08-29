@@ -8,10 +8,6 @@ use InvalidArgumentException;
 
 final readonly class DealChangeSet
 {
-    private const STAGES = ['new', 'qualification', 'need_defined', 'matching', 'viewing', 'negotiation', 'deal', 'aftercare', 'repeat', 'paused', 'lost'];
-    private const STATUSES = ['active', 'paused', 'closed', 'lost'];
-    private const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
-
     private function __construct(private array $changes)
     {
     }
@@ -23,9 +19,9 @@ final readonly class DealChangeSet
             throw new InvalidArgumentException('No allowed Deal fields supplied.');
         }
 
-        self::assertOneOf($changes, 'stage', self::STAGES);
-        self::assertOneOf($changes, 'status', self::STATUSES);
-        self::assertOneOf($changes, 'priority', self::PRIORITIES);
+        self::assertOneOf($changes, 'stage', PipelineStage::values());
+        self::assertOneOf($changes, 'status', ClientCaseStatus::values());
+        self::assertOneOf($changes, 'priority', SalesPriority::values());
         if (isset($changes['next_contact_at']) && $changes['next_contact_at'] !== '') {
             $changes['next_contact_at'] = (new DateTimeImmutable((string) $changes['next_contact_at']))->format('Y-m-d H:i:s');
         } elseif (array_key_exists('next_contact_at', $changes)) {

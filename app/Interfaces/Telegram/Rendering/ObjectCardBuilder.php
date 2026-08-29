@@ -196,7 +196,7 @@ class ObjectCardBuilder extends BaseCardBuilder
     }
     public function getThumbUrl()
     {
-        return isset($this->photos_url[0]) ? $this->photos_url[0] : '/img/logos/logo.png';
+        return isset($this->photos_url[0]) ? $this->photos_url[0] : null;
     }
 
     public function render(): array{

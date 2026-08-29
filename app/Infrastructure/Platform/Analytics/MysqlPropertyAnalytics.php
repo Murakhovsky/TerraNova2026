@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Domains\Analytics\Infrastructure\Persistence\MySql;
+namespace Infrastructure\Platform\Analytics;
 
 use Domains\Property\Application\Contract\PropertyAnalyticsInterface;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;

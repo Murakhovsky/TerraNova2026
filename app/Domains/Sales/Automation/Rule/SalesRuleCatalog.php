@@ -7,6 +7,8 @@ use Domains\Sales\Automation\Event\DealCreated;
 use Domains\Sales\Automation\Event\DealStageChanged;
 use Domains\Sales\Automation\Event\FollowupOverdue;
 use Domains\Sales\Automation\Event\CallCompleted;
+use Domains\Sales\Model\ClientCaseStatus;
+use Domains\Sales\Model\PipelineStage;
 use Kernel\Rule\Rule;
 
 final class SalesRuleCatalog
@@ -18,8 +20,8 @@ final class SalesRuleCatalog
             new Rule(
                 $this->id($organizationId, 'sales-new-deal-qualification-v1'), $organizationId, 'Новий Deal потребує кваліфікації', DealCreated::TYPE,
                 [
-                    ['field' => 'deal.status', 'operator' => '=', 'value' => 'active'],
-                    ['field' => 'deal.stage', 'operator' => '=', 'value' => 'new'],
+                    ['field' => 'deal.status', 'operator' => '=', 'value' => ClientCaseStatus::Active->value],
+                    ['field' => 'deal.stage', 'operator' => '=', 'value' => PipelineStage::New->value],
                 ],
                 [
                     'type' => 'CREATE_ACTION', 'action_type' => 'sales.create_qualification_task',
@@ -32,8 +34,14 @@ final class SalesRuleCatalog
             new Rule(
                 $this->id($organizationId, 'sales-stage-without-next-contact-v1'), $organizationId, 'Активний Deal без наступного контакту', DealStageChanged::TYPE,
                 [
-                    ['field' => 'deal.status', 'operator' => '=', 'value' => 'active'],
-                    ['field' => 'deal.stage', 'operator' => 'IN', 'value' => ['qualification', 'need_defined', 'matching', 'viewing', 'negotiation']],
+                    ['field' => 'deal.status', 'operator' => '=', 'value' => ClientCaseStatus::Active->value],
+                    ['field' => 'deal.stage', 'operator' => 'IN', 'value' => [
+                        PipelineStage::Qualification->value,
+                        PipelineStage::NeedDefined->value,
+                        PipelineStage::Matching->value,
+                        PipelineStage::Viewing->value,
+                        PipelineStage::Negotiation->value,
+                    ]],
                     ['field' => 'deal.next_contact_at', 'operator' => 'IS_NULL'],
                 ],
                 [
@@ -47,7 +55,7 @@ final class SalesRuleCatalog
             new Rule(
                 $this->id($organizationId, 'sales-overdue-followup-escalation-v1'), $organizationId, 'Прострочений follow-up потребує ескалації', FollowupOverdue::TYPE,
                 [
-                    ['field' => 'deal.status', 'operator' => '=', 'value' => 'active'],
+                    ['field' => 'deal.status', 'operator' => '=', 'value' => ClientCaseStatus::Active->value],
                     ['field' => 'activity.completed_at', 'operator' => 'IS_NULL'],
                     ['field' => 'activity.is_overdue', 'operator' => '=', 'value' => true],
                 ],

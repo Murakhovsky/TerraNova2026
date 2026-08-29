@@ -163,13 +163,17 @@ class Requests extends PresentationModel
     {
         return false;
     }
-    public function getJSON()
+    public function getJSON(): string
     {
-        // TODO: Implement getJSON() method.
+        return json_encode($this->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     }
-    public static function getWEB(array $data)
+
+    public static function getWEB(array $data): string
     {
-        // TODO: Implement getWEB() method.
+        $title = htmlspecialchars(self::getTittle($data), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $description = htmlspecialchars(trim((string) ($data['description'] ?? '')), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        return '<article class="sales-request"><h3>' . $title . '</h3><p>' . nl2br($description) . '</p></article>';
     }
 
     public static function getCountOf($company_id, $status = 'in_work', $user_id = false, $period = 'all', $interval = false){

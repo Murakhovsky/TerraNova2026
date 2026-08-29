@@ -8,6 +8,13 @@ use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\Support\ClientCaseEvents;
 use Domains\Sales\Application\Support\ClientCaseInput;
 use Domains\Sales\Application\Support\ClientCasePeople;
+use Domains\Sales\Model\SalesPriority;
+use Domains\Sales\Model\ClientCaseStatus;
+use Domains\Sales\Model\LeadStatus;
+use Domains\Sales\Model\PipelineStage;
+use Domains\Sales\Model\PropertyMatchStatus;
+use Domains\Sales\Model\SalesActivityType;
+use Domains\Sales\Model\SalesCurrency;
 use Domains\Sales\Automation\Event\ClientCaseCreated;
 use Domains\Sales\Automation\Event\LeadChanged;
 use Kernel\Event\EventBus;
@@ -49,11 +56,16 @@ final readonly class CreateClientCaseFromInboundRequest
                 'full_name' => $name,
                 'type' => ClientCaseInput::caseTypeFromInbound($request),
                 'title' => ClientCaseInput::caseTitleFromInbound($request, $name),
-                'stage' => 'qualification', 'status' => 'active',
-                'priority' => ClientCaseInput::allowed((string) ($input['priority'] ?? 'normal'), ClientCaseInput::PRIORITIES, 'normal'),
+                'stage' => PipelineStage::Qualification->value,
+                'status' => ClientCaseStatus::Active->value,
+                'priority' => ClientCaseInput::allowed(
+                    (string) ($input['priority'] ?? SalesPriority::Normal->value),
+                    SalesPriority::values(),
+                    SalesPriority::Normal->value,
+                ),
                 'source' => ClientCaseInput::nullable((string) ($request['source_page'] ?? 'inbound-request'), 120),
                 'description' => ClientCaseInput::text((string) ($request['message'] ?? '')),
-                'currency' => 'USD',
+                'currency' => SalesCurrency::Usd->value,
             ];
             $case = ClientCaseInput::caseData(
                 $caseInput,
@@ -69,17 +81,19 @@ final readonly class CreateClientCaseFromInboundRequest
                 throw new RuntimeException('Inbound request could not be linked to the new client case.');
             }
             $this->commands->addActivity($this->organizationId, $caseId, $personId, $user['id'] ?? null, [
-                'activity_type' => 'note', 'title' => 'Кейс створено із заявки',
+                'activity_type' => SalesActivityType::Note->value, 'title' => 'Кейс створено із заявки',
                 'body' => ClientCaseInput::text((string) ($request['message'] ?? '')), 'due_at' => null, 'completed_at' => null,
             ]);
             $propertyId = (int) ($request['property_id'] ?? 0);
             $property = $propertyId > 0 ? $this->commands->property($propertyId) : null;
             if ($property) {
                 $this->commands->upsertPropertyMatch($this->organizationId, $caseId, $propertyId, [
-                    'match_status' => 'interested', 'score' => null, 'note' => 'Обʼєкт із вхідної заявки',
+                    'match_status' => PropertyMatchStatus::Interested->value,
+                    'score' => null,
+                    'note' => 'Обʼєкт із вхідної заявки',
                 ]);
                 $this->commands->addActivity($this->organizationId, $caseId, $personId, $user['id'] ?? null, [
-                    'activity_type' => 'note', 'title' => 'Обʼєкт додано у підбір',
+                    'activity_type' => SalesActivityType::Note->value, 'title' => 'Обʼєкт додано у підбір',
                     'body' => trim($property['public_id'] . ' / ' . $property['title'] . ' / Обʼєкт із вхідної заявки'),
                     'due_at' => null, 'completed_at' => null,
                 ]);
@@ -88,11 +102,14 @@ final readonly class CreateClientCaseFromInboundRequest
             $metadata = ClientCaseEvents::metadata($user);
             $this->events->publish(ClientCaseCreated::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                ['person_id' => $personId, 'stage' => 'qualification', 'source' => 'inbound-request'], $metadata,
+                ['person_id' => $personId, 'stage' => PipelineStage::Qualification->value, 'source' => 'inbound-request'], $metadata,
             ));
             $this->events->publish(LeadChanged::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $requestId,
-                ['client_case_id' => ['from' => null, 'to' => $caseId], 'status' => ['from' => $request['status'], 'to' => 'qualified']],
+                [
+                    'client_case_id' => ['from' => null, 'to' => $caseId],
+                    'status' => ['from' => $request['status'], 'to' => LeadStatus::Qualified->value],
+                ],
                 $metadata,
             ));
             return ClientCaseCommandResult::success('created', ['case_id' => $caseId, 'person_id' => $personId]);

@@ -45,8 +45,8 @@ final class ViteAssetManifest
     {
         $manifest = $this->manifest();
         $sources = [
-            'resources/frontend/entrypoints/' . $name . '.js',
-            'resources/spatial/' . $name . '.js',
+            'frontend/entrypoints/' . $name . '.js',
+            'frontend/spatial/' . $name . '.js',
         ];
 
         foreach ($sources as $source) {

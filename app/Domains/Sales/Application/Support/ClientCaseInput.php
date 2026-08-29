@@ -3,16 +3,15 @@ declare(strict_types=1);
 
 namespace Domains\Sales\Application\Support;
 
+use Domains\Sales\Model\ClientCaseStatus;
+use Domains\Sales\Model\ClientCaseType;
+use Domains\Sales\Model\LeadStatus;
+use Domains\Sales\Model\PipelineStage;
+use Domains\Sales\Model\SalesCurrency;
+use Domains\Sales\Model\SalesPriority;
+
 final class ClientCaseInput
 {
-    public const STAGES = ['new', 'qualification', 'need_defined', 'matching', 'viewing', 'negotiation', 'deal', 'aftercare', 'repeat', 'paused', 'lost'];
-    public const TYPES = ['buy', 'sell', 'rent', 'lease_out', 'repair', 'investment', 'management', 'inheritance', 'other'];
-    public const STATUSES = ['active', 'paused', 'closed', 'lost'];
-    public const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
-    public const MATCH_STATUSES = ['suggested', 'sent', 'interested', 'viewing', 'rejected', 'deal'];
-    public const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'viewing_planned', 'viewing', 'negotiation', 'won', 'lost', 'spam', 'closed'];
-    public const LEAD_ACTIVITY_TYPES = ['note', 'call', 'message', 'status_change', 'task', 'viewing'];
-
     public static function allowed(string $value, array $allowed, string $default): string
     {
         return in_array($value, $allowed, true) ? $value : $default;
@@ -65,7 +64,7 @@ final class ClientCaseInput
     public static function currency(string $value): string
     {
         $value = strtoupper(trim($value));
-        return in_array($value, ['USD', 'EUR', 'UAH'], true) ? $value : 'USD';
+        return SalesCurrency::accepts($value) ? $value : SalesCurrency::Usd->value;
     }
 
     public static function parametersJson(array $input): ?string
@@ -86,13 +85,29 @@ final class ClientCaseInput
         ?int $locationId,
         ?array $existing = null,
     ): array {
-        $status = self::allowed((string) ($input['status'] ?? ($existing['status'] ?? 'active')), self::STATUSES, (string) ($existing['status'] ?? 'active'));
+        $status = self::allowed(
+            (string) ($input['status'] ?? ($existing['status'] ?? ClientCaseStatus::Active->value)),
+            ClientCaseStatus::values(),
+            (string) ($existing['status'] ?? ClientCaseStatus::Active->value),
+        );
         return [
-            'type' => self::allowed((string) ($input['type'] ?? ($existing['type'] ?? 'buy')), self::TYPES, (string) ($existing['type'] ?? 'buy')),
+            'type' => self::allowed(
+                (string) ($input['type'] ?? ($existing['type'] ?? ClientCaseType::Buy->value)),
+                ClientCaseType::values(),
+                (string) ($existing['type'] ?? ClientCaseType::Buy->value),
+            ),
             'title' => self::caseTitle($input, $name),
             'status' => $status,
-            'stage' => self::allowed((string) ($input['stage'] ?? ($existing['stage'] ?? 'new')), self::STAGES, (string) ($existing['stage'] ?? 'new')),
-            'priority' => self::allowed((string) ($input['priority'] ?? ($existing['priority'] ?? 'normal')), self::PRIORITIES, (string) ($existing['priority'] ?? 'normal')),
+            'stage' => self::allowed(
+                (string) ($input['stage'] ?? ($existing['stage'] ?? PipelineStage::New->value)),
+                PipelineStage::values(),
+                (string) ($existing['stage'] ?? PipelineStage::New->value),
+            ),
+            'priority' => self::allowed(
+                (string) ($input['priority'] ?? ($existing['priority'] ?? SalesPriority::Normal->value)),
+                SalesPriority::values(),
+                (string) ($existing['priority'] ?? SalesPriority::Normal->value),
+            ),
             'assigned_user_id' => $managerId,
             'source' => self::nullable((string) ($input['source'] ?? ($existing['source'] ?? 'manual')), 120),
             'property_type_id' => $propertyTypeId,
@@ -105,7 +120,7 @@ final class ClientCaseInput
             'description' => self::text((string) ($input['description'] ?? ($existing['description'] ?? ''))),
             'parameters_json' => self::parametersJson($input),
             'next_contact_at' => self::dateTime((string) ($input['next_contact_at'] ?? ($existing['next_contact_at'] ?? ''))),
-            'closed_at' => in_array($status, ['closed', 'lost'], true)
+            'closed_at' => ClientCaseStatus::from($status)->isTerminal()
                 ? (($existing['closed_at'] ?? null) ?: date('Y-m-d H:i:s'))
                 : null,
         ];
@@ -115,7 +130,11 @@ final class ClientCaseInput
     {
         $title = trim((string) ($input['title'] ?? ''));
         if ($title !== '') return self::limit($title, 220);
-        $type = self::allowed((string) ($input['type'] ?? 'buy'), self::TYPES, 'buy');
+        $type = self::allowed(
+            (string) ($input['type'] ?? ClientCaseType::Buy->value),
+            ClientCaseType::values(),
+            ClientCaseType::Buy->value,
+        );
         $labels = [
             'buy' => 'Купівля', 'sell' => 'Продаж', 'rent' => 'Оренда', 'lease_out' => 'Здача в оренду',
             'repair' => 'Ремонт', 'investment' => 'Інвестиція', 'management' => 'Управління',
@@ -128,10 +147,14 @@ final class ClientCaseInput
     {
         $role = mb_strtolower(trim((string) ($input['role'] ?? '')));
         $dealType = mb_strtolower(trim((string) ($input['deal_type'] ?? $input['request_type'] ?? '')));
-        if ($dealType === 'rent') return in_array($role, ['owner', 'seller'], true) ? 'lease_out' : 'rent';
-        if (in_array($role, ['owner', 'seller'], true)) return 'sell';
-        if ($role === 'investor' || $dealType === 'investment') return 'investment';
-        return 'buy';
+        if ($dealType === 'rent') {
+            return in_array($role, ['owner', 'seller'], true)
+                ? ClientCaseType::LeaseOut->value
+                : ClientCaseType::Rent->value;
+        }
+        if (in_array($role, ['owner', 'seller'], true)) return ClientCaseType::Sell->value;
+        if ($role === 'investor' || $dealType === 'investment') return ClientCaseType::Investment->value;
+        return ClientCaseType::Buy->value;
     }
 
     public static function caseTitleFromInbound(array $input, string $name): string
@@ -148,9 +171,16 @@ final class ClientCaseInput
     public static function leadStatusLabel(string $status): string
     {
         return [
-            'new' => 'Нова', 'contacted' => 'Контакт був', 'qualified' => 'Кваліфікована',
-            'viewing_planned' => 'Перегляд заплановано', 'viewing' => 'Перегляд', 'negotiation' => 'Переговори',
-            'won' => 'Успіх', 'lost' => 'Втрачена', 'spam' => 'Спам', 'closed' => 'Закрита',
+            LeadStatus::New->value => 'Нова',
+            LeadStatus::Contacted->value => 'Контакт був',
+            LeadStatus::Qualified->value => 'Кваліфікована',
+            LeadStatus::ViewingPlanned->value => 'Перегляд заплановано',
+            LeadStatus::Viewing->value => 'Перегляд',
+            LeadStatus::Negotiation->value => 'Переговори',
+            LeadStatus::Won->value => 'Успіх',
+            LeadStatus::Lost->value => 'Втрачена',
+            LeadStatus::Spam->value => 'Спам',
+            LeadStatus::Closed->value => 'Закрита',
         ][$status] ?? 'Заявка';
     }
 
@@ -158,14 +188,21 @@ final class ClientCaseInput
     public static function caseStateForLead(string $leadStatus): array
     {
         $stage = [
-            'new' => 'new', 'contacted' => 'qualification', 'qualified' => 'qualification',
-            'viewing_planned' => 'viewing', 'viewing' => 'viewing', 'negotiation' => 'negotiation',
-            'won' => 'deal', 'lost' => 'lost', 'spam' => 'lost', 'closed' => 'lost',
-        ][$leadStatus] ?? 'new';
+            LeadStatus::New->value => PipelineStage::New->value,
+            LeadStatus::Contacted->value => PipelineStage::Qualification->value,
+            LeadStatus::Qualified->value => PipelineStage::Qualification->value,
+            LeadStatus::ViewingPlanned->value => PipelineStage::Viewing->value,
+            LeadStatus::Viewing->value => PipelineStage::Viewing->value,
+            LeadStatus::Negotiation->value => PipelineStage::Negotiation->value,
+            LeadStatus::Won->value => PipelineStage::Deal->value,
+            LeadStatus::Lost->value => PipelineStage::Lost->value,
+            LeadStatus::Spam->value => PipelineStage::Lost->value,
+            LeadStatus::Closed->value => PipelineStage::Lost->value,
+        ][$leadStatus] ?? PipelineStage::New->value;
         $status = match ($leadStatus) {
-            'won' => 'closed',
-            'lost', 'spam', 'closed' => 'lost',
-            default => 'active',
+            LeadStatus::Won->value => ClientCaseStatus::Closed->value,
+            LeadStatus::Lost->value, LeadStatus::Spam->value, LeadStatus::Closed->value => ClientCaseStatus::Lost->value,
+            default => ClientCaseStatus::Active->value,
         };
         return ['stage' => $stage, 'status' => $status];
     }

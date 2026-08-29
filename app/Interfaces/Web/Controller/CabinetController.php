@@ -36,7 +36,7 @@ class CabinetController extends ControllerBase
 
             if ($this->authService()->isManager($user)) {
                 $this->view->managerWorkspace = $this->managerWorkspace($user);
-                $this->view->telegramOutboxStats = $this->telegramAutomationService()->outboxStats();
+                $this->view->telegramOutboxStats = $this->notificationOperations()->outboxStats();
             }
         } catch (Throwable $e) {
             $this->logFrontendError('cabinet-page', $e);

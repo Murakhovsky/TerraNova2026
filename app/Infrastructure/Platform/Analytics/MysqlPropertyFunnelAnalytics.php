@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace Domains\Analytics\Infrastructure\ReadModel\MySql;
+namespace Infrastructure\Platform\Analytics;
 
-use Domains\Analytics\Application\Contract\AnalyticsServiceInterface;
+use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Throwable;
 
-class AnalyticsService implements AnalyticsServiceInterface
+final class MysqlPropertyFunnelAnalytics implements PropertyFunnelAnalyticsInterface
 {
     private const PUBLIC_EVENTS = [
         'phone_click',

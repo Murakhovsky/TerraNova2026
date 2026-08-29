@@ -20,9 +20,12 @@ $entries = [
 ];
 
 foreach ([$root . '/public/js', $root . '/public/css'] as $legacyDirectory) {
-    if (is_dir($legacyDirectory) && count(glob($legacyDirectory . '/*') ?: []) > 0) {
-        throw new RuntimeException('Browser source remains in public: ' . $legacyDirectory);
+    if (is_dir($legacyDirectory)) {
+        throw new RuntimeException('Legacy browser source directory was restored: ' . $legacyDirectory);
     }
+}
+if (!is_dir($root . '/frontend') || is_dir($root . '/resources')) {
+    throw new RuntimeException('Frontend source must live only in the root frontend directory.');
 }
 
 $assets = (new ViteAssetManifest($manifestPath))->assets($entries);
