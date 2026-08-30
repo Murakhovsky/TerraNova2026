@@ -6,7 +6,7 @@ use Infrastructure\Platform\Persistence\TableOwnership;
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
-$expected = ['Content', 'Identity', 'Property', 'Sales', 'Spatial'];
+$expected = ['Content', 'Diagnostic', 'Identity', 'Property', 'Sales', 'Spatial'];
 $actual = array_map(
     static fn (string $path): string => basename($path),
     glob($root . '/app/Domains/*', GLOB_ONLYDIR) ?: [],
@@ -42,4 +42,3 @@ if (TableOwnership::ownerOf('tn_analytics_events') !== 'Platform') {
 }
 
 echo "Domain boundaries passed: only approved business contexts remain under Domains.\n";
-

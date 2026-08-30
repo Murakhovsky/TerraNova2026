@@ -6,6 +6,10 @@ use Domains\Property\Application\Service\PropertyManagementService;
 use Domains\Property\Application\UseCase\PropertyModerationService;
 use Domains\Property\Application\UseCase\PropertySubmissionService;
 use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
+use Domains\Diagnostic\Application\UseCase\EvaluateDiagnosticSession;
+use Domains\Diagnostic\Application\UseCase\PublishDiagnosticPack;
+use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository;
+use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
@@ -37,6 +41,10 @@ $expected = [
     'frontendPropertyMediaService' => PropertyManagementService::class,
     'propertyAnalytics' => MysqlPropertyAnalytics::class,
     'frontendAnalyticsService' => MysqlPropertyFunnelAnalytics::class,
+    'diagnosticPackRepository' => MysqlDiagnosticPackRepository::class,
+    'diagnosticSessionRepository' => MysqlDiagnosticSessionRepository::class,
+    'diagnosticPublishPack' => PublishDiagnosticPack::class,
+    'diagnosticEvaluateSession' => EvaluateDiagnosticSession::class,
 ];
 
 foreach ($expected as $serviceId => $class) {

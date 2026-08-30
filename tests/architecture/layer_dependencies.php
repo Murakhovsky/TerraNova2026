@@ -35,7 +35,7 @@ function assertNoDependencies(string $directory, array $forbiddenPrefixes): void
 
 assertNoDependencies($root . '/app/Kernel', ['Domains', 'Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
 foreach (glob($root . '/app/Domains/*', GLOB_ONLYDIR) ?: [] as $domainDirectory) {
-    foreach (['Application', 'Automation', 'Domain', 'Model'] as $coreArea) {
+    foreach (['Application', 'Automation', 'Domain', 'Methodology', 'Model'] as $coreArea) {
         $directory = $domainDirectory . '/' . $coreArea;
         if (is_dir($directory)) {
             assertNoDependencies($directory, ['Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon', 'PDO']);
@@ -86,6 +86,12 @@ $requiredSalesAreas = ['Application', 'Automation', 'Bootstrap', 'Infrastructure
 foreach ($requiredSalesAreas as $area) {
     if (!is_dir($root . '/app/Domains/Sales/' . $area)) {
         throw new RuntimeException(sprintf('Sales domain is missing its %s area.', $area));
+    }
+}
+
+foreach (['Application', 'Automation', 'Infrastructure', 'Methodology', 'Model'] as $area) {
+    if (!is_dir($root . '/app/Domains/Diagnostic/' . $area)) {
+        throw new RuntimeException(sprintf('Diagnostic domain is missing its %s area.', $area));
     }
 }
 

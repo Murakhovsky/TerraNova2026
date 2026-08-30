@@ -40,12 +40,17 @@ $requiredMigrations = [
     '20260826_000017_production_hardening',
     '20260826_000018_remove_obsolete_cos_policies',
     '20260826_000019_tenant_public_identifiers',
+    '20260830_000020_diagnostic_domain',
 ];
 $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_migrations WHERE migration IN (' . implode(',', array_fill(0, count($requiredMigrations), '?')) . ')');
 $statement->execute($requiredMigrations);
 if ((int) $statement->fetchColumn() !== count($requiredMigrations)) throw new RuntimeException('Production hardening migrations are not applied.');
 
-$requiredTables = ['cos_organizations', 'cos_organization_memberships', 'cos_crm_inbox', 'cos_configuration_provisions', 'cos_operational_metrics'];
+$requiredTables = [
+    'cos_organizations', 'cos_organization_memberships', 'cos_crm_inbox',
+    'cos_configuration_provisions', 'cos_operational_metrics',
+    'diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records',
+];
 $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
 $tables = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN (' . $placeholders . ')');
 $tables->execute($requiredTables);

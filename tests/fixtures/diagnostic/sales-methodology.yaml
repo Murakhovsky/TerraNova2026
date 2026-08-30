@@ -1,0 +1,77 @@
+id: sales-foundation
+version: 1
+name: Sales Foundation
+sections:
+  - id: lead-management
+    name: Lead management
+    weight: 1
+facts:
+  - id: crm_adopted
+    name: CRM adopted
+    type: boolean
+metrics:
+  - id: lead_response_time
+    name: Lead response time
+    type: duration
+    unit: minutes
+    direction: lower_is_better
+  - id: lost_lead_rate
+    name: Lost lead rate
+    type: percentage
+    unit: percent
+    direction: lower_is_better
+  - id: lead_count
+    name: Lead count
+    type: integer
+    unit: count
+criteria:
+  - id: lead-processing
+    name: Lead processing
+    section: lead-management
+    required:
+      - lead_response_time
+      - lost_lead_rate
+      - lead_count
+    optional:
+      - fact.crm_adopted
+    minimum_coverage: 1
+    weight: 1
+rules:
+  - id: slow-lead-processing
+    criterion: lead-processing
+    conditions:
+      all:
+        - subject: metric.lead_response_time
+          operator: ">"
+          value: 60
+        - subject: metric.lost_lead_rate
+          operator: ">"
+          value: 20
+    finding: Slow lead processing
+    severity: high
+scoring:
+  - criterion: lead-processing
+    metric: lead_response_time
+    bands:
+      - min: 0
+        max: 5
+        score: 100
+      - min: 5
+        max: 15
+        score: 80
+      - min: 15
+        max: 60
+        score: 50
+      - min: 60
+        score: 20
+dependencies:
+  - source: lead_response_time
+    target: lost_lead_rate
+    type: influences
+    strength: 0.8
+    direction: positive
+  - source: lead-processing
+    target: lead-management
+    type: contributes_to
+    strength: 1
+    direction: positive

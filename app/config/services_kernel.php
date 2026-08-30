@@ -5,3 +5,4 @@ declare(strict_types=1);
 require APP_PATH . '/Bootstrap/InfrastructureServices.php';
 require APP_PATH . '/Bootstrap/SalesServices.php';
 require APP_PATH . '/Bootstrap/KernelServices.php';
+require APP_PATH . '/Bootstrap/DiagnosticServices.php';

@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://terranova.local/schemas/diagnostic-pack-v1.json",
+  "title": "COS Diagnostic Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "name", "target_domain", "areas", "criteria"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "id": { "$ref": "#/$defs/id" },
+    "version": { "type": "integer", "minimum": 1 },
+    "name": { "$ref": "#/$defs/nonEmptyString" },
+    "description": { "type": "string" },
+    "target_domain": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+    "areas": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/area" } },
+    "facts": { "type": "array", "default": [], "items": { "$ref": "#/$defs/fact" } },
+    "criteria": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/criterion" } },
+    "questions": { "type": "array", "default": [], "items": { "$ref": "#/$defs/question" } },
+    "evidence_requirements": { "type": "array", "default": [], "items": { "$ref": "#/$defs/evidenceRequirement" } },
+    "metrics": { "type": "array", "default": [], "items": { "$ref": "#/$defs/metric" } },
+    "rules": { "type": "array", "default": [], "items": { "$ref": "#/$defs/rule" } },
+    "scoring": { "type": "array", "default": [], "items": { "$ref": "#/$defs/scoring" } },
+    "dependencies": { "type": "array", "default": [], "items": { "$ref": "#/$defs/dependency" } },
+    "hypothesis_policies": { "type": "array", "default": [], "items": { "$ref": "#/$defs/hypothesisPolicy" } },
+    "recommendations": { "type": "array", "default": [], "items": { "$ref": "#/$defs/recommendation" } },
+    "confidence_policy": { "$ref": "#/$defs/confidencePolicy" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "probability": { "type": "number", "minimum": 0, "maximum": 1 },
+    "idList": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "severity": { "enum": ["none", "info", "low", "medium", "high", "critical"] },
+    "valueType": { "enum": ["boolean", "integer", "number", "string", "enum", "percentage", "ratio", "duration", "currency", "date", "datetime"] },
+    "area": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "type": "string" }, "weight": { "type": "number", "minimum": 0, "default": 1 }
+      }
+    },
+    "fact": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "value_type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "type": "string" }, "value_type": { "$ref": "#/$defs/valueType" },
+        "unit": { "type": "string" }, "enum_values": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "allowed_truth_levels": { "type": "array", "uniqueItems": true, "items": { "enum": ["observed", "reported", "calculated", "derived", "inferred", "estimated", "assumed"] } }
+      }
+    },
+    "criterion": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "area_id", "name", "statement", "required_inputs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "area_id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/nonEmptyString" }, "statement": { "$ref": "#/$defs/nonEmptyString" },
+        "required": { "type": "boolean", "default": true }, "weight": { "type": "number", "minimum": 0, "default": 1 },
+        "required_inputs": { "$ref": "#/$defs/weightedReferences" }, "optional_inputs": { "$ref": "#/$defs/weightedReferences" },
+        "minimum_coverage": { "$ref": "#/$defs/probability" }, "minimum_confidence": { "$ref": "#/$defs/probability" },
+        "applicability": { "$ref": "#/$defs/condition" },
+        "good_practices": { "type": "array", "items": { "$ref": "#/$defs/nonEmptyString" } },
+        "bad_practices": { "type": "array", "items": { "$ref": "#/$defs/nonEmptyString" } }
+      }
+    },
+    "weightedReferences": {
+      "type": "array", "default": [], "items": {
+        "type": "object", "additionalProperties": false, "required": ["ref"],
+        "properties": { "ref": { "type": "string", "pattern": "^(fact|metric)\\.[a-z][a-z0-9_.-]*$" }, "weight": { "type": "number", "exclusiveMinimum": 0, "default": 1 } }
+      }
+    },
+    "question": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "criterion_ids", "text", "answer_type", "produces"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "criterion_ids": { "$ref": "#/$defs/idList" }, "text": { "$ref": "#/$defs/nonEmptyString" },
+        "answer_type": { "$ref": "#/$defs/valueType" }, "possible_answers": { "type": "array", "uniqueItems": true, "items": {} },
+        "produces": { "type": "string", "pattern": "^fact\\.[a-z][a-z0-9_.-]*$" },
+        "evidence_requirement_ids": { "$ref": "#/$defs/idList" }, "eligibility": { "$ref": "#/$defs/condition" },
+        "priority": { "type": "object", "additionalProperties": false, "properties": {
+          "diagnostic_impact": { "$ref": "#/$defs/probability" }, "uncertainty_reduction": { "$ref": "#/$defs/probability" },
+          "criterion_importance": { "$ref": "#/$defs/probability" }, "expected_information_gain": { "$ref": "#/$defs/probability" },
+          "dependency_value": { "type": "number", "minimum": 0 }, "question_cost": { "type": "number", "exclusiveMinimum": 0 },
+          "user_fatigue": { "type": "number", "exclusiveMinimum": 0 }
+        } }
+      }
+    },
+    "evidenceRequirement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "criterion_ids", "acceptable_sources", "minimum_count"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "criterion_ids": { "$ref": "#/$defs/idList" },
+        "acceptable_sources": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["document", "interview", "system_data", "observation", "survey", "external_source"] } },
+        "preferred_sources": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "minimum_count": { "type": "integer", "minimum": 1 },
+        "source_reliability": { "type": "object", "additionalProperties": { "$ref": "#/$defs/probability" } },
+        "maximum_age_days": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "value_type", "formula", "inputs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/nonEmptyString" }, "description": { "type": "string" },
+        "value_type": { "$ref": "#/$defs/valueType" }, "unit": { "type": "string" },
+        "formula": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
+        "inputs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^(fact|metric)\\.[a-z][a-z0-9_.-]*$" } },
+        "parameters": { "type": "object" }, "direction": { "enum": ["higher_is_better", "lower_is_better", "target_range", "neutral"] },
+        "expected_range": { "$ref": "#/$defs/range" }
+      }
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "criterion_id", "when", "then"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "type": { "enum": ["threshold", "consistency", "absence", "dependency", "pattern"] },
+        "criterion_id": { "$ref": "#/$defs/id" }, "when": { "$ref": "#/$defs/condition" },
+        "then": { "type": "object", "additionalProperties": false, "required": ["finding_id", "statement", "severity"], "properties": {
+          "finding_id": { "$ref": "#/$defs/id" }, "statement": { "$ref": "#/$defs/nonEmptyString" }, "severity": { "$ref": "#/$defs/severity" },
+          "criterion_status": { "enum": ["assessed", "good", "warning", "critical", "insufficient_data", "contradictory", "not_applicable"] },
+          "hypothesis_policy_ids": { "$ref": "#/$defs/idList" }
+        } }
+      }
+    },
+    "condition": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["all"], "properties": { "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["any"], "properties": { "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["not"], "properties": { "not": { "$ref": "#/$defs/condition" } } },
+        { "type": "object", "additionalProperties": false, "required": ["subject", "operator"], "properties": {
+          "subject": { "type": "string", "pattern": "^(fact|metric|criterion)\\.[a-z][a-z0-9_.-]*$" },
+          "operator": { "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "between", "in", "exists", "not_exists"] },
+          "value": {}, "values": { "type": "array" }
+        } }
+      ]
+    },
+    "scoring": {
+      "type": "object", "additionalProperties": false, "required": ["criterion_id", "metric_id", "bands"],
+      "properties": {
+        "criterion_id": { "$ref": "#/$defs/id" }, "metric_id": { "$ref": "#/$defs/id" },
+        "bands": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["status", "score"], "properties": {
+          "min": { "type": "number" }, "max": { "type": "number" }, "score": { "type": "number", "minimum": 0, "maximum": 100 },
+          "status": { "enum": ["assessed", "good", "warning", "critical"] }, "severity": { "$ref": "#/$defs/severity" }
+        } } }
+      }
+    },
+    "dependency": {
+      "type": "object", "additionalProperties": false, "required": ["source", "target", "type"],
+      "properties": {
+        "source": { "type": "string", "pattern": "^(fact|metric|criterion|area)\\.[a-z][a-z0-9_.-]*$" },
+        "target": { "type": "string", "pattern": "^(fact|metric|criterion|area)\\.[a-z][a-z0-9_.-]*$" },
+        "type": { "enum": ["requires", "influences", "blocks", "depends_on", "contributes_to"] },
+        "strength": { "$ref": "#/$defs/probability" }, "direction": { "enum": ["positive", "negative", "neutral"] }
+      }
+    },
+    "hypothesisPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "statement_template", "target_criterion_ids", "thresholds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "statement_template": { "$ref": "#/$defs/nonEmptyString" },
+        "target_criterion_ids": { "$ref": "#/$defs/idList" }, "supporting_rule_ids": { "$ref": "#/$defs/idList" },
+        "contradicting_rule_ids": { "$ref": "#/$defs/idList" },
+        "thresholds": { "type": "object", "additionalProperties": false, "required": ["supported", "strongly_supported", "confirmed_root_cause"], "properties": {
+          "supported": { "$ref": "#/$defs/probability" }, "strongly_supported": { "$ref": "#/$defs/probability" },
+          "confirmed_root_cause": { "$ref": "#/$defs/probability" }, "maximum_contradiction": { "$ref": "#/$defs/probability" },
+          "minimum_coverage": { "$ref": "#/$defs/probability" }
+        } }
+      }
+    },
+    "recommendation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "title", "trigger_finding_ids", "target_criterion_ids", "priority", "expected_impact", "effort", "actions", "metrics_to_watch"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "title": { "$ref": "#/$defs/nonEmptyString" }, "description": { "type": "string" },
+        "trigger_finding_ids": { "$ref": "#/$defs/idList" }, "trigger_hypothesis_policy_ids": { "$ref": "#/$defs/idList" },
+        "target_criterion_ids": { "$ref": "#/$defs/idList" }, "priority": { "enum": ["low", "medium", "high", "critical"] },
+        "expected_impact": { "enum": ["low", "medium", "high"] }, "effort": { "enum": ["low", "medium", "high"] },
+        "dependency_ids": { "$ref": "#/$defs/idList" }, "actions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmptyString" } },
+        "metrics_to_watch": { "$ref": "#/$defs/idList" }
+      }
+    },
+    "confidencePolicy": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "function": { "enum": ["multiplicative", "weighted_geometric_mean"], "default": "multiplicative" },
+        "factors": { "type": "array", "uniqueItems": true, "items": { "enum": ["source_reliability", "evidence_directness", "freshness", "sample_quality", "consistency", "llm_confidence"] } },
+        "weights": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } }
+      }
+    },
+    "range": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "min": { "type": "number" }, "max": { "type": "number" } }, "minProperties": 1
+    }
+  }
+}

@@ -27,6 +27,7 @@ final class TableOwnership
             'tn_buyer_requests', 'tn_buyers', 'request_requests', 'request_shows', 'request_join_realty',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
+        'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],
         'Spatial' => [
             'tn_spatial_assets', 'tn_spatial_captures', 'tn_spatial_events', 'tn_spatial_hotspots',
             'tn_spatial_processing_jobs', 'tn_spatial_relations', 'tn_spatial_scenes', 'tn_spatial_versions',

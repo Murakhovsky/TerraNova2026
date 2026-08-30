@@ -11,6 +11,7 @@
 | Область | Рішення | Власна бізнесова відповідальність |
 |---|---|---|
 | `Sales` | залишити, еталонний COS Domain | Lead, ClientCase/Deal, pipeline, activities, matching, follow-up, Sales automation та CRM translation |
+| `Diagnostic` | залишити, універсальний diagnostic engine | versioned methodology packs, sessions, evidence, facts/metrics/assessments, findings, hypotheses, recommendations і traceability |
 | `Property` | залишити | об'єкт, submission, moderation, publication та presentation lifecycle |
 | `Content` | залишити | керований контент, revision, scheduling, publication та SEO lifecycle |
 | `Identity` | залишити | account, organization membership, role, authentication та access lifecycle |
@@ -18,7 +19,9 @@
 | `Analytics` | прибрати як Domain | поточна реалізація є технічною funnel/telemetry проєкцією; перенесена до `Infrastructure/Platform/Analytics`, споживчий порт належить Property |
 | `Notification` | прибрати як Domain | Telegram є delivery adapter; account linking належить Identity, Property notifications — порту Property, outbox/delivery — Infrastructure |
 
-Поточний дозволений набір каталогів `app/Domains`: `Content`, `Identity`, `Property`, `Sales`, `Spatial`. Додавання нового каталогу вимагає окремого bounded-context рішення та оновлення architecture test.
+Поточний дозволений набір каталогів `app/Domains`: `Content`, `Diagnostic`, `Identity`, `Property`, `Sales`, `Spatial`. `Diagnostic` не залежить від моделі цільового Domain: Sales, Finance, Operations, HR або Marketing описуються як target/pack. Додавання нового каталогу вимагає окремого bounded-context рішення та оновлення architecture test.
+
+`Diagnostic` зберігає повну versioned methodology всередині lifecycle pack, а session фіксує її id/version і materializes deterministic assessments/findings із наскрізною evidence traceability. Таблиці `diagnostic_*` належать лише цьому Domain; target domains не пишуть у них напряму й запускають діагностику через Application use cases.
 
 ## Cross-domain правило
 
@@ -33,4 +36,3 @@ Domain не пише напряму в таблиці іншого Domain. Ві�
 - технічні shared stores і telemetry розміщувати в `Infrastructure/Platform`;
 - бізнесовий порт оголошує той Domain, якому потрібна операція;
 - delivery-рівень викликає Application use case, а не Infrastructure repository.
-

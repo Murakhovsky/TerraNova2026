@@ -55,6 +55,7 @@ CRM webhooks require `X-CRM-Event-Id` and `X-CRM-Signature: sha256=<HMAC>`. Stor
 
 - Canonical architecture: [`docs/architecture/cos-kernel.md`](docs/architecture/cos-kernel.md)
 - Domain boundary audit: [`docs/architecture/domain-boundaries.md`](docs/architecture/domain-boundaries.md)
+- Diagnostic domain model and methodology contract: [`docs/architecture/diagnostic-domain-model.md`](docs/architecture/diagnostic-domain-model.md)
 - Sales development guide: [`app/Domains/Sales/README.md`](app/Domains/Sales/README.md)
 - Implementation report: [`docs/architecture/implementation-report-2026-08-26.md`](docs/architecture/implementation-report-2026-08-26.md)
 - Automated checks: `tests/architecture`, `tests/smoke`, and `tests/integration`
