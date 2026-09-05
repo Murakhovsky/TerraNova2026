@@ -12,12 +12,12 @@
     "src": "frontend/assets/images/google-map-black.png"
   },
   "frontend/entrypoints/cos-site.js": {
-    "file": "assets/cos-site-DMcHiLga.js",
+    "file": "assets/cos-site-BhdBo_UG.js",
     "name": "cos-site",
     "src": "frontend/entrypoints/cos-site.js",
     "isEntry": true,
     "css": [
-      "assets/cos-site-XaBEhkXu.css",
+      "assets/cos-site-Cq1JQm5g.css",
       "assets/tokens-LEZJCtf5.css"
     ]
   },
