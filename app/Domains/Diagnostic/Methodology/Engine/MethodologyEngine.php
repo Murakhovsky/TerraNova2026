@@ -37,7 +37,9 @@ class MethodologyEngine
             $criterionConfidence = $this->confidenceEngine->evaluate($criterion, $input);
             $eligible = $coverage->ratio >= $criterion->minimumCoverage
                 && $criterionConfidence >= $criterion->minimumConfidence;
-            $score = $eligible ? $this->scoringEngine->criterionScore($criterion->id, $input, $pack->scoring) : null;
+            // A score over observed applicable inputs is provisional; coverage/confidence
+            // gate conclusions, not the availability of that partial score.
+            $score = $this->scoringEngine->criterionScore($criterion->id, $input, $pack->scoring);
             $criterionScores[$criterion->id] = $score;
             $evidenceIds = $input->evidenceIds(array_merge($criterion->required, $criterion->optional));
             $assessments[$criterion->id] = new CriterionAssessment(

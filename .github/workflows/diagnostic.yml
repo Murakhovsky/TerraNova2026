@@ -1,0 +1,20 @@
+name: Diagnostic Phase 1-3
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - run: php tests/smoke/diagnostic_domain.php
+      - run: php tests/smoke/diagnostic_methodology_contract.php
+      - run: php tests/smoke/diagnostic_methodology.php
+      - run: php tests/smoke/diagnostic_phase_1_3.php
+      - run: php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"

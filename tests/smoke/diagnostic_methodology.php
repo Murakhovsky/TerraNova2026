@@ -53,14 +53,14 @@ methodologyEnsure($result->score === 20.0, 'Pack score must be deterministic and
 methodologyEnsure($result->coverage->ratio === 1.0 && $result->coverage->level === 'COMPLETE', 'Coverage was calculated incorrectly.');
 methodologyEnsure($result->confidence > 0.8 && $result->confidence <= 1.0, 'Confidence was calculated incorrectly.');
 methodologyEnsure(count($result->findings) === 1 && $result->findings[0]->severity === 'high', 'Rule did not emit the expected finding.');
-methodologyEnsure(count($result->dependencies) === 2, 'Dependency graph was not returned.');
+methodologyEnsure(count($result->dependencies) >= 2 && isset($result->dependencies[0]->status), 'Dependency states were not evaluated.');
 
 $incomplete = new DiagnosticInput([], [
     'lead_response_time' => new ObservedValue(75, [$crm]),
     'lost_lead_rate' => new ObservedValue(25, [$crm]),
 ], $now);
 $incompleteResult = (new MethodologyEngine())->evaluate($incomplete, $pack);
-methodologyEnsure($incompleteResult->score === null, 'An incomplete criterion must not produce a pack score.');
+methodologyEnsure($incompleteResult->score === 20.0, 'Partial coverage must preserve a provisional score.');
 methodologyEnsure($incompleteResult->coverage->level === 'MEDIUM', 'Two of three required inputs must produce MEDIUM coverage.');
 methodologyEnsure($incompleteResult->findings === [], 'An incomplete criterion must not emit a finding.');
 

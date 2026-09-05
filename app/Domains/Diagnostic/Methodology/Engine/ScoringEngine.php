@@ -43,14 +43,13 @@ final class ScoringEngine
         $result = [];
         foreach ($sections as $section) {
             $sum = 0.0; $weights = 0.0;
-            $blocked = false;
             foreach ($criteria as $criterion) {
                 $score = $criterionScores[$criterion->id] ?? null;
                 if ($criterion->sectionId !== $section->id) continue;
-                if ($score === null) { $blocked = true; break; }
+                if ($score === null) continue;
                 $sum += $score * $criterion->weight; $weights += $criterion->weight;
             }
-            $result[$section->id] = !$blocked && $weights > 0 ? round($sum / $weights, 2) : null;
+            $result[$section->id] = $weights > 0 ? round($sum / $weights, 2) : null;
         }
         return $result;
     }
@@ -61,7 +60,7 @@ final class ScoringEngine
         $sum = 0.0; $weights = 0.0;
         foreach ($sections as $section) {
             $score = $sectionScores[$section->id] ?? null;
-            if ($score === null) return null;
+            if ($score === null) continue;
             $sum += $score * $section->weight; $weights += $section->weight;
         }
         return $weights > 0 ? round($sum / $weights, 2) : null;

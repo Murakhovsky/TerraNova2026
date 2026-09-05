@@ -32,7 +32,7 @@ final class PackLoader
                 [$required, $requiredWeights] = $this->references($item['required'] ?? $item['required_inputs'] ?? []);
                 [$optional, $optionalWeights] = $this->references($item['optional'] ?? $item['optional_inputs'] ?? []);
                 return new CriterionDefinition(
-                    (string) (0['id'] ?? ''),
+                    (string) ($item['id'] ?? ''),
                     (string) ($item['name'] ?? ''),
                     (string) ($item['section'] ?? $item['section_id'] ?? $item['area_id'] ?? ''),
                     $required,

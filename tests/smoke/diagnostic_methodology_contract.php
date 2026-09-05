@@ -100,7 +100,7 @@ $completeWeakInput = new DiagnosticInput(
     $now,
 );
 $weakResult = (new MethodologyEngine())->evaluate($completeWeakInput, $lowConfidencePack);
-methodologyContractEnsure($weakResult->score === null && $weakResult->findings === [], 'Low confidence did not suppress conclusions.');
+methodologyContractEnsure($weakResult->score !== null && $weakResult->findings === [], 'Low confidence must retain a provisional score but suppress conclusions.');
 
 $ruleInput = new DiagnosticInput(
     ['crm_adopted' => new ObservedValue(true, [$trusted])],
@@ -145,7 +145,7 @@ $blockedSection = (new ScoringEngine())->sectionScores(
     ],
     [new SectionDefinition('section', 'Section')],
 );
-methodologyContractEnsure($blockedSection['section'] === null, 'Section score ignored a criterion without a defensible score.');
+methodologyContractEnsure($blockedSection['section'] === 80.0, 'Partial coverage must retain a provisional section score.');
 
 $alignedInput = new DiagnosticInput([], [
     'lead_response_time' => new ObservedValue(75, [
