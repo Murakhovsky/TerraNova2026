@@ -1,0 +1,957 @@
+{
+    "dataset": "sales-v0.1",
+    "cases": [
+        {
+            "id": "sales-eval-01",
+            "name": "healthy-sales-team",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-0",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 80,
+                "win_rate": 80,
+                "crm_completeness": 90
+            },
+            "expected_assessments": [],
+            "expected_findings": [],
+            "expected_hypotheses": [],
+            "expected_likely_root_causes": [],
+            "expected_recommendations": []
+        },
+        {
+            "id": "sales-eval-02",
+            "name": "no-crm",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-1",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_02_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to no-crm"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_02"
+            ]
+        },
+        {
+            "id": "sales-eval-03",
+            "name": "slow-response",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-2",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_03_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to slow-response"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_03"
+            ]
+        },
+        {
+            "id": "sales-eval-04",
+            "name": "good-sales-weak-marketing",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-3",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_04_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to good-sales-weak-marketing"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_04"
+            ]
+        },
+        {
+            "id": "sales-eval-05",
+            "name": "poor-qualification",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-4",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_05_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to poor-qualification"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_05"
+            ]
+        },
+        {
+            "id": "sales-eval-06",
+            "name": "poor-closing",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-5",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_06_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to poor-closing"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_06"
+            ]
+        },
+        {
+            "id": "sales-eval-07",
+            "name": "weak-follow-up",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-6",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_07_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to weak-follow-up"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_07"
+            ]
+        },
+        {
+            "id": "sales-eval-08",
+            "name": "broken-crm-data",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-7",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_08_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to broken-crm-data"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_08"
+            ]
+        },
+        {
+            "id": "sales-eval-09",
+            "name": "founder-led-sales",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-8",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_09_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to founder-led-sales"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_09"
+            ]
+        },
+        {
+            "id": "sales-eval-10",
+            "name": "high-volume-low-conversion",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-9",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_10_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to high-volume-low-conversion"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_10"
+            ]
+        },
+        {
+            "id": "sales-eval-11",
+            "name": "low-volume-high-conversion",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-10",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_11_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to low-volume-high-conversion"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_11"
+            ]
+        },
+        {
+            "id": "sales-eval-12",
+            "name": "long-sales-cycle",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-11",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_12_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to long-sales-cycle"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_12"
+            ]
+        },
+        {
+            "id": "sales-eval-13",
+            "name": "incorrect-pipeline-stages",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-12",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_13_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to incorrect-pipeline-stages"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_13"
+            ]
+        },
+        {
+            "id": "sales-eval-14",
+            "name": "fake-forecast",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-13",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_14_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to fake-forecast"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_14"
+            ]
+        },
+        {
+            "id": "sales-eval-15",
+            "name": "strong-results-weak-processes",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-14",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_15_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to strong-results-weak-processes"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_15"
+            ]
+        },
+        {
+            "id": "sales-eval-16",
+            "name": "new-sales-department",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-15",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_16_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to new-sales-department"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_16"
+            ]
+        },
+        {
+            "id": "sales-eval-17",
+            "name": "understaffed-team",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-16",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_17_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to understaffed-team"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_17"
+            ]
+        },
+        {
+            "id": "sales-eval-18",
+            "name": "high-rep-variance",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-17",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_18_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to high-rep-variance"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_18"
+            ]
+        },
+        {
+            "id": "sales-eval-19",
+            "name": "bad-lead-routing",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-18",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_19_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to bad-lead-routing"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_19"
+            ]
+        },
+        {
+            "id": "sales-eval-20",
+            "name": "lost-lead-ownership",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-19",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_20_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to lost-lead-ownership"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_20"
+            ]
+        },
+        {
+            "id": "sales-eval-21",
+            "name": "high-no-show-rate",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-20",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_21_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to high-no-show-rate"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_21"
+            ]
+        },
+        {
+            "id": "sales-eval-22",
+            "name": "weak-icp",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-21",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_22_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to weak-icp"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_22"
+            ]
+        },
+        {
+            "id": "sales-eval-23",
+            "name": "duplicate-heavy-crm",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-22",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_23_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to duplicate-heavy-crm"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_23"
+            ]
+        },
+        {
+            "id": "sales-eval-24",
+            "name": "stale-pipeline",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-23",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_24_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to stale-pipeline"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_24"
+            ]
+        },
+        {
+            "id": "sales-eval-25",
+            "name": "low-activity",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-24",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_25_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to low-activity"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_25"
+            ]
+        },
+        {
+            "id": "sales-eval-26",
+            "name": "poor-coaching",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-25",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_26_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to poor-coaching"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_26"
+            ]
+        },
+        {
+            "id": "sales-eval-27",
+            "name": "weak-proposals",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-26",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_27_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to weak-proposals"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_27"
+            ]
+        },
+        {
+            "id": "sales-eval-28",
+            "name": "overdue-follow-ups",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-27",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_28_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to overdue-follow-ups"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_28"
+            ]
+        },
+        {
+            "id": "sales-eval-29",
+            "name": "low-pipeline-coverage",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-28",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_29_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to low-pipeline-coverage"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_29"
+            ]
+        },
+        {
+            "id": "sales-eval-30",
+            "name": "unreliable-forecast",
+            "input_facts": {
+                "sales_fact_01": true
+            },
+            "input_evidence": [
+                {
+                    "id": "crm-29",
+                    "source": "CRM",
+                    "reliability": 0.9
+                }
+            ],
+            "expected_metrics": {
+                "lead_volume": 50,
+                "win_rate": 45,
+                "crm_completeness": 55
+            },
+            "expected_assessments": [],
+            "expected_findings": [
+                "rule_sales_criterion_30_low"
+            ],
+            "expected_hypotheses": [
+                "Process weakness contributes to unreliable-forecast"
+            ],
+            "expected_likely_root_causes": [
+                "Operating control gap"
+            ],
+            "expected_recommendations": [
+                "recommendation_sales_criterion_30"
+            ]
+        }
+    ]
+}
