@@ -8,6 +8,10 @@ $actions = $overview['actions'] ?? [];
 $approvals = $overview['approvals'] ?? [];
 $results = $overview['results'] ?? [];
 $audit = $overview['audit'] ?? [];
+$agentRuns = $overview['agent_runs'] ?? [];
+$rules = $overview['rules'] ?? [];
+$policies = $overview['policies'] ?? [];
+$integrations = $overview['integrations'] ?? [];
 $json = static function ($value): string {
     if ($value === null || $value === '') return '—';
     $decoded = is_string($value) ? json_decode($value, true) : $value;
@@ -43,13 +47,15 @@ $csrfToken = $csrfToken ?? '';
       'Approvals' => $stats['pending_approvals'] ?? 0,
       'Results' => $stats['completed_results'] ?? 0,
       'Dead jobs' => $stats['dead_jobs'] ?? 0,
+      'Active Rules' => $stats['active_rules'] ?? 0,
+      'Agent runs 24h' => $stats['agent_runs_24h'] ?? 0,
     ] as $label => $value): ?>
       <article><span><?php echo $h($label); ?></span><strong><?php echo (int) $value; ?></strong></article>
     <?php endforeach; ?>
   </section>
 
   <nav class="tn-admin-tabs tn-cos-tabs" aria-label="COS sections">
-    <a href="#events">Events</a><a href="#decisions">Decisions</a><a href="#actions">Proposed Actions</a>
+    <a href="#events">Events</a><a href="#rules">Rules</a><a href="#agents">Agents</a><a href="#policies">Policies</a><a href="#integrations">Integrations</a><a href="#decisions">Decisions</a><a href="#actions">Proposed Actions</a>
     <a href="#approvals">Approvals</a><a href="#results">Results</a><a href="#audit">Audit</a>
   </nav>
 
@@ -64,6 +70,32 @@ $csrfToken = $csrfToken ?? '';
       </tr><?php endforeach; ?>
       <?php if (!$events): ?><tr><td colspan="5">Подій ще немає.</td></tr><?php endif; ?>
     </tbody></table></div>
+  </section>
+
+  <section class="tn-admin-panel tn-cos-section" id="rules">
+    <div class="tn-section-heading"><div><p class="tn-kicker">Deterministic automation</p><h2>Rules</h2></div><span><?php echo count($rules); ?> configured</span></div>
+    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Rule</th><th>Trigger</th><th>Status</th><th>Priority</th><th>Effect</th></tr></thead><tbody>
+      <?php foreach ($rules as $rule): ?><tr><td><strong><?php echo $h($rule['name']); ?></strong><span><?php echo $h($rule['code']); ?></span></td><td><?php echo $h($rule['trigger_type']); ?></td><td><span class="<?php echo $statusClass($rule['status']); ?>"><?php echo $h($rule['status']); ?></span></td><td><?php echo (int)$rule['priority']; ?></td><td><details><summary>Configuration</summary><pre><?php echo $h($json($rule['effect'])); ?></pre></details></td></tr><?php endforeach; ?>
+      <?php if (!$rules): ?><tr><td colspan="5">Rules ще не provisioned.</td></tr><?php endif; ?>
+    </tbody></table></div>
+  </section>
+
+  <section class="tn-admin-panel tn-cos-section" id="agents">
+    <div class="tn-section-heading"><div><p class="tn-kicker">Intelligence runtime</p><h2>Agents</h2></div><span><?php echo count($agentRuns); ?> runs</span></div>
+    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Agent</th><th>Subject</th><th>Status</th><th>Confidence</th><th>Runtime</th></tr></thead><tbody>
+      <?php foreach ($agentRuns as $run): ?><tr><td><strong><?php echo $h($run['agent_name']); ?></strong><span><?php echo $h($run['agent_version'].' · '.$run['model']); ?></span></td><td><?php echo $h(($run['subject_type']?:'—').' #'.($run['subject_id']?:'—')); ?></td><td><span class="<?php echo $statusClass($run['status']); ?>"><?php echo $h($run['status']); ?></span></td><td><?php echo $run['confidence']!==null?$h(round((float)$run['confidence']*100).'%'):'—'; ?></td><td><?php echo $h(($run['duration_ms']??0).' ms'); ?></td></tr><?php endforeach; ?>
+      <?php if (!$agentRuns): ?><tr><td colspan="5">Agent runs ще немає.</td></tr><?php endif; ?>
+    </tbody></table></div>
+  </section>
+
+  <section class="tn-admin-panel tn-cos-section" id="policies">
+    <div class="tn-section-heading"><div><p class="tn-kicker">Governance</p><h2>Policies</h2></div><span><?php echo count($policies); ?> configured</span></div>
+    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Policy</th><th>Action</th><th>Decision</th><th>Status</th></tr></thead><tbody><?php foreach ($policies as $policy): ?><tr><td><strong><?php echo $h($policy['name']); ?></strong><span><?php echo $h($policy['code']); ?></span></td><td><?php echo $h($policy['action_type']); ?></td><td><span class="<?php echo $statusClass($policy['decision']); ?>"><?php echo $h($policy['decision']); ?></span></td><td><?php echo $h($policy['status']); ?></td></tr><?php endforeach; ?></tbody></table></div>
+  </section>
+
+  <section class="tn-admin-panel tn-cos-section" id="integrations">
+    <div class="tn-section-heading"><div><p class="tn-kicker">Infrastructure boundary</p><h2>Integrations</h2></div><span><?php echo count($integrations); ?> connected</span></div>
+    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Name</th><th>Provider</th><th>Type</th><th>Status</th></tr></thead><tbody><?php foreach ($integrations as $integration): ?><tr><td><strong><?php echo $h($integration['name']); ?></strong></td><td><?php echo $h($integration['provider']); ?></td><td><?php echo $h($integration['type']); ?></td><td><span class="<?php echo $statusClass($integration['status']); ?>"><?php echo $h($integration['status']); ?></span></td></tr><?php endforeach; ?><?php if (!$integrations): ?><tr><td colspan="4">Інтеграції не налаштовані.</td></tr><?php endif; ?></tbody></table></div>
   </section>
 
   <section class="tn-admin-panel tn-cos-section" id="decisions">

@@ -25,11 +25,17 @@ final readonly class MysqlOperationsReadModel implements OperationsReadModelInte
                 . "(SELECT COUNT(*) FROM cos_approvals WHERE organization_id = :approvals_org AND status = 'PENDING') AS pending_approvals, "
                 . "(SELECT COUNT(*) FROM cos_action_attempts WHERE organization_id = :results_org AND status = 'COMPLETED') AS completed_results, "
                 . "(SELECT COUNT(*) FROM cos_jobs WHERE organization_id = :jobs_org AND status = 'DEAD') AS dead_jobs, "
-                . "(SELECT COUNT(*) FROM cos_event_outbox WHERE organization_id = :outbox_org AND status IN ('FAILED', 'DEAD')) AS failed_events",
+                . "(SELECT COUNT(*) FROM cos_event_outbox WHERE organization_id = :outbox_org AND status IN ('FAILED', 'DEAD')) AS failed_events, "
+                . "(SELECT COUNT(*) FROM cos_rules WHERE organization_id = :rules_org AND status = 'ACTIVE') AS active_rules, "
+                . "(SELECT COUNT(DISTINCT agent_name) FROM cos_agent_runs WHERE organization_id = :agents_org) AS active_agents, "
+                . "(SELECT COUNT(*) FROM cos_agent_runs WHERE organization_id = :runs_org AND created_at >= NOW() - INTERVAL 24 HOUR) AS agent_runs_24h, "
+                . "(SELECT COUNT(*) FROM cos_events WHERE organization_id = :events24_org AND occurred_at >= NOW() - INTERVAL 24 HOUR) AS events_24h",
                 [
                     'events_org' => $organizationId, 'decisions_org' => $organizationId,
                     'actions_org' => $organizationId, 'approvals_org' => $organizationId,
                     'results_org' => $organizationId, 'jobs_org' => $organizationId, 'outbox_org' => $organizationId,
+                    'rules_org' => $organizationId, 'agents_org' => $organizationId, 'runs_org' => $organizationId,
+                    'events24_org' => $organizationId,
                 ],
             ) ?? [],
             'events' => $this->all(
@@ -41,6 +47,27 @@ final readonly class MysqlOperationsReadModel implements OperationsReadModelInte
                 'SELECT d.*, ar.agent_name, ar.model, ar.prompt_version FROM cos_decisions d '
                 . 'LEFT JOIN cos_agent_runs ar ON ar.id = d.source_id '
                 . 'WHERE d.organization_id = :organization_id ORDER BY d.created_at DESC LIMIT ' . $limit,
+                $organization,
+            ),
+            'agent_runs' => $this->all(
+                'SELECT id, agent_name, agent_version, provider, model, prompt_version, schema_version, subject_type, subject_id, '
+                . 'status, confidence, duration_ms, error, correlation_id, started_at, finished_at, created_at '
+                . 'FROM cos_agent_runs WHERE organization_id = :organization_id ORDER BY created_at DESC LIMIT ' . $limit,
+                $organization,
+            ),
+            'rules' => $this->all(
+                'SELECT id, code, name, trigger_type, conditions, effect, priority, version, status, updated_at '
+                . 'FROM cos_rules WHERE organization_id = :organization_id ORDER BY priority, name LIMIT ' . $limit,
+                $organization,
+            ),
+            'policies' => $this->all(
+                'SELECT id, code, name, action_type, conditions, decision, priority, version, status, updated_at '
+                . 'FROM cos_policies WHERE organization_id = :organization_id ORDER BY action_type, priority LIMIT ' . $limit,
+                $organization,
+            ),
+            'integrations' => $this->all(
+                'SELECT id, provider, type, name, status, credentials_reference, configuration, updated_at '
+                . 'FROM cos_integrations WHERE organization_id = :organization_id ORDER BY type, provider LIMIT ' . $limit,
                 $organization,
             ),
             'actions' => $this->all(
@@ -94,7 +121,13 @@ final readonly class MysqlOperationsReadModel implements OperationsReadModelInte
             . 'AND d.subject_id = :target_id ORDER BY d.created_at DESC LIMIT 1',
             $parameters,
         );
-        return ['decision' => $decision, 'actions' => $actions];
+        $outcomes = $this->all(
+            'SELECT o.*, a.type AS action_type FROM cos_action_outcomes o INNER JOIN cos_actions a ON a.id = o.action_id '
+            . 'WHERE o.organization_id = :organization_id AND a.target_type IN ("deal", "client_case") '
+            . 'AND a.target_id = :target_id ORDER BY o.measured_at DESC LIMIT 20',
+            $parameters,
+        );
+        return ['decision' => $decision, 'actions' => $actions, 'outcomes' => $outcomes];
     }
 
     public function health(): array

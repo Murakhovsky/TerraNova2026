@@ -12,7 +12,7 @@ use Kernel\Action\ExecutionResult;
 
 final readonly class UpdateDealHandler implements ActionHandlerInterface
 {
-    public const TYPE = 'sales.update_deal';
+    public const TYPES = ['sales.update_deal', 'sales.change_stage', 'sales.assign_owner'];
 
     public function __construct(private DealRepositoryInterface $deals)
     {
@@ -20,7 +20,7 @@ final readonly class UpdateDealHandler implements ActionHandlerInterface
 
     public function supports(string $actionType): bool
     {
-        return $actionType === self::TYPE;
+        return in_array($actionType, self::TYPES, true);
     }
 
     public function execute(Action $action): ExecutionResult

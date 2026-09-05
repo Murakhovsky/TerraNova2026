@@ -12,7 +12,7 @@ use Kernel\Action\ExecutionResult;
 
 final readonly class ScheduleFollowupHandler implements ActionHandlerInterface
 {
-    public const TYPE = 'sales.schedule_followup';
+    public const TYPES = ['sales.schedule_followup', 'sales.create_followup'];
 
     public function __construct(private FollowupRepositoryInterface $followups)
     {
@@ -20,7 +20,7 @@ final readonly class ScheduleFollowupHandler implements ActionHandlerInterface
 
     public function supports(string $actionType): bool
     {
-        return $actionType === self::TYPE;
+        return in_array($actionType, self::TYPES, true);
     }
 
     public function execute(Action $action): ExecutionResult

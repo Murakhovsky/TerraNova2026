@@ -133,7 +133,7 @@ public/
 
 - Винести реєстрацію маршрутів з великого `Modules/Frontend/Module.php` у route files за зонами: public, property, client-case, content, admin, API/COS.
 - Перенести DI factories у `Bootstrap` за доменами; legacy service IDs тимчасово залишити aliases/decorators.
-- Зробити `Interfaces/Web/Controller` базовЯою HTTP межею; прибрати service-locator access із нових контролерів через constructor/factory wiring, де дозволяє Phalcon integration.
+- Зробити `Interfaces/Web/Controller` базовою HTTP межею; прибрати service-locator access із нових контролерів через constructor/factory wiring, де дозволяє Phalcon integration.
 - Для кожного endpoint створити явний request DTO і view/response model на межі Interface.
 
 Критерій виходу: новий маршрут можна додати без редагування legacy `Module.php`; чинні URL не змінені.

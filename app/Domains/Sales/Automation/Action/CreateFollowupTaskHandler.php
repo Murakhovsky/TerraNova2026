@@ -18,6 +18,8 @@ final readonly class CreateFollowupTaskHandler implements ActionHandlerInterface
         'sales.create_followup_task',
         'sales.escalate_overdue_followup',
         'sales.request_manager_review',
+        'sales.request_document',
+        'sales.schedule_meeting',
     ];
 
     public function __construct(private CrmGatewayInterface $crm)

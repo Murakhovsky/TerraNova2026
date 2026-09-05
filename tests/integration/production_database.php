@@ -41,6 +41,7 @@ $requiredMigrations = [
     '20260826_000018_remove_obsolete_cos_policies',
     '20260826_000019_tenant_public_identifiers',
     '20260830_000020_diagnostic_domain',
+    '20260904_000021_sales_runtime_workspace',
 ];
 $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_migrations WHERE migration IN (' . implode(',', array_fill(0, count($requiredMigrations), '?')) . ')');
 $statement->execute($requiredMigrations);
@@ -50,6 +51,8 @@ $requiredTables = [
     'cos_organizations', 'cos_organization_memberships', 'cos_crm_inbox',
     'cos_configuration_provisions', 'cos_operational_metrics',
     'diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records',
+    'sales_pipelines', 'sales_pipeline_stages', 'sales_pipeline_transitions', 'sales_communications',
+    'cos_action_outcomes', 'sales_metric_snapshots',
 ];
 $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
 $tables = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN (' . $placeholders . ')');

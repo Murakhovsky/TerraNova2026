@@ -116,7 +116,9 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             'public_id' => $this->nextPublicId($organizationId, 'tn_client_cases', 'CC'),
             'person_id' => $personId,
         ] + $case);
-        return (int) $this->connection->lastInsertId();
+        $caseId = (int) $this->connection->lastInsertId();
+        $this->syncCanonicalStage($organizationId, $caseId, (string) $case['stage']);
+        return $caseId;
     }
 
     public function updateCase(string $organizationId, int $caseId, array $case): bool
@@ -128,6 +130,7 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             parameters_json=:parameters_json,next_contact_at=:next_contact_at,closed_at=:closed_at,updated_at=NOW()
             WHERE id=:id AND organization_id=:organization_id');
         $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + $case);
+        $this->syncCanonicalStage($organizationId, $caseId, (string) $case['stage']);
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 
@@ -137,6 +140,7 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             priority=:priority,assigned_user_id=:assigned_user_id,next_contact_at=:next_contact_at,
             closed_at=:closed_at,updated_at=NOW() WHERE id=:id AND organization_id=:organization_id');
         $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + $changes);
+        $this->syncCanonicalStage($organizationId, $caseId, (string) $changes['stage']);
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 
@@ -151,7 +155,10 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             'client_case_id_check' => $caseId, 'organization_id_check' => $organizationId,
         ] + $activity);
         if ($statement->rowCount() === 0) throw new \RuntimeException('Client case does not belong to the organization.');
-        return (int) $this->connection->lastInsertId();
+        $activityId = (int) $this->connection->lastInsertId();
+        $this->connection->prepare('UPDATE tn_client_cases SET last_activity_at=NOW() WHERE id=:id AND organization_id=:organization_id')
+            ->execute(['id' => $caseId, 'organization_id' => $organizationId]);
+        return $activityId;
     }
 
     public function clearNextContact(string $organizationId, int $caseId): void
@@ -187,7 +194,25 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             assigned_user_id=COALESCE(:assigned_user_id,assigned_user_id),next_contact_at=:next_contact_at,
             closed_at=:closed_at,updated_at=NOW() WHERE id=:id AND organization_id=:organization_id');
         $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + $changes);
+        $this->syncCanonicalStage($organizationId, $caseId, (string) $changes['stage']);
         return $this->exists('tn_client_cases', $organizationId, $caseId);
+    }
+
+    private function syncCanonicalStage(string $organizationId, int $caseId, string $legacyStage): void
+    {
+        $code = match ($legacyStage) {
+            'new' => 'NEW', 'qualification', 'need_defined' => 'QUALIFIED', 'matching' => 'PROPOSAL',
+            'viewing' => 'MEETING', 'negotiation' => 'NEGOTIATION', 'deal', 'aftercare' => 'WON',
+            'lost' => 'LOST', default => 'CONTACTED',
+        };
+        $statement = $this->connection->prepare(
+            'UPDATE tn_client_cases c '
+            . 'INNER JOIN sales_pipelines p ON p.organization_id=c.organization_id AND p.code="default-sales" '
+            . 'INNER JOIN sales_pipeline_stages s ON s.pipeline_id=p.id AND s.code=:stage_code '
+            . 'SET c.pipeline_id=p.id,c.stage_id=s.id,c.probability=COALESCE(c.probability,s.probability_default),'
+            . 'c.deal_value=COALESCE(c.deal_value,c.budget_max) WHERE c.id=:case_id AND c.organization_id=:organization_id'
+        );
+        $statement->execute(['stage_code' => $code, 'case_id' => $caseId, 'organization_id' => $organizationId]);
     }
 
     public function attachInboundRequest(string $organizationId, int $caseId, int $personId, int $requestId, ?int $userId): bool

@@ -21,11 +21,22 @@ final readonly class MysqlSalesRuleContextProvider implements RuleContextProvide
         ]];
         if (in_array($event->aggregateType, ['deal', 'client_case'], true)) {
             $statement = $this->connection->prepare(
-                'SELECT id, public_id, status, stage, priority, next_contact_at, assigned_user_id, updated_at '
+                'SELECT id, public_id, status, stage, priority, next_contact_at, assigned_user_id, '
+                . 'last_activity_at, deal_value, lost_reason, updated_at '
                 . 'FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
             );
             $statement->execute(['id' => $event->aggregateId, 'organization_id' => $event->organizationId]);
             $deal = $statement->fetch(PDO::FETCH_ASSOC) ?: [];
+            if ($deal !== []) {
+                $now = time();
+                $lastActivity = isset($deal['last_activity_at']) ? strtotime((string) $deal['last_activity_at']) : false;
+                $updatedAt = isset($deal['updated_at']) ? strtotime((string) $deal['updated_at']) : false;
+                $deal['no_activity_48h'] = $lastActivity === false || $lastActivity <= $now - 172800;
+                $deal['stuck_in_stage'] = $updatedAt !== false && $updatedAt <= $now - 604800;
+                $deal['high_value'] = (float) ($deal['deal_value'] ?? 0) >= 100000;
+                $deal['lost_reason_missing'] = strtolower((string) ($deal['status'] ?? '')) === 'lost'
+                    && trim((string) ($deal['lost_reason'] ?? '')) === '';
+            }
             $context['deal'] = $deal;
             $context['client_case'] = $deal;
         } elseif ($event->aggregateType === 'lead') {

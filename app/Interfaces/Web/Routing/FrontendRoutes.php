@@ -43,6 +43,9 @@ final class FrontendRoutes
         $router->add('/client-case/:action/:params', self::target('Interfaces\Web\Controller', 'client_case', 1) + ['params' => 2]);
         self::add($router, 'add', '/client-case/:action', 'Interfaces\Web\Controller', 'client_case', 1);
         self::add($router, 'add', '/client-case', 'Interfaces\Web\Controller', 'client_case', 'index');
+        self::add($router, 'addGet', '/sales/dashboard', 'Interfaces\Web\Controller', 'sales', 'dashboard');
+        self::add($router, 'addGet', '/sales/pipeline', 'Interfaces\Web\Controller', 'sales', 'pipeline');
+        self::add($router, 'addGet', '/sales/today', 'Interfaces\Web\Controller', 'sales', 'today');
 
         self::add($router, 'addPost', '/cos/action/{id:[a-f0-9]{32}}/execute', 'Interfaces\Web\Controller', 'cos', 'execute');
         self::add($router, 'addPost', '/cos/approval/{id:[a-f0-9]{32}}/approve', 'Interfaces\Web\Controller', 'cos', 'approve');
@@ -55,6 +58,26 @@ final class FrontendRoutes
         self::add($router, 'addPost', '/api/approvals/{id:[a-f0-9]{32}}/approve', 'Interfaces\Api\Controller', 'approval', 'approve');
         self::add($router, 'addPost', '/api/approvals/{id:[a-f0-9]{32}}/reject', 'Interfaces\Api\Controller', 'approval', 'reject');
         self::add($router, 'addGet', '/api/health', 'Interfaces\Api\Controller', 'health', 'index');
+        self::add($router, 'addGet', '/api/sales/dashboard', 'Interfaces\Api\Controller', 'sales', 'dashboard');
+        self::add($router, 'addGet', '/api/sales/leads', 'Interfaces\Api\Controller', 'sales', 'leads');
+        self::add($router, 'addGet', '/api/sales/deals', 'Interfaces\Api\Controller', 'sales', 'deals');
+        self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}', 'Interfaces\Api\Controller', 'sales', 'deal');
+        self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}/timeline', 'Interfaces\Api\Controller', 'sales', 'timeline');
+        self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}/intelligence', 'Interfaces\Api\Controller', 'sales', 'intelligence');
+        self::add($router, 'addGet', '/api/sales/pipelines', 'Interfaces\Api\Controller', 'sales', 'pipelines');
+        self::add($router, 'addGet', '/api/sales/today', 'Interfaces\Api\Controller', 'sales', 'today');
+        self::add($router, 'addGet', '/api/sales/metrics', 'Interfaces\Api\Controller', 'sales', 'metrics');
+        self::add($router, 'addPost', '/api/sales/actions/{id:[a-f0-9]{32}}/outcomes', 'Interfaces\Api\Controller', 'sales', 'recordOutcome');
+        self::add($router, 'addGet', '/api/cos/actions', 'Interfaces\Api\Controller', 'cos_runtime', 'actions');
+        self::add($router, 'addGet', '/api/cos/actions/{id:[a-f0-9]{32}}', 'Interfaces\Api\Controller', 'cos_runtime', 'action');
+        self::add($router, 'addPost', '/api/cos/actions/{id:[a-f0-9]{32}}/execute', 'Interfaces\Api\Controller', 'cos_runtime', 'execute');
+        self::add($router, 'addGet', '/api/cos/approvals', 'Interfaces\Api\Controller', 'cos_runtime', 'approvals');
+        self::add($router, 'addPost', '/api/cos/approvals/{id:[a-f0-9]{32}}/approve', 'Interfaces\Api\Controller', 'cos_runtime', 'approve');
+        self::add($router, 'addPost', '/api/cos/approvals/{id:[a-f0-9]{32}}/reject', 'Interfaces\Api\Controller', 'cos_runtime', 'reject');
+        self::add($router, 'addGet', '/api/cos/agents', 'Interfaces\Api\Controller', 'cos_runtime', 'agents');
+        self::add($router, 'addGet', '/api/cos/rules', 'Interfaces\Api\Controller', 'cos_runtime', 'rules');
+        self::add($router, 'addGet', '/api/cos/events', 'Interfaces\Api\Controller', 'cos_runtime', 'events');
+        self::add($router, 'addGet', '/api/cos/audit', 'Interfaces\Api\Controller', 'cos_runtime', 'audit');
         self::add($router, 'addPost', '/api/integrations/{organization:[a-zA-Z0-9_-]+}/crm/{provider:[a-zA-Z0-9_-]+}/webhook', 'Interfaces\Api\Controller', 'crm_webhook', 'receive');
 
         foreach (['economy', 'games', 'users'] as $deprecatedModule) {

@@ -36,9 +36,20 @@ final readonly class MysqlSalesActivityRepository implements SalesActivityReposi
         }
         $activityId = (string) $this->connection->lastInsertId();
         $this->connection->prepare(
-            'UPDATE tn_client_cases SET next_contact_at = NULL '
+            'UPDATE tn_client_cases SET next_contact_at = NULL, last_activity_at = NOW() '
             . 'WHERE id = :case_id AND organization_id = :organization_id'
         )->execute(['case_id' => $command->dealReference, 'organization_id' => $command->organizationId]);
+        $this->connection->prepare(
+            'INSERT INTO sales_communications '
+            . '(id, organization_id, deal_id, person_id, activity_id, channel, direction, sender, recipient, body, external_id, metadata, occurred_at) '
+            . 'VALUES (:id, :organization_id, :deal_id, :person_id, :activity_id, "PHONE", "OUTBOUND", :sender, :recipient, :body, :external_id, :metadata, NOW())'
+        )->execute([
+            'id' => bin2hex(random_bytes(16)), 'organization_id' => $command->organizationId,
+            'deal_id' => $command->dealReference, 'person_id' => $command->personReference, 'activity_id' => $activityId,
+            'sender' => $command->actorId, 'recipient' => (string) $command->personReference, 'body' => $command->body,
+            'external_id' => 'call:' . $command->eventId,
+            'metadata' => json_encode(['duration_seconds' => $command->durationSeconds, 'result' => $command->result], JSON_THROW_ON_ERROR),
+        ]);
         return $activityId;
     }
 }

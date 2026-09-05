@@ -14,6 +14,9 @@ $canSubmit = in_array($role, ['seller', 'realtor', 'developer', 'partner', 'mana
 
 if ($isTeam) {
     $navItems = [
+        ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Sales'],
+        ['key' => 'today', 'path' => 'sales/today', 'label' => 'Today'],
+        ['key' => 'pipeline', 'path' => 'sales/pipeline', 'label' => 'Pipeline'],
         ['key' => 'admin', 'path' => 'admin', 'label' => 'Огляд'],
         ['key' => 'objects', 'path' => 'property/manage', 'label' => 'Обʼєкти'],
         ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
@@ -25,6 +28,7 @@ if ($isTeam) {
         ['key' => 'spatial', 'path' => 'spatial/manage', 'label' => '3D'],
         ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Каталог'],
         ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Кабінет'],
+        ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'COS'],
     ];
 } else {
     $navItems = [

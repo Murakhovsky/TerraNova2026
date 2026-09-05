@@ -22,6 +22,11 @@ final class SalesPolicyCatalog
             new ActionPolicy($this->id($organizationId, 'policy-financing-followup-approval-v1'), $organizationId, 'sales.send_financing_followup', [], PolicyDecision::ApprovalRequired, 10),
             new ActionPolicy($this->id($organizationId, 'policy-manager-review-auto-v1'), $organizationId, 'sales.request_manager_review', [], PolicyDecision::Auto, 10),
             new ActionPolicy($this->id($organizationId, 'policy-update-deal-auto-v1'), $organizationId, 'sales.update_deal', [], PolicyDecision::Auto, 10),
+            new ActionPolicy($this->id($organizationId, 'policy-create-followup-auto-v1'), $organizationId, 'sales.create_followup', [], PolicyDecision::Auto, 10),
+            new ActionPolicy($this->id($organizationId, 'policy-change-stage-auto-v1'), $organizationId, 'sales.change_stage', [], PolicyDecision::Auto, 10),
+            new ActionPolicy($this->id($organizationId, 'policy-assign-owner-auto-v1'), $organizationId, 'sales.assign_owner', [], PolicyDecision::Auto, 10),
+            new ActionPolicy($this->id($organizationId, 'policy-request-document-approval-v1'), $organizationId, 'sales.request_document', [], PolicyDecision::ApprovalRequired, 10),
+            new ActionPolicy($this->id($organizationId, 'policy-schedule-meeting-auto-v1'), $organizationId, 'sales.schedule_meeting', [], PolicyDecision::Auto, 10),
         ];
     }
 

@@ -31,12 +31,12 @@
     ]
   },
   "frontend/entrypoints/terranova-club.js": {
-    "file": "assets/terranova-club-BT0yvB2s.js",
+    "file": "assets/terranova-club-CXeQ9qmy.js",
     "name": "terranova-club",
     "src": "frontend/entrypoints/terranova-club.js",
     "isEntry": true,
     "css": [
-      "assets/terranova-club-CFu7Bq8r.css",
+      "assets/terranova-club-RtvNTwVB.css",
       "assets/tokens-LEZJCtf5.css"
     ]
   },

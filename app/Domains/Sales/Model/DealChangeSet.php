@@ -14,7 +14,9 @@ final readonly class DealChangeSet
 
     public static function fromArray(array $input): self
     {
-        $changes = array_intersect_key($input, array_flip(['stage', 'status', 'priority', 'next_contact_at']));
+        $changes = array_intersect_key($input, array_flip([
+            'stage', 'status', 'priority', 'next_contact_at', 'assigned_user_id', 'deal_value', 'probability', 'expected_close_at',
+        ]));
         if ($changes === []) {
             throw new InvalidArgumentException('No allowed Deal fields supplied.');
         }
@@ -22,10 +24,21 @@ final readonly class DealChangeSet
         self::assertOneOf($changes, 'stage', PipelineStage::values());
         self::assertOneOf($changes, 'status', ClientCaseStatus::values());
         self::assertOneOf($changes, 'priority', SalesPriority::values());
-        if (isset($changes['next_contact_at']) && $changes['next_contact_at'] !== '') {
-            $changes['next_contact_at'] = (new DateTimeImmutable((string) $changes['next_contact_at']))->format('Y-m-d H:i:s');
-        } elseif (array_key_exists('next_contact_at', $changes)) {
-            $changes['next_contact_at'] = null;
+        foreach (['next_contact_at', 'expected_close_at'] as $dateField) {
+            if (isset($changes[$dateField]) && $changes[$dateField] !== '') {
+                $changes[$dateField] = (new DateTimeImmutable((string) $changes[$dateField]))->format('Y-m-d H:i:s');
+            } elseif (array_key_exists($dateField, $changes)) {
+                $changes[$dateField] = null;
+            }
+        }
+        if (array_key_exists('assigned_user_id', $changes)) $changes['assigned_user_id'] = max(1, (int) $changes['assigned_user_id']);
+        if (array_key_exists('deal_value', $changes)) {
+            $changes['deal_value'] = (float) $changes['deal_value'];
+            if ($changes['deal_value'] < 0) throw new InvalidArgumentException('Deal value cannot be negative.');
+        }
+        if (array_key_exists('probability', $changes)) {
+            $changes['probability'] = (float) $changes['probability'];
+            if ($changes['probability'] < 0 || $changes['probability'] > 100) throw new InvalidArgumentException('Deal probability must be between 0 and 100.');
         }
 
         return new self($changes);

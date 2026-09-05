@@ -21,7 +21,10 @@ use Domains\Sales\Application\UseCase\UpdateInboundClientCaseRequest;
 use Domains\Sales\Automation\Job\CrmInboxJobHandler;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository;
+use Domains\Sales\Application\UseCase\RecordActionOutcome;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel;
 use Bootstrap\InboundCaseResolverAdapter;
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
@@ -44,6 +47,15 @@ $di->setShared('salesCompleteCall', fn (): CompleteSalesCall => new CompleteSale
 $di->setShared('salesClientCaseReadModel', fn (): MysqlClientCaseReadModel => new MysqlClientCaseReadModel(
     $this->getShared('databaseService')->connection(),
     $this->getShared('organizationContext')->id(),
+));
+$di->setShared('salesWorkspaceReadModel', fn (): MysqlSalesWorkspaceReadModel => new MysqlSalesWorkspaceReadModel(
+    $this->getShared('databaseService')->connection(),
+));
+$di->setShared('salesOutcomeRepository', fn (): MysqlSalesOutcomeRepository => new MysqlSalesOutcomeRepository(
+    $this->getShared('databaseService')->connection(),
+));
+$di->setShared('salesRecordActionOutcome', fn (): RecordActionOutcome => new RecordActionOutcome(
+    $this->getShared('salesOutcomeRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
 ));
 $di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepository => new MysqlClientCaseCommandRepository(
     $this->getShared('databaseService')->connection(),
