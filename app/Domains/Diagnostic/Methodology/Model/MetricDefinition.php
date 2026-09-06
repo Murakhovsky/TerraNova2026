@@ -14,6 +14,11 @@ final readonly class MetricDefinition
         public ?string $normalization = null,
         public ?array $expectedRange = null,
         public string $aggregation = 'average',
+        public ?string $formula = null,
+        public array $inputFacts = [],
+        public ?string $timeWindow = null,
+        public int $minimumSampleSize = 1,
+        public ?string $benchmarkReference = null,
     ) {
     }
 }

@@ -24,6 +24,8 @@ final class DiagnosticSession
         private readonly string $packId,
         private readonly int $packVersion,
         private readonly DiagnosticTarget $target,
+        private readonly ?string $methodologyVersion = null,
+        private readonly string $schemaVersion = 'diagnostic-pack-schema:1',
     ) {
         if (trim($id) === '' || trim($packId) === '' || $packVersion < 1) {
             throw new InvalidArgumentException('Session id/pack id must not be empty and pack version must be positive.');
@@ -45,8 +47,10 @@ final class DiagnosticSession
         int $lockVersion,
         array $evidence,
         array $records,
+        ?string $methodologyVersion = null,
+        string $schemaVersion = 'diagnostic-pack-schema:1',
     ): self {
-        $session = new self($id, $packId, $packVersion, $target);
+        $session = new self($id, $packId, $packVersion, $target, $methodologyVersion, $schemaVersion);
         $session->status = $status;
         $session->startedAt = $startedAt;
         $session->completedAt = $completedAt;
@@ -153,6 +157,8 @@ final class DiagnosticSession
     public function id(): string { return $this->id; }
     public function packId(): string { return $this->packId; }
     public function packVersion(): int { return $this->packVersion; }
+    public function methodologyVersion(): string { return $this->methodologyVersion ?? (string) $this->packVersion; }
+    public function schemaVersion(): string { return $this->schemaVersion; }
     public function target(): DiagnosticTarget { return $this->target; }
     public function status(): DiagnosticSessionStatus { return $this->status; }
     public function startedAt(): ?DateTimeImmutable { return $this->startedAt; }

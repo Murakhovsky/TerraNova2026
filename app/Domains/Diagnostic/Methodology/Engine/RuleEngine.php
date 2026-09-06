@@ -59,7 +59,7 @@ final class RuleEngine
             $observed = $value?->value;
         }
         if ($operator === 'exists') return $exists;
-        if ($operator === 'not_exists') return !$exists;
+        if ($operator === 'not_exists' || $operator === 'missing') return !$exists;
         if (!$exists) return false;
         $expected = $node['value'] ?? $node['values'] ?? null;
         return match ($operator) {
@@ -71,6 +71,7 @@ final class RuleEngine
             '<=', 'lte' => $observed <= $expected,
             'between' => is_array($expected) && count($expected) === 2 && $observed >= $expected[0] && $observed <= $expected[1],
             'in' => is_array($expected) && in_array($observed, $expected, true),
+            'not_in' => is_array($expected) && !in_array($observed, $expected, true),
             default => throw new InvalidArgumentException('Unsupported methodology rule operator: ' . $operator),
         };
     }

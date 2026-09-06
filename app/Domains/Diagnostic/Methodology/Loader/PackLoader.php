@@ -46,6 +46,11 @@ final class PackLoader
                     (float) ($item['minimum_confidence'] ?? 0),
                     $requiredWeights,
                     $optionalWeights,
+                    is_array($item['applicability'] ?? null) ? $item['applicability'] : [],
+                    $this->stringList($item['good_practices'] ?? []),
+                    $this->stringList($item['bad_practices'] ?? []),
+                    (string) ($item['description'] ?? ''),
+                    is_numeric($item['importance'] ?? 1) ? (float) ($item['importance'] ?? 1) : (string) $item['importance'],
                 );
             }, $this->list($data, 'criteria')),
             array_map(fn (array $item): MetricDefinition => new MetricDefinition(
@@ -57,6 +62,11 @@ final class PackLoader
                 isset($item['normalization']) ? (string) $item['normalization'] : null,
                 isset($item['expected_range']) && is_array($item['expected_range']) ? $item['expected_range'] : null,
                 (string) ($item['aggregation'] ?? 'average'),
+                isset($item['formula_expression']) ? (string) $item['formula_expression'] : (($item['input_facts'] ?? []) !== [] && isset($item['formula']) ? (string) $item['formula'] : null),
+                $this->stringList($item['input_facts'] ?? []),
+                isset($item['time_window']) ? (string) $item['time_window'] : null,
+                max(1, (int) ($item['minimum_sample_size'] ?? 1)),
+                isset($item['benchmark_reference']) ? (string) $item['benchmark_reference'] : null,
             ), $this->list($data, 'metrics')),
             array_map(fn (array $item): RuleDefinition => new RuleDefinition(
                 (string) ($item['id'] ?? ''),
@@ -104,6 +114,8 @@ final class PackLoader
                 isset($item['evidence_requirement_id']) ? (string) $item['evidence_requirement_id'] : null,
                 (float) ($item['cost'] ?? 1),
                 (string) ($item['area_id'] ?? ''),
+                $this->stringList($item['allowed_diagnostic_modes'] ?? []),
+                (bool) ($item['enabled'] ?? true),
             ), $this->list($data, 'questions')),
             array_map(fn (array $item): EvidenceRequirementDefinition => new EvidenceRequirementDefinition(
                 (string) ($item['id'] ?? ''),
@@ -114,6 +126,9 @@ final class PackLoader
                 (float) ($item['minimum_reliability'] ?? 0),
                 (float) ($item['minimum_directness'] ?? 0),
                 (bool) ($item['required'] ?? true),
+                max(1, (int) ($item['minimum_sample_size'] ?? 1)),
+                isset($item['maximum_age']) ? (string) $item['maximum_age'] : null,
+                (bool) ($item['direct_evidence_required'] ?? false),
             ), $this->list($data, 'evidence_requirements')),
             array_map(fn (array $item): RecommendationDefinition => new RecommendationDefinition(
                 (string) ($item['id'] ?? ''),
@@ -129,6 +144,10 @@ final class PackLoader
                 $this->stringList($item['success_metrics'] ?? []),
                 $this->stringList($item['dependencies'] ?? []),
                 (string) ($item['owner_role'] ?? 'Sales Manager'),
+                (string) ($item['description'] ?? ''),
+                $this->stringList($item['target_findings'] ?? []),
+                (string) ($item['cost_level'] ?? 'medium'),
+                isset($item['implementation_time']) ? (string) $item['implementation_time'] : null,
             ), $this->list($data, 'recommendations')),
             array_map(fn (array $item): BenchmarkDefinition => new BenchmarkDefinition(
                 (string)($item['id']??''),(string)($item['metric_id']??''),(string)($item['name']??''),

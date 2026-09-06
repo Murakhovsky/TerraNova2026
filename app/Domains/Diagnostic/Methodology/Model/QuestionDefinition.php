@@ -17,6 +17,8 @@ final readonly class QuestionDefinition
         public ?string $evidenceRequirementId = null,
         public float $cost = 1.0,
         public string $areaId = '',
+        public array $allowedDiagnosticModes = [],
+        public bool $enabled = true,
     ) {
     }
 }

@@ -20,6 +20,7 @@ class MethodologyEngine
         private readonly RuleEngine $ruleEngine = new RuleEngine(),
         private readonly ScoringEngine $scoringEngine = new ScoringEngine(),
         private readonly DependencyEngine $dependencyEngine = new DependencyEngine(),
+        private readonly ApplicabilityEngine $applicabilityEngine = new ApplicabilityEngine(),
     ) {
     }
 
@@ -33,6 +34,10 @@ class MethodologyEngine
 
         $assessments = []; $criterionScores = [];
         foreach ($pack->criteria as $criterion) {
+            if (!$this->applicabilityEngine->applies($criterion->applicability, $input)) {
+                $assessments[$criterion->id] = new CriterionAssessment($criterion->id, null, new Coverage(1.0, 'NOT_APPLICABLE'), 1.0, [], [], false);
+                continue;
+            }
             $coverage = $this->coverageEngine->evaluate($criterion, $input);
             $criterionConfidence = $this->confidenceEngine->evaluate($criterion, $input);
             $eligible = $coverage->ratio >= $criterion->minimumCoverage
@@ -51,7 +56,7 @@ class MethodologyEngine
             $pack->rules,
             static function ($rule) use ($assessments, $pack): bool {
                 $assessment = $assessments[$rule->criterionId] ?? null;
-                if ($assessment === null) return false;
+                if ($assessment === null || !$assessment->applicable) return false;
                 foreach ($pack->criteria as $criterion) {
                     if ($criterion->id === $rule->criterionId) {
                         return $assessment->coverage->ratio >= $criterion->minimumCoverage
@@ -66,18 +71,18 @@ class MethodologyEngine
             $criterionFindings = array_values(array_filter($findings, static fn ($finding): bool => $finding->criterionId === $id));
             $assessments[$id] = new CriterionAssessment(
                 $id, $assessment->score, $assessment->coverage, $assessment->confidence,
-                $criterionFindings, $assessment->evidenceIds,
+                $criterionFindings, $assessment->evidenceIds, $assessment->applicable,
             );
         }
         $sectionScores = $this->scoringEngine->sectionScores($criterionScores, $pack->criteria, $pack->sections);
         $criterionWeights = [];
-        foreach ($pack->criteria as $criterion) $criterionWeights[$criterion->id] = $criterion->weight;
+        foreach ($pack->criteria as $criterion) if (($assessments[$criterion->id]??null)?->applicable) $criterionWeights[$criterion->id] = $criterion->weight;
         $totalWeight = array_sum($criterionWeights);
         $coverageRatio = $totalWeight > 0
-            ? array_sum(array_map(static fn ($assessment): float => $assessment->coverage->ratio * $criterionWeights[$assessment->criterionId], $assessments)) / $totalWeight
+            ? array_sum(array_map(static fn ($assessment): float => $assessment->applicable ? $assessment->coverage->ratio * ($criterionWeights[$assessment->criterionId]??0) : 0.0, $assessments)) / $totalWeight
             : 1.0;
         $confidence = $totalWeight > 0
-            ? array_sum(array_map(static fn ($assessment): float => $assessment->confidence * $criterionWeights[$assessment->criterionId], $assessments)) / $totalWeight
+            ? array_sum(array_map(static fn ($assessment): float => $assessment->applicable ? $assessment->confidence * ($criterionWeights[$assessment->criterionId]??0) : 0.0, $assessments)) / $totalWeight
             : 0.0;
         $availableNodes = array_fill_keys(array_merge(array_keys($input->metrics), array_keys($assessments), array_keys($sectionScores)), true);
 

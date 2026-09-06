@@ -46,6 +46,7 @@ final class FrontendRoutes
         self::add($router, 'addGet', '/sales/dashboard', 'Interfaces\Web\Controller', 'sales', 'dashboard');
         self::add($router, 'addGet', '/sales/pipeline', 'Interfaces\Web\Controller', 'sales', 'pipeline');
         self::add($router, 'addGet', '/sales/today', 'Interfaces\Web\Controller', 'sales', 'today');
+        self::add($router, 'addGet', '/admin/diagnostics/methodology-studio', 'Interfaces\Web\Controller', 'methodology_studio', 'index');
 
         self::add($router, 'addPost', '/cos/action/{id:[a-f0-9]{32}}/execute', 'Interfaces\Web\Controller', 'cos', 'execute');
         self::add($router, 'addPost', '/cos/approval/{id:[a-f0-9]{32}}/approve', 'Interfaces\Web\Controller', 'cos', 'approve');
@@ -58,6 +59,22 @@ final class FrontendRoutes
         self::add($router, 'addPost', '/api/approvals/{id:[a-f0-9]{32}}/approve', 'Interfaces\Api\Controller', 'approval', 'approve');
         self::add($router, 'addPost', '/api/approvals/{id:[a-f0-9]{32}}/reject', 'Interfaces\Api\Controller', 'approval', 'reject');
         self::add($router, 'addGet', '/api/health', 'Interfaces\Api\Controller', 'health', 'index');
+        self::add($router, 'addGet', '/api/admin/diagnostics/packs', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'packs');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'packs');
+        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'pack');
+        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'versions');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities/{type:[a-z_]+}', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'entity');
+        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'entities');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities/{type:[a-z_]+}/{entity:[a-z0-9_.-]+}/delete', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'deleteEntity');
+        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/scenarios', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'scenarios');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/scenarios', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'scenario');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/validate', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'validate');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/simulate', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'simulate');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/clone', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'clone');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/publish', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'publish');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/regression', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'regression');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/archive', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'archive');
+        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/activate', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'activate');
         self::add($router, 'addGet', '/api/sales/dashboard', 'Interfaces\Api\Controller', 'sales', 'dashboard');
         self::add($router, 'addGet', '/api/sales/leads', 'Interfaces\Api\Controller', 'sales', 'leads');
         self::add($router, 'addGet', '/api/sales/deals', 'Interfaces\Api\Controller', 'sales', 'deals');

@@ -20,6 +20,10 @@ final readonly class RecommendationDefinition
         public array $successMetrics,
         public array $dependencies = [],
         public string $ownerRole = 'Sales Manager',
+        public string $description = '',
+        public array $targetFindings = [],
+        public string $costLevel = 'medium',
+        public ?string $implementationTime = null,
     ) {
     }
 }

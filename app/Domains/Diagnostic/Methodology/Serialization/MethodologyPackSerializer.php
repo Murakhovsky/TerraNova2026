@@ -26,12 +26,18 @@ final class MethodologyPackSerializer
                 'optional' => array_map(static fn (string $ref): array => ['ref' => $ref, 'weight' => $item->optionalWeights[$ref] ?? 1.0], $item->optional),
                 'weight' => $item->weight, 'minimum_coverage' => $item->minimumCoverage,
                 'minimum_confidence' => $item->minimumConfidence,
+                'applicability' => $item->applicability, 'good_practices' => $item->goodPractices,
+                'bad_practices' => $item->badPractices, 'description' => $item->description,
+                'importance' => $item->importance,
             ], $pack->criteria),
             'metrics' => array_map(static fn ($item): array => [
                 'id' => $item->id, 'name' => $item->name, 'type' => $item->type,
                 'unit' => $item->unit, 'direction' => $item->direction,
                 'normalization' => $item->normalization, 'expected_range' => $item->expectedRange,
                 'aggregation' => $item->aggregation,
+                'formula_expression' => $item->formula, 'input_facts' => $item->inputFacts,
+                'time_window' => $item->timeWindow, 'minimum_sample_size' => $item->minimumSampleSize,
+                'benchmark_reference' => $item->benchmarkReference,
             ], $pack->metrics),
             'facts' => array_map(static fn ($item): array => [
                 'id' => $item->id, 'name' => $item->name, 'type' => $item->type,
@@ -59,12 +65,15 @@ final class MethodologyPackSerializer
                 'follow_up_conditions' => $item->followUpConditions,
                 'evidence_requirement_id' => $item->evidenceRequirementId,
                 'cost' => $item->cost, 'area_id' => $item->areaId,
+                'allowed_diagnostic_modes' => $item->allowedDiagnosticModes, 'enabled' => $item->enabled,
             ], $pack->questions),
             'evidence_requirements' => array_map(static fn ($item): array => [
                 'id' => $item->id, 'criteria' => $item->criterionIds,
                 'accepted_source_types' => $item->acceptedSourceTypes, 'hierarchy' => $item->hierarchy,
                 'minimum_sources' => $item->minimumSources, 'minimum_reliability' => $item->minimumReliability,
                 'minimum_directness' => $item->minimumDirectness, 'required' => $item->required,
+                'minimum_sample_size' => $item->minimumSampleSize, 'maximum_age' => $item->maximumAge,
+                'direct_evidence_required' => $item->directEvidenceRequired,
             ], $pack->evidenceRequirements),
             'recommendations' => array_map(static fn ($item): array => [
                 'id' => $item->id, 'trigger_rules' => $item->triggerRules,
@@ -73,6 +82,8 @@ final class MethodologyPackSerializer
                 'expected_impact' => $item->expectedImpact, 'implementation_effort' => $item->implementationEffort,
                 'priority' => $item->priority, 'success_metrics' => $item->successMetrics,
                 'dependencies' => $item->dependencies, 'owner_role' => $item->ownerRole,
+                'description' => $item->description, 'target_findings' => $item->targetFindings,
+                'cost_level' => $item->costLevel, 'implementation_time' => $item->implementationTime,
             ], $pack->recommendations),
             'benchmarks'=>array_map(static fn($item):array=>['id'=>$item->id,'metric_id'=>$item->metricId,'name'=>$item->name,'segments'=>$item->segments,'bands'=>$item->bands,'unit'=>$item->unit,'source'=>$item->source,'valid_from'=>$item->validFrom,'valid_to'=>$item->validTo],$pack->benchmarks),
         ];

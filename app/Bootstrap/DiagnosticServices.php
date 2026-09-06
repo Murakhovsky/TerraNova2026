@@ -12,6 +12,8 @@ use Domains\Diagnostic\Application\UseCase\ReviseDiagnosticPack;
 use Domains\Diagnostic\Application\UseCase\StartDiagnosticSession;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository;
+use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyStudioRepository;
+use Domains\Diagnostic\Application\Service\MethodologyStudioService;
 
 $di->setShared('diagnosticPackRepository', fn (): MysqlDiagnosticPackRepository => new MysqlDiagnosticPackRepository(
     $this->getShared('databaseService')->connection(),
@@ -19,6 +21,8 @@ $di->setShared('diagnosticPackRepository', fn (): MysqlDiagnosticPackRepository 
 $di->setShared('diagnosticSessionRepository', fn (): MysqlDiagnosticSessionRepository => new MysqlDiagnosticSessionRepository(
     $this->getShared('databaseService')->connection(),
 ));
+$di->setShared('diagnosticMethodologyStudioRepository', fn (): MysqlMethodologyStudioRepository => new MysqlMethodologyStudioRepository($this->getShared('databaseService')->connection()));
+$di->setShared('diagnosticMethodologyStudio', fn (): MethodologyStudioService => new MethodologyStudioService($this->getShared('diagnosticMethodologyStudioRepository')));
 $di->setShared('diagnosticPublishPack', fn (): PublishDiagnosticPack => new PublishDiagnosticPack(
     $this->getShared('diagnosticPackRepository'),
     $this->getShared('eventBus'),

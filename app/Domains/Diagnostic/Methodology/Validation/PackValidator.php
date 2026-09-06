@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace Domains\Diagnostic\Methodology\Validation;
 
+use Domains\Diagnostic\Methodology\Engine\MetricExpressionEngine;
 use Domains\Diagnostic\Methodology\Model\MethodologyPack;
 
 final class PackValidator
 {
     private const METRIC_TYPES = ['integer', 'number', 'float', 'boolean', 'string', 'enum', 'percentage', 'ratio', 'duration', 'currency', 'date', 'datetime'];
     private const NUMERIC_TYPES = ['integer', 'number', 'float', 'percentage', 'ratio', 'duration', 'currency'];
-    private const OPERATORS = ['==', '=', 'eq', '!=', 'neq', '>', 'gt', '>=', 'gte', '<', 'lt', '<=', 'lte', 'between', 'in', 'exists', 'not_exists'];
+    private const OPERATORS = ['==', '=', 'eq', '!=', 'neq', '>', 'gt', '>=', 'gte', '<', 'lt', '<=', 'lte', 'between', 'in', 'not_in', 'exists', 'missing', 'not_exists'];
     private const DEPENDENCY_TYPES = ['requires', 'influences', 'blocks', 'depends_on', 'contributes_to'];
 
     public function validate(MethodologyPack $pack): ValidationResult
@@ -65,6 +66,16 @@ final class PackValidator
                 && (!is_numeric($metric->expectedRange['min']) || !is_numeric($metric->expectedRange['max']) || $metric->expectedRange['min'] > $metric->expectedRange['max'])) {
                 $errors[] = $this->issue('metric.invalid_range', 'metrics.' . $metric->id, 'Expected range min must not exceed max.');
             }
+            foreach ($metric->inputFacts as $factId) if (!isset($facts[$this->nodeId($factId)])) {
+                $errors[] = $this->issue('metric.unknown_input_fact', 'metrics.' . $metric->id, 'Metric references unknown fact: ' . $factId);
+            }
+            if ($metric->formula !== null) {
+                try {(new MetricExpressionEngine())->validate($metric->formula);}
+                catch (\Throwable $exception) {$errors[] = $this->issue('metric.invalid_formula', 'metrics.' . $metric->id, $exception->getMessage());}
+            }
+            if ($metric->benchmarkReference !== null && !isset($benchmarks[$metric->benchmarkReference])) {
+                $errors[] = $this->issue('metric.unknown_benchmark', 'metrics.' . $metric->id, 'Metric references unknown benchmark: ' . $metric->benchmarkReference);
+            }
         }
         foreach ($pack->facts as $fact) {
             if (trim($fact->name) === '') $errors[] = $this->issue('fact.empty_name', 'facts.' . $fact->id, 'Fact name must not be empty.');
@@ -101,6 +112,8 @@ final class PackValidator
             foreach ($criterion->required as $input) if ($criterion->requiredWeight($input) <= 0) {
                 $errors[] = $this->issue('criterion.invalid_input_weight', 'criteria.' . $criterion->id, 'Required input weights must be positive.');
             }
+            if ($criterion->applicability !== []) $this->validateConditions($criterion->applicability, 'criteria.' . $criterion->id . '.applicability', $metrics, $facts, $criteria, $errors);
+            if ((is_float($criterion->importance) && $criterion->importance <= 0) || (is_string($criterion->importance) && !in_array(strtolower($criterion->importance), ['low','medium','high','critical'], true))) $errors[] = $this->issue('criterion.invalid_importance', 'criteria.' . $criterion->id, 'Criterion importance must be positive or low/medium/high/critical.');
         }
         foreach ($pack->rules as $rule) {
             if (!isset($criteria[$rule->criterionId])) {
@@ -285,7 +298,7 @@ final class PackValidator
             $errors[] = $this->issue('rule.invalid_between', $path, 'between requires two ordered numeric values.');
         }
         if ($operator === 'in' && (!is_array($expected) || $expected === [])) $errors[] = $this->issue('rule.invalid_in', $path, 'in requires a non-empty value list.');
-        if (!in_array($operator, ['exists', 'not_exists', 'between', 'in'], true) && !array_key_exists('value', $node)) {
+        if (!in_array($operator, ['exists', 'missing', 'not_exists', 'between', 'in', 'not_in'], true) && !array_key_exists('value', $node)) {
             $errors[] = $this->issue('rule.missing_value', $path, 'Comparison operator requires a value.');
         }
         if (isset($metrics[$metricId]) && in_array($operator, ['>', 'gt', '>=', 'gte', '<', 'lt', '<=', 'lte', 'between'], true)

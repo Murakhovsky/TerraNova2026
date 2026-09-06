@@ -15,6 +15,9 @@ final readonly class EvidenceRequirementDefinition
         public float $minimumReliability = 0.0,
         public float $minimumDirectness = 0.0,
         public bool $required = true,
+        public int $minimumSampleSize = 1,
+        public ?string $maximumAge = null,
+        public bool $directEvidenceRequired = false,
     ) {
     }
 }

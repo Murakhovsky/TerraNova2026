@@ -30,6 +30,8 @@ final readonly class MysqlDiagnosticSessionRepository implements DiagnosticSessi
             'session_id' => $session->id(),
             'pack_id' => $session->packId(),
             'pack_version' => $session->packVersion(),
+            'methodology_version' => $session->methodologyVersion(),
+            'schema_version' => $session->schemaVersion(),
             'target_domain' => $session->target()->domain,
             'target_subject_type' => $session->target()->subjectType,
             'target_subject_id' => $session->target()->subjectId,
@@ -41,9 +43,9 @@ final readonly class MysqlDiagnosticSessionRepository implements DiagnosticSessi
         if ($expectedLockVersion === null) {
             $statement = $this->connection->prepare(
                 'INSERT INTO diagnostic_sessions '
-                . '(organization_id, session_id, pack_id, pack_version, target_domain, target_subject_type, '
+                . '(organization_id, session_id, pack_id, pack_version, methodology_version, schema_version, target_domain, target_subject_type, '
                 . 'target_subject_id, status, lock_version, started_at, completed_at) '
-                . 'VALUES (:organization_id, :session_id, :pack_id, :pack_version, :target_domain, :target_subject_type, '
+                . 'VALUES (:organization_id, :session_id, :pack_id, :pack_version, :methodology_version, :schema_version, :target_domain, :target_subject_type, '
                 . ':target_subject_id, :status, :lock_version, :started_at, :completed_at)'
             );
             $statement->execute($values);
@@ -51,6 +53,7 @@ final readonly class MysqlDiagnosticSessionRepository implements DiagnosticSessi
             $values['expected_lock_version'] = $expectedLockVersion;
             $statement = $this->connection->prepare(
                 'UPDATE diagnostic_sessions SET status = :status, lock_version = :lock_version, '
+                . 'methodology_version = :methodology_version, schema_version = :schema_version, '
                 . 'started_at = :started_at, completed_at = :completed_at '
                 . 'WHERE organization_id = :organization_id AND session_id = :session_id '
                 . 'AND pack_id = :pack_id AND pack_version = :pack_version '
@@ -86,6 +89,8 @@ final readonly class MysqlDiagnosticSessionRepository implements DiagnosticSessi
             (int) $row['lock_version'],
             $this->evidence($organizationId, $sessionId),
             $this->records($organizationId, $sessionId),
+            isset($row['methodology_version']) ? (string) $row['methodology_version'] : null,
+            isset($row['schema_version']) ? (string) $row['schema_version'] : 'diagnostic-pack-schema:1',
         );
     }
 

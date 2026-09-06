@@ -22,6 +22,11 @@ final readonly class CriterionDefinition
         public float $minimumConfidence = 0.0,
         public array $requiredWeights = [],
         public array $optionalWeights = [],
+        public array $applicability = [],
+        public array $goodPractices = [],
+        public array $badPractices = [],
+        public string $description = '',
+        public string|float $importance = 1.0,
     ) {
     }
 

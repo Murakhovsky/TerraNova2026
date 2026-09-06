@@ -13,6 +13,7 @@ final readonly class CriterionAssessment
         public float $confidence,
         public array $findings,
         public array $evidenceIds = [],
+        public bool $applicable = true,
     ) {
     }
 }
