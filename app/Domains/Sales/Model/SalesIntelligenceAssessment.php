@@ -12,7 +12,7 @@ final readonly class SalesIntelligenceAssessment
     {
         $data=$decision->evidence['sales_intelligence']??null;if(!is_array($data))throw new InvalidArgumentException('Missing sales_intelligence evidence.');
         foreach(['risk_reasons','objections','missing_information'] as $field)if(!isset($data[$field])||!is_array($data[$field]))throw new InvalidArgumentException('Sales intelligence '.$field.' must be an array.');
-        $next=$data['next_best_action']??'';$type=is_array($next)?(string)($next['type']??''):(string)$next;if($type!==''&&!in_array($type,$allowedActions,true))throw new InvalidArgumentException('Sales intelligence contains an unknown action.');
+        if(!array_key_exists('next_best_action',$data))throw new InvalidArgumentException('Sales intelligence next_best_action is required.');$next=$data['next_best_action'];$type=is_array($next)?(string)($next['type']??''):(string)$next;if($type===''||!in_array($type,$allowedActions,true))throw new InvalidArgumentException('Sales intelligence contains an unknown action.');
         return new self((string)($data['deal_health']??''),(string)($data['risk_level']??''),$data['risk_reasons'],(string)($data['opportunity_level']??''),(string)($data['customer_intent']??''),$data['objections'],$data['missing_information'],$next,(string)($data['recommended_timing']??''),$decision->confidence);
     }
 }

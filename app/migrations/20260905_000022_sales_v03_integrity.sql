@@ -15,6 +15,15 @@ INNER JOIN sales_pipeline_stages s ON s.pipeline_id=p.id AND s.code=CASE c.stage
     WHEN 'matching' THEN 'PROPOSAL' WHEN 'viewing' THEN 'MEETING' WHEN 'negotiation' THEN 'NEGOTIATION'
     WHEN 'deal' THEN 'WON' WHEN 'aftercare' THEN 'WON' WHEN 'lost' THEN 'LOST' ELSE 'CONTACTED' END
 SET c.pipeline_id=p.id,c.stage_id=s.id,c.probability=COALESCE(c.probability,s.probability_default)
-WHERE c.pipeline_id IS NULL OR c.stage_id IS NULL OR c.pipeline_id<>p.id OR c.stage_id<>s.id;
+WHERE c.pipeline_id IS NULL AND c.stage_id IS NULL;
+
+UPDATE tn_client_cases c
+INNER JOIN sales_pipelines p ON p.id=c.pipeline_id AND p.organization_id=c.organization_id AND p.status='ACTIVE'
+INNER JOIN sales_pipeline_stages s ON s.pipeline_id=p.id AND s.code=CASE c.stage
+    WHEN 'new' THEN 'NEW' WHEN 'qualification' THEN 'QUALIFIED' WHEN 'need_defined' THEN 'QUALIFIED'
+    WHEN 'matching' THEN 'PROPOSAL' WHEN 'viewing' THEN 'MEETING' WHEN 'negotiation' THEN 'NEGOTIATION'
+    WHEN 'deal' THEN 'WON' WHEN 'aftercare' THEN 'WON' WHEN 'lost' THEN 'LOST' ELSE 'CONTACTED' END
+SET c.stage_id=s.id,c.probability=COALESCE(c.probability,s.probability_default)
+WHERE c.pipeline_id IS NOT NULL AND c.stage_id IS NULL;
 
 INSERT IGNORE INTO tn_migrations (migration) VALUES ('20260905_000022_sales_v03_integrity');

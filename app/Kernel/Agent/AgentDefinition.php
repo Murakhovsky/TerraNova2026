@@ -16,5 +16,7 @@ final readonly class AgentDefinition
         public string $defaultExecutionMode = 'APPROVAL_REQUIRED',
         public string $defaultRiskLevel = 'MEDIUM',
         public array $evidenceSchemas = [],
+        /** @var class-string<\Kernel\Agent\Contract\AgentResultValidatorInterface>|null */
+        public ?string $resultValidatorClass = null,
     ) {}
 }

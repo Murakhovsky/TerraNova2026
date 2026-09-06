@@ -128,23 +128,22 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
     public function updateCase(string $organizationId, int $caseId, array $case): bool
     {
         $statement = $this->connection->prepare('UPDATE tn_client_cases SET
-            title=:title,type=:type,status=:status,stage=:stage,priority=:priority,assigned_user_id=:assigned_user_id,
+            title=:title,type=:type,priority=:priority,
             source=:source,property_type_id=:property_type_id,location_id=:location_id,budget_min=:budget_min,
             budget_max=:budget_max,currency=:currency,area_min=:area_min,area_max=:area_max,description=:description,
-            parameters_json=:parameters_json,next_contact_at=:next_contact_at,closed_at=:closed_at,updated_at=NOW()
+            parameters_json=:parameters_json,next_contact_at=:next_contact_at,updated_at=NOW()
             WHERE id=:id AND organization_id=:organization_id');
-        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + $case);
-        $this->syncCanonicalStage($organizationId, $caseId, (string) $case['stage']);
+        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_diff_key($case, array_flip(['stage','stage_id','pipeline_id','status','closed_at','assigned_user_id'])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 
     public function quickUpdate(string $organizationId, int $caseId, array $changes): bool
     {
-        $statement = $this->connection->prepare('UPDATE tn_client_cases SET status=:status,
-            priority=:priority,assigned_user_id=:assigned_user_id,next_contact_at=:next_contact_at,
-            closed_at=:closed_at,updated_at=NOW() WHERE id=:id AND organization_id=:organization_id');
+        $statement = $this->connection->prepare('UPDATE tn_client_cases SET
+            priority=:priority,next_contact_at=:next_contact_at,
+            updated_at=NOW() WHERE id=:id AND organization_id=:organization_id');
         $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_intersect_key($changes, array_flip([
-            'status','priority','assigned_user_id','next_contact_at','closed_at',
+            'priority','next_contact_at',
         ])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
@@ -202,23 +201,6 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             'status','assigned_user_id','next_contact_at','closed_at',
         ])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
-    }
-
-    private function syncCanonicalStage(string $organizationId, int $caseId, string $legacyStage): void
-    {
-        $code = match ($legacyStage) {
-            'new' => 'NEW', 'qualification', 'need_defined' => 'QUALIFIED', 'matching' => 'PROPOSAL',
-            'viewing' => 'MEETING', 'negotiation' => 'NEGOTIATION', 'deal', 'aftercare' => 'WON',
-            'lost' => 'LOST', default => 'CONTACTED',
-        };
-        $statement = $this->connection->prepare(
-            'UPDATE tn_client_cases c '
-            . 'INNER JOIN sales_pipelines p ON p.organization_id=c.organization_id AND p.code="default-sales" '
-            . 'INNER JOIN sales_pipeline_stages s ON s.pipeline_id=p.id AND s.code=:stage_code '
-            . 'SET c.pipeline_id=p.id,c.stage_id=s.id,c.probability=COALESCE(c.probability,s.probability_default),'
-            . 'c.deal_value=COALESCE(c.deal_value,c.budget_max) WHERE c.id=:case_id AND c.organization_id=:organization_id'
-        );
-        $statement->execute(['stage_code' => $code, 'case_id' => $caseId, 'organization_id' => $organizationId]);
     }
 
     private function initialStage(string $organizationId): array

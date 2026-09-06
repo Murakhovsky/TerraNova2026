@@ -25,7 +25,9 @@ final class SalesIntelligenceAgent
             ['sales_intelligence'=>['required'=>[
                 'deal_health'=>'string','risk_level'=>'string','risk_reasons'=>'array','opportunity_level'=>'string',
                 'customer_intent'=>'string','objections'=>'array','missing_information'=>'array','recommended_timing'=>'string',
+                'next_best_action'=>'string_or_object',
             ]]],
+            SalesIntelligenceResultValidator::class,
         );
     }
 }

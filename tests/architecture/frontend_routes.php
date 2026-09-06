@@ -10,8 +10,13 @@ $router->setDI(new Phalcon\Di\FactoryDefault());
 Interfaces\Web\Routing\FrontendRoutes::register($router, ['about']);
 
 $patterns = [];
+$routeIdentities = [];
 foreach ($router->getRoutes() as $route) {
     $patterns[] = $route->getPattern();
+    if ($route->getPattern() !== '/') {
+        $methods=$route->getHttpMethods();
+        $routeIdentities[]=(is_array($methods)?implode(',',$methods):(string)$methods).' '.$route->getPattern();
+    }
 }
 
 $required = [
@@ -55,7 +60,7 @@ if ($router->getControllerName() !== 'api' || $router->getActionName() !== 'feat
     throw new RuntimeException('Static featured endpoint is shadowed by the property slug route.');
 }
 
-if (count($patterns) !== count(array_unique($patterns))) {
+if (count($routeIdentities) !== count(array_unique($routeIdentities))) {
     throw new RuntimeException('Frontend route registration contains duplicate patterns.');
 }
 

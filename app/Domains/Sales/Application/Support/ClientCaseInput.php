@@ -6,7 +6,6 @@ namespace Domains\Sales\Application\Support;
 use Domains\Sales\Model\ClientCaseStatus;
 use Domains\Sales\Model\ClientCaseType;
 use Domains\Sales\Model\LeadStatus;
-use Domains\Sales\Model\PipelineStage;
 use Domains\Sales\Model\SalesCurrency;
 use Domains\Sales\Model\SalesPriority;
 
@@ -98,11 +97,6 @@ final class ClientCaseInput
             ),
             'title' => self::caseTitle($input, $name),
             'status' => $status,
-            'stage' => self::allowed(
-                (string) ($input['stage'] ?? ($existing['stage'] ?? PipelineStage::New->value)),
-                PipelineStage::values(),
-                (string) ($existing['stage'] ?? PipelineStage::New->value),
-            ),
             'priority' => self::allowed(
                 (string) ($input['priority'] ?? ($existing['priority'] ?? SalesPriority::Normal->value)),
                 SalesPriority::values(),
@@ -188,17 +182,11 @@ final class ClientCaseInput
     public static function caseStateForLead(string $leadStatus): array
     {
         $stage = [
-            LeadStatus::New->value => PipelineStage::New->value,
-            LeadStatus::Contacted->value => PipelineStage::Qualification->value,
-            LeadStatus::Qualified->value => PipelineStage::Qualification->value,
-            LeadStatus::ViewingPlanned->value => PipelineStage::Viewing->value,
-            LeadStatus::Viewing->value => PipelineStage::Viewing->value,
-            LeadStatus::Negotiation->value => PipelineStage::Negotiation->value,
-            LeadStatus::Won->value => PipelineStage::Deal->value,
-            LeadStatus::Lost->value => PipelineStage::Lost->value,
-            LeadStatus::Spam->value => PipelineStage::Lost->value,
-            LeadStatus::Closed->value => PipelineStage::Lost->value,
-        ][$leadStatus] ?? PipelineStage::New->value;
+            LeadStatus::New->value => 'NEW', LeadStatus::Contacted->value => 'CONTACTED',
+            LeadStatus::Qualified->value => 'QUALIFIED', LeadStatus::ViewingPlanned->value, LeadStatus::Viewing->value => 'MEETING',
+            LeadStatus::Negotiation->value => 'NEGOTIATION', LeadStatus::Won->value => 'WON',
+            LeadStatus::Lost->value, LeadStatus::Spam->value, LeadStatus::Closed->value => 'LOST',
+        ][$leadStatus] ?? 'NEW';
         $status = match ($leadStatus) {
             LeadStatus::Won->value => ClientCaseStatus::Closed->value,
             LeadStatus::Lost->value, LeadStatus::Spam->value, LeadStatus::Closed->value => ClientCaseStatus::Lost->value,

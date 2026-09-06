@@ -161,7 +161,7 @@ $update = new UpdateClientCase($readModel, $repository, $eventBus, $transactions
 ensure($update->execute(10, ['full_name' => 'Updated Person'], $user)->ok, 'Update client case failed.');
 
 $quick = new QuickUpdateClientCase($readModel, $repository, $eventBus, $transactions, $organizationId);
-ensure($quick->execute(10, ['priority' => 'urgent', 'assigned_user_id' => 5], $user)->ok, 'Quick update failed.');
+ensure($quick->execute(10, ['priority' => 'urgent'], $user)->ok, 'Quick update failed.');
 
 $activity = new AddClientCaseActivity($readModel, $repository, $completeCall, $transactions, $organizationId);
 ensure($activity->execute(10, ['title' => 'Note'], $user)->ok, 'Add activity failed.');

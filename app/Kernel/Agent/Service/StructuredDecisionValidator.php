@@ -90,6 +90,7 @@ final class StructuredDecisionValidator
             'object' => is_array($value) && !array_is_list($value),
             'number' => is_int($value) || is_float($value),
             'boolean' => is_bool($value),
+            'string_or_object' => (is_string($value) && trim($value) !== '') || (is_array($value) && !array_is_list($value)),
             default => false,
         };
     }

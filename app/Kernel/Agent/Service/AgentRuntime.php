@@ -49,6 +49,13 @@ final readonly class AgentRuntime
             }
             try {
                 $result = $this->validator->validate($response->output, $agent);
+                if ($agent->resultValidatorClass !== null) {
+                    $validatorClass = $agent->resultValidatorClass;
+                    if (!is_a($validatorClass, \Kernel\Agent\Contract\AgentResultValidatorInterface::class, true)) {
+                        throw new \RuntimeException('Configured Agent result validator does not implement the Kernel contract.');
+                    }
+                    (new $validatorClass())->validate($result, $agent);
+                }
             } catch (Throwable $exception) {
                 $this->runs->fail($runId, $exception, $this->duration($started), true);
                 $failureRecorded = true;

@@ -53,7 +53,7 @@ final readonly class CreateClientCase
             ]);
             $this->events->publish(ClientCaseCreated::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                ['person_id' => $personId, 'stage' => $case['stage']], ClientCaseEvents::metadata($user),
+                ['person_id' => $personId], ClientCaseEvents::metadata($user),
             ));
             return ClientCaseCommandResult::success('created', ['case_id' => $caseId, 'person_id' => $personId]);
         });

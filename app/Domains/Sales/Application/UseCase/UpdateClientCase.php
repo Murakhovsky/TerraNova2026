@@ -25,6 +25,7 @@ final readonly class UpdateClientCase
         private string $organizationId,
         private ?PipelineRepositoryInterface $pipelines = null,
         private ?ChangeDealStage $changeDealStage = null,
+        private ?AssignDealOwner $assignDealOwner = null,
     ) {
     }
 
@@ -64,13 +65,14 @@ final readonly class UpdateClientCase
                 throw new RuntimeException('Client case disappeared during update.');
             }
             if($targetStageId!==null&&$targetStageId!==(string)($existing['stage_id']??'')){if($this->changeDealStage===null)throw new RuntimeException('Stage service is unavailable.');$stageResult=$this->changeDealStage->execute(new ChangeDealStageCommand($this->organizationId,(string)$caseId,$targetStageId,isset($user['id'])?'USER':'SYSTEM',isset($user['id'])?(string)$user['id']:'system',$correlationId));if(!$stageResult->successful)throw new RuntimeException($stageResult->reason??'Invalid stage transition.');}
+            if($case['assigned_user_id']!==null&&(int)$case['assigned_user_id']!==(int)($existing['assigned_user_id']??0)){if($this->assignDealOwner===null)throw new RuntimeException('Owner assignment service is unavailable.');$assignment=$this->assignDealOwner->execute($this->organizationId,(string)$caseId,(int)$case['assigned_user_id'],$correlationId,isset($user['id'])?'USER':'SYSTEM',isset($user['id'])?(string)$user['id']:'system');if(!$assignment->successful)throw new RuntimeException($assignment->error??'Owner assignment failed.');}
             $this->commands->addActivity($this->organizationId, $caseId, (int) $existing['person_id'], $user['id'] ?? null, [
                 'activity_type' => 'status_change', 'title' => 'Кейс оновлено',
                 'body' => 'Оновлено дані людини або параметри кейсу.', 'due_at' => null, 'completed_at' => null,
             ]);
             $metadata = ClientCaseEvents::metadata($user, $correlationId);
             $changes = [
-                'status' => ['from' => (string) $existing['status'], 'to' => $case['status']],
+                'details' => ['from' => 'existing', 'to' => 'updated'],
             ];
             $this->events->publish(ClientCaseChanged::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $caseId, $changes, $metadata,

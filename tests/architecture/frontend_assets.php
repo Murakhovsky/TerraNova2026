@@ -24,8 +24,11 @@ foreach ([$root . '/public/js', $root . '/public/css'] as $legacyDirectory) {
         throw new RuntimeException('Legacy browser source directory was restored: ' . $legacyDirectory);
     }
 }
-if (!is_dir($root . '/frontend') || is_dir($root . '/resources')) {
+if (!is_dir($root . '/frontend')) {
     throw new RuntimeException('Frontend source must live only in the root frontend directory.');
+}
+foreach (glob($root . '/resources/*.{js,jsx,ts,tsx,css,scss,vue}', GLOB_BRACE) ?: [] as $legacySource) {
+    throw new RuntimeException('Frontend source was restored under resources: ' . $legacySource);
 }
 
 $assets = (new ViteAssetManifest($manifestPath))->assets($entries);

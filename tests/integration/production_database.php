@@ -44,6 +44,7 @@ $requiredMigrations = [
     '20260904_000021_sales_runtime_workspace',
     '20260905_000022_sales_v03_integrity',
     '20260905_000023_sales_stage_compatibility',
+    '20260906_000024_sales_pipeline_integrity_correction',
 ];
 $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_migrations WHERE migration IN (' . implode(',', array_fill(0, count($requiredMigrations), '?')) . ')');
 $statement->execute($requiredMigrations);
@@ -109,6 +110,12 @@ if (is_array($case)) {
         if (($mapped['event_type'] ?? null) !== 'sales.client_case.changed') {
             throw new RuntimeException('External CRM event was not mapped to a Sales-owned event.');
         }
+        $beforeStage=$pdo->prepare('SELECT stage,stage_id,pipeline_id FROM tn_client_cases WHERE id=:id AND organization_id=:org');
+        $beforeStage->execute(['id'=>$case['id'],'org'=>$case['organization_id']]);$beforeStage=$beforeStage->fetch();
+        (new MysqlCrmInboundApplier($pdo))->apply(new CrmInboxItem('inbox-stage-bypass',(string)$case['organization_id'],'aida','event-stage-bypass','deal.updated',['entity_type'=>'deal','external_id'=>(string)$case['id'],'changes'=>['stage'=>'LOST']],1,'correlation-stage-bypass'));
+        $afterStage=$pdo->prepare('SELECT stage,stage_id,pipeline_id FROM tn_client_cases WHERE id=:id AND organization_id=:org');
+        $afterStage->execute(['id'=>$case['id'],'org'=>$case['organization_id']]);
+        if($afterStage->fetch()!==$beforeStage)throw new RuntimeException('CRM adapter bypassed canonical ChangeDealStage.');
     } finally {
         $pdo->rollBack();
     }

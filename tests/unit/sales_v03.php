@@ -14,6 +14,7 @@ if(!$policy->evaluate(['pipeline_id'=>'p'],$pipeline,$new,$new,null)->noOp)throw
 if($policy->evaluate(['pipeline_id'=>'p'],$pipeline,$won,$new,new PipelineTransitionDefinition('back','p','won','new'))->allowed)throw new RuntimeException('Terminal stage was left.');
 if($policy->evaluate(['pipeline_id'=>'foreign'],$pipeline,$new,$won,$transition)->allowed)throw new RuntimeException('Cross-pipeline deal accepted.');
 foreach([['stage'=>'won'],['stage_id'=>'won'],['pipeline_id'=>'p']] as $bypass){try{DealChangeSet::fromArray($bypass);throw new RuntimeException('Generic DealChangeSet accepted stage mutation.');}catch(InvalidArgumentException){}}
+try{DealChangeSet::fromArray(['assigned_user_id'=>7]);throw new RuntimeException('Generic DealChangeSet accepted owner assignment.');}catch(InvalidArgumentException){}
 $changes=DealChangeSet::fromArray(['priority'=>'high','probability'=>80]);if($changes->toArray()['probability']!==80.0)throw new RuntimeException('Generic fields failed.');
 try{DealChangeSet::fromArray(['probability'=>101]);throw new RuntimeException('Invalid probability accepted.');}catch(InvalidArgumentException){}
 

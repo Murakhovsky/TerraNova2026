@@ -40,7 +40,7 @@ foreach (['Deal без активності понад 48 годин', 'Вхід
     if (!in_array($name, $ruleNames, true)) throw new RuntimeException('Missing deterministic Sales rule: ' . $name);
 }
 
-$changes = DealChangeSet::fromArray(['assigned_user_id' => 7, 'deal_value' => 125000, 'probability' => 80]);
+$changes = DealChangeSet::fromArray(['deal_value' => 125000, 'probability' => 80]);
 if ($changes->toArray()['probability'] !== 80.0) throw new RuntimeException('Deal change validation lost probability.');
 
 $command = new RecordActionOutcomeCommand('tenant-a', str_repeat('a', 32), 'customer_replied', true, OutcomeAttribution::Direct, [], new \DateTimeImmutable('2026-09-05T12:00:00Z'), str_repeat('b', 32), 'user', '7');

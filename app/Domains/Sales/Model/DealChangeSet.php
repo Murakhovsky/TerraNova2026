@@ -18,13 +18,12 @@ final readonly class DealChangeSet
             if (array_key_exists($stageField, $input)) throw new InvalidArgumentException('Deal stage can only be changed through ChangeDealStage.');
         }
         $changes = array_intersect_key($input, array_flip([
-            'status', 'priority', 'next_contact_at', 'assigned_user_id', 'deal_value', 'probability', 'expected_close_at',
+            'priority', 'next_contact_at', 'deal_value', 'probability', 'expected_close_at',
         ]));
         if ($changes === []) {
             throw new InvalidArgumentException('No allowed Deal fields supplied.');
         }
 
-        self::assertOneOf($changes, 'status', ClientCaseStatus::values());
         self::assertOneOf($changes, 'priority', SalesPriority::values());
         foreach (['next_contact_at', 'expected_close_at'] as $dateField) {
             if (isset($changes[$dateField]) && $changes[$dateField] !== '') {
@@ -33,7 +32,6 @@ final readonly class DealChangeSet
                 $changes[$dateField] = null;
             }
         }
-        if (array_key_exists('assigned_user_id', $changes)) $changes['assigned_user_id'] = max(1, (int) $changes['assigned_user_id']);
         if (array_key_exists('deal_value', $changes)) {
             $changes['deal_value'] = (float) $changes['deal_value'];
             if ($changes['deal_value'] < 0) throw new InvalidArgumentException('Deal value cannot be negative.');

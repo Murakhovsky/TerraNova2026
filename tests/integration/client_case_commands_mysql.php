@@ -102,15 +102,15 @@ try {
     ]);
     assertCommand($caseId > 0, 'Client case creation failed.');
     assertCommand(!$commands->quickUpdate('foreign-tenant', $caseId, [
-        'status' => 'active', 'stage' => 'new', 'priority' => 'normal', 'assigned_user_id' => null,
+        'status' => 'active', 'priority' => 'normal', 'assigned_user_id' => null,
         'next_contact_at' => null, 'closed_at' => null,
     ]), 'Foreign tenant updated a client case.');
     assertCommand($commands->quickUpdate($organizationId, $caseId, [
-        'status' => 'active', 'stage' => 'qualification', 'priority' => 'high', 'assigned_user_id' => null,
+        'status' => 'active', 'priority' => 'high', 'assigned_user_id' => null,
         'next_contact_at' => null, 'closed_at' => null,
     ]), 'Quick update failed.');
     assertCommand($commands->updateCase($organizationId, $caseId, [
-        'type' => 'buy', 'title' => 'Updated integration case ' . $token, 'status' => 'active', 'stage' => 'matching',
+        'type' => 'buy', 'title' => 'Updated integration case ' . $token, 'status' => 'active',
         'priority' => 'high', 'assigned_user_id' => null, 'source' => 'integration',
         'property_type_id' => $propertyTypeId !== false ? (int) $propertyTypeId : null,
         'location_id' => $locationId !== false ? (int) $locationId : null, 'budget_min' => '100000.00',

@@ -18,6 +18,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         'deal.stage_changed' => DealStageChanged::TYPE,
         'lead.updated' => LeadChanged::TYPE,
         'lead.changed' => LeadChanged::TYPE,
+        'message.received' => \Domains\Sales\Automation\Event\SalesEventType::MESSAGE_RECEIVED,
     ];
 
     public function __construct(private PDO $connection)
@@ -33,13 +34,18 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         $entityType = strtolower(trim((string) ($item->payload['entity_type'] ?? 'deal')));
         $externalId = trim((string) ($item->payload['external_id'] ?? $item->payload['aggregate_id'] ?? ''));
         if ($externalId === '') throw new RuntimeException('CRM payload requires external_id.');
-        $localId = $this->localReference($item, $entityType, $externalId);
+        $localId = $entityType==='message'
+            ? $this->localReference($item,'deal',trim((string)($item->payload['deal_external_id']??$item->payload['deal_id']??'')))
+            : $this->localReference($item, $entityType, $externalId);
         $changes = is_array($item->payload['changes'] ?? null) ? $item->payload['changes'] : [];
 
         if (in_array($entityType, ['deal', 'client_case'], true)) {
+            $pipelineStatement = $this->connection->prepare('SELECT pipeline_id FROM tn_client_cases WHERE id=:id AND organization_id=:organization_id LIMIT 1');
+            $pipelineStatement->execute(['id'=>$localId,'organization_id'=>$item->organizationId]);
+            $pipelineId = (string)($pipelineStatement->fetchColumn() ?: '');
             $this->updateAllowed(
                 'tn_client_cases',
-                ['stage', 'status', 'priority', 'next_contact_at'],
+                ['status', 'priority', 'next_contact_at'],
                 $item->organizationId,
                 $localId,
                 $changes,
@@ -54,6 +60,9 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
                 $changes,
             );
             $aggregateType = 'lead';
+        } elseif ($entityType === 'message') {
+            if(trim((string)($item->payload['body']??''))==='')throw new RuntimeException('Incoming CRM message requires body.');
+            $aggregateType='deal';
         } else {
             throw new RuntimeException('Unsupported CRM entity type: ' . $entityType);
         }
@@ -76,7 +85,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
             'event_type' => $mappedEventType,
             'aggregate_type' => $aggregateType,
             'aggregate_id' => $localId,
-            'payload' => [...$item->payload, 'changes' => $changes, 'provider' => $item->provider, 'external_id' => $externalId],
+            'payload' => [...$item->payload, 'changes' => array_diff_key($changes, ['stage'=>true,'stage_id'=>true,'pipeline_id'=>true]), 'requested_stage' => $changes['stage_id'] ?? $changes['stage'] ?? null, 'requested_message' => $entityType==='message', 'pipeline_id' => $pipelineId ?? null, 'provider' => $item->provider, 'external_id' => $externalId],
         ];
     }
 

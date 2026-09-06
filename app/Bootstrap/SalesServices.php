@@ -35,6 +35,9 @@ use Domains\Sales\Application\UseCase\SendSalesMessage;
 use Domains\Sales\Application\UseCase\ScheduleSalesMeeting;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
 use Domains\Sales\Application\UseCase\RecordIncomingMessage;
+use Domains\Sales\Application\UseCase\NoActivityDetector;
+use Domains\Sales\Application\UseCase\DetectMissedFollowups;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository;
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
     $this->getShared('cosCrmGateway'),
@@ -75,6 +78,9 @@ $di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepositor
 $di->setShared('salesPipelineRepository', fn (): MysqlPipelineRepository => new MysqlPipelineRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesDealRepository', fn (): MysqlDealRepository => new MysqlDealRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesOperationRepository', fn (): MysqlSalesOperationRepository => new MysqlSalesOperationRepository($this->getShared('databaseService')->connection()));
+$di->setShared('salesAttentionRepository', fn (): MysqlSalesAttentionRepository => new MysqlSalesAttentionRepository($this->getShared('databaseService')->connection()));
+$di->setShared('salesNoActivityDetector', fn (): NoActivityDetector => new NoActivityDetector($this->getShared('salesAttentionRepository'),$this->getShared('eventBus'),$this->getShared('cosTransactionManager')));
+$di->setShared('salesMissedFollowupDetector', fn (): DetectMissedFollowups => new DetectMissedFollowups($this->getShared('salesAttentionRepository'),$this->getShared('eventBus'),$this->getShared('cosTransactionManager')));
 $di->setShared('salesSendMessage', fn (): SendSalesMessage => new SendSalesMessage(
     $this->getShared('cosCrmGateway'), $this->getShared('salesOperationRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
 ));
@@ -99,11 +105,13 @@ $di->setShared('salesUpdateClientCase', fn (): UpdateClientCase => new UpdateCli
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
     $this->getShared('salesPipelineRepository'), $this->getShared('salesChangeDealStage'),
+    $this->getShared('salesAssignDealOwner'),
 ));
 $di->setShared('salesQuickUpdateClientCase', fn (): QuickUpdateClientCase => new QuickUpdateClientCase(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
     $this->getShared('salesPipelineRepository'), $this->getShared('salesChangeDealStage'),
+    $this->getShared('salesAssignDealOwner'),
 ));
 $di->setShared('salesAddClientCaseActivity', fn (): AddClientCaseActivity => new AddClientCaseActivity(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
@@ -167,6 +175,9 @@ $di->setShared('salesProcessCrmInbox', fn (): ProcessCrmInbox => new ProcessCrmI
     $this->getShared('cosDomainRegistry'),
     $this->getShared('eventBus'),
     $this->getShared('cosTransactionManager'),
+    $this->getShared('salesPipelineRepository'),
+    $this->getShared('salesChangeDealStage'),
+    $this->getShared('salesRecordIncomingMessage'),
 ));
 $di->setShared('salesCrmInboxJobHandler', fn (): CrmInboxJobHandler => new CrmInboxJobHandler(
     $this->getShared('salesProcessCrmInbox'),

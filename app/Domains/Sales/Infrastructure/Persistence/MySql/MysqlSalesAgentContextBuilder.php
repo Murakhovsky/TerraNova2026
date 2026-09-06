@@ -49,7 +49,28 @@ final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilde
         ];
         return $this->enforceBudget($context,12000);
     }
-    private function enforceBudget(array $context,int $tokens):array{$max=$tokens*4;while(strlen(json_encode($context,JSON_THROW_ON_ERROR))>$max){if(count($context['communications'])>3){array_pop($context['communications']);continue;}if(count($context['activities'])>5){array_pop($context['activities']);continue;}if(count($context['sales_history'])>3){array_pop($context['sales_history']);continue;}break;}$context['_limits']['estimated_tokens']=(int)ceil(strlen(json_encode($context,JSON_THROW_ON_ERROR))/4);return $context;}
+    private function enforceBudget(array $context,int $tokens):array
+    {
+        $max=max(1024,$tokens*4);$target=$max-256;
+        while(strlen(json_encode($context,JSON_THROW_ON_ERROR))>$target){
+            if(count($context['communications'])>3){array_pop($context['communications']);continue;}
+            if(count($context['activities'])>5){array_pop($context['activities']);continue;}
+            if(count($context['sales_history'])>3){array_pop($context['sales_history']);continue;}
+            if(count($context['rules'])>3){array_pop($context['rules']);continue;}
+            if(count($context['policies'])>3){array_pop($context['policies']);continue;}
+            if(!$this->shrinkLargestString($context))break;
+        }
+        if(strlen(json_encode($context,JSON_THROW_ON_ERROR))>$target){
+            $context=['deal'=>array_intersect_key($context['deal'],array_flip(['id','title','status','stage','priority','value','currency','probability','next_contact_at','last_activity_at'])),'person'=>['id'=>$context['person']['id']??null],'lead'=>$context['lead']===null?null:array_intersect_key($context['lead'],array_flip(['id','status','source'])),'pipeline'=>$context['pipeline'],'activities'=>[],'communications'=>[],'last_contact'=>$context['last_contact'],'next_action'=>$context['next_action'],'sales_history'=>[],'assigned_manager'=>$context['assigned_manager'],'product_or_property'=>null,'metrics'=>$context['metrics'],'rules'=>[],'policies'=>[],'goals'=>[],'question'=>mb_substr((string)$context['question'],0,500),'context_references'=>[],'_limits'=>$context['_limits']];
+        }
+        $context['_limits']['estimated_tokens']=(int)ceil(strlen(json_encode($context,JSON_THROW_ON_ERROR))/4);
+        if(strlen(json_encode($context,JSON_THROW_ON_ERROR))>$max)throw new RuntimeException('Sales context cannot fit the configured token budget.');
+        return $context;
+    }
+    private function shrinkLargestString(array &$value):bool
+    {
+        $largestPath=null;$largestLength=0;$walk=function(array &$node,array $path=[])use(&$walk,&$largestPath,&$largestLength):void{foreach($node as $key=>&$item){$current=[...$path,$key];if(is_array($item)){$walk($item,$current);}elseif(is_string($item)&&mb_strlen($item)>$largestLength){$largestLength=mb_strlen($item);$largestPath=$current;}}};$walk($value);if($largestPath===null||$largestLength<=64)return false;$cursor=&$value;foreach($largestPath as $key)$cursor=&$cursor[$key];$cursor=mb_substr($cursor,0,max(64,(int)floor($largestLength/2)));return true;
+    }
     private function all(string $sql,array $params): array {$s=$this->connection->prepare($sql);$s->execute($params);return $s->fetchAll(PDO::FETCH_ASSOC);}
     private function one(string $sql,array $params): ?array {$s=$this->connection->prepare($sql);$s->execute($params);$r=$s->fetch(PDO::FETCH_ASSOC);return $r===false?null:$r;}
 }

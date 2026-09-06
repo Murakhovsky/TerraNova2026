@@ -36,7 +36,7 @@ try {
 }
 
 $case = ClientCaseInput::caseData([], 'Test client', null, null, null);
-if ($case['stage'] !== PipelineStage::New->value
+if (array_key_exists('stage', $case)
     || $case['status'] !== ClientCaseStatus::Active->value
     || $case['type'] !== ClientCaseType::Buy->value
 ) {

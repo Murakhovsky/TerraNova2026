@@ -25,6 +25,7 @@ final readonly class QuickUpdateClientCase
         private string $organizationId,
         private ?PipelineRepositoryInterface $pipelines = null,
         private ?ChangeDealStage $changeDealStage = null,
+        private ?AssignDealOwner $assignDealOwner = null,
     ) {
     }
 
@@ -70,14 +71,14 @@ final readonly class QuickUpdateClientCase
                 ));
                 if (!$stageResult->successful) return false;
             }
+            if ($managerId !== null && (int)$managerId !== (int)($case['assigned_user_id'] ?? 0)) {
+                if ($this->assignDealOwner === null) return false;
+                $assignment=$this->assignDealOwner->execute($this->organizationId,(string)$caseId,(int)$managerId,$correlationId,isset($user['id'])?'USER':'SYSTEM',isset($user['id'])?(string)$user['id']:'system');
+                if(!$assignment->successful)return false;
+            }
             $updated = $this->commands->quickUpdate($this->organizationId, $caseId, [
-                'status' => $status,
                 'priority' => $priority,
-                'assigned_user_id' => $managerId,
                 'next_contact_at' => $nextContact,
-                'closed_at' => ClientCaseStatus::from($status)->isTerminal()
-                    ? (($case['closed_at'] ?? null) ?: date('Y-m-d H:i:s'))
-                    : null,
             ]);
             if (!$updated) {
                 return false;
