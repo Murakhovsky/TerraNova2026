@@ -24,6 +24,7 @@ class ClientCaseController extends ControllerBase
         $this->view->locations = [];
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
+        $this->view->pipelineStages = [];
 
         try {
             $this->view->cases = $this->clientCaseService()->cases($this->view->filters);
@@ -33,6 +34,8 @@ class ClientCaseController extends ControllerBase
             $this->view->managerOptions = $this->clientCaseService()->managerOptions();
             $this->view->propertyTypes = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
+            $pipelines = $this->di->getShared('salesWorkspaceReadModel')->pipelines($this->di->getShared('organizationContext')->id());
+            $this->view->pipelineStages = $pipelines[0]['stages'] ?? [];
         } catch (Throwable $e) {
             $this->logFrontendError('client-case-index', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -54,6 +57,7 @@ class ClientCaseController extends ControllerBase
         $this->view->managerOptions = [];
         $this->view->pageStatus = null;
         $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
+        $this->view->pipelineStages = [];
 
         try {
             $this->view->inboundRequests = $this->clientCaseService()->inboundInbox($this->view->filters);
@@ -109,6 +113,8 @@ class ClientCaseController extends ControllerBase
             $this->view->managerOptions = $this->clientCaseService()->managerOptions();
             $this->view->propertyTypes = $this->catalogService()->propertyTypes();
             $this->view->locations = $this->catalogService()->locations();
+            $pipelines = $this->di->getShared('salesWorkspaceReadModel')->pipelines($this->di->getShared('organizationContext')->id());
+            $this->view->pipelineStages = $pipelines[0]['stages'] ?? [];
         } catch (Throwable $e) {
             $this->logFrontendError('client-case-show', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');

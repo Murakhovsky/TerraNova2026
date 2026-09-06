@@ -62,6 +62,16 @@ final class StructuredDecisionValidator
         if (!is_array($evidence) || count($evidence) > 20) {
             throw new InvalidArgumentException('Agent evidence must contain at most 20 items.');
         }
+        foreach ($agent->evidenceSchemas as $namespace => $schema) {
+            if (!isset($evidence[$namespace]) || !is_array($evidence[$namespace])) {
+                throw new InvalidArgumentException('Agent evidence requires structured namespace: ' . $namespace);
+            }
+            foreach (($schema['required'] ?? []) as $field => $type) {
+                if (!array_key_exists($field, $evidence[$namespace]) || !$this->matchesType($evidence[$namespace][$field], (string) $type)) {
+                    throw new InvalidArgumentException(sprintf('Agent evidence %s.%s must be %s.', $namespace, $field, $type));
+                }
+            }
+        }
 
         return new AgentResult(
             $decision,
@@ -70,5 +80,17 @@ final class StructuredDecisionValidator
             $validated,
             $evidence,
         );
+    }
+
+    private function matchesType(mixed $value, string $type): bool
+    {
+        return match ($type) {
+            'string' => is_string($value) && trim($value) !== '',
+            'array' => is_array($value),
+            'object' => is_array($value) && !array_is_list($value),
+            'number' => is_int($value) || is_float($value),
+            'boolean' => is_bool($value),
+            default => false,
+        };
     }
 }

@@ -24,6 +24,7 @@ $required = [
     '/api/sales/deals',
     '/api/sales/deals/{id:[0-9]+}/timeline',
     '/api/sales/deals/{id:[0-9]+}/intelligence',
+    '/api/sales/deals/{id:[0-9]+}/stage',
     '/api/sales/actions/{id:[a-f0-9]{32}}/outcomes',
     '/api/cos/actions',
     '/api/cos/approvals',

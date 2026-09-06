@@ -9,7 +9,8 @@ use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\Support\ClientCaseEvents;
 use Domains\Sales\Application\Support\ClientCaseInput;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
-use Domains\Sales\Automation\Event\DealStageChanged;
+use Domains\Sales\Application\Contract\PipelineRepositoryInterface;
+use Domains\Sales\Application\DTO\ChangeDealStageCommand;
 use Kernel\Event\EventBus;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 use RuntimeException;
@@ -22,6 +23,8 @@ final readonly class UpdateClientCase
         private EventBus $events,
         private TransactionManagerInterface $transactions,
         private string $organizationId,
+        private ?PipelineRepositoryInterface $pipelines = null,
+        private ?ChangeDealStage $changeDealStage = null,
     ) {
     }
 
@@ -44,8 +47,10 @@ final readonly class UpdateClientCase
             $existing,
         );
         $correlationId = ClientCaseEvents::id();
+        $targetStageId=isset($input['stage_id'])?trim((string)$input['stage_id']):null;
+        if($targetStageId===null&&array_key_exists('stage',$input)){if($this->pipelines===null)return ClientCaseCommandResult::failure('stage_service_unavailable');$stage=$this->pipelines->findStageByCode($this->organizationId,(string)($existing['pipeline_id']??''),strtoupper((string)$input['stage']));if($stage===null)return ClientCaseCommandResult::failure('invalid_stage');$targetStageId=$stage->id;}
 
-        return $this->transactions->transactional(function () use ($caseId, $input, $user, $existing, $name, $case, $correlationId): ClientCaseCommandResult {
+        return $this->transactions->transactional(function () use ($caseId, $input, $user, $existing, $name, $case, $correlationId,$targetStageId): ClientCaseCommandResult {
             if (!$this->commands->updatePerson($this->organizationId, (int) $existing['person_id'], [
                 'full_name' => $name,
                 'phone' => ClientCaseInput::nullable((string) ($input['phone'] ?? $existing['phone'] ?? ''), 50),
@@ -58,24 +63,18 @@ final readonly class UpdateClientCase
             if (!$this->commands->updateCase($this->organizationId, $caseId, $case)) {
                 throw new RuntimeException('Client case disappeared during update.');
             }
+            if($targetStageId!==null&&$targetStageId!==(string)($existing['stage_id']??'')){if($this->changeDealStage===null)throw new RuntimeException('Stage service is unavailable.');$stageResult=$this->changeDealStage->execute(new ChangeDealStageCommand($this->organizationId,(string)$caseId,$targetStageId,isset($user['id'])?'USER':'SYSTEM',isset($user['id'])?(string)$user['id']:'system',$correlationId));if(!$stageResult->successful)throw new RuntimeException($stageResult->reason??'Invalid stage transition.');}
             $this->commands->addActivity($this->organizationId, $caseId, (int) $existing['person_id'], $user['id'] ?? null, [
                 'activity_type' => 'status_change', 'title' => 'Кейс оновлено',
                 'body' => 'Оновлено дані людини або параметри кейсу.', 'due_at' => null, 'completed_at' => null,
             ]);
             $metadata = ClientCaseEvents::metadata($user, $correlationId);
             $changes = [
-                'stage' => ['from' => (string) $existing['stage'], 'to' => $case['stage']],
                 'status' => ['from' => (string) $existing['status'], 'to' => $case['status']],
             ];
             $this->events->publish(ClientCaseChanged::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $caseId, $changes, $metadata,
             ));
-            if ((string) $existing['stage'] !== $case['stage']) {
-                $this->events->publish(DealStageChanged::create(
-                    ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                    (string) $existing['stage'], $case['stage'], $metadata,
-                ));
-            }
             return ClientCaseCommandResult::success('updated', ['case_id' => $caseId]);
         });
     }

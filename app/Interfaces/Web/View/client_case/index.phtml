@@ -10,6 +10,7 @@ $propertyTypes = $propertyTypes ?? [];
 $locations = $locations ?? [];
 $pageStatus = $pageStatus ?? null;
 $actionStatus = $actionStatus ?? null;
+$pipelineStages = $pipelineStages ?? [];
 $stageLabels = [
     'new' => 'Новий',
     'qualification' => 'Кваліфікація',
@@ -280,8 +281,8 @@ foreach ($cases as $caseItem) {
                   <span class="tn-status-pill"><?php echo $h($stageLabels[$case['stage']] ?? $case['stage']); ?></span>
                   <form class="tn-quick-case-form" action="<?php echo $this->url->get('client-case/quickUpdate/' . $case['id']); ?>" method="post">
                     <input name="return_url" type="hidden" value="client-case">
-                    <select name="stage" aria-label="Етап">
-                      <?php foreach ($stageLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['stage'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?>
+                    <select name="stage_id" aria-label="Етап">
+                      <?php foreach ($pipelineStages as $stage): ?><option value="<?php echo $h($stage['id']); ?>" <?php echo $selected($case['stage_id'] ?? '', $stage['id']); ?>><?php echo $h($stage['name']); ?></option><?php endforeach; ?>
                     </select>
                     <select name="status" aria-label="Статус">
                       <?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['status'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?>

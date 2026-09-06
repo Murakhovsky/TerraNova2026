@@ -158,10 +158,10 @@ $created = $create->execute(['full_name' => 'New Person', 'phone' => '+3804', 't
 ensure($created->ok && ($created->data['case_id'] ?? null) === 201, 'Create client case failed.');
 
 $update = new UpdateClientCase($readModel, $repository, $eventBus, $transactions, $organizationId);
-ensure($update->execute(10, ['full_name' => 'Updated Person', 'stage' => 'qualification'], $user)->ok, 'Update client case failed.');
+ensure($update->execute(10, ['full_name' => 'Updated Person'], $user)->ok, 'Update client case failed.');
 
 $quick = new QuickUpdateClientCase($readModel, $repository, $eventBus, $transactions, $organizationId);
-ensure($quick->execute(10, ['stage' => 'qualification', 'priority' => 'urgent', 'assigned_user_id' => 5], $user)->ok, 'Quick update failed.');
+ensure($quick->execute(10, ['priority' => 'urgent', 'assigned_user_id' => 5], $user)->ok, 'Quick update failed.');
 
 $activity = new AddClientCaseActivity($readModel, $repository, $completeCall, $transactions, $organizationId);
 ensure($activity->execute(10, ['title' => 'Note'], $user)->ok, 'Add activity failed.');
@@ -195,7 +195,7 @@ foreach ($repository->writes as $write) {
     ensure(($write[1] ?? null) === $organizationId, 'A command write lost tenant scope: ' . json_encode($write));
 }
 $eventTypes = array_map(static fn(DomainEvent $event): string => $event->type, $events);
-foreach (['sales.client_case.created', 'sales.client_case.changed', 'sales.deal.stage_changed', 'sales.lead.changed', 'sales.call.completed'] as $type) {
+foreach (['sales.client_case.created', 'sales.client_case.changed', 'sales.lead.changed', 'sales.call.completed'] as $type) {
     ensure(in_array($type, $eventTypes, true), 'Expected event was not published: ' . $type);
 }
 

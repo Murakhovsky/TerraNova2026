@@ -10,6 +10,9 @@ use Domains\Sales\Application\UseCase\CreateClientCase;
 use Domains\Sales\Application\UseCase\QuickUpdateClientCase;
 use Domains\Sales\Application\UseCase\UpdateClientCase;
 use Kernel\Event\EventBus;
+use Domains\Sales\Infrastructure\Persistence\MySql\{MysqlDealRepository,MysqlPipelineRepository};
+use Domains\Sales\Application\UseCase\ChangeDealStage;
+use Domains\Sales\Domain\Policy\StageTransitionPolicy;
 
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
@@ -50,6 +53,8 @@ try {
     $transactions = new TransactionManager($connection);
     $eventBus = new EventBus(new MysqlEventStore($connection), $transactions);
     $readModel = new MysqlClientCaseReadModel($connection, $organizationId);
+    $pipelines = new MysqlPipelineRepository($connection);
+    $changeStage = new ChangeDealStage(new MysqlDealRepository($connection),$pipelines,new StageTransitionPolicy(),$eventBus,$transactions);
     $createdByUseCase = (new CreateClientCase($commands, $eventBus, $transactions, $organizationId))->execute([
         'full_name' => 'UseCase ' . $token,
         'email' => $token . '-usecase@commands.test',
@@ -58,13 +63,13 @@ try {
     ]);
     $useCaseId = (int) ($createdByUseCase->data['case_id'] ?? 0);
     assertCommand($createdByUseCase->ok && $useCaseId > 0, 'CreateClientCase MySQL flow failed.');
-    assertCommand((new UpdateClientCase($readModel, $commands, $eventBus, $transactions, $organizationId))->execute(
+    assertCommand((new UpdateClientCase($readModel, $commands, $eventBus, $transactions, $organizationId,$pipelines,$changeStage))->execute(
         $useCaseId,
-        ['full_name' => 'Updated UseCase ' . $token, 'email' => $token . '-usecase@commands.test', 'stage' => 'qualification'],
+        ['full_name' => 'Updated UseCase ' . $token, 'email' => $token . '-usecase@commands.test', 'stage' => 'CONTACTED'],
     )->ok, 'UpdateClientCase MySQL flow failed.');
-    assertCommand((new QuickUpdateClientCase($readModel, $commands, $eventBus, $transactions, $organizationId))->execute(
+    assertCommand((new QuickUpdateClientCase($readModel, $commands, $eventBus, $transactions, $organizationId,$pipelines,$changeStage))->execute(
         $useCaseId,
-        ['stage' => 'matching', 'priority' => 'high'],
+        ['stage' => 'qualification', 'priority' => 'high'],
     )->ok, 'QuickUpdateClientCase MySQL flow failed.');
     $eventCount = $connection->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=:organization_id AND aggregate_id=:case_id');
     $eventCount->execute(['organization_id' => $organizationId, 'case_id' => (string) $useCaseId]);

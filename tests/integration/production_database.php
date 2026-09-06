@@ -42,6 +42,8 @@ $requiredMigrations = [
     '20260826_000019_tenant_public_identifiers',
     '20260830_000020_diagnostic_domain',
     '20260904_000021_sales_runtime_workspace',
+    '20260905_000022_sales_v03_integrity',
+    '20260905_000023_sales_stage_compatibility',
 ];
 $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_migrations WHERE migration IN (' . implode(',', array_fill(0, count($requiredMigrations), '?')) . ')');
 $statement->execute($requiredMigrations);
@@ -53,6 +55,7 @@ $requiredTables = [
     'diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records',
     'sales_pipelines', 'sales_pipeline_stages', 'sales_pipeline_transitions', 'sales_communications',
     'cos_action_outcomes', 'sales_metric_snapshots',
+    'sales_operation_receipts',
 ];
 $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
 $tables = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN (' . $placeholders . ')');
@@ -81,6 +84,20 @@ if (is_array($case)) {
     $foreign = $repository->update('tenant-that-does-not-own-the-deal', (string) $case['id'], DealChangeSet::fromArray(['priority' => $case['priority']]));
     $owner = $repository->update((string) $case['organization_id'], (string) $case['id'], DealChangeSet::fromArray(['priority' => $case['priority']]));
     if ($foreign->successful || !$owner->successful) throw new RuntimeException('Deal repository tenant boundary failed.');
+
+    $activeOwner = $pdo->prepare('SELECT id FROM tn_users WHERE organization_id = :organization_id AND status = "active" ORDER BY id LIMIT 1');
+    $activeOwner->execute(['organization_id' => $case['organization_id']]);
+    $activeOwnerId = $activeOwner->fetchColumn();
+    if ($activeOwnerId !== false) {
+        $pdo->beginTransaction();
+        try {
+            $crossTenantAssignment = $repository->assignOwner('tenant-that-does-not-own-the-deal', (string) $case['id'], (int) $activeOwnerId);
+            $validAssignment = $repository->assignOwner((string) $case['organization_id'], (string) $case['id'], (int) $activeOwnerId);
+            if ($crossTenantAssignment->successful || !$validAssignment->successful) throw new RuntimeException('Owner assignment tenant boundary failed.');
+        } finally {
+            $pdo->rollBack();
+        }
+    }
 
     $pdo->beginTransaction();
     try {

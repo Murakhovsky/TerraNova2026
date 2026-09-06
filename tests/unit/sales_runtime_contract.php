@@ -8,6 +8,10 @@ use Domains\Sales\Application\DTO\RecordActionOutcomeCommand;
 use Domains\Sales\Automation\Action\CreateFollowupTaskHandler;
 use Domains\Sales\Automation\Action\ScheduleFollowupHandler;
 use Domains\Sales\Automation\Action\UpdateDealHandler;
+use Domains\Sales\Automation\Action\ChangeDealStageHandler;
+use Domains\Sales\Automation\Action\RequestDocumentHandler;
+use Domains\Sales\Automation\Action\ScheduleMeetingHandler;
+use Domains\Sales\Automation\Action\AssignOwnerHandler;
 use Domains\Sales\Automation\Event\ActionOutcomeMeasured;
 use Domains\Sales\Automation\Event\SalesEventType;
 use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
@@ -21,6 +25,7 @@ $requiredActions = [
 ];
 $implemented = [...CreateFollowupTaskHandler::TYPES, ...ScheduleFollowupHandler::TYPES, ...UpdateDealHandler::TYPES];
 $implemented[] = 'sales.send_message';
+$implemented = [...$implemented, ChangeDealStageHandler::TYPE, AssignOwnerHandler::TYPE, RequestDocumentHandler::TYPE, ScheduleMeetingHandler::TYPE];
 foreach ($requiredActions as $actionType) {
     if (!in_array($actionType, $implemented, true)) throw new RuntimeException('Missing Sales action handler contract: ' . $actionType);
 }

@@ -12,7 +12,10 @@ use Domains\Sales\Model\LeadStatus;
 use Domains\Sales\Model\ClientCaseStatus;
 use Domains\Sales\Model\SalesActivityType;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
-use Domains\Sales\Automation\Event\DealStageChanged;
+use Domains\Sales\Automation\Event\SalesEventType;
+use Domains\Sales\Application\Contract\PipelineRepositoryInterface;
+use Domains\Sales\Application\DTO\ChangeDealStageCommand;
+use Kernel\Event\DomainEvent;
 use Domains\Sales\Automation\Event\LeadChanged;
 use Kernel\Event\EventBus;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
@@ -26,6 +29,8 @@ final readonly class UpdateInboundClientCaseRequest
         private EventBus $events,
         private TransactionManagerInterface $transactions,
         private string $organizationId,
+        private ?PipelineRepositoryInterface $pipelines = null,
+        private ?ChangeDealStage $changeDealStage = null,
     ) {
     }
 
@@ -89,16 +94,19 @@ final readonly class UpdateInboundClientCaseRequest
                 ['status' => ['from' => $request['status'], 'to' => $status], 'assigned_user_id' => ['from' => $request['assigned_user_id'] ?? null, 'to' => $managerId]],
                 $metadata,
             ));
+            $canonicalType=match($status){LeadStatus::Contacted->value=>SalesEventType::LEAD_CONTACTED,LeadStatus::Qualified->value=>SalesEventType::LEAD_QUALIFIED,LeadStatus::Lost->value=>SalesEventType::LEAD_DISQUALIFIED,default=>null};
+            if($canonicalType!==null&&(string)$request['status']!==$status)$this->events->publish(new DomainEvent(ClientCaseEvents::id(),$this->organizationId,$canonicalType,'lead',(string)$requestId,['previous_status'=>$request['status'],'status'=>$status],$metadata,new \DateTimeImmutable()));
 
             if ($case) {
                 $state = ClientCaseInput::caseStateForLead($status);
                 if (!$this->commands->syncCaseFromLead($this->organizationId, $caseId, [
-                    'stage' => $state['stage'], 'status' => $state['status'], 'assigned_user_id' => $managerId,
+                    'status' => $state['status'], 'assigned_user_id' => $managerId,
                     'next_contact_at' => $nextContact,
                     'closed_at' => ClientCaseStatus::from($state['status'])->isTerminal() ? date('Y-m-d H:i:s') : null,
                 ])) {
                     throw new RuntimeException('Linked client case disappeared during lead synchronization.');
                 }
+                if((string)$case['stage']!==$state['stage']&&$this->pipelines!==null&&$this->changeDealStage!==null){$target=$this->pipelines->findStageByCode($this->organizationId,(string)($case['pipeline_id']??''),$this->canonicalStageCode($state['stage']));if($target===null)throw new RuntimeException('Configured stage for lead status was not found.');$changed=$this->changeDealStage->execute(new ChangeDealStageCommand($this->organizationId,(string)$caseId,$target->id,isset($user['id'])?'USER':'SYSTEM',isset($user['id'])?(string)$user['id']:'system',$correlationId));if(!$changed->successful)throw new RuntimeException($changed->reason??'Lead stage synchronization failed.');}
                 $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
                     'activity_type' => $activityType === SalesActivityType::Viewing->value
                         ? SalesActivityType::Viewing->value
@@ -114,14 +122,9 @@ final readonly class UpdateInboundClientCaseRequest
                 $this->events->publish(ClientCaseChanged::create(
                     ClientCaseEvents::id(), $this->organizationId, (string) $caseId, $changes, $metadata,
                 ));
-                if ((string) $case['stage'] !== $state['stage']) {
-                    $this->events->publish(DealStageChanged::create(
-                        ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                        (string) $case['stage'], $state['stage'], $metadata,
-                    ));
-                }
             }
             return ClientCaseCommandResult::success('updated', ['case_id' => $caseId]);
         });
     }
+    private function canonicalStageCode(string $legacy):string{return match($legacy){'new'=>'NEW','qualification','need_defined'=>'QUALIFIED','matching'=>'PROPOSAL','viewing'=>'MEETING','negotiation'=>'NEGOTIATION','deal','aftercare'=>'WON','lost'=>'LOST',default=>'CONTACTED'};}
 }

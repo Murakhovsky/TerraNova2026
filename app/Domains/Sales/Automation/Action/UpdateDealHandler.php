@@ -12,7 +12,7 @@ use Kernel\Action\ExecutionResult;
 
 final readonly class UpdateDealHandler implements ActionHandlerInterface
 {
-    public const TYPES = ['sales.update_deal', 'sales.change_stage', 'sales.assign_owner'];
+    public const TYPES = ['sales.update_deal'];
 
     public function __construct(private DealRepositoryInterface $deals)
     {

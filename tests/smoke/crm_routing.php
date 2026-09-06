@@ -92,10 +92,10 @@ if (($result->data['external_id'] ?? null) !== 'external-task-42') {
 
 $gateway->send(new SendMessageCommand('client-with-external-crm', 'external-deal-17', 'email', 'Hello', 'message-key'));
 $gateway->schedule(new ScheduleFollowupCommand('client-with-external-crm', 'external-deal-17', 'Call', null, new DateTimeImmutable('+1 day'), 'followup-key'));
-$gateway->update('client-with-external-crm', 'external-deal-17', DealChangeSet::fromArray(['stage' => 'negotiation']));
+$gateway->update('client-with-external-crm', 'external-deal-17', DealChangeSet::fromArray(['priority' => 'high']));
 if ($adapter->message?->dealReference !== 'external-deal-17'
     || $adapter->followup?->dealReference !== 'external-deal-17'
-    || $adapter->changes?->toArray() !== ['stage' => 'negotiation']
+    || $adapter->changes?->toArray() !== ['priority' => 'high']
 ) {
     throw new RuntimeException('External CRM did not receive the complete outbound capability surface.');
 }

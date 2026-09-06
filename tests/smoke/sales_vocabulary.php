@@ -26,10 +26,8 @@ foreach ([PipelineStage::class, ClientCaseStatus::class, ClientCaseType::class, 
     }
 }
 
-$changes = DealChangeSet::fromArray(['stage' => PipelineStage::Negotiation->value, 'priority' => SalesPriority::High->value]);
-if ($changes->toArray() !== ['stage' => 'negotiation', 'priority' => 'high']) {
-    throw new RuntimeException('DealChangeSet does not use the canonical Sales vocabulary.');
-}
+$changes = DealChangeSet::fromArray(['priority' => SalesPriority::High->value]);
+if ($changes->toArray() !== ['priority' => 'high']) throw new RuntimeException('DealChangeSet does not use the canonical Sales vocabulary.');
 
 try {
     DealChangeSet::fromArray(['stage' => 'provider_specific_stage']);
@@ -46,4 +44,3 @@ if ($case['stage'] !== PipelineStage::New->value
 }
 
 echo "Sales vocabulary passed: typed states are canonical across Deal and ClientCase flows.\n";
-

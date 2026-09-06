@@ -6,11 +6,18 @@ namespace Domains\Sales\Bootstrap;
 use Domains\Sales\Application\Contract\CrmGatewayInterface;
 use Domains\Sales\Application\Contract\DealRepositoryInterface;
 use Domains\Sales\Application\Contract\FollowupRepositoryInterface;
-use Domains\Sales\Application\Contract\MessageGatewayInterface;
 use Domains\Sales\Automation\Action\CreateFollowupTaskHandler;
 use Domains\Sales\Automation\Action\ScheduleFollowupHandler;
 use Domains\Sales\Automation\Action\SendMessageHandler;
 use Domains\Sales\Automation\Action\UpdateDealHandler;
+use Domains\Sales\Automation\Action\ChangeDealStageHandler;
+use Domains\Sales\Application\UseCase\ChangeDealStage;
+use Domains\Sales\Automation\Action\RequestDocumentHandler;
+use Domains\Sales\Automation\Action\ScheduleMeetingHandler;
+use Domains\Sales\Automation\Action\AssignOwnerHandler;
+use Domains\Sales\Application\UseCase\AssignDealOwner;
+use Domains\Sales\Application\UseCase\SendSalesMessage;
+use Domains\Sales\Application\UseCase\ScheduleSalesMeeting;
 use Domains\Sales\Automation\Agent\SalesIntelligenceAgent;
 use Domains\Sales\Automation\Event\CallCompleted;
 use Domains\Sales\Automation\Event\ActionOutcomeMeasured;
@@ -33,10 +40,13 @@ final readonly class SalesDomainModule implements DomainModuleInterface
     public function __construct(
         private CrmGatewayInterface $crm,
         private DealRepositoryInterface $deals,
-        private MessageGatewayInterface $messages,
         private FollowupRepositoryInterface $followups,
         private RuleContextProviderInterface $ruleContexts,
         private AgentContextBuilderInterface $agentContexts,
+        private ChangeDealStage $changeDealStage,
+        private SendSalesMessage $sendSalesMessage,
+        private ScheduleSalesMeeting $scheduleSalesMeeting,
+        private AssignDealOwner $assignDealOwner,
     ) {
     }
 
@@ -55,7 +65,7 @@ final readonly class SalesDomainModule implements DomainModuleInterface
 
     public function actionTypes(): array
     {
-        return [...CreateFollowupTaskHandler::TYPES, ...UpdateDealHandler::TYPES, ...SendMessageHandler::TYPES, ...ScheduleFollowupHandler::TYPES];
+        return [...CreateFollowupTaskHandler::TYPES, ...UpdateDealHandler::TYPES, ChangeDealStageHandler::TYPE, AssignOwnerHandler::TYPE, RequestDocumentHandler::TYPE, ScheduleMeetingHandler::TYPE, ...SendMessageHandler::TYPES, ...ScheduleFollowupHandler::TYPES];
     }
 
     public function actionHandlers(): array
@@ -63,8 +73,12 @@ final readonly class SalesDomainModule implements DomainModuleInterface
         return [
             new CreateFollowupTaskHandler($this->crm),
             new UpdateDealHandler($this->deals),
-            new SendMessageHandler($this->messages),
+            new ChangeDealStageHandler($this->changeDealStage),
+            new AssignOwnerHandler($this->assignDealOwner),
+            new SendMessageHandler($this->sendSalesMessage),
             new ScheduleFollowupHandler($this->followups),
+            new RequestDocumentHandler($this->sendSalesMessage),
+            new ScheduleMeetingHandler($this->scheduleSalesMeeting),
         ];
     }
 

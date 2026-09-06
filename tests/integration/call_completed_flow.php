@@ -121,7 +121,7 @@ $audit = new class implements AuditRepositoryInterface {
 $executed = [];
 $actionHandler = new class($executed) implements ActionHandlerInterface {
     public function __construct(private array &$executed) {}
-    public function supports(string $actionType): bool { return $actionType === 'sales.send_followup'; }
+    public function supports(string $actionType): bool { return $actionType === 'sales.create_followup'; }
     public function execute(Action $action): ExecutionResult {
         $this->executed[] = $action->id;
         return ExecutionResult::success(['message_id' => 'msg-1', 'channel' => $action->parameters['channel'] ?? 'telegram'], ['messages_sent' => 1]);
@@ -185,7 +185,12 @@ $llm = new class implements LlmClientInterface {
         $this->calls++;
         return new LlmResponse([
             'decision' => 'FOLLOW_UP', 'reason' => 'Buying intent exists and no next contact is scheduled.', 'confidence' => 0.91,
-            'proposed_actions' => [['type' => 'sales.send_followup', 'parameters' => ['channel' => 'telegram', 'body' => 'Financing options']]],
+            'proposed_actions' => [['type' => 'sales.create_followup', 'parameters' => ['title' => 'Financing follow-up']]],
+            'evidence' => ['sales_intelligence' => [
+                'deal_health' => 'AT_RISK', 'risk_level' => 'HIGH', 'risk_reasons' => ['No next contact'],
+                'opportunity_level' => 'HIGH', 'customer_intent' => 'INTERESTED', 'objections' => ['Financing'],
+                'missing_information' => [], 'next_best_action' => 'sales.create_followup', 'recommended_timing' => 'within 24 hours',
+            ]],
         ], 'fake', 'fake-structured');
     }
 };
@@ -292,7 +297,7 @@ $jobStatuses = array_values(array_map(static fn (array $record): string => $reco
 $action = array_values($actionRepository->actions)[0] ?? null;
 $auditCategories = array_map(static fn (AuditEntry $entry): string => $entry->category, $audit->entries);
 
-if ($eventTypes !== ['sales.call.completed', ActionExecutionFinished::COMPLETED]) throw new RuntimeException('Expected CallCompleted and generic ActionCompleted events.');
+if ($eventTypes !== ['sales.call.completed', ActionExecutionFinished::COMPLETED]) throw new RuntimeException('Expected CallCompleted and generic ActionCompleted events: ' . json_encode($eventTypes));
 if ($jobStatuses !== ['COMPLETED', 'COMPLETED']) throw new RuntimeException('Agent and Action jobs did not complete: ' . json_encode($queue->jobs));
 if (count($ruleEvaluations) !== 1 || !$ruleEvaluations[0]->matched) throw new RuntimeException('Rule did not match.');
 if ($agentRuns !== ['RUNNING', 'COMPLETED'] || $llm->calls !== 1) throw new RuntimeException('Agent did not complete exactly once.');

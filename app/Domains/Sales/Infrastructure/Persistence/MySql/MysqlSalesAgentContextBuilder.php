@@ -34,19 +34,22 @@ final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilde
         $org=['organization_id'=>$invocation->organizationId];
         $rules=$this->all('SELECT code,name,trigger_type,conditions,effect FROM cos_rules WHERE organization_id=:organization_id AND status="ACTIVE" AND trigger_type LIKE "sales.%" ORDER BY priority LIMIT 20',$org);
         $policies=$this->all('SELECT code,action_type,conditions,decision FROM cos_policies WHERE organization_id=:organization_id AND status="ACTIVE" AND action_type LIKE "sales.%" ORDER BY priority LIMIT 20',$org);
-        return [
+        $property=$this->one('SELECT p.public_id,p.title,p.price_amount,p.price_currency,m.match_status,m.score FROM tn_client_case_property_matches m INNER JOIN tn_properties p ON p.id=m.property_id WHERE m.client_case_id=:id AND m.organization_id=:organization_id ORDER BY m.score DESC,m.updated_at DESC LIMIT 1',$scope);
+        $context = [
             'deal'=>$deal,'person'=>['id'=>$deal['person_id'],'name'=>$deal['full_name'],'notes'=>$deal['customer_notes']],
             'lead'=>$lead,'pipeline'=>['name'=>$deal['pipeline_name'],'stage'=>$deal['stage']],
             'activities'=>$activities,'communications'=>$communications,'last_contact'=>$communications[0]??$activities[0]??null,
             'next_action'=>['at'=>$deal['next_contact_at']],'sales_history'=>array_slice($activities,0,10),
-            'assigned_manager'=>['name'=>$deal['assigned_manager']],'product_or_property'=>null,
+            'assigned_manager'=>['name'=>$deal['assigned_manager']],'product_or_property'=>$property,
             'metrics'=>['activity_count_180d'=>count($activities),'communication_count_90d'=>count($communications),
                 'days_since_activity'=>$deal['last_activity_at']?max(0,(int)floor((time()-strtotime((string)$deal['last_activity_at']))/86400)):null],
             'rules'=>$rules,'policies'=>$policies,'goals'=>[['type'=>'advance_deal_safely','target'=>'next_valid_pipeline_stage']],
             'question'=>$invocation->question,'context_references'=>$invocation->contextReferences,
             '_limits'=>['activity_limit'=>30,'communication_limit'=>20,'history_days'=>180,'pii'=>'redacted_by_kernel','token_budget'=>12000],
         ];
+        return $this->enforceBudget($context,12000);
     }
+    private function enforceBudget(array $context,int $tokens):array{$max=$tokens*4;while(strlen(json_encode($context,JSON_THROW_ON_ERROR))>$max){if(count($context['communications'])>3){array_pop($context['communications']);continue;}if(count($context['activities'])>5){array_pop($context['activities']);continue;}if(count($context['sales_history'])>3){array_pop($context['sales_history']);continue;}break;}$context['_limits']['estimated_tokens']=(int)ceil(strlen(json_encode($context,JSON_THROW_ON_ERROR))/4);return $context;}
     private function all(string $sql,array $params): array {$s=$this->connection->prepare($sql);$s->execute($params);return $s->fetchAll(PDO::FETCH_ASSOC);}
     private function one(string $sql,array $params): ?array {$s=$this->connection->prepare($sql);$s->execute($params);$r=$s->fetch(PDO::FETCH_ASSOC);return $r===false?null:$r;}
 }

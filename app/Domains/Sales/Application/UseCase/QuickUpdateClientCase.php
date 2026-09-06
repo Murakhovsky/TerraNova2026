@@ -7,9 +7,9 @@ use Domains\Sales\Application\Contract\ClientCaseCommandRepositoryInterface;
 use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
 use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
-use Domains\Sales\Automation\Event\DealStageChanged;
 use Domains\Sales\Model\ClientCaseStatus;
-use Domains\Sales\Model\PipelineStage;
+use Domains\Sales\Application\Contract\PipelineRepositoryInterface;
+use Domains\Sales\Application\DTO\ChangeDealStageCommand;
 use Domains\Sales\Model\SalesPriority;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
@@ -23,6 +23,8 @@ final readonly class QuickUpdateClientCase
         private EventBus $events,
         private TransactionManagerInterface $transactions,
         private string $organizationId,
+        private ?PipelineRepositoryInterface $pipelines = null,
+        private ?ChangeDealStage $changeDealStage = null,
     ) {
     }
 
@@ -38,11 +40,14 @@ final readonly class QuickUpdateClientCase
             ClientCaseStatus::values(),
             (string) $case['status'],
         );
-        $stage = $this->allowed(
-            (string) ($input['stage'] ?? $case['stage']),
-            PipelineStage::values(),
-            (string) $case['stage'],
-        );
+        $targetStageId = isset($input['stage_id']) ? trim((string) $input['stage_id']) : null;
+        if ($targetStageId === null && array_key_exists('stage', $input)) {
+            $pipelineId = (string) ($case['pipeline_id'] ?? '');
+            if($this->pipelines===null)return ClientCaseCommandResult::failure('stage_service_unavailable');
+            $resolved = $this->pipelines->findStageByCode($this->organizationId, $pipelineId, $this->canonicalStageCode((string) $input['stage']));
+            if ($resolved === null) return ClientCaseCommandResult::failure('invalid_stage');
+            $targetStageId = $resolved->id;
+        }
         $priority = $this->allowed(
             (string) ($input['priority'] ?? $case['priority']),
             SalesPriority::values(),
@@ -56,10 +61,17 @@ final readonly class QuickUpdateClientCase
             : ($case['next_contact_at'] ?? null);
         $correlationId = bin2hex(random_bytes(16));
 
-        $ok = $this->transactions->transactional(function () use ($case, $caseId, $status, $stage, $priority, $managerId, $nextContact, $user, $correlationId): bool {
+        $ok = $this->transactions->transactional(function () use ($case, $caseId, $status, $targetStageId, $priority, $managerId, $nextContact, $user, $correlationId): bool {
+            if ($targetStageId !== null && $targetStageId !== (string) ($case['stage_id'] ?? '')) {
+                if($this->changeDealStage===null)return false;
+                $stageResult = $this->changeDealStage->execute(new ChangeDealStageCommand(
+                    $this->organizationId, (string) $caseId, $targetStageId,
+                    isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system', $correlationId,
+                ));
+                if (!$stageResult->successful) return false;
+            }
             $updated = $this->commands->quickUpdate($this->organizationId, $caseId, [
                 'status' => $status,
-                'stage' => $stage,
                 'priority' => $priority,
                 'assigned_user_id' => $managerId,
                 'next_contact_at' => $nextContact,
@@ -88,26 +100,24 @@ final readonly class QuickUpdateClientCase
                 $this->organizationId,
                 (string) $caseId,
                 [
-                    'stage' => ['from' => (string) $case['stage'], 'to' => $stage],
                     'status' => ['from' => (string) $case['status'], 'to' => $status],
                     'priority' => ['from' => (string) $case['priority'], 'to' => $priority],
                 ],
                 $metadata,
             ));
-            if ((string) $case['stage'] !== $stage) {
-                $this->events->publish(DealStageChanged::create(
-                    bin2hex(random_bytes(16)),
-                    $this->organizationId,
-                    (string) $caseId,
-                    (string) $case['stage'],
-                    $stage,
-                    $metadata,
-                ));
-            }
             return true;
         });
 
         return $ok ? ClientCaseCommandResult::success('updated') : ClientCaseCommandResult::failure('not_found');
+    }
+
+    private function canonicalStageCode(string $legacy): string
+    {
+        return match (strtolower($legacy)) {
+            'new' => 'NEW', 'qualification', 'need_defined', 'qualified' => 'QUALIFIED', 'matching', 'proposal' => 'PROPOSAL',
+            'viewing', 'meeting' => 'MEETING', 'negotiation' => 'NEGOTIATION', 'deal', 'aftercare', 'won' => 'WON',
+            'lost' => 'LOST', default => strtoupper($legacy),
+        };
     }
 
     private function allowed(string $value, array $allowed, string $default): string

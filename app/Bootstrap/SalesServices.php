@@ -26,14 +26,26 @@ use Domains\Sales\Application\UseCase\RecordActionOutcome;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel;
 use Bootstrap\InboundCaseResolverAdapter;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
+use Domains\Sales\Application\UseCase\ChangeDealStage;
+use Domains\Sales\Domain\Policy\StageTransitionPolicy;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository;
+use Domains\Sales\Application\UseCase\SendSalesMessage;
+use Domains\Sales\Application\UseCase\ScheduleSalesMeeting;
+use Domains\Sales\Application\UseCase\AssignDealOwner;
+use Domains\Sales\Application\UseCase\RecordIncomingMessage;
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
     $this->getShared('cosCrmGateway'),
     $this->getShared('cosCrmGateway'),
     $this->getShared('cosCrmGateway'),
-    $this->getShared('cosCrmGateway'),
     $this->getShared('salesRuleContextProvider'),
     $this->getShared('salesAgentContextBuilder'),
+    $this->getShared('salesChangeDealStage'),
+    $this->getShared('salesSendMessage'),
+    $this->getShared('salesScheduleMeeting'),
+    $this->getShared('salesAssignDealOwner'),
 ));
 
 $di->setShared('salesCompleteCall', fn (): CompleteSalesCall => new CompleteSalesCall(
@@ -60,6 +72,25 @@ $di->setShared('salesRecordActionOutcome', fn (): RecordActionOutcome => new Rec
 $di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepository => new MysqlClientCaseCommandRepository(
     $this->getShared('databaseService')->connection(),
 ));
+$di->setShared('salesPipelineRepository', fn (): MysqlPipelineRepository => new MysqlPipelineRepository($this->getShared('databaseService')->connection()));
+$di->setShared('salesDealRepository', fn (): MysqlDealRepository => new MysqlDealRepository($this->getShared('databaseService')->connection()));
+$di->setShared('salesOperationRepository', fn (): MysqlSalesOperationRepository => new MysqlSalesOperationRepository($this->getShared('databaseService')->connection()));
+$di->setShared('salesSendMessage', fn (): SendSalesMessage => new SendSalesMessage(
+    $this->getShared('cosCrmGateway'), $this->getShared('salesOperationRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesScheduleMeeting', fn (): ScheduleSalesMeeting => new ScheduleSalesMeeting(
+    $this->getShared('salesOperationRepository'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesRecordIncomingMessage', fn (): RecordIncomingMessage => new RecordIncomingMessage(
+    $this->getShared('salesOperationRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesChangeDealStage', fn (): ChangeDealStage => new ChangeDealStage(
+    $this->getShared('salesDealRepository'), $this->getShared('salesPipelineRepository'), new StageTransitionPolicy(),
+    $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesAssignDealOwner', fn (): AssignDealOwner => new AssignDealOwner(
+    $this->getShared('salesDealRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
 $di->setShared('salesCreateClientCase', fn (): CreateClientCase => new CreateClientCase(
     $this->getShared('salesClientCaseCommands'), $this->getShared('eventBus'),
     $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
@@ -67,14 +98,17 @@ $di->setShared('salesCreateClientCase', fn (): CreateClientCase => new CreateCli
 $di->setShared('salesUpdateClientCase', fn (): UpdateClientCase => new UpdateClientCase(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
+    $this->getShared('salesPipelineRepository'), $this->getShared('salesChangeDealStage'),
 ));
 $di->setShared('salesQuickUpdateClientCase', fn (): QuickUpdateClientCase => new QuickUpdateClientCase(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
+    $this->getShared('salesPipelineRepository'), $this->getShared('salesChangeDealStage'),
 ));
 $di->setShared('salesAddClientCaseActivity', fn (): AddClientCaseActivity => new AddClientCaseActivity(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
     $this->getShared('salesCompleteCall'), $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
+    $this->getShared('eventBus'),
 ));
 $di->setShared('salesAttachInboundRequest', fn (): AttachInboundRequest => new AttachInboundRequest(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
@@ -83,6 +117,7 @@ $di->setShared('salesAttachInboundRequest', fn (): AttachInboundRequest => new A
 $di->setShared('salesUpdateInboundClientCaseRequest', fn (): UpdateInboundClientCaseRequest => new UpdateInboundClientCaseRequest(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'), $this->getShared('organizationContext')->id(),
+    $this->getShared('salesPipelineRepository'), $this->getShared('salesChangeDealStage'),
 ));
 $di->setShared('salesCreateClientCaseFromInboundRequest', fn (): CreateClientCaseFromInboundRequest => new CreateClientCaseFromInboundRequest(
     $this->getShared('salesClientCaseCommands'), $this->getShared('eventBus'),

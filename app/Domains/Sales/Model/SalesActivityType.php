@@ -16,4 +16,5 @@ enum SalesActivityType: string
     case StatusChange = 'status_change';
     case Deal = 'deal';
     case Task = 'task';
+    case Followup = 'followup';
 }

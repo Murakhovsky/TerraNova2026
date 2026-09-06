@@ -15,5 +15,6 @@ final readonly class AgentDefinition
         public array $allowedActionTypes,
         public string $defaultExecutionMode = 'APPROVAL_REQUIRED',
         public string $defaultRiskLevel = 'MEDIUM',
+        public array $evidenceSchemas = [],
     ) {}
 }

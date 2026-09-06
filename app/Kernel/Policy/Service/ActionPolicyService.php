@@ -66,10 +66,18 @@ final readonly class ActionPolicyService
                 PolicyDecision::Auto => $this->actions->queue($organizationId, $action->id),
                 PolicyDecision::ApprovalRequired => $this->requestApproval($action, $evaluation->reason),
                 PolicyDecision::Denied => $this->actions->reject($organizationId, $action->id),
+                PolicyDecision::HumanOnly => $this->isHumanOrigin($action->sourceType)
+                    ? $this->actions->queue($organizationId, $action->id)
+                    : $this->actions->reject($organizationId, $action->id),
             };
 
             return $this->actions->find($organizationId, $action->id) ?? $action;
         });
+    }
+
+    private function isHumanOrigin(string $sourceType): bool
+    {
+        return in_array(strtoupper($sourceType), ['USER', 'HUMAN', 'MANAGER', 'ADMIN'], true);
     }
 
     private function requestApproval(Action $action, string $reason): void

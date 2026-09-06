@@ -14,14 +14,16 @@ final readonly class DealChangeSet
 
     public static function fromArray(array $input): self
     {
+        foreach (['stage', 'stage_id', 'pipeline_id'] as $stageField) {
+            if (array_key_exists($stageField, $input)) throw new InvalidArgumentException('Deal stage can only be changed through ChangeDealStage.');
+        }
         $changes = array_intersect_key($input, array_flip([
-            'stage', 'status', 'priority', 'next_contact_at', 'assigned_user_id', 'deal_value', 'probability', 'expected_close_at',
+            'status', 'priority', 'next_contact_at', 'assigned_user_id', 'deal_value', 'probability', 'expected_close_at',
         ]));
         if ($changes === []) {
             throw new InvalidArgumentException('No allowed Deal fields supplied.');
         }
 
-        self::assertOneOf($changes, 'stage', PipelineStage::values());
         self::assertOneOf($changes, 'status', ClientCaseStatus::values());
         self::assertOneOf($changes, 'priority', SalesPriority::values());
         foreach (['next_contact_at', 'expected_close_at'] as $dateField) {

@@ -64,6 +64,7 @@ final class FrontendRoutes
         self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}', 'Interfaces\Api\Controller', 'sales', 'deal');
         self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}/timeline', 'Interfaces\Api\Controller', 'sales', 'timeline');
         self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}/intelligence', 'Interfaces\Api\Controller', 'sales', 'intelligence');
+        self::add($router, 'addPost', '/api/sales/deals/{id:[0-9]+}/stage', 'Interfaces\Api\Controller', 'sales', 'stage');
         self::add($router, 'addGet', '/api/sales/pipelines', 'Interfaces\Api\Controller', 'sales', 'pipelines');
         self::add($router, 'addGet', '/api/sales/today', 'Interfaces\Api\Controller', 'sales', 'today');
         self::add($router, 'addGet', '/api/sales/metrics', 'Interfaces\Api\Controller', 'sales', 'metrics');

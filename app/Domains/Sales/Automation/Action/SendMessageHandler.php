@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Domains\Sales\Automation\Action;
 
-use Domains\Sales\Application\Contract\MessageGatewayInterface;
+use Domains\Sales\Application\UseCase\SendSalesMessage;
 use Domains\Sales\Application\DTO\SendMessageCommand;
 use Kernel\Action\Action;
 use Kernel\Action\Contract\ActionHandlerInterface;
@@ -13,7 +13,7 @@ final readonly class SendMessageHandler implements ActionHandlerInterface
 {
     public const TYPES = ['sales.send_message', 'sales.send_followup', 'sales.send_financing_followup'];
 
-    public function __construct(private MessageGatewayInterface $messages)
+    public function __construct(private SendSalesMessage $messages)
     {
     }
 
@@ -32,13 +32,13 @@ final readonly class SendMessageHandler implements ActionHandlerInterface
             return ExecutionResult::failure('Message body is required.');
         }
 
-        $result = $this->messages->send(new SendMessageCommand(
+        $result = $this->messages->execute(new SendMessageCommand(
             $action->organizationId,
             $action->targetId,
-            (string) ($action->parameters['channel'] ?? 'internal'),
+            (string) ($action->parameters['channel'] ?? 'WEB'),
             $body,
             $action->idempotencyKey ?? $action->id,
-        ));
+        ), ['purpose' => 'sales_message'], $action->sourceType, $action->sourceId);
 
         return $result->successful
             ? ExecutionResult::success(['message_id' => $result->externalId, ...$result->data], ['messages_sent' => 1])

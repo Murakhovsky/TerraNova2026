@@ -8,6 +8,8 @@ use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 use Domains\Sales\Application\DTO\RecordActionOutcomeCommand;
 use Domains\Sales\Application\UseCase\RecordActionOutcome;
 use Domains\Sales\Model\OutcomeAttribution;
+use Domains\Sales\Application\DTO\ChangeDealStageCommand;
+use Domains\Sales\Application\UseCase\ChangeDealStage;
 use Interfaces\Web\Controller\WebController;
 use Phalcon\Http\Response;
 use Throwable;
@@ -82,6 +84,20 @@ final class SalesController extends WebController
         } catch (Throwable) {
             return $this->json(500, ['ok' => false, 'error' => 'Sales intelligence is unavailable.']);
         }
+    }
+
+    public function stageAction(?string $id = null): Response
+    {
+        $dealId=(string)($id?:$this->dispatcher->getParam('id'));$user=$this->auth()->currentUser();
+        if($user===null||!$this->auth()->isManager($user))return $this->json(403,['ok'=>false,'error'=>'Manager authorization required.']);
+        if(!$this->validMutation()||!ctype_digit($dealId)||((int)$dealId)<=0)return $this->json(400,['ok'=>false,'error'=>'Invalid request or CSRF token.']);
+        $json=$this->request->getJsonRawBody(true);$input=is_array($json)?$json:(array)$this->request->getPost();$stageId=trim((string)($input['stage_id']??''));
+        try {
+            if($stageId===''){$code=trim((string)($input['stage']??''));$deal=$this->di->getShared('salesDealRepository')->getForStageChange($this->organization()->id(),$dealId);if($deal===null)return $this->json(404,['ok'=>false,'error'=>'Deal not found.']);$stage=$this->di->getShared('salesPipelineRepository')->findStageByCode($this->organization()->id(),(string)$deal['pipeline_id'],strtoupper($code));$stageId=$stage?->id??'';}
+            if($stageId==='')return $this->json(422,['ok'=>false,'error'=>'A valid stage_id is required.']);
+            /** @var ChangeDealStage $useCase */$useCase=$this->di->getShared('salesChangeDealStage');$result=$useCase->execute(new ChangeDealStageCommand($this->organization()->id(),$dealId,$stageId,'USER',(string)$user['id'],bin2hex(random_bytes(16))));
+            return $result->successful?$this->json(200,['ok'=>true,'data'=>['changed'=>$result->changed,'previous_stage_id'=>$result->previousStageId,'stage_id'=>$result->stageId]]):$this->json(422,['ok'=>false,'error'=>$result->reason]);
+        }catch(Throwable $e){return $this->json(422,['ok'=>false,'error'=>$e->getMessage()]);}
     }
 
     private function read(callable $reader): Response

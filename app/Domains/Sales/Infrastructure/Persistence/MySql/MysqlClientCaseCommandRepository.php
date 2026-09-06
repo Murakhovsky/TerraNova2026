@@ -106,18 +106,22 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function createCase(string $organizationId, int $personId, array $case): int
     {
+        $initial = $this->initialStage($organizationId);
         $statement = $this->connection->prepare('INSERT INTO tn_client_cases
-            (organization_id,public_id,person_id,type,title,status,stage,priority,assigned_user_id,source,
+            (organization_id,public_id,person_id,type,title,status,stage,pipeline_id,stage_id,probability,priority,assigned_user_id,source,
              property_type_id,location_id,budget_min,budget_max,currency,area_min,area_max,description,parameters_json,started_at,next_contact_at,closed_at)
-            VALUES (:organization_id,:public_id,:person_id,:type,:title,:status,:stage,:priority,:assigned_user_id,:source,
+            VALUES (:organization_id,:public_id,:person_id,:type,:title,:status,:stage,:pipeline_id,:stage_id,:probability,:priority,:assigned_user_id,:source,
              :property_type_id,:location_id,:budget_min,:budget_max,:currency,:area_min,:area_max,:description,:parameters_json,NOW(),:next_contact_at,:closed_at)');
         $statement->execute([
             'organization_id' => $organizationId,
             'public_id' => $this->nextPublicId($organizationId, 'tn_client_cases', 'CC'),
             'person_id' => $personId,
-        ] + $case);
+            'stage' => strtolower((string) $initial['code']),
+            'pipeline_id' => $initial['pipeline_id'],
+            'stage_id' => $initial['id'],
+            'probability' => $initial['probability_default'],
+        ] + array_diff_key($case, array_flip(['stage'])));
         $caseId = (int) $this->connection->lastInsertId();
-        $this->syncCanonicalStage($organizationId, $caseId, (string) $case['stage']);
         return $caseId;
     }
 
@@ -136,11 +140,12 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function quickUpdate(string $organizationId, int $caseId, array $changes): bool
     {
-        $statement = $this->connection->prepare('UPDATE tn_client_cases SET status=:status,stage=:stage,
+        $statement = $this->connection->prepare('UPDATE tn_client_cases SET status=:status,
             priority=:priority,assigned_user_id=:assigned_user_id,next_contact_at=:next_contact_at,
             closed_at=:closed_at,updated_at=NOW() WHERE id=:id AND organization_id=:organization_id');
-        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + $changes);
-        $this->syncCanonicalStage($organizationId, $caseId, (string) $changes['stage']);
+        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_intersect_key($changes, array_flip([
+            'status','priority','assigned_user_id','next_contact_at','closed_at',
+        ])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 
@@ -190,11 +195,12 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function syncCaseFromLead(string $organizationId, int $caseId, array $changes): bool
     {
-        $statement = $this->connection->prepare('UPDATE tn_client_cases SET stage=:stage,status=:status,
+        $statement = $this->connection->prepare('UPDATE tn_client_cases SET status=:status,
             assigned_user_id=COALESCE(:assigned_user_id,assigned_user_id),next_contact_at=:next_contact_at,
             closed_at=:closed_at,updated_at=NOW() WHERE id=:id AND organization_id=:organization_id');
-        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + $changes);
-        $this->syncCanonicalStage($organizationId, $caseId, (string) $changes['stage']);
+        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_intersect_key($changes, array_flip([
+            'status','assigned_user_id','next_contact_at','closed_at',
+        ])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 
@@ -213,6 +219,14 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             . 'c.deal_value=COALESCE(c.deal_value,c.budget_max) WHERE c.id=:case_id AND c.organization_id=:organization_id'
         );
         $statement->execute(['stage_code' => $code, 'case_id' => $caseId, 'organization_id' => $organizationId]);
+    }
+
+    private function initialStage(string $organizationId): array
+    {
+        $statement=$this->connection->prepare('SELECT s.id,s.pipeline_id,s.code,s.probability_default FROM sales_pipelines p INNER JOIN sales_pipeline_stages s ON s.pipeline_id=p.id AND s.is_terminal=0 WHERE p.organization_id=:organization_id AND p.status="ACTIVE" ORDER BY p.is_default DESC,s.sort_order,s.id LIMIT 1');
+        $statement->execute(['organization_id'=>$organizationId]);$row=$statement->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))throw new \RuntimeException('No initial stage is configured for the organization default pipeline.');
+        return $row;
     }
 
     public function attachInboundRequest(string $organizationId, int $caseId, int $personId, int $requestId, ?int $userId): bool
