@@ -4,10 +4,14 @@ declare(strict_types=1);
 namespace Domains\Diagnostic\Methodology\Loader;
 
 use Domains\Diagnostic\Methodology\Model\CriterionDefinition;
+use Domains\Diagnostic\Methodology\Model\BenchmarkDefinition;
 use Domains\Diagnostic\Methodology\Model\DependencyDefinition;
 use Domains\Diagnostic\Methodology\Model\FactDefinition;
+use Domains\Diagnostic\Methodology\Model\EvidenceRequirementDefinition;
 use Domains\Diagnostic\Methodology\Model\MethodologyPack;
 use Domains\Diagnostic\Methodology\Model\MetricDefinition;
+use Domains\Diagnostic\Methodology\Model\QuestionDefinition;
+use Domains\Diagnostic\Methodology\Model\RecommendationDefinition;
 use Domains\Diagnostic\Methodology\Model\RuleDefinition;
 use Domains\Diagnostic\Methodology\Model\ScoringDefinition;
 use Domains\Diagnostic\Methodology\Model\SectionDefinition;
@@ -89,6 +93,48 @@ final class PackLoader
                 isset($item['unit']) ? (string) $item['unit'] : null,
                 array_values($item['enum_values'] ?? []),
             ), $this->list($data, 'facts')),
+            array_map(fn (array $item): QuestionDefinition => new QuestionDefinition(
+                (string) ($item['id'] ?? ''),
+                (string) ($item['text'] ?? ''),
+                $this->stringList($item['target_facts'] ?? []),
+                $this->stringList($item['target_criteria'] ?? []),
+                (float) ($item['priority'] ?? 1),
+                (string) ($item['expected_answer_type'] ?? 'text'),
+                is_array($item['follow_up_conditions'] ?? null) ? $item['follow_up_conditions'] : [],
+                isset($item['evidence_requirement_id']) ? (string) $item['evidence_requirement_id'] : null,
+                (float) ($item['cost'] ?? 1),
+                (string) ($item['area_id'] ?? ''),
+            ), $this->list($data, 'questions')),
+            array_map(fn (array $item): EvidenceRequirementDefinition => new EvidenceRequirementDefinition(
+                (string) ($item['id'] ?? ''),
+                $this->stringList(isset($item['criteria']) ? $item['criteria'] : [($item['criterion'] ?? '')]),
+                $this->stringList($item['accepted_source_types'] ?? []),
+                $this->stringList($item['hierarchy'] ?? []),
+                (int) ($item['minimum_sources'] ?? 1),
+                (float) ($item['minimum_reliability'] ?? 0),
+                (float) ($item['minimum_directness'] ?? 0),
+                (bool) ($item['required'] ?? true),
+            ), $this->list($data, 'evidence_requirements')),
+            array_map(fn (array $item): RecommendationDefinition => new RecommendationDefinition(
+                (string) ($item['id'] ?? ''),
+                $this->stringList($item['trigger_rules'] ?? []),
+                $this->stringList($item['criteria'] ?? $item['criterion_ids'] ?? []),
+                (string) ($item['target_problem'] ?? ''),
+                (string) ($item['title'] ?? ''),
+                (string) ($item['rationale'] ?? ''),
+                $this->stringList($item['actions'] ?? []),
+                (string) ($item['expected_impact'] ?? ''),
+                (string) ($item['implementation_effort'] ?? 'medium'),
+                (string) ($item['priority'] ?? 'medium'),
+                $this->stringList($item['success_metrics'] ?? []),
+                $this->stringList($item['dependencies'] ?? []),
+                (string) ($item['owner_role'] ?? 'Sales Manager'),
+            ), $this->list($data, 'recommendations')),
+            array_map(fn (array $item): BenchmarkDefinition => new BenchmarkDefinition(
+                (string)($item['id']??''),(string)($item['metric_id']??''),(string)($item['name']??''),
+                is_array($item['segments']??null)?$item['segments']:[],array_values($item['bands']??[]),(string)($item['unit']??''),
+                (string)($item['source']??''),isset($item['valid_from'])?(string)$item['valid_from']:null,isset($item['valid_to'])?(string)$item['valid_to']:null,
+            ),$this->list($data,'benchmarks')),
         );
     }
 
@@ -150,5 +196,17 @@ final class PackLoader
             $weights[$reference] = $weight;
         }
         return [$references, $weights];
+    }
+
+    /** @return list<string> */
+    private function stringList(mixed $value): array
+    {
+        if (!is_array($value)) throw new InvalidArgumentException('Methodology reference field must be a list.');
+        $result = [];
+        foreach ($value as $item) {
+            if (!is_string($item) || trim($item) === '') throw new InvalidArgumentException('Methodology references must be non-empty strings.');
+            $result[] = $item;
+        }
+        return array_values($result);
     }
 }

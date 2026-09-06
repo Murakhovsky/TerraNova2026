@@ -52,6 +52,29 @@ final class MethodologyPackSerializer
                 'source' => $item->source, 'target' => $item->target, 'type' => $item->type,
                 'strength' => $item->strength, 'direction' => $item->direction,
             ], $pack->dependencies),
+            'questions' => array_map(static fn ($item): array => [
+                'id' => $item->id, 'text' => $item->text, 'target_facts' => $item->targetFacts,
+                'target_criteria' => $item->targetCriteria, 'priority' => $item->priority,
+                'expected_answer_type' => $item->expectedAnswerType,
+                'follow_up_conditions' => $item->followUpConditions,
+                'evidence_requirement_id' => $item->evidenceRequirementId,
+                'cost' => $item->cost, 'area_id' => $item->areaId,
+            ], $pack->questions),
+            'evidence_requirements' => array_map(static fn ($item): array => [
+                'id' => $item->id, 'criteria' => $item->criterionIds,
+                'accepted_source_types' => $item->acceptedSourceTypes, 'hierarchy' => $item->hierarchy,
+                'minimum_sources' => $item->minimumSources, 'minimum_reliability' => $item->minimumReliability,
+                'minimum_directness' => $item->minimumDirectness, 'required' => $item->required,
+            ], $pack->evidenceRequirements),
+            'recommendations' => array_map(static fn ($item): array => [
+                'id' => $item->id, 'trigger_rules' => $item->triggerRules,
+                'criteria' => $item->criterionIds, 'target_problem' => $item->targetProblem,
+                'title' => $item->title, 'rationale' => $item->rationale, 'actions' => $item->actions,
+                'expected_impact' => $item->expectedImpact, 'implementation_effort' => $item->implementationEffort,
+                'priority' => $item->priority, 'success_metrics' => $item->successMetrics,
+                'dependencies' => $item->dependencies, 'owner_role' => $item->ownerRole,
+            ], $pack->recommendations),
+            'benchmarks'=>array_map(static fn($item):array=>['id'=>$item->id,'metric_id'=>$item->metricId,'name'=>$item->name,'segments'=>$item->segments,'bands'=>$item->bands,'unit'=>$item->unit,'source'=>$item->source,'valid_from'=>$item->validFrom,'valid_to'=>$item->validTo],$pack->benchmarks),
         ];
     }
 

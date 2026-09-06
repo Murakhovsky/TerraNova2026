@@ -24,11 +24,15 @@ final class PackValidator
         $criteria = $this->index($pack->criteria, 'criteria', $errors);
         $metrics = $this->index($pack->metrics, 'metrics', $errors);
         $facts = $this->index($pack->facts, 'facts', $errors);
-        $this->index($pack->rules, 'rules', $errors);
+        $rules = $this->index($pack->rules, 'rules', $errors);
+        $questions = $this->index($pack->questions, 'questions', $errors);
+        $evidenceRequirements = $this->index($pack->evidenceRequirements, 'evidence_requirements', $errors);
+        $recommendations = $this->index($pack->recommendations, 'recommendations', $errors);
+        $benchmarks = $this->index($pack->benchmarks, 'benchmarks', $errors);
         if ($pack->sections === []) $errors[] = $this->issue('pack.no_sections', 'sections', 'A diagnostic pack requires at least one section.');
         if ($pack->criteria === []) $errors[] = $this->issue('pack.no_criteria', 'criteria', 'A diagnostic pack requires at least one criterion.');
         $globalIds = [];
-        foreach (['sections' => $pack->sections, 'criteria' => $pack->criteria, 'metrics' => $pack->metrics, 'facts' => $pack->facts, 'rules' => $pack->rules] as $kind => $items) {
+        foreach (['sections' => $pack->sections, 'criteria' => $pack->criteria, 'metrics' => $pack->metrics, 'facts' => $pack->facts, 'rules' => $pack->rules, 'questions' => $pack->questions, 'evidence_requirements' => $pack->evidenceRequirements, 'recommendations' => $pack->recommendations, 'benchmarks'=>$pack->benchmarks] as $kind => $items) {
             foreach ($items as $item) {
                 if (isset($globalIds[$item->id])) {
                     $errors[] = $this->issue('id.duplicate_global', $kind . '.' . $item->id, 'ID is already used by ' . $globalIds[$item->id] . ': ' . $item->id);
@@ -108,6 +112,36 @@ final class PackValidator
                 $errors[] = $this->issue('rule.invalid_severity', 'rules.' . $rule->id, 'Unsupported finding severity: ' . $rule->severity);
             }
         }
+        foreach ($pack->evidenceRequirements as $requirement) {
+            $path = 'evidence_requirements.' . $requirement->id;
+            if ($requirement->criterionIds === []) $errors[] = $this->issue('evidence_requirement.no_criteria', $path, 'Evidence requirement must target criteria.');
+            foreach ($requirement->criterionIds as $criterionId) if (!isset($criteria[$criterionId])) {
+                $errors[] = $this->issue('evidence_requirement.unknown_criterion', $path, 'Unknown criterion: ' . $criterionId);
+            }
+            if ($requirement->acceptedSourceTypes === [] || $requirement->hierarchy === []) $errors[] = $this->issue('evidence_requirement.empty_sources', $path, 'Evidence source types and hierarchy are required.');
+            if ($requirement->minimumSources < 1 || $requirement->minimumReliability < 0 || $requirement->minimumReliability > 1 || $requirement->minimumDirectness < 0 || $requirement->minimumDirectness > 1) {
+                $errors[] = $this->issue('evidence_requirement.invalid_threshold', $path, 'Evidence thresholds are invalid.');
+            }
+        }
+        foreach ($pack->questions as $question) {
+            $path = 'questions.' . $question->id;
+            if (trim($question->text) === '' || $question->targetFacts === [] || $question->targetCriteria === []) $errors[] = $this->issue('question.invalid', $path, 'Question requires text, target facts and target criteria.');
+            foreach ($question->targetFacts as $factId) if (!isset($facts[$this->nodeId($factId)])) $errors[] = $this->issue('question.unknown_fact', $path, 'Unknown target fact: ' . $factId);
+            foreach ($question->targetCriteria as $criterionId) if (!isset($criteria[$this->nodeId($criterionId)])) $errors[] = $this->issue('question.unknown_criterion', $path, 'Unknown target criterion: ' . $criterionId);
+            if ($question->evidenceRequirementId !== null && !isset($evidenceRequirements[$question->evidenceRequirementId])) $errors[] = $this->issue('question.unknown_evidence_requirement', $path, 'Unknown evidence requirement: ' . $question->evidenceRequirementId);
+            if ($question->priority <= 0 || $question->cost <= 0) $errors[] = $this->issue('question.invalid_priority', $path, 'Question priority and cost must be positive.');
+        }
+        foreach ($pack->recommendations as $recommendation) {
+            $path = 'recommendations.' . $recommendation->id;
+            if ($recommendation->triggerRules === [] || $recommendation->criterionIds === [] || trim($recommendation->title) === '' || trim($recommendation->rationale) === '' || $recommendation->actions === [] || $recommendation->successMetrics === []) {
+                $errors[] = $this->issue('recommendation.invalid', $path, 'Recommendation requires triggers, criteria, content, actions and metrics.');
+            }
+            foreach ($recommendation->triggerRules as $ruleId) if (!isset($rules[$ruleId])) $errors[] = $this->issue('recommendation.unknown_rule', $path, 'Unknown trigger rule: ' . $ruleId);
+            foreach ($recommendation->criterionIds as $criterionId) if (!isset($criteria[$criterionId])) $errors[] = $this->issue('recommendation.unknown_criterion', $path, 'Unknown criterion: ' . $criterionId);
+            foreach ($recommendation->successMetrics as $metricId) if (!isset($metrics[$this->nodeId($metricId)])) $errors[] = $this->issue('recommendation.unknown_metric', $path, 'Unknown success metric: ' . $metricId);
+            foreach ($recommendation->dependencies as $dependencyId) if (!isset($recommendations[$dependencyId])) $errors[] = $this->issue('recommendation.unknown_dependency', $path, 'Unknown recommendation dependency: ' . $dependencyId);
+        }
+        foreach($pack->benchmarks as $benchmark){$path='benchmarks.'.$benchmark->id;if(!isset($metrics[$benchmark->metricId]))$errors[]=$this->issue('benchmark.unknown_metric',$path,'Unknown metric: '.$benchmark->metricId);if(trim($benchmark->name)===''||trim($benchmark->unit)===''||$benchmark->bands===[])$errors[]=$this->issue('benchmark.invalid',$path,'Benchmark requires name, unit and bands.');foreach($benchmark->bands as $band)if(!is_array($band)||!isset($band['label'])||(!isset($band['min'])&&!isset($band['max'])))$errors[]=$this->issue('benchmark.invalid_band',$path,'Benchmark band requires label and a bound.');}
         $criterionAggregations = [];
         $scoringWeights = [];
         foreach ($pack->scoring as $index => $scoring) {

@@ -13,6 +13,10 @@ final readonly class MethodologyPack
      * @param list<ScoringDefinition> $scoring
      * @param list<DependencyDefinition> $dependencies
      * @param list<FactDefinition> $facts
+     * @param list<QuestionDefinition> $questions
+     * @param list<EvidenceRequirementDefinition> $evidenceRequirements
+     * @param list<RecommendationDefinition> $recommendations
+     * @param list<BenchmarkDefinition> $benchmarks
      */
     public function __construct(
         public string $id,
@@ -25,6 +29,10 @@ final readonly class MethodologyPack
         public array $scoring = [],
         public array $dependencies = [],
         public array $facts = [],
+        public array $questions = [],
+        public array $evidenceRequirements = [],
+        public array $recommendations = [],
+        public array $benchmarks = [],
     ) {
     }
 }

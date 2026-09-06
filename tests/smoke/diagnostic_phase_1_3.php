@@ -23,14 +23,14 @@ phaseEnsure($hypothesis->transition(HypothesisStatus::Supported,.7)->status===Hy
 $compiled=(new PackCompiler())->compile(dirname(__DIR__,2).'/resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');
 phaseEnsure(count($compiled->sectionsById)===12 && count($compiled->criteriaById)===60 && count($compiled->metricsById)===36 && count($compiled->rulesById)===96,'Sales pack size contract failed.');
 $signal=new EvidenceSignal('crm','CRM',.95,1,$now);
-$base=[];foreach($compiled->metricsById as $id=>$definition)$base[$id]=new ObservedValue(80,[$signal]);
+$base=[];foreach($compiled->metricsById as $id=>$definition)$base[$id]=new ObservedValue($definition->direction==='lower_is_better'?10:90,[$signal]);
 $baseFacts=[];foreach($compiled->factsById as $id=>$definition)$baseFacts[$id]=new ObservedValue(true,[$signal]);
 $scenarios=[
  'healthy'=>[],
- 'slow-response'=>['lead_response_time'=>20,'contact_rate'=>40],
+ 'slow-response'=>['lead_response_time'=>90,'contact_rate'=>40],
  'weak-qualification'=>['qualification_rate'=>35,'qualified_lead_rate'=>40],
  'broken-pipeline'=>['pipeline_coverage'=>35,'stage_conversion_rate'=>40,'process_compliance'=>30],
- 'poor-crm-forecast'=>['crm_completeness'=>30,'duplicate_rate'=>20,'forecast_accuracy'=>35],
+ 'poor-crm-forecast'=>['crm_completeness'=>30,'duplicate_rate'=>40,'forecast_accuracy'=>35],
 ];
 $engine=new MethodologyEngine();$findingCounts=[];
 foreach($scenarios as $name=>$overrides){$values=$base;foreach($overrides as $id=>$value)$values[$id]=new ObservedValue($value,[$signal]);$result=$engine->evaluate(new DiagnosticInput($baseFacts,$values,$now),$compiled->pack);phaseEnsure($result->score!==null && $result->coverage->ratio===1.0,$name.' did not produce a deterministic result.');$findingCounts[$name]=count($result->findings);}
