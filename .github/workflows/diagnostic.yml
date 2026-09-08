@@ -38,8 +38,11 @@ jobs:
           php tests/unit/sales_runtime_contract.php
           php tests/unit/sales_v03.php
 
-      - name: Property and legacy isolation checks
-        run: |
-          php tests/smoke/property_submission.php
-          php tests/smoke/property_workflow.php
-          php tests/architecture/telegram_migration.php
+      - name: Property submission check
+        run: php tests/smoke/property_submission.php
+
+      - name: Property workflow check
+        run: php tests/smoke/property_workflow.php
+
+      - name: Telegram isolation check
+        run: php tests/architecture/telegram_migration.php
