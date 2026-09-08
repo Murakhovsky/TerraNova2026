@@ -21,7 +21,7 @@ $di->setShared('config', function () {
 $di->setShared('db', function () {
     $config = $this->getConfig();
 
-    $class = 'Phalcon\\Db\\Adapter\\Pdo\\\\' . $config->database->adapter;
+    $class = 'Phalcon\Db\Adapter\Pdo\\' . $config->database->adapter;
     $params = [
         'host'     => $config->database->host,
         'port'     => $config->database->port,
