@@ -1,0 +1,17 @@
+<?php
+$kind = preg_replace('/[^a-z0-9-]/', '', strtolower((string) ($kind ?? 'empty')));
+$title = trim((string) ($title ?? 'Немає даних'));
+$message = trim((string) ($message ?? ''));
+$action = is_array($action ?? null) ? $action : null;
+$h = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+?>
+<section class="tn-ui-state tn-ui-state--<?php echo $h($kind ?: 'empty'); ?>" role="<?php echo $kind === 'error' ? 'alert' : 'status'; ?>">
+  <div class="tn-ui-state__icon" aria-hidden="true"></div>
+  <div>
+    <h2><?php echo $h($title); ?></h2>
+    <?php if ($message !== ''): ?><p><?php echo $h($message); ?></p><?php endif; ?>
+  </div>
+  <?php if ($action): ?>
+    <a class="tn-ui-button" href="<?php echo $h($this->url->get((string) ($action['href'] ?? ''))); ?>"><?php echo $h($action['label'] ?? 'Відкрити'); ?></a>
+  <?php endif; ?>
+</section>

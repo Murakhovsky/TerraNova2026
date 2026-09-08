@@ -1,7 +1,9 @@
 import '../styles/interface.css';
+import { initInterfaceComponents } from '../components/interactive.js';
 import { initWorkspaceShell } from '../core/workspace-shell.js';
 
 const bootInterface = () => {
+  initInterfaceComponents();
   initWorkspaceShell();
 };
 

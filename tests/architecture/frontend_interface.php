@@ -48,18 +48,50 @@ foreach ([
     'app/Interfaces/Web/View/components/workspace_sidebar.phtml',
     'app/Interfaces/Web/View/components/workspace_topbar.phtml',
     'app/Interfaces/Web/View/components/workspace_mobile_nav.phtml',
+    'app/Interfaces/Web/View/components/ui/page_header.phtml',
+    'app/Interfaces/Web/View/components/ui/kpi_card.phtml',
+    'app/Interfaces/Web/View/components/ui/state.phtml',
+    'app/Interfaces/Web/View/components/ui/status_badge.phtml',
+    'app/Interfaces/Web/View/components/ui/tabs.phtml',
+    'frontend/components/interactive.js',
     'frontend/core/workspace-shell.js',
     'frontend/entrypoints/terranova-interface.js',
+    'frontend/entrypoints/cos-control-center.js',
+    'frontend/entrypoints/diagnostics-methodology-studio.js',
+    'frontend/features/cos/control-center.css',
+    'frontend/features/diagnostics/methodology-studio.css',
+    'frontend/features/diagnostics/methodology-studio.js',
+    'frontend/layouts/surfaces.css',
     'frontend/styles/interface.css',
     'frontend/styles/foundation.css',
     'frontend/styles/components.css',
     'frontend/styles/patterns.css',
     'frontend/styles/workspace.css',
     'docs/architecture/frontend-interface.md',
+    'docs/architecture/web-v0.2.md',
 ] as $requiredPath) {
     if (!is_file($root . '/' . $requiredPath)) {
-        throw new RuntimeException('WEB V0.1 interface architecture file is missing: ' . $requiredPath);
+        throw new RuntimeException('Frontend interface architecture file is missing: ' . $requiredPath);
     }
 }
 
-echo "Frontend interface architecture passed: Public, Portal and Workspace boundaries are explicit.\n";
+$cosController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/CosController.php');
+if (!str_contains($cosController, "workspaceSection = 'cos'") || !str_contains($cosController, "['cos-control-center']")) {
+    throw new RuntimeException('COS Control Center must opt into the Workspace shell and its feature bundle.');
+}
+
+$diagnosticController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/MethodologyStudioController.php');
+if (!str_contains($diagnosticController, "['diagnostics-methodology-studio']")) {
+    throw new RuntimeException('Methodology Studio must load through a Vite feature entrypoint.');
+}
+
+$views = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/app/Interfaces/Web/View'));
+foreach ($views as $view) {
+    if (!$view->isFile() || strtolower($view->getExtension()) !== 'phtml') continue;
+    $source = (string) file_get_contents($view->getPathname());
+    if (str_contains($source, '/assets/js/') || str_contains($source, '/assets/css/')) {
+        throw new RuntimeException('PHTML must not bypass Vite with direct /assets JS/CSS references: ' . $view->getPathname());
+    }
+}
+
+echo "Frontend interface architecture passed: WEB V0.2 foundation, feature bundles and Workspace boundaries are explicit.\n";

@@ -1,0 +1,34 @@
+@layer tn-feature-cos {
+  .tn-has-workspace .tn-cos-page {
+    width: min(100%, 1680px);
+    margin-inline: auto;
+    padding: clamp(18px, 2.4vw, 32px);
+  }
+
+  .tn-has-workspace .tn-cos-page > .tn-breadcrumbs {
+    margin-top: 0;
+  }
+
+  .tn-has-workspace .tn-cos-hero {
+    margin-top: 0;
+    border-radius: var(--tn-radius-md);
+  }
+
+  .tn-has-workspace .tn-cos-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .tn-has-workspace .tn-cos-tabs {
+    position: sticky;
+    top: calc(var(--tn-topbar-height) + 1px);
+    z-index: 5;
+    background: var(--tn-color-workspace);
+  }
+
+  @media (max-width: 650px) {
+    .tn-has-workspace .tn-cos-page {
+      padding: 16px 12px calc(84px + env(safe-area-inset-bottom));
+    }
+    .tn-has-workspace .tn-cos-tabs { top: 58px; }
+  }
+}

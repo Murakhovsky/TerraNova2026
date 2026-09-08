@@ -18,6 +18,8 @@ final class CosController extends WebController
     {
         if (!$this->requireManager()) return;
         $this->view->title = 'COS Control Center';
+        $this->view->workspaceSection = 'cos';
+        $this->view->pageAssetEntries = ['cos-control-center'];
         $this->view->csrfToken = $this->di->getShared('csrfTokenManager')->token();
         $this->view->actionStatus = (string) $this->request->getQuery('status_message', 'string', '');
         $this->view->pageStatus = null;

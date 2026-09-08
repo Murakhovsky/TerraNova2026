@@ -11,6 +11,13 @@
     "file": "assets/google-map-black-CYMhgP8G.png",
     "src": "frontend/assets/images/google-map-black.png"
   },
+  "frontend/entrypoints/cos-control-center.js": {
+    "file": "assets/cos-control-center-WEBV02.js",
+    "name": "cos-control-center",
+    "src": "frontend/entrypoints/cos-control-center.js",
+    "isEntry": true,
+    "css": ["assets/cos-control-center-WEBV02.css"]
+  },
   "frontend/entrypoints/cos-site.js": {
     "file": "assets/cos-site-BhdBo_UG.js",
     "name": "cos-site",
@@ -21,14 +28,19 @@
       "assets/tokens-LEZJCtf5.css"
     ]
   },
+  "frontend/entrypoints/diagnostics-methodology-studio.js": {
+    "file": "assets/diagnostics-methodology-studio-WEBV02.js",
+    "name": "diagnostics-methodology-studio",
+    "src": "frontend/entrypoints/diagnostics-methodology-studio.js",
+    "isEntry": true,
+    "css": ["assets/diagnostics-methodology-studio-WEBV02.css"]
+  },
   "frontend/entrypoints/terranova-catalog-api.js": {
     "file": "assets/terranova-catalog-api-CpAyczo0.js",
     "name": "terranova-catalog-api",
     "src": "frontend/entrypoints/terranova-catalog-api.js",
     "isEntry": true,
-    "imports": [
-      "_client-DTvB7HO0.js"
-    ]
+    "imports": ["_client-DTvB7HO0.js"]
   },
   "frontend/entrypoints/terranova-club.js": {
     "file": "assets/terranova-club-CXeQ9qmy.js",
@@ -51,26 +63,21 @@
     "name": "terranova-home",
     "src": "frontend/entrypoints/terranova-home.js",
     "isEntry": true,
-    "imports": [
-      "_client-DTvB7HO0.js"
-    ],
-    "css": [
-      "assets/terranova-home-bqIxkEPv.css"
-    ],
-    "assets": [
-      "assets/google-map-black-CYMhgP8G.png"
-    ]
+    "imports": ["_client-DTvB7HO0.js"],
+    "css": ["assets/terranova-home-bqIxkEPv.css"],
+    "assets": ["assets/google-map-black-CYMhgP8G.png"]
   },
   "frontend/entrypoints/terranova-interface.js": {
-    "file": "assets/terranova-interface-WEBV01.js",
+    "file": "assets/terranova-interface-WEBV02.js",
     "name": "terranova-interface",
     "src": "frontend/entrypoints/terranova-interface.js",
     "isEntry": true,
     "css": [
       "assets/terranova-interface-tokens-WEBV01.css",
       "assets/terranova-interface-foundation-WEBV01.css",
-      "assets/terranova-interface-components-WEBV01.css",
-      "assets/terranova-interface-patterns-WEBV01.css",
+      "assets/terranova-interface-components-WEBV02.css",
+      "assets/terranova-interface-patterns-WEBV02.css",
+      "assets/terranova-interface-layouts-WEBV02.css",
       "assets/terranova-interface-workspace-WEBV01.css"
     ]
   },
@@ -97,12 +104,8 @@
     "name": "spatial-viewer",
     "src": "frontend/spatial/spatial-viewer.js",
     "isEntry": true,
-    "dynamicImports": [
-      "node_modules/@sparkjsdev/spark/dist/spark.module.js"
-    ],
-    "css": [
-      "assets/spatial-viewer-VLiYmN_P.css"
-    ],
+    "dynamicImports": ["node_modules/@sparkjsdev/spark/dist/spark.module.js"],
+    "css": ["assets/spatial-viewer-VLiYmN_P.css"],
     "assets": [
       "assets/draco_decoder-C32yEggz.wasm",
       "assets/draco_wasm_wrapper-DxJM36Ib.js",
@@ -118,9 +121,7 @@
     "name": "spark.module",
     "src": "node_modules/@sparkjsdev/spark/dist/spark.module.js",
     "isDynamicEntry": true,
-    "imports": [
-      "frontend/spatial/spatial-viewer.js"
-    ]
+    "imports": ["frontend/spatial/spatial-viewer.js"]
   },
   "node_modules/three/examples/jsm/libs/basis/basis_transcoder.js": {
     "file": "assets/basis_transcoder-o4Hde_L7.js",

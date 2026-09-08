@@ -8,7 +8,9 @@ use Interfaces\Web\Assets\ViteAssetManifest;
 $root = dirname(__DIR__, 2);
 $manifestPath = $root . '/public/build/.vite/manifest.json';
 $entries = [
+    'cos-control-center',
     'cos-site',
+    'diagnostics-methodology-studio',
     'terranova-catalog-api',
     'terranova-club',
     'terranova-copy',
@@ -20,7 +22,7 @@ $entries = [
     'spatial-viewer',
 ];
 
-foreach ([$root . '/public/js', $root . '/public/css'] as $legacyDirectory) {
+foreach ([$root . '/public/js', $root . '/public/css', $root . '/public/assets/js', $root . '/public/assets/css'] as $legacyDirectory) {
     if (is_dir($legacyDirectory)) {
         throw new RuntimeException('Legacy browser source directory was restored: ' . $legacyDirectory);
     }
