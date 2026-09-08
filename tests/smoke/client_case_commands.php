@@ -39,14 +39,29 @@ $readModel = new class implements ClientCaseReadModelInterface {
     public function stats(): array { return []; }
     public function case(int $id): ?array
     {
-        return $id === 10 ? [
-            'id' => 10, 'organization_id' => 'org-1', 'person_id' => 20, 'full_name' => 'Existing Person',
-            'phone' => '+380000000000', 'email' => 'old@example.test', 'telegram' => null, 'person_notes' => null,
-            'type' => 'buy', 'title' => 'Existing case', 'status' => 'active', 'stage' => 'new', 'priority' => 'normal',
-            'assigned_user_id' => null, 'property_type_id' => null, 'location_id' => null, 'source' => 'manual',
-            'budget_min' => null, 'budget_max' => null, 'currency' => 'USD', 'area_min' => null, 'area_max' => null,
-            'description' => null, 'next_contact_at' => null, 'closed_at' => null,
-        ] : null;
+        if ($id === 10) {
+            return [
+                'id' => 10, 'organization_id' => 'org-1', 'person_id' => 20, 'full_name' => 'Existing Person',
+                'phone' => '+380000000000', 'email' => 'old@example.test', 'telegram' => null, 'person_notes' => null,
+                'type' => 'buy', 'title' => 'Existing case', 'status' => 'active', 'stage' => 'new', 'priority' => 'normal',
+                'pipeline_id' => null, 'stage_id' => null,
+                'assigned_user_id' => null, 'property_type_id' => null, 'location_id' => null, 'source' => 'manual',
+                'budget_min' => null, 'budget_max' => null, 'currency' => 'USD', 'area_min' => null, 'area_max' => null,
+                'description' => null, 'next_contact_at' => null, 'closed_at' => null,
+            ];
+        }
+        if ($id >= 200) {
+            return [
+                'id' => $id, 'organization_id' => 'org-1', 'person_id' => 100 + ($id - 200), 'full_name' => 'Created Person',
+                'phone' => '+3804', 'email' => null, 'telegram' => null, 'person_notes' => null,
+                'type' => 'buy', 'title' => 'Created case', 'status' => 'active', 'stage' => 'new', 'priority' => 'normal',
+                'pipeline_id' => null, 'stage_id' => null,
+                'assigned_user_id' => null, 'property_type_id' => null, 'location_id' => null, 'source' => 'manual',
+                'budget_min' => null, 'budget_max' => null, 'currency' => 'USD', 'area_min' => null, 'area_max' => null,
+                'description' => null, 'next_contact_at' => null, 'closed_at' => null,
+            ];
+        }
+        return null;
     }
     public function inboundRequests(int $caseId): array { return []; }
     public function activities(int $caseId): array { return []; }

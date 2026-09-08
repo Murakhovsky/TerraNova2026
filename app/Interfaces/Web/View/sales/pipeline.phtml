@@ -1,5 +1,5 @@
 <?php
-$h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+$h = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $workspace = $workspace ?? [];
 $pipelines = $workspace['pipelines'] ?? [];
 $deals = $workspace['deals'] ?? [];
@@ -8,24 +8,49 @@ $pipeline = null;
 foreach ($pipelines as $candidate) {
     if ($selectedPipelineId !== '' && (string)($candidate['id'] ?? '') === $selectedPipelineId) { $pipeline = $candidate; break; }
 }
-$pipeline ??= $pipelines[0] ?? ['stages'=>[]];
+$pipeline ??= $pipelines[0] ?? ['stages' => []];
 $byStage = [];
 foreach ($deals as $deal) {
     if ((string)($deal['pipeline_id'] ?? '') !== (string)($pipeline['id'] ?? '')) continue;
-    $byStage[$deal['stage_id'] ?? $deal['stage_code']][] = $deal;
+    $byStage[(string)($deal['stage_id'] ?? $deal['stage_code'] ?? '')][] = $deal;
 }
+$money = static fn($v, $currency = 'USD') => number_format((float)$v, 0, '.', ' ') . ' ' . ($currency ?: 'USD');
 ?>
-<?php $this->partial('shared/manager_header', ['active' => 'pipeline']); ?>
-<main class="tn-page tn-admin-page tn-sales-workspace">
-  <section class="tn-listing-hero"><div><p class="tn-kicker">Pipeline</p><h1><?php echo $h($pipeline['name'] ?? 'Sales Pipeline'); ?></h1><p>Конфігурована воронка з ризиками, value і наступною дією.</p></div><div><a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('sales/leads'); ?>">Leads</a> <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('sales/dashboard'); ?>">Dashboard</a></div></section>
-  <?php if (count($pipelines) > 1): ?><nav class="tn-sales-tabs"><?php foreach ($pipelines as $item): ?><a href="<?php echo $this->url->get('sales/pipeline?pipeline_id=' . urlencode((string)$item['id'])); ?>"><?php echo $h($item['name'] ?? $item['code']); ?></a><?php endforeach; ?></nav><?php endif; ?>
-  <?php if ($pageStatus ?? null): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
-  <div class="tn-sales-kanban">
-    <?php foreach ($pipeline['stages'] ?? [] as $stage): $items=$byStage[$stage['id']]??[]; ?>
-      <section class="tn-sales-stage"><header><span><?php echo $h($stage['name']); ?></span><b><?php echo count($items); ?></b></header>
-        <?php foreach ($items as $deal): ?><a class="tn-sales-card" href="<?php echo $this->url->get('sales/deals/' . (int)$deal['id']); ?>"><div><strong><?php echo $h($deal['customer']); ?></strong><em class="is-<?php echo strtolower($h($deal['risk_level'])); ?>"><?php echo $h($deal['risk_level']); ?></em></div><p><?php echo $h($deal['title']); ?></p><dl><dt>Value</dt><dd><?php echo $h(number_format((float)$deal['deal_value'],0,'.',' ') . ' ' . $deal['currency']); ?></dd><dt>Next</dt><dd><?php echo $h($deal['next_action_at'] ?: 'Not set'); ?></dd></dl></a><?php endforeach; ?>
-        <?php if (!$items): ?><p class="tn-muted">Порожньо</p><?php endif; ?>
-      </section>
-    <?php endforeach; ?>
-  </div>
+<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-sales-workspace" data-sales-workspace>
+  <?php $this->partial('components/sales/navigation', ['active' => 'pipeline']); ?>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Sales · Pipeline',
+    'title' => $pipeline['name'] ?? 'Sales Pipeline',
+    'description' => 'Конфігурована воронка з value, risk та наступною дією. Stage definitions приходять із Sales V0.4.',
+    'actions' => [['label' => 'Deals', 'href' => 'sales/deals', 'variant' => 'ghost'], ['label' => 'Today', 'href' => 'sales/today', 'variant' => 'primary']],
+  ]); ?>
+  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Pipeline недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
+
+  <?php if (count($pipelines) > 1): ?>
+    <form class="tn-ui-filter-bar tn-workspace-section" method="get" action="<?php echo $this->url->get('sales/pipeline'); ?>">
+      <label class="tn-ui-field"><span>Pipeline</span><select class="tn-ui-select" name="pipeline_id" onchange="this.form.submit()"><?php foreach ($pipelines as $item): ?><option value="<?php echo $h($item['id'] ?? ''); ?>" <?php echo (string)($pipeline['id'] ?? '') === (string)($item['id'] ?? '') ? 'selected' : ''; ?>><?php echo $h($item['name'] ?? $item['code'] ?? 'Pipeline'); ?></option><?php endforeach; ?></select></label>
+    </form>
+  <?php endif; ?>
+
+  <?php if (!empty($pipeline['stages'])): ?>
+    <section class="tn-sales-kanban tn-workspace-section" aria-label="Sales pipeline">
+      <?php foreach ($pipeline['stages'] as $stage): $items = $byStage[(string)($stage['id'] ?? '')] ?? []; ?>
+        <section class="tn-sales-stage">
+          <header><span><?php echo $h($stage['name'] ?? $stage['code'] ?? 'Stage'); ?></span><b><?php echo count($items); ?></b></header>
+          <div class="tn-sales-stage__body">
+            <?php foreach ($items as $deal): ?>
+              <a class="tn-sales-card" href="<?php echo $this->url->get('sales/deals/' . (int)$deal['id']); ?>">
+                <div><strong><?php echo $h($deal['customer'] ?? '—'); ?></strong><?php $this->partial('components/ui/status_badge', ['label' => $deal['risk_level'] ?? 'NORMAL', 'tone' => ($deal['risk_level'] ?? '') === 'HIGH' ? 'danger' : 'neutral']); ?></div>
+                <p><?php echo $h($deal['title'] ?? $deal['public_id'] ?? 'Deal'); ?></p>
+                <dl><dt>Value</dt><dd><?php echo $h($money($deal['deal_value'] ?? 0, $deal['currency'] ?? 'USD')); ?></dd><dt>Probability</dt><dd><?php echo $h(($deal['probability'] ?? 0) . '%'); ?></dd><dt>Next</dt><dd><?php echo $h($deal['next_action_at'] ?: 'Not set'); ?></dd></dl>
+              </a>
+            <?php endforeach; ?>
+            <?php if (!$items): ?><p class="tn-sales-empty">Порожньо</p><?php endif; ?>
+          </div>
+        </section>
+      <?php endforeach; ?>
+    </section>
+  <?php else: ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'Pipeline не налаштований', 'message' => 'Sales Domain не повернув активної воронки або етапів.']); ?>
+  <?php endif; ?>
 </main>

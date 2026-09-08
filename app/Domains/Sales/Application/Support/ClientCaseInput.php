@@ -182,10 +182,16 @@ final class ClientCaseInput
     public static function caseStateForLead(string $leadStatus): array
     {
         $stage = [
-            LeadStatus::New->value => 'NEW', LeadStatus::Contacted->value => 'CONTACTED',
-            LeadStatus::Qualified->value => 'QUALIFIED', LeadStatus::ViewingPlanned->value, LeadStatus::Viewing->value => 'MEETING',
-            LeadStatus::Negotiation->value => 'NEGOTIATION', LeadStatus::Won->value => 'WON',
-            LeadStatus::Lost->value, LeadStatus::Spam->value, LeadStatus::Closed->value => 'LOST',
+            LeadStatus::New->value => 'NEW',
+            LeadStatus::Contacted->value => 'CONTACTED',
+            LeadStatus::Qualified->value => 'QUALIFIED',
+            LeadStatus::ViewingPlanned->value => 'MEETING',
+            LeadStatus::Viewing->value => 'MEETING',
+            LeadStatus::Negotiation->value => 'NEGOTIATION',
+            LeadStatus::Won->value => 'WON',
+            LeadStatus::Lost->value => 'LOST',
+            LeadStatus::Spam->value => 'LOST',
+            LeadStatus::Closed->value => 'LOST',
         ][$leadStatus] ?? 'NEW';
         $status = match ($leadStatus) {
             LeadStatus::Won->value => ClientCaseStatus::Closed->value,

@@ -12,13 +12,13 @@ final class SalesController extends WebController
     {
         $user = $this->requireManager();
         if ($user === null) return;
-        $this->load('Sales Dashboard', fn ($q, $org) => $q->dashboard($org, (int) $user['id']));
+        $this->load('Sales Overview', 'sales', fn ($q, $org) => $q->dashboard($org, (int) $user['id']));
     }
 
     public function pipelineAction(): void
     {
         if ($this->requireManager() === null) return;
-        $this->load('Sales Pipeline', fn ($q, $org) => [
+        $this->load('Sales Pipeline', 'pipeline', fn ($q, $org) => [
             'pipelines' => $q->pipelines($org),
             'deals' => $q->deals($org, (array) $this->request->getQuery()),
         ]);
@@ -28,21 +28,30 @@ final class SalesController extends WebController
     {
         $user = $this->requireManager();
         if ($user === null) return;
-        $this->load('Today', fn ($q, $org) => $q->today($org, (int) $user['id']));
+        $this->load('Sales Today', 'today', fn ($q, $org) => $q->today($org, (int) $user['id']));
     }
 
     public function leadsAction(): void
     {
         if ($this->requireManager() === null) return;
-        $this->load('Sales Leads', fn ($q, $org) => [
+        $this->load('Sales Leads', 'leads', fn ($q, $org) => [
             'leads' => $q->leads($org, (array) $this->request->getQuery()),
+        ]);
+    }
+
+    public function dealsAction(): void
+    {
+        if ($this->requireManager() === null) return;
+        $this->load('Sales Deals', 'deals', fn ($q, $org) => [
+            'pipelines' => $q->pipelines($org),
+            'deals' => $q->deals($org, (array) $this->request->getQuery()),
         ]);
     }
 
     public function dealAction(int $id): void
     {
         if ($this->requireManager() === null) return;
-        $this->load('Deal Workspace', function ($q, $org) use ($id): array {
+        $this->load('Deal Workspace', 'deals', function ($q, $org) use ($id): array {
             $deal = $q->deal($org, $id);
             if ($deal === null) {
                 $this->response->setStatusCode(404, 'Not Found');
@@ -59,7 +68,7 @@ final class SalesController extends WebController
     public function directorAction(): void
     {
         if ($this->requireManager() === null) return;
-        $this->load('Sales Director', fn ($q, $org) => [
+        $this->load('Sales Director', 'director', fn ($q, $org) => [
             'metrics' => $q->metrics($org, 30),
             'dashboard' => $q->dashboard($org, null),
             'deals' => $q->deals($org, ['limit' => 50]),
@@ -69,15 +78,20 @@ final class SalesController extends WebController
     public function adminAction(): void
     {
         if ($this->requireAdmin() === null) return;
-        $this->load('Sales Administration', fn ($q, $org) => [
+        $this->load('Sales Administration', 'sales-admin', fn ($q, $org) => [
             'pipelines' => $q->pipelines($org),
             'metrics' => $q->metrics($org, 30),
         ]);
     }
 
-    private function load(string $title, callable $reader): void
+    private function load(string $title, string $active, callable $reader): void
     {
         $this->view->title = $title;
+        $this->view->metaTitle = $title . ' | Terra Nova COS';
+        $this->view->workspaceSection = 'sales';
+        $this->view->workspaceActive = $active;
+        $this->view->pageAssetEntries = ['sales-workspace'];
+        $this->view->csrfToken = $this->di->getShared('csrfTokenManager')->token();
         $this->view->workspace = [];
         $this->view->pageStatus = null;
         try {

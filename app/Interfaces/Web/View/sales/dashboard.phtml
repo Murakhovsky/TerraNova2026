@@ -1,31 +1,69 @@
 <?php
-$h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+$h = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $workspace = $workspace ?? [];
 $kpis = $workspace['kpis'] ?? [];
 $today = $workspace['today'] ?? [];
-$money = fn($v) => number_format((float) $v, 0, '.', ' ') . ' USD';
+$money = static fn($v) => number_format((float) $v, 0, '.', ' ') . ' USD';
 ?>
-<?php $this->partial('shared/manager_header', ['active' => 'sales']); ?>
-<main class="tn-page tn-admin-page tn-sales-workspace">
-  <section class="tn-listing-hero"><div><p class="tn-kicker">Sales workspace</p><h1>Продажі під контролем COS</h1><p>Пріоритети, ризики й наступні дії — в одному операційному екрані.</p></div><div><a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('sales/leads'); ?>">Leads</a> <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('sales/today'); ?>">Відкрити Today</a></div></section>
-  <?php if ($pageStatus ?? null): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
-  <section class="tn-sales-kpis">
-    <?php foreach ([['Активні угоди',$kpis['active_deals']??0],['Pipeline value',$money($kpis['pipeline_value']??0)],['Expected revenue',$money($kpis['expected_revenue']??0)],['У ризику',$kpis['deals_at_risk']??0],['Follow-ups overdue',$kpis['followups_overdue']??0]] as [$label,$value]): ?>
-      <article><span><?php echo $h($label); ?></span><strong><?php echo $h($value); ?></strong></article>
+<main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
+  <?php $this->partial('components/sales/navigation', ['active' => 'sales']); ?>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Sales workspace',
+    'title' => 'Продажі під контролем COS',
+    'description' => 'Пріоритети, ризики й наступні дії в одному операційному екрані.',
+    'actions' => [
+      ['label' => 'Leads', 'href' => 'sales/leads', 'variant' => 'ghost'],
+      ['label' => 'Today', 'href' => 'sales/today', 'variant' => 'primary'],
+    ],
+  ]); ?>
+
+  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Sales workspace недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section">
+    <?php foreach ([
+      ['Активні угоди', $kpis['active_deals'] ?? 0, 'neutral'],
+      ['Pipeline value', $money($kpis['pipeline_value'] ?? 0), 'neutral'],
+      ['Expected revenue', $money($kpis['expected_revenue'] ?? 0), 'positive'],
+      ['У ризику', $kpis['deals_at_risk'] ?? 0, 'danger'],
+      ['Follow-ups overdue', $kpis['followups_overdue'] ?? 0, 'warning'],
+    ] as [$label, $value, $tone]): ?>
+      <?php $this->partial('components/ui/kpi_card', ['label' => $label, 'value' => $value, 'tone' => $tone]); ?>
     <?php endforeach; ?>
   </section>
-  <div class="tn-sales-columns">
-    <section class="tn-admin-panel"><div class="tn-section-heading"><div><p class="tn-kicker">Focus</p><h2>At-risk Deals</h2></div><a href="<?php echo $this->url->get('sales/pipeline?risk=high'); ?>">Усі</a></div>
-      <?php foreach ($workspace['at_risk'] ?? [] as $deal): ?><a class="tn-sales-row" href="<?php echo $this->url->get('sales/deals/' . (int)$deal['id']); ?>"><span><strong><?php echo $h($deal['customer']); ?></strong><small><?php echo $h($deal['stage_name'] . ' · ' . $deal['public_id']); ?></small></span><b><?php echo $h($money($deal['deal_value'])); ?></b><em>Risk <?php echo $h($deal['risk_level']); ?></em></a><?php endforeach; ?>
-      <?php if (empty($workspace['at_risk'])): ?><p class="tn-muted">Критичних угод немає.</p><?php endif; ?>
+
+  <div class="tn-ui-split tn-workspace-section">
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Focus</p><h2>At-risk Deals</h2></div><a href="<?php echo $this->url->get('sales/deals?risk=high'); ?>">Усі</a></div>
+      <div class="tn-sales-list">
+        <?php foreach ($workspace['at_risk'] ?? [] as $deal): ?>
+          <a class="tn-sales-list-row" href="<?php echo $this->url->get('sales/deals/' . (int) $deal['id']); ?>">
+            <span><strong><?php echo $h($deal['customer']); ?></strong><small><?php echo $h(($deal['stage_name'] ?? '') . ' · ' . ($deal['public_id'] ?? '')); ?></small></span>
+            <b><?php echo $h($money($deal['deal_value'] ?? 0)); ?></b><em>HIGH</em>
+          </a>
+        <?php endforeach; ?>
+        <?php if (empty($workspace['at_risk'])): ?><p class="tn-sales-empty">Критичних угод немає.</p><?php endif; ?>
+      </div>
     </section>
-    <section class="tn-admin-panel"><div class="tn-section-heading"><div><p class="tn-kicker">Inbox</p><h2>Сьогодні</h2></div><a href="<?php echo $this->url->get('sales/today'); ?>">Operational inbox</a></div>
-      <?php foreach (array_slice(array_merge($today['overdue'] ?? [], $today['must_do'] ?? []), 0, 8) as $item): ?><a class="tn-sales-row" href="<?php echo $this->url->get('sales/deals/' . (int)$item['id']); ?>"><span><strong><?php echo $h($item['customer']); ?></strong><small><?php echo $h($item['title']); ?></small></span><time><?php echo $h($item['next_contact_at'] ?? 'Без дати'); ?></time></a><?php endforeach; ?>
-      <?php if (empty($today['overdue']) && empty($today['must_do'])): ?><p class="tn-muted">На сьогодні немає запланованих дій.</p><?php endif; ?>
+
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Operational inbox</p><h2>Сьогодні</h2></div><a href="<?php echo $this->url->get('sales/today'); ?>">Відкрити</a></div>
+      <div class="tn-sales-list">
+        <?php foreach (array_slice(array_merge($today['overdue'] ?? [], $today['must_do'] ?? []), 0, 8) as $item): ?>
+          <a class="tn-sales-list-row" href="<?php echo $this->url->get('sales/deals/' . (int) $item['id']); ?>">
+            <span><strong><?php echo $h($item['customer']); ?></strong><small><?php echo $h($item['title'] ?? 'Follow-up'); ?></small></span>
+            <time><?php echo $h($item['next_contact_at'] ?? 'Без дати'); ?></time>
+          </a>
+        <?php endforeach; ?>
+        <?php if (empty($today['overdue']) && empty($today['must_do'])): ?><p class="tn-sales-empty">На сьогодні немає запланованих дій.</p><?php endif; ?>
+      </div>
     </section>
   </div>
-  <section class="tn-admin-panel"><div class="tn-section-heading"><div><p class="tn-kicker">Fresh demand</p><h2>New Leads</h2></div><a href="<?php echo $this->url->get('sales/leads'); ?>">Вхідні заявки</a></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Lead</th><th>Source</th><th>Status</th><th>Owner</th><th>Next action</th></tr></thead><tbody><?php foreach ($workspace['new_leads'] ?? [] as $lead): ?><tr><td><strong><?php echo $h($lead['name']); ?></strong></td><td><?php echo $h($lead['source']); ?></td><td><?php echo $h($lead['status']); ?></td><td><?php echo $h($lead['owner_name'] ?: 'Unassigned'); ?></td><td><?php echo $h($lead['next_action_at'] ?: '—'); ?></td></tr><?php endforeach; ?></tbody></table></div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Fresh demand</p><h2>New Leads</h2></div><a href="<?php echo $this->url->get('sales/leads'); ?>">Вхідні заявки</a></div>
+    <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Lead</th><th>Source</th><th>Status</th><th>Owner</th><th>Next action</th></tr></thead><tbody>
+      <?php foreach ($workspace['new_leads'] ?? [] as $lead): ?><tr><td><strong><?php echo $h($lead['name']); ?></strong></td><td><?php echo $h($lead['source'] ?: '—'); ?></td><td><?php echo $h($lead['status']); ?></td><td><?php echo $h($lead['owner_name'] ?: 'Unassigned'); ?></td><td><?php echo $h($lead['next_action_at'] ?: '—'); ?></td></tr><?php endforeach; ?>
+      <?php if (empty($workspace['new_leads'])): ?><tr><td colspan="5">Нових лідів немає.</td></tr><?php endif; ?>
+    </tbody></table></div>
   </section>
-  <nav class="tn-sales-tabs"><a href="<?php echo $this->url->get('sales/pipeline'); ?>">Pipeline</a><a href="<?php echo $this->url->get('sales/director'); ?>">Director</a><a href="<?php echo $this->url->get('sales/admin'); ?>">Sales Admin</a></nav>
 </main>

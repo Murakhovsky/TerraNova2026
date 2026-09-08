@@ -1,0 +1,18 @@
+<?php
+$active = (string) ($active ?? 'sales');
+$items = [
+    ['key' => 'sales', 'href' => 'sales/dashboard', 'label' => 'Overview'],
+    ['key' => 'today', 'href' => 'sales/today', 'label' => 'Today'],
+    ['key' => 'pipeline', 'href' => 'sales/pipeline', 'label' => 'Pipeline'],
+    ['key' => 'leads', 'href' => 'sales/leads', 'label' => 'Leads'],
+    ['key' => 'deals', 'href' => 'sales/deals', 'label' => 'Deals'],
+    ['key' => 'director', 'href' => 'sales/director', 'label' => 'Director'],
+];
+try {
+    $user = $this->getDI()->getShared('authService')->currentUser();
+    if ($user !== null && $this->getDI()->getShared('authService')->isAdmin($user)) {
+        $items[] = ['key' => 'sales-admin', 'href' => 'sales/admin', 'label' => 'Sales Admin'];
+    }
+} catch (Throwable) {
+}
+$this->partial('components/ui/tabs', ['items' => $items, 'active' => $active, 'label' => 'Sales workspace']);

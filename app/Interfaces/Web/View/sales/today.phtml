@@ -1,29 +1,44 @@
 <?php
-$h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+$h = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $workspace = $workspace ?? [];
-$sections=[
-  'must_do'=>'Must Do',
-  'ai_recommended'=>'AI Recommended',
-  'overdue'=>'Overdue',
-  'new_replies'=>'New Replies',
-  'meetings'=>'Meetings',
-  'followups'=>'Follow-ups',
-  'waiting_for_client'=>'Waiting for Client',
+$sections = [
+  'must_do' => ['Must Do', 'Що потрібно зробити сьогодні'],
+  'ai_recommended' => ['AI Recommended', 'Пропозиції COS, які потребують уваги'],
+  'overdue' => ['Overdue', 'Прострочені наступні контакти'],
+  'new_replies' => ['New Replies', 'Нові вхідні відповіді'],
+  'meetings' => ['Meetings', 'Зустрічі на сьогодні'],
+  'followups' => ['Follow-ups', 'Заплановані follow-up'],
+  'waiting_for_client' => ['Waiting for Client', 'Угоди без активного next action'],
 ];
+$total = array_sum(array_map(static fn($key) => count($workspace[$key] ?? []), array_keys($sections)));
 ?>
-<?php $this->partial('shared/manager_header', ['active' => 'today']); ?>
-<main class="tn-page tn-admin-page tn-sales-workspace">
-  <section class="tn-listing-hero"><div><p class="tn-kicker">Operational inbox</p><h1>Today</h1><p>Тільки те, що потребує рішення або дії зараз.</p></div><div><a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('sales/leads'); ?>">Leads</a> <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('sales/pipeline'); ?>">Pipeline</a></div></section>
-  <?php if ($pageStatus ?? null): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
-  <div class="tn-sales-today">
-    <?php foreach ($sections as $key=>$label): ?><section class="tn-admin-panel"><div class="tn-section-heading"><h2><?php echo $h($label); ?></h2><span><?php echo count($workspace[$key]??[]); ?></span></div>
-      <?php foreach ($workspace[$key]??[] as $item): $dealId=(int)($item['id']??$item['deal_id']??0); ?>
-        <?php if ($dealId > 0): ?><a class="tn-sales-row" href="<?php echo $this->url->get('sales/deals/'.$dealId); ?>"><?php else: ?><div class="tn-sales-row"><?php endif; ?>
-          <span><strong><?php echo $h($item['customer']??$item['type']??'Action'); ?></strong><small><?php echo $h($item['activity_title']??$item['title']??$item['reason']??$item['detail']??$item['status']??''); ?></small></span>
-          <em><?php echo $h($item['risk_level']??$item['priority']??''); ?></em>
-        <?php if ($dealId > 0): ?></a><?php else: ?></div><?php endif; ?>
-      <?php endforeach; ?>
-      <?php if (empty($workspace[$key])): ?><p class="tn-muted">Немає елементів.</p><?php endif; ?>
-    </section><?php endforeach; ?>
+<main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
+  <?php $this->partial('components/sales/navigation', ['active' => 'today']); ?>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Sales · Operational inbox',
+    'title' => 'Today',
+    'description' => 'Тільки те, що потребує рішення або дії зараз. Не ще один список усіх справ у Всесвіті.',
+    'actions' => [['label' => 'Pipeline', 'href' => 'sales/pipeline', 'variant' => 'ghost'], ['label' => 'Deals', 'href' => 'sales/deals', 'variant' => 'primary']],
+    'meta' => ['value' => $total, 'label' => 'операційних сигналів'],
+  ]); ?>
+  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Today недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
+
+  <div class="tn-sales-today-grid tn-workspace-section">
+    <?php foreach ($sections as $key => [$label, $description]): $items = $workspace[$key] ?? []; ?>
+      <section class="tn-ui-panel tn-sales-today-card">
+        <div class="tn-ui-panel__head"><div><h2><?php echo $h($label); ?></h2><p><?php echo $h($description); ?></p></div><span class="tn-sales-count"><?php echo count($items); ?></span></div>
+        <div class="tn-sales-list">
+          <?php foreach ($items as $item): $dealId = (int)($item['id'] ?? $item['deal_id'] ?? 0); ?>
+            <?php $tag = $dealId > 0 ? 'a' : 'div'; $href = $dealId > 0 ? ' href="' . $this->url->get('sales/deals/' . $dealId) . '"' : ''; ?>
+            <<?php echo $tag; ?> class="tn-sales-list-row"<?php echo $href; ?>>
+              <span><strong><?php echo $h($item['customer'] ?? $item['type'] ?? 'Action'); ?></strong><small><?php echo $h($item['activity_title'] ?? $item['title'] ?? $item['reason'] ?? $item['detail'] ?? $item['status'] ?? ''); ?></small></span>
+              <?php if (!empty($item['risk_level']) || !empty($item['priority'])): ?><em><?php echo $h($item['risk_level'] ?? $item['priority']); ?></em><?php endif; ?>
+              <?php if (!empty($item['due_at']) || !empty($item['next_contact_at']) || !empty($item['occurred_at'])): ?><time><?php echo $h($item['due_at'] ?? $item['next_contact_at'] ?? $item['occurred_at']); ?></time><?php endif; ?>
+            </<?php echo $tag; ?>>
+          <?php endforeach; ?>
+          <?php if (!$items): ?><p class="tn-sales-empty">Немає елементів.</p><?php endif; ?>
+        </div>
+      </section>
+    <?php endforeach; ?>
   </div>
 </main>

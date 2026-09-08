@@ -1,22 +1,25 @@
 <?php
-$h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+$h = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $workspace = $workspace ?? [];
 $pipelines = $workspace['pipelines'] ?? [];
+$metrics = $workspace['metrics'] ?? [];
 ?>
-<?php $this->partial('shared/manager_header', ['active' => 'sales']); ?>
-<main class="tn-page tn-admin-page tn-sales-workspace">
-  <section class="tn-listing-hero"><div><p class="tn-kicker">Sales · Administration</p><h1>Налаштування Sales Domain</h1><p>Бізнес-конфігурація Sales окремо від технічної телеметрії Kernel.</p></div><a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('cos/control-center'); ?>">COS Control Center</a></section>
-  <?php if ($pageStatus ?? null): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
-  <div class="tn-sales-columns">
-    <section class="tn-admin-panel"><div class="tn-section-heading"><div><p class="tn-kicker">Pipelines</p><h2>Воронки та етапи</h2></div></div>
-      <?php foreach ($pipelines as $pipeline): ?><article class="tn-sales-admin-block"><strong><?php echo $h($pipeline['name'] ?? $pipeline['code'] ?? 'Pipeline'); ?></strong><small><?php echo !empty($pipeline['is_default']) ? 'Default' : ''; ?></small><ol><?php foreach ($pipeline['stages'] ?? [] as $stage): ?><li><span><?php echo $h($stage['name'] ?? $stage['code']); ?></span> <small><?php echo $h($stage['code']); ?> · <?php echo $h($stage['probability_default'] ?? 0); ?>%</small></li><?php endforeach; ?></ol></article><?php endforeach; ?>
-      <?php if (empty($pipelines)): ?><p class="tn-muted">Активних Pipeline немає.</p><?php endif; ?>
+<main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
+  <?php $this->partial('components/sales/navigation', ['active' => 'sales-admin']); ?>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Sales · Administration',
+    'title' => 'Налаштування Sales Domain',
+    'description' => 'Бізнес-конфігурація Sales окремо від технічної телеметрії Kernel і generic COS runtime.',
+    'actions' => [['label' => 'COS Control Center', 'href' => 'cos/control-center', 'variant' => 'ghost']],
+  ]); ?>
+  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Sales Admin недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
+
+  <div class="tn-ui-split tn-workspace-section">
+    <section class="tn-ui-panel"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Pipelines</p><h2>Воронки та етапи</h2></div><span><?php echo count($pipelines); ?></span></div>
+      <div class="tn-sales-admin-pipelines"><?php foreach ($pipelines as $pipeline): ?><article><header><strong><?php echo $h($pipeline['name'] ?? $pipeline['code'] ?? 'Pipeline'); ?></strong><?php if(!empty($pipeline['is_default'])): ?><span>Default</span><?php endif; ?></header><ol><?php foreach ($pipeline['stages'] ?? [] as $stage): ?><li><span><?php echo $h($stage['name'] ?? $stage['code']); ?></span><small><?php echo $h($stage['code']); ?> · <?php echo $h($stage['probability_default'] ?? 0); ?>%</small></li><?php endforeach; ?></ol></article><?php endforeach; ?><?php if(!$pipelines): ?><p class="tn-sales-empty">Активних Pipeline немає.</p><?php endif; ?></div>
     </section>
-    <section class="tn-admin-panel"><div class="tn-section-heading"><div><p class="tn-kicker">Automation</p><h2>Rules · Agents · Policies</h2></div></div>
-      <p>Sales Admin є бізнесовою поверхнею. Runtime-конфігурація та аудит залишаються в generic COS.</p>
-      <p><a href="<?php echo $this->url->get('api/cos/rules'); ?>">Rules API</a> · <a href="<?php echo $this->url->get('api/cos/agents'); ?>">Agents API</a> · <a href="<?php echo $this->url->get('api/cos/actions'); ?>">Actions API</a> · <a href="<?php echo $this->url->get('api/cos/audit'); ?>">Audit API</a></p>
-      <p class="tn-muted">Policy semantics V0.4: ручна авторизована Sales-операція виконується напряму; AI/COS Action завжди проходить Kernel Policy. APPROVAL_REQUIRED потребує Kernel Approval, HUMAN_ONLY блокує автоматичне виконання.</p>
-    </section>
+    <section class="tn-ui-panel"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Automation boundary</p><h2>Rules · Agents · Policies</h2></div></div><p>Sales Admin показує бізнесову конфігурацію. Runtime policies (політики виконання), approvals (погодження), audit (аудит) і agent execution (виконання агентів) залишаються у generic COS.</p><div class="tn-ui-actions"><a class="tn-ui-button" href="<?php echo $this->url->get('cos/control-center#rules'); ?>">Rules</a><a class="tn-ui-button" href="<?php echo $this->url->get('cos/control-center#agents'); ?>">Agents</a><a class="tn-ui-button" href="<?php echo $this->url->get('cos/control-center#policies'); ?>">Policies</a></div><p class="tn-sales-note">Sales V0.4 semantics: ручна авторизована операція виконується через Sales use case (сценарій застосунку); AI/COS Action проходить Kernel Policy.</p></section>
   </div>
-  <section class="tn-admin-panel"><div class="tn-section-heading"><div><p class="tn-kicker">Next configuration layer</p><h2>Керування без deploy</h2></div></div><div class="tn-sales-kpis"><article><span>Pipelines</span><strong>Read-ready</strong></article><article><span>Rules</span><strong>Runtime API</strong></article><article><span>Agents</span><strong>Runtime API</strong></article><article><span>Policies</span><strong>Kernel owned</strong></article></div></section>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section"><?php $this->partial('components/ui/kpi_card',['label'=>'Pipelines','value'=>count($pipelines),'hint'=>'Configured runtime']); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Won rate / 30d','value'=>($metrics['won_rate']??0).'%']); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Follow-up completion','value'=>($metrics['followup_completion_rate']??0).'%']); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Policies','value'=>'Kernel owned','hint'=>'No duplicate Sales policy layer']); ?></section>
 </main>

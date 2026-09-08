@@ -31,6 +31,7 @@ export default defineConfig({
         'cos-control-center': resolve(import.meta.dirname, 'frontend/entrypoints/cos-control-center.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'diagnostics-methodology-studio': resolve(import.meta.dirname, 'frontend/entrypoints/diagnostics-methodology-studio.js'),
+        'sales-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/sales-workspace.js'),
         'terranova-catalog-api': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-catalog-api.js'),
         'terranova-club': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-club.js'),
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),

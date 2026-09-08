@@ -32,47 +32,36 @@ final class FrontendNavigation
             ['key' => 'content', 'path' => 'admin/content', 'label' => 'Контент', 'glyph' => 'CT'],
             ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Кабінет', 'glyph' => 'ME'],
         ];
-
         if ($role === 'admin') {
             array_unshift($utility, ['key' => 'users', 'path' => 'admin/users', 'label' => 'Користувачі', 'glyph' => 'US']);
+        }
+
+        $salesChildren = [
+            ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Overview'],
+            ['key' => 'today', 'path' => 'sales/today', 'label' => 'Today'],
+            ['key' => 'pipeline', 'path' => 'sales/pipeline', 'label' => 'Pipeline'],
+            ['key' => 'leads', 'path' => 'sales/leads', 'label' => 'Leads'],
+            ['key' => 'deals', 'path' => 'sales/deals', 'label' => 'Deals'],
+            ['key' => 'director', 'path' => 'sales/director', 'label' => 'Director'],
+        ];
+        if ($role === 'admin') {
+            $salesChildren[] = ['key' => 'sales-admin', 'path' => 'sales/admin', 'label' => 'Sales Admin'];
         }
 
         return [
             'surface' => 'workspace',
             'primary' => [
+                ['key' => 'home', 'path' => 'admin', 'label' => 'Огляд', 'glyph' => 'HM', 'children' => []],
+                ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Sales', 'glyph' => 'SL', 'children' => $salesChildren],
                 [
-                    'key' => 'home',
-                    'path' => 'admin',
-                    'label' => 'Огляд',
-                    'glyph' => 'HM',
-                    'children' => [],
-                ],
-                [
-                    'key' => 'sales',
-                    'path' => 'sales/dashboard',
-                    'label' => 'Sales',
-                    'glyph' => 'SL',
-                    'children' => [
-                        ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Overview'],
-                        ['key' => 'today', 'path' => 'sales/today', 'label' => 'Today'],
-                        ['key' => 'pipeline', 'path' => 'sales/pipeline', 'label' => 'Pipeline'],
-                    ],
-                ],
-                [
-                    'key' => 'clients',
-                    'path' => 'client-case/inbox',
-                    'label' => 'Клієнти',
-                    'glyph' => 'CL',
+                    'key' => 'clients', 'path' => 'client-case/inbox', 'label' => 'Клієнти', 'glyph' => 'CL',
                     'children' => [
                         ['key' => 'inbox', 'path' => 'client-case/inbox', 'label' => 'Inbox'],
                         ['key' => 'cases', 'path' => 'client-case', 'label' => 'Cases'],
                     ],
                 ],
                 [
-                    'key' => 'properties',
-                    'path' => 'property/manage',
-                    'label' => 'Нерухомість',
-                    'glyph' => 'RE',
+                    'key' => 'properties', 'path' => 'property/manage', 'label' => 'Нерухомість', 'glyph' => 'RE',
                     'children' => [
                         ['key' => 'objects', 'path' => 'property/manage', 'label' => 'Inventory'],
                         ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
@@ -82,22 +71,13 @@ final class FrontendNavigation
                     ],
                 ],
                 [
-                    'key' => 'cos',
-                    'path' => 'cos/control-center',
-                    'label' => 'COS',
-                    'glyph' => 'OS',
+                    'key' => 'cos', 'path' => 'cos/control-center', 'label' => 'COS', 'glyph' => 'OS',
                     'children' => [
                         ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'Control Center'],
                         ['key' => 'diagnostics', 'path' => 'admin/diagnostics/methodology-studio', 'label' => 'Diagnostics'],
                     ],
                 ],
-                [
-                    'key' => 'analytics',
-                    'path' => 'admin/analytics',
-                    'label' => 'Аналітика',
-                    'glyph' => 'AN',
-                    'children' => [],
-                ],
+                ['key' => 'analytics', 'path' => 'admin/analytics', 'label' => 'Аналітика', 'glyph' => 'AN', 'children' => []],
             ],
             'utility' => $utility,
         ];
@@ -110,27 +90,16 @@ final class FrontendNavigation
             ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість'],
             ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
         ];
-
-        if (in_array($role, self::LISTING_ROLES, true)) {
-            $items[] = ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Мої обʼєкти'];
-        }
-
-        if (in_array($role, self::SUBMIT_ROLES, true)) {
-            $items[] = ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати обʼєкт'];
-        }
-
-        return [
-            'surface' => 'portal',
-            'primary' => $items,
-            'utility' => [],
-        ];
+        if (in_array($role, self::LISTING_ROLES, true)) $items[] = ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Мої обʼєкти'];
+        if (in_array($role, self::SUBMIT_ROLES, true)) $items[] = ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати обʼєкт'];
+        return ['surface' => 'portal', 'primary' => $items, 'utility' => []];
     }
 
     public static function activeSection(string $active): string
     {
         return match ($active) {
             'admin', 'home' => 'home',
-            'sales', 'today', 'pipeline', 'leads', 'deals' => 'sales',
+            'sales', 'today', 'pipeline', 'leads', 'deals', 'director', 'sales-admin' => 'sales',
             'inbox', 'cases', 'clients' => 'clients',
             'objects', 'listing', 'submissions', 'spatial', 'catalog', 'properties' => 'properties',
             'cos', 'diagnostics', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit' => 'cos',
