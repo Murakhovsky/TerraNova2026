@@ -27,11 +27,6 @@ include APP_PATH . '/config/services.php';
 include APP_PATH . '/config/services_cli.php';
 
 /**
- * Include Autoloader
- */
-include APP_PATH . '/config/loader.php';
-
-/**
  * Get config service for use in inline setup below
  */
 $config = $di->getConfig();
@@ -46,7 +41,7 @@ $console = new ConsoleApp($di);
  */
 $console->registerModules([
     'cli' => [
-        'className' => 'Interfaces\Cli\Module',
+        'className' => 'Interfaces\\Cli\\Module',
         'path' => APP_PATH . '/Interfaces/Cli/Module.php',
     ],
 ]);
