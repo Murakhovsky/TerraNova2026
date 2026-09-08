@@ -37,45 +37,27 @@ final class WebApplicationServices
         ));
         $di->setShared('frontendContentService', fn() => new ContentService($di->getShared('contentRepository')));
         $di->setShared('propertyAnalytics', fn() => new MysqlPropertyAnalytics($di->getShared('databaseService')));
-        $di->setShared('frontendCatalogService', fn() => new CatalogService(
-            $di->getShared('databaseService'), $di->getShared('propertyAnalytics'),
-        ));
+        $di->setShared('frontendCatalogService', fn() => new CatalogService($di->getShared('databaseService'), $di->getShared('propertyAnalytics')));
         $di->setShared('frontendClientCaseService', fn() => new ClientCaseService(
-            $di->getShared('salesClientCaseReadModel'), $di->getShared('salesCreateClientCase'),
-            $di->getShared('salesUpdateClientCase'), $di->getShared('salesQuickUpdateClientCase'),
-            $di->getShared('salesAddClientCaseActivity'), $di->getShared('salesAttachInboundRequest'),
-            $di->getShared('salesUpdateInboundClientCaseRequest'), $di->getShared('salesCreateClientCaseFromInboundRequest'),
-            $di->getShared('salesAddClientCasePropertyMatch'), $di->getShared('salesUpdateClientCasePropertyMatch'),
-            $di->getShared('salesRegisterInboundClientCaseRequest'), $di->getShared('salesResolveInboundProperty'),
-            $di->getShared('salesEnsureInboundClientCase'),
+            $di->getShared('salesClientCaseReadModel'), $di->getShared('salesClientCaseService'), $di->getShared('salesInboundService'),
         ));
-        $di->setShared('frontendInboundRequestService', fn() => new InboundRequestService(
-            $di->getShared('salesReceivePublicLead'),
-        ));
-        $di->setShared('propertySubmissionRepository', fn() => new MysqlPropertySubmissionRepository(
-            $di->getShared('databaseService'),
-        ));
+        $di->setShared('frontendInboundRequestService', fn() => new InboundRequestService($di->getShared('salesReceivePublicLead')));
+
+        $di->setShared('propertySubmissionRepository', fn() => new MysqlPropertySubmissionRepository($di->getShared('databaseService')));
         $di->setShared('frontendPropertySubmissionService', fn() => new PropertySubmissionService(
-            $di->getShared('propertySubmissionRepository'), $di->getShared('mediaStorageService'),
-            $di->getShared('telegramAutomationService'), $di->getShared('propertyAnalytics'),
+            $di->getShared('propertySubmissionRepository'), $di->getShared('mediaStorageService'), null, $di->getShared('propertyAnalytics'),
         ));
         $di->setShared('propertyModerationRepository', fn() => new MysqlPropertyModerationRepository(
-            $di->getShared('databaseService'), $di->getShared('mediaStorageService'),
-            new MysqlLocationReference($di->getShared('databaseService')),
+            $di->getShared('databaseService'), $di->getShared('mediaStorageService'), new MysqlLocationReference($di->getShared('databaseService')),
         ));
-        $di->setShared('frontendPropertyModerationService', fn() => new PropertyModerationService(
-            $di->getShared('propertyModerationRepository'), $di->getShared('telegramAutomationService'),
-        ));
+        $di->setShared('frontendPropertyModerationService', fn() => new PropertyModerationService($di->getShared('propertyModerationRepository')));
         $di->setShared('propertyManagementRepository', fn() => new MysqlPropertyManagementRepository(
             $di->getShared('databaseService'), $di->getShared('mediaStorageService'), $di->getShared('organizationContext')->id(),
         ));
-        $di->setShared('frontendPropertyMediaService', fn() => new PropertyManagementService(
-            $di->getShared('propertyManagementRepository'), $di->getShared('telegramAutomationService'),
-        ));
+        $di->setShared('frontendPropertyMediaService', fn() => new PropertyManagementService($di->getShared('propertyManagementRepository')));
         $di->setShared('frontendPropertyPresentationService', fn() => new PropertyPresentationService(
-            $di->getShared('frontendCatalogService'), $di->getShared('databaseService'),
-            $di->getShared('telegramAutomationService'), $di->getShared('propertyAnalytics'),
-            new MysqlPresentationSales($di->getShared('databaseService')),
+            $di->getShared('frontendCatalogService'), $di->getShared('databaseService'), null,
+            $di->getShared('propertyAnalytics'), new MysqlPresentationSales($di->getShared('databaseService')),
         ));
         $di->setShared('frontendN8nWebhookService', fn() => new N8nWebhookService(
             $di->getShared('databaseService'), $di->getShared('frontendContentService'),
