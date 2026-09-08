@@ -1,10 +1,9 @@
 <?php
 declare(strict_types=1);
 
+use Domains\Sales\Application\Service\SalesOperationService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
-use Domains\Sales\Application\UseCase\ScheduleSalesMeeting;
-use Domains\Sales\Application\UseCase\SendSalesMessage;
 use Domains\Sales\Bootstrap\SalesDomainModule;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository;
@@ -17,48 +16,23 @@ define('BASE_PATH', $root);
 define('APP_PATH', $root . '/app');
 
 spl_autoload_register(static function (string $class) use ($root): void {
-    foreach ([
-        'Kernel\\' => '/app/Kernel/',
-        'Domains\\' => '/app/Domains/',
-        'Infrastructure\\' => '/app/Infrastructure/',
-        'Interfaces\\' => '/app/Interfaces/',
-        'Bootstrap\\' => '/app/Bootstrap/',
-    ] as $prefix => $directory) {
-        if (!str_starts_with($class, $prefix)) {
-            continue;
-        }
-
+    foreach (['Kernel\\' => '/app/Kernel/', 'Domains\\' => '/app/Domains/', 'Infrastructure\\' => '/app/Infrastructure/', 'Interfaces\\' => '/app/Interfaces/', 'Bootstrap\\' => '/app/Bootstrap/'] as $prefix => $directory) {
+        if (!str_starts_with($class, $prefix)) continue;
         $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-        if (is_file($file)) {
-            require $file;
-        }
+        if (is_file($file)) require $file;
         return;
     }
 });
 
 final class CompositionTestContainer
 {
-    /** @var array<string, mixed> */
     private array $definitions = [];
-
-    /** @var array<string, mixed> */
     private array $shared = [];
-
-    public function setShared(string $id, mixed $definition): void
-    {
-        $this->definitions[$id] = $definition;
-        unset($this->shared[$id]);
-    }
-
+    public function setShared(string $id, mixed $definition): void { $this->definitions[$id] = $definition; unset($this->shared[$id]); }
     public function getShared(string $id): mixed
     {
-        if (array_key_exists($id, $this->shared)) {
-            return $this->shared[$id];
-        }
-        if (!array_key_exists($id, $this->definitions)) {
-            throw new RuntimeException('Missing composition dependency: ' . $id);
-        }
-
+        if (array_key_exists($id, $this->shared)) return $this->shared[$id];
+        if (!array_key_exists($id, $this->definitions)) throw new RuntimeException('Missing composition dependency: ' . $id);
         $definition = $this->definitions[$id];
         $value = $definition instanceof Closure ? $definition->call($this) : $definition;
         return $this->shared[$id] = $value;
@@ -66,31 +40,28 @@ final class CompositionTestContainer
 }
 
 $withoutConstructor = static fn (string $class): object => (new ReflectionClass($class))->newInstanceWithoutConstructor();
-
 $di = new CompositionTestContainer();
 require APP_PATH . '/Bootstrap/SalesServices.php';
 
-// Replace infrastructure-backed dependencies with correctly typed, uninitialized objects.
-// The test verifies DI wiring and constructor contracts without opening a database connection.
-$di->setShared('cosCrmGateway', $withoutConstructor(RoutedCrmGateway::class));
-$di->setShared('salesDealRepository', $withoutConstructor(MysqlDealRepository::class));
-$di->setShared('salesFollowupRepository', $withoutConstructor(MysqlFollowupRepository::class));
+$crm = $withoutConstructor(RoutedCrmGateway::class);
+$deals = $withoutConstructor(MysqlDealRepository::class);
+$followups = $withoutConstructor(MysqlFollowupRepository::class);
+$operations = $withoutConstructor(SalesOperationService::class);
+$di->setShared('cosCrmGateway', $crm);
+$di->setShared('salesDealRepository', $deals);
+$di->setShared('salesFollowupRepository', $followups);
 $di->setShared('salesRuleContextProvider', $withoutConstructor(MysqlSalesRuleContextProvider::class));
 $di->setShared('salesAgentContextBuilder', $withoutConstructor(MysqlSalesAgentContextBuilder::class));
 $di->setShared('salesChangeDealStage', $withoutConstructor(ChangeDealStage::class));
-$di->setShared('salesSendMessage', $withoutConstructor(SendSalesMessage::class));
-$di->setShared('salesScheduleMeeting', $withoutConstructor(ScheduleSalesMeeting::class));
+$di->setShared('salesOperationService', $operations);
 $di->setShared('salesAssignDealOwner', $withoutConstructor(AssignDealOwner::class));
 
 $module = $di->getShared('salesDomainModule');
-if (!$module instanceof SalesDomainModule) {
-    throw new RuntimeException('salesDomainModule did not resolve to SalesDomainModule.');
+if (!$module instanceof SalesDomainModule || $module->name() !== 'sales') throw new RuntimeException('salesDomainModule did not resolve correctly.');
+$reflection = new ReflectionClass($module);
+foreach (['deals' => $deals, 'followups' => $followups, 'operations' => $operations] as $property => $expected) {
+    if ($reflection->getProperty($property)->getValue($module) !== $expected) throw new RuntimeException('Sales composition root selected the wrong implementation for ' . $property . '.');
 }
-if ($module->name() !== 'sales') {
-    throw new RuntimeException('Resolved Sales module has an unexpected module name.');
-}
-if (count($module->actionHandlers()) < 1) {
-    throw new RuntimeException('Resolved Sales module did not build its action handlers.');
-}
+if (count($module->actionHandlers()) < 1) throw new RuntimeException('Resolved Sales module did not build its action handlers.');
 
-echo "Sales composition root passed: salesDomainModule resolved with typed dependencies and handlers.\n";
+echo "Sales composition root passed: canonical repositories and consolidated operations are wired explicitly.\n";
