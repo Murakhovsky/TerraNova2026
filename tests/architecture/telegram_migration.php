@@ -13,6 +13,26 @@ if (str_contains($configSource, '/modules/')) {
     throw new RuntimeException('Telegram command configuration still points to app/modules.');
 }
 
+// Telegram is retained as legacy source, but must stay outside the shared Web/CLI runtime.
+$sharedServices = (string) file_get_contents($root . '/app/config/services.php');
+foreach (['telegramAutomationService', 'telegramAccessPolicy', 'TelegramAutomationService', 'TelegramAccessPolicy'] as $telegramDependency) {
+    if (str_contains($sharedServices, $telegramDependency)) {
+        throw new RuntimeException('Shared DI still depends on legacy Telegram: ' . $telegramDependency);
+    }
+}
+
+$telegramServices = (string) file_get_contents($root . '/app/config/services_tg.php');
+foreach (['telegramAutomationService', 'telegramAccessPolicy'] as $telegramService) {
+    if (!str_contains($telegramServices, $telegramService)) {
+        throw new RuntimeException('Telegram-only DI lost legacy service: ' . $telegramService);
+    }
+}
+
+$webhook = (string) file_get_contents($root . '/public/tgAdmin_webhook.php');
+if (!str_contains($webhook, 'http_response_code(410)') || str_contains($webhook, 'bootstrap_tg.php')) {
+    throw new RuntimeException('Legacy Telegram public webhook is not safely disabled.');
+}
+
 $roots = [
     $root . '/app/Interfaces/Telegram/Command',
     $root . '/app/Interfaces/Telegram/Controller',
@@ -101,5 +121,5 @@ foreach ([
     }
 }
 
-echo "Telegram migration passed: {$loaded} types loaded and " . count($commands)
-    . " commands discovered (" . implode(', ', array_keys($commands)) . ").\n";
+echo "Telegram migration passed: runtime isolated/disabled, {$loaded} legacy types loadable and " . count($commands)
+    . " commands discoverable.\n";
