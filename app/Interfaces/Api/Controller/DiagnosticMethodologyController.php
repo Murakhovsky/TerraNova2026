@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Interfaces\Api\Controller;
 
 use Domains\Diagnostic\Application\Service\MethodologyStudioService;
+use Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess;
 use Interfaces\Web\Controller\WebController;
 use Phalcon\Http\ResponseInterface;
 use Throwable;
@@ -78,18 +79,24 @@ final class DiagnosticMethodologyController extends WebController
     public function publishAction(?string $id = null, ?string $version = null): ResponseInterface {[$p,$v]=$this->identity($id,$version);return $this->call(function($s,$o,$u)use($p,$v){$s->publish($o,$p,$v,(string)$u['id']);return ['published'=>true];},'publisher');}
     public function archiveAction(?string $id = null, ?string $version = null): ResponseInterface {[$p,$v]=$this->identity($id,$version);return $this->call(function($s,$o,$u)use($p,$v){$s->archive($o,$p,$v,(string)$u['id']);return ['archived'=>true];},'publisher');}
     public function activateAction(?string $id = null, ?string $version = null): ResponseInterface {[$p,$v]=$this->identity($id,$version);return $this->call(function($s,$o,$u)use($p,$v){$s->activate($o,$p,$v,(string)$u['id']);return ['activated'=>true];},'publisher');}
+    public function historyAction(): ResponseInterface {return $this->call(fn($s,$o)=>['history'=>$s->history($o,(string)$this->request->getQuery('pack','string',''),(string)$this->request->getQuery('version','string',''))]);}
+    public function runsAction(): ResponseInterface {return $this->call(fn($s,$o)=>['runs'=>$s->runs($o)]);}
+    public function permissionsAction(): ResponseInterface {return $this->call(function($s,$o,$u){$access=$this->di->getShared('diagnosticMethodologyAccess');return ['view'=>true,'edit'=>$access->allows($o,(int)$u['id'],DiagnosticMethodologyAccess::EDIT),'publish'=>$access->allows($o,(int)$u['id'],DiagnosticMethodologyAccess::PUBLISH)];});}
 
     private function call(callable $callback, string $access = 'viewer'): ResponseInterface
     {
         $user = $this->auth()->currentUser();
         if ($user === null) return $this->jsonOut(401, ['ok' => false, 'error' => 'Authentication required.']);
-        if ($access === 'admin' && !$this->auth()->isManager($user)) return $this->jsonOut(403, ['ok' => false, 'error' => 'Diagnostic Admin role required.']);
-        if ($access === 'publisher' && !$this->auth()->isAdmin($user)) return $this->jsonOut(403, ['ok' => false, 'error' => 'Diagnostic Publisher role required.']);
+        $organizationId = $this->organization()->id();
+        /** @var DiagnosticMethodologyAccess $authorization */
+        $authorization = $this->di->getShared('diagnosticMethodologyAccess');
+        $permission = match ($access) {'admin'=>DiagnosticMethodologyAccess::EDIT,'publisher'=>DiagnosticMethodologyAccess::PUBLISH,default=>DiagnosticMethodologyAccess::VIEW};
+        if (!$authorization->allows($organizationId, (int) $user['id'], $permission)) return $this->jsonOut(403, ['ok'=>false,'error'=>'Missing permission: '.$permission]);
         if ($access !== 'viewer' && !$this->validMutation()) return $this->jsonOut(400, ['ok' => false, 'error' => 'Invalid CSRF token.']);
         try {
             /** @var MethodologyStudioService $service */
             $service = $this->di->getShared('diagnosticMethodologyStudio');
-            return $this->jsonOut(200, ['ok' => true, 'data' => $callback($service, $this->organization()->id(), $user)]);
+            return $this->jsonOut(200, ['ok' => true, 'data' => $callback($service, $organizationId, $user)]);
         } catch (Throwable $exception) {return $this->jsonOut(422, ['ok' => false, 'error' => $exception->getMessage()]);}
     }
 

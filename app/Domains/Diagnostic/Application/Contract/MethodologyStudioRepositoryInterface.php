@@ -20,4 +20,6 @@ interface MethodologyStudioRepositoryInterface
  public function deleteScenario(string $organizationId,string $packId,string $version,string $scenarioId):void;
  public function saveTestResult(string $organizationId,array $result):void;
  public function audit(string $organizationId,array $entry):void;
+ public function auditHistory(string $organizationId,string $packId='',string $version='',int $limit=100):array;
+ public function diagnosticRuns(string $organizationId,int $limit=100):array;
 }

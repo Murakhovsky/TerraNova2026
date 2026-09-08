@@ -22,15 +22,29 @@ $database = $di->getShared('databaseService');
 /** @var MethodologyStudioService $studio */
 $studio = $di->getShared('diagnosticMethodologyStudio');
 $source = json_decode((string) file_get_contents(BASE_PATH . '/resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json'), true, 512, JSON_THROW_ON_ERROR);
+$overrides = json_decode((string) file_get_contents(BASE_PATH . '/resources/diagnostic/sales/0.2.0/studio-overrides.json'), true, 512, JSON_THROW_ON_ERROR);
 $map = ['sections'=>'AREA','criteria'=>'CRITERION','facts'=>'FACT','metrics'=>'METRIC','questions'=>'QUESTION','evidence_requirements'=>'EVIDENCE_REQUIREMENT','rules'=>'RULE','dependencies'=>'DEPENDENCY','recommendations'=>'RECOMMENDATION','benchmarks'=>'BENCHMARK','scoring'=>'SCORING'];
 
 $pdo = $database->connection();
 $pdo->beginTransaction();
 try {
-    $studio->create($organizationId, ['slug'=>'sales','name'=>'Sales Diagnostic','domain'=>'Sales','description'=>'Production sales operating-system diagnostic methodology.','methodology_version'=>'0.2.0'], $userId);
+    $studio->create($organizationId, ['slug'=>'sales','name'=>$overrides['pack']['name'],'domain'=>$overrides['pack']['domain'],'description'=>$overrides['pack']['description'],'methodology_version'=>'0.2.0'], $userId);
     foreach ($map as $field => $type) foreach ($source[$field] ?? [] as $position => $entity) {
+        if ($type === 'METRIC') {unset($entity['formula']); $entity = array_replace($entity, $overrides['metrics'][$entity['id']] ?? []);}
         $studio->saveEntity($organizationId, 'sales', '0.2.0', $type, $entity + ['order' => $position], $userId);
     }
+    $healthyFacts = array_fill_keys(array_column($source['facts'], 'id'), true);
+    $healthyMetrics = [];
+    foreach ($source['metrics'] as $metric) $healthyMetrics[$metric['id']] = ($metric['direction'] ?? '') === 'lower_is_better' ? 10 : 90;
+    $studio->saveScenario($organizationId, 'sales', '0.2.0', ['id'=>'healthy-baseline','name'=>'Healthy sales operating system','input'=>['facts'=>$healthyFacts,'metrics'=>$healthyMetrics],'expected'=>['findings'=>[],'recommendations'=>[],'score_min'=>75]], $userId);
     $pdo->commit();
 } catch (Throwable $exception) {$pdo->rollBack(); throw $exception;}
-echo "Imported Sales Diagnostic Pack v0.2.0 as a Studio draft. Validate, simulate and publish it in Methodology Studio.\n";
+$validation = $studio->validate($organizationId, 'sales', '0.2.0');
+if (!$validation['valid']) {
+    throw new RuntimeException('Imported Sales v0.2.0 is invalid: ' . json_encode($validation['errors'], JSON_THROW_ON_ERROR));
+}
+$regression = $studio->runRegression($organizationId, 'sales', '0.2.0');
+if ($regression['passed'] < 1 || $regression['failed'] > 0 || $regression['changed'] > 0) {
+    throw new RuntimeException('Imported Sales v0.2.0 failed regression: ' . json_encode($regression, JSON_THROW_ON_ERROR));
+}
+echo "Imported and validated Sales Diagnostic Pack v0.2.0; {$regression['passed']} scenario(s) PASSED.\n";

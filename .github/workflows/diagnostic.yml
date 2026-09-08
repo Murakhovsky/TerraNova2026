@@ -19,4 +19,5 @@ jobs:
       - run: php tests/smoke/diagnostic_phase_1_3.php
       - run: php tests/smoke/diagnostic_phase_4_6.php
       - run: php tests/smoke/diagnostic_methodology_studio.php
+      - run: php tests/smoke/diagnostic_v053.php
       - run: php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"

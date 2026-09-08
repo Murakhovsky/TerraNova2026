@@ -61,6 +61,9 @@ final class FrontendRoutes
         self::add($router, 'addGet', '/api/health', 'Interfaces\Api\Controller', 'health', 'index');
         self::add($router, 'addGet', '/api/admin/diagnostics/packs', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'packs');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'packs');
+        self::add($router, 'addGet', '/api/admin/diagnostics/history', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'history');
+        self::add($router, 'addGet', '/api/admin/diagnostics/runs', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'runs');
+        self::add($router, 'addGet', '/api/admin/diagnostics/permissions', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'permissions');
         self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'pack');
         self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'versions');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities/{type:[a-z_]+}', 'Interfaces\Api\Controller', 'diagnostic_methodology', 'entity');
