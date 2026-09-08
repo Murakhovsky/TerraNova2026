@@ -1,11 +1,11 @@
-name: Diagnostic Phase 1-3
+name: COS Runtime Checks
 on:
   push:
     branches: [COS]
   pull_request:
     branches: [COS]
 jobs:
-  diagnostics:
+  runtime-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,11 +13,33 @@ jobs:
         with:
           php-version: '8.2'
       - run: composer install --no-interaction --prefer-dist
-      - run: php tests/smoke/diagnostic_domain.php
-      - run: php tests/smoke/diagnostic_methodology_contract.php
-      - run: php tests/smoke/diagnostic_methodology.php
-      - run: php tests/smoke/diagnostic_phase_1_3.php
-      - run: php tests/smoke/diagnostic_phase_4_6.php
-      - run: php tests/smoke/diagnostic_methodology_studio.php
-      - run: php tests/smoke/diagnostic_v053.php
-      - run: php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
+
+      - name: Diagnostic checks
+        run: |
+          php tests/smoke/diagnostic_domain.php
+          php tests/smoke/diagnostic_methodology_contract.php
+          php tests/smoke/diagnostic_methodology.php
+          php tests/smoke/diagnostic_phase_1_3.php
+          php tests/smoke/diagnostic_phase_4_6.php
+          php tests/smoke/diagnostic_methodology_studio.php
+          php tests/smoke/diagnostic_v053.php
+          php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
+
+      - name: Sales architecture and runtime checks
+        run: |
+          php tests/architecture/sales_readiness.php
+          php tests/smoke/sales_composition_root.php
+          php tests/smoke/client_case_commands.php
+          php tests/smoke/deterministic_sales_processes.php
+          php tests/smoke/crm_routing.php
+          php tests/smoke/crm_webhook.php
+          php tests/smoke/public_lead.php
+          php tests/unit/sales_attention_detectors.php
+          php tests/unit/sales_runtime_contract.php
+          php tests/unit/sales_v03.php
+
+      - name: Property and legacy isolation checks
+        run: |
+          php tests/smoke/property_submission.php
+          php tests/smoke/property_workflow.php
+          php tests/architecture/telegram_migration.php
