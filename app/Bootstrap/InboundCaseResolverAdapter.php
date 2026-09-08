@@ -4,27 +4,20 @@ declare(strict_types=1);
 namespace Bootstrap;
 
 use Domains\Sales\Application\Contract\InboundCaseResolverInterface;
-use Domains\Sales\Application\UseCase\EnsureInboundClientCase;
-use Domains\Sales\Application\UseCase\RegisterInboundClientCaseRequest;
-use Domains\Sales\Application\UseCase\ResolveInboundProperty;
+use Domains\Sales\Application\Service\SalesInboundService;
 
 final readonly class InboundCaseResolverAdapter implements InboundCaseResolverInterface
 {
-    public function __construct(
-        private ResolveInboundProperty $resolveProperty,
-        private EnsureInboundClientCase $ensureCase,
-        private RegisterInboundClientCaseRequest $registerRequest,
-    ) {
-    }
+    public function __construct(private SalesInboundService $inbound) {}
 
     public function resolvePropertyId(mixed $value): ?int
     {
-        return $this->resolveProperty->execute($value);
+        return $this->inbound->resolvePropertyId($value);
     }
 
     public function resolvePersonAndCase(array $input): array
     {
-        $result = $this->ensureCase->execute($input);
+        $result = $this->inbound->ensureCase($input);
         return [
             'person_id' => $result->data['person_id'] ?? null,
             'client_case_id' => $result->data['client_case_id'] ?? null,
@@ -33,6 +26,6 @@ final readonly class InboundCaseResolverAdapter implements InboundCaseResolverIn
 
     public function attachRequest(int $caseId, int $requestId): void
     {
-        $this->registerRequest->execute($caseId, $requestId);
+        $this->inbound->registerRequest($caseId, $requestId);
     }
 }

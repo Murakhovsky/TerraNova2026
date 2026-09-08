@@ -1,15 +1,25 @@
 <?php
 declare(strict_types=1);
 
-
 use Phalcon\Mvc\Router;
-use Phalcon\Session\Adapter\Stream as SessionAdapter;
-use Phalcon\Session\Manager as SessionManager;
 use Phalcon\Mvc\Url as UrlResolver;
-use Phalcon\Translate\Adapter\NativeArray;
 use Interfaces\Telegram\Listener\IdentityUserEventsListener;
 use Infrastructure\Identity\TelegramNotificationService;
 use Infrastructure\Identity\TelegramUserService;
+use Infrastructure\Integration\Telegram\TelegramAutomationService;
+use Infrastructure\Security\TelegramAccessPolicy;
+
+/**
+ * Telegram-only services. This file is intentionally loaded only by bootstrap_tg.php
+ * so the regular Web/CLI composition roots do not depend on the legacy Telegram runtime.
+ */
+$di->setShared('telegramAutomationService', function () {
+    return new TelegramAutomationService($this->getShared('databaseService'));
+});
+
+$di->setShared('telegramAccessPolicy', fn () => new TelegramAccessPolicy(
+    $this->getShared('databaseService'),
+));
 
 /**
  * Registering a router
@@ -19,7 +29,6 @@ $di->setShared('router', function () {
     $router->setDefaultModule('TgAdmin');
     return $router;
 });
-
 
 $di->setShared('userService', fn () => new TelegramUserService());
 $di->setShared('notificationService', fn () => new TelegramNotificationService());
@@ -45,5 +54,3 @@ $di->setShared('url', function () {
 
     return $url;
 });
-
-

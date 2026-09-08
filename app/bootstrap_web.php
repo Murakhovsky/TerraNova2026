@@ -25,7 +25,6 @@ try {
      */
     require APP_PATH . '/config/services_web.php';
 
-
     /**
      * Include general services
      */
@@ -37,11 +36,6 @@ try {
     $config = $di->getConfig();
 
     /**
-     * Include Autoloader
-     */
-    include APP_PATH . '/config/loader.php';
-
-    /**
      * Handle the request
      */
     $application = new Application($di);
@@ -51,12 +45,12 @@ try {
      */
     $application->registerModules([
         'frontend' => [
-            'className' => 'Interfaces\Web\Module',
+            'className' => 'Interfaces\\Web\\Module',
             'path'      => APP_PATH . '/Interfaces/Web/Module.php',
             'default'   => true
         ],
         'spatial' => [
-            'className' => 'Bootstrap\SpatialModule',
+            'className' => 'Bootstrap\\SpatialModule',
             'path'      => APP_PATH . '/Bootstrap/SpatialModule.php',
         ],
     ]);

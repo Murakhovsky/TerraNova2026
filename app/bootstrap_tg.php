@@ -27,7 +27,7 @@ try {
     require APP_PATH . '/config/services.php';
 
     /**
-     * Include web environment specific services
+     * Include Telegram environment specific services
      */
     require APP_PATH . '/config/services_tg.php';
 
@@ -35,11 +35,6 @@ try {
      * Get config service for use in inline setup below
      */
     $config = $di->getConfig();
-
-    /**
-     * Include Autoloader
-     */
-    include APP_PATH . '/config/loader.php';
 
     /**
      * Handle the request
@@ -51,7 +46,7 @@ try {
      */
     $application->registerModules([
         'TgAdmin' =>[
-            'className' => 'Interfaces\Telegram\Module',
+            'className' => 'Interfaces\\Telegram\\Module',
             'path'      => APP_PATH . '/Interfaces/Telegram/Module.php',
             'default'   => true
         ],

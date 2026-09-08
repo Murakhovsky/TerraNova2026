@@ -2,29 +2,20 @@
 declare(strict_types=1);
 
 use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
-use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
 use Phalcon\Mvc\View;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Media\ImageOptimizerService;
 use Infrastructure\Media\MediaStorageService;
-use Infrastructure\Integration\Telegram\TelegramAutomationService;
 use Infrastructure\Framework\PhalconEventService;
 use Infrastructure\Identity\SessionAuthService;
 use Interfaces\Web\Tenant\SessionOrganizationContext;
 use Interfaces\Web\Security\CsrfTokenManager;
 use Interfaces\Web\Assets\ViteAssetManifest;
-use Infrastructure\Security\TelegramAccessPolicy;
 
-/**
- * Shared configuration service
- */
 $di->setShared('config', function () {
     return include APP_PATH . "/config/config.php";
 });
 
-/**
- * Database connection is created based in the parameters defined in the configuration file
- */
 $di->setShared('db', function () {
     $config = $this->getConfig();
 
@@ -47,10 +38,6 @@ $di->setShared('db', function () {
 
 $di->setShared('databaseService', function () {
     return new PdoConnection($this->getConfig()->database);
-});
-
-$di->setShared('telegramAutomationService', function () {
-    return new TelegramAutomationService($this->getShared('databaseService'));
 });
 
 $di->setShared('mediaStorageService', function () {
@@ -78,27 +65,18 @@ $di->setShared('viteAssetManifest', fn () => new ViteAssetManifest(
     BASE_PATH . '/public/build/.vite/manifest.json',
 ));
 
-$di->setShared('telegramAccessPolicy', fn () => new TelegramAccessPolicy(
-    $this->getShared('databaseService'),
-));
-
-/**
- * If the configuration specify the use of metadata adapter use it or use memory otherwise
- */
 $di->setShared('modelsMetadata', function () {
     return new MetaDataAdapter();
 });
 
-//  **Реєструємо view**, щоб Phalcon не падав
 $di->setShared('view', function() {
     $view = new View();
-    $view->disable();      // вимикаємо будь-яке рендерення
+    $view->disable();
     return $view;
 });
 
-$di->setShared('eventService', function () use ($di) {
-    $eventService = new PhalconEventService();
-    return $eventService;
+$di->setShared('eventService', function () {
+    return new PhalconEventService();
 });
 
 if (!function_exists('di')) {
@@ -109,6 +87,4 @@ if (!function_exists('di')) {
     }
 }
 
-require_once APP_PATH . '/Bootstrap/InboundCaseResolverAdapter.php';
-require_once APP_PATH . '/Bootstrap/WebApplicationServices.php';
 require APP_PATH . '/config/services_kernel.php';
