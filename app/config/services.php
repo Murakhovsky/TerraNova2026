@@ -6,13 +6,11 @@ use Phalcon\Mvc\View;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Media\ImageOptimizerService;
 use Infrastructure\Media\MediaStorageService;
-use Infrastructure\Integration\Telegram\TelegramAutomationService;
 use Infrastructure\Framework\PhalconEventService;
 use Infrastructure\Identity\SessionAuthService;
 use Interfaces\Web\Tenant\SessionOrganizationContext;
 use Interfaces\Web\Security\CsrfTokenManager;
 use Interfaces\Web\Assets\ViteAssetManifest;
-use Infrastructure\Security\TelegramAccessPolicy;
 
 $di->setShared('config', function () {
     return include APP_PATH . "/config/config.php";
@@ -42,10 +40,6 @@ $di->setShared('databaseService', function () {
     return new PdoConnection($this->getConfig()->database);
 });
 
-$di->setShared('telegramAutomationService', function () {
-    return new TelegramAutomationService($this->getShared('databaseService'));
-});
-
 $di->setShared('mediaStorageService', function () {
     return new MediaStorageService($this->getShared('databaseService'), $this->getShared('imageOptimizerService'));
 });
@@ -69,10 +63,6 @@ $di->setShared('csrfTokenManager', fn () => new CsrfTokenManager($this->getShare
 
 $di->setShared('viteAssetManifest', fn () => new ViteAssetManifest(
     BASE_PATH . '/public/build/.vite/manifest.json',
-));
-
-$di->setShared('telegramAccessPolicy', fn () => new TelegramAccessPolicy(
-    $this->getShared('databaseService'),
 ));
 
 $di->setShared('modelsMetadata', function () {
