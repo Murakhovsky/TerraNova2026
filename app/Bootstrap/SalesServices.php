@@ -41,8 +41,8 @@ use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
     $this->getShared('cosCrmGateway'),
-    $this->getShared('cosCrmGateway'),
-    $this->getShared('cosCrmGateway'),
+    $this->getShared('salesDealRepository'),
+    $this->getShared('salesFollowupRepository'),
     $this->getShared('salesRuleContextProvider'),
     $this->getShared('salesAgentContextBuilder'),
     $this->getShared('salesChangeDealStage'),
