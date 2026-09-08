@@ -4,6 +4,12 @@ namespace Domains\Sales\Domain\Policy;
 use Domains\Sales\Model\{PipelineDefinition,PipelineStageDefinition,PipelineTransitionDefinition};
 final class StageTransitionPolicy
 {
+    /**
+     * Validates Sales business topology only. PipelineTransitionDefinition::requiresApproval
+     * is automation metadata consumed by the Kernel action/policy path. An authorized direct
+     * USER command is not converted into a Kernel approval request here; AI/SYSTEM actions
+     * must still pass Kernel Policy (AUTO / APPROVAL_REQUIRED / DENIED / HUMAN_ONLY).
+     */
     public function evaluate(array $deal,PipelineDefinition $pipeline,PipelineStageDefinition $current,PipelineStageDefinition $target,?PipelineTransitionDefinition $transition):StageTransitionResult
     {
         if((string)($deal['pipeline_id']??'')!==$pipeline->id)return StageTransitionResult::denied('Deal does not belong to the selected pipeline.');

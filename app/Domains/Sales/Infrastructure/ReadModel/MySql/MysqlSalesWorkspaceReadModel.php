@@ -144,10 +144,33 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             . ' ORDER BY c.next_contact_at IS NULL, c.next_contact_at, c.updated_at DESC LIMIT 20',
             $base,
         );
+        $activityOwnerSql = $ownerId > 0 ? ' AND c.assigned_user_id = :activity_owner_id' : '';
+        $activityBase = ['activity_org' => $organizationId] + ($ownerId > 0 ? ['activity_owner_id' => $ownerId] : []);
+        $activities = fn (string $type, string $condition): array => $this->all(
+            'SELECT c.id, c.public_id, c.title, p.full_name customer, c.priority, a.id activity_id, a.title activity_title, a.due_at '
+            . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
+            . 'INNER JOIN tn_people p ON p.id=c.person_id AND p.organization_id=c.organization_id '
+            . 'WHERE a.organization_id=:activity_org AND a.activity_type="' . $type . '" AND a.completed_at IS NULL' . $activityOwnerSql . ' AND ' . $condition
+            . ' ORDER BY a.due_at IS NULL,a.due_at,c.updated_at DESC LIMIT 20',
+            $activityBase,
+        );
+        $communicationOwnerSql = $ownerId > 0 ? ' AND d.assigned_user_id=:communication_owner_id' : '';
+        $communicationParams = ['communication_org' => $organizationId] + ($ownerId > 0 ? ['communication_owner_id' => $ownerId] : []);
+
         return [
             'must_do' => $query('c.next_contact_at BETWEEN CURRENT_DATE() AND CURRENT_DATE() + INTERVAL 1 DAY'),
             'overdue' => $query('c.next_contact_at < NOW()'),
             'waiting_for_client' => $query('c.next_contact_at IS NULL AND c.last_activity_at >= NOW() - INTERVAL 7 DAY'),
+            'new_replies' => $this->safeAll(
+                'SELECT d.id,d.public_id,d.title,p.full_name customer,d.priority,c.occurred_at,c.channel,c.body detail '
+                . 'FROM sales_communications c INNER JOIN tn_client_cases d ON d.id=c.deal_id AND d.organization_id=c.organization_id '
+                . 'INNER JOIN tn_people p ON p.id=d.person_id AND p.organization_id=d.organization_id '
+                . 'WHERE c.organization_id=:communication_org AND c.direction="INBOUND" AND c.occurred_at>=NOW()-INTERVAL 24 HOUR' . $communicationOwnerSql
+                . ' ORDER BY c.occurred_at DESC LIMIT 20',
+                $communicationParams,
+            ),
+            'meetings' => $activities('meeting', 'a.due_at BETWEEN CURRENT_DATE() AND CURRENT_DATE()+INTERVAL 1 DAY'),
+            'followups' => $activities('followup', 'a.due_at <= CURRENT_DATE()+INTERVAL 1 DAY'),
             'ai_recommended' => $this->safeAll(
                 'SELECT a.id action_id, a.type, a.target_id deal_id, a.status, a.risk_level, a.parameters, d.reason, d.confidence '
                 . 'FROM cos_actions a LEFT JOIN cos_decisions d ON d.source_id = a.source_id '
@@ -165,13 +188,17 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         $core = $this->one(
             'SELECT COUNT(*) total_deals, SUM(c.status = "lost") lost_deals, '
             . 'ROUND(100 * SUM(COALESCE(s.is_won, 0) = 1) / NULLIF(COUNT(*), 0), 2) won_rate, '
-            . 'ROUND(AVG(CASE WHEN c.closed_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, c.created_at, c.closed_at) END), 2) sales_cycle_hours, '
-            . 'ROUND(100 * SUM(a.completed_at IS NOT NULL) / NULLIF(COUNT(a.id), 0), 2) followup_completion_rate '
-            . 'FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id = c.stage_id '
-            . 'LEFT JOIN tn_client_case_activities a ON a.client_case_id = c.id AND a.organization_id = c.organization_id AND a.activity_type IN ("task", "followup") '
+            . 'ROUND(AVG(CASE WHEN c.closed_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, c.created_at, c.closed_at) END), 2) sales_cycle_hours '
+            . 'FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id = c.stage_id AND s.organization_id=c.organization_id '
             . 'WHERE c.organization_id = :organization_id AND c.created_at >= NOW() - INTERVAL ' . $days . ' DAY',
             $params,
         ) ?? [];
+        $followups = $this->one(
+            'SELECT ROUND(100 * SUM(a.completed_at IS NOT NULL) / NULLIF(COUNT(*),0),2) followup_completion_rate '
+            . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
+            . 'WHERE a.organization_id=:organization_id AND a.activity_type IN ("task","followup") AND a.created_at>=NOW()-INTERVAL ' . $days . ' DAY',
+            $params,
+        ) ?? ['followup_completion_rate' => 0];
         $ai = $this->safeOne(
             'SELECT '
             . '(SELECT COUNT(*) FROM cos_actions ca WHERE ca.organization_id = :actions_org AND ca.created_at >= NOW() - INTERVAL ' . $days . ' DAY) actions_proposed, '
@@ -179,7 +206,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             . '(SELECT COUNT(*) FROM cos_action_outcomes o WHERE o.organization_id = :outcomes_org AND o.measured_at >= NOW() - INTERVAL ' . $days . ' DAY) actions_successful',
             ['actions_org' => $organizationId, 'executed_org' => $organizationId, 'outcomes_org' => $organizationId],
         ) ?? ['actions_proposed' => 0, 'actions_executed' => 0, 'actions_successful' => 0];
-        return $core + $ai;
+        return $core + $followups + $ai;
     }
 
     private function limit(mixed $value): int { return max(1, min((int) $value, 250)); }

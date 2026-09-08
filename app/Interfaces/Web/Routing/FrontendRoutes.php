@@ -46,6 +46,10 @@ final class FrontendRoutes
         self::add($router, 'addGet', '/sales/dashboard', 'Interfaces\Web\Controller', 'sales', 'dashboard');
         self::add($router, 'addGet', '/sales/pipeline', 'Interfaces\Web\Controller', 'sales', 'pipeline');
         self::add($router, 'addGet', '/sales/today', 'Interfaces\Web\Controller', 'sales', 'today');
+        self::add($router, 'addGet', '/sales/leads', 'Interfaces\Web\Controller', 'sales', 'leads');
+        self::add($router, 'addGet', '/sales/deals/{id:[0-9]+}', 'Interfaces\Web\Controller', 'sales', 'deal');
+        self::add($router, 'addGet', '/sales/director', 'Interfaces\Web\Controller', 'sales', 'director');
+        self::add($router, 'addGet', '/sales/admin', 'Interfaces\Web\Controller', 'sales', 'admin');
         self::add($router, 'addGet', '/admin/diagnostics/methodology-studio', 'Interfaces\Web\Controller', 'methodology_studio', 'index');
 
         self::add($router, 'addPost', '/cos/action/{id:[a-f0-9]{32}}/execute', 'Interfaces\Web\Controller', 'cos', 'execute');

@@ -7,7 +7,6 @@ use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
 use Domains\Sales\Model\ClientCaseStatus;
 use Domains\Sales\Model\ClientCaseType;
 use Domains\Sales\Model\LeadStatus;
-use Domains\Sales\Model\PipelineStage;
 use Domains\Sales\Model\SalesPriority;
 use PDO;
 
@@ -21,7 +20,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         return [
             'q' => trim((string) ($query['q'] ?? '')),
-            'stage' => $this->allowed((string) ($query['stage'] ?? ''), PipelineStage::values(), ''),
+            'stage' => $this->canonicalStageFilter((string) ($query['stage'] ?? '')),
             'status' => $this->allowed((string) ($query['status'] ?? ''), ClientCaseStatus::values(), ''),
             'type' => $this->allowed((string) ($query['type'] ?? ''), ClientCaseType::values(), ''),
             'priority' => $this->allowed((string) ($query['priority'] ?? ''), SalesPriority::values(), ''),
@@ -38,7 +37,11 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             $where[] = '(c.public_id LIKE :q OR c.title LIKE :q OR p.full_name LIKE :q OR p.phone LIKE :q OR p.email LIKE :q OR p.telegram LIKE :q)';
             $params['q'] = '%' . $filters['q'] . '%';
         }
-        foreach (['stage' => 'stage', 'status' => 'status', 'type' => 'type', 'priority' => 'priority'] as $filter => $column) {
+        if (($filters['stage'] ?? '') !== '') {
+            $where[] = 'COALESCE(ps.code, UPPER(c.stage)) = :stage';
+            $params['stage'] = $filters['stage'];
+        }
+        foreach (['status' => 'status', 'type' => 'type', 'priority' => 'priority'] as $filter => $column) {
             if (($filters[$filter] ?? '') !== '') {
                 $where[] = 'c.' . $column . ' = :' . $filter;
                 $params[$filter] = $filters[$filter];
@@ -55,7 +58,8 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             default => 'c.updated_at DESC, c.id DESC',
         };
 
-        return $this->all('SELECT c.*, p.public_id AS person_public_id, p.full_name, p.phone, p.email, p.telegram,
+        return $this->all('SELECT c.*, COALESCE(ps.code, UPPER(c.stage)) AS stage_code, COALESCE(ps.name, c.stage) AS stage_name,
+            p.public_id AS person_public_id, p.full_name, p.phone, p.email, p.telegram,
             u.full_name AS manager_name, pt.name_uk AS property_type_name, l.city AS location_city,
             (SELECT COUNT(*) FROM tn_leads l WHERE l.client_case_id = c.id AND l.organization_id = c.organization_id) AS inquiry_count,
             (SELECT COUNT(*) FROM tn_client_case_activities a WHERE a.client_case_id = c.id AND a.organization_id = c.organization_id) AS activity_count,
@@ -65,19 +69,27 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id
             LEFT JOIN tn_property_types pt ON pt.id = c.property_type_id
             LEFT JOIN tn_locations l ON l.id = c.location_id
+            LEFT JOIN sales_pipeline_stages ps ON ps.id = c.stage_id AND ps.organization_id = c.organization_id
             WHERE c.organization_id = :organization_id AND ' . implode(' AND ', $where) . '
             ORDER BY ' . $orderBy . ' LIMIT 150', $params);
     }
 
     public function stats(): array
     {
-        $rows = $this->all('SELECT stage, COUNT(*) AS total FROM tn_client_cases
-            WHERE organization_id = :organization_id GROUP BY stage', ['organization_id' => $this->organizationId]);
-        $stats = array_fill_keys(['all', ...PipelineStage::values()], 0);
+        $stageRows = $this->all('SELECT s.code FROM sales_pipeline_stages s
+            INNER JOIN sales_pipelines p ON p.id=s.pipeline_id AND p.organization_id=s.organization_id
+            WHERE s.organization_id=:organization_id AND p.status="ACTIVE" ORDER BY p.is_default DESC,s.sort_order,s.id',
+            ['organization_id' => $this->organizationId]);
+        $stats = ['all' => 0];
+        foreach ($stageRows as $stageRow) $stats[(string) $stageRow['code']] = 0;
+        $rows = $this->all('SELECT COALESCE(s.code, UPPER(c.stage)) stage_code, COUNT(*) total
+            FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id
+            WHERE c.organization_id=:organization_id GROUP BY COALESCE(s.code, UPPER(c.stage))',
+            ['organization_id' => $this->organizationId]);
         foreach ($rows as $row) {
-            $stage = (string) ($row['stage'] ?? '');
+            $stage = (string) ($row['stage_code'] ?? '');
             $total = (int) ($row['total'] ?? 0);
-            if (array_key_exists($stage, $stats)) $stats[$stage] = $total;
+            if ($stage !== '') $stats[$stage] = $total;
             $stats['all'] += $total;
         }
         return $stats;
@@ -85,13 +97,16 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function case(int $id): ?array
     {
-        return $this->one('SELECT c.*, p.public_id AS person_public_id, p.full_name, p.phone, p.email, p.telegram,
+        return $this->one('SELECT c.*, COALESCE(ps.code, UPPER(c.stage)) AS stage_code, COALESCE(ps.name, c.stage) AS stage_name,
+            pl.name AS pipeline_name, p.public_id AS person_public_id, p.full_name, p.phone, p.email, p.telegram,
             p.notes AS person_notes, u.full_name AS manager_name, pt.name_uk AS property_type_name, l.city AS location_city
             FROM tn_client_cases c
             INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id
             LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id
             LEFT JOIN tn_property_types pt ON pt.id = c.property_type_id
             LEFT JOIN tn_locations l ON l.id = c.location_id
+            LEFT JOIN sales_pipelines pl ON pl.id=c.pipeline_id AND pl.organization_id=c.organization_id
+            LEFT JOIN sales_pipeline_stages ps ON ps.id=c.stage_id AND ps.organization_id=c.organization_id
             WHERE c.id = :id AND c.organization_id = :organization_id LIMIT 1',
             ['id' => $id, 'organization_id' => $this->organizationId]);
     }
@@ -207,8 +222,9 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function openCaseOptions(): array
     {
-        return $this->all('SELECT c.id, c.public_id, c.title, c.type, c.stage, p.full_name
+        return $this->all('SELECT c.id, c.public_id, c.title, c.type, COALESCE(s.code, UPPER(c.stage)) stage, p.full_name
             FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id
+            LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id
             WHERE c.status IN ("active", "paused") AND c.organization_id = :organization_id
             ORDER BY c.updated_at DESC, c.id DESC LIMIT 100', ['organization_id' => $this->organizationId]);
     }
@@ -218,6 +234,17 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         return $this->all('SELECT id, full_name, email, role FROM tn_users
             WHERE organization_id = :organization_id AND status = "active" AND role IN ("manager", "admin")
             ORDER BY FIELD(role, "admin", "manager"), full_name, email', ['organization_id' => $this->organizationId]);
+    }
+
+    private function canonicalStageFilter(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') return '';
+        return match (strtolower($value)) {
+            'new' => 'NEW', 'contacted' => 'CONTACTED', 'qualification', 'need_defined', 'qualified' => 'QUALIFIED',
+            'matching', 'proposal' => 'PROPOSAL', 'viewing', 'meeting' => 'MEETING', 'negotiation' => 'NEGOTIATION',
+            'deal', 'aftercare', 'won' => 'WON', 'lost' => 'LOST', default => strtoupper($value),
+        };
     }
 
     private function all(string $sql, array $params = []): array

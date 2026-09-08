@@ -18,7 +18,6 @@ use Domains\Sales\Application\UseCase\CompleteSalesCall;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
 use Domains\Sales\Automation\Event\ClientCaseCreated;
 use Domains\Sales\Automation\Event\SalesEventType;
-use Domains\Sales\Model\ClientCaseStatus;
 use Domains\Sales\Model\PropertyMatchStatus;
 use Domains\Sales\Model\SalesActivityType;
 use Domains\Sales\Model\SalesPriority;
@@ -72,9 +71,17 @@ final readonly class ClientCaseCommandService
                 'activity_type' => 'note', 'title' => 'Кейс створено', 'body' => $case['description'],
                 'due_at' => null, 'completed_at' => null,
             ]);
+            $created = $this->readModel->case($caseId);
+            if (!$created) throw new RuntimeException('Created client case could not be reloaded.');
             $this->events->publish(ClientCaseCreated::create(
                 ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                ['person_id' => $personId], ClientCaseEvents::metadata($user),
+                [
+                    'person_id' => $personId,
+                    'pipeline_id' => $created['pipeline_id'] ?? null,
+                    'stage_id' => $created['stage_id'] ?? null,
+                    'stage' => (string) ($created['stage'] ?? ''),
+                ],
+                ClientCaseEvents::metadata($user),
             ));
             return ClientCaseCommandResult::success('created', ['case_id' => $caseId, 'person_id' => $personId]);
         });
@@ -103,7 +110,7 @@ final readonly class ClientCaseCommandService
             $stage = $this->pipelines->findStageByCode(
                 $this->organizationId,
                 (string) ($existing['pipeline_id'] ?? ''),
-                strtoupper((string) $input['stage']),
+                $this->canonicalStageCode((string) $input['stage']),
             );
             if ($stage === null) return ClientCaseCommandResult::failure('invalid_stage');
             $targetStageId = $stage->id;
@@ -153,7 +160,6 @@ final readonly class ClientCaseCommandService
         $case = $this->readModel->case($caseId);
         if (!$case) return ClientCaseCommandResult::failure('not_found');
 
-        $status = $this->allowed((string) ($input['status'] ?? $case['status']), ClientCaseStatus::values(), (string) $case['status']);
         $targetStageId = isset($input['stage_id']) ? trim((string) $input['stage_id']) : null;
         if ($targetStageId === null && array_key_exists('stage', $input)) {
             if ($this->pipelines === null) return ClientCaseCommandResult::failure('stage_service_unavailable');
@@ -170,8 +176,15 @@ final readonly class ClientCaseCommandService
         $nextContact = array_key_exists('next_contact_at', $input)
             ? $this->dateTime((string) ($input['next_contact_at'] ?? '')) : ($case['next_contact_at'] ?? null);
         $correlationId = bin2hex(random_bytes(16));
+        $simpleChanges = [];
+        if ((string) ($case['priority'] ?? '') !== $priority) {
+            $simpleChanges['priority'] = ['from' => (string) ($case['priority'] ?? ''), 'to' => $priority];
+        }
+        if (($case['next_contact_at'] ?? null) !== $nextContact) {
+            $simpleChanges['next_contact_at'] = ['from' => $case['next_contact_at'] ?? null, 'to' => $nextContact];
+        }
 
-        $ok = $this->transactions->transactional(function () use ($case, $caseId, $status, $targetStageId, $priority, $managerId, $nextContact, $user, $correlationId): bool {
+        $ok = $this->transactions->transactional(function () use ($case, $caseId, $targetStageId, $priority, $managerId, $nextContact, $user, $correlationId, $simpleChanges): bool {
             if ($targetStageId !== null && $targetStageId !== (string) ($case['stage_id'] ?? '')) {
                 if ($this->changeDealStage === null) return false;
                 $stageResult = $this->changeDealStage->execute(new ChangeDealStageCommand(
@@ -191,15 +204,17 @@ final readonly class ClientCaseCommandService
             if (!$this->commands->quickUpdate($this->organizationId, $caseId, [
                 'priority' => $priority, 'next_contact_at' => $nextContact,
             ])) return false;
-            $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
-                'activity_type' => 'status_change', 'title' => 'Кейс швидко оновлено',
-                'body' => 'Оновлено етап, статус, пріоритет або відповідального менеджера.', 'due_at' => null, 'completed_at' => null,
-            ]);
-            $this->events->publish(ClientCaseChanged::create(
-                bin2hex(random_bytes(16)), $this->organizationId, (string) $caseId,
-                ['status' => ['from' => (string) $case['status'], 'to' => $status], 'priority' => ['from' => (string) $case['priority'], 'to' => $priority]],
-                new EventMetadata($correlationId, null, isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system'),
-            ));
+            if ($simpleChanges !== []) {
+                $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
+                    'activity_type' => 'status_change', 'title' => 'Кейс швидко оновлено',
+                    'body' => 'Оновлено пріоритет або наступний контакт.', 'due_at' => null, 'completed_at' => null,
+                ]);
+                $this->events->publish(ClientCaseChanged::create(
+                    bin2hex(random_bytes(16)), $this->organizationId, (string) $caseId,
+                    $simpleChanges,
+                    new EventMetadata($correlationId, null, isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system'),
+                ));
+            }
             return true;
         });
         return $ok ? ClientCaseCommandResult::success('updated') : ClientCaseCommandResult::failure('not_found');
@@ -302,7 +317,7 @@ final readonly class ClientCaseCommandService
     private function canonicalStageCode(string $legacy): string
     {
         return match (strtolower($legacy)) {
-            'new' => 'NEW', 'qualification', 'need_defined', 'qualified' => 'QUALIFIED', 'matching', 'proposal' => 'PROPOSAL',
+            'new' => 'NEW', 'contacted' => 'CONTACTED', 'qualification', 'need_defined', 'qualified' => 'QUALIFIED', 'matching', 'proposal' => 'PROPOSAL',
             'viewing', 'meeting' => 'MEETING', 'negotiation' => 'NEGOTIATION', 'deal', 'aftercare', 'won' => 'WON',
             'lost' => 'LOST', default => strtoupper($legacy),
         };

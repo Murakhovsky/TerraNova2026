@@ -18,7 +18,6 @@ use Domains\Sales\Automation\Event\LeadChanged;
 use Domains\Sales\Automation\Event\SalesEventType;
 use Domains\Sales\Model\ClientCaseStatus;
 use Domains\Sales\Model\LeadStatus;
-use Domains\Sales\Model\PipelineStage;
 use Domains\Sales\Model\PropertyMatchStatus;
 use Domains\Sales\Model\SalesActivityType;
 use Domains\Sales\Model\SalesCurrency;
@@ -111,25 +110,41 @@ final readonly class SalesInboundService
                     'status' => $state['status'], 'assigned_user_id' => $managerId, 'next_contact_at' => $nextContact,
                     'closed_at' => ClientCaseStatus::from($state['status'])->isTerminal() ? date('Y-m-d H:i:s') : null,
                 ])) throw new RuntimeException('Linked client case disappeared during lead synchronization.');
-                if ((string) $case['stage'] !== $state['stage'] && $this->pipelines !== null && $this->changeDealStage !== null) {
-                    $target = $this->pipelines->findStageByCode($this->organizationId, (string) ($case['pipeline_id'] ?? ''), $this->canonicalStageCode($state['stage']));
+
+                if ($this->pipelines !== null && $this->changeDealStage !== null) {
+                    $target = $this->pipelines->findStageByCode($this->organizationId, (string) ($case['pipeline_id'] ?? ''), $state['stage']);
                     if ($target === null) throw new RuntimeException('Configured stage for lead status was not found.');
-                    $changed = $this->changeDealStage->execute(new ChangeDealStageCommand(
-                        $this->organizationId, (string) $caseId, $target->id,
-                        isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system', $correlationId,
-                    ));
-                    if (!$changed->successful) throw new RuntimeException($changed->reason ?? 'Lead stage synchronization failed.');
+                    if ($target->id !== (string) ($case['stage_id'] ?? '')) {
+                        $changed = $this->changeDealStage->execute(new ChangeDealStageCommand(
+                            $this->organizationId, (string) $caseId, $target->id,
+                            isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system', $correlationId,
+                        ));
+                        if (!$changed->successful) throw new RuntimeException($changed->reason ?? 'Lead stage synchronization failed.');
+                    }
                 }
+
                 $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
                     'activity_type' => $activityType === SalesActivityType::Viewing->value ? SalesActivityType::Viewing->value : SalesActivityType::Note->value,
                     'title' => 'Заявку оновлено: ' . ClientCaseInput::leadStatusLabel($status), 'body' => $activityBody,
                     'due_at' => $nextContact, 'completed_at' => $completedAt,
                 ]);
                 if ($completedAt !== null) $this->commands->clearNextContact($this->organizationId, $caseId);
-                $this->events->publish(ClientCaseChanged::create(
-                    ClientCaseEvents::id(), $this->organizationId, (string) $caseId,
-                    ['stage' => ['from' => (string) $case['stage'], 'to' => $state['stage']], 'status' => ['from' => (string) $case['status'], 'to' => $state['status']]], $metadata,
-                ));
+
+                $changes = [];
+                if ((string) $case['status'] !== $state['status']) {
+                    $changes['status'] = ['from' => (string) $case['status'], 'to' => $state['status']];
+                }
+                if ((int) ($case['assigned_user_id'] ?? 0) !== (int) ($managerId ?? 0)) {
+                    $changes['assigned_user_id'] = ['from' => $case['assigned_user_id'] ?? null, 'to' => $managerId];
+                }
+                if (($case['next_contact_at'] ?? null) !== $nextContact) {
+                    $changes['next_contact_at'] = ['from' => $case['next_contact_at'] ?? null, 'to' => $nextContact];
+                }
+                if ($changes !== []) {
+                    $this->events->publish(ClientCaseChanged::create(
+                        ClientCaseEvents::id(), $this->organizationId, (string) $caseId, $changes, $metadata,
+                    ));
+                }
             }
             return ClientCaseCommandResult::success('updated', ['case_id' => $caseId]);
         });
@@ -149,7 +164,7 @@ final readonly class SalesInboundService
             $personId = ClientCasePeople::findOrCreate($this->commands, $this->organizationId, ['full_name' => $name, 'phone' => $phone, 'email' => $email, 'telegram' => null, 'notes' => null]);
             $caseInput = [
                 'full_name' => $name, 'type' => ClientCaseInput::caseTypeFromInbound($request), 'title' => ClientCaseInput::caseTitleFromInbound($request, $name),
-                'stage' => PipelineStage::Qualification->value, 'status' => ClientCaseStatus::Active->value,
+                'status' => ClientCaseStatus::Active->value,
                 'priority' => ClientCaseInput::allowed((string) ($input['priority'] ?? SalesPriority::Normal->value), SalesPriority::values(), SalesPriority::Normal->value),
                 'source' => ClientCaseInput::nullable((string) ($request['source_page'] ?? 'inbound-request'), 120),
                 'description' => ClientCaseInput::text((string) ($request['message'] ?? '')), 'currency' => SalesCurrency::Usd->value,
@@ -172,8 +187,16 @@ final readonly class SalesInboundService
                     'body' => trim($property['public_id'] . ' / ' . $property['title'] . ' / Обʼєкт із вхідної заявки'), 'due_at' => null, 'completed_at' => null,
                 ]);
             }
+            $created = $this->readModel->case($caseId);
+            if (!$created) throw new RuntimeException('Created client case could not be reloaded.');
             $metadata = ClientCaseEvents::metadata($user);
-            $this->events->publish(ClientCaseCreated::create(ClientCaseEvents::id(), $this->organizationId, (string) $caseId, ['person_id' => $personId, 'stage' => PipelineStage::Qualification->value, 'source' => 'inbound-request'], $metadata));
+            $this->events->publish(ClientCaseCreated::create(ClientCaseEvents::id(), $this->organizationId, (string) $caseId, [
+                'person_id' => $personId,
+                'pipeline_id' => $created['pipeline_id'] ?? null,
+                'stage_id' => $created['stage_id'] ?? null,
+                'stage' => (string) ($created['stage'] ?? ''),
+                'source' => 'inbound-request',
+            ], $metadata));
             $this->events->publish(LeadChanged::create(ClientCaseEvents::id(), $this->organizationId, (string) $requestId, ['client_case_id' => ['from' => null, 'to' => $caseId], 'status' => ['from' => $request['status'], 'to' => LeadStatus::Qualified->value]], $metadata));
             return ClientCaseCommandResult::success('created', ['case_id' => $caseId, 'person_id' => $personId]);
         });
@@ -192,12 +215,20 @@ final readonly class SalesInboundService
             ]);
             $caseInput = [
                 'full_name' => $name, 'type' => ClientCaseInput::caseTypeFromInbound($input), 'title' => ClientCaseInput::caseTitleFromInbound($input, $name),
-                'stage' => PipelineStage::New->value, 'status' => ClientCaseStatus::Active->value, 'priority' => SalesPriority::Normal->value,
+                'status' => ClientCaseStatus::Active->value, 'priority' => SalesPriority::Normal->value,
                 'source' => 'site-inbound-request', 'description' => ClientCaseInput::text((string) ($input['message'] ?? $input['comment'] ?? '')), 'currency' => SalesCurrency::Usd->value,
             ];
             $case = ClientCaseInput::caseData($caseInput, $name, null, null, null);
             $caseId = $this->commands->createCase($this->organizationId, $personId, $case);
-            $this->events->publish(ClientCaseCreated::create(bin2hex(random_bytes(16)), $this->organizationId, (string) $caseId, ['person_id' => $personId, 'stage' => PipelineStage::New->value, 'source' => 'site-inbound-request'], ClientCaseEvents::metadata($user)));
+            $created = $this->readModel->case($caseId);
+            if (!$created) throw new RuntimeException('Created client case could not be reloaded.');
+            $this->events->publish(ClientCaseCreated::create(bin2hex(random_bytes(16)), $this->organizationId, (string) $caseId, [
+                'person_id' => $personId,
+                'pipeline_id' => $created['pipeline_id'] ?? null,
+                'stage_id' => $created['stage_id'] ?? null,
+                'stage' => (string) ($created['stage'] ?? ''),
+                'source' => 'site-inbound-request',
+            ], ClientCaseEvents::metadata($user)));
             return ClientCaseCommandResult::success('created', ['person_id' => $personId, 'client_case_id' => $caseId]);
         });
     }
@@ -213,13 +244,5 @@ final readonly class SalesInboundService
     {
         $propertyId = is_numeric($value) ? (int) $value : 0;
         return $this->commands->property($propertyId, true) ? $propertyId : null;
-    }
-
-    private function canonicalStageCode(string $legacy): string
-    {
-        return match ($legacy) {
-            'new' => 'NEW', 'qualification', 'need_defined' => 'QUALIFIED', 'matching' => 'PROPOSAL', 'viewing' => 'MEETING',
-            'negotiation' => 'NEGOTIATION', 'deal', 'aftercare' => 'WON', 'lost' => 'LOST', default => 'CONTACTED',
-        };
     }
 }

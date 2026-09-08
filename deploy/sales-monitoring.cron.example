@@ -1,0 +1,3 @@
+# Install on the application host after replacing /srv/terranova with the actual release path.
+# Sales attention detection is idempotent; a five-minute cadence keeps Today/automation fresh without creating duplicate signals.
+*/5 * * * * www-data cd /srv/terranova && /usr/bin/php bin/sales-monitoring.php >> storage/logs/sales-monitoring.log 2>&1

@@ -48,6 +48,7 @@ jobs:
           php tests/unit/sales_attention_detectors.php
           php tests/unit/sales_runtime_contract.php
           php tests/unit/sales_v03.php
+          php tests/unit/sales_v04.php
 
       - name: Property submission check
         run: php tests/smoke/property_submission.php

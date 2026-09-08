@@ -34,6 +34,20 @@ abstract class WebController extends Controller
         return $user;
     }
 
+    protected function requireAdmin(): ?array
+    {
+        $user = $this->auth()->currentUser();
+        if ($user === null) {
+            $this->response->redirect('auth/login');
+            return null;
+        }
+        if (!$this->auth()->isAdmin($user)) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            return null;
+        }
+        return $user;
+    }
+
     protected function validMutation(): bool
     {
         if (!$this->request->isPost()) {

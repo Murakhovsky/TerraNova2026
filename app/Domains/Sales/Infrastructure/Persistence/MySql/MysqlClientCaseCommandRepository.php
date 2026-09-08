@@ -116,13 +116,12 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             'organization_id' => $organizationId,
             'public_id' => $this->nextPublicId($organizationId, 'tn_client_cases', 'CC'),
             'person_id' => $personId,
-            'stage' => strtolower((string) $initial['code']),
+            'stage' => strtoupper((string) $initial['code']),
             'pipeline_id' => $initial['pipeline_id'],
             'stage_id' => $initial['id'],
             'probability' => $initial['probability_default'],
         ] + array_diff_key($case, array_flip(['stage'])));
-        $caseId = (int) $this->connection->lastInsertId();
-        return $caseId;
+        return (int) $this->connection->lastInsertId();
     }
 
     public function updateCase(string $organizationId, int $caseId, array $case): bool
