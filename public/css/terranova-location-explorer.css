@@ -1,0 +1,129 @@
+:where(.tn-visual-page, .tn-visual-header, .tn-visual-footer) {
+  font-family: Inter, Manrope, Montserrat, "Helvetica Neue", Arial, sans-serif;
+}
+
+.tn-visual-page h1,
+.tn-visual-page h2,
+.tn-visual-page h3,
+.tn-visual-logo,
+.tn-visual-kicker,
+.tn-location-tabs a,
+.tn-location-tabs button,
+.tn-map-pin,
+.tn-location-panel,
+.tn-project-card {
+  font-family: Inter, Manrope, Montserrat, "Helvetica Neue", Arial, sans-serif;
+}
+
+.tn-visual-hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  text-transform: none;
+}
+
+.tn-location-tabs {
+  align-items: center;
+  gap: 8px;
+}
+
+.tn-location-tabs a,
+.tn-location-tabs button {
+  cursor: pointer;
+  min-height: 46px;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.tn-location-tabs .is-active {
+  color: #061012;
+  background: linear-gradient(135deg, #f0ba72, #b67b3f);
+  border-color: rgba(240, 186, 114, 0.9);
+  box-shadow: 0 0 28px rgba(240, 186, 114, 0.2);
+}
+
+.tn-map-pin[hidden] {
+  display: none;
+}
+
+.tn-map-pin.is-filtered-out {
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.82);
+}
+
+.tn-map-pin small {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  color: #061012;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #f0ba72, #b67b3f);
+  border: 1px solid rgba(240, 186, 114, 0.86);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(240, 186, 114, 0.24);
+}
+
+.tn-map-pin.is-active small,
+.tn-map-pin--cyan small {
+  background: linear-gradient(135deg, #59e2de, #16716f);
+  border-color: rgba(89, 226, 222, 0.86);
+  box-shadow: 0 0 22px rgba(89, 226, 222, 0.28);
+}
+
+.tn-location-panel__stats span {
+  white-space: nowrap;
+}
+
+.tn-location-mini-list article {
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.tn-location-mini-list article:hover {
+  transform: translateY(-2px);
+  border-color: rgba(240, 186, 114, 0.45);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.tn-map-legend[hidden] {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .tn-location-tabs {
+    padding: 12px;
+  }
+
+  .tn-location-tabs a,
+  .tn-location-tabs button {
+    flex: 1 1 calc(50% - 8px);
+    min-height: 42px;
+    padding: 0 12px;
+    font-size: 0.84rem;
+  }
+
+  .tn-map-pin {
+    gap: 7px;
+    min-height: 42px;
+    padding: 6px 8px 6px 6px;
+  }
+
+  .tn-map-pin__icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .tn-map-pin strong {
+    font-size: 0.78rem;
+  }
+
+  .tn-map-pin small {
+    min-width: 21px;
+    height: 21px;
+    padding: 0 6px;
+    font-size: 0.7rem;
+  }
+}

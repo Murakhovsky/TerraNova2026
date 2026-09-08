@@ -9,8 +9,11 @@ class IndexController extends ControllerBase
 {
     public function indexAction(): void
     {
-        $this->view->pageStyles = ['css/terranova-home.css?v=20260719-home9'];
-        $this->view->pageScripts = ['js/terranova-home.js?v=20260718-api3'];
+        $this->view->pageStyles = [
+            'css/terranova-home.css?v=20260719-home9',
+            'css/terranova-location-explorer.css?v=20260908-location1',
+        ];
+        $this->view->pageScripts = ['js/terranova-home.js?v=20260908-location1'];
         $this->view->featuredProperties = [];
         $this->view->types = [];
         $this->view->locations = [];

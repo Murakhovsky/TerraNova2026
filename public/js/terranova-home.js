@@ -65,15 +65,17 @@
   const objects = locationPanel.querySelector('[data-location-objects]');
   const link = locationPanel.querySelector('[data-location-link]');
   const list = locationPanel.querySelector('[data-location-list]');
-  const choices = document.querySelectorAll('[data-location-choice]');
+  const empty = document.querySelector('[data-location-empty]');
+  const choices = Array.from(document.querySelectorAll('[data-location-choice]'));
+  const filterButtons = Array.from(document.querySelectorAll('[data-type-filter]'));
 
   const pluralLocations = (count) => {
     const value = Number(count);
     if (value === 1) {
-      return 'локація';
+      return 'підлокація';
     }
 
-    return value > 1 && value < 5 ? 'локації' : 'локацій';
+    return value > 1 && value < 5 ? 'підлокації' : 'підлокацій';
   };
 
   const parseGroups = (choice) => {
@@ -84,13 +86,33 @@
     }
   };
 
+  const locationHasType = (choice, type) => {
+    if (type === 'all') {
+      return true;
+    }
+
+    return (choice.dataset.propertyTypes || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .includes(type);
+  };
+
+  const filterGroupsByType = (groups, type) => {
+    if (type === 'all') {
+      return groups;
+    }
+
+    return groups.filter((group) => Array.isArray(group.types) && group.types.includes(type));
+  };
+
   const renderGroups = (groups) => {
     if (!list) {
       return;
     }
 
     if (!groups.length) {
-      list.innerHTML = '<article><div><strong>Локації готуються</strong><span>Список проєктів з’явиться після публікації.</span><small>Скоро</small></div></article>';
+      list.innerHTML = '<article><div><strong>Немає підлокацій</strong><span>Для вибраного типу нерухомості ця локація поки не має активних пропозицій.</span><small>Спробуйте інший фільтр</small></div></article>';
       return;
     }
 
@@ -106,9 +128,17 @@
     `).join('');
   };
 
+  let activeType = 'all';
+
   const applyLocation = (choice) => {
+    if (!choice || choice.hidden || choice.classList.contains('is-filtered-out')) {
+      return;
+    }
+
     choices.forEach((item) => item.classList.toggle('is-active', item === choice));
-    const groups = parseGroups(choice);
+    const groups = filterGroupsByType(parseGroups(choice), activeType);
+    const groupCount = groups.length;
+    const objectCount = groups.reduce((sum, group) => sum + Number(group.objects || 0), 0);
 
     if (title) {
       title.textContent = choice.dataset.locationTitle || '';
@@ -119,18 +149,54 @@
     }
 
     if (projects) {
-      projects.textContent = `${choice.dataset.locationProjects || groups.length || 0} ${pluralLocations(choice.dataset.locationProjects || groups.length)}`;
+      projects.textContent = `${groupCount} ${pluralLocations(groupCount)}`;
     }
 
     if (objects) {
-      objects.textContent = `${choice.dataset.locationObjects || 0} об'єктів`;
+      objects.textContent = `${objectCount} об'єктів`;
     }
 
     if (link) {
-      link.href = choice.href;
+      const separator = choice.href.includes('?') ? '&' : '?';
+      link.href = activeType === 'all' ? choice.href : `${choice.href}${separator}type=${encodeURIComponent(activeType)}`;
     }
 
     renderGroups(groups);
+  };
+
+  const applyTypeFilter = (type) => {
+    activeType = type || 'all';
+    let firstVisible = null;
+
+    choices.forEach((choice) => {
+      const isVisible = locationHasType(choice, activeType);
+      choice.classList.toggle('is-filtered-out', !isVisible);
+      choice.hidden = !isVisible;
+
+      if (isVisible && !firstVisible) {
+        firstVisible = choice;
+      }
+    });
+
+    filterButtons.forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.typeFilter === activeType);
+    });
+
+    if (empty) {
+      empty.hidden = Boolean(firstVisible);
+    }
+
+    if (firstVisible) {
+      applyLocation(firstVisible);
+    } else {
+      choices.forEach((item) => item.classList.remove('is-active'));
+      if (title) title.textContent = 'Немає локацій';
+      if (summary) summary.textContent = 'Для цього типу нерухомості локації ще готуються.';
+      if (projects) projects.textContent = '0 підлокацій';
+      if (objects) objects.textContent = '0 об’єктів';
+      if (link) link.href = filterButtons.find((button) => button.dataset.typeFilter === activeType)?.dataset.catalogUrl || '/property/catalog';
+      renderGroups([]);
+    }
   };
 
   choices.forEach((choice) => {
@@ -141,4 +207,10 @@
       applyLocation(choice);
     });
   });
+
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', () => applyTypeFilter(button.dataset.typeFilter || 'all'));
+  });
+
+  applyTypeFilter('all');
 })();
