@@ -31,7 +31,6 @@ use Infrastructure\Llm\HttpStructuredLlmClient;
 use Infrastructure\Observability\JsonFileLogger;
 use Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder;
 use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
-use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlMessageGateway;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
@@ -68,7 +67,6 @@ $di->setShared('cosOperationsReadModel', fn (): MysqlOperationsReadModel => new 
 $di->setShared('cosMetrics', fn (): MysqlMetricsRecorder => new MysqlMetricsRecorder($connection($this)));
 $di->setShared('cosLogger', fn (): JsonFileLogger => new JsonFileLogger(BASE_PATH . '/tmp/logs/cos.jsonl'));
 
-$di->setShared('salesDealRepository', fn (): MysqlDealRepository => new MysqlDealRepository($connection($this)));
 $di->setShared('externalReferenceStore', fn (): MysqlExternalReferenceStore => new MysqlExternalReferenceStore($connection($this)));
 $di->setShared('salesMessageGateway', fn (): MysqlMessageGateway => new MysqlMessageGateway(
     $connection($this), $this->getShared('externalReferenceStore'),
