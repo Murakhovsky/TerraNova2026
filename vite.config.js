@@ -33,6 +33,7 @@ export default defineConfig({
         'terranova-club': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-club.js'),
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),
         'terranova-home': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-home.js'),
+        'terranova-interface': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-interface.js'),
         'terranova-media-manager': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-media-manager.js'),
         'terranova-property-gallery': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-property-gallery.js'),
         'terranova-spatial-admin': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-spatial-admin.js'),

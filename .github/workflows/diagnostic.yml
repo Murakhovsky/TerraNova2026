@@ -12,7 +12,18 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
       - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+
+      - name: Frontend interface architecture
+        run: |
+          npm run build
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/frontend_interface.php
 
       - name: Diagnostic checks
         run: |

@@ -61,6 +61,19 @@
       "assets/google-map-black-CYMhgP8G.png"
     ]
   },
+  "frontend/entrypoints/terranova-interface.js": {
+    "file": "assets/terranova-interface-WEBV01.js",
+    "name": "terranova-interface",
+    "src": "frontend/entrypoints/terranova-interface.js",
+    "isEntry": true,
+    "css": [
+      "assets/terranova-interface-tokens-WEBV01.css",
+      "assets/terranova-interface-foundation-WEBV01.css",
+      "assets/terranova-interface-components-WEBV01.css",
+      "assets/terranova-interface-patterns-WEBV01.css",
+      "assets/terranova-interface-workspace-WEBV01.css"
+    ]
+  },
   "frontend/entrypoints/terranova-media-manager.js": {
     "file": "assets/terranova-media-manager-rzLw8Ri1.js",
     "name": "terranova-media-manager",

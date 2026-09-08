@@ -1,0 +1,7 @@
+@layer tn-foundation, tn-components, tn-patterns, tn-workspace;
+
+@import './tokens.css';
+@import './foundation.css';
+@import './components.css';
+@import './patterns.css';
+@import './workspace.css';

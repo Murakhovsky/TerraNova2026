@@ -13,11 +13,11 @@
       $pageUrl = $metaUrl ?? $pageRoot;
       $pageType = $metaType ?? 'website';
       $requestPath = '/' . ltrim((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/');
-      $isPrivatePage = preg_match('#^/(admin|auth|cabinet|client-case)(/|$)|^/property/(manage|listing|edit|add|submissions|submission|group|moderate|media|note)(/|$)#', $requestPath) === 1;
+      $isPrivatePage = preg_match('#^/(admin|auth|cabinet|client-case|sales)(/|$)|^/cos/control-center(/|$)|^/property/(manage|listing|edit|add|submissions|submission|group|moderate|media|note)(/|$)#', $requestPath) === 1;
       $pageRobots = $metaRobots ?? ($isPrivatePage ? 'noindex,nofollow' : 'index,follow');
       $analyticsPropertyId = (int) ($analyticsPropertyId ?? 0);
       $pageAssetEntries = $pageAssetEntries ?? [];
-      $assetEntries = array_merge(['terranova-club'], !empty($cosSite) ? ['cos-site'] : [], $pageAssetEntries);
+      $assetEntries = array_merge(['terranova-club', 'terranova-interface'], !empty($cosSite) ? ['cos-site'] : [], $pageAssetEntries);
       $assets = di('viteAssetManifest')->assets($assetEntries);
       $escape = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     ?>

@@ -13,6 +13,7 @@ $entries = [
     'terranova-club',
     'terranova-copy',
     'terranova-home',
+    'terranova-interface',
     'terranova-media-manager',
     'terranova-property-gallery',
     'terranova-spatial-admin',
