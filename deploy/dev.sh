@@ -45,9 +45,16 @@ echo "Using server environment: $ENV_FILE"
 # is persistent and is never replaced by this deployment.
 "${COMPOSE[@]}" build --pull php worker migrate
 
-# The compose graph already requires `migrate` to complete successfully before
-# php/worker start, so every deployment applies pending schema migrations first.
-"${COMPOSE[@]}" up -d --remove-orphans
+# The compose graph requires `migrate` to finish successfully before php/worker
+# start. Capture compose failures explicitly so migration diagnostics are not
+# swallowed by `set -e`.
+if ! "${COMPOSE[@]}" up -d --remove-orphans; then
+  echo "docker compose up failed. Container state:" >&2
+  "${COMPOSE[@]}" ps -a >&2 || true
+  echo "Migration/MySQL logs:" >&2
+  "${COMPOSE[@]}" logs --no-color --tail=250 migrate mysql >&2 || true
+  exit 24
+fi
 
 MIGRATE_ID="$("${COMPOSE[@]}" ps -aq migrate)"
 if [[ -n "$MIGRATE_ID" ]]; then
@@ -55,7 +62,7 @@ if [[ -n "$MIGRATE_ID" ]]; then
   MIGRATE_EXIT_CODE="$("${DOCKER[@]}" inspect -f '{{.State.ExitCode}}' "$MIGRATE_ID")"
   if [[ "$MIGRATE_STATUS" == "exited" && "$MIGRATE_EXIT_CODE" != "0" ]]; then
     echo "Database migration failed with exit code $MIGRATE_EXIT_CODE." >&2
-    "${COMPOSE[@]}" logs --no-color migrate >&2 || true
+    "${COMPOSE[@]}" logs --no-color --tail=250 migrate mysql >&2 || true
     exit 24
   fi
 fi
@@ -63,7 +70,7 @@ fi
 PHP_ID="$("${COMPOSE[@]}" ps -q php)"
 if [[ -z "$PHP_ID" ]]; then
   echo "PHP container was not created." >&2
-  "${COMPOSE[@]}" ps >&2 || true
+  "${COMPOSE[@]}" ps -a >&2 || true
   exit 25
 fi
 
@@ -74,7 +81,7 @@ for _ in $(seq 1 20); do
   fi
   if [[ "$PHP_HEALTH" == "unhealthy" || "$PHP_HEALTH" == "exited" || "$PHP_HEALTH" == "dead" ]]; then
     echo "PHP container entered state: $PHP_HEALTH" >&2
-    "${COMPOSE[@]}" logs --no-color php >&2 || true
+    "${COMPOSE[@]}" logs --no-color --tail=250 php >&2 || true
     exit 26
   fi
   sleep 3
@@ -83,7 +90,7 @@ done
 PHP_HEALTH="$("${DOCKER[@]}" inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$PHP_ID")"
 if [[ "$PHP_HEALTH" != "healthy" && "$PHP_HEALTH" != "running" ]]; then
   echo "PHP container did not become ready; state: $PHP_HEALTH" >&2
-  "${COMPOSE[@]}" logs --no-color php >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 php >&2 || true
   exit 27
 fi
 
