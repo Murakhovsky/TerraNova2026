@@ -12,14 +12,16 @@ if ! command -v nginx >/dev/null 2>&1; then
   exit 40
 fi
 
-if [[ ! -r "$CERT_DIR/fullchain.pem" || ! -r "$CERT_DIR/privkey.pem" ]]; then
-  echo "Let's Encrypt certificate for $DOMAIN is missing." >&2
-  exit 41
-fi
-
 if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true >/dev/null 2>&1; then
   echo "Passwordless sudo is required to configure host nginx." >&2
   exit 42
+fi
+
+# Let's Encrypt private material is intentionally root-only. Validate it through
+# sudo rather than treating normal filesystem permissions as a missing cert.
+if ! sudo -n test -r "$CERT_DIR/fullchain.pem" || ! sudo -n test -r "$CERT_DIR/privkey.pem"; then
+  echo "Let's Encrypt certificate for $DOMAIN is missing." >&2
+  exit 41
 fi
 
 sudo -n install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/letsencrypt
