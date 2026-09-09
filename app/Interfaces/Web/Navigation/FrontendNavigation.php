@@ -18,6 +18,7 @@ final class FrontendNavigation
     public static function public(): array
     {
         return [
+            ['key' => 'home', 'path' => '', 'label' => 'Головна'],
             ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість'],
             ['key' => 'services', 'path' => 'services', 'label' => 'Послуги'],
             ['key' => 'partners', 'path' => 'partners', 'label' => 'Партнерам'],
@@ -29,12 +30,8 @@ final class FrontendNavigation
     public static function workspace(string $role): array
     {
         $utility = [
-            ['key' => 'content', 'path' => 'admin/content', 'label' => 'Контент', 'glyph' => 'CT'],
             ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Кабінет', 'glyph' => 'ME'],
         ];
-        if ($role === 'admin') {
-            array_unshift($utility, ['key' => 'users', 'path' => 'admin/users', 'label' => 'Користувачі', 'glyph' => 'US']);
-        }
 
         $salesChildren = [
             ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Overview'],
@@ -47,6 +44,12 @@ final class FrontendNavigation
         if ($role === 'admin') {
             $salesChildren[] = ['key' => 'sales-admin', 'path' => 'sales/admin', 'label' => 'Sales Admin'];
         }
+
+        $administrationChildren = [];
+        if ($role === 'admin') {
+            $administrationChildren[] = ['key' => 'users', 'path' => 'admin/users', 'label' => 'Users'];
+        }
+        $administrationChildren[] = ['key' => 'content', 'path' => 'admin/content', 'label' => 'Content'];
 
         return [
             'surface' => 'workspace',
@@ -65,6 +68,7 @@ final class FrontendNavigation
                     'children' => [
                         ['key' => 'objects', 'path' => 'property/manage', 'label' => 'Inventory'],
                         ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
+                        ['key' => 'locations', 'path' => 'property/map', 'label' => 'Locations'],
                         ['key' => 'submissions', 'path' => 'property/submissions', 'label' => 'Модерація'],
                         ['key' => 'spatial', 'path' => 'spatial/manage', 'label' => '3D / Spatial'],
                         ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Публічний каталог'],
@@ -73,11 +77,21 @@ final class FrontendNavigation
                 [
                     'key' => 'cos', 'path' => 'cos/control-center', 'label' => 'COS', 'glyph' => 'OS',
                     'children' => [
-                        ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'Control Center'],
+                        ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'Overview'],
+                        ['key' => 'actions', 'path' => 'cos/control-center#actions', 'label' => 'Actions'],
+                        ['key' => 'approvals', 'path' => 'cos/control-center#approvals', 'label' => 'Approvals'],
+                        ['key' => 'agents', 'path' => 'cos/control-center#agents', 'label' => 'Agents'],
+                        ['key' => 'rules', 'path' => 'cos/control-center#rules', 'label' => 'Rules'],
+                        ['key' => 'events', 'path' => 'cos/control-center#events', 'label' => 'Events'],
+                        ['key' => 'audit', 'path' => 'cos/control-center#audit', 'label' => 'Audit'],
                         ['key' => 'diagnostics', 'path' => 'admin/diagnostics/methodology-studio', 'label' => 'Diagnostics'],
                     ],
                 ],
                 ['key' => 'analytics', 'path' => 'admin/analytics', 'label' => 'Аналітика', 'glyph' => 'AN', 'children' => []],
+                [
+                    'key' => 'administration', 'path' => 'admin/content', 'label' => 'Administration', 'glyph' => 'AD',
+                    'children' => $administrationChildren,
+                ],
             ],
             'utility' => $utility,
         ];
@@ -101,10 +115,10 @@ final class FrontendNavigation
             'admin', 'home' => 'home',
             'sales', 'today', 'pipeline', 'leads', 'deals', 'director', 'sales-admin' => 'sales',
             'inbox', 'cases', 'clients' => 'clients',
-            'objects', 'listing', 'submissions', 'spatial', 'catalog', 'properties' => 'properties',
+            'objects', 'listing', 'locations', 'submissions', 'spatial', 'catalog', 'properties' => 'properties',
             'cos', 'diagnostics', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit' => 'cos',
             'analytics' => 'analytics',
-            'content', 'users', 'settings', 'integrations' => 'administration',
+            'administration', 'content', 'users', 'settings', 'integrations' => 'administration',
             default => $active,
         };
     }
