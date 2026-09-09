@@ -127,29 +127,19 @@ jobs:
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "cd $REMOTE_PATH && bash deploy/dev.sh"
 
-      - name: TLS server diagnostics
+      - name: Configure HTTPS reverse proxy
+        if: env.DEV_HEALTHCHECK_URL != ''
         run: |
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" 'bash -s' <<'EOF'
-            set +e
-            echo '=== listeners ==='
-            sudo -n ss -ltnp 2>/dev/null | grep -E ':(80|443)[[:space:]]' || ss -ltn 2>/dev/null | grep -E ':(80|443)[[:space:]]' || true
-            echo '=== web services ==='
-            for svc in nginx apache2 caddy; do
-              systemctl is-active "$svc" 2>/dev/null && echo "$svc: active" || true
-            done
-            echo '=== nginx TLS directives ==='
-            sudo -n nginx -T 2>/dev/null | grep -nE 'server_name|listen .*443|ssl_certificate|proxy_pass' | head -n 160 || true
-            echo '=== certbot ==='
-            sudo -n certbot certificates 2>/dev/null || true
-            echo '=== live certificate directories ==='
-            sudo -n find /etc/letsencrypt/live -maxdepth 2 -type l -printf '%p -> %l\n' 2>/dev/null || true
-            echo '=== certificate served locally for aida.terra-nova.site ==='
-            echo | openssl s_client -connect 127.0.0.1:443 -servername aida.terra-nova.site 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName 2>/dev/null || true
-          EOF
+          DEV_DOMAIN="${DEV_HEALTHCHECK_URL#*://}"
+          DEV_DOMAIN="${DEV_DOMAIN%%/*}"
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          REMOTE_DOMAIN=$(printf '%q' "$DEV_DOMAIN")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
 
-      # Public checks are diagnostics only. The blocking application check runs
-      # on the dev server in deploy/dev.sh so CDN/WAF/TLS failures cannot mark a
-      # healthy deployment as failed.
+      # Public checks are diagnostics only. The blocking application and TLS
+      # checks run on the dev server, where CDN/WAF issues cannot cause a false
+      # deployment failure.
       - name: External application health diagnostic
         if: env.DEV_HEALTHCHECK_URL != ''
         continue-on-error: true
