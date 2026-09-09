@@ -105,9 +105,10 @@ foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-d
 foreach (['postStageChange', 'initSalesPipeline', 'is-drop-target', '/stage'] as $marker) {
     $assert(str_contains($js, $marker), 'Sales JS is missing Pipeline stage interaction ' . $marker);
 }
-foreach (['#work', '#intelligence', '#timeline'] as $anchor) {
-    $assert(str_contains($today, $anchor), 'Today must deep-link signals to Deal Workspace ' . $anchor);
+foreach (["'work'", "'intelligence'", "'timeline'"] as $anchor) {
+    $assert(str_contains($today, $anchor), 'Today must map signals to Deal Workspace section ' . $anchor);
 }
+$assert(str_contains($today, "'#' . \$anchor"), 'Today must append the mapped section as a Deal Workspace fragment.');
 foreach (['is-drop-target', 'is-dragging'] as $marker) {
     $assert(str_contains($css, $marker), 'Sales CSS is missing Pipeline interaction state ' . $marker);
 }
