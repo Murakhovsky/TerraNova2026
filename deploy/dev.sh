@@ -94,5 +94,31 @@ if [[ "$PHP_HEALTH" != "healthy" && "$PHP_HEALTH" != "running" ]]; then
   exit 27
 fi
 
+# This is the blocking application check. Run it inside the server so a public
+# CDN/WAF/TLS issue cannot make a healthy deployment look broken.
+NGINX_ID="$("${COMPOSE[@]}" ps -q nginx)"
+if [[ -z "$NGINX_ID" ]]; then
+  echo "Nginx container was not created." >&2
+  "${COMPOSE[@]}" ps -a >&2 || true
+  exit 28
+fi
+
+APP_HEALTHY=0
+for _ in $(seq 1 15); do
+  if "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O /dev/null http://127.0.0.1/cos; then
+    APP_HEALTHY=1
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$APP_HEALTHY" != "1" ]]; then
+  echo "Local application health check failed: http://127.0.0.1/cos" >&2
+  "${COMPOSE[@]}" ps -a >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
+  exit 28
+fi
+
+echo "Local application health check passed: /cos"
 "${COMPOSE[@]}" ps
 printf 'DEV deployment completed successfully.\n'

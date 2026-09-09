@@ -127,17 +127,18 @@ jobs:
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "cd $REMOTE_PATH && bash deploy/dev.sh"
 
-      # Availability and certificate validity are intentionally separate checks.
-      # The application check ignores TLS verification only to verify that the
-      # deployed HTTP route itself returns a successful response.
-      - name: External application health check
+      # Public checks are diagnostics only. The blocking application check runs
+      # on the dev server in deploy/dev.sh so CDN/WAF/TLS failures cannot mark a
+      # healthy deployment as failed.
+      - name: External application health diagnostic
         if: env.DEV_HEALTHCHECK_URL != ''
+        continue-on-error: true
         run: |
           curl --insecure --fail --show-error --silent --location \
-            --retry 10 --retry-delay 3 --retry-connrefused \
+            --retry 2 --retry-delay 2 --retry-connrefused \
             "$DEV_HEALTHCHECK_URL" > /dev/null
 
-      - name: External TLS certificate check
+      - name: External TLS certificate diagnostic
         if: env.DEV_HEALTHCHECK_URL != ''
         continue-on-error: true
         run: |
