@@ -5,6 +5,8 @@ namespace Kernel\Rule\Service;
 
 use Kernel\Event\Contract\EventHandlerInterface;
 use Kernel\Event\DomainEvent;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\DomainModuleRegistry;
 use Kernel\Rule\Contract\ActionProposalSinkInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 use Kernel\Rule\Contract\RuleEvaluationRepositoryInterface;
@@ -18,10 +20,17 @@ final readonly class RuleEngineEventHandler implements EventHandlerInterface
         private RuleEvaluationRepositoryInterface $evaluations,
         private ActionProposalSinkInterface $actions,
         private DeterministicProcessEngine $engine,
+        private ?DomainModuleRegistry $domains = null,
+        private ?ActiveModuleResolver $modules = null,
     ) {}
 
     public function handle(DomainEvent $event): void
     {
+        $moduleId = $this->domains?->ownerOfEvent($event->type);
+        if ($moduleId !== null && $this->modules !== null && !$this->modules->isEnabled($event->organizationId, $moduleId)) {
+            return;
+        }
+
         $rules = $this->rules->activeFor($event->organizationId, $event->type);
         if ($rules === []) {
             return;

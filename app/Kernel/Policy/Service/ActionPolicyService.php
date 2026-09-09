@@ -3,17 +3,20 @@ declare(strict_types=1);
 
 namespace Kernel\Policy\Service;
 
+use DateTimeImmutable;
+use DomainException;
 use Kernel\Action\Action;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Service\ActionService;
 use Kernel\Approval\Contract\ApprovalRepositoryInterface;
+use Kernel\Audit\AuditEntry;
+use Kernel\Audit\Contract\AuditRepositoryInterface;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\DomainModuleRegistry;
 use Kernel\Policy\Contract\PolicyEvaluationRepositoryInterface;
 use Kernel\Policy\Contract\PolicyRepositoryInterface;
 use Kernel\Policy\PolicyDecision;
-use DateTimeImmutable;
-use Kernel\Audit\AuditEntry;
-use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class ActionPolicyService
@@ -26,10 +29,14 @@ final readonly class ActionPolicyService
         private PolicyEngine $engine,
         private TransactionManagerInterface $transactions,
         private ?AuditRepositoryInterface $audit = null,
+        private ?DomainModuleRegistry $domains = null,
+        private ?ActiveModuleResolver $modules = null,
     ) {}
 
     public function submit(string $organizationId, ActionProposal $proposal, string $correlationId): Action
     {
+        $this->assertModuleEnabled($organizationId, $proposal->type);
+
         return $this->transactions->transactional(function () use ($organizationId, $proposal, $correlationId): Action {
             $action = $this->actions->propose($organizationId, $proposal, $correlationId, ActionStatus::Proposed);
 
@@ -73,6 +80,17 @@ final readonly class ActionPolicyService
 
             return $this->actions->find($organizationId, $action->id) ?? $action;
         });
+    }
+
+    private function assertModuleEnabled(string $organizationId, string $actionType): void
+    {
+        if ($this->domains === null || $this->modules === null) {
+            return;
+        }
+        $moduleId = $this->domains->ownerOfAction($actionType);
+        if ($moduleId !== null && !$this->modules->isEnabled($organizationId, $moduleId)) {
+            throw new DomainException(sprintf('Module %s is disabled for organization %s.', $moduleId, $organizationId));
+        }
     }
 
     private function isHumanOrigin(string $sourceType): bool

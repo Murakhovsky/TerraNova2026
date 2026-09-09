@@ -24,6 +24,9 @@ final class DomainModuleRegistry
     /** @var array<string, AgentDefinition> */
     private array $agents = [];
 
+    /** @var array<string, string> */
+    private array $agentModules = [];
+
     /** @var array<string, AgentContextBuilderInterface> */
     private array $agentContexts = [];
 
@@ -89,6 +92,7 @@ final class DomainModuleRegistry
                 throw new InvalidArgumentException(sprintf('Agent %s has no context builder.', $agentName));
             }
             $this->agents[$agentName] = $definition;
+            $this->agentModules[$agentName] = $name;
             $this->agentContexts[$agentName] = $context;
         }
 
@@ -125,14 +129,29 @@ final class DomainModuleRegistry
             ?? throw new RuntimeException(sprintf('No rule context provider for event: %s.', $eventType));
     }
 
+    public function ownerOfEvent(string $eventType): ?string
+    {
+        return $this->events[$eventType] ?? null;
+    }
+
+    public function ownerOfAction(string $actionType): ?string
+    {
+        return $this->actions[$actionType] ?? null;
+    }
+
+    public function ownerOfAgent(string $agentName): ?string
+    {
+        return $this->agentModules[$agentName] ?? null;
+    }
+
     public function ownsEvent(string $domainName, string $eventType): bool
     {
-        return ($this->events[$eventType] ?? null) === $domainName;
+        return $this->ownerOfEvent($eventType) === $domainName;
     }
 
     public function ownsAction(string $domainName, string $actionType): bool
     {
-        return ($this->actions[$actionType] ?? null) === $domainName;
+        return $this->ownerOfAction($actionType) === $domainName;
     }
 
     public function hasAgent(string $agentName): bool

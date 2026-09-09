@@ -7,17 +7,23 @@ use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\DomainModuleRegistry;
 use RuntimeException;
 
 final class ActionExecutor
 {
     /** @param list<ActionHandlerInterface> $handlers */
-    public function __construct(private readonly array $handlers)
-    {
+    public function __construct(
+        private readonly array $handlers,
+        private readonly ?DomainModuleRegistry $domains = null,
+        private readonly ?ActiveModuleResolver $modules = null,
+    ) {
     }
 
     public function execute(Action $action): ExecutionResult
     {
+        $this->assertModuleEnabled($action);
         $handler = $this->handlerFor($action->type);
         if ($action->status === ActionStatus::Queued) {
             $action->transitionTo(ActionStatus::Running);
@@ -27,6 +33,17 @@ final class ActionExecutor
         $result = $handler->execute($action);
         $action->transitionTo($result->successful ? ActionStatus::Completed : ActionStatus::Failed);
         return $result;
+    }
+
+    private function assertModuleEnabled(Action $action): void
+    {
+        if ($this->domains === null || $this->modules === null) {
+            return;
+        }
+        $moduleId = $this->domains->ownerOfAction($action->type);
+        if ($moduleId !== null && !$this->modules->isEnabled($action->organizationId, $moduleId)) {
+            throw new RuntimeException(sprintf('Module %s is disabled for organization %s.', $moduleId, $action->organizationId));
+        }
     }
 
     private function handlerFor(string $type): ActionHandlerInterface

@@ -7,11 +7,12 @@ use Kernel\Action\ActionStatus;
 use Kernel\Action\ActionProposal;
 use Kernel\Agent\AgentInvocation;
 use Kernel\Agent\Service\AgentRuntime;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\DomainModuleRegistry;
 use Kernel\Policy\Service\ActionPolicyService;
 use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Job;
-use Kernel\Module\DomainModuleRegistry;
 use RuntimeException;
 
 final readonly class AgentRunJobHandler implements JobHandlerInterface
@@ -23,6 +24,7 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         private DomainModuleRegistry $domains,
         private ActionPolicyService $policies,
         private JobQueueInterface $queue,
+        private ?ActiveModuleResolver $modules = null,
     ) {}
 
     public function supports(string $type): bool
@@ -38,6 +40,11 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         $agentName = (string) ($job->payload['agent_name'] ?? '');
         if ($agentName === '' || $subjectType === '' || $subjectId === '' || $question === '') {
             throw new RuntimeException('AGENT_RUN job requires agent_name, subject_type, subject_id and question.');
+        }
+
+        $moduleId = $this->domains->ownerOfAgent($agentName);
+        if ($moduleId !== null && $this->modules !== null && !$this->modules->isEnabled($job->organizationId, $moduleId)) {
+            return;
         }
 
         $agent = $this->domains->agent($agentName);
