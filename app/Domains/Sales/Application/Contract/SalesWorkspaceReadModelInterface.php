@@ -21,10 +21,19 @@ interface SalesWorkspaceReadModelInterface
     public function timeline(string $organizationId, int $dealId, int $limit = 100): array;
 
     /** @return list<array<string, mixed>> */
+    public function communications(string $organizationId, int $dealId, int $limit = 50): array;
+
+    /** @return list<array<string, mixed>> */
+    public function approvals(string $organizationId, ?int $dealId = null, ?int $ownerId = null, int $limit = 50): array;
+
+    /** @return list<array<string, mixed>> */
     public function pipelines(string $organizationId): array;
 
     /** @return array<string, list<array<string, mixed>>> */
     public function today(string $organizationId, int $ownerId): array;
+
+    /** @return array<string, mixed> */
+    public function directorAnalytics(string $organizationId, int $days = 30): array;
 
     /** @return array<string, mixed> */
     public function metrics(string $organizationId, int $days = 30): array;
