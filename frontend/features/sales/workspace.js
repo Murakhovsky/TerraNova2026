@@ -52,6 +52,18 @@ const loadIntelligence = async (root) => {
 
 const readForm = (form) => Object.fromEntries([...new FormData(form).entries()].map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]));
 
+const postStageChange = async (dealId, stageId, csrf) => {
+  const response = await fetch(`/api/sales/deals/${encodeURIComponent(dealId)}/stage`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf || '', Accept: 'application/json' },
+    body: JSON.stringify({ stage_id: stageId }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || 'Stage change failed.');
+  return payload.data || {};
+};
+
 const operationEndpoint = (dealId, operation) => {
   const suffix = {
     quick: 'quick',
@@ -110,16 +122,9 @@ const initDealWorkspace = (root) => {
     if (stageStatus) stageStatus.textContent = 'Зберігаю…';
 
     try {
-      const response = await fetch(`/api/sales/deals/${encodeURIComponent(root.dataset.dealId)}/stage`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': root.dataset.csrf || '', Accept: 'application/json' },
-        body: JSON.stringify({ stage_id: stageId }),
-      });
-      const payload = await response.json();
-      if (!response.ok || !payload.ok) throw new Error(payload.error || 'Stage change failed.');
-      if (stageStatus) stageStatus.textContent = payload.data?.changed === false ? 'Stage вже актуальний.' : 'Stage змінено.';
-      if (payload.data?.changed !== false) window.setTimeout(() => window.location.reload(), 350);
+      const result = await postStageChange(root.dataset.dealId, stageId, root.dataset.csrf || '');
+      if (stageStatus) stageStatus.textContent = result.changed === false ? 'Stage вже актуальний.' : 'Stage змінено.';
+      if (result.changed !== false) window.setTimeout(() => window.location.reload(), 350);
     } catch (error) {
       if (stageStatus) stageStatus.textContent = error.message || 'Не вдалося змінити stage.';
     } finally {
@@ -135,8 +140,57 @@ const initDealWorkspace = (root) => {
   });
 };
 
+const initSalesPipeline = (root) => {
+  const status = root.querySelector('[data-sales-pipeline-status]');
+  let draggedCard = null;
+
+  root.querySelectorAll('[data-sales-deal-card]').forEach((card) => {
+    card.addEventListener('dragstart', (event) => {
+      draggedCard = card;
+      card.classList.add('is-dragging');
+      event.dataTransfer?.setData('text/plain', card.dataset.dealId || '');
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('is-dragging');
+      root.querySelectorAll('[data-sales-stage-dropzone]').forEach((zone) => zone.classList.remove('is-drop-target'));
+      draggedCard = null;
+    });
+  });
+
+  root.querySelectorAll('[data-sales-stage-dropzone]').forEach((zone) => {
+    zone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      zone.classList.add('is-drop-target');
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('is-drop-target'));
+    zone.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      zone.classList.remove('is-drop-target');
+      const card = draggedCard;
+      const dealId = card?.dataset.dealId || event.dataTransfer?.getData('text/plain') || '';
+      const targetStageId = zone.dataset.stageId || '';
+      if (!dealId || !targetStageId || card?.dataset.stageId === targetStageId) return;
+
+      if (status) status.textContent = 'Змінюю stage…';
+      root.setAttribute('aria-busy', 'true');
+      try {
+        const result = await postStageChange(dealId, targetStageId, root.dataset.csrf || '');
+        if (status) status.textContent = result.changed === false ? 'Stage уже актуальний.' : 'Stage змінено.';
+        if (result.changed !== false) window.setTimeout(() => window.location.reload(), 250);
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Не вдалося змінити stage.';
+      } finally {
+        root.removeAttribute('aria-busy');
+      }
+    });
+  });
+};
+
 const initSalesWorkspace = () => {
   document.querySelectorAll('[data-sales-deal-workspace]').forEach(initDealWorkspace);
+  document.querySelectorAll('[data-sales-pipeline-root]').forEach(initSalesPipeline);
   document.querySelectorAll('.tn-sales-click-row[data-href]').forEach((row) => {
     row.addEventListener('click', (event) => {
       if (event.target instanceof Element && event.target.closest('a,button,input,select,label')) return;
