@@ -73,21 +73,43 @@ $assert($duplicateStore->events === [], 'Duplicate follow-up must not publish an
 
 $files = [
     'routes' => $root . '/app/Interfaces/Web/Routing/SalesRoutes.php',
+    'frontend_routes' => $root . '/app/Interfaces/Web/Routing/FrontendRoutes.php',
     'api' => $root . '/app/Interfaces/Api/Controller/SalesController.php',
     'view' => $root . '/app/Interfaces/Web/View/sales/deal.phtml',
+    'pipeline' => $root . '/app/Interfaces/Web/View/sales/pipeline.phtml',
+    'today' => $root . '/app/Interfaces/Web/View/sales/today.phtml',
     'js' => $root . '/frontend/features/sales/workspace.js',
+    'css' => $root . '/frontend/features/sales/workspace.css',
     'repo' => $root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlFollowupRepository.php',
 ];
-foreach ($files as $name => $path) $assert(is_file($path), 'Missing Sales V0.5 ' . $name . ' file.');
+foreach ($files as $name => $path) $assert(is_file($path), 'Missing Sales manager operations ' . $name . ' file.');
 $routes = file_get_contents($files['routes']);
+$frontendRoutes = file_get_contents($files['frontend_routes']);
 $api = file_get_contents($files['api']);
 $view = file_get_contents($files['view']);
+$pipeline = file_get_contents($files['pipeline']);
+$today = file_get_contents($files['today']);
 $js = file_get_contents($files['js']);
+$css = file_get_contents($files['css']);
 $repo = file_get_contents($files['repo']);
 foreach (['/quick', '/activities', '/followups', '/meetings', '/owner'] as $route) $assert(str_contains($routes, $route), 'Missing manager operation route ' . $route);
+$assert(str_contains($frontendRoutes, "'/api/sales/deals/{id:[0-9]+}/stage'"), 'Canonical stage route is missing.');
 foreach (['quickUpdateAction', 'activityAction', 'followupAction', 'meetingAction', 'ownerAction'] as $method) $assert(str_contains($api, $method), 'Missing manager operation API method ' . $method);
 foreach (['data-operation="quick"', 'data-operation="owner"', 'data-operation="followup"', 'data-operation="meeting"', 'data-operation="activity"'] as $marker) $assert(str_contains($view, $marker), 'Deal workspace is missing ' . $marker);
 foreach (['quick:', 'owner:', 'activity:', 'followup:', 'meeting:'] as $marker) $assert(str_contains($js, $marker), 'Sales JS is missing operation mapping ' . $marker);
 $assert(str_contains($repo, "'followup'"), 'Follow-up repository must persist followup activity type.');
 
-echo "Sales V0.5 manager operations passed: canonical follow-up, API routes and Deal Workspace actions are wired.\n";
+foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-deal-card', 'draggable="true"', 'data-csrf='] as $marker) {
+    $assert(str_contains($pipeline, $marker), 'Pipeline workspace is missing operational marker ' . $marker);
+}
+foreach (['postStageChange', 'initSalesPipeline', 'is-drop-target', '/stage'] as $marker) {
+    $assert(str_contains($js, $marker), 'Sales JS is missing Pipeline stage interaction ' . $marker);
+}
+foreach (['#work', '#intelligence', '#timeline'] as $anchor) {
+    $assert(str_contains($today, $anchor), 'Today must deep-link signals to Deal Workspace ' . $anchor);
+}
+foreach (['is-drop-target', 'is-dragging'] as $marker) {
+    $assert(str_contains($css, $marker), 'Sales CSS is missing Pipeline interaction state ' . $marker);
+}
+
+echo "Sales manager operations passed: canonical follow-up, Deal actions, Pipeline stage mutation and Today deep links are wired.\n";
