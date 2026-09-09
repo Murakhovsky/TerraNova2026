@@ -2,20 +2,16 @@
 declare(strict_types=1);
 
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
-use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
 
+require APP_PATH . '/config/environment.php';
 require BASE_PATH . '/vendor/autoload.php';
 Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 
-$di = new FactoryDefault();
-require APP_PATH . '/config/services.php';
-require APP_PATH . '/config/loader.php';
-
-$database = $di->getShared('databaseService');
-assert($database instanceof PdoConnection);
+$config = require APP_PATH . '/config/config.php';
+$database = new PdoConnection($config->database);
 
 $email = trim((string) ($argv[1] ?? ''));
 $fullName = trim((string) ($argv[2] ?? 'COS Administrator'));
