@@ -9,6 +9,7 @@ use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
 use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
 use Interfaces\Web\Service\ClientCaseService;
+use Interfaces\Web\Service\CompanyHomeService;
 use Domains\Content\Application\Service\ContentService;
 use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
 use Interfaces\Web\Service\InboundRequestService;
@@ -38,6 +39,11 @@ final class WebApplicationServices
         $di->setShared('frontendContentService', fn() => new ContentService($di->getShared('contentRepository')));
         $di->setShared('propertyAnalytics', fn() => new MysqlPropertyAnalytics($di->getShared('databaseService')));
         $di->setShared('frontendCatalogService', fn() => new CatalogService($di->getShared('databaseService'), $di->getShared('propertyAnalytics')));
+        $di->setShared('frontendCompanyHomeService', fn() => new CompanyHomeService(
+            $di->getShared('salesWorkspaceReadModel'),
+            $di->getShared('cosOperationsReadModel'),
+            $di->getShared('cosActiveModuleResolver'),
+        ));
         $di->setShared('frontendClientCaseService', fn() => new ClientCaseService(
             $di->getShared('salesClientCaseReadModel'), $di->getShared('salesClientCaseService'), $di->getShared('salesInboundService'),
         ));

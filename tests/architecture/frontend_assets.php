@@ -8,6 +8,7 @@ use Interfaces\Web\Assets\ViteAssetManifest;
 $root = dirname(__DIR__, 2);
 $manifestPath = $root . '/public/build/.vite/manifest.json';
 $entries = [
+    'company-home',
     'cos-control-center',
     'cos-site',
     'diagnostics-methodology-studio',

@@ -13,38 +13,22 @@ class AdminController extends ControllerBase
             return;
         }
 
-        $this->view->title = 'Admin dashboard';
-        $this->view->metaTitle = 'Admin dashboard | Terra Nova CLUB';
+        $this->view->title = 'Company Home';
+        $this->view->metaTitle = 'Company Home | Terra Nova CLUB';
+        $this->view->metaRobots = 'noindex,nofollow';
+        $this->view->workspaceSection = 'home';
+        $this->view->workspaceActive = 'home';
+        $this->view->pageAssetEntries = ['company-home'];
         $this->view->pageStatus = null;
-        $this->view->metrics = [];
-        $this->view->propertyStatus = [];
-        $this->view->submissionStatus = [];
-        $this->view->caseStages = [];
-        $this->view->recentSubmissions = [];
-        $this->view->recentRequests = [];
-        $this->view->activeCases = [];
-        $this->view->attentionProperties = [];
-        $this->view->moderationProperties = [];
-        $this->view->activeProperties = [];
-        $this->view->recentManagerActivities = [];
+        $this->view->home = [];
 
         try {
-            $dashboard = $this->di->getShared('frontendAdminDashboardService');
-            $this->view->metrics = $dashboard->metrics();
-            $this->view->propertyStatus = $dashboard->propertyStatus();
-            $this->view->submissionStatus = $dashboard->submissionStatus();
-            $this->view->caseStages = $dashboard->caseStages();
-            $this->view->recentSubmissions = $dashboard->recentSubmissions();
-            $this->view->recentRequests = $dashboard->recentRequests();
-            $this->view->activeCases = $dashboard->activeCases();
-            $this->view->attentionProperties = $dashboard->attentionProperties();
-            $this->view->moderationProperties = $dashboard->moderationProperties();
-            $this->view->activeProperties = $dashboard->activeProperties();
-            $this->view->recentManagerActivities = $dashboard->recentManagerActivities();
+            $home = $this->di->getShared('frontendCompanyHomeService');
+            $this->view->home = $home->snapshot($this->di->getShared('organizationContext')->id());
         } catch (Throwable $e) {
-            $this->logFrontendError('admin-dashboard', $e);
+            $this->logFrontendError('company-home', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = 'Панель керування тимчасово недоступна. Деталі записано в лог.';
+            $this->view->pageStatus = 'Огляд компанії тимчасово недоступний. Деталі записано в лог.';
         }
     }
 
@@ -128,4 +112,3 @@ class AdminController extends ControllerBase
         $this->response->redirect('admin/users?status_message=' . rawurlencode($result['message']));
     }
 }
-

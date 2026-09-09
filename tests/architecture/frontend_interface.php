@@ -35,6 +35,7 @@ $adminSales = array_map(static fn(array $item): string => (string)($item['key'] 
 if (!in_array('sales-admin', $adminSales, true)) throw new RuntimeException('Admin Sales workspace must expose Sales Admin.');
 
 foreach ([
+    'app/Interfaces/Web/Service/CompanyHomeService.php',
     'app/Interfaces/Web/View/components/workspace_sidebar.phtml',
     'app/Interfaces/Web/View/components/workspace_topbar.phtml',
     'app/Interfaces/Web/View/components/workspace_mobile_nav.phtml',
@@ -44,6 +45,7 @@ foreach ([
     'app/Interfaces/Web/View/components/ui/status_badge.phtml',
     'app/Interfaces/Web/View/components/ui/tabs.phtml',
     'app/Interfaces/Web/View/components/sales/navigation.phtml',
+    'app/Interfaces/Web/View/admin/index.phtml',
     'app/Interfaces/Web/View/sales/dashboard.phtml',
     'app/Interfaces/Web/View/sales/today.phtml',
     'app/Interfaces/Web/View/sales/pipeline.phtml',
@@ -54,10 +56,12 @@ foreach ([
     'app/Interfaces/Web/View/sales/admin.phtml',
     'frontend/components/interactive.js',
     'frontend/core/workspace-shell.js',
+    'frontend/entrypoints/company-home.js',
     'frontend/entrypoints/terranova-interface.js',
     'frontend/entrypoints/cos-control-center.js',
     'frontend/entrypoints/diagnostics-methodology-studio.js',
     'frontend/entrypoints/sales-workspace.js',
+    'frontend/features/home/company-home.css',
     'frontend/features/cos/control-center.css',
     'frontend/features/diagnostics/methodology-studio.css',
     'frontend/features/diagnostics/methodology-studio.js',
@@ -72,9 +76,33 @@ foreach ([
     'docs/architecture/frontend-interface.md',
     'docs/architecture/web-v0.2.md',
     'docs/architecture/web-v0.3.md',
+    'docs/architecture/web-v0.4.md',
 ] as $requiredPath) {
     if (!is_file($root . '/' . $requiredPath)) throw new RuntimeException('Frontend interface architecture file is missing: ' . $requiredPath);
 }
+
+$companyHome = (string) file_get_contents($root . '/app/Interfaces/Web/Service/CompanyHomeService.php');
+foreach ([
+    'SalesWorkspaceReadModelInterface',
+    'OperationsReadModelInterface',
+    'ActiveModuleResolver',
+] as $needle) {
+    if (!str_contains($companyHome, $needle)) throw new RuntimeException('WEB V0.4 Company Home must compose canonical read boundaries: ' . $needle);
+}
+foreach (['PdoConnection', 'PDO ', 'SELECT ', 'INSERT ', 'UPDATE ', 'DELETE '] as $forbidden) {
+    if (str_contains($companyHome, $forbidden)) throw new RuntimeException('Company Home must not become a direct persistence read model: ' . $forbidden);
+}
+
+$adminController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/AdminController.php');
+foreach (["workspaceSection = 'home'", "workspaceActive = 'home'", "['company-home']", "getShared('frontendCompanyHomeService')"] as $needle) {
+    if (!str_contains($adminController, $needle)) throw new RuntimeException('AdminController is missing WEB V0.4 Company Home workspace contract: ' . $needle);
+}
+$adminHomeView = (string) file_get_contents($root . '/app/Interfaces/Web/View/admin/index.phtml');
+if (str_contains($adminHomeView, "partial('shared/manager_header'")) throw new RuntimeException('Company Home must use the layout-owned Workspace shell.');
+if (!str_contains($adminHomeView, 'Runtime modules') || !str_contains($adminHomeView, 'Company Home')) throw new RuntimeException('Company Home must expose company pulse and runtime module state.');
+
+$webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
+if (!str_contains($webServices, "setShared('frontendCompanyHomeService'")) throw new RuntimeException('Company Home must be registered in the Web composition root.');
 
 $cosController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/CosController.php');
 if (!str_contains($cosController, "workspaceSection = 'cos'") || !str_contains($cosController, "['cos-control-center']")) throw new RuntimeException('COS Control Center must opt into the Workspace shell and its feature bundle.');
@@ -100,4 +128,4 @@ foreach ($views as $view) {
     if (str_contains($source, '/assets/js/') || str_contains($source, '/assets/css/')) throw new RuntimeException('PHTML must not bypass Vite with direct /assets JS/CSS references: ' . $view->getPathname());
 }
 
-echo "Frontend interface architecture passed: WEB V0.3 Sales Workspace is a complete reference vertical on the shared foundation.\n";
+echo "Frontend interface architecture passed: WEB V0.4 Company Home composes module-aware read projections on the shared workspace foundation.\n";
