@@ -5,10 +5,10 @@ namespace Domains\Sales\Bootstrap;
 
 use Domains\Sales\Application\Contract\CrmGatewayInterface;
 use Domains\Sales\Application\Contract\DealRepositoryInterface;
-use Domains\Sales\Application\Contract\FollowupRepositoryInterface;
 use Domains\Sales\Application\Service\SalesOperationService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
+use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
 use Domains\Sales\Automation\Action\AssignOwnerHandler;
 use Domains\Sales\Automation\Action\ChangeDealStageHandler;
 use Domains\Sales\Automation\Action\CreateFollowupTaskHandler;
@@ -39,7 +39,7 @@ final readonly class SalesDomainModule implements DomainModuleInterface
     public function __construct(
         private CrmGatewayInterface $crm,
         private DealRepositoryInterface $deals,
-        private FollowupRepositoryInterface $followups,
+        private ScheduleDealFollowup $scheduleFollowup,
         private RuleContextProviderInterface $ruleContexts,
         private AgentContextBuilderInterface $agentContexts,
         private ChangeDealStage $changeDealStage,
@@ -76,7 +76,7 @@ final readonly class SalesDomainModule implements DomainModuleInterface
             new ChangeDealStageHandler($this->changeDealStage),
             new AssignOwnerHandler($this->assignDealOwner),
             new SendMessageHandler($this->operations),
-            new ScheduleFollowupHandler($this->followups),
+            new ScheduleFollowupHandler($this->scheduleFollowup),
             new RequestDocumentHandler($this->operations),
             new ScheduleMeetingHandler($this->operations),
         ];

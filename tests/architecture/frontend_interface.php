@@ -9,30 +9,45 @@ require $root . '/vendor/autoload.php';
 
 if (is_dir($root . '/app/Domains/Frontend')) throw new RuntimeException('Frontend is an Interface/Presentation layer and must not become a DDD Domain.');
 
+$keys = static fn (array $items): array => array_map(static fn (array $item): string => (string) ($item['key'] ?? ''), $items);
+$section = static function (array $items, string $key): ?array {
+    foreach ($items as $item) if (($item['key'] ?? '') === $key) return $item;
+    return null;
+};
+
 $public = FrontendNavigation::public();
-if (count($public) !== 5) throw new RuntimeException('Public primary navigation must contain exactly five canonical sections.');
+$expectedPublic = ['home', 'catalog', 'services', 'partners', 'about', 'cos'];
+if ($keys($public) !== $expectedPublic) throw new RuntimeException('Public primary navigation changed without an explicit interface architecture decision.');
 
 $workspace = FrontendNavigation::workspace('manager');
 $primary = $workspace['primary'] ?? [];
-if (count($primary) > 6) throw new RuntimeException('Workspace primary navigation must contain no more than six sections.');
-$expectedPrimary = ['home', 'sales', 'clients', 'properties', 'cos', 'analytics'];
-$actualPrimary = array_map(static fn (array $item): string => (string) ($item['key'] ?? ''), $primary);
-if ($actualPrimary !== $expectedPrimary) throw new RuntimeException('Workspace primary navigation changed without an explicit interface architecture decision.');
+$expectedPrimary = ['home', 'sales', 'clients', 'properties', 'cos', 'analytics', 'administration'];
+if ($keys($primary) !== $expectedPrimary) throw new RuntimeException('Workspace primary navigation changed without an explicit interface architecture decision.');
 
-$managerUtility = array_map(static fn (array $item): string => (string) ($item['key'] ?? ''), $workspace['utility'] ?? []);
+$managerUtility = $keys($workspace['utility'] ?? []);
 if (in_array('users', $managerUtility, true)) throw new RuntimeException('Manager navigation must not expose admin-only Users.');
-$adminWorkspace = FrontendNavigation::workspace('admin');
-$adminUtility = array_map(static fn (array $item): string => (string) ($item['key'] ?? ''), $adminWorkspace['utility'] ?? []);
-if (!in_array('users', $adminUtility, true)) throw new RuntimeException('Admin Workspace must expose Users in system navigation.');
+$managerAdministration = $section($primary, 'administration');
+if ($keys($managerAdministration['children'] ?? []) !== ['content']) throw new RuntimeException('Manager Administration must expose Content without admin-only Users.');
 
-$salesSection = null;
-foreach ($primary as $item) if (($item['key'] ?? '') === 'sales') $salesSection = $item;
-$managerSales = array_map(static fn(array $item): string => (string)($item['key'] ?? ''), $salesSection['children'] ?? []);
+$adminWorkspace = FrontendNavigation::workspace('admin');
+$adminPrimary = $adminWorkspace['primary'] ?? [];
+if ($keys($adminPrimary) !== $expectedPrimary) throw new RuntimeException('Admin Workspace primary navigation must use the canonical workspace sections.');
+$adminAdministration = $section($adminPrimary, 'administration');
+if ($keys($adminAdministration['children'] ?? []) !== ['users', 'content']) throw new RuntimeException('Admin Administration must expose Users and Content.');
+
+$salesSection = $section($primary, 'sales');
+$managerSales = $keys($salesSection['children'] ?? []);
 if ($managerSales !== ['sales','today','pipeline','leads','deals','director']) throw new RuntimeException('Manager Sales workspace navigation must expose the canonical WEB V0.3 screens.');
-$adminSalesSection = null;
-foreach ($adminWorkspace['primary'] ?? [] as $item) if (($item['key'] ?? '') === 'sales') $adminSalesSection = $item;
-$adminSales = array_map(static fn(array $item): string => (string)($item['key'] ?? ''), $adminSalesSection['children'] ?? []);
+$adminSalesSection = $section($adminPrimary, 'sales');
+$adminSales = $keys($adminSalesSection['children'] ?? []);
 if (!in_array('sales-admin', $adminSales, true)) throw new RuntimeException('Admin Sales workspace must expose Sales Admin.');
+
+$propertiesSection = $section($primary, 'properties');
+if (!in_array('locations', $keys($propertiesSection['children'] ?? []), true)) throw new RuntimeException('Workspace Properties must expose Locations.');
+$cosSection = $section($primary, 'cos');
+foreach (['actions', 'approvals', 'agents', 'rules', 'events', 'audit', 'diagnostics'] as $cosChild) {
+    if (!in_array($cosChild, $keys($cosSection['children'] ?? []), true)) throw new RuntimeException('COS workspace is missing canonical child: ' . $cosChild);
+}
 
 foreach ([
     'app/Interfaces/Web/Service/CompanyHomeService.php',
@@ -128,4 +143,4 @@ foreach ($views as $view) {
     if (str_contains($source, '/assets/js/') || str_contains($source, '/assets/css/')) throw new RuntimeException('PHTML must not bypass Vite with direct /assets JS/CSS references: ' . $view->getPathname());
 }
 
-echo "Frontend interface architecture passed: WEB V0.4 Company Home composes module-aware read projections on the shared workspace foundation.\n";
+echo "Frontend interface architecture passed: unified public/workspace navigation and WEB V0.4 composition are enforced.\n";

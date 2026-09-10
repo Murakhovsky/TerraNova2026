@@ -12,6 +12,7 @@ use Domains\Sales\Application\UseCase\CompleteSalesCall;
 use Domains\Sales\Application\UseCase\ProcessCrmInbox;
 use Domains\Sales\Application\UseCase\ReceiveCrmWebhook;
 use Domains\Sales\Application\UseCase\ReceivePublicLead;
+use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
 use Domains\Sales\Automation\Job\CrmInboxJobHandler;
 use Domains\Sales\Bootstrap\SalesDomainModule;
 use Domains\Sales\Domain\Policy\StageTransitionPolicy;
@@ -28,7 +29,7 @@ use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel;
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
     $this->getShared('cosCrmGateway'),
     $this->getShared('salesDealRepository'),
-    $this->getShared('salesFollowupRepository'),
+    $this->getShared('salesScheduleDealFollowup'),
     $this->getShared('salesRuleContextProvider'),
     $this->getShared('salesAgentContextBuilder'),
     $this->getShared('salesChangeDealStage'),
@@ -58,6 +59,9 @@ $di->setShared('salesChangeDealStage', fn (): ChangeDealStage => new ChangeDealS
 ));
 $di->setShared('salesAssignDealOwner', fn (): AssignDealOwner => new AssignDealOwner(
     $this->getShared('salesDealRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesScheduleDealFollowup', fn (): ScheduleDealFollowup => new ScheduleDealFollowup(
+    $this->getShared('salesFollowupRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
 ));
 $di->setShared('salesOperationService', fn (): SalesOperationService => new SalesOperationService(
     $this->getShared('cosCrmGateway'), $this->getShared('salesOperationRepository'),

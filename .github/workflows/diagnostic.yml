@@ -49,6 +49,7 @@ jobs:
           php tests/unit/sales_runtime_contract.php
           php tests/unit/sales_v03.php
           php tests/unit/sales_v04.php
+          php tests/unit/sales_manager_operations.php
 
       - name: Property submission check
         run: php tests/smoke/property_submission.php

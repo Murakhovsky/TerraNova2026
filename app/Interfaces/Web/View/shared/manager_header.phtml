@@ -14,11 +14,18 @@ try {
 $role = (string) ($currentUser['role'] ?? '');
 $isTeam = FrontendNavigation::isTeam($role);
 $href = function (string $path): string {
-    if ($path === '' || $path === '/') {
-        return $this->url->get();
+    $fragment = '';
+    $fragmentPosition = strpos($path, '#');
+    if ($fragmentPosition !== false) {
+        $fragment = substr($path, $fragmentPosition);
+        $path = substr($path, 0, $fragmentPosition);
     }
 
-    return $this->url->get($path);
+    $url = ($path === '' || $path === '/')
+        ? $this->url->get()
+        : $this->url->get($path);
+
+    return $url . $fragment;
 };
 
 if ($isTeam) {
@@ -37,6 +44,7 @@ if ($isTeam) {
         'href' => $href,
     ]);
     $this->partial('components/workspace_mobile_nav', [
+        'navigation' => $navigation,
         'activeSection' => $activeSection,
         'href' => $href,
     ]);

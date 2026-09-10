@@ -55,12 +55,19 @@ final class SalesController extends WebController
             $deal = $q->deal($org, $id);
             if ($deal === null) {
                 $this->response->setStatusCode(404, 'Not Found');
-                return ['deal' => null, 'timeline' => [], 'pipelines' => []];
+                return ['deal' => null, 'timeline' => [], 'pipelines' => [], 'owners' => []];
+            }
+            $owners = [];
+            try {
+                $owners = $this->di->getShared('salesClientCaseReadModel')->managerOptions();
+            } catch (Throwable) {
+                // Deal workspace remains usable even if owner options cannot be loaded.
             }
             return [
                 'deal' => $deal,
                 'timeline' => $q->timeline($org, $id, 100),
                 'pipelines' => $q->pipelines($org),
+                'owners' => $owners,
             ];
         });
     }

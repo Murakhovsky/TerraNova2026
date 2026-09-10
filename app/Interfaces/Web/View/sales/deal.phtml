@@ -4,7 +4,13 @@ $workspace = $workspace ?? [];
 $deal = $workspace['deal'] ?? null;
 $timeline = $workspace['timeline'] ?? [];
 $pipelines = $workspace['pipelines'] ?? [];
+$owners = $workspace['owners'] ?? [];
 $money = static fn($v, $currency = 'USD') => number_format((float) $v, 0, '.', ' ') . ' ' . ($currency ?: 'USD');
+$datetimeInput = static function ($value): string {
+    if (!$value) return '';
+    $timestamp = strtotime((string) $value);
+    return $timestamp ? date('Y-m-d\TH:i', $timestamp) : '';
+};
 $stages = [];
 if ($deal) {
     foreach ($pipelines as $pipeline) {
@@ -26,7 +32,7 @@ if ($deal) {
       ]); ?>
       <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Deal workspace недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
 
-      <nav class="tn-ui-tabs tn-sales-anchor-tabs" aria-label="Deal sections"><a href="#overview" class="is-active">Overview</a><a href="#intelligence">Intelligence</a><a href="#timeline">Timeline</a></nav>
+      <nav class="tn-ui-tabs tn-sales-anchor-tabs" aria-label="Deal sections"><a href="#overview" class="is-active">Overview</a><a href="#work">Work</a><a href="#intelligence">Intelligence</a><a href="#timeline">Timeline</a></nav>
 
       <section id="overview" class="tn-ui-kpi-grid tn-workspace-section tn-sales-deal-kpis">
         <?php $this->partial('components/ui/kpi_card', ['label' => 'Value', 'value' => $money($deal['value'] ?? 0, $deal['currency'] ?? 'USD')]); ?>
@@ -52,6 +58,65 @@ if ($deal) {
           <?php else: ?><p class="tn-sales-empty">Stage configuration недоступна для цієї угоди.</p><?php endif; ?>
         </section>
       </div>
+
+      <section id="work" class="tn-workspace-section">
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Manager operations</p><h2>Що робимо далі</h2><p>Робочі дії виконуються через Sales Application layer і одразу потрапляють у timeline/COS.</p></div></div>
+        <div class="tn-ui-split">
+          <section class="tn-ui-panel">
+            <div class="tn-ui-panel__head"><div><h3>Пріоритет і наступний контакт</h3></div></div>
+            <form class="tn-sales-operation-form" data-sales-operation-form data-operation="quick">
+              <label class="tn-ui-field"><span>Priority</span><select class="tn-ui-select" name="priority"><?php foreach (['low'=>'Low','normal'=>'Normal','high'=>'High','urgent'=>'Urgent'] as $value=>$label): ?><option value="<?php echo $value; ?>" <?php echo ($deal['priority'] ?? 'normal') === $value ? 'selected' : ''; ?>><?php echo $label; ?></option><?php endforeach; ?></select></label>
+              <label class="tn-ui-field"><span>Next contact</span><input class="tn-ui-input" type="datetime-local" name="next_contact_at" value="<?php echo $h($datetimeInput($deal['next_contact_at'] ?? null)); ?>"></label>
+              <button class="tn-ui-button tn-ui-button--primary" type="submit">Зберегти</button><span class="tn-sales-inline-status" data-sales-operation-status aria-live="polite"></span>
+            </form>
+          </section>
+          <section class="tn-ui-panel">
+            <div class="tn-ui-panel__head"><div><h3>Відповідальний</h3></div></div>
+            <form class="tn-sales-operation-form" data-sales-operation-form data-operation="owner">
+              <label class="tn-ui-field"><span>Owner</span><select class="tn-ui-select" name="owner_id" required><option value="">Оберіть менеджера</option><?php foreach ($owners as $owner): ?><option value="<?php echo (int)($owner['id'] ?? 0); ?>" <?php echo (int)($deal['assigned_user_id'] ?? 0) === (int)($owner['id'] ?? 0) ? 'selected' : ''; ?>><?php echo $h($owner['full_name'] ?? $owner['email'] ?? ('Manager #' . ($owner['id'] ?? ''))); ?></option><?php endforeach; ?></select></label>
+              <button class="tn-ui-button tn-ui-button--primary" type="submit" <?php echo !$owners ? 'disabled' : ''; ?>>Призначити</button><span class="tn-sales-inline-status" data-sales-operation-status aria-live="polite"></span>
+            </form>
+          </section>
+        </div>
+
+        <div class="tn-ui-split">
+          <section class="tn-ui-panel">
+            <div class="tn-ui-panel__head"><div><h3>Follow-up</h3><p>Створює follow-up activity, next contact і canonical event.</p></div></div>
+            <form class="tn-sales-operation-form" data-sales-operation-form data-operation="followup">
+              <label class="tn-ui-field"><span>Title</span><input class="tn-ui-input" name="title" value="Follow-up" maxlength="180" required></label>
+              <label class="tn-ui-field"><span>Due at</span><input class="tn-ui-input" type="datetime-local" name="due_at" required></label>
+              <label class="tn-ui-field"><span>Note</span><textarea class="tn-ui-input" name="body" rows="3" maxlength="4000"></textarea></label>
+              <button class="tn-ui-button tn-ui-button--primary" type="submit">Запланувати follow-up</button><span class="tn-sales-inline-status" data-sales-operation-status aria-live="polite"></span>
+            </form>
+          </section>
+          <section class="tn-ui-panel">
+            <div class="tn-ui-panel__head"><div><h3>Meeting</h3><p>Створює meeting activity у Sales.</p></div></div>
+            <form class="tn-sales-operation-form" data-sales-operation-form data-operation="meeting">
+              <label class="tn-ui-field"><span>Title</span><input class="tn-ui-input" name="title" value="Sales meeting" maxlength="180" required></label>
+              <label class="tn-ui-field"><span>Scheduled at</span><input class="tn-ui-input" type="datetime-local" name="scheduled_at" required></label>
+              <label class="tn-ui-field"><span>Location / link</span><input class="tn-ui-input" name="location" maxlength="500"></label>
+              <label class="tn-ui-field"><span>Notes</span><textarea class="tn-ui-input" name="notes" rows="2" maxlength="2000"></textarea></label>
+              <button class="tn-ui-button tn-ui-button--primary" type="submit">Запланувати meeting</button><span class="tn-sales-inline-status" data-sales-operation-status aria-live="polite"></span>
+            </form>
+          </section>
+        </div>
+
+        <section class="tn-ui-panel">
+          <div class="tn-ui-panel__head"><div><h3>Зафіксувати контакт</h3><p>Нотатка або завершений дзвінок. Completed call запускає canonical CallCompleted flow.</p></div></div>
+          <form class="tn-sales-operation-form" data-sales-operation-form data-operation="activity">
+            <div class="tn-ui-split">
+              <label class="tn-ui-field"><span>Type</span><select class="tn-ui-select" name="activity_type"><option value="note">Note</option><option value="call">Completed call</option></select></label>
+              <label class="tn-ui-field"><span>Title</span><input class="tn-ui-input" name="title" value="Нотатка" maxlength="180"></label>
+            </div>
+            <label class="tn-ui-field"><span>Details</span><textarea class="tn-ui-input" name="body" rows="4" maxlength="4000"></textarea></label>
+            <div class="tn-ui-split">
+              <label class="tn-ui-field"><span>Call result</span><input class="tn-ui-input" name="call_result" placeholder="connected / no_answer / interested"></label>
+              <label class="tn-ui-field"><span>Duration, sec</span><input class="tn-ui-input" type="number" min="0" max="86400" name="duration_seconds" value="0"></label>
+            </div>
+            <button class="tn-ui-button tn-ui-button--primary" type="submit">Додати в timeline</button><span class="tn-sales-inline-status" data-sales-operation-status aria-live="polite"></span>
+          </form>
+        </section>
+      </section>
 
       <section id="intelligence" class="tn-ui-panel tn-workspace-section tn-sales-intelligence">
         <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">COS Intelligence</p><h2>Рішення, не телеметрія</h2><p>Остання decision (рішення) та запропоновані actions (дії) для цієї угоди.</p></div><button class="tn-ui-button tn-ui-button--ghost" type="button" data-sales-intelligence-refresh>Оновити</button></div>

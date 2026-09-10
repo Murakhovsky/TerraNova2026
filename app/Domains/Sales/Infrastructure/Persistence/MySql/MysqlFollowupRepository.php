@@ -39,12 +39,14 @@ final readonly class MysqlFollowupRepository implements FollowupRepositoryInterf
             ]);
             $statement = $this->connection->prepare(
                 "INSERT INTO tn_client_case_activities (organization_id, client_case_id, activity_type, title, body, due_at) "
-                . "SELECT :organization_id, id, 'task', :title, :body, :due_at FROM tn_client_cases "
+                . "SELECT :organization_id, id, 'followup', :title, :body, :due_at FROM tn_client_cases "
                 . 'WHERE id = :id AND organization_id = :organization_scope'
             );
             $statement->execute([
-                'id' => $command->dealReference, 'title' => $command->title,
-                'body' => $command->body, 'due_at' => $dueAt,
+                'id' => $command->dealReference,
+                'title' => $command->title,
+                'body' => $command->body,
+                'due_at' => $dueAt,
                 'organization_id' => $command->organizationId,
                 'organization_scope' => $command->organizationId,
             ]);
@@ -54,7 +56,7 @@ final readonly class MysqlFollowupRepository implements FollowupRepositoryInterf
             $externalId = (string) $this->connection->lastInsertId();
             $this->references->put($command->organizationId, 'aida', 'followup', $externalId, $reference);
             if ($ownsTransaction) $this->connection->commit();
-            return OperationResult::success($externalId);
+            return OperationResult::success($externalId, ['duplicate' => false, 'due_at' => $command->dueAt->format(DATE_ATOM)]);
         } catch (Throwable $exception) {
             if ($ownsTransaction && $this->connection->inTransaction()) $this->connection->rollBack();
             return OperationResult::failure($exception->getMessage());

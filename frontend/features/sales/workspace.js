@@ -50,21 +50,64 @@ const loadIntelligence = async (root) => {
   }
 };
 
+const readForm = (form) => Object.fromEntries([...new FormData(form).entries()].map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]));
+
+const operationEndpoint = (dealId, operation) => {
+  const suffix = {
+    quick: 'quick',
+    owner: 'owner',
+    activity: 'activities',
+    followup: 'followups',
+    meeting: 'meetings',
+  }[operation];
+  return suffix ? `/api/sales/deals/${encodeURIComponent(dealId)}/${suffix}` : null;
+};
+
+const submitOperation = async (root, form) => {
+  const operation = form.dataset.operation || '';
+  const endpoint = operationEndpoint(root.dataset.dealId, operation);
+  const status = form.querySelector('[data-sales-operation-status]');
+  const button = form.querySelector('button[type="submit"]');
+  if (!endpoint) return;
+
+  button?.setAttribute('disabled', 'disabled');
+  if (status) status.textContent = 'Зберігаю…';
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': root.dataset.csrf || '',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(readForm(form)),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || 'Sales operation failed.');
+    if (status) status.textContent = 'Готово.';
+    window.setTimeout(() => window.location.reload(), 350);
+  } catch (error) {
+    if (status) status.textContent = error.message || 'Не вдалося виконати дію.';
+  } finally {
+    button?.removeAttribute('disabled');
+  }
+};
+
 const initDealWorkspace = (root) => {
   loadIntelligence(root);
   root.querySelector('[data-sales-intelligence-refresh]')?.addEventListener('click', () => loadIntelligence(root));
 
-  const form = root.querySelector('[data-sales-stage-form]');
-  const status = root.querySelector('[data-sales-stage-status]');
-  if (!form) return;
-
-  form.addEventListener('submit', async (event) => {
+  const stageForm = root.querySelector('[data-sales-stage-form]');
+  const stageStatus = root.querySelector('[data-sales-stage-status]');
+  stageForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const button = form.querySelector('button[type="submit"]');
-    const stageId = form.querySelector('[data-sales-stage-select]')?.value || '';
+    const button = stageForm.querySelector('button[type="submit"]');
+    const stageId = stageForm.querySelector('[data-sales-stage-select]')?.value || '';
     if (!stageId) return;
     button?.setAttribute('disabled', 'disabled');
-    if (status) status.textContent = 'Зберігаю…';
+    if (stageStatus) stageStatus.textContent = 'Зберігаю…';
 
     try {
       const response = await fetch(`/api/sales/deals/${encodeURIComponent(root.dataset.dealId)}/stage`, {
@@ -75,13 +118,20 @@ const initDealWorkspace = (root) => {
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload.error || 'Stage change failed.');
-      if (status) status.textContent = payload.data?.changed === false ? 'Stage вже актуальний.' : 'Stage змінено.';
+      if (stageStatus) stageStatus.textContent = payload.data?.changed === false ? 'Stage вже актуальний.' : 'Stage змінено.';
       if (payload.data?.changed !== false) window.setTimeout(() => window.location.reload(), 350);
     } catch (error) {
-      if (status) status.textContent = error.message || 'Не вдалося змінити stage.';
+      if (stageStatus) stageStatus.textContent = error.message || 'Не вдалося змінити stage.';
     } finally {
       button?.removeAttribute('disabled');
     }
+  });
+
+  root.querySelectorAll('[data-sales-operation-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitOperation(root, form);
+    });
   });
 };
 
