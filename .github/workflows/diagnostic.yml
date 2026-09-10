@@ -58,3 +58,100 @@ jobs:
 
       - name: Telegram isolation check
         run: php tests/architecture/telegram_migration.php
+
+  deploy-dev:
+    name: Deploy COS to AWS dev
+    needs: runtime-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/COS'
+    runs-on: ubuntu-latest
+    environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      DEV_HEALTHCHECK_URL: ${{ vars.DEV_HEALTHCHECK_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate deployment configuration
+        run: |
+          : "${DEV_HOST:?DEV_HOST secret is missing}"
+          : "${DEV_USER:?DEV_USER secret is missing}"
+          : "${DEV_PORT:?DEV_PORT secret is missing}"
+          : "${DEV_PATH:?DEV_PATH environment variable is missing}"
+          test -n "${{ secrets.DEV_SSH_KEY }}" || { echo "DEV_SSH_KEY secret is missing" >&2; exit 1; }
+
+      - name: Configure SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' '${{ secrets.DEV_SSH_KEY }}' > ~/.ssh/dev_deploy_key
+          chmod 600 ~/.ssh/dev_deploy_key
+          ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Prepare server directory
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- $REMOTE_PATH"
+
+      - name: Sync repository to dev server
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='.env' \
+            --exclude='.env.docker' \
+            --exclude='vendor/' \
+            --exclude='node_modules/' \
+            --exclude='tmp/' \
+            --exclude='public/uploads/' \
+            -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
+            ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
+
+      - name: Deploy containers and database migrations
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "cd $REMOTE_PATH && bash deploy/dev.sh"
+
+      - name: Configure HTTPS reverse proxy
+        if: env.DEV_HEALTHCHECK_URL != ''
+        run: |
+          DEV_DOMAIN="${DEV_HEALTHCHECK_URL#*://}"
+          DEV_DOMAIN="${DEV_DOMAIN%%/*}"
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          REMOTE_DOMAIN=$(printf '%q' "$DEV_DOMAIN")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+
+      # Public checks are diagnostics only. The blocking application and TLS
+      # checks run on the dev server, where CDN/WAF issues cannot cause a false
+      # deployment failure.
+      - name: External application health diagnostic
+        if: env.DEV_HEALTHCHECK_URL != ''
+        continue-on-error: true
+        run: |
+          curl --insecure --fail --show-error --silent --location \
+            --retry 2 --retry-delay 2 --retry-connrefused \
+            "$DEV_HEALTHCHECK_URL" > /dev/null
+
+      - name: External TLS certificate diagnostic
+        if: env.DEV_HEALTHCHECK_URL != ''
+        continue-on-error: true
+        run: |
+          curl --fail --show-error --silent --location \
+            --retry 2 --retry-delay 2 --retry-connrefused \
+            "$DEV_HEALTHCHECK_URL" > /dev/null
