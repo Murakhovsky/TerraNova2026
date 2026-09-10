@@ -10,6 +10,7 @@ $assert = static function (bool $condition, string $message): void {
 
 $pipeline = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/pipeline.phtml');
 $today = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/today.phtml');
+$deal = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/deal.phtml');
 $js = (string) file_get_contents($root . '/frontend/features/sales/workspace.js');
 $css = (string) file_get_contents($root . '/frontend/features/sales/workspace.css');
 $routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
@@ -22,11 +23,16 @@ $assert(str_contains($routes, "'/api/sales/deals/{id:[0-9]+}/stage'"), 'Canonica
 foreach (['initSalesPipeline', 'postStageChange', 'is-drop-target', '/stage'] as $marker) {
     $assert(str_contains($js, $marker), 'Sales workspace JS is missing Pipeline interaction: ' . $marker);
 }
-foreach (['#work', '#intelligence', '#timeline'] as $anchor) {
-    $assert(str_contains($today, $anchor), 'Today workspace must deep-link operational items to Deal Workspace section ' . $anchor);
+
+// Today stores the target section as data, then composes the hash at render time. Test the mapping
+// rather than requiring literal "#work" strings, which would couple the contract to PHP syntax.
+foreach (['work', 'intelligence', 'timeline', 'communications'] as $anchor) {
+    $assert(str_contains($today, "'" . $anchor . "'"), 'Today workspace is missing Deal Workspace mapping: ' . $anchor);
+    $assert(str_contains($deal, 'id="' . $anchor . '"'), 'Deal Workspace is missing mapped section: ' . $anchor);
 }
+$assert(str_contains($today, "'#' . $anchor"), 'Today workspace must compose section deep links from the configured mapping.');
 foreach (['is-drop-target', 'is-dragging'] as $marker) {
     $assert(str_contains($css, $marker), 'Sales workspace CSS is missing drag/drop state: ' . $marker);
 }
 
-echo "Sales operational workspace passed: Pipeline stage mutation and Today deep links use canonical Deal Workspace flows.\n";
+echo "Sales operational workspace passed: Pipeline mutation and Today deep links use canonical Deal Workspace flows.\n";
