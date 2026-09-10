@@ -63,11 +63,11 @@ final class SalesController extends WebController
             $deal = $q->deal($org, $id);
             if ($deal === null) {
                 $this->response->setStatusCode(404, 'Not Found');
-                return ['deal' => null, 'timeline' => [], 'communications' => [], 'approvals' => [], 'pipelines' => [], 'owners' => [], 'intelligence' => []];
+                return ['deal' => null, 'timeline' => [], 'communications' => [], 'approvals' => [], 'pipelines' => [], 'owners' => [], 'intelligence' => $this->normalizeDealIntelligence([])];
             }
-            $intelligence = [];
+            $intelligence = $this->normalizeDealIntelligence([]);
             try {
-                $intelligence = (array) $this->di->getShared('cosOperationsReadModel')->dealIntelligence($org, $id);
+                $intelligence = $this->normalizeDealIntelligence((array) $this->di->getShared('cosOperationsReadModel')->dealIntelligence($org, $id));
             } catch (Throwable) {
                 // Deal operations remain available even if intelligence projection is unavailable.
             }
@@ -122,6 +122,44 @@ final class SalesController extends WebController
             $this->view->pageStatus = 'Sales workspace тимчасово недоступний.';
             $this->di->getShared('cosLogger')->error('sales.workspace.read_failed', ['error' => $error->getMessage()]);
         }
+    }
+
+    /**
+     * Stable Sales-facing intelligence contract. COS can evolve its internal
+     * projection shape without forcing the Deal workspace to know every alias.
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeDealIntelligence(array $raw): array
+    {
+        $analysis = is_array($raw['analysis'] ?? null) ? $raw['analysis'] : [];
+        $decision = is_array($raw['decision'] ?? null) ? $raw['decision'] : [];
+        $signals = is_array($raw['signals'] ?? null) ? $raw['signals'] : [];
+        $actions = is_array($raw['actions'] ?? null) ? $raw['actions'] : [];
+        $firstAction = [];
+        foreach ($actions as $candidate) {
+            if (is_array($candidate)) {
+                $firstAction = $candidate;
+                break;
+            }
+        }
+        $pick = static function (mixed ...$values): mixed {
+            foreach ($values as $value) {
+                if ($value !== null && $value !== '' && $value !== []) return $value;
+            }
+            return null;
+        };
+
+        return array_replace($raw, [
+            'contract_version' => 'sales.intelligence.v1',
+            'deal_health' => $pick($raw['deal_health'] ?? null, $analysis['deal_health'] ?? null, $decision['deal_health'] ?? null, $raw['health'] ?? null, $decision['risk_level'] ?? null),
+            'customer_intent' => $pick($raw['customer_intent'] ?? null, $analysis['customer_intent'] ?? null, $signals['customer_intent'] ?? null, $decision['customer_intent'] ?? null),
+            'objections' => $pick($raw['objections'] ?? null, $analysis['objections'] ?? null, $signals['objections'] ?? null),
+            'missing_information' => $pick($raw['missing_information'] ?? null, $analysis['missing_information'] ?? null, $signals['missing_information'] ?? null, $raw['missing_info'] ?? null),
+            'next_best_action' => $pick($raw['next_best_action'] ?? null, $analysis['next_best_action'] ?? null, $decision['next_best_action'] ?? null, $firstAction['reason'] ?? null, $firstAction['description'] ?? null, $firstAction['type'] ?? null),
+            'recommended_timing' => $pick($raw['recommended_timing'] ?? null, $analysis['recommended_timing'] ?? null, $decision['recommended_timing'] ?? null, $firstAction['recommended_at'] ?? null, $firstAction['execute_at'] ?? null),
+            'confidence' => $pick($raw['confidence'] ?? null, $analysis['confidence'] ?? null, $decision['confidence'] ?? null),
+        ]);
     }
 
     /** @return list<array<string, mixed>> */

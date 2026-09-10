@@ -372,8 +372,11 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             $pipelineId = (string) ($row['pipeline_id'] ?? '');
             $dealId = (string) ($row['deal_id'] ?? '');
             $stageId = (string) ($row['stage_id'] ?? '');
-            if ($pipelineId === '' || $dealId === '' || $stageId === '') continue;
-            $visits[$pipelineId][$dealId][$stageId] = true;
+            $enteredAt = (string) ($row['entered_at'] ?? '');
+            if ($pipelineId === '' || $dealId === '' || $stageId === '' || $enteredAt === '') continue;
+            // Rows are ordered chronologically, so the first exact visit is the
+            // canonical timestamp used to prove forward conversion.
+            $visits[$pipelineId][$dealId][$stageId] ??= $enteredAt;
         }
 
         $result = [];
@@ -388,9 +391,13 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
                 $enteredDeals = [];
                 $reachedFromPrevious = [];
                 foreach ($dealVisits as $dealId => $stageVisits) {
-                    if (!empty($stageVisits[$stageId])) $enteredDeals[$dealId] = true;
-                    if ($previousStageId !== null && !empty($stageVisits[$previousStageId]) && !empty($stageVisits[$stageId])) {
-                        $reachedFromPrevious[$dealId] = true;
+                    $currentEnteredAt = $stageVisits[$stageId] ?? null;
+                    if ($currentEnteredAt !== null) $enteredDeals[$dealId] = true;
+                    if ($previousStageId !== null && $currentEnteredAt !== null) {
+                        $previousEnteredAt = $stageVisits[$previousStageId] ?? null;
+                        if ($previousEnteredAt !== null && strtotime((string) $currentEnteredAt) >= strtotime((string) $previousEnteredAt)) {
+                            $reachedFromPrevious[$dealId] = true;
+                        }
                     }
                 }
                 $entered = count($enteredDeals);

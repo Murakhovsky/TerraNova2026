@@ -1,0 +1,58 @@
+name: Sales V0.6.8 Epic 2 Closure
+
+on:
+  push:
+    branches: [COS, sales-v0.6.7-epic2-hardening]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sales V0.6.8 closure contract
+        run: php tests/unit/sales_v068.php
+      - name: Sales PHP syntax
+        run: |
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php
+          php -l app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php
+          php -l app/Interfaces/Web/Controller/SalesController.php
+      - name: Mutation E2E syntax
+        run: node --check tests/browser/sales_workspace.mjs
+
+  mutation-e2e:
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Require disposable Sales fixture configuration
+        env:
+          SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          SALES_E2E_STORAGE_STATE_JSON: ${{ secrets.SALES_E2E_STORAGE_STATE_JSON }}
+        run: |
+          test -n "$SALES_E2E_BASE_URL" || { echo 'Missing SALES_E2E_BASE_URL secret'; exit 1; }
+          test -n "$SALES_E2E_STORAGE_STATE_JSON" || { echo 'Missing SALES_E2E_STORAGE_STATE_JSON secret'; exit 1; }
+          printf '%s' "$SALES_E2E_STORAGE_STATE_JSON" > "$RUNNER_TEMP/sales-e2e-storage.json"
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN" || { echo 'No Chrome/Chromium executable found'; exit 1; }
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: Run mutation-safe Sales browser E2E
+        env:
+          SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          SALES_E2E_STORAGE_STATE: ${{ runner.temp }}/sales-e2e-storage.json
+          SALES_E2E_MUTATION_SAFE: '1'
+        run: npm run test:sales-browser
