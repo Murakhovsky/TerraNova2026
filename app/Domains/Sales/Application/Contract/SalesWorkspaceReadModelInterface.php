@@ -3,6 +3,13 @@ declare(strict_types=1);
 
 namespace Domains\Sales\Application\Contract;
 
+/**
+ * Stable read contract used by the core Sales workspace.
+ *
+ * Rich operational projections (communications, approvals, director drill-down)
+ * evolve independently so this base contract does not force every read model to
+ * implement UX-specific projections before they are wired into the workspace.
+ */
 interface SalesWorkspaceReadModelInterface
 {
     /** @return array<string, mixed> */
@@ -21,19 +28,10 @@ interface SalesWorkspaceReadModelInterface
     public function timeline(string $organizationId, int $dealId, int $limit = 100): array;
 
     /** @return list<array<string, mixed>> */
-    public function communications(string $organizationId, int $dealId, int $limit = 50): array;
-
-    /** @return list<array<string, mixed>> */
-    public function approvals(string $organizationId, ?int $dealId = null, ?int $ownerId = null, int $limit = 50): array;
-
-    /** @return list<array<string, mixed>> */
     public function pipelines(string $organizationId): array;
 
     /** @return array<string, list<array<string, mixed>>> */
     public function today(string $organizationId, int $ownerId): array;
-
-    /** @return array<string, mixed> */
-    public function directorAnalytics(string $organizationId, int $days = 30): array;
 
     /** @return array<string, mixed> */
     public function metrics(string $organizationId, int $days = 30): array;
