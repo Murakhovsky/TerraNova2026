@@ -62,7 +62,20 @@ final readonly class ChangeDealStage
             return ChangeDealStageResult::success($current->id, $target->id, false);
         }
 
-        return $this->transactions->transactional(function () use ($command, $pipeline, $current, $target, $validation) {
+        $lostReasonId = null;
+        if ($target->isLost) {
+            $lostReasonId = trim((string) $command->lostReasonId);
+            if ($lostReasonId === '') {
+                // Compatibility path for existing Sales/CRM callers that predate V0.7.2.
+                // Every LOST transition still persists a canonical reason, preferring OTHER.
+                $lostReasonId = $this->pipelines->defaultLostReasonId($command->organizationId, $pipeline->id) ?? '';
+            }
+            if ($lostReasonId === '' || !$this->pipelines->isValidLostReason($command->organizationId, $pipeline->id, $lostReasonId)) {
+                return ChangeDealStageResult::failure('An active lost reason is required when moving a Deal to LOST.');
+            }
+        }
+
+        return $this->transactions->transactional(function () use ($command, $pipeline, $current, $target, $validation, $lostReasonId) {
             $changed = $this->deals->changeStage(
                 $command->organizationId,
                 $command->dealId,
@@ -74,6 +87,8 @@ final readonly class ChangeDealStage
                 $target->isTerminal,
                 $target->isWon,
                 $target->isLost,
+                $target->isLost ? $lostReasonId : null,
+                $target->isLost ? $command->lostReasonNote : null,
             );
             if (!$changed) {
                 return ChangeDealStageResult::failure('concurrent_stage_change');
@@ -103,17 +118,23 @@ final readonly class ChangeDealStage
                 : ($target->isLost ? SalesEventType::DEAL_LOST : null);
 
             if ($terminalType !== null) {
+                $payload = [
+                    'pipeline_id' => $pipeline->id,
+                    'stage_id' => $target->id,
+                    'stage_code' => $target->code,
+                ];
+                if ($target->isLost) {
+                    $payload['lost_reason_id'] = $lostReasonId;
+                    $payload['lost_reason_note'] = $command->lostReasonNote;
+                }
+
                 $this->events->publish(new DomainEvent(
                     bin2hex(random_bytes(16)),
                     $command->organizationId,
                     $terminalType,
                     'deal',
                     $command->dealId,
-                    [
-                        'pipeline_id' => $pipeline->id,
-                        'stage_id' => $target->id,
-                        'stage_code' => $target->code,
-                    ],
+                    $payload,
                     $metadata,
                     new DateTimeImmutable(),
                 ));

@@ -214,9 +214,20 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     private function initialStage(string $organizationId): array
     {
-        $statement=$this->connection->prepare('SELECT s.id,s.pipeline_id,s.code,s.probability_default FROM sales_pipelines p INNER JOIN sales_pipeline_stages s ON s.pipeline_id=p.id AND s.is_terminal=0 WHERE p.organization_id=:organization_id AND p.status="ACTIVE" ORDER BY p.is_default DESC,s.sort_order,s.id LIMIT 1');
-        $statement->execute(['organization_id'=>$organizationId]);$row=$statement->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($row))throw new \RuntimeException('No initial stage is configured for the organization default pipeline.');
+        $statement = $this->connection->prepare(
+            'SELECT s.id, s.pipeline_id, s.code, s.probability_default
+             FROM sales_pipelines p
+             INNER JOIN sales_pipeline_stages s
+                ON s.id = p.initial_stage_id
+                AND s.pipeline_id = p.id
+                AND s.organization_id = p.organization_id
+                AND s.status = "ACTIVE"
+             WHERE p.organization_id = :organization_id AND p.status = "ACTIVE"
+             ORDER BY p.is_default DESC, p.created_at, p.id LIMIT 1'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) throw new \RuntimeException('No explicit active initial stage is configured for the organization default pipeline.');
         return $row;
     }
 

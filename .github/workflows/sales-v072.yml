@@ -1,0 +1,35 @@
+name: Sales V0.7.2 Pipeline Administration
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Sales V0.7.2 architecture contract
+        run: php tests/architecture/sales_v072_pipeline_admin.php
+      - name: Sales V0.7.2 PHP syntax
+        run: |
+          php -l app/Domains/Sales/Application/Contract/SalesPipelineAdministrationInterface.php
+          php -l app/Domains/Sales/Application/Contract/PipelineRepositoryInterface.php
+          php -l app/Domains/Sales/Application/Contract/DealStageRepositoryInterface.php
+          php -l app/Domains/Sales/Application/DTO/ChangeDealStageCommand.php
+          php -l app/Domains/Sales/Application/UseCase/ChangeDealStage.php
+          php -l app/Domains/Sales/Model/PipelineDefinition.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlPipelineRepository.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesPipelineAdministration.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlDealRepository.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php
+          php -l app/Interfaces/Api/Controller/SalesAdminPipelineController.php
+          php -l app/Interfaces/Api/Controller/SalesDealLifecycleController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminController.php
+          php -l app/Interfaces/Web/Routing/SalesRoutes.php
