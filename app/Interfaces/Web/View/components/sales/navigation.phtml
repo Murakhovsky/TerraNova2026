@@ -1,5 +1,6 @@
 <?php
 $active = (string) ($active ?? 'sales');
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $items = [
     ['key' => 'sales', 'href' => 'sales/dashboard', 'label' => 'Overview'],
     ['key' => 'today', 'href' => 'sales/today', 'label' => 'Today'],
@@ -16,3 +17,18 @@ try {
 } catch (Throwable) {
 }
 $this->partial('components/ui/tabs', ['items' => $items, 'active' => $active, 'label' => 'Sales workspace']);
+?>
+<div class="tn-sales-global-search" data-sales-global-search data-endpoint="<?php echo $h($this->url->get('api/sales/search')); ?>">
+  <!-- The GET form remains useful without JavaScript by falling back to the Deals search. -->
+  <form class="tn-sales-global-search__form" method="get" action="<?php echo $h($this->url->get('sales/deals')); ?>" data-sales-global-search-form role="search">
+    <label class="tn-ui-field tn-sales-global-search__field">
+      <span>Sales search</span>
+      <input class="tn-ui-input" type="search" name="q" minlength="2" maxlength="120" autocomplete="off"
+             placeholder="Lead, person, deal, phone, email, ID" aria-controls="sales-global-search-results" aria-autocomplete="list"
+             data-sales-global-search-input>
+    </label>
+    <button class="tn-ui-button tn-ui-button--ghost" type="submit">Search</button>
+  </form>
+  <p class="tn-sales-global-search__status" data-sales-global-search-status aria-live="polite"></p>
+  <div id="sales-global-search-results" class="tn-sales-global-search__results" data-sales-global-search-results hidden></div>
+</div>

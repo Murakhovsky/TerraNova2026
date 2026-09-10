@@ -3,8 +3,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Web\Controller;
 
-use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
-use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel;
+use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Throwable;
 
 final class SalesController extends WebController
@@ -108,13 +107,9 @@ final class SalesController extends WebController
         $this->view->workspace = [];
         $this->view->pageStatus = null;
         try {
-            /** @var SalesWorkspaceReadModelInterface $base */
-            $base = $this->di->getShared('salesWorkspaceReadModel');
-            // EPIC 2 keeps richer workspace projections outside the stable runtime read contract.
-            $query = new MysqlSalesWorkspaceOperationalReadModel(
-                $this->di->getShared('databaseService')->connection(),
-                $base,
-            );
+            /** @var SalesWorkspaceOperationalReadModelInterface $query */
+            $query = $this->di->getShared('salesWorkspaceOperationalReadModel');
+            // Interface layers depend on the Application contract; Bootstrap owns the concrete MySQL projection.
             $this->view->workspace = $reader($query, $this->organization()->id());
         } catch (Throwable $error) {
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -129,7 +124,7 @@ final class SalesController extends WebController
         try {
             return $this->di->getShared('salesClientCaseReadModel')->managerOptions();
         } catch (Throwable) {
-            // Workspaces remain usable if assignment options are temporarily unavailable.
+            // Workspaces remain usable if assignment options cannot be loaded.
             return [];
         }
     }

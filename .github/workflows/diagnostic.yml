@@ -55,6 +55,9 @@ jobs:
           # V0.6.1 was superseded by the stable V0.6.2 read boundary; gate deploy on the current runtime + UX contracts.
           php tests/unit/sales_v062.php
           php tests/unit/sales_v063.php
+          php tests/unit/sales_v065.php
+          node --check frontend/features/sales/workspace.js
+          node --check tests/browser/sales_workspace.mjs
 
       - name: Property submission check
         run: php tests/smoke/property_submission.php

@@ -21,6 +21,12 @@ final class SalesRoutes
             'controller' => 'sales_workspace_actions',
             'action' => $action,
         ];
+        $searchApi = static fn (string $action): array => [
+            'namespace' => 'Interfaces\\Api\\Controller',
+            'module' => 'frontend',
+            'controller' => 'sales_workspace_search',
+            'action' => $action,
+        ];
         $web = static fn (string $action): array => [
             'namespace' => 'Interfaces\\Web\\Controller',
             'module' => 'frontend',
@@ -28,8 +34,10 @@ final class SalesRoutes
             'action' => $action,
         ];
 
-        // Sales opens on the operational inbox. Dashboard remains available as a secondary overview.
+        // Sales opens on the operational inbox. Dashboard remains a secondary overview.
         $router->addGet('/sales', $web('today'));
+        // Search is read-only and intentionally separated from all mutation endpoints.
+        $router->addGet('/api/sales/search', $searchApi('search'));
 
         // Existing manager operations stay in the original Sales API controller.
         $router->addPost('/api/sales/deals/{id:[0-9]+}/quick', $salesApi('quickUpdate'));
@@ -38,7 +46,7 @@ final class SalesRoutes
         $router->addPost('/api/sales/deals/{id:[0-9]+}/meetings', $salesApi('meeting'));
         $router->addPost('/api/sales/deals/{id:[0-9]+}/owner', $salesApi('owner'));
 
-        // V0.6.2 actions form one Sales-facing facade over canonical Sales/Kernel mechanisms.
+        // Sales-facing facade over canonical Sales/Kernel mechanisms.
         $router->addPost('/api/sales/deals/{id:[0-9]+}/messages', $workspaceApi('message'));
         $router->addPost('/api/sales/deals/{id:[0-9]+}/activities/{activityId:[0-9]+}/complete', $workspaceApi('completeActivity'));
         $router->addPost('/api/sales/deals/{id:[0-9]+}/activities/{activityId:[0-9]+}/reschedule', $workspaceApi('rescheduleActivity'));
