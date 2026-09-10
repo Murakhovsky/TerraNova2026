@@ -5,6 +5,7 @@ namespace Domains\Diagnostic\Application\UseCase;
 
 use DateTimeImmutable;
 use DomainException;
+use Domains\Diagnostic\Application\Contract\DiagnosticAssessmentProjectionInterface;
 use Domains\Diagnostic\Application\Contract\DiagnosticPackRepositoryInterface;
 use Domains\Diagnostic\Application\Contract\DiagnosticSessionRepositoryInterface;
 use Domains\Diagnostic\Application\Support\DiagnosticEvents;
@@ -26,29 +27,20 @@ final readonly class EvaluateDiagnosticSession
         private TransactionManagerInterface $transactions,
         private MethodologyEngine $engine = new MethodologyEngine(),
         private DiagnosticSessionInputFactory $inputs = new DiagnosticSessionInputFactory(),
-    ) {
-    }
+        private ?DiagnosticAssessmentProjectionInterface $assessmentProjection = null,
+    ) {}
 
-    public function execute(
-        string $organizationId,
-        string $sessionId,
-        DateTimeImmutable $now,
-        string $actorType = 'SYSTEM',
-        string $actorId = 'system',
-    ): DiagnosticResult {
+    public function execute(string $organizationId, string $sessionId, DateTimeImmutable $now, string $actorType = 'SYSTEM', string $actorId = 'system'): DiagnosticResult
+    {
         return $this->transactions->transactional(function () use ($organizationId, $sessionId, $now, $actorType, $actorId): DiagnosticResult {
-            $session = $this->sessions->get($organizationId, $sessionId)
-                ?? throw new DomainException('Diagnostic session was not found.');
-            $pack = $this->packs->get($organizationId, $session->packId(), $session->packVersion())
-                ?? throw new DomainException('Pinned diagnostic pack was not found.');
+            $session = $this->sessions->get($organizationId, $sessionId) ?? throw new DomainException('Diagnostic session was not found.');
+            $pack = $this->packs->get($organizationId, $session->packId(), $session->packVersion()) ?? throw new DomainException('Pinned diagnostic pack was not found.');
             $result = $this->engine->evaluate($this->inputs->create($session), $pack->methodology());
             $expectedLockVersion = $session->lockVersion();
 
             $inputRecords = [];
             foreach ($session->records() as $record) {
-                if (in_array($record->type, [DiagnosticRecordType::Fact, DiagnosticRecordType::Metric], true)) {
-                    $inputRecords[$record->criterionCode] = $record;
-                }
+                if (in_array($record->type, [DiagnosticRecordType::Fact, DiagnosticRecordType::Metric], true)) $inputRecords[$record->criterionCode] = $record;
             }
             foreach ($result->assessments as $assessment) {
                 $id = 'assessment:' . $assessment->criterionId;
@@ -64,19 +56,8 @@ final readonly class EvaluateDiagnosticSession
                     DiagnosticRecordType::Assessment,
                     $assessment->criterionId,
                     $assessment->score === null
-                        ? sprintf(
-                            'Insufficient data for %s (coverage %.2f, confidence %.2f; missing: %s).',
-                            $assessment->criterionId,
-                            $assessment->coverage->ratio,
-                            $assessment->confidence,
-                            $assessment->coverage->missingRequired === [] ? 'none' : implode(', ', $assessment->coverage->missingRequired),
-                        )
-                        : sprintf(
-                            'Deterministic assessment for %s (coverage %.2f, confidence %.2f).',
-                            $assessment->criterionId,
-                            $assessment->coverage->ratio,
-                            $assessment->confidence,
-                        ),
+                        ? sprintf('Insufficient data for %s (coverage %.2f, confidence %.2f; missing: %s).', $assessment->criterionId, $assessment->coverage->ratio, $assessment->confidence, $assessment->coverage->missingRequired === [] ? 'none' : implode(', ', $assessment->coverage->missingRequired))
+                        : sprintf('Deterministic assessment for %s (coverage %.2f, confidence %.2f).', $assessment->criterionId, $assessment->coverage->ratio, $assessment->confidence),
                     $assessment->score,
                     'score',
                     $assessment->evidenceIds,
@@ -100,6 +81,9 @@ final readonly class EvaluateDiagnosticSession
             }
 
             $this->sessions->save($organizationId, $session, $expectedLockVersion);
+            // Coverage/confidence are structured diagnostic data, not prose. Keep a dedicated read projection
+            // so admin dashboards never have to parse human-readable assessment statements.
+            $this->assessmentProjection?->replace($organizationId, $sessionId, $result);
             $this->events->publish(DiagnosticSessionEvaluated::create(
                 DiagnosticEvents::id(), $organizationId, $sessionId, $result,
                 DiagnosticEvents::metadata($actorType, $actorId), $now,
