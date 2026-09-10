@@ -49,6 +49,12 @@ foreach (['completeActivity(', 'rescheduleActivity(', 'organization_id=:org', 'c
     $assert(str_contains($repository, $marker), 'Sales operation persistence missing tenant-safe lifecycle predicate: ' . $marker);
 }
 
+// V0.6.6 hardening: Deal.next_contact_at is a projection of open follow-ups, not of arbitrary activities.
+foreach (['syncNextContact(', 'MIN(due_at)', 'activity_type="followup"'] as $marker) {
+    $assert(str_contains($repository, $marker), 'Follow-up next-contact projection missing: ' . $marker);
+}
+$assert(!str_contains($repository, 'SET next_contact_at=:due'), 'Rescheduling a meeting/task must not overwrite Deal.next_contact_at directly.');
+
 // V0.6.1 put UX-specific projections on the stable read contract too early. V0.6.2
 // restores the base contract so runtime implementations cannot be broken by an unfinished UI slice.
 foreach (['communications(', 'approvals(', 'directorAnalytics('] as $marker) {
