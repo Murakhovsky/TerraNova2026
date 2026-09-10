@@ -105,10 +105,14 @@ foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-d
 foreach (['postStageChange', 'initSalesPipeline', 'is-drop-target', '/stage'] as $marker) {
     $assert(str_contains($js, $marker), 'Sales JS is missing Pipeline stage interaction ' . $marker);
 }
-foreach (["'work'", "'intelligence'", "'timeline'"] as $anchor) {
-    $assert(str_contains($today, $anchor), 'Today must map signals to Deal Workspace section ' . $anchor);
+
+// Today V0.6.3 moved incoming replies to the first-class Communications panel.
+// Test the current semantic mappings instead of preserving the old Timeline destination.
+foreach (['work', 'intelligence', 'communications'] as $anchor) {
+    $assert(str_contains($today, "'" . $anchor . "'"), 'Today must map signals to Deal Workspace section ' . $anchor);
+    $assert(str_contains($view, 'id="' . $anchor . '"'), 'Mapped Deal Workspace section is missing: ' . $anchor);
 }
-$assert(str_contains($today, "'#' . \$anchor"), 'Today must append the mapped section as a Deal Workspace fragment.');
+$assert(str_contains($today, "'#'.\$anchor") || str_contains($today, "'#' . \$anchor"), 'Today must append the mapped section as a Deal Workspace fragment.');
 foreach (['is-drop-target', 'is-dragging'] as $marker) {
     $assert(str_contains($css, $marker), 'Sales CSS is missing Pipeline interaction state ' . $marker);
 }

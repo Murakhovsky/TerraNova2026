@@ -35,7 +35,7 @@ jobs:
           php tests/smoke/diagnostic_methodology_studio.php
           php tests/smoke/diagnostic_v053.php
           php tests/smoke/diagnostic_v054.php
-          php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
+          php -r "require 'vendor/autoload.php'; (new Domains\Diagnostic\Methodology\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
 
       - name: Sales architecture and runtime checks
         run: |
@@ -51,6 +51,10 @@ jobs:
           php tests/unit/sales_v03.php
           php tests/unit/sales_v04.php
           php tests/unit/sales_manager_operations.php
+          php tests/unit/sales_operational_workspace.php
+          # V0.6.1 was superseded by the stable V0.6.2 read boundary; gate deploy on the current runtime + UX contracts.
+          php tests/unit/sales_v062.php
+          php tests/unit/sales_v063.php
 
       - name: Property submission check
         run: php tests/smoke/property_submission.php

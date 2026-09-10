@@ -24,13 +24,13 @@ foreach (['initSalesPipeline', 'postStageChange', 'is-drop-target', '/stage'] as
     $assert(str_contains($js, $marker), 'Sales workspace JS is missing Pipeline interaction: ' . $marker);
 }
 
-// Today stores the target section as data, then composes the hash at render time. Test the mapping
-// rather than requiring literal "#work" strings, which would couple the contract to PHP syntax.
-foreach (['work', 'intelligence', 'timeline', 'communications'] as $anchor) {
+// Only anchors actually used by Today belong to this contract. Timeline remains a valid
+// Deal section, but New Replies now deep-link to Communications where the manager can answer.
+foreach (['work', 'intelligence', 'communications'] as $anchor) {
     $assert(str_contains($today, "'" . $anchor . "'"), 'Today workspace is missing Deal Workspace mapping: ' . $anchor);
     $assert(str_contains($deal, 'id="' . $anchor . '"'), 'Deal Workspace is missing mapped section: ' . $anchor);
 }
-$assert(str_contains($today, "'#' . $anchor"), 'Today workspace must compose section deep links from the configured mapping.');
+$assert(str_contains($today, "'#'.\$anchor") || str_contains($today, "'#' . \$anchor"), 'Today workspace must compose section deep links from the configured mapping.');
 foreach (['is-drop-target', 'is-dragging'] as $marker) {
     $assert(str_contains($css, $marker), 'Sales workspace CSS is missing drag/drop state: ' . $marker);
 }
