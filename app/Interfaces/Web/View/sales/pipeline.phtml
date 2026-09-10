@@ -16,12 +16,12 @@ foreach ($deals as $deal) {
 }
 $money = static fn($v, $currency = 'USD') => number_format((float)$v, 0, '.', ' ') . ' ' . ($currency ?: 'USD');
 ?>
-<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-sales-workspace" data-sales-workspace>
+<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-sales-workspace" data-sales-workspace data-sales-pipeline-root data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
   <?php $this->partial('components/sales/navigation', ['active' => 'pipeline']); ?>
   <?php $this->partial('components/ui/page_header', [
     'eyebrow' => 'Sales · Pipeline',
     'title' => $pipeline['name'] ?? 'Sales Pipeline',
-    'description' => 'Конфігурована воронка з value, risk та наступною дією. Stage definitions приходять із Sales V0.4.',
+    'description' => 'Конфігурована воронка з value, risk та наступною дією. Перетягування картки викликає canonical ChangeDealStage, а не обхідний UI-запис.',
     'actions' => [['label' => 'Deals', 'href' => 'sales/deals', 'variant' => 'ghost'], ['label' => 'Today', 'href' => 'sales/today', 'variant' => 'primary']],
   ]); ?>
   <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Pipeline недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
@@ -32,14 +32,16 @@ $money = static fn($v, $currency = 'USD') => number_format((float)$v, 0, '.', ' 
     </form>
   <?php endif; ?>
 
+  <div class="tn-sales-pipeline-status" data-sales-pipeline-status aria-live="polite"></div>
+
   <?php if (!empty($pipeline['stages'])): ?>
     <section class="tn-sales-kanban tn-workspace-section" aria-label="Sales pipeline">
-      <?php foreach ($pipeline['stages'] as $stage): $items = $byStage[(string)($stage['id'] ?? '')] ?? []; ?>
-        <section class="tn-sales-stage">
+      <?php foreach ($pipeline['stages'] as $stage): $stageId = (string)($stage['id'] ?? ''); $items = $byStage[$stageId] ?? []; ?>
+        <section class="tn-sales-stage" data-sales-stage data-stage-id="<?php echo $h($stageId); ?>">
           <header><span><?php echo $h($stage['name'] ?? $stage['code'] ?? 'Stage'); ?></span><b><?php echo count($items); ?></b></header>
-          <div class="tn-sales-stage__body">
+          <div class="tn-sales-stage__body" data-sales-stage-dropzone data-stage-id="<?php echo $h($stageId); ?>">
             <?php foreach ($items as $deal): ?>
-              <a class="tn-sales-card" href="<?php echo $this->url->get('sales/deals/' . (int)$deal['id']); ?>">
+              <a class="tn-sales-card" draggable="true" data-sales-deal-card data-deal-id="<?php echo (int)$deal['id']; ?>" data-stage-id="<?php echo $h((string)($deal['stage_id'] ?? '')); ?>" href="<?php echo $this->url->get('sales/deals/' . (int)$deal['id']); ?>">
                 <div><strong><?php echo $h($deal['customer'] ?? '—'); ?></strong><?php $this->partial('components/ui/status_badge', ['label' => $deal['risk_level'] ?? 'NORMAL', 'tone' => ($deal['risk_level'] ?? '') === 'HIGH' ? 'danger' : 'neutral']); ?></div>
                 <p><?php echo $h($deal['title'] ?? $deal['public_id'] ?? 'Deal'); ?></p>
                 <dl><dt>Value</dt><dd><?php echo $h($money($deal['deal_value'] ?? 0, $deal['currency'] ?? 'USD')); ?></dd><dt>Probability</dt><dd><?php echo $h(($deal['probability'] ?? 0) . '%'); ?></dd><dt>Next</dt><dd><?php echo $h($deal['next_action_at'] ?: 'Not set'); ?></dd></dl>
