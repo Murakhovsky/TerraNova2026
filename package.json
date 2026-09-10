@@ -4,7 +4,8 @@
   "scripts": {
     "build": "vite build",
     "build:spatial": "vite build",
-    "test:frontend": "node tests/frontend/api_client.mjs"
+    "test:frontend": "node tests/frontend/api_client.mjs",
+    "test:sales-browser": "node tests/browser/sales_workspace.mjs"
   },
   "dependencies": {
     "@sparkjsdev/spark": "^2.1.0",

@@ -98,13 +98,16 @@ final readonly class SalesInboundService
             $canonicalType = match ($status) {
                 LeadStatus::Contacted->value => SalesEventType::LEAD_CONTACTED,
                 LeadStatus::Qualified->value => SalesEventType::LEAD_QUALIFIED,
-                LeadStatus::Lost->value => SalesEventType::LEAD_DISQUALIFIED,
+                LeadStatus::Disqualified->value, LeadStatus::Lost->value => SalesEventType::LEAD_DISQUALIFIED,
                 default => null,
             };
             if ($canonicalType !== null && (string) $request['status'] !== $status) {
                 $this->events->publish(new DomainEvent(ClientCaseEvents::id(), $this->organizationId, $canonicalType, 'lead', (string) $requestId, ['previous_status' => $request['status'], 'status' => $status], $metadata, new \DateTimeImmutable()));
             }
-            if ($case) {
+
+            // Disqualification classifies the Lead only. A linked Deal has its own lifecycle
+            // and must not be silently moved to LOST just because this inbound request is rejected.
+            if ($case && $status !== LeadStatus::Disqualified->value) {
                 $state = ClientCaseInput::caseStateForLead($status);
                 if (!$this->commands->syncCaseFromLead($this->organizationId, $caseId, [
                     'status' => $state['status'], 'assigned_user_id' => $managerId, 'next_contact_at' => $nextContact,

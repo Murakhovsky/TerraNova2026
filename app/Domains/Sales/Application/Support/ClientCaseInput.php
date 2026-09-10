@@ -173,6 +173,7 @@ final class ClientCaseInput
             LeadStatus::Negotiation->value => 'Переговори',
             LeadStatus::Won->value => 'Успіх',
             LeadStatus::Lost->value => 'Втрачена',
+            LeadStatus::Disqualified->value => 'Дискваліфікована',
             LeadStatus::Spam->value => 'Спам',
             LeadStatus::Closed->value => 'Закрита',
         ][$status] ?? 'Заявка';

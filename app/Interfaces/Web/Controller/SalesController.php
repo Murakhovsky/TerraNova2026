@@ -63,7 +63,13 @@ final class SalesController extends WebController
             $deal = $q->deal($org, $id);
             if ($deal === null) {
                 $this->response->setStatusCode(404, 'Not Found');
-                return ['deal' => null, 'timeline' => [], 'communications' => [], 'approvals' => [], 'pipelines' => [], 'owners' => []];
+                return ['deal' => null, 'timeline' => [], 'communications' => [], 'approvals' => [], 'pipelines' => [], 'owners' => [], 'intelligence' => []];
+            }
+            $intelligence = [];
+            try {
+                $intelligence = (array) $this->di->getShared('cosOperationsReadModel')->dealIntelligence($org, $id);
+            } catch (Throwable) {
+                // Deal operations remain available even if intelligence projection is unavailable.
             }
             return [
                 'deal' => $deal,
@@ -72,6 +78,7 @@ final class SalesController extends WebController
                 'approvals' => $q->approvals($org, $id, null, 50),
                 'pipelines' => $q->pipelines($org),
                 'owners' => $this->managerOptions(),
+                'intelligence' => $intelligence,
             ];
         });
     }
@@ -109,7 +116,6 @@ final class SalesController extends WebController
         try {
             /** @var SalesWorkspaceOperationalReadModelInterface $query */
             $query = $this->di->getShared('salesWorkspaceOperationalReadModel');
-            // Interface layers depend on the Application contract; Bootstrap owns the concrete MySQL projection.
             $this->view->workspace = $reader($query, $this->organization()->id());
         } catch (Throwable $error) {
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -124,7 +130,6 @@ final class SalesController extends WebController
         try {
             return $this->di->getShared('salesClientCaseReadModel')->managerOptions();
         } catch (Throwable) {
-            // Workspaces remain usable if assignment options cannot be loaded.
             return [];
         }
     }
