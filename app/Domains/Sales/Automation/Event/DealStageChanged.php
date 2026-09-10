@@ -15,8 +15,11 @@ final class DealStageChanged
         string $id,
         string $organizationId,
         string $dealId,
-        string $previousStage,
-        string $newStage,
+        string $pipelineId,
+        string $previousStageId,
+        string $previousStageCode,
+        string $stageId,
+        string $stageCode,
         EventMetadata $metadata,
     ): DomainEvent {
         return new DomainEvent(
@@ -25,7 +28,13 @@ final class DealStageChanged
             self::TYPE,
             'deal',
             $dealId,
-            ['previous_stage' => $previousStage, 'new_stage' => $newStage],
+            [
+                'pipeline_id' => $pipelineId,
+                'previous_stage_id' => $previousStageId,
+                'previous_stage_code' => $previousStageCode,
+                'stage_id' => $stageId,
+                'stage_code' => $stageCode,
+            ],
             $metadata,
             new DateTimeImmutable(),
         );
