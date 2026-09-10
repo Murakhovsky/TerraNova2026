@@ -56,8 +56,8 @@ $executor = new ActionExecutor([
 ]);
 
 $scenarios = [
-    [DealCreated::TYPE, 'deal-1', ['deal' => ['status' => 'active', 'stage' => 'new']], 'sales.create_qualification_task'],
-    [DealStageChanged::TYPE, 'deal-2', ['deal' => ['status' => 'active', 'stage' => 'qualification', 'next_contact_at' => null]], 'sales.create_followup_task'],
+    [DealCreated::TYPE, 'deal-1', ['deal' => ['status' => 'active', 'stage_code' => 'NEW']], 'sales.create_qualification_task'],
+    [DealStageChanged::TYPE, 'deal-2', ['deal' => ['status' => 'active', 'stage_code' => 'QUALIFIED', 'next_contact_at' => null]], 'sales.create_followup_task'],
     [FollowupOverdue::TYPE, 'deal-3', ['deal' => ['status' => 'active'], 'activity' => ['completed_at' => null, 'is_overdue' => true]], 'sales.escalate_overdue_followup'],
 ];
 
@@ -101,7 +101,7 @@ foreach ($scenarios as $index => [$type, $dealId, $context, $expectedAction]) {
 
 $negative = new DomainEvent('event-negative', 'default', DealStageChanged::TYPE, 'deal', 'deal-4', [], $metadata, new DateTimeImmutable());
 $matched = array_filter(
-    $engine->evaluate($negative, ['deal' => ['status' => 'active', 'stage' => 'qualification', 'next_contact_at' => '2026-08-23 10:00:00']], $rules),
+    $engine->evaluate($negative, ['deal' => ['status' => 'active', 'stage_code' => 'QUALIFIED', 'next_contact_at' => '2026-08-23 10:00:00']], $rules),
     static fn ($evaluation): bool => $evaluation->matched,
 );
 if ($matched !== []) {

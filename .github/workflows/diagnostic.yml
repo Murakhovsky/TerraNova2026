@@ -19,6 +19,15 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: npm ci
 
+      - name: Kernel and domain architecture gate
+        run: |
+          php tests/architecture/layer_dependencies.php
+          php tests/architecture/domain_boundaries.php
+          php tests/architecture/persistence_boundaries.php
+          php tests/architecture/table_ownership.php
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/sales_v071_configuration.php
+
       - name: Frontend interface architecture
         run: |
           npm run build
@@ -52,7 +61,6 @@ jobs:
           php tests/unit/sales_v04.php
           php tests/unit/sales_manager_operations.php
           php tests/unit/sales_operational_workspace.php
-          # V0.6.1 was superseded by the stable V0.6.2 read boundary; gate deploy on the current runtime + UX contracts.
           php tests/unit/sales_v062.php
           php tests/unit/sales_v063.php
           php tests/unit/sales_v065.php

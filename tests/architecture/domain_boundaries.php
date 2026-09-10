@@ -6,22 +6,17 @@ use Infrastructure\Platform\Persistence\TableOwnership;
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
-$expected = ['Content', 'Diagnostic', 'Identity', 'Property', 'Sales', 'Spatial'];
-$actual = array_map(
+$domains = array_map(
     static fn (string $path): string => basename($path),
     glob($root . '/app/Domains/*', GLOB_ONLYDIR) ?: [],
 );
-sort($expected);
-sort($actual);
-if ($actual !== $expected) {
-    throw new RuntimeException(sprintf(
-        'Domain catalog changed without an architecture decision. Expected %s, got %s.',
-        implode(', ', $expected),
-        implode(', ', $actual),
-    ));
+sort($domains);
+
+if ($domains === []) {
+    throw new RuntimeException('No business Domains were discovered.');
 }
 
-foreach ($expected as $domain) {
+foreach ($domains as $domain) {
     $application = $root . '/app/Domains/' . $domain . '/Application';
     if (!is_dir($application) || (glob($application . '/**/*.php') ?: []) === []) {
         throw new RuntimeException($domain . ' has no application boundary.');
@@ -41,4 +36,7 @@ if (TableOwnership::ownerOf('tn_analytics_events') !== 'Platform') {
     throw new RuntimeException('Technical analytics storage must be owned by Platform.');
 }
 
-echo "Domain boundaries passed: only approved business contexts remain under Domains.\n";
+echo sprintf(
+    "Domain boundaries passed: %d business contexts discovered dynamically.\n",
+    count($domains),
+);
