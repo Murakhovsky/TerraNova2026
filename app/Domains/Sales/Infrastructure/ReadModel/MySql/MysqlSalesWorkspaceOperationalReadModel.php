@@ -85,7 +85,6 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         }
         if (($filters['q'] ?? '') !== '') {
             $value = '%' . trim((string) $filters['q']) . '%';
-            // Phone/email are included because Global Sales Search must find a Deal by the customer contact too.
             $where[] = '(c.title LIKE :q_title OR c.public_id LIKE :q_public OR p.full_name LIKE :q_customer OR p.phone LIKE :q_phone OR p.email LIKE :q_email)';
             $params['q_title'] = $value;
             $params['q_public'] = $value;
@@ -101,6 +100,14 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         if (($filters['risk'] ?? '') === 'high') {
             $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
         }
+        if (($filters['value_min'] ?? '') !== '' && is_numeric($filters['value_min'])) {
+            $where[] = 'COALESCE(c.deal_value,c.budget_max,0) >= :value_min';
+            $params['value_min'] = (float) $filters['value_min'];
+        }
+        if (($filters['value_max'] ?? '') !== '' && is_numeric($filters['value_max'])) {
+            $where[] = 'COALESCE(c.deal_value,c.budget_max,0) <= :value_max';
+            $params['value_max'] = (float) $filters['value_max'];
+        }
 
         return $this->all(
             'SELECT c.id,c.public_id,c.title,c.status,c.priority,c.source,c.pipeline_id,c.stage_id,'
@@ -109,14 +116,21 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             . 'COALESCE(c.deal_value,c.budget_max) deal_value,c.currency,COALESCE(c.probability,s.probability_default,0) probability,'
             . 'ROUND(COALESCE(c.deal_value,c.budget_max,0)*COALESCE(c.probability,s.probability_default,0)/100,2) weighted_value,'
             . 'c.last_activity_at,c.next_contact_at next_action_at,c.expected_close_at,c.created_at,c.updated_at,'
-            . 'TIMESTAMPDIFF(DAY,c.updated_at,NOW()) days_in_stage,'
+            . 'COALESCE(h.entered_at,c.created_at) stage_entered_at,'
+            . 'TIMESTAMPDIFF(DAY,COALESCE(h.entered_at,c.created_at),NOW()) days_in_stage,'
+            . 'CASE WHEN h.is_backfill=1 THEN 1 ELSE 0 END stage_age_estimated,'
             . 'CASE WHEN c.next_contact_at IS NOT NULL AND c.next_contact_at<NOW() THEN "FOLLOW_UP_OVERDUE" '
             . 'WHEN c.priority IN ("high","urgent") THEN "HIGH_PRIORITY" WHEN c.last_activity_at IS NULL THEN "NO_ACTIVITY" '
             . 'WHEN c.last_activity_at<NOW()-INTERVAL 48 HOUR THEN "NO_ACTIVITY_48H" WHEN c.next_contact_at IS NULL THEN "NO_NEXT_ACTION" ELSE NULL END attention_reason,'
-            . 'CASE WHEN c.priority IN ("high","urgent") OR c.next_contact_at<NOW() OR c.last_activity_at<NOW()-INTERVAL 48 HOUR THEN "HIGH" ELSE "NORMAL" END risk_level '
+            . 'CASE WHEN c.priority IN ("high","urgent") OR c.next_contact_at<NOW() OR c.last_activity_at<NOW()-INTERVAL 48 HOUR THEN "HIGH" ELSE "NORMAL" END risk_level,'
+            . 'CASE WHEN c.next_contact_at IS NOT NULL AND c.next_contact_at<NOW() THEN "Complete overdue follow-up" '
+            . 'WHEN c.next_contact_at IS NULL THEN "Set the next customer action" '
+            . 'WHEN c.last_activity_at IS NULL OR c.last_activity_at<NOW()-INTERVAL 48 HOUR THEN "Re-engage the customer" '
+            . 'WHEN c.priority IN ("high","urgent") THEN "Review high-priority deal" ELSE "Continue planned next action" END ai_recommendation '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id=c.person_id AND p.organization_id=c.organization_id '
             . 'LEFT JOIN tn_users u ON u.id=c.assigned_user_id AND u.organization_id=c.organization_id '
             . 'LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id '
+            . 'LEFT JOIN sales_deal_stage_history h ON h.organization_id=c.organization_id AND h.deal_id=c.id AND h.pipeline_id=c.pipeline_id AND h.stage_id=c.stage_id AND h.left_at IS NULL '
             . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY COALESCE(s.sort_order,0),c.updated_at DESC LIMIT ' . $this->limit($filters['limit'] ?? 100),
             $params,
         );
@@ -126,7 +140,16 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
     {
         $deal = $this->base->deal($organizationId, $dealId);
         if ($deal === null) return null;
-        $deal['days_in_stage'] = max(0, (int) floor((time() - strtotime((string) ($deal['updated_at'] ?? 'now'))) / 86400));
+        $history = $this->safeAll(
+            'SELECT entered_at,is_backfill FROM sales_deal_stage_history WHERE organization_id=:organization_id AND deal_id=:deal_id AND left_at IS NULL ORDER BY id DESC LIMIT 1',
+            ['organization_id' => $organizationId, 'deal_id' => $dealId],
+        );
+        $current = $history[0] ?? null;
+        $enteredAt = (string) ($current['entered_at'] ?? $deal['created_at'] ?? $deal['updated_at'] ?? 'now');
+        $entered = strtotime($enteredAt) ?: time();
+        $deal['stage_entered_at'] = $enteredAt;
+        $deal['stage_age_estimated'] = (int) ($current['is_backfill'] ?? 0) === 1;
+        $deal['days_in_stage'] = max(0, (int) floor((time() - $entered) / 86400));
         $deal['weighted_value'] = round((float) ($deal['value'] ?? 0) * (float) ($deal['probability'] ?? 0) / 100, 2);
         $deal['attention_reason'] = $this->attentionReason($deal);
         return $deal;
@@ -258,7 +281,6 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
                 'id' => (int) $person['id'],
                 'title' => (string) ($person['name'] ?? 'Person'),
                 'meta' => $this->meta([$person['phone'] ?? null, $person['email'] ?? null, $person['telegram'] ?? null, $person['deal_public_id'] ?? null]),
-                // A standalone Person has no Sales detail route yet. Link only when a Deal exists.
                 'href' => !empty($person['deal_id']) ? '/sales/deals/' . (int) $person['deal_id'] : null,
             ];
         }
@@ -276,7 +298,6 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         $deals = $this->deals($organizationId, ['limit' => 250]);
         $active = array_values(array_filter($deals, static fn (array $deal): bool => in_array((string) ($deal['status'] ?? ''), ['active', 'paused'], true)));
         $managers = [];
-        $stageCounts = [];
 
         foreach ($deals as $deal) {
             $ownerKey = (string) ((int) ($deal['owner_id'] ?? 0));
@@ -294,11 +315,8 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             $managers[$ownerKey]['pipeline_value'] += (float) ($deal['deal_value'] ?? 0);
             if (($deal['risk_level'] ?? '') === 'HIGH') $managers[$ownerKey]['at_risk']++;
             if (empty($deal['next_action_at'])) $managers[$ownerKey]['without_next_action']++;
-            $stage = (string) ($deal['stage_name'] ?? $deal['stage_code'] ?? 'Unknown');
-            $stageCounts[$stage] = ($stageCounts[$stage] ?? 0) + 1;
         }
 
-        // Response time and follow-up discipline come from real Sales timestamps, not AI inference.
         foreach ($this->safeAll(
             'SELECT assigned_user_id owner_id,ROUND(AVG(TIMESTAMPDIFF(MINUTE,created_at,last_contacted_at)),1) lead_response_minutes '
             . 'FROM tn_leads WHERE organization_id=:organization_id AND assigned_user_id IS NOT NULL AND last_contacted_at IS NOT NULL '
@@ -322,7 +340,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         $stale = array_values(array_filter($active, static fn (array $deal): bool => (int) ($deal['days_in_stage'] ?? 0) >= 7));
 
         return [
-            'funnel' => ['kind' => 'current_state_cohort', 'stages' => $stageCounts],
+            'funnel' => $this->historicalFunnel($organizationId, $days),
             'pipeline_health' => [
                 'active_deals' => count($active),
                 'at_risk' => count($atRisk),
@@ -334,6 +352,82 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             'manager_performance' => array_values($managers),
             'pending_approvals' => count($this->approvals($organizationId, null, null, 250)),
             'window_days' => $days,
+        ];
+    }
+
+    private function historicalFunnel(string $organizationId, int $days): array
+    {
+        $rows = $this->safeAll(
+            'SELECT deal_id,pipeline_id,stage_id,entered_at FROM sales_deal_stage_history '
+            . 'WHERE organization_id=:organization_id AND is_backfill=0 AND entered_at>=NOW()-INTERVAL ' . $days . ' DAY '
+            . 'ORDER BY pipeline_id,deal_id,entered_at,id',
+            ['organization_id' => $organizationId],
+        );
+        $legacy = $this->safeAll(
+            'SELECT COUNT(*) count FROM sales_deal_stage_history WHERE organization_id=:organization_id AND is_backfill=1',
+            ['organization_id' => $organizationId],
+        );
+        $visits = [];
+        foreach ($rows as $row) {
+            $pipelineId = (string) ($row['pipeline_id'] ?? '');
+            $dealId = (string) ($row['deal_id'] ?? '');
+            $stageId = (string) ($row['stage_id'] ?? '');
+            $enteredAt = (string) ($row['entered_at'] ?? '');
+            if ($pipelineId === '' || $dealId === '' || $stageId === '' || $enteredAt === '') continue;
+            // Rows are ordered chronologically, so the first exact visit is the
+            // canonical timestamp used to prove forward conversion.
+            $visits[$pipelineId][$dealId][$stageId] ??= $enteredAt;
+        }
+
+        $result = [];
+        foreach ($this->base->pipelines($organizationId) as $pipeline) {
+            $pipelineId = (string) ($pipeline['id'] ?? '');
+            $dealVisits = $visits[$pipelineId] ?? [];
+            $stages = [];
+            $previousStageId = null;
+            $previousEntered = null;
+            foreach ($pipeline['stages'] ?? [] as $stage) {
+                $stageId = (string) ($stage['id'] ?? '');
+                $enteredDeals = [];
+                $reachedFromPrevious = [];
+                foreach ($dealVisits as $dealId => $stageVisits) {
+                    $currentEnteredAt = $stageVisits[$stageId] ?? null;
+                    if ($currentEnteredAt !== null) $enteredDeals[$dealId] = true;
+                    if ($previousStageId !== null && $currentEnteredAt !== null) {
+                        $previousEnteredAt = $stageVisits[$previousStageId] ?? null;
+                        if ($previousEnteredAt !== null && strtotime((string) $currentEnteredAt) >= strtotime((string) $previousEnteredAt)) {
+                            $reachedFromPrevious[$dealId] = true;
+                        }
+                    }
+                }
+                $entered = count($enteredDeals);
+                $conversion = $previousStageId === null || !$previousEntered
+                    ? null
+                    : round(100 * count($reachedFromPrevious) / $previousEntered, 1);
+                $stages[] = [
+                    'stage_id' => $stageId,
+                    'stage_code' => (string) ($stage['code'] ?? ''),
+                    'stage_name' => (string) ($stage['name'] ?? $stage['code'] ?? 'Stage'),
+                    'entered' => $entered,
+                    'reached_from_previous' => count($reachedFromPrevious),
+                    'conversion_from_previous' => $conversion,
+                ];
+                $previousStageId = $stageId;
+                $previousEntered = $entered;
+            }
+            $result[] = [
+                'pipeline_id' => $pipelineId,
+                'pipeline_name' => (string) ($pipeline['name'] ?? $pipeline['code'] ?? 'Pipeline'),
+                'stages' => $stages,
+            ];
+        }
+
+        return [
+            'kind' => 'historical_stage_transitions',
+            'pipelines' => $result,
+            'window_days' => $days,
+            'exact_entries' => count($rows),
+            'backfill_excluded' => (int) ($legacy[0]['count'] ?? 0),
         ];
     }
 
@@ -377,7 +471,6 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         try {
             return $this->all($sql, $params);
         } catch (PDOException) {
-            // Optional workspace analytics/search degrade to empty data, never break manager operations.
             return [];
         }
     }

@@ -15,6 +15,7 @@ enum LeadStatus: string
     case Negotiation = 'negotiation';
     case Won = 'won';
     case Lost = 'lost';
+    case Disqualified = 'disqualified';
     case Spam = 'spam';
     case Closed = 'closed';
 }

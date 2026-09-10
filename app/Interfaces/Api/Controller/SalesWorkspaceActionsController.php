@@ -78,7 +78,7 @@ final class SalesWorkspaceActionsController extends WebController
     {
         return $this->leadMutation($id, function (int $leadId, array $input, array $user): Response {
             $status = strtolower(trim((string) ($input['status'] ?? '')));
-            if (!in_array($status, ['new', 'contacted', 'qualified', 'lost'], true)) {
+            if (!in_array($status, ['new', 'contacted', 'qualified', 'disqualified', 'lost'], true)) {
                 return $this->json(422, ['ok' => false, 'error' => 'Unsupported lead status.']);
             }
             $result = $this->di->getShared('salesInboundService')->updateRequest($leadId, [
@@ -183,7 +183,6 @@ final class SalesWorkspaceActionsController extends WebController
             $actions = $this->di->getShared('cosActionService');
             $action = $actions->find($this->organization()->id(), $actionId);
             if ($action === null) return $this->json(404, ['ok' => false, 'error' => 'Action not found.']);
-            // Pending approvals must be rejected through ApprovalService so approval and action states cannot diverge.
             if ($action->status !== ActionStatus::Proposed) return $this->json(409, ['ok' => false, 'error' => 'Only a proposed action can be dismissed directly.']);
             $actions->reject($this->organization()->id(), $actionId);
             return $this->json(200, ['ok' => true, 'data' => ['status' => 'REJECTED']]);

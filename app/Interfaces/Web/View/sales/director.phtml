@@ -5,6 +5,7 @@ $metrics = $workspace['metrics'] ?? [];
 $kpis = $workspace['dashboard']['kpis'] ?? [];
 $analytics = $workspace['analytics'] ?? [];
 $health = $analytics['pipeline_health'] ?? [];
+$funnel = $analytics['funnel'] ?? [];
 $money = static fn($value) => number_format((float) $value, 0, '.', ' ') . ' USD';
 $minutes = static fn($value) => $value === null ? '—' : number_format((float) $value, 1, '.', ' ') . ' min';
 $percent = static fn($value) => $value === null ? '—' : number_format((float) $value, 1, '.', ' ') . '%';
@@ -14,7 +15,7 @@ $percent = static fn($value) => $value === null ? '—' : number_format((float) 
   <?php $this->partial('components/ui/page_header', [
       'eyebrow' => 'Sales · Director',
       'title' => 'Комерційна картина',
-      'description' => 'Current-state pipeline health, team discipline і вимірюваний вплив COS. Історичну transition conversion не домальовуємо з фантазії.',
+      'description' => 'Pipeline health, historical stage transitions, team discipline і вимірюваний вплив COS.',
       'actions' => [['label' => 'Pipeline', 'href' => 'sales/pipeline', 'variant' => 'primary']],
   ]); ?>
 
@@ -25,19 +26,19 @@ $percent = static fn($value) => $value === null ? '—' : number_format((float) 
         ['Won rate', ($metrics['won_rate'] ?? 0) . '%', 'positive'],
         ['At-risk revenue', $money($health['at_risk_revenue'] ?? 0), 'danger'],
         ['Pending approvals', $analytics['pending_approvals'] ?? 0, 'warning'],
-    ] as [$label, $value, $tone]) {
-        $this->partial('components/ui/kpi_card', ['label' => $label, 'value' => $value, 'tone' => $tone]);
-    } ?>
+    ] as [$label, $value, $tone]) $this->partial('components/ui/kpi_card', ['label' => $label, 'value' => $value, 'tone' => $tone]); ?>
   </section>
 
   <div class="tn-ui-split tn-workspace-section">
     <section class="tn-ui-panel">
-      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Funnel</p><h2>Current-state cohort</h2><p>Розподіл поточних угод за stage. Це не історична stage conversion.</p></div></div>
-      <dl class="tn-sales-definition-list">
-        <?php foreach (($analytics['funnel']['stages'] ?? []) as $stage => $count): ?>
-          <div><dt><?php echo $h($stage); ?></dt><dd><?php echo (int) $count; ?></dd></div>
-        <?php endforeach; ?>
-      </dl>
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Funnel</p><h2>Historical stage transitions</h2><p>Conversion рахується лише з точних stage-entry records у вікні <?php echo (int) ($funnel['window_days'] ?? 30); ?> днів.</p></div></div>
+      <?php foreach ($funnel['pipelines'] ?? [] as $pipeline): ?>
+        <h3><?php echo $h($pipeline['pipeline_name'] ?? 'Pipeline'); ?></h3>
+        <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Stage</th><th>Entered</th><th>Reached from previous</th><th>Conversion</th></tr></thead><tbody>
+        <?php foreach ($pipeline['stages'] ?? [] as $stage): ?><tr><td><?php echo $h($stage['stage_name'] ?? 'Stage'); ?></td><td><?php echo (int) ($stage['entered'] ?? 0); ?></td><td><?php echo (int) ($stage['reached_from_previous'] ?? 0); ?></td><td><?php echo ($stage['conversion_from_previous'] ?? null) === null ? '—' : $h(number_format((float) $stage['conversion_from_previous'], 1) . '%'); ?></td></tr><?php endforeach; ?>
+        </tbody></table></div>
+      <?php endforeach; ?>
+      <p class="tn-sales-note">Exact entries: <?php echo (int) ($funnel['exact_entries'] ?? 0); ?>. Legacy backfill excluded: <?php echo (int) ($funnel['backfill_excluded'] ?? 0); ?>. Старим даним машина часу не домальована.</p>
     </section>
     <section class="tn-ui-panel">
       <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Pipeline health</p><h2>Операційне здоровʼя</h2></div></div>
@@ -49,24 +50,14 @@ $percent = static fn($value) => $value === null ? '—' : number_format((float) 
         <div><dt>Stale 7d</dt><dd><?php echo (int) ($health['stale_7d'] ?? 0); ?></dd></div>
         <div><dt>Weighted value</dt><dd><?php echo $h($money($health['weighted_value'] ?? 0)); ?></dd></div>
       </dl>
-      <p class="tn-sales-note">Stale 7d uses the current days-in-stage approximation until a dedicated historical stage projection is introduced.</p>
+      <p class="tn-sales-note">Stage age uses durable stage history. Legacy current-stage seeds remain explicitly marked as estimated until the next real transition.</p>
     </section>
   </div>
 
   <section class="tn-ui-panel tn-workspace-section">
     <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Manager performance</p><h2>Команда</h2><p>Response і follow-up discipline рахуються з реальних lead/activity timestamps.</p></div></div>
     <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Manager</th><th>Deals</th><th>Pipeline</th><th>At risk</th><th>No next action</th><th>Response</th><th>Follow-up</th></tr></thead><tbody>
-      <?php foreach ($analytics['manager_performance'] ?? [] as $manager): ?>
-        <tr>
-          <td><?php echo $h($manager['owner_name'] ?? 'Unassigned'); ?></td>
-          <td><?php echo (int) ($manager['deals'] ?? 0); ?></td>
-          <td><?php echo $h($money($manager['pipeline_value'] ?? 0)); ?></td>
-          <td><?php echo (int) ($manager['at_risk'] ?? 0); ?></td>
-          <td><?php echo (int) ($manager['without_next_action'] ?? 0); ?></td>
-          <td><?php echo $h($minutes($manager['lead_response_minutes'] ?? null)); ?></td>
-          <td><?php echo $h($percent($manager['followup_completion_rate'] ?? null)); ?></td>
-        </tr>
-      <?php endforeach; ?>
+      <?php foreach ($analytics['manager_performance'] ?? [] as $manager): ?><tr><td><?php echo $h($manager['owner_name'] ?? 'Unassigned'); ?></td><td><?php echo (int) ($manager['deals'] ?? 0); ?></td><td><?php echo $h($money($manager['pipeline_value'] ?? 0)); ?></td><td><?php echo (int) ($manager['at_risk'] ?? 0); ?></td><td><?php echo (int) ($manager['without_next_action'] ?? 0); ?></td><td><?php echo $h($minutes($manager['lead_response_minutes'] ?? null)); ?></td><td><?php echo $h($percent($manager['followup_completion_rate'] ?? null)); ?></td></tr><?php endforeach; ?>
     </tbody></table></div>
   </section>
 
@@ -77,6 +68,6 @@ $percent = static fn($value) => $value === null ? '—' : number_format((float) 
       <?php $this->partial('components/ui/kpi_card', ['label' => 'Executed', 'value' => $metrics['actions_executed'] ?? 0]); ?>
       <?php $this->partial('components/ui/kpi_card', ['label' => 'Measured outcomes', 'value' => $metrics['actions_successful'] ?? 0, 'tone' => 'positive']); ?>
     </div>
-    <p class="tn-sales-note">Revenue influenced зʼявляється тільки через Business Outcome attribution. Сам факт, що COS торкнувся Deal, ще не робить його бухгалтером.</p>
+    <p class="tn-sales-note">Revenue influenced зʼявляється тільки через Business Outcome attribution.</p>
   </section>
 </main>
