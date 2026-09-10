@@ -44,6 +44,8 @@ jobs:
           php tests/smoke/diagnostic_methodology_studio.php
           php tests/smoke/diagnostic_v053.php
           php tests/smoke/diagnostic_v054.php
+          php tests/smoke/diagnostic_v055.php
+          node --check frontend/features/diagnostics/methodology-studio-v055.js
           php -r "require 'vendor/autoload.php'; (new Domains\Diagnostic\Methodology\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
 
       - name: Sales architecture and runtime checks

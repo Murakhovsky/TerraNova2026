@@ -14,7 +14,9 @@ use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticAssessmen
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyStudioRepository;
+use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyWorkbenchRepository;
 use Domains\Diagnostic\Application\Service\MethodologyStudioService;
+use Domains\Diagnostic\Application\Service\MethodologyWorkbenchService;
 use Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess;
 
 $di->setShared('diagnosticPackRepository', fn (): MysqlDiagnosticPackRepository => new MysqlDiagnosticPackRepository($this->getShared('databaseService')->connection()));
@@ -22,6 +24,12 @@ $di->setShared('diagnosticSessionRepository', fn (): MysqlDiagnosticSessionRepos
 $di->setShared('diagnosticAssessmentProjection', fn (): MysqlDiagnosticAssessmentProjection => new MysqlDiagnosticAssessmentProjection($this->getShared('databaseService')->connection()));
 $di->setShared('diagnosticMethodologyStudioRepository', fn (): MysqlMethodologyStudioRepository => new MysqlMethodologyStudioRepository($this->getShared('databaseService')->connection()));
 $di->setShared('diagnosticMethodologyStudio', fn (): MethodologyStudioService => new MethodologyStudioService($this->getShared('diagnosticMethodologyStudioRepository')));
+$di->setShared('diagnosticMethodologyWorkbenchRepository', fn (): MysqlMethodologyWorkbenchRepository => new MysqlMethodologyWorkbenchRepository($this->getShared('databaseService')->connection()));
+$di->setShared('diagnosticMethodologyWorkbench', fn (): MethodologyWorkbenchService => new MethodologyWorkbenchService(
+    $this->getShared('diagnosticMethodologyStudio'),
+    $this->getShared('diagnosticMethodologyStudioRepository'),
+    $this->getShared('diagnosticMethodologyWorkbenchRepository'),
+));
 $di->setShared('diagnosticMethodologyAccess', fn (): DiagnosticMethodologyAccess => new DiagnosticMethodologyAccess($this->getShared('databaseService')->connection()));
 $di->setShared('diagnosticPublishPack', fn (): PublishDiagnosticPack => new PublishDiagnosticPack($this->getShared('diagnosticPackRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager')));
 $di->setShared('diagnosticDraftPack', fn (): DraftDiagnosticPack => new DraftDiagnosticPack($this->getShared('diagnosticPackRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager')));
