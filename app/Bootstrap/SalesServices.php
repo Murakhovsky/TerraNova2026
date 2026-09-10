@@ -24,6 +24,7 @@ use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel;
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
@@ -45,6 +46,11 @@ $di->setShared('salesClientCaseReadModel', fn (): MysqlClientCaseReadModel => ne
 ));
 $di->setShared('salesWorkspaceReadModel', fn (): MysqlSalesWorkspaceReadModel => new MysqlSalesWorkspaceReadModel(
     $this->getShared('databaseService')->connection(),
+));
+// The composition root owns the concrete projection; Web/API layers consume only the Application contract.
+$di->setShared('salesWorkspaceOperationalReadModel', fn (): MysqlSalesWorkspaceOperationalReadModel => new MysqlSalesWorkspaceOperationalReadModel(
+    $this->getShared('databaseService')->connection(),
+    $this->getShared('salesWorkspaceReadModel'),
 ));
 $di->setShared('salesOutcomeRepository', fn (): MysqlSalesOutcomeRepository => new MysqlSalesOutcomeRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepository => new MysqlClientCaseCommandRepository($this->getShared('databaseService')->connection()));

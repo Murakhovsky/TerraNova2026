@@ -17,6 +17,14 @@ interface SalesWorkspaceOperationalReadModelInterface extends SalesWorkspaceRead
     /** @return list<array<string, mixed>> */
     public function approvals(string $organizationId, ?int $dealId = null, ?int $ownerId = null, int $limit = 50): array;
 
+    /**
+     * Search is a workspace projection, not a new domain aggregate. It combines
+     * tenant-scoped Leads, Deals and Persons into one navigation surface.
+     *
+     * @return array{query:string,items:list<array<string,mixed>>,groups:array<string,int>}
+     */
+    public function search(string $organizationId, string $query, int $limitPerType = 6): array;
+
     /** @return array<string, mixed> */
     public function directorAnalytics(string $organizationId, int $days = 30): array;
 }
