@@ -1,37 +1,4 @@
 <?php
-$h = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-$workspace = $workspace ?? [];
-$metrics = $workspace['metrics'] ?? [];
-$kpis = $workspace['dashboard']['kpis'] ?? [];
-$deals = $workspace['deals'] ?? [];
-$money = static fn($v) => number_format((float) $v, 0, '.', ' ') . ' USD';
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');$workspace=$workspace??[];$metrics=$workspace['metrics']??[];$kpis=$workspace['dashboard']['kpis']??[];$analytics=$workspace['analytics']??[];$money=static fn($v)=>number_format((float)$v,0,'.',' ').' USD';
 ?>
-<main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
-  <?php $this->partial('components/sales/navigation', ['active' => 'director']); ?>
-  <?php $this->partial('components/ui/page_header', [
-    'eyebrow' => 'Sales · Director',
-    'title' => 'Комерційна картина',
-    'description' => 'Pipeline, conversion, ризик і вплив COS мовою бізнесу, а не логів Kernel.',
-    'actions' => [['label' => 'Pipeline', 'href' => 'sales/pipeline', 'variant' => 'primary']],
-  ]); ?>
-  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Director view недоступний', 'message' => $pageStatus]); ?><?php endif; ?>
-
-  <section class="tn-ui-kpi-grid tn-workspace-section">
-    <?php foreach ([
-      ['Pipeline value', $money($kpis['pipeline_value'] ?? 0), 'neutral'],
-      ['Expected revenue', $money($kpis['expected_revenue'] ?? 0), 'positive'],
-      ['Won rate', ($metrics['won_rate'] ?? 0) . '%', 'positive'],
-      ['Deals at risk', $kpis['deals_at_risk'] ?? 0, 'danger'],
-      ['Sales cycle', ($metrics['sales_cycle_hours'] ?? 0) . ' h', 'neutral'],
-    ] as [$label,$value,$tone]): ?><?php $this->partial('components/ui/kpi_card', ['label'=>$label,'value'=>$value,'tone'=>$tone]); ?><?php endforeach; ?>
-  </section>
-
-  <div class="tn-ui-split tn-workspace-section">
-    <section class="tn-ui-panel"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Execution</p><h2>COS Impact</h2></div></div><div class="tn-ui-kpi-grid tn-sales-mini-kpis"><?php $this->partial('components/ui/kpi_card',['label'=>'Proposed','value'=>$metrics['actions_proposed']??0]); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Executed','value'=>$metrics['actions_executed']??0]); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Measured outcomes','value'=>$metrics['actions_successful']??0,'tone'=>'positive']); ?></div><p class="tn-sales-note">Revenue influenced зʼявляється тільки після Business Outcome attribution (атрибуції бізнес-результату). Ніякої бухгалтерії з оптимізмом.</p></section>
-    <section class="tn-ui-panel"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Discipline</p><h2>Sales process</h2></div></div><dl class="tn-sales-definition-list"><div><dt>Follow-up completion</dt><dd><?php echo $h(($metrics['followup_completion_rate'] ?? 0) . '%'); ?></dd></div><div><dt>Lost deals</dt><dd><?php echo $h($metrics['lost_deals'] ?? 0); ?></dd></div><div><dt>Total deals / 30d</dt><dd><?php echo $h($metrics['total_deals'] ?? 0); ?></dd></div></dl></section>
-  </div>
-
-  <section class="tn-ui-panel tn-workspace-section"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Portfolio</p><h2>Останні угоди</h2></div><a href="<?php echo $this->url->get('sales/deals'); ?>">Усі deals</a></div>
-    <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Deal</th><th>Customer</th><th>Stage</th><th>Owner</th><th>Value</th><th>Risk</th></tr></thead><tbody><?php foreach ($deals as $deal): ?><tr><td><a href="<?php echo $this->url->get('sales/deals/' . (int)$deal['id']); ?>"><?php echo $h($deal['public_id']); ?></a></td><td><?php echo $h($deal['customer']); ?></td><td><?php echo $h($deal['stage_name']); ?></td><td><?php echo $h($deal['owner_name'] ?: 'Unassigned'); ?></td><td><?php echo $h($money($deal['deal_value'])); ?></td><td><?php $this->partial('components/ui/status_badge',['label'=>$deal['risk_level']??'NORMAL','tone'=>($deal['risk_level']??'')==='HIGH'?'danger':'neutral']); ?></td></tr><?php endforeach; ?><?php if(!$deals): ?><tr><td colspan="6">Угод немає.</td></tr><?php endif; ?></tbody></table></div>
-  </section>
-</main>
+<main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace><?php $this->partial('components/sales/navigation',['active'=>'director']); ?><?php $this->partial('components/ui/page_header',['eyebrow'=>'Sales · Director','title'=>'Комерційна картина','description'=>'Current-state pipeline health, team load і вимірюваний вплив COS. Без вигаданої історичної конверсії.','actions'=>[['label'=>'Pipeline','href'=>'sales/pipeline','variant'=>'primary']]]); ?><section class="tn-ui-kpi-grid tn-workspace-section"><?php foreach([['Pipeline value',$money($kpis['pipeline_value']??0),'neutral'],['Expected revenue',$money($kpis['expected_revenue']??0),'positive'],['Won rate',($metrics['won_rate']??0).'%','positive'],['Deals at risk',$analytics['pipeline_health']['at_risk']??0,'danger'],['Pending approvals',$analytics['pending_approvals']??0,'warning']] as [$l,$v,$t])$this->partial('components/ui/kpi_card',['label'=>$l,'value'=>$v,'tone'=>$t]); ?></section><div class="tn-ui-split tn-workspace-section"><section class="tn-ui-panel"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Funnel</p><h2>Current-state cohort</h2><p>Розподіл поточних угод за stage, а не історична transition conversion.</p></div></div><dl class="tn-sales-definition-list"><?php foreach(($analytics['funnel']['stages']??[]) as $stage=>$count):?><div><dt><?php echo $h($stage); ?></dt><dd><?php echo (int)$count; ?></dd></div><?php endforeach; ?></dl></section><section class="tn-ui-panel"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Pipeline health</p><h2>Операційне здоровʼя</h2></div></div><dl class="tn-sales-definition-list"><div><dt>Active deals</dt><dd><?php echo (int)($analytics['pipeline_health']['active_deals']??0); ?></dd></div><div><dt>At risk</dt><dd><?php echo (int)($analytics['pipeline_health']['at_risk']??0); ?></dd></div><div><dt>Without next action</dt><dd><?php echo (int)($analytics['pipeline_health']['without_next_action']??0); ?></dd></div><div><dt>Weighted value</dt><dd><?php echo $h($money($analytics['pipeline_health']['weighted_value']??0)); ?></dd></div></dl></section></div><section class="tn-ui-panel tn-workspace-section"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Manager performance</p><h2>Команда</h2></div></div><div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Manager</th><th>Deals</th><th>Pipeline</th><th>At risk</th><th>No next action</th></tr></thead><tbody><?php foreach($analytics['manager_performance']??[] as $m):?><tr><td><?php echo $h($m['owner_name']??'Unassigned'); ?></td><td><?php echo (int)($m['deals']??0); ?></td><td><?php echo $h($money($m['pipeline_value']??0)); ?></td><td><?php echo (int)($m['at_risk']??0); ?></td><td><?php echo (int)($m['without_next_action']??0); ?></td></tr><?php endforeach; ?></tbody></table></div></section><section class="tn-ui-panel tn-workspace-section"><div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">COS Impact</p><h2>Measured execution</h2></div></div><div class="tn-ui-kpi-grid tn-sales-mini-kpis"><?php $this->partial('components/ui/kpi_card',['label'=>'Proposed','value'=>$metrics['actions_proposed']??0]); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Executed','value'=>$metrics['actions_executed']??0]); ?><?php $this->partial('components/ui/kpi_card',['label'=>'Measured outcomes','value'=>$metrics['actions_successful']??0,'tone'=>'positive']); ?></div><p class="tn-sales-note">Revenue influenced зʼявляється тільки через Business Outcome attribution.</p></section></main>

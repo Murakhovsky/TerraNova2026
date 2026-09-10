@@ -1,0 +1,23 @@
+name: Sales V0.6.3 Contract
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+jobs:
+  sales-v063:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sales V0.6.2 runtime boundary
+        run: php tests/unit/sales_v062.php
+      - name: Sales V0.6.3 projection and UX contract
+        run: php tests/unit/sales_v063.php
+      - name: Sales workspace JavaScript syntax
+        run: node --check frontend/features/sales/workspace.js
