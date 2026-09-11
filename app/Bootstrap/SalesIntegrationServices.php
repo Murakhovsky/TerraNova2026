@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 use Domains\Sales\Automation\Integration\SalesIntegrationDefinitionCatalog;
-use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesIntegrationAdministration;
 use Infrastructure\Integration\Crm\CrmRegistrySalesIntegrationHealthProbe;
+use Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesIntegrationAdministration;
 
 $di->setShared('salesIntegrationHealthProbe', fn (): CrmRegistrySalesIntegrationHealthProbe => new CrmRegistrySalesIntegrationHealthProbe(
     $this->getShared('cosCrmRegistry'),

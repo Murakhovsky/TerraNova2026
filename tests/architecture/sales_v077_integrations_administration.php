@@ -7,7 +7,7 @@ $required = [
     'app/Domains/Sales/Application/Contract/SalesIntegrationAdministrationInterface.php',
     'app/Domains/Sales/Application/Contract/SalesIntegrationHealthProbeInterface.php',
     'app/Domains/Sales/Automation/Integration/SalesIntegrationDefinitionCatalog.php',
-    'app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesIntegrationAdministration.php',
+    'app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlSalesIntegrationAdministration.php',
     'app/Infrastructure/Integration/Crm/CrmRegistrySalesIntegrationHealthProbe.php',
     'app/Interfaces/Api/Controller/SalesAdminIntegrationController.php',
     'app/Interfaces/Web/Controller/SalesAdminIntegrationController.php',
@@ -21,7 +21,7 @@ foreach ($required as $path) {
     }
 }
 
-$service = file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesIntegrationAdministration.php');
+$service = file_get_contents($root . '/app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlSalesIntegrationAdministration.php');
 foreach (['cos_integrations', 'sales_integration_routes', 'configuration_version', 'health_status', 'credentials_configured', 'INTEGRATION_ROUTE'] as $needle) {
     if (!str_contains($service, $needle)) {
         throw new RuntimeException('V0.7.7 integration administration contract missing: ' . $needle);

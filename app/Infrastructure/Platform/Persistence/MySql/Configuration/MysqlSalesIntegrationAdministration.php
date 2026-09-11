@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Domains\Sales\Infrastructure\Persistence\MySql;
+namespace Infrastructure\Platform\Persistence\MySql\Configuration;
 
 use DomainException;
 use Domains\Sales\Application\Contract\SalesIntegrationAdministrationInterface;
