@@ -18,10 +18,22 @@ foreach (['OrganizationContextInterface', 'ActiveModuleResolver', 'organization-
 }
 
 $contributor = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/SalesModuleRouteContributor.php');
-foreach (['SalesRoutes::register', 'SalesTeamRoutes::register', 'SalesIntegrationRoutes::register', 'SalesAdministrationRoutes::register', 'beforeMatch', "allows('sales')", 'spl_object_id'] as $needle) {
+foreach (['SalesRoutes::register', 'SalesTeamRoutes::register', 'SalesIntegrationRoutes::register', 'SalesAdministrationRoutes::register'] as $needle) {
     if (!str_contains($contributor, $needle)) {
-        throw new RuntimeException('Sales route contribution is missing module access enforcement: ' . $needle);
+        throw new RuntimeException('Sales route contribution lost route ownership: ' . $needle);
     }
+}
+
+$registrarPath = $root . '/app/Interfaces/Web/Routing/ModuleRouteRegistrar.php';
+$registrar = is_file($registrarPath) ? (string) file_get_contents($registrarPath) : '';
+$enforcement = $contributor . "\n" . $registrar;
+foreach (['beforeMatch', 'spl_object_id'] as $needle) {
+    if (!str_contains($enforcement, $needle)) {
+        throw new RuntimeException('Module route access enforcement is missing: ' . $needle);
+    }
+}
+if (!str_contains($enforcement, "allows('sales')") && !str_contains($enforcement, 'allows($moduleId)')) {
+    throw new RuntimeException('Module route access enforcement is not backed by ModuleRouteAccessGuard.');
 }
 
 $services = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');

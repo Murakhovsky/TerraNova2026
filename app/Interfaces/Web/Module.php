@@ -7,6 +7,7 @@ use Bootstrap\WebApplicationServices;
 use Interfaces\Web\Page\PublicPageService;
 use Interfaces\Web\Routing\FrontendRoutes;
 use Interfaces\Web\Routing\ModuleRouteContributorInterface;
+use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\PlatformRoutes;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
@@ -30,6 +31,11 @@ class Module implements ModuleDefinitionInterface
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
         PlatformRoutes::register($router);
 
+        $routeRegistrar = $di->getShared('moduleRouteRegistrar');
+        if (!$routeRegistrar instanceof ModuleRouteRegistrar) {
+            throw new RuntimeException('Invalid module route registrar.');
+        }
+
         foreach ((array) $di->getShared('cosModuleApiRouteContributors') as $contribution) {
             $moduleId = $contribution['module_id'] ?? null;
             $service = $contribution['service'] ?? null;
@@ -37,7 +43,7 @@ class Module implements ModuleDefinitionInterface
                 throw new RuntimeException('Invalid module route contributor.');
             }
 
-            $service->register($router);
+            $routeRegistrar->register($moduleId, $service, $router);
         }
 
         $di->set('view', function () {

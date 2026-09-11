@@ -9,6 +9,7 @@ use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
 use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
 use Interfaces\Web\Routing\ModuleRouteAccessGuard;
+use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\SalesModuleRouteContributor;
 use Interfaces\Web\Service\ClientCaseService;
 use Interfaces\Web\Service\CompanyHomeService;
@@ -36,9 +37,10 @@ final class WebApplicationServices
             $di->getShared('organizationContext'),
             $di->getShared('cosActiveModuleResolver'),
         ));
-        $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor(
+        $di->setShared('moduleRouteRegistrar', fn() => new ModuleRouteRegistrar(
             $di->getShared('moduleRouteAccessGuard'),
         ));
+        $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor());
         $di->setShared('frontendAdminDashboardService', fn() => new AdminDashboardService($di->getShared('databaseService')));
         $di->setShared('frontendAnalyticsService', fn() => new MysqlPropertyFunnelAnalytics($di->getShared('databaseService')));
         $di->setShared('frontendPublicPageService', fn() => new PublicPageService());
