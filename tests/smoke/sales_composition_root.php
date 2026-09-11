@@ -8,6 +8,7 @@ use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
 use Domains\Sales\Bootstrap\SalesDomainModule;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPolicyContextProvider;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesRuleContextProvider;
 use Infrastructure\Integration\Crm\RoutedCrmGateway;
 
@@ -52,6 +53,7 @@ $di->setShared('salesDealRepository', $deals);
 $di->setShared('salesScheduleDealFollowup', $followup);
 $di->setShared('salesRuleContextProvider', $withoutConstructor(MysqlSalesRuleContextProvider::class));
 $di->setShared('salesAgentContextBuilder', $withoutConstructor(MysqlSalesAgentContextBuilder::class));
+$di->setShared('salesPolicyContextProvider', $withoutConstructor(MysqlSalesPolicyContextProvider::class));
 $di->setShared('salesChangeDealStage', $withoutConstructor(ChangeDealStage::class));
 $di->setShared('salesOperationService', $operations);
 $di->setShared('salesAssignDealOwner', $withoutConstructor(AssignDealOwner::class));
