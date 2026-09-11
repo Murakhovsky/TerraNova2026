@@ -37,6 +37,8 @@ jobs:
           npm run build
           php tests/architecture/frontend_assets.php
           php tests/architecture/frontend_interface.php
+          php tests/architecture/web_v05_module_navigation.php
+          php tests/unit/web_v05_module_navigation.php
 
       - name: Diagnostic checks
         run: |

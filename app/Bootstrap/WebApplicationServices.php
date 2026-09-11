@@ -8,6 +8,10 @@ use Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService;
 use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
 use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
+use Interfaces\Web\Navigation\DiagnosticNavigationContributor;
+use Interfaces\Web\Navigation\ModuleAwareNavigationService;
+use Interfaces\Web\Navigation\PropertyNavigationContributor;
+use Interfaces\Web\Navigation\SalesNavigationContributor;
 use Interfaces\Web\Routing\ModuleRouteAccessGuard;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\SalesModuleRouteContributor;
@@ -41,6 +45,18 @@ final class WebApplicationServices
             $di->getShared('moduleRouteAccessGuard'),
         ));
         $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor());
+
+        $di->setShared('webModuleNavigationContributors', fn() => [
+            new SalesNavigationContributor(),
+            new PropertyNavigationContributor(),
+            new DiagnosticNavigationContributor(),
+        ]);
+        $di->setShared('frontendNavigationService', fn() => new ModuleAwareNavigationService(
+            $di->getShared('organizationContext'),
+            $di->getShared('cosActiveModuleResolver'),
+            $di->getShared('webModuleNavigationContributors'),
+        ));
+
         $di->setShared('frontendAdminDashboardService', fn() => new AdminDashboardService($di->getShared('databaseService')));
         $di->setShared('frontendAnalyticsService', fn() => new MysqlPropertyFunnelAnalytics($di->getShared('databaseService')));
         $di->setShared('frontendPublicPageService', fn() => new PublicPageService());

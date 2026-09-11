@@ -19,37 +19,28 @@ $public = FrontendNavigation::public();
 $expectedPublic = ['home', 'catalog', 'services', 'partners', 'about', 'cos'];
 if ($keys($public) !== $expectedPublic) throw new RuntimeException('Public primary navigation changed without an explicit interface architecture decision.');
 
-$workspace = FrontendNavigation::workspace('manager');
-$primary = $workspace['primary'] ?? [];
-$expectedPrimary = ['home', 'sales', 'clients', 'properties', 'cos', 'analytics', 'administration'];
-if ($keys($primary) !== $expectedPrimary) throw new RuntimeException('Workspace primary navigation changed without an explicit interface architecture decision.');
-
-$managerUtility = $keys($workspace['utility'] ?? []);
-if (in_array('users', $managerUtility, true)) throw new RuntimeException('Manager navigation must not expose admin-only Users.');
-$managerAdministration = $section($primary, 'administration');
+$workspaceCore = FrontendNavigation::workspaceCore('manager');
+$corePrimary = $workspaceCore['primary'] ?? [];
+$expectedCorePrimary = ['home', 'cos', 'analytics', 'administration'];
+if ($keys($corePrimary) !== $expectedCorePrimary) throw new RuntimeException('Workspace core navigation must remain module-neutral.');
+$managerAdministration = $section($corePrimary, 'administration');
 if ($keys($managerAdministration['children'] ?? []) !== ['content']) throw new RuntimeException('Manager Administration must expose Content without admin-only Users.');
 
-$adminWorkspace = FrontendNavigation::workspace('admin');
-$adminPrimary = $adminWorkspace['primary'] ?? [];
-if ($keys($adminPrimary) !== $expectedPrimary) throw new RuntimeException('Admin Workspace primary navigation must use the canonical workspace sections.');
-$adminAdministration = $section($adminPrimary, 'administration');
+$adminWorkspaceCore = FrontendNavigation::workspaceCore('admin');
+$adminCorePrimary = $adminWorkspaceCore['primary'] ?? [];
+if ($keys($adminCorePrimary) !== $expectedCorePrimary) throw new RuntimeException('Admin Workspace core must remain module-neutral.');
+$adminAdministration = $section($adminCorePrimary, 'administration');
 if ($keys($adminAdministration['children'] ?? []) !== ['users', 'content']) throw new RuntimeException('Admin Administration must expose Users and Content.');
 
-$salesSection = $section($primary, 'sales');
-$managerSales = $keys($salesSection['children'] ?? []);
-if ($managerSales !== ['sales','today','pipeline','leads','deals','director']) throw new RuntimeException('Manager Sales workspace navigation must expose the canonical WEB V0.3 screens.');
-$adminSalesSection = $section($adminPrimary, 'sales');
-$adminSales = $keys($adminSalesSection['children'] ?? []);
-if (!in_array('sales-admin', $adminSales, true)) throw new RuntimeException('Admin Sales workspace must expose Sales Admin.');
-
-$propertiesSection = $section($primary, 'properties');
-if (!in_array('locations', $keys($propertiesSection['children'] ?? []), true)) throw new RuntimeException('Workspace Properties must expose Locations.');
-$cosSection = $section($primary, 'cos');
-foreach (['actions', 'approvals', 'agents', 'rules', 'events', 'audit', 'diagnostics'] as $cosChild) {
-    if (!in_array($cosChild, $keys($cosSection['children'] ?? []), true)) throw new RuntimeException('COS workspace is missing canonical child: ' . $cosChild);
-}
+$portalCore = FrontendNavigation::portalCore('realtor');
+if ($keys($portalCore['primary'] ?? []) !== ['cabinet']) throw new RuntimeException('Portal core must not hardcode Domain navigation.');
 
 foreach ([
+    'app/Interfaces/Web/Navigation/ModuleNavigationContributorInterface.php',
+    'app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php',
+    'app/Interfaces/Web/Navigation/SalesNavigationContributor.php',
+    'app/Interfaces/Web/Navigation/PropertyNavigationContributor.php',
+    'app/Interfaces/Web/Navigation/DiagnosticNavigationContributor.php',
     'app/Interfaces/Web/Service/CompanyHomeService.php',
     'app/Interfaces/Web/View/components/workspace_sidebar.phtml',
     'app/Interfaces/Web/View/components/workspace_topbar.phtml',
@@ -92,6 +83,7 @@ foreach ([
     'docs/architecture/web-v0.2.md',
     'docs/architecture/web-v0.3.md',
     'docs/architecture/web-v0.4.md',
+    'docs/architecture/web-v0.5.md',
 ] as $requiredPath) {
     if (!is_file($root . '/' . $requiredPath)) throw new RuntimeException('Frontend interface architecture file is missing: ' . $requiredPath);
 }
@@ -117,7 +109,14 @@ if (str_contains($adminHomeView, "partial('shared/manager_header'")) throw new R
 if (!str_contains($adminHomeView, 'Runtime modules') || !str_contains($adminHomeView, 'Company Home')) throw new RuntimeException('Company Home must expose company pulse and runtime module state.');
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
-if (!str_contains($webServices, "setShared('frontendCompanyHomeService'")) throw new RuntimeException('Company Home must be registered in the Web composition root.');
+foreach (["setShared('frontendCompanyHomeService'", "setShared('webModuleNavigationContributors'", "setShared('frontendNavigationService'"] as $needle) {
+    if (!str_contains($webServices, $needle)) throw new RuntimeException('Web composition root is missing service: ' . $needle);
+}
+
+$managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
+foreach (["getShared('frontendNavigationService')", 'navigationService->workspace', 'navigationService->portal'] as $needle) {
+    if (!str_contains($managerHeader, $needle)) throw new RuntimeException('Shared Web shell is missing WEB V0.5 module-aware navigation: ' . $needle);
+}
 
 $cosController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/CosController.php');
 if (!str_contains($cosController, "workspaceSection = 'cos'") || !str_contains($cosController, "['cos-control-center']")) throw new RuntimeException('COS Control Center must opt into the Workspace shell and its feature bundle.');
@@ -143,4 +142,4 @@ foreach ($views as $view) {
     if (str_contains($source, '/assets/js/') || str_contains($source, '/assets/css/')) throw new RuntimeException('PHTML must not bypass Vite with direct /assets JS/CSS references: ' . $view->getPathname());
 }
 
-echo "Frontend interface architecture passed: unified public/workspace navigation and WEB V0.4 composition are enforced.\n";
+echo "Frontend interface architecture passed: public shell, module-aware workspace/portal navigation and WEB V0.4 composition are enforced.\n";

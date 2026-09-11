@@ -7,8 +7,6 @@ namespace Interfaces\Web\Navigation;
 final class FrontendNavigation
 {
     private const TEAM_ROLES = ['manager', 'admin'];
-    private const LISTING_ROLES = ['manager', 'admin', 'realtor', 'partner', 'developer'];
-    private const SUBMIT_ROLES = ['seller', 'realtor', 'developer', 'partner', 'manager', 'admin'];
 
     public static function isTeam(string $role): bool
     {
@@ -29,84 +27,59 @@ final class FrontendNavigation
 
     public static function workspace(string $role): array
     {
-        $utility = [
-            ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Кабінет', 'glyph' => 'ME'],
-        ];
+        return self::workspaceCore($role);
+    }
 
-        $salesChildren = [
-            ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Overview'],
-            ['key' => 'today', 'path' => 'sales/today', 'label' => 'Today'],
-            ['key' => 'pipeline', 'path' => 'sales/pipeline', 'label' => 'Pipeline'],
-            ['key' => 'leads', 'path' => 'sales/leads', 'label' => 'Leads'],
-            ['key' => 'deals', 'path' => 'sales/deals', 'label' => 'Deals'],
-            ['key' => 'director', 'path' => 'sales/director', 'label' => 'Director'],
-        ];
-        if ($role === 'admin') {
-            $salesChildren[] = ['key' => 'sales-admin', 'path' => 'sales/admin', 'label' => 'Sales Admin'];
-        }
-
+    public static function workspaceCore(string $role): array
+    {
         $administrationChildren = [];
         if ($role === 'admin') {
-            $administrationChildren[] = ['key' => 'users', 'path' => 'admin/users', 'label' => 'Users'];
+            $administrationChildren[] = ['key' => 'users', 'path' => 'admin/users', 'label' => 'Users', 'order' => 10];
         }
-        $administrationChildren[] = ['key' => 'content', 'path' => 'admin/content', 'label' => 'Content'];
+        $administrationChildren[] = ['key' => 'content', 'path' => 'admin/content', 'label' => 'Content', 'order' => 20];
 
         return [
             'surface' => 'workspace',
             'primary' => [
-                ['key' => 'home', 'path' => 'admin', 'label' => 'Огляд', 'glyph' => 'HM', 'children' => []],
-                ['key' => 'sales', 'path' => 'sales/dashboard', 'label' => 'Sales', 'glyph' => 'SL', 'children' => $salesChildren],
+                ['key' => 'home', 'path' => 'admin', 'label' => 'Огляд', 'glyph' => 'HM', 'order' => 10, 'children' => []],
                 [
-                    'key' => 'clients', 'path' => 'client-case/inbox', 'label' => 'Клієнти', 'glyph' => 'CL',
+                    'key' => 'cos', 'path' => 'cos/control-center', 'label' => 'COS', 'glyph' => 'OS', 'order' => 50,
                     'children' => [
-                        ['key' => 'inbox', 'path' => 'client-case/inbox', 'label' => 'Inbox'],
-                        ['key' => 'cases', 'path' => 'client-case', 'label' => 'Cases'],
+                        ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'Overview', 'order' => 10],
+                        ['key' => 'actions', 'path' => 'cos/control-center#actions', 'label' => 'Actions', 'order' => 20],
+                        ['key' => 'approvals', 'path' => 'cos/control-center#approvals', 'label' => 'Approvals', 'order' => 30],
+                        ['key' => 'agents', 'path' => 'cos/control-center#agents', 'label' => 'Agents', 'order' => 40],
+                        ['key' => 'rules', 'path' => 'cos/control-center#rules', 'label' => 'Rules', 'order' => 50],
+                        ['key' => 'events', 'path' => 'cos/control-center#events', 'label' => 'Events', 'order' => 60],
+                        ['key' => 'audit', 'path' => 'cos/control-center#audit', 'label' => 'Audit', 'order' => 70],
                     ],
                 ],
+                ['key' => 'analytics', 'path' => 'admin/analytics', 'label' => 'Аналітика', 'glyph' => 'AN', 'order' => 60, 'children' => []],
                 [
-                    'key' => 'properties', 'path' => 'property/manage', 'label' => 'Нерухомість', 'glyph' => 'RE',
-                    'children' => [
-                        ['key' => 'objects', 'path' => 'property/manage', 'label' => 'Inventory'],
-                        ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Listing'],
-                        ['key' => 'locations', 'path' => 'property/map', 'label' => 'Locations'],
-                        ['key' => 'submissions', 'path' => 'property/submissions', 'label' => 'Модерація'],
-                        ['key' => 'spatial', 'path' => 'spatial/manage', 'label' => '3D / Spatial'],
-                        ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Публічний каталог'],
-                    ],
-                ],
-                [
-                    'key' => 'cos', 'path' => 'cos/control-center', 'label' => 'COS', 'glyph' => 'OS',
-                    'children' => [
-                        ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'Overview'],
-                        ['key' => 'actions', 'path' => 'cos/control-center#actions', 'label' => 'Actions'],
-                        ['key' => 'approvals', 'path' => 'cos/control-center#approvals', 'label' => 'Approvals'],
-                        ['key' => 'agents', 'path' => 'cos/control-center#agents', 'label' => 'Agents'],
-                        ['key' => 'rules', 'path' => 'cos/control-center#rules', 'label' => 'Rules'],
-                        ['key' => 'events', 'path' => 'cos/control-center#events', 'label' => 'Events'],
-                        ['key' => 'audit', 'path' => 'cos/control-center#audit', 'label' => 'Audit'],
-                        ['key' => 'diagnostics', 'path' => 'admin/diagnostics/methodology-studio', 'label' => 'Diagnostics'],
-                    ],
-                ],
-                ['key' => 'analytics', 'path' => 'admin/analytics', 'label' => 'Аналітика', 'glyph' => 'AN', 'children' => []],
-                [
-                    'key' => 'administration', 'path' => 'admin/content', 'label' => 'Administration', 'glyph' => 'AD',
+                    'key' => 'administration', 'path' => 'admin/content', 'label' => 'Administration', 'glyph' => 'AD', 'order' => 70,
                     'children' => $administrationChildren,
                 ],
             ],
-            'utility' => $utility,
+            'utility' => [
+                ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Кабінет', 'glyph' => 'ME', 'order' => 10],
+            ],
         ];
     }
 
     public static function portal(string $role): array
     {
-        $items = [
-            ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Огляд'],
-            ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість'],
-            ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані'],
+        return self::portalCore($role);
+    }
+
+    public static function portalCore(string $role): array
+    {
+        return [
+            'surface' => 'portal',
+            'primary' => [
+                ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Огляд', 'order' => 10],
+            ],
+            'utility' => [],
         ];
-        if (in_array($role, self::LISTING_ROLES, true)) $items[] = ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Мої обʼєкти'];
-        if (in_array($role, self::SUBMIT_ROLES, true)) $items[] = ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати обʼєкт'];
-        return ['surface' => 'portal', 'primary' => $items, 'utility' => []];
     }
 
     public static function activeSection(string $active): string

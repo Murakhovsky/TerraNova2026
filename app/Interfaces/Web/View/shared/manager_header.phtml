@@ -1,6 +1,7 @@
 <?php
 
 use Interfaces\Web\Navigation\FrontendNavigation;
+use Interfaces\Web\Navigation\ModuleAwareNavigationService;
 
 $active = (string) ($active ?? '');
 $brandSuffix = (string) ($brandSuffix ?? 'CLUB');
@@ -30,6 +31,11 @@ if ($currentUser && $authService) {
     }
 }
 
+$navigationService = $this->getDI()->getShared('frontendNavigationService');
+if (!$navigationService instanceof ModuleAwareNavigationService) {
+    throw new RuntimeException('Invalid module-aware frontend navigation service.');
+}
+
 $href = function (string $path): string {
     $fragment = '';
     $fragmentPosition = strpos($path, '#');
@@ -46,7 +52,7 @@ $href = function (string $path): string {
 };
 
 if ($isTeam) {
-    $navigation = FrontendNavigation::workspace($role);
+    $navigation = $navigationService->workspace($role);
     $activeSection = FrontendNavigation::activeSection($active);
     $this->partial('components/workspace_sidebar', [
         'navigation' => $navigation,
@@ -68,7 +74,7 @@ if ($isTeam) {
     return;
 }
 
-$navigation = FrontendNavigation::portal($role);
+$navigation = $navigationService->portal($role);
 ?>
 <header class="tn-header tn-portal-header" data-header data-interface-surface="portal">
   <a class="tn-logo" href="<?php echo $href('cabinet'); ?>" aria-label="Terra Nova <?php echo htmlspecialchars($brandSuffix, ENT_QUOTES, 'UTF-8'); ?>">
