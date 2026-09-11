@@ -25,11 +25,19 @@ foreach (['requires upgrade before enable', 'dependency %s requires upgrade', 'i
 }
 
 $control = (string) file_get_contents($root . '/app/Kernel/Module/ModuleControlService.php');
-if (!str_contains($control, 'isInstalled($organizationId, $moduleId)')) {
+$enableStart = strpos($control, 'public function enable(');
+$disableStart = strpos($control, 'public function disable(', $enableStart === false ? 0 : $enableStart);
+if ($enableStart === false || $disableStart === false || $disableStart <= $enableStart) {
+    throw new RuntimeException('Cannot isolate module enable control path.');
+}
+$enablePath = substr($control, $enableStart, $disableStart - $enableStart);
+if (!str_contains($enablePath, 'isInstalled($organizationId, $moduleId)')) {
     throw new RuntimeException('Module control enable path no longer preserves explicit lifecycle semantics.');
 }
-if (str_contains($control, 'upgrade($organizationId, $moduleId')) {
-    throw new RuntimeException('Module enable must not silently upgrade a stale installation.');
+foreach (['->upgrade(', "'upgrade'"] as $forbidden) {
+    if (str_contains($enablePath, $forbidden)) {
+        throw new RuntimeException('Module enable must not silently upgrade a stale installation.');
+    }
 }
 
 $context = (string) file_get_contents($root . '/app/Kernel/Module/EffectiveModuleContext.php');
