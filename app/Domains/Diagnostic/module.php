@@ -6,7 +6,7 @@ return [
     'name' => 'Diagnostics',
     'version' => '0.5.4',
     'schema_version' => '0.5.4',
-    'kernel_constraint' => '^0.7.1',
+    'kernel_constraint' => '^0.8.0',
     'description' => 'Business diagnostics, methodology, interviews and reporting.',
     'icon' => 'scan-search',
     'dependencies' => [],

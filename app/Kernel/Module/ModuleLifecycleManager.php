@@ -40,12 +40,24 @@ final readonly class ModuleLifecycleManager
         }
 
         foreach ($manifest->dependencies as $dependencyId) {
+            $dependencyManifest = $this->catalog->get($dependencyId);
             $dependency = $this->installations->find($organizationId, $dependencyId);
             if ($dependency !== null && !$dependency->isInstalled()) {
                 throw new RuntimeException(sprintf(
                     'Cannot upgrade %s while dependency %s is uninstalled.',
                     $moduleId,
                     $dependencyId,
+                ));
+            }
+
+            $installedVersion = $dependency?->installedVersion ?? $dependencyManifest->version;
+            if (!VersionConstraint::matches($installedVersion, $manifest->constraintFor($dependencyId))) {
+                throw new RuntimeException(sprintf(
+                    'Cannot upgrade %s: dependency %s %s does not satisfy %s.',
+                    $moduleId,
+                    $dependencyId,
+                    $installedVersion,
+                    $manifest->constraintFor($dependencyId),
                 ));
             }
         }
@@ -55,53 +67,21 @@ final readonly class ModuleLifecycleManager
 
     public function uninstall(string $organizationId, string $moduleId): void
     {
-        foreach ($this->catalog->all() as $candidate) {
-            if (!in_array($moduleId, $candidate->dependencies, true)) {
-                continue;
-            }
-
-            $installation = $this->installations->find($organizationId, $candidate->id);
-            $enabled = $this->states->enabledOverride($organizationId, $candidate->id)
-                ?? $candidate->enabledByDefault;
-
-            if (($installation === null || $installation->isInstalled()) && $enabled) {
-                throw new RuntimeException(sprintf(
-                    'Cannot uninstall %s while dependent module %s is enabled.',
-                    $moduleId,
-                    $candidate->id,
-                ));
-            }
-        }
-
         $manifest = $this->catalog->get($moduleId);
+        $this->assertNoEnabledDependents($organizationId, $moduleId, 'uninstall');
         $this->states->setEnabled($organizationId, $moduleId, false);
         $this->installations->record($organizationId, $manifest, ModuleInstallation::UNINSTALLED);
     }
 
     public function enable(string $organizationId, string $moduleId): void
     {
-        $installation = $this->installations->find($organizationId, $moduleId);
-        if ($installation !== null && !$installation->isInstalled()) {
-            $this->install($organizationId, $moduleId, true);
-            return;
-        }
-
-        $manifest = $this->catalog->get($moduleId);
-        foreach ($manifest->dependencies as $dependencyId) {
-            $dependency = $this->installations->find($organizationId, $dependencyId);
-            if ($dependency !== null && !$dependency->isInstalled()) {
-                $this->install($organizationId, $dependencyId, true);
-            } else {
-                $this->states->setEnabled($organizationId, $dependencyId, true);
-            }
-        }
-
-        $this->states->setEnabled($organizationId, $moduleId, true);
+        $this->enableRecursive($organizationId, $moduleId, []);
     }
 
     public function disable(string $organizationId, string $moduleId): void
     {
         $this->catalog->get($moduleId);
+        $this->assertNoEnabledDependents($organizationId, $moduleId, 'disable');
         $this->states->setEnabled($organizationId, $moduleId, false);
     }
 
@@ -127,5 +107,51 @@ final readonly class ModuleLifecycleManager
 
         $this->installations->record($organizationId, $manifest, ModuleInstallation::INSTALLED);
         $this->states->setEnabled($organizationId, $moduleId, $enable);
+    }
+
+    /** @param array<string, true> $stack */
+    private function enableRecursive(string $organizationId, string $moduleId, array $stack): void
+    {
+        if (isset($stack[$moduleId])) {
+            throw new RuntimeException(sprintf('Circular enable dependency detected at %s.', $moduleId));
+        }
+
+        $stack[$moduleId] = true;
+        $manifest = $this->catalog->get($moduleId);
+        $installation = $this->installations->find($organizationId, $moduleId);
+
+        if ($installation !== null && !$installation->isInstalled()) {
+            $this->installRecursive($organizationId, $moduleId, true, []);
+            return;
+        }
+
+        foreach ($manifest->dependencies as $dependencyId) {
+            $this->enableRecursive($organizationId, $dependencyId, $stack);
+        }
+
+        $this->states->setEnabled($organizationId, $moduleId, true);
+    }
+
+    private function assertNoEnabledDependents(string $organizationId, string $moduleId, string $operation): void
+    {
+        foreach ($this->catalog->all() as $candidate) {
+            if (!in_array($moduleId, $candidate->dependencies, true)) {
+                continue;
+            }
+
+            $installation = $this->installations->find($organizationId, $candidate->id);
+            $installed = $installation === null || $installation->isInstalled();
+            $enabled = $this->states->enabledOverride($organizationId, $candidate->id)
+                ?? $candidate->enabledByDefault;
+
+            if ($installed && $enabled) {
+                throw new RuntimeException(sprintf(
+                    'Cannot %s %s while dependent module %s is enabled.',
+                    $operation,
+                    $moduleId,
+                    $candidate->id,
+                ));
+            }
+        }
     }
 }

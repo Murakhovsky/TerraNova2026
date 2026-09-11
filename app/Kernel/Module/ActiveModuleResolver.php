@@ -25,6 +25,26 @@ final readonly class ActiveModuleResolver
         return $this->resolve($organizationId, $moduleId, []);
     }
 
+    public function isConfiguredEnabled(string $organizationId, string $moduleId): bool
+    {
+        if (!$this->catalog->has($moduleId)) {
+            return false;
+        }
+
+        $module = $this->catalog->get($moduleId);
+        return $this->states->enabledOverride($organizationId, $moduleId) ?? $module->enabledByDefault;
+    }
+
+    public function isInstalled(string $organizationId, string $moduleId): bool
+    {
+        if (!$this->catalog->has($moduleId)) {
+            return false;
+        }
+
+        $installation = $this->installations?->find($organizationId, $moduleId);
+        return $installation === null || $installation->isInstalled();
+    }
+
     /** @return list<ModuleManifest> */
     public function active(string $organizationId): array
     {
@@ -40,13 +60,16 @@ final readonly class ActiveModuleResolver
         return array_map(
             function (ModuleManifest $module) use ($organizationId): array {
                 $installation = $this->installations?->find($organizationId, $module->id);
+                $active = $this->isEnabled($organizationId, $module->id);
 
                 return $module->toArray() + [
-                    // No lifecycle row means a legacy/deployment-installed module. This preserves
-                    // pre-V0.7.1 tenants while explicit UNINSTALLED rows remain authoritative.
-                    'installed' => $installation === null || $installation->isInstalled(),
+                    // Missing lifecycle state means deployment-installed for pre-lifecycle tenants.
+                    'installed' => $this->isInstalled($organizationId, $module->id),
                     'installed_version' => $installation?->installedVersion ?? $module->version,
-                    'enabled' => $this->isEnabled($organizationId, $module->id),
+                    // Keep `enabled` as the effective value for API backwards compatibility.
+                    'enabled' => $active,
+                    'configured_enabled' => $this->isConfiguredEnabled($organizationId, $module->id),
+                    'active' => $active,
                 ];
             },
             $this->catalog->all(),
@@ -60,19 +83,13 @@ final readonly class ActiveModuleResolver
             throw new RuntimeException(sprintf('Circular module dependency detected at %s.', $moduleId));
         }
 
-        $installation = $this->installations?->find($organizationId, $moduleId);
-        if ($installation !== null && !$installation->isInstalled()) {
-            return false;
-        }
-
-        $module = $this->catalog->get($moduleId);
-        $override = $this->states->enabledOverride($organizationId, $moduleId);
-        if (!($override ?? $module->enabledByDefault)) {
+        if (!$this->isInstalled($organizationId, $moduleId)
+            || !$this->isConfiguredEnabled($organizationId, $moduleId)) {
             return false;
         }
 
         $stack[$moduleId] = true;
-        foreach ($module->dependencies as $dependency) {
+        foreach ($this->catalog->get($moduleId)->dependencies as $dependency) {
             if (!$this->resolve($organizationId, $dependency, $stack)) {
                 return false;
             }

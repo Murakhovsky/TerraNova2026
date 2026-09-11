@@ -7,6 +7,5 @@ interface ModuleStateRepositoryInterface
 {
     public function enabledOverride(string $organizationId, string $moduleId): ?bool;
 
-    /** @param array<string, mixed> $configuration */
-    public function setEnabled(string $organizationId, string $moduleId, bool $enabled, array $configuration = []): void;
+    public function setEnabled(string $organizationId, string $moduleId, bool $enabled): void;
 }

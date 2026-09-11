@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Infrastructure\Module;
 
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
-use JsonException;
 use Kernel\Module\Contract\ModuleStateRepositoryInterface;
 
 final readonly class MysqlModuleStateRepository implements ModuleStateRepositoryInterface
@@ -23,22 +22,19 @@ final readonly class MysqlModuleStateRepository implements ModuleStateRepository
         return $row === null ? null : ((int) $row['enabled'] === 1);
     }
 
-    /** @throws JsonException */
-    public function setEnabled(string $organizationId, string $moduleId, bool $enabled, array $configuration = []): void
+    public function setEnabled(string $organizationId, string $moduleId, bool $enabled): void
     {
         $statement = $this->database->connection()->prepare(<<<'SQL'
-INSERT INTO cos_organization_modules (organization_id, module_id, enabled, configuration_json)
-VALUES (:organization_id, :module_id, :enabled, :configuration_json)
+INSERT INTO cos_organization_modules (organization_id, module_id, enabled)
+VALUES (:organization_id, :module_id, :enabled)
 ON DUPLICATE KEY UPDATE
     enabled = VALUES(enabled),
-    configuration_json = VALUES(configuration_json),
     updated_at = CURRENT_TIMESTAMP
 SQL);
         $statement->execute([
             'organization_id' => $organizationId,
             'module_id' => $moduleId,
             'enabled' => $enabled ? 1 : 0,
-            'configuration_json' => $configuration === [] ? null : json_encode($configuration, JSON_THROW_ON_ERROR),
         ]);
     }
 }
