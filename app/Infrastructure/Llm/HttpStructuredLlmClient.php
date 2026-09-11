@@ -24,16 +24,14 @@ final class HttpStructuredLlmClient implements LlmClientInterface
         private readonly int $circuitSeconds = 60,
     ) {}
 
-    public function structured(AgentDefinition $agent, string $question, array $context): LlmResponse    {
-        if ($this->endpoint === '') {
-            throw new RuntimeException('LLM_ENDPOINT is not configured.');
-        }
-        if ($this->circuitOpenUntil > time()) {
-            throw new RuntimeException('LLM circuit breaker is open.');
-        }
+    public function structured(AgentDefinition $agent, string $question, array $context): LlmResponse
+    {
+        if ($this->endpoint === '') throw new RuntimeException('LLM_ENDPOINT is not configured.');
+        if ($this->circuitOpenUntil > time()) throw new RuntimeException('LLM circuit breaker is open.');
+        $model = trim((string) $agent->model) !== '' ? trim((string) $agent->model) : $this->model;
 
         $body = json_encode([
-            'model' => $this->model,
+            'model' => $model,
             'system_prompt' => $agent->systemPrompt,
             'question' => $question,
             'context' => [
@@ -49,12 +47,14 @@ final class HttpStructuredLlmClient implements LlmClientInterface
                     'confidence' => ['type' => 'number', 'minimum' => 0, 'maximum' => 1],
                     'proposed_actions' => [
                         'type' => 'array',
-                        'maxItems' => 10,
+                        'maxItems' => max(0, $agent->maxActionsPerRun),
                         'items' => [
                             'type' => 'object',
                             'required' => ['type', 'parameters'],
                             'properties' => [
-                                'type' => ['type' => 'string', 'enum' => $agent->allowedActionTypes],
+                                'type' => $agent->allowedActionTypes === []
+                                    ? ['type' => 'string']
+                                    : ['type' => 'string', 'enum' => $agent->allowedActionTypes],
                                 'parameters' => ['type' => 'object'],
                                 'target_type' => ['type' => ['string', 'null']],
                                 'target_id' => ['type' => ['string', 'null']],
@@ -72,18 +72,15 @@ final class HttpStructuredLlmClient implements LlmClientInterface
             ],
         ], JSON_THROW_ON_ERROR);
 
-        [$raw, $status] = $this->request($body);
-
+        [$raw] = $this->request($body);
         $decoded = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
         $output = $decoded['output'] ?? $decoded;
-        if (!is_array($output)) {
-            throw new RuntimeException('LLM response does not contain structured output.');
-        }
+        if (!is_array($output)) throw new RuntimeException('LLM response does not contain structured output.');
 
         return new LlmResponse(
             $output,
             (string) ($decoded['provider'] ?? $this->provider),
-            (string) ($decoded['model'] ?? $this->model),
+            (string) ($decoded['model'] ?? $model),
             isset($decoded['usage']['input_tokens']) ? (int) $decoded['usage']['input_tokens'] : null,
             isset($decoded['usage']['output_tokens']) ? (int) $decoded['usage']['output_tokens'] : null,
             isset($decoded['cost']['amount']) ? (float) $decoded['cost']['amount'] : null,
@@ -122,13 +119,7 @@ final class HttpStructuredLlmClient implements LlmClientInterface
             usleep((int) (100000 * (2 ** ($attempt - 1)) + random_int(0, 50000)));
         }
         $this->consecutiveFailures++;
-        if ($this->consecutiveFailures >= max(1, $this->failureThreshold)) {
-            $this->circuitOpenUntil = time() + max(10, $this->circuitSeconds);
-        }
-        throw new RuntimeException(sprintf(
-            'LLM request failed with HTTP %d%s.',
-            $lastStatus,
-            $lastError !== '' ? ' (' . mb_substr($lastError, 0, 200) . ')' : '',
-        ));
+        if ($this->consecutiveFailures >= max(1, $this->failureThreshold)) $this->circuitOpenUntil = time() + max(10, $this->circuitSeconds);
+        throw new RuntimeException(sprintf('LLM request failed with HTTP %d%s.', $lastStatus, $lastError !== '' ? ' (' . mb_substr($lastError, 0, 200) . ')' : ''));
     }
 }

@@ -1,0 +1,38 @@
+name: Sales V0.7.4 Agent Administration
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Sales V0.7.1-V0.7.3 regressions
+        run: |
+          php tests/architecture/sales_v071_configuration.php
+          php tests/architecture/sales_v072_pipeline_admin.php
+          php tests/architecture/sales_v073_rule_editor.php
+          php tests/unit/sales_v073_rule_editor.php
+      - name: Sales V0.7.4 Agent Administration contract
+        run: |
+          php tests/architecture/sales_v074_agent_admin.php
+          php tests/unit/sales_v074_agent_runtime.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Agent/AgentDefinition.php
+          php -l app/Kernel/Agent/Service/AgentRuntime.php
+          php -l app/Kernel/Agent/Service/StructuredDecisionValidator.php
+          php -l app/Infrastructure/Llm/HttpStructuredLlmClient.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlAgentConfigurationProvider.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlSalesAgentAdministration.php
+          php -l app/Interfaces/Api/Controller/SalesAdminAgentController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminAgentController.php

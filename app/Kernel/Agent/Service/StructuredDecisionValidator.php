@@ -16,39 +16,23 @@ final class StructuredDecisionValidator
         $confidence = $output['confidence'] ?? null;
         $actions = $output['proposed_actions'] ?? null;
 
-        if ($decision === '' || $reason === '') {
-            throw new InvalidArgumentException('Agent output requires decision and reason.');
-        }
-        if (!is_numeric($confidence) || (float) $confidence < 0 || (float) $confidence > 1) {
-            throw new InvalidArgumentException('Agent confidence must be between 0 and 1.');
-        }
-        if (!is_array($actions)) {
-            throw new InvalidArgumentException('Agent proposed_actions must be an array.');
-        }
-        if (count($actions) > 10) {
-            throw new InvalidArgumentException('Agent may propose at most 10 actions.');
+        if ($decision === '' || $reason === '') throw new InvalidArgumentException('Agent output requires decision and reason.');
+        if (!is_numeric($confidence) || (float) $confidence < 0 || (float) $confidence > 1) throw new InvalidArgumentException('Agent confidence must be between 0 and 1.');
+        if (!is_array($actions)) throw new InvalidArgumentException('Agent proposed_actions must be an array.');
+        if (count($actions) > max(0, $agent->maxActionsPerRun)) {
+            throw new InvalidArgumentException(sprintf('Agent may propose at most %d actions.', max(0, $agent->maxActionsPerRun)));
         }
 
         $validated = [];
         foreach ($actions as $index => $action) {
-            if (!is_array($action) || !is_string($action['type'] ?? null)) {
-                throw new InvalidArgumentException(sprintf('Invalid proposed action at index %d.', $index));
-            }
+            if (!is_array($action) || !is_string($action['type'] ?? null)) throw new InvalidArgumentException(sprintf('Invalid proposed action at index %d.', $index));
             $type = trim($action['type']);
-            if (!in_array($type, $agent->allowedActionTypes, true)) {
-                throw new InvalidArgumentException(sprintf('Agent is not allowed to propose %s.', $type));
-            }
-            if (isset($action['parameters']) && !is_array($action['parameters'])) {
-                throw new InvalidArgumentException(sprintf('Action %s parameters must be an object.', $type));
-            }
+            if (!in_array($type, $agent->allowedActionTypes, true)) throw new InvalidArgumentException(sprintf('Agent is not allowed to propose %s.', $type));
+            if (isset($action['parameters']) && !is_array($action['parameters'])) throw new InvalidArgumentException(sprintf('Action %s parameters must be an object.', $type));
             $encodedParameters = json_encode($action['parameters'] ?? [], JSON_THROW_ON_ERROR);
-            if (strlen($encodedParameters) > 32768) {
-                throw new InvalidArgumentException(sprintf('Action %s parameters are too large.', $type));
-            }
+            if (strlen($encodedParameters) > 32768) throw new InvalidArgumentException(sprintf('Action %s parameters are too large.', $type));
             foreach (['target_type', 'target_id'] as $targetField) {
-                if (isset($action[$targetField]) && !is_string($action[$targetField])) {
-                    throw new InvalidArgumentException(sprintf('Action %s %s must be a string.', $type, $targetField));
-                }
+                if (isset($action[$targetField]) && !is_string($action[$targetField])) throw new InvalidArgumentException(sprintf('Action %s %s must be a string.', $type, $targetField));
             }
             $validated[] = [
                 'type' => $type,
@@ -59,13 +43,9 @@ final class StructuredDecisionValidator
         }
 
         $evidence = $output['evidence'] ?? [];
-        if (!is_array($evidence) || count($evidence) > 20) {
-            throw new InvalidArgumentException('Agent evidence must contain at most 20 items.');
-        }
+        if (!is_array($evidence) || count($evidence) > 20) throw new InvalidArgumentException('Agent evidence must contain at most 20 items.');
         foreach ($agent->evidenceSchemas as $namespace => $schema) {
-            if (!isset($evidence[$namespace]) || !is_array($evidence[$namespace])) {
-                throw new InvalidArgumentException('Agent evidence requires structured namespace: ' . $namespace);
-            }
+            if (!isset($evidence[$namespace]) || !is_array($evidence[$namespace])) throw new InvalidArgumentException('Agent evidence requires structured namespace: ' . $namespace);
             foreach (($schema['required'] ?? []) as $field => $type) {
                 if (!array_key_exists($field, $evidence[$namespace]) || !$this->matchesType($evidence[$namespace][$field], (string) $type)) {
                     throw new InvalidArgumentException(sprintf('Agent evidence %s.%s must be %s.', $namespace, $field, $type));
@@ -73,13 +53,7 @@ final class StructuredDecisionValidator
             }
         }
 
-        return new AgentResult(
-            $decision,
-            $reason,
-            (float) $confidence,
-            $validated,
-            $evidence,
-        );
+        return new AgentResult($decision, $reason, (float) $confidence, $validated, $evidence);
     }
 
     private function matchesType(mixed $value, string $type): bool

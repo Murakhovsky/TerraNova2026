@@ -14,6 +14,8 @@ final class SalesRoutes
         $searchApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_workspace_search','action'=>$action];
         $adminApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_pipeline','action'=>$action];
         $adminRuleApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_rule','action'=>$action];
+        $adminAgentApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_agent','action'=>$action];
+        $adminAgentWeb = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales_admin_agent','action'=>$action];
         $lifecycleApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_deal_lifecycle','action'=>$action];
         $web = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales','action'=>$action];
         $adminWeb = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales_admin','action'=>$action];
@@ -69,5 +71,14 @@ final class SalesRoutes
         $router->addPost('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/restore-system', $adminRuleApi('restoreSystem'));
         $router->addGet('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/dry-run', $adminRuleApi('dryRun'));
         $router->addGet('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/revisions', $adminRuleApi('revisions'));
+
+        $router->addGet('/sales/admin/agents', $adminAgentWeb('agents'));
+        $router->addGet('/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}', $adminAgentWeb('agent'));
+        $router->addGet('/api/sales/admin/agents/catalog', $adminAgentApi('catalog'));
+        $router->addGet('/api/sales/admin/agents', $adminAgentApi('agents'));
+        $router->addGet('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}', $adminAgentApi('agent'));
+        $router->addPost('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}', $adminAgentApi('update'));
+        $router->addPost('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}/test', $adminAgentApi('test'));
+        $router->addGet('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}/revisions', $adminAgentApi('revisions'));
     }
 }

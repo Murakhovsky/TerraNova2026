@@ -18,5 +18,14 @@ final readonly class AgentDefinition
         public array $evidenceSchemas = [],
         /** @var class-string<\Kernel\Agent\Contract\AgentResultValidatorInterface>|null */
         public ?string $resultValidatorClass = null,
+        public string $domainName = 'kernel',
+        public bool $enabled = true,
+        public string $profile = 'default',
+        public ?string $model = null,
+        /** @var list<string>|null */
+        public ?array $contextSources = null,
+        public float $confidenceThreshold = 0.0,
+        public int $maxActionsPerRun = 10,
+        public bool $configurationManaged = true,
     ) {}
 }

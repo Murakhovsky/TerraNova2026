@@ -1,0 +1,91 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$agent = is_array($agent ?? null) ? $agent : [];
+$catalog = is_array($agentCatalog ?? null) ? $agentCatalog : [];
+$revisions = is_array($agentRevisions ?? null) ? $agentRevisions : [];
+$name = (string) ($agent['agent_name'] ?? 'sales_intelligence');
+$selectedContexts = array_flip((array) ($agent['context_sources'] ?? []));
+$selectedActions = array_flip((array) ($agent['allowed_actions'] ?? []));
+$code = (array) ($agent['code_owned'] ?? []);
+?>
+<main class="tn-page tn-workspace-page tn-sales-workspace tn-sales-agent-admin" data-sales-agent-admin data-agent-name="<?php echo $h($name); ?>" data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
+  <?php $this->partial('components/sales/navigation', ['active' => 'sales-agents']); ?>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Sales · Administration · Intelligence',
+    'title' => 'Sales Intelligence Agent',
+    'description' => 'Tune business behavior without changing the immutable schema, safety contract or Kernel execution controls.',
+    'actions' => [['label' => 'All agents', 'href' => 'sales/admin/agents', 'variant' => 'ghost']],
+  ]); ?>
+  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind'=>'error','title'=>'Agent unavailable','message'=>$pageStatus]); ?><?php endif; ?>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Admin-owned runtime configuration</p><h2><?php echo $h($name); ?></h2></div><span><?php echo $h($agent['ownership'] ?? 'SYSTEM'); ?> · v<?php echo (int) ($agent['configuration_version'] ?? 1); ?></span></div>
+    <form data-sales-agent-config>
+      <input type="hidden" name="configuration_version" value="<?php echo (int) ($agent['configuration_version'] ?? 1); ?>">
+      <label class="tn-ui-field"><span>Enabled</span><select class="tn-ui-input" name="enabled"><option value="1" <?php echo !empty($agent['enabled']) ? 'selected' : ''; ?>>Enabled</option><option value="0" <?php echo empty($agent['enabled']) ? 'selected' : ''; ?>>Disabled</option></select></label>
+      <label class="tn-ui-field"><span>Profile</span><select class="tn-ui-input" name="profile"><?php foreach (($catalog['profiles'] ?? []) as $profile): ?><option value="<?php echo $h($profile); ?>" <?php echo ($agent['profile'] ?? '') === $profile ? 'selected' : ''; ?>><?php echo $h($profile); ?></option><?php endforeach; ?></select></label>
+      <label class="tn-ui-field"><span>Model override</span><input class="tn-ui-input" name="model" maxlength="160" value="<?php echo $h($agent['model'] ?? ''); ?>" placeholder="empty = platform default"></label>
+      <label class="tn-ui-field"><span>Confidence threshold</span><input class="tn-ui-input" name="confidence_threshold" type="number" min="0" max="1" step="0.01" value="<?php echo $h($agent['confidence_threshold'] ?? 0.65); ?>"></label>
+      <label class="tn-ui-field"><span>Business instructions</span><textarea class="tn-ui-input" name="business_instructions" rows="6" maxlength="10000"><?php echo $h($agent['business_instructions'] ?? ''); ?></textarea><small>Lower priority than the immutable safety/schema contract.</small></label>
+
+      <fieldset class="tn-ui-field"><legend>Context sources</legend><div class="tn-sales-rule-list"><?php foreach (($catalog['context_sources'] ?? []) as $source): ?><label><input type="checkbox" name="context_sources" value="<?php echo $h($source); ?>" <?php echo isset($selectedContexts[$source]) ? 'checked' : ''; ?>> <?php echo $h($source); ?></label><?php endforeach; ?></div></fieldset>
+      <fieldset class="tn-ui-field"><legend>Allowed actions</legend><small>May only remove permissions from the code-owned hard allowlist.</small><div class="tn-sales-rule-list"><?php foreach (($catalog['hard_allowed_actions'] ?? []) as $action): ?><label><input type="checkbox" name="allowed_actions" value="<?php echo $h($action); ?>" <?php echo isset($selectedActions[$action]) ? 'checked' : ''; ?>> <?php echo $h($action); ?></label><?php endforeach; ?></div></fieldset>
+      <div class="tn-ui-actions"><button class="tn-ui-button tn-ui-button--primary" type="submit">Save configuration</button><span data-sales-agent-status aria-live="polite"></span></div>
+    </form>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Code-owned boundary</p><h2>Immutable safety contract</h2></div><span>deploy required</span></div>
+    <dl class="tn-sales-summary-grid">
+      <div><dt>Agent version</dt><dd><?php echo $h($code['agent_version'] ?? '—'); ?></dd></div>
+      <div><dt>Schema</dt><dd><?php echo $h($code['schema_version'] ?? '—'); ?></dd></div>
+      <div><dt>Prompt</dt><dd><?php echo $h($code['prompt_version'] ?? '—'); ?></dd></div>
+      <div><dt>Max actions / run</dt><dd><?php echo (int) ($code['max_actions_per_run'] ?? 0); ?></dd></div>
+      <div><dt>Execution mode</dt><dd><?php echo $h($code['default_execution_mode'] ?? '—'); ?></dd></div>
+      <div><dt>Risk level</dt><dd><?php echo $h($code['default_risk_level'] ?? '—'); ?></dd></div>
+    </dl>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Read-only runtime test</p><h2>Test against a real deal</h2></div><span>actions disabled</span></div>
+    <form data-sales-agent-test>
+      <label class="tn-ui-field"><span>Subject</span><select class="tn-ui-input" name="subject_type"><option value="deal">deal</option><option value="client_case">client_case</option></select></label>
+      <label class="tn-ui-field"><span>Subject ID</span><input class="tn-ui-input" name="subject_id" required maxlength="100" placeholder="Existing deal/client_case id"></label>
+      <label class="tn-ui-field"><span>Question</span><textarea class="tn-ui-input" name="question" rows="3" maxlength="2000">Analyze this Sales case and return the current assessment.</textarea></label>
+      <div class="tn-ui-actions"><button class="tn-ui-button tn-ui-button--ghost" type="submit">Run read-only test</button><span data-sales-agent-test-status aria-live="polite"></span></div>
+    </form>
+    <pre data-sales-agent-test-result hidden></pre>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Configuration history</p><h2>Revisions</h2></div><span><?php echo count($revisions); ?></span></div>
+    <div class="tn-sales-rule-list"><?php foreach ($revisions as $revision): ?><article class="tn-sales-rule-card"><div><strong><?php echo $h($revision['action'] ?? 'UPDATE'); ?></strong><small>v<?php echo (int) ($revision['entity_version'] ?? 0); ?> · <?php echo $h($revision['actor_type'] ?? ''); ?>:<?php echo $h($revision['actor_id'] ?? ''); ?></small></div><div><small><?php echo $h($revision['created_at'] ?? ''); ?></small></div></article><?php endforeach; ?></div>
+  </section>
+</main>
+<script>
+(() => {
+  const root = document.querySelector('[data-sales-agent-admin]');
+  if (!root) return;
+  const name = root.dataset.agentName || '';
+  const csrf = root.dataset.csrf || '';
+  const post = async (suffix, payload) => {
+    const response = await fetch(`/api/sales/admin/agents/${encodeURIComponent(name)}${suffix}`, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'Accept':'application/json'}, body:JSON.stringify(payload)});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) { const error = new Error(data.error || 'Request failed.'); error.status = response.status; throw error; }
+    return data.data;
+  };
+  const config = root.querySelector('[data-sales-agent-config]');
+  config?.addEventListener('submit', async (event) => {
+    event.preventDefault(); const status = root.querySelector('[data-sales-agent-status]'); status.textContent = 'Saving…';
+    const form = new FormData(config); const payload = {configuration_version:Number(form.get('configuration_version')),enabled:form.get('enabled')==='1',profile:String(form.get('profile')||''),model:String(form.get('model')||''),business_instructions:String(form.get('business_instructions')||''),confidence_threshold:Number(form.get('confidence_threshold')),context_sources:form.getAll('context_sources'),allowed_actions:form.getAll('allowed_actions')};
+    try { const result = await post('', payload); status.textContent = 'Saved.'; config.elements.configuration_version.value = result.configuration_version; }
+    catch (error) { status.textContent = error.status === 409 ? 'Configuration changed elsewhere. Reload required.' : error.message; }
+  });
+  const test = root.querySelector('[data-sales-agent-test]');
+  test?.addEventListener('submit', async (event) => {
+    event.preventDefault(); const status = root.querySelector('[data-sales-agent-test-status]'); const output = root.querySelector('[data-sales-agent-test-result]'); const form = new FormData(test); status.textContent = 'Running read-only test…'; output.hidden = true;
+    try { const result = await post('/test', {subject_type:String(form.get('subject_type')||'deal'),subject_id:String(form.get('subject_id')||''),question:String(form.get('question')||'')}); status.textContent = 'Completed. No actions were executed.'; output.textContent = JSON.stringify(result, null, 2); output.hidden = false; }
+    catch (error) { status.textContent = error.message; }
+  });
+})();
+</script>
