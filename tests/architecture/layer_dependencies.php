@@ -35,7 +35,7 @@ function assertNoDependencies(string $directory, array $forbiddenPrefixes): void
 
 assertNoDependencies($root . '/app/Kernel', ['Domains', 'Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon']);
 foreach (glob($root . '/app/Domains/*', GLOB_ONLYDIR) ?: [] as $domainDirectory) {
-    foreach (['Application', 'Automation', 'Domain', 'Methodology', 'Model'] as $coreArea) {
+    foreach (['AI', 'Application', 'Automation', 'Domain', 'Methodology', 'Model'] as $coreArea) {
         $directory = $domainDirectory . '/' . $coreArea;
         if (is_dir($directory)) {
             assertNoDependencies($directory, ['Infrastructure', 'Interfaces', 'Modules', 'Common', 'Phalcon', 'PDO']);
@@ -89,10 +89,26 @@ foreach ($requiredSalesAreas as $area) {
     }
 }
 
-foreach (['Application', 'Automation', 'Infrastructure', 'Methodology', 'Model'] as $area) {
+$requiredDiagnosticAreas = ['AI', 'Application', 'Domain', 'Infrastructure', 'Schemas'];
+foreach ($requiredDiagnosticAreas as $area) {
     if (!is_dir($root . '/app/Domains/Diagnostic/' . $area)) {
         throw new RuntimeException(sprintf('Diagnostic domain is missing its %s area.', $area));
     }
 }
 
-echo "Architecture boundaries passed: Kernel/Domains are independent and Telegram uses canonical adapters only.\n";
+$diagnosticLlmGateway = (string) file_get_contents($root . '/app/Domains/Diagnostic/Infrastructure/AI/OpenAiGateway.php');
+if (str_contains($diagnosticLlmGateway, 'Kernel\\Agent\\')) {
+    throw new RuntimeException('Diagnostic LLM gateway must use the provider-neutral Kernel\\Llm port, not the Agent runtime contract.');
+}
+if (!str_contains($diagnosticLlmGateway, 'Kernel\\Llm\\StructuredLlmClientInterface')) {
+    throw new RuntimeException('Diagnostic LLM gateway must depend on Kernel\\Llm\\StructuredLlmClientInterface.');
+}
+
+$httpLlmClient = (string) file_get_contents($root . '/app/Infrastructure/Llm/HttpStructuredLlmClient.php');
+foreach (['LlmClientInterface', 'StructuredLlmClientInterface'] as $contract) {
+    if (!str_contains($httpLlmClient, $contract)) {
+        throw new RuntimeException('HTTP LLM transport must implement both Agent compatibility and provider-neutral structured LLM contracts.');
+    }
+}
+
+echo "Architecture boundaries passed: Kernel/Domains are independent and LLM transport is shared without leaking Agent semantics into Diagnostic.\n";

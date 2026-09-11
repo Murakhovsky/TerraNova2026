@@ -1,11 +1,43 @@
 <?php
 declare(strict_types=1);
+
 namespace Domains\Diagnostic\Infrastructure\AI;
-use Domains\Diagnostic\AI\{AiGatewayInterface,AiOperationDefinition,AiRequest,AiResponse,PromptRegistry};
-use Kernel\Agent\AgentDefinition;
-use Kernel\Agent\Contract\LlmClientInterface;
+
+use Domains\Diagnostic\AI\AiGatewayInterface;
+use Domains\Diagnostic\AI\AiOperationDefinition;
+use Domains\Diagnostic\AI\AiRequest;
+use Domains\Diagnostic\AI\AiResponse;
+use Domains\Diagnostic\AI\PromptRegistry;
+use Kernel\Llm\StructuredLlmClientInterface;
+use Kernel\Llm\StructuredLlmRequest;
+
 final readonly class OpenAiGateway implements AiGatewayInterface
 {
-    public function __construct(private LlmClientInterface $client,private PromptRegistry $prompts=new PromptRegistry()){}
-    public function execute(AiOperationDefinition $operation,AiRequest $request):AiResponse{$prompt=$this->prompts->get($operation->promptVersion);$agent=new AgentDefinition('diagnostic-'.$operation->operation->value,'1.0',(string)$prompt['system'],$operation->promptVersion,$operation->schemaVersion,[], 'APPROVAL_REQUIRED','MEDIUM',[$operation->schemaVersion=>$request->outputSchema]);$started=hrtime(true);$response=$this->client->structured($agent,(string)$prompt['task'],$request->context+['output_schema'=>$request->outputSchema]);return new AiResponse($response->output,$response->inputTokens??0,$response->outputTokens??0,$response->costAmount??0,(int)round((hrtime(true)-$started)/1_000_000),$response->model);}
+    public function __construct(
+        private StructuredLlmClientInterface $client,
+        private PromptRegistry $prompts = new PromptRegistry(),
+    ) {}
+
+    public function execute(AiOperationDefinition $operation, AiRequest $request): AiResponse
+    {
+        $prompt = $this->prompts->get($operation->promptVersion);
+        $started = hrtime(true);
+        $response = $this->client->complete(new StructuredLlmRequest(
+            systemPrompt: (string) $prompt['system'],
+            userPrompt: (string) $prompt['task'],
+            context: $request->context,
+            responseSchema: $request->outputSchema,
+            model: $operation->model,
+            maxOutputTokens: $operation->tokenBudget,
+        ));
+
+        return new AiResponse(
+            $response->output,
+            $response->inputTokens ?? 0,
+            $response->outputTokens ?? 0,
+            $response->costAmount ?? 0.0,
+            (int) round((hrtime(true) - $started) / 1_000_000),
+            $response->model,
+        );
+    }
 }
