@@ -8,6 +8,7 @@ use Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService;
 use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
 use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
+use Interfaces\Web\Routing\SalesModuleRouteContributor;
 use Interfaces\Web\Service\ClientCaseService;
 use Interfaces\Web\Service\CompanyHomeService;
 use Domains\Content\Application\Service\ContentService;
@@ -30,6 +31,7 @@ final class WebApplicationServices
 {
     public static function register(DiInterface $di): void
     {
+        $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor());
         $di->setShared('frontendAdminDashboardService', fn() => new AdminDashboardService($di->getShared('databaseService')));
         $di->setShared('frontendAnalyticsService', fn() => new MysqlPropertyFunnelAnalytics($di->getShared('databaseService')));
         $di->setShared('frontendPublicPageService', fn() => new PublicPageService());

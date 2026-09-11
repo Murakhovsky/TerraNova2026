@@ -4,17 +4,15 @@ declare(strict_types=1);
 namespace Interfaces\Web;
 
 use Bootstrap\WebApplicationServices;
-use Interfaces\Web\Routing\FrontendRoutes;
-use Interfaces\Web\Routing\PlatformRoutes;
-use Interfaces\Web\Routing\SalesAdministrationRoutes;
-use Interfaces\Web\Routing\SalesRoutes;
-use Interfaces\Web\Routing\SalesTeamRoutes;
-use Interfaces\Web\Routing\SalesIntegrationRoutes;
 use Interfaces\Web\Page\PublicPageService;
+use Interfaces\Web\Routing\FrontendRoutes;
+use Interfaces\Web\Routing\ModuleRouteContributorInterface;
+use Interfaces\Web\Routing\PlatformRoutes;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 use Phalcon\Mvc\View;
 use Phalcon\Mvc\View\Engine\Php as PhpEngine;
+use RuntimeException;
 
 class Module implements ModuleDefinitionInterface
 {
@@ -26,14 +24,21 @@ class Module implements ModuleDefinitionInterface
 
     public function registerServices(DiInterface $di): void
     {
+        WebApplicationServices::register($di);
+
         $router = $di->getShared('router');
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
         PlatformRoutes::register($router);
-        SalesRoutes::register($router);
-        SalesTeamRoutes::register($router);
-        SalesIntegrationRoutes::register($router);
-        SalesAdministrationRoutes::register($router);
-        WebApplicationServices::register($di);
+
+        foreach ((array) $di->getShared('cosModuleApiRouteContributors') as $contribution) {
+            $moduleId = $contribution['module_id'] ?? null;
+            $service = $contribution['service'] ?? null;
+            if (!is_string($moduleId) || !$service instanceof ModuleRouteContributorInterface) {
+                throw new RuntimeException('Invalid module route contributor.');
+            }
+
+            $service->register($router);
+        }
 
         $di->set('view', function () {
             $view = new View();

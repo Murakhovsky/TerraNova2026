@@ -16,7 +16,9 @@ return [
         'job_handler_services' => [
             'salesCrmInboxJobHandler',
         ],
-        'api_route_contributor_services' => [],
+        'api_route_contributor_services' => [
+            'salesRouteContributor',
+        ],
         'configuration_provisioner_services' => [
             'salesModuleConfigurationProvisioner',
         ],

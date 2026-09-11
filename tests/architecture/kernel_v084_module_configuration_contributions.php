@@ -10,8 +10,8 @@ use Kernel\Module\KernelVersion;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDiscovery;
 
-if (KernelVersion::VERSION !== '0.8.4') {
-    throw new RuntimeException('COS Kernel V0.8.4 contribution contract version mismatch.');
+if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.4', '<')) {
+    throw new RuntimeException('COS Kernel module configuration contributions require Kernel 0.8.4+ on the 0.8.x line.');
 }
 
 $catalog = new ModuleCatalog((new ModuleDiscovery($root . '/app/Domains'))->discover());
