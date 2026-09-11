@@ -1,75 +1,97 @@
-version: 1
+version: 2
 branch: COS
 sections:
   - id: start
     label: Start Here
     order: 0
     items:
-      - path: 00-start/what-is-cos.md
-        label: Що таке COS
-      - path: 00-start/mental-model.md
-        label: Mental Model
-      - path: 00-start/repository-map.md
-        label: Repository Map
+      - { path: 00-start/what-is-cos.md, label: Що таке COS }
+      - { path: 00-start/mental-model.md, label: Mental Model }
+      - { path: 00-start/repository-map.md, label: Repository Map }
+
+  - id: product
+    label: Product
+    order: 1
+    items:
+      - { path: 01-product/current-scope.md, label: Current Scope }
+
+  - id: workflows
+    label: Business Workflows
+    order: 2
+    items:
+      - { path: 02-workflows/sales-lead-to-managed-case.md, label: Sales Lead → Managed Case }
+      - { path: 02-workflows/property-submission-to-publication.md, label: Property Submission → Publication }
 
   - id: architecture
     label: System Architecture
     order: 3
     items:
-      - path: 03-architecture/kernel-overview.md
-        label: Kernel Overview
-      - path: architecture/cos-kernel.md
-        label: Canonical Kernel Architecture
-      - path: architecture/domain-boundaries.md
-        label: Domain Boundaries
-      - path: architecture/persistence.md
-        label: Persistence
-      - path: architecture/frontend-interface.md
-        label: Frontend Interface
-      - path: architecture/diagnostic-domain-model.md
-        label: Diagnostic Domain Model
+      - { path: 03-architecture/domain-map.md, label: Domain Map }
+      - { path: 03-architecture/kernel-overview.md, label: Kernel Overview }
+      - { path: architecture/cos-kernel.md, label: Canonical Kernel Architecture }
+      - { path: architecture/domain-boundaries.md, label: Domain Boundaries }
+      - { path: architecture/persistence.md, label: Persistence }
+      - { path: architecture/frontend-interface.md, label: Frontend Interface }
+      - { path: architecture/diagnostic-domain-model.md, label: Diagnostic Domain Model }
+
+  - id: domains
+    label: Domains
+    order: 4
+    items:
+      - { path: 04-domains/sales/overview.md, label: Sales }
+      - { path: 04-domains/diagnostic/overview.md, label: Diagnostic }
+      - { path: 04-domains/property/overview.md, label: Property }
+      - { path: 04-domains/supporting-domains.md, label: Identity / Content / Spatial }
 
   - id: runtime
     label: Runtime
     order: 5
     items:
-      - path: 05-runtime/execution-lifecycle.md
-        label: Execution Lifecycle
-      - path: 05-runtime/commands-and-use-cases.md
-        label: Commands & Use Cases
-      - path: 05-runtime/events-and-outbox.md
-        label: Events & Outbox
-      - path: 05-runtime/policies-and-approvals.md
-        label: Policies & Approvals
-      - path: 05-runtime/module-lifecycle.md
-        label: Module Lifecycle
-      - path: 05-runtime/audit-and-diagnostics.md
-        label: Audit & Diagnostics
+      - { path: 05-runtime/execution-lifecycle.md, label: Execution Lifecycle }
+      - { path: 05-runtime/commands-and-use-cases.md, label: Commands & Use Cases }
+      - { path: 05-runtime/events-and-outbox.md, label: Events & Outbox }
+      - { path: 05-runtime/policies-and-approvals.md, label: Policies & Approvals }
+      - { path: 05-runtime/module-lifecycle.md, label: Module Lifecycle }
+      - { path: 05-runtime/audit-and-diagnostics.md, label: Audit & Diagnostics }
 
   - id: agents
     label: AI / Agents
     order: 6
     items:
-      - path: 06-ai-agents/llm-boundary.md
-        label: LLM Boundary
-      - path: 06-ai-agents/agent-runtime.md
-        label: Agent Runtime
-      - path: 06-ai-agents/context-and-tools.md
-        label: Context & Tools
+      - { path: 06-ai-agents/llm-boundary.md, label: LLM Boundary }
+      - { path: 06-ai-agents/agent-runtime.md, label: Agent Runtime }
+      - { path: 06-ai-agents/context-and-tools.md, label: Context & Tools }
 
-  - id: diagnostics
-    label: Business Diagnostics
+  - id: integrations
+    label: API & Integrations
     order: 7
     items:
-      - path: architecture/diagnostic-domain-model.md
-        label: Domain Model
+      - { path: 07-api-integrations/integration-model.md, label: Integration Model }
+
+  - id: ui
+    label: UI / Interfaces
+    order: 8
+    items:
+      - { path: 08-ui/interface-surfaces.md, label: Interface Surfaces }
+
+  - id: development
+    label: Development
+    order: 9
+    items:
+      - { path: 09-development/adding-a-domain.md, label: Adding a Domain }
+
+  - id: operations
+    label: Operations
+    order: 10
+    items:
+      - { path: 10-operations/data-and-migrations.md, label: Data & Migrations }
 
   - id: reference
     label: Reference
     order: 12
     items:
-      - path: 12-reference/kernel-components.md
-        label: Kernel Components
+      - { path: 12-reference/kernel-components.md, label: Kernel Components }
+      - { path: 12-reference/module-capabilities.md, label: Modules & Capabilities }
 
 legacy_reference:
   - architecture/legacy-entrypoint-inventory.md

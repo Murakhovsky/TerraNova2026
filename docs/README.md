@@ -8,31 +8,42 @@ kind: index
 
 # COS Documentation
 
-Ця директорія є канонічним входом у документацію **Company Operating System**.
+Ця директорія є канонічним входом у документацію **Company Operating System** для гілки `COS`.
 
-Документація описує актуальну архітектуру гілки `COS`: Kernel, Domains, runtime виконання, agentic loop, policies, approvals, queue, audit, observability та модульний контракт.
+Документація будується від бізнес-смислу до коду:
 
-> Важливо: старі Terra Nova документи в корені `docs/` описують попередню прикладну платформу. Вони корисні як історія та integration reference, але не визначають архітектуру COS Kernel.
+```text
+Product
+→ Workflow
+→ Domain
+→ Use Case
+→ Runtime
+→ Policy / Approval
+→ Port
+→ Infrastructure
+→ Interface
+```
 
-## Як читати COS
-
-Рекомендований порядок:
+## Рекомендований порядок
 
 1. [Що таке COS](00-start/what-is-cos.md)
 2. [Mental Model](00-start/mental-model.md)
-3. [Карта репозиторію](00-start/repository-map.md)
-4. [Kernel Overview](03-architecture/kernel-overview.md)
-5. [Canonical Kernel Architecture](architecture/cos-kernel.md)
-6. [Execution Lifecycle](05-runtime/execution-lifecycle.md)
-7. [Events & Outbox](05-runtime/events-and-outbox.md)
-8. [Policies & Approvals](05-runtime/policies-and-approvals.md)
-9. [Module Lifecycle](05-runtime/module-lifecycle.md)
-10. [Agent Runtime](06-ai-agents/agent-runtime.md)
-11. [Context & Tools](06-ai-agents/context-and-tools.md)
-12. [Audit & Diagnostics](05-runtime/audit-and-diagnostics.md)
-13. [Kernel Components Reference](12-reference/kernel-components.md)
+3. [Repository Map](00-start/repository-map.md)
+4. [Current Scope](01-product/current-scope.md)
+5. [Domain Map](03-architecture/domain-map.md)
+6. [Kernel Overview](03-architecture/kernel-overview.md)
+7. [Execution Lifecycle](05-runtime/execution-lifecycle.md)
+8. [Sales Lead → Managed Case](02-workflows/sales-lead-to-managed-case.md)
+9. [Property Submission → Publication](02-workflows/property-submission-to-publication.md)
+10. [Sales Domain](04-domains/sales/overview.md)
+11. [Diagnostic Domain](04-domains/diagnostic/overview.md)
+12. [Property Domain](04-domains/property/overview.md)
+13. [Agent Runtime](06-ai-agents/agent-runtime.md)
+14. [Integration Model](07-api-integrations/integration-model.md)
+15. [Interface Surfaces](08-ui/interface-surfaces.md)
+16. [Adding a Domain](09-development/adding-a-domain.md)
 
-## Головна модель
+## Головний runtime
 
 ```text
 Business transaction
@@ -45,64 +56,55 @@ Durable consumer
     ↓
 Rule / Agent
     ↓
-Action proposal
+ActionProposal
     ↓
 Policy
     ├─ DENIED
-    ├─ APPROVAL_REQUIRED → Human Approval
+    ├─ APPROVAL_REQUIRED → Human
     └─ AUTO
          ↓
 Queue / Execution
          ↓
-Domain port / Infrastructure adapter
+Domain port
          ↓
-Result Event
+Infrastructure adapter
          ↓
-Audit + Metrics + next automation
+Result Event + Audit + Metrics
 ```
 
 ## Архітектурні рівні
 
 ```text
-Interfaces
-    ↓
-Application / Kernel services
-    ↓
-Domains
-    ↓
-Kernel contracts
-
-Infrastructure implements ports
-Bootstrap assembles concrete dependencies
+Interfaces        Web / API / Telegram / CLI
+Application       use cases and orchestration
+Domains           business vocabulary and invariants
+Kernel            generic execution mechanisms
+Infrastructure    concrete technical adapters
+Bootstrap         composition root
 ```
 
-Kernel володіє **механізмами**, Domain володіє **бізнес-смислом**.
+Kernel володіє механізмами. Domain володіє бізнес-смислом.
 
-Kernel знає, як виконати Action, застосувати Policy, створити Approval, поставити Job у Queue та записати Audit. Kernel не повинен знати, що означає `sales.send_followup`, яка стадія угоди є доброю або кому саме треба телефонувати.
+## AS-IS і TARGET
 
-## AS-IS та TARGET
+- `AS-IS` — підтверджено кодом гілки `COS`.
+- `TARGET` — напрямок/правило, яке ще не повністю реалізоване.
 
-У цій документації:
+Не описуємо TARGET як готову систему. Людство вже винайшло достатньо документації, де майбутній намір подається як production feature.
 
-- `AS-IS` означає поведінку, підтверджену кодом гілки `COS`;
-- `TARGET` означає принцип або наступний архітектурний крок, який ще не повністю реалізований.
+## Нормативні детальні документи
 
-Не змішуємо ці дві речі. Архітектурна документація, яка описує бажане як готове, корисна приблизно як карта метро з вигаданими станціями.
+Зберігаються існуючі:
 
-## Існуючі детальні документи
+- `architecture/cos-kernel.md`;
+- `architecture/domain-boundaries.md`;
+- `architecture/persistence.md`;
+- `architecture/diagnostic-domain-model.md`;
+- `architecture/frontend-interface.md`;
+- `diagnostic/` schemas/assets.
 
-Зберігаються і залишаються джерелом деталей:
-
-- `docs/architecture/cos-kernel.md` — canonical architecture;
-- `docs/architecture/domain-boundaries.md` — bounded contexts;
-- `docs/architecture/persistence.md` — persistence rules;
-- `docs/architecture/diagnostic-domain-model.md` — diagnostic domain;
-- `docs/architecture/frontend-interface.md` — interface architecture;
-- `docs/architecture/legacy-modules-integration-plan.md` — migration from legacy application;
-- `docs/diagnostic/` — methodology and diagnostic assets.
+Legacy migration documents залишаються історичним reference, але не визначають поточну COS architecture.
 
 ## Source of truth
 
-Код визначає виконувану реальність. Документація пояснює її смисл, межі та правила.
-
-Коли вони розходяться, це defect документації або defect архітектури, а не привід удавати, що конфлікту немає.
+Код визначає executable reality. `/docs` пояснює ownership, workflows, architecture rules і navigation. Якщо вони розходяться — це defect, який треба виправити, а не нова філософська школа.
