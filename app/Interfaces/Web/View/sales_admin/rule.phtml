@@ -1,0 +1,86 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$rule = is_array($rule ?? null) ? $rule : null;
+$catalog = is_array($ruleCatalog ?? null) ? $ruleCatalog : [];
+$revisions = is_array($ruleRevisions ?? null) ? $ruleRevisions : [];
+?>
+<main class="tn-page tn-workspace-page tn-sales-workspace tn-sales-rule-editor" data-sales-rule-editor
+  data-rule-id="<?php echo $h($rule['id'] ?? ''); ?>"
+  data-version="<?php echo (int) ($rule['configuration_version'] ?? 0); ?>"
+  data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
+  <?php $this->partial('components/sales/navigation', ['active' => 'sales-rules']); ?>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Sales · Administration · Rule',
+    'title' => $rule['name'] ?? 'Business Rule Editor',
+    'description' => $rule ? (($rule['code'] ?? '') . ' · ' . ($rule['status'] ?? 'DRAFT') . ' · ' . ($rule['ownership'] ?? 'SYSTEM')) : 'Rule not found.',
+    'actions' => [
+      ['label' => '← Rules', 'href' => 'sales/admin/rules', 'variant' => 'ghost'],
+    ],
+  ]); ?>
+  <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind'=>'error','title'=>'Rule editor unavailable','message'=>$pageStatus]); ?><?php endif; ?>
+  <?php if ($rule === null): ?><?php $this->partial('components/ui/state', ['kind'=>'empty','title'=>'Rule not found','message'=>'This Sales rule does not exist in the current organization.']); ?></main><?php return; endif; ?>
+
+  <script type="application/json" data-sales-rule-catalog><?php echo json_encode($catalog, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?></script>
+  <script type="application/json" data-sales-rule-current><?php echo json_encode($rule, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?></script>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Lifecycle</p><h2>Rule control</h2></div>
+      <span class="tn-sales-rule-status" data-rule-status data-status="<?php echo $h($rule['status'] ?? 'DRAFT'); ?>"><?php echo $h($rule['status'] ?? 'DRAFT'); ?></span>
+    </div>
+    <div class="tn-ui-actions tn-sales-rule-lifecycle">
+      <button class="tn-ui-button tn-ui-button--primary" type="button" data-rule-save>Save draft</button>
+      <button class="tn-ui-button" type="button" data-rule-dry-run>Test Rule</button>
+      <button class="tn-ui-button" type="button" data-rule-lifecycle="activate">Activate</button>
+      <button class="tn-ui-button" type="button" data-rule-lifecycle="disable">Disable</button>
+      <button class="tn-ui-button" type="button" data-rule-lifecycle="archive">Archive</button>
+      <?php if (is_array($rule['system_definition'] ?? null)): ?><button class="tn-ui-button" type="button" data-rule-lifecycle="restore-system">Restore system definition</button><?php endif; ?>
+      <span data-rule-status-message aria-live="polite"></span>
+    </div>
+    <?php if (!empty($rule['system_update_available'])): ?><p class="tn-sales-note">A newer system default exists. Your Admin customization remains authoritative until you explicitly restore the system definition.</p><?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Editor</p><h2>WHEN → IF → THEN</h2></div><div class="tn-ui-actions"><button class="tn-ui-button" type="button" data-rule-mode="basic">Basic Mode</button><button class="tn-ui-button" type="button" data-rule-mode="advanced">Advanced Mode</button></div></div>
+
+    <div data-rule-basic>
+      <div class="tn-sales-rule-grid">
+        <label class="tn-ui-field"><span>Name</span><input class="tn-ui-input" data-rule-name maxlength="220" value="<?php echo $h($rule['name'] ?? ''); ?>"></label>
+        <label class="tn-ui-field"><span>Priority</span><input class="tn-ui-input" data-rule-priority type="number" min="1" max="10000" value="<?php echo (int) ($rule['priority'] ?? 100); ?>"></label>
+      </div>
+      <div class="tn-sales-rule-block">
+        <div class="tn-sales-rule-keyword">WHEN</div>
+        <label class="tn-ui-field"><span>Trigger</span><select class="tn-ui-input" data-rule-trigger></select></label>
+      </div>
+      <div class="tn-sales-rule-block">
+        <div class="tn-sales-rule-keyword">IF</div>
+        <div class="tn-sales-rule-condition-toolbar"><select class="tn-ui-input" data-rule-condition-mode><option value="all">ALL conditions (AND)</option><option value="any">ANY condition (OR)</option></select><button class="tn-ui-button" type="button" data-rule-add-condition>Add condition</button></div>
+        <div data-rule-conditions></div>
+      </div>
+      <div class="tn-sales-rule-block">
+        <div class="tn-sales-rule-keyword">THEN</div>
+        <div class="tn-ui-actions"><button class="tn-ui-button" type="button" data-rule-add-action>Add action</button></div>
+        <div data-rule-actions></div>
+      </div>
+    </div>
+
+    <div data-rule-advanced hidden>
+      <p class="tn-sales-note">Raw declarative JSON only. The same trigger, field, operator, action and parameter allowlists are enforced server-side. SQL/PHP or unknown keys are rejected.</p>
+      <textarea class="tn-ui-input tn-sales-rule-json" rows="26" spellcheck="false" data-rule-json></textarea>
+    </div>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-rule-preview-panel hidden>
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Dry Run</p><h2>Read-only preview</h2></div><span>0 mutations</span></div>
+    <div class="tn-ui-kpi-grid" data-rule-preview></div>
+    <p class="tn-sales-note" data-rule-preview-note></p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Audit</p><h2>Revision history</h2></div><span><?php echo count($revisions); ?></span></div>
+    <div class="tn-sales-rule-revisions">
+      <?php foreach ($revisions as $revision): ?><article><strong><?php echo $h($revision['action'] ?? 'UPDATE'); ?></strong><span>v<?php echo (int) ($revision['entity_version'] ?? 0); ?> · <?php echo $h($revision['actor_id'] ?? 'system'); ?></span><small><?php echo $h($revision['created_at'] ?? ''); ?></small></article><?php endforeach; ?>
+      <?php if ($revisions === []): ?><p class="tn-sales-empty">Revision history is empty.</p><?php endif; ?>
+    </div>
+  </section>
+</main>

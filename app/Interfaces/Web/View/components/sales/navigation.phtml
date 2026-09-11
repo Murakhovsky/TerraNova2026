@@ -13,6 +13,7 @@ try {
     $user = $this->getDI()->getShared('authService')->currentUser();
     if ($user !== null && $this->getDI()->getShared('authService')->isAdmin($user)) {
         $items[] = ['key' => 'sales-admin', 'href' => 'sales/admin', 'label' => 'Sales Admin'];
+        $items[] = ['key' => 'sales-rules', 'href' => 'sales/admin/rules', 'label' => 'Rules'];
     }
 } catch (Throwable) {
 }

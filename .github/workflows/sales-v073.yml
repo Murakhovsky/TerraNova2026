@@ -1,0 +1,35 @@
+name: Sales V0.7.3 Business Rule Editor
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Legacy deploy blocker regressions
+        run: |
+          php tests/unit/sales_v062.php
+          php tests/unit/sales_v063.php
+          php tests/unit/sales_v065.php
+      - name: Sales V0.7.2 pipeline administration regression
+        run: php tests/architecture/sales_v072_pipeline_admin.php
+      - name: Sales V0.7.3 pipeline governance contract
+        run: php tests/architecture/sales_v073_governance.php
+      - name: Sales V0.7.3 Business Rule Editor contract
+        run: |
+          php tests/architecture/sales_v073_rule_editor.php
+          php tests/unit/sales_v073_rule_editor.php
+          node --check frontend/features/sales/rule-editor.js

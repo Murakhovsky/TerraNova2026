@@ -5,14 +5,31 @@ use Interfaces\Web\Navigation\FrontendNavigation;
 $active = (string) ($active ?? '');
 $brandSuffix = (string) ($brandSuffix ?? 'CLUB');
 $currentUser = null;
+$authService = null;
 try {
-    $currentUser = $this->getDI()->getShared('authService')->currentUser();
+    $authService = $this->getDI()->getShared('authService');
+    $currentUser = $authService->currentUser();
 } catch (Throwable $e) {
     $currentUser = null;
+    $authService = null;
 }
 
 $role = (string) ($currentUser['role'] ?? '');
 $isTeam = FrontendNavigation::isTeam($role);
+
+if ($currentUser && $authService) {
+    try {
+        $isTeam = $authService->isManager($currentUser);
+        if ($isTeam) {
+            $role = $authService->isAdmin($currentUser) ? 'admin' : 'manager';
+        }
+    } catch (Throwable $e) {
+        // Fall back to the account role so navigation still renders if the
+        // organization membership lookup is temporarily unavailable.
+        $isTeam = FrontendNavigation::isTeam($role);
+    }
+}
+
 $href = function (string $path): string {
     $fragment = '';
     $fragmentPosition = strpos($path, '#');

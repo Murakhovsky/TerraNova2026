@@ -183,7 +183,15 @@ final class SalesWorkspaceActionsController extends WebController
             $actions = $this->di->getShared('cosActionService');
             $action = $actions->find($this->organization()->id(), $actionId);
             if ($action === null) return $this->json(404, ['ok' => false, 'error' => 'Action not found.']);
-            if ($action->status !== ActionStatus::Proposed) return $this->json(409, ['ok' => false, 'error' => 'Only a proposed action can be dismissed directly.']);
+
+            // Pending approvals must be rejected through ApprovalService so the approval
+            // decision and Action rejection stay atomic, tenant-safe and Kernel-audited.
+            if ($action->status === ActionStatus::PendingApproval) {
+                return $this->json(409, ['ok' => false, 'error' => 'Pending approval must be rejected through its approval decision.']);
+            }
+            if ($action->status !== ActionStatus::Proposed) {
+                return $this->json(409, ['ok' => false, 'error' => 'Only a proposed action can be dismissed directly.']);
+            }
             $actions->reject($this->organization()->id(), $actionId);
             return $this->json(200, ['ok' => true, 'data' => ['status' => 'REJECTED']]);
         } catch (DomainException $error) {

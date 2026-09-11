@@ -24,6 +24,7 @@ use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineAdministration;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineGovernance;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel;
@@ -57,6 +58,7 @@ $di->setShared('salesOutcomeRepository', fn (): MysqlSalesOutcomeRepository => n
 $di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepository => new MysqlClientCaseCommandRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesPipelineRepository', fn (): MysqlPipelineRepository => new MysqlPipelineRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesPipelineAdministration', fn (): MysqlSalesPipelineAdministration => new MysqlSalesPipelineAdministration($this->getShared('databaseService')->connection()));
+$di->setShared('salesPipelineGovernance', fn (): MysqlSalesPipelineGovernance => new MysqlSalesPipelineGovernance($this->getShared('databaseService')->connection()));
 $di->setShared('salesDealRepository', fn (): MysqlDealRepository => new MysqlDealRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesOperationRepository', fn (): MysqlSalesOperationRepository => new MysqlSalesOperationRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesAttentionRepository', fn (): MysqlSalesAttentionRepository => new MysqlSalesAttentionRepository($this->getShared('databaseService')->connection()));

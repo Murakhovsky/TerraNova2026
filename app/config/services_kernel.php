@@ -7,3 +7,4 @@ require APP_PATH . '/Bootstrap/SalesServices.php';
 require APP_PATH . '/Bootstrap/DiagnosticServices.php';
 require APP_PATH . '/Bootstrap/ModuleServices.php';
 require APP_PATH . '/Bootstrap/KernelServices.php';
+require APP_PATH . '/Bootstrap/SalesRuleServices.php';

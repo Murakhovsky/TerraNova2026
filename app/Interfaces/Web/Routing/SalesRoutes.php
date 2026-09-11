@@ -13,6 +13,7 @@ final class SalesRoutes
         $workspaceApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_workspace_actions','action'=>$action];
         $searchApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_workspace_search','action'=>$action];
         $adminApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_pipeline','action'=>$action];
+        $adminRuleApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_rule','action'=>$action];
         $lifecycleApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_deal_lifecycle','action'=>$action];
         $web = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales','action'=>$action];
         $adminWeb = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales_admin','action'=>$action];
@@ -44,6 +45,8 @@ final class SalesRoutes
         $router->addPost('/api/sales/admin/pipelines', $adminApi('create'));
         $router->addGet('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}', $adminApi('pipeline'));
         $router->addPost('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}', $adminApi('update'));
+        $router->addPost('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}/clone', $adminApi('clone'));
+        $router->addGet('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}/revisions', $adminApi('revisions'));
         $router->addPost('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}/stages', $adminApi('createStage'));
         $router->addPost('/api/sales/admin/stages/{id:[A-Za-z0-9_-]{8,64}}', $adminApi('updateStage'));
         $router->addPost('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}/stages/reorder', $adminApi('reorder'));
@@ -52,5 +55,19 @@ final class SalesRoutes
         $router->addPost('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}/lost-reasons', $adminApi('createLostReason'));
         $router->addPost('/api/sales/admin/lost-reasons/{id:[A-Za-z0-9_-]{8,64}}', $adminApi('updateLostReason'));
         $router->addGet('/api/sales/admin/pipelines/{id:[A-Za-z0-9_-]{8,64}}/validate', $adminApi('validate'));
+
+        $router->addGet('/sales/admin/rules', $adminWeb('rules'));
+        $router->addGet('/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}', $adminWeb('rule'));
+        $router->addGet('/api/sales/admin/rules/catalog', $adminRuleApi('catalog'));
+        $router->addGet('/api/sales/admin/rules', $adminRuleApi('rules'));
+        $router->addPost('/api/sales/admin/rules', $adminRuleApi('create'));
+        $router->addGet('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}', $adminRuleApi('rule'));
+        $router->addPost('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}', $adminRuleApi('update'));
+        $router->addPost('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/activate', $adminRuleApi('activate'));
+        $router->addPost('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/disable', $adminRuleApi('disable'));
+        $router->addPost('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/archive', $adminRuleApi('archive'));
+        $router->addPost('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/restore-system', $adminRuleApi('restoreSystem'));
+        $router->addGet('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/dry-run', $adminRuleApi('dryRun'));
+        $router->addGet('/api/sales/admin/rules/{id:[A-Za-z0-9_.-]{8,64}}/revisions', $adminRuleApi('revisions'));
     }
 }
