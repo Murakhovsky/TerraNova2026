@@ -7,6 +7,8 @@ use InvalidArgumentException;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Agent\AgentDefinition;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
+use Kernel\Policy\Contract\PolicyContextProviderInterface;
+use Kernel\Policy\Contract\PolicyContextProvidingModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 use RuntimeException;
 
@@ -127,6 +129,24 @@ final class DomainModuleRegistry
         $module = is_string($moduleName) ? ($this->modules[$moduleName] ?? null) : null;
         return $module?->ruleContextProvider()
             ?? throw new RuntimeException(sprintf('No rule context provider for event: %s.', $eventType));
+    }
+
+    public function policyContextProviderFor(string $actionType): ?PolicyContextProviderInterface
+    {
+        $moduleName = $this->actions[$actionType] ?? null;
+        $module = is_string($moduleName) ? ($this->modules[$moduleName] ?? null) : null;
+        return $module instanceof PolicyContextProvidingModuleInterface
+            ? $module->policyContextProvider()
+            : null;
+    }
+
+    /** @return list<string> */
+    public function actionTypesForDomain(string $domainName): array
+    {
+        return array_values(array_keys(array_filter(
+            $this->actions,
+            static fn (string $owner): bool => $owner === $domainName,
+        )));
     }
 
     public function ownerOfEvent(string $eventType): ?string

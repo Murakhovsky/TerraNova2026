@@ -12,6 +12,8 @@ final readonly class ActionPolicy
         public array $conditions,
         public PolicyDecision $decision,
         public int $priority = 100,
+        public ?string $name = null,
+        public ?string $reason = null,
     ) {
     }
 }

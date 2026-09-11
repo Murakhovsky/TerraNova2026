@@ -31,6 +31,7 @@ final readonly class ActionPolicyService
         private ?AuditRepositoryInterface $audit = null,
         private ?DomainModuleRegistry $domains = null,
         private ?ActiveModuleResolver $modules = null,
+        private ?PolicyContextBuilder $contexts = null,
     ) {}
 
     public function submit(string $organizationId, ActionProposal $proposal, string $correlationId): Action
@@ -43,7 +44,7 @@ final readonly class ActionPolicyService
             // An idempotent duplicate has already passed policy and keeps its current lifecycle state.
             if ($action->status !== ActionStatus::Proposed) return $action;
 
-            $context = ['action' => [
+            $context = $this->contexts?->build($organizationId, $proposal) ?? ['action' => [
                 'type' => $action->type,
                 'parameters' => $action->parameters,
                 'risk_level' => $action->riskLevel,
@@ -72,10 +73,7 @@ final readonly class ActionPolicyService
             match ($evaluation->decision) {
                 PolicyDecision::Auto => $this->actions->queue($organizationId, $action->id),
                 PolicyDecision::ApprovalRequired => $this->requestApproval($action, $evaluation->reason),
-                PolicyDecision::Denied => $this->actions->reject($organizationId, $action->id),
-                PolicyDecision::HumanOnly => $this->isHumanOrigin($action->sourceType)
-                    ? $this->actions->queue($organizationId, $action->id)
-                    : $this->actions->reject($organizationId, $action->id),
+                PolicyDecision::Denied, PolicyDecision::HumanOnly => $this->actions->reject($organizationId, $action->id),
             };
 
             return $this->actions->find($organizationId, $action->id) ?? $action;
@@ -91,11 +89,6 @@ final readonly class ActionPolicyService
         if ($moduleId !== null && !$this->modules->isEnabled($organizationId, $moduleId)) {
             throw new DomainException(sprintf('Module %s is disabled for organization %s.', $moduleId, $organizationId));
         }
-    }
-
-    private function isHumanOrigin(string $sourceType): bool
-    {
-        return in_array(strtoupper($sourceType), ['USER', 'HUMAN', 'MANAGER', 'ADMIN'], true);
     }
 
     private function requestApproval(Action $action, string $reason): void

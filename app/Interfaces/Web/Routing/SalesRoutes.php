@@ -16,6 +16,8 @@ final class SalesRoutes
         $adminRuleApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_rule','action'=>$action];
         $adminAgentApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_agent','action'=>$action];
         $adminAgentWeb = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales_admin_agent','action'=>$action];
+        $adminPolicyApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_admin_policy','action'=>$action];
+        $adminPolicyWeb = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales_admin_policy','action'=>$action];
         $lifecycleApi = static fn (string $action): array => ['namespace'=>'Interfaces\\Api\\Controller','module'=>'frontend','controller'=>'sales_deal_lifecycle','action'=>$action];
         $web = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales','action'=>$action];
         $adminWeb = static fn (string $action): array => ['namespace'=>'Interfaces\\Web\\Controller','module'=>'frontend','controller'=>'sales_admin','action'=>$action];
@@ -80,5 +82,14 @@ final class SalesRoutes
         $router->addPost('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}', $adminAgentApi('update'));
         $router->addPost('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}/test', $adminAgentApi('test'));
         $router->addGet('/api/sales/admin/agents/{name:[A-Za-z0-9_.-]{3,160}}/revisions', $adminAgentApi('revisions'));
+
+        $router->addGet('/sales/admin/actions', $adminPolicyWeb('actions'));
+        $router->addGet('/api/sales/admin/policies/catalog', $adminPolicyApi('catalog'));
+        $router->addGet('/api/sales/admin/policies', $adminPolicyApi('actions'));
+        $router->addPost('/api/sales/admin/policies', $adminPolicyApi('create'));
+        $router->addPost('/api/sales/admin/policies/preview', $adminPolicyApi('preview'));
+        $router->addPost('/api/sales/admin/policies/{id:[A-Za-z0-9_.-]{8,64}}', $adminPolicyApi('update'));
+        $router->addPost('/api/sales/admin/policies/{id:[A-Za-z0-9_.-]{8,64}}/archive', $adminPolicyApi('archive'));
+        $router->addGet('/api/sales/admin/policies/{id:[A-Za-z0-9_.-]{8,64}}/revisions', $adminPolicyApi('revisions'));
     }
 }

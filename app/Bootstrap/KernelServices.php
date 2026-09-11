@@ -17,6 +17,7 @@ use Kernel\Event\Service\OutboxReplayService;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Operations\Service\WorkerSupervisor;
 use Kernel\Policy\Service\ActionPolicyService;
+use Kernel\Policy\Service\PolicyContextBuilder;
 use Kernel\Policy\Service\PolicyEngine;
 use Kernel\Queue\Handler\ActionExecutionJobHandler;
 use Kernel\Queue\Handler\AgentRunJobHandler;
@@ -38,6 +39,7 @@ $di->setShared('cosConfigurationProvisioner', fn (): ConfigurationProvisioner =>
 $di->setShared('cosConditionEvaluator', fn (): ConditionEvaluator => new ConditionEvaluator());
 $di->setShared('cosDeterministicProcessEngine', fn (): DeterministicProcessEngine => new DeterministicProcessEngine($this->getShared('cosConditionEvaluator')));
 $di->setShared('cosPolicyEngine', fn (): PolicyEngine => new PolicyEngine($this->getShared('cosConditionEvaluator')));
+$di->setShared('cosPolicyContextBuilder', fn (): PolicyContextBuilder => new PolicyContextBuilder($this->getShared('cosDomainRegistry')));
 
 $di->setShared('cosRuleContextProvider', fn (): RoutedRuleContextProvider => new RoutedRuleContextProvider($this->getShared('cosDomainRegistry')));
 $di->setShared('cosActionProposalSink', fn (): QueuedActionProposalSink => new QueuedActionProposalSink(
@@ -97,6 +99,7 @@ $di->setShared('cosActionPolicyService', fn (): ActionPolicyService => new Actio
     $this->getShared('cosAuditRepository'),
     $this->getShared('cosDomainRegistry'),
     $this->getShared('cosActiveModuleResolver'),
+    $this->getShared('cosPolicyContextBuilder'),
 ));
 $di->setShared('cosApprovalService', fn (): ApprovalService => new ApprovalService(
     $this->getShared('cosApprovalRepository'),

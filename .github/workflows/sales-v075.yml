@@ -1,0 +1,26 @@
+name: Sales V0.7.5 Actions & Policies Administration
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: V0.7.5 architecture
+        run: php tests/architecture/sales_v075_policy_admin.php
+      - name: V0.7.5 policy semantics
+        run: php tests/unit/sales_v075_policy_engine.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Policy/Service/PolicyContextBuilder.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlSalesPolicyAdministration.php
+          php -l app/Interfaces/Api/Controller/SalesAdminPolicyController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminPolicyController.php

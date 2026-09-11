@@ -15,6 +15,8 @@ final readonly class ActionProposal
         public string $executionMode,
         public string $riskLevel,
         public string $idempotencyKey,
+        /** @var array<string,mixed> */
+        public array $policyContext = [],
     ) {
     }
 }

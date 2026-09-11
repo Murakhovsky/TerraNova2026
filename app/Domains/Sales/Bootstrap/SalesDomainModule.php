@@ -32,9 +32,11 @@ use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
 use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use Kernel\Module\DomainModuleInterface;
+use Kernel\Policy\Contract\PolicyContextProviderInterface;
+use Kernel\Policy\Contract\PolicyContextProvidingModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 
-final readonly class SalesDomainModule implements DomainModuleInterface
+final readonly class SalesDomainModule implements DomainModuleInterface, PolicyContextProvidingModuleInterface
 {
     public function __construct(
         private CrmGatewayInterface $crm,
@@ -42,6 +44,7 @@ final readonly class SalesDomainModule implements DomainModuleInterface
         private ScheduleDealFollowup $scheduleFollowup,
         private RuleContextProviderInterface $ruleContexts,
         private AgentContextBuilderInterface $agentContexts,
+        private PolicyContextProviderInterface $policyContexts,
         private ChangeDealStage $changeDealStage,
         private SalesOperationService $operations,
         private AssignDealOwner $assignDealOwner,
@@ -85,6 +88,7 @@ final readonly class SalesDomainModule implements DomainModuleInterface
     public function agents(): array { return [SalesIntelligenceAgent::NAME => SalesIntelligenceAgent::definition()]; }
     public function agentContextBuilders(): array { return [SalesIntelligenceAgent::NAME => $this->agentContexts]; }
     public function ruleContextProvider(): RuleContextProviderInterface { return $this->ruleContexts; }
+    public function policyContextProvider(): PolicyContextProviderInterface { return $this->policyContexts; }
     public function rules(string $organizationId): array { return (new SalesRuleCatalog())->rules($organizationId); }
     public function policies(string $organizationId): array { return (new SalesPolicyCatalog())->policies($organizationId); }
 }

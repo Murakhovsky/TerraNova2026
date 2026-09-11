@@ -9,3 +9,4 @@ require APP_PATH . '/Bootstrap/ModuleServices.php';
 require APP_PATH . '/Bootstrap/KernelServices.php';
 require APP_PATH . '/Bootstrap/SalesAgentServices.php';
 require APP_PATH . '/Bootstrap/SalesRuleServices.php';
+require APP_PATH . '/Bootstrap/SalesPolicyServices.php';

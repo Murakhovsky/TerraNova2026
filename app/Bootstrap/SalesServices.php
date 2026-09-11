@@ -35,6 +35,7 @@ $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainM
     $this->getShared('salesScheduleDealFollowup'),
     $this->getShared('salesRuleContextProvider'),
     $this->getShared('salesAgentContextBuilder'),
+    $this->getShared('salesPolicyContextProvider'),
     $this->getShared('salesChangeDealStage'),
     $this->getShared('salesOperationService'),
     $this->getShared('salesAssignDealOwner'),
