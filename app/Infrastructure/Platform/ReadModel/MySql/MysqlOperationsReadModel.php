@@ -66,8 +66,9 @@ final readonly class MysqlOperationsReadModel implements OperationsReadModelInte
                 $organization,
             ),
             'integrations' => $this->all(
-                'SELECT id, provider, type, name, status, credentials_reference, configuration, updated_at '
-                . 'FROM cos_integrations WHERE organization_id = :organization_id ORDER BY type, provider LIMIT ' . $limit,
+                'SELECT id, integration_key, capability, provider, name, status, configuration_version, health_status, '
+                . 'last_health_check_at, last_success_at, updated_at '
+                . 'FROM cos_integrations WHERE organization_id = :organization_id ORDER BY capability, provider LIMIT ' . $limit,
                 $organization,
             ),
             'actions' => $this->all(

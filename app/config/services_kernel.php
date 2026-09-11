@@ -12,3 +12,4 @@ require APP_PATH . '/Bootstrap/SalesAgentServices.php';
 require APP_PATH . '/Bootstrap/SalesRuleServices.php';
 require APP_PATH . '/Bootstrap/SalesPolicyServices.php';
 require APP_PATH . '/Bootstrap/SalesIntegrationServices.php';
+require APP_PATH . '/Bootstrap/SalesAdministrationServices.php';

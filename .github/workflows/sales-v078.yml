@@ -1,0 +1,45 @@
+name: Sales V0.7.8 Audit Health Administration Closure
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: V0.7.1-V0.7.7 regressions
+        run: |
+          php tests/architecture/sales_v071_configuration.php
+          php tests/architecture/sales_v072_pipeline_admin.php
+          php tests/architecture/sales_v073_rule_editor.php
+          php tests/architecture/sales_v074_agent_admin.php
+          php tests/architecture/sales_v075_policy_admin.php
+          php tests/unit/sales_v075_policy_engine.php
+          php tests/architecture/sales_v076_users_teams_authority.php
+          php tests/unit/sales_v076_authority.php
+          php tests/architecture/sales_v077_integrations_administration.php
+          php tests/unit/sales_v077_integrations.php
+      - name: V0.7.8 architecture and health contracts
+        run: |
+          php tests/architecture/table_ownership.php
+          php tests/architecture/sales_v078_admin_closure.php
+          php tests/unit/sales_v078_health_classifier.php
+      - name: PHP syntax
+        run: |
+          php -l app/Domains/Sales/Application/Contract/SalesAdministrationReadModelInterface.php
+          php -l app/Domains/Sales/Application/Service/SalesAdministrationHealthClassifier.php
+          php -l app/Infrastructure/Platform/ReadModel/MySql/MysqlSalesAdministrationReadModel.php
+          php -l app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php
+          php -l app/Bootstrap/SalesAdministrationServices.php
+          php -l app/Interfaces/Api/Controller/SalesAdminHealthController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminHealthController.php
+          php -l app/Interfaces/Web/Routing/SalesAdministrationRoutes.php
+          php -l app/Interfaces/Web/View/sales_admin/health.phtml
+          php -l app/Interfaces/Web/Module.php

@@ -5,6 +5,7 @@ namespace Interfaces\Web;
 
 use Bootstrap\WebApplicationServices;
 use Interfaces\Web\Routing\FrontendRoutes;
+use Interfaces\Web\Routing\SalesAdministrationRoutes;
 use Interfaces\Web\Routing\SalesRoutes;
 use Interfaces\Web\Routing\SalesTeamRoutes;
 use Interfaces\Web\Routing\SalesIntegrationRoutes;
@@ -29,6 +30,7 @@ class Module implements ModuleDefinitionInterface
         SalesRoutes::register($router);
         SalesTeamRoutes::register($router);
         SalesIntegrationRoutes::register($router);
+        SalesAdministrationRoutes::register($router);
         WebApplicationServices::register($di);
 
         $di->set('view', function () {
