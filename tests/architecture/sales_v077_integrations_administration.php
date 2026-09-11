@@ -27,8 +27,18 @@ foreach (['cos_integrations', 'sales_integration_routes', 'configuration_version
         throw new RuntimeException('V0.7.7 integration administration contract missing: ' . $needle);
     }
 }
-if (str_contains($service, "'credentials_reference' => $credentialsReference")) {
+
+$revisionStart = strpos($service, 'private function revisionSnapshot');
+$credentialBoundaryStart = strpos($service, 'private function credentialsReference');
+if ($revisionStart === false || $credentialBoundaryStart === false || $credentialBoundaryStart <= $revisionStart) {
+    throw new RuntimeException('V0.7.7 credential revision boundary cannot be verified.');
+}
+$revisionSnapshot = substr($service, $revisionStart, $credentialBoundaryStart - $revisionStart);
+if (str_contains($revisionSnapshot, 'credentials_reference')) {
     throw new RuntimeException('Credential reference must not be copied into configuration revisions.');
+}
+if (!str_contains($revisionSnapshot, 'credentials_configured')) {
+    throw new RuntimeException('Configuration revisions must expose only safe credential presence metadata.');
 }
 
 $migration = file_get_contents($root . '/app/migrations/20260911_000035_sales_v077_integrations_administration.sql');
