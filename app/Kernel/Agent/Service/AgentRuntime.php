@@ -13,6 +13,7 @@ use Kernel\Agent\Contract\AgentRunRepositoryInterface;
 use Kernel\Agent\Contract\ContextRedactorInterface;
 use Kernel\Agent\Contract\DecisionRepositoryInterface;
 use Kernel\Agent\Contract\LlmClientInterface;
+use Kernel\Agent\Contract\OrganizationAwareLlmClientInterface;
 use RuntimeException;
 use Throwable;
 
@@ -46,7 +47,16 @@ final readonly class AgentRuntime
         $this->runs->start($runId, $agent, $invocation, $context);
 
         try {
-            $response = $this->llm->structured($agent, $invocation->question, $context);
+            $response = $this->llm instanceof OrganizationAwareLlmClientInterface
+                ? $this->llm->structuredForOrganization(
+                    $invocation->organizationId,
+                    $agent,
+                    $invocation->question,
+                    $context,
+                    $runId,
+                )
+                : $this->llm->structured($agent, $invocation->question, $context);
+
             if ($this->redactor !== null) {
                 $response = new \Kernel\Agent\LlmResponse(
                     $this->redactor->redact($response->output),

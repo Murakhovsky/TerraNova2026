@@ -6,8 +6,8 @@ use Kernel\Module\KernelVersion;
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.')) {
-    throw new RuntimeException('COS Kernel V0.8 module control contract requires the 0.8.x compatibility line.');
+if (version_compare(KernelVersion::VERSION, '0.8.2', '<')) {
+    throw new RuntimeException('COS Kernel module control contract requires Kernel 0.8.2+.');
 }
 
 $control = (string) file_get_contents($root . '/app/Kernel/Module/ModuleControlService.php');
@@ -36,4 +36,4 @@ foreach (['KernelVersion::VERSION', 'ModuleCapabilityRegistry'] as $boundary) {
 $bootstrap = (string) file_get_contents($root . '/app/Bootstrap/KernelServices.php');
 if (!str_contains($bootstrap, "'cosModuleControlService'")) throw new RuntimeException('Module control service is not registered in composition root.');
 
-echo "COS Kernel V0.8 module control plane contract passed on Kernel " . KernelVersion::VERSION . ".\n";
+echo "COS Kernel module control plane contract passed on Kernel " . KernelVersion::VERSION . ".\n";

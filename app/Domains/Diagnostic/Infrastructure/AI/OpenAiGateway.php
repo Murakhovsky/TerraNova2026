@@ -29,6 +29,9 @@ final readonly class OpenAiGateway implements AiGatewayInterface
             responseSchema: $request->outputSchema,
             model: $operation->model,
             maxOutputTokens: $operation->tokenBudget,
+            organizationId: $request->organizationId,
+            useCase: 'diagnostic.' . strtolower($operation->operation->value),
+            correlationId: $request->diagnosticId,
         ));
 
         return new AiResponse(

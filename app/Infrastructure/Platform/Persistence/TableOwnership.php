@@ -39,8 +39,8 @@ final class TableOwnership
             'cos_action_attempts', 'cos_approvals', 'cos_policies', 'cos_policy_evaluations',
             'cos_rules', 'cos_rule_evaluations', 'cos_agent_runs', 'cos_audit_log', 'cos_decisions',
             'cos_jobs', 'cos_configuration_provisions', 'cos_operational_metrics', 'cos_crm_inbox',
-            'cos_external_references', 'cos_integrations', 'cos_sync_state', 'tn_notification_outbox',
-            'tn_analytics_events',
+            'cos_external_references', 'cos_integrations', 'cos_sync_state', 'cos_llm_budgets', 'cos_llm_usage',
+            'tn_notification_outbox', 'tn_analytics_events',
             'tn_integration_outbox', 'tn_webhook_deliveries', 'tn_migrations',
         ],
     ];

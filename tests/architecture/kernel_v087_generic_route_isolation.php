@@ -6,8 +6,8 @@ require $root . '/vendor/autoload.php';
 
 use Kernel\Module\KernelVersion;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.7', '<')) {
-    throw new RuntimeException('COS Kernel generic module route isolation requires Kernel 0.8.7+ on the 0.8.x line.');
+if (version_compare(KernelVersion::VERSION, '0.8.7', '<')) {
+    throw new RuntimeException('COS Kernel generic module route isolation requires Kernel 0.8.7+.');
 }
 
 $registrar = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/ModuleRouteRegistrar.php');
@@ -49,9 +49,9 @@ if (!str_contains($manifest, "'salesRouteContributor'")) {
 }
 
 $moduleServices = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');
-foreach (['\'module_id\' => $definition->manifest->id', '\'service\' => $this->getShared($serviceId)'] as $needle) {
+foreach (["'module_id' => \$extension->moduleId", "'service' => \$this->getShared(\$extension->serviceId)"] as $needle) {
     if (!str_contains($moduleServices, $needle)) {
-        throw new RuntimeException('Module route contributions lost module ownership metadata: ' . $needle);
+        throw new RuntimeException('Module route extensions lost module ownership metadata: ' . $needle);
     }
 }
 

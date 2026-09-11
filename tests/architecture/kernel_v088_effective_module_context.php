@@ -6,8 +6,8 @@ require $root . '/vendor/autoload.php';
 
 use Kernel\Module\KernelVersion;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.8', '<')) {
-    throw new RuntimeException('COS Kernel effective module context requires Kernel 0.8.8+ on the 0.8.x line.');
+if (version_compare(KernelVersion::VERSION, '0.8.8', '<')) {
+    throw new RuntimeException('COS Kernel effective module context requires Kernel 0.8.8+.');
 }
 
 $contextPath = $root . '/app/Kernel/Module/EffectiveModuleContext.php';

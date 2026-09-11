@@ -1,0 +1,46 @@
+name: COS Kernel V0.10 LLM Runtime Governance
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: LLM governance architecture
+        run: |
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/kernel_v09_extension_runtime.php
+          php tests/architecture/kernel_v010_llm_runtime_governance.php
+      - name: LLM governance invariants
+        run: php tests/unit/llm_runtime_governance.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Llm/StructuredLlmRequest.php
+          php -l app/Kernel/Llm/LlmRoute.php
+          php -l app/Kernel/Llm/LlmRoutingPolicy.php
+          php -l app/Kernel/Llm/LlmProviderRegistry.php
+          php -l app/Kernel/Llm/LlmProviderException.php
+          php -l app/Kernel/Llm/LlmBudgetExceededException.php
+          php -l app/Kernel/Llm/LlmGovernanceRepositoryInterface.php
+          php -l app/Kernel/Llm/LlmUsageRecord.php
+          php -l app/Kernel/Llm/GovernedStructuredLlmClient.php
+          php -l app/Kernel/Agent/Contract/OrganizationAwareLlmClientInterface.php
+          php -l app/Kernel/Agent/Service/StructuredAgentLlmClient.php
+          php -l app/Kernel/Agent/Service/AgentRuntime.php
+          php -l app/Infrastructure/Llm/HttpStructuredLlmClient.php
+          php -l app/Infrastructure/Llm/MysqlLlmGovernanceRepository.php
+          php -l app/Bootstrap/InfrastructureServices.php
+          php -l app/Bootstrap/KernelServices.php
+          php -l app/Domains/Diagnostic/Infrastructure/AI/OpenAiGateway.php
+          php -l tests/unit/llm_runtime_governance.php
+          php -l tests/architecture/kernel_v010_llm_runtime_governance.php

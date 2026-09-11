@@ -10,8 +10,8 @@ use Kernel\Module\KernelVersion;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDiscovery;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.5', '<')) {
-    throw new RuntimeException('COS Kernel module route contributions require Kernel 0.8.5+ on the 0.8.x line.');
+if (version_compare(KernelVersion::VERSION, '0.8.5', '<')) {
+    throw new RuntimeException('COS Kernel module route contributions require Kernel 0.8.5+.');
 }
 
 $catalog = new ModuleCatalog((new ModuleDiscovery($root . '/app/Domains'))->discover());
@@ -41,8 +41,6 @@ if (!str_contains($webServicesSource, "setShared('salesRouteContributor'")) {
     throw new RuntimeException('Sales route contributor is not registered in Web composition.');
 }
 
-// Architecture CI does not load the native Phalcon extension, so preserve the route contract
-// by verifying contributor ownership plus representative route declarations at source level.
 $contributorSource = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/SalesModuleRouteContributor.php');
 $routeFamilies = [
     'SalesRoutes::register',

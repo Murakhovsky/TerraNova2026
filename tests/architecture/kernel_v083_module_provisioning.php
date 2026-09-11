@@ -9,8 +9,8 @@ use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDiscovery;
 use Kernel\Module\ModuleTenantProvisioner;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.')) {
-    throw new RuntimeException('COS Kernel V0.8 provisioning contract must remain on the 0.8.x compatibility line.');
+if (version_compare(KernelVersion::VERSION, '0.8.3', '<')) {
+    throw new RuntimeException('COS Kernel module provisioning contract requires Kernel 0.8.3+.');
 }
 
 $catalog = new ModuleCatalog((new ModuleDiscovery($root . '/app/Domains'))->discover());

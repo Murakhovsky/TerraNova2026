@@ -6,8 +6,8 @@ require $root . '/vendor/autoload.php';
 
 use Kernel\Module\KernelVersion;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.6', '<')) {
-    throw new RuntimeException('COS Kernel per-request module route access requires Kernel 0.8.6+ on the 0.8.x line.');
+if (version_compare(KernelVersion::VERSION, '0.8.6', '<')) {
+    throw new RuntimeException('COS Kernel per-request module route access requires Kernel 0.8.6+.');
 }
 
 $guard = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/ModuleRouteAccessGuard.php');

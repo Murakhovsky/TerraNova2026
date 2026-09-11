@@ -9,8 +9,8 @@ use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDiscovery;
 use Kernel\Module\ModuleExtensionRegistry;
 
-if (KernelVersion::VERSION !== '0.9.0') {
-    throw new RuntimeException('Kernel machine version is not aligned with V0.9.0.');
+if (version_compare(KernelVersion::VERSION, '0.9.0', '<')) {
+    throw new RuntimeException('Kernel extension runtime requires Kernel V0.9.0+.');
 }
 
 $definitions = (new ModuleDiscovery($root . '/app/Domains'))->discover();

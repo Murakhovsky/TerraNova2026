@@ -28,6 +28,7 @@ use Infrastructure\Integration\Crm\MysqlCrmInboxRepository;
 use Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver;
 use Infrastructure\Integration\Crm\RoutedCrmGateway;
 use Infrastructure\Llm\HttpStructuredLlmClient;
+use Infrastructure\Llm\MysqlLlmGovernanceRepository;
 use Infrastructure\Observability\JsonFileLogger;
 use Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder;
 use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
@@ -36,6 +37,10 @@ use Domains\Sales\Infrastructure\Persistence\MySql\MysqlMessageGateway;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesActivityRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesRuleContextProvider;
+use Kernel\Llm\GovernedStructuredLlmClient;
+use Kernel\Llm\LlmProviderRegistry;
+use Kernel\Llm\LlmRoute;
+use Kernel\Llm\LlmRoutingPolicy;
 
 $connection = static fn ($container) => $container->getShared('databaseService')->connection();
 
@@ -91,12 +96,86 @@ $di->setShared('cosCrmInbox', fn (): MysqlCrmInboxRepository => new MysqlCrmInbo
 $di->setShared('cosCrmWebhookSecrets', fn (): EnvironmentCrmWebhookSecretResolver => new EnvironmentCrmWebhookSecretResolver($connection($this)));
 $di->setShared('cosCrmInboundApplier', fn (): MysqlCrmInboundApplier => new MysqlCrmInboundApplier($connection($this)));
 
-$di->setShared('cosLlmClient', function (): HttpStructuredLlmClient {
+$di->setShared('cosLlmGovernanceRepository', fn (): MysqlLlmGovernanceRepository => new MysqlLlmGovernanceRepository($connection($this)));
+
+$di->setShared('cosLlmProviderRegistry', function (): LlmProviderRegistry {
     $config = $this->getConfig()->llm;
-    return new HttpStructuredLlmClient(
-        (string) $config->endpoint,
-        (string) $config->token,
-        (string) $config->model,
-        (string) $config->provider,
-    );
+    $primaryId = trim((string) $config->provider) !== '' ? trim((string) $config->provider) : 'primary';
+    $providers = [
+        $primaryId => new HttpStructuredLlmClient(
+            (string) $config->endpoint,
+            (string) $config->token,
+            (string) $config->model,
+            $primaryId,
+        ),
+    ];
+
+    $fallbackEndpoint = trim((string) (getenv('LLM_FALLBACK_ENDPOINT') ?: ''));
+    if ($fallbackEndpoint !== '') {
+        $fallbackId = trim((string) (getenv('LLM_FALLBACK_PROVIDER') ?: 'fallback'));
+        if ($fallbackId === $primaryId) {
+            throw new RuntimeException('LLM fallback provider id must differ from the primary provider id.');
+        }
+        $providers[$fallbackId] = new HttpStructuredLlmClient(
+            $fallbackEndpoint,
+            (string) (getenv('LLM_FALLBACK_TOKEN') ?: ''),
+            (string) (getenv('LLM_FALLBACK_MODEL') ?: $config->model),
+            $fallbackId,
+        );
+    }
+
+    return new LlmProviderRegistry($providers);
 });
+
+$di->setShared('cosLlmRoutingPolicy', function (): LlmRoutingPolicy {
+    $config = $this->getConfig()->llm;
+    $registry = $this->getShared('cosLlmProviderRegistry');
+    $primaryId = trim((string) $config->provider) !== '' ? trim((string) $config->provider) : 'primary';
+    $defaults = [new LlmRoute($primaryId, (string) $config->model)];
+
+    $fallbackEndpoint = trim((string) (getenv('LLM_FALLBACK_ENDPOINT') ?: ''));
+    if ($fallbackEndpoint !== '') {
+        $fallbackId = trim((string) (getenv('LLM_FALLBACK_PROVIDER') ?: 'fallback'));
+        $defaults[] = new LlmRoute(
+            $fallbackId,
+            (string) (getenv('LLM_FALLBACK_MODEL') ?: $config->model),
+        );
+    }
+
+    $useCaseRoutes = [];
+    $routesJson = trim((string) (getenv('LLM_ROUTES_JSON') ?: ''));
+    if ($routesJson !== '') {
+        $decoded = json_decode($routesJson, true, flags: JSON_THROW_ON_ERROR);
+        if (!is_array($decoded)) {
+            throw new RuntimeException('LLM_ROUTES_JSON must decode to an object of use-case routes.');
+        }
+        foreach ($decoded as $useCase => $routeDefinitions) {
+            if (!is_string($useCase) || !is_array($routeDefinitions)) {
+                throw new RuntimeException('Invalid LLM use-case routing definition.');
+            }
+            $routes = [];
+            foreach ($routeDefinitions as $definition) {
+                if (!is_array($definition)) {
+                    throw new RuntimeException(sprintf('Invalid LLM route for use case %s.', $useCase));
+                }
+                $provider = trim((string) ($definition['provider'] ?? ''));
+                $model = trim((string) ($definition['model'] ?? ''));
+                if ($provider === '' || $model === '' || !$registry->has($provider)) {
+                    throw new RuntimeException(sprintf('Invalid or unavailable LLM route for use case %s.', $useCase));
+                }
+                $routes[] = new LlmRoute($provider, $model);
+            }
+            $useCaseRoutes[$useCase] = $routes;
+        }
+    }
+
+    return new LlmRoutingPolicy($defaults, $useCaseRoutes);
+});
+
+$di->setShared('cosLlmClient', fn (): GovernedStructuredLlmClient => new GovernedStructuredLlmClient(
+    $this->getShared('cosLlmProviderRegistry'),
+    $this->getShared('cosLlmRoutingPolicy'),
+    $this->getShared('cosLlmGovernanceRepository'),
+    $this->getShared('cosMetrics'),
+    strtoupper((string) (getenv('LLM_BUDGET_CURRENCY') ?: 'USD')),
+));

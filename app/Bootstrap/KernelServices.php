@@ -5,6 +5,7 @@ use Kernel\Action\Service\ActionExecutor;
 use Kernel\Action\Service\ActionService;
 use Kernel\Agent\Service\AgentRuntime;
 use Kernel\Agent\Service\RoutedAgentContextBuilder;
+use Kernel\Agent\Service\StructuredAgentLlmClient;
 use Kernel\Agent\Service\StructuredDecisionValidator;
 use Kernel\Agent\Service\SensitiveContextRedactor;
 use Kernel\Approval\Service\ApprovalService;
@@ -125,9 +126,12 @@ $di->setShared('cosApprovalService', fn (): ApprovalService => new ApprovalServi
 ));
 
 $di->setShared('cosAgentContextBuilder', fn (): RoutedAgentContextBuilder => new RoutedAgentContextBuilder($this->getShared('cosDomainRegistry')));
+$di->setShared('cosAgentLlmClient', fn (): StructuredAgentLlmClient => new StructuredAgentLlmClient(
+    $this->getShared('cosLlmClient'),
+));
 $di->setShared('cosAgentRuntime', fn (): AgentRuntime => new AgentRuntime(
     $this->getShared('cosAgentContextBuilder'),
-    $this->getShared('cosLlmClient'),
+    $this->getShared('cosAgentLlmClient'),
     new StructuredDecisionValidator(),
     $this->getShared('cosAgentRunRepository'),
     $this->getShared('cosDecisionRepository'),

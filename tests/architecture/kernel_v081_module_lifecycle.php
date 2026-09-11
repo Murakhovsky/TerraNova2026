@@ -9,8 +9,8 @@ use Kernel\Module\VersionConstraint;
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
-if (!VersionConstraint::matches(KernelVersion::VERSION, '>=0.8.1 <0.9.0')) {
-    throw new RuntimeException('Kernel runtime version is outside the V0.8 lifecycle contract.');
+if (version_compare(KernelVersion::VERSION, '0.8.1', '<')) {
+    throw new RuntimeException('Kernel runtime version is older than the V0.8.1 lifecycle contract.');
 }
 
 $definitions = (new ModuleDiscovery($root . '/app/Domains'))->discover();

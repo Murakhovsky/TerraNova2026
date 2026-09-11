@@ -6,8 +6,8 @@ require $root . '/vendor/autoload.php';
 
 use Kernel\Module\KernelVersion;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.10', '<')) {
-    throw new RuntimeException('COS Kernel module readiness diagnostics require Kernel 0.8.10+ on the 0.8.x line.');
+if (version_compare(KernelVersion::VERSION, '0.8.10', '<')) {
+    throw new RuntimeException('COS Kernel module readiness diagnostics require Kernel 0.8.10+.');
 }
 
 $diagnosticPath = $root . '/app/Kernel/Module/ModuleReadinessDiagnostic.php';

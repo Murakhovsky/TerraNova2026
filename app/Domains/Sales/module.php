@@ -6,7 +6,7 @@ return [
     'name' => 'Sales',
     'version' => '0.7.1',
     'schema_version' => '0.7.1',
-    'kernel_constraint' => '>=0.9.0 <0.10.0',
+    'kernel_constraint' => '>=0.10.0 <0.11.0',
     'description' => 'Sales operations, CRM workflow, intelligence and automation.',
     'icon' => 'chart-line',
     'dependencies' => [],

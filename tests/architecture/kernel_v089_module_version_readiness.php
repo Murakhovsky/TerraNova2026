@@ -6,8 +6,8 @@ require $root . '/vendor/autoload.php';
 
 use Kernel\Module\KernelVersion;
 
-if (!str_starts_with(KernelVersion::VERSION, '0.8.') || version_compare(KernelVersion::VERSION, '0.8.9', '<')) {
-    throw new RuntimeException('COS Kernel module version readiness requires Kernel 0.8.9+ on the 0.8.x line.');
+if (version_compare(KernelVersion::VERSION, '0.8.9', '<')) {
+    throw new RuntimeException('COS Kernel module version readiness requires Kernel 0.8.9+.');
 }
 
 $resolver = (string) file_get_contents($root . '/app/Kernel/Module/ActiveModuleResolver.php');
