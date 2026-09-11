@@ -24,8 +24,13 @@ $webModule = (string) file_get_contents($root . '/app/Interfaces/Web/Module.php'
 if (!str_contains($webModule, 'PlatformRoutes::register($router)')) throw new RuntimeException('Platform routes are not wired into the Web module.');
 
 $controller = (string) file_get_contents($root . '/app/Interfaces/Api/Controller/PlatformModuleController.php');
-foreach (['isAdmin($user)', 'validMutation()', 'cosModuleControlService', 'KernelVersion::VERSION', 'cosModuleCapabilityRegistry'] as $boundary) {
+foreach (['isAdmin($user)', 'validMutation()', 'cosModuleControlService', 'cosEffectiveModuleContext'] as $boundary) {
     if (!str_contains($controller, $boundary)) throw new RuntimeException('Platform module controller boundary is missing: ' . $boundary);
+}
+
+$effectiveContext = (string) file_get_contents($root . '/app/Kernel/Module/EffectiveModuleContext.php');
+foreach (['KernelVersion::VERSION', 'ModuleCapabilityRegistry'] as $boundary) {
+    if (!str_contains($effectiveContext, $boundary)) throw new RuntimeException('Effective module context boundary is missing: ' . $boundary);
 }
 
 $bootstrap = (string) file_get_contents($root . '/app/Bootstrap/KernelServices.php');
