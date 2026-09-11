@@ -1,0 +1,81 @@
+version: 1
+branch: COS
+sections:
+  - id: start
+    label: Start Here
+    order: 0
+    items:
+      - path: 00-start/what-is-cos.md
+        label: Що таке COS
+      - path: 00-start/mental-model.md
+        label: Mental Model
+      - path: 00-start/repository-map.md
+        label: Repository Map
+
+  - id: architecture
+    label: System Architecture
+    order: 3
+    items:
+      - path: 03-architecture/kernel-overview.md
+        label: Kernel Overview
+      - path: architecture/cos-kernel.md
+        label: Canonical Kernel Architecture
+      - path: architecture/domain-boundaries.md
+        label: Domain Boundaries
+      - path: architecture/persistence.md
+        label: Persistence
+      - path: architecture/frontend-interface.md
+        label: Frontend Interface
+      - path: architecture/diagnostic-domain-model.md
+        label: Diagnostic Domain Model
+
+  - id: runtime
+    label: Runtime
+    order: 5
+    items:
+      - path: 05-runtime/execution-lifecycle.md
+        label: Execution Lifecycle
+      - path: 05-runtime/commands-and-use-cases.md
+        label: Commands & Use Cases
+      - path: 05-runtime/events-and-outbox.md
+        label: Events & Outbox
+      - path: 05-runtime/policies-and-approvals.md
+        label: Policies & Approvals
+      - path: 05-runtime/module-lifecycle.md
+        label: Module Lifecycle
+      - path: 05-runtime/audit-and-diagnostics.md
+        label: Audit & Diagnostics
+
+  - id: agents
+    label: AI / Agents
+    order: 6
+    items:
+      - path: 06-ai-agents/llm-boundary.md
+        label: LLM Boundary
+      - path: 06-ai-agents/agent-runtime.md
+        label: Agent Runtime
+      - path: 06-ai-agents/context-and-tools.md
+        label: Context & Tools
+
+  - id: diagnostics
+    label: Business Diagnostics
+    order: 7
+    items:
+      - path: architecture/diagnostic-domain-model.md
+        label: Domain Model
+
+  - id: reference
+    label: Reference
+    order: 12
+    items:
+      - path: 12-reference/kernel-components.md
+        label: Kernel Components
+
+legacy_reference:
+  - architecture/legacy-entrypoint-inventory.md
+  - architecture/legacy-modules-integration-plan.md
+  - architecture/legacy-service-migration-ledger.md
+  - n8n-content-webhooks.md
+  - telegram-automation.md
+  - spatial-module.md
+  - release-p2-v06-status.md
