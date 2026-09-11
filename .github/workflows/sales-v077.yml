@@ -1,0 +1,42 @@
+name: Sales V0.7.7 Integrations Administration
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: V0.7.1-V0.7.6 regressions
+        run: |
+          php tests/architecture/sales_v071_configuration.php
+          php tests/architecture/sales_v072_pipeline_admin.php
+          php tests/architecture/sales_v073_rule_editor.php
+          php tests/architecture/sales_v074_agent_admin.php
+          php tests/architecture/sales_v075_policy_admin.php
+          php tests/unit/sales_v075_policy_engine.php
+          php tests/architecture/sales_v076_users_teams_authority.php
+          php tests/unit/sales_v076_authority.php
+      - name: V0.7.7 architecture and integration contracts
+        run: |
+          php tests/architecture/sales_v077_integrations_administration.php
+          php tests/unit/sales_v077_integrations.php
+      - name: PHP syntax
+        run: |
+          php -l app/Domains/Sales/Application/Contract/SalesIntegrationAdministrationInterface.php
+          php -l app/Domains/Sales/Application/Contract/SalesIntegrationHealthProbeInterface.php
+          php -l app/Domains/Sales/Automation/Integration/SalesIntegrationDefinitionCatalog.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesIntegrationAdministration.php
+          php -l app/Infrastructure/Integration/Crm/CrmRegistrySalesIntegrationHealthProbe.php
+          php -l app/Bootstrap/SalesIntegrationServices.php
+          php -l app/Interfaces/Api/Controller/SalesAdminIntegrationController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminIntegrationController.php
+          php -l app/Interfaces/Web/Routing/SalesIntegrationRoutes.php
+          php -l app/Interfaces/Web/View/sales_admin/integrations.phtml
