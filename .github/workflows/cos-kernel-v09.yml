@@ -1,0 +1,38 @@
+name: COS Kernel V0.9 Extension Runtime
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Extension runtime architecture
+        run: |
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/kernel_v09_extension_runtime.php
+      - name: Extension runtime invariants
+        run: |
+          php tests/unit/module_extension_registry.php
+          php tests/unit/module_route_access.php
+          php tests/unit/module_effective_context.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Kernel/Module/ModuleContributions.php
+          php -l app/Kernel/Module/ModuleExtensionContribution.php
+          php -l app/Kernel/Module/ModuleExtensionRegistry.php
+          php -l app/Bootstrap/ModuleServices.php
+          php -l app/Bootstrap/WebApplicationServices.php
+          php -l app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php
+          php -l tests/unit/module_extension_registry.php
+          php -l tests/architecture/kernel_v09_extension_runtime.php

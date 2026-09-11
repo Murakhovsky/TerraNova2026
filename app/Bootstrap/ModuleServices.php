@@ -11,6 +11,7 @@ use Kernel\Module\ModuleCapabilityRegistry;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDefinition;
 use Kernel\Module\ModuleDiscovery;
+use Kernel\Module\ModuleExtensionRegistry;
 use Kernel\Module\ModuleLifecycleManager;
 use Kernel\Module\ModuleReadinessDiagnostic;
 use Kernel\Queue\Contract\JobHandlerInterface;
@@ -45,6 +46,10 @@ $di->setShared('cosModuleLifecycleManager', fn (): ModuleLifecycleManager => new
 ));
 
 $di->setShared('cosModuleCapabilityRegistry', fn (): ModuleCapabilityRegistry => new ModuleCapabilityRegistry(
+    $this->getShared('cosModuleCatalog'),
+));
+
+$di->setShared('cosModuleExtensionRegistry', fn (): ModuleExtensionRegistry => new ModuleExtensionRegistry(
     $this->getShared('cosModuleCatalog'),
 ));
 
@@ -120,41 +125,59 @@ $di->setShared('cosModuleJobHandlers', function (): array {
     return $handlers;
 });
 
-// API integrations remain declarative and retain module ownership.
+// API routes are a first-class extension point. Routes remain globally registered;
+// request-time module access is enforced by ModuleRouteAccessGuard in the Web layer.
 $di->setShared('cosModuleApiRouteContributors', function (): array {
     $contributors = [];
-    foreach ($this->getShared('cosModuleDefinitions') as $definition) {
-        foreach ($definition->contributions->apiRouteContributorServices as $serviceId) {
-            $contributors[] = [
-                'module_id' => $definition->manifest->id,
-                'service' => $this->getShared($serviceId),
-            ];
-        }
+    /** @var ModuleExtensionRegistry $registry */
+    $registry = $this->getShared('cosModuleExtensionRegistry');
+    foreach ($registry->for(ModuleExtensionRegistry::API_ROUTES) as $extension) {
+        $contributors[] = [
+            'module_id' => $extension->moduleId,
+            'service' => $this->getShared($extension->serviceId),
+        ];
     }
 
     return $contributors;
 });
 
-// Tenant configuration is provisioned only through services explicitly owned by a module manifest.
+// Tenant configuration provisioning uses the same extension registry while retaining
+// its explicit contract and ownership validation.
 $di->setShared('cosModuleConfigurationProvisioners', function (): array {
     $provisioners = [];
-    foreach ($this->getShared('cosModuleDefinitions') as $definition) {
-        foreach ($definition->contributions->configurationProvisionerServices as $serviceId) {
-            $service = $this->getShared($serviceId);
-            if (!$service instanceof ModuleConfigurationProvisionerInterface) {
-                throw new RuntimeException(sprintf(
-                    'Module %s configuration service %s must implement ModuleConfigurationProvisionerInterface.',
-                    $definition->manifest->id,
-                    $serviceId,
-                ));
-            }
-
-            $provisioners[] = [
-                'module_id' => $definition->manifest->id,
-                'service' => $service,
-            ];
+    /** @var ModuleExtensionRegistry $registry */
+    $registry = $this->getShared('cosModuleExtensionRegistry');
+    foreach ($registry->for(ModuleExtensionRegistry::TENANT_CONFIGURATION) as $extension) {
+        $service = $this->getShared($extension->serviceId);
+        if (!$service instanceof ModuleConfigurationProvisionerInterface) {
+            throw new RuntimeException(sprintf(
+                'Module %s configuration service %s must implement ModuleConfigurationProvisionerInterface.',
+                $extension->moduleId,
+                $extension->serviceId,
+            ));
         }
+
+        $provisioners[] = [
+            'module_id' => $extension->moduleId,
+            'service' => $service,
+        ];
     }
 
     return $provisioners;
+});
+
+// Web UI contributions stay provider-neutral in Kernel. The Web layer validates
+// the concrete navigation contract when it consumes this extension point.
+$di->setShared('cosModuleWebNavigationContributors', function (): array {
+    $contributors = [];
+    /** @var ModuleExtensionRegistry $registry */
+    $registry = $this->getShared('cosModuleExtensionRegistry');
+    foreach ($registry->for('web.navigation') as $extension) {
+        $contributors[] = [
+            'module_id' => $extension->moduleId,
+            'service' => $this->getShared($extension->serviceId),
+        ];
+    }
+
+    return $contributors;
 });

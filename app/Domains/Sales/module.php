@@ -6,7 +6,7 @@ return [
     'name' => 'Sales',
     'version' => '0.7.1',
     'schema_version' => '0.7.1',
-    'kernel_constraint' => '^0.8.0',
+    'kernel_constraint' => '>=0.9.0 <0.10.0',
     'description' => 'Sales operations, CRM workflow, intelligence and automation.',
     'icon' => 'chart-line',
     'dependencies' => [],
@@ -21,6 +21,11 @@ return [
         ],
         'configuration_provisioner_services' => [
             'salesModuleConfigurationProvisioner',
+        ],
+        'extension_services' => [
+            'web.navigation' => [
+                'salesNavigationContributor',
+            ],
         ],
         'migration_files' => [
             'app/migrations/20260910_000030_sales_v071_configuration_ownership.sql',

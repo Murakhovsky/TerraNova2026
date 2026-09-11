@@ -10,26 +10,41 @@ use RuntimeException;
 
 final readonly class ModuleAwareNavigationService
 {
-    /** @param list<ModuleNavigationContributorInterface> $contributors */
+    /** @var list<array{module_id: string, service: ModuleNavigationContributorInterface}> */
+    private array $contributors;
+
+    /** @param list<array{module_id: string, service: ModuleNavigationContributorInterface}> $contributors */
     public function __construct(
         private OrganizationContextInterface $organization,
         private ActiveModuleResolver $modules,
-        private array $contributors,
+        array $contributors,
     ) {
         $moduleIds = [];
-        foreach ($this->contributors as $contributor) {
-            if (!$contributor instanceof ModuleNavigationContributorInterface) {
-                throw new InvalidArgumentException('Invalid Web module navigation contributor.');
+        $normalized = [];
+        foreach ($contributors as $contribution) {
+            $moduleId = $contribution['module_id'] ?? null;
+            $contributor = $contribution['service'] ?? null;
+            if (!is_string($moduleId) || !$contributor instanceof ModuleNavigationContributorInterface) {
+                throw new InvalidArgumentException('Invalid Web module navigation contribution.');
             }
-            $moduleId = $contributor->moduleId();
             if (!preg_match('/^[a-z][a-z0-9_]*$/', $moduleId)) {
                 throw new InvalidArgumentException(sprintf('Invalid Web navigation module id: %s.', $moduleId));
+            }
+            if ($contributor->moduleId() !== $moduleId) {
+                throw new InvalidArgumentException(sprintf(
+                    'Web navigation contributor reports module %s but is owned by %s.',
+                    $contributor->moduleId(),
+                    $moduleId,
+                ));
             }
             if (isset($moduleIds[$moduleId])) {
                 throw new InvalidArgumentException(sprintf('Duplicate Web navigation contributor for module: %s.', $moduleId));
             }
             $moduleIds[$moduleId] = true;
+            $normalized[] = ['module_id' => $moduleId, 'service' => $contributor];
         }
+
+        $this->contributors = $normalized;
     }
 
     /** @return array<string, mixed> */
@@ -40,8 +55,10 @@ final readonly class ModuleAwareNavigationService
         $extensions = [];
         $organizationId = $this->organization->id();
 
-        foreach ($this->contributors as $contributor) {
-            if (!$this->modules->isEnabled($organizationId, $contributor->moduleId())) {
+        foreach ($this->contributors as $contribution) {
+            $moduleId = $contribution['module_id'];
+            $contributor = $contribution['service'];
+            if (!$this->modules->isEnabled($organizationId, $moduleId)) {
                 continue;
             }
 
@@ -69,9 +86,9 @@ final readonly class ModuleAwareNavigationService
         $primary = (array) ($navigation['primary'] ?? []);
         $organizationId = $this->organization->id();
 
-        foreach ($this->contributors as $contributor) {
-            if ($this->modules->isEnabled($organizationId, $contributor->moduleId())) {
-                array_push($primary, ...$contributor->portalPrimary($role));
+        foreach ($this->contributors as $contribution) {
+            if ($this->modules->isEnabled($organizationId, $contribution['module_id'])) {
+                array_push($primary, ...$contribution['service']->portalPrimary($role));
             }
         }
 

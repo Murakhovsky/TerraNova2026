@@ -46,15 +46,15 @@ final class WebApplicationServices
         ));
         $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor());
 
-        $di->setShared('webModuleNavigationContributors', fn() => [
-            new SalesNavigationContributor(),
-            new PropertyNavigationContributor(),
-            new DiagnosticNavigationContributor(),
-        ]);
+        // UI extensions are declared by module.php. Web owns the concrete contributor
+        // implementations, while Kernel owns only the extension-point registry.
+        $di->setShared('salesNavigationContributor', fn() => new SalesNavigationContributor());
+        $di->setShared('propertyNavigationContributor', fn() => new PropertyNavigationContributor());
+        $di->setShared('diagnosticNavigationContributor', fn() => new DiagnosticNavigationContributor());
         $di->setShared('frontendNavigationService', fn() => new ModuleAwareNavigationService(
             $di->getShared('organizationContext'),
             $di->getShared('cosActiveModuleResolver'),
-            $di->getShared('webModuleNavigationContributors'),
+            $di->getShared('cosModuleWebNavigationContributors'),
         ));
 
         $di->setShared('frontendAdminDashboardService', fn() => new AdminDashboardService($di->getShared('databaseService')));
