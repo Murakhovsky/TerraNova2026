@@ -10,6 +10,7 @@ final class PlatformRoutes
     public static function register(RouterInterface $router): void
     {
         $router->addGet('/api/platform/modules', self::target('index'));
+        $router->addGet('/api/platform/modules/readiness', self::target('readiness'));
         $router->addPost('/api/platform/modules/{id:[a-z][a-z0-9_]*}/install', self::target('install'));
         $router->addPost('/api/platform/modules/{id:[a-z][a-z0-9_]*}/upgrade', self::target('upgrade'));
         $router->addPost('/api/platform/modules/{id:[a-z][a-z0-9_]*}/enable', self::target('enable'));

@@ -7,6 +7,7 @@ use Interfaces\Web\Controller\WebController;
 use InvalidArgumentException;
 use Kernel\Module\EffectiveModuleContext;
 use Kernel\Module\ModuleControlService;
+use Kernel\Module\ModuleReadinessDiagnostic;
 use Phalcon\Http\Response;
 use RuntimeException;
 use Throwable;
@@ -32,6 +33,28 @@ final class PlatformModuleController extends WebController
         } catch (Throwable $error) {
             $this->di->getShared('cosLogger')->error('platform.modules.read_failed', ['error' => $error->getMessage()]);
             return $this->json(500, ['ok' => false, 'error' => 'Platform module state is unavailable.']);
+        }
+    }
+
+    public function readinessAction(): Response
+    {
+        $this->view->disable();
+        $user = $this->auth()->currentUser();
+        if ($user === null || !$this->auth()->isAdmin($user)) {
+            return $this->json(403, ['ok' => false, 'error' => 'Administrator authorization required.']);
+        }
+
+        try {
+            /** @var ModuleReadinessDiagnostic $diagnostic */
+            $diagnostic = $this->di->getShared('cosModuleReadinessDiagnostic');
+
+            return $this->json(200, [
+                'ok' => true,
+                'data' => $diagnostic->diagnose($this->organization()->id()),
+            ]);
+        } catch (Throwable $error) {
+            $this->di->getShared('cosLogger')->error('platform.modules.readiness_failed', ['error' => $error->getMessage()]);
+            return $this->json(500, ['ok' => false, 'error' => 'Platform module readiness is unavailable.']);
         }
     }
 

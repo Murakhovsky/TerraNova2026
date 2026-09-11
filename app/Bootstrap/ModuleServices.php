@@ -12,6 +12,7 @@ use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDefinition;
 use Kernel\Module\ModuleDiscovery;
 use Kernel\Module\ModuleLifecycleManager;
+use Kernel\Module\ModuleReadinessDiagnostic;
 use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Handler\ModuleAwareJobHandler;
 
@@ -50,6 +51,12 @@ $di->setShared('cosModuleCapabilityRegistry', fn (): ModuleCapabilityRegistry =>
 $di->setShared('cosEffectiveModuleContext', fn (): EffectiveModuleContext => new EffectiveModuleContext(
     $this->getShared('cosActiveModuleResolver'),
     $this->getShared('cosModuleCapabilityRegistry'),
+));
+
+$di->setShared('cosModuleReadinessDiagnostic', fn (): ModuleReadinessDiagnostic => new ModuleReadinessDiagnostic(
+    $this->getShared('cosModuleCatalog'),
+    $this->getShared('cosActiveModuleResolver'),
+    $this->getShared('cosMigrationRunner'),
 ));
 
 // Runtime contributors are declared by each domain's module.php and resolved generically.
