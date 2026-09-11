@@ -15,6 +15,7 @@ use Kernel\Event\Service\DurableEventDispatcher;
 use Kernel\Event\Service\OutboxPublisher;
 use Kernel\Event\Service\OutboxReplayService;
 use Kernel\Module\DomainModuleRegistry;
+use Kernel\Module\ModuleControlService;
 use Kernel\Operations\Service\WorkerSupervisor;
 use Kernel\Policy\Service\ActionPolicyService;
 use Kernel\Policy\Service\PolicyContextBuilder;
@@ -58,6 +59,13 @@ $di->setShared('cosRuleEngineEventHandler', fn (): RuleEngineEventHandler => new
 
 $di->setShared('eventBus', fn (): EventBus => new EventBus(
     $this->getShared('eventStore'),
+    $this->getShared('cosTransactionManager'),
+));
+$di->setShared('cosModuleControlService', fn (): ModuleControlService => new ModuleControlService(
+    $this->getShared('cosModuleLifecycleManager'),
+    $this->getShared('cosActiveModuleResolver'),
+    $this->getShared('cosAuditRepository'),
+    $this->getShared('eventBus'),
     $this->getShared('cosTransactionManager'),
 ));
 $di->setShared('cosDurableEventDispatcher', fn (): DurableEventDispatcher => new DurableEventDispatcher(

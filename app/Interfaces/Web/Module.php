@@ -5,6 +5,7 @@ namespace Interfaces\Web;
 
 use Bootstrap\WebApplicationServices;
 use Interfaces\Web\Routing\FrontendRoutes;
+use Interfaces\Web\Routing\PlatformRoutes;
 use Interfaces\Web\Routing\SalesAdministrationRoutes;
 use Interfaces\Web\Routing\SalesRoutes;
 use Interfaces\Web\Routing\SalesTeamRoutes;
@@ -27,6 +28,7 @@ class Module implements ModuleDefinitionInterface
     {
         $router = $di->getShared('router');
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
+        PlatformRoutes::register($router);
         SalesRoutes::register($router);
         SalesTeamRoutes::register($router);
         SalesIntegrationRoutes::register($router);
@@ -38,7 +40,6 @@ class Module implements ModuleDefinitionInterface
             $view->setDI($this);
             $view->setViewsDir(APP_PATH . '/Interfaces/Web/View/');
             $view->registerEngines(['.phtml' => PhpEngine::class]);
-
             return $view;
         });
     }

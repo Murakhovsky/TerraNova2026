@@ -9,21 +9,16 @@ use Kernel\Module\VersionConstraint;
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
-if (KernelVersion::VERSION !== '0.8.1') {
-    throw new RuntimeException('Kernel runtime version must match COS Kernel V0.8.1.');
+if (!VersionConstraint::matches(KernelVersion::VERSION, '>=0.8.1 <0.9.0')) {
+    throw new RuntimeException('Kernel runtime version is outside the V0.8 lifecycle contract.');
 }
 
 $definitions = (new ModuleDiscovery($root . '/app/Domains'))->discover();
 $catalog = new ModuleCatalog($definitions);
 $catalog->assertCompatibility(KernelVersion::VERSION);
-
 foreach ($definitions as $definition) {
     if (!VersionConstraint::matches(KernelVersion::VERSION, $definition->manifest->kernelConstraint)) {
-        throw new RuntimeException(sprintf(
-            'Module %s does not accept Kernel %s.',
-            $definition->manifest->id,
-            KernelVersion::VERSION,
-        ));
+        throw new RuntimeException(sprintf('Module %s does not accept Kernel %s.', $definition->manifest->id, KernelVersion::VERSION));
     }
 }
 
@@ -33,21 +28,14 @@ if (str_contains($stateContract, '$configuration')) {
 }
 
 $mysqlStateRepository = (string) file_get_contents($root . '/app/Infrastructure/Module/MysqlModuleStateRepository.php');
-foreach ([
-    'configuration_json = VALUES(configuration_json)',
-    '(organization_id, module_id, enabled, configuration_json)',
-] as $unsafeWrite) {
+foreach (['configuration_json = VALUES(configuration_json)', '(organization_id, module_id, enabled, configuration_json)'] as $unsafeWrite) {
     if (str_contains($mysqlStateRepository, $unsafeWrite)) {
         throw new RuntimeException('Activation write can still overwrite module configuration: ' . $unsafeWrite);
     }
 }
 
 $lifecycle = (string) file_get_contents($root . '/app/Kernel/Module/ModuleLifecycleManager.php');
-foreach ([
-    'assertNoEnabledDependents',
-    'enableRecursive',
-    'Cannot %s %s while dependent module %s is enabled.',
-] as $requiredInvariant) {
+foreach (['assertNoEnabledDependents', 'enableRecursive', 'Cannot %s %s while dependent module %s is enabled.'] as $requiredInvariant) {
     if (!str_contains($lifecycle, $requiredInvariant)) {
         throw new RuntimeException('Module lifecycle invariant is missing: ' . $requiredInvariant);
     }
@@ -60,4 +48,4 @@ foreach (['isConfiguredEnabled', 'isInstalled', "'configured_enabled'", "'active
     }
 }
 
-echo "COS Kernel V0.8.1 module lifecycle contract passed.\n";
+echo sprintf("COS Kernel V0.8 lifecycle contract passed on Kernel %s.\n", KernelVersion::VERSION);
