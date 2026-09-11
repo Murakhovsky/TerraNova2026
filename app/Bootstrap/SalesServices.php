@@ -15,6 +15,7 @@ use Domains\Sales\Application\UseCase\ReceivePublicLead;
 use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
 use Domains\Sales\Automation\Job\CrmInboxJobHandler;
 use Domains\Sales\Bootstrap\SalesDomainModule;
+use Domains\Sales\Bootstrap\SalesModuleConfigurationProvisioner;
 use Domains\Sales\Domain\Policy\StageTransitionPolicy;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
@@ -39,6 +40,9 @@ $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainM
     $this->getShared('salesChangeDealStage'),
     $this->getShared('salesOperationService'),
     $this->getShared('salesAssignDealOwner'),
+));
+$di->setShared('salesModuleConfigurationProvisioner', fn (): SalesModuleConfigurationProvisioner => new SalesModuleConfigurationProvisioner(
+    $this->getShared('cosConfigurationProvisioner'),
 ));
 
 $di->setShared('salesCompleteCall', fn (): CompleteSalesCall => new CompleteSalesCall(

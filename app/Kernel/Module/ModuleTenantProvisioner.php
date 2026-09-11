@@ -3,23 +3,33 @@ declare(strict_types=1);
 
 namespace Kernel\Module;
 
-use Kernel\Configuration\Service\ConfigurationProvisioner;
 use Kernel\Database\MigrationRunnerInterface;
+use Kernel\Module\Contract\ModuleConfigurationProvisionerInterface;
 use RuntimeException;
 use Throwable;
 
 final readonly class ModuleTenantProvisioner
 {
+    /**
+     * @param list<array{module_id: string, service: ModuleConfigurationProvisionerInterface}> $configurationProvisioners
+     */
     public function __construct(
         private ModuleCatalog $catalog,
         private MigrationRunnerInterface $migrations,
-        private ConfigurationProvisioner $configuration,
+        private array $configurationProvisioners = [],
     ) {
+        foreach ($this->configurationProvisioners as $contribution) {
+            if (!is_string($contribution['module_id'] ?? null)
+                || !($contribution['service'] ?? null) instanceof ModuleConfigurationProvisionerInterface
+            ) {
+                throw new RuntimeException('Invalid module configuration provisioner contribution.');
+            }
+        }
     }
 
     /**
      * Verify that deployment-level schema migrations are already applied, then provision
-     * tenant-scoped defaults for the requested module and its dependency tree.
+     * tenant-scoped defaults explicitly declared by the requested module and dependency tree.
      *
      * @return array{modules: list<string>, domains: int, rules: int, policies: int, manifest_hashes: array<string, string>}
      */
@@ -109,18 +119,30 @@ final readonly class ModuleTenantProvisioner
             ));
         }
 
-        if ($definition->contributions->runtimeModuleService !== null) {
-            $provisioned = $this->configuration->provisionDomain($organizationId, $moduleId, $actorId);
-            $result['domains'] += $provisioned['domains'];
-            $result['rules'] += $provisioned['rules'];
-            $result['policies'] += $provisioned['policies'];
-            $result['manifest_hashes'] = array_merge(
-                $result['manifest_hashes'],
-                $provisioned['manifest_hashes'],
+        foreach ($this->configurationProvisioners as $contribution) {
+            if ($contribution['module_id'] !== $moduleId) {
+                continue;
+            }
+
+            $this->mergeProvisioningResult(
+                $result,
+                $contribution['service']->provision($organizationId, $actorId),
             );
         }
 
         $visited[$moduleId] = true;
         $result['modules'][] = $moduleId;
+    }
+
+    /**
+     * @param array{modules: list<string>, domains: int, rules: int, policies: int, manifest_hashes: array<string, string>} $target
+     * @param array{domains: int, rules: int, policies: int, manifest_hashes: array<string, string>} $source
+     */
+    private function mergeProvisioningResult(array &$target, array $source): void
+    {
+        $target['domains'] += $source['domains'];
+        $target['rules'] += $source['rules'];
+        $target['policies'] += $source['policies'];
+        $target['manifest_hashes'] = array_merge($target['manifest_hashes'], $source['manifest_hashes']);
     }
 }

@@ -17,7 +17,9 @@ return [
             'salesCrmInboxJobHandler',
         ],
         'api_route_contributor_services' => [],
-        'configuration_provisioner_services' => [],
+        'configuration_provisioner_services' => [
+            'salesModuleConfigurationProvisioner',
+        ],
         'migration_files' => [
             'app/migrations/20260910_000030_sales_v071_configuration_ownership.sql',
         ],

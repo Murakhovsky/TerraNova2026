@@ -40,7 +40,7 @@ $di->setShared('cosConfigurationProvisioner', fn (): ConfigurationProvisioner =>
 $di->setShared('cosModuleTenantProvisioner', fn (): ModuleTenantProvisioner => new ModuleTenantProvisioner(
     $this->getShared('cosModuleCatalog'),
     $this->getShared('cosMigrationRunner'),
-    $this->getShared('cosConfigurationProvisioner'),
+    $this->getShared('cosModuleConfigurationProvisioners'),
 ));
 
 $di->setShared('cosConditionEvaluator', fn (): ConditionEvaluator => new ConditionEvaluator());

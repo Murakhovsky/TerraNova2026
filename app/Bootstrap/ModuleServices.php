@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Infrastructure\Module\MysqlModuleLifecycleRepository;
 use Infrastructure\Module\MysqlModuleStateRepository;
 use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\Contract\ModuleConfigurationProvisionerInterface;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Module\ModuleCapabilityRegistry;
 use Kernel\Module\ModuleCatalog;
@@ -106,7 +107,7 @@ $di->setShared('cosModuleJobHandlers', function (): array {
     return $handlers;
 });
 
-// API and configuration integrations remain declarative and retain module ownership.
+// API integrations remain declarative and retain module ownership.
 $di->setShared('cosModuleApiRouteContributors', function (): array {
     $contributors = [];
     foreach ($this->getShared('cosModuleDefinitions') as $definition) {
@@ -121,13 +122,23 @@ $di->setShared('cosModuleApiRouteContributors', function (): array {
     return $contributors;
 });
 
+// Tenant configuration is provisioned only through services explicitly owned by a module manifest.
 $di->setShared('cosModuleConfigurationProvisioners', function (): array {
     $provisioners = [];
     foreach ($this->getShared('cosModuleDefinitions') as $definition) {
         foreach ($definition->contributions->configurationProvisionerServices as $serviceId) {
+            $service = $this->getShared($serviceId);
+            if (!$service instanceof ModuleConfigurationProvisionerInterface) {
+                throw new RuntimeException(sprintf(
+                    'Module %s configuration service %s must implement ModuleConfigurationProvisionerInterface.',
+                    $definition->manifest->id,
+                    $serviceId,
+                ));
+            }
+
             $provisioners[] = [
                 'module_id' => $definition->manifest->id,
-                'service' => $this->getShared($serviceId),
+                'service' => $service,
             ];
         }
     }
