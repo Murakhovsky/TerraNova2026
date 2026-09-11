@@ -5,9 +5,7 @@ namespace Interfaces\Api\Controller;
 
 use Interfaces\Web\Controller\WebController;
 use InvalidArgumentException;
-use Kernel\Module\ActiveModuleResolver;
-use Kernel\Module\KernelVersion;
-use Kernel\Module\ModuleCapabilityRegistry;
+use Kernel\Module\EffectiveModuleContext;
 use Kernel\Module\ModuleControlService;
 use Phalcon\Http\Response;
 use RuntimeException;
@@ -24,23 +22,12 @@ final class PlatformModuleController extends WebController
         }
 
         try {
-            /** @var ActiveModuleResolver $modules */
-            $modules = $this->di->getShared('cosActiveModuleResolver');
-            /** @var ModuleCapabilityRegistry $capabilities */
-            $capabilities = $this->di->getShared('cosModuleCapabilityRegistry');
-            $organizationId = $this->organization()->id();
-            $descriptions = array_map(
-                static fn (array $module): array => $module + ['capabilities' => $capabilities->capabilitiesFor((string) $module['id'])],
-                $modules->describe($organizationId),
-            );
+            /** @var EffectiveModuleContext $context */
+            $context = $this->di->getShared('cosEffectiveModuleContext');
 
             return $this->json(200, [
                 'ok' => true,
-                'data' => [
-                    'organization_id' => $organizationId,
-                    'kernel_version' => KernelVersion::VERSION,
-                    'modules' => $descriptions,
-                ],
+                'data' => $context->describe($this->organization()->id()),
             ]);
         } catch (Throwable $error) {
             $this->di->getShared('cosLogger')->error('platform.modules.read_failed', ['error' => $error->getMessage()]);

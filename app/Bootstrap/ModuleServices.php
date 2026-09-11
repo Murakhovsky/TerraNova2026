@@ -6,6 +6,7 @@ use Infrastructure\Module\MysqlModuleStateRepository;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\Contract\ModuleConfigurationProvisionerInterface;
 use Kernel\Module\DomainModuleInterface;
+use Kernel\Module\EffectiveModuleContext;
 use Kernel\Module\ModuleCapabilityRegistry;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDefinition;
@@ -44,6 +45,11 @@ $di->setShared('cosModuleLifecycleManager', fn (): ModuleLifecycleManager => new
 
 $di->setShared('cosModuleCapabilityRegistry', fn (): ModuleCapabilityRegistry => new ModuleCapabilityRegistry(
     $this->getShared('cosModuleCatalog'),
+));
+
+$di->setShared('cosEffectiveModuleContext', fn (): EffectiveModuleContext => new EffectiveModuleContext(
+    $this->getShared('cosActiveModuleResolver'),
+    $this->getShared('cosModuleCapabilityRegistry'),
 ));
 
 // Runtime contributors are declared by each domain's module.php and resolved generically.
