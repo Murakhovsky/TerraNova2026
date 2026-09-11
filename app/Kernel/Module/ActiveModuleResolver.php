@@ -45,6 +45,27 @@ final readonly class ActiveModuleResolver
         return $installation === null || $installation->isInstalled();
     }
 
+    public function isCurrent(string $organizationId, string $moduleId): bool
+    {
+        if (!$this->catalog->has($moduleId)) {
+            return false;
+        }
+
+        $installation = $this->installations?->find($organizationId, $moduleId);
+        if ($installation === null) {
+            // Pre-lifecycle tenants are treated as deployment-current until an explicit
+            // lifecycle record is created for them.
+            return true;
+        }
+        if (!$installation->isInstalled()) {
+            return false;
+        }
+
+        $manifest = $this->catalog->get($moduleId);
+        return $installation->installedVersion === $manifest->version
+            && $installation->schemaVersion === $manifest->schemaVersion;
+    }
+
     /** @return list<ModuleManifest> */
     public function active(string $organizationId): array
     {
@@ -61,11 +82,20 @@ final readonly class ActiveModuleResolver
             function (ModuleManifest $module) use ($organizationId): array {
                 $installation = $this->installations?->find($organizationId, $module->id);
                 $active = $this->isEnabled($organizationId, $module->id);
+                $installed = $this->isInstalled($organizationId, $module->id);
+                $installedVersion = $installation?->installedVersion ?? $module->version;
+                $installedSchemaVersion = $installation?->schemaVersion ?? $module->schemaVersion;
+                $versionCurrent = $installed && $installedVersion === $module->version;
+                $schemaVersionCurrent = $installed && $installedSchemaVersion === $module->schemaVersion;
 
                 return $module->toArray() + [
-                    // Missing lifecycle state means deployment-installed for pre-lifecycle tenants.
-                    'installed' => $this->isInstalled($organizationId, $module->id),
-                    'installed_version' => $installation?->installedVersion ?? $module->version,
+                    // Missing lifecycle state means deployment-installed/current for pre-lifecycle tenants.
+                    'installed' => $installed,
+                    'installed_version' => $installedVersion,
+                    'installed_schema_version' => $installedSchemaVersion,
+                    'version_current' => $versionCurrent,
+                    'schema_version_current' => $schemaVersionCurrent,
+                    'current' => $versionCurrent && $schemaVersionCurrent,
                     // Keep `enabled` as the effective value for API backwards compatibility.
                     'enabled' => $active,
                     'configured_enabled' => $this->isConfiguredEnabled($organizationId, $module->id),
@@ -84,6 +114,7 @@ final readonly class ActiveModuleResolver
         }
 
         if (!$this->isInstalled($organizationId, $moduleId)
+            || !$this->isCurrent($organizationId, $moduleId)
             || !$this->isConfiguredEnabled($organizationId, $moduleId)) {
             return false;
         }

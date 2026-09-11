@@ -50,6 +50,21 @@ final readonly class ModuleLifecycleManager
                 ));
             }
 
+            if ($dependency !== null && (
+                $dependency->installedVersion !== $dependencyManifest->version
+                || $dependency->schemaVersion !== $dependencyManifest->schemaVersion
+            )) {
+                throw new RuntimeException(sprintf(
+                    'Cannot upgrade %s: dependency %s requires upgrade from %s/schema %s to %s/schema %s.',
+                    $moduleId,
+                    $dependencyId,
+                    $dependency->installedVersion,
+                    $dependency->schemaVersion,
+                    $dependencyManifest->version,
+                    $dependencyManifest->schemaVersion,
+                ));
+            }
+
             $installedVersion = $dependency?->installedVersion ?? $dependencyManifest->version;
             if (!VersionConstraint::matches($installedVersion, $manifest->constraintFor($dependencyId))) {
                 throw new RuntimeException(sprintf(
@@ -123,6 +138,20 @@ final readonly class ModuleLifecycleManager
         if ($installation !== null && !$installation->isInstalled()) {
             $this->installRecursive($organizationId, $moduleId, true, []);
             return;
+        }
+
+        if ($installation !== null && (
+            $installation->installedVersion !== $manifest->version
+            || $installation->schemaVersion !== $manifest->schemaVersion
+        )) {
+            throw new RuntimeException(sprintf(
+                'Module %s requires upgrade before enable: installed %s/schema %s, deployed %s/schema %s.',
+                $moduleId,
+                $installation->installedVersion,
+                $installation->schemaVersion,
+                $manifest->version,
+                $manifest->schemaVersion,
+            ));
         }
 
         foreach ($manifest->dependencies as $dependencyId) {
