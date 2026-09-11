@@ -6,7 +6,7 @@ return [
     'name' => 'Property',
     'version' => '0.1.0',
     'schema_version' => '0.1.0',
-    'kernel_constraint' => '^0.7.1',
+    'kernel_constraint' => '^0.8.0',
     'description' => 'Property catalog, presentation and real-estate workflows.',
     'icon' => 'building',
     'dependencies' => [],

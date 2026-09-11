@@ -16,6 +16,7 @@ use Kernel\Event\Service\OutboxPublisher;
 use Kernel\Event\Service\OutboxReplayService;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Module\ModuleControlService;
+use Kernel\Module\ModuleTenantProvisioner;
 use Kernel\Operations\Service\WorkerSupervisor;
 use Kernel\Policy\Service\ActionPolicyService;
 use Kernel\Policy\Service\PolicyContextBuilder;
@@ -35,6 +36,11 @@ $di->setShared('cosConfigurationProvisioner', fn (): ConfigurationProvisioner =>
     $this->getShared('cosDomainRegistry'),
     $this->getShared('cosConfigurationValidator'),
     $this->getShared('cosConfigurationStore'),
+));
+$di->setShared('cosModuleTenantProvisioner', fn (): ModuleTenantProvisioner => new ModuleTenantProvisioner(
+    $this->getShared('cosModuleCatalog'),
+    $this->getShared('cosMigrationRunner'),
+    $this->getShared('cosConfigurationProvisioner'),
 ));
 
 $di->setShared('cosConditionEvaluator', fn (): ConditionEvaluator => new ConditionEvaluator());
@@ -67,6 +73,7 @@ $di->setShared('cosModuleControlService', fn (): ModuleControlService => new Mod
     $this->getShared('cosAuditRepository'),
     $this->getShared('eventBus'),
     $this->getShared('cosTransactionManager'),
+    $this->getShared('cosModuleTenantProvisioner'),
 ));
 $di->setShared('cosDurableEventDispatcher', fn (): DurableEventDispatcher => new DurableEventDispatcher(
     $this->getShared('cosEventConsumptions'),

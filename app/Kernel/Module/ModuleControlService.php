@@ -22,25 +22,37 @@ final readonly class ModuleControlService
         private AuditRepositoryInterface $audit,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
+        private ?ModuleTenantProvisioner $provisioner = null,
     ) {
     }
 
     /** @return array<string, mixed> */
     public function install(string $organizationId, string $moduleId, string $actorId, string $correlationId, ?string $reason = null): array
     {
-        return $this->change('install', $organizationId, $moduleId, $actorId, $correlationId, $reason, fn () => $this->lifecycle->install($organizationId, $moduleId, true));
+        return $this->change('install', $organizationId, $moduleId, $actorId, $correlationId, $reason, function () use ($organizationId, $moduleId, $actorId): void {
+            $this->provisioner?->provision($organizationId, $moduleId, $actorId);
+            $this->lifecycle->install($organizationId, $moduleId, true);
+        });
     }
 
     /** @return array<string, mixed> */
     public function upgrade(string $organizationId, string $moduleId, string $actorId, string $correlationId, ?string $reason = null): array
     {
-        return $this->change('upgrade', $organizationId, $moduleId, $actorId, $correlationId, $reason, fn () => $this->lifecycle->upgrade($organizationId, $moduleId));
+        return $this->change('upgrade', $organizationId, $moduleId, $actorId, $correlationId, $reason, function () use ($organizationId, $moduleId, $actorId): void {
+            $this->provisioner?->provision($organizationId, $moduleId, $actorId);
+            $this->lifecycle->upgrade($organizationId, $moduleId);
+        });
     }
 
     /** @return array<string, mixed> */
     public function enable(string $organizationId, string $moduleId, string $actorId, string $correlationId, ?string $reason = null): array
     {
-        return $this->change('enable', $organizationId, $moduleId, $actorId, $correlationId, $reason, fn () => $this->lifecycle->enable($organizationId, $moduleId));
+        return $this->change('enable', $organizationId, $moduleId, $actorId, $correlationId, $reason, function () use ($organizationId, $moduleId, $actorId): void {
+            if (!$this->modules->isInstalled($organizationId, $moduleId)) {
+                $this->provisioner?->provision($organizationId, $moduleId, $actorId);
+            }
+            $this->lifecycle->enable($organizationId, $moduleId);
+        });
     }
 
     /** @return array<string, mixed> */
