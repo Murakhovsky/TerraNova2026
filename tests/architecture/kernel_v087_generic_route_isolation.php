@@ -49,7 +49,7 @@ if (!str_contains($manifest, "'salesRouteContributor'")) {
 }
 
 $moduleServices = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');
-foreach (["'module_id' => $definition->manifest->id", "'service' => $this->getShared($serviceId)"] as $needle) {
+foreach (['\'module_id\' => $definition->manifest->id', '\'service\' => $this->getShared($serviceId)'] as $needle) {
     if (!str_contains($moduleServices, $needle)) {
         throw new RuntimeException('Module route contributions lost module ownership metadata: ' . $needle);
     }
