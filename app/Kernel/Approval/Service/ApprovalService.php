@@ -3,11 +3,12 @@ declare(strict_types=1);
 
 namespace Kernel\Approval\Service;
 
+use DateTimeImmutable;
 use DomainException;
 use Kernel\Action\Service\ActionService;
 use Kernel\Approval\ApprovalStatus;
+use Kernel\Approval\Contract\ApprovalAuthorityInterface;
 use Kernel\Approval\Contract\ApprovalRepositoryInterface;
-use DateTimeImmutable;
 use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
@@ -21,6 +22,7 @@ final readonly class ApprovalService
         private TransactionManagerInterface $transactions,
         private ?AuditRepositoryInterface $audit = null,
         private ?JobQueueInterface $queue = null,
+        private ?ApprovalAuthorityInterface $authority = null,
     ) {}
 
     public function approve(string $organizationId, string $approvalId, string $userId, ?string $note = null): void
@@ -37,26 +39,43 @@ final readonly class ApprovalService
     {
         $this->transactions->transactional(function () use ($organizationId, $approvalId, $userId, $decision, $note): void {
             $approval = $this->approvals->findPending($organizationId, $approvalId);
-            if ($approval === null || !$this->approvals->decide($organizationId, $approvalId, $decision, $userId, $note)) {
+            if ($approval === null) {
                 throw new DomainException('Approval is not pending or does not exist.');
             }
-            $action = null;
+
+            if (strtoupper($approval->approverType) === 'USER'
+                && $approval->approverId !== ''
+                && $approval->approverId !== $userId) {
+                throw new DomainException('Approval belongs to another user.');
+            }
+
+            $action = $this->actions->find($organizationId, $approval->actionId);
+            if ($action === null) {
+                throw new DomainException('Approval action does not exist.');
+            }
+            $this->authority?->assertCanDecide($organizationId, $userId, $approval, $action);
+
+            if (!$this->approvals->decide($organizationId, $approvalId, $decision, $userId, $note)) {
+                throw new DomainException('Approval is not pending or does not exist.');
+            }
+
             if ($decision === ApprovalStatus::Approved) {
                 $this->actions->queue($organizationId, $approval->actionId);
-                $action = $this->actions->find($organizationId, $approval->actionId);
+                $action = $this->actions->find($organizationId, $approval->actionId) ?? $action;
                 $this->queue?->enqueue(
                     $organizationId,
                     'ACTION_EXECUTION',
                     ['action_id' => $approval->actionId],
-                    $action?->correlationId ?: $approval->actionId,
+                    $action->correlationId ?: $approval->actionId,
                     'action-execution:' . $approval->actionId,
                     5,
                     120,
                 );
             } else {
                 $this->actions->reject($organizationId, $approval->actionId);
+                $action = $this->actions->find($organizationId, $approval->actionId) ?? $action;
             }
-            $action ??= $this->actions->find($organizationId, $approval->actionId);
+
             $this->audit?->append(new AuditEntry(
                 bin2hex(random_bytes(16)), $organizationId, 'APPROVAL', 'USER', $userId,
                 'action', $approval->actionId, $note,
@@ -65,7 +84,7 @@ final readonly class ApprovalService
                     'input_references' => ['approval_id' => $approvalId, 'action_id' => $approval->actionId],
                     'result' => ['status' => $decision->value],
                 ],
-                $action?->correlationId ?: $approval->actionId, new DateTimeImmutable(),
+                $action->correlationId ?: $approval->actionId, new DateTimeImmutable(),
             ));
         });
     }

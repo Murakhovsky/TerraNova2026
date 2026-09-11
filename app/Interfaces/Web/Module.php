@@ -6,6 +6,7 @@ namespace Interfaces\Web;
 use Bootstrap\WebApplicationServices;
 use Interfaces\Web\Routing\FrontendRoutes;
 use Interfaces\Web\Routing\SalesRoutes;
+use Interfaces\Web\Routing\SalesTeamRoutes;
 use Interfaces\Web\Page\PublicPageService;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
@@ -25,6 +26,7 @@ class Module implements ModuleDefinitionInterface
         $router = $di->getShared('router');
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
         SalesRoutes::register($router);
+        SalesTeamRoutes::register($router);
         WebApplicationServices::register($di);
 
         $di->set('view', function () {

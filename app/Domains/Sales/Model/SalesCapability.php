@@ -9,6 +9,9 @@ enum SalesCapability: string
 
     case WorkspaceUse = 'sales.workspace.use';
     case DirectorView = 'sales.director.view';
+    case DealAssign = 'sales.deal.assign';
+    case ApprovalDecide = 'sales.approval.decide';
+    case ApprovalAnyTeam = 'sales.approval.any_team';
 
     case AdminView = 'sales.admin.view';
     case AdminPipelineManage = 'sales.admin.pipeline.manage';
