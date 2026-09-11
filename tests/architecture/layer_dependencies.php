@@ -89,7 +89,9 @@ foreach ($requiredSalesAreas as $area) {
     }
 }
 
-$requiredDiagnosticAreas = ['AI', 'Application', 'Domain', 'Infrastructure', 'Schemas'];
+// Diagnostic uses Model as its domain-model area. Schemas are documentation/data contracts,
+// not a PHP architectural layer; keep this gate aligned with the canonical Diagnostic layout.
+$requiredDiagnosticAreas = ['AI', 'Application', 'Automation', 'Infrastructure', 'Methodology', 'Model'];
 foreach ($requiredDiagnosticAreas as $area) {
     if (!is_dir($root . '/app/Domains/Diagnostic/' . $area)) {
         throw new RuntimeException(sprintf('Diagnostic domain is missing its %s area.', $area));
