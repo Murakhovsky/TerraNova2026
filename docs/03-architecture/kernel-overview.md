@@ -10,7 +10,7 @@ kind: architecture
 
 COS Kernel є generic execution layer. Він не знає бізнес-мову конкретного Domain, але забезпечує однакові правила виконання для всіх Domains.
 
-Поточний executable Kernel contract: **`0.10.0`**.
+Поточний executable Kernel contract: **`0.10.2`**.
 
 Детальний canonical document: [`docs/architecture/cos-kernel.md`](../architecture/cos-kernel.md).
 
