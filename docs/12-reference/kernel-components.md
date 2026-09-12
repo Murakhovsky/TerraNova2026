@@ -10,7 +10,7 @@ kind: reference
 
 Це короткий індекс, а не заміна коду або `docs/architecture/cos-kernel.md`.
 
-Поточна executable версія Kernel: **`0.10.0`**.
+Поточна executable версія Kernel: **`0.10.2`**.
 
 | Area | Key components | Purpose |
 | --- | --- | --- |
@@ -22,6 +22,7 @@ kind: reference
 | Event | `DomainEvent`, `EventMetadata`, `EventBus`, `OutboxMessage` | immutable facts and durable delivery |
 | Policy | `ActionPolicy`, `PolicyDecision`, `PolicyEvaluation` | permission/risk gate |
 | Queue | `Job` + contracts/handlers/services | durable asynchronous execution |
+| Execution runtime | `RuleEngineEventHandler`, `QueuedActionProposalSink`, `ActionPolicyService`, `AgentRunJobHandler`, `ActionExecutionJobHandler`, `WorkerSupervisor` | canonical decision → policy → queue → execution lifecycle |
 | Module | `DomainModuleInterface`, `DomainModuleRegistry` | Domain runtime contributions and ownership routing |
 | Module lifecycle | `ModuleManifest`, `ModuleDiscovery`, `ModuleCatalog`, `ModuleInstallation`, `ModuleLifecycleManager`, `ActiveModuleResolver` | install/activate/deactivate module runtime |
 | Module extensions | `ModuleContributions`, `ModuleExtensionContribution`, `ModuleExtensionRegistry` | module-owned API/config/UI/other extension surfaces |
@@ -60,6 +61,28 @@ Kernel/Module        owns module lifecycle/registry/extension mechanics
 Domain/module.php    owns module declarations/contributions
 Consumer layer       owns concrete extension interface semantics
 ```
+
+## Execution runtime shorthand
+
+```text
+Event
+  ↓
+Rule / Agent
+  ↓
+ActionProposal
+  ↓
+Policy
+  ↓
+Approval (when required)
+  ↓
+Queue
+  ↓
+ActionExecutionJobHandler
+  ↓
+ActionService / ActionExecutor
+```
+
+Rule та Agent не виконують side effects напряму. Вони створюють proposal, який обов'язково проходить policy gate та durable execution path.
 
 ## Module extension shorthand
 

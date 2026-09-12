@@ -1,4 +1,4 @@
-name: COS Kernel V0.10 LLM Runtime Governance
+name: COS Kernel V0.10 Runtime Governance
 
 on:
   push:
@@ -16,15 +16,17 @@ jobs:
         with:
           php-version: '8.2'
       - run: composer install --no-interaction --prefer-dist
-      - name: LLM governance architecture
+      - name: Kernel runtime architecture
         run: |
           php tests/architecture/domain_module_contract.php
           php tests/architecture/kernel_v09_extension_runtime.php
           php tests/architecture/kernel_v010_llm_runtime_governance.php
+          php tests/architecture/kernel_v0102_execution_runtime.php
       - name: LLM governance invariants
         run: php tests/unit/llm_runtime_governance.php
       - name: PHP syntax
         run: |
+          php -l app/Kernel/Module/KernelVersion.php
           php -l app/Kernel/Llm/StructuredLlmRequest.php
           php -l app/Kernel/Llm/LlmRoute.php
           php -l app/Kernel/Llm/LlmRoutingPolicy.php
@@ -41,6 +43,7 @@ jobs:
           php -l app/Infrastructure/Llm/MysqlLlmGovernanceRepository.php
           php -l app/Bootstrap/InfrastructureServices.php
           php -l app/Bootstrap/KernelServices.php
-          php -l app/Domains/Diagnostic/Infrastructure/AI/OpenAiGateway.php
+          php -l app/Domains/Diagnostic/Infrastructure/AI/StructuredLlmAiGateway.php
           php -l tests/unit/llm_runtime_governance.php
           php -l tests/architecture/kernel_v010_llm_runtime_governance.php
+          php -l tests/architecture/kernel_v0102_execution_runtime.php
