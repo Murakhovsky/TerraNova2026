@@ -20,6 +20,7 @@ use Kernel\Queue\Handler\ModuleAwareJobHandler;
 
 $di->setShared('cosModuleDefinitions', fn (): array => (new ModuleDiscovery(
     APP_PATH . '/Domains',
+    dirname(APP_PATH) . '/tmp/cache/cos_modules.php',
 ))->discover());
 
 $di->setShared('cosModuleCatalog', fn (): ModuleCatalog => new ModuleCatalog(
