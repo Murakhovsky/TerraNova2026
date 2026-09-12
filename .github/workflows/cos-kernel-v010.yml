@@ -41,6 +41,8 @@ jobs:
           php -l app/Kernel/Event/Service/OutboxPublisher.php
           php -l app/Kernel/Operations/Service/PeriodicMaintenanceGate.php
           php -l app/Kernel/Queue/Service/QueueWorker.php
+          php -l app/Kernel/Action/Contract/ActionExecutionGateInterface.php
+          php -l app/Kernel/Action/Service/ModuleActionExecutionGate.php
           php -l app/Kernel/Action/Service/ActionExecutor.php
           php -l app/Kernel/Llm/StructuredLlmRequest.php
           php -l app/Kernel/Llm/LlmRoute.php

@@ -18,6 +18,8 @@ $services = $read('app/config/services_kernel.php');
 $extensions = $read('app/Kernel/Module/ModuleExtensionRegistry.php');
 $moduleServices = $read('app/Bootstrap/ModuleServices.php');
 $agentRuntime = $read('app/Kernel/Agent/Service/AgentRuntime.php');
+$actionExecutor = $read('app/Kernel/Action/Service/ActionExecutor.php');
+$actionGate = $read('app/Kernel/Action/Service/ModuleActionExecutionGate.php');
 
 if (substr_count($kernel, "setShared('cosAgentRuntime'") !== 1) {
     throw new RuntimeException('KernelServices must own exactly one cosAgentRuntime registration.');
@@ -44,6 +46,18 @@ foreach (['cosModuleEventConsumers', 'DurableEventConsumerInterface'] as $needle
 }
 if (!str_contains($kernel, "getShared('cosModuleEventConsumers')")) {
     throw new RuntimeException('DurableEventDispatcher must include module-owned event consumers.');
+}
+if (!str_contains($kernel, "setShared('cosActionExecutionGate'")
+    || !str_contains($kernel, "getShared('cosActionExecutionGate')")) {
+    throw new RuntimeException('Canonical ActionExecutor wiring must include an explicit execution gate.');
+}
+if (str_contains($actionExecutor, '?DomainModuleRegistry') || str_contains($actionExecutor, '?ActiveModuleResolver')) {
+    throw new RuntimeException('ActionExecutor must not contain nullable module-governance bypasses.');
+}
+foreach (['ownerOfAction', 'isEnabled', 'has no owning domain module'] as $needle) {
+    if (!str_contains($actionGate, $needle)) {
+        throw new RuntimeException('Module action execution gate is missing fail-closed invariant: ' . $needle);
+    }
 }
 
 echo "COS Kernel runtime composition invariant passed.\n";
