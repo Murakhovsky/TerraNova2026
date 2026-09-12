@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Kernel\Configuration\Service;
 
 use Kernel\Configuration\Contract\ConfigurationStoreInterface;
+use Kernel\Module\Contract\PolicyProvidingModuleInterface;
+use Kernel\Module\Contract\RuleProvidingModuleInterface;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Module\DomainModuleRegistry;
 use RuntimeException;
@@ -43,8 +45,12 @@ final readonly class ConfigurationProvisioner
     /** @return array{domains: int, rules: int, policies: int, manifest_hashes: array<string, string>} */
     private function provisionModule(DomainModuleInterface $module, string $organizationId, string $actorId): array
     {
-        $rules = $module->rules($organizationId);
-        $policies = $module->policies($organizationId);
+        if (!$module instanceof RuleProvidingModuleInterface && !$module instanceof PolicyProvidingModuleInterface) {
+            return $this->emptyResult();
+        }
+
+        $rules = $module instanceof RuleProvidingModuleInterface ? $module->rules($organizationId) : [];
+        $policies = $module instanceof PolicyProvidingModuleInterface ? $module->policies($organizationId) : [];
         $this->validator->validate($module, $organizationId, $rules, $policies);
         $hash = hash('sha256', serialize([$rules, $policies]));
         $this->store->provision($organizationId, $module->name(), $rules, $policies, $hash, $actorId);
