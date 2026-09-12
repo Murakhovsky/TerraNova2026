@@ -58,9 +58,9 @@ $navigation = new ModuleAwareNavigationService(
     $organization,
     $resolver,
     [
-        new SalesNavigationContributor(),
-        new PropertyNavigationContributor(),
-        new DiagnosticNavigationContributor(),
+        ['module_id' => 'sales', 'service' => new SalesNavigationContributor()],
+        ['module_id' => 'property', 'service' => new PropertyNavigationContributor()],
+        ['module_id' => 'diagnostic', 'service' => new DiagnosticNavigationContributor()],
     ],
 );
 
