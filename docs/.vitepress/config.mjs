@@ -31,8 +31,8 @@ export default {
     search: {
       provider: 'local',
       options: {
-        async _render(src, env, md) {
-          const html = await md.renderAsync(src, env);
+        _render(src, env, md) {
+          const html = md.render(src, env);
           const path = env.relativePath || '';
           if (path.startsWith('architecture/') || path.startsWith('api/') || path.startsWith('diagnostic/')) {
             return '';
