@@ -62,7 +62,9 @@ function parseFrontmatter(file, content) {
   checkedFrontmatter += 1;
 
   if (canonical) {
-    for (const key of ['title', 'status', 'updated', 'kind']) {
+    const generated = ['true', 'yes'].includes((values.get('generated') ?? '').toLowerCase());
+    const requiredKeys = generated ? ['title', 'status', 'kind'] : ['title', 'status', 'updated', 'kind'];
+    for (const key of requiredKeys) {
       if (!values.get(key)) errors.push(`${relative}: required frontmatter key '${key}' is missing or empty`);
     }
   }

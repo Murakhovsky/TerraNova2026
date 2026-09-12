@@ -5,13 +5,21 @@ on:
     branches: [COS]
     paths:
       - 'docs/**'
+      - 'app/Domains/*/module.php'
       - 'app/Kernel/Module/KernelVersion.php'
+      - 'app/Kernel/Module/ModuleContributions.php'
+      - 'app/Kernel/Module/ModuleExtensionRegistry.php'
+      - 'app/Kernel/Module/ModuleManifest.php'
       - 'package.json'
       - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'docs/**'
+      - 'app/Domains/*/module.php'
       - 'app/Kernel/Module/KernelVersion.php'
+      - 'app/Kernel/Module/ModuleContributions.php'
+      - 'app/Kernel/Module/ModuleExtensionRegistry.php'
+      - 'app/Kernel/Module/ModuleManifest.php'
       - 'package.json'
       - '.github/workflows/docs.yml'
 
@@ -29,6 +37,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Check generated reference
+        run: npm run docs:generate:check
 
       - name: Check documentation integrity
         run: npm run docs:check
