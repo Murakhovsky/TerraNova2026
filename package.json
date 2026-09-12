@@ -4,6 +4,9 @@
   "scripts": {
     "build": "vite build",
     "build:spatial": "vite build",
+    "docs:dev": "npx --yes vitepress@1.6.4 dev docs",
+    "docs:build": "npx --yes vitepress@1.6.4 build docs",
+    "docs:preview": "npx --yes vitepress@1.6.4 preview docs",
     "test:frontend": "node tests/frontend/api_client.mjs",
     "test:sales-browser": "node tests/browser/sales_workspace.mjs"
   },

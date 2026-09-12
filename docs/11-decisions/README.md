@@ -22,8 +22,9 @@ kind: index
 | [ADR-0004](ADR-0004-module-owned-extension-contributions.md) | Modules own extension contributions; shared layers не hardcode-ять Domains |
 | [ADR-0005](ADR-0005-governed-structured-llm-runtime.md) | Structured LLM access проходить centralized governance runtime |
 | [ADR-0006](ADR-0006-deployed-modules-vs-tenant-activation.md) | Deployed module discovery відокремлена від tenant activation/lifecycle |
+| [ADR-0007](ADR-0007-documentation-content-and-renderer.md) | `/docs` content відокремлений від generated documentation renderer |
 
-Ці ADR формалізують уже реалізовану AS-IS архітектуру. Вони не додають нової поведінки самі по собі.
+Ці ADR формалізують уже реалізовану або прямо введену цим documentation change AS-IS архітектуру. Вони не є roadmap.
 
 ## Коли потрібен ADR
 
@@ -53,7 +54,7 @@ ADR-0002-another-decision.md
 
 ```markdown
 ---
-title: ADR-0007 — Назва рішення
+title: ADR-0008 — Назва рішення
 status: proposed
 updated: YYYY-MM-DD
 kind: decision

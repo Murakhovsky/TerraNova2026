@@ -57,13 +57,14 @@ Product
 ### Розробляти й експлуатувати
 
 18. [Interface Surfaces](08-ui/interface-surfaces.md)
-19. [Adding a Domain](09-development/adding-a-domain.md)
-20. [Documentation Rules](09-development/documentation-rules.md)
-21. [Data and Migrations](10-operations/data-and-migrations.md)
-22. [Module Readiness](10-operations/module-readiness.md)
-23. [Architecture Decisions](11-decisions/README.md)
-24. [Kernel Components Reference](12-reference/kernel-components.md)
-25. [Module Capabilities](12-reference/module-capabilities.md)
+19. [Documentation Site](08-ui/documentation-site.md)
+20. [Adding a Domain](09-development/adding-a-domain.md)
+21. [Documentation Rules](09-development/documentation-rules.md)
+22. [Data and Migrations](10-operations/data-and-migrations.md)
+23. [Module Readiness](10-operations/module-readiness.md)
+24. [Architecture Decisions](11-decisions/README.md)
+25. [Kernel Components Reference](12-reference/kernel-components.md)
+26. [Module Capabilities](12-reference/module-capabilities.md)
 
 ## Головний runtime
 
@@ -149,6 +150,18 @@ Kernel володіє механізмами. Domain володіє бізнес
 - `TARGET` — напрямок/правило, яке ще не повністю реалізоване.
 
 Не описуємо TARGET як готову систему. Людство вже винайшло достатньо документації, де майбутній намір подається як production feature.
+
+## Documentation website
+
+`/docs` є source of truth. Статичний documentation site збирається з цієї ж директорії у `public/docs` і не містить окремої копії content.
+
+```text
+npm run docs:dev
+npm run docs:build
+npm run docs:preview
+```
+
+Детально: [Documentation Site](08-ui/documentation-site.md).
 
 ## Нормативні детальні документи
 

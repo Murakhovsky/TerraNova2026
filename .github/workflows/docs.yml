@@ -1,0 +1,39 @@
+name: COS Documentation
+
+on:
+  push:
+    branches: [COS]
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build documentation
+        run: npm run docs:build
+
+      - name: Upload generated site
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-documentation
+          path: public/docs
+          if-no-files-found: error

@@ -1,6 +1,6 @@
 ---
 title: Documentation Rules
-description: Правила docs-as-code, source of truth і синхронізації документації COS з executable architecture.
+description: Правила підтримки COS documentation як живої частини codebase.
 status: active
 updated: 2026-09-12
 kind: development
@@ -8,199 +8,147 @@ kind: development
 
 # Documentation Rules
 
-`/docs` є канонічною knowledge layer COS, але executable truth усе одно визначають code + tests.
+COS documentation є частиною codebase, а не окремим wiki, який згадують раз на квартал під час ритуального прибирання.
 
-Мета документації — не дублювати кожен клас вручну, а пояснювати:
-
-- product semantics;
-- workflows;
-- ownership;
-- architecture boundaries;
-- runtime lifecycle;
-- operational rules;
-- rationale великих рішень;
-- navigation від бізнес-поняття до коду.
-
-## Source of truth hierarchy
+## Source of truth
 
 ```text
-Executable behavior → code + tests
-Architecture rationale → ADR
-Current architecture/workflow explanation → /docs
-Generated reference → code/schema/manifests as source
-Historical intent → legacy plans / old ADR
+Executable code + tests    фактична поведінка
+/docs                      explanation, workflows, architecture, reference
+/docs/11-decisions         rationale та history довгоживучих рішень
 ```
 
-Якщо current docs суперечать executable code, це documentation defect.
+Generated documentation site лише рендерить `/docs` і не створює другу content source.
 
-## AS-IS і TARGET
+## Коли documentation update обов'язковий
 
-Кожна суттєва сторінка повинна чітко відрізняти:
+Оновлюйте docs у тому самому change, якщо змінюється:
 
-- `AS-IS` — підтверджено поточним code path;
-- `TARGET` — бажаний стан, який ще не завершений.
-
-Не можна описувати TARGET як production capability.
+- Domain ownership або boundary;
+- Kernel mechanism/lifecycle;
+- module manifest, lifecycle або extension point;
+- public/internal API contract;
+- Event/Action/Policy semantics;
+- Agent/LLM governance;
+- persistence ownership;
+- deployment/migration workflow;
+- суттєвий user/operator workflow.
 
 ## Page types
 
-Основні `kind`:
+### Concept
 
-- `concept` — mental model / термін;
-- `product` — product scope/capability;
-- `workflow` — наскрізний business flow;
-- `architecture` — system boundaries/mechanisms;
-- `domain` — конкретний bounded context;
-- `agent` — Agent/LLM behavior;
-- `development` — how-to для розробника;
-- `operations` — deployment/readiness/monitoring;
-- `decision` — ADR;
-- `reference` — glossary/catalogue/generated-like reference;
-- `index` — navigation page.
+Пояснює mental model і терміни. Не дублює class reference.
 
-## Status values
+### Workflow
 
-Для current docs:
+Показує business goal, actors, input, lifecycle, COS implementation, runtime, UI і code map.
 
-- `active` — чинна сторінка;
-- `draft` — неповна/неперевірена;
-- `deprecated` — більше не є current guidance;
-- `historical` — лишається для history/migration context.
+### Architecture
 
-Для ADR використовуються окремі decision statuses з `11-decisions/README.md`.
+Пояснює boundaries, dependency direction, invariants і system flow.
 
-## Коли документація має оновлюватися разом із кодом
+### Domain
 
-Docs review обов'язковий, якщо commit змінює:
+Пояснює bounded context: vocabulary, ownership, use cases, automation, ports, persistence, interfaces.
 
-1. `KernelVersion` або Kernel public contract;
-2. module manifest/contributions/extensions;
-3. Domain ownership або canonical workflow;
-4. Action/Policy/Approval lifecycle;
-5. Agent/LLM governance behavior;
-6. persistence guarantees або migration semantics;
-7. tenant isolation/configuration model;
-8. public API/delivery surface;
-9. operational readiness/status model;
-10. architecture dependency direction.
+### How-to
 
-Не кожен refactor вимагає docs change. Зміна поведінки або mental model — вимагає.
+Покрокова інструкція для developer/operator.
 
-## Не дублювати те, що можна генерувати
+### Reference
 
-Reference data, яке має executable source, бажано генерувати або перевіряти автоматично:
+Точні contracts, statuses, events, permissions, configuration. Reference, яке можна надійно отримати з executable metadata, у перспективі генерується.
 
-- routes;
-- module manifests;
-- capabilities;
-- permissions;
-- events/action catalogues;
-- configuration keys;
-- DB schema/migrations;
-- API schemas.
+### ADR
 
-Curated docs повинні пояснювати **сенс і зв'язки**, а не вручну підтримувати 300-рядкову копію enum, яка гарантовано застаріє в п'ятницю ввечері.
+Фіксує Context → Decision → Rationale → Alternatives → Consequences → Verification.
 
-## Code links
+## AS-IS vs TARGET
 
-Architecture/workflow docs повинні мати `Code map` для ключових implementation paths, але не прив'язувати пояснення до випадкових line numbers.
+Будь-яка сторінка повинна чітко розрізняти:
 
-Хороший рівень:
+- **AS-IS** — підтверджено code/tests;
+- **TARGET** — запланований direction, ще не повністю executable.
 
-```text
-app/Kernel/Llm/GovernedStructuredLlmClient.php
-app/Domains/Sales/Application/UseCase/
+TARGET не описується граматикою «система робить», якщо система цього ще не робить.
+
+## Frontmatter
+
+Canonical page мінімально має:
+
+```yaml
+---
+title: Page Title
+description: Short description.
+status: active
+updated: YYYY-MM-DD
+kind: architecture
+---
 ```
 
-Поганий рівень:
+Recommended `kind`:
 
 ```text
-див. рядок 183 класу X
+concept
+product
+workflow
+architecture
+domain
+runtime
+agent
+integration
+ui
+development
+operations
+decision
+reference
 ```
 
-Line numbers нестабільні й не є architecture contract.
+## Navigation
 
-## Workflow page template
+Numeric canonical sections автоматично входять у website sidebar. Не підтримуйте паралельний ручний список кожного нового файла в UI config.
+
+Для великих вкладених розділів використовуйте directory hierarchy, а не filename на 90 символів.
+
+## Links
+
+Внутрішні Markdown links мають бути relative, якщо сторінки рухаються разом, або root-relative лише коли це свідомий stable documentation route.
+
+Не посилайтеся на generated `public/docs` files з source Markdown.
+
+## Code references
+
+Коли документ пояснює implementation, додавайте `Code map` з canonical paths, але не копіюйте великі фрагменти PHP у docs. Код змінюється швидше за prose.
+
+## Generated reference
+
+TARGET:
 
 ```text
-Business goal
-Actors
-Trigger / Input
-Canonical state
-Main flow
-Decision points
-Failure/retry behavior
-Runtime mapping
-UI/API surfaces
-Invariants
-Code map
-AS-IS gaps / TARGET
+module manifests ─┐
+routes             ├─> generated reference
+Events/Actions     ┤
+permissions        ┤
+DB schema          ┘
 ```
 
-Workflow має мостити:
+Manual narrative лишається для meaning/rationale. Machine-readable facts не повинні вручну підтримуватись у п'яти таблицях.
 
-```text
-business concept
-→ Domain
-→ use case/event
-→ runtime
-→ infrastructure
-→ UI/API
-```
+## CI
 
-## Architecture page template
+`npm run docs:build` є базовою перевіркою documentation site. CI запускає його при змінах docs/config.
 
-```text
-Problem / responsibility
-Boundary
-Components
-Flow
-Ownership
-Invariants
-Failure model
-Operational implications
-Code map
-Related decisions/docs
-```
+У перспективі CI також має перевіряти:
 
-## Domain page template
+- internal links;
+- duplicate page identifiers;
+- stale code paths;
+- frontmatter schema;
+- generated reference drift.
 
-```text
-Purpose
-Owned vocabulary
-Entities/value objects
-Use cases
-Business events
-Automation
-Ports
-Persistence
-Read models
-Module contributions
-Cross-domain integrations
-Invariants
-Maturity / gaps
-Code map
-```
+## Ownership
 
-## ADR rule
+Автор code change не зобов'язаний написати енциклопедію. Він зобов'язаний оновити той documentation contract, який змінився.
 
-Коли змінюється довгострокове architecture рішення, не переписуємо історію так, ніби попереднього рішення не існувало.
-
-Створюємо/оновлюємо ADR, а current docs показують актуальний стан.
-
-## Review checklist
-
-Перед merge docs change:
-
-- чи терміни відповідають Glossary;
-- чи версії відповідають code;
-- чи AS-IS не змішаний з TARGET;
-- чи Domain/Kernel ownership описаний правильно;
-- чи немає provider-specific detail у Domain docs;
-- чи links/paths існують;
-- чи новий page доданий у navigation/index, якщо він важливий;
-- чи зміна не дублює generated reference вручну.
-
-## Головне правило
-
-> Documentation повинна скорочувати шлях від «що це за бізнес-функція?» до «де і чому вона так реалізована?», а не просто збільшувати кількість Markdown-файлів у репозиторії.
+Правило просте: якщо без diff неможливо зрозуміти нову поведінку з документації, change не завершений.
