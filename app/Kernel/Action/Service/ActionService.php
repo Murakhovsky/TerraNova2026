@@ -6,6 +6,7 @@ namespace Kernel\Action\Service;
 use DateTimeImmutable;
 use DomainException;
 use Kernel\Action\Action;
+use Kernel\Action\ActionExecutionClaim;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionRepositoryInterface;
@@ -83,22 +84,24 @@ final readonly class ActionService
 
     public function executeNext(string $workerId): ?Action
     {
-        $action = $this->actions->claimNext($workerId);
-        if ($action === null) return null;
+        $claim = $this->actions->claimNext($workerId);
+        if ($claim === null) return null;
 
-        return $this->executeClaimed($action, $workerId);
+        return $this->executeClaimed($claim);
     }
 
     public function execute(string $organizationId, string $actionId, string $workerId): ?Action
     {
-        $action = $this->actions->claim($organizationId, $actionId, $workerId);
-        if ($action === null) return null;
+        $claim = $this->actions->claim($organizationId, $actionId, $workerId);
+        if ($claim === null) return null;
 
-        return $this->executeClaimed($action, $workerId);
+        return $this->executeClaimed($claim);
     }
 
-    private function executeClaimed(Action $action, string $workerId): Action
+    private function executeClaimed(ActionExecutionClaim $claim): Action
     {
+        $action = $claim->action;
+        $workerId = $claim->workerId;
 
         try {
             $result = $this->executor->execute($action);
@@ -108,8 +111,9 @@ final readonly class ActionService
                 $action->transitionTo(ActionStatus::Failed);
             }
         }
-        $finish = function () use ($action, $result, $workerId): void {
-            $this->actions->finish($action, $result);
+
+        $finish = function () use ($action, $claim, $result, $workerId): void {
+            $this->actions->finish($claim, $result);
             $event = ActionExecutionFinished::create($action, $result, $workerId);
             $this->events?->append($event);
             $this->audit?->append(new AuditEntry(
@@ -118,20 +122,36 @@ final readonly class ActionService
                 $result->error,
                 [
                     'action' => $action->type,
-                    'input_references' => ['action_id' => $action->id, 'source_type' => $action->sourceType, 'source_id' => $action->sourceId],
+                    'input_references' => [
+                        'action_id' => $action->id,
+                        'source_type' => $action->sourceType,
+                        'source_id' => $action->sourceId,
+                        'execution_attempt' => $claim->attempt,
+                    ],
                     'changes' => $result->data['changes'] ?? [],
-                    'result' => ['status' => $result->status(), 'output' => $result->data, 'error' => $result->error, 'metrics' => $result->metrics],
-                    'metadata' => ['risk_level' => $action->riskLevel, 'execution_mode' => $action->executionMode],
+                    'result' => [
+                        'status' => $result->status(),
+                        'output' => $result->data,
+                        'error' => $result->error,
+                        'metrics' => $result->metrics,
+                    ],
+                    'metadata' => [
+                        'risk_level' => $action->riskLevel,
+                        'execution_mode' => $action->executionMode,
+                        'worker_id' => $workerId,
+                    ],
                 ],
                 $action->correlationId ?: $action->id,
                 new DateTimeImmutable(),
             ));
         };
+
         if ($this->transactions !== null) {
             $this->transactions->transactional($finish);
         } else {
             $finish();
         }
+
         return $action;
     }
 

@@ -29,6 +29,7 @@ jobs:
           php tests/unit/module_runtime_snapshot.php
           php tests/unit/runtime_dispatch_optimization.php
           php tests/unit/module_discovery_cache.php
+          php tests/unit/action_execution_claim.php
       - name: PHP syntax
         run: |
           php -l app/Kernel/Module/KernelVersion.php
@@ -43,9 +44,14 @@ jobs:
           php -l app/Kernel/Event/Service/OutboxPublisher.php
           php -l app/Kernel/Operations/Service/PeriodicMaintenanceGate.php
           php -l app/Kernel/Queue/Service/QueueWorker.php
+          php -l app/Kernel/Action/ActionExecutionClaim.php
+          php -l app/Kernel/Action/StaleActionExecutionClaimException.php
+          php -l app/Kernel/Action/Contract/ActionRepositoryInterface.php
           php -l app/Kernel/Action/Contract/ActionExecutionGateInterface.php
           php -l app/Kernel/Action/Service/ModuleActionExecutionGate.php
           php -l app/Kernel/Action/Service/ActionExecutor.php
+          php -l app/Kernel/Action/Service/ActionService.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Action/MysqlActionRepository.php
           php -l app/Kernel/Llm/StructuredLlmRequest.php
           php -l app/Kernel/Llm/LlmRoute.php
           php -l app/Kernel/Llm/LlmRoutingPolicy.php
@@ -69,6 +75,7 @@ jobs:
           php -l tests/unit/module_runtime_snapshot.php
           php -l tests/unit/runtime_dispatch_optimization.php
           php -l tests/unit/module_discovery_cache.php
+          php -l tests/unit/action_execution_claim.php
           php -l tests/architecture/kernel_v010_llm_runtime_governance.php
           php -l tests/architecture/kernel_v0102_execution_runtime.php
           php -l tests/architecture/kernel_runtime_composition.php
