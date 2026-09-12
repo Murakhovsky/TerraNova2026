@@ -53,8 +53,14 @@ foreach (['/sales/admin/agents', '/api/sales/admin/agents', '/test', '/revisions
     $must(str_contains($routes, $needle), 'Sales Agent Administration route missing: ' . $needle);
 }
 
-$bootstrap = $read('app/Bootstrap/SalesAgentServices.php');
-$must(str_contains($bootstrap, "setShared('cosAgentRuntime'"), 'Configured runtime must still be the generic Kernel AgentRuntime service.');
-$must(!str_contains($bootstrap, 'SalesAgentRuntime'), 'Sales must not introduce a duplicate SalesAgentRuntime.');
+// Sales owns the tenant configuration provider; Kernel owns the generic runtime
+// composition. This preserves the original boundary without a domain bootstrap override.
+$salesBootstrap = $read('app/Bootstrap/SalesAgentServices.php');
+$kernelBootstrap = $read('app/Bootstrap/KernelServices.php');
+$must(str_contains($salesBootstrap, "setShared('cosAgentConfigurationProvider'"), 'Sales must register the tenant Agent configuration provider.');
+$must(!str_contains($salesBootstrap, "setShared('cosAgentRuntime'"), 'Sales must not override the Kernel-owned AgentRuntime.');
+$must(str_contains($kernelBootstrap, "setShared('cosAgentRuntime'"), 'Configured runtime must remain the generic Kernel AgentRuntime service.');
+$must(str_contains($kernelBootstrap, "getShared('cosAgentConfigurationProvider')"), 'Kernel AgentRuntime must consume the tenant configuration provider.');
+$must(!str_contains($salesBootstrap, 'SalesAgentRuntime'), 'Sales must not introduce a duplicate SalesAgentRuntime.');
 
 fwrite(STDOUT, "Sales V0.7.4 agent administration architecture contract passed.\n");

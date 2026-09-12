@@ -41,11 +41,19 @@ foreach (['assertNoEnabledDependents', 'enableRecursive', 'Cannot %s %s while de
     }
 }
 
+// V0.10.3 moved the effective per-organization state projection into a dedicated
+// snapshot while ActiveModuleResolver remains the public resolver facade. Historical
+// guards assert the invariant across that boundary instead of pinning it to one file.
 $resolver = (string) file_get_contents($root . '/app/Kernel/Module/ActiveModuleResolver.php');
+$snapshot = (string) file_get_contents($root . '/app/Kernel/Module/OrganizationModuleSnapshot.php');
+$moduleStateRuntime = $resolver . "\n" . $snapshot;
 foreach (['isConfiguredEnabled', 'isInstalled', "'configured_enabled'", "'active'"] as $stateDimension) {
-    if (!str_contains($resolver, $stateDimension)) {
+    if (!str_contains($moduleStateRuntime, $stateDimension)) {
         throw new RuntimeException('Module state dimension is missing: ' . $stateDimension);
     }
+}
+if (!str_contains($resolver, 'OrganizationModuleSnapshot')) {
+    throw new RuntimeException('ActiveModuleResolver must resolve tenant state through OrganizationModuleSnapshot.');
 }
 
 echo sprintf("COS Kernel V0.8 lifecycle contract passed on Kernel %s.\n", KernelVersion::VERSION);
