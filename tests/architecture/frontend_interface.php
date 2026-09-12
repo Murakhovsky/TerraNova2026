@@ -109,8 +109,11 @@ if (str_contains($adminHomeView, "partial('shared/manager_header'")) throw new R
 if (!str_contains($adminHomeView, 'Runtime modules') || !str_contains($adminHomeView, 'Company Home')) throw new RuntimeException('Company Home must expose company pulse and runtime module state.');
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
-foreach (["setShared('frontendCompanyHomeService'", "setShared('webModuleNavigationContributors'", "setShared('frontendNavigationService'"] as $needle) {
-    if (!str_contains($webServices, $needle)) throw new RuntimeException('Web composition root is missing service: ' . $needle);
+foreach (["setShared('frontendCompanyHomeService'", "setShared('frontendNavigationService'", "getShared('cosModuleWebNavigationContributors')"] as $needle) {
+    if (!str_contains($webServices, $needle)) throw new RuntimeException('Web composition root is missing service or extension runtime dependency: ' . $needle);
+}
+if (str_contains($webServices, "setShared('webModuleNavigationContributors'")) {
+    throw new RuntimeException('Web composition root must not restore the pre-V0.9 hardcoded navigation contributor list.');
 }
 
 $managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
