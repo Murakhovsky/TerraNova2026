@@ -19,6 +19,23 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
 
     public function complete(StructuredLlmRequest $request): StructuredLlmResponse
     {
+        // Unbudgeted tenants remain fully concurrent. Budgeted tenants execute the
+        // check -> provider -> usage settlement path inside one tenant/currency lock,
+        // so two parallel agents cannot both approve against stale monthly spend.
+        if ($request->organizationId !== null
+            && $this->governance->monthlyBudget($request->organizationId, $this->budgetCurrency) !== null) {
+            return $this->governance->synchronizedBudget(
+                $request->organizationId,
+                $this->budgetCurrency,
+                fn (): StructuredLlmResponse => $this->completeGoverned($request),
+            );
+        }
+
+        return $this->completeGoverned($request);
+    }
+
+    private function completeGoverned(StructuredLlmRequest $request): StructuredLlmResponse
+    {
         $this->assertBudget($request);
 
         $routes = $this->routing->routesFor($request);
@@ -87,6 +104,10 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
         int $latencyMs,
         int $fallbackCount,
     ): void {
+        $costCurrency = $response->costAmount !== null
+            ? strtoupper($response->costCurrency ?? $this->budgetCurrency)
+            : null;
+
         $this->governance->record(new LlmUsageRecord(
             bin2hex(random_bytes(16)),
             $request->organizationId,
@@ -97,7 +118,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             $response->inputTokens,
             $response->outputTokens,
             $response->costAmount,
-            $response->costCurrency,
+            $costCurrency,
             $latencyMs,
             $fallbackCount,
         ));
@@ -117,7 +138,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
         }
         if ($response->costAmount !== null) {
             $this->metrics->record('llm.request.cost', $response->costAmount, $request->organizationId, $labels + [
-                'currency' => $response->costCurrency ?? $this->budgetCurrency,
+                'currency' => $costCurrency ?? $this->budgetCurrency,
             ]);
         }
     }
