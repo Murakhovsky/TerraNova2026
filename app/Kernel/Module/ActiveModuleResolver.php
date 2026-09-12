@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Kernel\Module;
 
+use Kernel\Module\Contract\BulkModuleStateRepositoryInterface;
 use Kernel\Module\Contract\ModuleLifecycleRepositoryInterface;
 use Kernel\Module\Contract\ModuleStateRepositoryInterface;
-use RuntimeException;
 
 final readonly class ActiveModuleResolver
 {
@@ -16,116 +16,74 @@ final readonly class ActiveModuleResolver
     ) {
     }
 
-    public function isEnabled(string $organizationId, string $moduleId): bool
+    public function snapshot(string $organizationId): OrganizationModuleSnapshot
     {
-        if (!$this->catalog->has($moduleId)) {
-            return false;
+        $overrides = $this->states instanceof BulkModuleStateRepositoryInterface
+            ? $this->states->enabledOverrides($organizationId)
+            : $this->fallbackEnabledOverrides($organizationId);
+
+        $installations = [];
+        foreach ($this->installations?->forOrganization($organizationId) ?? [] as $installation) {
+            $installations[$installation->moduleId] = $installation;
         }
 
-        return $this->resolve($organizationId, $moduleId, []);
+        return new OrganizationModuleSnapshot(
+            $organizationId,
+            $this->catalog,
+            $overrides,
+            $installations,
+        );
+    }
+
+    public function isEnabled(string $organizationId, string $moduleId): bool
+    {
+        return $this->snapshot($organizationId)->isEnabled($moduleId);
     }
 
     public function isConfiguredEnabled(string $organizationId, string $moduleId): bool
     {
-        if (!$this->catalog->has($moduleId)) {
-            return false;
-        }
-
-        $module = $this->catalog->get($moduleId);
-        return $this->states->enabledOverride($organizationId, $moduleId) ?? $module->enabledByDefault;
+        return $this->snapshot($organizationId)->isConfiguredEnabled($moduleId);
     }
 
     public function isInstalled(string $organizationId, string $moduleId): bool
     {
-        if (!$this->catalog->has($moduleId)) {
-            return false;
-        }
-
-        $installation = $this->installations?->find($organizationId, $moduleId);
-        return $installation === null || $installation->isInstalled();
+        return $this->snapshot($organizationId)->isInstalled($moduleId);
     }
 
     public function isCurrent(string $organizationId, string $moduleId): bool
     {
-        if (!$this->catalog->has($moduleId)) {
-            return false;
-        }
-
-        $installation = $this->installations?->find($organizationId, $moduleId);
-        if ($installation === null) {
-            // Pre-lifecycle tenants are treated as deployment-current until an explicit
-            // lifecycle record is created for them.
-            return true;
-        }
-        if (!$installation->isInstalled()) {
-            return false;
-        }
-
-        $manifest = $this->catalog->get($moduleId);
-        return $installation->installedVersion === $manifest->version
-            && $installation->schemaVersion === $manifest->schemaVersion;
+        return $this->snapshot($organizationId)->isCurrent($moduleId);
     }
 
     /** @return list<ModuleManifest> */
     public function active(string $organizationId): array
     {
-        return array_values(array_filter(
-            $this->catalog->all(),
-            fn (ModuleManifest $module): bool => $this->isEnabled($organizationId, $module->id),
-        ));
+        return $this->snapshot($organizationId)->active();
+    }
+
+    /** @return array<string, mixed> */
+    public function describeModule(string $organizationId, string $moduleId): array
+    {
+        return $this->snapshot($organizationId)->describeModule($moduleId);
     }
 
     /** @return list<array<string, mixed>> */
     public function describe(string $organizationId): array
     {
-        return array_map(
-            function (ModuleManifest $module) use ($organizationId): array {
-                $installation = $this->installations?->find($organizationId, $module->id);
-                $active = $this->isEnabled($organizationId, $module->id);
-                $installed = $this->isInstalled($organizationId, $module->id);
-                $installedVersion = $installation?->installedVersion ?? $module->version;
-                $installedSchemaVersion = $installation?->schemaVersion ?? $module->schemaVersion;
-                $versionCurrent = $installed && $installedVersion === $module->version;
-                $schemaVersionCurrent = $installed && $installedSchemaVersion === $module->schemaVersion;
-
-                return $module->toArray() + [
-                    // Missing lifecycle state means deployment-installed/current for pre-lifecycle tenants.
-                    'installed' => $installed,
-                    'installed_version' => $installedVersion,
-                    'installed_schema_version' => $installedSchemaVersion,
-                    'version_current' => $versionCurrent,
-                    'schema_version_current' => $schemaVersionCurrent,
-                    'current' => $versionCurrent && $schemaVersionCurrent,
-                    // Keep `enabled` as the effective value for API backwards compatibility.
-                    'enabled' => $active,
-                    'configured_enabled' => $this->isConfiguredEnabled($organizationId, $module->id),
-                    'active' => $active,
-                ];
-            },
-            $this->catalog->all(),
-        );
+        return $this->snapshot($organizationId)->describe();
     }
 
-    /** @param array<string, true> $stack */
-    private function resolve(string $organizationId, string $moduleId, array $stack): bool
+    /** @return array<string, bool> */
+    private function fallbackEnabledOverrides(string $organizationId): array
     {
-        if (isset($stack[$moduleId])) {
-            throw new RuntimeException(sprintf('Circular module dependency detected at %s.', $moduleId));
-        }
-
-        if (!$this->isInstalled($organizationId, $moduleId)
-            || !$this->isCurrent($organizationId, $moduleId)
-            || !$this->isConfiguredEnabled($organizationId, $moduleId)) {
-            return false;
-        }
-
-        $stack[$moduleId] = true;
-        foreach ($this->catalog->get($moduleId)->dependencies as $dependency) {
-            if (!$this->resolve($organizationId, $dependency, $stack)) {
-                return false;
+        $overrides = [];
+        foreach ($this->catalog->ids() as $moduleId) {
+            $value = $this->states->enabledOverride($organizationId, $moduleId);
+            if ($value !== null) {
+                $overrides[$moduleId] = $value;
             }
         }
 
-        return true;
+        return $overrides;
     }
 }
