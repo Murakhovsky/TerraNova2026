@@ -85,19 +85,47 @@ final readonly class ModuleContributions
         );
     }
 
+    /**
+     * Canonical extension map consumed by the runtime. Legacy first-class fields are
+     * normalized here so callers do not need to understand multiple manifest shapes.
+     *
+     * @return array<string, list<string>>
+     */
+    public function normalizedExtensionServices(): array
+    {
+        $extensions = [];
+
+        if ($this->apiRouteContributorServices !== []) {
+            $extensions[ModuleExtensionPoint::API_ROUTES] = $this->apiRouteContributorServices;
+        }
+        if ($this->configurationProvisionerServices !== []) {
+            $extensions[ModuleExtensionPoint::TENANT_CONFIGURATION] = $this->configurationProvisionerServices;
+        }
+
+        foreach ($this->extensionServices as $extensionPoint => $serviceIds) {
+            if (!isset($extensions[$extensionPoint])) {
+                $extensions[$extensionPoint] = [];
+            }
+            array_push($extensions[$extensionPoint], ...$serviceIds);
+        }
+
+        return array_filter(
+            $extensions,
+            static fn (array $serviceIds): bool => $serviceIds !== [],
+        );
+    }
+
     /** @return list<string> */
     public function allServiceIds(): array
     {
         $extensionServiceIds = [];
-        foreach ($this->extensionServices as $serviceIds) {
+        foreach ($this->normalizedExtensionServices() as $serviceIds) {
             array_push($extensionServiceIds, ...$serviceIds);
         }
 
         return array_values(array_unique(array_filter([
             $this->runtimeModuleService,
             ...$this->jobHandlerServices,
-            ...$this->apiRouteContributorServices,
-            ...$this->configurationProvisionerServices,
             ...$extensionServiceIds,
         ], static fn (?string $value): bool => $value !== null)));
     }
