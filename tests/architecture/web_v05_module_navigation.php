@@ -54,7 +54,7 @@ if (str_contains($managerHeader, 'FrontendNavigation::workspace(') || str_contai
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
 foreach ([
-    "setShared('webModuleNavigationContributors'",
+    "getShared('cosModuleWebNavigationContributors')",
     'new SalesNavigationContributor()',
     'new PropertyNavigationContributor()',
     'new DiagnosticNavigationContributor()',
@@ -64,6 +64,9 @@ foreach ([
     if (!str_contains($webServices, $needle)) {
         throw new RuntimeException('Web composition is missing module-aware navigation wiring: ' . $needle);
     }
+}
+if (str_contains($webServices, "setShared('webModuleNavigationContributors'")) {
+    throw new RuntimeException('WEB V0.5 must not restore the pre-V0.9 hardcoded navigation contributor aggregate.');
 }
 
 foreach ([
