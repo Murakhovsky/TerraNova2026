@@ -78,7 +78,10 @@ $di->setShared('cosModuleControlService', fn (): ModuleControlService => new Mod
 ));
 $di->setShared('cosDurableEventDispatcher', fn (): DurableEventDispatcher => new DurableEventDispatcher(
     $this->getShared('cosEventConsumptions'),
-    ['kernel.rule-engine.v1' => $this->getShared('cosRuleEngineEventHandler')],
+    [
+        'kernel.rule-engine.v1' => $this->getShared('cosRuleEngineEventHandler'),
+        ...$this->getShared('cosModuleEventConsumers'),
+    ],
 ));
 $di->setShared('cosOutboxPublisher', fn (): OutboxPublisher => new OutboxPublisher(
     $this->getShared('cosEventOutbox'),
@@ -136,6 +139,7 @@ $di->setShared('cosAgentRuntime', fn (): AgentRuntime => new AgentRuntime(
     $this->getShared('cosAgentRunRepository'),
     $this->getShared('cosDecisionRepository'),
     new SensitiveContextRedactor(),
+    $this->getShared('cosAgentConfigurationProvider'),
 ));
 $di->setShared('cosAgentRunJobHandler', fn (): AgentRunJobHandler => new AgentRunJobHandler(
     $this->getShared('cosAgentRuntime'),

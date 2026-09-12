@@ -31,7 +31,13 @@ final readonly class AgentRuntime
 
     public function run(AgentDefinition $agent, AgentInvocation $invocation): AgentExecution
     {
-        if ($agent->configurationManaged && $this->configurations !== null) {
+        if ($agent->configurationManaged) {
+            if ($this->configurations === null) {
+                throw new RuntimeException(sprintf(
+                    'Agent %s requires managed configuration, but no configuration provider is available.',
+                    $agent->name,
+                ));
+            }
             $agent = $this->configurations->effective($invocation->organizationId, $agent);
         }
         if (!$agent->enabled) {

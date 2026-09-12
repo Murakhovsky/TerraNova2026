@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Infrastructure\Module\MysqlModuleLifecycleRepository;
 use Infrastructure\Module\MysqlModuleStateRepository;
+use Kernel\Event\Contract\DurableEventConsumerInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\Contract\ModuleConfigurationProvisionerInterface;
 use Kernel\Module\DomainModuleInterface;
@@ -123,6 +124,40 @@ $di->setShared('cosModuleJobHandlers', function (): array {
     }
 
     return $handlers;
+});
+
+// Durable event consumers are resolved through the same generic extension runtime.
+// The stable consumer name is owned by the consumer contract because the event
+// consumption repository uses it as the idempotency boundary.
+$di->setShared('cosModuleEventConsumers', function (): array {
+    $consumers = [];
+    /** @var ModuleExtensionRegistry $registry */
+    $registry = $this->getShared('cosModuleExtensionRegistry');
+    foreach ($registry->for(ModuleExtensionRegistry::EVENT_CONSUMERS) as $extension) {
+        $consumer = $this->getShared($extension->serviceId);
+        if (!$consumer instanceof DurableEventConsumerInterface) {
+            throw new RuntimeException(sprintf(
+                'Module %s event consumer service %s must implement DurableEventConsumerInterface.',
+                $extension->moduleId,
+                $extension->serviceId,
+            ));
+        }
+
+        $name = $consumer->consumerName();
+        if (str_starts_with($name, 'kernel.')) {
+            throw new RuntimeException(sprintf(
+                'Module %s event consumer %s uses reserved kernel.* namespace.',
+                $extension->moduleId,
+                $name,
+            ));
+        }
+        if (isset($consumers[$name])) {
+            throw new RuntimeException(sprintf('Duplicate durable event consumer name: %s.', $name));
+        }
+        $consumers[$name] = $consumer;
+    }
+
+    return $consumers;
 });
 
 // API routes are a first-class extension point. Routes remain globally registered;

@@ -9,6 +9,7 @@ final class ModuleExtensionRegistry
 {
     public const API_ROUTES = 'api.routes';
     public const TENANT_CONFIGURATION = 'tenant.configuration';
+    public const EVENT_CONSUMERS = 'event.consumers';
 
     /** @var array<string, list<ModuleExtensionContribution>> */
     private array $extensions = [];

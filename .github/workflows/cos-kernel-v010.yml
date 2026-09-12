@@ -22,11 +22,14 @@ jobs:
           php tests/architecture/kernel_v09_extension_runtime.php
           php tests/architecture/kernel_v010_llm_runtime_governance.php
           php tests/architecture/kernel_v0102_execution_runtime.php
+          php tests/architecture/kernel_runtime_composition.php
       - name: LLM governance invariants
         run: php tests/unit/llm_runtime_governance.php
       - name: PHP syntax
         run: |
           php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Kernel/Module/ModuleExtensionRegistry.php
+          php -l app/Kernel/Event/Contract/DurableEventConsumerInterface.php
           php -l app/Kernel/Llm/StructuredLlmRequest.php
           php -l app/Kernel/Llm/LlmRoute.php
           php -l app/Kernel/Llm/LlmRoutingPolicy.php
@@ -42,8 +45,11 @@ jobs:
           php -l app/Infrastructure/Llm/HttpStructuredLlmClient.php
           php -l app/Infrastructure/Llm/MysqlLlmGovernanceRepository.php
           php -l app/Bootstrap/InfrastructureServices.php
+          php -l app/Bootstrap/ModuleServices.php
           php -l app/Bootstrap/KernelServices.php
+          php -l app/Bootstrap/SalesAgentServices.php
           php -l app/Domains/Diagnostic/Infrastructure/AI/StructuredLlmAiGateway.php
           php -l tests/unit/llm_runtime_governance.php
           php -l tests/architecture/kernel_v010_llm_runtime_governance.php
           php -l tests/architecture/kernel_v0102_execution_runtime.php
+          php -l tests/architecture/kernel_runtime_composition.php
