@@ -152,11 +152,11 @@ function checkKernelVersion() {
   const runtime = fs.readFileSync(runtimePath, 'utf8');
   const docs = fs.readFileSync(docsPath, 'utf8');
 
-  const runtimeMatch = runtime.match(/public\s+const\s+CURRENT\s*=\s*['"]([^'"]+)['"]/);
+  const runtimeMatch = runtime.match(/public\s+const\s+VERSION\s*=\s*['"]([^'"]+)['"]/);
   const docsMatch = docs.match(/Поточний executable Kernel contract:\s*\*\*`([^`]+)`\*\*/);
 
   if (!runtimeMatch) {
-    errors.push(`${relativeToRepo(runtimePath)}: cannot read KernelVersion::CURRENT`);
+    errors.push(`${relativeToRepo(runtimePath)}: cannot read KernelVersion::VERSION`);
     return;
   }
   if (!docsMatch) {
