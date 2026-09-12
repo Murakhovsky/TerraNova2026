@@ -2,7 +2,7 @@
 declare(strict_types=1);
 use Domains\Diagnostic\AI\PromptRegistry;
 use Domains\Diagnostic\Evaluation\{CostEvaluator,DiagnosticComparisonService,EvaluationMetrics,ReDiagnosticSchedule,RegressionComparator,SalesEvaluationRunner};
-use Domains\Diagnostic\Infrastructure\AI\{FakeAiGateway,RecordedAiGateway,RetryingAiGateway};
+use Tests\Support\Diagnostic\{FakeAiGateway,RecordedAiGateway};
 use Domains\Diagnostic\Interview\{ContradictionDetectionService,DiagnosticMode,ExtractedFact,FactExtractionService,HypothesisGenerationService,InterviewCoordinator,NextBestQuestionEngine,RootCauseAnalysisService};
 use Domains\Diagnostic\Methodology\PackCompiler;
 use Domains\Diagnostic\Model\{DiagnosticState,Fact,FactStatus,HypothesisStatus};
@@ -12,6 +12,8 @@ use Kernel\Action\Contract\ActionRepositoryInterface;
 use Kernel\Action\Service\{ActionExecutor,ActionService};
 use Domains\Diagnostic\Application\UseCase\AcceptDiagnosticRecommendation;
 require dirname(__DIR__,2).'/vendor/autoload.php';
+require_once dirname(__DIR__).'/Support/Diagnostic/FakeAiGateway.php';
+require_once dirname(__DIR__).'/Support/Diagnostic/RecordedAiGateway.php';
 function p46(bool $ok,string $message):void{if(!$ok)throw new RuntimeException($message);}
 function state(string $id,array $missing,array $findings=[],array $recommendations=[],float $score=50):DiagnosticState{return new DiagnosticState($id,'sales',1,1,new DateTimeImmutable(),[],$missing,[],[] ,[],$findings,[],[],$recommendations,[],['pack'=>.8],.8,['pack'=>$score,'sections'=>['pipeline'=>$score]],[],[],[]);}
 $root=dirname(__DIR__,2);$pack=(new PackCompiler())->compile($root.'/resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');
@@ -19,7 +21,6 @@ p46(count((new PromptRegistry())->versions())===7,'Prompt registry incomplete.')
 $factIds=array_keys($pack->factsById);$decision=(new NextBestQuestionEngine())->decide(state('d1',array_slice($factIds,0,2)),$pack,[],DiagnosticMode::DeepDiagnostic,5,30);p46($decision!==null&&$decision->targetFacts!==[],'Adaptive question selection failed.');$targetFact=$decision->targetFacts[0];
 $output=['facts'=>[['key'=>$targetFact,'value'=>true,'provenance'=>'REPORTED','confidence'=>.7,'evidence_ids'=>['ev1']]],'metrics'=>[],'evidence'=>[['id'=>'ev1','title'=>'Interview','value'=>'yes']],'uncertainties'=>[],'contradictions'=>[],'missing_information'=>[]];$recorded=new RecordedAiGateway(new FakeAiGateway([$output]));$extracted=(new FactExtractionService($recorded))->extract('org','d1',$decision->question,'yes',$pack);p46(count($extracted->candidateFacts)===1&&count($recorded->calls)===1,'Structured extraction/audit failed.');
 $turn=(new InterviewCoordinator(new FactExtractionService(new FakeAiGateway([$output]))))->processAnswer('org',state('d1',[$targetFact]),$pack,$decision,'yes',[],[],DiagnosticMode::DeepDiagnostic,[],5,30);p46($turn->state->revision===2&&isset($turn->state->knownFacts[$targetFact]),'Interview coordinator did not rebuild state.');
-$retry=(new RetryingAiGateway(new FakeAiGateway([new RuntimeException('transient'),$output])));$retried=(new FactExtractionService($retry))->extract('org','d1','q','a',$pack);p46(count($retried->candidateFacts)===1,'AI retry policy failed.');
 $hallucinated=$output;$hallucinated['facts'][0]['key']='invented_fact';try{(new FactExtractionService(new FakeAiGateway([$hallucinated])))->extract('org','d1','q','a',$pack);throw new RuntimeException('Hallucinated fact entered domain.');}catch(UnexpectedValueException){}
 $now=new DateTimeImmutable();$existing=new Fact('f','d1',$targetFact,true,'boolean',FactStatus::Known,.9,'CRM',['crm'],$now,$now);$contradictions=(new ContradictionDetectionService())->detect([$existing],[new ExtractedFact($targetFact,false,'boolean','REPORTED',.8,['interview'])]);p46(count($contradictions)===1&&$contradictions[0]->status==='OPEN','Contradiction was not retained.');
 $hypOut=['hypotheses'=>[['hypothesis'=>'Routing is inconsistent','supporting_evidence'=>['crm','interview'],'contradicting_evidence'=>[],'required_evidence'=>[],'confidence_estimate'=>.99]]];$hyp=(new HypothesisGenerationService(new FakeAiGateway([$hypOut])))->generate('org','d1',['finding'],['crm','interview'])[0];p46($hyp->confidence===.69,'AI confidence was accepted as final.');$supported=$hyp->transition(HypothesisStatus::Supported,.85);$causes=(new RootCauseAnalysisService())->analyze([$supported],['finding-1'],.9);p46(count($causes)===1,'Root-cause evidence threshold failed.');

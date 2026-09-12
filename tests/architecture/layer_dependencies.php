@@ -98,12 +98,15 @@ foreach ($requiredDiagnosticAreas as $area) {
     }
 }
 
-$diagnosticLlmGateway = (string) file_get_contents($root . '/app/Domains/Diagnostic/Infrastructure/AI/OpenAiGateway.php');
+$diagnosticLlmGateway = (string) file_get_contents($root . '/app/Domains/Diagnostic/Infrastructure/AI/StructuredLlmAiGateway.php');
 if (str_contains($diagnosticLlmGateway, 'Kernel\\Agent\\')) {
     throw new RuntimeException('Diagnostic LLM gateway must use the provider-neutral Kernel\\Llm port, not the Agent runtime contract.');
 }
 if (!str_contains($diagnosticLlmGateway, 'Kernel\\Llm\\StructuredLlmClientInterface')) {
     throw new RuntimeException('Diagnostic LLM gateway must depend on Kernel\\Llm\\StructuredLlmClientInterface.');
+}
+if (!str_contains($diagnosticLlmGateway, 'useCase: $operation->operationId')) {
+    throw new RuntimeException('Diagnostic LLM gateway must route through the semantic operation id.');
 }
 
 $httpLlmClient = (string) file_get_contents($root . '/app/Infrastructure/Llm/HttpStructuredLlmClient.php');
@@ -113,4 +116,4 @@ foreach (['LlmClientInterface', 'StructuredLlmClientInterface'] as $contract) {
     }
 }
 
-echo "Architecture boundaries passed: Kernel/Domains are independent and LLM transport is shared without leaking Agent semantics into Diagnostic.\n";
+echo "Architecture boundaries passed: Kernel/Domains are independent and LLM transport is shared without leaking provider or Agent semantics into Diagnostic.\n";

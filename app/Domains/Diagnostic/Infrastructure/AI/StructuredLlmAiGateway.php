@@ -11,7 +11,7 @@ use Domains\Diagnostic\AI\PromptRegistry;
 use Kernel\Llm\StructuredLlmClientInterface;
 use Kernel\Llm\StructuredLlmRequest;
 
-final readonly class OpenAiGateway implements AiGatewayInterface
+final readonly class StructuredLlmAiGateway implements AiGatewayInterface
 {
     public function __construct(
         private StructuredLlmClientInterface $client,
@@ -27,10 +27,9 @@ final readonly class OpenAiGateway implements AiGatewayInterface
             userPrompt: (string) $prompt['task'],
             context: $request->context,
             responseSchema: $request->outputSchema,
-            model: $operation->model,
             maxOutputTokens: $operation->tokenBudget,
             organizationId: $request->organizationId,
-            useCase: 'diagnostic.' . strtolower($operation->operation->value),
+            useCase: $operation->operationId,
             correlationId: $request->diagnosticId,
         ));
 

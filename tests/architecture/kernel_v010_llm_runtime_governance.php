@@ -6,8 +6,8 @@ require $root . '/vendor/autoload.php';
 
 use Kernel\Module\KernelVersion;
 
-if (version_compare(KernelVersion::VERSION, '0.10.0', '<')) {
-    throw new RuntimeException('COS Kernel LLM governance requires Kernel 0.10.0+.');
+if (version_compare(KernelVersion::VERSION, '0.10.1', '<')) {
+    throw new RuntimeException('COS Kernel LLM governance boundary cleanup requires Kernel 0.10.1+.');
 }
 
 foreach ([
@@ -17,6 +17,7 @@ foreach ([
     'app/Kernel/Llm/LlmGovernanceRepositoryInterface.php',
     'app/Kernel/Llm/LlmUsageRecord.php',
     'app/Infrastructure/Llm/MysqlLlmGovernanceRepository.php',
+    'app/Domains/Diagnostic/Infrastructure/AI/StructuredLlmAiGateway.php',
     'app/migrations/20260911_000041_cos_kernel_v010_llm_governance.sql',
 ] as $path) {
     if (!is_file($root . '/' . $path)) {
@@ -45,10 +46,38 @@ foreach (['cosLlmProviderRegistry', 'cosLlmRoutingPolicy', 'cosLlmGovernanceRepo
     }
 }
 
-$diagnostic = (string) file_get_contents($root . '/app/Domains/Diagnostic/Infrastructure/AI/OpenAiGateway.php');
-foreach (['organizationId: $request->organizationId', "useCase: 'diagnostic.'", 'correlationId: $request->diagnosticId'] as $needle) {
+$diagnostic = (string) file_get_contents($root . '/app/Domains/Diagnostic/Infrastructure/AI/StructuredLlmAiGateway.php');
+foreach (['organizationId: $request->organizationId', 'useCase: $operation->operationId', 'correlationId: $request->diagnosticId'] as $needle) {
     if (!str_contains($diagnostic, $needle)) {
         throw new RuntimeException('Diagnostic AI is missing tenant-aware LLM governance context: ' . $needle);
+    }
+}
+foreach (['model: $operation->model', 'maxRetries', 'timeoutSeconds', 'OpenAi'] as $forbidden) {
+    if (str_contains($diagnostic, $forbidden)) {
+        throw new RuntimeException('Diagnostic LLM gateway leaked provider/runtime policy: ' . $forbidden);
+    }
+}
+
+$definition = (string) file_get_contents($root . '/app/Domains/Diagnostic/AI/AiOperationDefinition.php');
+foreach (['public string $operationId', 'public string $promptVersion', 'public string $schemaVersion', 'public int $tokenBudget'] as $needle) {
+    if (!str_contains($definition, $needle)) {
+        throw new RuntimeException('Diagnostic AI operation definition is missing semantic metadata: ' . $needle);
+    }
+}
+foreach (['public string $model', 'maxRetries', 'timeoutSeconds'] as $forbidden) {
+    if (str_contains($definition, $forbidden)) {
+        throw new RuntimeException('Diagnostic AI operation must not own LLM runtime policy: ' . $forbidden);
+    }
+}
+
+foreach ([
+    'app/Domains/Diagnostic/Infrastructure/AI/OpenAiGateway.php',
+    'app/Domains/Diagnostic/Infrastructure/AI/RetryingAiGateway.php',
+    'app/Domains/Diagnostic/Infrastructure/AI/RecordedAiGateway.php',
+    'app/Domains/Diagnostic/Infrastructure/AI/FakeAiGateway.php',
+] as $obsolete) {
+    if (is_file($root . '/' . $obsolete)) {
+        throw new RuntimeException('Obsolete Diagnostic AI infrastructure remains in production source: ' . $obsolete);
     }
 }
 
@@ -66,4 +95,4 @@ foreach (['cos_llm_budgets', 'cos_llm_usage', 'organization_id', 'monthly_limit'
     }
 }
 
-echo "COS Kernel V0.10 LLM runtime governance architecture passed.\n";
+echo "COS Kernel V0.10.1 Diagnostic LLM boundary architecture passed.\n";
