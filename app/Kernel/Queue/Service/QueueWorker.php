@@ -2,42 +2,65 @@
 declare(strict_types=1);
 namespace Kernel\Queue\Service;
 
-use Kernel\Queue\Contract\JobHandlerInterface;
-use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Observability\StructuredLoggerInterface;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
+use Kernel\Operations\Service\PeriodicMaintenanceGate;
+use Kernel\Queue\Contract\JobHandlerInterface;
+use Kernel\Queue\Contract\JobQueueInterface;
 use RuntimeException;
 use Throwable;
 
-final readonly class QueueWorker
+final class QueueWorker
 {
+    /** @var array<string, JobHandlerInterface> */
+    private array $handlerCache = [];
+    private readonly PeriodicMaintenanceGate $recoveryGate;
+
     /** @param list<JobHandlerInterface> $handlers */
     public function __construct(
-        private JobQueueInterface $queue,
-        private array $handlers,
-        private ?MetricsRecorderInterface $metrics = null,
-        private ?StructuredLoggerInterface $logger = null,
-    ) {}
+        private readonly JobQueueInterface $queue,
+        private readonly array $handlers,
+        private readonly ?MetricsRecorderInterface $metrics = null,
+        private readonly ?StructuredLoggerInterface $logger = null,
+        int $recoveryIntervalSeconds = 30,
+    ) {
+        $this->recoveryGate = new PeriodicMaintenanceGate($recoveryIntervalSeconds);
+    }
+
     public function runOne(string $workerId): bool
     {
-        $this->queue->recoverTimedOut();
+        if ($this->recoveryGate->due()) {
+            $this->queue->recoverTimedOut();
+        }
+
         $job = $this->queue->claim($workerId);
         if ($job === null) return false;
         try {
-            foreach ($this->handlers as $handler) {
-                if ($handler->supports($job->type)) {
-                    $handler->handle($job);
-                    $this->queue->complete($job);
-                    $this->observe('cos.jobs.completed', $job->organizationId, $job->type);
-                    return true;
-                }
-            }
-            throw new RuntimeException('No handler for job ' . $job->type);
+            $handler = $this->handlerFor($job->type);
+            $handler->handle($job);
+            $this->queue->complete($job);
+            $this->observe('cos.jobs.completed', $job->organizationId, $job->type);
+            return true;
         } catch (Throwable $exception) {
             $this->queue->fail($job, $exception->getMessage());
             $this->observe('cos.jobs.failed', $job->organizationId, $job->type, $exception);
             return true;
         }
+    }
+
+    private function handlerFor(string $type): JobHandlerInterface
+    {
+        if (isset($this->handlerCache[$type])) {
+            return $this->handlerCache[$type];
+        }
+
+        foreach ($this->handlers as $handler) {
+            if ($handler->supports($type)) {
+                return $this->handlerCache[$type] = $handler;
+            }
+        }
+
+        throw new RuntimeException('No handler for job ' . $type);
     }
 
     private function observe(string $metric, string $organizationId, string $jobType, ?Throwable $error = null): void
