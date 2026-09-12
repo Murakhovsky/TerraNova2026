@@ -1,6 +1,6 @@
 ---
 title: Architecture Decisions
-description: Правила ведення ADR для рішень, що змінюють довгострокову архітектуру COS.
+description: ADR для рішень, що визначають довгострокову архітектуру COS.
 status: active
 updated: 2026-09-12
 kind: index
@@ -8,9 +8,22 @@ kind: index
 
 # Architecture Decisions
 
-Цей розділ призначений для **ADR (Architecture Decision Records)** — коротких документів, які пояснюють не лише *що* зроблено, а *чому саме так*.
+Цей розділ містить **ADR (Architecture Decision Records)**: короткі документи, які пояснюють не лише *що* реалізовано, а *чому саме так*.
 
-Код показує поточну реалізацію. ADR пояснює рішення, альтернативи та наслідки. Це різні задачі, і змішувати їх в один README приблизно так само корисно, як вести бухгалтерію в коментарях до PHP.
+Код показує executable reality. Current architecture docs пояснюють поточну систему. ADR зберігає rationale, alternatives і consequences конкретного довгоживучого рішення.
+
+## Accepted ADRs
+
+| ADR | Decision |
+| --- | --- |
+| [ADR-0001](ADR-0001-kernel-domain-ownership.md) | Kernel owns mechanisms; Domains own business semantics |
+| [ADR-0002](ADR-0002-state-events-outbox.md) | MySQL state + Event + Outbox; COS is not Event Sourcing |
+| [ADR-0003](ADR-0003-agents-propose-actions.md) | Agents propose Actions; mutation проходить Policy runtime |
+| [ADR-0004](ADR-0004-module-owned-extension-contributions.md) | Modules own extension contributions; shared layers не hardcode-ять Domains |
+| [ADR-0005](ADR-0005-governed-structured-llm-runtime.md) | Structured LLM access проходить centralized governance runtime |
+| [ADR-0006](ADR-0006-deployed-modules-vs-tenant-activation.md) | Deployed module discovery відокремлена від tenant activation/lifecycle |
+
+Ці ADR формалізують уже реалізовану AS-IS архітектуру. Вони не додають нової поведінки самі по собі.
 
 ## Коли потрібен ADR
 
@@ -20,7 +33,7 @@ ADR створюється, коли рішення:
 - вводить або прибирає Kernel mechanism;
 - змінює module contract;
 - визначає persistence model;
-- змінює tenant isolation model;
+- змінює tenant isolation/lifecycle model;
 - вводить новий extension point із довгим lifecycle;
 - визначає LLM/Agent governance boundary;
 - змінює delivery/event semantics;
@@ -40,8 +53,8 @@ ADR-0002-another-decision.md
 
 ```markdown
 ---
-title: ADR-0001 — Назва рішення
-status: accepted
+title: ADR-0007 — Назва рішення
+status: proposed
 updated: YYYY-MM-DD
 kind: decision
 ---
@@ -73,21 +86,15 @@ kind: decision
 
 ## Status values
 
-Використовуємо:
-
 - `proposed` — рішення ще обговорюється;
 - `accepted` — чинне architectural rule;
 - `superseded` — замінене новим ADR;
 - `deprecated` — більше не рекомендоване, але історично важливе;
 - `rejected` — розглянуте і свідомо відхилене.
 
-Не переписуємо старий accepted ADR так, ніби минулого рішення не існувало. Якщо архітектура змінилась, створюємо новий ADR і позначаємо попередній `superseded`.
+Accepted ADR не переписується так, ніби попереднього рішення не існувало. Якщо архітектура змінилась, створюється новий ADR, а попередній отримує `superseded` із посиланням на replacement.
 
-## AS-IS vs decision history
-
-ADR не є автоматично описом поточного code state.
-
-Поточна truth hierarchy:
+## Truth hierarchy
 
 ```text
 Executable code + tests
@@ -99,23 +106,14 @@ Accepted ADR rationale/history
 Legacy migration notes
 ```
 
-Якщо ADR і code розходяться, треба або завершити implementation, або supersede/update рішення. Не треба робити вигляд, що обидві реальності однаково правильні.
+Якщо ADR і code розходяться, треба або завершити implementation, або supersede рішення. Дві несумісні «правди» не є гнучкою архітектурою, це просто борг у гарному костюмі.
 
-## Вже існуючі decision-like documents
+## Existing decision-like documents
 
-У `docs/architecture/` уже є технічні документи й migration plans, які частково виконують роль історичних ADR.
+У `docs/architecture/` зберігаються детальні технічні документи та migration plans, частина яких історично виконувала роль ADR.
 
-Нові довгострокові рішення варто фіксувати тут окремими ADR, а детальні поточні architecture docs залишати в `03-architecture/` та `architecture/`.
+Надалі:
 
-## Перші рішення, які варто формалізувати
-
-Із поточної архітектури природними кандидатами є:
-
-1. Kernel owns mechanisms, Domains own business semantics.
-2. MySQL state + Event + Outbox замість Event Sourcing.
-3. Agents are proposal-only; mutation проходить Action/Policy runtime.
-4. Modules declare extension services; shared layers не hardcode-ять Domains.
-5. Structured LLM access проходить centralized governance runtime.
-6. Tenant activation відокремлена від deployed module discovery.
-
-Ці правила вже підтримуються кодом, але окремі ADR зроблять причини рішень явними для наступних змін.
+- `03-architecture/` та `architecture/` описують current structure/constraints;
+- `11-decisions/` зберігає rationale довгоживучих рішень;
+- code/tests залишаються executable source of truth.
