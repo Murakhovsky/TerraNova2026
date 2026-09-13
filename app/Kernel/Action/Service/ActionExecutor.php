@@ -13,6 +13,9 @@ use RuntimeException;
 
 final class ActionExecutor
 {
+    /** @var array<string, ActionHandlerInterface> */
+    private array $handlerCache = [];
+
     /** @param list<ActionHandlerInterface> $handlers */
     public function __construct(
         private readonly array $handlers,
@@ -48,9 +51,13 @@ final class ActionExecutor
 
     private function handlerFor(string $type): ActionHandlerInterface
     {
+        if (isset($this->handlerCache[$type])) {
+            return $this->handlerCache[$type];
+        }
+
         foreach ($this->handlers as $handler) {
             if ($handler->supports($type)) {
-                return $handler;
+                return $this->handlerCache[$type] = $handler;
             }
         }
 

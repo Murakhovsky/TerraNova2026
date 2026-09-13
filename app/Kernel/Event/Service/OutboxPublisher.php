@@ -7,23 +7,31 @@ use Kernel\Event\Contract\EventOutboxInterface;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Observability\StructuredLoggerInterface;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
+use Kernel\Operations\Service\PeriodicMaintenanceGate;
 use RuntimeException;
 use Throwable;
 
-final readonly class OutboxPublisher
+final class OutboxPublisher
 {
+    private readonly PeriodicMaintenanceGate $recoveryGate;
+
     public function __construct(
-        private EventOutboxInterface $outbox,
-        private EventStoreInterface $events,
-        private DurableEventDispatcher $dispatcher,
-        private ?MetricsRecorderInterface $metrics = null,
-        private ?StructuredLoggerInterface $logger = null,
+        private readonly EventOutboxInterface $outbox,
+        private readonly EventStoreInterface $events,
+        private readonly DurableEventDispatcher $dispatcher,
+        private readonly ?MetricsRecorderInterface $metrics = null,
+        private readonly ?StructuredLoggerInterface $logger = null,
+        int $recoveryIntervalSeconds = 30,
     ) {
+        $this->recoveryGate = new PeriodicMaintenanceGate($recoveryIntervalSeconds);
     }
 
     public function runOne(string $workerId): bool
     {
-        $this->outbox->recoverTimedOut();
+        if ($this->recoveryGate->due()) {
+            $this->outbox->recoverTimedOut();
+        }
+
         $message = $this->outbox->claim($workerId);
         if ($message === null) {
             return false;

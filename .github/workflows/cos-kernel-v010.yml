@@ -27,6 +27,7 @@ jobs:
         run: |
           php tests/unit/llm_runtime_governance.php
           php tests/unit/module_runtime_snapshot.php
+          php tests/unit/runtime_dispatch_optimization.php
       - name: PHP syntax
         run: |
           php -l app/Kernel/Module/KernelVersion.php
@@ -37,6 +38,10 @@ jobs:
           php -l app/Kernel/Module/ModuleControlService.php
           php -l app/Infrastructure/Module/MysqlModuleStateRepository.php
           php -l app/Kernel/Event/Contract/DurableEventConsumerInterface.php
+          php -l app/Kernel/Event/Service/OutboxPublisher.php
+          php -l app/Kernel/Operations/Service/PeriodicMaintenanceGate.php
+          php -l app/Kernel/Queue/Service/QueueWorker.php
+          php -l app/Kernel/Action/Service/ActionExecutor.php
           php -l app/Kernel/Llm/StructuredLlmRequest.php
           php -l app/Kernel/Llm/LlmRoute.php
           php -l app/Kernel/Llm/LlmRoutingPolicy.php
@@ -58,6 +63,7 @@ jobs:
           php -l app/Domains/Diagnostic/Infrastructure/AI/StructuredLlmAiGateway.php
           php -l tests/unit/llm_runtime_governance.php
           php -l tests/unit/module_runtime_snapshot.php
+          php -l tests/unit/runtime_dispatch_optimization.php
           php -l tests/architecture/kernel_v010_llm_runtime_governance.php
           php -l tests/architecture/kernel_v0102_execution_runtime.php
           php -l tests/architecture/kernel_runtime_composition.php
