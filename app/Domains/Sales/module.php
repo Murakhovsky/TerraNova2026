@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'sales',
     'name' => 'Sales',
-    'version' => '0.8.5',
-    'schema_version' => '0.8.3',
+    'version' => '0.8.6',
+    'schema_version' => '0.8.6',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Sales operations, CRM workflow, intelligence and automation.',
     'icon' => 'chart-line',
@@ -35,6 +35,7 @@ return [
             'app/migrations/20260913_000044_sales_v081_historical_stage_history.sql',
             'app/migrations/20260913_000045_sales_v082_funnel_metrics.sql',
             'app/migrations/20260913_000046_sales_v083_operational_performance.sql',
+            'app/migrations/20260913_000047_sales_v086_hardening.sql',
         ],
         'capabilities' => [
             'sales.workspace.use',

@@ -4,6 +4,9 @@ declare(strict_types=1);
 namespace Interfaces\Cli\Task;
 
 use DateTimeImmutable;
+use Domains\Sales\Application\Service\SalesDealOwnerHistoryRebuilder;
+use Domains\Sales\Application\Service\SalesDealStageHistoryRebuilder;
+use Domains\Sales\Application\Service\SalesHistoricalIntelligenceHealthService;
 use Domains\Sales\Application\Service\SalesMonitoringService;
 use Phalcon\Cli\Task;
 
@@ -26,6 +29,48 @@ final class SalesTask extends Task
             'run_at' => $now->format(DATE_ATOM),
         ];
 
-        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+        $this->output($result);
+    }
+
+    public function rebuildHistoryAction(string $organizationId): void
+    {
+        $organizationId = $this->organizationId($organizationId);
+        /** @var SalesDealStageHistoryRebuilder $stage */
+        $stage = $this->getDI()->getShared('salesDealStageHistoryRebuilder');
+        /** @var SalesDealOwnerHistoryRebuilder $owner */
+        $owner = $this->getDI()->getShared('salesDealOwnerHistoryRebuilder');
+        /** @var SalesHistoricalIntelligenceHealthService $health */
+        $health = $this->getDI()->getShared('salesHistoricalIntelligenceHealth');
+
+        $this->output([
+            'organization_id' => $organizationId,
+            'stage' => $stage->rebuildOrganization($organizationId),
+            'owner' => $owner->rebuildOrganization($organizationId),
+            'health' => $health->check($organizationId),
+            'completed_at' => (new DateTimeImmutable())->format(DATE_ATOM),
+        ]);
+    }
+
+    public function historyHealthAction(string $organizationId): void
+    {
+        $organizationId = $this->organizationId($organizationId);
+        /** @var SalesHistoricalIntelligenceHealthService $health */
+        $health = $this->getDI()->getShared('salesHistoricalIntelligenceHealth');
+        $this->output($health->check($organizationId));
+    }
+
+    private function organizationId(string $organizationId): string
+    {
+        $organizationId = trim($organizationId);
+        if ($organizationId === '') {
+            throw new \InvalidArgumentException('organizationId is required.');
+        }
+        return $organizationId;
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function output(array $payload): void
+    {
+        echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . PHP_EOL;
     }
 }
