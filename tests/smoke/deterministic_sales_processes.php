@@ -8,6 +8,7 @@ use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
 use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
+use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
 use Kernel\Action\Service\ActionExecutor;
@@ -41,6 +42,9 @@ $catalog = new SalesRuleCatalog();
 $rules = $catalog->rules('default');
 $policies = (new SalesPolicyCatalog())->policies('default');
 $policyEngine = new PolicyEngine(new ConditionEvaluator());
+$executionGate = new class implements ActionExecutionGateInterface {
+    public function assertExecutable(Action $action): void {}
+};
 $executor = new ActionExecutor([
     new class implements ActionHandlerInterface {
         public function supports(string $actionType): bool
@@ -53,7 +57,7 @@ $executor = new ActionExecutor([
             return ExecutionResult::success(['simulated' => true, 'action_type' => $action->type]);
         }
     },
-]);
+], $executionGate);
 
 $scenarios = [
     [DealCreated::TYPE, 'deal-1', ['deal' => ['status' => 'active', 'stage_code' => 'NEW']], 'sales.create_qualification_task'],
