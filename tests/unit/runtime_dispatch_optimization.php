@@ -7,6 +7,7 @@ use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
 use Kernel\Action\Service\ActionExecutor;
+use Kernel\Action\Service\ActionHandlerRegistry;
 use Kernel\Operations\Service\PeriodicMaintenanceGate;
 use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
@@ -105,7 +106,8 @@ final class CachedJobHandler implements JobHandlerInterface
 
 $actionHandler = new CachedActionHandler();
 $actionGate = new RuntimeTestActionGate();
-$executor = new ActionExecutor([$actionHandler], $actionGate);
+$actionRegistry = new ActionHandlerRegistry(['test.action' => $actionHandler]);
+$executor = new ActionExecutor($actionRegistry, $actionGate);
 foreach (['action-1', 'action-2'] as $id) {
     $executor->execute(new Action(
         $id,
@@ -123,11 +125,11 @@ foreach (['action-1', 'action-2'] as $id) {
         ActionStatus::Queued,
     ));
 }
-if ($actionHandler->supportsCalls !== 1) {
-    throw new RuntimeException('Action handler lookup must be cached by action type.');
+if ($actionHandler->supportsCalls !== 0) {
+    throw new RuntimeException('Precomputed action handler dispatch must not scan handlers during execution.');
 }
 if ($actionGate->calls !== 2) {
-    throw new RuntimeException('Action execution gate must run for every execution, including cached handler lookups.');
+    throw new RuntimeException('Action execution gate must run for every execution, including direct handler lookups.');
 }
 
 $queue = new RuntimeTestQueue([

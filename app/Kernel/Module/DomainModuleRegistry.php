@@ -38,6 +38,9 @@ final class DomainModuleRegistry
     /** @var list<ActionHandlerInterface> */
     private array $handlers = [];
 
+    /** @var array<string, ActionHandlerInterface> */
+    private array $handlersByActionType = [];
+
     /** @param iterable<DomainModuleInterface> $modules */
     public function __construct(iterable $modules)
     {
@@ -66,10 +69,10 @@ final class DomainModuleRegistry
             $handlers = $module->actionHandlers();
             foreach ($module->actionTypes() as $actionType) {
                 $this->claim($this->actions, $actionType, $name, 'action');
-                $supportingHandlers = array_filter(
+                $supportingHandlers = array_values(array_filter(
                     $handlers,
                     static fn (ActionHandlerInterface $handler): bool => $handler->supports($actionType),
-                );
+                ));
                 if (count($supportingHandlers) !== 1) {
                     throw new InvalidArgumentException(sprintf(
                         'Action %s must have exactly one handler; %d found.',
@@ -77,6 +80,7 @@ final class DomainModuleRegistry
                         count($supportingHandlers),
                     ));
                 }
+                $this->handlersByActionType[$actionType] = $supportingHandlers[0];
             }
             array_push($this->handlers, ...$handlers);
         }
@@ -123,6 +127,12 @@ final class DomainModuleRegistry
     public function actionHandlers(): array
     {
         return $this->handlers;
+    }
+
+    /** @return array<string, ActionHandlerInterface> */
+    public function actionHandlerMap(): array
+    {
+        return $this->handlersByActionType;
     }
 
     public function agent(string $name): AgentDefinition

@@ -12,20 +12,22 @@ use RuntimeException;
 
 final class ActionExecutor
 {
-    /** @var array<string, ActionHandlerInterface> */
-    private array $handlerCache = [];
+    private readonly ActionHandlerRegistry $handlers;
 
-    /** @param list<ActionHandlerInterface> $handlers */
+    /** @param ActionHandlerRegistry|list<ActionHandlerInterface> $handlers */
     public function __construct(
-        private readonly array $handlers,
+        ActionHandlerRegistry|array $handlers,
         private readonly ActionExecutionGateInterface $executionGate,
     ) {
+        $this->handlers = $handlers instanceof ActionHandlerRegistry
+            ? $handlers
+            : new ActionHandlerRegistry($handlers);
     }
 
     public function execute(Action $action): ExecutionResult
     {
         $this->executionGate->assertExecutable($action);
-        $handler = $this->handlerFor($action->type);
+        $handler = $this->handlers->handlerFor($action->type);
         if ($action->status === ActionStatus::Queued) {
             $action->transitionTo(ActionStatus::Running);
         } elseif ($action->status !== ActionStatus::Running) {
@@ -34,20 +36,5 @@ final class ActionExecutor
         $result = $handler->execute($action);
         $action->transitionTo($result->successful ? ActionStatus::Completed : ActionStatus::Failed);
         return $result;
-    }
-
-    private function handlerFor(string $type): ActionHandlerInterface
-    {
-        if (isset($this->handlerCache[$type])) {
-            return $this->handlerCache[$type];
-        }
-
-        foreach ($this->handlers as $handler) {
-            if ($handler->supports($type)) {
-                return $this->handlerCache[$type] = $handler;
-            }
-        }
-
-        throw new RuntimeException(sprintf('No action handler registered for %s.', $type));
     }
 }

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Kernel\Action\Service\ActionExecutor;
+use Kernel\Action\Service\ActionHandlerRegistry;
 use Kernel\Action\Service\ActionService;
 use Kernel\Action\Service\ModuleActionExecutionGate;
 use Kernel\Agent\Service\AgentRuntime;
@@ -101,8 +102,11 @@ $di->setShared('cosActionExecutionGate', fn (): ModuleActionExecutionGate => new
     $this->getShared('cosDomainRegistry'),
     $this->getShared('cosActiveModuleResolver'),
 ));
+$di->setShared('cosActionHandlerRegistry', fn (): ActionHandlerRegistry => new ActionHandlerRegistry(
+    $this->getShared('cosDomainRegistry')->actionHandlerMap(),
+));
 $di->setShared('cosActionExecutor', fn (): ActionExecutor => new ActionExecutor(
-    $this->getShared('cosDomainRegistry')->actionHandlers(),
+    $this->getShared('cosActionHandlerRegistry'),
     $this->getShared('cosActionExecutionGate'),
 ));
 $di->setShared('cosActionService', fn (): ActionService => new ActionService(
