@@ -13,6 +13,7 @@ use Infrastructure\Integration\Crm\CrmRegistry;
 use Infrastructure\Integration\Crm\RoutedCrmGateway;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
+use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Service\ActionExecutor;
 
 $root = dirname(__DIR__, 2);
@@ -62,7 +63,10 @@ $resolver = new class implements OrganizationCrmResolverInterface {
 
 $gateway = new RoutedCrmGateway($resolver, new CrmRegistry([$adapter]));
 $handler = new CreateFollowupTaskHandler($gateway);
-$executor = new ActionExecutor([$handler]);
+$executionGate = new class implements ActionExecutionGateInterface {
+    public function assertExecutable(Action $action): void {}
+};
+$executor = new ActionExecutor([$handler], $executionGate);
 $action = new Action(
     'action-1',
     'client-with-external-crm',
