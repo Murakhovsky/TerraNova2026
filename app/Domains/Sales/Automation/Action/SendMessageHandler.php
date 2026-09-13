@@ -6,15 +6,17 @@ namespace Domains\Sales\Automation\Action;
 use Domains\Sales\Application\DTO\SendMessageCommand;
 use Domains\Sales\Application\Service\SalesOperationService;
 use Kernel\Action\Action;
-use Kernel\Action\Contract\ActionHandlerInterface;
+use Kernel\Action\Contract\IdempotentExternalActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
+use Kernel\Action\ExternalActionIdempotency;
 
-final readonly class SendMessageHandler implements ActionHandlerInterface
+final readonly class SendMessageHandler implements IdempotentExternalActionHandlerInterface
 {
     public const TYPES = ['sales.send_message', 'sales.send_followup', 'sales.send_financing_followup'];
 
     public function __construct(private SalesOperationService $operations) {}
     public function supports(string $actionType): bool { return in_array($actionType, self::TYPES, true); }
+    public function idempotencyKey(Action $action): string { return ExternalActionIdempotency::resolve($action); }
 
     public function execute(Action $action): ExecutionResult
     {
@@ -24,7 +26,7 @@ final readonly class SendMessageHandler implements ActionHandlerInterface
 
         $result = $this->operations->sendMessage(new SendMessageCommand(
             $action->organizationId, $action->targetId, (string) ($action->parameters['channel'] ?? 'WEB'),
-            $body, $action->idempotencyKey ?? $action->id,
+            $body, $this->idempotencyKey($action),
         ), ['purpose' => 'sales_message'], $action->sourceType, $action->sourceId);
 
         return $result->successful

@@ -7,10 +7,11 @@ use DateTimeImmutable;
 use Domains\Sales\Application\Contract\CrmGatewayInterface;
 use Domains\Sales\Application\DTO\CreateTaskCommand;
 use Kernel\Action\Action;
-use Kernel\Action\Contract\ActionHandlerInterface;
+use Kernel\Action\Contract\IdempotentExternalActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
+use Kernel\Action\ExternalActionIdempotency;
 
-final readonly class CreateFollowupTaskHandler implements ActionHandlerInterface
+final readonly class CreateFollowupTaskHandler implements IdempotentExternalActionHandlerInterface
 {
     public const TYPES = [
         'sales.create_task',
@@ -27,6 +28,11 @@ final readonly class CreateFollowupTaskHandler implements ActionHandlerInterface
     public function supports(string $actionType): bool
     {
         return in_array($actionType, self::TYPES, true);
+    }
+
+    public function idempotencyKey(Action $action): string
+    {
+        return ExternalActionIdempotency::resolve($action);
     }
 
     public function execute(Action $action): ExecutionResult
@@ -48,7 +54,7 @@ final readonly class CreateFollowupTaskHandler implements ActionHandlerInterface
             (string) ($action->parameters['title'] ?? 'Follow-up'),
             isset($action->parameters['body']) ? (string) $action->parameters['body'] : null,
             $dueAt,
-            $action->idempotencyKey ?? $action->id,
+            $this->idempotencyKey($action),
         ));
 
         return $result->successful

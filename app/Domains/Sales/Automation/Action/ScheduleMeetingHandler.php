@@ -5,15 +5,17 @@ namespace Domains\Sales\Automation\Action;
 
 use Domains\Sales\Application\Service\SalesOperationService;
 use Kernel\Action\Action;
-use Kernel\Action\Contract\ActionHandlerInterface;
+use Kernel\Action\Contract\IdempotentExternalActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
+use Kernel\Action\ExternalActionIdempotency;
 
-final readonly class ScheduleMeetingHandler implements ActionHandlerInterface
+final readonly class ScheduleMeetingHandler implements IdempotentExternalActionHandlerInterface
 {
     public const TYPE = 'sales.schedule_meeting';
 
     public function __construct(private SalesOperationService $operations) {}
     public function supports(string $type): bool { return $type === self::TYPE; }
+    public function idempotencyKey(Action $action): string { return ExternalActionIdempotency::resolve($action); }
 
     public function execute(Action $action): ExecutionResult
     {
@@ -25,7 +27,7 @@ final readonly class ScheduleMeetingHandler implements ActionHandlerInterface
         }
         $result = $this->operations->scheduleMeeting(
             $action->organizationId, $action->targetId, (string) ($action->parameters['title'] ?? 'Sales meeting'),
-            $at, $action->idempotencyKey ?? $action->id,
+            $at, $this->idempotencyKey($action),
             ['location' => $action->parameters['location'] ?? null, 'channel' => $action->parameters['channel'] ?? null, 'notes' => $action->parameters['notes'] ?? null],
         );
         return ExecutionResult::success(
