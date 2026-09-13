@@ -26,6 +26,7 @@ jobs:
           php tests/unit/sales_v076_authority.php
           php tests/architecture/sales_v077_integrations_administration.php
           php tests/unit/sales_v077_integrations.php
+          php tests/architecture/sales_crm_ingress_regression.php
       - name: V0.7.8 architecture and health contracts
         run: |
           php tests/architecture/table_ownership.php
@@ -33,6 +34,7 @@ jobs:
           php tests/unit/sales_v078_health_classifier.php
       - name: PHP syntax
         run: |
+          php -l tests/architecture/sales_crm_ingress_regression.php
           php -l app/Domains/Sales/Application/Contract/SalesAdministrationReadModelInterface.php
           php -l app/Domains/Sales/Application/Service/SalesAdministrationHealthClassifier.php
           php -l app/Infrastructure/Platform/ReadModel/MySql/MysqlSalesAdministrationReadModel.php
