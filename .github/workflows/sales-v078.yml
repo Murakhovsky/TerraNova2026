@@ -27,6 +27,12 @@ jobs:
           php tests/architecture/sales_v077_integrations_administration.php
           php tests/unit/sales_v077_integrations.php
           php tests/architecture/sales_crm_ingress_regression.php
+      - name: Sales CRM smoke tests
+        run: |
+          php tests/smoke/crm_webhook.php
+          php tests/smoke/crm_routing.php
+          php tests/smoke/crm_inbox_processing.php
+          php tests/smoke/sales_composition_root.php
       - name: V0.7.8 architecture and health contracts
         run: |
           php tests/architecture/table_ownership.php
@@ -35,6 +41,8 @@ jobs:
       - name: PHP syntax
         run: |
           php -l tests/architecture/sales_crm_ingress_regression.php
+          php -l tests/smoke/crm_inbox_processing.php
+          php -l app/Domains/Sales/Application/UseCase/ProcessCrmInbox.php
           php -l app/Domains/Sales/Application/Contract/CrmIngressResolverInterface.php
           php -l app/Domains/Sales/Application/Contract/SalesAdministrationReadModelInterface.php
           php -l app/Domains/Sales/Application/Service/SalesAdministrationHealthClassifier.php
