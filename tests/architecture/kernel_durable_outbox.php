@@ -24,8 +24,11 @@ foreach ([
     "status = 'PROCESSING'",
     'locked_by = :worker',
     'recoverTimedOut',
-    "status = 'DEAD'",
+    '$dead = $message->attempts >= 10;',
+    "'status' => $dead ? 'DEAD' : 'FAILED'",
+    "CASE WHEN attempts >= 10 THEN 'DEAD' ELSE 'FAILED' END",
     'public function replay',
+    "status IN ('PUBLISHED', 'FAILED', 'DEAD')",
 ] as $needle) {
     assertDurableOutbox(str_contains($outbox, $needle), 'Durable outbox delivery invariant missing: ' . $needle);
 }
@@ -37,6 +40,15 @@ foreach ([
     '$this->consumptions->fail(',
 ] as $needle) {
     assertDurableOutbox(str_contains($dispatcher, $needle), 'Durable consumer idempotency invariant missing: ' . $needle);
+}
+
+$replay = (string) file_get_contents($root . '/app/Kernel/Event/Service/OutboxReplayService.php');
+foreach ([
+    '$this->consumptions->reset(',
+    '$this->outbox->replay(',
+    '$this->transactions?->transactional($operation)',
+] as $needle) {
+    assertDurableOutbox(str_contains($replay, $needle), 'Durable replay invariant missing: ' . $needle);
 }
 
 $actionService = (string) file_get_contents($root . '/app/Kernel/Action/Service/ActionService.php');
