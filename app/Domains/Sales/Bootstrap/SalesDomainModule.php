@@ -31,12 +31,24 @@ use Domains\Sales\Automation\Event\SalesEventType;
 use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
 use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
+use Kernel\Module\Contract\ActionOwningModuleInterface;
+use Kernel\Module\Contract\AgentProvidingModuleInterface;
+use Kernel\Module\Contract\EventOwningModuleInterface;
+use Kernel\Module\Contract\PolicyProvidingModuleInterface;
+use Kernel\Module\Contract\RuleProvidingModuleInterface;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Policy\Contract\PolicyContextProviderInterface;
 use Kernel\Policy\Contract\PolicyContextProvidingModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 
-final readonly class SalesDomainModule implements DomainModuleInterface, PolicyContextProvidingModuleInterface
+final readonly class SalesDomainModule implements
+    DomainModuleInterface,
+    EventOwningModuleInterface,
+    ActionOwningModuleInterface,
+    AgentProvidingModuleInterface,
+    RuleProvidingModuleInterface,
+    PolicyProvidingModuleInterface,
+    PolicyContextProvidingModuleInterface
 {
     public function __construct(
         private CrmGatewayInterface $crm,

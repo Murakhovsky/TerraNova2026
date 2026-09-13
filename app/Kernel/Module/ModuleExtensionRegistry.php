@@ -7,9 +7,12 @@ use InvalidArgumentException;
 
 final class ModuleExtensionRegistry
 {
-    public const API_ROUTES = 'api.routes';
-    public const TENANT_CONFIGURATION = 'tenant.configuration';
-    public const EVENT_CONSUMERS = 'event.consumers';
+    /** @deprecated Use ModuleExtensionPoint constants for new code. */
+    public const API_ROUTES = ModuleExtensionPoint::API_ROUTES;
+    /** @deprecated Use ModuleExtensionPoint constants for new code. */
+    public const TENANT_CONFIGURATION = ModuleExtensionPoint::TENANT_CONFIGURATION;
+    /** @deprecated Use ModuleExtensionPoint constants for new code. */
+    public const EVENT_CONSUMERS = ModuleExtensionPoint::EVENT_CONSUMERS;
 
     /** @var array<string, list<ModuleExtensionContribution>> */
     private array $extensions = [];
@@ -18,15 +21,7 @@ final class ModuleExtensionRegistry
     {
         foreach ($catalog->definitions() as $definition) {
             $moduleId = $definition->manifest->id;
-            $contributions = $definition->contributions;
-
-            foreach ($contributions->apiRouteContributorServices as $serviceId) {
-                $this->register($moduleId, self::API_ROUTES, $serviceId);
-            }
-            foreach ($contributions->configurationProvisionerServices as $serviceId) {
-                $this->register($moduleId, self::TENANT_CONFIGURATION, $serviceId);
-            }
-            foreach ($contributions->extensionServices as $extensionPoint => $serviceIds) {
+            foreach ($definition->contributions->normalizedExtensionServices() as $extensionPoint => $serviceIds) {
                 foreach ($serviceIds as $serviceId) {
                     $this->register($moduleId, $extensionPoint, $serviceId);
                 }

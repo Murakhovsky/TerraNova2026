@@ -12,6 +12,7 @@ use Kernel\Module\ModuleCapabilityRegistry;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDefinition;
 use Kernel\Module\ModuleDiscovery;
+use Kernel\Module\ModuleExtensionPoint;
 use Kernel\Module\ModuleExtensionRegistry;
 use Kernel\Module\ModuleLifecycleManager;
 use Kernel\Module\ModuleReadinessDiagnostic;
@@ -134,7 +135,7 @@ $di->setShared('cosModuleEventConsumers', function (): array {
     $consumers = [];
     /** @var ModuleExtensionRegistry $registry */
     $registry = $this->getShared('cosModuleExtensionRegistry');
-    foreach ($registry->for(ModuleExtensionRegistry::EVENT_CONSUMERS) as $extension) {
+    foreach ($registry->for(ModuleExtensionPoint::EVENT_CONSUMERS) as $extension) {
         $consumer = $this->getShared($extension->serviceId);
         if (!$consumer instanceof DurableEventConsumerInterface) {
             throw new RuntimeException(sprintf(
@@ -167,7 +168,7 @@ $di->setShared('cosModuleApiRouteContributors', function (): array {
     $contributors = [];
     /** @var ModuleExtensionRegistry $registry */
     $registry = $this->getShared('cosModuleExtensionRegistry');
-    foreach ($registry->for(ModuleExtensionRegistry::API_ROUTES) as $extension) {
+    foreach ($registry->for(ModuleExtensionPoint::API_ROUTES) as $extension) {
         $contributors[] = [
             'module_id' => $extension->moduleId,
             'service' => $this->getShared($extension->serviceId),
@@ -183,7 +184,7 @@ $di->setShared('cosModuleConfigurationProvisioners', function (): array {
     $provisioners = [];
     /** @var ModuleExtensionRegistry $registry */
     $registry = $this->getShared('cosModuleExtensionRegistry');
-    foreach ($registry->for(ModuleExtensionRegistry::TENANT_CONFIGURATION) as $extension) {
+    foreach ($registry->for(ModuleExtensionPoint::TENANT_CONFIGURATION) as $extension) {
         $service = $this->getShared($extension->serviceId);
         if (!$service instanceof ModuleConfigurationProvisionerInterface) {
             throw new RuntimeException(sprintf(
@@ -208,7 +209,7 @@ $di->setShared('cosModuleWebNavigationContributors', function (): array {
     $contributors = [];
     /** @var ModuleExtensionRegistry $registry */
     $registry = $this->getShared('cosModuleExtensionRegistry');
-    foreach ($registry->for('web.navigation') as $extension) {
+    foreach ($registry->for(ModuleExtensionPoint::WEB_NAVIGATION) as $extension) {
         $contributors[] = [
             'module_id' => $extension->moduleId,
             'service' => $this->getShared($extension->serviceId),

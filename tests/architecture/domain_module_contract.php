@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+use Domains\Sales\Bootstrap\SalesDomainModule;
+use Kernel\Module\Contract\ActionOwningModuleInterface;
+use Kernel\Module\Contract\AgentProvidingModuleInterface;
+use Kernel\Module\Contract\EventOwningModuleInterface;
+use Kernel\Module\Contract\PolicyProvidingModuleInterface;
+use Kernel\Module\Contract\RuleProvidingModuleInterface;
+use Kernel\Module\DomainModuleInterface;
+use Kernel\Module\DomainModuleRegistry;
 use Kernel\Module\KernelVersion;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDefinition;
@@ -18,6 +26,39 @@ if ($definitions === []) {
 
 $catalog = new ModuleCatalog($definitions);
 $catalog->assertCompatibility(KernelVersion::VERSION);
+
+$runtimeBoundaryMethods = array_map(
+    static fn (ReflectionMethod $method): string => $method->getName(),
+    (new ReflectionClass(DomainModuleInterface::class))->getMethods(),
+);
+sort($runtimeBoundaryMethods);
+if ($runtimeBoundaryMethods !== ['name']) {
+    throw new RuntimeException('Base DomainModuleInterface must expose identity only; optional runtime behavior belongs to capability contracts.');
+}
+
+$minimalRuntimeModule = new class implements DomainModuleInterface {
+    public function name(): string { return 'minimal'; }
+};
+$minimalRegistry = new DomainModuleRegistry([$minimalRuntimeModule]);
+if (count($minimalRegistry->modules()) !== 1 || $minimalRegistry->actionHandlers() !== []) {
+    throw new RuntimeException('A minimal runtime domain module cannot be registered without optional capabilities.');
+}
+if ($minimalRegistry->ownerOfEvent('minimal.event') !== null || $minimalRegistry->ownerOfAction('minimal.action') !== null) {
+    throw new RuntimeException('A minimal runtime module unexpectedly claimed optional event/action ownership.');
+}
+
+$salesRuntime = new ReflectionClass(SalesDomainModule::class);
+foreach ([
+    EventOwningModuleInterface::class,
+    ActionOwningModuleInterface::class,
+    AgentProvidingModuleInterface::class,
+    RuleProvidingModuleInterface::class,
+    PolicyProvidingModuleInterface::class,
+] as $capabilityContract) {
+    if (!$salesRuntime->implementsInterface($capabilityContract)) {
+        throw new RuntimeException('Sales runtime module is missing capability contract: ' . $capabilityContract);
+    }
+}
 
 $moduleIds = [];
 $capabilities = [];

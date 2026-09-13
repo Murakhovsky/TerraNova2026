@@ -7,6 +7,9 @@ use InvalidArgumentException;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Agent\AgentDefinition;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
+use Kernel\Module\Contract\ActionOwningModuleInterface;
+use Kernel\Module\Contract\AgentProvidingModuleInterface;
+use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Policy\Contract\PolicyContextProviderInterface;
 use Kernel\Policy\Contract\PolicyContextProvidingModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
@@ -53,49 +56,58 @@ final class DomainModuleRegistry
             throw new InvalidArgumentException(sprintf('Domain module is already registered: %s.', $name));
         }
 
-        foreach ($module->eventTypes() as $eventType) {
-            $this->claim($this->events, $eventType, $name, 'event');
-        }
-        $handlers = $module->actionHandlers();
-        foreach ($module->actionTypes() as $actionType) {
-            $this->claim($this->actions, $actionType, $name, 'action');
-            $supportingHandlers = array_filter(
-                $handlers,
-                static fn (ActionHandlerInterface $handler): bool => $handler->supports($actionType),
-            );
-            if (count($supportingHandlers) !== 1) {
-                throw new InvalidArgumentException(sprintf(
-                    'Action %s must have exactly one handler; %d found.',
-                    $actionType,
-                    count($supportingHandlers),
-                ));
+        if ($module instanceof EventOwningModuleInterface) {
+            foreach ($module->eventTypes() as $eventType) {
+                $this->claim($this->events, $eventType, $name, 'event');
             }
         }
-        array_push($this->handlers, ...$handlers);
-        foreach ($module->agents() as $agentName => $definition) {
-            if ($agentName !== $definition->name) {
-                throw new InvalidArgumentException(sprintf('Agent registry key %s must equal definition name %s.', $agentName, $definition->name));
-            }
-            if (isset($this->agents[$agentName])) {
-                throw new InvalidArgumentException(sprintf('Agent is already registered: %s.', $agentName));
-            }
-            foreach ($definition->allowedActionTypes as $actionType) {
-                if (($this->actions[$actionType] ?? null) !== $name) {
+
+        if ($module instanceof ActionOwningModuleInterface) {
+            $handlers = $module->actionHandlers();
+            foreach ($module->actionTypes() as $actionType) {
+                $this->claim($this->actions, $actionType, $name, 'action');
+                $supportingHandlers = array_filter(
+                    $handlers,
+                    static fn (ActionHandlerInterface $handler): bool => $handler->supports($actionType),
+                );
+                if (count($supportingHandlers) !== 1) {
                     throw new InvalidArgumentException(sprintf(
-                        'Agent %s proposes action %s which is not owned by domain %s.',
-                        $agentName,
+                        'Action %s must have exactly one handler; %d found.',
                         $actionType,
-                        $name,
+                        count($supportingHandlers),
                     ));
                 }
             }
-            $context = $module->agentContextBuilders()[$agentName] ?? null;
-            if (!$context instanceof AgentContextBuilderInterface) {
-                throw new InvalidArgumentException(sprintf('Agent %s has no context builder.', $agentName));
+            array_push($this->handlers, ...$handlers);
+        }
+
+        if ($module instanceof AgentProvidingModuleInterface) {
+            $contexts = $module->agentContextBuilders();
+            foreach ($module->agents() as $agentName => $definition) {
+                if ($agentName !== $definition->name) {
+                    throw new InvalidArgumentException(sprintf('Agent registry key %s must equal definition name %s.', $agentName, $definition->name));
+                }
+                if (isset($this->agents[$agentName])) {
+                    throw new InvalidArgumentException(sprintf('Agent is already registered: %s.', $agentName));
+                }
+                foreach ($definition->allowedActionTypes as $actionType) {
+                    if (($this->actions[$actionType] ?? null) !== $name) {
+                        throw new InvalidArgumentException(sprintf(
+                            'Agent %s proposes action %s which is not owned by domain %s.',
+                            $agentName,
+                            $actionType,
+                            $name,
+                        ));
+                    }
+                }
+                $context = $contexts[$agentName] ?? null;
+                if (!$context instanceof AgentContextBuilderInterface) {
+                    throw new InvalidArgumentException(sprintf('Agent %s has no context builder.', $agentName));
+                }
+                $this->agents[$agentName] = $definition;
+                $this->agentModules[$agentName] = $name;
+                $this->agentContexts[$agentName] = $context;
             }
-            $this->agents[$agentName] = $definition;
-            $this->agentModules[$agentName] = $name;
-            $this->agentContexts[$agentName] = $context;
         }
 
         $this->modules[$name] = $module;
@@ -127,8 +139,9 @@ final class DomainModuleRegistry
     {
         $moduleName = $this->events[$eventType] ?? null;
         $module = is_string($moduleName) ? ($this->modules[$moduleName] ?? null) : null;
-        return $module?->ruleContextProvider()
-            ?? throw new RuntimeException(sprintf('No rule context provider for event: %s.', $eventType));
+        return $module instanceof EventOwningModuleInterface
+            ? $module->ruleContextProvider()
+            : throw new RuntimeException(sprintf('No rule context provider for event: %s.', $eventType));
     }
 
     public function policyContextProviderFor(string $actionType): ?PolicyContextProviderInterface
