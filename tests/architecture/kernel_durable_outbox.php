@@ -25,7 +25,7 @@ foreach ([
     'locked_by = :worker',
     'recoverTimedOut',
     '$dead = $message->attempts >= 10;',
-    "'status' => $dead ? 'DEAD' : 'FAILED'",
+    "'status' => \$dead ? 'DEAD' : 'FAILED'",
     "CASE WHEN attempts >= 10 THEN 'DEAD' ELSE 'FAILED' END",
     'public function replay',
     "status IN ('PUBLISHED', 'FAILED', 'DEAD')",
