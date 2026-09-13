@@ -16,6 +16,7 @@ use Infrastructure\Platform\Persistence\MySql\Migration\SqlStatementSplitter;
 use Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository;
 use Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository;
 use Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue;
+use Infrastructure\Platform\Persistence\MySql\Resilience\MysqlCircuitBreakerStore;
 use Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleEvaluationRepository;
 use Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleRepository;
 use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
@@ -41,6 +42,7 @@ use Kernel\Llm\GovernedStructuredLlmClient;
 use Kernel\Llm\LlmProviderRegistry;
 use Kernel\Llm\LlmRoute;
 use Kernel\Llm\LlmRoutingPolicy;
+use Kernel\Resilience\ExternalCallExecutor;
 
 $connection = static fn ($container) => $container->getShared('databaseService')->connection();
 
@@ -66,11 +68,21 @@ $di->setShared('cosAgentRunRepository', fn (): MysqlAgentRunRepository => new My
 ));
 $di->setShared('cosAgentRetention', fn (): MysqlAgentRetention => new MysqlAgentRetention($connection($this)));
 $di->setShared('cosDecisionRepository', fn (): MysqlDecisionRepository => new MysqlDecisionRepository($connection($this)));
-$di->setShared('cosJobQueue', fn (): MysqlJobQueue => new MysqlJobQueue($connection($this)));
+$di->setShared('cosJobQueue', fn (): MysqlJobQueue => new MysqlJobQueue(
+    $connection($this),
+    max(1, (int) (getenv('COS_TENANT_JOB_CONCURRENCY') ?: 4)),
+    max(0, min(30, (int) (getenv('COS_TENANT_JOB_LOCK_TIMEOUT_SECONDS') ?: 2))),
+));
 $di->setShared('cosConfigurationStore', fn (): MysqlConfigurationStore => new MysqlConfigurationStore($connection($this)));
 $di->setShared('cosOperationsReadModel', fn (): MysqlOperationsReadModel => new MysqlOperationsReadModel($connection($this)));
 $di->setShared('cosMetrics', fn (): MysqlMetricsRecorder => new MysqlMetricsRecorder($connection($this)));
 $di->setShared('cosLogger', fn (): JsonFileLogger => new JsonFileLogger(BASE_PATH . '/tmp/logs/cos.jsonl'));
+$di->setShared('cosExternalCircuitBreakerStore', fn (): MysqlCircuitBreakerStore => new MysqlCircuitBreakerStore($connection($this)));
+$di->setShared('cosExternalCallExecutor', fn (): ExternalCallExecutor => new ExternalCallExecutor(
+    $this->getShared('cosExternalCircuitBreakerStore'),
+    $this->getShared('cosMetrics'),
+    $this->getShared('cosLogger'),
+));
 
 $di->setShared('externalReferenceStore', fn (): MysqlExternalReferenceStore => new MysqlExternalReferenceStore($connection($this)));
 $di->setShared('salesMessageGateway', fn (): MysqlMessageGateway => new MysqlMessageGateway(
@@ -178,4 +190,7 @@ $di->setShared('cosLlmClient', fn (): GovernedStructuredLlmClient => new Governe
     $this->getShared('cosLlmGovernanceRepository'),
     $this->getShared('cosMetrics'),
     strtoupper((string) (getenv('LLM_BUDGET_CURRENCY') ?: 'USD')),
+    max(1, (int) (getenv('COS_EXTERNAL_CIRCUIT_FAILURE_THRESHOLD') ?: 5)),
+    max(1, min(86400, (int) (getenv('COS_EXTERNAL_CIRCUIT_OPEN_SECONDS') ?: 60))),
+    $this->getShared('cosExternalCallExecutor'),
 ));

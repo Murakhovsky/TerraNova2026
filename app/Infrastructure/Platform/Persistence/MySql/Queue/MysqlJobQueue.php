@@ -12,7 +12,7 @@ use Throwable;
 
 final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 {
-    private const CLAIM_SCAN_LIMIT = 16;
+    private const CLAIM_RACE_RETRIES = 8;
 
     public function __construct(
         private PDO $connection,
@@ -68,14 +68,14 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 
     public function claim(string $workerId): ?Job
     {
-        for ($scan = 0; $scan < self::CLAIM_SCAN_LIMIT; $scan++) {
+        // The SQL admission filter prevents a noisy tenant from occupying the front of the
+        // queue. We still serialize the final per-tenant lease check because concurrent
+        // workers can race after the eligibility snapshot.
+        for ($race = 0; $race < self::CLAIM_RACE_RETRIES; $race++) {
             $lockName = null;
             $this->connection->beginTransaction();
             try {
-                $row = $this->connection->query(
-                    "SELECT * FROM cos_jobs WHERE status IN ('PENDING', 'FAILED') AND available_at <= NOW(6) "
-                    . 'ORDER BY available_at, created_at LIMIT 1 FOR UPDATE SKIP LOCKED'
-                )->fetch(PDO::FETCH_ASSOC);
+                $row = $this->connection->query($this->claimSql())->fetch(PDO::FETCH_ASSOC);
                 if ($row === false) {
                     $this->connection->commit();
                     return null;
@@ -84,15 +84,15 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
                 $organizationId = (string) $row['organization_id'];
                 $lockName = $this->tenantLockName($organizationId);
                 if (!$this->acquireTenantLock($lockName)) {
-                    $this->deferUnclaimedRow((string) $row['id']);
-                    $this->connection->commit();
+                    $this->connection->rollBack();
                     continue;
                 }
 
                 $this->purgeExpiredTenantLeases($organizationId);
                 if ($this->activeTenantLeaseCount($organizationId) >= $this->maxConcurrentJobsPerTenant) {
-                    $this->deferUnclaimedRow((string) $row['id']);
-                    $this->connection->commit();
+                    // Another worker filled the last slot after our SELECT. Do not mutate the
+                    // job or consume an attempt; retry admission against a fresh snapshot.
+                    $this->connection->rollBack();
                     continue;
                 }
 
@@ -206,13 +206,17 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
         return $statement->rowCount();
     }
 
-    private function deferUnclaimedRow(string $jobId): void
+    private function claimSql(): string
     {
-        $statement = $this->connection->prepare(
-            'UPDATE cos_jobs SET available_at = DATE_ADD(NOW(6), INTERVAL 1 SECOND) '
-            . "WHERE id = :id AND status IN ('PENDING', 'FAILED')"
-        );
-        $statement->execute(['id' => $jobId]);
+        $limit = $this->maxConcurrentJobsPerTenant;
+        $activeLeaseCount = "(SELECT COUNT(*) FROM cos_tenant_execution_leases leases "
+            . "WHERE leases.organization_id = jobs.organization_id AND leases.expires_at > NOW(6))";
+
+        return "SELECT jobs.* FROM cos_jobs jobs "
+            . "WHERE jobs.status IN ('PENDING', 'FAILED') AND jobs.available_at <= NOW(6) "
+            . "AND {$activeLeaseCount} < {$limit} "
+            . "ORDER BY {$activeLeaseCount} ASC, jobs.available_at ASC, jobs.created_at ASC "
+            . 'LIMIT 1 FOR UPDATE SKIP LOCKED';
     }
 
     private function acquireTenantLock(string $lockName): bool

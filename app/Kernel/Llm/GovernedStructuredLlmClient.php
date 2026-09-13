@@ -7,6 +7,8 @@ use InvalidArgumentException;
 use Kernel\Execution\ExecutionFailureException;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
 use Kernel\Resilience\Contract\CircuitBreakerStoreInterface;
+use Kernel\Resilience\ExternalCallExecutor;
+use Kernel\Resilience\ExternalCallPolicy;
 use Throwable;
 
 final readonly class GovernedStructuredLlmClient implements StructuredLlmClientInterface
@@ -21,7 +23,10 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
         private string $budgetCurrency = 'USD',
         private int $circuitFailureThreshold = 5,
         private int $circuitOpenSeconds = 60,
+        private ?ExternalCallExecutor $resilience = null,
     ) {
+        // Backward compatibility for tests/legacy composition roots. Production composition
+        // injects the generic resilience executor and does not couple circuits to governance.
         $this->circuits = $governance instanceof CircuitBreakerStoreInterface ? $governance : null;
     }
 
@@ -72,17 +77,40 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             $routedRequest = $request->routedTo($route->model);
             $serviceKey = 'llm.' . strtolower($route->provider);
             try {
-                $this->circuits?->assertAvailable($request->organizationId, $serviceKey);
-                $response = $this->providers->client($route->provider)->complete($routedRequest);
-                $this->recordCircuitSuccess($request->organizationId, $serviceKey);
+                if ($this->resilience !== null) {
+                    // HttpStructuredLlmClient already performs transport retries/backoff. The
+                    // Kernel executor owns cross-request circuit state here, so one exhausted
+                    // provider call counts as one circuit failure rather than each HTTP attempt.
+                    $response = $this->resilience->execute(
+                        null,
+                        $serviceKey,
+                        fn (): StructuredLlmResponse => $this->providers
+                            ->client($route->provider)
+                            ->complete($routedRequest),
+                        new ExternalCallPolicy(
+                            maxAttempts: 1,
+                            baseDelayMilliseconds: 0,
+                            maxDelayMilliseconds: 0,
+                            failureThreshold: max(1, $this->circuitFailureThreshold),
+                            circuitOpenSeconds: max(1, $this->circuitOpenSeconds),
+                        ),
+                    );
+                } else {
+                    $this->circuits?->assertAvailable($request->organizationId, $serviceKey);
+                    $response = $this->providers->client($route->provider)->complete($routedRequest);
+                    $this->recordCircuitSuccess($request->organizationId, $serviceKey);
+                }
+
                 $latencyMs = $this->duration($started);
                 $this->recordSuccess($request, $response, $correlationId, $latencyMs, $fallbackCount, $reservation);
                 return $response;
             } catch (LlmProviderException $error) {
-                if ($error->retryable) {
-                    $this->recordCircuitFailure($request->organizationId, $serviceKey);
-                } else {
-                    $this->recordCircuitSuccess($request->organizationId, $serviceKey);
+                if ($this->resilience === null) {
+                    if ($error->retryable) {
+                        $this->recordCircuitFailure($request->organizationId, $serviceKey);
+                    } else {
+                        $this->recordCircuitSuccess($request->organizationId, $serviceKey);
+                    }
                 }
                 $this->metrics->record('llm.request.error', 1.0, $request->organizationId, [
                     'provider' => $route->provider,
