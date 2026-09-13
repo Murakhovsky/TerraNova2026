@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Kernel\Queue\Service;
 
 use InvalidArgumentException;
+use Kernel\Execution\ExecutionFailureException;
 use Kernel\Queue\Contract\JobHandlerInterface;
-use RuntimeException;
 
 final class JobHandlerRegistry
 {
@@ -41,13 +41,19 @@ final class JobHandlerRegistry
                 continue;
             }
             if ($match !== null) {
-                throw new RuntimeException(sprintf('Multiple job handlers registered for %s.', $type));
+                throw ExecutionFailureException::permanent(sprintf(
+                    'Multiple job handlers registered for %s.',
+                    $type,
+                ));
             }
             $match = $handler;
         }
 
         if ($match === null) {
-            throw new RuntimeException(sprintf('No handler for job type %s.', $type));
+            throw ExecutionFailureException::permanent(sprintf(
+                'No handler for job type %s.',
+                $type,
+            ));
         }
 
         return $this->handlersByType[$type] = $match;

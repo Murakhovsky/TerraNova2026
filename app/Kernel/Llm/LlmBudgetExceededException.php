@@ -3,9 +3,11 @@ declare(strict_types=1);
 
 namespace Kernel\Llm;
 
+use Kernel\Execution\ClassifiedExecutionFailureInterface;
+use Kernel\Execution\ExecutionFailureKind;
 use RuntimeException;
 
-final class LlmBudgetExceededException extends RuntimeException
+final class LlmBudgetExceededException extends RuntimeException implements ClassifiedExecutionFailureInterface
 {
     public function __construct(
         public readonly string $organizationId,
@@ -20,5 +22,10 @@ final class LlmBudgetExceededException extends RuntimeException
             $limit,
             $currency,
         ));
+    }
+
+    public function failureKind(): ExecutionFailureKind
+    {
+        return ExecutionFailureKind::BudgetExceeded;
     }
 }

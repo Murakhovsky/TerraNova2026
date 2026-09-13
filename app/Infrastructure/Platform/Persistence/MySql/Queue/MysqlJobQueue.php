@@ -4,13 +4,13 @@ declare(strict_types=1);
 namespace Infrastructure\Platform\Persistence\MySql\Queue;
 
 use DateTimeImmutable;
-use Kernel\Queue\Contract\JobQueueInterface;
+use Kernel\Queue\Contract\RetryAwareJobQueueInterface;
 use Kernel\Queue\Job;
 use PDO;
 use RuntimeException;
 use Throwable;
 
-final readonly class MysqlJobQueue implements JobQueueInterface
+final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 {
     public function __construct(private PDO $connection) {}
 
@@ -96,7 +96,12 @@ final readonly class MysqlJobQueue implements JobQueueInterface
 
     public function fail(Job $job, string $error): void
     {
-        $dead = $job->attempts >= $job->maxAttempts;
+        $this->failWithRetryPolicy($job, $error, true);
+    }
+
+    public function failWithRetryPolicy(Job $job, string $error, bool $retryable): void
+    {
+        $dead = !$retryable || $job->attempts >= $job->maxAttempts;
         $delay = min(3600, 10 * (2 ** max(0, $job->attempts - 1)));
         $statement = $this->connection->prepare(
             'UPDATE cos_jobs SET status = :status, available_at = DATE_ADD(NOW(6), INTERVAL :delay SECOND), '

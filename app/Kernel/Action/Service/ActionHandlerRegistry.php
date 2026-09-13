@@ -5,7 +5,7 @@ namespace Kernel\Action\Service;
 
 use InvalidArgumentException;
 use Kernel\Action\Contract\ActionHandlerInterface;
-use RuntimeException;
+use Kernel\Execution\ExecutionFailureException;
 
 final class ActionHandlerRegistry
 {
@@ -52,13 +52,19 @@ final class ActionHandlerRegistry
                 continue;
             }
             if ($match !== null) {
-                throw new RuntimeException(sprintf('Multiple action handlers registered for %s.', $type));
+                throw ExecutionFailureException::permanent(sprintf(
+                    'Multiple action handlers registered for %s.',
+                    $type,
+                ));
             }
             $match = $handler;
         }
 
         if ($match === null) {
-            throw new RuntimeException(sprintf('No action handler registered for %s.', $type));
+            throw ExecutionFailureException::permanent(sprintf(
+                'No action handler registered for %s.',
+                $type,
+            ));
         }
 
         return $this->handlersByType[$type] = $match;

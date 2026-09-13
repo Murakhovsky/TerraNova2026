@@ -5,9 +5,9 @@ namespace Kernel\Action\Service;
 
 use Kernel\Action\Action;
 use Kernel\Action\Contract\ActionExecutionGateInterface;
+use Kernel\Execution\ExecutionFailureException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\DomainModuleRegistry;
-use RuntimeException;
 
 final readonly class ModuleActionExecutionGate implements ActionExecutionGateInterface
 {
@@ -21,13 +21,13 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
     {
         $moduleId = $this->domains->ownerOfAction($action->type);
         if ($moduleId === null) {
-            throw new RuntimeException(sprintf(
+            throw ExecutionFailureException::permanent(sprintf(
                 'Action type %s has no owning domain module.',
                 $action->type,
             ));
         }
         if (!$this->modules->isEnabled($action->organizationId, $moduleId)) {
-            throw new RuntimeException(sprintf(
+            throw ExecutionFailureException::policyDenied(sprintf(
                 'Module %s is disabled for organization %s.',
                 $moduleId,
                 $action->organizationId,

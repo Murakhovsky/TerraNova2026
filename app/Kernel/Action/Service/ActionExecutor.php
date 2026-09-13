@@ -8,7 +8,7 @@ use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
-use RuntimeException;
+use Kernel\Execution\ExecutionFailureException;
 
 final class ActionExecutor
 {
@@ -31,7 +31,11 @@ final class ActionExecutor
         if ($action->status === ActionStatus::Queued) {
             $action->transitionTo(ActionStatus::Running);
         } elseif ($action->status !== ActionStatus::Running) {
-            throw new RuntimeException(sprintf('Action %s is not executable from %s.', $action->id, $action->status->value));
+            throw ExecutionFailureException::permanent(sprintf(
+                'Action %s is not executable from %s.',
+                $action->id,
+                $action->status->value,
+            ));
         }
         $result = $handler->execute($action);
         $action->transitionTo($result->successful ? ActionStatus::Completed : ActionStatus::Failed);

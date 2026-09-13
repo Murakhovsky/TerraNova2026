@@ -11,12 +11,13 @@ use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionRepositoryInterface;
 use Kernel\Action\ExecutionResult;
-use Throwable;
 use Kernel\Action\Event\ActionExecutionFinished;
 use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Event\Contract\EventStoreInterface;
+use Kernel\Execution\ExecutionFailureClassifier;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
+use Throwable;
 
 final readonly class ActionService
 {
@@ -106,7 +107,11 @@ final readonly class ActionService
         try {
             $result = $this->executor->execute($action);
         } catch (Throwable $exception) {
-            $result = ExecutionResult::failure($exception->getMessage());
+            $failureKind = ExecutionFailureClassifier::classify($exception);
+            $result = ExecutionResult::failure(
+                $exception->getMessage(),
+                failureKind: $failureKind,
+            );
             if ($action->status === ActionStatus::Running) {
                 $action->transitionTo(ActionStatus::Failed);
             }
@@ -133,6 +138,8 @@ final readonly class ActionService
                         'status' => $result->status(),
                         'output' => $result->data,
                         'error' => $result->error,
+                        'failure_kind' => $result->failureKind?->value,
+                        'retryable' => $result->retryable,
                         'metrics' => $result->metrics,
                     ],
                     'metadata' => [

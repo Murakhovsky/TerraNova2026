@@ -28,6 +28,8 @@ final class ActionExecutionFinished
                 'status' => $result->status(),
                 'output' => $result->data,
                 'error' => $result->error,
+                'failure_kind' => $result->failureKind?->value,
+                'retryable' => $result->retryable,
                 'metrics' => $result->metrics,
             ],
             new EventMetadata($action->correlationId ?: $action->id, $action->id, 'WORKER', $workerId),

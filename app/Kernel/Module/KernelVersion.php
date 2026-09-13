@@ -5,7 +5,7 @@ namespace Kernel\Module;
 
 final class KernelVersion
 {
-    public const VERSION = '0.10.2';
+    public const VERSION = '0.11.5';
 
     private function __construct()
     {

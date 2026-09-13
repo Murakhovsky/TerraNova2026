@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace Kernel\Llm;
 
+use Kernel\Execution\ClassifiedExecutionFailureInterface;
+use Kernel\Execution\ExecutionFailureKind;
 use RuntimeException;
 use Throwable;
 
-final class LlmProviderException extends RuntimeException
+final class LlmProviderException extends RuntimeException implements ClassifiedExecutionFailureInterface
 {
     public function __construct(
         public readonly string $provider,
@@ -16,5 +18,12 @@ final class LlmProviderException extends RuntimeException
         ?Throwable $previous = null,
     ) {
         parent::__construct($message, 0, $previous);
+    }
+
+    public function failureKind(): ExecutionFailureKind
+    {
+        return $this->retryable
+            ? ExecutionFailureKind::ExternalUnavailable
+            : ExecutionFailureKind::Permanent;
     }
 }
