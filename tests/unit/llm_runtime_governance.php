@@ -20,12 +20,29 @@ use Kernel\Operations\Contract\MetricsRecorderInterface;
 $repository = new class implements LlmGovernanceRepositoryInterface {
     public ?float $budget = null;
     public float $spent = 0.0;
+    public int $synchronizedCalls = 0;
+    public bool $insideBudgetSection = false;
     /** @var list<LlmUsageRecord> */
     public array $usage = [];
 
     public function monthlyBudget(string $organizationId, string $currency): ?float { return $this->budget; }
     public function monthlySpend(string $organizationId, string $currency): float { return $this->spent; }
-    public function record(LlmUsageRecord $usage): void { $this->usage[] = $usage; }
+    public function synchronizedBudget(string $organizationId, string $currency, callable $operation): mixed
+    {
+        $this->synchronizedCalls++;
+        if ($this->insideBudgetSection) throw new RuntimeException('Budget section re-entered unexpectedly.');
+        $this->insideBudgetSection = true;
+        try { return $operation(); }
+        finally { $this->insideBudgetSection = false; }
+    }
+    public function record(LlmUsageRecord $usage): void
+    {
+        if ($this->budget !== null && !$this->insideBudgetSection) {
+            throw new RuntimeException('Budgeted usage must be settled inside the synchronized section.');
+        }
+        $this->usage[] = $usage;
+        $this->spent += $usage->costAmount ?? 0.0;
+    }
 };
 $metrics = new class implements MetricsRecorderInterface {
     public array $records = [];
@@ -49,7 +66,7 @@ $fallback = new class implements StructuredLlmClientInterface {
     {
         $this->calls++;
         $this->lastRequest = $request;
-        return new StructuredLlmResponse(['ok' => true], 'fallback', (string) $request->model, 10, 5, 0.02, 'USD');
+        return new StructuredLlmResponse(['ok' => true], 'fallback', (string) $request->model, 10, 5, 0.02, null);
     }
 };
 
@@ -81,6 +98,12 @@ if ($primary->calls !== 1 || $fallback->calls !== 1) {
 }
 if (count($repository->usage) !== 1 || $repository->usage[0]->fallbackCount !== 1 || $repository->usage[0]->correlationId !== 'corr-1') {
     throw new RuntimeException('Governed LLM usage was not recorded with fallback/correlation metadata.');
+}
+if ($repository->usage[0]->costCurrency !== 'USD') {
+    throw new RuntimeException('Missing provider cost currency must settle in the configured budget currency.');
+}
+if ($repository->synchronizedCalls !== 0) {
+    throw new RuntimeException('Unbudgeted organizations must not be serialized by the budget guard.');
 }
 
 // Explicit governance for a use case wins over a domain model hint.
@@ -119,15 +142,28 @@ if ($fallback->calls !== $fallbackCalls) {
     throw new RuntimeException('Non-retryable LLM failure incorrectly invoked fallback.');
 }
 
-// Budget denial happens before any provider call and is never a fallback condition.
+// Budgeted execution, budget check and usage settlement must share one critical section.
 $repository->budget = 1.0;
+$repository->spent = 0.0;
+$primary->retryable = true;
+$syncBefore = $repository->synchronizedCalls;
+$client->complete($request);
+if ($repository->synchronizedCalls !== $syncBefore + 1) {
+    throw new RuntimeException('Budgeted LLM execution must use the synchronized budget section.');
+}
+
+// Budget denial happens inside the critical section and before any provider call.
 $repository->spent = 1.0;
 $primaryCalls = $primary->calls;
 $fallbackCalls = $fallback->calls;
+$syncBefore = $repository->synchronizedCalls;
 try {
     $client->complete($request);
     throw new RuntimeException('Expected LLM budget denial.');
 } catch (LlmBudgetExceededException) {
+}
+if ($repository->synchronizedCalls !== $syncBefore + 1) {
+    throw new RuntimeException('Budget denial must be decided inside the synchronized budget section.');
 }
 if ($primary->calls !== $primaryCalls || $fallback->calls !== $fallbackCalls) {
     throw new RuntimeException('Budget denial must happen before provider execution.');

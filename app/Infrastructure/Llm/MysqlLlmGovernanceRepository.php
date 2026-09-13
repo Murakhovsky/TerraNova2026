@@ -6,11 +6,18 @@ namespace Infrastructure\Llm;
 use Kernel\Llm\LlmGovernanceRepositoryInterface;
 use Kernel\Llm\LlmUsageRecord;
 use PDO;
+use RuntimeException;
+use Throwable;
 
 final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceRepositoryInterface
 {
-    public function __construct(private PDO $connection)
-    {
+    public function __construct(
+        private PDO $connection,
+        private int $budgetLockTimeoutSeconds = 10,
+    ) {
+        if ($this->budgetLockTimeoutSeconds < 0 || $this->budgetLockTimeoutSeconds > 60) {
+            throw new \InvalidArgumentException('LLM budget lock timeout must be between 0 and 60 seconds.');
+        }
     }
 
     public function monthlyBudget(string $organizationId, string $currency): ?float
@@ -33,6 +40,40 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
         );
         $statement->execute(['organization_id' => $organizationId, 'currency' => strtoupper($currency)]);
         return (float) $statement->fetchColumn();
+    }
+
+    public function synchronizedBudget(string $organizationId, string $currency, callable $operation): mixed
+    {
+        $currency = strtoupper($currency);
+        $lockName = 'cos.llm.' . substr(hash('sha256', $organizationId . '|' . $currency), 0, 40);
+        $statement = $this->connection->prepare(
+            sprintf('SELECT GET_LOCK(:lock_name, %d)', $this->budgetLockTimeoutSeconds)
+        );
+        $statement->execute(['lock_name' => $lockName]);
+        if ((int) $statement->fetchColumn() !== 1) {
+            throw new RuntimeException(sprintf(
+                'Unable to acquire LLM budget lock for organization %s within %d seconds.',
+                $organizationId,
+                $this->budgetLockTimeoutSeconds,
+            ));
+        }
+
+        try {
+            return $operation();
+        } finally {
+            try {
+                $release = $this->connection->prepare('SELECT RELEASE_LOCK(:lock_name)');
+                $release->execute(['lock_name' => $lockName]);
+                if ((int) $release->fetchColumn() !== 1) {
+                    throw new RuntimeException(sprintf('Unable to release LLM budget lock for organization %s.', $organizationId));
+                }
+            } catch (Throwable $error) {
+                // A lost DB session releases MySQL advisory locks automatically. Surface every
+                // other release failure because silently retaining a live-session lock would
+                // stall subsequent governed calls for the tenant.
+                throw $error;
+            }
+        }
     }
 
     public function record(LlmUsageRecord $usage): void

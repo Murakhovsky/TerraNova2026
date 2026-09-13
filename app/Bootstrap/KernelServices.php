@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Kernel\Action\Service\ActionExecutor;
 use Kernel\Action\Service\ActionService;
+use Kernel\Action\Service\ModuleActionExecutionGate;
 use Kernel\Agent\Service\AgentRuntime;
 use Kernel\Agent\Service\RoutedAgentContextBuilder;
 use Kernel\Agent\Service\StructuredAgentLlmClient;
@@ -96,10 +97,13 @@ $di->setShared('cosOutboxReplay', fn (): OutboxReplayService => new OutboxReplay
     $this->getShared('cosTransactionManager'),
 ));
 
-$di->setShared('cosActionExecutor', fn (): ActionExecutor => new ActionExecutor(
-    $this->getShared('cosDomainRegistry')->actionHandlers(),
+$di->setShared('cosActionExecutionGate', fn (): ModuleActionExecutionGate => new ModuleActionExecutionGate(
     $this->getShared('cosDomainRegistry'),
     $this->getShared('cosActiveModuleResolver'),
+));
+$di->setShared('cosActionExecutor', fn (): ActionExecutor => new ActionExecutor(
+    $this->getShared('cosDomainRegistry')->actionHandlers(),
+    $this->getShared('cosActionExecutionGate'),
 ));
 $di->setShared('cosActionService', fn (): ActionService => new ActionService(
     $this->getShared('cosActionRepository'),

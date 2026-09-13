@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
+use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
 use Kernel\Action\Service\ActionExecutor;
@@ -27,6 +28,16 @@ final class CachedActionHandler implements ActionHandlerInterface
     public function execute(Action $action): ExecutionResult
     {
         return ExecutionResult::success();
+    }
+}
+
+final class RuntimeTestActionGate implements ActionExecutionGateInterface
+{
+    public int $calls = 0;
+
+    public function assertExecutable(Action $action): void
+    {
+        $this->calls++;
     }
 }
 
@@ -93,7 +104,8 @@ final class CachedJobHandler implements JobHandlerInterface
 }
 
 $actionHandler = new CachedActionHandler();
-$executor = new ActionExecutor([$actionHandler]);
+$actionGate = new RuntimeTestActionGate();
+$executor = new ActionExecutor([$actionHandler], $actionGate);
 foreach (['action-1', 'action-2'] as $id) {
     $executor->execute(new Action(
         $id,
@@ -113,6 +125,9 @@ foreach (['action-1', 'action-2'] as $id) {
 }
 if ($actionHandler->supportsCalls !== 1) {
     throw new RuntimeException('Action handler lookup must be cached by action type.');
+}
+if ($actionGate->calls !== 2) {
+    throw new RuntimeException('Action execution gate must run for every execution, including cached handler lookups.');
 }
 
 $queue = new RuntimeTestQueue([
