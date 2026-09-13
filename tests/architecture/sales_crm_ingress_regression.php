@@ -83,8 +83,8 @@ foreach ([
 }
 
 $handler = (string) file_get_contents($root . '/app/Domains/Sales/Automation/Job/CrmInboxJobHandler.php');
-if (!str_contains($handler, 'ProcessCrmInbox') || !str_contains($handler, 'CRM_INBOX_PROCESS')) {
-    throw new RuntimeException('CRM inbox queue handler is no longer connected to ProcessCrmInbox.');
+if (!str_contains($handler, 'ProcessCrmInbox') || !str_contains($handler, 'ReceiveCrmWebhook::JOB_TYPE')) {
+    throw new RuntimeException('CRM inbox queue handler is no longer connected to ProcessCrmInbox through ReceiveCrmWebhook::JOB_TYPE.');
 }
 
 echo "Sales CRM ingress regression contract: OK\n";
