@@ -3,17 +3,20 @@ declare(strict_types=1);
 
 namespace Infrastructure\Llm;
 
+use Kernel\Execution\ExecutionFailureException;
 use Kernel\Llm\LlmBudgetExceededException;
 use Kernel\Llm\LlmBudgetReservation;
 use Kernel\Llm\LlmGovernanceRepositoryInterface;
 use Kernel\Llm\LlmUsageRecord;
+use Kernel\Resilience\Contract\CircuitBreakerStoreInterface;
 use PDO;
 use RuntimeException;
 use Throwable;
 
-final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceRepositoryInterface
+final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceRepositoryInterface, CircuitBreakerStoreInterface
 {
     private const RESERVATION_TTL_MINUTES = 60;
+    private const GLOBAL_ORGANIZATION = '_global';
 
     public function __construct(
         private PDO $connection,
@@ -168,6 +171,73 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
         ]);
     }
 
+    public function assertAvailable(?string $organizationId, string $serviceKey): void
+    {
+        $statement = $this->connection->prepare(
+            'SELECT opened_until FROM cos_external_circuits '
+            . 'WHERE organization_id = :organization_id AND service_key = :service_key LIMIT 1'
+        );
+        $statement->execute([
+            'organization_id' => $this->circuitOrganizationKey($organizationId),
+            'service_key' => $serviceKey,
+        ]);
+        $openedUntil = $statement->fetchColumn();
+        if ($openedUntil === false || $openedUntil === null) {
+            return;
+        }
+
+        $check = $this->connection->prepare('SELECT :opened_until > UTC_TIMESTAMP(6)');
+        $check->execute(['opened_until' => $openedUntil]);
+        if ((int) $check->fetchColumn() === 1) {
+            throw ExecutionFailureException::externalUnavailable(
+                sprintf('External circuit is open for %s.', $serviceKey),
+            );
+        }
+
+        $this->recordSuccess($organizationId, $serviceKey);
+    }
+
+    public function recordSuccess(?string $organizationId, string $serviceKey): void
+    {
+        $statement = $this->connection->prepare(
+            'INSERT INTO cos_external_circuits '
+            . '(organization_id, service_key, consecutive_failures, opened_until, updated_at) '
+            . 'VALUES (:organization_id, :service_key, 0, NULL, UTC_TIMESTAMP(6)) '
+            . 'ON DUPLICATE KEY UPDATE consecutive_failures = 0, opened_until = NULL, updated_at = UTC_TIMESTAMP(6)'
+        );
+        $statement->execute([
+            'organization_id' => $this->circuitOrganizationKey($organizationId),
+            'service_key' => $serviceKey,
+        ]);
+    }
+
+    public function recordRetryableFailure(
+        ?string $organizationId,
+        string $serviceKey,
+        int $failureThreshold,
+        int $openSeconds,
+    ): void {
+        $failureThreshold = max(1, $failureThreshold);
+        $openSeconds = max(1, min($openSeconds, 86400));
+        $statement = $this->connection->prepare(
+            'INSERT INTO cos_external_circuits '
+            . '(organization_id, service_key, consecutive_failures, opened_until, updated_at) '
+            . 'VALUES (:organization_id, :service_key, 1, '
+            . ($failureThreshold <= 1
+                ? sprintf('DATE_ADD(UTC_TIMESTAMP(6), INTERVAL %d SECOND)', $openSeconds)
+                : 'NULL')
+            . ', UTC_TIMESTAMP(6)) '
+            . 'ON DUPLICATE KEY UPDATE '
+            . 'opened_until = IF(consecutive_failures + 1 >= ' . $failureThreshold . ', '
+            . sprintf('DATE_ADD(UTC_TIMESTAMP(6), INTERVAL %d SECOND)', $openSeconds)
+            . ', opened_until), consecutive_failures = consecutive_failures + 1, updated_at = UTC_TIMESTAMP(6)'
+        );
+        $statement->execute([
+            'organization_id' => $this->circuitOrganizationKey($organizationId),
+            'service_key' => $serviceKey,
+        ]);
+    }
+
     private function activeReservedAmount(string $organizationId, string $currency): float
     {
         $statement = $this->connection->prepare(
@@ -185,5 +255,11 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
             . 'WHERE organization_id = :organization_id AND currency = :currency AND expires_at <= UTC_TIMESTAMP(6)'
         );
         $statement->execute(['organization_id' => $organizationId, 'currency' => $currency]);
+    }
+
+    private function circuitOrganizationKey(?string $organizationId): string
+    {
+        $organizationId = trim((string) $organizationId);
+        return $organizationId !== '' ? $organizationId : self::GLOBAL_ORGANIZATION;
     }
 }

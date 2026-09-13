@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Platform\Persistence\MySql\Queue;
 
-use DateTimeImmutable;
+use InvalidArgumentException;
 use Kernel\Queue\Contract\RetryAwareJobQueueInterface;
 use Kernel\Queue\Job;
 use PDO;
@@ -12,7 +12,20 @@ use Throwable;
 
 final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 {
-    public function __construct(private PDO $connection) {}
+    private const CLAIM_SCAN_LIMIT = 16;
+
+    public function __construct(
+        private PDO $connection,
+        private int $maxConcurrentJobsPerTenant = 4,
+        private int $tenantLockTimeoutSeconds = 2,
+    ) {
+        if ($this->maxConcurrentJobsPerTenant < 1) {
+            throw new InvalidArgumentException('Tenant job concurrency limit must be positive.');
+        }
+        if ($this->tenantLockTimeoutSeconds < 0 || $this->tenantLockTimeoutSeconds > 30) {
+            throw new InvalidArgumentException('Tenant job lock timeout must be between 0 and 30 seconds.');
+        }
+    }
 
     public function enqueue(
         string $organizationId,
@@ -55,43 +68,77 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 
     public function claim(string $workerId): ?Job
     {
-        $this->connection->beginTransaction();
-        try {
-            $row = $this->connection->query(
-                "SELECT * FROM cos_jobs WHERE status IN ('PENDING', 'FAILED') AND available_at <= NOW(6) "
-                . 'ORDER BY available_at, created_at LIMIT 1 FOR UPDATE SKIP LOCKED'
-            )->fetch(PDO::FETCH_ASSOC);
-            if ($row === false) {
-                $this->connection->commit();
-                return null;
-            }
+        for ($scan = 0; $scan < self::CLAIM_SCAN_LIMIT; $scan++) {
+            $lockName = null;
+            $this->connection->beginTransaction();
+            try {
+                $row = $this->connection->query(
+                    "SELECT * FROM cos_jobs WHERE status IN ('PENDING', 'FAILED') AND available_at <= NOW(6) "
+                    . 'ORDER BY available_at, created_at LIMIT 1 FOR UPDATE SKIP LOCKED'
+                )->fetch(PDO::FETCH_ASSOC);
+                if ($row === false) {
+                    $this->connection->commit();
+                    return null;
+                }
 
-            $updated = $this->connection->prepare(
-                "UPDATE cos_jobs SET status = 'RUNNING', attempts = attempts + 1, locked_at = NOW(6), "
-                . 'locked_by = :worker WHERE id = :id AND status IN (\'PENDING\', \'FAILED\')'
-            );
-            $updated->execute(['worker' => $workerId, 'id' => $row['id']]);
-            if ($updated->rowCount() !== 1) {
-                $this->connection->rollBack();
-                return null;
+                $organizationId = (string) $row['organization_id'];
+                $lockName = $this->tenantLockName($organizationId);
+                if (!$this->acquireTenantLock($lockName)) {
+                    $this->deferUnclaimedRow((string) $row['id']);
+                    $this->connection->commit();
+                    continue;
+                }
+
+                $this->purgeExpiredTenantLeases($organizationId);
+                if ($this->activeTenantLeaseCount($organizationId) >= $this->maxConcurrentJobsPerTenant) {
+                    $this->deferUnclaimedRow((string) $row['id']);
+                    $this->connection->commit();
+                    continue;
+                }
+
+                $this->insertTenantLease(
+                    (string) $row['id'],
+                    $organizationId,
+                    (int) $row['timeout_seconds'],
+                );
+
+                $updated = $this->connection->prepare(
+                    "UPDATE cos_jobs SET status = 'RUNNING', attempts = attempts + 1, locked_at = NOW(6), "
+                    . 'locked_by = :worker WHERE id = :id AND status IN (\'PENDING\', \'FAILED\')'
+                );
+                $updated->execute(['worker' => $workerId, 'id' => $row['id']]);
+                if ($updated->rowCount() !== 1) {
+                    $this->connection->rollBack();
+                    continue;
+                }
+
+                $this->connection->commit();
+                $row['attempts'] = (int) $row['attempts'] + 1;
+                $row['locked_by'] = $workerId;
+                return $this->hydrate($row);
+            } catch (Throwable $exception) {
+                if ($this->connection->inTransaction()) $this->connection->rollBack();
+                throw $exception;
+            } finally {
+                if ($lockName !== null) {
+                    $this->releaseTenantLock($lockName);
+                }
             }
-            $this->connection->commit();
-            $row['attempts'] = (int) $row['attempts'] + 1;
-            $row['locked_by'] = $workerId;
-            return $this->hydrate($row);
-        } catch (Throwable $exception) {
-            if ($this->connection->inTransaction()) $this->connection->rollBack();
-            throw $exception;
         }
+
+        return null;
     }
 
     public function complete(Job $job): void
     {
         $statement = $this->connection->prepare(
             "UPDATE cos_jobs SET status = 'COMPLETED', completed_at = NOW(6), locked_at = NULL, locked_by = NULL, "
-            . 'last_error = NULL WHERE id = :id AND status = \'RUNNING\''
+            . 'last_error = NULL WHERE id = :id AND status = \'RUNNING\' AND locked_by = :worker'
         );
-        $statement->execute(['id' => $job->id]);
+        $statement->execute(['id' => $job->id, 'worker' => $job->claimedBy]);
+        if ($statement->rowCount() === 1) {
+            $this->releaseTenantLease($job);
+        }
     }
 
     public function fail(Job $job, string $error): void
@@ -105,14 +152,19 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
         $delay = min(3600, 10 * (2 ** max(0, $job->attempts - 1)));
         $statement = $this->connection->prepare(
             'UPDATE cos_jobs SET status = :status, available_at = DATE_ADD(NOW(6), INTERVAL :delay SECOND), '
-            . 'locked_at = NULL, locked_by = NULL, last_error = :error WHERE id = :id AND status = \'RUNNING\''
+            . 'locked_at = NULL, locked_by = NULL, last_error = :error '
+            . 'WHERE id = :id AND status = \'RUNNING\' AND locked_by = :worker'
         );
         $statement->execute([
             'status' => $dead ? 'DEAD' : 'FAILED',
             'delay' => $dead ? 0 : $delay,
             'error' => mb_substr($error, 0, 65535),
             'id' => $job->id,
+            'worker' => $job->claimedBy,
         ]);
+        if ($statement->rowCount() === 1) {
+            $this->releaseTenantLease($job);
+        }
     }
 
     public function recoverTimedOut(): int
@@ -123,7 +175,14 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
             . "WHERE status = 'RUNNING' AND locked_at < DATE_SUB(NOW(6), INTERVAL timeout_seconds SECOND)"
         );
         $statement->execute();
-        return $statement->rowCount();
+        $recovered = $statement->rowCount();
+
+        $cleanup = $this->connection->prepare(
+            'DELETE FROM cos_tenant_execution_leases WHERE expires_at <= NOW(6)'
+        );
+        $cleanup->execute();
+
+        return $recovered;
     }
 
     public function replayDead(?string $organizationId = null, ?string $jobId = null): int
@@ -147,6 +206,89 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
         return $statement->rowCount();
     }
 
+    private function deferUnclaimedRow(string $jobId): void
+    {
+        $statement = $this->connection->prepare(
+            'UPDATE cos_jobs SET available_at = DATE_ADD(NOW(6), INTERVAL 1 SECOND) '
+            . "WHERE id = :id AND status IN ('PENDING', 'FAILED')"
+        );
+        $statement->execute(['id' => $jobId]);
+    }
+
+    private function acquireTenantLock(string $lockName): bool
+    {
+        $statement = $this->connection->prepare(
+            sprintf('SELECT GET_LOCK(:lock_name, %d)', $this->tenantLockTimeoutSeconds)
+        );
+        $statement->execute(['lock_name' => $lockName]);
+        return (int) $statement->fetchColumn() === 1;
+    }
+
+    private function releaseTenantLock(string $lockName): void
+    {
+        try {
+            $statement = $this->connection->prepare('SELECT RELEASE_LOCK(:lock_name)');
+            $statement->execute(['lock_name' => $lockName]);
+        } catch (Throwable) {
+            // Named locks are connection-scoped and are also released when the connection closes.
+        }
+    }
+
+    private function tenantLockName(string $organizationId): string
+    {
+        return 'cos.jobs.tenant.' . substr(hash('sha256', $organizationId), 0, 40);
+    }
+
+    private function purgeExpiredTenantLeases(string $organizationId): void
+    {
+        $statement = $this->connection->prepare(
+            'DELETE FROM cos_tenant_execution_leases '
+            . 'WHERE organization_id = :organization_id AND expires_at <= NOW(6)'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+    }
+
+    private function activeTenantLeaseCount(string $organizationId): int
+    {
+        $statement = $this->connection->prepare(
+            'SELECT COUNT(*) FROM cos_tenant_execution_leases '
+            . 'WHERE organization_id = :organization_id AND expires_at > NOW(6)'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+        return (int) $statement->fetchColumn();
+    }
+
+    private function insertTenantLease(string $jobId, string $organizationId, int $timeoutSeconds): void
+    {
+        $ttl = max(30, min(86400, $timeoutSeconds + 30));
+        $statement = $this->connection->prepare(
+            'INSERT INTO cos_tenant_execution_leases (lease_id, organization_id, expires_at, created_at) '
+            . sprintf("VALUES (:lease_id, :organization_id, DATE_ADD(NOW(6), INTERVAL %d SECOND), NOW(6))", $ttl)
+        );
+        $statement->execute([
+            'lease_id' => $this->tenantLeaseId($jobId),
+            'organization_id' => $organizationId,
+        ]);
+    }
+
+    private function releaseTenantLease(Job $job): void
+    {
+        $statement = $this->connection->prepare(
+            'DELETE FROM cos_tenant_execution_leases '
+            . 'WHERE lease_id = :lease_id AND organization_id = :organization_id'
+        );
+        $statement->execute([
+            'lease_id' => $this->tenantLeaseId($job->id),
+            'organization_id' => $job->organizationId,
+        ]);
+    }
+
+    private function tenantLeaseId(string $jobId): string
+    {
+        return 'job:' . hash('sha256', $jobId);
+    }
+
+    /** @param array<string,mixed> $row */
     private function hydrate(array $row): Job
     {
         return new Job(

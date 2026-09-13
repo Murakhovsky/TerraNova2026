@@ -4,18 +4,25 @@ declare(strict_types=1);
 namespace Kernel\Llm;
 
 use InvalidArgumentException;
+use Kernel\Execution\ExecutionFailureException;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
+use Kernel\Resilience\Contract\CircuitBreakerStoreInterface;
 use Throwable;
 
 final readonly class GovernedStructuredLlmClient implements StructuredLlmClientInterface
 {
+    private ?CircuitBreakerStoreInterface $circuits;
+
     public function __construct(
         private LlmProviderRegistry $providers,
         private LlmRoutingPolicy $routing,
         private LlmGovernanceRepositoryInterface $governance,
         private MetricsRecorderInterface $metrics,
         private string $budgetCurrency = 'USD',
+        private int $circuitFailureThreshold = 5,
+        private int $circuitOpenSeconds = 60,
     ) {
+        $this->circuits = $governance instanceof CircuitBreakerStoreInterface ? $governance : null;
     }
 
     public function complete(StructuredLlmRequest $request): StructuredLlmResponse
@@ -63,18 +70,36 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
 
         foreach ($routes as $index => $route) {
             $routedRequest = $request->routedTo($route->model);
+            $serviceKey = 'llm.' . strtolower($route->provider);
             try {
+                $this->circuits?->assertAvailable($request->organizationId, $serviceKey);
                 $response = $this->providers->client($route->provider)->complete($routedRequest);
+                $this->recordCircuitSuccess($request->organizationId, $serviceKey);
                 $latencyMs = $this->duration($started);
                 $this->recordSuccess($request, $response, $correlationId, $latencyMs, $fallbackCount, $reservation);
                 return $response;
             } catch (LlmProviderException $error) {
+                if ($error->retryable) {
+                    $this->recordCircuitFailure($request->organizationId, $serviceKey);
+                } else {
+                    $this->recordCircuitSuccess($request->organizationId, $serviceKey);
+                }
                 $this->metrics->record('llm.request.error', 1.0, $request->organizationId, [
                     'provider' => $route->provider,
                     'use_case' => $request->useCase ?? 'unspecified',
                     'retryable' => $error->retryable ? 'true' : 'false',
                 ]);
                 if (!$error->retryable || $index === count($routes) - 1) {
+                    throw $error;
+                }
+                $lastRetryable = $error;
+                $fallbackCount++;
+            } catch (ExecutionFailureException $error) {
+                $this->metrics->record('llm.request.circuit_open', 1.0, $request->organizationId, [
+                    'provider' => $route->provider,
+                    'use_case' => $request->useCase ?? 'unspecified',
+                ]);
+                if (!$error->failureKind()->retryable() || $index === count($routes) - 1) {
                     throw $error;
                 }
                 $lastRetryable = $error;
@@ -90,6 +115,23 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
         }
 
         throw $lastRetryable ?? new LlmProviderException('unknown', false, 'No LLM route was executed.');
+    }
+
+    private function recordCircuitSuccess(?string $organizationId, string $serviceKey): void
+    {
+        if ($this->circuits === null) return;
+        $this->circuits->recordSuccess($organizationId, $serviceKey);
+    }
+
+    private function recordCircuitFailure(?string $organizationId, string $serviceKey): void
+    {
+        if ($this->circuits === null) return;
+        $this->circuits->recordRetryableFailure(
+            $organizationId,
+            $serviceKey,
+            max(1, $this->circuitFailureThreshold),
+            max(1, $this->circuitOpenSeconds),
+        );
     }
 
     private function recordSuccess(
