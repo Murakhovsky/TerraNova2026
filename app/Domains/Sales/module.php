@@ -4,9 +4,9 @@ declare(strict_types=1);
 return [
     'id' => 'sales',
     'name' => 'Sales',
-    'version' => '0.7.1',
-    'schema_version' => '0.7.1',
-    'kernel_constraint' => '>=0.10.0 <0.11.0',
+    'version' => '0.8.1',
+    'schema_version' => '0.8.1',
+    'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Sales operations, CRM workflow, intelligence and automation.',
     'icon' => 'chart-line',
     'dependencies' => [],
@@ -23,12 +23,16 @@ return [
             'salesModuleConfigurationProvisioner',
         ],
         'extension_services' => [
+            'event.consumers' => [
+                'salesHistoricalEventConsumer',
+            ],
             'web.navigation' => [
                 'salesNavigationContributor',
             ],
         ],
         'migration_files' => [
             'app/migrations/20260910_000030_sales_v071_configuration_ownership.sql',
+            'app/migrations/20260913_000044_sales_v081_historical_stage_history.sql',
         ],
         'capabilities' => [
             'sales.workspace.use',
