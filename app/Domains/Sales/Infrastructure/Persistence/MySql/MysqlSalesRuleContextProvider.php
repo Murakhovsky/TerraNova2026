@@ -22,9 +22,15 @@ final readonly class MysqlSalesRuleContextProvider implements RuleContextProvide
             $statement = $this->connection->prepare(
                 'SELECT c.id, c.public_id, c.status, c.stage, c.pipeline_id, c.stage_id, '
                 . 's.code AS stage_code, c.priority, c.next_contact_at, c.assigned_user_id, '
-                . 'c.source, c.last_activity_at, c.deal_value, c.lost_reason, c.updated_at '
+                . 'c.source, c.last_activity_at, c.deal_value, c.lost_reason, c.updated_at, '
+                . 't.stuck_after_seconds, h.entered_at AS current_stage_entered_at, h.history_quality '
                 . 'FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s '
                 . 'ON s.id = c.stage_id AND s.organization_id = c.organization_id '
+                . 'LEFT JOIN sales_stage_metric_thresholds t '
+                . 'ON t.organization_id = c.organization_id AND t.stage_id = c.stage_id '
+                . 'LEFT JOIN sales_deal_stage_history h ON h.id = (SELECT h2.id FROM sales_deal_stage_history h2 '
+                . 'WHERE h2.organization_id = c.organization_id AND h2.deal_id = CAST(c.id AS CHAR) AND h2.left_at IS NULL '
+                . 'ORDER BY COALESCE(h2.entered_at,h2.projected_at) DESC,h2.id DESC LIMIT 1) '
                 . 'WHERE c.id = :id AND c.organization_id = :organization_id LIMIT 1'
             );
             $statement->execute(['id' => $event->aggregateId, 'organization_id' => $event->organizationId]);
@@ -32,14 +38,21 @@ final readonly class MysqlSalesRuleContextProvider implements RuleContextProvide
             if ($deal !== []) {
                 $now = time();
                 $lastActivity = isset($deal['last_activity_at']) ? strtotime((string) $deal['last_activity_at']) : false;
-                $updatedAt = isset($deal['updated_at']) ? strtotime((string) $deal['updated_at']) : false;
+                $enteredAt = isset($deal['current_stage_entered_at']) ? strtotime((string) $deal['current_stage_entered_at']) : false;
+                $nextContact = isset($deal['next_contact_at']) ? strtotime((string) $deal['next_contact_at']) : false;
+                $threshold = isset($deal['stuck_after_seconds']) ? (int) $deal['stuck_after_seconds'] : 0;
                 $daysWithoutActivity = $lastActivity === false ? 99999.0 : max(0.0, ($now - $lastActivity) / 86400);
+                $hasExactStageEntry = $enteredAt !== false && ($deal['history_quality'] ?? null) !== 'ESTIMATED';
+                $stageAgeBreached = $threshold > 0 && $hasExactStageEntry && ($now - $enteredAt) >= $threshold;
+                $activityBreached = $threshold > 0 && ($lastActivity === false || ($now - $lastActivity) >= $threshold);
+                $hasFutureContact = $nextContact !== false && $nextContact > $now;
+
                 $deal['value'] = (float) ($deal['deal_value'] ?? 0);
                 $deal['owner_id'] = isset($deal['assigned_user_id']) ? (int) $deal['assigned_user_id'] : null;
                 $deal['risk'] = $event->payload['risk'] ?? null;
                 $deal['days_without_activity'] = $daysWithoutActivity;
                 $deal['no_activity_48h'] = $daysWithoutActivity >= 2;
-                $deal['stuck_in_stage'] = $updatedAt !== false && $updatedAt <= $now - 604800;
+                $deal['stuck_in_stage'] = $stageAgeBreached && $activityBreached && !$hasFutureContact;
                 $deal['high_value'] = (float) ($deal['deal_value'] ?? 0) >= 100000;
                 $deal['lost_reason_missing'] = strtolower((string) ($deal['status'] ?? '')) === 'lost'
                     && trim((string) ($deal['lost_reason'] ?? '')) === '';
