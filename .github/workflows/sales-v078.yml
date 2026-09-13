@@ -14,7 +14,7 @@ jobs:
         with:
           php-version: '8.2'
       - run: composer install --no-interaction --prefer-dist
-      - name: V0.7.1-V0.7.7 regressions
+      - name: V0.7.1-V0.7.7 regressions and CRM ingress
         run: |
           php tests/architecture/sales_v071_configuration.php
           php tests/architecture/sales_v072_pipeline_admin.php
@@ -35,13 +35,18 @@ jobs:
       - name: PHP syntax
         run: |
           php -l tests/architecture/sales_crm_ingress_regression.php
+          php -l app/Domains/Sales/Application/Contract/CrmIngressResolverInterface.php
           php -l app/Domains/Sales/Application/Contract/SalesAdministrationReadModelInterface.php
           php -l app/Domains/Sales/Application/Service/SalesAdministrationHealthClassifier.php
+          php -l app/Infrastructure/Integration/Crm/MysqlCrmIngressResolver.php
           php -l app/Infrastructure/Platform/ReadModel/MySql/MysqlSalesAdministrationReadModel.php
           php -l app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php
+          php -l app/Bootstrap/SalesIntegrationServices.php
           php -l app/Bootstrap/SalesAdministrationServices.php
+          php -l app/Interfaces/Api/Controller/CrmWebhookController.php
           php -l app/Interfaces/Api/Controller/SalesAdminHealthController.php
           php -l app/Interfaces/Web/Controller/SalesAdminHealthController.php
+          php -l app/Interfaces/Web/Routing/SalesIntegrationRoutes.php
           php -l app/Interfaces/Web/Routing/SalesAdministrationRoutes.php
           php -l app/Interfaces/Web/View/sales_admin/health.phtml
           php -l app/Interfaces/Web/Module.php

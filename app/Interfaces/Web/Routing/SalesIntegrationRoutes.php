@@ -21,6 +21,15 @@ final class SalesIntegrationRoutes
             'controller' => 'sales_admin_integration',
             'action' => $action,
         ];
+        $crmWebhook = [
+            'namespace' => 'Interfaces\\Api\\Controller',
+            'module' => 'frontend',
+            'controller' => 'crm_webhook',
+            'action' => 'receiveIntegration',
+        ];
+
+        // Canonical CRM ingress resolves tenant/provider from the active Integration Control Plane record.
+        $router->addPost('/api/integrations/crm/{integration:[0-9]+}/webhook', $crmWebhook);
 
         $router->addGet('/sales/admin/integrations', $web('integrations'));
         $router->addGet('/api/sales/admin/integrations/catalog', $api('catalog'));

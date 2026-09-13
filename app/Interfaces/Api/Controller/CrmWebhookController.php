@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Api\Controller;
 
+use Domains\Sales\Application\Contract\CrmIngressResolverInterface;
 use Domains\Sales\Application\UseCase\ReceiveCrmWebhook;
 use InvalidArgumentException;
 use Phalcon\Http\Response;
@@ -11,6 +12,36 @@ use Throwable;
 
 final class CrmWebhookController extends Controller
 {
+    public function receiveIntegrationAction(?string $integration = null): Response
+    {
+        $this->view->disable();
+        $this->response->setContentType('application/json', 'UTF-8');
+
+        if (!$this->request->isPost()) {
+            return $this->respond(405, ['ok' => false, 'error' => 'POST required.']);
+        }
+
+        try {
+            $integrationId = (string) ($integration ?: $this->dispatcher->getParam('integration'));
+            if (!ctype_digit($integrationId) || (int) $integrationId <= 0) {
+                throw new InvalidArgumentException('Invalid CRM integration endpoint.');
+            }
+
+            /** @var CrmIngressResolverInterface $resolver */
+            $resolver = $this->di->getShared('salesCrmIngressResolver');
+            $target = $resolver->resolve((int) $integrationId);
+
+            return $this->receiveAction(
+                (string) $target['organization_id'],
+                (string) $target['provider'],
+            );
+        } catch (InvalidArgumentException $error) {
+            return $this->respond(401, ['ok' => false, 'error' => $error->getMessage()]);
+        } catch (Throwable) {
+            return $this->respond(503, ['ok' => false, 'error' => 'CRM webhook could not be accepted.']);
+        }
+    }
+
     public function receiveAction(?string $organization = null, ?string $provider = null): Response
     {
         $this->view->disable();

@@ -2,7 +2,23 @@
 declare(strict_types=1);
 
 $root=dirname(__DIR__,2);
-$required=['app/Domains/Sales/Application/Contract/SalesAdministrationReadModelInterface.php','app/Domains/Sales/Application/Service/SalesAdministrationHealthClassifier.php','app/Infrastructure/Platform/ReadModel/MySql/MysqlSalesAdministrationReadModel.php','app/Bootstrap/SalesAdministrationServices.php','app/Interfaces/Api/Controller/SalesAdminHealthController.php','app/Interfaces/Web/Controller/SalesAdminHealthController.php','app/Interfaces/Web/Routing/SalesAdministrationRoutes.php','app/Interfaces/Web/Routing/SalesModuleRouteContributor.php','app/Interfaces/Web/View/sales_admin/health.phtml','app/migrations/20260911_000036_sales_v078_admin_closure.sql'];
+$required=[
+    'app/Domains/Sales/Application/Contract/SalesAdministrationReadModelInterface.php',
+    'app/Domains/Sales/Application/Contract/CrmIngressResolverInterface.php',
+    'app/Domains/Sales/Application/Service/SalesAdministrationHealthClassifier.php',
+    'app/Infrastructure/Platform/ReadModel/MySql/MysqlSalesAdministrationReadModel.php',
+    'app/Infrastructure/Integration/Crm/MysqlCrmIngressResolver.php',
+    'app/Bootstrap/SalesAdministrationServices.php',
+    'app/Bootstrap/SalesIntegrationServices.php',
+    'app/Interfaces/Api/Controller/SalesAdminHealthController.php',
+    'app/Interfaces/Api/Controller/CrmWebhookController.php',
+    'app/Interfaces/Web/Controller/SalesAdminHealthController.php',
+    'app/Interfaces/Web/Routing/SalesAdministrationRoutes.php',
+    'app/Interfaces/Web/Routing/SalesIntegrationRoutes.php',
+    'app/Interfaces/Web/Routing/SalesModuleRouteContributor.php',
+    'app/Interfaces/Web/View/sales_admin/health.phtml',
+    'app/migrations/20260911_000036_sales_v078_admin_closure.sql'
+];
 foreach($required as $path) if(!is_file($root.'/'.$path)) throw new RuntimeException('Missing V0.7.8 artifact: '.$path);
 $readModel=(string)file_get_contents($root.'/app/Infrastructure/Platform/ReadModel/MySql/MysqlSalesAdministrationReadModel.php');
 foreach(['cos_integrations','cos_jobs','cos_actions','cos_approvals','cos_agent_runs','cos_crm_inbox','cos_audit_log','cos_configuration_revisions','cos_operational_metrics'] as $table) if(!str_contains($readModel,$table)) throw new RuntimeException('V0.7.8 read model is missing canonical source: '.$table);
@@ -12,11 +28,16 @@ $migration=(string)file_get_contents($root.'/app/migrations/20260911_000036_sale
 foreach(["'INTEGRATION_ROUTE'","'ACTIVATE'",'sales.admin.audit.view'] as $needle) if(!str_contains($migration,$needle)) throw new RuntimeException('V0.7.8 closure migration missing: '.$needle);
 $routes=(string)file_get_contents($root.'/app/Interfaces/Web/Routing/SalesAdministrationRoutes.php');
 foreach(['/sales/admin/health','/api/sales/admin/health'] as $route) if(!str_contains($routes,$route)) throw new RuntimeException('V0.7.8 route missing: '.$route);
+$integrationRoutes=(string)file_get_contents($root.'/app/Interfaces/Web/Routing/SalesIntegrationRoutes.php');
+if(!str_contains($integrationRoutes,'/api/integrations/crm/{integration:[0-9]+}/webhook')) throw new RuntimeException('V0.7.8 canonical CRM ingress route is missing.');
+$ingressResolver=(string)file_get_contents($root.'/app/Infrastructure/Integration/Crm/MysqlCrmIngressResolver.php');
+foreach(['FROM cos_integrations','capability="CRM"','status="ACTIVE"'] as $needle) if(!str_contains($ingressResolver,$needle)) throw new RuntimeException('V0.7.8 CRM ingress does not resolve from active Integration Control Plane state: '.$needle);
+foreach(['credentials_reference','SELECT *'] as $forbidden) if(str_contains($ingressResolver,$forbidden)) throw new RuntimeException('V0.7.8 CRM ingress resolver crosses the credentials boundary: '.$forbidden);
 $api=(string)file_get_contents($root.'/app/Interfaces/Api/Controller/SalesAdminHealthController.php'); $web=(string)file_get_contents($root.'/app/Interfaces/Web/Controller/SalesAdminHealthController.php');
 if(!str_contains($api,'SalesCapability::AdminAuditView')||!str_contains($web,'SalesCapability::AdminAuditView')) throw new RuntimeException('V0.7.8 access must use sales.admin.audit.view.');
-$contributor=(string)file_get_contents($root.'/app/Interfaces/Web/Routing/SalesModuleRouteContributor.php'); if(!str_contains($contributor,'SalesAdministrationRoutes::register')) throw new RuntimeException('V0.7.8 routes are not owned by the Sales module route contributor.');
+$contributor=(string)file_get_contents($root.'/app/Interfaces/Web/Routing/SalesModuleRouteContributor.php'); if(!str_contains($contributor,'SalesAdministrationRoutes::register')||!str_contains($contributor,'SalesIntegrationRoutes::register')) throw new RuntimeException('V0.7.8 routes are not owned by the Sales module route contributor.');
 $manifest=(string)file_get_contents($root.'/app/Domains/Sales/module.php'); if(!str_contains($manifest,"'salesRouteContributor'")) throw new RuntimeException('Sales manifest does not declare its route contributor.');
-$services=(string)file_get_contents($root.'/app/config/services_kernel.php'); if(!str_contains($services,'SalesAdministrationServices.php')) throw new RuntimeException('V0.7.8 services are not registered.');
+$services=(string)file_get_contents($root.'/app/config/services_kernel.php'); if(!str_contains($services,'SalesAdministrationServices.php')||!str_contains($services,'SalesIntegrationServices.php')) throw new RuntimeException('V0.7.8 services are not registered.');
 $operations=(string)file_get_contents($root.'/app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'); $start=strpos($operations,"'integrations' =>"); $end=strpos($operations,"'actions' =>",$start===false?0:$start); if($start===false||$end===false) throw new RuntimeException('Cannot verify operations integration projection.'); $projection=substr($operations,$start,$end-$start);
 foreach(['credentials_reference',' configuration, ',' type, name, status'] as $forbidden) if(str_contains($projection,$forbidden)) throw new RuntimeException('Operations integration projection exposes obsolete/sensitive field: '.$forbidden);
 foreach(['integration_key','configuration_version','health_status'] as $field) if(!str_contains($projection,$field)) throw new RuntimeException('Operations integration projection missing V0.7.7 field: '.$field);
