@@ -10,7 +10,6 @@ use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
-use RuntimeException;
 
 final readonly class ModuleControlService
 {
@@ -71,9 +70,9 @@ final readonly class ModuleControlService
     private function change(string $operation, string $organizationId, string $moduleId, string $actorId, string $correlationId, ?string $reason, callable $mutation): array
     {
         return $this->transactions->transactional(function () use ($operation, $organizationId, $moduleId, $actorId, $correlationId, $reason, $mutation): array {
-            $before = $this->snapshot($organizationId, $moduleId);
+            $before = $this->modules->describeModule($organizationId, $moduleId);
             $mutation();
-            $after = $this->snapshot($organizationId, $moduleId);
+            $after = $this->modules->describeModule($organizationId, $moduleId);
             $now = new DateTimeImmutable();
 
             $this->audit->append(new AuditEntry(
@@ -96,17 +95,5 @@ final readonly class ModuleControlService
 
             return $after;
         });
-    }
-
-    /** @return array<string, mixed> */
-    private function snapshot(string $organizationId, string $moduleId): array
-    {
-        foreach ($this->modules->describe($organizationId) as $module) {
-            if (($module['id'] ?? null) === $moduleId) {
-                return $module;
-            }
-        }
-
-        throw new RuntimeException(sprintf('Unknown module: %s.', $moduleId));
     }
 }
