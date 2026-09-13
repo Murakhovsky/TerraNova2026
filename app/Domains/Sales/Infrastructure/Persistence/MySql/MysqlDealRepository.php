@@ -52,8 +52,9 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
     public function getForStageChange(string $organizationId, string $dealId): ?array
     {
         $statement = $this->connection->prepare(
-            'SELECT id, organization_id, pipeline_id, stage_id, stage, status, closed_at, created_at
-             FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
+            'SELECT id, organization_id, pipeline_id, stage_id, stage, status, closed_at, created_at, '
+            . 'deal_value, currency, assigned_user_id '
+            . 'FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
         );
         $statement->execute(['id' => $dealId, 'organization_id' => $organizationId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
@@ -103,65 +104,61 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
             'pipeline_id' => $pipelineId,
             'expected_stage_id' => $expectedStageId,
         ]);
-        if ($statement->rowCount() !== 1) return false;
 
-        // Preserve the V0.6.8 historical stage projection while V0.7.2 adds configurable topology.
-        $close = $this->connection->prepare(
-            'UPDATE sales_deal_stage_history SET left_at = NOW()
-             WHERE organization_id = :organization_id AND deal_id = :deal_id
-               AND pipeline_id = :pipeline_id AND stage_id = :stage_id AND left_at IS NULL'
-        );
-        $close->execute([
-            'organization_id' => $organizationId,
-            'deal_id' => $dealId,
-            'pipeline_id' => $pipelineId,
-            'stage_id' => $expectedStageId,
-        ]);
-
-        if ($close->rowCount() === 0) {
-            $seed = $this->connection->prepare(
-                'INSERT INTO sales_deal_stage_history
-                    (organization_id, deal_id, pipeline_id, stage_id, entered_at, left_at, is_backfill)
-                 SELECT organization_id, id, pipeline_id, :stage_id, created_at, NOW(), 0
-                 FROM tn_client_cases
-                 WHERE id = :deal_id AND organization_id = :organization_id AND pipeline_id = :pipeline_id'
-            );
-            $seed->execute([
-                'stage_id' => $expectedStageId,
-                'deal_id' => $dealId,
-                'organization_id' => $organizationId,
-                'pipeline_id' => $pipelineId,
-            ]);
-        }
-
-        $open = $this->connection->prepare(
-            'INSERT INTO sales_deal_stage_history
-                (organization_id, deal_id, pipeline_id, stage_id, entered_at, left_at, is_backfill)
-             VALUES (:organization_id, :deal_id, :pipeline_id, :stage_id, NOW(), NULL, 0)'
-        );
-        $open->execute([
-            'organization_id' => $organizationId,
-            'deal_id' => $dealId,
-            'pipeline_id' => $pipelineId,
-            'stage_id' => $stageId,
-        ]);
-        return true;
+        // Stage history is event-owned from V0.8.1 onward. Direct writes here used the
+        // retired V0.6.7 schema and could race the durable DealStageChanged projection.
+        return $statement->rowCount() === 1;
     }
 
     public function assignOwner(string $organizationId, string $dealId, int $ownerId): OperationResult
     {
         try {
-            $owner = $this->connection->prepare('SELECT id FROM tn_users WHERE id = :owner_id AND organization_id = :organization_id AND status = "active" LIMIT 1');
+            $deal = $this->connection->prepare(
+                'SELECT assigned_user_id FROM tn_client_cases '
+                . 'WHERE id=:id AND organization_id=:organization_id LIMIT 1 FOR UPDATE'
+            );
+            $deal->execute(['id' => $dealId, 'organization_id' => $organizationId]);
+            $current = $deal->fetchColumn();
+            if ($current === false) {
+                return OperationResult::failure('Deal was not found in the current organization.');
+            }
+
+            $previousOwnerId = $current !== null ? (int) $current : null;
+            if ($previousOwnerId === $ownerId) {
+                return OperationResult::success($dealId, [
+                    'changed' => false,
+                    'previous_owner_id' => $previousOwnerId,
+                    'owner_id' => $ownerId,
+                ]);
+            }
+
+            $owner = $this->connection->prepare(
+                'SELECT id FROM tn_users WHERE id = :owner_id '
+                . 'AND organization_id = :organization_id AND status = "active" LIMIT 1'
+            );
             $owner->execute(['owner_id' => $ownerId, 'organization_id' => $organizationId]);
-            if ($owner->fetchColumn() === false) return OperationResult::failure('Owner was not found or is inactive in the current organization.');
-            $statement = $this->connection->prepare('UPDATE tn_client_cases SET assigned_user_id = :owner_id, updated_at = NOW() WHERE id = :id AND organization_id = :organization_id AND (assigned_user_id IS NULL OR assigned_user_id <> :owner_check)');
-            $statement->execute(['owner_id' => $ownerId, 'owner_check' => $ownerId, 'id' => $dealId, 'organization_id' => $organizationId]);
-            if ($statement->rowCount() === 1) return OperationResult::success($dealId, ['changed' => true]);
-            $exists = $this->connection->prepare('SELECT assigned_user_id FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1');
-            $exists->execute(['id' => $dealId, 'organization_id' => $organizationId]);
-            return $exists->fetchColumn() === false
-                ? OperationResult::failure('Deal was not found in the current organization.')
-                : OperationResult::success($dealId, ['changed' => false]);
+            if ($owner->fetchColumn() === false) {
+                return OperationResult::failure('Owner was not found or is inactive in the current organization.');
+            }
+
+            $statement = $this->connection->prepare(
+                'UPDATE tn_client_cases SET assigned_user_id=:owner_id,updated_at=NOW() '
+                . 'WHERE id=:id AND organization_id=:organization_id'
+            );
+            $statement->execute([
+                'owner_id' => $ownerId,
+                'id' => $dealId,
+                'organization_id' => $organizationId,
+            ]);
+            if ($statement->rowCount() !== 1) {
+                return OperationResult::failure('Deal owner could not be changed.');
+            }
+
+            return OperationResult::success($dealId, [
+                'changed' => true,
+                'previous_owner_id' => $previousOwnerId,
+                'owner_id' => $ownerId,
+            ]);
         } catch (Throwable $exception) {
             return OperationResult::failure($exception->getMessage());
         }

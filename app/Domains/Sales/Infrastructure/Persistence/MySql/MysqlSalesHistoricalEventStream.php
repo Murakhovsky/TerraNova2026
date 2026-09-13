@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use Domains\Sales\Application\Contract\SalesHistoricalEventStreamInterface;
 use Domains\Sales\Automation\Event\DealCreated;
 use Domains\Sales\Automation\Event\DealStageChanged;
+use Domains\Sales\Automation\Event\SalesEventType;
 use Kernel\Event\DomainEvent;
 use Kernel\Event\EventMetadata;
 use PDO;
@@ -23,13 +24,14 @@ final readonly class MysqlSalesHistoricalEventStream implements SalesHistoricalE
             'SELECT id,organization_id,type,aggregate_type,aggregate_id,payload,schema_version,'
             . 'correlation_id,causation_id,actor_type,actor_id,occurred_at '
             . 'FROM cos_events WHERE organization_id=:organization_id '
-            . 'AND type IN (:deal_created,:stage_changed) '
+            . 'AND type IN (:deal_created,:stage_changed,:owner_assigned) '
             . 'ORDER BY occurred_at ASC,id ASC'
         );
         $statement->execute([
             'organization_id' => $organizationId,
             'deal_created' => DealCreated::TYPE,
             'stage_changed' => DealStageChanged::TYPE,
+            'owner_assigned' => SalesEventType::DEAL_OWNER_ASSIGNED,
         ]);
 
         while (($row = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {

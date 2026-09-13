@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Domains\Sales\Automation\Event;
 
 use Domains\Sales\Application\Contract\PipelineRepositoryInterface;
+use Domains\Sales\Application\Contract\SalesDealOwnerHistoryStoreInterface;
+use Domains\Sales\Application\Service\SalesDealOwnerHistoryProjector;
 use Domains\Sales\Application\Service\SalesDealStageHistoryProjector;
 use Kernel\Event\Contract\DurableEventConsumerInterface;
 use Kernel\Event\Contract\EventStoreInterface;
@@ -14,7 +16,9 @@ use Kernel\Event\EventMetadata;
 final readonly class SalesHistoricalEventConsumer implements DurableEventConsumerInterface
 {
     public function __construct(
-        private SalesDealStageHistoryProjector $projector,
+        private SalesDealStageHistoryProjector $stageProjector,
+        private SalesDealOwnerHistoryProjector $ownerProjector,
+        private SalesDealOwnerHistoryStoreInterface $ownerHistory,
         private PipelineRepositoryInterface $pipelines,
         private EventBus $events,
         private EventStoreInterface $eventStore,
@@ -23,6 +27,7 @@ final readonly class SalesHistoricalEventConsumer implements DurableEventConsume
 
     public function consumerName(): string
     {
+        // Keep the durable cursor name stable across V0.8.3.
         return 'sales.stage-history.v1';
     }
 
@@ -34,7 +39,10 @@ final readonly class SalesHistoricalEventConsumer implements DurableEventConsume
         }
 
         if (in_array($event->type, [DealCreated::TYPE, DealStageChanged::TYPE], true)) {
-            $this->projector->project($event);
+            $this->stageProjector->project($event);
+        }
+        if (in_array($event->type, [DealCreated::TYPE, SalesEventType::DEAL_OWNER_ASSIGNED], true)) {
+            $this->ownerProjector->project($event);
         }
     }
 
@@ -52,7 +60,6 @@ final readonly class SalesHistoricalEventConsumer implements DurableEventConsume
             return;
         }
 
-        // Prove that the stage snapshot belongs to the declared pipeline.
         $pipelineStage = $this->pipelines->findStageByCode($source->organizationId, $pipelineId, $stage->code);
         if ($pipelineStage === null || $pipelineStage->id !== $stageId) {
             return;
@@ -65,6 +72,18 @@ final readonly class SalesHistoricalEventConsumer implements DurableEventConsume
             $snapshotStageCode = $stage->code;
         }
 
+        $assignedUserId = (int) ($source->payload['assigned_user_id'] ?? 0);
+        if ($assignedUserId <= 0) {
+            // V0.8.3 DB capture records owner changes at mutation time. Consulting that
+            // interval at the source event timestamp is safe even if durable consumption
+            // is delayed; reading the Deal's current owner here would be retroactive.
+            $ownerAtCreation = $this->ownerHistory->ownerAt(
+                $source->organizationId,
+                $source->aggregateId,
+                $source->occurredAt,
+            );
+            $assignedUserId = (int) ($ownerAtCreation['owner_user_id'] ?? 0);
+        }
         $eventId = substr(hash('sha256', DealCreated::TYPE . ':' . $source->id), 0, 32);
         $created = DealCreated::create(
             $eventId,
@@ -81,14 +100,14 @@ final readonly class SalesHistoricalEventConsumer implements DurableEventConsume
                 $source->metadata->schemaVersion,
             ),
             $source->occurredAt,
+            $assignedUserId > 0 ? $assignedUserId : null,
         );
 
         if ($this->eventStore->find($eventId) === null) {
             $this->events->publish($created);
         }
 
-        // Project now, before a later stage-change outbox row can be consumed.
-        // Delivery of the derived event itself is idempotent and will become a no-op here.
-        $this->projector->project($created);
+        $this->stageProjector->project($created);
+        $this->ownerProjector->project($created);
     }
 }

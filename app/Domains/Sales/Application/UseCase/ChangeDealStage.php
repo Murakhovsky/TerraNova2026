@@ -66,8 +66,6 @@ final readonly class ChangeDealStage
         if ($target->isLost) {
             $lostReasonId = trim((string) $command->lostReasonId);
             if ($lostReasonId === '') {
-                // Compatibility path for existing Sales/CRM callers that predate V0.7.2.
-                // Every LOST transition still persists a canonical reason, preferring OTHER.
                 $lostReasonId = $this->pipelines->defaultLostReasonId($command->organizationId, $pipeline->id) ?? '';
             }
             if ($lostReasonId === '' || !$this->pipelines->isValidLostReason($command->organizationId, $pipeline->id, $lostReasonId)) {
@@ -75,7 +73,7 @@ final readonly class ChangeDealStage
             }
         }
 
-        return $this->transactions->transactional(function () use ($command, $pipeline, $current, $target, $validation, $lostReasonId) {
+        return $this->transactions->transactional(function () use ($command, $pipeline, $current, $target, $validation, $lostReasonId, $deal) {
             $changed = $this->deals->changeStage(
                 $command->organizationId,
                 $command->dealId,
@@ -118,10 +116,15 @@ final readonly class ChangeDealStage
                 : ($target->isLost ? SalesEventType::DEAL_LOST : null);
 
             if ($terminalType !== null) {
+                $currency = strtoupper(trim((string) ($deal['currency'] ?? '')));
+                $ownerId = (int) ($deal['assigned_user_id'] ?? 0);
                 $payload = [
                     'pipeline_id' => $pipeline->id,
                     'stage_id' => $target->id,
                     'stage_code' => $target->code,
+                    'deal_value' => $deal['deal_value'] !== null ? (float) $deal['deal_value'] : null,
+                    'currency' => $currency !== '' ? $currency : null,
+                    'owner_id' => $ownerId > 0 ? $ownerId : null,
                 ];
                 if ($target->isLost) {
                     $payload['lost_reason_id'] = $lostReasonId;

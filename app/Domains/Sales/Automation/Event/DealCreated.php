@@ -20,18 +20,24 @@ final class DealCreated
         string $stageCode,
         EventMetadata $metadata,
         ?DateTimeImmutable $occurredAt = null,
+        ?int $assignedUserId = null,
     ): DomainEvent {
+        $payload = [
+            'pipeline_id' => $pipelineId,
+            'stage_id' => $stageId,
+            'stage_code' => $stageCode,
+        ];
+        if ($assignedUserId !== null && $assignedUserId > 0) {
+            $payload['assigned_user_id'] = $assignedUserId;
+        }
+
         return new DomainEvent(
             $id,
             $organizationId,
             self::TYPE,
             'deal',
             $dealId,
-            [
-                'pipeline_id' => $pipelineId,
-                'stage_id' => $stageId,
-                'stage_code' => $stageCode,
-            ],
+            $payload,
             $metadata,
             $occurredAt ?? new DateTimeImmutable(),
         );

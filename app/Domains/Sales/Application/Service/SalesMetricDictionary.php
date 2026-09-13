@@ -90,6 +90,37 @@ final class SalesMetricDictionary
                 ['organization', 'pipeline', 'period', 'from_stage', 'to_stage'], 'not monetary',
                 $history,
             ),
+            'response_time' => new SalesMetricDefinition(
+                'response_time', 'Response Time',
+                'Time from the first inbound message in an unanswered Deal/channel burst to the first outbound reply.',
+                'first outbound occurred_at − first inbound occurred_at', 'response opportunities whose first inbound occurred in period',
+                'first inbound occurred_at', ['organization', 'pipeline', 'period', 'channel', 'owner'], 'not monetary',
+                ['Communication direction and occurred_at must be known.', 'Manager attribution requires a known-timestamp owner interval at first inbound; ESTIMATED owners are never used.'],
+            ),
+            'followup_compliance' => new SalesMetricDefinition(
+                'followup_compliance', 'Follow-up Compliance',
+                'Completion and on-time execution of follow-up activities whose due time falls in the observed period.',
+                'completed or completed on-time follow-ups', 'follow-ups due by observation_end',
+                'follow-up due_at', ['organization', 'pipeline', 'period', 'owner'], 'not monetary',
+                ['due_at and completed_at are authoritative current facts.', 'Pre-V0.8.3 reschedule history is PARTIAL and is not reconstructed.'],
+            ),
+            'loss_analysis' => new SalesMetricDefinition(
+                'loss_analysis', 'Loss Analysis',
+                'Distribution of canonical LOST outcomes by reason, with immutable monetary snapshots where available.',
+                'lost Deal outcomes grouped by reason', 'all sales.deal.lost outcomes in period',
+                'DealLost occurred_at', ['organization', 'pipeline', 'period', 'reason', 'currency'],
+                'Lost value is grouped by currency; different currencies are never combined.',
+                ['Reason uses the canonical DealLost event.', 'Historical value/currency may be absent before V0.8.3 and must remain missing rather than copied from current Deal state.'],
+            ),
+            'manager_performance' => new SalesMetricDefinition(
+                'manager_performance', 'Manager Performance',
+                'Operational response, follow-up and terminal-outcome metrics attributed to the manager proven at each fact timestamp.',
+                'per-manager attributed operational facts', 'only facts with a provable owner-at-time for manager-specific rates',
+                'fact timestamp: first inbound, follow-up due_at, or terminal outcome occurred_at',
+                ['organization', 'pipeline', 'period', 'owner'],
+                'Lost value remains grouped by currency; no mixed-currency manager total exists.',
+                ['Current assigned_user_id must never be applied retroactively.', 'COMPLETE/PARTIAL owner intervals require a known assigned_at; ESTIMATED current-state owners are excluded.', 'Unattributed facts remain visible through coverage.'],
+            ),
         ];
     }
 
