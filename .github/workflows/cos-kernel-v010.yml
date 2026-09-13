@@ -31,6 +31,7 @@ jobs:
           php tests/unit/module_discovery_cache.php
           php tests/unit/action_execution_claim.php
           php tests/unit/execution_failure_semantics.php
+          php tests/unit/action_execution_outcome.php
       - name: PHP syntax
         run: |
           php -l app/Kernel/Module/KernelVersion.php
@@ -51,7 +52,9 @@ jobs:
           php -l app/Kernel/Queue/Contract/RetryAwareJobQueueInterface.php
           php -l app/Kernel/Queue/Service/QueueWorker.php
           php -l app/Kernel/Queue/Service/JobHandlerRegistry.php
+          php -l app/Kernel/Queue/Handler/ActionExecutionJobHandler.php
           php -l app/Kernel/Action/ActionExecutionClaim.php
+          php -l app/Kernel/Action/ActionExecutionOutcome.php
           php -l app/Kernel/Action/StaleActionExecutionClaimException.php
           php -l app/Kernel/Action/ExecutionResult.php
           php -l app/Kernel/Action/Contract/ActionRepositoryInterface.php
@@ -88,6 +91,7 @@ jobs:
           php -l tests/unit/module_discovery_cache.php
           php -l tests/unit/action_execution_claim.php
           php -l tests/unit/execution_failure_semantics.php
+          php -l tests/unit/action_execution_outcome.php
           php -l tests/architecture/kernel_v010_llm_runtime_governance.php
           php -l tests/architecture/kernel_v0102_execution_runtime.php
           php -l tests/architecture/kernel_runtime_composition.php

@@ -100,7 +100,8 @@ $assertNotContains($policy, ['ActionExecutor'], 'ActionPolicyService');
 $executionHandler = $read('app/Kernel/Queue/Handler/ActionExecutionJobHandler.php');
 $assertContains($executionHandler, [
     'ActionService',
-    '$this->actions->execute(',
+    '$this->actions->executeOutcome(',
+    'ExecutionFailureException',
 ], 'ActionExecutionJobHandler');
 
 $supervisor = $read('app/Kernel/Operations/Service/WorkerSupervisor.php');

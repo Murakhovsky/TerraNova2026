@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DomainException;
 use Kernel\Action\Action;
 use Kernel\Action\ActionExecutionClaim;
+use Kernel\Action\ActionExecutionOutcome;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionRepositoryInterface;
@@ -85,6 +86,11 @@ final readonly class ActionService
 
     public function executeNext(string $workerId): ?Action
     {
+        return $this->executeNextOutcome($workerId)?->action();
+    }
+
+    public function executeNextOutcome(string $workerId): ?ActionExecutionOutcome
+    {
         $claim = $this->actions->claimNext($workerId);
         if ($claim === null) return null;
 
@@ -93,13 +99,18 @@ final readonly class ActionService
 
     public function execute(string $organizationId, string $actionId, string $workerId): ?Action
     {
+        return $this->executeOutcome($organizationId, $actionId, $workerId)?->action();
+    }
+
+    public function executeOutcome(string $organizationId, string $actionId, string $workerId): ?ActionExecutionOutcome
+    {
         $claim = $this->actions->claim($organizationId, $actionId, $workerId);
         if ($claim === null) return null;
 
         return $this->executeClaimed($claim);
     }
 
-    private function executeClaimed(ActionExecutionClaim $claim): Action
+    private function executeClaimed(ActionExecutionClaim $claim): ActionExecutionOutcome
     {
         $action = $claim->action;
         $workerId = $claim->workerId;
@@ -159,7 +170,7 @@ final readonly class ActionService
             $finish();
         }
 
-        return $action;
+        return new ActionExecutionOutcome($claim, $result);
     }
 
     public function find(string $organizationId, string $actionId): ?Action
