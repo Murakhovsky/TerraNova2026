@@ -11,9 +11,16 @@ if (version_compare(KernelVersion::VERSION, '0.8.9', '<')) {
 }
 
 $resolver = (string) file_get_contents($root . '/app/Kernel/Module/ActiveModuleResolver.php');
-foreach (['isCurrent(', 'installed_schema_version', 'version_current', 'schema_version_current', "'current'", '!$this->isCurrent'] as $needle) {
+foreach (['snapshot(', 'OrganizationModuleSnapshot', '->isCurrent($moduleId)', '->describe()'] as $needle) {
     if (!str_contains($resolver, $needle)) {
-        throw new RuntimeException('ActiveModuleResolver is missing version readiness behavior: ' . $needle);
+        throw new RuntimeException('ActiveModuleResolver is missing snapshot-backed readiness delegation: ' . $needle);
+    }
+}
+
+$snapshot = (string) file_get_contents($root . '/app/Kernel/Module/OrganizationModuleSnapshot.php');
+foreach (['isCurrent(', 'installed_schema_version', 'version_current', 'schema_version_current', "'current'", '!$this->isCurrent'] as $needle) {
+    if (!str_contains($snapshot, $needle)) {
+        throw new RuntimeException('OrganizationModuleSnapshot is missing version readiness behavior: ' . $needle);
     }
 }
 

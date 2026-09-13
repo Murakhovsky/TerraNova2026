@@ -7,6 +7,7 @@ require $root . '/vendor/autoload.php';
 use Kernel\Module\KernelVersion;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleDiscovery;
+use Kernel\Module\ModuleExtensionPoint;
 use Kernel\Module\ModuleExtensionRegistry;
 
 if (version_compare(KernelVersion::VERSION, '0.9.0', '<')) {
@@ -15,7 +16,7 @@ if (version_compare(KernelVersion::VERSION, '0.9.0', '<')) {
 
 $definitions = (new ModuleDiscovery($root . '/app/Domains'))->discover();
 $registry = new ModuleExtensionRegistry(new ModuleCatalog($definitions));
-$navigation = $registry->for('web.navigation');
+$navigation = $registry->for(ModuleExtensionPoint::WEB_NAVIGATION);
 $owners = [];
 foreach ($navigation as $contribution) {
     $owners[$contribution->moduleId] = $contribution->serviceId;
@@ -31,7 +32,13 @@ foreach ([
 }
 
 $moduleBootstrap = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');
-foreach (['cosModuleExtensionRegistry', 'ModuleExtensionRegistry::API_ROUTES', 'ModuleExtensionRegistry::TENANT_CONFIGURATION', "->for('web.navigation')"] as $needle) {
+foreach ([
+    'cosModuleExtensionRegistry',
+    'ModuleExtensionPoint::API_ROUTES',
+    'ModuleExtensionPoint::TENANT_CONFIGURATION',
+    'ModuleExtensionPoint::WEB_NAVIGATION',
+    'ModuleExtensionPoint::EVENT_CONSUMERS',
+] as $needle) {
     if (!str_contains($moduleBootstrap, $needle)) {
         throw new RuntimeException('Extension runtime bootstrap is incomplete: ' . $needle);
     }
