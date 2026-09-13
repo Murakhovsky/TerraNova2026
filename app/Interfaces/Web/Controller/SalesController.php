@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Web\Controller;
 
+use DateTimeImmutable;
 use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Throwable;
 
@@ -86,12 +87,16 @@ final class SalesController extends WebController
     public function directorAction(): void
     {
         if ($this->requireManager() === null) return;
-        $this->load('Sales Director', 'director', fn ($q, $org) => [
-            'metrics' => $q->metrics($org, 30),
-            'dashboard' => $q->dashboard($org, null),
-            'analytics' => $q->directorAnalytics($org, 30),
-            'deals' => $q->deals($org, ['limit' => 50]),
-        ]);
+        $historyDays = max(1, min(366, (int) $this->request->getQuery('history_days', 'int', 30)));
+        $forecastDays = max(1, min(366, (int) $this->request->getQuery('forecast_days', 'int', 30)));
+        $pipelineId = trim((string) $this->request->getQuery('pipeline_id', 'string', '')) ?: null;
+        $this->load('Sales Director', 'director', fn ($q, $org) => $this->di->getShared('salesDirectorCockpit')->overview(
+            $org,
+            new DateTimeImmutable(),
+            $historyDays,
+            $forecastDays,
+            $pipelineId,
+        ));
     }
 
     public function adminAction(): void
@@ -124,12 +129,7 @@ final class SalesController extends WebController
         }
     }
 
-    /**
-     * Stable Sales-facing intelligence contract. COS can evolve its internal
-     * projection shape without forcing the Deal workspace to know every alias.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function normalizeDealIntelligence(array $raw): array
     {
         $analysis = is_array($raw['analysis'] ?? null) ? $raw['analysis'] : [];

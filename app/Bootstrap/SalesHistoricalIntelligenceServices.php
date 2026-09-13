@@ -5,6 +5,7 @@ use Domains\Sales\Application\Service\SalesDealOwnerHistoryProjector;
 use Domains\Sales\Application\Service\SalesDealOwnerHistoryRebuilder;
 use Domains\Sales\Application\Service\SalesDealStageHistoryProjector;
 use Domains\Sales\Application\Service\SalesDealStageHistoryRebuilder;
+use Domains\Sales\Application\Service\SalesDirectorCockpitService;
 use Domains\Sales\Application\Service\SalesForecastRiskService;
 use Domains\Sales\Application\Service\SalesHistoricalMetricsService;
 use Domains\Sales\Application\Service\SalesMetricDictionary;
@@ -52,6 +53,11 @@ $di->setShared('salesOperationalPerformance', fn (): SalesOperationalPerformance
 ));
 $di->setShared('salesForecastRisk', fn (): SalesForecastRiskService => new SalesForecastRiskService(
     $this->getShared('salesForecastRiskReadModel'),
+));
+$di->setShared('salesDirectorCockpit', fn (): SalesDirectorCockpitService => new SalesDirectorCockpitService(
+    $this->getShared('salesHistoricalMetrics'),
+    $this->getShared('salesOperationalPerformance'),
+    $this->getShared('salesForecastRisk'),
 ));
 $di->setShared('salesDealStageHistoryProjector', fn (): SalesDealStageHistoryProjector => new SalesDealStageHistoryProjector(
     $this->getShared('salesDealStageHistoryStore'),
