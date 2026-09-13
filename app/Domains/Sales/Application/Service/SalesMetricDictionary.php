@@ -121,6 +121,37 @@ final class SalesMetricDictionary
                 'Lost value remains grouped by currency; no mixed-currency manager total exists.',
                 ['Current assigned_user_id must never be applied retroactively.', 'COMPLETE/PARTIAL owner intervals require a known assigned_at; ESTIMATED current-state owners are excluded.', 'Unattributed facts remain visible through coverage.'],
             ),
+            'forecast_value' => new SalesMetricDefinition(
+                'forecast_value', 'Forecast Value',
+                'Nominal value of currently open Deals whose current expected_close_at falls inside the forecast window.',
+                'SUM(deal_value) for open Deals with expected_close_at in [from,to)', 'n/a',
+                'current expected_close_at snapshot at as_of', ['organization', 'pipeline', 'forecast_window'],
+                'Group strictly by currency; never combine currencies.',
+                ['Deal must have expected_close_at, deal_value and currency to contribute.', 'This is a current snapshot, not reconstructed historical forecast.'],
+            ),
+            'weighted_forecast' => new SalesMetricDefinition(
+                'weighted_forecast', 'Weighted Forecast',
+                'Forecast Value weighted by the Deal probability, falling back only to the configured current-stage default.',
+                'SUM(deal_value × valid probability / 100) for Deals in forecast window', 'n/a',
+                'current expected_close_at and probability snapshot at as_of', ['organization', 'pipeline', 'forecast_window'],
+                'Group strictly by currency; never combine currencies.',
+                ['Probability source must be DEAL or STAGE_DEFAULT and within 0..100.', 'Missing or invalid probability is excluded rather than guessed.', 'Operational probability is not a calibrated statistical prediction.'],
+            ),
+            'forecast_coverage' => new SalesMetricDefinition(
+                'forecast_coverage', 'Forecast Coverage',
+                'Completeness of scheduling, money, probability and exact stage-age inputs used by forecast/risk.',
+                'facts with the required input', 'eligible open or forecast-window Deals',
+                'current snapshot at as_of', ['organization', 'pipeline', 'forecast_window'], 'not monetary',
+                ['Coverage is reported explicitly so missing data cannot masquerade as certainty.'],
+            ),
+            'risk_explainability' => new SalesMetricDefinition(
+                'risk_explainability', 'Risk Explainability',
+                'Per-Deal deterministic risk reasons with observable evidence; no opaque composite score.',
+                'explicit STUCK / NEXT_CONTACT_OVERDUE / EXPECTED_CLOSE_OVERDUE reasons', 'open non-terminal Deals',
+                'current snapshot at as_of', ['organization', 'pipeline', 'as_of'],
+                'At-risk values are grouped strictly by currency; never combine currencies.',
+                ['STUCK requires configured threshold and known stage entered_at.', 'ESTIMATED stage age cannot trigger STUCK.', 'Every returned risk reason includes its factual evidence.'],
+            ),
         ];
     }
 

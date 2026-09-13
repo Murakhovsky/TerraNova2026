@@ -5,6 +5,7 @@ use Domains\Sales\Application\Service\SalesDealOwnerHistoryProjector;
 use Domains\Sales\Application\Service\SalesDealOwnerHistoryRebuilder;
 use Domains\Sales\Application\Service\SalesDealStageHistoryProjector;
 use Domains\Sales\Application\Service\SalesDealStageHistoryRebuilder;
+use Domains\Sales\Application\Service\SalesForecastRiskService;
 use Domains\Sales\Application\Service\SalesHistoricalMetricsService;
 use Domains\Sales\Application\Service\SalesMetricDictionary;
 use Domains\Sales\Application\Service\SalesOperationalPerformanceService;
@@ -14,6 +15,7 @@ use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealStageHistorySto
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesHistoricalEventStream;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMetricConfiguration;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesDealStageHistoryReadModel;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesForecastRiskReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalMetricsReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesOperationalPerformanceReadModel;
 
@@ -35,6 +37,9 @@ $di->setShared('salesHistoricalMetricsReadModel', fn (): MysqlSalesHistoricalMet
 $di->setShared('salesOperationalPerformanceReadModel', fn (): MysqlSalesOperationalPerformanceReadModel => new MysqlSalesOperationalPerformanceReadModel(
     $this->getShared('databaseService')->connection(),
 ));
+$di->setShared('salesForecastRiskReadModel', fn (): MysqlSalesForecastRiskReadModel => new MysqlSalesForecastRiskReadModel(
+    $this->getShared('databaseService')->connection(),
+));
 $di->setShared('salesMetricConfiguration', fn (): MysqlSalesMetricConfiguration => new MysqlSalesMetricConfiguration(
     $this->getShared('databaseService')->connection(),
 ));
@@ -44,6 +49,9 @@ $di->setShared('salesHistoricalMetrics', fn (): SalesHistoricalMetricsService =>
 ));
 $di->setShared('salesOperationalPerformance', fn (): SalesOperationalPerformanceService => new SalesOperationalPerformanceService(
     $this->getShared('salesOperationalPerformanceReadModel'),
+));
+$di->setShared('salesForecastRisk', fn (): SalesForecastRiskService => new SalesForecastRiskService(
+    $this->getShared('salesForecastRiskReadModel'),
 ));
 $di->setShared('salesDealStageHistoryProjector', fn (): SalesDealStageHistoryProjector => new SalesDealStageHistoryProjector(
     $this->getShared('salesDealStageHistoryStore'),

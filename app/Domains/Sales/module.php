@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'sales',
     'name' => 'Sales',
-    'version' => '0.8.3',
+    'version' => '0.8.4',
     'schema_version' => '0.8.3',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Sales operations, CRM workflow, intelligence and automation.',
