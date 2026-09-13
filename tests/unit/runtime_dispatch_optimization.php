@@ -12,6 +12,7 @@ use Kernel\Operations\Service\PeriodicMaintenanceGate;
 use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Job;
+use Kernel\Queue\Service\JobHandlerRegistry;
 use Kernel\Queue\Service\QueueWorker;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
@@ -137,7 +138,8 @@ $queue = new RuntimeTestQueue([
     new Job('job-2', 'org-1', 'test.job', [], 0, 5, 60, 'corr-2'),
 ]);
 $jobHandler = new CachedJobHandler();
-$worker = new QueueWorker($queue, [$jobHandler], recoveryIntervalSeconds: 60);
+$jobRegistry = new JobHandlerRegistry([$jobHandler]);
+$worker = new QueueWorker($queue, $jobRegistry, recoveryIntervalSeconds: 60);
 $worker->runOne('worker-1');
 $worker->runOne('worker-1');
 
@@ -149,6 +151,17 @@ if ($queue->completeCalls !== 2 || $jobHandler->handleCalls !== 2) {
 }
 if ($jobHandler->supportsCalls !== 1) {
     throw new RuntimeException('Job handler lookup must be cached by job type.');
+}
+
+$duplicateRegistry = new JobHandlerRegistry([new CachedJobHandler(), new CachedJobHandler()]);
+$duplicateDetected = false;
+try {
+    $duplicateRegistry->handlerFor('test.job');
+} catch (RuntimeException $exception) {
+    $duplicateDetected = str_contains($exception->getMessage(), 'Multiple job handlers registered');
+}
+if (!$duplicateDetected) {
+    throw new RuntimeException('Job handler registry must reject ambiguous job type routing.');
 }
 
 $gate = new PeriodicMaintenanceGate(60);

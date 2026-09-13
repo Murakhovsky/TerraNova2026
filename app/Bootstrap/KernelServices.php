@@ -26,6 +26,7 @@ use Kernel\Policy\Service\PolicyContextBuilder;
 use Kernel\Policy\Service\PolicyEngine;
 use Kernel\Queue\Handler\ActionExecutionJobHandler;
 use Kernel\Queue\Handler\AgentRunJobHandler;
+use Kernel\Queue\Service\JobHandlerRegistry;
 use Kernel\Queue\Service\QueueWorker;
 use Kernel\Rule\Service\ConditionEvaluator;
 use Kernel\Rule\Service\DeterministicProcessEngine;
@@ -157,11 +158,17 @@ $di->setShared('cosAgentRunJobHandler', fn (): AgentRunJobHandler => new AgentRu
     $this->getShared('cosActiveModuleResolver'),
 ));
 $di->setShared('cosActionExecutionJobHandler', fn (): ActionExecutionJobHandler => new ActionExecutionJobHandler($this->getShared('cosActionService')));
-$di->setShared('cosQueueWorker', fn (): QueueWorker => new QueueWorker($this->getShared('cosJobQueue'), [
+$di->setShared('cosJobHandlerRegistry', fn (): JobHandlerRegistry => new JobHandlerRegistry([
     $this->getShared('cosAgentRunJobHandler'),
     $this->getShared('cosActionExecutionJobHandler'),
     ...$this->getShared('cosModuleJobHandlers'),
-], $this->getShared('cosMetrics'), $this->getShared('cosLogger')));
+]));
+$di->setShared('cosQueueWorker', fn (): QueueWorker => new QueueWorker(
+    $this->getShared('cosJobQueue'),
+    $this->getShared('cosJobHandlerRegistry'),
+    $this->getShared('cosMetrics'),
+    $this->getShared('cosLogger'),
+));
 $di->setShared('cosWorkerSupervisor', fn (): WorkerSupervisor => new WorkerSupervisor(
     $this->getShared('cosOutboxPublisher'),
     $this->getShared('cosQueueWorker'),
