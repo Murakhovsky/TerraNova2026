@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Platform\Persistence\MySql\Queue;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Kernel\Queue\Contract\RetryAwareJobQueueInterface;
 use Kernel\Queue\Job;
@@ -68,6 +69,8 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 
     public function claim(string $workerId): ?Job
     {
+        $lockWaitNanoseconds = 0;
+
         // The SQL admission filter prevents a noisy tenant from occupying the front of the
         // queue. We still serialize the final per-tenant lease check because concurrent
         // workers can race after the eligibility snapshot.
@@ -83,7 +86,10 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 
                 $organizationId = (string) $row['organization_id'];
                 $lockName = $this->tenantLockName($organizationId);
-                if (!$this->acquireTenantLock($lockName)) {
+                $lockStarted = hrtime(true);
+                $lockAcquired = $this->acquireTenantLock($lockName);
+                $lockWaitNanoseconds += max(0, hrtime(true) - $lockStarted);
+                if (!$lockAcquired) {
                     $this->connection->rollBack();
                     continue;
                 }
@@ -115,7 +121,7 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
                 $this->connection->commit();
                 $row['attempts'] = (int) $row['attempts'] + 1;
                 $row['locked_by'] = $workerId;
-                return $this->hydrate($row);
+                return $this->hydrate($row, $lockWaitNanoseconds / 1_000_000);
             } catch (Throwable $exception) {
                 if ($this->connection->inTransaction()) $this->connection->rollBack();
                 throw $exception;
@@ -293,7 +299,7 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
     }
 
     /** @param array<string,mixed> $row */
-    private function hydrate(array $row): Job
+    private function hydrate(array $row, float $lockWaitMs = 0.0): Job
     {
         return new Job(
             (string) $row['id'],
@@ -306,6 +312,8 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
             (string) $row['correlation_id'],
             $row['idempotency_key'] !== null ? (string) $row['idempotency_key'] : null,
             (string) ($row['locked_by'] ?? ''),
+            isset($row['available_at']) ? new DateTimeImmutable((string) $row['available_at']) : null,
+            max(0.0, $lockWaitMs),
         );
     }
 }

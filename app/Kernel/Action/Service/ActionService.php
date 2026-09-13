@@ -17,6 +17,8 @@ use Kernel\Audit\AuditEntry;
 use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Execution\ExecutionFailureClassifier;
+use Kernel\Observability\StructuredLoggerInterface;
+use Kernel\Operations\Contract\MetricsRecorderInterface;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 use Throwable;
 
@@ -28,6 +30,8 @@ final readonly class ActionService
         private ?EventStoreInterface $events = null,
         private ?AuditRepositoryInterface $audit = null,
         private ?TransactionManagerInterface $transactions = null,
+        private ?MetricsRecorderInterface $metrics = null,
+        private ?StructuredLoggerInterface $logger = null,
     ) {}
 
     public function propose(
@@ -114,6 +118,7 @@ final readonly class ActionService
     {
         $action = $claim->action;
         $workerId = $claim->workerId;
+        $started = hrtime(true);
 
         try {
             $result = $this->executor->execute($action);
@@ -170,7 +175,54 @@ final readonly class ActionService
             $finish();
         }
 
+        $this->observeExecution($claim, $result, $started);
         return new ActionExecutionOutcome($claim, $result);
+    }
+
+    private function observeExecution(ActionExecutionClaim $claim, ExecutionResult $result, int $started): void
+    {
+        try {
+            $action = $claim->action;
+            $outcome = $result->successful ? 'success' : 'failure';
+            $labels = [
+                'runtime' => 'action',
+                'action_type' => $action->type,
+                'outcome' => $outcome,
+            ];
+            $durationMs = max(0.0, (hrtime(true) - $started) / 1_000_000);
+
+            $this->metrics?->record('cos.execution.execution_ms', $durationMs, $action->organizationId, $labels);
+            $this->metrics?->record('cos.execution.throughput', 1, $action->organizationId, $labels);
+            if ($claim->attempt > 1) {
+                $this->metrics?->record('cos.execution.retry_count', 1, $action->organizationId, [
+                    'runtime' => 'action',
+                    'action_type' => $action->type,
+                ]);
+            }
+            if ($result->failureKind !== null) {
+                $failureLabels = [
+                    ...$labels,
+                    'failure_kind' => $result->failureKind->value,
+                    'retryable' => $result->retryable ? '1' : '0',
+                ];
+                $this->metrics?->record('cos.execution.failures', 1, $action->organizationId, $failureLabels);
+            }
+
+            if (!$result->successful) {
+                $this->logger?->log('error', 'COS action failed.', [
+                    'organization_id' => $action->organizationId,
+                    'correlation_id' => $action->correlationId ?: $action->id,
+                    'action_id' => $action->id,
+                    'action_type' => $action->type,
+                    'attempt' => $claim->attempt,
+                    'error' => $result->error,
+                    'failure_kind' => $result->failureKind?->value,
+                    'retryable' => $result->retryable,
+                ]);
+            }
+        } catch (Throwable) {
+            // Telemetry is best-effort and must not alter action lifecycle semantics.
+        }
     }
 
     public function find(string $organizationId, string $actionId): ?Action

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kernel\Resilience;
 
 use Kernel\Execution\ExecutionFailureClassifier;
+use Kernel\Execution\ExecutionFailureKind;
 use Kernel\Observability\StructuredLoggerInterface;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
 use Kernel\Resilience\Contract\CircuitBreakerStoreInterface;
@@ -45,7 +46,7 @@ final readonly class ExternalCallExecutor
                 if (!$kind->retryable()) {
                     // A permanent rejection still proves that the provider is reachable.
                     $this->circuits->recordSuccess($organizationId, $serviceKey);
-                    $this->observe('cos.external.failure', $organizationId, $serviceKey, $attempt, $started, $error, false);
+                    $this->observe('cos.external.failure', $organizationId, $serviceKey, $attempt, $started, $error, $kind);
                     throw $error;
                 }
 
@@ -55,7 +56,7 @@ final readonly class ExternalCallExecutor
                     $policy->failureThreshold,
                     $policy->circuitOpenSeconds,
                 );
-                $this->observe('cos.external.failure', $organizationId, $serviceKey, $attempt, $started, $error, true);
+                $this->observe('cos.external.failure', $organizationId, $serviceKey, $attempt, $started, $error, $kind);
 
                 if ($attempt >= $policy->maxAttempts) {
                     throw $error;
@@ -72,34 +73,56 @@ final readonly class ExternalCallExecutor
     }
 
     private function observe(
-        string $metric,
+        string $legacyMetric,
         ?string $organizationId,
         string $serviceKey,
         int $attempt,
         int $started,
         ?Throwable $error = null,
-        ?bool $retryable = null,
+        ?ExecutionFailureKind $failureKind = null,
     ): void {
         try {
-            $labels = [
+            $outcome = $error === null ? 'success' : 'failure';
+            $durationMs = max(0.0, (hrtime(true) - $started) / 1_000_000);
+            $legacyLabels = [
                 'service' => $serviceKey,
                 'attempt' => (string) $attempt,
             ];
-            if ($retryable !== null) {
-                $labels['retryable'] = $retryable ? '1' : '0';
+            if ($failureKind !== null) {
+                $legacyLabels['retryable'] = $failureKind->retryable() ? '1' : '0';
             }
-            $this->metrics?->record(
-                $metric,
-                (float) round((hrtime(true) - $started) / 1_000_000),
-                $organizationId,
-                $labels,
-            );
+
+            // Preserve pre-V0.11.8 external metrics for compatibility.
+            $this->metrics?->record($legacyMetric, $durationMs, $organizationId, $legacyLabels);
+
+            $labels = [
+                'runtime' => 'external',
+                'service' => $serviceKey,
+                'outcome' => $outcome,
+            ];
+            $this->metrics?->record('cos.execution.external_call_ms', $durationMs, $organizationId, $labels);
+            $this->metrics?->record('cos.execution.throughput', 1, $organizationId, $labels);
+            if ($attempt > 1) {
+                $this->metrics?->record('cos.execution.retry_count', 1, $organizationId, [
+                    'runtime' => 'external',
+                    'service' => $serviceKey,
+                ]);
+            }
+            if ($failureKind !== null) {
+                $this->metrics?->record('cos.execution.failures', 1, $organizationId, [
+                    ...$labels,
+                    'failure_kind' => $failureKind->value,
+                    'retryable' => $failureKind->retryable() ? '1' : '0',
+                ]);
+            }
+
             if ($error !== null) {
                 $this->logger?->log('warning', 'External call failed.', [
                     'organization_id' => $organizationId,
                     'service' => $serviceKey,
                     'attempt' => $attempt,
-                    'retryable' => $retryable,
+                    'retryable' => $failureKind?->retryable(),
+                    'failure_kind' => $failureKind?->value,
                     'exception' => $error::class,
                     'error' => $error->getMessage(),
                 ]);

@@ -116,6 +116,8 @@ $di->setShared('cosActionService', fn (): ActionService => new ActionService(
     $this->getShared('eventStore'),
     $this->getShared('cosAuditRepository'),
     $this->getShared('cosTransactionManager'),
+    $this->getShared('cosMetrics'),
+    $this->getShared('cosLogger'),
 ));
 $di->setShared('cosActionPolicyService', fn (): ActionPolicyService => new ActionPolicyService(
     $this->getShared('cosActionService'),

@@ -10,6 +10,7 @@ use Kernel\Operations\Service\PeriodicMaintenanceGate;
 use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Contract\RetryAwareJobQueueInterface;
+use Kernel\Queue\Job;
 use Throwable;
 
 final class QueueWorker
@@ -39,11 +40,14 @@ final class QueueWorker
 
         $job = $this->queue->claim($workerId);
         if ($job === null) return false;
+
+        $this->observeAdmission($job);
+        $started = hrtime(true);
         try {
             $handler = $this->handlers->handlerFor($job->type);
             $handler->handle($job);
             $this->queue->complete($job);
-            $this->observe('cos.jobs.completed', $job->organizationId, $job->type);
+            $this->observeResult($job, $started);
             return true;
         } catch (Throwable $exception) {
             $failureKind = ExecutionFailureClassifier::classify($exception);
@@ -52,29 +56,69 @@ final class QueueWorker
             } else {
                 $this->queue->fail($job, $exception->getMessage());
             }
-            $this->observe('cos.jobs.failed', $job->organizationId, $job->type, $exception, $failureKind);
+            $this->observeResult($job, $started, $exception, $failureKind);
             return true;
         }
     }
 
-    private function observe(
-        string $metric,
-        string $organizationId,
-        string $jobType,
+    private function observeAdmission(Job $job): void
+    {
+        try {
+            $labels = ['runtime' => 'job', 'job_type' => $job->type];
+            $queueWaitMs = $job->queueWaitMilliseconds();
+            if ($queueWaitMs !== null) {
+                $this->metrics?->record('cos.execution.queue_wait_ms', $queueWaitMs, $job->organizationId, $labels);
+            }
+            $this->metrics?->record('cos.execution.lock_wait_ms', max(0.0, $job->lockWaitMs), $job->organizationId, [
+                ...$labels,
+                'lock_scope' => 'tenant_job',
+            ]);
+            if ($job->attempts > 1) {
+                $this->metrics?->record('cos.execution.retry_count', 1, $job->organizationId, $labels);
+            }
+        } catch (Throwable) {
+            // Telemetry is best-effort and must not alter queue admission.
+        }
+    }
+
+    private function observeResult(
+        Job $job,
+        int $started,
         ?Throwable $error = null,
         ?ExecutionFailureKind $failureKind = null,
     ): void {
         try {
-            $labels = ['job_type' => $jobType];
+            $outcome = $error === null ? 'success' : 'failure';
+            $labels = [
+                'runtime' => 'job',
+                'job_type' => $job->type,
+                'outcome' => $outcome,
+            ];
+            $durationMs = max(0.0, (hrtime(true) - $started) / 1_000_000);
+
+            // Legacy counters remain for existing dashboards.
+            $this->metrics?->record($error === null ? 'cos.jobs.completed' : 'cos.jobs.failed', 1, $job->organizationId, [
+                'job_type' => $job->type,
+            ]);
+            $this->metrics?->record('cos.execution.execution_ms', $durationMs, $job->organizationId, $labels);
+            $this->metrics?->record('cos.execution.throughput', 1, $job->organizationId, $labels);
+
             if ($failureKind !== null) {
-                $labels['failure_kind'] = $failureKind->value;
-                $labels['retryable'] = $failureKind->retryable() ? '1' : '0';
+                $failureLabels = [
+                    ...$labels,
+                    'failure_kind' => $failureKind->value,
+                    'retryable' => $failureKind->retryable() ? '1' : '0',
+                ];
+                $this->metrics?->record('cos.execution.failures', 1, $job->organizationId, $failureLabels);
             }
-            $this->metrics?->record($metric, 1, $organizationId, $labels);
+
             if ($error !== null) {
                 $this->logger?->log('error', 'COS job failed.', [
-                    'organization_id' => $organizationId,
-                    'job_type' => $jobType,
+                    'organization_id' => $job->organizationId,
+                    'correlation_id' => $job->correlationId,
+                    'job_id' => $job->id,
+                    'job_type' => $job->type,
+                    'attempt' => $job->attempts,
                     'exception' => $error::class,
                     'error' => $error->getMessage(),
                     'failure_kind' => $failureKind?->value,
