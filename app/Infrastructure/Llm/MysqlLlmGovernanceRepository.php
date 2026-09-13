@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Infrastructure\Llm;
 
+use Kernel\Llm\LlmBudgetExceededException;
+use Kernel\Llm\LlmBudgetReservation;
 use Kernel\Llm\LlmGovernanceRepositoryInterface;
 use Kernel\Llm\LlmUsageRecord;
 use PDO;
@@ -11,6 +13,8 @@ use Throwable;
 
 final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceRepositoryInterface
 {
+    private const RESERVATION_TTL_MINUTES = 60;
+
     public function __construct(
         private PDO $connection,
         private int $budgetLockTimeoutSeconds = 10,
@@ -42,36 +46,101 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
         return (float) $statement->fetchColumn();
     }
 
+    public function reserveBudget(string $organizationId, float $maxCostAmount, string $currency): LlmBudgetReservation
+    {
+        $currency = strtoupper($currency);
+        return $this->synchronizedBudget($organizationId, $currency, function () use ($organizationId, $maxCostAmount, $currency): LlmBudgetReservation {
+            $this->purgeExpiredReservations($organizationId, $currency);
+            $limit = $this->monthlyBudget($organizationId, $currency);
+            if ($limit === null) {
+                throw new RuntimeException(sprintf('Cannot reserve an undefined LLM budget for organization %s.', $organizationId));
+            }
+
+            $spent = $this->monthlySpend($organizationId, $currency);
+            $reserved = $this->activeReservedAmount($organizationId, $currency);
+            if ($spent + $reserved + $maxCostAmount > $limit) {
+                throw new LlmBudgetExceededException($organizationId, $spent + $reserved, $limit, $currency);
+            }
+
+            $reservation = new LlmBudgetReservation(bin2hex(random_bytes(16)), $organizationId, $maxCostAmount, $currency);
+            $statement = $this->connection->prepare(
+                'INSERT INTO cos_llm_budget_reservations '
+                . '(id, organization_id, currency, reserved_amount, expires_at, created_at) '
+                . 'VALUES (:id, :organization_id, :currency, :reserved_amount, '
+                . sprintf('DATE_ADD(UTC_TIMESTAMP(6), INTERVAL %d MINUTE), UTC_TIMESTAMP(6))', self::RESERVATION_TTL_MINUTES)
+            );
+            $statement->execute([
+                'id' => $reservation->id,
+                'organization_id' => $reservation->organizationId,
+                'currency' => $reservation->currency,
+                'reserved_amount' => $reservation->maxCostAmount,
+            ]);
+            return $reservation;
+        });
+    }
+
+    public function settleBudget(LlmBudgetReservation $reservation, LlmUsageRecord $usage): void
+    {
+        $this->synchronizedBudget($reservation->organizationId, $reservation->currency, function () use ($reservation, $usage): void {
+            $this->connection->beginTransaction();
+            try {
+                $statement = $this->connection->prepare(
+                    'SELECT reserved_amount FROM cos_llm_budget_reservations '
+                    . 'WHERE id = :id AND organization_id = :organization_id AND currency = :currency FOR UPDATE'
+                );
+                $statement->execute([
+                    'id' => $reservation->id,
+                    'organization_id' => $reservation->organizationId,
+                    'currency' => $reservation->currency,
+                ]);
+                if ($statement->fetchColumn() === false) {
+                    throw new RuntimeException(sprintf('LLM budget reservation %s is not active.', $reservation->id));
+                }
+
+                $this->record($usage);
+                $delete = $this->connection->prepare('DELETE FROM cos_llm_budget_reservations WHERE id = :id');
+                $delete->execute(['id' => $reservation->id]);
+                $this->connection->commit();
+            } catch (Throwable $error) {
+                if ($this->connection->inTransaction()) {
+                    $this->connection->rollBack();
+                }
+                throw $error;
+            }
+        });
+    }
+
+    public function releaseBudget(LlmBudgetReservation $reservation): void
+    {
+        $this->synchronizedBudget($reservation->organizationId, $reservation->currency, function () use ($reservation): void {
+            $statement = $this->connection->prepare(
+                'DELETE FROM cos_llm_budget_reservations WHERE id = :id AND organization_id = :organization_id AND currency = :currency'
+            );
+            $statement->execute([
+                'id' => $reservation->id,
+                'organization_id' => $reservation->organizationId,
+                'currency' => $reservation->currency,
+            ]);
+        });
+    }
+
     public function synchronizedBudget(string $organizationId, string $currency, callable $operation): mixed
     {
         $currency = strtoupper($currency);
         $lockName = 'cos.llm.' . substr(hash('sha256', $organizationId . '|' . $currency), 0, 40);
-        $statement = $this->connection->prepare(
-            sprintf('SELECT GET_LOCK(:lock_name, %d)', $this->budgetLockTimeoutSeconds)
-        );
+        $statement = $this->connection->prepare(sprintf('SELECT GET_LOCK(:lock_name, %d)', $this->budgetLockTimeoutSeconds));
         $statement->execute(['lock_name' => $lockName]);
         if ((int) $statement->fetchColumn() !== 1) {
-            throw new RuntimeException(sprintf(
-                'Unable to acquire LLM budget lock for organization %s within %d seconds.',
-                $organizationId,
-                $this->budgetLockTimeoutSeconds,
-            ));
+            throw new RuntimeException(sprintf('Unable to acquire LLM budget lock for organization %s within %d seconds.', $organizationId, $this->budgetLockTimeoutSeconds));
         }
 
         try {
             return $operation();
         } finally {
-            try {
-                $release = $this->connection->prepare('SELECT RELEASE_LOCK(:lock_name)');
-                $release->execute(['lock_name' => $lockName]);
-                if ((int) $release->fetchColumn() !== 1) {
-                    throw new RuntimeException(sprintf('Unable to release LLM budget lock for organization %s.', $organizationId));
-                }
-            } catch (Throwable $error) {
-                // A lost DB session releases MySQL advisory locks automatically. Surface every
-                // other release failure because silently retaining a live-session lock would
-                // stall subsequent governed calls for the tenant.
-                throw $error;
+            $release = $this->connection->prepare('SELECT RELEASE_LOCK(:lock_name)');
+            $release->execute(['lock_name' => $lockName]);
+            if ((int) $release->fetchColumn() !== 1) {
+                throw new RuntimeException(sprintf('Unable to release LLM budget lock for organization %s.', $organizationId));
             }
         }
     }
@@ -97,5 +166,24 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
             'latency_ms' => $usage->latencyMs,
             'fallback_count' => $usage->fallbackCount,
         ]);
+    }
+
+    private function activeReservedAmount(string $organizationId, string $currency): float
+    {
+        $statement = $this->connection->prepare(
+            'SELECT COALESCE(SUM(reserved_amount), 0) FROM cos_llm_budget_reservations '
+            . 'WHERE organization_id = :organization_id AND currency = :currency AND expires_at > UTC_TIMESTAMP(6)'
+        );
+        $statement->execute(['organization_id' => $organizationId, 'currency' => $currency]);
+        return (float) $statement->fetchColumn();
+    }
+
+    private function purgeExpiredReservations(string $organizationId, string $currency): void
+    {
+        $statement = $this->connection->prepare(
+            'DELETE FROM cos_llm_budget_reservations '
+            . 'WHERE organization_id = :organization_id AND currency = :currency AND expires_at <= UTC_TIMESTAMP(6)'
+        );
+        $statement->execute(['organization_id' => $organizationId, 'currency' => $currency]);
     }
 }

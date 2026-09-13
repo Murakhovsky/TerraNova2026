@@ -9,9 +9,15 @@ interface LlmGovernanceRepositoryInterface
 
     public function monthlySpend(string $organizationId, string $currency): float;
 
+    public function reserveBudget(string $organizationId, float $maxCostAmount, string $currency): LlmBudgetReservation;
+
+    public function settleBudget(LlmBudgetReservation $reservation, LlmUsageRecord $usage): void;
+
+    public function releaseBudget(LlmBudgetReservation $reservation): void;
+
     /**
-     * Serialize budget-sensitive work for one organization/currency pair.
-     * The implementation must keep the critical section exclusive until the callback returns.
+     * Backward-compatible low-level critical section. New governed execution must
+     * never place an external provider call inside this lock.
      *
      * @template T
      * @param callable(): T $operation

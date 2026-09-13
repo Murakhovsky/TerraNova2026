@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Kernel\Llm;
 
+use InvalidArgumentException;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
 use Throwable;
 
@@ -19,25 +20,41 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
 
     public function complete(StructuredLlmRequest $request): StructuredLlmResponse
     {
-        // Unbudgeted tenants remain fully concurrent. Budgeted tenants execute the
-        // check -> provider -> usage settlement path inside one tenant/currency lock,
-        // so two parallel agents cannot both approve against stale monthly spend.
-        if ($request->organizationId !== null
-            && $this->governance->monthlyBudget($request->organizationId, $this->budgetCurrency) !== null) {
-            return $this->governance->synchronizedBudget(
-                $request->organizationId,
-                $this->budgetCurrency,
-                fn (): StructuredLlmResponse => $this->completeGoverned($request),
-            );
+        if ($request->organizationId === null
+            || $this->governance->monthlyBudget($request->organizationId, $this->budgetCurrency) === null) {
+            return $this->completeGoverned($request);
         }
 
-        return $this->completeGoverned($request);
+        if ($request->maxCostAmount === null) {
+            throw new InvalidArgumentException('Budgeted structured LLM requests require maxCostAmount.');
+        }
+
+        try {
+            $reservation = $this->governance->reserveBudget(
+                $request->organizationId,
+                $request->maxCostAmount,
+                $this->budgetCurrency,
+            );
+        } catch (LlmBudgetExceededException $error) {
+            $this->metrics->record('llm.budget.denied', 1.0, $request->organizationId, [
+                'currency' => $this->budgetCurrency,
+                'use_case' => $request->useCase ?? 'unspecified',
+            ]);
+            throw $error;
+        }
+
+        try {
+            return $this->completeGoverned($request, $reservation);
+        } catch (Throwable $error) {
+            $this->governance->releaseBudget($reservation);
+            throw $error;
+        }
     }
 
-    private function completeGoverned(StructuredLlmRequest $request): StructuredLlmResponse
-    {
-        $this->assertBudget($request);
-
+    private function completeGoverned(
+        StructuredLlmRequest $request,
+        ?LlmBudgetReservation $reservation = null,
+    ): StructuredLlmResponse {
         $routes = $this->routing->routesFor($request);
         $correlationId = $request->correlationId ?? bin2hex(random_bytes(16));
         $started = hrtime(true);
@@ -49,7 +66,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             try {
                 $response = $this->providers->client($route->provider)->complete($routedRequest);
                 $latencyMs = $this->duration($started);
-                $this->recordSuccess($request, $response, $correlationId, $latencyMs, $fallbackCount);
+                $this->recordSuccess($request, $response, $correlationId, $latencyMs, $fallbackCount, $reservation);
                 return $response;
             } catch (LlmProviderException $error) {
                 $this->metrics->record('llm.request.error', 1.0, $request->organizationId, [
@@ -72,29 +89,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             }
         }
 
-        // Defensive only: routing policies cannot be empty.
         throw $lastRetryable ?? new LlmProviderException('unknown', false, 'No LLM route was executed.');
-    }
-
-    private function assertBudget(StructuredLlmRequest $request): void
-    {
-        if ($request->organizationId === null) {
-            return;
-        }
-
-        $limit = $this->governance->monthlyBudget($request->organizationId, $this->budgetCurrency);
-        if ($limit === null) {
-            return;
-        }
-
-        $spent = $this->governance->monthlySpend($request->organizationId, $this->budgetCurrency);
-        if ($spent >= $limit) {
-            $this->metrics->record('llm.budget.denied', 1.0, $request->organizationId, [
-                'currency' => $this->budgetCurrency,
-                'use_case' => $request->useCase ?? 'unspecified',
-            ]);
-            throw new LlmBudgetExceededException($request->organizationId, $spent, $limit, $this->budgetCurrency);
-        }
     }
 
     private function recordSuccess(
@@ -103,12 +98,13 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
         string $correlationId,
         int $latencyMs,
         int $fallbackCount,
+        ?LlmBudgetReservation $reservation,
     ): void {
         $costCurrency = $response->costAmount !== null
             ? strtoupper($response->costCurrency ?? $this->budgetCurrency)
             : null;
 
-        $this->governance->record(new LlmUsageRecord(
+        $usage = new LlmUsageRecord(
             bin2hex(random_bytes(16)),
             $request->organizationId,
             $correlationId,
@@ -121,7 +117,13 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             $costCurrency,
             $latencyMs,
             $fallbackCount,
-        ));
+        );
+
+        if ($reservation !== null) {
+            $this->governance->settleBudget($reservation, $usage);
+        } else {
+            $this->governance->record($usage);
+        }
 
         $labels = [
             'provider' => $response->provider,

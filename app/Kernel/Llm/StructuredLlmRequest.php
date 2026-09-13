@@ -14,6 +14,7 @@ final readonly class StructuredLlmRequest
         public array $responseSchema,
         public ?string $model = null,
         public ?int $maxOutputTokens = null,
+        public ?float $maxCostAmount = null,
         public ?string $organizationId = null,
         public ?string $useCase = null,
         public ?string $correlationId = null,
@@ -23,6 +24,9 @@ final readonly class StructuredLlmRequest
         }
         if ($this->maxOutputTokens !== null && $this->maxOutputTokens < 1) {
             throw new InvalidArgumentException('Structured LLM output token limit must be positive.');
+        }
+        if ($this->maxCostAmount !== null && $this->maxCostAmount <= 0.0) {
+            throw new InvalidArgumentException('Structured LLM maximum cost must be positive.');
         }
         if ($this->organizationId !== null && trim($this->organizationId) === '') {
             throw new InvalidArgumentException('Structured LLM organization id cannot be empty.');
@@ -44,6 +48,7 @@ final readonly class StructuredLlmRequest
             $this->responseSchema,
             $model,
             $this->maxOutputTokens,
+            $this->maxCostAmount,
             $this->organizationId,
             $this->useCase,
             $this->correlationId,
