@@ -5,23 +5,31 @@ namespace Domains\Property\Infrastructure\Persistence\MySql;
 
 use Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use InvalidArgumentException;
 
 final readonly class MysqlPropertySubmissionRepository implements PropertySubmissionRepositoryInterface
 {
-    public function __construct(private PdoConnection $database)
-    {
+    public function __construct(
+        private PdoConnection $database,
+        private string $organizationId,
+    ) {
+        if (trim($this->organizationId) === '') {
+            throw new InvalidArgumentException('Property submission repository requires organization scope.');
+        }
     }
 
     public function create(array $submission): int
     {
         $statement = $this->database->connection()->prepare('
             INSERT INTO tn_property_submissions (
+                organization_id,
                 submission_ref, status, source_type, deal_type, property_type, title,
                 city, region, district, address, price_amount, price_currency,
                 area_total, land_area, rooms, floor, floors, built_year, has_3d_tour,
                 media_links, description, features_text, owner_name, owner_phone,
                 owner_email, preferred_contact, source_page
             ) VALUES (
+                :organization_id,
                 :submission_ref, "new", :source_type, :deal_type, :property_type, :title,
                 :city, :region, :district, :address, :price_amount, :price_currency,
                 :area_total, :land_area, :rooms, :floor, :floors, :built_year, :has_3d_tour,
@@ -29,7 +37,7 @@ final readonly class MysqlPropertySubmissionRepository implements PropertySubmis
                 :owner_email, :preferred_contact, :source_page
             )
         ');
-        $statement->execute($submission);
+        $statement->execute(['organization_id' => $this->organizationId] + $submission);
 
         return (int) $this->database->connection()->lastInsertId();
     }
@@ -39,11 +47,18 @@ final readonly class MysqlPropertySubmissionRepository implements PropertySubmis
         return $this->database->fetchOne('
             SELECT s.*, p.slug AS property_slug, p.title AS property_title
             FROM tn_property_submissions s
-            LEFT JOIN tn_properties p ON p.id = s.property_id
+            LEFT JOIN tn_properties p
+              ON p.id = s.property_id
+             AND p.organization_id = s.organization_id
             WHERE s.id = :id
+              AND s.organization_id = :organization_id
               AND LOWER(s.owner_email) = :email
             LIMIT 1
-        ', ['id' => $id, 'email' => $email]);
+        ', [
+            'id' => $id,
+            'organization_id' => $this->organizationId,
+            'email' => $email,
+        ]);
     }
 
     public function update(int $id, array $submission): void
@@ -79,8 +94,11 @@ final readonly class MysqlPropertySubmissionRepository implements PropertySubmis
                 review_note = NULL,
                 updated_at = NOW()
             WHERE id = :id
+              AND organization_id = :organization_id
             LIMIT 1
-        ')->execute(['id' => $id] + $submission);
+        ')->execute([
+            'id' => $id,
+            'organization_id' => $this->organizationId,
+        ] + $submission);
     }
-
 }

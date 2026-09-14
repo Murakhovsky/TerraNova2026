@@ -98,6 +98,29 @@ Property also owns a tenant-scoped configuration namespace. V0.2.1 provisions it
 
 Runtime health is reported through the Kernel `ModuleReadinessDiagnostic`, so Property installation state, deployed/schema versions, migrations, dependencies and enabled state are evaluated by the same control-plane mechanism as other COS modules.
 
-## Direction after V0.2.1
+## Property V0.2.2 — Tenant boundary
 
-V0.2.2 turns organization scope from a repository convenience into a domain invariant. Later V0.2 slices introduce canonical types, commands and domain events without turning the codebase into ceremonial DDD class multiplication.
+`organization_id` is now a Property persistence invariant rather than an optional filter convention.
+
+Tenant-owned mutable Property data includes:
+
+- `tn_properties`;
+- `tn_property_groups`;
+- `tn_property_submissions`;
+- `tn_property_images`;
+- `tn_property_features`;
+- `tn_property_activities`.
+
+`tn_property_types` and `tn_locations` remain shared reference data. They describe real-world taxonomy and geography rather than organization ownership.
+
+The tenant boundary is enforced at three levels:
+
+1. persistence adapters receive the active `organizationContext` and scope reads/writes by it;
+2. mutable child rows carry `organization_id` explicitly;
+3. composite foreign keys such as `(organization_id, property_id)` prevent media, features, activities or submissions from being related to an asset owned by another organization.
+
+The management, submission and moderation persistence paths all require a non-empty organization scope. Cross-tenant IDs are treated as absent rather than as accessible records.
+
+## Direction after V0.2.2
+
+V0.2.3 introduces the canonical core domain model: `PropertyAsset`, `PropertyType`, `PropertyLocation` and `PropertyLifecycle`. Later V0.2 slices add commands, events and relationships on top of those types instead of continuing to pass anonymous arrays through every boundary.

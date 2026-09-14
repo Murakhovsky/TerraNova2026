@@ -7,6 +7,7 @@ use Domains\Property\Application\Contract\PropertyManagementRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyMediaStorageInterface;
 use Domains\Property\Model\PropertyWorkflowPolicy;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use InvalidArgumentException;
 use PDO;
 use Throwable;
 
@@ -19,6 +20,10 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         ?PropertyWorkflowPolicy $workflow = null,
     )
     {
+        if (trim($this->organizationId) === '') {
+            throw new InvalidArgumentException('Property management repository requires organization scope.');
+        }
+
         $this->workflow = $workflow ?? new PropertyWorkflowPolicy();
     }
 
@@ -35,28 +40,39 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_groups g ON g.id = p.property_group_id
+            LEFT JOIN tn_property_groups g
+              ON g.id = p.property_group_id
+             AND g.organization_id = p.organization_id
             LEFT JOIN tn_agents a ON a.id = p.agent_id
             WHERE p.id = :id
+              AND p.organization_id = :organization_id
             LIMIT 1
-        ', ['id' => $id]);
+        ', ['id' => $id, 'organization_id' => $this->organizationId]);
     }
 
     public function images(int $propertyId): array
     {
+        if (!$this->ownsProperty($propertyId)) {
+            return [];
+        }
+
         $this->syncMediaAssetsToPropertyImages($propertyId);
 
         return $this->database->fetchAll('
             SELECT id, image_url, alt_text, sort_order, is_cover, created_at
             FROM tn_property_images
             WHERE property_id = :property_id
+              AND organization_id = :organization_id
             ORDER BY is_cover DESC, sort_order, id
-        ', ['property_id' => $propertyId]);
+        ', [
+            'property_id' => $propertyId,
+            'organization_id' => $this->organizationId,
+        ]);
     }
 
     private function syncMediaAssetsToPropertyImages(int $propertyId): void
     {
-        if ($propertyId <= 0) {
+        if ($propertyId <= 0 || !$this->ownsProperty($propertyId)) {
             return;
         }
 
@@ -73,6 +89,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                   SELECT 1
                   FROM tn_property_images i
                   WHERE i.property_id = :property_id_exists
+                    AND i.organization_id = :organization_id_exists
                     AND i.image_url = a.public_url
               )
             ORDER BY r.role = "cover" DESC, r.sort_order, a.id
@@ -80,6 +97,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $media->execute([
             'property_id' => $propertyId,
             'property_id_exists' => $propertyId,
+            'organization_id_exists' => $this->organizationId,
         ]);
         $items = $media->fetchAll(PDO::FETCH_ASSOC);
 
@@ -88,8 +106,8 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         }
 
         $insert = $pdo->prepare('
-            INSERT INTO tn_property_images (property_id, image_url, alt_text, sort_order, is_cover, created_at)
-            VALUES (:property_id, :image_url, :alt_text, :sort_order, :is_cover, :created_at)
+            INSERT INTO tn_property_images (organization_id, property_id, image_url, alt_text, sort_order, is_cover, created_at)
+            VALUES (:organization_id, :property_id, :image_url, :alt_text, :sort_order, :is_cover, :created_at)
         ');
         $coverId = 0;
         $sortOrder = $this->nextSortOrder($pdo, $propertyId);
@@ -102,6 +120,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
             $isCover = (string) ($item['role'] ?? '') === 'cover' ? 1 : 0;
             $insert->execute([
+                'organization_id' => $this->organizationId,
                 'property_id' => $propertyId,
                 'image_url' => $imageUrl,
                 'alt_text' => $this->limit((string) ($item['original_name'] ?? ''), 220),
@@ -132,7 +151,10 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     public function propertyGroups(bool $activeOnly = true): array
     {
-        $where = $activeOnly ? 'WHERE g.status = "active"' : '';
+        $where = ['g.organization_id = :organization_id'];
+        if ($activeOnly) {
+            $where[] = 'g.status = "active"';
+        }
 
         return $this->database->fetchAll('
             SELECT g.id, g.title, g.slug, g.group_type, g.location_id, g.address, g.description, g.image_url, g.status,
@@ -140,11 +162,13 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                    COUNT(p.id) AS property_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
-            LEFT JOIN tn_properties p ON p.property_group_id = g.id
-            ' . $where . '
+            LEFT JOIN tn_properties p
+              ON p.property_group_id = g.id
+             AND p.organization_id = g.organization_id
+            WHERE ' . implode(' AND ', $where) . '
             GROUP BY g.id
             ORDER BY FIELD(g.status, "active") DESC, l.city, g.sort_order, g.title
-        ');
+        ', ['organization_id' => $this->organizationId]);
     }
 
     public function propertyGroup(int $id): ?array
@@ -159,16 +183,19 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                    SUM(p.status = "sold") AS sold_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
-            LEFT JOIN tn_properties p ON p.property_group_id = g.id
+            LEFT JOIN tn_properties p
+              ON p.property_group_id = g.id
+             AND p.organization_id = g.organization_id
             WHERE g.id = :id
+              AND g.organization_id = :organization_id
             GROUP BY g.id
             LIMIT 1
-        ', ['id' => $id]);
+        ', ['id' => $id, 'organization_id' => $this->organizationId]);
     }
 
     public function propertyGroupProperties(int $groupId): array
     {
-        if ($groupId <= 0) {
+        if ($groupId <= 0 || $this->propertyGroup($groupId) === null) {
             return [];
         }
 
@@ -207,6 +234,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
             $data = [
                 'id' => $groupId,
+                'organization_id' => $this->organizationId,
                 'title' => $title,
                 'slug' => $this->uniqueGroupSlug($pdo, $slug, $groupId),
                 'group_type' => $this->allowed((string) ($input['group_type'] ?? $group['group_type']), ['address', 'building', 'complex', 'project', 'location'], (string) $group['group_type']),
@@ -239,6 +267,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     sort_order = :sort_order,
                     updated_at = NOW()
                 WHERE id = :id
+                  AND organization_id = :organization_id
                 LIMIT 1
             ');
             $statement->execute($data);
@@ -259,6 +288,10 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     public function activities(int $propertyId, int $limit = 20): array
     {
+        if (!$this->ownsProperty($propertyId)) {
+            return [];
+        }
+
         $limit = max(1, min(50, $limit));
 
         return $this->database->fetchAll('
@@ -267,39 +300,64 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             FROM tn_property_activities a
             LEFT JOIN tn_users u ON u.id = a.user_id
             WHERE a.property_id = :property_id
+              AND a.organization_id = :organization_id
             ORDER BY a.created_at DESC, a.id DESC
             LIMIT ' . $limit . '
-        ', ['property_id' => $propertyId]);
+        ', [
+            'property_id' => $propertyId,
+            'organization_id' => $this->organizationId,
+        ]);
     }
 
     public function inboundRequests(int $propertyId): array
     {
+        if (!$this->ownsProperty($propertyId)) {
+            return [];
+        }
+
         return $this->database->fetchAll('
             SELECT l.id, l.full_name, l.phone, l.email, l.role, l.deal_type, l.status, l.source_page, l.created_at,
                    l.client_case_id,
                    c.public_id AS case_public_id, c.title AS case_title, c.stage AS case_stage, c.status AS case_status
             FROM tn_leads l
-            LEFT JOIN tn_client_cases c ON c.id = l.client_case_id
+            LEFT JOIN tn_client_cases c
+              ON c.id = l.client_case_id
+             AND c.organization_id = l.organization_id
             WHERE l.property_id = :property_id
+              AND l.organization_id = :organization_id
             ORDER BY l.created_at DESC, l.id DESC
             LIMIT 30
-        ', ['property_id' => $propertyId]);
+        ', [
+            'property_id' => $propertyId,
+            'organization_id' => $this->organizationId,
+        ]);
     }
 
     public function caseMatches(int $propertyId): array
     {
+        if (!$this->ownsProperty($propertyId)) {
+            return [];
+        }
+
         return $this->database->fetchAll('
             SELECT m.id, m.match_status, m.score, m.note, m.created_at, m.updated_at,
                    c.id AS case_id, c.public_id AS case_public_id, c.title AS case_title,
                    c.type AS case_type, c.stage AS case_stage, c.status AS case_status,
                    p.full_name, p.phone, p.email
             FROM tn_client_case_property_matches m
-            INNER JOIN tn_client_cases c ON c.id = m.client_case_id
-            INNER JOIN tn_people p ON p.id = c.person_id
+            INNER JOIN tn_client_cases c
+              ON c.id = m.client_case_id
+             AND c.organization_id = :organization_id
+            INNER JOIN tn_people p
+              ON p.id = c.person_id
+             AND p.organization_id = c.organization_id
             WHERE m.property_id = :property_id
             ORDER BY FIELD(m.match_status, "interested", "viewing", "sent", "suggested", "deal", "rejected"), m.updated_at DESC
             LIMIT 30
-        ', ['property_id' => $propertyId]);
+        ', [
+            'property_id' => $propertyId,
+            'organization_id' => $this->organizationId,
+        ]);
     }
 
     public function adminFilters(array $query): array
@@ -323,7 +381,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     public function adminProperties(array $filters): array
     {
-        $where = ['1 = 1'];
+        $where = ['p.organization_id = :organization_id'];
         $params = ['organization_id' => $this->organizationId];
 
         if (($filters['q'] ?? '') !== '') {
@@ -382,12 +440,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                 (
                     SELECT image.image_url FROM tn_property_images image
                     WHERE image.property_id = p.id
+                      AND image.organization_id = p.organization_id
                     ORDER BY image.is_cover DESC, image.sort_order, image.id
                     LIMIT 1
                 ) AS cover_url,
                 (
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
+                      AND image_count.organization_id = p.organization_id
                 ) AS image_count,
                 (
                     SELECT COUNT(*) FROM tn_leads inbound_request_count
@@ -397,7 +457,9 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_groups g ON g.id = p.property_group_id
+            LEFT JOIN tn_property_groups g
+              ON g.id = p.property_group_id
+             AND g.organization_id = p.organization_id
             LEFT JOIN tn_agents a ON a.id = p.agent_id
             WHERE ' . implode(' AND ', $where) . '
             ORDER BY ' . $orderBy . '
@@ -468,8 +530,9 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $rows = $this->database->fetchAll('
             SELECT status, COUNT(*) AS total
             FROM tn_properties
+            WHERE organization_id = :organization_id
             GROUP BY status
-        ');
+        ', ['organization_id' => $this->organizationId]);
 
         $stats = [
             'total' => 0,
@@ -500,7 +563,12 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         }
         $stats['total'] = $stats['all'];
 
-        foreach ($this->database->fetchAll('SELECT visibility, COUNT(*) AS total FROM tn_properties GROUP BY visibility') as $row) {
+        foreach ($this->database->fetchAll('
+            SELECT visibility, COUNT(*) AS total
+            FROM tn_properties
+            WHERE organization_id = :organization_id
+            GROUP BY visibility
+        ', ['organization_id' => $this->organizationId]) as $row) {
             $visibility = (string) ($row['visibility'] ?? '');
             if (array_key_exists($visibility, $stats['visibility'])) {
                 $stats['visibility'][$visibility] = (int) ($row['total'] ?? 0);
@@ -570,6 +638,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
             $stage = $this->operationalStage((string) ($input['operational_stage'] ?? 'intake')) ?: 'intake';
             $data = [
+                'organization_id' => $this->organizationId,
                 'public_id' => $publicId,
                 'slug' => $this->uniqueSlug($pdo, $slug, 0),
                 'title' => $title,
@@ -617,6 +686,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
             $statement = $pdo->prepare('
                 INSERT INTO tn_properties (
+                    organization_id,
                     public_id, slug, title, deal_type, type_id, status, source_type, location_id, agent_id,
                     property_group_id,
                     price_amount, price_currency, price_period, min_price_amount,
@@ -626,6 +696,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     address, short_description, description, manager_note, source_note,
                     operational_stage, next_action_title, next_action_due_at, next_action_note
                 ) VALUES (
+                    :organization_id,
                     :public_id, :slug, :title, :deal_type, :type_id, :status, :source_type, :location_id, :agent_id,
                     :property_group_id,
                     :price_amount, :price_currency, :price_period, :min_price_amount,
@@ -667,8 +738,6 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             $this->logError('property-create-draft', $e);
 
             return ['ok' => false, 'message' => $this->publicErrorMessage($e, 'Не вдалося створити об’єкт. Деталі записано в лог.')];
-
-            return ['ok' => false, 'message' => 'Не вдалося створити об’єкт. Деталі записано в лог.'];
         }
     }
 
@@ -741,10 +810,12 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     END,
                     updated_at = NOW()
                 WHERE id = :id
+                  AND organization_id = :organization_id
                 LIMIT 1
             ');
             $statement->execute([
                 'id' => $propertyId,
+                'organization_id' => $this->organizationId,
                 'status' => $status,
                 'status_note' => $note,
                 'status_changed_at' => $statusChangedAt,
@@ -837,6 +908,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
             $data = [
                 'id' => $propertyId,
+                'organization_id' => $this->organizationId,
                 'slug' => $this->uniqueSlug($pdo, $slug, $propertyId),
                 'title' => $title,
                 'deal_type' => $this->allowed((string) ($input['deal_type'] ?? $property['deal_type']), ['sale', 'rent', 'investment'], (string) $property['deal_type']),
@@ -974,6 +1046,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     END,
                     updated_at = NOW()
                 WHERE id = :id
+                  AND organization_id = :organization_id
                 LIMIT 1
             ');
             $statement->execute($data);
@@ -1068,8 +1141,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             $coverId = $uploadedCoverId ?: (int) ($input['cover_image_id'] ?? 0);
             $this->ensureCover($pdo, $propertyId, $coverId);
 
-            $touch = $pdo->prepare('UPDATE tn_properties SET updated_at = NOW() WHERE id = :id LIMIT 1');
-            $touch->execute(['id' => $propertyId]);
+            $touch = $pdo->prepare('
+                UPDATE tn_properties
+                SET updated_at = NOW()
+                WHERE id = :id
+                  AND organization_id = :organization_id
+                LIMIT 1
+            ');
+            $touch->execute(['id' => $propertyId, 'organization_id' => $this->organizationId]);
 
             $this->insertActivity(
                 $pdo,
@@ -1091,8 +1170,6 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             $this->logError('property-media-update', $e);
 
             return ['ok' => false, 'message' => $this->publicErrorMessage($e, 'Не вдалося оновити медіа. Деталі записано в лог.')];
-
-            return ['ok' => false, 'message' => 'Не вдалося оновити медіа. Деталі записано в лог.'];
         }
     }
 
@@ -1129,8 +1206,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                 $body
             );
 
-            $touch = $pdo->prepare('UPDATE tn_properties SET updated_at = NOW() WHERE id = :id LIMIT 1');
-            $touch->execute(['id' => $propertyId]);
+            $touch = $pdo->prepare('
+                UPDATE tn_properties
+                SET updated_at = NOW()
+                WHERE id = :id
+                  AND organization_id = :organization_id
+                LIMIT 1
+            ');
+            $touch->execute(['id' => $propertyId, 'organization_id' => $this->organizationId]);
 
             $pdo->commit();
 
@@ -1179,8 +1262,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     $this->nullableText((string) ($input['activity_body'] ?? 'Публічне посилання на картку обʼєкта передано клієнту.'))
                 );
 
-                $touch = $pdo->prepare('UPDATE tn_properties SET updated_at = NOW() WHERE id = :id LIMIT 1');
-                $touch->execute(['id' => $propertyId]);
+                $touch = $pdo->prepare('
+                    UPDATE tn_properties
+                    SET updated_at = NOW()
+                    WHERE id = :id
+                      AND organization_id = :organization_id
+                    LIMIT 1
+                ');
+                $touch->execute(['id' => $propertyId, 'organization_id' => $this->organizationId]);
                 $pdo->commit();
 
                 return ['ok' => true, 'message' => 'Відправку посилання зафіксовано в журналі.'];
@@ -1204,10 +1293,12 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                         next_action_note = :next_action_note,
                         updated_at = NOW()
                     WHERE id = :id
+                      AND organization_id = :organization_id
                     LIMIT 1
                 ');
                 $statement->execute([
                     'id' => $propertyId,
+                    'organization_id' => $this->organizationId,
                     'next_action_title' => $nextActionTitle,
                     'next_action_due_at' => $nextActionDueAt,
                     'next_action_note' => $nextActionNote,
@@ -1270,10 +1361,12 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     next_action_note = :next_action_note,
                     updated_at = NOW()
                 WHERE id = :id
+                  AND organization_id = :organization_id
                 LIMIT 1
             ');
             $statement->execute([
                 'id' => $propertyId,
+                'organization_id' => $this->organizationId,
                 'operational_stage' => $nextStage,
                 'next_action_title' => $stageData['next_action_title'],
                 'next_action_due_at' => $stageData['next_action_due_at'],
@@ -1319,10 +1412,32 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         return $this->readinessForData($property, count($this->images($propertyId)));
     }
 
+    private function ownsProperty(int $propertyId): bool
+    {
+        if ($propertyId <= 0) {
+            return false;
+        }
+
+        return $this->database->fetchOne('
+            SELECT id
+            FROM tn_properties
+            WHERE id = :id
+              AND organization_id = :organization_id
+            LIMIT 1
+        ', ['id' => $propertyId, 'organization_id' => $this->organizationId]) !== null;
+    }
+
     private function propertyForUpdate(PDO $pdo, int $propertyId): ?array
     {
-        $statement = $pdo->prepare('SELECT * FROM tn_properties WHERE id = :id LIMIT 1 FOR UPDATE');
-        $statement->execute(['id' => $propertyId]);
+        $statement = $pdo->prepare('
+            SELECT *
+            FROM tn_properties
+            WHERE id = :id
+              AND organization_id = :organization_id
+            LIMIT 1
+            FOR UPDATE
+        ');
+        $statement->execute(['id' => $propertyId, 'organization_id' => $this->organizationId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
@@ -1330,8 +1445,15 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     private function propertyGroupForUpdate(PDO $pdo, int $groupId): ?array
     {
-        $statement = $pdo->prepare('SELECT * FROM tn_property_groups WHERE id = :id LIMIT 1 FOR UPDATE');
-        $statement->execute(['id' => $groupId]);
+        $statement = $pdo->prepare('
+            SELECT *
+            FROM tn_property_groups
+            WHERE id = :id
+              AND organization_id = :organization_id
+            LIMIT 1
+            FOR UPDATE
+        ');
+        $statement->execute(['id' => $groupId, 'organization_id' => $this->organizationId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
@@ -1379,8 +1501,16 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     private function imageCount(PDO $pdo, int $propertyId): int
     {
-        $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_property_images WHERE property_id = :property_id');
-        $statement->execute(['property_id' => $propertyId]);
+        $statement = $pdo->prepare('
+            SELECT COUNT(*)
+            FROM tn_property_images
+            WHERE property_id = :property_id
+              AND organization_id = :organization_id
+        ');
+        $statement->execute([
+            'property_id' => $propertyId,
+            'organization_id' => $this->organizationId,
+        ]);
 
         return (int) $statement->fetchColumn();
     }
@@ -1437,8 +1567,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             return null;
         }
 
-        $statement = $pdo->prepare('SELECT id FROM tn_client_cases WHERE id = :id LIMIT 1');
-        $statement->execute(['id' => $id]);
+        $statement = $pdo->prepare('
+            SELECT id
+            FROM tn_client_cases
+            WHERE id = :id
+              AND organization_id = :organization_id
+            LIMIT 1
+        ');
+        $statement->execute(['id' => $id, 'organization_id' => $this->organizationId]);
 
         return $statement->fetchColumn() ? $id : $fallback;
     }
@@ -1480,10 +1616,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         ?string $newValue = null
     ): void {
         $statement = $pdo->prepare('
-            INSERT INTO tn_property_activities (property_id, user_id, activity_type, title, body, old_value, new_value)
-            VALUES (:property_id, :user_id, :activity_type, :title, :body, :old_value, :new_value)
+            INSERT INTO tn_property_activities (
+                organization_id, property_id, user_id, activity_type, title, body, old_value, new_value
+            ) VALUES (
+                :organization_id, :property_id, :user_id, :activity_type, :title, :body, :old_value, :new_value
+            )
         ');
         $statement->execute([
+            'organization_id' => $this->organizationId,
             'property_id' => $propertyId,
             'user_id' => $userId && $userId > 0 ? $userId : null,
             'activity_type' => $type,
@@ -1518,10 +1658,12 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $statement = $pdo->prepare('
             SELECT id
             FROM tn_property_groups
-            WHERE id = :id AND status = "active"
+            WHERE id = :id
+              AND organization_id = :organization_id
+              AND status = "active"
             LIMIT 1
         ');
-        $statement->execute(['id' => $groupId]);
+        $statement->execute(['id' => $groupId, 'organization_id' => $this->organizationId]);
 
         return $statement->fetchColumn() ? $groupId : null;
     }
@@ -1534,10 +1676,11 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         }
 
         $statement = $pdo->prepare('
-            INSERT INTO tn_property_groups (title, slug, group_type, location_id, address)
-            VALUES (:title, :slug, "address", :location_id, :address)
+            INSERT INTO tn_property_groups (organization_id, title, slug, group_type, location_id, address)
+            VALUES (:organization_id, :title, :slug, "address", :location_id, :address)
         ');
         $statement->execute([
+            'organization_id' => $this->organizationId,
             'title' => $title,
             'slug' => $this->uniqueGroupSlug($pdo, $slugBase),
             'location_id' => $locationId,
@@ -1724,12 +1867,12 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         }
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $select = $pdo->prepare('SELECT image_url FROM tn_property_images WHERE property_id = ? AND id IN (' . $placeholders . ')');
-        $select->execute(array_merge([$propertyId], $ids));
+        $select = $pdo->prepare('SELECT image_url FROM tn_property_images WHERE organization_id = ? AND property_id = ? AND id IN (' . $placeholders . ')');
+        $select->execute(array_merge([$this->organizationId, $propertyId], $ids));
         $publicUrls = $select->fetchAll(PDO::FETCH_COLUMN);
 
-        $statement = $pdo->prepare('DELETE FROM tn_property_images WHERE property_id = ? AND id IN (' . $placeholders . ')');
-        $statement->execute(array_merge([$propertyId], $ids));
+        $statement = $pdo->prepare('DELETE FROM tn_property_images WHERE organization_id = ? AND property_id = ? AND id IN (' . $placeholders . ')');
+        $statement->execute(array_merge([$this->organizationId, $propertyId], $ids));
 
         $this->mediaStorage->markDeletedByPublicUrls('property', $propertyId, $publicUrls ?: []);
     }
@@ -1739,7 +1882,9 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $statement = $pdo->prepare('
             UPDATE tn_property_images
             SET alt_text = :alt_text, sort_order = :sort_order
-            WHERE property_id = :property_id AND id = :id
+            WHERE organization_id = :organization_id
+              AND property_id = :property_id
+              AND id = :id
             LIMIT 1
         ');
 
@@ -1752,6 +1897,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
             $statement->execute([
                 'id' => $imageId,
+                'organization_id' => $this->organizationId,
                 'property_id' => $propertyId,
                 'alt_text' => $this->nullable((string) ($image['alt_text'] ?? ''), 220),
                 'sort_order' => max(0, (int) ($image['sort_order'] ?? 100)),
@@ -1768,8 +1914,8 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $coverId = null;
         $sortOrder = $this->nextSortOrder($pdo, $propertyId);
         $statement = $pdo->prepare('
-            INSERT INTO tn_property_images (property_id, image_url, alt_text, sort_order, is_cover)
-            VALUES (:property_id, :image_url, :alt_text, :sort_order, :is_cover)
+            INSERT INTO tn_property_images (organization_id, property_id, image_url, alt_text, sort_order, is_cover)
+            VALUES (:organization_id, :property_id, :image_url, :alt_text, :sort_order, :is_cover)
         ');
 
         foreach ($uploaded as $asset) {
@@ -1778,6 +1924,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             $sort = $isCover ? 5 : $sortOrder;
 
             $statement->execute([
+                'organization_id' => $this->organizationId,
                 'property_id' => $propertyId,
                 'image_url' => $this->limit((string) $asset['public_url'], 700),
                 'alt_text' => $this->limit($title, 220),
@@ -1798,21 +1945,43 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     private function ensureCover(PDO $pdo, int $propertyId, int $coverId): void
     {
-        $pdo->prepare('UPDATE tn_property_images SET is_cover = 0 WHERE property_id = :property_id')
-            ->execute(['property_id' => $propertyId]);
+        $pdo->prepare('
+            UPDATE tn_property_images
+            SET is_cover = 0
+            WHERE organization_id = :organization_id
+              AND property_id = :property_id
+        ')->execute([
+            'organization_id' => $this->organizationId,
+            'property_id' => $propertyId,
+        ]);
 
         if ($coverId > 0) {
             $statement = $pdo->prepare('
                 UPDATE tn_property_images
                 SET is_cover = 1, sort_order = LEAST(sort_order, 10)
-                WHERE property_id = :property_id AND id = :id
+                WHERE organization_id = :organization_id
+                  AND property_id = :property_id
+                  AND id = :id
                 LIMIT 1
             ');
-            $statement->execute(['property_id' => $propertyId, 'id' => $coverId]);
+            $statement->execute([
+                'organization_id' => $this->organizationId,
+                'property_id' => $propertyId,
+                'id' => $coverId,
+            ]);
         }
 
-        $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_property_images WHERE property_id = :property_id AND is_cover = 1');
-        $statement->execute(['property_id' => $propertyId]);
+        $statement = $pdo->prepare('
+            SELECT COUNT(*)
+            FROM tn_property_images
+            WHERE organization_id = :organization_id
+              AND property_id = :property_id
+              AND is_cover = 1
+        ');
+        $statement->execute([
+            'organization_id' => $this->organizationId,
+            'property_id' => $propertyId,
+        ]);
 
         if ((int) $statement->fetchColumn() > 0) {
             $this->syncMediaRelationsFromPropertyImages($pdo, $propertyId);
@@ -1822,11 +1991,15 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $fallback = $pdo->prepare('
             UPDATE tn_property_images
             SET is_cover = 1
-            WHERE property_id = :property_id
+            WHERE organization_id = :organization_id
+              AND property_id = :property_id
             ORDER BY sort_order, id
             LIMIT 1
         ');
-        $fallback->execute(['property_id' => $propertyId]);
+        $fallback->execute([
+            'organization_id' => $this->organizationId,
+            'property_id' => $propertyId,
+        ]);
 
         $this->syncMediaRelationsFromPropertyImages($pdo, $propertyId);
     }
@@ -1837,9 +2010,14 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             SELECT image_url AS public_url,
                    CASE WHEN is_cover = 1 THEN "cover" ELSE "gallery" END AS role,
                    sort_order
-            FROM tn_property_images WHERE property_id = :property_id
+            FROM tn_property_images
+            WHERE organization_id = :organization_id
+              AND property_id = :property_id
         ');
-        $statement->execute(['property_id' => $propertyId]);
+        $statement->execute([
+            'organization_id' => $this->organizationId,
+            'property_id' => $propertyId,
+        ]);
         $this->mediaStorage->syncRelationMetadata(
             'property', $propertyId, $statement->fetchAll(PDO::FETCH_ASSOC),
         );
@@ -1847,8 +2025,16 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     private function nextSortOrder(PDO $pdo, int $propertyId): int
     {
-        $statement = $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM tn_property_images WHERE property_id = :property_id');
-        $statement->execute(['property_id' => $propertyId]);
+        $statement = $pdo->prepare('
+            SELECT COALESCE(MAX(sort_order), 0) + 10
+            FROM tn_property_images
+            WHERE organization_id = :organization_id
+              AND property_id = :property_id
+        ');
+        $statement->execute([
+            'organization_id' => $this->organizationId,
+            'property_id' => $propertyId,
+        ]);
 
         return max(10, (int) $statement->fetchColumn());
     }

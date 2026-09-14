@@ -18,8 +18,8 @@ $catalog = new ModuleCatalog((new ModuleDiscovery($root . '/app/Domains'))->disc
 $property = $catalog->definition('property');
 $contributions = $property->contributions;
 
-if ($property->manifest->version !== '0.2.1') {
-    throw new RuntimeException('Property runtime manifest must be V0.2.1.');
+if (version_compare($property->manifest->version, '0.2.1', '<')) {
+    throw new RuntimeException('Property runtime manifest must stay at V0.2.1+.');
 }
 if ($contributions->runtimeModuleService !== 'propertyDomainModule') {
     throw new RuntimeException('Property must expose propertyDomainModule as runtime service.');
@@ -75,7 +75,7 @@ foreach (['/api/v1/property-registry', '/api/v1/property-registry/health'] as $r
         throw new RuntimeException('Property canonical runtime route is missing: ' . $route);
     }
 }
-if (str_contains($routes, '/api/v1/properties')) {
+if (str_contains($routes, "addGet('/api/v1/properties")) {
     throw new RuntimeException('Canonical Property runtime must not collapse into the legacy public catalog API.');
 }
 

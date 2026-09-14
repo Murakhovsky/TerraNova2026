@@ -7,6 +7,7 @@ use Domains\Property\Application\Contract\PropertyModerationRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyMediaStorageInterface;
 use Domains\Property\Application\Contract\LocationReferenceInterface;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use InvalidArgumentException;
 use PDO;
 use Throwable;
 
@@ -16,23 +17,27 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
         private PdoConnection $database,
         private PropertyMediaStorageInterface $mediaStorage,
         private LocationReferenceInterface $locations,
+        private string $organizationId,
     ) {
+        if (trim($this->organizationId) === '') {
+            throw new InvalidArgumentException('Property moderation repository requires organization scope.');
+        }
     }
 
     public function submissions(string $status = ''): array
     {
-        $where = '';
-        $params = [];
+        $where = ['s.organization_id = :organization_id'];
+        $params = ['organization_id' => $this->organizationId];
 
         if ($status !== '' && in_array($status, $this->submissionStatuses(), true)) {
-            $where = 'WHERE s.status = :status';
+            $where[] = 's.status = :status';
             $params['status'] = $status;
         }
 
         return $this->database->fetchAll('
             SELECT s.*
             FROM tn_property_submissions s
-            ' . $where . '
+            WHERE ' . implode(' AND ', $where) . '
             ORDER BY
                 FIELD(s.status, "new", "submitted", "review", "in_review", "needs_changes", "accepted", "approved", "published", "rejected", "spam"),
                 s.created_at DESC,
@@ -46,10 +51,13 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
         return $this->database->fetchOne('
             SELECT s.*, p.public_id, p.slug AS property_slug, p.status AS property_status
             FROM tn_property_submissions s
-            LEFT JOIN tn_properties p ON p.id = s.property_id
+            LEFT JOIN tn_properties p
+              ON p.id = s.property_id
+             AND p.organization_id = s.organization_id
             WHERE s.id = :id
+              AND s.organization_id = :organization_id
             LIMIT 1
-        ', ['id' => $id]);
+        ', ['id' => $id, 'organization_id' => $this->organizationId]);
     }
 
     public function counts(): array
@@ -57,8 +65,9 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
         $rows = $this->database->fetchAll('
             SELECT status, COUNT(*) AS total
             FROM tn_property_submissions
+            WHERE organization_id = :organization_id
             GROUP BY status
-        ');
+        ', ['organization_id' => $this->organizationId]);
 
         $counts = array_fill_keys($this->submissionStatuses(), 0);
         foreach ($rows as $row) {
@@ -70,6 +79,10 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
 
     public function submissionMedia(int $id): array
     {
+        if ($this->submission($id) === null) {
+            return [];
+        }
+
         return $this->mediaStorage->assetsFor('property_submission', $id);
     }
 
@@ -79,10 +92,12 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
             UPDATE tn_property_submissions
             SET status = :status, reviewed_at = NOW(), review_note = :note
             WHERE id = :id
+              AND organization_id = :organization_id
             LIMIT 1
         ');
         $statement->execute([
             'id' => $id,
+            'organization_id' => $this->organizationId,
             'status' => $status,
             'note' => $this->nullable($note, 500),
         ]);
@@ -136,11 +151,13 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
 
             $statement = $pdo->prepare('
                 INSERT INTO tn_properties (
+                    organization_id,
                     public_id, slug, title, deal_type, type_id, status, source_type, location_id, agent_id,
                     price_amount, price_currency, price_period, area_total, land_area, rooms, floor, floors, built_year,
                     address, short_description, description, features_json, is_featured, has_3d_tour, tour_url,
                     meta_title, meta_description, published_at
                 ) VALUES (
+                    :organization_id,
                     :public_id, :slug, :title, :deal_type, :type_id, "active", :source_type, :location_id, :agent_id,
                     :price_amount, :price_currency, "total", :area_total, :land_area, :rooms, :floor, :floors, :built_year,
                     :address, :short_description, :description, :features_json, 0, :has_3d_tour, :tour_url,
@@ -148,6 +165,7 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
                 )
             ');
             $statement->execute([
+                'organization_id' => $this->organizationId,
                 'public_id' => $publicId,
                 'slug' => $slug,
                 'title' => $this->limit((string) $submission['title'], 220),
@@ -209,10 +227,12 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
                 UPDATE tn_property_submissions
                 SET status = "published", property_id = :property_id, reviewed_at = NOW(), review_note = :note
                 WHERE id = :id
+                  AND organization_id = :organization_id
                 LIMIT 1
             ');
             $update->execute([
                 'id' => $id,
+                'organization_id' => $this->organizationId,
                 'property_id' => $propertyId,
                 'note' => $this->nullable($note, 500),
             ]);
@@ -233,8 +253,15 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
 
     private function submissionForUpdate(PDO $pdo, int $id): ?array
     {
-        $statement = $pdo->prepare('SELECT * FROM tn_property_submissions WHERE id = :id LIMIT 1 FOR UPDATE');
-        $statement->execute(['id' => $id]);
+        $statement = $pdo->prepare('
+            SELECT *
+            FROM tn_property_submissions
+            WHERE id = :id
+              AND organization_id = :organization_id
+            LIMIT 1
+            FOR UPDATE
+        ');
+        $statement->execute(['id' => $id, 'organization_id' => $this->organizationId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
@@ -305,10 +332,11 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
     private function insertImage(PDO $pdo, int $propertyId, string $url, string $title, int $sortOrder = 10): void
     {
         $statement = $pdo->prepare('
-            INSERT IGNORE INTO tn_property_images (property_id, image_url, alt_text, sort_order, is_cover)
-            VALUES (:property_id, :image_url, :alt_text, :sort_order, :is_cover)
+            INSERT IGNORE INTO tn_property_images (organization_id, property_id, image_url, alt_text, sort_order, is_cover)
+            VALUES (:organization_id, :property_id, :image_url, :alt_text, :sort_order, :is_cover)
         ');
         $statement->execute([
+            'organization_id' => $this->organizationId,
             'property_id' => $propertyId,
             'image_url' => $this->limit($url, 700),
             'alt_text' => $this->limit($title, 220),
@@ -320,10 +348,11 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
     private function insertFeature(PDO $pdo, int $propertyId, string $key, string $value): void
     {
         $statement = $pdo->prepare('
-            INSERT IGNORE INTO tn_property_features (property_id, feature_key, feature_value, sort_order)
-            VALUES (:property_id, :feature_key, :feature_value, 10)
+            INSERT IGNORE INTO tn_property_features (organization_id, property_id, feature_key, feature_value, sort_order)
+            VALUES (:organization_id, :property_id, :feature_key, :feature_value, 10)
         ');
         $statement->execute([
+            'organization_id' => $this->organizationId,
             'property_id' => $propertyId,
             'feature_key' => $this->limit($key, 80),
             'feature_value' => $this->limit($value, 255),

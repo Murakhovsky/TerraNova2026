@@ -10,6 +10,7 @@ on:
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
+      - 'app/migrations/*property*.sql'
       - 'tests/architecture/property_*.php'
       - 'tests/smoke/property_*.php'
       - '.github/workflows/property.yml'
@@ -23,6 +24,7 @@ on:
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
+      - 'app/migrations/*property*.sql'
       - 'tests/architecture/property_*.php'
       - 'tests/smoke/property_*.php'
       - '.github/workflows/property.yml'
@@ -41,6 +43,7 @@ jobs:
         run: |
           php tests/architecture/property_domain_definition.php
           php tests/architecture/property_v021_runtime.php
+          php tests/architecture/property_v022_tenant_boundary.php
 
       - name: Property compatibility smoke
         run: |
@@ -57,3 +60,4 @@ jobs:
           php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
           php -l tests/architecture/property_domain_definition.php
           php -l tests/architecture/property_v021_runtime.php
+          php -l tests/architecture/property_v022_tenant_boundary.php

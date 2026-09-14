@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.2.1',
-    'schema_version' => '0.1.1',
+    'version' => '0.2.2',
+    'schema_version' => '0.2.2',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Canonical registry of physical real-estate assets, their intrinsic facts, location, lifecycle and relations.',
     'icon' => 'building',
@@ -27,6 +27,7 @@ return [
         ],
         'migration_files' => [
             'app/migrations/20260914_000048_web_v041_property_tenancy.sql',
+            'app/migrations/20260914_000050_property_v022_tenant_boundary.sql',
         ],
         'capabilities' => [
             'property.registry',

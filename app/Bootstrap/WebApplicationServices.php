@@ -83,12 +83,17 @@ final class WebApplicationServices
         ));
         $di->setShared('frontendInboundRequestService', fn() => new InboundRequestService($di->getShared('salesReceivePublicLead')));
 
-        $di->setShared('propertySubmissionRepository', fn() => new MysqlPropertySubmissionRepository($di->getShared('databaseService')));
+        $di->setShared('propertySubmissionRepository', fn() => new MysqlPropertySubmissionRepository(
+            $di->getShared('databaseService'), $di->getShared('organizationContext')->id(),
+        ));
         $di->setShared('frontendPropertySubmissionService', fn() => new PropertySubmissionService(
             $di->getShared('propertySubmissionRepository'), $di->getShared('mediaStorageService'), null, $di->getShared('propertyAnalytics'),
         ));
         $di->setShared('propertyModerationRepository', fn() => new MysqlPropertyModerationRepository(
-            $di->getShared('databaseService'), $di->getShared('mediaStorageService'), new MysqlLocationReference($di->getShared('databaseService')),
+            $di->getShared('databaseService'),
+            $di->getShared('mediaStorageService'),
+            new MysqlLocationReference($di->getShared('databaseService')),
+            $di->getShared('organizationContext')->id(),
         ));
         $di->setShared('frontendPropertyModerationService', fn() => new PropertyModerationService($di->getShared('propertyModerationRepository')));
         $di->setShared('propertyManagementRepository', fn() => new MysqlPropertyManagementRepository(
