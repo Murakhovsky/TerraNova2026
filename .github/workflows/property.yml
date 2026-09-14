@@ -47,6 +47,7 @@ jobs:
           php tests/architecture/property_v021_runtime.php
           php tests/architecture/property_v022_tenant_boundary.php
           php tests/architecture/property_v030_registry_schema.php
+          php tests/architecture/property_v040_identity_schema.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -56,6 +57,9 @@ jobs:
 
       - name: Property asset registry and structure
         run: php tests/unit/property_v030_asset_registry_structure.php
+
+      - name: Property identity provenance and relations
+        run: php tests/unit/property_v040_identity_provenance.php
 
       - name: Property compatibility smoke
         run: |
@@ -74,6 +78,8 @@ jobs:
           php -l tests/architecture/property_v021_runtime.php
           php -l tests/architecture/property_v022_tenant_boundary.php
           php -l tests/architecture/property_v030_registry_schema.php
+          php -l tests/architecture/property_v040_identity_schema.php
           php -l tests/unit/property_v023_core_model.php
           php -l tests/unit/property_v024_commands_events.php
           php -l tests/unit/property_v030_asset_registry_structure.php
+          php -l tests/unit/property_v040_identity_provenance.php

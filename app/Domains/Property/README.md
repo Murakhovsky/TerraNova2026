@@ -1,52 +1,43 @@
 # Property Domain
 
-## Property V0.2.0 — Canonical Domain Definition
-
 Property is the COS canonical registry of **physical real-estate assets**.
 
-Its authority is the identity and intrinsic state of real property: what physically exists, where it is, what it is, how it is structured, its lifecycle state, media that documents the asset, and explicit relations to the asset.
+Its authority is the identity and intrinsic state of real property: what physically exists, where it is, what it is, how it is structured, its lifecycle state, where facts came from, and explicit relations to the asset.
 
-Property is not the Sales domain, not CRM, and not the public advertising catalog.
+Property is not Sales, CRM, Inventory or Listing.
 
 ## Ubiquitous language
 
-The canonical Property vocabulary is:
-
-- `PropertyAsset` — a physical real-estate asset with stable identity.
-- `PropertyType` — the physical/category classification of an asset.
-- `PropertyLocation` — address, spatial identity and geospatial facts of an asset.
-- `PropertyLifecycle` — the asset lifecycle independent of a sales pipeline.
-- `PropertyRelation` — explicit relationships between an asset and other domain identities.
+- `PropertyAsset` — a physical real-estate asset or structural node with stable canonical identity.
+- `PropertyIdentity` — tenant-local canonical identity `(organization_id, asset_id)`.
+- `PropertyAssetKind` — structural role such as development, building, floor or unit.
+- `PropertyType` — concrete physical/category specialization such as apartment or commercial unit.
+- `PropertyLocation` / `LocationNode` — canonical spatial identity and normalized geography.
+- `PropertyLifecycle` — physical lifecycle independent of sales or publication state.
+- `PropertyRelation` — umbrella domain language for explicit relations owned by Property.
+- `PropertyAssetRelation` — explicit asset-to-asset structural or spatial relation.
+- `PropertyPartyRelation` — Property-owned fact that an opaque Party identity has a role toward an asset.
 - `PropertyMedia` — media attached to or documenting the physical asset.
+- `PropertySource` — an identified origin of Property data.
+- `ExternalReference` — a source-system identity mapped to one canonical asset.
+- `DataProvenance` — source, observed value, confidence and verification state for a concrete canonical field.
 - `PropertySubmission` — intake material from which a canonical asset may be created or updated.
 
-These names are domain language. New code should prefer them over vague terms such as `object`, `realty`, arbitrary status strings, or untyped property arrays when crossing domain boundaries.
+New code should prefer this language over vague `object`, `realty`, anonymous arrays or untyped status strings.
 
-## The fundamental boundary
+## Fundamental boundary
 
-### PROPERTY
+### PROPERTY — what physically exists
 
-**What physically exists.**
+Property owns facts that remain meaningful even if nobody is currently selling, renting, advertising or discussing the asset: identity, type, structure, location, intrinsic characteristics, physical lifecycle, source/provenance and relations.
 
-Property owns facts that remain meaningful even if nobody is currently selling, renting, advertising or discussing the asset.
+### INVENTORY — what can currently be commercialized
 
-Examples: asset identity, type, address, coordinates, areas, rooms, construction facts, physical state, lifecycle, parent/child structure and asset media.
+Inventory is a commercial projection over Property. Availability, asking price, mandate, rent/sale terms, responsible commercial team and reservation state are not intrinsic Property facts.
 
-### INVENTORY
+### LISTING — how it is represented to a market/channel
 
-**What an organization can currently sell, rent or otherwise commercialize.**
-
-Inventory is a commercial projection over Property. It may reference a `PropertyAsset`, but availability, commercial terms, mandate, responsible team, asking price, rent terms and sale/rent readiness are not intrinsic Property facts.
-
-Inventory does not redefine the physical asset.
-
-### LISTING
-
-**How an inventory item or asset is represented to a market/channel.**
-
-Listing owns publication-specific representation: headline, marketing description, publication media ordering, channel state, SEO/public slug, publication schedule and channel-specific presentation.
-
-Listing does not own the physical asset and must not become a second property database.
+Listing owns headline, marketing copy, publication media ordering, channel state, SEO/public slug and publication schedule. It references Property/Inventory; it does not redefine the physical asset.
 
 ## Ownership map
 
@@ -56,71 +47,187 @@ Property owns:
 - physical characteristics and structure;
 - canonical location and geospatial facts;
 - asset lifecycle;
-- asset-to-asset and explicit domain relations;
+- asset-to-asset relations;
+- Party-to-asset relation facts without copying Party data;
 - asset media/documentation relations;
-- intake/submission lifecycle before canonicalization.
+- source identities and field-level provenance;
+- submission/intake lifecycle before canonicalization.
 
 Property explicitly does **not** own:
 
-- leads, persons, clients, conversations or relationship history — CRM;
-- opportunities, deals, pipeline stages, follow-ups or sales performance — Sales;
-- commercial availability, mandate and sale/rent terms — Inventory;
+- persons, organizations, phones, emails, conversations or relationship history — CRM;
+- opportunities, deals, pipeline stages or sales performance — Sales;
+- commercial availability, mandate, price and sale/rent terms — Inventory;
 - public/channel copy, publication status, SEO or advertising representation — Listing;
 - campaign performance or marketing attribution — Marketing/Analytics projections.
 
-## Compatibility rule for legacy code
+## Compatibility rule
 
-The current codebase still contains catalog, presentation, moderation and legacy `Realty/Object` structures under or around Property. They are compatibility surfaces, not permission to expand Property into a catch-all real-estate module.
+Legacy catalog, presentation, moderation and `Realty/Object` structures remain compatibility surfaces while canonical Property evolves.
 
-While V0.2–V0.4 migrates the implementation:
+1. `PROPERTY != INVENTORY != LISTING`.
+2. New Property contracts describe canonical asset behavior rather than page/UI behavior.
+3. Legacy catalog/public presentation code may read Property but must not define its canonical model.
+4. Commercial data must move toward explicit domain projections/contracts rather than additional columns on the canonical asset.
+5. Legacy `tn_properties` remains compatible while `tn_property_assets` becomes the canonical registry.
 
-1. no new business rule may infer that `PROPERTY == INVENTORY == LISTING`;
-2. new Property contracts must describe canonical asset behavior rather than page/UI behavior;
-3. legacy catalog/public presentation code may read Property, but it must not define Property's canonical model;
-4. cross-domain commercial data should move toward explicit projections/contracts instead of additional columns on the canonical asset.
+## Property V0.2 — Domain Foundation
 
-## Property V0.2.1 — Module runtime
+V0.2 establishes Property as an independent COS bounded context and fixes the rules that all later Property versions build on.
 
-Property participates in the Kernel module runtime through `propertyDomainModule`.
+Implemented:
 
-Canonical runtime capabilities are:
+- canonical definition of Property as the COS source of truth for physical real-estate assets;
+- explicit `PROPERTY / INVENTORY / LISTING` boundary;
+- canonical domain language and ownership rules;
+- compatibility rule for legacy `Realty/Object`, catalog and presentation code;
+- Kernel runtime module through `propertyDomainModule`;
+- Property capabilities:
+  - `property.registry`;
+  - `property.read`;
+  - `property.write`;
+  - `property.intake`;
+  - `property.media`;
+  - `property.catalog`;
+- canonical runtime API under `/api/v1/property-registry`, separate from legacy `/api/v1/properties`;
+- module configuration provisioning and readiness diagnostics;
+- dedicated Property CI workflow;
+- tenant boundary with `organization_id` as a persistence invariant;
+- tenant-scoped repositories, mutable rows and composite foreign keys;
+- cross-tenant IDs treated as inaccessible/absent;
+- shared taxonomy and geography reference data kept global;
+- immutable core domain model:
+  - `PropertyAsset`;
+  - `PropertyType`;
+  - `PropertyLocation`;
+  - `PropertyLifecycle`;
+- physical lifecycle separated from Sales, Inventory and publication statuses;
+- typed commands for:
+  - asset registration;
+  - reclassification;
+  - relocation;
+  - lifecycle change;
+- Property-owned domain events integrated with Kernel event ownership;
+- Property rule context provider;
+- tenant-safe command context.
 
-- `property.registry`
-- `property.read`
-- `property.write`
-- `property.intake`
-- `property.media`
-- `property.catalog`
+**Result:** Property becomes a real bounded context with its own runtime, tenant isolation, canonical model, command contracts and events instead of remaining a collection of real-estate screens and tables.
 
-The module contributes its own canonical runtime API surface under `/api/v1/property-registry`. This is intentionally separate from the legacy `/api/v1/properties` public catalog API: one describes the COS asset registry runtime, the other remains a compatibility/presentation surface until later migration.
+## Property V0.3 — Asset Registry & Structure
 
-Property also owns a tenant-scoped configuration namespace. V0.2.1 provisions it with no default runtime rules; rules are introduced only after Property commands and events have canonical contracts.
+V0.3 makes Property describe the physical structure of the real world without forcing every asset into one universal hierarchy or one giant nullable table.
 
-Runtime health is reported through the Kernel `ModuleReadinessDiagnostic`, so Property installation state, deployed/schema versions, migrations, dependencies and enabled state are evaluated by the same control-plane mechanism as other COS modules.
+Implemented:
 
-## Property V0.2.2 — Tenant boundary
+- canonical asset registry in `tn_property_assets`;
+- `PropertyAssetKind` for structural roles such as:
+  - development;
+  - building;
+  - section / entrance;
+  - floor;
+  - unit;
+  - land plot;
+  - house;
+- `PropertyType` retained as the concrete specialization of an asset;
+- explicit separation `kind != type`, for example `kind=unit`, `type=apartment`;
+- graph-based `PropertyAssetRelation` model instead of a mandatory parent chain;
+- asset relation types:
+  - `contains`;
+  - `part_of`;
+  - `located_in`;
+  - `built_on`;
+  - `serves`;
+  - `adjacent_to`;
+- support for structures such as:
+  - `Development -> Building -> Entrance -> Floor -> Unit`;
+  - `LandPlot -> House`;
+  - other valid graph combinations without fake hierarchy levels;
+- typed physical specifications:
+  - `ResidentialSpec`;
+  - `LandSpec`;
+  - `CommercialSpec`;
+  - `BuildingSpec`;
+- normalized location registry through:
+  - `LocationNode`;
+  - `PropertyAddress`;
+  - `GeoPoint`;
+  - `GeoBoundary`;
+- normalized geography hierarchy for country, region, district, city, settlement, city district and street;
+- global normalized geography with tenant-owned Property assets;
+- canonical persistence tables:
+  - `tn_property_assets`;
+  - `tn_property_asset_relations`;
+  - `tn_property_residential_specs`;
+  - `tn_property_land_specs`;
+  - `tn_property_commercial_specs`;
+  - `tn_property_building_specs`;
+  - `tn_location_nodes`;
+  - `tn_addresses`;
+  - `tn_geo_points`;
+  - `tn_geo_boundaries`.
 
-`organization_id` is now a Property persistence invariant rather than an optional filter convention.
+**Result:** Property becomes a graph-based registry capable of naturally describing an apartment, cottage, land plot, residential development, building, parking unit or commercial unit with the same domain model.
 
-Tenant-owned mutable Property data includes:
+## Property V0.4 — Identity, Relations & Provenance
 
-- `tn_properties`;
-- `tn_property_groups`;
-- `tn_property_submissions`;
-- `tn_property_images`;
-- `tn_property_features`;
-- `tn_property_activities`.
+V0.4 turns the asset registry into a system that knows not only what the canonical asset is, but also where facts came from, how trustworthy they are and whether incoming data describes an existing asset.
 
-`tn_property_types` and `tn_locations` remain shared reference data. They describe real-world taxonomy and geography rather than organization ownership.
+Implemented:
 
-The tenant boundary is enforced at three levels:
+- canonical `PropertyIdentity` based on tenant-local `(organization_id, asset_id)`;
+- no second competing canonical Property ID;
+- `PropertySource` as a first-class description of data origin;
+- `ExternalReference` mapping external source identities to one canonical asset;
+- supported source scenarios including:
+  - developer API;
+  - manual input;
+  - owner submission;
+  - partner;
+  - CRM import;
+  - MLS;
+  - parser;
+  - external API;
+- tenant-level uniqueness of `(source_system, external_id)` so one external identity maps to one canonical asset;
+- field-level `DataProvenance` containing:
+  - `field_path`;
+  - observed value;
+  - source;
+  - observed/imported timestamps;
+  - confidence;
+  - verification status;
+- preservation of conflicting observations instead of silent overwrite;
+- `PropertyPartyRelation` for Property-owned facts between a Party and an asset;
+- supported Party relation roles:
+  - `OWNER`;
+  - `CO_OWNER`;
+  - `DEVELOPER`;
+  - `MANAGER`;
+  - `REPRESENTATIVE`;
+  - `TENANT`;
+  - `OPERATOR`;
+  - `CONTRACTOR`;
+- opaque CRM Party references instead of copying Person/Organization/contact data into Property;
+- temporal Party relations through `valid_from` / `valid_to`;
+- relation source and confidence;
+- identity signals for duplicate detection;
+- deterministic `PropertyIdentityResolver`;
+- canonical intake pipeline:
+  `Submission -> validation -> identity signals -> duplicate scoring -> moderation -> CREATE / MERGE / REVIEW / REJECT -> canonical PropertyAsset`;
+- matching signals including:
+  - external ID;
+  - cadastral number;
+  - normalized address;
+  - development/building/unit position;
+  - area;
+  - structural identity;
+- exact external/cadastral identity may resolve to `MERGE`;
+- strong but non-authoritative matches may resolve to `REVIEW`;
+- fuzzy matching does not automatically `REJECT` a submission;
+- canonical persistence tables:
+  - `tn_property_sources`;
+  - `tn_property_external_references`;
+  - `tn_property_provenance`;
+  - `tn_property_party_relations`;
+  - `tn_property_identity_resolutions`.
 
-1. persistence adapters receive the active `organizationContext` and scope reads/writes by it;
-2. mutable child rows carry `organization_id` explicitly;
-3. composite foreign keys such as `(organization_id, property_id)` prevent media, features, activities or submissions from being related to an asset owned by another organization.
-
-The management, submission and moderation persistence paths all require a non-empty organization scope. Cross-tenant IDs are treated as absent rather than as accessible records.
-
-## Direction after V0.2.2
-
-V0.2.3 introduces the canonical core domain model: `PropertyAsset`, `PropertyType`, `PropertyLocation` and `PropertyLifecycle`. Later V0.2 slices add commands, events and relationships on top of those types instead of continuing to pass anonymous arrays through every boundary.
+**Result:** Property becomes a canonical registry that understands asset identity, relationships, duplicate resolution and the provenance and confidence of individual facts rather than merely storing the latest value it received.
