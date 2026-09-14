@@ -8,6 +8,8 @@ use InvalidArgumentException;
 
 final readonly class PropertyAsset
 {
+    public PropertyAssetKind $kind;
+
     public function __construct(
         public string $organizationId,
         public string $assetId,
@@ -22,6 +24,7 @@ final readonly class PropertyAsset
         public ?int $floors = null,
         public ?int $builtYear = null,
         public ?int $persistenceId = null,
+        ?PropertyAssetKind $kind = null,
     ) {
         $organizationId = trim($this->organizationId);
         if ($organizationId === '' || mb_strlen($organizationId) > 64) {
@@ -33,6 +36,8 @@ final readonly class PropertyAsset
         if ($this->persistenceId !== null && $this->persistenceId <= 0) {
             throw new InvalidArgumentException('PropertyAsset persistence id must be positive when present.');
         }
+
+        $this->kind = $kind ?? PropertyAssetKind::infer($this->type);
 
         foreach ([
             'totalArea' => $this->totalArea,
@@ -62,9 +67,9 @@ final readonly class PropertyAsset
         }
     }
 
-    public function reclassify(PropertyType $type): self
+    public function reclassify(PropertyType $type, ?PropertyAssetKind $kind = null): self
     {
-        return $this->copy(type: $type);
+        return $this->copy(type: $type, kind: $kind ?? PropertyAssetKind::infer($type));
     }
 
     public function relocate(PropertyLocation $location): self
@@ -93,12 +98,14 @@ final readonly class PropertyAsset
             'organization_id' => $this->organizationId,
             'asset_id' => $this->assetId,
             'persistence_id' => $this->persistenceId,
+            'kind' => $this->kind->value,
             'type' => [
                 'code' => $this->type->code,
                 'reference_id' => $this->type->referenceId,
             ],
             'location' => $this->location->toArray(),
             'lifecycle' => $this->lifecycle->value,
+            // Compatibility projection. V0.3 canonical persistence moves these facts into typed spec tables.
             'physical' => [
                 'total_area' => $this->totalArea,
                 'living_area' => $this->livingArea,
@@ -115,6 +122,7 @@ final readonly class PropertyAsset
         ?PropertyType $type = null,
         ?PropertyLocation $location = null,
         ?PropertyLifecycle $lifecycle = null,
+        ?PropertyAssetKind $kind = null,
     ): self {
         return new self(
             $this->organizationId,
@@ -130,6 +138,7 @@ final readonly class PropertyAsset
             $this->floors,
             $this->builtYear,
             $this->persistenceId,
+            $kind ?? $this->kind,
         );
     }
 }
