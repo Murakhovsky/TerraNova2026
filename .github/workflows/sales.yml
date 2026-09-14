@@ -1,0 +1,86 @@
+name: Sales CI
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: composer install --no-interaction --prefer-dist
+
+      - name: Sales architecture contracts
+        run: |
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/sales_v071_configuration.php
+          php tests/architecture/sales_v072_pipeline_admin.php
+          php tests/architecture/sales_v073_rule_editor.php
+          php tests/architecture/sales_v074_agent_admin.php
+          php tests/architecture/sales_v075_policy_admin.php
+          php tests/architecture/sales_v076_users_teams_authority.php
+          php tests/architecture/sales_v077_integrations_administration.php
+          php tests/architecture/sales_crm_ingress_regression.php
+          php tests/architecture/table_ownership.php
+          php tests/architecture/sales_v078_admin_closure.php
+
+      - name: Sales behavioral contracts
+        run: |
+          php tests/unit/sales_v073_rule_editor.php
+          php tests/unit/sales_v074_agent_runtime.php
+          php tests/unit/sales_v075_policy_engine.php
+          php tests/unit/sales_v076_authority.php
+          php tests/unit/sales_v077_integrations.php
+          php tests/unit/sales_v078_health_classifier.php
+
+      - name: Sales smoke tests
+        run: |
+          php tests/smoke/crm_webhook.php
+          php tests/smoke/crm_routing.php
+          php tests/smoke/crm_inbox_processing.php
+          php tests/smoke/sales_composition_root.php
+
+      - name: Frontend syntax
+        run: |
+          node --check frontend/features/sales/workspace.js
+          node --check frontend/features/sales/rule-editor.js
+          node --check tests/browser/sales_workspace.mjs
+
+  mutation-e2e:
+    if: github.event_name == 'workflow_dispatch'
+    needs: contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Require disposable Sales fixture configuration
+        env:
+          SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          SALES_E2E_STORAGE_STATE_JSON: ${{ secrets.SALES_E2E_STORAGE_STATE_JSON }}
+        run: |
+          test -n "$SALES_E2E_BASE_URL" || { echo 'Missing SALES_E2E_BASE_URL secret'; exit 1; }
+          test -n "$SALES_E2E_STORAGE_STATE_JSON" || { echo 'Missing SALES_E2E_STORAGE_STATE_JSON secret'; exit 1; }
+          printf '%s' "$SALES_E2E_STORAGE_STATE_JSON" > "$RUNNER_TEMP/sales-e2e-storage.json"
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN" || { echo 'No Chrome/Chromium executable found'; exit 1; }
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: Run mutation-safe Sales browser E2E
+        env:
+          SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          SALES_E2E_STORAGE_STATE: ${{ runner.temp }}/sales-e2e-storage.json
+          SALES_E2E_MUTATION_SAFE: '1'
+        run: npm run test:sales-browser
