@@ -26,6 +26,11 @@ use Interfaces\Web\Service\InboundRequestService;
 use Infrastructure\Integration\N8n\N8nWebhookService;
 use Domains\Property\Application\Service\PropertyManagementService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\ComposedPropertyManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyGroupManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyManagementReadRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyManagementWorkflowRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyManagementWriteRepository;
 use Domains\Property\Application\UseCase\PropertyModerationService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
 use Domains\Property\Infrastructure\Presentation\PropertyPresentationService;
@@ -51,8 +56,6 @@ final class WebApplicationServices
         $di->setShared('diagnosticRouteContributor', fn() => new DiagnosticModuleRouteContributor());
         $di->setShared('propertyRouteContributor', fn() => new PropertyModuleRouteContributor());
 
-        // UI extensions are declared by module.php. Web owns the concrete contributor
-        // implementations, while Kernel owns only the extension-point registry.
         $di->setShared('salesNavigationContributor', fn() => new SalesNavigationContributor());
         $di->setShared('propertyNavigationContributor', fn() => new PropertyNavigationContributor());
         $di->setShared('diagnosticNavigationContributor', fn() => new DiagnosticNavigationContributor());
@@ -95,9 +98,22 @@ final class WebApplicationServices
             new MysqlLocationReference($di->getShared('databaseService')),
             $di->getShared('organizationContext')->id(),
         ));
-        $di->setShared('frontendPropertyModerationService', fn() => new PropertyModerationService($di->getShared('propertyModerationRepository')));
-        $di->setShared('propertyManagementRepository', fn() => new MysqlPropertyManagementRepository(
+        $di->setShared('frontendPropertyModerationService', fn() => new PropertyModerationService(
+            $di->getShared('propertyModerationRepository'),
+            null,
+            $di->getShared('propertyIdentityWorkflow'),
+        ));
+
+        // V0.11 keeps the legacy SQL implementation as a compatibility backend, but the
+        // application-facing repository is now composed from narrow read/write/workflow/group ports.
+        $di->setShared('propertyManagementLegacyBackend', fn() => new MysqlPropertyManagementRepository(
             $di->getShared('databaseService'), $di->getShared('mediaStorageService'), $di->getShared('organizationContext')->id(),
+        ));
+        $di->setShared('propertyManagementRepository', fn() => new ComposedPropertyManagementRepository(
+            new LegacyPropertyManagementReadRepository($di->getShared('propertyManagementLegacyBackend')),
+            new LegacyPropertyGroupManagementRepository($di->getShared('propertyManagementLegacyBackend')),
+            new LegacyPropertyManagementWriteRepository($di->getShared('propertyManagementLegacyBackend')),
+            new LegacyPropertyManagementWorkflowRepository($di->getShared('propertyManagementLegacyBackend')),
         ));
         $di->setShared('frontendPropertyMediaService', fn() => new PropertyManagementService($di->getShared('propertyManagementRepository')));
         $di->setShared('frontendPropertyPresentationService', fn() => new PropertyPresentationService(

@@ -7,6 +7,7 @@ require APP_PATH . '/Bootstrap/SalesServices.php';
 require APP_PATH . '/Bootstrap/SalesHistoricalIntelligenceServices.php';
 require APP_PATH . '/Bootstrap/DiagnosticServices.php';
 require APP_PATH . '/Bootstrap/PropertyServices.php';
+require APP_PATH . '/Bootstrap/PropertyIdentityServices.php';
 require APP_PATH . '/Bootstrap/PropertyAnalyticsServices.php';
 require APP_PATH . '/Bootstrap/PropertyIntelligenceServices.php';
 require APP_PATH . '/Bootstrap/PropertyNetworkServices.php';

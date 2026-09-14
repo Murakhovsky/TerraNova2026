@@ -17,7 +17,7 @@ kind: product
 | Kernel | `0.11.8` | executable platform contract |
 | Sales | `0.8.6` | full runtime module / reference domain |
 | Diagnostic | `0.6.1` | installable runtime module with API routes and event consumer |
-| Property | `0.10.0` | installable runtime module with registry, inventory, listings, analytics, intelligence and external network boundary |
+| Property | `0.11.0` | installable runtime module with canonical identity review, registry, inventory, listings, analytics, intelligence and external network interoperability |
 
 Machine-readable metadata: [Module and Capability Reference](../12-reference/module-capabilities.md).
 
@@ -31,21 +31,23 @@ Diagnostic володіє methodology/session/evidence/evaluation/recommendation
 
 ## Property
 
-Property більше не є лише catalogue/presentation boundary. Поточний `0.10.0` вводить canonical real-estate asset model:
+Property `0.11.0` hardened canonical real-estate asset model:
 
 ```text
 Property Asset
 ├─ identity / provenance / verification
+├─ CREATE / MERGE / REVIEW identity workflow + audit
+├─ canonical legacy aliases
 ├─ structure / location / relations
 ├─ Inventory
 ├─ Listing / Publication
 ├─ history contracts
 ├─ analytics
 ├─ evidence-linked intelligence
-└─ external Property Network boundary
+└─ external Property Network + RESO adapter boundary
 ```
 
-Комерційний стан відділений від фізичного Property через Inventory. Publication відділена від Inventory через Listing/Publication model.
+Комерційний стан відділений від фізичного Property через Inventory. Publication відділена від Inventory через Listing/Publication model. Старий management repository залишається compatibility backend, але application-facing contract уже зібраний з окремих read/group/write/workflow ports.
 
 ## Supporting areas
 
