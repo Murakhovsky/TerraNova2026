@@ -11,7 +11,11 @@ $mustContain('app/migrations/20260910_000031_sales_v072_pipeline_administration.
 $mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlPipelineRepository.php', ['initial_stage_id','s.status = "ACTIVE"','isValidLostReason','lostReasons'], 'runtime repository');
 $mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php', ['s.id = p.initial_stage_id','s.status = "ACTIVE"','sales_deal_stage_history'], 'creation boundary');
 $mustContain('app/Domains/Sales/Application/UseCase/ChangeDealStage.php', ['An active lost reason is required when moving a Deal to LOST.','defaultLostReasonId','isValidLostReason',"['lost_reason_id']"], 'lost lifecycle');
-$mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlDealRepository.php', ['lost_reason_id','lost_reason_note','sales_deal_stage_history'], 'deal persistence');
+$mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlDealRepository.php', ['lost_reason_id','lost_reason_note'], 'deal persistence');
+$dealRepository = (string) file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlDealRepository.php');
+if (str_contains($dealRepository, 'INSERT INTO sales_deal_stage_history')) {
+    throw new RuntimeException('Sales V0.7.2 compatibility gate must not restore direct history writes retired by Sales V0.8.3.');
+}
 $mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesPipelineAdministration.php', ['CONFIGURATION_CONFLICT','Pipeline code is immutable','Stage code is immutable','Stage has active deals','assertPipelineValid','cos_configuration_revisions',"'TRANSITION'","'LOST_REASON'"], 'administration');
 $mustContain('app/Interfaces/Web/Routing/SalesRoutes.php', ['/sales/admin/pipelines','/api/sales/admin/pipelines','/stages/reorder','/transitions','/lost-reasons','/api/sales/deals/{id:[0-9]+}/lost'], 'routes');
 $mustContain('app/Bootstrap/SalesServices.php', ['MysqlSalesPipelineAdministration',"'salesPipelineAdministration'"], 'DI');

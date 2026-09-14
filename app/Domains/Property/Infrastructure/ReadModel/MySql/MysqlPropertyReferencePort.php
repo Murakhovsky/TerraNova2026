@@ -17,24 +17,19 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
             : 'a.asset_id = :reference';
 
         return $this->one('SELECT a.asset_id,a.legacy_property_id,a.kind,a.type_code,a.lifecycle,
-                rs.total_area AS residential_total_area, cs.total_area AS commercial_total_area,
-                bs.gross_area, ls.land_area,
-                legacy.public_id,legacy.title AS legacy_title,legacy.slug AS legacy_slug,
-                legacy.type_id AS legacy_type_id,legacy.location_id AS legacy_location_id,
-                legacy_type.name_uk AS type_name,legacy_location.city,
-                COALESCE(cover.image_url, first_image.image_url) AS cover_url
+                a.location_node_id,a.address_id,
+                location.name AS location_name,address.formatted_address,
+                rs.total_area AS residential_total_area,rs.living_area,rs.rooms,rs.bedrooms,rs.bathrooms,
+                cs.total_area AS commercial_total_area,cs.usable_area,cs.ceiling_height,cs.entrances,
+                bs.gross_area,bs.floors,bs.built_year,
+                ls.land_area,ls.buildable_area
             FROM tn_property_assets a
+            LEFT JOIN tn_addresses address ON address.id=a.address_id
+            LEFT JOIN tn_location_nodes location ON location.id=COALESCE(a.location_node_id,address.locality_node_id)
             LEFT JOIN tn_property_residential_specs rs ON rs.organization_id=a.organization_id AND rs.asset_id=a.asset_id
             LEFT JOIN tn_property_commercial_specs cs ON cs.organization_id=a.organization_id AND cs.asset_id=a.asset_id
             LEFT JOIN tn_property_building_specs bs ON bs.organization_id=a.organization_id AND bs.asset_id=a.asset_id
             LEFT JOIN tn_property_land_specs ls ON ls.organization_id=a.organization_id AND ls.asset_id=a.asset_id
-            LEFT JOIN tn_properties legacy ON legacy.id=a.legacy_property_id AND legacy.organization_id=a.organization_id
-            LEFT JOIN tn_property_types legacy_type ON legacy_type.id=legacy.type_id
-            LEFT JOIN tn_locations legacy_location ON legacy_location.id=legacy.location_id
-            LEFT JOIN tn_property_images cover ON cover.property_id=legacy.id AND cover.is_cover=1
-            LEFT JOIN tn_property_images first_image ON first_image.id=(
-                SELECT image.id FROM tn_property_images image WHERE image.property_id=legacy.id ORDER BY image.sort_order,image.id LIMIT 1
-            )
             WHERE a.organization_id=:organization_id AND ' . $where . ' LIMIT 1', [
                 'organization_id' => $organizationId,
                 'reference' => $reference,
@@ -70,13 +65,14 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
         }
 
         return $this->all('SELECT i.inventory_id,i.asset_id,i.transaction_type,i.status,i.price_amount,i.price_currency,i.price_period,
-                a.kind,a.type_code,a.lifecycle,l.listing_id,l.title,l.slug,l.status AS listing_status
+                a.kind,a.type_code,a.lifecycle,
+                l.listing_id,l.title,l.slug,l.status AS listing_status
             FROM tn_property_inventory_items i
             INNER JOIN tn_property_assets a ON a.organization_id=i.organization_id AND a.asset_id=i.asset_id
             LEFT JOIN tn_property_listings l ON l.organization_id=i.organization_id AND l.inventory_id=i.inventory_id
                 AND l.status IN ("ready","published")
             WHERE ' . implode(' AND ', $where) . '
-            ORDER BY i.updated_at DESC LIMIT 200', $params);
+            ORDER BY i.updated_at DESC,l.updated_at DESC LIMIT 200', $params);
     }
 
     public function getPropertyPresentation(string $organizationId, string|int $reference): ?array
@@ -121,12 +117,14 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
 
         return $this->all('SELECT DISTINCT a.asset_id,a.legacy_property_id
             FROM tn_property_assets a
-            LEFT JOIN tn_properties legacy ON legacy.id=a.legacy_property_id AND legacy.organization_id=a.organization_id
+            LEFT JOIN tn_addresses address ON address.id=a.address_id
+            LEFT JOIN tn_location_nodes location ON location.id=COALESCE(a.location_node_id,address.locality_node_id)
             LEFT JOIN tn_property_inventory_items inventory ON inventory.organization_id=a.organization_id AND inventory.asset_id=a.asset_id
             LEFT JOIN tn_property_listings listing ON listing.organization_id=inventory.organization_id AND listing.inventory_id=inventory.inventory_id
-            WHERE a.organization_id=:organization_id AND a.legacy_property_id IS NOT NULL
-              AND (a.asset_id LIKE :query OR legacy.public_id LIKE :query OR legacy.title LIKE :query OR listing.title LIKE :query)
-            ORDER BY a.legacy_property_id DESC
+            WHERE a.organization_id=:organization_id
+              AND (a.asset_id LIKE :query OR a.type_code LIKE :query OR listing.title LIKE :query OR listing.slug LIKE :query
+                   OR location.name LIKE :query OR address.formatted_address LIKE :query)
+            ORDER BY a.legacy_property_id DESC,a.asset_id
             LIMIT ' . $limit, [
                 'organization_id' => $organizationId,
                 'query' => '%' . $query . '%',
