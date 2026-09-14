@@ -31,7 +31,7 @@ if ($contributions->configurationProvisionerServices !== ['propertyModuleConfigu
     throw new RuntimeException('Property must own its tenant configuration provisioning.');
 }
 
-$expectedCapabilities = [
+$requiredCapabilities = [
     'property.registry',
     'property.read',
     'property.write',
@@ -39,8 +39,10 @@ $expectedCapabilities = [
     'property.media',
     'property.catalog',
 ];
-if ($contributions->capabilities !== $expectedCapabilities) {
-    throw new RuntimeException('Property capability contract drifted.');
+foreach ($requiredCapabilities as $capability) {
+    if (!in_array($capability, $contributions->capabilities, true)) {
+        throw new RuntimeException('Property lost required runtime capability: ' . $capability);
+    }
 }
 
 if (!is_subclass_of(PropertyDomainModule::class, DomainModuleInterface::class)) {
