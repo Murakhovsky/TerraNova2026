@@ -16,19 +16,18 @@ final class PropertyEventType
     public const INVENTORY_RESERVED = 'property.inventory.reserved';
     public const INVENTORY_RELEASED = 'property.inventory.released';
 
+    public const LISTING_CREATED = 'property.listing.created';
+    public const LISTING_PUBLISHED = 'property.listing.published';
+    public const LISTING_HIDDEN = 'property.listing.hidden';
+
     /** @return list<string> */
     public static function values(): array
     {
         return [
-            self::ASSET_REGISTERED,
-            self::TYPE_CHANGED,
-            self::LOCATION_CHANGED,
-            self::LIFECYCLE_CHANGED,
-            self::INVENTORY_CREATED,
-            self::INVENTORY_PRICE_CHANGED,
-            self::INVENTORY_STATUS_CHANGED,
-            self::INVENTORY_RESERVED,
-            self::INVENTORY_RELEASED,
+            self::ASSET_REGISTERED, self::TYPE_CHANGED, self::LOCATION_CHANGED, self::LIFECYCLE_CHANGED,
+            self::INVENTORY_CREATED, self::INVENTORY_PRICE_CHANGED, self::INVENTORY_STATUS_CHANGED,
+            self::INVENTORY_RESERVED, self::INVENTORY_RELEASED,
+            self::LISTING_CREATED, self::LISTING_PUBLISHED, self::LISTING_HIDDEN,
         ];
     }
 }
