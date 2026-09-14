@@ -1,98 +1,43 @@
 ---
 title: Sales Domain Overview
-description: Межі, структура, runtime contributions і development rules Sales domain.
+description: Ownership, runtime contributions, use-case model і boundaries Sales domain.
 status: active
-updated: 2026-09-11
+updated: 2026-09-14
 kind: domain
 ---
 
 # Sales Domain Overview
 
-Sales — reference bounded context COS і найбільш повна реалізація domain/module pattern.
+Sales — reference bounded context COS і найповніша реалізація domain/module pattern у current `main`.
 
-## Ownership
-
-Sales володіє:
-
-- inbound leads;
-- Sales relationship із person;
-- client cases/deals;
-- pipeline definition/stages/transitions;
-- assignments;
-- activities;
-- follow-ups;
-- property matches;
-- communication-oriented Sales operations;
-- Sales events/rules/agent/actions/policies;
-- CRM mapping/synchronization;
-- Sales workspace/read models;
-- Sales admin capabilities.
-
-Sales не володіє Property listings, generic queue, LLM transport, Telegram transport, auth framework або telemetry.
-
-## Structure
+## Purpose
 
 ```text
-Sales/
-├── Model
-├── Domain/Policy
-├── Application
-│   ├── Contract
-│   ├── DTO
-│   ├── Service
-│   ├── Support
-│   └── UseCase
-├── Automation
-│   ├── Event
-│   ├── Rule
-│   ├── Agent
-│   ├── Action
-│   ├── Job
-│   ├── Integration
-│   └── Policy
-├── Infrastructure
-│   ├── Persistence
-│   └── ReadModel
-├── Bootstrap
-└── module.php
+Lead → Client Case / Deal → Pipeline → Activities / Follow-up → Outcome
 ```
 
-## Canonical model
+Sales володіє demand lifecycle, а не generic CRM і не canonical Property.
 
-Typed vocabulary включає `PipelineStage`, `ClientCaseStatus`, `ClientCaseType`, `LeadStatus`, `PropertyMatchStatus`, `SalesActivityType`, `SalesPriority`, `SalesCurrency`, communication types та capability enum.
+## Runtime manifest
 
-Adapter не має права приносити власний статус і робити його новим внутрішнім стандартом.
+```text
+id: sales
+version: 0.8.6
+schema: 0.8.6
+kernel: >=0.11.0 <0.12.0
+```
 
-## Application layer
+Manifest декларує runtime module service, CRM inbox job handler, API route contributor, configuration provisioner, event consumer, Web navigation, migrations і capability catalogue.
 
-Use cases окремо моделюють meaningful operations, а repositories/gateways задаються contracts.
+## Automation
 
-Приклад: `ChangeDealStage` не є `UPDATE deals SET stage=...`; він має пройти transition policy/governance, persistence та event publication.
+```text
+Sales Event → Rule / Agent → Action Proposal → Policy → Kernel Execution
+```
 
-## Automation layer
+Generated inventories:
 
-Sales має deterministic rules, `SalesIntelligenceAgent`, action handlers, policy catalogs, CRM inbox job handler і Sales-owned events.
-
-Agent runtime — decision support, не persistence API.
-
-## Runtime module
-
-`SalesDomainModule` декларує contributions у Kernel runtime. `module.php` описує installable module metadata.
-
-Sales manifest version: `0.7.1`, kernel constraint: `^0.7.1`.
-
-## Capabilities
-
-Business/UI authority додатково типізована через `SalesCapability`. Повний список див. `12-reference/module-capabilities.md`.
-
-## Read model
-
-Workspace та operational dashboard читають dedicated projections, а не domain write repositories.
-
-## Legacy boundary
-
-`Infrastructure/Persistence/Phalcon/Telegram` — quarantined compatibility adapter для історичних таблиць/моделей. Новий business code туди не додається.
-
-## Definition of done
-
-Sales change має бути tenant-scoped, atomic із Event/Outbox для writes, idempotent для external side effects, policy-gated для Actions і покритий architecture/smoke/integration tests.
+- [Application Use Cases](../../12-reference/application-use-cases.md)
+- [Commands](../../12-reference/commands.md)
+- [Events](../../12-reference/event-types.md)
+- [Module Routes](../../12-reference/module-routes.md)

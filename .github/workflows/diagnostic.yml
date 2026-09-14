@@ -1,9 +1,9 @@
 name: COS Runtime Checks
 on:
   push:
-    branches: [main, COS]
+    branches: [main]
   pull_request:
-    branches: [main, COS]
+    branches: [main]
 jobs:
   runtime-checks:
     runs-on: ubuntu-latest
@@ -94,19 +94,40 @@ jobs:
         run: |
           php tests/architecture/property_domain_definition.php
           php tests/architecture/property_v021_runtime.php
+          php tests/architecture/property_v022_tenant_boundary.php
+          php tests/architecture/property_v030_registry_schema.php
+          php tests/architecture/property_v040_identity_schema.php
+          php tests/architecture/property_v050_inventory_schema.php
+          php tests/architecture/property_v060_listing_schema.php
+          php tests/architecture/property_v070_history_contracts_schema.php
+          php tests/architecture/property_v071_sales_boundary.php
+          php tests/architecture/property_v080_analytics.php
+          php tests/architecture/property_v090_intelligence.php
+          php tests/architecture/property_v0100_external_network.php
           php tests/smoke/property_submission.php
           php tests/smoke/property_workflow.php
+          php tests/unit/property_v023_core_model.php
+          php tests/unit/property_v024_commands_events.php
+          php tests/unit/property_v030_asset_registry_structure.php
+          php tests/unit/property_v040_identity_provenance.php
+          php tests/unit/property_v050_inventory.php
+          php tests/unit/property_v060_listing_publication.php
+          php tests/unit/property_v070_history_contracts.php
+          php tests/unit/property_v080_market_analytics.php
+          php tests/unit/property_v090_intelligence.php
+          php tests/unit/property_v0100_external_network.php
 
       - name: Property PHP lint
         run: |
           find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Bootstrap/PropertyServices.php
+          php -l app/Bootstrap/PropertyAnalyticsServices.php
+          php -l app/Bootstrap/PropertyIntelligenceServices.php
+          php -l app/Bootstrap/PropertyNetworkServices.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
-          php -l tests/architecture/property_domain_definition.php
-          php -l tests/architecture/property_v021_runtime.php
 
       - name: Telegram isolation check
         run: php tests/architecture/telegram_migration.php
@@ -114,7 +135,7 @@ jobs:
   deploy-dev:
     name: Deploy COS to AWS dev
     needs: runtime-checks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/COS'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: AWS TN2026
     concurrency:
@@ -126,13 +147,11 @@ jobs:
       DEV_PORT: ${{ secrets.DEV_PORT }}
       DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
       DEV_PATH: ${{ vars.DEV_PATH }}
-      DEV_HEALTHCHECK_URL: ${{ vars.DEV_HEALTHCHECK_URL }}
       COMPANY_OS_DOMAIN: company-os.shop
       COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/cos
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -193,12 +212,8 @@ jobs:
 
       - name: Company OS public HTTP preflight
         run: |
-          echo "Public DNS for $COMPANY_OS_DOMAIN:"
           getent ahostsv4 "$COMPANY_OS_DOMAIN"
-          curl --fail --show-error --silent --location \
-            --retry 2 --retry-delay 2 --retry-connrefused \
-            "http://$COMPANY_OS_DOMAIN/cos" > /dev/null
-          echo "Public HTTP application route is reachable for $COMPANY_OS_DOMAIN/cos."
+          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "http://$COMPANY_OS_DOMAIN/cos" > /dev/null
 
       - name: Configure company-os.shop HTTPS
         run: |
@@ -209,7 +224,4 @@ jobs:
 
       - name: External HTTPS application health check
         run: |
-          curl --fail --show-error --silent --location \
-            --retry 2 --retry-delay 2 --retry-connrefused \
-            "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
-          echo "Public HTTPS application health check passed: $COMPANY_OS_HEALTHCHECK_URL"
+          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null

@@ -1,108 +1,54 @@
 ---
 title: Що таке COS
-description: Продуктова й архітектурна роль Company Operating System.
+description: Продуктова й архітектурна роль Company Operating System та короткий шлях до розуміння системи.
 status: active
-updated: 2026-09-11
+updated: 2026-09-14
 kind: concept
 ---
 
 # Що таке COS
 
-**COS (Company Operating System)** — це платформа виконання бізнес-процесів, де люди, правила, AI-агенти, автоматизації та зовнішні системи працюють через один контрольований runtime.
+**COS (Company Operating System)** — платформа, яка дає компанії спільний контрольований runtime для виконання бізнес-процесів людьми, software, правилами та AI.
 
-COS не є просто CRM, набором AI-чатів або бібліотекою інтеграцій. Його задача — перетворювати бізнес-події на контрольовані рішення та дії.
+> COS перетворює бізнес-наміри й події на контрольовані, дозволені, спостережувані та пояснювані дії.
 
-```text
-Something happened
-    ↓
-COS understands context
-    ↓
-Rule or Agent proposes what to do
-    ↓
-Policy decides whether it may be done
-    ↓
-Human approves when required
-    ↓
-COS executes through a controlled adapter
-    ↓
-Result is recorded and can trigger the next process
-```
+COS не є «ще однією CRM». CRM, Sales, Property, Diagnostic, Finance, Support або HR можуть бути окремими Domains.
 
-## Що Kernel дає кожному Domain
-
-Kernel надає універсальні механізми:
-
-- Event та durable Outbox;
-- deterministic Rules;
-- Agent runtime;
-- Action lifecycle;
-- Policy gate;
-- Human Approval;
-- durable Queue;
-- Audit trail;
-- tenant isolation;
-- Configuration;
-- Operations та Observability;
-- Module lifecycle.
-
-## Що належить Domain
-
-Domain володіє бізнес-мовою:
-
-- сутностями та інваріантами;
-- use cases;
-- бізнес-подіями;
-- rule context;
-- agent context;
-- action types;
-- action handlers;
-- domain policies;
-- outbound ports.
-
-Наприклад, Sales знає, що таке угода, дзвінок, follow-up та pipeline. Kernel знає лише, як надійно провести event → decision → action → policy → execution.
-
-## Головна межа
+## Два execution paths
 
 ```text
-Kernel = HOW
-Domain = WHAT + WHY
-Infrastructure = WITH WHAT
-Interface = WHO / FROM WHERE
-Bootstrap = HOW EVERYTHING IS ASSEMBLED
+Direct: User → Use Case / Command → Domain → State → Result / Event
+
+Automation: Business Event → Rule / Agent → Action Proposal → Policy → Execution → Result / Audit
 ```
 
-Ця межа дозволяє підключати Finance, HR, Inventory чи інший Domain без перетворення Kernel на колекцію `if ($domain === 'sales')`.
+## Архітектурна формула
 
-## Agentic AI у COS
+```text
+Kernel         = HOW execution works
+Domain         = WHAT business concept means and WHY rules exist
+Application    = orchestration of a concrete business use case
+Infrastructure = technical implementation behind ports
+Interface      = delivery surface
+Bootstrap      = composition root
+```
 
-AI не отримує необмежений доступ до системи.
+Kernel `0.11.8` дає shared mechanisms для Event/Outbox, Rules, Agents, Actions, Policies, Approvals, Queue, Audit, Tenancy, Modules, LLM governance, resilience та observability.
 
-У поточній моделі Agent:
+## Поточні installable Domains
 
-1. отримує redacted context;
-2. викликає LLM через контракт;
-3. повертає structured decision;
-4. пропонує одну або кілька Actions;
-5. не виконує mutation самостійно.
+```text
+Sales       0.8.6   reference runtime Domain
+Diagnostic  0.6.1   executable diagnostic runtime
+Property    0.10.0  asset registry + inventory + listing + intelligence + network
+```
 
-Після цього звичайний Kernel runtime застосовує Policy, Approval, Queue та Action executor.
+Exact facts генеруються з current `main` manifests. Деталі: [Current COS Scope](../01-product/current-scope.md).
 
-Це ключова відмінність між COS і «LLM з доступом до бази».
+## Canonical branch
 
-## Навіщо модульність
+```text
+main = executable code + tests + docs + generated-reference inputs + CI/deploy metadata
+```
 
-Domain повинен мати можливість бути виявленим, встановленим, активованим, деактивованим та оновленим як модуль.
-
-Для цього Kernel уже містить module manifest, discovery, catalog, lifecycle manager, active resolver, capability registry та version constraints.
-
-Отже модульність у COS — не організація папок. Це runtime contract.
-
-## Поточний reference implementation
-
-Sales є першим повноцінним business Domain і reference implementation для наступних Domains.
-
-Його задача не в тому, щоб зробити Kernel sales-specific. Навпаки: Sales має довести, що generic Kernel може виконувати реальний бізнес-процес без знання його внутрішньої семантики.
-
-## Найкоротше визначення
-
-> COS — це контрольований runtime компанії, який перетворює бізнес-події на дозволені, пояснювані та відтворювані дії людей, software та AI-агентів.
+AS-IS твердження повинні підтверджуватися current `main` commit.

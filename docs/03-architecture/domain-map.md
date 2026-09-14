@@ -1,106 +1,203 @@
 ---
 title: COS Domain Map
-description: Карта bounded contexts, platform mechanisms, interfaces та infrastructure boundaries.
+description: Карта installable Domains, supporting areas, Kernel та delivery/infrastructure boundaries.
 status: active
-updated: 2026-09-11
+updated: 2026-09-14
 kind: architecture
 ---
 
 # COS Domain Map
 
+Ця карта описує **AS-IS гілки `COS`**. Documentation source живе в `main`; executable authority — у `COS`.
+
 ## System map
 
 ```text
-                    ┌──────── Kernel ────────┐
-                    │ Event / Rule / Agent   │
-                    │ Action / Policy        │
-                    │ Approval / Queue       │
-                    │ Audit / Tenant         │
-                    │ Module / LLM / Ops     │
-                    └──────────┬──────────────┘
-                               │ contracts
-       ┌───────────────┬───────┼─────────┬───────────────┐
-       │               │       │         │               │
-     Sales         Diagnostic Property  Identity      Content/Spatial
-       │               │       │         │               │
-       └───────────────┴───────┴─────────┴───────────────┘
-                               │ ports
-                         Infrastructure
-                               │
-                 MySQL / CRM / LLM / Media / etc.
+                         Kernel 0.11.8
+        Event / Rule / Agent / Action / Policy / Queue / Audit
+                                  │
+                                  │ runtime contracts
+                                  ▼
+          ┌───────────────────────┼───────────────────────┐
+          │                       │                       │
+        Sales                 Diagnostic              Property
+       0.8.6                    0.5.4                  0.1.1
+   reference runtime        partial runtime        partial runtime
+          │                       │                       │
+          └───────────────────────┼───────────────────────┘
+                                  │ ports/contracts
+                                  ▼
+                           Infrastructure
+                    MySQL / CRM / LLM / Media / etc.
 
+Supporting bounded areas: Identity / Content / Spatial
 Interfaces: Web / API / Telegram / CLI
 Bootstrap: composition root
 ```
 
+## Installable Domain vs directory
+
+У COS важливо розрізняти:
+
+```text
+Domain directory
+≠
+installable module
+≠
+fully integrated runtime Domain
+```
+
+`Sales`, `Diagnostic` і `Property` мають `module.php` та потрапляють у generated module reference.
+
+`Identity`, `Content`, `Spatial` фізично відокремлені як bounded areas, але наразі не мають такого ж installable/runtime contract.
+
 ## Kernel
 
-Kernel володіє механізмами, а не бізнес-словником.
+Kernel володіє **механізмами**, а не бізнес-семантикою.
 
-Він може знати, що існує Action і Policy. Він не повинен знати, що таке «кваліфікований лід» або «модерація квартири».
+Він може знати про:
+
+- Event;
+- Rule;
+- Agent;
+- Action;
+- Policy;
+- Approval;
+- Queue;
+- Audit;
+- Tenant;
+- Module;
+- LLM;
+- Observability.
+
+Kernel не повинен знати, що таке qualified lead, diagnostic finding чи property moderation.
 
 ## Sales
 
-Володіє lead-to-deal lifecycle, pipeline, activities, follow-up, Sales automation, CRM translation та Sales-specific authority/capabilities.
+Sales володіє lead-to-deal operational lifecycle:
 
-Reference domain для повного COS module/runtime contract.
+```text
+Lead
+→ Client Case / Deal
+→ Pipeline
+→ Activities / Follow-up
+→ Outcome
+```
+
+Також Sales володіє своїми events, rules, agent/actions/policies, CRM translation, workspace/read models і Sales authority.
+
+Sales є reference implementation повного COS module/runtime pattern.
 
 ## Diagnostic
 
-Володіє diagnostic methodology lifecycle, sessions, evidence traceability, deterministic evaluation та diagnostic AI use cases.
+Diagnostic володіє evidence-based diagnostic lifecycle:
 
-Не залежить від Sales model. Sales methodology є data/fixture, а не compile-time dependency.
+```text
+Methodology
+→ Session
+→ Evidence
+→ Facts / Metrics
+→ Evaluation
+→ Findings / Hypotheses
+→ Recommendations
+```
+
+Diagnostic AI допомагає extraction/interpretation, але deterministic scoring не повинен перетворювати LLM output на недоторканну істину.
 
 ## Property
 
-Володіє real-estate catalogue/management/submission/moderation/presentation contracts та persistence.
+Property у поточному COS володіє real-estate application boundary:
 
-Property не повинен знати implementation details Sales або Web.
+- catalogue;
+- management;
+- submission;
+- moderation;
+- media;
+- presentation;
+- location references;
+- analytics contracts;
+- Sales-facing presentation integration.
 
-## Identity
+Property уже виділений у власний bounded context, але module/runtime maturity нижча за Sales: manifest має WEB navigation contribution, але не має runtime module service чи capability catalogue.
 
-Відповідає за identity-oriented application/infrastructure boundaries. Поточна структура ще компактна і не має повного module manifest.
+## Supporting areas
 
-## Content
+### Identity
 
-Винесений application/infrastructure area для content workflows/integration.
+Identity-oriented application/infrastructure boundary.
 
-## Spatial
+### Content
 
-Винесений application/infrastructure area для 3D/spatial workflows.
+Content workflows та integration boundary.
+
+### Spatial
+
+Spatial/3D application/infrastructure boundary.
+
+Їх не слід автоматично прирівнювати до installable Domains лише через те, що в filesystem уже є красиві директорії. Файлова система, на щастя, ще не отримала право проектувати архітектуру.
 
 ## Interfaces
 
-`Web`, `Api`, `Telegram`, `Cli` — delivery adapters. Вони:
+`Web`, `API`, `Telegram`, `CLI` — delivery adapters.
 
-- приймають input;
-- встановлюють auth/tenant context;
-- переводять transport DTO;
-- викликають use case/service;
-- повертають response/view.
+Вони можуть:
 
-Вони не визначають domain transitions.
+- приймати input;
+- встановлювати auth/tenant context;
+- переводити transport DTO;
+- викликати application/runtime service;
+- повертати response/view.
+
+Вони не визначають domain ownership і business transitions.
 
 ## Infrastructure
 
-Infrastructure реалізує ports і технічні механізми: provider clients, persistence, security adapters, observability, LLM transport, media, integration routing.
+Infrastructure реалізує technical adapters і ports:
+
+```text
+Persistence
+Provider clients
+LLM transport
+Media
+Security
+Observability
+Integration
+```
 
 ## Bootstrap
 
-`app/Bootstrap` — composition root. Тільки він має право бачити всі concrete dependencies і збирати їх разом.
+`app/Bootstrap` — composition root. Саме тут concrete implementations збираються у working application.
 
 ## Dependency direction
 
 ```text
-Kernel         → PHP only
+Kernel         → generic PHP/platform contracts
 Domain         → Kernel + same Domain
 Infrastructure → Domain/Kernel contracts
 Interfaces     → exposed application/runtime services
-Bootstrap      → all, because it assembles
+Bootstrap      → concrete assembly
 ```
+
+## Машинна карта
+
+Точні versions, capabilities, migrations і extension contributions не дублюємо вручну. Для цього є:
+
+- [Module and Capability Reference](../12-reference/module-capabilities.md)
+- [Module Extension Points](../12-reference/extension-points.md)
+- [Application Use Cases](../12-reference/application-use-cases.md)
+- [Event Types](../12-reference/event-types.md)
+- [Command DTO Reference](../12-reference/commands.md)
 
 ## Критерій нового Domain
 
-Створювати новий Domain варто лише коли є власні бізнес-інваріанти, lifecycle/state, vocabulary, use cases і ownership даних/подій.
+Окремий Domain виправданий, коли з'являються власні:
 
-Telegram, email, LLM transport, file storage та telemetry самі по собі не є Domains.
+- vocabulary;
+- invariants;
+- lifecycle/state;
+- use cases;
+- data ownership;
+- event ownership;
+- authority boundaries.
+
+Telegram, email transport, file storage або telemetry самі по собі Domains не утворюють.

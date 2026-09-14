@@ -10,12 +10,8 @@ export default {
   outDir: '../public/docs',
   cleanUrls: false,
   lastUpdated: true,
-  markdown: {
-    lineNumbers: true,
-  },
-  head: [
-    ['meta', { name: 'theme-color', content: '#111827' }],
-  ],
+  markdown: { lineNumbers: true },
+  head: [['meta', { name: 'theme-color', content: '#111827' }]],
   themeConfig: {
     siteTitle: 'COS Documentation',
     nav: [
@@ -23,47 +19,21 @@ export default {
       { text: 'Workflows', link: '/02-workflows/sales-lead-to-managed-case' },
       { text: 'Architecture', link: '/03-architecture/domain-map' },
       { text: 'Domains', link: '/04-domains/sales/overview' },
-      { text: 'Reference', link: '/12-reference/glossary' },
+      { text: 'Reference', link: '/12-reference/README' },
+      { text: 'Code · main', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
     ],
     sidebar: buildSidebar(),
-    outline: {
-      level: [2, 3],
-      label: 'На цій сторінці',
-    },
-    search: {
-      provider: 'local',
-      options: {
-        _render(src, env, md) {
-          const html = md.render(src, env);
-          const path = env.relativePath || '';
-          if (path.startsWith('architecture/') || path.startsWith('api/') || path.startsWith('diagnostic/')) {
-            return '';
-          }
-          if (env.frontmatter?.search === false) return '';
-          return html;
-        },
-      },
-    },
+    outline: { level: [2, 3], label: 'На цій сторінці' },
+    search: { provider: 'local' },
     editLink: {
-      pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/COS/docs/:path',
-      text: 'Редагувати на GitHub',
+      pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/main/docs/:path',
+      text: 'Редагувати документацію',
     },
-    lastUpdated: {
-      text: 'Оновлено',
-      formatOptions: {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      },
-    },
-    docFooter: {
-      prev: 'Попередня сторінка',
-      next: 'Наступна сторінка',
-    },
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/COS' },
-    ],
+    lastUpdated: { text: 'Оновлено', formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
+    docFooter: { prev: 'Попередня сторінка', next: 'Наступна сторінка' },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' }],
     footer: {
-      message: 'Документація описує гілку COS. Executable source of truth: code + tests.',
+      message: 'Canonical branch: main · Source of truth: code + tests + manifests in the current commit.',
       copyright: 'Terra Nova COS',
     },
   },

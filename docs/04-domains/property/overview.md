@@ -1,6 +1,6 @@
 ---
 title: Property Domain Overview
-description: Canonical Property architecture through V0.10.
+description: Canonical real-estate asset registry, Inventory, Listing, analytics, intelligence і network boundary.
 status: active
 updated: 2026-09-14
 kind: domain
@@ -8,65 +8,61 @@ kind: domain
 
 # Property Domain Overview
 
-Property is the COS bounded context for canonical physical real-estate identity and Property-owned projections.
+Property — canonical owner фізичного real-estate asset state у COS.
 
-## Canonical stack
+## Core separation
 
 ```text
-Asset Registry
-  -> Structure / Location / Relations / Provenance
-  -> Inventory
-  -> Listing
-  -> Publication
-  -> History
-  -> Analytics
-  -> Intelligence
-
-External systems
-  <-> Property Network
-  <-> Submission / identity resolution boundary
+Property Asset = що фізично існує
+Inventory Item = як organization комерційно працює з активом
+Listing        = як пропозиція представлена/публікується
+Sales          = попит, pipeline і deal process
+CRM            = people/relationship context
 ```
 
-The physical asset never inherits Sales pipeline state or Listing publication state.
+Квартира не стає фізично `SOLD`; `SOLD` є комерційним станом Inventory.
 
-## Authority boundaries
+## Asset model
 
-Property owns Asset, Inventory, Listing/Publication, source/provenance, Property history, Property analytics read models, derived intelligence and network synchronization ledger.
+Property `0.10.0` охоплює:
 
-CRM owns Parties/relationships. Sales owns demand, ClientCases, Deals and pipeline state. Cross-domain access uses explicit ports. Sales-to-Property direct table reads are forbidden.
+- canonical asset registry і structure graph;
+- asset kind/lifecycle/relations;
+- location/address/geo model;
+- identity resolution, external references, provenance і verification;
+- Inventory lifecycle, reservations, transaction type і price state;
+- Listing/Publication lifecycle та media;
+- history/event contracts;
+- market analytics;
+- evidence-linked Property Intelligence;
+- external Property Network intake/export/sync boundary.
 
-Platform composition may combine Property supply with Sales demand without moving ownership of either fact set.
+## Runtime manifest
 
-## Runtime contracts
+```text
+id: property
+version: 0.10.0
+schema: 0.10.0
+kernel: >=0.11.0 <0.12.0
+enabled_by_default: true
+```
 
-Important boundaries include:
+AS-IS contributions:
 
-- `PropertyReferencePort`
-- `PropertyAnalyticsReadModelInterface`
-- `PropertyIntelligenceProviderInterface`
-- `PropertyIntelligenceRepositoryInterface`
-- `PropertyNetworkConnectorInterface`
-- `PropertyNetworkIntakePort`
-- `PropertyNetworkExportPort`
-- `PropertyNetworkSyncRepositoryInterface`
+- runtime module service `propertyDomainModule`;
+- API route contributor `propertyRouteContributor`;
+- configuration provisioner `propertyModuleConfigurationProvisioner`;
+- Web navigation contribution;
+- Property migrations through `V0.10.0`;
+- explicit Property capability catalogue.
 
-## V0.10 External Property Network
+## Cross-domain rule
 
-Network connectors are transport adapters for MLS/developer/partner/portal/file sources. Property core stores only connector identity/configuration reference, durable sync runs and network records.
+Sales може читати Property через explicit Property reference/read contracts, але не має володіти canonical Property state. Property, у свою чергу, не володіє deal pipeline або CRM relationships.
 
-Imports are idempotent by source identity + payload hash and pass through `PropertySubmission`. External deletes are tombstones, not canonical deletes.
+## Generated facts
 
-Exports are built from canonical `PropertyAsset + InventoryItem + Listing` data. Provider credentials remain outside Property.
-
-## Compatibility debt
-
-Legacy `tn_properties`, historical catalog/presentation paths and Telegram Realty/Object models are quarantined compatibility surfaces. `MysqlPropertyManagementRepository` remains oversized and should be decomposed separately rather than dragged into V0.10.
-
-## Module status
-
-- module: `property`
-- version: `0.10.0`
-- schema: `0.10.0`
-- capability added in V0.10: `property.network`
-
-Property is approaching stable-domain status, but V1.0 remains intentionally gated on real connector traffic and confirmation that canonical/cross-domain contracts do not require structural rewrites.
+- [Module & Capabilities](../../12-reference/module-capabilities.md)
+- [Events](../../12-reference/event-types.md)
+- [Commands](../../12-reference/commands.md)
+- [Routes](../../12-reference/module-routes.md)

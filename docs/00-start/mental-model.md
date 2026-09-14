@@ -1,8 +1,8 @@
 ---
 title: COS Mental Model
-description: Модель читання COS від бізнес-події до виконаної дії.
+description: Модель читання COS від бізнес-наміру до контрольованого виконання і результату.
 status: active
-updated: 2026-09-11
+updated: 2026-09-14
 kind: concept
 ---
 
@@ -10,15 +10,80 @@ kind: concept
 
 COS найпростіше розуміти не через класи, а через **ланцюг відповідальності**.
 
-## 1. Business transaction
+## Два основні execution paths
 
-Спочатку в Domain відбувається реальна бізнес-операція: завершився дзвінок, змінився стан угоди, надійшов webhook, менеджер виконав use case.
+У системі є два природні шляхи.
 
-Domain змінює власний state і створює business Event.
+### Direct use case
 
-## 2. Event
+```text
+User / Interface
+    ↓
+Use Case / Command
+    ↓
+Domain validation
+    ↓
+State change
+    ↓
+Event + Result
+```
 
-Event є фактом, а не командою.
+### Event-driven automation
+
+```text
+Business Event
+    ↓
+Rule / Agent
+    ↓
+Action proposal
+    ↓
+Policy
+    ↓
+Approval / Auto / Deny
+    ↓
+Execution
+    ↓
+Result Event + Audit
+```
+
+Не кожна операція потребує Agent, Queue чи Approval. COS не повинен перетворювати простий update на релігійний ритуал із сімнадцяти мікросервісів.
+
+## 1. Intent / business operation
+
+На початку є конкретна бізнес-мета: створити lead, змінити stage, почати diagnostic session, прийняти property submission або виконати іншу domain operation.
+
+Interface лише передає намір у application boundary.
+
+## 2. Use Case / Command
+
+Application layer оркеструє meaningful operation.
+
+```text
+Input
+→ validation/context
+→ domain/application logic
+→ persistence/ports
+→ result
+```
+
+Command є запитом щось зробити. Event є фактом, що щось уже сталося. Плутати їх зручно лише до першої серйозної автоматизації.
+
+## 3. Domain ownership
+
+Domain визначає:
+
+- vocabulary;
+- invariants;
+- state transitions;
+- business events;
+- contracts;
+- authority над своїми даними.
+
+Kernel не вирішує, чи Lead qualified. Web controller не вирішує, чи diagnostic methodology валідна. Infrastructure не вирішує, що означає property moderation.
+
+## 4. Event
+
+Event описує факт.
 
 ```text
 sales.call.completed
@@ -26,11 +91,9 @@ sales.call.completed
 
 означає «дзвінок завершився», а не «надішли follow-up».
 
-Business state, Event і Outbox повинні бути зафіксовані узгоджено в одній transaction boundary.
+Business state + Event + Outbox повинні мати узгоджену transaction boundary там, де Event запускає подальший processing.
 
-## 3. Durable delivery
-
-Outbox відділяє commit бізнес-операції від наступної автоматизації.
+## 5. Durable delivery
 
 ```text
 DB commit
@@ -40,23 +103,25 @@ Outbox
 Consumer / worker
 ```
 
-Delivery є at-least-once, тому downstream side effects мають бути idempotent.
+Delivery може бути at-least-once, тому side effects мають бути idempotent.
 
-## 4. Decision
+## 6. Decision
 
-Подія може пройти через два типи decision logic:
+Після Event рішення може приймати:
 
 ### Rule
 
-Deterministic умова. Однаковий context дає однаковий результат.
+Deterministic logic.
 
 ### Agent
 
-LLM-based decision. Agent отримує domain-owned context, але повертає **proposal**, а не виконує mutation.
+LLM-assisted decision logic на domain-owned context.
 
-## 5. Action proposal
+Agent повертає proposal. Він не отримує право мутувати систему лише тому, що вміє писати переконливі JSON-и.
 
-Рішення матеріалізується як Action / ActionProposal.
+## 7. Action proposal
+
+Рішення матеріалізується як контрольована Action / ActionProposal.
 
 ```text
 sales.send_followup
@@ -64,11 +129,9 @@ sales.update_deal
 integration.sync_contact
 ```
 
-Action є контрольованою одиницею mutation.
+## 8. Policy
 
-## 6. Policy
-
-Жодна Action не обходить Policy.
+Action проходить authority check:
 
 ```text
 Action
@@ -79,62 +142,51 @@ Policy
   └─ DENIED
 ```
 
-Default при відсутності явної policy — deny.
+Default-deny лишається безпечнішим baseline для mutation authority.
 
-## 7. Approval
+## 9. Approval
 
-Якщо Policy вимагає людину, створюється Approval. Agent не може сам собі видати дозвіл, що, як не дивно, корисна властивість і для software, і для людей.
+Якщо потрібна людина, створюється окремий Approval lifecycle.
 
-Approval має окремий lifecycle і після рішення повертає Action у контрольований execution path.
+Agent не затверджує власне рішення. Люди іноді теж не повинні, але для них ми поки не написали Kernel.
 
-## 8. Queue
+## 10. Queue / Execution
 
-LLM work, mutation та зовнішні інтеграції виконуються через durable jobs там, де потрібна асинхронність, retry, lease або dead letter.
+Durable Queue використовується там, де потрібні asynchronous execution, retries, leases або dead-letter semantics.
 
-Queue — частина reliability model, не «фонова оптимізація».
+Executor знаходить domain-owned handler через runtime/module registry та викликає outbound ports/adapters.
 
-## 9. Execution
+## 11. Result
 
-Action executor знаходить handler через module registry / routing і викликає domain-owned implementation.
+Kernel може завершувати generic execution lifecycle events, а Domain створює власні business events, коли змінено business state.
 
-Handler працює через outbound ports. Він не повинен знати конкретний CRM provider, SQL connection або HTTP client.
+Kernel не вигадує domain semantics за Domain.
 
-## 10. Result
+## 12. Audit + Observability
 
-Kernel завершує lifecycle generic events:
-
-```text
-cos.action.completed
-cos.action.failed
-```
-
-Domain, якщо змінив власний бізнес-state, створює власний business Event.
-
-Kernel не вигадує бізнес-події за Domain.
-
-## 11. Audit + Observability
-
-На виході ми повинні мати відповідь:
+На виході система повинна дозволяти відповісти:
 
 - що сталося;
-- який context був використаний;
-- яке правило або Agent прийняли рішення;
+- який Domain володів операцією;
+- який context використано;
+- яке правило/Agent прийняли рішення;
 - яку Action запропоновано;
 - яка Policy спрацювала;
-- чи було Approval;
-- хто його прийняв;
-- який handler виконав дію;
-- що повернула зовнішня система;
-- скільки це тривало;
+- чи був Approval;
+- який handler виконав mutation;
+- який external call відбувся;
+- який Result отримано;
 - де сталася помилка.
 
 ## Ментальна формула
 
 ```text
-FACT
+INTENT
+ → DOMAIN OPERATION
+ → FACT
  → DECISION
  → PROPOSAL
- → PERMISSION
+ → AUTHORITY
  → EXECUTION
  → RESULT
  → EXPLANATION
@@ -149,7 +201,7 @@ Workflow
   ↓
 Domain
   ↓
-Use Case / Event
+Use Case / Command / Event
   ↓
 Kernel Runtime
   ↓
@@ -162,14 +214,25 @@ Infrastructure Adapter
 External System / Database
 ```
 
-## Сім питань для дебагу будь-якого процесу
+## Branch mental model
 
-1. Який бізнес-факт стався?
+Для самої документації є ще один важливий поділ:
+
+```text
+COS  = executable truth
+main = human-readable knowledge + WEB
+```
+
+Тому AS-IS твердження мають підтверджуватися `COS` code/tests або generated reference, синхронізованим із `COS`.
+
+## Сім питань для дебагу
+
+1. Який бізнес-наміp або факт ми обробляємо?
 2. Який Domain ним володіє?
-3. Який Event був створений?
-4. Що прийняло рішення: Rule чи Agent?
-5. Яка Action була запропонована?
-6. Яка Policy дозволила або заблокувала її?
-7. Де записані Result та Audit?
+3. Який Use Case/Command/Event представляє операцію?
+4. Де приймається рішення: domain logic, Rule чи Agent?
+5. Яка Action/transition виконується?
+6. Яка authority/policy дозволила її?
+7. Де записані Result, Event та Audit?
 
-Якщо відповідей немає, проблема майже напевно не в тому, що «AI щось не зрозумів». Система просто ще не має чіткої причинно-наслідкової траси.
+Якщо немає чітких відповідей, проблема зазвичай не в AI. Причинно-наслідкова траса просто ще не сформована.

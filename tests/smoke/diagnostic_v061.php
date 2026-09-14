@@ -76,7 +76,10 @@ $assert(str_contains($outcome, "diagnostic.action-outcome.v1"), 'Diagnostic dura
 $assert(str_contains($outcome, 'appendMeasurement'), 'Diagnostic action outcome is not feeding the measurement ledger.');
 
 $workflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
-$assert(str_contains($workflow, 'branches: [main, COS]'), 'Diagnostic CI does not run on main.');
+$assert(str_contains($workflow, 'branches: [main]'), 'Diagnostic CI must run on canonical main.');
+$assert(!str_contains($workflow, 'branches: [main, COS]'), 'Diagnostic CI must not depend on the historical COS branch.');
+$assert(str_contains($workflow, "github.ref == 'refs/heads/main'"), 'Diagnostic deployment must originate from canonical main.');
+$assert(!str_contains($workflow, "refs/heads/COS"), 'Diagnostic deployment still references the historical COS branch.');
 $assert(str_contains($workflow, 'diagnostic_v061.php'), 'Diagnostic V0.6.1 smoke is absent from CI.');
 
 echo "Diagnostic V0.6.1 delivery contract: OK\n";

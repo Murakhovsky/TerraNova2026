@@ -1,42 +1,76 @@
 ---
 layout: home
 title: COS Documentation
-description: Канонічна документація Company Operating System.
+description: Канонічна WEB-документація Company Operating System.
 hero:
   name: Company Operating System
   text: Documentation
-  tagline: Від бізнес-процесу до Domain, Runtime, Agent, Policy, Integration і коду.
+  tagline: Від бізнес-процесу до Domain, Runtime, Contract, Agent і коду без археології по випадкових Service.php.
   actions:
     - theme: brand
-      text: Почати з Mental Model
-      link: /00-start/mental-model
+      text: Зрозуміти COS за 10 хв
+      link: /00-start/what-is-cos
     - theme: alt
-      text: Поточний Scope
-      link: /01-product/current-scope
+      text: Відкрити System Map
+      link: /03-architecture/system-map
 features:
   - title: Understand COS
-    details: Product, mental model, workflows та bounded contexts без необхідності читати сотні PHP-файлів.
+    details: Product model, Mental Model, current scope, workflows та bounded contexts.
     link: /00-start/what-is-cos
+  - title: Business Workflows
+    details: Sales, Property і Diagnostic від business goal до decisions, failures та code map.
+    link: /02-workflows/sales-lead-to-managed-case
+  - title: Architecture
+    details: Kernel, Domains, cross-domain contracts, runtime, persistence та dependency direction.
+    link: /03-architecture/domain-map
   - title: Build with COS
-    details: Kernel, extension runtime, Agents, integrations, development rules та operational lifecycle.
-    link: /03-architecture/kernel-overview
-  - title: Architecture Decisions
-    details: Причини фундаментальних рішень, альтернативи та наслідки зафіксовані окремими ADR.
-    link: /11-decisions/README
+    details: Development rules, generated reference, module lifecycle, testing та operations.
+    link: /09-development/adding-a-domain
+  - title: Executable Reference
+    details: Versions, modules, capabilities, events, commands, routes та use cases, згенеровані з поточного main.
+    link: /12-reference/README
 ---
 
-## Канонічний шлях
+<div class="cos-branch-contract">
+  <span class="cos-badge"><strong>CODE</strong>&nbsp; main</span>
+  <span class="cos-badge"><strong>DOCS</strong>&nbsp; main</span>
+  <span class="cos-badge"><strong>AUTHORITY</strong>&nbsp; current commit</span>
+</div>
+
+## Один commit — одна executable reality
 
 ```text
-Business
-→ Workflow
-→ Domain
-→ Use Case / Event
-→ Kernel Runtime
-→ Policy / Approval / Queue
-→ Domain Port
-→ Infrastructure Adapter
-→ Result / Audit
+main
+├─ code + tests
+├─ manifests + migrations
+├─ narrative docs
+├─ documentation generators
+└─ CI / deployment metadata
 ```
 
-Документація читається зверху вниз. Якщо потрібно знайти конкретний class або table, починайте з бізнес-capability, а не з випадкового `Service.php`. Система вже достатньо велика, щоб археологічний метод перестав бути романтичним.
+AS-IS documentation перевіряється проти того самого checkout, з якого збирається COS. Cross-branch sync більше немає.
+
+## Канонічний шлях від бізнесу до реалізації
+
+```text
+Business problem
+→ Workflow
+→ Owning Domain
+→ Use Case / Command / Event
+→ Cross-Domain Contract when required
+→ Kernel mechanism
+→ Port
+→ Infrastructure Adapter
+→ Interface / Result / Audit
+```
+
+## Поточний baseline
+
+| Component | Version | Role |
+| --- | --- | --- |
+| Kernel | `0.11.8` | generic execution platform |
+| Sales | `0.8.6` | reference runtime Domain |
+| Diagnostic | `0.6.1` | executable diagnostic runtime |
+| Property | `0.10.0` | asset registry, inventory, listing, intelligence and network boundary |
+
+Exact module facts генеруються з `main/app/Domains/*/module.php` у [Generated Reference](./12-reference/README.md).

@@ -1,147 +1,73 @@
 ---
 title: Documentation Site
-description: Як /docs перетворюється на великий навігаційний documentation surface без дублювання контенту.
+description: Як /docs перетворюється на навігаційний documentation surface без дублювання source of truth.
 status: active
-updated: 2026-09-12
+updated: 2026-09-14
 kind: ui
 ---
 
 # Documentation Site
 
-COS documentation має два окремі поняття:
-
 ```text
-/docs                      canonical knowledge
-        ↓
-VitePress build             renderer / navigation / search
-        ↓
-/public/docs                generated static site
+main code + docs
+      ↓
+reference generation
+      ↓
+VitePress build
+      ↓
+public/docs
 ```
 
-`public/docs` не є source of truth і не редагується вручну.
+`public/docs` є disposable static artifact і не редагується вручну.
 
-## Чому окремий documentation surface
+## UX
 
-Документація вже перевищує формат одного README. Потрібні:
-
-- багаторівневий sidebar;
-- full-text search;
-- breadcrumbs/navigation context;
-- right-side page outline;
-- previous/next navigation;
-- deep links на конкретні sections;
-- frontmatter metadata;
-- edit-on-GitHub link;
-- predictable static deployment.
-
-Це UX знань, а не ще одна business application сторінка COS.
+Documentation surface дає sidebar, local full-text search, page outline, previous/next navigation, deep links, frontmatter metadata, edit-on-GitHub і clickable System Map.
 
 ## Renderer
 
-Renderer — stable VitePress `1.6.4`, запущений окремими npm scripts.
-
-Він не додається до основного COS frontend dependency graph. Поточний root Vite build продовжує збирати application assets у `public/build`, docs build окремо генерує `public/docs`.
+Stable VitePress `1.6.4` запускається окремо від основного Vite application build.
 
 ```text
-npm run build
-    → public/build
-
-npm run docs:build
-    → public/docs
+npm run build       → public/build
+npm run docs:build  → public/docs
 ```
 
-Так docs не змінюють application bundler і не додають Vue/VitePress runtime у COS application.
+## Branch model
 
-## URL model
+Окремої documentation/code branch model більше немає. `main` містить code, tests, docs, generators і deployment metadata. Кожен docs build описує current checkout, а не сусідню branch.
 
-Production base:
+## Generated reference
 
-```text
-/docs/
-```
-
-Clean URLs навмисно вимкнені. Поточний Apache/Phalcon rewrite пропускає існуючі files/directories, тому generated `.html` pages віддаються напряму без втручання application router.
-
-## Sidebar
-
-Sidebar генерується build-time з numeric canonical sections:
-
-```text
-00-start
-01-product
-02-workflows
-03-architecture
-04-domains
-05-runtime
-06-ai-agents
-07-api-integrations
-08-ui
-09-development
-10-operations
-11-decisions
-12-reference
-```
-
-Новий `.md` у цій структурі автоматично з'являється в navigation. Title береться з frontmatter, fallback — H1/filename.
-
-Legacy/detail directories (`architecture/`, `api/`, `diagnostic/`) залишаються repository reference і можуть бути напряму linked, але не створюють головний sidebar та не входять у local search index.
-
-## Search
-
-Використовується VitePress local full-text search. Зовнішній search backend для першої версії не потрібний.
-
-Search індексує curated canonical documentation. Legacy/detail trees виключені з search, щоб одна й та сама концепція не поверталася в кількох історичних формулюваннях.
+Modules, capabilities, routes, permissions, use cases, events і commands генеруються з current `main` перед build.
 
 ## Editing workflow
 
 ```text
-change code / architecture
+change code / architecture in main
         ↓
-update canonical /docs page or ADR
+update narrative docs when meaning changed
         ↓
-commit
+generate reference
         ↓
-Docs CI builds site
+Docs CI validates same commit
         ↓
-static deployment publishes public/docs
+VitePress build / deployment
 ```
-
-Generated HTML не комітиться.
-
-## CI rule
-
-Docs CI має запускатися при змінах:
-
-- `docs/**`;
-- docs build scripts/config;
-- самого workflow.
-
-Build failure означає documentation defect: invalid config, broken Markdown build або інший compile-time problem.
-
-## Future evolution
-
-TARGET, не AS-IS:
-
-- generated API/event/permission/config references з executable manifests;
-- link checker/source-code references;
-- version selector для tagged COS releases;
-- Mermaid/system maps;
-- optional authenticated internal sections;
-- search ranking по page kind/status;
-- automated stale-page detection.
-
-Головне правило не змінюється: **генеруємо reference з коду там, де це можливо; вручну пишемо explanation, workflow, decisions і rationale.**
 
 ## Code map
 
 ```text
 docs/
   index.md
+  03-architecture/system-map.md
   .vitepress/
     config.mjs
     sidebar.mjs
-
+    check.mjs
+    generate-*.php
+    theme/
 package.json
 .github/workflows/docs.yml
-public/docs/             generated, ignored by Git
+public/docs/  generated
 ```

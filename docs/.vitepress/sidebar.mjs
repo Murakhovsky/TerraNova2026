@@ -27,6 +27,7 @@ const preferredOrder = new Map([
   ['overview.md', -30],
   ['README.md', -30],
   ['current-scope.md', -20],
+  ['system-map.md', -40],
   ['domain-map.md', -30],
   ['kernel-overview.md', -20],
   ['extension-runtime.md', -10],

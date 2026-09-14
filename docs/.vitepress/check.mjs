@@ -6,12 +6,20 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..', '..');
 const docsRoot = path.join(repoRoot, 'docs');
+const sourceRoot = repoRoot;
 const errors = [];
 let checkedLinks = 0;
 let checkedFrontmatter = 0;
+let checkedDomainDocs = 0;
+let checkedWorkflowContracts = 0;
+let checkedModuleVersions = 0;
 
 function relativeToRepo(file) {
   return path.relative(repoRoot, file).split(path.sep).join('/');
+}
+
+function relativeToDocs(file) {
+  return path.relative(docsRoot, file).split(path.sep).join('/');
 }
 
 function walk(directory) {
@@ -26,7 +34,7 @@ function walk(directory) {
 }
 
 function parseFrontmatter(file, content) {
-  const relative = path.relative(docsRoot, file).split(path.sep).join('/');
+  const relative = relativeToDocs(file);
   const canonical = /^\d{2}-[^/]+\//.test(relative) && path.basename(file).toLowerCase() !== 'readme.md';
   const normalized = content.replace(/\r\n/g, '\n');
 
@@ -111,7 +119,7 @@ function candidatesFor(targetPath) {
 }
 
 function checkLinks(file, content) {
-  const relative = path.relative(docsRoot, file).split(path.sep).join('/');
+  const relative = relativeToDocs(file);
   const source = stripCodeFences(content);
   const regex = /(?<!!)\[[^\]]*\]\(([^)]+)\)/g;
   let match;
@@ -149,8 +157,14 @@ function checkLinks(file, content) {
 }
 
 function checkKernelVersion() {
-  const runtimePath = path.join(repoRoot, 'app', 'Kernel', 'Module', 'KernelVersion.php');
+  const runtimePath = path.join(sourceRoot, 'app', 'Kernel', 'Module', 'KernelVersion.php');
   const docsPath = path.join(docsRoot, '03-architecture', 'kernel-overview.md');
+
+  if (!fs.existsSync(runtimePath)) {
+    errors.push(`${relativeToRepo(runtimePath)}: KernelVersion.php not found in current checkout`);
+    return;
+  }
+
   const runtime = fs.readFileSync(runtimePath, 'utf8');
   const docs = fs.readFileSync(docsPath, 'utf8');
 
@@ -170,6 +184,79 @@ function checkKernelVersion() {
   }
 }
 
+function moduleDefinitions() {
+  const domainsRoot = path.join(sourceRoot, 'app', 'Domains');
+  if (!fs.existsSync(domainsRoot)) {
+    errors.push(`${relativeToRepo(domainsRoot)}: Domains root not found in current checkout`);
+    return [];
+  }
+
+  const modules = [];
+  for (const entry of fs.readdirSync(domainsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const modulePath = path.join(domainsRoot, entry.name, 'module.php');
+    if (!fs.existsSync(modulePath)) continue;
+
+    const source = fs.readFileSync(modulePath, 'utf8');
+    const id = source.match(/['"]id['"]\s*=>\s*['"]([^'"]+)['"]/)?.[1];
+    const version = source.match(/['"]version['"]\s*=>\s*['"]([^'"]+)['"]/)?.[1];
+    if (!id || !version) {
+      errors.push(`${relativeToRepo(modulePath)}: cannot read module id/version`);
+      continue;
+    }
+
+    modules.push({ directory: entry.name, id, version, modulePath });
+  }
+
+  return modules;
+}
+
+function checkDomainDocumentation(modules) {
+  for (const module of modules) {
+    checkedDomainDocs += 1;
+    const overviewPath = path.join(docsRoot, '04-domains', module.id, 'overview.md');
+    if (!fs.existsSync(overviewPath)) {
+      errors.push(`04-domains/${module.id}/overview.md: missing canonical overview for installable module ${module.directory}`);
+    }
+  }
+}
+
+function checkModuleVersionDocumentation(modules) {
+  const scopePath = path.join(docsRoot, '01-product', 'current-scope.md');
+  const scope = fs.existsSync(scopePath) ? fs.readFileSync(scopePath, 'utf8') : '';
+
+  for (const module of modules) {
+    checkedModuleVersions += 1;
+    const label = module.id.charAt(0).toUpperCase() + module.id.slice(1);
+    const scopeMarker = `| ${label} | \`${module.version}\` |`;
+    if (!scope.includes(scopeMarker)) {
+      errors.push(`${relativeToRepo(scopePath)}: module version drift for ${module.id}; expected visible scope row '${scopeMarker}' from current manifest`);
+    }
+
+    const overviewPath = path.join(docsRoot, '04-domains', module.id, 'overview.md');
+    if (!fs.existsSync(overviewPath)) continue;
+    const overview = fs.readFileSync(overviewPath, 'utf8');
+    const versionMarker = `version: ${module.version}`;
+    if (!overview.includes(versionMarker)) {
+      errors.push(`${relativeToRepo(overviewPath)}: module version drift for ${module.id}; expected '${versionMarker}' from current manifest`);
+    }
+  }
+}
+
+function checkWorkflowContract(file, content, frontmatter) {
+  if (!frontmatter || frontmatter.get('kind') !== 'workflow') return;
+
+  checkedWorkflowContracts += 1;
+  const source = stripCodeFences(content);
+  const requiredSections = ['Business goal', 'Actors', 'Code map'];
+  for (const section of requiredSections) {
+    const pattern = new RegExp(`^##\\s+${section.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*$`, 'mi');
+    if (!pattern.test(source)) {
+      errors.push(`${relativeToDocs(file)}: workflow page is missing required section '## ${section}'`);
+    }
+  }
+}
+
 if (!fs.existsSync(docsRoot)) {
   console.error('Documentation root not found:', docsRoot);
   process.exit(1);
@@ -178,10 +265,15 @@ if (!fs.existsSync(docsRoot)) {
 const markdownFiles = walk(docsRoot);
 for (const file of markdownFiles) {
   const content = fs.readFileSync(file, 'utf8');
-  parseFrontmatter(file, content);
+  const frontmatter = parseFrontmatter(file, content);
   checkLinks(file, content);
+  checkWorkflowContract(file, content, frontmatter);
 }
+
 checkKernelVersion();
+const modules = moduleDefinitions();
+checkDomainDocumentation(modules);
+checkModuleVersionDocumentation(modules);
 
 if (errors.length > 0) {
   console.error(`Documentation checks failed (${errors.length}):`);
@@ -189,4 +281,10 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Documentation checks passed: ${markdownFiles.length} Markdown files, ${checkedFrontmatter} frontmatter blocks, ${checkedLinks} internal links.`);
+console.log(
+  `Documentation checks passed: ${markdownFiles.length} Markdown files, ` +
+  `${checkedFrontmatter} frontmatter blocks, ${checkedLinks} internal links, ` +
+  `${checkedDomainDocs} installable Domain docs, ${checkedModuleVersions} module version contracts, ` +
+  `${checkedWorkflowContracts} workflow contracts. ` +
+  'Executable source: current main checkout.',
+);
