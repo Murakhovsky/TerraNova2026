@@ -4,9 +4,9 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.1.0',
-    'schema_version' => '0.1.0',
-    'kernel_constraint' => '>=0.10.0 <0.11.0',
+    'version' => '0.1.1',
+    'schema_version' => '0.1.1',
+    'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Property catalog, presentation and real-estate workflows.',
     'icon' => 'building',
     'dependencies' => [],
@@ -21,7 +21,9 @@ return [
                 'propertyNavigationContributor',
             ],
         ],
-        'migration_files' => [],
+        'migration_files' => [
+            'app/migrations/20260914_000048_web_v041_property_tenancy.sql',
+        ],
         'capabilities' => [],
     ],
 ];

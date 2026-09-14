@@ -8,6 +8,7 @@ use Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService;
 use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
 use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
+use Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyWorkspaceReadModel;
 use Interfaces\Web\Navigation\DiagnosticNavigationContributor;
 use Interfaces\Web\Navigation\ModuleAwareNavigationService;
 use Interfaces\Web\Navigation\PropertyNavigationContributor;
@@ -66,8 +67,10 @@ final class WebApplicationServices
         $di->setShared('frontendContentService', fn() => new ContentService($di->getShared('contentRepository')));
         $di->setShared('propertyAnalytics', fn() => new MysqlPropertyAnalytics($di->getShared('databaseService')));
         $di->setShared('frontendCatalogService', fn() => new CatalogService($di->getShared('databaseService'), $di->getShared('propertyAnalytics')));
+        $di->setShared('propertyWorkspaceReadModel', fn() => new MysqlPropertyWorkspaceReadModel($di->getShared('databaseService')));
         $di->setShared('frontendCompanyHomeService', fn() => new CompanyHomeService(
             $di->getShared('salesWorkspaceReadModel'),
+            $di->getShared('propertyWorkspaceReadModel'),
             $di->getShared('cosOperationsReadModel'),
             $di->getShared('cosActiveModuleResolver'),
         ));

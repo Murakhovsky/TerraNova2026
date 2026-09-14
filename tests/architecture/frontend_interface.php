@@ -36,6 +36,8 @@ $portalCore = FrontendNavigation::portalCore('realtor');
 if ($keys($portalCore['primary'] ?? []) !== ['cabinet']) throw new RuntimeException('Portal core must not hardcode Domain navigation.');
 
 foreach ([
+    'app/Domains/Property/Application/Contract/PropertyWorkspaceReadModelInterface.php',
+    'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php',
     'app/Interfaces/Web/Navigation/ModuleNavigationContributorInterface.php',
     'app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php',
     'app/Interfaces/Web/Navigation/SalesNavigationContributor.php',
@@ -60,6 +62,7 @@ foreach ([
     'app/Interfaces/Web/View/sales/deal.phtml',
     'app/Interfaces/Web/View/sales/director.phtml',
     'app/Interfaces/Web/View/sales/admin.phtml',
+    'app/migrations/20260914_000048_web_v041_property_tenancy.sql',
     'frontend/components/interactive.js',
     'frontend/core/workspace-shell.js',
     'frontend/entrypoints/company-home.js',
@@ -91,13 +94,26 @@ foreach ([
 $companyHome = (string) file_get_contents($root . '/app/Interfaces/Web/Service/CompanyHomeService.php');
 foreach ([
     'SalesWorkspaceReadModelInterface',
+    'PropertyWorkspaceReadModelInterface',
     'OperationsReadModelInterface',
     'ActiveModuleResolver',
+    '$this->properties->overview($organizationId, 6)',
 ] as $needle) {
-    if (!str_contains($companyHome, $needle)) throw new RuntimeException('WEB V0.4 Company Home must compose canonical read boundaries: ' . $needle);
+    if (!str_contains($companyHome, $needle)) throw new RuntimeException('WEB V0.4.1 Company Home must compose canonical read boundaries: ' . $needle);
 }
 foreach (['PdoConnection', 'PDO ', 'SELECT ', 'INSERT ', 'UPDATE ', 'DELETE '] as $forbidden) {
     if (str_contains($companyHome, $forbidden)) throw new RuntimeException('Company Home must not become a direct persistence read model: ' . $forbidden);
+}
+
+$propertyWorkspace = (string) file_get_contents($root . '/app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php');
+foreach (['implements PropertyWorkspaceReadModelInterface', 'WHERE organization_id = :organization_id', 'p.organization_id = :organization_id'] as $needle) {
+    if (!str_contains($propertyWorkspace, $needle)) throw new RuntimeException('WEB V0.4.1 Property Home read model must remain tenant-scoped: ' . $needle);
+}
+if (str_contains($propertyWorkspace, 'Interfaces\\Web')) throw new RuntimeException('Property read model must not depend on the Web delivery layer.');
+
+$propertyTenancyMigration = (string) file_get_contents($root . '/app/migrations/20260914_000048_web_v041_property_tenancy.sql');
+foreach (['ALTER TABLE tn_properties', 'ADD COLUMN organization_id', 'idx_tn_properties_organization_catalog'] as $needle) {
+    if (!str_contains($propertyTenancyMigration, $needle)) throw new RuntimeException('WEB V0.4.1 Property tenancy migration is incomplete: ' . $needle);
 }
 
 $adminController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/AdminController.php');
@@ -107,9 +123,10 @@ foreach (["workspaceSection = 'home'", "workspaceActive = 'home'", "['company-ho
 $adminHomeView = (string) file_get_contents($root . '/app/Interfaces/Web/View/admin/index.phtml');
 if (str_contains($adminHomeView, "partial('shared/manager_header'")) throw new RuntimeException('Company Home must use the layout-owned Workspace shell.');
 if (!str_contains($adminHomeView, 'Runtime modules') || !str_contains($adminHomeView, 'Company Home')) throw new RuntimeException('Company Home must expose company pulse and runtime module state.');
+if (str_contains($adminHomeView, 'Kernel V0.7 module state')) throw new RuntimeException('Company Home must not hard-code a stale Kernel version in the runtime module state UI.');
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
-foreach (["setShared('frontendCompanyHomeService'", "setShared('frontendNavigationService'", "getShared('cosModuleWebNavigationContributors')"] as $needle) {
+foreach (["setShared('frontendCompanyHomeService'", "setShared('propertyWorkspaceReadModel'", "setShared('frontendNavigationService'", "getShared('cosModuleWebNavigationContributors')"] as $needle) {
     if (!str_contains($webServices, $needle)) throw new RuntimeException('Web composition root is missing service or extension runtime dependency: ' . $needle);
 }
 if (str_contains($webServices, "setShared('webModuleNavigationContributors'")) {
@@ -145,4 +162,4 @@ foreach ($views as $view) {
     if (str_contains($source, '/assets/js/') || str_contains($source, '/assets/css/')) throw new RuntimeException('PHTML must not bypass Vite with direct /assets JS/CSS references: ' . $view->getPathname());
 }
 
-echo "Frontend interface architecture passed: public shell, module-aware workspace/portal navigation and WEB V0.4 composition are enforced.\n";
+echo "Frontend interface architecture passed: public shell, module-aware workspace/portal navigation and WEB V0.4.1 Company Home closure are enforced.\n";

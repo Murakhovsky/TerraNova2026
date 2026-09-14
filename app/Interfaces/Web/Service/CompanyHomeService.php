@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Web\Service;
 
+use Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface;
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Operations\Contract\OperationsReadModelInterface;
@@ -12,6 +13,7 @@ final readonly class CompanyHomeService
 {
     public function __construct(
         private SalesWorkspaceReadModelInterface $sales,
+        private PropertyWorkspaceReadModelInterface $properties,
         private OperationsReadModelInterface $operations,
         private ActiveModuleResolver $modules,
     ) {
@@ -33,14 +35,7 @@ final readonly class CompanyHomeService
             'generated_at' => date('Y-m-d H:i:s'),
             'modules' => $modules,
             'sales' => $this->section($salesEnabled, fn (): array => $this->sales->dashboard($organizationId)),
-            'property' => $propertyEnabled
-                ? [
-                    'enabled' => true,
-                    'available' => false,
-                    'data' => [],
-                    'error' => 'Контракт читання Property з прив’язкою до організації ще не готовий; загальні дані каталогу навмисно не використовуються.',
-                ]
-                : ['enabled' => false, 'available' => false, 'data' => [], 'error' => null],
+            'property' => $this->section($propertyEnabled, fn (): array => $this->properties->overview($organizationId, 6)),
             'cos' => $this->section(true, fn (): array => [
                 'overview' => $this->operations->overview($organizationId, 12),
                 'health' => $this->operations->health(),

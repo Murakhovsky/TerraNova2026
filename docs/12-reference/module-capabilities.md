@@ -20,8 +20,8 @@ generated: true
 
 | ID | Name | Version | Schema | Kernel constraint | Default | Dependencies | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `diagnostic` | Diagnostics | `0.5.4` | `0.5.4` | `>=0.10.0 <0.11.0` | yes | — | `app/Domains/Diagnostic/module.php` |
-| `property` | Property | `0.1.0` | `0.1.0` | `>=0.10.0 <0.11.0` | yes | — | `app/Domains/Property/module.php` |
+| `diagnostic` | Diagnostics | `0.5.4` | `0.5.4` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Diagnostic/module.php` |
+| `property` | Property | `0.1.1` | `0.1.1` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Property/module.php` |
 | `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Sales/module.php` |
 
 ## Diagnostics (`diagnostic`)
@@ -46,7 +46,7 @@ Property catalog, presentation and real-estate workflows.
 - job handlers: —;
 - API route contributors: —;
 - configuration provisioners: —;
-- migrations: —.
+- migrations: `app/migrations/20260914_000048_web_v041_property_tenancy.sql`.
 
 ### Declared capabilities
 

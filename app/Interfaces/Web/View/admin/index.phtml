@@ -184,7 +184,7 @@ $openActions = array_values(array_filter(
     <section class="tn-ui-panel tn-workspace-section tn-company-home__modules">
       <div class="tn-ui-panel__head">
         <div><p class="tn-ui-eyebrow">Runtime modules</p><h2>Підключені модулі</h2></div>
-        <span class="tn-company-home__meta">Kernel V0.7 module state</span>
+        <span class="tn-company-home__meta">Effective module state</span>
       </div>
       <?php if (!($modules['available'] ?? false)): ?>
         <div class="tn-company-home__quiet tn-company-home__quiet--warning"><strong>Стан модулів не прочитано</strong><span><?php echo $h($modules['error'] ?? 'Module resolver недоступний.'); ?></span></div>
