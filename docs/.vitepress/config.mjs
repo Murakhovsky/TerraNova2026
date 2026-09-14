@@ -1,10 +1,12 @@
 import { buildSidebar } from './sidebar.mjs';
 
+const docsBase = process.env.COS_DOCS_BASE || '/docs/';
+
 export default {
   title: 'COS Documentation',
   description: 'Company Operating System product, architecture, runtime and development documentation.',
   lang: 'uk-UA',
-  base: '/docs/',
+  base: docsBase,
   outDir: '../public/docs',
   cleanUrls: false,
   lastUpdated: true,

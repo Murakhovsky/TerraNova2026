@@ -57,6 +57,26 @@ server {
 
     client_max_body_size 100m;
 
+    location = /docs {
+        return 301 /docs/;
+    }
+
+    # Documentation is a static VitePress site served by the application nginx
+    # from /var/www/html/public/docs. Keep an explicit route here so host-level
+    # nginx never falls back to a filesystem/default-site handler for /docs/.
+    location ^~ /docs/ {
+        proxy_pass http://$UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port 443;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+
     location / {
         proxy_pass http://$UPSTREAM;
         proxy_http_version 1.1;

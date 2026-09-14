@@ -2,7 +2,7 @@
 title: Kernel Overview
 description: Відповідальності та межі COS Kernel.
 status: active
-updated: 2026-09-12
+updated: 2026-09-13
 kind: architecture
 ---
 
@@ -10,7 +10,7 @@ kind: architecture
 
 COS Kernel є generic execution layer. Він не знає бізнес-мову конкретного Domain, але забезпечує однакові правила виконання для всіх Domains.
 
-Поточний executable Kernel contract: **`0.10.2`**.
+Поточний executable Kernel contract: **`0.11.8`**.
 
 Детальний canonical document: [`docs/architecture/cos-kernel.md`](../architecture/cos-kernel.md).
 

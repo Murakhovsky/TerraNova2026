@@ -15,6 +15,7 @@ generated: true
 | Extension point | Kind | Contributions |
 | --- | --- | ---: |
 | `api.routes` | built-in | 1 |
+| `event.consumers` | module-defined | 1 |
 | `tenant.configuration` | built-in | 1 |
 | `web.navigation` | module-defined | 3 |
 
@@ -25,6 +26,14 @@ Kind: **built-in**.
 | Module | Service |
 | --- | --- |
 | `sales` | `salesRouteContributor` |
+
+## `event.consumers`
+
+Kind: **module-defined**.
+
+| Module | Service |
+| --- | --- |
+| `sales` | `salesHistoricalEventConsumer` |
 
 ## `tenant.configuration`
 
