@@ -1,9 +1,9 @@
 name: COS Runtime Checks
 on:
   push:
-    branches: [COS]
+    branches: [main, COS]
   pull_request:
-    branches: [COS]
+    branches: [main, COS]
 jobs:
   runtime-checks:
     runs-on: ubuntu-latest
@@ -42,6 +42,7 @@ jobs:
 
       - name: Diagnostic checks
         run: |
+          php tests/architecture/diagnostic_readiness.php
           php tests/smoke/diagnostic_domain.php
           php tests/smoke/diagnostic_methodology_contract.php
           php tests/smoke/diagnostic_methodology.php
@@ -51,8 +52,20 @@ jobs:
           php tests/smoke/diagnostic_v053.php
           php tests/smoke/diagnostic_v054.php
           php tests/smoke/diagnostic_v055.php
+          php tests/smoke/diagnostic_v061.php
           node --check frontend/features/diagnostics/methodology-studio-v055.js
           php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
+
+      - name: Diagnostic PHP lint
+        run: |
+          find app/Domains/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/DiagnosticServices.php
+          php -l app/Bootstrap/WebApplicationServices.php
+          php -l app/Interfaces/Api/Controller/DiagnosticRuntimeController.php
+          php -l app/Interfaces/Web/Controller/DiagnosticReportController.php
+          php -l app/Interfaces/Web/Routing/DiagnosticRoutes.php
+          php -l app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php
+          php -l tests/smoke/diagnostic_v061.php
 
       - name: Sales architecture and runtime checks
         run: |

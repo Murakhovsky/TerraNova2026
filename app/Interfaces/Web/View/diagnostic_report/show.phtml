@@ -1,0 +1,81 @@
+<?php
+/** @var array $report */
+/** @var array $reportEnvelope */
+/** @var string $sessionId */
+$e = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$list = static fn (mixed $value): array => is_array($value) ? $value : [];
+$percent = static fn (mixed $value): string => number_format((float) $value * 100, 1) . '%';
+$scalar = static function (mixed $value) use ($e): string {
+    if (is_scalar($value) || $value === null) return $e($value ?? '');
+    return $e(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+};
+?>
+<?php $this->partial('shared/manager_header', ['active' => 'diagnostics']); ?>
+<main class="tn-page tn-workspace-page tn-workspace-page--wide">
+    <header class="tn-page-header">
+        <div>
+            <small>Diagnostic report</small>
+            <h1><?php echo $e($report['diagnosticId'] ?? $sessionId); ?></h1>
+            <p><?php echo $e($report['executiveSummary'] ?? ''); ?></p>
+        </div>
+    </header>
+
+    <section class="tn-card-grid">
+        <article class="tn-card"><small>Health</small><strong><?php echo number_format((float) ($report['overallHealth'] ?? 0), 1); ?>/100</strong></article>
+        <article class="tn-card"><small>Coverage</small><strong><?php echo $percent($report['coverage'] ?? 0); ?></strong></article>
+        <article class="tn-card"><small>Confidence</small><strong><?php echo $percent($report['confidence'] ?? 0); ?></strong></article>
+        <article class="tn-card"><small>Report version</small><strong><?php echo $e($reportEnvelope['report_version'] ?? '1'); ?></strong></article>
+    </section>
+
+    <?php
+    $sections = [
+        'topProblems' => 'Top problems',
+        'criticalRisks' => 'Critical risks',
+        'opportunities' => 'Opportunities',
+        'strengths' => 'Strengths',
+        'quickWins' => 'Quick wins',
+        'findings' => 'Findings',
+        'rootCauses' => 'Root causes',
+        'recommendations' => 'Recommendations',
+        'roadmap' => 'Roadmap',
+        'unknowns' => 'Unknowns',
+        'contradictions' => 'Contradictions',
+    ];
+    foreach ($sections as $key => $title):
+        $items = $list($report[$key] ?? []);
+        if ($items === []) continue;
+    ?>
+        <section class="tn-card">
+            <h2><?php echo $e($title); ?></h2>
+            <div class="tn-stack">
+                <?php foreach ($items as $item): ?>
+                    <article class="tn-list-row">
+                        <?php if (is_array($item)): ?>
+                            <?php foreach ($item as $field => $value): ?>
+                                <div><strong><?php echo $e($field); ?>:</strong> <?php echo $scalar($value); ?></div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div><?php echo $scalar($item); ?></div>
+                        <?php endif; ?>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endforeach; ?>
+
+    <?php $measurements = $list($reportEnvelope['measurements'] ?? []); ?>
+    <?php if ($measurements !== []): ?>
+        <section class="tn-card">
+            <h2>Measured outcomes</h2>
+            <div class="tn-stack">
+                <?php foreach ($measurements as $measurement): ?>
+                    <article class="tn-list-row">
+                        <strong><?php echo $e($measurement['metric_code'] ?? 'metric'); ?></strong>
+                        <span><?php echo $e($measurement['metric_value'] ?? ''); ?></span>
+                        <small><?php echo $e($measurement['measured_at'] ?? ''); ?></small>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+</main>
