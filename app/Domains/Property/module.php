@@ -7,7 +7,7 @@ return [
     'version' => '0.7.0',
     'schema_version' => '0.7.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical real-estate registry with separated Inventory, Listing/Publication, historical projections and cross-domain reference contracts.',
+    'description' => 'Canonical registry of real-estate assets with separated Inventory, Listing/Publication, historical projections and cross-domain reference contracts.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
