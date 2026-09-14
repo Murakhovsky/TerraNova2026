@@ -4,7 +4,9 @@ on:
     branches: [main]
     paths:
       - 'app/Domains/Property/**'
+      - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
+      - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
@@ -19,7 +21,9 @@ on:
     branches: [main]
     paths:
       - 'app/Domains/Property/**'
+      - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
+      - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
@@ -51,6 +55,7 @@ jobs:
           php tests/architecture/property_v050_inventory_schema.php
           php tests/architecture/property_v060_listing_schema.php
           php tests/architecture/property_v070_history_contracts_schema.php
+          php tests/architecture/property_v071_sales_boundary.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -81,7 +86,12 @@ jobs:
       - name: Property PHP lint
         run: |
           find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php
+          php -l app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlClientCaseReadModel.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php
+          php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php
           php -l app/Bootstrap/PropertyServices.php
+          php -l app/Bootstrap/SalesServices.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php

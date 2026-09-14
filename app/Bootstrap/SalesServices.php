@@ -21,14 +21,27 @@ use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandReposit
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineAdministration;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineGovernance;
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel;
+
+$di->setShared('salesPropertyReference', fn (): SalesPropertyReference => new SalesPropertyReference(
+    $this->getShared('propertyReferencePort'),
+    $this->getShared('organizationContext')->id(),
+));
+// Sales owns this adapter composition because its context builder now depends on the Property contract.
+// This intentionally supersedes the legacy infrastructure-only registration from InfrastructureServices.
+$di->setShared('salesAgentContextBuilder', fn (): MysqlSalesAgentContextBuilder => new MysqlSalesAgentContextBuilder(
+    $this->getShared('databaseService')->connection(),
+    $this->getShared('salesPropertyReference'),
+));
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
     $this->getShared('cosCrmGateway'),
@@ -49,7 +62,9 @@ $di->setShared('salesCompleteCall', fn (): CompleteSalesCall => new CompleteSale
     $this->getShared('salesActivityRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
 ));
 $di->setShared('salesClientCaseReadModel', fn (): MysqlClientCaseReadModel => new MysqlClientCaseReadModel(
-    $this->getShared('databaseService')->connection(), $this->getShared('organizationContext')->id(),
+    $this->getShared('databaseService')->connection(),
+    $this->getShared('organizationContext')->id(),
+    $this->getShared('salesPropertyReference'),
 ));
 $di->setShared('salesWorkspaceReadModel', fn (): MysqlSalesWorkspaceReadModel => new MysqlSalesWorkspaceReadModel(
     $this->getShared('databaseService')->connection(),
@@ -60,7 +75,10 @@ $di->setShared('salesWorkspaceOperationalReadModel', fn (): MysqlSalesWorkspaceO
     $this->getShared('salesWorkspaceReadModel'),
 ));
 $di->setShared('salesOutcomeRepository', fn (): MysqlSalesOutcomeRepository => new MysqlSalesOutcomeRepository($this->getShared('databaseService')->connection()));
-$di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepository => new MysqlClientCaseCommandRepository($this->getShared('databaseService')->connection()));
+$di->setShared('salesClientCaseCommands', fn (): MysqlClientCaseCommandRepository => new MysqlClientCaseCommandRepository(
+    $this->getShared('databaseService')->connection(),
+    $this->getShared('salesPropertyReference'),
+));
 $di->setShared('salesPipelineRepository', fn (): MysqlPipelineRepository => new MysqlPipelineRepository($this->getShared('databaseService')->connection()));
 $di->setShared('salesPipelineAdministration', fn (): MysqlSalesPipelineAdministration => new MysqlSalesPipelineAdministration($this->getShared('databaseService')->connection()));
 $di->setShared('salesPipelineGovernance', fn (): MysqlSalesPipelineGovernance => new MysqlSalesPipelineGovernance($this->getShared('databaseService')->connection()));

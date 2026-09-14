@@ -18,12 +18,23 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
 
         return $this->one('SELECT a.asset_id,a.legacy_property_id,a.kind,a.type_code,a.lifecycle,
                 rs.total_area AS residential_total_area, cs.total_area AS commercial_total_area,
-                bs.gross_area, ls.land_area
+                bs.gross_area, ls.land_area,
+                legacy.public_id,legacy.title AS legacy_title,legacy.slug AS legacy_slug,
+                legacy.type_id AS legacy_type_id,legacy.location_id AS legacy_location_id,
+                legacy_type.name_uk AS type_name,legacy_location.city,
+                COALESCE(cover.image_url, first_image.image_url) AS cover_url
             FROM tn_property_assets a
             LEFT JOIN tn_property_residential_specs rs ON rs.organization_id=a.organization_id AND rs.asset_id=a.asset_id
             LEFT JOIN tn_property_commercial_specs cs ON cs.organization_id=a.organization_id AND cs.asset_id=a.asset_id
             LEFT JOIN tn_property_building_specs bs ON bs.organization_id=a.organization_id AND bs.asset_id=a.asset_id
             LEFT JOIN tn_property_land_specs ls ON ls.organization_id=a.organization_id AND ls.asset_id=a.asset_id
+            LEFT JOIN tn_properties legacy ON legacy.id=a.legacy_property_id AND legacy.organization_id=a.organization_id
+            LEFT JOIN tn_property_types legacy_type ON legacy_type.id=legacy.type_id
+            LEFT JOIN tn_locations legacy_location ON legacy_location.id=legacy.location_id
+            LEFT JOIN tn_property_images cover ON cover.property_id=legacy.id AND cover.is_cover=1
+            LEFT JOIN tn_property_images first_image ON first_image.id=(
+                SELECT image.id FROM tn_property_images image WHERE image.property_id=legacy.id ORDER BY image.sort_order,image.id LIMIT 1
+            )
             WHERE a.organization_id=:organization_id AND ' . $where . ' LIMIT 1', [
                 'organization_id' => $organizationId,
                 'reference' => $reference,
@@ -73,40 +84,53 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
         $property = $this->getPropertyReference($organizationId, $reference);
         if ($property === null) return null;
 
-        $presentation = $this->one('SELECT l.listing_id,l.inventory_id,l.title,l.description,l.presentation_price_amount,
-                l.presentation_price_currency,l.slug,l.visibility,l.seo_title,l.seo_description,l.public_features_json,
-                i.transaction_type,i.status AS inventory_status,i.price_amount,i.price_currency,i.price_period
-            FROM tn_property_inventory_items i
-            INNER JOIN tn_property_listings l ON l.organization_id=i.organization_id AND l.inventory_id=i.inventory_id
-            WHERE i.organization_id=:organization_id AND i.asset_id=:asset_id
-            ORDER BY FIELD(l.status,"published","ready","hidden","draft","expired","archived"), l.updated_at DESC LIMIT 1', [
+        $inventory = $this->one('SELECT inventory_id,asset_id,transaction_type,status,price_amount,price_currency,price_period,
+                available_from,available_until,responsible_party_reference,source_id,updated_at
+            FROM tn_property_inventory_items
+            WHERE organization_id=:organization_id AND asset_id=:asset_id
+            ORDER BY FIELD(status,"available","reserved","under_offer","on_hold","off_market","sold","rented","withdrawn"),updated_at DESC
+            LIMIT 1', [
                 'organization_id' => $organizationId,
                 'asset_id' => $property['asset_id'],
             ]);
 
-        return $presentation === null ? ['property' => $property, 'inventory' => null, 'listing' => null] : [
+        $listing = null;
+        if ($inventory !== null) {
+            $listing = $this->one('SELECT listing_id,inventory_id,title,description,presentation_price_amount,
+                    presentation_price_currency,slug,visibility,seo_title,seo_description,public_features_json,status
+                FROM tn_property_listings
+                WHERE organization_id=:organization_id AND inventory_id=:inventory_id
+                ORDER BY FIELD(status,"published","ready","hidden","draft","expired","archived"),updated_at DESC LIMIT 1', [
+                    'organization_id' => $organizationId,
+                    'inventory_id' => $inventory['inventory_id'],
+                ]);
+        }
+
+        return [
             'property' => $property,
-            'inventory' => [
-                'inventory_id' => $presentation['inventory_id'],
-                'transaction_type' => $presentation['transaction_type'],
-                'status' => $presentation['inventory_status'],
-                'price_amount' => $presentation['price_amount'],
-                'price_currency' => $presentation['price_currency'],
-                'price_period' => $presentation['price_period'],
-            ],
-            'listing' => [
-                'listing_id' => $presentation['listing_id'],
-                'title' => $presentation['title'],
-                'description' => $presentation['description'],
-                'presentation_price_amount' => $presentation['presentation_price_amount'],
-                'presentation_price_currency' => $presentation['presentation_price_currency'],
-                'slug' => $presentation['slug'],
-                'visibility' => $presentation['visibility'],
-                'seo_title' => $presentation['seo_title'],
-                'seo_description' => $presentation['seo_description'],
-                'public_features_json' => $presentation['public_features_json'],
-            ],
+            'inventory' => $inventory,
+            'listing' => $listing,
         ];
+    }
+
+    public function searchPropertyReferences(string $organizationId, string $query, int $limit = 100): array
+    {
+        $query = trim($query);
+        if ($query === '') return [];
+        $limit = max(1, min(200, $limit));
+
+        return $this->all('SELECT DISTINCT a.asset_id,a.legacy_property_id
+            FROM tn_property_assets a
+            LEFT JOIN tn_properties legacy ON legacy.id=a.legacy_property_id AND legacy.organization_id=a.organization_id
+            LEFT JOIN tn_property_inventory_items inventory ON inventory.organization_id=a.organization_id AND inventory.asset_id=a.asset_id
+            LEFT JOIN tn_property_listings listing ON listing.organization_id=inventory.organization_id AND listing.inventory_id=inventory.inventory_id
+            WHERE a.organization_id=:organization_id AND a.legacy_property_id IS NOT NULL
+              AND (a.asset_id LIKE :query OR legacy.public_id LIKE :query OR legacy.title LIKE :query OR listing.title LIKE :query)
+            ORDER BY a.legacy_property_id DESC
+            LIMIT ' . $limit, [
+                'organization_id' => $organizationId,
+                'query' => '%' . $query . '%',
+            ]);
     }
 
     /** @return list<array<string,mixed>> */

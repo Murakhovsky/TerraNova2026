@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 
+use Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
 use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
@@ -38,21 +40,24 @@ $organizationId = (string) $connection->query('SELECT id FROM cos_organizations 
 assertCommand($organizationId !== '', 'No active organization is available for ClientCase command integration.');
 $propertyTypeId = $connection->query('SELECT id FROM tn_property_types WHERE is_active=1 ORDER BY id LIMIT 1')->fetchColumn();
 $locationId = $connection->query('SELECT id FROM tn_locations WHERE is_active=1 ORDER BY id LIMIT 1')->fetchColumn();
-$propertyId = $connection->query('SELECT id FROM tn_properties ORDER BY id LIMIT 1')->fetchColumn();
+$propertyStatement = $connection->prepare('SELECT legacy_property_id FROM tn_property_assets WHERE organization_id=:organization_id AND legacy_property_id IS NOT NULL ORDER BY legacy_property_id LIMIT 1');
+$propertyStatement->execute(['organization_id' => $organizationId]);
+$propertyId = $propertyStatement->fetchColumn();
 $managerStatement = $connection->prepare('SELECT u.id FROM tn_users u
     INNER JOIN cos_organization_memberships m ON m.user_id=u.id AND m.organization_id=:organization_id
     WHERE u.status="active" AND m.status="ACTIVE" AND m.role IN ("manager","admin") ORDER BY u.id LIMIT 1');
 $managerStatement->execute(['organization_id' => $organizationId]);
 $managerId = $managerStatement->fetchColumn();
 
-$commands = new MysqlClientCaseCommandRepository($connection);
+$propertyReference = new SalesPropertyReference(new MysqlPropertyReferencePort($connection), $organizationId);
+$commands = new MysqlClientCaseCommandRepository($connection, $propertyReference);
 $leads = new MysqlInboundLeadRepository($connection);
 $token = bin2hex(random_bytes(6));
 $connection->beginTransaction();
 try {
     $transactions = new TransactionManager($connection);
     $eventBus = new EventBus(new MysqlEventStore($connection), $transactions);
-    $readModel = new MysqlClientCaseReadModel($connection, $organizationId);
+    $readModel = new MysqlClientCaseReadModel($connection, $organizationId, $propertyReference);
     $pipelines = new MysqlPipelineRepository($connection);
     $changeStage = new ChangeDealStage(new MysqlDealRepository($connection),$pipelines,new StageTransitionPolicy(),$eventBus,$transactions);
     $createdByUseCase = (new CreateClientCase($commands, $eventBus, $transactions, $organizationId))->execute([

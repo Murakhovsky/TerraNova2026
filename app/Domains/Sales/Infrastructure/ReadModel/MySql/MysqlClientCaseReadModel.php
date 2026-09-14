@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\ReadModel\MySql;
 
 use Domains\Sales\Application\Contract\ClientCaseReadModelInterface;
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Domains\Sales\Model\ClientCaseStatus;
 use Domains\Sales\Model\ClientCaseType;
 use Domains\Sales\Model\LeadStatus;
@@ -12,8 +13,11 @@ use PDO;
 
 final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInterface
 {
-    public function __construct(private PDO $connection, private string $organizationId)
-    {
+    public function __construct(
+        private PDO $connection,
+        private string $organizationId,
+        private SalesPropertyReference $properties,
+    ) {
     }
 
     public function filters(array $query): array
@@ -113,10 +117,10 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function inboundRequests(int $caseId): array
     {
-        return $this->all('SELECT l.*, pr.public_id AS property_public_id, pr.slug AS property_slug, pr.title AS property_title
-            FROM tn_leads l LEFT JOIN tn_properties pr ON pr.id = l.property_id
+        $rows = $this->all('SELECT l.* FROM tn_leads l
             WHERE l.client_case_id = :case_id AND l.organization_id = :organization_id
             ORDER BY l.created_at DESC, l.id DESC', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
+        return $this->enrichLeadProperties($rows);
     }
 
     public function activities(int $caseId): array
@@ -129,16 +133,19 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function propertyMatches(int $caseId): array
     {
-        return $this->all('SELECT m.*, p.public_id, p.slug, p.title, p.price_amount, p.price_currency, p.area_total,
-            t.name_uk AS type_name, l.city, COALESCE(cover.image_url, first_image.image_url) AS cover_url
-            FROM tn_client_case_property_matches m
-            INNER JOIN tn_properties p ON p.id = m.property_id
-            INNER JOIN tn_property_types t ON t.id = p.type_id INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
-            LEFT JOIN tn_property_images first_image ON first_image.id = (SELECT i.id FROM tn_property_images i WHERE i.property_id = p.id ORDER BY i.sort_order, i.id LIMIT 1)
+        $rows = $this->all('SELECT m.* FROM tn_client_case_property_matches m
             WHERE m.client_case_id = :case_id AND m.organization_id = :organization_id
             ORDER BY FIELD(m.match_status, "interested", "viewing", "sent", "suggested", "deal", "rejected"), m.updated_at DESC',
             ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
+
+        foreach ($rows as &$row) {
+            $property = $this->properties->property((int) ($row['property_id'] ?? 0));
+            foreach (['public_id','slug','title','price_amount','price_currency','area_total','type_name','city','cover_url'] as $field) {
+                $row[$field] = $property[$field] ?? null;
+            }
+        }
+        unset($row);
+        return $rows;
     }
 
     public function requestMatches(int $caseId): array
@@ -152,10 +159,10 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function unlinkedInboundRequests(): array
     {
-        return $this->all('SELECT l.*, p.public_id AS property_public_id, p.title AS property_title FROM tn_leads l
-            LEFT JOIN tn_properties p ON p.id = l.property_id
+        $rows = $this->all('SELECT l.* FROM tn_leads l
             WHERE l.client_case_id IS NULL AND l.organization_id = :organization_id
             ORDER BY l.created_at DESC, l.id DESC LIMIT 80', ['organization_id' => $this->organizationId]);
+        return $this->enrichLeadProperties($rows);
     }
 
     public function inboundFilters(array $query): array
@@ -174,7 +181,18 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         $where = ['l.organization_id = :organization_id'];
         $params = ['organization_id' => $this->organizationId];
-        if (($filters['q'] ?? '') !== '') { $where[] = '(l.full_name LIKE :q OR l.phone LIKE :q OR l.email LIKE :q OR l.message LIKE :q OR p.public_id LIKE :q OR p.title LIKE :q OR c.public_id LIKE :q)'; $params['q'] = '%' . $filters['q'] . '%'; }
+        if (($filters['q'] ?? '') !== '') {
+            $search = ['l.full_name LIKE :q', 'l.phone LIKE :q', 'l.email LIKE :q', 'l.message LIKE :q', 'c.public_id LIKE :q'];
+            $params['q'] = '%' . $filters['q'] . '%';
+            $propertyPlaceholders = [];
+            foreach ($this->properties->searchLegacyPropertyIds((string) $filters['q'], 100) as $index => $propertyId) {
+                $key = 'property_q_' . $index;
+                $propertyPlaceholders[] = ':' . $key;
+                $params[$key] = $propertyId;
+            }
+            if ($propertyPlaceholders !== []) $search[] = 'l.property_id IN (' . implode(',', $propertyPlaceholders) . ')';
+            $where[] = '(' . implode(' OR ', $search) . ')';
+        }
         if (($filters['status'] ?? '') !== '') { $where[] = 'l.status = :status'; $params['status'] = $filters['status']; }
         if (($filters['request_intent'] ?? '') !== '') { $where[] = 'l.request_intent = :request_intent'; $params['request_intent'] = $filters['request_intent']; }
         if ((int) ($filters['assigned_user_id'] ?? 0) > 0) { $where[] = 'l.assigned_user_id = :assigned_user_id'; $params['assigned_user_id'] = (int) $filters['assigned_user_id']; }
@@ -185,13 +203,14 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             'status' => 'FIELD(l.status, "new", "contacted", "qualified", "viewing_planned", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC',
             default => 'l.created_at DESC, l.id DESC',
         };
-        return $this->all('SELECT l.*, p.public_id AS property_public_id, p.slug AS property_slug, p.title AS property_title,
+        $rows = $this->all('SELECT l.*,
             c.public_id AS case_public_id, c.title AS case_title, u.full_name AS manager_name,
             (SELECT COUNT(*) FROM tn_lead_activities activity_count WHERE activity_count.lead_id = l.id) AS activity_count
-            FROM tn_leads l LEFT JOIN tn_properties p ON p.id = l.property_id
+            FROM tn_leads l
             LEFT JOIN tn_client_cases c ON c.id = l.client_case_id AND c.organization_id = l.organization_id
             LEFT JOIN tn_users u ON u.id = l.assigned_user_id AND u.organization_id = l.organization_id
             WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $orderBy . ' LIMIT 150', $params);
+        return $this->enrichLeadProperties($rows);
     }
 
     public function inboundInboxStats(): array
@@ -234,6 +253,19 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         return $this->all('SELECT id, full_name, email, role FROM tn_users
             WHERE organization_id = :organization_id AND status = "active" AND role IN ("manager", "admin")
             ORDER BY FIELD(role, "admin", "manager"), full_name, email', ['organization_id' => $this->organizationId]);
+    }
+
+    /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
+    private function enrichLeadProperties(array $rows): array
+    {
+        foreach ($rows as &$row) {
+            $property = $this->properties->property((int) ($row['property_id'] ?? 0));
+            $row['property_public_id'] = $property['public_id'] ?? null;
+            $row['property_slug'] = $property['slug'] ?? null;
+            $row['property_title'] = $property['title'] ?? null;
+        }
+        unset($row);
+        return $rows;
     }
 
     private function canonicalStageFilter(string $value): string

@@ -16,4 +16,7 @@ interface PropertyReferencePort
 
     /** @return array<string,mixed>|null */
     public function getPropertyPresentation(string $organizationId, string|int $reference): ?array;
+
+    /** @return list<array<string,mixed>> */
+    public function searchPropertyReferences(string $organizationId, string $query, int $limit = 100): array;
 }

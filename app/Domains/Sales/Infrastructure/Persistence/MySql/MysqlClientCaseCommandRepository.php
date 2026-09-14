@@ -4,13 +4,16 @@ declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\Persistence\MySql;
 
 use Domains\Sales\Application\Contract\ClientCaseCommandRepositoryInterface;
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use InvalidArgumentException;
 use PDO;
 
 final readonly class MysqlClientCaseCommandRepository implements ClientCaseCommandRepositoryInterface
 {
-    public function __construct(private PDO $connection)
-    {
+    public function __construct(
+        private PDO $connection,
+        private SalesPropertyReference $properties,
+    ) {
     }
 
     public function activeManagerId(string $organizationId, mixed $value): ?int
@@ -37,29 +40,34 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function property(int $propertyId, bool $activeOnly = false): ?array
     {
-        if ($propertyId <= 0) return null;
-        $sql = 'SELECT id, public_id, title, slug, type_id, location_id, price_amount, price_currency, status
-            FROM tn_properties WHERE id = :id';
-        if ($activeOnly) $sql .= ' AND status IN ("published", "reserved")';
-        return $this->one($sql . ' LIMIT 1', ['id' => $propertyId]);
+        return $this->properties->property($propertyId, $activeOnly);
     }
 
     public function propertyMatch(string $organizationId, int $matchId): ?array
     {
-        return $this->one('SELECT m.*, p.public_id, p.title FROM tn_client_case_property_matches m
-            INNER JOIN tn_properties p ON p.id = m.property_id
+        $match = $this->one('SELECT m.* FROM tn_client_case_property_matches m
             INNER JOIN tn_client_cases c ON c.id = m.client_case_id AND c.organization_id = m.organization_id
             WHERE m.id = :id AND m.organization_id = :organization_id LIMIT 1',
             ['id' => $matchId, 'organization_id' => $organizationId]);
+        if ($match === null) return null;
+        $property = $this->properties->property((int) ($match['property_id'] ?? 0));
+        $match['public_id'] = $property['public_id'] ?? null;
+        $match['title'] = $property['title'] ?? null;
+        return $match;
     }
 
     public function inboundRequest(string $organizationId, int $requestId): ?array
     {
-        return $this->one('SELECT l.*, p.type_id AS property_type_id, p.location_id,
-                p.public_id AS property_public_id, p.title AS property_title
-            FROM tn_leads l LEFT JOIN tn_properties p ON p.id = l.property_id
+        $request = $this->one('SELECT l.* FROM tn_leads l
             WHERE l.id = :id AND l.organization_id = :organization_id LIMIT 1',
             ['id' => $requestId, 'organization_id' => $organizationId]);
+        if ($request === null) return null;
+        $property = $this->properties->property((int) ($request['property_id'] ?? 0));
+        $request['property_type_id'] = $property['type_id'] ?? null;
+        $request['location_id'] = $property['location_id'] ?? null;
+        $request['property_public_id'] = $property['public_id'] ?? null;
+        $request['property_title'] = $property['title'] ?? null;
+        return $request;
     }
 
     public function findPerson(string $organizationId, ?string $email, ?string $phone): ?array

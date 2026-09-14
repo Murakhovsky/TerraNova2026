@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort;
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
 
 define('BASE_PATH', dirname(__DIR__, 2));
@@ -13,7 +15,8 @@ require APP_PATH . '/config/loader.php';
 $config = require APP_PATH . '/config/config.php';
 $database = new PdoConnection($config->database);
 $organizationId = (string) ($_ENV['COS_ORGANIZATION_ID'] ?? 'default');
-$readModel = new MysqlClientCaseReadModel($database->connection(), $organizationId);
+$propertyReference = new SalesPropertyReference(new MysqlPropertyReferencePort($database->connection()), $organizationId);
+$readModel = new MysqlClientCaseReadModel($database->connection(), $organizationId, $propertyReference);
 
 $filters = $readModel->filters([
     'stage' => 'invalid', 'status' => 'active', 'priority' => 'urgent', 'assigned_user_id' => '-5', 'sort' => 'budget',

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\Persistence\MySql;
 
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Kernel\Agent\AgentInvocation;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use PDO;
@@ -9,7 +10,10 @@ use RuntimeException;
 
 final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilderInterface
 {
-    public function __construct(private PDO $connection) {}
+    public function __construct(
+        private PDO $connection,
+        private ?SalesPropertyReference $properties = null,
+    ) {}
 
     public function build(AgentInvocation $invocation): array
     {
@@ -34,7 +38,22 @@ final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilde
         $org=['organization_id'=>$invocation->organizationId];
         $rules=$this->all('SELECT code,name,trigger_type,conditions,effect FROM cos_rules WHERE organization_id=:organization_id AND status="ACTIVE" AND trigger_type LIKE "sales.%" ORDER BY priority LIMIT 20',$org);
         $policies=$this->all('SELECT code,action_type,conditions,decision FROM cos_policies WHERE organization_id=:organization_id AND status="ACTIVE" AND action_type LIKE "sales.%" ORDER BY priority LIMIT 20',$org);
-        $property=$this->one('SELECT p.public_id,p.title,p.price_amount,p.price_currency,m.match_status,m.score FROM tn_client_case_property_matches m INNER JOIN tn_properties p ON p.id=m.property_id WHERE m.client_case_id=:id AND m.organization_id=:organization_id ORDER BY m.score DESC,m.updated_at DESC LIMIT 1',$scope);
+        $propertyMatch=$this->one('SELECT property_id,match_status,score FROM tn_client_case_property_matches '
+            . 'WHERE client_case_id=:id AND organization_id=:organization_id ORDER BY score DESC,updated_at DESC LIMIT 1',$scope);
+        $property=null;
+        if ($propertyMatch !== null && $this->properties !== null) {
+            $reference=$this->properties->property((int) $propertyMatch['property_id']);
+            if ($reference !== null) {
+                $property=[
+                    'public_id'=>$reference['public_id']??null,
+                    'title'=>$reference['title']??null,
+                    'price_amount'=>$reference['price_amount']??null,
+                    'price_currency'=>$reference['price_currency']??null,
+                    'match_status'=>$propertyMatch['match_status']??null,
+                    'score'=>$propertyMatch['score']??null,
+                ];
+            }
+        }
         $context = [
             'deal'=>$deal,'person'=>['id'=>$deal['person_id'],'name'=>$deal['full_name'],'notes'=>$deal['customer_notes']],
             'lead'=>$lead,'pipeline'=>['name'=>$deal['pipeline_name'],'stage'=>$deal['stage']],
