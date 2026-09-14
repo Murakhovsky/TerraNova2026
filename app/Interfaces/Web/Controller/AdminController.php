@@ -66,8 +66,12 @@ class AdminController extends ControllerBase
         }
 
         $days = (int) $this->request->getQuery('days', 'int', 30);
+        $this->view->title = 'Аналітика';
         $this->view->metaTitle = 'Аналітика продажів | Terra Nova CLUB';
         $this->view->metaRobots = 'noindex,nofollow';
+        $this->view->workspaceSection = 'analytics';
+        $this->view->workspaceActive = 'analytics';
+        $this->view->pageAssetEntries = ['analytics-workspace'];
         $this->view->pageStatus = null;
         $this->view->report = [];
 
