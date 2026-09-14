@@ -79,6 +79,25 @@ While V0.2–V0.4 migrates the implementation:
 3. legacy catalog/public presentation code may read Property, but it must not define Property's canonical model;
 4. cross-domain commercial data should move toward explicit projections/contracts instead of additional columns on the canonical asset.
 
-## Direction after V0.2.0
+## Property V0.2.1 — Module runtime
 
-V0.2.1 makes Property a real Kernel runtime module. V0.2.2 makes organization scope a domain invariant. Later V0.2 slices introduce canonical types, commands and domain events without turning the codebase into ceremonial DDD class multiplication.
+Property participates in the Kernel module runtime through `propertyDomainModule`.
+
+Canonical runtime capabilities are:
+
+- `property.registry`
+- `property.read`
+- `property.write`
+- `property.intake`
+- `property.media`
+- `property.catalog`
+
+The module contributes its own canonical runtime API surface under `/api/v1/property-registry`. This is intentionally separate from the legacy `/api/v1/properties` public catalog API: one describes the COS asset registry runtime, the other remains a compatibility/presentation surface until later migration.
+
+Property also owns a tenant-scoped configuration namespace. V0.2.1 provisions it with no default runtime rules; rules are introduced only after Property commands and events have canonical contracts.
+
+Runtime health is reported through the Kernel `ModuleReadinessDiagnostic`, so Property installation state, deployed/schema versions, migrations, dependencies and enabled state are evaluated by the same control-plane mechanism as other COS modules.
+
+## Direction after V0.2.1
+
+V0.2.2 turns organization scope from a repository convenience into a domain invariant. Later V0.2 slices introduce canonical types, commands and domain events without turning the codebase into ceremonial DDD class multiplication.

@@ -13,7 +13,7 @@ $assert = static function (bool $condition, string $message): void {
 };
 
 $assert(($manifest['id'] ?? null) === 'property', 'manifest id must stay property');
-$assert(($manifest['version'] ?? null) === '0.2.0', 'manifest version must be 0.2.0');
+$assert(version_compare((string) ($manifest['version'] ?? '0.0.0'), '0.2.0', '>='), 'manifest version must stay at Property V0.2+');
 $assert(is_string($readme) && $readme !== '', 'Property README must exist');
 
 foreach ([

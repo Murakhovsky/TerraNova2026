@@ -16,6 +16,7 @@ use Interfaces\Web\Navigation\SalesNavigationContributor;
 use Interfaces\Web\Routing\DiagnosticModuleRouteContributor;
 use Interfaces\Web\Routing\ModuleRouteAccessGuard;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
+use Interfaces\Web\Routing\PropertyModuleRouteContributor;
 use Interfaces\Web\Routing\SalesModuleRouteContributor;
 use Interfaces\Web\Service\ClientCaseService;
 use Interfaces\Web\Service\CompanyHomeService;
@@ -48,6 +49,7 @@ final class WebApplicationServices
         ));
         $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor());
         $di->setShared('diagnosticRouteContributor', fn() => new DiagnosticModuleRouteContributor());
+        $di->setShared('propertyRouteContributor', fn() => new PropertyModuleRouteContributor());
 
         // UI extensions are declared by module.php. Web owns the concrete contributor
         // implementations, while Kernel owns only the extension-point registry.

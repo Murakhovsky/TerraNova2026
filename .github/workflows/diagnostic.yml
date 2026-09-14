@@ -90,11 +90,23 @@ jobs:
           node --check frontend/features/sales/rule-editor.js
           node --check tests/browser/sales_workspace.mjs
 
-      - name: Property submission check
-        run: php tests/smoke/property_submission.php
+      - name: Property domain and runtime checks
+        run: |
+          php tests/architecture/property_domain_definition.php
+          php tests/architecture/property_v021_runtime.php
+          php tests/smoke/property_submission.php
+          php tests/smoke/property_workflow.php
 
-      - name: Property workflow check
-        run: php tests/smoke/property_workflow.php
+      - name: Property PHP lint
+        run: |
+          find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/PropertyServices.php
+          php -l app/Bootstrap/WebApplicationServices.php
+          php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
+          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
+          php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
+          php -l tests/architecture/property_domain_definition.php
+          php -l tests/architecture/property_v021_runtime.php
 
       - name: Telegram isolation check
         run: php tests/architecture/telegram_migration.php

@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.2.0',
+    'version' => '0.2.1',
     'schema_version' => '0.1.1',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Canonical registry of physical real-estate assets, their intrinsic facts, location, lifecycle and relations.',
@@ -12,10 +12,14 @@ return [
     'dependencies' => [],
     'enabled_by_default' => true,
     'contributions' => [
-        'runtime_module_service' => null,
+        'runtime_module_service' => 'propertyDomainModule',
         'job_handler_services' => [],
-        'api_route_contributor_services' => [],
-        'configuration_provisioner_services' => [],
+        'api_route_contributor_services' => [
+            'propertyRouteContributor',
+        ],
+        'configuration_provisioner_services' => [
+            'propertyModuleConfigurationProvisioner',
+        ],
         'extension_services' => [
             'web.navigation' => [
                 'propertyNavigationContributor',
@@ -24,6 +28,13 @@ return [
         'migration_files' => [
             'app/migrations/20260914_000048_web_v041_property_tenancy.sql',
         ],
-        'capabilities' => [],
+        'capabilities' => [
+            'property.registry',
+            'property.read',
+            'property.write',
+            'property.intake',
+            'property.media',
+            'property.catalog',
+        ],
     ],
 ];
