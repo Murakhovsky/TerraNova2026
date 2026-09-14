@@ -1,6 +1,6 @@
 ---
 title: Property Domain Overview
-description: Canonical real-estate asset registry, Inventory, Listing, analytics, intelligence і network boundary.
+description: Canonical real-estate asset registry, Inventory, Listing, analytics, intelligence, identity hardening і network interoperability.
 status: active
 updated: 2026-09-14
 kind: domain
@@ -24,25 +24,29 @@ CRM            = people/relationship context
 
 ## Asset model
 
-Property `0.10.0` охоплює:
+Property `0.11.0` охоплює:
 
 - canonical asset registry і structure graph;
 - asset kind/lifecycle/relations;
 - location/address/geo model;
 - identity resolution, external references, provenance і verification;
+- operational identity `CREATE / MERGE / REVIEW` workflow with review audit;
+- canonical aliases for legacy property identifiers without runtime fallback to `tn_properties`;
 - Inventory lifecycle, reservations, transaction type і price state;
 - Listing/Publication lifecycle та media;
 - history/event contracts;
 - market analytics;
 - evidence-linked Property Intelligence;
-- external Property Network intake/export/sync boundary.
+- external Property Network intake/export/sync boundary;
+- concrete transport-injected RESO Web API connector adapter for MLS/developer/partner interoperability;
+- decomposed Property management ports behind a compatibility facade.
 
 ## Runtime manifest
 
 ```text
 id: property
-version: 0.10.0
-schema: 0.10.0
+version: 0.11.0
+schema: 0.11.0
 kernel: >=0.11.0 <0.12.0
 enabled_by_default: true
 ```
@@ -53,8 +57,16 @@ AS-IS contributions:
 - API route contributor `propertyRouteContributor`;
 - configuration provisioner `propertyModuleConfigurationProvisioner`;
 - Web navigation contribution;
-- Property migrations through `V0.10.0`;
-- explicit Property capability catalogue.
+- Property migrations through `V0.11.0`;
+- explicit Property capability catalogue, including `property.identity.review`.
+
+## V0.11 hardening rule
+
+Identity merge means resolving an incoming observation/submission into one existing canonical asset. It does **not** destructively merge two canonical assets. Ambiguous matches enter explicit review; review decisions are audited.
+
+Legacy `tn_properties` may be read by the V0.11 one-time compatibility migration, but canonical runtime reference resolution remains on Property-owned canonical tables and `tn_property_asset_legacy_links`.
+
+The RESO adapter implements the existing V0.10 `PropertyNetworkConnectorInterface`; provider authentication, endpoint details and secrets remain outside Property behind `configuration_reference` and the injected transport port.
 
 ## Cross-domain rule
 

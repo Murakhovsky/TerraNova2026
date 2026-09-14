@@ -12,9 +12,20 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
 
     public function getPropertyReference(string $organizationId, string|int $reference): ?array
     {
-        $where = is_int($reference) || ctype_digit((string) $reference)
-            ? 'a.legacy_property_id = :reference'
+        $numeric = is_int($reference) || ctype_digit((string) $reference);
+        $where = $numeric
+            ? '(a.legacy_property_id = :reference OR EXISTS (
+                    SELECT 1 FROM tn_property_asset_legacy_links legacy
+                    WHERE legacy.organization_id=a.organization_id
+                      AND legacy.asset_id=a.asset_id
+                      AND legacy.legacy_property_id=:reference_alias
+                ))'
             : 'a.asset_id = :reference';
+        $params = [
+            'organization_id' => $organizationId,
+            'reference' => $reference,
+        ];
+        if ($numeric) $params['reference_alias'] = $reference;
 
         return $this->one('SELECT a.asset_id,a.legacy_property_id,a.kind,a.type_code,a.lifecycle,
                 a.location_node_id,a.address_id,
@@ -30,10 +41,7 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
             LEFT JOIN tn_property_commercial_specs cs ON cs.organization_id=a.organization_id AND cs.asset_id=a.asset_id
             LEFT JOIN tn_property_building_specs bs ON bs.organization_id=a.organization_id AND bs.asset_id=a.asset_id
             LEFT JOIN tn_property_land_specs ls ON ls.organization_id=a.organization_id AND ls.asset_id=a.asset_id
-            WHERE a.organization_id=:organization_id AND ' . $where . ' LIMIT 1', [
-                'organization_id' => $organizationId,
-                'reference' => $reference,
-            ]);
+            WHERE a.organization_id=:organization_id AND ' . $where . ' LIMIT 1', $params);
     }
 
     public function getInventorySnapshot(string $organizationId, string $inventoryId): ?array
@@ -115,8 +123,10 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
         if ($query === '') return [];
         $limit = max(1, min(200, $limit));
 
-        return $this->all('SELECT DISTINCT a.asset_id,a.legacy_property_id
+        return $this->all('SELECT DISTINCT a.asset_id,COALESCE(legacy.legacy_property_id,a.legacy_property_id) AS legacy_property_id
             FROM tn_property_assets a
+            LEFT JOIN tn_property_asset_legacy_links legacy
+              ON legacy.organization_id=a.organization_id AND legacy.asset_id=a.asset_id
             LEFT JOIN tn_addresses address ON address.id=a.address_id
             LEFT JOIN tn_location_nodes location ON location.id=COALESCE(a.location_node_id,address.locality_node_id)
             LEFT JOIN tn_property_inventory_items inventory ON inventory.organization_id=a.organization_id AND inventory.asset_id=a.asset_id
@@ -124,7 +134,7 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
             WHERE a.organization_id=:organization_id
               AND (a.asset_id LIKE :query OR a.type_code LIKE :query OR listing.title LIKE :query OR listing.slug LIKE :query
                    OR location.name LIKE :query OR address.formatted_address LIKE :query)
-            ORDER BY a.legacy_property_id DESC,a.asset_id
+            ORDER BY legacy_property_id DESC,a.asset_id
             LIMIT ' . $limit, [
                 'organization_id' => $organizationId,
                 'query' => '%' . $query . '%',

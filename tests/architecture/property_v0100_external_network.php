@@ -58,8 +58,8 @@ foreach (['tn_property_assets','tn_property_inventory_items','tn_property_listin
 $assert(!str_contains($export, 'tn_properties'), 'V0.10 export must not fall back to legacy tn_properties.');
 
 $module = require $root . '/app/Domains/Property/module.php';
-$assert(($module['version'] ?? null) === '0.10.0', 'Property module must be V0.10.0.');
-$assert(($module['schema_version'] ?? null) === '0.10.0', 'Property schema must be V0.10.0.');
+$assert(version_compare((string) ($module['version'] ?? '0.0.0'), '0.10.0', '>='), 'Property module must retain V0.10.0+ external network behavior.');
+$assert(version_compare((string) ($module['schema_version'] ?? '0.0.0'), '0.10.0', '>='), 'Property schema must retain V0.10.0+ external network behavior.');
 $assert(in_array('property.network', $module['contributions']['capabilities'] ?? [], true), 'Property V0.10 network capability missing.');
 $assert(in_array('app/migrations/20260914_000057_property_v0100_external_network.sql', $module['contributions']['migration_files'] ?? [], true), 'Property V0.10 migration missing from manifest.');
 

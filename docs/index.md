@@ -71,6 +71,6 @@ Business problem
 | Kernel | `0.11.8` | generic execution platform |
 | Sales | `0.8.6` | reference runtime Domain |
 | Diagnostic | `0.6.1` | executable diagnostic runtime |
-| Property | `0.10.0` | asset registry, inventory, listing, intelligence and network boundary |
+| Property | `0.11.0` | canonical asset identity, inventory, listing, intelligence and network interoperability |
 
 Exact module facts генеруються з `main/app/Domains/*/module.php` у [Generated Reference](./12-reference/README.md).
