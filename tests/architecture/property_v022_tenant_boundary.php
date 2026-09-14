@@ -8,11 +8,11 @@ $fail = static function (string $message): never {
     throw new RuntimeException($message);
 };
 
-if (($manifest['version'] ?? null) !== '0.2.2') {
-    $fail('Property V0.2.2 manifest version is required.');
+if (version_compare((string) ($manifest['version'] ?? '0.0.0'), '0.2.2', '<')) {
+    $fail('Property tenant boundary requires manifest V0.2.2+.');
 }
-if (($manifest['schema_version'] ?? null) !== '0.2.2') {
-    $fail('Property V0.2.2 schema version is required.');
+if (version_compare((string) ($manifest['schema_version'] ?? '0.0.0'), '0.2.2', '<')) {
+    $fail('Property tenant boundary requires schema V0.2.2+.');
 }
 
 $migrationPath = 'app/migrations/20260914_000050_property_v022_tenant_boundary.sql';
