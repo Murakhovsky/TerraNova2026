@@ -9,23 +9,30 @@ use Interfaces\Web\Navigation\ModuleAwareNavigationService;
 use Interfaces\Web\Navigation\PropertyNavigationContributor;
 use Interfaces\Web\Navigation\SalesNavigationContributor;
 use Kernel\Module\ActiveModuleResolver;
-use Kernel\Module\Contract\ModuleStateRepositoryInterface;
+use Kernel\Module\Contract\BulkModuleStateRepositoryInterface;
 use Kernel\Module\ModuleCatalog;
 use Kernel\Module\ModuleManifest;
 use Kernel\Tenant\OrganizationContextInterface;
 
-$states = new class implements ModuleStateRepositoryInterface {
-    /** @var array<string, bool> */
+$states = new class implements BulkModuleStateRepositoryInterface {
+    /** @var array<string, array<string, bool>> */
     private array $values = [];
+    public int $bulkReads = 0;
 
     public function enabledOverride(string $organizationId, string $moduleId): ?bool
     {
-        return $this->values[$organizationId . ':' . $moduleId] ?? null;
+        return $this->values[$organizationId][$moduleId] ?? null;
+    }
+
+    public function enabledOverrides(string $organizationId): array
+    {
+        $this->bulkReads++;
+        return $this->values[$organizationId] ?? [];
     }
 
     public function setEnabled(string $organizationId, string $moduleId, bool $enabled): void
     {
-        $this->values[$organizationId . ':' . $moduleId] = $enabled;
+        $this->values[$organizationId][$moduleId] = $enabled;
     }
 };
 
@@ -49,8 +56,8 @@ $organization = new class implements OrganizationContextInterface {
 };
 
 $catalog = new ModuleCatalog([
-    new ModuleManifest('sales', 'Sales', '0.7.1'),
-    new ModuleManifest('property', 'Property', '0.1.0'),
+    new ModuleManifest('sales', 'Sales', '0.8.6'),
+    new ModuleManifest('property', 'Property', '0.1.1'),
     new ModuleManifest('diagnostic', 'Diagnostics', '0.5.4'),
 ]);
 $resolver = new ActiveModuleResolver($catalog, $states);
@@ -71,8 +78,23 @@ $section = static function (array $items, string $key): ?array {
     }
     return null;
 };
+$assertNoOrderMetadata = null;
+$assertNoOrderMetadata = static function (array $items) use (&$assertNoOrderMetadata): void {
+    foreach ($items as $item) {
+        if (array_key_exists('order', $item)) {
+            throw new RuntimeException('Internal navigation ordering metadata leaked into the view contract.');
+        }
+        if (isset($item['children'])) {
+            $assertNoOrderMetadata((array) $item['children']);
+        }
+    }
+};
 
+$beforeManagerReads = $states->bulkReads;
 $manager = $navigation->workspace('manager');
+if (($states->bulkReads - $beforeManagerReads) !== 1) {
+    throw new RuntimeException('Workspace navigation must resolve exactly one effective module snapshot per render.');
+}
 $expected = ['home', 'sales', 'clients', 'properties', 'cos', 'analytics', 'administration'];
 if ($keys($manager['primary'] ?? []) !== $expected) {
     throw new RuntimeException('Enabled modules did not compose the canonical manager workspace.');
@@ -82,9 +104,10 @@ if ($keys($sales['children'] ?? []) !== ['sales', 'today', 'pipeline', 'leads', 
     throw new RuntimeException('Manager Sales navigation contribution is invalid.');
 }
 $cos = $section($manager['primary'] ?? [], 'cos');
-if (!in_array('diagnostics', $keys($cos['children'] ?? []), true)) {
-    throw new RuntimeException('Diagnostics module did not extend the COS navigation section.');
+if ($keys($cos['children'] ?? []) !== ['cos', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit', 'diagnostics']) {
+    throw new RuntimeException('Diagnostics module did not extend the COS navigation section in canonical order.');
 }
+$assertNoOrderMetadata($manager['primary'] ?? []);
 
 $admin = $navigation->workspace('admin');
 $adminSales = $section($admin['primary'] ?? [], 'sales');
@@ -96,10 +119,15 @@ if ($keys($adminAdministration['children'] ?? []) !== ['users', 'content']) {
     throw new RuntimeException('Admin core navigation lost Administration permissions.');
 }
 
+$beforePortalReads = $states->bulkReads;
 $portal = $navigation->portal('realtor');
+if (($states->bulkReads - $beforePortalReads) !== 1) {
+    throw new RuntimeException('Portal navigation must resolve exactly one effective module snapshot per render.');
+}
 if ($keys($portal['primary'] ?? []) !== ['cabinet', 'catalog', 'favour', 'listing', 'submit']) {
     throw new RuntimeException('Property module did not contribute the canonical portal navigation.');
 }
+$assertNoOrderMetadata($portal['primary'] ?? []);
 
 $states->setEnabled('org-a', 'sales', false);
 $withoutSales = $navigation->workspace('manager');
@@ -129,11 +157,18 @@ $otherTenant = $navigation->workspace('manager');
 if ($keys($otherTenant['primary'] ?? []) !== $expected) {
     throw new RuntimeException('Module-aware navigation cached another organization state.');
 }
-
-foreach ($otherTenant['primary'] ?? [] as $item) {
-    if (array_key_exists('order', $item)) {
-        throw new RuntimeException('Internal navigation ordering metadata leaked into the view contract.');
-    }
+$otherTenantCos = $section($otherTenant['primary'] ?? [], 'cos');
+if (!in_array('diagnostics', $keys($otherTenantCos['children'] ?? []), true)) {
+    throw new RuntimeException('Organization switch did not restore the second tenant effective module state.');
 }
+
+$organization->organizationId = 'org-a';
+$disabledTenantAgain = $navigation->workspace('manager');
+if ($keys($disabledTenantAgain['primary'] ?? []) !== ['home', 'cos', 'analytics', 'administration']) {
+    throw new RuntimeException('Navigation did not re-resolve the original tenant after switching organizations.');
+}
+
+$assertNoOrderMetadata($otherTenant['primary'] ?? []);
+$assertNoOrderMetadata($disabledTenantAgain['primary'] ?? []);
 
 echo "WEB V0.5 module-aware navigation runtime contract passed.\n";

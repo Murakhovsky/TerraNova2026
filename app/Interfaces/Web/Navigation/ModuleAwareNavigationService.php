@@ -54,11 +54,12 @@ final readonly class ModuleAwareNavigationService
         $primary = (array) ($navigation['primary'] ?? []);
         $extensions = [];
         $organizationId = $this->organization->id();
+        $moduleSnapshot = $this->modules->snapshot($organizationId);
 
         foreach ($this->contributors as $contribution) {
             $moduleId = $contribution['module_id'];
             $contributor = $contribution['service'];
-            if (!$this->modules->isEnabled($organizationId, $moduleId)) {
+            if (!$moduleSnapshot->isEnabled($moduleId)) {
                 continue;
             }
 
@@ -85,9 +86,10 @@ final readonly class ModuleAwareNavigationService
         $navigation = FrontendNavigation::portalCore($role);
         $primary = (array) ($navigation['primary'] ?? []);
         $organizationId = $this->organization->id();
+        $moduleSnapshot = $this->modules->snapshot($organizationId);
 
         foreach ($this->contributors as $contribution) {
-            if ($this->modules->isEnabled($organizationId, $contribution['module_id'])) {
+            if ($moduleSnapshot->isEnabled($contribution['module_id'])) {
                 array_push($primary, ...$contribution['service']->portalPrimary($role));
             }
         }

@@ -36,10 +36,13 @@ foreach (['workspaceCore', 'portalCore'] as $needle) {
 }
 
 $service = (string) file_get_contents($root . '/app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php');
-foreach (['OrganizationContextInterface', 'ActiveModuleResolver', 'modules->isEnabled', 'organization->id()', 'workspacePrimary', 'workspaceChildExtensions', 'portalPrimary'] as $needle) {
+foreach (['OrganizationContextInterface', 'ActiveModuleResolver', 'modules->snapshot', 'moduleSnapshot->isEnabled', 'organization->id()', 'workspacePrimary', 'workspaceChildExtensions', 'portalPrimary'] as $needle) {
     if (!str_contains($service, $needle)) {
         throw new RuntimeException('Module-aware navigation service is missing runtime behavior: ' . $needle);
     }
+}
+if (str_contains($service, 'modules->isEnabled')) {
+    throw new RuntimeException('WEB V0.5 navigation must use one effective module snapshot per render instead of resolving module state repeatedly.');
 }
 
 $managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
@@ -69,6 +72,13 @@ if (str_contains($webServices, "setShared('webModuleNavigationContributors'")) {
     throw new RuntimeException('WEB V0.5 must not restore the pre-V0.9 hardcoded navigation contributor aggregate.');
 }
 
+$moduleServices = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');
+foreach (['ModuleExtensionPoint::WEB_NAVIGATION', "setShared('cosModuleWebNavigationContributors'", "'module_id' => $extension->moduleId"] as $needle) {
+    if (!str_contains($moduleServices, $needle)) {
+        throw new RuntimeException('Generic module extension runtime is missing WEB navigation integration: ' . $needle);
+    }
+}
+
 foreach ([
     'SalesNavigationContributor.php' => ["return 'sales'", 'sales/dashboard', 'client-case/inbox'],
     'PropertyNavigationContributor.php' => ["return 'property'", 'property/manage', 'property/catalog'],
@@ -79,6 +89,17 @@ foreach ([
         if (!str_contains($source, $needle)) {
             throw new RuntimeException(sprintf('%s is missing owned navigation: %s.', $file, $needle));
         }
+    }
+}
+
+foreach ([
+    'app/Domains/Sales/module.php' => 'salesNavigationContributor',
+    'app/Domains/Property/module.php' => 'propertyNavigationContributor',
+    'app/Domains/Diagnostic/module.php' => 'diagnosticNavigationContributor',
+] as $manifestPath => $serviceId) {
+    $manifest = (string) file_get_contents($root . '/' . $manifestPath);
+    if (!str_contains($manifest, "'web.navigation'") || !str_contains($manifest, $serviceId)) {
+        throw new RuntimeException(sprintf('%s must declare its Web navigation extension service.', $manifestPath));
     }
 }
 
