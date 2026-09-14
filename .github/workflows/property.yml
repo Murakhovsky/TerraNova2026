@@ -7,9 +7,10 @@ on:
       - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
       - 'app/Bootstrap/PropertyAnalyticsServices.php'
+      - 'app/Bootstrap/PropertyIntelligenceServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
-      - 'app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php'
+      - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
@@ -26,9 +27,10 @@ on:
       - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
       - 'app/Bootstrap/PropertyAnalyticsServices.php'
+      - 'app/Bootstrap/PropertyIntelligenceServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
-      - 'app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php'
+      - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
@@ -61,6 +63,7 @@ jobs:
           php tests/architecture/property_v070_history_contracts_schema.php
           php tests/architecture/property_v071_sales_boundary.php
           php tests/architecture/property_v080_analytics.php
+          php tests/architecture/property_v090_intelligence.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -86,6 +89,9 @@ jobs:
       - name: Property V0.8 market analytics
         run: php tests/unit/property_v080_market_analytics.php
 
+      - name: Property V0.9 intelligence
+        run: php tests/unit/property_v090_intelligence.php
+
       - name: Property compatibility smoke
         run: |
           php tests/smoke/property_submission.php
@@ -101,8 +107,10 @@ jobs:
           php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php
           php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php
           php -l app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php
+          php -l app/Infrastructure/Platform/Analytics/PropertyIntelligenceCoordinator.php
           php -l app/Bootstrap/PropertyServices.php
           php -l app/Bootstrap/PropertyAnalyticsServices.php
+          php -l app/Bootstrap/PropertyIntelligenceServices.php
           php -l app/Bootstrap/SalesServices.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
