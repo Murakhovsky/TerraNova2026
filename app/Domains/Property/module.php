@@ -7,7 +7,7 @@ return [
     'version' => '0.8.0',
     'schema_version' => '0.7.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical real-estate asset domain with Inventory, Listing/Publication, history, cross-domain references and supply/demand analytics.',
+    'description' => 'Canonical registry of real-estate assets with Inventory, Listing/Publication, history, cross-domain references and supply/demand analytics.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
