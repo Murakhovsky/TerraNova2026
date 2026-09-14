@@ -49,6 +49,8 @@ jobs:
           php tests/architecture/property_v030_registry_schema.php
           php tests/architecture/property_v040_identity_schema.php
           php tests/architecture/property_v050_inventory_schema.php
+          php tests/architecture/property_v060_listing_schema.php
+          php tests/architecture/property_v070_history_contracts_schema.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -64,6 +66,12 @@ jobs:
 
       - name: Property commercial inventory
         run: php tests/unit/property_v050_inventory.php
+
+      - name: Property listings and publication
+        run: php tests/unit/property_v060_listing_publication.php
+
+      - name: Property history and cross-domain contracts
+        run: php tests/unit/property_v070_history_contracts.php
 
       - name: Property compatibility smoke
         run: |

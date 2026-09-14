@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.6.0',
-    'schema_version' => '0.6.0',
+    'version' => '0.7.0',
+    'schema_version' => '0.7.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical real-estate registry with commercial Inventory and channel-specific Listing/Publication layers.',
+    'description' => 'Canonical real-estate registry with separated Inventory, Listing/Publication, historical projections and cross-domain reference contracts.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
@@ -24,10 +24,11 @@ return [
             'app/migrations/20260914_000052_property_v040_identity_provenance.sql',
             'app/migrations/20260914_000053_property_v050_inventory.sql',
             'app/migrations/20260914_000054_property_v060_listings_publication.sql',
+            'app/migrations/20260914_000055_property_v070_history_contracts.sql',
         ],
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
-            'property.inventory','property.listing','property.publish',
+            'property.inventory','property.listing','property.publish','property.history','property.reference',
         ],
     ],
 ];
