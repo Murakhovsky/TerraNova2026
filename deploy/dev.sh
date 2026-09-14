@@ -38,6 +38,19 @@ else
   exit 23
 fi
 
+migration_structured_log() {
+  local migrate_id tmp_log
+  migrate_id="$("${COMPOSE[@]}" ps -aq migrate 2>/dev/null || true)"
+  [[ -n "$migrate_id" ]] || return 0
+
+  tmp_log="$(mktemp)"
+  if "${DOCKER[@]}" cp "$migrate_id:/var/www/html/tmp/logs/cos.jsonl" "$tmp_log" >/dev/null 2>&1; then
+    echo "Structured migration log:" >&2
+    tail -n 100 "$tmp_log" >&2 || true
+  fi
+  rm -f "$tmp_log"
+}
+
 echo "Using server environment: $ENV_FILE"
 "${COMPOSE[@]}" config --quiet
 
@@ -53,6 +66,7 @@ if ! "${COMPOSE[@]}" up -d --remove-orphans; then
   "${COMPOSE[@]}" ps -a >&2 || true
   echo "Migration/MySQL logs:" >&2
   "${COMPOSE[@]}" logs --no-color --tail=250 migrate mysql >&2 || true
+  migration_structured_log
   exit 24
 fi
 
@@ -63,6 +77,7 @@ if [[ -n "$MIGRATE_ID" ]]; then
   if [[ "$MIGRATE_STATUS" == "exited" && "$MIGRATE_EXIT_CODE" != "0" ]]; then
     echo "Database migration failed with exit code $MIGRATE_EXIT_CODE." >&2
     "${COMPOSE[@]}" logs --no-color --tail=250 migrate mysql >&2 || true
+    migration_structured_log
     exit 24
   fi
 fi

@@ -116,9 +116,12 @@ SET
         COALESCE((
             SELECT s.code
             FROM sales_pipeline_stages s
-            WHERE s.organization_id = NEW.organization_id
-              AND s.pipeline_id = NEW.pipeline_id
-              AND s.id = NEW.stage_id
+            WHERE CONVERT(s.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                  = CONVERT(NEW.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+              AND CONVERT(s.pipeline_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                  = CONVERT(NEW.pipeline_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+              AND CONVERT(s.id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                  = CONVERT(NEW.stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
             LIMIT 1
         ), 'UNKNOWN'),
         NEW.to_stage_code
@@ -131,6 +134,8 @@ SET
 
 -- After a repair, current state is known but its entry timestamp is not. Seed it explicitly
 -- as ESTIMATED; the durable canonical replay upgrades what can actually be proven.
+-- Older databases may still use utf8mb4_general_ci on Sales source tables, therefore all
+-- cross-table string comparisons are normalized explicitly during this compatibility upgrade.
 INSERT IGNORE INTO sales_deal_stage_history (
     id, organization_id, deal_id, pipeline_id,
     from_stage_id, from_stage_code, to_stage_id, to_stage_code,
@@ -154,13 +159,18 @@ SELECT
     'ESTIMATED'
 FROM tn_client_cases c
 LEFT JOIN sales_pipeline_stages s
-    ON s.id = c.stage_id AND s.organization_id = c.organization_id
+    ON CONVERT(s.id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+       = CONVERT(c.stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+   AND CONVERT(s.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+       = CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
 WHERE c.stage_id IS NOT NULL
-  AND COALESCE(s.code, UPPER(c.stage), '') <> ''
+  AND CHAR_LENGTH(COALESCE(s.code, UPPER(c.stage), '')) > 0
   AND NOT EXISTS (
       SELECT 1 FROM sales_deal_stage_history h
-      WHERE h.organization_id = c.organization_id
-        AND h.deal_id = CAST(c.id AS CHAR)
+      WHERE CONVERT(h.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        AND CONVERT(h.deal_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(CAST(c.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
         AND h.left_at IS NULL
   );
 
@@ -211,8 +221,10 @@ FOR EACH ROW
 UPDATE sales_deal_owner_history
 SET unassigned_at = NOW(6),
     history_quality = IF(history_quality = 'COMPLETE', 'COMPLETE', 'PARTIAL')
-WHERE organization_id = NEW.organization_id
-  AND deal_id = CAST(NEW.id AS CHAR)
+WHERE CONVERT(organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+      = CONVERT(NEW.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+  AND CONVERT(deal_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+      = CONVERT(CAST(NEW.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
   AND unassigned_at IS NULL
   AND NOT (OLD.assigned_user_id <=> NEW.assigned_user_id);
 
@@ -248,8 +260,10 @@ FROM tn_client_cases c
 WHERE c.assigned_user_id IS NOT NULL
   AND NOT EXISTS (
       SELECT 1 FROM sales_deal_owner_history h
-      WHERE h.organization_id = c.organization_id
-        AND h.deal_id = CAST(c.id AS CHAR)
+      WHERE CONVERT(h.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        AND CONVERT(h.deal_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            = CONVERT(CAST(c.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
         AND h.unassigned_at IS NULL
   );
 

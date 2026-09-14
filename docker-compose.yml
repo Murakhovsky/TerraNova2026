@@ -118,6 +118,9 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
+      # Triggers are versioned application schema. Permit the migration user to
+      # create them without granting the broad SUPER privilege while binlog is on.
+      - --log-bin-trust-function-creators=1
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
