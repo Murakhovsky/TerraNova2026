@@ -30,7 +30,8 @@ foreach (['PropertyReferencePort','PropertyMarketAnalyticsService','PropertyComp
 }
 
 $module = require $root . '/app/Domains/Property/module.php';
-$assert(($module['version'] ?? null) === '0.9.0' && ($module['schema_version'] ?? null) === '0.9.0', 'Property module must be V0.9.0.');
+$assert(version_compare((string) ($module['version'] ?? '0.0.0'), '0.9.0', '>='), 'Property module must retain V0.9+ intelligence.');
+$assert(version_compare((string) ($module['schema_version'] ?? '0.0.0'), '0.9.0', '>='), 'Property schema must retain V0.9+ intelligence.');
 $assert(in_array('property.intelligence', $module['contributions']['capabilities'] ?? [], true), 'Property V0.9 intelligence capability missing.');
 $assert(in_array('app/migrations/20260914_000056_property_v090_intelligence.sql', $module['contributions']['migration_files'] ?? [], true), 'Property V0.9 migration missing from manifest.');
 

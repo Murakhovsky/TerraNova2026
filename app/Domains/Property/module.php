@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.9.0',
-    'schema_version' => '0.9.0',
+    'version' => '0.10.0',
+    'schema_version' => '0.10.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical registry of real-estate assets with Inventory, Listing/Publication, history, supply/demand analytics and evidence-linked derived intelligence.',
+    'description' => 'Canonical registry of real-estate assets with Inventory, Listing/Publication, history, analytics, evidence-linked intelligence and an external Property Network boundary.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
@@ -26,11 +26,12 @@ return [
             'app/migrations/20260914_000054_property_v060_listings_publication.sql',
             'app/migrations/20260914_000055_property_v070_history_contracts.sql',
             'app/migrations/20260914_000056_property_v090_intelligence.sql',
+            'app/migrations/20260914_000057_property_v0100_external_network.sql',
         ],
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
             'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
-            'property.intelligence',
+            'property.intelligence','property.network',
         ],
     ],
 ];

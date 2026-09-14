@@ -1,75 +1,72 @@
 ---
 title: Property Domain Overview
-description: Поточні boundaries, ports, use cases та persistence Property domain.
+description: Canonical Property architecture through V0.10.
 status: active
-updated: 2026-09-11
+updated: 2026-09-14
 kind: domain
 ---
 
 # Property Domain Overview
 
-Property — bounded context для real-estate catalogue та operational lifecycle об'єктів.
+Property is the COS bounded context for canonical physical real-estate identity and Property-owned projections.
 
-## Поточна структура
+## Canonical stack
 
 ```text
-Property/
-├── Model
-├── Application
-│   ├── Contract
-│   ├── Service
-│   └── UseCase
-├── Infrastructure
-│   └── Persistence
-└── module.php
+Asset Registry
+  -> Structure / Location / Relations / Provenance
+  -> Inventory
+  -> Listing
+  -> Publication
+  -> History
+  -> Analytics
+  -> Intelligence
+
+External systems
+  <-> Property Network
+  <-> Submission / identity resolution boundary
 ```
 
-## Application capabilities
+The physical asset never inherits Sales pipeline state or Listing publication state.
 
-Property має contracts для:
+## Authority boundaries
 
-- catalogue;
-- management;
-- submissions;
-- moderation;
-- submission media;
-- media storage;
-- presentation;
-- notification;
-- analytics;
-- funnel analytics;
-- location references;
-- Sales-facing presentation integration.
+Property owns Asset, Inventory, Listing/Publication, source/provenance, Property history, Property analytics read models, derived intelligence and network synchronization ledger.
 
-Use cases включають submission і moderation; management logic винесена в application service.
+CRM owns Parties/relationships. Sales owns demand, ClientCases, Deals and pipeline state. Cross-domain access uses explicit ports. Sales-to-Property direct table reads are forbidden.
 
-## Persistence
+Platform composition may combine Property supply with Sales demand without moving ownership of either fact set.
 
-MySQL implementations знаходяться в `Infrastructure/Persistence/MySql`.
+## Runtime contracts
 
-Legacy Phalcon Telegram models ізольовані під compatibility path. Це не шаблон для нового коду.
+Important boundaries include:
 
-## Submission boundary
+- `PropertyReferencePort`
+- `PropertyAnalyticsReadModelInterface`
+- `PropertyIntelligenceProviderInterface`
+- `PropertyIntelligenceRepositoryInterface`
+- `PropertyNetworkConnectorInterface`
+- `PropertyNetworkIntakePort`
+- `PropertyNetworkExportPort`
+- `PropertyNetworkSyncRepositoryInterface`
 
-Submission і canonical Property — різні lifecycle concepts. Moderation є explicit application boundary між intake та publication/management.
+## V0.10 External Property Network
 
-## Cross-domain relation із Sales
+Network connectors are transport adapters for MLS/developer/partner/portal/file sources. Property core stores only connector identity/configuration reference, durable sync runs and network records.
 
-Property не має напряму залежати від Sales implementation. Для presentation/Sales interaction є explicit contract boundary.
+Imports are idempotent by source identity + payload hash and pass through `PropertySubmission`. External deletes are tombstones, not canonical deletes.
 
-## Analytics
+Exports are built from canonical `PropertyAsset + InventoryItem + Listing` data. Provider credentials remain outside Property.
 
-Property contracts вже передбачають general analytics і funnel analytics. Це означає, що tracking має бути domain-aware, але concrete telemetry/storage може залишатися infrastructure concern.
+## Compatibility debt
+
+Legacy `tn_properties`, historical catalog/presentation paths and Telegram Realty/Object models are quarantined compatibility surfaces. `MysqlPropertyManagementRepository` remains oversized and should be decomposed separately rather than dragged into V0.10.
 
 ## Module status
 
-Manifest:
+- module: `property`
+- version: `0.10.0`
+- schema: `0.10.0`
+- capability added in V0.10: `property.network`
 
-- id: `property`;
-- version: `0.1.0`;
-- kernel constraint: `^0.7.1`;
-- enabled by default;
-- runtime module service: поки `null`;
-- capabilities: поки порожні.
-
-Тобто Domain уже фізично виділений, але ще не доведений до повного Sales-рівня pluggable runtime contract.
+Property is approaching stable-domain status, but V1.0 remains intentionally gated on real connector traffic and confirmation that canonical/cross-domain contracts do not require structural rewrites.

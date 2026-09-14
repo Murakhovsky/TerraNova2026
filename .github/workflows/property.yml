@@ -8,6 +8,7 @@ on:
       - 'app/Bootstrap/PropertyServices.php'
       - 'app/Bootstrap/PropertyAnalyticsServices.php'
       - 'app/Bootstrap/PropertyIntelligenceServices.php'
+      - 'app/Bootstrap/PropertyNetworkServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
@@ -16,6 +17,7 @@ on:
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
+      - 'docs/04-domains/property/**'
       - 'tests/architecture/property_*.php'
       - 'tests/unit/property_*.php'
       - 'tests/smoke/property_*.php'
@@ -28,6 +30,7 @@ on:
       - 'app/Bootstrap/PropertyServices.php'
       - 'app/Bootstrap/PropertyAnalyticsServices.php'
       - 'app/Bootstrap/PropertyIntelligenceServices.php'
+      - 'app/Bootstrap/PropertyNetworkServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
@@ -36,6 +39,7 @@ on:
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
+      - 'docs/04-domains/property/**'
       - 'tests/architecture/property_*.php'
       - 'tests/unit/property_*.php'
       - 'tests/smoke/property_*.php'
@@ -64,6 +68,7 @@ jobs:
           php tests/architecture/property_v071_sales_boundary.php
           php tests/architecture/property_v080_analytics.php
           php tests/architecture/property_v090_intelligence.php
+          php tests/architecture/property_v0100_external_network.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -92,6 +97,9 @@ jobs:
       - name: Property V0.9 intelligence
         run: php tests/unit/property_v090_intelligence.php
 
+      - name: Property V0.10 external network
+        run: php tests/unit/property_v0100_external_network.php
+
       - name: Property compatibility smoke
         run: |
           php tests/smoke/property_submission.php
@@ -111,6 +119,7 @@ jobs:
           php -l app/Bootstrap/PropertyServices.php
           php -l app/Bootstrap/PropertyAnalyticsServices.php
           php -l app/Bootstrap/PropertyIntelligenceServices.php
+          php -l app/Bootstrap/PropertyNetworkServices.php
           php -l app/Bootstrap/SalesServices.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php

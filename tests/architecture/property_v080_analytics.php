@@ -35,7 +35,7 @@ foreach (['PropertyAnalyticsReadModelInterface','SalesDemandReadModelInterface',
 }
 
 $module = require $root . '/app/Domains/Property/module.php';
-$assert(($module['version'] ?? null) === '0.8.0', 'Property module must be V0.8.0.');
+$assert(version_compare((string) ($module['version'] ?? '0.0.0'), '0.8.0', '>='), 'Property module must retain V0.8+ analytics.');
 $assert(in_array('property.analytics', $module['contributions']['capabilities'] ?? [], true), 'Property V0.8 analytics capability missing.');
 
 echo "Property V0.8 analytics architecture: OK\n";
