@@ -14,6 +14,7 @@ $entries = [
     'cos-control-center',
     'cos-site',
     'diagnostics-methodology-studio',
+    'portal-cabinet',
     'property-workspace',
     'sales-workspace',
     'terranova-catalog-api',

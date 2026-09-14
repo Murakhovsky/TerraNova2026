@@ -1,0 +1,126 @@
+@layer tn-portal-cabinet {
+  .tn-portal-cabinet .tn-portal-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(14px);
+  }
+
+  .tn-portal-cabinet .tn-page {
+    width: min(100%, 1320px);
+    margin-inline: auto;
+    padding-inline: clamp(16px, 2.5vw, 32px);
+  }
+
+  .tn-portal-cabinet .tn-page-hero {
+    align-items: end;
+    gap: 24px;
+  }
+
+  .tn-portal-cabinet .tn-cabinet-workspace {
+    display: grid;
+    gap: 20px;
+  }
+
+  .tn-portal-cabinet .tn-cabinet-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .tn-portal-cabinet .tn-admin-card,
+  .tn-portal-cabinet .tn-admin-panel {
+    min-width: 0;
+  }
+
+  .tn-portal-cabinet .tn-admin-card__head,
+  .tn-portal-cabinet .tn-cabinet-actions,
+  .tn-portal-cabinet .tn-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .tn-portal-cabinet .tn-admin-card__head {
+    justify-content: space-between;
+    align-items: start;
+  }
+
+  .tn-portal-cabinet .tn-listing-table-wrap,
+  .tn-portal-cabinet .tn-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .tn-portal-cabinet .tn-listing-table {
+    min-width: 760px;
+  }
+
+  .tn-portal-cabinet .tn-property-form,
+  .tn-portal-cabinet .tn-form-grid {
+    min-width: 0;
+  }
+
+  .tn-portal-cabinet input,
+  .tn-portal-cabinet select,
+  .tn-portal-cabinet textarea {
+    max-width: 100%;
+  }
+
+  .tn-portal-cabinet form[aria-busy='true'] button[type='submit'],
+  .tn-portal-cabinet form[data-submitting='true'] input[type='submit'] {
+    cursor: progress;
+    opacity: .68;
+  }
+
+  .tn-portal-cabinet .tn-empty-state {
+    min-height: 180px;
+  }
+
+  @media (max-width: 1050px) {
+    .tn-portal-cabinet .tn-cabinet-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .tn-portal-cabinet .tn-page {
+      padding-inline: 20px;
+    }
+  }
+
+  @media (max-width: 650px) {
+    .tn-portal-cabinet .tn-page {
+      padding-inline: 14px;
+    }
+
+    .tn-portal-cabinet .tn-page-hero,
+    .tn-portal-cabinet .tn-listing-hero {
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    .tn-portal-cabinet .tn-page-hero__meta,
+    .tn-portal-cabinet .tn-hero-metric {
+      width: 100%;
+    }
+
+    .tn-portal-cabinet .tn-cabinet-actions,
+    .tn-portal-cabinet .tn-form-actions {
+      width: 100%;
+    }
+
+    .tn-portal-cabinet .tn-cabinet-actions .tn-btn,
+    .tn-portal-cabinet .tn-form-actions .tn-btn {
+      flex: 1 1 150px;
+    }
+
+    .tn-portal-cabinet .tn-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .tn-portal-cabinet .tn-listing-table {
+      min-width: 680px;
+    }
+  }
+}

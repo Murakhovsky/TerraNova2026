@@ -15,9 +15,9 @@ class CabinetController extends ControllerBase
             return;
         }
 
-        $this->view->title = 'Кабінет';
+        $isManager = $this->prepareCabinetSurface($user, 'Кабінет');
         $this->view->user = $user;
-        $this->view->isManager = $this->authService()->isManager($user);
+        $this->view->isManager = $isManager;
         $this->view->myProperties = [];
         $this->view->submissions = [];
         $this->view->inboundRequests = [];
@@ -34,7 +34,7 @@ class CabinetController extends ControllerBase
             $this->view->inboundRequests = $data['inbound_requests'];
             $this->view->telegramBinding = $this->telegramAutomationService()->bindingForUser((int) $user['id']);
 
-            if ($this->authService()->isManager($user)) {
+            if ($isManager) {
                 $this->view->managerWorkspace = $this->managerWorkspace($user);
                 $this->view->telegramOutboxStats = $this->notificationOperations()->outboxStats();
             }
@@ -84,8 +84,8 @@ class CabinetController extends ControllerBase
             return;
         }
 
+        $this->prepareCabinetSurface($user, 'Редагування поданого об’єкта');
         $submissionId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
-        $this->view->title = 'Редагування поданого об’єкта';
         $this->view->submission = null;
         $this->view->media = [];
         $this->view->pageStatus = null;
@@ -123,6 +123,18 @@ class CabinetController extends ControllerBase
             $this->response->setStatusCode(503, 'Service Unavailable');
             $this->view->pageStatus = 'Редагування заявки тимчасово недоступне.';
         }
+    }
+
+    private function prepareCabinetSurface(array $user, string $title): bool
+    {
+        $isManager = $this->authService()->isManager($user);
+        $this->view->title = $title;
+        $this->view->metaTitle = $title . ' | Terra Nova CLUB';
+        $this->view->metaRobots = 'noindex,nofollow';
+        $this->view->pageAssetEntries = ['portal-cabinet'];
+        $this->view->interfaceSurface = $isManager ? 'workspace' : 'portal';
+
+        return $isManager;
     }
 
     private function managerWorkspace(array $user): array
@@ -203,4 +215,3 @@ class CabinetController extends ControllerBase
         return $unique;
     }
 }
-
