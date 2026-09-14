@@ -6,8 +6,10 @@ on:
       - 'app/Domains/Property/**'
       - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
+      - 'app/Bootstrap/PropertyAnalyticsServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
+      - 'app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
@@ -23,8 +25,10 @@ on:
       - 'app/Domains/Property/**'
       - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
+      - 'app/Bootstrap/PropertyAnalyticsServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
+      - 'app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
@@ -56,6 +60,7 @@ jobs:
           php tests/architecture/property_v060_listing_schema.php
           php tests/architecture/property_v070_history_contracts_schema.php
           php tests/architecture/property_v071_sales_boundary.php
+          php tests/architecture/property_v080_analytics.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -78,6 +83,9 @@ jobs:
       - name: Property history and cross-domain contracts
         run: php tests/unit/property_v070_history_contracts.php
 
+      - name: Property V0.8 market analytics
+        run: php tests/unit/property_v080_market_analytics.php
+
       - name: Property compatibility smoke
         run: |
           php tests/smoke/property_submission.php
@@ -86,11 +94,15 @@ jobs:
       - name: Property PHP lint
         run: |
           find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Domains/Sales/Application/Contract/SalesDemandReadModelInterface.php
+          php -l app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesDemandReadModel.php
           php -l app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php
           php -l app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlClientCaseReadModel.php
           php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php
           php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php
+          php -l app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php
           php -l app/Bootstrap/PropertyServices.php
+          php -l app/Bootstrap/PropertyAnalyticsServices.php
           php -l app/Bootstrap/SalesServices.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php

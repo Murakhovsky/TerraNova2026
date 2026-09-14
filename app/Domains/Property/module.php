@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.7.1',
+    'version' => '0.8.0',
     'schema_version' => '0.7.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical registry of real-estate assets with separated Inventory, Listing/Publication, historical projections and cross-domain reference contracts.',
+    'description' => 'Canonical real-estate asset domain with Inventory, Listing/Publication, history, cross-domain references and supply/demand analytics.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
@@ -28,7 +28,7 @@ return [
         ],
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
-            'property.inventory','property.listing','property.publish','property.history','property.reference',
+            'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
         ],
     ],
 ];
