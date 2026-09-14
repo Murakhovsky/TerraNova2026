@@ -297,8 +297,7 @@ class PropertyController extends ControllerBase
             return;
         }
 
-        $this->view->title = 'Внутрішній MLS / Listing';
-        $this->view->metaTitle = 'Внутрішній MLS / Listing | Terra Nova CLUB';
+        $this->prepareWorkspace('Внутрішній MLS / Listing', 'listing');
         $this->view->metaDescription = 'Табличне представлення каталогу Terra Nova CLUB для швидкої роботи з об’єктами.';
         $this->view->filters = $this->propertyMediaService()->adminFilters((array) $this->request->getQuery());
         $this->view->types = [];
@@ -333,7 +332,7 @@ class PropertyController extends ControllerBase
             return;
         }
 
-        $this->view->title = 'Керування об’єктами';
+        $this->prepareWorkspace('Керування об’єктами', 'objects');
         $this->view->filters = $this->propertyMediaService()->adminFilters((array) $this->request->getQuery());
         $this->view->types = [];
         $this->view->locations = [];
@@ -369,8 +368,7 @@ class PropertyController extends ControllerBase
             return;
         }
 
-        $this->view->pageAssetEntries = ['terranova-media-manager'];
-        $this->view->title = 'Додати об’єкт';
+        $this->prepareWorkspace('Додати об’єкт', 'objects', ['terranova-media-manager']);
         $this->view->types = [];
         $this->view->locations = [];
         $this->view->propertyGroups = [];
@@ -496,7 +494,7 @@ class PropertyController extends ControllerBase
         }
 
         $status = (string) $this->request->getQuery('status', 'string', '');
-        $this->view->title = 'Модерація об’єктів';
+        $this->prepareWorkspace('Модерація об’єктів', 'submissions');
         $this->view->status = $status;
         $this->view->submissions = [];
         $this->view->counts = [];
@@ -519,7 +517,7 @@ class PropertyController extends ControllerBase
         }
 
         $id = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
-        $this->view->title = 'Заявка на об’єкт';
+        $this->prepareWorkspace('Заявка на об’єкт', 'submissions');
         $this->view->submission = null;
         $this->view->media = [];
         $this->view->actionStatus = null;
@@ -548,8 +546,7 @@ class PropertyController extends ControllerBase
         }
 
         $groupId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
-        $this->view->pageAssetEntries = ['terranova-media-manager'];
-        $this->view->title = 'Локація';
+        $this->prepareWorkspace('Локація', 'objects', ['terranova-media-manager']);
         $this->view->group = null;
         $this->view->properties = [];
         $this->view->locations = [];
@@ -621,9 +618,8 @@ class PropertyController extends ControllerBase
             return;
         }
 
-        $this->view->pageAssetEntries = ['terranova-media-manager', 'terranova-copy'];
+        $this->prepareWorkspace('Редагувати медіа об’єкта', 'objects', ['terranova-media-manager', 'terranova-copy']);
         $propertyId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
-        $this->view->title = 'Редагувати медіа об’єкта';
         $this->view->property = null;
         $this->view->images = [];
         $this->view->types = [];
@@ -815,6 +811,16 @@ class PropertyController extends ControllerBase
         $this->loadPropertyWorkspace('favour-page');
     }
 
+    private function prepareWorkspace(string $title, string $active, array $assets = []): void
+    {
+        $this->view->title = $title;
+        $this->view->metaTitle = $title . ' | Terra Nova COS';
+        $this->view->metaRobots = 'noindex,nofollow';
+        $this->view->workspaceSection = 'properties';
+        $this->view->workspaceActive = $active;
+        $this->view->pageAssetEntries = array_values(array_unique(array_merge(['property-workspace'], $assets)));
+    }
+
     private function loadPropertyWorkspace(string $label, array $filterOverrides = []): void
     {
         $this->view->catalogStatus = null;
@@ -899,4 +905,3 @@ class PropertyController extends ControllerBase
         return (string) $bytes . ' Б';
     }
 }
-
