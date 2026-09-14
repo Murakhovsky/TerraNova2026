@@ -48,6 +48,7 @@ jobs:
           php tests/architecture/property_v022_tenant_boundary.php
           php tests/architecture/property_v030_registry_schema.php
           php tests/architecture/property_v040_identity_schema.php
+          php tests/architecture/property_v050_inventory_schema.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -60,6 +61,9 @@ jobs:
 
       - name: Property identity provenance and relations
         run: php tests/unit/property_v040_identity_provenance.php
+
+      - name: Property commercial inventory
+        run: php tests/unit/property_v050_inventory.php
 
       - name: Property compatibility smoke
         run: |
@@ -74,12 +78,5 @@ jobs:
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
-          php -l tests/architecture/property_domain_definition.php
-          php -l tests/architecture/property_v021_runtime.php
-          php -l tests/architecture/property_v022_tenant_boundary.php
-          php -l tests/architecture/property_v030_registry_schema.php
-          php -l tests/architecture/property_v040_identity_schema.php
-          php -l tests/unit/property_v023_core_model.php
-          php -l tests/unit/property_v024_commands_events.php
-          php -l tests/unit/property_v030_asset_registry_structure.php
-          php -l tests/unit/property_v040_identity_provenance.php
+          find tests/architecture -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l
+          find tests/unit -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l

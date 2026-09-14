@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.4.0',
-    'schema_version' => '0.4.0',
+    'version' => '0.5.0',
+    'schema_version' => '0.5.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical registry of physical real-estate assets, their intrinsic facts, location, lifecycle, identity, provenance and relations.',
+    'description' => 'Canonical real-estate asset registry with tenant-owned commercial inventory separated from physical Property state.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
@@ -30,6 +30,7 @@ return [
             'app/migrations/20260914_000050_property_v022_tenant_boundary.sql',
             'app/migrations/20260914_000051_property_v030_asset_registry.sql',
             'app/migrations/20260914_000052_property_v040_identity_provenance.sql',
+            'app/migrations/20260914_000053_property_v050_inventory.sql',
         ],
         'capabilities' => [
             'property.registry',
@@ -38,6 +39,7 @@ return [
             'property.intake',
             'property.media',
             'property.catalog',
+            'property.inventory',
         ],
     ],
 ];
