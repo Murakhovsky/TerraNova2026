@@ -1,0 +1,26 @@
+@layer tn-foundation {
+  :where([data-interface-surface], .tn-workspace-sidebar, .tn-workspace-topbar, .tn-workspace-mobile-nav, .tn-command-palette) {
+    font-family: var(--tn-font-sans);
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--tn-color-focus);
+    outline-offset: 2px;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  .tn-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}

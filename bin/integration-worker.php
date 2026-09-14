@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Frontend\Services\ContentService;
-use Modules\Frontend\Services\IntegrationOutboxProcessor;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Domains\Content\Application\Service\ContentService;
+use Infrastructure\Integration\N8n\IntegrationOutboxProcessor;
+use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
+use Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox;
 use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));
@@ -16,8 +18,8 @@ require APP_PATH . '/config/services.php';
 require APP_PATH . '/config/loader.php';
 $config = $di->getShared('config')->integrations->n8n;
 $database = $di->getShared('databaseService');
-assert($database instanceof DatabaseService);
-$content = new ContentService($database);
+assert($database instanceof PdoConnection);
+$content = new ContentService(new MysqlContentRepository($database, new MysqlContentIntegrationOutbox($database)));
 $options = getopt('', ['schedule-content', 'limit::']);
 $scheduled = isset($options['schedule-content']) ? $content->publishScheduled() : 0;
 $limit = isset($options['limit']) ? max(1, min(100, (int) $options['limit'])) : 25;

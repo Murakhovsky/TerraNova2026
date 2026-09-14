@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://terranova.local/schemas/diagnostic-methodology-phase2-v1.json",
+  "title": "TerraNova Diagnostic Methodology — Phase 2 executable contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "name", "sections", "criteria", "metrics"],
+  "properties": {
+    "id": {"$ref": "#/$defs/id"},
+    "version": {"type": "integer", "minimum": 1},
+    "name": {"$ref": "#/$defs/name"},
+    "sections": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/section"}},
+    "facts": {"type": "array", "default": [], "items": {"$ref": "#/$defs/fact"}},
+    "criteria": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/criterion"}},
+    "metrics": {"type": "array", "default": [], "items": {"$ref": "#/$defs/metric"}},
+    "rules": {"type": "array", "default": [], "items": {"$ref": "#/$defs/rule"}},
+    "scoring": {"type": "array", "default": [], "items": {"$ref": "#/$defs/scoring"}},
+    "dependencies": {"type": "array", "default": [], "items": {"$ref": "#/$defs/dependency"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]*$"},
+    "name": {"type": "string", "minLength": 1},
+    "probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "valueType": {"enum": ["boolean", "integer", "number", "float", "string", "enum", "percentage", "ratio", "duration", "currency", "date", "datetime"]},
+    "section": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name"],
+      "properties": {"id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/name"}, "weight": {"type": "number", "exclusiveMinimum": 0}}
+    },
+    "fact": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "type"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/name"}, "type": {"$ref": "#/$defs/valueType"},
+        "unit": {"type": ["string", "null"]}, "enum_values": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "inputReference": {
+      "oneOf": [
+        {"type": "string", "pattern": "^(?:(?:fact|metric)\\.)?[a-z][a-z0-9_.-]*$"},
+        {"type": "object", "additionalProperties": false, "required": ["ref"], "properties": {
+          "ref": {"type": "string", "pattern": "^(fact|metric)\\.[a-z][a-z0-9_.-]*$"},
+          "weight": {"type": "number", "exclusiveMinimum": 0}
+        }}
+      ]
+    },
+    "criterion": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "section", "required"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/name"}, "section": {"$ref": "#/$defs/id"},
+        "required": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/inputReference"}},
+        "optional": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/inputReference"}},
+        "weight": {"type": "number", "exclusiveMinimum": 0},
+        "minimum_coverage": {"$ref": "#/$defs/probability"}, "minimum_confidence": {"$ref": "#/$defs/probability"}
+      }
+    },
+    "metric": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "type"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/name"}, "type": {"$ref": "#/$defs/valueType"},
+        "unit": {"type": ["string", "null"]}, "direction": {"enum": ["higher_is_better", "lower_is_better", "target_range", "neutral"]},
+        "normalization": {"type": ["string", "null"], "enum": ["bands", "linear", "inverse_linear", null]},
+        "expected_range": {"type": ["object", "null"], "additionalProperties": false, "minProperties": 1, "properties": {"min": {"type": "number"}, "max": {"type": "number"}}},
+        "aggregation": {"enum": ["average", "sum", "minimum", "maximum", "latest", "count"]}
+      }
+    },
+    "condition": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["all"], "properties": {"all": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}}},
+        {"type": "object", "additionalProperties": false, "required": ["any"], "properties": {"any": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}}},
+        {"type": "object", "additionalProperties": false, "required": ["not"], "properties": {"not": {"$ref": "#/$defs/condition"}}},
+        {"type": "object", "additionalProperties": false, "required": ["subject", "operator"], "properties": {
+          "subject": {"type": "string", "pattern": "^(fact|metric|assessment|criterion)\\.[a-z][a-z0-9_.-]*$"},
+          "operator": {"enum": ["=", "==", "eq", "!=", "neq", ">", "gt", ">=", "gte", "<", "lt", "<=", "lte", "between", "in", "exists", "not_exists"]},
+          "value": {}, "values": {"type": "array"}
+        }}
+      ]
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false, "required": ["id", "criterion", "conditions", "finding", "severity"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "criterion": {"$ref": "#/$defs/id"}, "conditions": {"$ref": "#/$defs/condition"},
+        "finding": {"$ref": "#/$defs/name"}, "severity": {"enum": ["info", "low", "medium", "high", "critical"]}
+      }
+    },
+    "band": {
+      "type": "object", "additionalProperties": false, "required": ["score"],
+      "properties": {"min": {"type": "number"}, "max": {"type": "number"}, "score": {"type": "number", "minimum": 0, "maximum": 100}}
+    },
+    "scoring": {
+      "type": "object", "additionalProperties": false, "required": ["criterion", "metric", "bands"],
+      "properties": {
+        "criterion": {"$ref": "#/$defs/id"}, "metric": {"$ref": "#/$defs/id"}, "bands": {"type": "array", "items": {"$ref": "#/$defs/band"}},
+        "weight": {"type": "number", "exclusiveMinimum": 0}, "penalty": {"type": "number"}, "bonus": {"type": "number"},
+        "min": {"type": "number", "minimum": 0, "maximum": 100}, "max": {"type": "number", "minimum": 0, "maximum": 100},
+        "normalization": {"enum": ["bands", "linear", "inverse_linear"]},
+        "aggregation": {"enum": ["weighted_average", "average", "sum", "minimum", "maximum"]},
+        "input_range": {"type": ["object", "null"], "additionalProperties": false, "properties": {"min": {"type": ["number", "null"]}, "max": {"type": ["number", "null"]}}}
+      }
+    },
+    "dependency": {
+      "type": "object", "additionalProperties": false, "required": ["source", "target", "type"],
+      "properties": {
+        "source": {"type": "string"}, "target": {"type": "string"}, "type": {"enum": ["requires", "influences", "blocks", "depends_on", "contributes_to"]},
+        "strength": {"$ref": "#/$defs/probability"}, "direction": {"enum": ["positive", "negative", "neutral"]}
+      }
+    }
+  }
+}

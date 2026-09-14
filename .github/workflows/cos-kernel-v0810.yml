@@ -1,0 +1,50 @@
+name: COS Kernel V0.8.10 Module Readiness Diagnostics
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Module architecture
+        run: |
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/kernel_v081_module_lifecycle.php
+          php tests/architecture/kernel_v082_module_control.php
+          php tests/architecture/kernel_v083_module_provisioning.php
+          php tests/architecture/kernel_v084_module_configuration_contributions.php
+          php tests/architecture/kernel_v085_module_route_contributions.php
+          php tests/architecture/kernel_v086_module_route_access.php
+          php tests/architecture/kernel_v087_generic_route_isolation.php
+          php tests/architecture/kernel_v088_effective_module_context.php
+          php tests/architecture/kernel_v089_module_version_readiness.php
+          php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
+      - name: Module runtime invariants
+        run: |
+          php tests/unit/module_activation.php
+          php tests/unit/module_lifecycle.php
+          php tests/unit/module_control.php
+          php tests/unit/module_provisioning.php
+          php tests/unit/module_route_access.php
+          php tests/unit/module_effective_context.php
+          php tests/unit/module_version_readiness.php
+          php tests/unit/module_readiness_diagnostic.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Kernel/Module/ModuleReadinessDiagnostic.php
+          php -l app/Bootstrap/ModuleServices.php
+          php -l app/Interfaces/Api/Controller/PlatformModuleController.php
+          php -l app/Interfaces/Web/Routing/PlatformRoutes.php
+          php -l tests/unit/module_readiness_diagnostic.php
+          php -l tests/architecture/kernel_v0810_module_readiness_diagnostics.php

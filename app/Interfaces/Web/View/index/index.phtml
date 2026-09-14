@@ -1,0 +1,380 @@
+<?php
+$h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, $currency = 'USD', $period = 'total') {
+    if ($amount === null || $amount === '') {
+        return 'Ціна за запитом';
+    }
+
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$number = static fn($value) => $value === null || $value === '' ? '' : rtrim(rtrim(number_format((float) $value, 1, '.', ' '), '0'), '.');
+$featuredProperties = $featuredProperties ?? [];
+$fallbackImage = 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=82';
+
+$locationGroups = [
+    'briukhovychi' => [
+        [
+            'title' => 'ЖК Лісова Гармонія',
+            'slug' => 'lisova-harmoniia',
+            'description' => 'Клубний житловий комплекс у лісовій зоні біля Львова.',
+            'meta' => '15 квартир',
+            'status' => 'Активно',
+            'objects' => 15,
+            'image' => 'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=420&q=80',
+        ],
+    ],
+    'lviv' => [
+        [
+            'title' => 'ЖК вул. Степового',
+            'slug' => 'stepovoho',
+            'description' => 'Міський формат житла з високою ліквідністю та зручною інфраструктурою.',
+            'meta' => '20 квартир',
+            'status' => 'В розробці',
+            'objects' => 20,
+            'image' => 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=420&q=80',
+        ],
+    ],
+    'remeniv' => [
+        [
+            'title' => 'Приватний сектор',
+            'slug' => 'private-sector',
+            'description' => 'Будинки для приватного життя поруч із містом.',
+            'meta' => '6 будинків',
+            'status' => 'Активно',
+            'objects' => 6,
+            'image' => 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=420&q=80',
+        ],
+        [
+            'title' => 'Новий район',
+            'slug' => 'new-district',
+            'description' => 'Нова житлова зона з потенціалом розвитку і декількома форматами об’єктів.',
+            'meta' => '20 об’єктів',
+            'status' => 'Активно',
+            'objects' => 20,
+            'image' => 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=420&q=80',
+        ],
+        [
+            'title' => 'Котеджі',
+            'slug' => 'cottages',
+            'description' => 'Камерний котеджний формат у підготовці до запуску.',
+            'meta' => '10 об’єктів',
+            'status' => 'Скоро',
+            'objects' => 10,
+            'image' => 'https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=420&q=80',
+        ],
+    ],
+    'vysloboky' => [
+        [
+            'title' => 'Котеджі з панорамою',
+            'slug' => 'panorama-cottages',
+            'description' => 'Заміський формат із приватністю, ділянкою та відкритими видами.',
+            'meta' => '2 котеджі',
+            'status' => 'В проєкті',
+            'objects' => 2,
+            'image' => 'https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=420&q=80',
+        ],
+        [
+            'title' => 'Приватні будинки',
+            'slug' => 'private-houses',
+            'description' => 'Окремі будинки для сімейного сценарію життя за містом.',
+            'meta' => '1 будинок',
+            'status' => 'Активно',
+            'objects' => 1,
+            'image' => 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=420&q=80',
+        ],
+    ],
+];
+
+$locationsExplorer = [
+    [
+        'name' => 'Брюховичі',
+        'slug' => 'briukhovychi',
+        'summary' => 'Лісова зона біля Львова. Клубний формат житла, тиша, природа, приватність.',
+        'projects' => 1,
+        'objects' => 15,
+        'status' => 'Активно',
+        'tone' => 'gold',
+        'x' => 25,
+        'y' => 40,
+    ],
+    [
+        'name' => 'Львів',
+        'slug' => 'lviv',
+        'summary' => 'Міська нерухомість, квартири, комерція та проєкти з високою ліквідністю.',
+        'projects' => 1,
+        'objects' => 20,
+        'status' => 'Активно',
+        'tone' => 'gold',
+        'x' => 46,
+        'y' => 60,
+    ],
+    [
+        'name' => 'Ременів',
+        'slug' => 'remeniv',
+        'summary' => 'Приватний сектор, новий район і камерні формати для життя поруч із містом.',
+        'projects' => 3,
+        'objects' => 36,
+        'status' => 'Активно',
+        'tone' => 'cyan',
+        'x' => 85,
+        'y' => 12,
+    ],
+    [
+        'name' => 'Вислобоки',
+        'slug' => 'vysloboky',
+        'summary' => 'Котеджі, приватні будинки та заміські сценарії з готовністю до розвитку.',
+        'projects' => 2,
+        'objects' => 3,
+        'status' => 'В проєкті',
+        'tone' => 'amber',
+        'x' => 80,
+        'y' => 22,
+    ],
+];
+
+foreach ($locationsExplorer as &$location) {
+    $groups = $locationGroups[$location['slug']] ?? [];
+    $location['projects'] = count($groups);
+    $location['objects'] = array_sum(array_map(static fn($group) => (int) ($group['objects'] ?? 0), $groups));
+}
+unset($location);
+
+$selectedLocation = $locationsExplorer[2];
+$selectedGroups = $locationGroups[$selectedLocation['slug']] ?? [];
+$projects = [
+    [
+        'title' => 'ЖК Лісова Гармонія',
+        'location' => 'Брюховичі',
+        'status' => 'Активно',
+        'meta' => '15 квартир',
+        'price' => 'від 1 950 $/м²',
+        'image' => 'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=900&q=82',
+    ],
+    [
+        'title' => 'ЖК вул. Степового',
+        'location' => 'Львів',
+        'status' => 'В розробці',
+        'meta' => '20 квартир',
+        'price' => 'від 1 700 $/м²',
+        'image' => 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=82',
+    ],
+    [
+        'title' => 'Приватний сектор',
+        'location' => 'Ременів',
+        'status' => 'Активно',
+        'meta' => '6 будинків',
+        'price' => 'від 98 000 $',
+        'image' => 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=900&q=82',
+    ],
+    [
+        'title' => 'Котеджі з панорамою',
+        'location' => 'Вислобоки',
+        'status' => 'В проєкті',
+        'meta' => '2 котеджі',
+        'price' => 'від 2 200 $/м²',
+        'image' => 'https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=900&q=82',
+    ],
+];
+?>
+
+<header class="tn-visual-header" data-header>
+  <a class="tn-visual-logo" href="<?php echo $this->url->get(); ?>" aria-label="Terra Nova">
+    <span class="tn-visual-logo__mark">TN</span>
+    <span>Terra Nova</span>
+  </a>
+
+  <button class="tn-menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-button>
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav class="tn-nav" id="site-menu" aria-label="Головне меню">
+    <a href="#realty">Нерухомість</a>
+    <a href="<?php echo $this->url->get('property/listing'); ?>">Listing / MLS</a>
+    <a href="#invest">Інвестиції</a>
+    <a href="#realtors">Рієлторам</a>
+    <a href="#developers">Забудовникам</a>
+    <a href="#estatebook">EstateBook CRM</a>
+    <a href="<?php echo $this->url->get('cos/en'); ?>">COS</a>
+    <a href="#aida">AIDA / IT</a>
+    <a href="#art">Art</a>
+    <a href="#request">Контакти</a>
+    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a>
+  </nav>
+  <a class="tn-visual-btn tn-visual-btn--outline" href="<?php echo $this->url->get('property/catalog'); ?>">Підібрати об'єкт <span>→</span></a>
+</header>
+
+<main class="tn-visual-page">
+  <section class="tn-visual-hero" id="top">
+    <div class="tn-visual-hero__copy">
+      <p class="tn-visual-kicker">Terra Nova</p>
+      <h1><span>Локації</span> для життя й інвестицій</h1>
+      <p>Нерухомість і проєкти Terra Nova у Львові та області: оберіть місце, перегляньте об’єкти, залиште заявку.</p>
+      <div class="tn-visual-actions">
+        <a class="tn-visual-btn tn-visual-btn--gold" href="#locations">Обрати локацію <span>→</span></a>
+        <a class="tn-visual-btn tn-visual-btn--glass" href="<?php echo $this->url->get('property/catalog'); ?>">Всі об'єкти <span>→</span></a>
+      </div>
+      <div class="tn-visual-benefits" aria-label="Переваги Terra Nova">
+        <span>Преміальна архітектура</span>
+        <span>Надійні забудовники</span>
+        <span>Продумані рішення</span>
+        <span>Підтримка інвесторів</span>
+      </div>
+    </div>
+    <div class="tn-visual-hero__scene" aria-hidden="true">
+      <div class="tn-hero-building"></div>
+      <div class="tn-hero-coordinates">49.8397° N, 24.0297° E</div>
+    </div>
+  </section>
+
+  <section class="tn-location-explorer" id="locations">
+    <div class="tn-location-map">
+      <div class="tn-location-tabs" aria-label="Типи нерухомості">
+        <a class="is-active" href="<?php echo $this->url->get('property/catalog'); ?>">Вся нерухомість</a>
+        <a href="<?php echo $this->url->get('property/catalog?type=apartment'); ?>">Квартири</a>
+        <a href="<?php echo $this->url->get('property/catalog?type=cottage'); ?>">Котеджі</a>
+        <a href="<?php echo $this->url->get('property/catalog?type=house'); ?>">Будинки</a>
+        <button type="button">Фільтри</button>
+      </div>
+
+      <div class="tn-map-zoom" aria-hidden="true"><span>+</span><span>−</span><span>⌖</span></div>
+      <div class="tn-map-grid" aria-hidden="true"></div>
+
+      <?php foreach ($locationsExplorer as $location): ?>
+        <a
+          class="tn-map-pin tn-map-pin--<?php echo $h($location['tone']); ?><?php echo $location['slug'] === $selectedLocation['slug'] ? ' is-active' : ''; ?>"
+          href="<?php echo $this->url->get('property/catalog?location=' . $location['slug']); ?>"
+          style="--pin-x: <?php echo (int) $location['x']; ?>%; --pin-y: <?php echo (int) $location['y']; ?>%;"
+          data-location-choice="<?php echo $h($location['slug']); ?>"
+          data-location-title="<?php echo $h($location['name']); ?>"
+          data-location-summary="<?php echo $h($location['summary']); ?>"
+          data-location-projects="<?php echo (int) $location['projects']; ?>"
+          data-location-objects="<?php echo (int) $location['objects']; ?>"
+          data-location-status="<?php echo $h($location['status']); ?>"
+          data-location-groups="<?php echo $h(json_encode($locationGroups[$location['slug']] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>"
+        >
+          <span class="tn-map-pin__icon">⌂</span>
+          <strong><?php echo $h($location['name']); ?></strong>
+          <small><?php echo (int) $location['projects']; ?></small>
+        </a>
+      <?php endforeach; ?>
+
+      <div class="tn-map-legend">
+        <span><i></i> Активні локації</span>
+        <span><i></i> Локації в проєкті</span>
+      </div>
+    </div>
+
+    <aside class="tn-location-panel">
+      <p class="tn-visual-kicker">Обрана локація</p>
+      <h2 data-location-title><?php echo $h($selectedLocation['name']); ?></h2>
+      <p data-location-summary><?php echo $h($selectedLocation['summary']); ?></p>
+      <div class="tn-location-panel__stats">
+        <span data-location-projects><?php echo (int) $selectedLocation['projects']; ?> локації</span>
+        <span data-location-objects><?php echo (int) $selectedLocation['objects']; ?> об'єктів</span>
+      </div>
+
+      <div class="tn-location-mini-list" data-location-list>
+        <?php foreach ($selectedGroups as $group): ?>
+          <article>
+            <img src="<?php echo $h($group['image']); ?>" alt="<?php echo $h($group['title']); ?>">
+            <div>
+              <strong><?php echo $h($group['title']); ?></strong>
+              <span><?php echo $h($group['description']); ?></span>
+              <small><?php echo $h($group['meta']); ?> · <?php echo $h($group['status']); ?></small>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+
+      <a class="tn-visual-btn tn-visual-btn--outline" href="<?php echo $this->url->get('property/catalog?location=remeniv'); ?>" data-location-link>Переглянути локацію <span>→</span></a>
+    </aside>
+  </section>
+
+  <section class="tn-visual-section" id="projects">
+    <div class="tn-visual-section__head">
+      <div>
+        <p class="tn-visual-kicker">Вибрані об'єкти</p>
+        <h2>Проєкти й локації, з яких варто почати</h2>
+      </div>
+      <a href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути всі проєкти →</a>
+    </div>
+    <div class="tn-project-grid">
+      <?php foreach ($projects as $project): ?>
+        <article class="tn-project-card">
+          <img src="<?php echo $h($project['image']); ?>" alt="<?php echo $h($project['title']); ?>">
+          <button type="button" aria-label="Додати у вибрані">♡</button>
+          <span class="tn-status-badge"><?php echo $h($project['status']); ?></span>
+          <div>
+            <h3><?php echo $h($project['title']); ?></h3>
+            <p><?php echo $h($project['location']); ?> · <?php echo $h($project['meta']); ?></p>
+            <strong><?php echo $h($project['price']); ?></strong>
+            <a href="<?php echo $this->url->get('property/catalog'); ?>" aria-label="Відкрити проєкт">→</a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <section class="tn-visual-section" data-featured-section data-api-url="<?php echo $this->url->get('api/v1/properties/featured?limit=4'); ?>">
+    <div class="tn-visual-section__head">
+      <div>
+        <p class="tn-visual-kicker">Каталог</p>
+        <h2>Актуальні об'єкти з бази Terra Nova</h2>
+      </div>
+      <a href="<?php echo $this->url->get('property/catalog'); ?>">Весь каталог →</a>
+    </div>
+    <div class="tn-project-grid" data-featured-grid>
+      <div class="tn-empty-state" data-featured-loading>
+        <h2>Завантажуємо актуальні об'єкти</h2>
+        <p>Підтягуємо дані з каталогу Terra Nova.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tn-visual-trust" id="about">
+    <div>
+      <h2>Terra Nova — це більше, ніж квадратні метри</h2>
+      <p>Ми фокусуємось на локаціях, перевірених об'єктах, презентації, супроводі та прямому контакті з менеджером.</p>
+    </div>
+    <dl>
+      <div><dt>4</dt><dd>локації</dd></div>
+      <div><dt>7</dt><dd>проєктів</dd></div>
+      <div><dt>70+</dt><dd>об'єктів</dd></div>
+      <div><dt>1:1</dt><dd>підхід до партнера</dd></div>
+    </dl>
+  </section>
+
+  <section class="tn-visual-partners" id="partners">
+    <div>
+      <p class="tn-visual-kicker">Для партнерів</p>
+      <h2>Маєте об'єкт або проєкт?</h2>
+      <p>Додайте його до системи, а Terra Nova допоможе з презентацією, каталогом, лідами й продажами.</p>
+    </div>
+    <div class="tn-visual-actions">
+      <a class="tn-visual-btn tn-visual-btn--gold" href="<?php echo $this->url->get('property/submit'); ?>">Подати об'єкт <span>→</span></a>
+      <a class="tn-visual-btn tn-visual-btn--glass" href="#contacts">Стати партнером <span>→</span></a>
+    </div>
+  </section>
+</main>
+
+<footer class="tn-visual-footer" id="contacts">
+  <div>
+    <strong>Terra Nova</strong>
+    <p>Нерухомість. Локації. Надійність.</p>
+  </div>
+  <nav>
+    <a href="<?php echo $this->url->get('property/catalog'); ?>">Нерухомість</a>
+    <a href="<?php echo $this->url->get('services'); ?>">Послуги</a>
+    <a href="<?php echo $this->url->get('partners'); ?>">Партнерам</a>
+    <a href="<?php echo $this->url->get('contacts'); ?>">Контакти</a>
+    <a href="<?php echo $this->url->get('property/submit'); ?>">Подати об'єкт</a>
+  </nav>
+  <div>
+    <a href="mailto:hello@terra-nova.ua">hello@terra-nova.ua</a>
+    <a class="tn-visual-btn tn-visual-btn--outline" href="#top">Нагору <span>↑</span></a>
+  </div>
+</footer>

@@ -1,0 +1,37 @@
+name: WEB V0.5 Module-aware Navigation
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Web architecture
+        run: |
+          php tests/architecture/frontend_interface.php
+          php tests/architecture/web_v05_module_navigation.php
+      - name: Web module navigation runtime
+        run: php tests/unit/web_v05_module_navigation.php
+      - name: PHP syntax
+        run: |
+          php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
+          php -l app/Interfaces/Web/Navigation/ModuleNavigationContributorInterface.php
+          php -l app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php
+          php -l app/Interfaces/Web/Navigation/SalesNavigationContributor.php
+          php -l app/Interfaces/Web/Navigation/PropertyNavigationContributor.php
+          php -l app/Interfaces/Web/Navigation/DiagnosticNavigationContributor.php
+          php -l app/Interfaces/Web/View/shared/manager_header.phtml
+          php -l app/Bootstrap/WebApplicationServices.php
+          php -l tests/architecture/frontend_interface.php
+          php -l tests/architecture/web_v05_module_navigation.php
+          php -l tests/unit/web_v05_module_navigation.php

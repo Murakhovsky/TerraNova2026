@@ -1,0 +1,34 @@
+name: COS Kernel V0.11.8 Observability
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  observability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Kernel runtime invariants
+        run: |
+          php tests/unit/execution_failure_semantics.php
+          php tests/unit/external_resilience_tenant_backpressure.php
+          php tests/architecture/kernel_durable_outbox.php
+          php tests/architecture/kernel_observability.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Kernel/Queue/Job.php
+          php -l app/Kernel/Queue/Service/QueueWorker.php
+          php -l app/Kernel/Action/Service/ActionService.php
+          php -l app/Kernel/Resilience/ExternalCallExecutor.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Queue/MysqlJobQueue.php
+          php -l app/Bootstrap/KernelServices.php
+          php -l tests/architecture/kernel_observability.php

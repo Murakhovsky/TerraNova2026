@@ -1,7 +1,13 @@
 /vendor/
 /node_modules/
 /.env
+/.env.docker
+*.pem
 .DS_Store
 tmp/
+/public/uploads/**
+/public/docs/
+/docs/.vitepress/cache/
+/docs/.vitepress/dist/
 
 .idea/

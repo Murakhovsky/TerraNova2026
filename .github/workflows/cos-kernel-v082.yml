@@ -1,0 +1,36 @@
+name: COS Kernel V0.8.2 Module Control Plane
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Module architecture
+        run: |
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/kernel_v081_module_lifecycle.php
+          php tests/architecture/kernel_v082_module_control.php
+      - name: Module runtime invariants
+        run: |
+          php tests/unit/module_activation.php
+          php tests/unit/module_lifecycle.php
+          php tests/unit/module_control.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Kernel/Module/ModuleControlService.php
+          php -l app/Bootstrap/KernelServices.php
+          php -l app/Interfaces/Api/Controller/PlatformModuleController.php
+          php -l app/Interfaces/Web/Routing/PlatformRoutes.php
+          php -l app/Interfaces/Web/Module.php

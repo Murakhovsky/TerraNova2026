@@ -1,0 +1,42 @@
+name: COS Kernel V0.8.5 Module Route Contributions
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Module architecture
+        run: |
+          php tests/architecture/domain_module_contract.php
+          php tests/architecture/kernel_v081_module_lifecycle.php
+          php tests/architecture/kernel_v082_module_control.php
+          php tests/architecture/kernel_v083_module_provisioning.php
+          php tests/architecture/kernel_v084_module_configuration_contributions.php
+          php tests/architecture/kernel_v085_module_route_contributions.php
+      - name: Module runtime invariants
+        run: |
+          php tests/unit/module_activation.php
+          php tests/unit/module_lifecycle.php
+          php tests/unit/module_control.php
+          php tests/unit/module_provisioning.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Interfaces/Web/Routing/ModuleRouteContributorInterface.php
+          php -l app/Interfaces/Web/Routing/SalesModuleRouteContributor.php
+          php -l app/Interfaces/Web/Module.php
+          php -l app/Bootstrap/WebApplicationServices.php
+          php -l app/Domains/Sales/module.php
+          php -l tests/architecture/kernel_v084_module_configuration_contributions.php
+          php -l tests/architecture/kernel_v085_module_route_contributions.php

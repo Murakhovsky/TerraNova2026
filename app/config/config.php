@@ -6,27 +6,44 @@
 defined('BASE_PATH') || define('BASE_PATH', getenv('BASE_PATH') ?: realpath(dirname(__FILE__) . '/../..'));
 defined('APP_PATH') || define('APP_PATH', BASE_PATH . '/app');
 $httpHost = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
-defined('DOMAIN_NAME') || define('DOMAIN_NAME', 'https://' . $httpHost);
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+defined('DOMAIN_NAME') || define('DOMAIN_NAME', $scheme . '://' . $httpHost);
 
 return new \Phalcon\Config\Config([
     'version' => '1.0',
 
     'database' => [
         'adapter'  => 'Mysql',
-        'host'     => 'topgear1.mysql.tools', // getenv('DB_HOST'),
-        'username' => 'topgear1_tn2026', // getenv('DB_USER'),
-        'password' => 'md%73u3^KS', //getenv('DB_PASS'),
-        'dbname'   => 'topgear1_tn2026', //getenv('DB_NAME'),
-        'charset'  => 'utf8',
+        'host'     => (string) ($_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'mysql'),
+        'port'     => (int) ($_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: 3306),
+        'username' => (string) ($_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'cos'),
+        'password' => (string) ($_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: ''),
+        'dbname'   => (string) ($_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: 'cos'),
+        'charset'  => 'utf8mb4',
     ],
 
     'application' => [
         'appDir'         => APP_PATH . '/',
-        'modelsDir'      => APP_PATH . '/common/models/',
+        'modelsDir'      => APP_PATH . '/Infrastructure/Persistence/Phalcon/',
         'migrationsDir'  => APP_PATH . '/migrations/',
         'cacheDir'       => BASE_PATH . '/cache/',
         'baseUri'        => '/',
         'publicUrl'      => rtrim((string) ($_ENV['APP_URL'] ?? getenv('APP_URL') ?: DOMAIN_NAME), '/'),
+    ],
+
+    'cos' => [
+        'organizationId' => getenv('COS_ORGANIZATION_ID') ?: 'default',
+    ],
+
+    'llm' => [
+        'endpoint' => getenv('LLM_ENDPOINT') ?: '',
+        'token' => getenv('LLM_TOKEN') ?: '',
+        'model' => getenv('LLM_MODEL') ?: '',
+        'provider' => getenv('LLM_PROVIDER') ?: 'http',
+    ],
+
+    'agent' => [
+        'inputRetentionDays' => (int) (getenv('AGENT_INPUT_RETENTION_DAYS') ?: 30),
     ],
 
     'integrations' => [
@@ -48,11 +65,11 @@ return new \Phalcon\Config\Config([
 
     'telegram' => array(
         // Add you bot's API key and name
-        'api_key'      => (string) ($_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: ''),
-        'bot_username' => (string) ($_ENV['TELEGRAM_BOT_NAME'] ?? getenv('TELEGRAM_BOT_NAME') ?: ''),
+        'api_key'      => getenv('TELEGRAM_BOT_TOKEN') ?: '',
+        'bot_username' => getenv('TELEGRAM_BOT_NAME') ?: '',
 
         // [Manager Only] Secret key required to access the webhook
-        'secret'       => (string) ($_ENV['TELEGRAM_WEBHOOK_SECRET'] ?? getenv('TELEGRAM_WEBHOOK_SECRET') ?: ''),
+        'secret'       => getenv('TELEGRAM_WEBHOOK_SECRET') ?: '',
 
         'webhook'      => array(
             'url' => (string) ($_ENV['TELEGRAM_WEBHOOK_URL'] ?? getenv('TELEGRAM_WEBHOOK_URL') ?: 'https://terra.ai-da.store/tgAdmin_webhook.php'),
@@ -61,27 +78,27 @@ return new \Phalcon\Config\Config([
         // All command related configs go here
         'commands'     => array(
             'paths'   => array(
-                APP_PATH . '/modules/TgAdmin/Commands/SystemCommands',
-                APP_PATH . '/modules/TgAdmin/Commands/UserCommands',
-                APP_PATH . '/modules/TgAdmin/Commands/AdminCommands',
+                APP_PATH . '/Interfaces/Telegram/Command/SystemCommands',
+                APP_PATH . '/Interfaces/Telegram/Command/UserCommands',
             ),
             // Here you can set any command-specific parameters
             'configs' => array(
                 // - Google geocode/timezone API key for /date command (see DateCommand.php)
                 // 'date'    => ['google_api_key' => 'your_google_api_key_here'],
                 // - OpenWeatherMap.org API key for /weather command (see WeatherCommand.php)
-                'weather' => ['owm_api_key' => '3e23a07a6a4883b68e2698af70acb13d'],
+                'weather' => ['owm_api_key' => getenv('OPENWEATHER_API_KEY') ?: ''],
                 // - Payment Provider Token for /payment command (see Payments/PaymentCommand.php)
                 // 'payment' => ['payment_provider_token' => 'your_payment_provider_token_here'],
             )
         ),
         'database' => [
             'adapter'  => 'Mysql',
-            'host'     => 'itsige00.mysql.tools', // getenv('DB_TG_HOST'),
-            'username' => 'itsige00_ass2tgbot', // getenv('DB_TG_USER'),
-            'password' => 'c7X7et#9Z@', //getenv('DB_TG_PASS'),
-            'dbname'   => 'itsige00_ass2tgbot', //getenv('DB_TG_NAME'),
-            'charset'  => 'utf8',
+            'host'     => getenv('DB_TG_HOST') ?: 'mysql',
+            'port'     => (int) (getenv('DB_TG_PORT') ?: (getenv('DB_PORT') ?: 3306)),
+            'username' => getenv('DB_TG_USERNAME') ?: (getenv('DB_USERNAME') ?: 'cos'),
+            'password' => getenv('DB_TG_PASSWORD') ?: (getenv('DB_PASSWORD') ?: ''),
+            'dbname'   => getenv('DB_TG_DATABASE') ?: (getenv('DB_DATABASE') ?: 'cos'),
+            'charset'  => 'utf8mb4',
         ],
         // Define all IDs of admin users
         'admins'       => array(

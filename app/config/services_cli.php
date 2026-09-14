@@ -8,6 +8,6 @@ use Phalcon\Cli\Dispatcher;
 */
 $di->setShared('dispatcher', function() {
     $dispatcher = new Dispatcher();
-    $dispatcher->setDefaultNamespace('Terra\Modules\Cli\Tasks');
+    $dispatcher->setDefaultNamespace('Interfaces\Cli\Task');
     return $dispatcher;
 });

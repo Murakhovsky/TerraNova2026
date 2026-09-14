@@ -19,8 +19,8 @@ Do not store bot tokens in PHP configuration or in the repository.
 
 ## Webhook
 
-Configure Telegram to send updates to the public `POST /tgAdmin_webhook.php` endpoint. The legacy
-public script routes the request internally to `POST /TgAdmin/webhook`. Pass the same
+Configure Telegram to send updates to the stable public `POST /tgAdmin_webhook.php` endpoint. The
+thin public entrypoint routes the request to the canonical Telegram controller. Pass the same
 `TELEGRAM_WEBHOOK_SECRET` as Telegram's `secret_token`. The webhook
 uses the existing Longman command loader. A user connects an account from `/cabinet`; `/start`
 consumes the one-time token and creates a binding to `tn_users`.

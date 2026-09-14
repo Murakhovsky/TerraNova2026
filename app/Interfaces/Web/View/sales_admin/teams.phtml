@@ -1,0 +1,170 @@
+<?php
+$teams = is_array($teams ?? null) ? $teams : [];
+$users = is_array($users ?? null) ? $users : [];
+$catalog = is_array($teamCatalog ?? null) ? $teamCatalog : [];
+$csrf = (string) ($csrfToken ?? '');
+$e = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+?>
+<section class="sales-admin-page" data-sales-team-admin data-csrf="<?= $e($csrf) ?>">
+    <header class="sales-admin-header">
+        <div>
+            <p class="eyebrow">Sales Administration · V0.7.6</p>
+            <h1>Users, Teams & Authority</h1>
+            <p>Team membership controls assignability and approval scope. Direct capabilities are explicit exceptions, not a second role system.</p>
+        </div>
+        <nav class="sales-admin-nav">
+            <a href="/sales/admin/pipelines">Pipelines</a>
+            <a href="/sales/admin/rules">Rules</a>
+            <a href="/sales/admin/agents">Agents</a>
+            <a href="/sales/admin/actions">Actions & Policies</a>
+            <strong>Teams</strong>
+        </nav>
+    </header>
+
+    <?php if (!empty($pageStatus)): ?>
+        <div class="sales-admin-alert"><?= $e($pageStatus) ?></div>
+    <?php endif; ?>
+
+    <div class="sales-admin-grid">
+        <article class="sales-admin-card">
+            <h2>Create team</h2>
+            <form data-create-team>
+                <label>Name <input name="name" required maxlength="160"></label>
+                <label>Code <input name="code" required maxlength="80" pattern="[A-Za-z0-9_]+" placeholder="LVIV_SALES"></label>
+                <label>Assignment mode
+                    <select name="assignment_mode">
+                        <?php foreach (($catalog['assignment_modes'] ?? ['MANUAL']) as $mode): ?>
+                            <option value="<?= $e($mode) ?>"><?= $e($mode) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <button type="submit">Create team</button>
+            </form>
+        </article>
+
+        <article class="sales-admin-card">
+            <h2>Authority model</h2>
+            <p><code>sales.deal.assign</code> allows cross-team manual assignment. A team LEAD may assign within their own active team.</p>
+            <p><code>sales.approval.decide</code> allows Sales approval decisions, still restricted to the approver's team for deal-targeted actions.</p>
+            <p><code>sales.approval.any_team</code> is the explicit organization-wide override.</p>
+        </article>
+    </div>
+
+    <section class="sales-admin-card">
+        <h2>Teams</h2>
+        <table>
+            <thead><tr><th>Team</th><th>Status</th><th>Mode</th><th>Members</th><th>Leads</th><th>Version</th></tr></thead>
+            <tbody>
+            <?php foreach ($teams as $team): ?>
+                <tr>
+                    <td><strong><?= $e($team['name'] ?? '') ?></strong><br><code><?= $e($team['code'] ?? '') ?></code></td>
+                    <td><?= $e($team['status'] ?? '') ?></td>
+                    <td><?= $e($team['assignment_mode'] ?? '') ?></td>
+                    <td><?= $e($team['active_members'] ?? 0) ?></td>
+                    <td><?= $e($team['leads'] ?? 0) ?></td>
+                    <td><?= $e($team['configuration_version'] ?? 1) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="sales-admin-card">
+        <h2>Users & effective Sales authority</h2>
+        <div class="sales-admin-user-list">
+        <?php foreach ($users as $user): ?>
+            <article class="sales-admin-user" data-user-id="<?= $e($user['id'] ?? '') ?>">
+                <header>
+                    <div><strong><?= $e($user['full_name'] ?? '') ?></strong><br><small><?= $e($user['email'] ?? '') ?></small></div>
+                    <span><?= $e($user['membership_status'] ?? '') ?></span>
+                </header>
+                <p>Organization role: <code><?= $e($user['organization_role'] ?? '') ?></code></p>
+                <p>Teams:
+                    <?php foreach (($user['teams'] ?? []) as $membership): ?>
+                        <span class="badge"><?= $e($membership['name'] ?? '') ?> · <?= $e($membership['role'] ?? '') ?> · <?= $e($membership['status'] ?? '') ?></span>
+                    <?php endforeach; ?>
+                </p>
+                <form data-membership-form>
+                    <fieldset>
+                        <legend>Team membership</legend>
+                        <label>Team
+                            <select name="team_id" required>
+                                <option value="">Select team</option>
+                                <?php foreach ($teams as $team): ?>
+                                    <?php if (($team['status'] ?? '') !== 'ARCHIVED'): ?>
+                                        <option value="<?= $e($team['id'] ?? '') ?>"><?= $e($team['name'] ?? '') ?> (<?= $e($team['code'] ?? '') ?>)</option>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label>Role <select name="role"><option value="MEMBER">MEMBER</option><option value="LEAD">LEAD</option></select></label>
+                        <label>Status <select name="status"><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></label>
+                        <label><input type="checkbox" name="assignment_enabled" value="1" checked> Assignable</label>
+                        <label><input type="checkbox" name="approval_enabled" value="1"> May approve for team</label>
+                        <label>Assignment weight <input type="number" name="assignment_weight" min="1" max="100" value="1"></label>
+                    </fieldset>
+                    <button type="submit">Save membership</button>
+                </form>
+                <form data-capabilities-form>
+                    <fieldset>
+                        <legend>Direct capabilities</legend>
+                        <?php $activeCaps = array_map('strval', $user['capabilities'] ?? []); ?>
+                        <?php foreach (($catalog['capabilities'] ?? []) as $capability): ?>
+                            <label><input type="checkbox" name="capabilities[]" value="<?= $e($capability) ?>" <?= in_array((string)$capability, $activeCaps, true) ? 'checked' : '' ?>> <?= $e($capability) ?></label>
+                        <?php endforeach; ?>
+                    </fieldset>
+                    <button type="submit">Save capabilities</button>
+                </form>
+            </article>
+        <?php endforeach; ?>
+        </div>
+    </section>
+</section>
+
+<script>
+(() => {
+    const root = document.querySelector('[data-sales-team-admin]');
+    if (!root) return;
+    const csrf = root.dataset.csrf || '';
+    const request = async (url, payload) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','X-CSRF-Token':csrf},
+            body: JSON.stringify({...payload, csrf_token: csrf})
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.ok !== true) throw new Error(body.error || 'Request failed.');
+        return body.data;
+    };
+    root.querySelector('[data-create-team]')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        try {
+            await request('/api/sales/admin/teams', Object.fromEntries(new FormData(form).entries()));
+            location.reload();
+        } catch (error) { alert(error.message); }
+    });
+    root.querySelectorAll('[data-membership-form]').forEach(form => form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const card = form.closest('[data-user-id]');
+        const data = Object.fromEntries(new FormData(form).entries());
+        if (!data.team_id) return;
+        data.assignment_enabled = form.querySelector('[name="assignment_enabled"]').checked;
+        data.approval_enabled = form.querySelector('[name="approval_enabled"]').checked;
+        const teamId = data.team_id;
+        delete data.team_id;
+        try {
+            await request(`/api/sales/admin/teams/${teamId}/members/${card.dataset.userId}`, data);
+            location.reload();
+        } catch (error) { alert(error.message); }
+    }));
+    root.querySelectorAll('[data-capabilities-form]').forEach(form => form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const card = form.closest('[data-user-id]');
+        const capabilities = [...form.querySelectorAll('input[name="capabilities[]"]:checked')].map(input => input.value);
+        try {
+            await request(`/api/sales/admin/users/${card.dataset.userId}/capabilities`, {capabilities});
+        } catch (error) { alert(error.message); }
+    }));
+})();
+</script>

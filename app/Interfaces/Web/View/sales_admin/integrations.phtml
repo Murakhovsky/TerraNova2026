@@ -1,0 +1,246 @@
+<?php
+$integrations = is_array($integrations ?? null) ? $integrations : [];
+$catalog = is_array($integrationCatalog ?? null) ? $integrationCatalog : [];
+$routing = is_array($routingOptions ?? null) ? $routingOptions : [];
+$csrf = (string) ($csrfToken ?? '');
+$e = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+?>
+<section class="sales-admin-page" data-sales-integration-admin data-csrf="<?= $e($csrf) ?>">
+    <header class="sales-admin-header">
+        <div>
+            <p class="eyebrow">Sales Administration · V0.7.7</p>
+            <h1>Integrations</h1>
+            <p>Sales owns business routing and administration. Platform owns provider adapters, credentials boundary, sync state and runtime transport.</p>
+        </div>
+        <nav class="sales-admin-nav">
+            <a href="/sales/admin/pipelines">Pipelines</a>
+            <a href="/sales/admin/rules">Rules</a>
+            <a href="/sales/admin/agents">Agents</a>
+            <a href="/sales/admin/actions">Actions & Policies</a>
+            <a href="/sales/admin/teams">Teams</a>
+            <strong>Integrations</strong>
+        </nav>
+    </header>
+
+    <?php if (!empty($pageStatus)): ?>
+        <div class="sales-admin-alert"><?= $e($pageStatus) ?></div>
+    <?php endif; ?>
+
+    <div class="sales-admin-grid">
+        <article class="sales-admin-card">
+            <h2>Add integration</h2>
+            <form data-create-integration>
+                <label>Integration
+                    <select name="integration_key" required>
+                        <?php foreach (($catalog['definitions'] ?? []) as $definition): ?>
+                            <option value="<?= $e($definition['integration_key'] ?? '') ?>">
+                                <?= $e($definition['name'] ?? $definition['integration_key'] ?? '') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>Name <input name="name" maxlength="160" placeholder="AIDA native CRM"></label>
+                <label>Credentials reference
+                    <input name="credentials_reference" maxlength="130" placeholder="env:CRM_API_TOKEN">
+                </label>
+                <small>Only an external secret reference is stored. Secret values never enter Sales configuration or revision history.</small>
+                <button type="submit">Create draft</button>
+            </form>
+        </article>
+
+        <article class="sales-admin-card">
+            <h2>Runtime boundary</h2>
+            <p><strong>Inbound:</strong> provider → verification/inbox → normalized Sales input → Sales use case/event.</p>
+            <p><strong>Outbound:</strong> Rule/Agent/User → ActionProposal → Policy → Approval → Action → provider adapter.</p>
+            <p>Integration health is operational state. It does not rewrite lifecycle status or configuration history.</p>
+        </article>
+    </div>
+
+    <section class="sales-admin-card">
+        <h2>Configured integrations</h2>
+        <div class="sales-admin-user-list">
+        <?php foreach ($integrations as $integration): ?>
+            <article class="sales-admin-user" data-integration-id="<?= $e($integration['id'] ?? '') ?>">
+                <header>
+                    <div>
+                        <strong><?= $e($integration['name'] ?? '') ?></strong><br>
+                        <code><?= $e($integration['integration_key'] ?? '') ?></code>
+                    </div>
+                    <span><?= $e($integration['status'] ?? '') ?> · <?= $e($integration['health_status'] ?? 'UNKNOWN') ?></span>
+                </header>
+                <p>
+                    <?= $e($integration['capability'] ?? '') ?> / <?= $e($integration['provider'] ?? '') ?>
+                    · version <?= $e($integration['configuration_version'] ?? 1) ?>
+                    · routes <?= $e($integration['route_count'] ?? 0) ?>
+                </p>
+                <p>
+                    Credentials: <?= !empty($integration['credentials_configured']) ? 'configured' : 'not configured' ?>
+                    <?php if (!empty($integration['credential_reference_scheme'])): ?>
+                        · <?= $e($integration['credential_reference_scheme']) ?>
+                    <?php endif; ?>
+                </p>
+                <?php if (!empty($integration['last_error'])): ?>
+                    <p class="sales-admin-alert"><?= $e($integration['last_error']) ?></p>
+                <?php endif; ?>
+
+                <form data-update-integration>
+                    <input type="hidden" name="configuration_version" value="<?= $e($integration['configuration_version'] ?? 1) ?>">
+                    <label>Name <input name="name" maxlength="160" value="<?= $e($integration['name'] ?? '') ?>"></label>
+                    <label>Status
+                        <select name="status">
+                            <?php foreach (($catalog['lifecycle_statuses'] ?? []) as $status): ?>
+                                <option value="<?= $e($status) ?>" <?= ($integration['status'] ?? '') === $status ? 'selected' : '' ?>>
+                                    <?= $e($status) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>Replace credentials reference
+                        <input name="credentials_reference" maxlength="130" placeholder="leave empty to keep current">
+                    </label>
+                    <button type="submit">Save configuration</button>
+                    <button type="button" data-test-integration>Test connection</button>
+                </form>
+
+                <details>
+                    <summary>Routing & mapping</summary>
+                    <?php foreach (($integration['routes'] ?? []) as $route): ?>
+                        <p>
+                            <code><?= $e($route['inbound_source'] ?? 'default') ?></code>
+                            → pipeline <?= $e($route['pipeline_id'] ?? 'unchanged') ?>
+                            → stage <?= $e($route['initial_stage_id'] ?? 'pipeline default') ?>
+                            → team <?= $e($route['team_id'] ?? 'unassigned') ?>
+                            · <?= $e($route['assignment_strategy'] ?? '') ?>
+                            · <?= $e($route['status'] ?? '') ?>
+                        </p>
+                    <?php endforeach; ?>
+                    <form data-route-form>
+                        <label>Inbound source <input name="inbound_source" maxlength="100" placeholder="default / facebook / website"></label>
+                        <label>Pipeline
+                            <select name="pipeline_id">
+                                <option value="">Keep/default</option>
+                                <?php foreach (($routing['pipelines'] ?? []) as $pipeline): ?>
+                                    <option value="<?= $e($pipeline['id'] ?? '') ?>"><?= $e($pipeline['name'] ?? $pipeline['code'] ?? '') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label>Initial stage
+                            <select name="initial_stage_id">
+                                <option value="">Pipeline default</option>
+                                <?php foreach (($routing['stages'] ?? []) as $stage): ?>
+                                    <option value="<?= $e($stage['id'] ?? '') ?>">
+                                        <?= $e(($stage['name'] ?? $stage['code'] ?? '') . ' · ' . ($stage['pipeline_id'] ?? '')) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label>Team
+                            <select name="team_id">
+                                <option value="">Unassigned</option>
+                                <?php foreach (($routing['teams'] ?? []) as $team): ?>
+                                    <option value="<?= $e($team['id'] ?? '') ?>"><?= $e($team['name'] ?? $team['code'] ?? '') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label>Assignment
+                            <select name="assignment_strategy">
+                                <?php foreach (($catalog['assignment_strategies'] ?? []) as $strategy): ?>
+                                    <option value="<?= $e($strategy) ?>"><?= $e($strategy) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <button type="submit">Add route</button>
+                    </form>
+                </details>
+            </article>
+        <?php endforeach; ?>
+        <?php if (!$integrations): ?>
+            <p>No Sales integrations are configured for this organization.</p>
+        <?php endif; ?>
+        </div>
+    </section>
+</section>
+
+<script>
+(() => {
+    const root = document.querySelector('[data-sales-integration-admin]');
+    if (!root) return;
+    const csrf = root.dataset.csrf || '';
+
+    const post = async (url, payload) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','X-CSRF-Token':csrf},
+            body: JSON.stringify({...payload, csrf_token: csrf})
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.ok !== true) throw new Error(body.error || 'Request failed.');
+        return body.data;
+    };
+
+    root.querySelector('[data-create-integration]')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const raw = Object.fromEntries(new FormData(form).entries());
+        const payload = {
+            integration_key: raw.integration_key,
+            name: raw.name || undefined,
+            credentials_reference: raw.credentials_reference || undefined,
+            config: {}
+        };
+        try {
+            await post('/api/sales/admin/integrations', payload);
+            location.reload();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    root.querySelectorAll('[data-update-integration]').forEach(form => {
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const card = form.closest('[data-integration-id]');
+            const data = Object.fromEntries(new FormData(form).entries());
+            const payload = {
+                name: data.name,
+                status: data.status,
+                configuration_version: Number(data.configuration_version)
+            };
+            if (data.credentials_reference) payload.credentials_reference = data.credentials_reference;
+            try {
+                await post(`/api/sales/admin/integrations/${card.dataset.integrationId}`, payload);
+                location.reload();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    });
+
+    root.querySelectorAll('[data-test-integration]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const card = button.closest('[data-integration-id]');
+            try {
+                const result = await post(`/api/sales/admin/integrations/${card.dataset.integrationId}/test`, {});
+                alert(`Health: ${result.health_status}${result.reason ? `\n${result.reason}` : ''}`);
+                location.reload();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    });
+
+    root.querySelectorAll('[data-route-form]').forEach(form => {
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const card = form.closest('[data-integration-id]');
+            const data = Object.fromEntries(new FormData(form).entries());
+            try {
+                await post(`/api/sales/admin/integrations/${card.dataset.integrationId}/routes`, data);
+                location.reload();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    });
+})();
+</script>

@@ -1,0 +1,119 @@
+{
+  "_client-DTvB7HO0.js": {
+    "file": "assets/client-DTvB7HO0.js",
+    "name": "client"
+  },
+  "_tokens-LEZJCtf5.css": {
+    "file": "assets/tokens-LEZJCtf5.css",
+    "src": "_tokens-LEZJCtf5.css"
+  },
+  "frontend/assets/images/google-map-black.png": {
+    "file": "assets/google-map-black-CYMhgP8G.png",
+    "src": "frontend/assets/images/google-map-black.png"
+  },
+  "frontend/entrypoints/cos-control-center.js": {
+    "file": "assets/cos-control-center-WEBV02.js",
+    "name": "cos-control-center",
+    "src": "frontend/entrypoints/cos-control-center.js",
+    "isEntry": true,
+    "css": ["assets/cos-control-center-WEBV02.css"]
+  },
+  "frontend/entrypoints/cos-site.js": {
+    "file": "assets/cos-site-BhdBo_UG.js",
+    "name": "cos-site",
+    "src": "frontend/entrypoints/cos-site.js",
+    "isEntry": true,
+    "css": ["assets/cos-site-Cq1JQm5g.css", "assets/tokens-LEZJCtf5.css"]
+  },
+  "frontend/entrypoints/diagnostics-methodology-studio.js": {
+    "file": "assets/diagnostics-methodology-studio-WEBV02.js",
+    "name": "diagnostics-methodology-studio",
+    "src": "frontend/entrypoints/diagnostics-methodology-studio.js",
+    "isEntry": true,
+    "css": ["assets/diagnostics-methodology-studio-WEBV02.css"]
+  },
+  "frontend/entrypoints/sales-workspace.js": {
+    "file": "assets/sales-workspace-WEBV03.js",
+    "name": "sales-workspace",
+    "src": "frontend/entrypoints/sales-workspace.js",
+    "isEntry": true,
+    "css": ["assets/sales-workspace-WEBV03.css"]
+  },
+  "frontend/entrypoints/terranova-catalog-api.js": {
+    "file": "assets/terranova-catalog-api-CpAyczo0.js",
+    "name": "terranova-catalog-api",
+    "src": "frontend/entrypoints/terranova-catalog-api.js",
+    "isEntry": true,
+    "imports": ["_client-DTvB7HO0.js"]
+  },
+  "frontend/entrypoints/terranova-club.js": {
+    "file": "assets/terranova-club-CXeQ9qmy.js",
+    "name": "terranova-club",
+    "src": "frontend/entrypoints/terranova-club.js",
+    "isEntry": true,
+    "css": ["assets/terranova-club-RtvNTwVB.css", "assets/tokens-LEZJCtf5.css"]
+  },
+  "frontend/entrypoints/terranova-copy.js": {
+    "file": "assets/terranova-copy-DXjwb-qv.js",
+    "name": "terranova-copy",
+    "src": "frontend/entrypoints/terranova-copy.js",
+    "isEntry": true
+  },
+  "frontend/entrypoints/terranova-home.js": {
+    "file": "assets/terranova-home-DNoHuzsR.js",
+    "name": "terranova-home",
+    "src": "frontend/entrypoints/terranova-home.js",
+    "isEntry": true,
+    "imports": ["_client-DTvB7HO0.js"],
+    "css": ["assets/terranova-home-bqIxkEPv.css"],
+    "assets": ["assets/google-map-black-CYMhgP8G.png"]
+  },
+  "frontend/entrypoints/terranova-interface.js": {
+    "file": "assets/terranova-interface-WEBV02.js",
+    "name": "terranova-interface",
+    "src": "frontend/entrypoints/terranova-interface.js",
+    "isEntry": true,
+    "css": ["assets/terranova-interface-tokens-WEBV01.css", "assets/terranova-interface-foundation-WEBV01.css", "assets/terranova-interface-components-WEBV02.css", "assets/terranova-interface-patterns-WEBV02.css", "assets/terranova-interface-layouts-WEBV02.css", "assets/terranova-interface-workspace-WEBV01.css"]
+  },
+  "frontend/entrypoints/terranova-media-manager.js": {
+    "file": "assets/terranova-media-manager-rzLw8Ri1.js",
+    "name": "terranova-media-manager",
+    "src": "frontend/entrypoints/terranova-media-manager.js",
+    "isEntry": true
+  },
+  "frontend/entrypoints/terranova-property-gallery.js": {
+    "file": "assets/terranova-property-gallery-DYNZHM4g.js",
+    "name": "terranova-property-gallery",
+    "src": "frontend/entrypoints/terranova-property-gallery.js",
+    "isEntry": true
+  },
+  "frontend/entrypoints/terranova-spatial-admin.js": {
+    "file": "assets/terranova-spatial-admin-BNUn8HCD.js",
+    "name": "terranova-spatial-admin",
+    "src": "frontend/entrypoints/terranova-spatial-admin.js",
+    "isEntry": true
+  },
+  "frontend/spatial/spatial-viewer.js": {
+    "file": "assets/spatial-viewer-DF5PRurM.js",
+    "name": "spatial-viewer",
+    "src": "frontend/spatial/spatial-viewer.js",
+    "isEntry": true,
+    "dynamicImports": ["node_modules/@sparkjsdev/spark/dist/spark.module.js"],
+    "css": ["assets/spatial-viewer-VLiYmN_P.css"],
+    "assets": ["assets/draco_decoder-C32yEggz.wasm", "assets/draco_wasm_wrapper-DxJM36Ib.js", "assets/draco_decoder-fzg4nYZr.js", "assets/draco_wasm_wrapper-fZCQGLGb.js", "assets/draco_decoder-Z1_iN-Ht.wasm", "assets/basis_transcoder-VXdx5NbI.wasm", "assets/basis_transcoder-o4Hde_L7.js"]
+  },
+  "node_modules/@sparkjsdev/spark/dist/spark.module.js": {
+    "file": "assets/spark.module-BdyreFe5.js",
+    "name": "spark.module",
+    "src": "node_modules/@sparkjsdev/spark/dist/spark.module.js",
+    "isDynamicEntry": true,
+    "imports": ["frontend/spatial/spatial-viewer.js"]
+  },
+  "node_modules/three/examples/jsm/libs/basis/basis_transcoder.js": {"file":"assets/basis_transcoder-o4Hde_L7.js","src":"node_modules/three/examples/jsm/libs/basis/basis_transcoder.js"},
+  "node_modules/three/examples/jsm/libs/basis/basis_transcoder.wasm": {"file":"assets/basis_transcoder-VXdx5NbI.wasm","src":"node_modules/three/examples/jsm/libs/basis/basis_transcoder.wasm"},
+  "node_modules/three/examples/jsm/libs/draco/draco_decoder.js": {"file":"assets/draco_decoder-fzg4nYZr.js","src":"node_modules/three/examples/jsm/libs/draco/draco_decoder.js"},
+  "node_modules/three/examples/jsm/libs/draco/draco_decoder.wasm": {"file":"assets/draco_decoder-C32yEggz.wasm","src":"node_modules/three/examples/jsm/libs/draco/draco_decoder.wasm"},
+  "node_modules/three/examples/jsm/libs/draco/draco_wasm_wrapper.js": {"file":"assets/draco_wasm_wrapper-DxJM36Ib.js","src":"node_modules/three/examples/jsm/libs/draco/draco_wasm_wrapper.js"},
+  "node_modules/three/examples/jsm/libs/draco/gltf/draco_decoder.wasm": {"file":"assets/draco_decoder-Z1_iN-Ht.wasm","src":"node_modules/three/examples/jsm/libs/draco/gltf/draco_decoder.wasm"},
+  "node_modules/three/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js": {"file":"assets/draco_wasm_wrapper-fZCQGLGb.js","src":"node_modules/three/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js"}
+}

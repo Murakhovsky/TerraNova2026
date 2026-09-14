@@ -1,0 +1,22 @@
+@layer tn-feature-sales-v065 {
+  .tn-sales-global-search { position: relative; z-index: 8; margin-top: calc(var(--tn-space-2) * -1); }
+  .tn-sales-global-search__form { display: grid; grid-template-columns: minmax(260px, 560px) auto; gap: var(--tn-space-2); align-items: end; }
+  .tn-sales-global-search__field { min-width: 0; }
+  .tn-sales-global-search__status, .tn-sales-control-status { display: block; min-height: 18px; margin: 4px 0 0; color: var(--tn-color-muted); font-size: var(--tn-font-xs); }
+  [data-state="success"] { color: var(--tn-color-positive); }
+  [data-state="warning"] { color: var(--tn-color-warning); }
+  [data-state="error"] { color: var(--tn-color-danger); }
+  .tn-sales-global-search__results { position: absolute; left: 0; top: calc(100% + 4px); width: min(680px, 100%); max-height: 420px; overflow: auto; padding: 6px; background: var(--tn-color-surface); border: 1px solid var(--tn-color-border-strong); border-radius: var(--tn-radius-md); box-shadow: var(--tn-shadow-ui); }
+  .tn-sales-global-search__result { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: var(--tn-space-3); align-items: center; padding: 10px 12px; color: var(--tn-color-ink); border-radius: var(--tn-radius-sm); text-decoration: none; }
+  .tn-sales-global-search__result:hover { background: var(--tn-color-surface-subtle); }
+  .tn-sales-global-search__result strong, .tn-sales-global-search__result small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tn-sales-global-search__result small { margin-top: 2px; color: var(--tn-color-muted); }
+  .tn-sales-global-search__type { color: var(--tn-color-muted); font-size: 10px; font-weight: 850; letter-spacing: .06em; }
+  .tn-sales-global-search__empty { margin: 0; padding: var(--tn-space-4); color: var(--tn-color-muted); }
+  .tn-sales-control-status { flex-basis: 100%; }
+
+  @media (max-width: 760px) {
+    .tn-sales-global-search__form { grid-template-columns: 1fr; }
+    .tn-sales-global-search__results { width: 100%; max-height: 55vh; }
+  }
+}

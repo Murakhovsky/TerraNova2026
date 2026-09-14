@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
+require APP_PATH . '/config/environment.php';
 
 require BASE_PATH . '/vendor/autoload.php';
 Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
@@ -24,7 +25,6 @@ try {
      */
     require APP_PATH . '/config/services_web.php';
 
-
     /**
      * Include general services
      */
@@ -36,11 +36,6 @@ try {
     $config = $di->getConfig();
 
     /**
-     * Include Autoloader
-     */
-    include APP_PATH . '/config/loader.php';
-
-    /**
      * Handle the request
      */
     $application = new Application($di);
@@ -50,25 +45,13 @@ try {
      */
     $application->registerModules([
         'frontend' => [
-            'className' => 'Modules\Frontend\Module',
-            'path'      => APP_PATH . '/modules/frontend/Module.php',
+            'className' => 'Interfaces\\Web\\Module',
+            'path'      => APP_PATH . '/Interfaces/Web/Module.php',
             'default'   => true
         ],
-        'economy' => [
-            'className' => 'Modules\Economy\Module',
-            'path'      => APP_PATH . '/modules/economy/Module.php',
-            ],
-        'games' => [
-            'className' => 'Modules\Games\Module',
-            'path'      => APP_PATH . '/modules/Games/Module.php',
-        ],
-        'users' => [
-            'className' => 'Modules\Users\Module',
-            'path'      => APP_PATH . '/modules/Users/Module.php',
-        ],
         'spatial' => [
-            'className' => 'Modules\Spatial\Module',
-            'path'      => APP_PATH . '/modules/spatial/Module.php',
+            'className' => 'Bootstrap\\SpatialModule',
+            'path'      => APP_PATH . '/Bootstrap/SpatialModule.php',
         ],
     ]);
 
@@ -78,7 +61,16 @@ try {
     require APP_PATH . '/config/routes.php';
 
     echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
-} catch (\Exception $e) {
-    echo $e->getMessage() . '<br>';
-    echo '<pre>' . $e->getTraceAsString() . '</pre>';
+} catch (\Throwable $e) {
+    if (isset($di) && $di->has('cosLogger')) {
+        $di->getShared('cosLogger')->log('error', 'Unhandled web exception.', [
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+            'request_uri' => $_SERVER['REQUEST_URI'] ?? null,
+        ]);
+    } else {
+        error_log('Unhandled web exception: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo 'Internal Server Error';
 }

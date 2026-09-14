@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Spatial\Services\SpatialAssetService;
-use Modules\Spatial\Services\SpatialProcessingService;
-use Modules\Spatial\Services\SpatialSceneService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Domains\Spatial\Application\Service\SpatialSceneService;
+use Infrastructure\Media\SpatialAssetService;
+use Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyTourPublisher;
+use Infrastructure\Spatial\SpatialProcessingService;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -13,7 +15,7 @@ Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 require APP_PATH . '/config/loader.php';
 
 $config = require APP_PATH . '/config/config.php';
-$database = new DatabaseService($config->database);
+$database = new PdoConnection($config->database);
 $pdo = $database->connection();
 $cleanupArgument = array_values(array_filter($argv ?? [], static fn(string $argument): bool => str_starts_with($argument, '--cleanup=')));
 if ($cleanupArgument) {
@@ -36,7 +38,9 @@ if ($cleanupArgument) {
     exit(0);
 }
 $assets = new SpatialAssetService($database, 5 * 1024 * 1024);
-$scenes = new SpatialSceneService($database, $assets);
+$scenes = new SpatialSceneService(new MysqlSpatialSceneRepository(
+    $database, $assets, new MysqlPropertyTourPublisher($database),
+));
 $processor = new SpatialProcessingService($database);
 $sceneId = 0;
 $userId = 0;

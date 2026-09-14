@@ -27,7 +27,7 @@ try {
     require APP_PATH . '/config/services.php';
 
     /**
-     * Include web environment specific services
+     * Include Telegram environment specific services
      */
     require APP_PATH . '/config/services_tg.php';
 
@@ -35,11 +35,6 @@ try {
      * Get config service for use in inline setup below
      */
     $config = $di->getConfig();
-
-    /**
-     * Include Autoloader
-     */
-    include APP_PATH . '/config/loader.php';
 
     /**
      * Handle the request
@@ -51,21 +46,9 @@ try {
      */
     $application->registerModules([
         'TgAdmin' =>[
-            'className' => 'Modules\TgAdmin\Module',
-            'path'      => APP_PATH . '/modules/TgAdmin/Module.php',
+            'className' => 'Interfaces\\Telegram\\Module',
+            'path'      => APP_PATH . '/Interfaces/Telegram/Module.php',
             'default'   => true
-        ],
-        'users' => [
-            'className' => 'Modules\Users\Module',
-            'path'      => APP_PATH . '/modules/Users/Module.php',
-        ],
-        'economy' => [
-            'className' => 'Modules\Economy\Module',
-            'path'      => APP_PATH . '/modules/economy/Module.php',
-        ],
-        'games' => [
-            'className' => 'Modules\Games\Module',
-            'path'      => APP_PATH . '/modules/Games/Module.php',
         ],
     ]);
 
@@ -75,7 +58,15 @@ try {
     require APP_PATH . '/config/routes.php';
 
     echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
-} catch (\Exception $e) {
-    echo $e->getMessage() . '<br>';
-    echo '<pre>' . $e->getTraceAsString() . '</pre>';
+} catch (\Throwable $e) {
+    if (isset($di) && $di->has('cosLogger')) {
+        $di->getShared('cosLogger')->log('error', 'Unhandled Telegram exception.', [
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+        ]);
+    } else {
+        error_log('Unhandled Telegram exception: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo 'Internal Server Error';
 }

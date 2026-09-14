@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\TelegramAutomationService;
+use Infrastructure\Integration\Telegram\TelegramAutomationService;
 use Longman\TelegramBot\Entities\InlineKeyboard;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram;
-use Modules\TgAdmin\Services\TelegramAutomationProcessor;
+use Infrastructure\Integration\Telegram\TelegramAutomationProcessor;
 use Phalcon\Di\FactoryDefault;
 
 define('BASE_PATH', dirname(__DIR__));

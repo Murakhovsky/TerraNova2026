@@ -2,31 +2,27 @@
 declare(strict_types=1);
 
 use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
-use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
 use Phalcon\Mvc\View;
-use Common\Services\AuthService;
-use Common\Services\DatabaseService;
-use Common\Services\EventService;
-use Common\Services\ImageOptimizerService;
-use Common\Services\MediaStorageService;
-use Common\Services\TelegramAutomationService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Infrastructure\Media\ImageOptimizerService;
+use Infrastructure\Media\MediaStorageService;
+use Infrastructure\Framework\PhalconEventService;
+use Infrastructure\Identity\SessionAuthService;
+use Interfaces\Web\Tenant\SessionOrganizationContext;
+use Interfaces\Web\Security\CsrfTokenManager;
+use Interfaces\Web\Assets\ViteAssetManifest;
 
-/**
- * Shared configuration service
- */
 $di->setShared('config', function () {
     return include APP_PATH . "/config/config.php";
 });
 
-/**
- * Database connection is created based in the parameters defined in the configuration file
- */
 $di->setShared('db', function () {
     $config = $this->getConfig();
 
     $class = 'Phalcon\Db\Adapter\Pdo\\' . $config->database->adapter;
     $params = [
         'host'     => $config->database->host,
+        'port'     => $config->database->port,
         'username' => $config->database->username,
         'password' => $config->database->password,
         'dbname'   => $config->database->dbname,
@@ -41,11 +37,7 @@ $di->setShared('db', function () {
 });
 
 $di->setShared('databaseService', function () {
-    return new DatabaseService($this->getConfig()->database);
-});
-
-$di->setShared('telegramAutomationService', function () {
-    return new TelegramAutomationService($this->getShared('databaseService'));
+    return new PdoConnection($this->getConfig()->database);
 });
 
 $di->setShared('mediaStorageService', function () {
@@ -57,27 +49,34 @@ $di->setShared('imageOptimizerService', function () {
 });
 
 $di->setShared('authService', function () {
-    return new AuthService($this->getShared('databaseService'), $this->getShared('session'));
+    return new SessionAuthService($this->getShared('databaseService'), $this->getShared('session'));
 });
 
-/**
- * If the configuration specify the use of metadata adapter use it or use memory otherwise
- */
+$di->setShared('organizationContext', function () {
+    return new SessionOrganizationContext(
+        $this->getShared('authService'),
+        (string) $this->getConfig()->cos->organizationId,
+    );
+});
+
+$di->setShared('csrfTokenManager', fn () => new CsrfTokenManager($this->getShared('session')));
+
+$di->setShared('viteAssetManifest', fn () => new ViteAssetManifest(
+    BASE_PATH . '/public/build/.vite/manifest.json',
+));
+
 $di->setShared('modelsMetadata', function () {
     return new MetaDataAdapter();
 });
 
-//  **Реєструємо view**, щоб Phalcon не падав
 $di->setShared('view', function() {
     $view = new View();
-    $view->disable();      // вимикаємо будь-яке рендерення
+    $view->disable();
     return $view;
 });
 
-$di->setShared('eventService', function () use ($di) {
-    $eventService = new EventService();
-//    $eventService->attach('user:profileCompleted', new \Modules\Users\Listeners\UserEventsListener());
-    return $eventService;
+$di->setShared('eventService', function () {
+    return new PhalconEventService();
 });
 
 if (!function_exists('di')) {
@@ -87,3 +86,5 @@ if (!function_exists('di')) {
         return $service ? $di->getShared($service) : $di;
     }
 }
+
+require APP_PATH . '/config/services_kernel.php';

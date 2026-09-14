@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Common\Services\TelegramAutomationService;
-use Modules\TgAdmin\Services\TelegramAutomationProcessor;
+use Domains\Identity\Application\Contract\TelegramAccountLinkInterface;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Infrastructure\Integration\Telegram\TelegramAutomationService;
+use Infrastructure\Integration\Telegram\TelegramAutomationProcessor;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -12,7 +13,7 @@ Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 require APP_PATH . '/config/loader.php';
 
 $config = require APP_PATH . '/config/config.php';
-$database = new DatabaseService($config->database);
+$database = new PdoConnection($config->database);
 $pdo = $database->connection();
 $email = 'telegram-test-' . bin2hex(random_bytes(4)) . '@example.test';
 $dedupe = 'telegram-integration-' . bin2hex(random_bytes(6));
@@ -26,6 +27,9 @@ try {
     $userId = (int) $pdo->lastInsertId();
 
     $service = new TelegramAutomationService($database);
+    if (!$service instanceof TelegramAccountLinkInterface) {
+        throw new RuntimeException('Telegram account linking is not exposed through the Identity port.');
+    }
     $link = $service->createUserLink($userId);
     $bound = $service->consumeLinkToken($link['token'], [
         'telegram_user_id' => $telegramUserId,

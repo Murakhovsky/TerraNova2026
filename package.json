@@ -2,7 +2,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:spatial": "vite build"
+    "build": "vite build",
+    "build:spatial": "vite build",
+    "docs:dev": "npx --yes vitepress@1.6.4 dev docs",
+    "docs:generate": "php docs/.vitepress/generate-reference.php && php docs/.vitepress/generate-permissions-reference.php && php docs/.vitepress/generate-application-reference.php",
+    "docs:generate:check": "php docs/.vitepress/generate-reference.php --check && php docs/.vitepress/generate-permissions-reference.php --check && php docs/.vitepress/generate-application-reference.php --check",
+    "docs:check": "node docs/.vitepress/check.mjs",
+    "docs:build": "npx --yes vitepress@1.6.4 build docs",
+    "docs:preview": "npx --yes vitepress@1.6.4 preview docs",
+    "test:frontend": "node tests/frontend/api_client.mjs",
+    "test:sales-browser": "node tests/browser/sales_workspace.mjs"
   },
   "dependencies": {
     "@sparkjsdev/spark": "^2.1.0",

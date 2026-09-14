@@ -6,6 +6,9 @@ use Phalcon\Cli\Console as ConsoleApp;
 
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
+require APP_PATH . '/config/environment.php';
+require BASE_PATH . '/vendor/autoload.php';
+Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 
 /**
  * The FactoryDefault Dependency Injector automatically registers the services that
@@ -24,11 +27,6 @@ include APP_PATH . '/config/services.php';
 include APP_PATH . '/config/services_cli.php';
 
 /**
- * Include Autoloader
- */
-include APP_PATH . '/config/loader.php';
-
-/**
  * Get config service for use in inline setup below
  */
 $config = $di->getConfig();
@@ -42,7 +40,10 @@ $console = new ConsoleApp($di);
  * Register console modules
  */
 $console->registerModules([
-    'cli' => ['className' => 'Terra\Modules\Cli\Module']
+    'cli' => [
+        'className' => 'Interfaces\\Cli\\Module',
+        'path' => APP_PATH . '/Interfaces/Cli/Module.php',
+    ],
 ]);
 
 /**
@@ -81,8 +82,15 @@ try {
     if (isset($config["printNewLine"]) && $config["printNewLine"]) {
         echo PHP_EOL;
     }
-} catch (Exception $e) {
-    echo $e->getMessage() . PHP_EOL;
-    echo $e->getTraceAsString() . PHP_EOL;
+} catch (Throwable $e) {
+    if ($di->has('cosLogger')) {
+        $di->getShared('cosLogger')->log('error', 'Unhandled CLI exception.', [
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+            'task' => $arguments['task'] ?? null,
+            'action' => $arguments['action'] ?? null,
+        ]);
+    }
+    echo "Command failed. See the structured application log for details." . PHP_EOL;
     exit(255);
 }

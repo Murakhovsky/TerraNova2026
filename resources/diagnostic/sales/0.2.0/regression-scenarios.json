@@ -1,0 +1,184 @@
+{
+  "scenarios": [
+    {
+      "id": "missing-documented-icp-evidence",
+      "name": "ICP exists only as an unsupported claim",
+      "unset_facts": [
+        "documented_icp_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-strategy-icp-documented_icp-missing"
+        ],
+        "recommendations": [
+          "recommendation-strategy-icp-documented_icp"
+        ]
+      }
+    },
+    {
+      "id": "missing-sales-targets-evidence",
+      "name": "Sales targets are not evidenced",
+      "unset_facts": [
+        "sales_targets_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-strategy-icp-sales_targets-missing"
+        ],
+        "recommendations": [
+          "recommendation-strategy-icp-sales_targets"
+        ]
+      }
+    },
+    {
+      "id": "missing-channel-attribution-evidence",
+      "name": "Lead source attribution is not evidenced",
+      "unset_facts": [
+        "channel_attribution_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-lead-generation-channel_attribution-missing"
+        ],
+        "recommendations": [
+          "recommendation-lead-generation-channel_attribution"
+        ]
+      }
+    },
+    {
+      "id": "missing-demand-capacity-evidence",
+      "name": "Demand capacity control is not evidenced",
+      "unset_facts": [
+        "demand_capacity_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-lead-generation-demand_capacity-missing"
+        ],
+        "recommendations": [
+          "recommendation-lead-generation-demand_capacity"
+        ]
+      }
+    },
+    {
+      "id": "missing-qualification-framework-evidence",
+      "name": "Qualification framework is not evidenced",
+      "unset_facts": [
+        "qualification_framework_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-qualification-qualification_framework-missing"
+        ],
+        "recommendations": [
+          "recommendation-qualification-qualification_framework"
+        ]
+      }
+    },
+    {
+      "id": "missing-decision-process-evidence",
+      "name": "Buying decision process is not evidenced",
+      "unset_facts": [
+        "decision_process_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-qualification-decision_process-missing"
+        ],
+        "recommendations": [
+          "recommendation-qualification-decision_process"
+        ]
+      }
+    },
+    {
+      "id": "missing-response-sla-evidence",
+      "name": "Inbound response SLA is not evidenced",
+      "unset_facts": [
+        "response_sla_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-speed-to-lead-response_sla-missing"
+        ],
+        "recommendations": [
+          "recommendation-speed-to-lead-response_sla"
+        ]
+      }
+    },
+    {
+      "id": "missing-routing-fallback-evidence",
+      "name": "Lead routing fallback is not evidenced",
+      "unset_facts": [
+        "routing_fallback_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-speed-to-lead-routing_fallback-missing"
+        ],
+        "recommendations": [
+          "recommendation-speed-to-lead-routing_fallback"
+        ]
+      }
+    },
+    {
+      "id": "missing-pipeline-coverage-control-evidence",
+      "name": "Pipeline coverage control is not evidenced",
+      "unset_facts": [
+        "pipeline_coverage_control_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-pipeline-pipeline_coverage_control-missing"
+        ],
+        "recommendations": [
+          "recommendation-pipeline-pipeline_coverage_control"
+        ]
+      }
+    },
+    {
+      "id": "missing-stale-opportunity-control-evidence",
+      "name": "Stale opportunity control is not evidenced",
+      "unset_facts": [
+        "stale_opportunity_control_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-pipeline-stale_opportunity_control-missing"
+        ],
+        "recommendations": [
+          "recommendation-pipeline-stale_opportunity_control"
+        ]
+      }
+    },
+    {
+      "id": "missing-stage-entry-criteria-evidence",
+      "name": "Stage entry criteria are not evidenced",
+      "unset_facts": [
+        "stage_entry_criteria_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-stage-discipline-stage_entry_criteria-missing"
+        ],
+        "recommendations": [
+          "recommendation-stage-discipline-stage_entry_criteria"
+        ]
+      }
+    },
+    {
+      "id": "missing-next-action-control-evidence",
+      "name": "Next-action discipline is not evidenced",
+      "unset_facts": [
+        "next_action_required_implemented"
+      ],
+      "expected": {
+        "findings": [
+          "rule-stage-discipline-next_action_required-missing"
+        ],
+        "recommendations": [
+          "recommendation-stage-discipline-next_action_required"
+        ]
+      }
+    }
+  ]
+}

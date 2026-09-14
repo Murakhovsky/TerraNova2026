@@ -1,15 +1,25 @@
 <?php
 declare(strict_types=1);
 
-
 use Phalcon\Mvc\Router;
-use Phalcon\Session\Adapter\Stream as SessionAdapter;
-use Phalcon\Session\Manager as SessionManager;
 use Phalcon\Mvc\Url as UrlResolver;
-use Phalcon\Translate\Adapter\NativeArray;
-use Modules\Users\Listeners\UserEventsListener;
-use Common\Services\EventService;
-use Common\Services\LoggerService;
+use Interfaces\Telegram\Listener\IdentityUserEventsListener;
+use Infrastructure\Identity\TelegramNotificationService;
+use Infrastructure\Identity\TelegramUserService;
+use Infrastructure\Integration\Telegram\TelegramAutomationService;
+use Infrastructure\Security\TelegramAccessPolicy;
+
+/**
+ * Telegram-only services. This file is intentionally loaded only by bootstrap_tg.php
+ * so the regular Web/CLI composition roots do not depend on the legacy Telegram runtime.
+ */
+$di->setShared('telegramAutomationService', function () {
+    return new TelegramAutomationService($this->getShared('databaseService'));
+});
+
+$di->setShared('telegramAccessPolicy', fn () => new TelegramAccessPolicy(
+    $this->getShared('databaseService'),
+));
 
 /**
  * Registering a router
@@ -20,18 +30,18 @@ $di->setShared('router', function () {
     return $router;
 });
 
+$di->setShared('userService', fn () => new TelegramUserService());
+$di->setShared('notificationService', fn () => new TelegramNotificationService());
 
-//$di->setShared('walletService', function () {
-//    return new WalletService();
-//});
-
-//$di->setShared('logger', function () {
-//    return new LoggerService([
-//        'logPath' => APP_PATH . '/common/logs',
-//        'chat_id' => '987654321',          // ваш chat_id
-//    ]);
-//});
-
+/** @var \Infrastructure\Framework\PhalconEventService $legacyEvents */
+$legacyEvents = $di->getShared('eventService');
+foreach ([
+    'user:newProfileSaved', 'user:registered', 'user:profileCompleted', 'user:login',
+    'user:loginDaily', 'user:logout', 'user:levelUp', 'user:xpAdded',
+    'user:statusChanged', 'user:referralJoined', 'user:referralActivated',
+] as $eventName) {
+    $legacyEvents->attach($eventName, new IdentityUserEventsListener());
+}
 
 /**
  * The URL component is used to generate all kinds of URLs in the application
@@ -44,5 +54,3 @@ $di->setShared('url', function () {
 
     return $url;
 });
-
-

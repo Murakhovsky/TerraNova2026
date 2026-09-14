@@ -1,0 +1,27 @@
+@layer tn-layouts {
+  :where([data-interface-surface="public"]) { --tn-density-block: var(--tn-space-6); }
+  :where([data-interface-surface="portal"]) { --tn-density-block: var(--tn-space-4); }
+  :where([data-interface-surface="workspace"]) { --tn-density-block: var(--tn-space-3); }
+
+  .tn-workspace-page {
+    width: min(100%, 1600px);
+    margin-inline: auto;
+    padding: clamp(18px, 2.4vw, 32px);
+  }
+
+  .tn-workspace-page--wide { width: 100%; max-width: none; }
+  .tn-workspace-page--compact { width: min(100%, 1180px); }
+  .tn-workspace-section { margin-block: 0 var(--tn-space-6); }
+  .tn-workspace-section:last-child { margin-bottom: 0; }
+
+  .tn-workspace-surface {
+    min-width: 0;
+    background: var(--tn-color-surface);
+    border: 1px solid var(--tn-color-border);
+    border-radius: var(--tn-radius-md);
+  }
+
+  @media (max-width: 650px) {
+    .tn-workspace-page { padding: 16px 12px calc(84px + env(safe-area-inset-bottom)); }
+  }
+}

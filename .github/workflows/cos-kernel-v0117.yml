@@ -1,0 +1,35 @@
+name: COS Kernel V0.11.7 Resilience
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  resilience:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Resilience and backpressure invariants
+        run: |
+          php tests/unit/external_resilience_tenant_backpressure.php
+          php tests/architecture/kernel_durable_outbox.php
+      - name: PHP syntax
+        run: |
+          php -l app/Kernel/Module/KernelVersion.php
+          php -l app/Kernel/Resilience/Contract/CircuitBreakerStoreInterface.php
+          php -l app/Kernel/Resilience/ExternalCallPolicy.php
+          php -l app/Kernel/Resilience/ExternalCallExecutor.php
+          php -l app/Kernel/Llm/GovernedStructuredLlmClient.php
+          php -l app/Infrastructure/Llm/MysqlLlmGovernanceRepository.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Resilience/MysqlCircuitBreakerStore.php
+          php -l app/Infrastructure/Platform/Persistence/MySql/Queue/MysqlJobQueue.php
+          php -l app/Bootstrap/InfrastructureServices.php
+          php -l tests/unit/external_resilience_tenant_backpressure.php
+          php -l tests/architecture/kernel_durable_outbox.php

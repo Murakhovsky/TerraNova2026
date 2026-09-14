@@ -1,0 +1,15 @@
+{
+  "pack": {"name": "Sales Diagnostic", "domain": "Sales", "description": "Production methodology for sales strategy, demand generation, qualification, response, pipeline, conversion, productivity, CRM quality, forecasting and enablement."},
+  "metrics": {
+    "cost_per_lead": {"type": "currency", "unit": "currency_per_lead", "description": "Acquisition spend divided by verified leads created in the same attribution window.", "aggregation": "average"},
+    "pipeline_coverage": {"type": "ratio", "unit": "x", "description": "Qualified open pipeline value divided by remaining period sales target.", "aggregation": "latest"},
+    "pipeline_velocity": {"type": "currency", "unit": "currency_per_day", "description": "Opportunity count multiplied by average deal value and win rate, divided by sales cycle days.", "aggregation": "latest"},
+    "opportunity_age": {"type": "duration", "unit": "days", "description": "Median elapsed days from opportunity creation to the evaluation date.", "aggregation": "average"},
+    "stage_conversion_rate": {"type": "percentage", "unit": "percent", "description": "Opportunities entering the next stage divided by opportunities eligible to advance.", "aggregation": "average"},
+    "stage_duration": {"type": "duration", "unit": "days", "description": "Median elapsed days between verified stage entry and exit timestamps.", "aggregation": "average"},
+    "sales_cycle_length": {"type": "duration", "unit": "days", "description": "Median days from qualified opportunity creation to closed outcome.", "aggregation": "average"},
+    "activity_per_rep": {"type": "number", "unit": "activities_per_rep", "description": "Verified selling activities divided by active sales representatives for the period.", "aggregation": "average"},
+    "revenue_per_rep": {"type": "currency", "unit": "currency_per_rep", "description": "Recognized sales revenue divided by active sales representatives for the period.", "aggregation": "average"},
+    "coaching_frequency": {"type": "number", "unit": "sessions_per_rep_month", "description": "Documented coaching sessions divided by active representatives per month.", "aggregation": "average"}
+  }
+}

@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: Terra Nova Web API
+  version: 1.0.0
+  description: Stable frontend-facing API baseline. Legacy unversioned property routes are not canonical.
+servers:
+  - url: /
+paths:
+  /api/v1/properties:
+    get:
+      operationId: listProperties
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 48 } }
+        - { name: deal_type, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string } }
+        - { name: location, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paginated property cards.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PropertyCollectionResponse' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/properties/featured:
+    get:
+      operationId: listFeaturedProperties
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 12, default: 4 } }
+      responses:
+        '200':
+          description: Featured property cards.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PropertyCollectionResponse' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/properties/{slug}:
+    get:
+      operationId: getProperty
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z0-9-]+$' }
+      responses:
+        '200':
+          description: Property details, media, features and related cards.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Runtime health and queue status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+components:
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: { const: true }
+        data: { type: object, additionalProperties: true }
+    ErrorEnvelope:
+      type: object
+      required: [ok, error, message]
+      properties:
+        ok: { const: false }
+        error: { type: string }
+        message: { type: string }
+        errors: { type: object, additionalProperties: true }
+    PropertyCollectionResponse:
+      allOf:
+        - { $ref: '#/components/schemas/SuccessEnvelope' }
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [properties]
+              properties:
+                properties: { type: array, items: { type: object, additionalProperties: true } }
+                pagination: { type: object, additionalProperties: true }
+                stats: { type: object, additionalProperties: true }
+  responses:
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    ServiceUnavailable:
+      description: Backing service unavailable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

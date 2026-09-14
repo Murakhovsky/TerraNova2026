@@ -1,0 +1,388 @@
+/*
+ * Mobile Workspace compatibility bridge.
+ *
+ * Intentionally NOT wrapped in a cascade layer. The legacy terranova-club.css
+ * stylesheet is also unlayered, so a layered responsive rule can lose to old
+ * desktop selectors even when it is loaded later. Keep this file narrow,
+ * mobile-only and workspace-scoped until the legacy stylesheet is retired.
+ */
+@media (max-width: 760px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body.tn-has-workspace {
+    overflow-x: hidden;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  body .tn-workspace-page,
+  body.tn-has-workspace .tn-page,
+  body.tn-workspace-collapsed .tn-page {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-right: 0;
+    margin-left: 0;
+    padding: 16px 12px calc(96px + env(safe-area-inset-bottom));
+  }
+
+  body.tn-has-workspace .tn-workspace-page,
+  body.tn-has-workspace .tn-page {
+    padding-top: 16px;
+  }
+
+  .tn-workspace-topbar,
+  body.tn-workspace-collapsed .tn-workspace-topbar {
+    position: sticky;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 115;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 58px;
+    margin-left: 0;
+    padding: 7px 10px;
+    gap: 8px;
+  }
+
+  .tn-workspace-topbar__context {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+
+  .tn-workspace-topbar__context > div {
+    min-width: 0;
+  }
+
+  .tn-workspace-topbar__context small {
+    display: none;
+  }
+
+  .tn-workspace-topbar__context strong {
+    overflow: hidden;
+    max-width: 30vw;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 15px;
+  }
+
+  .tn-workspace-topbar__actions {
+    flex: 0 0 auto;
+    gap: 5px;
+  }
+
+  .tn-workspace-mobile-menu {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 21px;
+  }
+
+  .tn-workspace-search-trigger {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+
+  .tn-workspace-search-trigger > span,
+  .tn-workspace-profile small {
+    display: none;
+  }
+
+  .tn-workspace-search-trigger kbd {
+    margin: 0;
+  }
+
+  .tn-workspace-topbar__actions > .tn-ui-button {
+    min-height: 40px;
+    padding: 8px 10px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .tn-workspace-profile {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .tn-workspace-sidebar {
+    width: min(88vw, 320px);
+    max-width: 320px;
+  }
+
+  .tn-workspace-mobile-nav {
+    position: fixed;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    z-index: 120;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: 62px;
+    padding: 6px;
+    gap: 2px;
+  }
+
+  .tn-workspace-mobile-nav a,
+  .tn-workspace-mobile-nav button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 48px;
+    padding: 5px 3px;
+    overflow: hidden;
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    line-height: 1.15;
+  }
+
+  .tn-workspace-page,
+  .tn-sales-workspace,
+  .tn-workspace-section,
+  .tn-ui-panel,
+  .tn-ui-page-head,
+  .tn-ui-page-head__main,
+  .tn-ui-page-head__side {
+    min-width: 0;
+  }
+
+  .tn-ui-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tn-ui-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tn-ui-tabs > a,
+  .tn-ui-tabs > button {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    white-space: nowrap;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .tn-sales-workspace > nav.tn-ui-tabs:first-of-type {
+    width: calc(100% + 24px);
+    max-width: none;
+    margin-right: -12px;
+    margin-left: -12px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .tn-sales-global-search {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tn-sales-global-search__form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 8px;
+  }
+
+  .tn-sales-global-search__field,
+  .tn-sales-global-search .tn-ui-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tn-sales-global-search .tn-ui-input {
+    box-sizing: border-box;
+    min-height: 46px;
+    padding: 11px 12px;
+    font-size: 16px;
+  }
+
+  .tn-sales-global-search .tn-ui-field > span {
+    font-size: 12px;
+  }
+
+  .tn-sales-global-search .tn-ui-button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .tn-ui-page-head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .tn-ui-page-head h1 {
+    margin: 0;
+    font-size: clamp(34px, 11vw, 44px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  .tn-ui-page-head p,
+  .tn-ui-page-head__description {
+    max-width: none;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .tn-ui-page-head__side {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .tn-ui-page-meta {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .tn-ui-page-meta strong {
+    font-size: 24px;
+  }
+
+  .tn-ui-actions {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .tn-ui-actions .tn-ui-button {
+    flex: 1 1 120px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .tn-sales-scope-tabs {
+    margin-top: 4px;
+  }
+
+  .tn-sales-today-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 10px;
+  }
+
+  .tn-ui-panel,
+  .tn-sales-today-card {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .tn-ui-panel__head {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .tn-ui-panel__head > div {
+    min-width: 0;
+  }
+
+  .tn-ui-panel__head h2,
+  .tn-sales-today-card h2 {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .tn-ui-panel__head p,
+  .tn-sales-today-card p {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .tn-sales-count {
+    flex: 0 0 auto;
+    font-size: 13px;
+  }
+
+  .tn-sales-list-row,
+  .tn-sales-list-row--actionable {
+    box-sizing: border-box;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .tn-sales-list-row__main,
+  .tn-sales-list-row__main > span {
+    min-width: 0;
+  }
+
+  .tn-sales-list-row__main strong {
+    font-size: 14px;
+  }
+
+  .tn-sales-list-row__main small,
+  .tn-sales-list-row__main time,
+  .tn-sales-empty {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .tn-sales-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .tn-sales-quick-actions .tn-ui-button {
+    flex: 1 1 120px;
+    min-height: 42px;
+  }
+
+  .tn-listing-table-wrap,
+  .tn-ui-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tn-command-palette__panel {
+    width: calc(100vw - 20px);
+    max-width: none;
+    max-height: min(78vh, 640px);
+  }
+}

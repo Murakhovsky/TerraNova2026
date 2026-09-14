@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 
-use Common\Services\DatabaseService;
-use Modules\Frontend\Services\ContentService;
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
+use Domains\Content\Application\Service\ContentService;
+use Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository;
+use Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox;
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -11,9 +13,9 @@ Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
 require APP_PATH . '/config/loader.php';
 
 $config = require APP_PATH . '/config/config.php';
-$database = new DatabaseService($config->database);
+$database = new PdoConnection($config->database);
 $pdo = $database->connection();
-$content = new ContentService($database);
+$content = new ContentService(new MysqlContentRepository($database, new MysqlContentIntegrationOutbox($database)));
 $baseUrl = rtrim((string) ($_ENV['TEST_BASE_URL'] ?? 'http://127.0.0.1:8001'), '/');
 $email = 'content-http-' . bin2hex(random_bytes(5)) . '@example.test';
 $password = 'ContentTest-' . bin2hex(random_bytes(8));
@@ -31,6 +33,11 @@ try {
         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
     ]);
     $userId = (int) $pdo->lastInsertId();
+    $organizationId = (string) ($_ENV['COS_ORGANIZATION_ID'] ?? 'default');
+    $pdo->prepare('
+        INSERT INTO cos_organization_memberships (organization_id, user_id, role, status)
+        VALUES (:organization_id, :user_id, "manager", "ACTIVE")
+    ')->execute(['organization_id' => $organizationId, 'user_id' => $userId]);
 
     $curl = curl_init();
     curl_setopt_array($curl, [
@@ -50,7 +57,12 @@ try {
         throw new RuntimeException('Manager login failed: ' . curl_error($curl));
     }
 
-    foreach (['/admin/content' => 'Блог і SEO', '/admin/content/edit' => 'Новий матеріал'] as $path => $marker) {
+    foreach ([
+        '/admin/content' => 'Блог і SEO',
+        '/admin/content/edit' => 'Новий матеріал',
+        '/client-case' => 'Клієнтські кейси',
+        '/client-case/inbox' => 'Вхідні заявки',
+    ] as $path => $marker) {
         curl_setopt_array($curl, [
             CURLOPT_URL => $baseUrl . $path,
             CURLOPT_HTTPGET => true,
@@ -97,6 +109,7 @@ try {
         $pdo->prepare('DELETE FROM tn_content_items WHERE id = :id')->execute(['id' => $contentId]);
     }
     if ($userId > 0) {
+        $pdo->prepare('DELETE FROM cos_organization_memberships WHERE user_id = :id')->execute(['id' => $userId]);
         $pdo->prepare('DELETE FROM tn_users WHERE id = :id')->execute(['id' => $userId]);
     }
 }
