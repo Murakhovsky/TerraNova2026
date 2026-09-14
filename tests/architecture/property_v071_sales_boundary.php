@@ -8,7 +8,11 @@ $assert = static function (bool $condition, string $message): void {
 
 $manifest = require $root . '/app/Domains/Property/module.php';
 $assert(version_compare((string) ($manifest['version'] ?? '0.0.0'), '0.7.1', '>='), 'Property manifest must be at least V0.7.1.');
-$assert((string) ($manifest['schema_version'] ?? '') === '0.7.0', 'Boundary hardening must not invent a schema migration.');
+$migrations = $manifest['contributions']['migration_files'] ?? [];
+$assert(in_array('app/migrations/20260914_000055_property_v070_history_contracts.sql', $migrations, true), 'V0.7 canonical schema baseline is missing.');
+foreach ($migrations as $migration) {
+    $assert(!str_contains((string) $migration, 'v071'), 'Boundary hardening V0.7.1 must not invent its own schema migration.');
+}
 
 $contract = file_get_contents($root . '/app/Domains/Property/Contract/PropertyReferencePort.php') ?: '';
 foreach (['getPropertyReference','getInventorySnapshot','findAvailableInventory','getPropertyPresentation','searchPropertyReferences'] as $method) {
