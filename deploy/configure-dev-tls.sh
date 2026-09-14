@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DOMAIN="${1:-aida.terra-nova.site}"
+DOMAIN="${1:-company-os.shop}"
 UPSTREAM="${2:-127.0.0.1:8080}"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 SITE_AVAILABLE="/etc/nginx/sites-available/$DOMAIN"
 SITE_ENABLED="/etc/nginx/sites-enabled/$DOMAIN"
+ACME_ROOT="/var/www/letsencrypt"
 
 if ! command -v nginx >/dev/null 2>&1; then
   echo "Host nginx is not installed." >&2
@@ -17,30 +18,74 @@ if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true >/dev/null 2>&1; then
   exit 42
 fi
 
-# Let's Encrypt private material is intentionally root-only. Validate it through
-# sudo rather than treating normal filesystem permissions as a missing cert.
+sudo -n install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled "$ACME_ROOT"
+
+# Bootstrap the apex certificate only when it is absent. HTTP-01 deliberately
+# covers the exact domain, not *.$DOMAIN; wildcard certificates require DNS-01.
 if ! sudo -n test -r "$CERT_DIR/fullchain.pem" || ! sudo -n test -r "$CERT_DIR/privkey.pem"; then
-  echo "Let's Encrypt certificate for $DOMAIN is missing." >&2
+  if ! command -v certbot >/dev/null 2>&1; then
+    echo "Certbot is required to issue the Let's Encrypt certificate for $DOMAIN." >&2
+    exit 41
+  fi
+
+  echo "Let's Encrypt certificate for $DOMAIN is missing; requesting it with HTTP-01."
+  sudo -n certbot certonly \
+    --webroot \
+    --webroot-path "$ACME_ROOT" \
+    --domain "$DOMAIN" \
+    --non-interactive \
+    --agree-tos \
+    --register-unsafely-without-email \
+    --keep-until-expiring
+fi
+
+if ! sudo -n test -r "$CERT_DIR/fullchain.pem" || ! sudo -n test -r "$CERT_DIR/privkey.pem"; then
+  echo "Let's Encrypt certificate for $DOMAIN is still missing after Certbot." >&2
   exit 41
 fi
 
-sudo -n install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/letsencrypt
-
 TMP_CONFIG="$(mktemp)"
-trap 'rm -f "$TMP_CONFIG"' EXIT
+TMP_RELOAD_HOOK="$(mktemp)"
+trap 'rm -f "$TMP_CONFIG" "$TMP_RELOAD_HOOK"' EXIT
 
 cat > "$TMP_CONFIG" <<EOF
+# Apex HTTP is used for ACME and redirects application traffic to HTTPS.
 server {
     listen 80;
     listen [::]:80;
     server_name $DOMAIN;
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/letsencrypt;
+    location ^~ /.well-known/acme-challenge/ {
+        root $ACME_ROOT;
+        default_type text/plain;
+        try_files \$uri =404;
     }
 
     location / {
         return 301 https://\$host\$request_uri;
+    }
+}
+
+# Keep wildcard tenants reachable over HTTP until a DNS-01 wildcard certificate
+# is provisioned. Do not redirect them to an apex-only TLS certificate.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name *.$DOMAIN;
+
+    client_max_body_size 100m;
+
+    location / {
+        proxy_pass http://$UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port 80;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
     }
 }
 
@@ -61,9 +106,6 @@ server {
         return 301 /docs/;
     }
 
-    # Documentation is a static VitePress site served by the application nginx
-    # from /var/www/html/public/docs. Keep an explicit route here so host-level
-    # nginx never falls back to a filesystem/default-site handler for /docs/.
     location ^~ /docs/ {
         proxy_pass http://$UPSTREAM;
         proxy_http_version 1.1;
@@ -98,6 +140,15 @@ sudo -n nginx -t
 sudo -n systemctl reset-failed nginx >/dev/null 2>&1 || true
 sudo -n systemctl enable nginx >/dev/null 2>&1 || true
 sudo -n systemctl restart nginx
+
+# Certbot renewals replace certificate files but nginx must reload to pick them up.
+cat > "$TMP_RELOAD_HOOK" <<'EOF'
+#!/usr/bin/env bash
+set -e
+systemctl reload nginx
+EOF
+sudo -n install -d -m 755 /etc/letsencrypt/renewal-hooks/deploy
+sudo -n install -m 755 "$TMP_RELOAD_HOOK" /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
 
 for _ in $(seq 1 15); do
   if curl --fail --silent --show-error \

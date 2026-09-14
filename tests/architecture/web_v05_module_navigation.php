@@ -73,7 +73,7 @@ if (str_contains($webServices, "setShared('webModuleNavigationContributors'")) {
 }
 
 $moduleServices = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');
-foreach (['ModuleExtensionPoint::WEB_NAVIGATION', "setShared('cosModuleWebNavigationContributors'", "'module_id' => $extension->moduleId"] as $needle) {
+foreach (['ModuleExtensionPoint::WEB_NAVIGATION', "setShared('cosModuleWebNavigationContributors'", "'module_id' => \$extension->moduleId"] as $needle) {
     if (!str_contains($moduleServices, $needle)) {
         throw new RuntimeException('Generic module extension runtime is missing WEB navigation integration: ' . $needle);
     }

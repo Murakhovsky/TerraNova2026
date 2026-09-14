@@ -124,8 +124,11 @@ jobs:
       DEV_HOST: ${{ secrets.DEV_HOST }}
       DEV_USER: ${{ secrets.DEV_USER }}
       DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
       DEV_PATH: ${{ vars.DEV_PATH }}
       DEV_HEALTHCHECK_URL: ${{ vars.DEV_HEALTHCHECK_URL }}
+      COMPANY_OS_DOMAIN: company-os.shop
+      COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/cos
 
     steps:
       - uses: actions/checkout@v4
@@ -145,13 +148,15 @@ jobs:
           : "${DEV_HOST:?DEV_HOST secret is missing}"
           : "${DEV_USER:?DEV_USER secret is missing}"
           : "${DEV_PORT:?DEV_PORT secret is missing}"
+          : "${DEV_SSH_KEY:?DEV_SSH_KEY secret is missing}"
           : "${DEV_PATH:?DEV_PATH environment variable is missing}"
-          test -n "${{ secrets.DEV_SSH_KEY }}" || { echo "DEV_SSH_KEY secret is missing" >&2; exit 1; }
+          : "${COMPANY_OS_DOMAIN:?COMPANY_OS_DOMAIN is missing}"
+          : "${COMPANY_OS_HEALTHCHECK_URL:?COMPANY_OS_HEALTHCHECK_URL is missing}"
 
       - name: Configure SSH
         run: |
           install -d -m 700 ~/.ssh
-          printf '%s\n' '${{ secrets.DEV_SSH_KEY }}' > ~/.ssh/dev_deploy_key
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/dev_deploy_key
           chmod 600 ~/.ssh/dev_deploy_key
           ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
@@ -174,36 +179,37 @@ jobs:
             -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
             ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
+      - name: Configure company-os.shop HTTP reverse proxy
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/configure-company-os-http.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+
       - name: Deploy containers and database migrations
         run: |
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "cd $REMOTE_PATH && bash deploy/dev.sh"
 
-      - name: Configure HTTPS reverse proxy
-        if: env.DEV_HEALTHCHECK_URL != ''
+      - name: Company OS public HTTP preflight
         run: |
-          DEV_DOMAIN="${DEV_HEALTHCHECK_URL#*://}"
-          DEV_DOMAIN="${DEV_DOMAIN%%/*}"
+          echo "Public DNS for $COMPANY_OS_DOMAIN:"
+          getent ahostsv4 "$COMPANY_OS_DOMAIN"
+          curl --fail --show-error --silent --location \
+            --retry 2 --retry-delay 2 --retry-connrefused \
+            "http://$COMPANY_OS_DOMAIN/cos" > /dev/null
+          echo "Public HTTP application route is reachable for $COMPANY_OS_DOMAIN/cos."
+
+      - name: Configure company-os.shop HTTPS
+        run: |
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
-          REMOTE_DOMAIN=$(printf '%q' "$DEV_DOMAIN")
+          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
             "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
 
-      # Public checks are diagnostics only. The blocking application and TLS
-      # checks run on the dev server, where CDN/WAF issues cannot cause a false
-      # deployment failure.
-      - name: External application health diagnostic
-        if: env.DEV_HEALTHCHECK_URL != ''
-        continue-on-error: true
-        run: |
-          curl --insecure --fail --show-error --silent --location \
-            --retry 2 --retry-delay 2 --retry-connrefused \
-            "$DEV_HEALTHCHECK_URL" > /dev/null
-
-      - name: External TLS certificate diagnostic
-        if: env.DEV_HEALTHCHECK_URL != ''
-        continue-on-error: true
+      - name: External HTTPS application health check
         run: |
           curl --fail --show-error --silent --location \
             --retry 2 --retry-delay 2 --retry-connrefused \
-            "$DEV_HEALTHCHECK_URL" > /dev/null
+            "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
+          echo "Public HTTPS application health check passed: $COMPANY_OS_HEALTHCHECK_URL"

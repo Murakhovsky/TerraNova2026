@@ -10,7 +10,10 @@
       "Infrastructure\\": "app/Infrastructure/",
       "Interfaces\\": "app/Interfaces/",
       "Bootstrap\\": "app/Bootstrap/"
-    }
+    },
+    "exclude-from-classmap": [
+      "/app/Interfaces/Telegram/Command/UserCommands/SearchAdvertsCommand.php"
+    ]
   },
   "autoload-dev": {
     "psr-4": {

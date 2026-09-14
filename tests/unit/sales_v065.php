@@ -47,7 +47,7 @@ $assert(!str_contains($js, 'window.alert'), 'Sales Workspace must use inline ope
 foreach (['tn-sales-global-search__results', 'data-state="error"', 'tn-sales-control-status'] as $marker) {
     $assert(str_contains($css, $marker), 'V0.6.5 Sales styling missing: ' . $marker);
 }
-foreach (['At-risk revenue', 'Stale 7d', 'Response', 'Follow-up', 'Historical stage transitions'] as $marker) {
+foreach (['Current at risk', 'Stuck deals', 'Response', 'Follow-up', 'Actual transitions'] as $marker) {
     $assert(str_contains($director, $marker), 'Director final metric UX missing: ' . $marker);
 }
 foreach (['playwright-core', '/sales/today', '/sales/leads', '/sales/pipeline', 'data-sales-global-search', 'SALES_E2E_MUTATION_SAFE'] as $marker) {
@@ -71,4 +71,4 @@ foreach ([
     $assert($code === 0, 'PHP syntax failed: ' . $file . ' ' . implode("\n", $output));
 }
 
-echo "Sales V0.6.5 final EPIC 2 contract passed on the V0.6.8 historical-funnel and mutation-safe E2E semantics.\n";
+echo "Sales V0.6.5 final EPIC 2 contract passed on the V0.8.5 Director UX and mutation-safe E2E semantics.\n";
