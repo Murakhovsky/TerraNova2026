@@ -5,6 +5,17 @@ use Interfaces\Web\Navigation\ModuleAwareNavigationService;
 
 $active = (string) ($active ?? '');
 $brandSuffix = (string) ($brandSuffix ?? 'CLUB');
+$layoutOwned = (bool) ($layoutOwned ?? false);
+$workspaceSection = trim((string) ($workspaceSection ?? ''));
+
+// WEB V0.6 compatibility bridge: migrated workspace controllers declare
+// workspaceSection and let the global layout own the shared shell. Legacy
+// views may still contain this historical partial call; suppress it there so
+// the shell is rendered exactly once by the layout.
+if (!$layoutOwned && $workspaceSection !== '') {
+    return;
+}
+
 $currentUser = null;
 $authService = null;
 try {

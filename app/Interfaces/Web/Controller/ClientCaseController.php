@@ -13,7 +13,7 @@ class ClientCaseController extends ControllerBase
             return;
         }
 
-        $this->view->title = 'CRM кейсів';
+        $this->prepareWorkspace('Клієнтські кейси', 'cases');
         $this->view->filters = $this->clientCaseService()->filters((array) $this->request->getQuery());
         $this->view->cases = [];
         $this->view->stats = [];
@@ -49,7 +49,7 @@ class ClientCaseController extends ControllerBase
             return;
         }
 
-        $this->view->title = 'CRM заявки';
+        $this->prepareWorkspace('Вхідні заявки', 'inbox');
         $this->view->filters = $this->clientCaseService()->inboundFilters((array) $this->request->getQuery());
         $this->view->inboundRequests = [];
         $this->view->inboundStats = [];
@@ -77,8 +77,8 @@ class ClientCaseController extends ControllerBase
             return;
         }
 
+        $this->prepareWorkspace('Картка кейсу', 'cases');
         $caseId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
-        $this->view->title = 'Картка кейсу';
         $this->view->case = null;
         $this->view->inboundRequests = [];
         $this->view->activities = [];
@@ -316,6 +316,15 @@ class ClientCaseController extends ControllerBase
         $this->response->redirect($target . $separator . 'status_message=' . rawurlencode($result['message']));
     }
 
+    private function prepareWorkspace(string $title, string $active): void
+    {
+        $this->view->title = $title;
+        $this->view->metaTitle = $title . ' | Terra Nova COS';
+        $this->view->workspaceSection = 'clients';
+        $this->view->workspaceActive = $active;
+        $this->view->pageAssetEntries = ['clients-workspace'];
+    }
+
     private function safeReturnUrl(string $value): string
     {
         $value = ltrim(trim($value), '/');
@@ -333,4 +342,3 @@ class ClientCaseController extends ControllerBase
         return '';
     }
 }
-

@@ -49,7 +49,7 @@
   </head>
   <body class="<?php echo !empty($cosSite) ? 'cos-site' : ''; ?>">
     <?php if ($workspaceSection !== ''): ?>
-      <?php $this->partial('shared/manager_header', ['active' => $workspaceActive]); ?>
+      <?php $this->partial('shared/manager_header', ['active' => $workspaceActive, 'layoutOwned' => true]); ?>
     <?php endif; ?>
     <?php echo $this->getContent(); ?>
     <?php foreach ($assets['scripts'] as $assetScript): ?>

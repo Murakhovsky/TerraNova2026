@@ -1,0 +1,35 @@
+name: WEB V0.6 Clients Workspace
+
+on:
+  push:
+    branches: [COS]
+  pull_request:
+    branches: [COS]
+  workflow_dispatch:
+
+jobs:
+  clients-workspace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: WEB V0.6 architecture
+        run: |
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/web_v05_module_navigation.php
+          php tests/architecture/web_v06_clients_workspace.php
+      - name: Syntax and browser module
+        run: |
+          php -l app/Interfaces/Web/Controller/ClientCaseController.php
+          php -l tests/architecture/web_v06_clients_workspace.php
+          node --check frontend/features/clients/workspace.js
