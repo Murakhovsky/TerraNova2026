@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.2.3',
+    'version' => '0.2.4',
     'schema_version' => '0.2.2',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Canonical registry of physical real-estate assets, their intrinsic facts, location, lifecycle and relations.',

@@ -50,6 +50,9 @@ jobs:
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
 
+      - name: Property commands and events
+        run: php tests/unit/property_v024_commands_events.php
+
       - name: Property compatibility smoke
         run: |
           php tests/smoke/property_submission.php
@@ -67,3 +70,4 @@ jobs:
           php -l tests/architecture/property_v021_runtime.php
           php -l tests/architecture/property_v022_tenant_boundary.php
           php -l tests/unit/property_v023_core_model.php
+          php -l tests/unit/property_v024_commands_events.php
