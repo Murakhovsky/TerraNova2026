@@ -8,7 +8,7 @@ use Infrastructure\Media\SpatialAssetService;
 use Infrastructure\Spatial\SpatialProcessingService;
 use Domains\Spatial\Application\Service\SpatialSceneService;
 use Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository;
-use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyTourPublisher;
+use Domains\Property\Infrastructure\Spatial\CanonicalPropertyTourPublisher;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 
@@ -58,7 +58,10 @@ class SpatialModule implements ModuleDefinitionInterface
             return new MysqlSpatialSceneRepository(
                 $this->getShared('databaseService'),
                 $this->getShared('spatialAssetService'),
-                new MysqlPropertyTourPublisher($this->getShared('databaseService')),
+                new CanonicalPropertyTourPublisher(
+                    $this->getShared('propertyCanonicalRuntime'),
+                    $this->getShared('organizationContext')->id(),
+                ),
             );
         });
         $di->setShared('spatialSceneService', function () {

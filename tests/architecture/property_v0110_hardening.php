@@ -8,8 +8,8 @@ $assert = static function (bool $condition, string $message): void {
 $read = static fn (string $path): string => (string) file_get_contents($root . '/' . $path);
 
 $module = require $root . '/app/Domains/Property/module.php';
-$assert(($module['version'] ?? null) === '0.11.0', 'Property manifest must declare V0.11.0.');
-$assert(($module['schema_version'] ?? null) === '0.11.0', 'Property schema version must declare V0.11.0.');
+$assert(version_compare((string) ($module['version'] ?? '0.0.0'), '0.11.0', '>='), 'Property manifest must preserve V0.11+ hardening.');
+$assert(version_compare((string) ($module['schema_version'] ?? '0.0.0'), '0.11.0', '>='), 'Property schema must preserve V0.11+ hardening.');
 $assert(in_array('app/migrations/20260914_000058_property_v0110_hardening.sql', $module['contributions']['migration_files'] ?? [], true), 'V0.11 migration missing from Property manifest.');
 $assert(in_array('property.identity.review', $module['contributions']['capabilities'] ?? [], true), 'Identity review capability missing.');
 

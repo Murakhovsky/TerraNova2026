@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.11.0',
-    'schema_version' => '0.11.0',
+    'version' => '0.12.0',
+    'schema_version' => '0.12.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical registry for real-estate assets with Inventory, Listing/Publication, history, analytics, intelligence, identity review/merge hardening and an external Property Network boundary.',
+    'description' => 'Canonical registry and real-estate asset runtime with tenant-safe Asset, Inventory, Listing/Publication writes, domain events, history, intelligence, network interoperability and one-way legacy compatibility projection.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
@@ -28,11 +28,12 @@ return [
             'app/migrations/20260914_000056_property_v090_intelligence.sql',
             'app/migrations/20260914_000057_property_v0100_external_network.sql',
             'app/migrations/20260914_000058_property_v0110_hardening.sql',
+            'app/migrations/20260915_000059_property_v0120_runtime_cutover.sql',
         ],
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
             'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
-            'property.intelligence','property.network','property.identity.review',
+            'property.intelligence','property.network','property.identity.review','property.runtime.canonical',
         ],
     ],
 ];
