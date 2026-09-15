@@ -8,11 +8,15 @@ use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRunt
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCompatibilityProjection;
 use Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort;
 use Domains\Property\Rule\PropertyRuleContextProvider;
+use Infrastructure\Platform\Persistence\MySql\MysqlLocationReference;
 
 $di->setShared('propertyRuleContextProvider', fn (): PropertyRuleContextProvider => new PropertyRuleContextProvider());
 $di->setShared('propertyReferencePort', fn (): MysqlPropertyReferencePort => new MysqlPropertyReferencePort($this->getShared('databaseService')->connection()));
 $di->setShared('propertyCanonicalRuntimeRepository', fn (): MysqlPropertyCanonicalRuntimeRepository => new MysqlPropertyCanonicalRuntimeRepository($this->getShared('databaseService')->connection()));
-$di->setShared('propertyCompatibilityProjection', fn (): MysqlPropertyCompatibilityProjection => new MysqlPropertyCompatibilityProjection($this->getShared('databaseService')->connection()));
+$di->setShared('propertyCompatibilityProjection', fn (): MysqlPropertyCompatibilityProjection => new MysqlPropertyCompatibilityProjection(
+    $this->getShared('databaseService')->connection(),
+    new MysqlLocationReference($this->getShared('databaseService')),
+));
 $di->setShared('propertyCanonicalRuntime', fn (): PropertyCanonicalRuntimeService => new PropertyCanonicalRuntimeService(
     $this->getShared('propertyCanonicalRuntimeRepository'),
     $this->getShared('propertyCompatibilityProjection'),
