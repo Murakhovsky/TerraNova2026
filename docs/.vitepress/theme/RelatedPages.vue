@@ -47,6 +47,11 @@ function currentRoute(relativePath) {
   return `/${relativePath.replace(/\.md$/, '')}`;
 }
 
+function pageHref(link) {
+  const target = /(?:\.html|\/)$/.test(link) ? link : `${link}.html`;
+  return withBase(target);
+}
+
 const related = computed(() => {
   const relativePath = page.value.relativePath || '';
   const route = currentRoute(relativePath);
@@ -130,7 +135,7 @@ const related = computed(() => {
           v-for="entry in related"
           :key="entry.link"
           class="cos-map-node"
-          :href="withBase(entry.link)"
+          :href="pageHref(entry.link)"
         >
           <strong>{{ entry.text }}</strong>
           <span>{{ entry.description }}</span>
