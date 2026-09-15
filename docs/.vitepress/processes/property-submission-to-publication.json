@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "property.submission-to-publication",
   "title": "Property Submission → Publication",
   "domain": "property",
@@ -25,6 +25,7 @@
       "id": "submission",
       "label": "Accept and validate submission",
       "kind": "operation",
+      "owner": "submitter / operator",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "PropertySubmissionService" }
@@ -34,6 +35,7 @@
       "id": "identity",
       "label": "Resolve identity / provenance",
       "kind": "decision",
+      "owner": "moderator / reviewer",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "PropertyModerationService" },
@@ -44,6 +46,7 @@
       "id": "asset",
       "label": "Resolve or create canonical Property Asset",
       "kind": "state",
+      "owner": "property manager",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "registerAsset" }
@@ -53,6 +56,7 @@
       "id": "inventory",
       "label": "Create or update Inventory Item",
       "kind": "state",
+      "owner": "organization inventory owner",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "createInventory" }
@@ -62,6 +66,7 @@
       "id": "listing",
       "label": "Create or update Listing",
       "kind": "state",
+      "owner": "listing/content operator",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "createListing" }
@@ -71,6 +76,7 @@
       "id": "publication",
       "label": "Publish and synchronize channel state",
       "kind": "outcome",
+      "owner": "publication channel adapter",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "publishListing" }

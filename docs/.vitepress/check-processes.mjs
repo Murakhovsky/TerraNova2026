@@ -22,6 +22,9 @@ const errors = [];
 const processIds = new Set();
 const workflowPaths = new Set();
 let mappingCount = 0;
+let stepCount = 0;
+let ownedStepCount = 0;
+let mappedStepCount = 0;
 let criticalCount = 0;
 let mappedCriticalCount = 0;
 
@@ -123,7 +126,7 @@ for (const name of files) {
     continue;
   }
 
-  if (definition.schema_version !== 1) fail(file, `schema_version must be 1, got '${definition.schema_version ?? 'missing'}'`);
+  if (definition.schema_version !== 2) fail(file, `schema_version must be 2, got '${definition.schema_version ?? 'missing'}'`);
   if (!definition.id || typeof definition.id !== 'string') fail(file, 'id is required');
   if (!definition.title || typeof definition.title !== 'string') fail(file, 'title is required');
   if (!definition.domain || typeof definition.domain !== 'string') fail(file, 'domain is required');
@@ -157,14 +160,24 @@ for (const name of files) {
       if (frontmatter.get('title') !== definition.title) {
         fail(file, `workflow title '${frontmatter.get('title') ?? 'missing'}' does not match registry title '${definition.title}'`);
       }
-      const diagramPattern = new RegExp(`<ProcessDiagram\\s+process-id=["']${escapeRegExp(definition.id)}["']\\s*/>`);
-      if (!diagramPattern.test(workflowContent)) {
+      const processId = escapeRegExp(definition.id);
+      const flowPattern = new RegExp(`<ProcessDiagram\\s+process-id=["']${processId}["']\\s*/>`);
+      if (!flowPattern.test(workflowContent)) {
         fail(file, `workflow ${definition.workflow} must render ProcessDiagram for '${definition.id}'`);
+      }
+      const ownershipPattern = new RegExp(`<ProcessDiagram(?=[^>]*process-id=["']${processId}["'])(?=[^>]*view=["']ownership["'])[^>]*/>`);
+      if (!ownershipPattern.test(workflowContent)) {
+        fail(file, `workflow ${definition.workflow} must render ownership view for '${definition.id}'`);
       }
     }
   }
 
-  if (!Array.isArray(definition.actors) || definition.actors.length === 0) fail(file, 'actors must be a non-empty array');
+  if (!Array.isArray(definition.actors) || definition.actors.length === 0) {
+    fail(file, 'actors must be a non-empty array');
+  }
+  const actors = new Set(Array.isArray(definition.actors) ? definition.actors : []);
+  if (actors.size !== (definition.actors?.length ?? 0)) fail(file, 'actors must not contain duplicates');
+
   if (!Array.isArray(definition.outcomes) || definition.outcomes.length === 0) fail(file, 'outcomes must be a non-empty array');
   if (!Array.isArray(definition.steps) || definition.steps.length === 0) {
     fail(file, 'steps must be a non-empty array');
@@ -177,6 +190,7 @@ for (const name of files) {
 
   const stepIds = new Set();
   for (const step of definition.steps) {
+    stepCount += 1;
     if (!step.id || typeof step.id !== 'string') {
       fail(file, `process '${definition.id}' has a step without id`);
       continue;
@@ -187,11 +201,20 @@ for (const name of files) {
     if (!step.label || typeof step.label !== 'string') fail(file, `process '${definition.id}' step '${step.id}' requires label`);
     if (!VALID_STEP_KINDS.has(step.kind)) fail(file, `process '${definition.id}' step '${step.id}' has unsupported kind '${step.kind ?? 'missing'}'`);
 
+    if (!step.owner || typeof step.owner !== 'string') {
+      fail(file, `process '${definition.id}' step '${step.id}' requires owner`);
+    } else if (!actors.has(step.owner)) {
+      fail(file, `process '${definition.id}' step '${step.id}' owner '${step.owner}' is not declared in actors`);
+    } else {
+      ownedStepCount += 1;
+    }
+
     const runtime = step.runtime ?? [];
     if (!Array.isArray(runtime)) {
       fail(file, `process '${definition.id}' step '${step.id}' runtime must be an array`);
       continue;
     }
+    if (runtime.length > 0) mappedStepCount += 1;
 
     if (step.critical === true) {
       criticalCount += 1;
@@ -258,4 +281,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Process Registry checks passed: ${files.length} processes, ${mappingCount} runtime mappings, ${mappedCriticalCount}/${criticalCount} critical steps mapped.`);
+console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${mappedStepCount}/${stepCount} steps runtime-mapped, ${mappingCount} runtime mappings, ${mappedCriticalCount}/${criticalCount} critical steps mapped.`);

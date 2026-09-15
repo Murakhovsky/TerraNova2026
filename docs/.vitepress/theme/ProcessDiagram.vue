@@ -11,11 +11,16 @@ const props = defineProps({
     type: String,
     default: 'TD',
   },
+  view: {
+    type: String,
+    default: 'flow',
+  },
 });
 
 const modules = import.meta.glob('../processes/*.json', { eager: true, import: 'default' });
 const definitions = Object.values(modules);
 const validDirections = new Set(['TD', 'TB', 'BT', 'LR', 'RL']);
+const validViews = new Set(['flow', 'ownership']);
 
 const definition = computed(() => definitions.find((candidate) => candidate.id === props.processId) ?? null);
 
@@ -41,33 +46,63 @@ function renderNode(step) {
   return `${id}["${label}"]`;
 }
 
-const mermaidSource = computed(() => {
-  const process = definition.value;
-  if (!process) return '';
-
-  const direction = validDirections.has(props.direction) ? props.direction : 'TD';
-  const lines = [
-    `flowchart ${direction}`,
-    `    %% Derived from Process Registry: ${process.id}`,
-  ];
-
-  for (const step of process.steps ?? []) {
-    lines.push(`    ${renderNode(step)}`);
-  }
-
+function renderEdges(process, lines) {
   for (const edge of process.edges ?? []) {
     const from = nodeId(edge.from);
     const to = nodeId(edge.to);
     if (edge.label) lines.push(`    ${from} -->|${safeLabel(edge.label)}| ${to}`);
     else lines.push(`    ${from} --> ${to}`);
   }
+}
 
+function renderFlow(process, direction) {
+  const lines = [
+    `flowchart ${direction}`,
+    `    %% Derived from Process Registry: ${process.id}`,
+  ];
+
+  for (const step of process.steps ?? []) lines.push(`    ${renderNode(step)}`);
+  renderEdges(process, lines);
   return lines.join('\n');
+}
+
+function renderOwnership(process, direction) {
+  const lines = [
+    `flowchart ${direction}`,
+    `    %% Ownership view derived from Process Registry: ${process.id}`,
+  ];
+
+  const owners = (process.actors ?? []).filter((actor) =>
+    (process.steps ?? []).some((step) => step.owner === actor),
+  );
+
+  owners.forEach((owner, index) => {
+    lines.push(`    subgraph owner_${index}["${safeLabel(owner)}"]`);
+    lines.push('        direction TB');
+    for (const step of process.steps ?? []) {
+      if (step.owner === owner) lines.push(`        ${renderNode(step)}`);
+    }
+    lines.push('    end');
+  });
+
+  renderEdges(process, lines);
+  return lines.join('\n');
+}
+
+const mermaidSource = computed(() => {
+  const process = definition.value;
+  if (!process) return '';
+
+  const direction = validDirections.has(props.direction) ? props.direction : 'TD';
+  const view = validViews.has(props.view) ? props.view : 'flow';
+  return view === 'ownership'
+    ? renderOwnership(process, direction)
+    : renderFlow(process, direction);
 });
 </script>
 
 <template>
-  <div class="cos-process-diagram" :data-process-id="processId">
+  <div class="cos-process-diagram" :data-process-id="processId" :data-process-view="view">
     <MermaidDiagram v-if="definition" :text="mermaidSource" />
     <div v-else class="custom-block danger">
       <p class="custom-block-title">Process Registry error</p>

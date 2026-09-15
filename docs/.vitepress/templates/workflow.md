@@ -27,7 +27,13 @@ process_id: TODO_PROCESS_ID
 
 <ProcessDiagram process-id="TODO_PROCESS_ID" />
 
-Основний business flow генерується з matching definition у `docs/.vitepress/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
+Основний business flow генерується з matching schema-v2 definition у `docs/.vitepress/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
+
+## Ownership view
+
+<ProcessDiagram process-id="TODO_PROCESS_ID" view="ownership" direction="LR" />
+
+Кожний registry step має оголосити primary responsible `owner`, який входить до `actors` process definition.
 
 ## Decision points
 

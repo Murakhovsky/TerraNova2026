@@ -32,11 +32,23 @@ function mappingLabel(mapping) {
   return `${mapping.type} \`${mapping.ref}\``;
 }
 
+function coverage(definition) {
+  const steps = definition.steps ?? [];
+  const critical = steps.filter((step) => step.critical === true);
+  return {
+    steps: steps.length,
+    owned: steps.filter((step) => typeof step.owner === 'string' && step.owner !== '').length,
+    runtimeMapped: steps.filter((step) => Array.isArray(step.runtime) && step.runtime.length > 0).length,
+    critical: critical.length,
+    criticalMapped: critical.filter((step) => Array.isArray(step.runtime) && step.runtime.length > 0).length,
+  };
+}
+
 function render(definitions) {
   const lines = [
     '---',
     'title: Business Process Registry',
-    'description: Generated registry of canonical COS business processes and their runtime mappings.',
+    'description: Generated registry of canonical COS business processes, ownership and runtime coverage.',
     'status: generated',
     'updated: 2026-09-15',
     'kind: reference',
@@ -48,35 +60,43 @@ function render(definitions) {
     '',
     'Generated from `docs/.vitepress/processes/*.json`. Do not edit this page manually.',
     '',
-    'The registry connects human workflow documentation to executable COS references without pretending that every business step is automated.',
+    'The registry connects human workflow documentation to process ownership and executable COS references without pretending that every business step is automated.',
     '',
     '## Process index',
     '',
-    '| Process | Domain | Truth state | Steps | Critical mapped | Workflow |',
-    '| --- | --- | --- | ---: | ---: | --- |',
+    '| Process | Domain | Truth state | Steps | Ownership | Runtime mapped | Critical mapped | Workflow |',
+    '| --- | --- | --- | ---: | ---: | ---: | ---: | --- |',
   ];
 
   for (const definition of definitions) {
-    const critical = definition.steps.filter((step) => step.critical === true);
-    const mapped = critical.filter((step) => Array.isArray(step.runtime) && step.runtime.length > 0);
-    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | ${definition.steps.length} | ${mapped.length}/${critical.length} | [Open workflow](${workflowLink(definition)}) |`);
+    const stats = coverage(definition);
+    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | ${stats.steps} | ${stats.owned}/${stats.steps} | ${stats.runtimeMapped}/${stats.steps} | ${stats.criticalMapped}/${stats.critical} | [Open workflow](${workflowLink(definition)}) |`);
+  }
+
+  lines.push('', '## Coverage', '');
+  lines.push('Coverage is structural, not a quality score. `owned` means a responsible actor is declared; `runtime mapped` means at least one executable/reference mapping exists; `critical mapped` is the minimum requirement for `runtime-verified`.');
+  lines.push('', '| Process | Owned steps | Runtime-mapped steps | Runtime-mapped critical steps |', '| --- | ---: | ---: | ---: |');
+  for (const definition of definitions) {
+    const stats = coverage(definition);
+    lines.push(`| ${escapeCell(definition.title)} | ${stats.owned}/${stats.steps} | ${stats.runtimeMapped}/${stats.steps} | ${stats.criticalMapped}/${stats.critical} |`);
   }
 
   for (const definition of definitions) {
     lines.push('', `## ${definition.title}`, '');
     lines.push(`- **Process ID:** \`${definition.id}\``);
+    lines.push(`- **Schema:** \`v${definition.schema_version}\``);
     lines.push(`- **Domain:** \`${definition.domain}\``);
     lines.push(`- **Truth state:** \`${definition.state}\``);
     lines.push(`- **Trigger:** ${definition.trigger}`);
     lines.push(`- **Workflow:** [${definition.title}](${workflowLink(definition)})`);
     lines.push('', '**Outcomes**', '');
     for (const outcome of definition.outcomes) lines.push(`- ${outcome}`);
-    lines.push('', '**Runtime mapping**', '');
-    lines.push('| Step | Kind | Critical | Executable / reference mapping |');
-    lines.push('| --- | --- | --- | --- |');
+    lines.push('', '**Ownership and runtime mapping**', '');
+    lines.push('| Step | Owner | Kind | Critical | Executable / reference mapping |');
+    lines.push('| --- | --- | --- | --- | --- |');
     for (const step of definition.steps) {
       const mappings = (step.runtime ?? []).map(mappingLabel).join('<br>') || '—';
-      lines.push(`| ${escapeCell(step.label)} | \`${step.kind}\` | ${step.critical === true ? 'yes' : 'no'} | ${mappings} |`);
+      lines.push(`| ${escapeCell(step.label)} | ${escapeCell(step.owner ?? '—')} | \`${step.kind}\` | ${step.critical === true ? 'yes' : 'no'} | ${mappings} |`);
     }
   }
 
@@ -84,12 +104,14 @@ function render(definitions) {
     '',
     '## Authority and limitations',
     '',
-    '- Registry structure and mappings are machine-checked by `check-processes.mjs`.',
+    '- Registry schema `v2` requires every process step to declare exactly one responsible `owner` from the process `actors` list.',
+    '- Registry structure, topology, ownership and mappings are machine-checked by `check-processes.mjs`.',
     '- `use_case`, `command` and `event` mappings must resolve to generated reference from the same checkout.',
     '- `source` mappings must resolve to an existing repository file and, when provided, contain the declared symbol.',
     '- `as-is` means the process is real, not that every step is machine-enforced.',
     '- `runtime-verified` requires every critical step to have an explicit runtime mapping.',
-    '- Mermaid diagrams remain the human visual projection on the workflow page; the Process Registry is the structured documentation contract.',
+    '- `ProcessDiagram` renders both core flow and ownership projection from the same registry definition.',
+    '- Coverage ratios expose documentation completeness; they are not business performance KPIs.',
     '',
   );
 

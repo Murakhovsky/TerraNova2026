@@ -113,6 +113,12 @@ AI не має автоматично створювати «істину» бе
 
 `process_state: as-is` фіксує реальний current Diagnostic process. Окремі human review/decision steps не трактуються як автоматизовані лише через те, що навколо них уже є runtime module.
 
+## Ownership view
+
+<ProcessDiagram process-id="diagnostic.session-to-recommendation" view="ownership" direction="LR" />
+
+Ownership view відділяє автора методології, оператора, deterministic evaluation engine і decision maker. AI boundary присутній як actor процесу, але не отримує штучного ownership над deterministic evaluation.
+
 ## Decision points
 
 - methodology version valid/published?

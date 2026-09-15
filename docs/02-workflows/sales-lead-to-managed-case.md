@@ -79,6 +79,12 @@ Generated reference фіксує:
 
 `process_state: as-is` означає, що схема описує реальний поточний процес, але не стверджує, що кожен human/operational step уже machine-enforced COS runtime.
 
+## Ownership view
+
+<ProcessDiagram process-id="sales.lead-to-managed-case" view="ownership" direction="LR" />
+
+Ownership view групує ті самі registry steps за відповідальним actor. Він не створює другого workflow і не переносить Domain ownership у UI або adapter layer.
+
 ## Events
 
 Sales володіє business events навколо lead, client case/deal, stage, calls, follow-up та action outcomes.

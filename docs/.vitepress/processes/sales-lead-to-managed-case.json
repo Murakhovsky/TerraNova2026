@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "sales.lead-to-managed-case",
   "title": "Sales Lead → Managed Case",
   "domain": "sales",
@@ -23,6 +23,7 @@
       "id": "intake",
       "label": "Lead intake",
       "kind": "operation",
+      "owner": "Sales automation",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ReceivePublicLead" },
@@ -33,6 +34,7 @@
       "id": "crm-inbox",
       "label": "Process durable CRM inbox",
       "kind": "operation",
+      "owner": "Sales automation",
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "ProcessCrmInbox" }
@@ -42,6 +44,7 @@
       "id": "canonical-state",
       "label": "Create or update canonical Sales state",
       "kind": "state",
+      "owner": "Sales automation",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Sales/Automation/Event/LeadCreated.php", "symbol": "sales.lead.created" }
@@ -51,6 +54,7 @@
       "id": "assign-owner",
       "label": "Assign owner",
       "kind": "operation",
+      "owner": "manager",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "AssignDealOwner" },
@@ -61,6 +65,7 @@
       "id": "pipeline",
       "label": "Manage pipeline stage",
       "kind": "operation",
+      "owner": "salesperson",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ChangeDealStage" },
@@ -71,6 +76,7 @@
       "id": "activity",
       "label": "Record activity / call",
       "kind": "operation",
+      "owner": "salesperson",
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "CompleteSalesCall" },
@@ -81,6 +87,7 @@
       "id": "followup",
       "label": "Schedule next action",
       "kind": "operation",
+      "owner": "salesperson",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ScheduleDealFollowup" },
@@ -91,6 +98,7 @@
       "id": "outcome",
       "label": "Record business outcome",
       "kind": "outcome",
+      "owner": "salesperson",
       "critical": true,
       "runtime": [
         { "type": "event", "ref": "sales.deal.won" },

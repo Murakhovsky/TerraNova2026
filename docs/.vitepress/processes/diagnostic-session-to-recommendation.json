@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "diagnostic.session-to-recommendation",
   "title": "Diagnostic Session → Recommendation",
   "domain": "diagnostic",
@@ -24,6 +24,7 @@
       "id": "methodology",
       "label": "Draft and publish methodology version",
       "kind": "operation",
+      "owner": "methodology author",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "DraftDiagnosticPack" },
@@ -34,6 +35,7 @@
       "id": "session",
       "label": "Start version-pinned session",
       "kind": "operation",
+      "owner": "diagnostic operator / interviewer",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "StartDiagnosticSession" }
@@ -43,6 +45,7 @@
       "id": "evidence",
       "label": "Capture evidence",
       "kind": "operation",
+      "owner": "diagnostic operator / interviewer",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "CaptureDiagnosticEvidence" }
@@ -52,6 +55,7 @@
       "id": "evaluation",
       "label": "Evaluate structured evidence",
       "kind": "operation",
+      "owner": "deterministic evaluation engine",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "EvaluateDiagnosticSession" }
@@ -61,6 +65,7 @@
       "id": "result",
       "label": "Record findings and recommendation",
       "kind": "state",
+      "owner": "deterministic evaluation engine",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "RecordDiagnosticResult" }
@@ -70,6 +75,7 @@
       "id": "complete",
       "label": "Complete coherent session",
       "kind": "operation",
+      "owner": "diagnostic operator / interviewer",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "CompleteDiagnosticSession" }
@@ -79,6 +85,7 @@
       "id": "decision",
       "label": "Review / accept recommendation",
       "kind": "decision",
+      "owner": "reviewer / decision maker",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "AcceptDiagnosticRecommendation" }

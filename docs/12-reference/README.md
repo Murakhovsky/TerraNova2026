@@ -11,7 +11,7 @@ contract: reference-v1
 
 Reference section відповідає на питання **«що executable code або machine-readable documentation contracts декларують точно?»**.
 
-Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
 
 ## Authority model
 
@@ -35,7 +35,7 @@ Generated files не редагуються вручну у `main`.
 
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
-| Canonical business processes, truth state і runtime mappings | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + generated executable reference |
+| Canonical business processes, ownership, topology і runtime coverage | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + generated executable reference |
 | Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
 | Module extension points і contributions | [Module Extension Points](extension-points.md) | module manifests + Kernel extension registry |
 | Application entry points / use cases | [Application Use Cases](application-use-cases.md) | Domain Application/UseCase structure |
@@ -79,12 +79,12 @@ Reference section не повинна пояснювати:
 → Concept / Product / ADR
 
 Питання: «Як працює бізнес-процес?»
-→ Workflow + Mermaid
+→ Workflow + ProcessDiagram
 
-Питання: «Яка machine-readable topology процесу і що з неї mapped у runtime?»
+Питання: «Яка machine-readable topology процесу, хто відповідає за steps і що mapped у runtime?»
 → Business Process Registry
 
-Питання: «Хто цим володіє?»
+Питання: «Хто володіє domain semantics?»
 → Domain / Architecture
 
 Питання: «Як виконується?»
@@ -101,6 +101,6 @@ Reference section не повинна пояснювати:
 
 CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary та Business Process Registry.
 
-Process Registry має окремий structural/runtime-mapping check: use case, command і event mappings повинні існувати у generated reference того самого checkout; source mappings повинні існувати у repository; `runtime-verified` process не може мати unmapped critical steps.
+Process Registry schema `v2` має structural/ownership/runtime-mapping check: кожний step має declared owner з process actors; усі steps reachable від root; process має terminal; use case, command і event mappings повинні існувати у generated reference того самого checkout; source mappings повинні існувати у repository; `runtime-verified` process не може мати unmapped critical steps.
 
 Narrative `Current Scope` і Domain overviews мають окремі version-drift checks проти module manifests. Зміна executable contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.

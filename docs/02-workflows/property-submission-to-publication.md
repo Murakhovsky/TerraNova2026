@@ -58,6 +58,12 @@ Property Submission
 
 Ця схема описує business flow поверх current Property model. Вона не означає, що кожен transition реалізований окремим `Application/UseCase` class.
 
+## Ownership view
+
+<ProcessDiagram process-id="property.submission-to-publication" view="ownership" direction="LR" />
+
+Ownership view показує, який actor відповідає за кожний canonical step, не змішуючи фізичний Asset, commercial state, presentation і channel delivery в одну безіменну «нерухомість».
+
 ## Canonical model
 
 ```mermaid
