@@ -8,6 +8,7 @@ final class ArchitectureGraphVocabulary
     public const TYPE_KERNEL = 'kernel';
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_CAPABILITY = 'capability';
+    public const TYPE_CONTRACT = 'contract';
     public const TYPE_EVENT = 'event';
     public const TYPE_RULE = 'rule';
     public const TYPE_ACTION = 'action';
@@ -19,6 +20,8 @@ final class ArchitectureGraphVocabulary
 
     public const REL_CONTAINS = 'contains';
     public const REL_DEPENDS_ON = 'depends_on';
+    public const REL_REQUIRES_CONTRACT = 'requires_contract';
+    public const REL_PROVIDES_CONTRACT = 'provides_contract';
     public const REL_OWNS = 'owns';
     public const REL_CONTRIBUTES = 'contributes';
     public const REL_CONTRIBUTES_TO = 'contributes_to';

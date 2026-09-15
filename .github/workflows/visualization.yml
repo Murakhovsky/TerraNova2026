@@ -1,11 +1,15 @@
-name: COS Visualization V0.1-V0.4.1
+name: COS Visualization V0.1-V0.4.2
 
 on:
   push:
     branches: [main]
     paths:
       - 'app/Kernel/Visualization/**'
+      - 'app/Kernel/Module/CrossDomainContract.php'
+      - 'app/Kernel/Module/ModuleContributions.php'
       - 'app/Kernel/Module/Contract/Bootstrap*ProvidingModuleInterface.php'
+      - 'app/Domains/Sales/module.php'
+      - 'app/Domains/Property/module.php'
       - 'app/Domains/Sales/Bootstrap/SalesDomainModule.php'
       - 'app/Infrastructure/Visualization/**'
       - 'app/Interfaces/Web/Visualization/**'
@@ -21,12 +25,18 @@ on:
       - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
+      - 'tests/architecture/cross_domain_dependency_audit.php'
+      - 'docs/03-architecture/visualization-v0.4.2.md'
       - '.github/workflows/visualization.yml'
   pull_request:
     branches: [main]
     paths:
       - 'app/Kernel/Visualization/**'
+      - 'app/Kernel/Module/CrossDomainContract.php'
+      - 'app/Kernel/Module/ModuleContributions.php'
       - 'app/Kernel/Module/Contract/Bootstrap*ProvidingModuleInterface.php'
+      - 'app/Domains/Sales/module.php'
+      - 'app/Domains/Property/module.php'
       - 'app/Domains/Sales/Bootstrap/SalesDomainModule.php'
       - 'app/Infrastructure/Visualization/**'
       - 'app/Interfaces/Web/Visualization/**'
@@ -42,6 +52,8 @@ on:
       - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
+      - 'tests/architecture/cross_domain_dependency_audit.php'
+      - 'docs/03-architecture/visualization-v0.4.2.md'
       - '.github/workflows/visualization.yml'
   workflow_dispatch:
 
@@ -65,20 +77,27 @@ jobs:
           php tests/architecture/visualization_v03.php
           php tests/architecture/visualization_v04.php
           php tests/architecture/visualization_v041.php
+          php tests/architecture/visualization_v042.php
+          php tests/architecture/cross_domain_dependency_audit.php
       - name: Visualization graph invariants
         run: |
           php tests/unit/visualization_graph_foundation.php
           php tests/unit/visualization_architecture_graph.php
           php tests/unit/visualization_cytoscape_mapper.php
           php tests/unit/visualization_architecture_projections.php
+          php tests/unit/visualization_cross_domain_contracts.php
       - name: Frontend build
         run: npm run build
       - name: PHP syntax
         run: |
           find app/Kernel/Visualization app/Infrastructure/Visualization app/Interfaces/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Kernel/Module/CrossDomainContract.php
+          php -l app/Kernel/Module/ModuleContributions.php
           php -l app/Kernel/Module/Contract/BootstrapRuleProvidingModuleInterface.php
           php -l app/Kernel/Module/Contract/BootstrapPolicyProvidingModuleInterface.php
           php -l app/Domains/Sales/Bootstrap/SalesDomainModule.php
+          php -l app/Domains/Sales/module.php
+          php -l app/Domains/Property/module.php
           php -l app/Bootstrap/VisualizationServices.php
           php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
@@ -87,7 +106,10 @@ jobs:
           php -l tests/architecture/visualization_v03.php
           php -l tests/architecture/visualization_v04.php
           php -l tests/architecture/visualization_v041.php
+          php -l tests/architecture/visualization_v042.php
+          php -l tests/architecture/cross_domain_dependency_audit.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
           php -l tests/unit/visualization_cytoscape_mapper.php
           php -l tests/unit/visualization_architecture_projections.php
+          php -l tests/unit/visualization_cross_domain_contracts.php

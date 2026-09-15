@@ -14,6 +14,7 @@ final readonly class ModuleContributions
      * @param list<string> $migrationFiles
      * @param list<string> $configurationProvisionerServices
      * @param array<string, list<string>> $extensionServices
+     * @param list<CrossDomainContract> $crossDomainContracts
      */
     public function __construct(
         public ?string $runtimeModuleService = null,
@@ -23,6 +24,7 @@ final readonly class ModuleContributions
         public array $migrationFiles = [],
         public array $configurationProvisionerServices = [],
         public array $extensionServices = [],
+        public array $crossDomainContracts = [],
     ) {
         if ($this->runtimeModuleService !== null) {
             self::assertServiceId($this->runtimeModuleService);
@@ -67,6 +69,18 @@ final readonly class ModuleContributions
                 throw new InvalidArgumentException(sprintf('Invalid module migration path: %s.', $migrationFile));
             }
         }
+
+        $contractKeys = [];
+        foreach ($this->crossDomainContracts as $contract) {
+            if (!$contract instanceof CrossDomainContract) {
+                throw new InvalidArgumentException('Module cross-domain contracts must be CrossDomainContract instances.');
+            }
+            $key = $contract->contract . "\0" . $contract->role . "\0" . $contract->counterpart;
+            if (isset($contractKeys[$key])) {
+                throw new InvalidArgumentException(sprintf('Duplicate cross-domain contract contribution: %s.', $contract->contract));
+            }
+            $contractKeys[$key] = true;
+        }
     }
 
     /** @param array<string, mixed> $definition */
@@ -82,6 +96,7 @@ final readonly class ModuleContributions
             self::stringList($definition['migration_files'] ?? []),
             self::stringList($definition['configuration_provisioner_services'] ?? []),
             self::extensionMap($definition['extension_services'] ?? []),
+            self::crossDomainContracts($definition['cross_domain_contracts'] ?? []),
         );
     }
 
@@ -152,6 +167,23 @@ final readonly class ModuleContributions
         }
 
         return $extensions;
+    }
+
+    /** @param mixed $value @return list<CrossDomainContract> */
+    private static function crossDomainContracts(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $contracts = [];
+        foreach ($value as $definition) {
+            if (!is_array($definition)) {
+                throw new InvalidArgumentException('Cross-domain contract contribution must be an object-like array.');
+            }
+            $contracts[] = CrossDomainContract::fromArray($definition);
+        }
+        return $contracts;
     }
 
     /** @param list<string> $values */

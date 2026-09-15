@@ -17,6 +17,22 @@ return [
         'api_route_contributor_services' => ['propertyRouteContributor'],
         'configuration_provisioner_services' => ['propertyModuleConfigurationProvisioner'],
         'extension_services' => ['web.navigation' => ['propertyNavigationContributor']],
+        'cross_domain_contracts' => [
+            [
+                'contract' => 'Domains\\Property\\Application\\Contract\\PresentationSalesInterface',
+                'role' => 'requires',
+                'counterpart' => 'sales',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Use Sales-owned client-case and share context in Property presentation workflows.',
+            ],
+            [
+                'contract' => 'Domains\\Spatial\\Application\\Contract\\PropertyTourPublisherInterface',
+                'role' => 'provides',
+                'counterpart' => 'spatial',
+                'kind' => 'integration_adapter',
+                'purpose' => 'Publish canonical Property tour data through the Spatial-owned boundary.',
+            ],
+        ],
         'migration_files' => [
             'app/migrations/20260914_000048_web_v041_property_tenancy.sql',
             'app/migrations/20260914_000050_property_v022_tenant_boundary.sql',

@@ -30,6 +30,15 @@ return [
                 'salesNavigationContributor',
             ],
         ],
+        'cross_domain_contracts' => [
+            [
+                'contract' => 'Domains\\Property\\Contract\\PropertyReferencePort',
+                'role' => 'requires',
+                'counterpart' => 'property',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Resolve canonical Property references inside Sales workflows without owning Property state.',
+            ],
+        ],
         'migration_files' => [
             'app/migrations/20260910_000030_sales_v071_configuration_ownership.sql',
             'app/migrations/20260913_000044_sales_v081_historical_stage_history.sql',
