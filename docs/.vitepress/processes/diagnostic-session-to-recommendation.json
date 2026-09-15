@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": "diagnostic.session-to-recommendation",
+  "title": "Diagnostic Session → Recommendation",
+  "domain": "diagnostic",
+  "state": "as-is",
+  "workflow": "02-workflows/diagnostic-session-to-recommendation.md",
+  "trigger": "A published methodology version is selected for a diagnostic target",
+  "outcomes": [
+    "Version-pinned diagnostic session is completed or canceled",
+    "Evidence-backed findings and recommendations are recorded",
+    "Recommendation decision remains traceable to the session"
+  ],
+  "actors": [
+    "methodology author",
+    "diagnostic operator / interviewer",
+    "respondent",
+    "Diagnostic AI boundary",
+    "deterministic evaluation engine",
+    "reviewer / decision maker"
+  ],
+  "steps": [
+    {
+      "id": "methodology",
+      "label": "Draft and publish methodology version",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "DraftDiagnosticPack" },
+        { "type": "use_case", "ref": "PublishDiagnosticPack" }
+      ]
+    },
+    {
+      "id": "session",
+      "label": "Start version-pinned session",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "StartDiagnosticSession" }
+      ]
+    },
+    {
+      "id": "evidence",
+      "label": "Capture evidence",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "CaptureDiagnosticEvidence" }
+      ]
+    },
+    {
+      "id": "evaluation",
+      "label": "Evaluate structured evidence",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "EvaluateDiagnosticSession" }
+      ]
+    },
+    {
+      "id": "result",
+      "label": "Record findings and recommendation",
+      "kind": "state",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "RecordDiagnosticResult" }
+      ]
+    },
+    {
+      "id": "complete",
+      "label": "Complete coherent session",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "CompleteDiagnosticSession" }
+      ]
+    },
+    {
+      "id": "decision",
+      "label": "Review / accept recommendation",
+      "kind": "decision",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "AcceptDiagnosticRecommendation" }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "methodology", "to": "session" },
+    { "from": "session", "to": "evidence" },
+    { "from": "evidence", "to": "evaluation" },
+    { "from": "evaluation", "to": "evidence", "label": "insufficient evidence" },
+    { "from": "evaluation", "to": "result", "label": "sufficient" },
+    { "from": "result", "to": "complete" },
+    { "from": "complete", "to": "decision" }
+  ]
+}

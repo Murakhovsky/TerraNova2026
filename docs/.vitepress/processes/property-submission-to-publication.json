@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "property.submission-to-publication",
+  "title": "Property Submission → Publication",
+  "domain": "property",
+  "state": "as-is",
+  "workflow": "02-workflows/property-submission-to-publication.md",
+  "trigger": "External or manual property data enters the Property intake boundary",
+  "outcomes": [
+    "Canonical Property Asset is resolved or created",
+    "Organization commercial state may exist as Inventory",
+    "Market presentation may exist as Listing",
+    "Channel-specific Publication state may be created and synchronized"
+  ],
+  "actors": [
+    "submitter / operator",
+    "moderator / reviewer",
+    "property manager",
+    "organization inventory owner",
+    "listing/content operator",
+    "publication channel adapter"
+  ],
+  "steps": [
+    {
+      "id": "submission",
+      "label": "Accept and validate submission",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "PropertySubmissionService" }
+      ]
+    },
+    {
+      "id": "identity",
+      "label": "Resolve identity / provenance",
+      "kind": "decision",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "PropertyModerationService" },
+        { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyIdentityWorkflowService.php", "symbol": "resolvePublished" }
+      ]
+    },
+    {
+      "id": "asset",
+      "label": "Resolve or create canonical Property Asset",
+      "kind": "state",
+      "critical": true,
+      "runtime": [
+        { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "registerAsset" }
+      ]
+    },
+    {
+      "id": "inventory",
+      "label": "Create or update Inventory Item",
+      "kind": "state",
+      "critical": true,
+      "runtime": [
+        { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "createInventory" }
+      ]
+    },
+    {
+      "id": "listing",
+      "label": "Create or update Listing",
+      "kind": "state",
+      "critical": true,
+      "runtime": [
+        { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "createListing" }
+      ]
+    },
+    {
+      "id": "publication",
+      "label": "Publish and synchronize channel state",
+      "kind": "outcome",
+      "critical": true,
+      "runtime": [
+        { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "publishListing" }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "submission", "to": "identity" },
+    { "from": "identity", "to": "asset", "label": "resolved / created" },
+    { "from": "identity", "to": "identity", "label": "review required" },
+    { "from": "asset", "to": "inventory", "label": "commercial use" },
+    { "from": "inventory", "to": "listing", "label": "market presentation" },
+    { "from": "listing", "to": "publication", "label": "publish" }
+  ]
+}

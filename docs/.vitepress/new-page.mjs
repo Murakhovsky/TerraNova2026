@@ -10,7 +10,7 @@ const templateRoot = path.join(here, 'templates');
 
 const aliases = {
   concept: 'concept-v1',
-  workflow: 'workflow-v1',
+  workflow: 'workflow-v2',
   architecture: 'architecture-v1',
   domain: 'domain-v1',
   'how-to': 'how-to-v1',
@@ -19,7 +19,7 @@ const aliases = {
 
 const templateNames = {
   'concept-v1': 'concept.md',
-  'workflow-v1': 'workflow.md',
+  'workflow-v2': 'workflow.md',
   'architecture-v1': 'architecture.md',
   'domain-v1': 'domain.md',
   'how-to-v1': 'how-to.md',
@@ -60,3 +60,8 @@ const content = template
 fs.mkdirSync(path.dirname(target), { recursive: true });
 fs.writeFileSync(target, content);
 console.log(`Created ${path.relative(docsRoot, target)} with ${contractName}.`);
+
+if (contractName === 'workflow-v2') {
+  console.log('Workflow V2 also requires a matching Process Registry definition in docs/.vitepress/processes/*.json.');
+  console.log('Run npm run docs:check after adding the registry definition; the check will reject an unregistered workflow.');
+}

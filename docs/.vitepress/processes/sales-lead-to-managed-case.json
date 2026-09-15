@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "id": "sales.lead-to-managed-case",
+  "title": "Sales Lead → Managed Case",
+  "domain": "sales",
+  "state": "as-is",
+  "workflow": "02-workflows/sales-lead-to-managed-case.md",
+  "trigger": "Inbound public lead or external CRM webhook",
+  "outcomes": [
+    "Canonical Sales state exists",
+    "Owner and pipeline state are managed",
+    "Next action or outcome is recorded"
+  ],
+  "actors": [
+    "client / external source",
+    "salesperson",
+    "manager",
+    "Sales automation",
+    "external CRM adapter"
+  ],
+  "steps": [
+    {
+      "id": "intake",
+      "label": "Lead intake",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "ReceivePublicLead" },
+        { "type": "use_case", "ref": "ReceiveCrmWebhook" }
+      ]
+    },
+    {
+      "id": "crm-inbox",
+      "label": "Process durable CRM inbox",
+      "kind": "operation",
+      "critical": false,
+      "runtime": [
+        { "type": "use_case", "ref": "ProcessCrmInbox" }
+      ]
+    },
+    {
+      "id": "canonical-state",
+      "label": "Create or update canonical Sales state",
+      "kind": "state",
+      "critical": true,
+      "runtime": [
+        { "type": "event", "ref": "sales.lead.created" }
+      ]
+    },
+    {
+      "id": "assign-owner",
+      "label": "Assign owner",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "AssignDealOwner" },
+        { "type": "event", "ref": "sales.deal.owner_assigned" }
+      ]
+    },
+    {
+      "id": "pipeline",
+      "label": "Manage pipeline stage",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "ChangeDealStage" },
+        { "type": "event", "ref": "sales.deal.stage_changed" }
+      ]
+    },
+    {
+      "id": "activity",
+      "label": "Record activity / call",
+      "kind": "operation",
+      "critical": false,
+      "runtime": [
+        { "type": "use_case", "ref": "CompleteSalesCall" },
+        { "type": "event", "ref": "sales.call.completed" }
+      ]
+    },
+    {
+      "id": "followup",
+      "label": "Schedule next action",
+      "kind": "operation",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "ScheduleDealFollowup" },
+        { "type": "event", "ref": "sales.followup.created" }
+      ]
+    },
+    {
+      "id": "outcome",
+      "label": "Record business outcome",
+      "kind": "outcome",
+      "critical": true,
+      "runtime": [
+        { "type": "event", "ref": "sales.deal.won" },
+        { "type": "event", "ref": "sales.deal.lost" }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "intake", "to": "crm-inbox", "label": "CRM path" },
+    { "from": "intake", "to": "canonical-state", "label": "Public path" },
+    { "from": "crm-inbox", "to": "canonical-state" },
+    { "from": "canonical-state", "to": "assign-owner" },
+    { "from": "assign-owner", "to": "pipeline" },
+    { "from": "pipeline", "to": "activity" },
+    { "from": "activity", "to": "followup" },
+    { "from": "followup", "to": "pipeline", "label": "continue" },
+    { "from": "pipeline", "to": "outcome", "label": "terminal outcome" }
+  ]
+}

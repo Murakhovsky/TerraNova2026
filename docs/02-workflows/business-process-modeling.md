@@ -23,6 +23,37 @@ Every canonical workflow page declares `process_state`.
 
 `active` у полі `status` означає стан документа. `process_state` означає стан самого бізнес-процесу. Це різні речі.
 
+## Process Registry
+
+Починаючи з DOC V0.11 canonical workflow має structured definition у `docs/.vitepress/processes/*.json`.
+
+```text
+Process Definition
+  ├── id / domain / truth state
+  ├── trigger / actors / outcomes
+  ├── steps + edges
+  └── runtime mappings
+          ↓
+check-processes.mjs
+          ↓
+Generated Business Process Registry
+          ↓
+Workflow narrative + Mermaid projection
+```
+
+Registry не переноситься в Kernel і поки не оголошується runtime source of truth. Це machine-readable documentation contract, який пов'язує business process із поточним executable reference.
+
+`check-processes.mjs` перевіряє:
+
+- unique process IDs і workflow mappings;
+- відповідність registry state до `process_state` workflow page;
+- unique step IDs і валідні edges;
+- існування заявлених use cases, commands та events у generated reference поточного checkout;
+- існування source mappings і declared symbols;
+- runtime coverage critical steps для `runtime-verified` process.
+
+Generated snapshot: [Business Process Registry](../12-reference/business-processes.md).
+
 ## Canonical views
 
 Один процес може мати кілька проєкцій, якщо вони відповідають на різні питання.
@@ -77,7 +108,9 @@ stateDiagram-v2
 4. Cross-domain transition має називати boundary або contract, а не малювати shared ownership.
 5. Exact command/event/service inventories не дублюються вручну, якщо для них існує generated reference.
 6. `runtime-verified` не використовується лише тому, що частина процесу має код.
-7. Mermaid source зберігається поруч із narrative workflow, щоб diff показував зміну процесу разом зі зміною пояснення.
+7. Mermaid source зберігається поруч із narrative workflow, щоб diff показував зміну process explanation.
+8. Structured Process Registry definition зберігає machine-checkable topology та runtime mappings.
+9. Якщо registry і narrative розходяться, це documentation defect; жодна з версій не отримує право «ну приблизно ж те саме».
 
 ## Mermaid delivery
 
@@ -92,11 +125,11 @@ Mermaid є presentation adapter документації. Він не входи
 ```mermaid
 flowchart LR
     A[Architecture metadata] --> B[Cytoscape Architecture Explorer]
-    C[Business process knowledge] --> D[Mermaid workflow diagrams]
+    C[Business Process Registry] --> D[Mermaid workflow diagrams]
     B --> E[COS Documentation / operational understanding]
     D --> E
 ```
 
-Cytoscape відповідає переважно на питання **«з чого COS складається і як компоненти пов'язані?»**. Mermaid відповідає на питання **«як реально рухається робота?»**.
+Cytoscape відповідає переважно на питання **«з чого COS складається і як компоненти пов'язані?»**. Mermaid відповідає на питання **«як реально рухається робота?»**. Process Registry додає третю властивість: **«на які executable contracts спирається ця модель?»**.
 
-Наступний рівень розвитку — структуровані process definitions, з яких документація зможе генерувати Mermaid і перевіряти runtime mapping автоматично. До появи такого source of truth workflow page залишається canonical human-maintained process model із явним `process_state`.
+Наступний рівень розвитку — генерувати основну Mermaid topology безпосередньо з Process Registry, залишаючи narrative сторінці explanation, альтернативні sequence/state views та business context.

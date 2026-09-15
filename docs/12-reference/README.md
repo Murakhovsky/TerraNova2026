@@ -4,18 +4,21 @@ description: Карта exact/generated reference COS і правила вибо
 status: active
 updated: 2026-09-15
 kind: reference
+contract: reference-v1
 ---
 
 # Reference Index
 
-Reference section відповідає на питання **«що executable code декларує точно?»**.
+Reference section відповідає на питання **«що executable code або machine-readable documentation contracts декларують точно?»**.
 
-Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes або capabilities, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
 
 ## Authority model
 
 ```text
 main executable metadata / code
+        +
+main structured documentation contracts
         ↓
 COS generators
         ↓
@@ -32,6 +35,7 @@ Generated files не редагуються вручну у `main`.
 
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
+| Canonical business processes, truth state і runtime mappings | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + generated executable reference |
 | Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
 | Module extension points і contributions | [Module Extension Points](extension-points.md) | module manifests + Kernel extension registry |
 | Application entry points / use cases | [Application Use Cases](application-use-cases.md) | Domain Application/UseCase structure |
@@ -61,7 +65,7 @@ Canonical vocabulary та терміни COS.
 Reference section не повинна пояснювати:
 
 - навіщо існує Domain;
-- як проходить business workflow;
+- як проходить business workflow у зрозумілій для людини формі;
 - чому обрана конкретна architecture;
 - які alternatives були відхилені;
 - як користувач працює з UI.
@@ -75,7 +79,10 @@ Reference section не повинна пояснювати:
 → Concept / Product / ADR
 
 Питання: «Як працює бізнес-процес?»
-→ Workflow
+→ Workflow + Mermaid
+
+Питання: «Яка machine-readable topology процесу і що з неї mapped у runtime?»
+→ Business Process Registry
 
 Питання: «Хто цим володіє?»
 → Domain / Architecture
@@ -92,6 +99,8 @@ Reference section не повинна пояснювати:
 
 ## Drift protection
 
-CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Після DOC V0.9.2 generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures та architecture graph vocabulary.
+CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary та Business Process Registry.
+
+Process Registry має окремий structural/runtime-mapping check: use case, command і event mappings повинні існувати у generated reference того самого checkout; source mappings повинні існувати у repository; `runtime-verified` process не може мати unmapped critical steps.
 
 Narrative `Current Scope` і Domain overviews мають окремі version-drift checks проти module manifests. Зміна executable contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.

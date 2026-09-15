@@ -45,13 +45,41 @@ flowchart TD
 
 Повні conventions: [Business Process Modeling](../02-workflows/business-process-modeling.md).
 
-## 3. Assign ownership
+## 3. Register the process
+
+Кожен `workflow-v2` має matching JSON definition у:
+
+```text
+docs/.vitepress/processes/<process-id>.json
+```
+
+Definition фіксує:
+
+- stable process ID;
+- Domain owner;
+- truth state;
+- workflow page;
+- trigger, actors та outcomes;
+- steps і edges;
+- critical steps;
+- runtime mappings.
+
+Runtime mapping types:
+
+- `use_case` → generated Application Use Cases;
+- `command` → generated Commands;
+- `event` → generated Event Types;
+- `source` → repository path + optional symbol.
+
+Не вигадуйте event/command names «по сенсу». Якщо exact reference їх не знає, використовуйте реальний source mapping або спершу виправте executable catalogue.
+
+## 4. Assign ownership
 
 Для кожного state change визначте Domain owner. Cross-domain workflow може координувати кілька Domains, але не створює shared table, яким усі тихо володіють одночасно.
 
-## 4. Map execution
+## 5. Map execution
 
-Narrative та Mermaid flow зв'яжіть із executable boundaries:
+Narrative, Mermaid flow і Process Registry зв'яжіть із executable boundaries:
 
 ```text
 Trigger
@@ -73,15 +101,15 @@ Result / Audit
 
 Не кожен step потребує окремого class. Документуйте meaningful business sequence, а exact executable inventory лишайте generated reference.
 
-Для `runtime-verified` critical transitions повинні мати зрозумілий mapping на current use cases, commands, events, policies або generated reference.
+Для `runtime-verified` кожен critical step повинен мати хоча б один валідний runtime mapping.
 
-## 5. Connect UI and code
+## 6. Connect UI and code
 
 Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв'язувала бізнес, UX, Runtime і implementation.
 
 UI click не є business transition сам по собі. Diagram має називати business action/result, якщо UI лише доставляє intent.
 
-## 6. Verify
+## 7. Verify
 
 Перевірте:
 
@@ -92,19 +120,24 @@ UI click не є business transition сам по собі. Diagram має наз
 - tenant scope;
 - auditability;
 - відповідність Mermaid diagram narrative тексту;
-- відповідність `process_state` фактичній зрілості process.
+- відповідність Registry topology реальному process;
+- відповідність `process_state` фактичній зрілості process;
+- існування всіх runtime mappings.
 
 Запустіть:
 
 ```bash
+npm run docs:generate
+npm run docs:generate:check
 npm run docs:check
 npm run docs:build
 ```
 
-`workflow-v2` не пройде check без `process_state` і Mermaid diagram.
+`workflow-v2` не пройде check без `process_state`, Mermaid diagram і matching Process Registry definition.
 
 ## Canonical examples
 
 - [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md)
-- [Property Submission → Managed Property](../02-workflows/property-submission-to-publication.md)
+- [Property Submission → Publication](../02-workflows/property-submission-to-publication.md)
 - [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md)
+- [Business Process Registry](../12-reference/business-processes.md)
