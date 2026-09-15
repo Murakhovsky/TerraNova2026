@@ -7,6 +7,8 @@ use InvalidArgumentException;
 
 final readonly class ArchitectureProjectionDefinition
 {
+    private const LAYOUTS = ['auto', 'hierarchical', 'flow', 'radial', 'force'];
+
     /**
      * @param list<string> $nodeTypes
      * @param list<string> $relations
@@ -17,6 +19,7 @@ final readonly class ArchitectureProjectionDefinition
         public array $nodeTypes,
         public array $relations,
         public ?int $defaultDepth = null,
+        public string $layout = 'auto',
     ) {
         if (!preg_match('/^[a-z][a-z0-9_]*$/', $this->name)) {
             throw new InvalidArgumentException(sprintf('Invalid architecture projection name: %s.', $this->name));
@@ -29,6 +32,9 @@ final readonly class ArchitectureProjectionDefinition
         }
         if ($this->defaultDepth !== null && $this->defaultDepth < 0) {
             throw new InvalidArgumentException(sprintf('Architecture projection %s has invalid default depth.', $this->name));
+        }
+        if (!in_array($this->layout, self::LAYOUTS, true)) {
+            throw new InvalidArgumentException(sprintf('Architecture projection %s has unsupported layout hint %s.', $this->name, $this->layout));
         }
     }
 }

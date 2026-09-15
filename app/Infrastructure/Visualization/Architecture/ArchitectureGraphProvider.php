@@ -5,10 +5,14 @@ namespace Infrastructure\Visualization\Architecture;
 
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\AgentProvidingModuleInterface;
+use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
+use Kernel\Module\Contract\BootstrapRuleProvidingModuleInterface;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Module\ModuleCatalog;
+use Kernel\Policy\ActionPolicy;
+use Kernel\Rule\Rule;
 use Kernel\Visualization\Graph\Edge;
 use Kernel\Visualization\Graph\Graph;
 use Kernel\Visualization\Graph\GraphProviderInterface;
@@ -28,6 +32,10 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
         $nodes = [];
         /** @var array<string, Edge> $edges */
         $edges = [];
+        /** @var array<string, string> $eventOwners */
+        $eventOwners = [];
+        /** @var array<string, string> $actionOwners */
+        $actionOwners = [];
 
         $kernelId = 'kernel:cos';
         $nodes[$kernelId] = new Node(
@@ -56,7 +64,24 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                     'source_path' => $definition->sourcePath,
                 ],
             );
-            $this->addEdge($edges, $kernelId, $domainId, ArchitectureGraphVocabulary::REL_CONTAINS);
+            $this->addEdge(
+                $edges,
+                $kernelId,
+                $domainId,
+                ArchitectureGraphVocabulary::REL_CONTAINS,
+                ['source' => 'module_catalog'],
+            );
+            $this->addEdge(
+                $edges,
+                $domainId,
+                $kernelId,
+                ArchitectureGraphVocabulary::REL_DEPENDS_ON,
+                [
+                    'source' => 'manifest.kernel_constraint',
+                    'constraint' => $manifest->kernelConstraint,
+                    'dependency_kind' => 'kernel_contract',
+                ],
+            );
 
             foreach ($manifest->dependencies as $dependency) {
                 $this->addEdge(
@@ -64,7 +89,11 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                     $domainId,
                     $this->domainId($dependency),
                     ArchitectureGraphVocabulary::REL_DEPENDS_ON,
-                    ['constraint' => $manifest->constraintFor($dependency)],
+                    [
+                        'source' => 'manifest.dependencies',
+                        'constraint' => $manifest->constraintFor($dependency),
+                        'dependency_kind' => 'module_manifest',
+                    ],
                 );
             }
 
@@ -76,7 +105,13 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                     $capability,
                     metadata: ['capability' => $capability],
                 );
-                $this->addEdge($edges, $domainId, $capabilityId, ArchitectureGraphVocabulary::REL_OWNS);
+                $this->addEdge(
+                    $edges,
+                    $domainId,
+                    $capabilityId,
+                    ArchitectureGraphVocabulary::REL_OWNS,
+                    ['source' => 'module.contributions.capabilities'],
+                );
             }
 
             foreach ($definition->contributions->allServiceIds() as $serviceId) {
@@ -87,7 +122,13 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                     $serviceId,
                     metadata: ['service_id' => $serviceId],
                 );
-                $this->addEdge($edges, $domainId, $nodeId, ArchitectureGraphVocabulary::REL_CONTRIBUTES);
+                $this->addEdge(
+                    $edges,
+                    $domainId,
+                    $nodeId,
+                    ArchitectureGraphVocabulary::REL_CONTRIBUTES,
+                    ['source' => 'module.contributions.services'],
+                );
             }
 
             foreach ($definition->contributions->normalizedExtensionServices() as $extensionPoint => $serviceIds) {
@@ -107,34 +148,82 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                         $serviceId,
                         metadata: ['service_id' => $serviceId],
                     );
-                    $this->addEdge($edges, $serviceNodeId, $extensionId, ArchitectureGraphVocabulary::REL_CONTRIBUTES_TO);
+                    $this->addEdge(
+                        $edges,
+                        $serviceNodeId,
+                        $extensionId,
+                        ArchitectureGraphVocabulary::REL_CONTRIBUTES_TO,
+                        ['source' => 'module.contributions.extension_services'],
+                    );
                 }
             }
         }
 
-        foreach ($this->runtimeModules->modules() as $module) {
-            $domainId = $this->domainId($module->name());
-            if (!isset($nodes[$domainId])) {
-                $nodes[$domainId] = new Node(
-                    $domainId,
-                    ArchitectureGraphVocabulary::TYPE_DOMAIN,
-                    ucfirst($module->name()),
-                    metadata: ['module_id' => $module->name(), 'runtime_only' => true],
-                );
-                $this->addEdge($edges, $kernelId, $domainId, ArchitectureGraphVocabulary::REL_CONTAINS);
-            }
+        $runtimeModules = $this->runtimeModules->modules();
+        foreach ($runtimeModules as $module) {
+            $this->ensureRuntimeDomain($nodes, $edges, $kernelId, $module);
+        }
 
-            $this->appendRuntimeEvents($nodes, $edges, $domainId, $module);
-            $this->appendRuntimeActions($nodes, $edges, $domainId, $module);
-            $this->appendRuntimeAgents($nodes, $edges, $domainId, $module);
+        // Build canonical ownership first so later automation relations can safely
+        // detect cross-domain dependencies without guessing from source code.
+        foreach ($runtimeModules as $module) {
+            $domainId = $this->domainId($module->name());
+            $this->appendRuntimeEvents($nodes, $edges, $domainId, $module, $eventOwners);
+            $this->appendRuntimeActions($nodes, $edges, $domainId, $module, $actionOwners);
+        }
+
+        foreach ($runtimeModules as $module) {
+            $domainId = $this->domainId($module->name());
+            $this->appendRuntimeAgents($nodes, $edges, $domainId, $module, $actionOwners);
+            $this->appendBootstrapRules($nodes, $edges, $domainId, $module, $eventOwners, $actionOwners);
+            $this->appendBootstrapPolicies($nodes, $edges, $domainId, $module, $actionOwners);
         }
 
         return new Graph(array_values($nodes), array_values($edges));
     }
 
     /** @param array<string, Node> $nodes @param array<string, Edge> $edges */
-    private function appendRuntimeEvents(array &$nodes, array &$edges, string $domainId, DomainModuleInterface $module): void
+    private function ensureRuntimeDomain(array &$nodes, array &$edges, string $kernelId, DomainModuleInterface $module): void
     {
+        $domainId = $this->domainId($module->name());
+        if (isset($nodes[$domainId])) {
+            return;
+        }
+
+        $nodes[$domainId] = new Node(
+            $domainId,
+            ArchitectureGraphVocabulary::TYPE_DOMAIN,
+            ucfirst($module->name()),
+            metadata: ['module_id' => $module->name(), 'runtime_only' => true],
+        );
+        $this->addEdge(
+            $edges,
+            $kernelId,
+            $domainId,
+            ArchitectureGraphVocabulary::REL_CONTAINS,
+            ['source' => 'runtime_module_registry'],
+        );
+        $this->addEdge(
+            $edges,
+            $domainId,
+            $kernelId,
+            ArchitectureGraphVocabulary::REL_DEPENDS_ON,
+            [
+                'source' => 'runtime_module_contract',
+                'constraint' => '*',
+                'dependency_kind' => 'kernel_contract',
+            ],
+        );
+    }
+
+    /** @param array<string, Node> $nodes @param array<string, Edge> $edges @param array<string,string> $eventOwners */
+    private function appendRuntimeEvents(
+        array &$nodes,
+        array &$edges,
+        string $domainId,
+        DomainModuleInterface $module,
+        array &$eventOwners,
+    ): void {
         if (!$module instanceof EventOwningModuleInterface) {
             return;
         }
@@ -147,13 +236,25 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                 $eventType,
                 metadata: ['event_type' => $eventType],
             );
-            $this->addEdge($edges, $domainId, $nodeId, ArchitectureGraphVocabulary::REL_OWNS);
+            $eventOwners[$eventType] ??= $domainId;
+            $this->addEdge(
+                $edges,
+                $domainId,
+                $nodeId,
+                ArchitectureGraphVocabulary::REL_OWNS,
+                ['source' => 'runtime.event_ownership'],
+            );
         }
     }
 
-    /** @param array<string, Node> $nodes @param array<string, Edge> $edges */
-    private function appendRuntimeActions(array &$nodes, array &$edges, string $domainId, DomainModuleInterface $module): void
-    {
+    /** @param array<string, Node> $nodes @param array<string, Edge> $edges @param array<string,string> $actionOwners */
+    private function appendRuntimeActions(
+        array &$nodes,
+        array &$edges,
+        string $domainId,
+        DomainModuleInterface $module,
+        array &$actionOwners,
+    ): void {
         if (!$module instanceof ActionOwningModuleInterface) {
             return;
         }
@@ -167,7 +268,14 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                 $actionType,
                 metadata: ['action_type' => $actionType],
             );
-            $this->addEdge($edges, $domainId, $nodeId, ArchitectureGraphVocabulary::REL_OWNS);
+            $actionOwners[$actionType] ??= $domainId;
+            $this->addEdge(
+                $edges,
+                $domainId,
+                $nodeId,
+                ArchitectureGraphVocabulary::REL_OWNS,
+                ['source' => 'runtime.action_ownership'],
+            );
 
             foreach ($handlers as $handler) {
                 if (!$handler->supports($actionType)) {
@@ -181,14 +289,25 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                     $handlerClass,
                     metadata: ['class' => $handlerClass],
                 );
-                $this->addEdge($edges, $nodeId, $handlerId, ArchitectureGraphVocabulary::REL_HANDLED_BY);
+                $this->addEdge(
+                    $edges,
+                    $nodeId,
+                    $handlerId,
+                    ArchitectureGraphVocabulary::REL_HANDLED_BY,
+                    ['source' => 'runtime.action_handlers'],
+                );
             }
         }
     }
 
-    /** @param array<string, Node> $nodes @param array<string, Edge> $edges */
-    private function appendRuntimeAgents(array &$nodes, array &$edges, string $domainId, DomainModuleInterface $module): void
-    {
+    /** @param array<string, Node> $nodes @param array<string, Edge> $edges @param array<string,string> $actionOwners */
+    private function appendRuntimeAgents(
+        array &$nodes,
+        array &$edges,
+        string $domainId,
+        DomainModuleInterface $module,
+        array $actionOwners,
+    ): void {
         if (!$module instanceof AgentProvidingModuleInterface) {
             return;
         }
@@ -214,24 +333,271 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                     'max_actions_per_run' => $definition->maxActionsPerRun,
                 ],
             );
-            $this->addEdge($edges, $domainId, $nodeId, ArchitectureGraphVocabulary::REL_OWNS);
+            $this->addEdge(
+                $edges,
+                $domainId,
+                $nodeId,
+                ArchitectureGraphVocabulary::REL_OWNS,
+                ['source' => 'runtime.agent_ownership'],
+            );
 
             foreach ($definition->allowedActionTypes as $actionType) {
+                $actionId = $this->ensureReferencedAction($nodes, $actionType, 'agent.allowed_action_types');
                 $this->addEdge(
                     $edges,
                     $nodeId,
-                    'action:' . $actionType,
+                    $actionId,
                     ArchitectureGraphVocabulary::REL_PROPOSES,
+                    ['source' => 'agent.allowed_action_types'],
+                );
+                $this->appendDerivedDomainDependency(
+                    $edges,
+                    $domainId,
+                    $actionOwners[$actionType] ?? null,
+                    'automation.agent',
+                    ['agent' => $name, 'action_type' => $actionType],
                 );
             }
         }
+    }
+
+    /**
+     * @param array<string, Node> $nodes
+     * @param array<string, Edge> $edges
+     * @param array<string,string> $eventOwners
+     * @param array<string,string> $actionOwners
+     */
+    private function appendBootstrapRules(
+        array &$nodes,
+        array &$edges,
+        string $domainId,
+        DomainModuleInterface $module,
+        array $eventOwners,
+        array $actionOwners,
+    ): void {
+        if (!$module instanceof BootstrapRuleProvidingModuleInterface) {
+            return;
+        }
+
+        foreach ($module->bootstrapRules() as $rule) {
+            if (!$rule instanceof Rule) {
+                continue;
+            }
+
+            $ruleId = 'rule:' . $module->name() . ':' . $rule->id;
+            $actionType = is_string($rule->effect['action_type'] ?? null)
+                ? trim((string) $rule->effect['action_type'])
+                : '';
+            $effectType = is_string($rule->effect['type'] ?? null)
+                ? (string) $rule->effect['type']
+                : '';
+
+            $nodes[$ruleId] = new Node(
+                $ruleId,
+                ArchitectureGraphVocabulary::TYPE_RULE,
+                $rule->name,
+                metadata: [
+                    'rule_id' => $rule->id,
+                    'scope' => 'bootstrap_default',
+                    'trigger' => $rule->trigger,
+                    'version' => $rule->version,
+                    'priority' => $rule->priority,
+                    'conditions_count' => count($rule->conditions),
+                    'effect_type' => $effectType,
+                    'action_type' => $actionType,
+                ],
+            );
+            $this->addEdge(
+                $edges,
+                $domainId,
+                $ruleId,
+                ArchitectureGraphVocabulary::REL_OWNS,
+                ['source' => 'bootstrap.rules'],
+            );
+
+            $eventId = $this->ensureReferencedEvent($nodes, $rule->trigger, 'bootstrap.rule.trigger');
+            $this->addEdge(
+                $edges,
+                $eventId,
+                $ruleId,
+                ArchitectureGraphVocabulary::REL_TRIGGERS,
+                ['source' => 'bootstrap.rule.trigger'],
+            );
+            $this->appendDerivedDomainDependency(
+                $edges,
+                $domainId,
+                $eventOwners[$rule->trigger] ?? null,
+                'automation.rule.trigger',
+                ['rule_id' => $rule->id, 'event_type' => $rule->trigger],
+            );
+
+            if ($actionType === '') {
+                continue;
+            }
+
+            $actionId = $this->ensureReferencedAction($nodes, $actionType, 'bootstrap.rule.effect');
+            $this->addEdge(
+                $edges,
+                $ruleId,
+                $actionId,
+                ArchitectureGraphVocabulary::REL_PRODUCES,
+                [
+                    'source' => 'bootstrap.rule.effect',
+                    'effect_type' => $effectType,
+                ],
+            );
+            $this->appendDerivedDomainDependency(
+                $edges,
+                $domainId,
+                $actionOwners[$actionType] ?? null,
+                'automation.rule.effect',
+                ['rule_id' => $rule->id, 'action_type' => $actionType],
+            );
+        }
+    }
+
+    /** @param array<string, Node> $nodes @param array<string, Edge> $edges @param array<string,string> $actionOwners */
+    private function appendBootstrapPolicies(
+        array &$nodes,
+        array &$edges,
+        string $domainId,
+        DomainModuleInterface $module,
+        array $actionOwners,
+    ): void {
+        if (!$module instanceof BootstrapPolicyProvidingModuleInterface) {
+            return;
+        }
+
+        foreach ($module->bootstrapPolicies() as $policy) {
+            if (!$policy instanceof ActionPolicy) {
+                continue;
+            }
+
+            $policyId = 'policy:' . $module->name() . ':' . $policy->id;
+            $nodes[$policyId] = new Node(
+                $policyId,
+                ArchitectureGraphVocabulary::TYPE_POLICY,
+                $policy->name ?? $policy->id,
+                metadata: [
+                    'policy_id' => $policy->id,
+                    'scope' => 'bootstrap_default',
+                    'action_type' => $policy->actionType,
+                    'decision' => $policy->decision->value,
+                    'priority' => $policy->priority,
+                    'conditions_count' => count($policy->conditions),
+                    'reason' => $policy->reason,
+                ],
+            );
+            $this->addEdge(
+                $edges,
+                $domainId,
+                $policyId,
+                ArchitectureGraphVocabulary::REL_OWNS,
+                ['source' => 'bootstrap.policies'],
+            );
+
+            $actionId = $this->ensureReferencedAction($nodes, $policy->actionType, 'bootstrap.policy.action');
+            $this->addEdge(
+                $edges,
+                $policyId,
+                $actionId,
+                ArchitectureGraphVocabulary::REL_GOVERNS,
+                [
+                    'source' => 'bootstrap.policy.action',
+                    'decision' => $policy->decision->value,
+                ],
+            );
+            $this->appendDerivedDomainDependency(
+                $edges,
+                $domainId,
+                $actionOwners[$policy->actionType] ?? null,
+                'automation.policy',
+                ['policy_id' => $policy->id, 'action_type' => $policy->actionType],
+            );
+        }
+    }
+
+    /** @param array<string, Node> $nodes */
+    private function ensureReferencedEvent(array &$nodes, string $eventType, string $source): string
+    {
+        $nodeId = 'event:' . $eventType;
+        $nodes[$nodeId] ??= new Node(
+            $nodeId,
+            ArchitectureGraphVocabulary::TYPE_EVENT,
+            $eventType,
+            metadata: [
+                'event_type' => $eventType,
+                'referenced_only' => true,
+                'reference_source' => $source,
+            ],
+        );
+
+        return $nodeId;
+    }
+
+    /** @param array<string, Node> $nodes */
+    private function ensureReferencedAction(array &$nodes, string $actionType, string $source): string
+    {
+        $nodeId = 'action:' . $actionType;
+        $nodes[$nodeId] ??= new Node(
+            $nodeId,
+            ArchitectureGraphVocabulary::TYPE_ACTION,
+            $actionType,
+            metadata: [
+                'action_type' => $actionType,
+                'referenced_only' => true,
+                'reference_source' => $source,
+            ],
+        );
+
+        return $nodeId;
+    }
+
+    /** @param array<string, Edge> $edges @param array<string,mixed> $metadata */
+    private function appendDerivedDomainDependency(
+        array &$edges,
+        string $sourceDomainId,
+        ?string $targetDomainId,
+        string $source,
+        array $metadata,
+    ): void {
+        if ($targetDomainId === null || $targetDomainId === $sourceDomainId) {
+            return;
+        }
+
+        $this->addEdge(
+            $edges,
+            $sourceDomainId,
+            $targetDomainId,
+            ArchitectureGraphVocabulary::REL_DEPENDS_ON,
+            [
+                'source' => $source,
+                'dependency_kind' => 'runtime_contract',
+                ...$metadata,
+            ],
+        );
     }
 
     /** @param array<string, Edge> $edges @param array<string, mixed> $metadata */
     private function addEdge(array &$edges, string $source, string $target, string $relation, array $metadata = []): void
     {
         $id = 'edge:' . sha1($source . "\0" . $relation . "\0" . $target);
-        $edges[$id] ??= new Edge($id, $source, $target, $relation, $metadata);
+        if (isset($edges[$id])) {
+            $existing = $edges[$id];
+            $merged = $existing->metadata;
+            if (($metadata['source'] ?? null) !== null && ($merged['source'] ?? null) !== ($metadata['source'] ?? null)) {
+                $sources = array_values(array_unique(array_filter([
+                    ...(array) ($merged['sources'] ?? []),
+                    is_string($merged['source'] ?? null) ? $merged['source'] : null,
+                    is_string($metadata['source'] ?? null) ? $metadata['source'] : null,
+                ])));
+                $merged['sources'] = $sources;
+            }
+            $edges[$id] = new Edge($id, $source, $target, $relation, [...$merged, ...$metadata]);
+            return;
+        }
+
+        $edges[$id] = new Edge($id, $source, $target, $relation, $metadata);
     }
 
     private function domainId(string $moduleId): string

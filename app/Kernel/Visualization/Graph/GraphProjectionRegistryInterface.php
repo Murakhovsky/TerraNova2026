@@ -8,7 +8,11 @@ interface GraphProjectionRegistryInterface
     /** @return list<string> */
     public function names(): array;
 
-    /** @return array<string, array{label:string}> */
+    /**
+     * Renderer-neutral projection hints.
+     *
+     * @return array<string, array{label:string,layout?:string,default_depth?:?int}>
+     */
     public function descriptions(): array;
 
     public function has(string $name): bool;

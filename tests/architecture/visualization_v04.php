@@ -32,7 +32,7 @@ $assert(str_contains($registry, 'implements GraphProjectionRegistryInterface'), 
 $controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
 $assert(str_contains($controller, 'GraphProjectionRegistryInterface'), 'Explorer must depend on the Kernel projection registry contract.');
 $assert(str_contains($controller, "getShared('cosArchitectureProjectionRegistry')"), 'Explorer projection registry DI lookup missing.');
-$assert(str_contains($controller, "'views' => $views"), 'Explorer must publish projected view payloads.');
+$assert(str_contains($controller, "'views' => \$views"), 'Explorer must publish projected view payloads.');
 $assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not depend on Infrastructure.');
 
 $bootstrap = $read('app/Bootstrap/VisualizationServices.php');

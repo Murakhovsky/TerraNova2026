@@ -15,5 +15,12 @@ final class VisualizationRoutes
             'controller' => 'architecture_explorer',
             'action' => 'index',
         ]);
+
+        $router->addGet('/cos/architecture/graph', [
+            'namespace' => 'Interfaces\\Web\\Visualization\\Controller',
+            'module' => 'frontend',
+            'controller' => 'architecture_explorer',
+            'action' => 'graph',
+        ]);
     }
 }
