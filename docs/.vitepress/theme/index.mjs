@@ -7,6 +7,7 @@ import ProcessDiagram from './ProcessDiagram.vue';
 import CrossDomainProcessTopology from './CrossDomainProcessTopology.vue';
 import './custom.css';
 import './mermaid.css';
+import './readability.css';
 
 export default {
   extends: DefaultTheme,

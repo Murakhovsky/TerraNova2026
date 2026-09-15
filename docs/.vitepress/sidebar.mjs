@@ -4,20 +4,20 @@ import { fileURLToPath } from 'node:url';
 
 const docsRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const sections = [
-  ['00-start', 'Start Here'],
-  ['01-product', 'Product'],
-  ['02-workflows', 'Business Workflows'],
-  ['03-architecture', 'System Architecture'],
-  ['04-domains', 'Domains'],
-  ['05-runtime', 'Runtime'],
-  ['06-ai-agents', 'AI / Agents'],
-  ['07-api-integrations', 'API & Integrations'],
-  ['08-ui', 'UI'],
-  ['09-development', 'Development'],
-  ['10-operations', 'Operations'],
-  ['11-decisions', 'Architecture Decisions'],
-  ['12-reference', 'Reference'],
+const developerSections = [
+  ['00-start', 'Початок'],
+  ['01-product', 'Продукт'],
+  ['02-workflows', 'Бізнес-процеси'],
+  ['03-architecture', 'Архітектура системи'],
+  ['04-domains', 'Домени'],
+  ['05-runtime', 'Середовище виконання'],
+  ['06-ai-agents', 'ШІ та агенти'],
+  ['07-api-integrations', 'API та інтеграції'],
+  ['08-ui', 'Інтерфейси'],
+  ['09-development', 'Розробка'],
+  ['10-operations', 'Експлуатація'],
+  ['11-decisions', 'Архітектурні рішення'],
+  ['12-reference', 'Технічний довідник'],
 ];
 
 const preferredOrder = new Map([
@@ -115,5 +115,60 @@ function itemsForDirectory(path) {
 }
 
 export function buildSidebar() {
-  return sections.map(([directory, text], index) => ({ text, collapsed: index > 2, items: itemsForDirectory(join(docsRoot, directory)) }));
+  const technicalBase = developerSections.map(([directory, text]) => ({
+    text,
+    collapsed: true,
+    items: itemsForDirectory(join(docsRoot, directory)),
+  }));
+
+  return [
+    {
+      text: 'Для бізнесу та користувачів',
+      collapsed: false,
+      items: [
+        { text: 'Що таке COS', link: '/for-business/' },
+        { text: 'Яку проблему вирішує COS', link: '/for-business/#яку-проблему-вирішує-cos' },
+        { text: 'Що отримує компанія', link: '/for-business/#що-отримує-компанія' },
+        { text: 'Приклади застосування', link: '/for-business/#приклади-застосування' },
+      ],
+    },
+    {
+      text: 'Для фахівців із впровадження',
+      collapsed: false,
+      items: [
+        { text: 'Маршрут впровадження', link: '/for-integrators/' },
+        { text: 'Модель бізнес-процесу', link: '/for-integrators/#модель-впровадження' },
+        { text: 'Інтеграції та дані', link: '/for-integrators/#інтеграції-та-дані' },
+        { text: 'Перевірка готовності', link: '/for-integrators/#критерії-готовності' },
+      ],
+    },
+    {
+      text: 'Для розробників',
+      collapsed: false,
+      items: [
+        { text: 'Вхід для розробника', link: '/for-developers/' },
+        ...technicalBase,
+      ],
+    },
+  ];
+}
+
+export function buildEnglishSidebar() {
+  return [
+    {
+      text: 'For business and users',
+      collapsed: false,
+      items: [{ text: 'What COS is', link: '/en/for-business/' }],
+    },
+    {
+      text: 'For implementation professionals',
+      collapsed: false,
+      items: [{ text: 'Implementation route', link: '/en/for-integrators/' }],
+    },
+    {
+      text: 'For developers',
+      collapsed: false,
+      items: [{ text: 'Developer entry point', link: '/en/for-developers/' }],
+    },
+  ];
 }

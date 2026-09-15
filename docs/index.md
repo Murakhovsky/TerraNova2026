@@ -1,107 +1,96 @@
 ---
 layout: home
-title: COS Documentation
-description: Канонічна WEB-документація Company Operating System.
+title: COS — операційна система компанії
+description: Документація COS для керівників, фахівців із впровадження та розробників.
 hero:
-  name: Company Operating System
-  text: Documentation
-  tagline: Від бізнес-процесу до Domain, Capability, Runtime, Contract, Agent і коду. Один простір для продукту, архітектури та executable reference.
+  name: COS
+  text: Операційна система компанії
+  tagline: Єдина система, яка пов’язує людей, процеси, дані, автоматизацію та штучний інтелект у керовану роботу компанії.
   actions:
     - theme: brand
-      text: Зрозуміти COS за 10 хв
-      link: /00-start/what-is-cos
+      text: Зрозуміти COS
+      link: /for-business/
     - theme: alt
-      text: Відкрити System Map
-      link: /03-architecture/system-map
+      text: Як впроваджувати
+      link: /for-integrators/
 features:
-  - title: Understand COS
-    details: Product model, Mental Model, current scope, workflows та bounded contexts без походів по сотнях PHP-файлів.
-    link: /00-start/what-is-cos
-  - title: Business Workflows
-    details: Sales, Property і Diagnostic від business goal до ownership, capabilities, evidence та code map.
-    link: /02-workflows/sales-lead-to-managed-case
-  - title: Architecture
-    details: Kernel, Domains, cross-domain contracts, runtime, persistence та dependency direction.
-    link: /03-architecture/domain-map
-  - title: Verify the Model
-    details: Generated reference, capability debt, runtime evidence, module lifecycle, testing та operations.
-    link: /12-reference/README
+  - title: Для керівника і команди
+    details: Що таке COS, яку проблему він вирішує, які можливості дає та де створює практичну цінність для бізнесу.
+    link: /for-business/
+  - title: Для фахівця з впровадження
+    details: Як описати процеси, під’єднати дані й сервіси, налаштувати ролі та перевірити готовність системи до роботи.
+    link: /for-integrators/
+  - title: Для розробника
+    details: Архітектура, домени, середовище виконання, контракти, інтеграції, тести та точний технічний довідник.
+    link: /for-developers/
 ---
 
 <div class="cos-home-shell">
-  <div class="cos-home-contract" aria-label="Canonical source contract">
-    <div class="cos-home-contract__item"><span>Canonical code</span><strong>main</strong></div>
-    <div class="cos-home-contract__item"><span>Canonical docs</span><strong>main</strong></div>
-    <div class="cos-home-contract__item"><span>Authority</span><strong>current commit</strong></div>
-  </div>
-
-  <section class="cos-home-section">
+  <section class="cos-home-section cos-home-section--first">
     <div class="cos-home-section__head">
       <div>
-        <div class="cos-home-kicker">System model</div>
-        <h2>Від проблеми бізнесу до контрольованого результату</h2>
+        <div class="cos-home-kicker">Один продукт · три рівні пояснення</div>
+        <h2>Почніть із того, навіщо вам COS</h2>
       </div>
-      <p>COS не ховає бізнес за технічними шарами. Документація веде тією самою дорогою, якою проходить реальна робота системи.</p>
+      <p>Документація більше не змушує керівника читати про класи, а розробника — шукати технічну істину між рекламними формулюваннями. Кожна аудиторія має свій маршрут.</p>
     </div>
 
-    <div class="cos-home-flow" aria-label="COS canonical execution path">
-      <div class="cos-home-flow__node"><strong>Business</strong><span>problem / goal</span></div>
-      <div class="cos-home-flow__arrow">→</div>
-      <div class="cos-home-flow__node"><strong>Workflow</strong><span>business flow</span></div>
-      <div class="cos-home-flow__arrow">→</div>
-      <div class="cos-home-flow__node"><strong>Domain</strong><span>semantic owner</span></div>
-      <div class="cos-home-flow__arrow">→</div>
-      <div class="cos-home-flow__node"><strong>Capability</strong><span>declared ability</span></div>
-      <div class="cos-home-flow__arrow">→</div>
-      <div class="cos-home-flow__node is-core"><strong>Kernel Runtime</strong><span>generic mechanism</span></div>
-      <div class="cos-home-flow__arrow">→</div>
-      <div class="cos-home-flow__node"><strong>Result</strong><span>state / audit</span></div>
+    <div class="cos-home-route-grid">
+      <a class="cos-home-route cos-home-route--primary" href="./for-business/">
+        <small>01 / БІЗНЕС</small>
+        <strong>Я хочу зрозуміти, що це і навіщо</strong>
+        <span>Простою мовою про продукт, можливості, користь, сценарії застосування та очікуваний результат.</span>
+      </a>
+      <a class="cos-home-route" href="./for-integrators/">
+        <small>02 / ВПРОВАДЖЕННЯ</small>
+        <strong>Я хочу впровадити COS у компанії</strong>
+        <span>Процеси, ролі, дані, інтеграції, налаштування, перевірки та перехід до робочої експлуатації.</span>
+      </a>
+      <a class="cos-home-route" href="./for-developers/">
+        <small>03 / РОЗРОБКА</small>
+        <strong>Я хочу змінювати або розширювати систему</strong>
+        <span>Архітектурні межі, код, контракти, тести, технічні рішення та точні факти з поточного стану системи.</span>
+      </a>
     </div>
   </section>
 
   <section class="cos-home-section">
     <div class="cos-home-section__head">
       <div>
-        <div class="cos-home-kicker">Current baseline</div>
-        <h2>Що реально є в current checkout</h2>
+        <div class="cos-home-kicker">Суть COS</div>
+        <h2>Компанія як керована система, а не набір розрізнених програм</h2>
       </div>
-      <p>Перший блок показує health структурованої моделі: processes, capability coverage, evidence, runtime backing і debt. Нижче — executable Kernel та Domain manifests. Обидва зрізи будуються з current checkout, а не з вручну намальованого «все зелене».</p>
+      <p>COS об’єднує робочі процеси, відповідальність, дані, правила, автоматизацію та штучний інтелект навколо реальних результатів бізнесу.</p>
+    </div>
+
+    <div class="cos-home-flow" aria-label="Як COS перетворює роботу компанії на керований процес">
+      <div class="cos-home-flow__node"><strong>Потреба</strong><span>що має відбутися</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Процес</strong><span>як виконується робота</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Відповідальність</strong><span>хто приймає рішення</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node is-core"><strong>COS</strong><span>координація та контроль</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Результат</strong><span>стан, історія, показники</span></div>
+    </div>
+  </section>
+
+  <section class="cos-home-section cos-home-section--technical">
+    <div class="cos-home-section__head">
+      <div>
+        <div class="cos-home-kicker">Поточний стан</div>
+        <h2>Що система вже вміє</h2>
+      </div>
+      <p>Цей блок формується з поточного стану коду та декларацій. Тут не маркетингове «майже готово», а фактичне покриття можливостей і модулів.</p>
     </div>
 
     <KnowledgeHealth />
     <SystemStatus />
   </section>
 
-  <section class="cos-home-section">
-    <div class="cos-home-section__head">
-      <div>
-        <div class="cos-home-kicker">Choose a route</div>
-        <h2>Не треба читати все</h2>
-      </div>
-      <p>Починайте з того рівня, який відповідає вашому питанню. Людство вже винайшло навігацію, тож археологія по Service.php більше не є обов’язковим ритуалом.</p>
-    </div>
-
-    <div class="cos-home-route-grid">
-      <a class="cos-home-route" href="./00-start/mental-model.html">
-        <small>01 / UNDERSTAND</small>
-        <strong>Я хочу зрозуміти COS</strong>
-        <span>Mental model, product scope, domains і ключові business workflows.</span>
-      </a>
-      <a class="cos-home-route" href="./03-architecture/system-map.html">
-        <small>02 / ARCHITECT</small>
-        <strong>Я хочу побачити систему цілком</strong>
-        <span>System map, dependency direction, Kernel, contracts і runtime boundaries.</span>
-      </a>
-      <a class="cos-home-route" href="./12-reference/README.html">
-        <small>03 / VERIFY</small>
-        <strong>Мені потрібні точні executable facts</strong>
-        <span>Processes, capabilities, debt, evidence, events, commands, routes та generated reference.</span>
-      </a>
-    </div>
-  </section>
-
   <div class="cos-home-footer-note">
-    <span>main = code + tests + manifests + docs + generated reference inputs</span>
-    <span>COS Documentation · Terra Nova</span>
+    <span>Українська — основна мова документації. Англійська доступна через перемикач мови.</span>
+    <span>COS · Terra Nova</span>
   </div>
 </div>

@@ -4,20 +4,29 @@ import { useData, withBase } from 'vitepress';
 
 const { page, frontmatter } = useData();
 
-const sectionMap = {
-  '00-start': ['Start', '/00-start/what-is-cos.html'],
-  '01-product': ['Product', '/01-product/current-scope.html'],
-  '02-workflows': ['Workflows', '/02-workflows/sales-lead-to-managed-case.html'],
-  '03-architecture': ['Architecture', '/03-architecture/system-map.html'],
-  '04-domains': ['Domains', '/04-domains/sales/overview.html'],
-  '05-runtime': ['Runtime', '/05-runtime/execution-lifecycle.html'],
-  '06-ai-agents': ['AI / Agents', '/06-ai-agents/agent-runtime.html'],
-  '07-api-integrations': ['API & Integrations', '/07-api-integrations/integration-model.html'],
-  '08-ui': ['UI', '/08-ui/documentation-site.html'],
-  '09-development': ['Development', '/09-development/documentation-rules.html'],
-  '10-operations': ['Operations', '/10-operations/documentation-build.html'],
-  '11-decisions': ['ADR', '/11-decisions/README.html'],
-  '12-reference': ['Reference', '/12-reference/README.html'],
+const ukSectionMap = {
+  'for-business': ['Для бізнесу', '/for-business/'],
+  'for-integrators': ['Для впровадження', '/for-integrators/'],
+  'for-developers': ['Для розробників', '/for-developers/'],
+  '00-start': ['Початок', '/00-start/what-is-cos.html'],
+  '01-product': ['Продукт', '/01-product/current-scope.html'],
+  '02-workflows': ['Бізнес-процеси', '/02-workflows/sales-lead-to-managed-case.html'],
+  '03-architecture': ['Архітектура', '/03-architecture/system-map.html'],
+  '04-domains': ['Домени', '/04-domains/sales/overview.html'],
+  '05-runtime': ['Середовище виконання', '/05-runtime/execution-lifecycle.html'],
+  '06-ai-agents': ['ШІ та агенти', '/06-ai-agents/agent-runtime.html'],
+  '07-api-integrations': ['API та інтеграції', '/07-api-integrations/integration-model.html'],
+  '08-ui': ['Інтерфейси', '/08-ui/documentation-site.html'],
+  '09-development': ['Розробка', '/09-development/documentation-rules.html'],
+  '10-operations': ['Експлуатація', '/10-operations/documentation-build.html'],
+  '11-decisions': ['Архітектурні рішення', '/11-decisions/README.html'],
+  '12-reference': ['Технічний довідник', '/12-reference/README.html'],
+};
+
+const enSectionMap = {
+  'for-business': ['For business', '/en/for-business/'],
+  'for-integrators': ['For implementation', '/en/for-integrators/'],
+  'for-developers': ['For developers', '/en/for-developers/'],
 };
 
 function humanize(value) {
@@ -30,12 +39,16 @@ function humanize(value) {
 
 const breadcrumbs = computed(() => {
   const relativePath = page.value?.relativePath ?? '';
-  if (!relativePath || relativePath === 'index.md') return [];
+  if (!relativePath || relativePath === 'index.md' || relativePath === 'en/index.md') return [];
 
   const parts = relativePath.split('/');
+  const isEnglish = parts[0] === 'en';
+  if (isEnglish) parts.shift();
+
   const first = parts.shift();
   const currentTitle = frontmatter.value?.title || page.value?.title || humanize(parts.at(-1) || first);
-  const result = [{ label: 'Docs', href: withBase('/') }];
+  const result = [{ label: isEnglish ? 'Documentation' : 'Документація', href: withBase(isEnglish ? '/en/' : '/') }];
+  const sectionMap = isEnglish ? enSectionMap : ukSectionMap;
 
   if (sectionMap[first]) {
     result.push({ label: sectionMap[first][0], href: withBase(sectionMap[first][1]) });

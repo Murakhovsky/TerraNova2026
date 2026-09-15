@@ -1,0 +1,172 @@
+/* Readability and responsive layer. Loaded after the visual theme. */
+:root {
+  --vp-layout-max-width: 1680px;
+  --vp-sidebar-width: 320px;
+  --cos-reading-width: 940px;
+}
+
+html { font-size: 17px; }
+body { font-size: 1rem; }
+
+.VPNavBarMenuLink,
+.VPNavBarMenuGroup .text { font-size: 0.94rem; }
+.VPNavBarTitle .title { font-size: 1rem; }
+
+.VPSidebarItem.level-0 > .item > .text {
+  font-size: 0.79rem;
+  line-height: 1.35;
+}
+
+.VPSidebarItem .item .link > .text,
+.VPSidebarItem .item > .text {
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.VPDoc.has-aside .content-container,
+.VPDoc:not(.has-aside) .content-container { max-width: var(--cos-reading-width); }
+
+.vp-doc p,
+.vp-doc li {
+  font-size: 1.02rem;
+  line-height: 1.78;
+}
+
+.vp-doc h1 {
+  font-size: clamp(2.35rem, 3.6vw, 3.55rem);
+  line-height: 1.03;
+}
+.vp-doc h2 { font-size: clamp(1.65rem, 2.1vw, 2rem); }
+.vp-doc h3 { font-size: 1.28rem; }
+
+.VPDocAsideOutline .outline-title { font-size: 0.8rem; }
+.VPDocAsideOutline .outline-link {
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.cos-breadcrumbs { font-size: 0.82rem; }
+.cos-doc-meta-item,
+.cos-badge { font-size: 0.75rem; }
+
+.VPHomeHero .container,
+.VPHomeFeatures .container,
+.VPHome .vp-doc.container { max-width: 1320px !important; }
+.VPHomeHero .main { max-width: 940px !important; }
+.VPHomeHero .tagline {
+  max-width: 820px !important;
+  font-size: clamp(1.08rem, 1.6vw, 1.38rem) !important;
+}
+.VPHomeFeatures .title { font-size: 1.1rem; }
+.VPHomeFeatures .details {
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.cos-home-section--first { margin-top: 2rem; }
+.cos-home-section__head p { font-size: 1.02rem; }
+.cos-home-route {
+  min-height: 205px;
+  padding: 1.4rem;
+}
+.cos-home-route strong {
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+.cos-home-route span {
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+.cos-home-route--primary {
+  border-color: color-mix(in srgb, var(--vp-c-brand-1) 58%, var(--vp-c-divider));
+  background: color-mix(in srgb, var(--vp-c-brand-1) 7%, var(--vp-c-bg-soft));
+}
+.cos-home-flow__node {
+  min-width: 165px;
+  min-height: 104px;
+}
+.cos-home-flow__node strong { font-size: 0.96rem; }
+.cos-home-flow__node span {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+@media (min-width: 1440px) {
+  html { font-size: 18px; }
+  :root {
+    --vp-sidebar-width: 340px;
+    --cos-reading-width: 1000px;
+  }
+}
+
+@media (max-width: 959px) {
+  html { font-size: 17px; }
+  .VPDoc .content { padding-top: 2rem; }
+  .vp-doc p,
+  .vp-doc li {
+    font-size: 1rem;
+    line-height: 1.72;
+  }
+  .cos-home-flow {
+    grid-template-columns: repeat(9, max-content);
+    margin-right: -1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  html { font-size: 16px; }
+  .VPHomeHero {
+    padding-top: 3.7rem !important;
+    padding-bottom: 2.2rem !important;
+  }
+  .VPHomeHero::after { display: none; }
+  .VPHomeHero .text {
+    font-size: clamp(2.35rem, 13vw, 3.6rem) !important;
+    line-height: 0.98 !important;
+    letter-spacing: -0.055em !important;
+  }
+  .VPHomeHero .tagline {
+    font-size: 1rem !important;
+    line-height: 1.55 !important;
+  }
+  .VPHomeHero .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .VPHomeHero .actions .VPButton {
+    width: 100%;
+    justify-content: center;
+  }
+  .vp-doc h1 { font-size: 2.25rem; }
+  .vp-doc h2 {
+    margin-top: 2.6rem;
+    padding-top: 1.5rem;
+    font-size: 1.55rem;
+  }
+  .vp-doc h3 { font-size: 1.2rem; }
+  .vp-doc table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .vp-doc th,
+  .vp-doc td { min-width: 140px; }
+  .cos-home-section { margin-top: 3.2rem; }
+  .cos-home-section__head h2 {
+    font-size: 2rem !important;
+    line-height: 1.04;
+  }
+  .cos-home-route {
+    min-height: auto;
+    padding: 1.15rem;
+  }
+  .cos-home-route strong { font-size: 1.08rem; }
+  .cos-home-route span { font-size: 0.9rem; }
+  .cos-home-flow { gap: 0.45rem; }
+  .cos-home-flow__node {
+    min-width: 145px;
+    min-height: 92px;
+  }
+  .cos-breadcrumbs { font-size: 0.76rem; }
+}
