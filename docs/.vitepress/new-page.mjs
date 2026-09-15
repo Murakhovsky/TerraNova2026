@@ -62,6 +62,6 @@ fs.writeFileSync(target, content);
 console.log(`Created ${path.relative(docsRoot, target)} with ${contractName}.`);
 
 if (contractName === 'workflow-v2') {
-  console.log('Workflow V2 also requires a matching Process Registry definition in docs/.vitepress/processes/*.json.');
+  console.log('Workflow V2 also requires a matching schema-v4 Process Registry definition in resources/processes/*.json.');
   console.log('Run npm run docs:check after adding the registry definition; the check will reject an unregistered workflow.');
 }
