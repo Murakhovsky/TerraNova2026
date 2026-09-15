@@ -150,6 +150,56 @@
       "severity": "high",
       "resolution": "declare-domain-capability",
       "target_capability": "sales.deal.outcome.record"
+    },
+    {
+      "id": "sales.request-to-property-match:load-request",
+      "process_id": "sales.request-to-property-match",
+      "step_id": "load-request",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.inbound.request.read"
+    },
+    {
+      "id": "sales.request-to-property-match:create-case",
+      "process_id": "sales.request-to-property-match",
+      "step_id": "create-case",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.client-case.create"
+    },
+    {
+      "id": "sales.request-to-property-match:resolve-property",
+      "process_id": "sales.request-to-property-match",
+      "step_id": "resolve-property",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.property.reference.resolve"
+    },
+    {
+      "id": "sales.request-to-property-match:record-match",
+      "process_id": "sales.request-to-property-match",
+      "step_id": "record-match",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.property-match.record"
+    },
+    {
+      "id": "sales.request-to-property-match:activity-events",
+      "process_id": "sales.request-to-property-match",
+      "step_id": "activity-events",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "medium",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.activity.record"
     }
   ]
 }

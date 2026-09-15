@@ -1,0 +1,159 @@
+{
+  "schema_version": 4,
+  "id": "sales.request-to-property-match",
+  "title": "Sales Request → Property Match",
+  "domain": "sales",
+  "state": "as-is",
+  "workflow": "02-workflows/sales-request-to-property-match.md",
+  "trigger": "Sales operator converts an inbound request into a Client Case with referenced Property context",
+  "outcomes": [
+    "Inbound request is attached to a canonical Client Case",
+    "Referenced Property is resolved through the Property Domain contract",
+    "Sales owns a traceable Property Match and follow-up context"
+  ],
+  "actors": [
+    "salesperson",
+    "Sales application",
+    "Property read boundary"
+  ],
+  "steps": [
+    {
+      "id": "load-request",
+      "label": "Load inbound request and referenced Property context",
+      "kind": "operation",
+      "owner": "Sales application",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
+          "symbol": "createCaseFromRequest("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php",
+          "symbol": "inboundRequest("
+        }
+      ]
+    },
+    {
+      "id": "create-case",
+      "label": "Create Client Case and link inbound request",
+      "kind": "state",
+      "owner": "Sales application",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
+          "symbol": "createCaseFromRequest("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php",
+          "symbol": "createCase("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php",
+          "symbol": "attachInboundRequest("
+        }
+      ]
+    },
+    {
+      "id": "resolve-property",
+      "label": "Resolve canonical Property presentation",
+      "kind": "operation",
+      "owner": "Property read boundary",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "contract",
+          "ref": "Domains\\Property\\Contract\\PropertyReferencePort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php",
+          "symbol": "getPropertyPresentation("
+        }
+      ]
+    },
+    {
+      "id": "record-match",
+      "label": "Record Property Match in Sales",
+      "kind": "state",
+      "owner": "Sales application",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php",
+          "symbol": "upsertPropertyMatch("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
+          "symbol": "PropertyMatchStatus::Interested"
+        }
+      ]
+    },
+    {
+      "id": "activity-events",
+      "label": "Record Sales activity and publish case/lead events",
+      "kind": "outcome",
+      "owner": "Sales application",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": false,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
+          "symbol": "Обʼєкт додано у підбір"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
+          "symbol": "ClientCaseCreated::create"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "load-request",
+      "to": "create-case"
+    },
+    {
+      "from": "create-case",
+      "to": "resolve-property"
+    },
+    {
+      "from": "resolve-property",
+      "to": "record-match",
+      "label": "Property resolved"
+    },
+    {
+      "from": "resolve-property",
+      "to": "activity-events",
+      "label": "No referenced Property"
+    },
+    {
+      "from": "record-match",
+      "to": "activity-events"
+    }
+  ]
+}
