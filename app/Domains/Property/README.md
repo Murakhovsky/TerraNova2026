@@ -84,7 +84,7 @@ AI/heuristic output is stored in versioned `PropertyIntelligenceSnapshot` rows w
 
 ### Property V0.10 — External Property Network
 
-V0.10 adds a transport-agnostic federation/synchronization boundary for MLS, developer APIs, partner feeds, portal feeds and file/custom integrations.
+Added a transport-agnostic federation/synchronization boundary for MLS, developer APIs, partner feeds, portal feeds and file/custom integrations.
 
 Architecture:
 
@@ -122,28 +122,43 @@ Rules:
 8. Export reads canonical `Asset + Inventory + Listing` projections and never falls back to legacy `tn_properties`.
 9. Publication and Network remain distinct: Publication is channel distribution of our Listing; Network is system-to-system record federation.
 
-Canonical V0.10 tables:
+### Property V0.11 — Canonical Hardening
 
-- `tn_property_network_connectors`
-- `tn_property_network_sync_runs`
-- `tn_property_network_records`
+Hardened identity resolution around explicit `CREATE / MERGE / REVIEW`, review audit and canonical aliases for legacy property identifiers. A merge resolves an incoming observation into one existing canonical asset; it never destructively merges two canonical assets.
 
-Runtime services:
+The management surface was decomposed behind separate read/group/write/workflow ports and the first concrete RESO connector adapter was attached to the V0.10 network boundary without allowing provider secrets or persistence concerns into the Property core.
 
-- `PropertyNetworkConnectorRegistry`
-- `PropertyNetworkSyncService`
-- `PropertyNetworkIntakePort`
-- `PropertyNetworkExportPort`
-- `PropertyNetworkSyncRepositoryInterface`
+### Property V0.12 — Canonical Runtime Cutover
+
+Moved authoritative operational mutations to the canonical model:
+
+```text
+Web / API / Spatial
+        ↓
+PropertyCanonicalRuntimeService
+        ↓
+PropertyAsset / InventoryItem / Listing / Publication
+        ↓
+Domain Events → Kernel EventBus / Outbox
+        ↓
+Compatibility Projection
+        ↓
+tn_properties
+```
+
+V0.12 adds canonical Asset/Inventory/Listing/Publication write services, canonical REST mutation routes, real Property event publication, Web management cutover and canonical Spatial tour publishing. `tn_properties` is now a one-way transitional projection/read surface for these concerns rather than their source of truth.
+
+The compatibility bridge may still materialize operational metadata, activity log entries and legacy media bookkeeping required by existing screens. Those writes are explicitly non-authoritative and cannot define canonical Asset, Inventory or Listing state.
 
 ## Current architectural debt
 
 The canonical direction is stable, but Property is not declared V1.0 yet.
 
-- `MysqlPropertyManagementRepository` is still a large compatibility-heavy repository and should be decomposed later.
-- Legacy `tn_properties`/Telegram models still exist for compatibility; new canonical layers are prohibited from depending on them.
-- V0.4 identity/provenance has stronger schema/model maturity than operational automation around canonical merge/review workflows.
+- `MysqlPropertyManagementRepository` is still a large compatibility-heavy read/group/media backend and should be retired or decomposed further as canonical product surfaces replace it.
+- Legacy `tn_properties`/Telegram models still exist for compatibility. New canonical runtime and cross-domain code are prohibited from depending on them as business truth.
+- Public catalog/workspace/presentation reads still include legacy compatibility projections; V0.12 primarily closes the authoritative write side.
 - V0.8 demand currently represents explicit Sales property matches, not full latent demand.
-- V0.10 provides the federation boundary and durable synchronization lifecycle; concrete OLX/DIM.RIA/MLS/developer connectors remain integration adapters outside the domain core.
+- V0.10 provides the federation boundary and durable synchronization lifecycle; additional concrete marketplace/developer connectors remain integration adapters outside the domain core.
+- Reference location materialization remains owned by Reference and is accessed through `LocationReferenceInterface`; Property must not write `tn_locations` directly.
 
-V1.0 should only be declared after canonical registry usage, Inventory/Listing separation, stable cross-domain contracts and External Network boundaries have survived real integration traffic without requiring core-model rewrites.
+V1.0 should only be declared after canonical registry usage, Inventory/Listing separation, stable cross-domain contracts and External Network boundaries have survived real integration traffic without requiring core-model rewrites, and after the main legacy Property read surfaces have been retired or reduced to isolated compatibility projections.
