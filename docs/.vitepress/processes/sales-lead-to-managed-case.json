@@ -44,7 +44,7 @@
       "kind": "state",
       "critical": true,
       "runtime": [
-        { "type": "event", "ref": "sales.lead.created" }
+        { "type": "source", "path": "app/Domains/Sales/Automation/Event/LeadCreated.php", "symbol": "sales.lead.created" }
       ]
     },
     {
@@ -64,7 +64,7 @@
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ChangeDealStage" },
-        { "type": "event", "ref": "sales.deal.stage_changed" }
+        { "type": "source", "path": "app/Domains/Sales/Automation/Event/DealStageChanged.php", "symbol": "sales.deal.stage_changed" }
       ]
     },
     {
@@ -74,7 +74,7 @@
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "CompleteSalesCall" },
-        { "type": "event", "ref": "sales.call.completed" }
+        { "type": "source", "path": "app/Domains/Sales/Automation/Event/CallCompleted.php", "symbol": "sales.call.completed" }
       ]
     },
     {

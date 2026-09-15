@@ -94,10 +94,10 @@ The registry connects human workflow documentation to executable COS references 
 | --- | --- | --- | --- |
 | Lead intake | `operation` | yes | use_case `ReceivePublicLead`<br>use_case `ReceiveCrmWebhook` |
 | Process durable CRM inbox | `operation` | no | use_case `ProcessCrmInbox` |
-| Create or update canonical Sales state | `state` | yes | event `sales.lead.created` |
+| Create or update canonical Sales state | `state` | yes | source `app/Domains/Sales/Automation/Event/LeadCreated.php` · `sales.lead.created` |
 | Assign owner | `operation` | yes | use_case `AssignDealOwner`<br>event `sales.deal.owner_assigned` |
-| Manage pipeline stage | `operation` | yes | use_case `ChangeDealStage`<br>event `sales.deal.stage_changed` |
-| Record activity / call | `operation` | no | use_case `CompleteSalesCall`<br>event `sales.call.completed` |
+| Manage pipeline stage | `operation` | yes | use_case `ChangeDealStage`<br>source `app/Domains/Sales/Automation/Event/DealStageChanged.php` · `sales.deal.stage_changed` |
+| Record activity / call | `operation` | no | use_case `CompleteSalesCall`<br>source `app/Domains/Sales/Automation/Event/CallCompleted.php` · `sales.call.completed` |
 | Schedule next action | `operation` | yes | use_case `ScheduleDealFollowup`<br>event `sales.followup.created` |
 | Record business outcome | `outcome` | yes | event `sales.deal.won`<br>event `sales.deal.lost` |
 
