@@ -7,7 +7,7 @@ return [
     'version' => '0.12.0',
     'schema_version' => '0.12.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical real-estate asset runtime with tenant-safe Asset, Inventory, Listing/Publication writes, domain events, history, intelligence, network interoperability and one-way legacy compatibility projection.',
+    'description' => 'Canonical registry and real-estate asset runtime with tenant-safe Asset, Inventory, Listing/Publication writes, domain events, history, intelligence, network interoperability and one-way legacy compatibility projection.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
