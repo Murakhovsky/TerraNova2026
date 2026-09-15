@@ -2,7 +2,7 @@
 title: Current COS Scope
 description: Фактичний product та architecture scope поточного main.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: product
 ---
 
@@ -17,7 +17,7 @@ kind: product
 | Kernel | `0.11.8` | executable platform contract |
 | Sales | `0.8.6` | full runtime module / reference domain |
 | Diagnostic | `0.6.1` | installable runtime module with API routes and event consumer |
-| Property | `0.11.0` | installable runtime module with canonical identity review, registry, inventory, listings, analytics, intelligence and external network interoperability |
+| Property | `0.12.0` | installable runtime module with canonical Asset/Inventory/Listing writes, compatibility projection, analytics, intelligence and external network interoperability |
 
 Machine-readable metadata: [Module and Capability Reference](../12-reference/module-capabilities.md).
 
@@ -31,7 +31,7 @@ Diagnostic володіє methodology/session/evidence/evaluation/recommendation
 
 ## Property
 
-Property `0.11.0` hardened canonical real-estate asset model:
+Property `0.12.0` є canonical runtime для real-estate assets:
 
 ```text
 Property Asset
@@ -41,13 +41,27 @@ Property Asset
 ├─ structure / location / relations
 ├─ Inventory
 ├─ Listing / Publication
-├─ history contracts
+├─ history + domain events
 ├─ analytics
 ├─ evidence-linked intelligence
 └─ external Property Network + RESO adapter boundary
 ```
 
-Комерційний стан відділений від фізичного Property через Inventory. Publication відділена від Inventory через Listing/Publication model. Старий management repository залишається compatibility backend, але application-facing contract уже зібраний з окремих read/group/write/workflow ports.
+Основна runtime direction:
+
+```text
+Web / API / Spatial
+        ↓
+canonical Property runtime
+        ↓
+Asset / Inventory / Listing / Publication
+        ↓
+EventBus / history
+        ↓
+legacy compatibility projection
+```
+
+Комерційний стан відділений від фізичного Property через Inventory. Publication відділена від Inventory через Listing/Publication model. `tn_properties` більше не є authoritative write model для Asset/Inventory/Listing state: Web mutation paths і Spatial tour publication входять через canonical runtime, а legacy table підтримується як transitional projection/read surface. Legacy media/group/read helpers поки залишаються compatibility infrastructure там, де canonical surface ще не потрібна.
 
 ## Supporting areas
 
