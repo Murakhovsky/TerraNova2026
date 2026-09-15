@@ -33,7 +33,9 @@ $adminAdministration = $section($adminCorePrimary, 'administration');
 if ($keys($adminAdministration['children'] ?? []) !== ['users', 'content']) throw new RuntimeException('Admin Administration must expose Users and Content.');
 
 $portalCore = FrontendNavigation::portalCore('realtor');
-if ($keys($portalCore['primary'] ?? []) !== ['cabinet']) throw new RuntimeException('Portal core must not hardcode Domain navigation.');
+if ($keys($portalCore['primary'] ?? []) !== ['cabinet', 'requests', 'profile']) {
+    throw new RuntimeException('Portal core must own only generic account journeys and must not hardcode Domain navigation.');
+}
 
 foreach ([
     'app/Domains/Property/Application/Contract/PropertyWorkspaceReadModelInterface.php',

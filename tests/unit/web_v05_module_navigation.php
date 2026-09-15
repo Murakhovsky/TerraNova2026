@@ -124,8 +124,8 @@ $portal = $navigation->portal('realtor');
 if (($states->bulkReads - $beforePortalReads) !== 1) {
     throw new RuntimeException('Portal navigation must resolve exactly one effective module snapshot per render.');
 }
-if ($keys($portal['primary'] ?? []) !== ['cabinet', 'catalog', 'favour', 'listing', 'submit']) {
-    throw new RuntimeException('Property module did not contribute the canonical portal navigation.');
+if ($keys($portal['primary'] ?? []) !== ['cabinet', 'catalog', 'favour', 'properties', 'submit', 'requests', 'profile']) {
+    throw new RuntimeException('Property module did not compose the canonical WEB V0.9 portal navigation.');
 }
 $assertNoOrderMetadata($portal['primary'] ?? []);
 
@@ -141,8 +141,8 @@ $withoutProperty = $navigation->workspace('manager');
 if (in_array('properties', $keys($withoutProperty['primary'] ?? []), true)) {
     throw new RuntimeException('Disabled Property module still appears in workspace navigation.');
 }
-if ($keys($navigation->portal('realtor')['primary'] ?? []) !== ['cabinet']) {
-    throw new RuntimeException('Disabled Property module still appears in portal navigation.');
+if ($keys($navigation->portal('realtor')['primary'] ?? []) !== ['cabinet', 'requests', 'profile']) {
+    throw new RuntimeException('Disabled Property module still appears in portal navigation or Portal core items were lost.');
 }
 
 $states->setEnabled('org-a', 'diagnostic', false);
