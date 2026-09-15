@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Interfaces\Web\Controller;
@@ -9,7 +10,9 @@ class IndexController extends ControllerBase
 {
     public function indexAction(): void
     {
-        $this->view->pageAssetEntries = ['terranova-home'];
+        $this->view->pick('index/public');
+        $this->view->interfaceSurface = 'public';
+        $this->view->pageAssetEntries = ['public-surface'];
         $this->view->featuredProperties = [];
         $this->view->types = [];
         $this->view->locations = [];
@@ -29,10 +32,11 @@ class IndexController extends ControllerBase
             $this->view->locations = $this->catalogService()->locations();
         } catch (Throwable $e) {
             $this->logFrontendError('home-page', $e);
-            $this->view->catalogStatus = 'Каталог тимчасово недоступний. Об’єкти з’являться після відновлення з’єднання з базою даних.';
+            $this->response->setStatusCode(503, 'Service Unavailable');
+            $this->view->catalogStatus = 'Каталог тимчасово недоступний. Спробуйте оновити сторінку трохи пізніше.';
 
             if ($this->request->isPost()) {
-                $this->view->inboundRequestStatus = 'Заявку не вдалося зберегти. Спробуйте ще раз або напишіть нам напряму.';
+                $this->view->inboundRequestStatus = 'Заявку не вдалося зберегти. Спробуйте ще раз або зв’яжіться з нами напряму.';
             }
         }
     }
@@ -45,4 +49,3 @@ class IndexController extends ControllerBase
         return $scheme . '://' . $host . '/';
     }
 }
-

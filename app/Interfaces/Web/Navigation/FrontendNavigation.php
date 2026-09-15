@@ -16,7 +16,6 @@ final class FrontendNavigation
     public static function public(): array
     {
         return [
-            ['key' => 'home', 'path' => '', 'label' => 'Головна'],
             ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість'],
             ['key' => 'services', 'path' => 'services', 'label' => 'Послуги'],
             ['key' => 'partners', 'path' => 'partners', 'label' => 'Партнерам'],

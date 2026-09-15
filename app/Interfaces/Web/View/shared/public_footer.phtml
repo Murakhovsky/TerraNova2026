@@ -1,18 +1,12 @@
 <?php
-$text = $text ?? 'Публічний каталог нерухомості Terra Nova CLUB з медіа, заявками, перевіркою обʼєктів і супроводом менеджера.';
+$text = $text ?? 'Terra Nova CLUB — нерухомість, продаж, підбір і партнерська робота з об’єктами в одному публічному контурі.';
 $links = $links ?? [
-    ['path' => '', 'label' => 'Головна'],
-    ['path' => 'property/catalog', 'label' => 'Каталог'],
+    ['path' => 'property/catalog', 'label' => 'Нерухомість'],
     ['path' => 'services', 'label' => 'Послуги'],
-    ['path' => 'agency', 'label' => 'Agency'],
-    ['path' => 'it', 'label' => 'IT'],
-    ['path' => 'art', 'label' => 'Art'],
-    ['path' => 'team', 'label' => 'Команда'],
     ['path' => 'partners', 'label' => 'Партнерам'],
-    ['path' => 'cases', 'label' => 'Кейси'],
-    ['path' => 'blog', 'label' => 'Блог'],
+    ['path' => 'terra-nova', 'label' => 'Terra Nova'],
+    ['path' => 'cos/en', 'label' => 'COS'],
     ['path' => 'contacts', 'label' => 'Контакти'],
-    ['path' => 'vacancies', 'label' => 'Вакансії'],
     ['path' => 'property/submit', 'label' => 'Подати об’єкт'],
 ];
 $href = function (string $path): string {
@@ -27,15 +21,14 @@ $href = function (string $path): string {
     return $this->url->get($path);
 };
 ?>
-
-<footer class="tn-footer">
+<footer class="tn-footer tn-public-footer" data-interface-surface="public">
   <div>
-    <strong>Terra Nova CLUB</strong>
-    <p><?php echo $text; ?></p>
+    <a href="<?php echo $this->url->get(); ?>"><strong>Terra Nova CLUB</strong></a>
+    <p><?php echo htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8'); ?></p>
   </div>
-  <div class="tn-footer__links">
+  <nav class="tn-footer__links" aria-label="Додаткова навігація">
     <?php foreach ($links as $link): ?>
-      <a href="<?php echo $href((string) $link['path']); ?>"><?php echo $link['label']; ?></a>
+      <a href="<?php echo $href((string) $link['path']); ?>"><?php echo htmlspecialchars((string) $link['label'], ENT_QUOTES, 'UTF-8'); ?></a>
     <?php endforeach; ?>
-  </div>
+  </nav>
 </footer>

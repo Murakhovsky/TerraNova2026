@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Interfaces\Web\Controller;
@@ -17,6 +18,8 @@ class PageController extends ControllerBase
             return;
         }
 
+        $this->view->interfaceSurface = 'public';
+        $this->view->pageAssetEntries = ['public-surface'];
         $this->view->page = $page;
         $this->view->inboundRequestStatus = null;
         $this->view->metaTitle = $page['title'] . ' | Terra Nova CLUB';
@@ -41,4 +44,3 @@ class PageController extends ControllerBase
         return $scheme . '://' . $host . '/' . ltrim($path, '/');
     }
 }
-

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Interfaces\Web\Routing;
@@ -10,5 +11,6 @@ final readonly class PropertyModuleRouteContributor implements ModuleRouteContri
     public function register(RouterInterface $router): void
     {
         PropertyRuntimeRoutes::register($router);
+        PublicPropertyRoutes::register($router);
     }
 }

@@ -1,0 +1,37 @@
+name: WEB V0.10 Public Surface Refinement
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  public-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Public surface architecture
+        run: |
+          php -l app/Interfaces/Web/Controller/PublicPropertyController.php
+          php -l app/Interfaces/Web/Controller/IndexController.php
+          php -l app/Interfaces/Web/Controller/PageController.php
+          php -l app/Interfaces/Web/Routing/PublicPropertyRoutes.php
+          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
+          php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
+          php -l tests/architecture/web_v010_public_surface.php
+          php tests/architecture/web_v010_public_surface.php
+          node --check frontend/entrypoints/public-surface.js
+          node --check frontend/features/public/surface.js

@@ -1,30 +1,59 @@
 <?php
 $h = static fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$money = static function ($amount, $currency = 'USD', $period = 'total') {
+$money = static function ($amount, $currency = 'USD', $period = 'total'): string {
     if ($amount === null || $amount === '') {
         return 'за запитом';
     }
-
     $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
-
     return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
 };
-$properties = $properties ?? [];
+$properties = (array) ($properties ?? []);
 $catalogStatus = $catalogStatus ?? null;
+$geoProperties = array_values(array_filter($properties, static fn(array $property): bool =>
+    isset($property['latitude'], $property['longitude'])
+    && is_numeric($property['latitude'])
+    && is_numeric($property['longitude'])
+));
+$lats = array_map(static fn(array $property): float => (float) $property['latitude'], $geoProperties);
+$lngs = array_map(static fn(array $property): float => (float) $property['longitude'], $geoProperties);
+$minLat = $lats ? min($lats) : 0.0;
+$maxLat = $lats ? max($lats) : 0.0;
+$minLng = $lngs ? min($lngs) : 0.0;
+$maxLng = $lngs ? max($lngs) : 0.0;
+$latRange = max(0.000001, $maxLat - $minLat);
+$lngRange = max(0.000001, $maxLng - $minLng);
+$position = static function (array $property) use ($geoProperties, $maxLat, $minLng, $latRange, $lngRange): array {
+    if (count($geoProperties) === 1) {
+        return [50.0, 50.0];
+    }
+    $x = 8 + (84 * (((float) $property['longitude'] - $minLng) / $lngRange));
+    $y = 8 + (84 * (($maxLat - (float) $property['latitude']) / $latRange));
+    return [max(4, min(96, $x)), max(4, min(96, $y))];
+};
 ?>
 
-<?php $this->partial('shared/public_header', ['active' => 'map']); ?>
+<?php $this->partial('shared/public_header', [
+    'active' => 'catalog',
+    'actions' => [
+        ['href' => 'property/catalog', 'label' => 'Список', 'class' => 'tn-btn--ghost'],
+        ['href' => 'property/submit', 'label' => 'Подати об’єкт', 'class' => 'tn-btn--dark'],
+    ],
+]); ?>
 
-<main class="tn-page">
+<main class="tn-page tn-public-map-page">
+  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
+    <a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a><span>/</span><span>Карта</span>
+  </nav>
+
   <section class="tn-page-hero tn-page-hero--catalog">
     <div>
       <p class="tn-kicker">Карта</p>
-      <h1>Об’єкти поруч</h1>
-      <p>Локації, ціни й доступні варіанти з переходом у картку або фільтри каталогу.</p>
+      <h1>Об’єкти за географічними координатами</h1>
+      <p>Позиції на схемі розраховані з фактичних latitude/longitude у публічних картках об’єктів.</p>
     </div>
     <div class="tn-page-hero__meta">
-      <strong><?php echo count($properties); ?></strong>
-      <span>точки на карті</span>
+      <strong><?php echo count($geoProperties); ?></strong>
+      <span>об’єктів із координатами</span>
     </div>
   </section>
 
@@ -32,17 +61,19 @@ $catalogStatus = $catalogStatus ?? null;
     <?php $this->partial('shared/catalog_viewbar', ['active' => 'map']); ?>
 
     <?php if ($catalogStatus): ?>
-      <div class="tn-empty-state"><h2>Карта тимчасово недоступна</h2><p><?php echo $h($catalogStatus); ?></p></div>
-    <?php elseif (!$properties): ?>
-      <div class="tn-empty-state"><h2>На карті поки немає об’єктів</h2><p>Поверніться в каталог і змініть фільтри або подайте новий об’єкт на модерацію.</p></div>
+      <div class="tn-empty-state" role="status"><h2>Карта тимчасово недоступна</h2><p><?php echo $h($catalogStatus); ?></p></div>
+    <?php elseif (!$geoProperties): ?>
+      <div class="tn-empty-state">
+        <h2>Немає опублікованих об’єктів із координатами</h2>
+        <p>Каталог продовжує працювати. Карта покаже об’єкти, щойно для їхніх карток будуть задані географічні координати.</p>
+        <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">До каталогу</a>
+      </div>
     <?php else: ?>
-      <div class="tn-map-canvas" aria-label="Карта об’єктів Terra Nova">
-        <?php foreach ($properties as $index => $property): ?>
-          <?php
-            $left = 16 + (($index * 29) % 68);
-            $top = 18 + (($index * 23) % 58);
-          ?>
-          <a class="tn-map-pin" style="left: <?php echo $left; ?>%; top: <?php echo $top; ?>%;" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">
+      <div class="tn-map-canvas tn-map-canvas--geo" aria-label="Географічна схема об’єктів Terra Nova">
+        <div class="tn-map-canvas__axis" aria-hidden="true"></div>
+        <?php foreach ($geoProperties as $property): ?>
+          <?php [$left, $top] = $position($property); ?>
+          <a class="tn-map-pin" style="left: <?php echo number_format($left, 2, '.', ''); ?>%; top: <?php echo number_format($top, 2, '.', ''); ?>%;" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" title="<?php echo $h($property['title']); ?>">
             <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
             <span><?php echo $h($property['city']); ?></span>
           </a>
@@ -50,12 +81,13 @@ $catalogStatus = $catalogStatus ?? null;
       </div>
 
       <div class="tn-map-list">
-        <?php foreach ($properties as $property): ?>
+        <?php foreach ($geoProperties as $property): ?>
           <article>
             <div>
               <p class="tn-kicker"><?php echo $h($property['public_id']); ?></p>
               <h2><a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>"><?php echo $h($property['title']); ?></a></h2>
-              <p><?php echo $h($property['city']); ?><?php if ($property['address']): ?> / <?php echo $h($property['address']); ?><?php endif; ?></p>
+              <p><?php echo $h($property['city']); ?><?php if (!empty($property['address'])): ?> / <?php echo $h($property['address']); ?><?php endif; ?></p>
+              <small><?php echo $h(number_format((float) $property['latitude'], 5, '.', '')); ?>, <?php echo $h(number_format((float) $property['longitude'], 5, '.', '')); ?></small>
             </div>
             <strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
           </article>
@@ -63,10 +95,15 @@ $catalogStatus = $catalogStatus ?? null;
       </div>
     <?php endif; ?>
   </section>
+
+  <?php if (count($properties) > count($geoProperties)): ?>
+    <section class="tn-empty-state tn-public-map-page__notice">
+      <h2><?php echo count($properties) - count($geoProperties); ?> об’єктів не показано на карті</h2>
+      <p>У них поки немає координат. Вони залишаються доступними у звичайному каталозі.</p>
+      <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути всі</a>
+    </section>
+  <?php endif; ?>
 </main>
 
 <?php $this->partial('shared/mobile_dock', ['active' => 'map']); ?>
-
-<?php $this->partial('shared/public_footer', [
-    'text' => 'Карта доповнює каталог і допомагає швидко оцінити локацію перед запитом або переглядом.',
-]); ?>
+<?php $this->partial('shared/public_footer', ['text' => 'Карта використовує координати з публічних карток об’єктів Terra Nova CLUB.']); ?>

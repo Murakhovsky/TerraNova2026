@@ -16,7 +16,7 @@ $section = static function (array $items, string $key): ?array {
 };
 
 $public = FrontendNavigation::public();
-$expectedPublic = ['home', 'catalog', 'services', 'partners', 'about', 'cos'];
+$expectedPublic = ['catalog', 'services', 'partners', 'about', 'cos'];
 if ($keys($public) !== $expectedPublic) throw new RuntimeException('Public primary navigation changed without an explicit interface architecture decision.');
 
 $workspaceCore = FrontendNavigation::workspaceCore('manager');

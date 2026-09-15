@@ -16,6 +16,7 @@ $entries = [
     'diagnostics-methodology-studio',
     'portal-cabinet',
     'property-workspace',
+    'public-surface',
     'sales-workspace',
     'terranova-catalog-api',
     'terranova-club',
