@@ -5,7 +5,7 @@ description: Канонічна WEB-документація Company Operating S
 hero:
   name: Company Operating System
   text: Documentation
-  tagline: Від бізнес-процесу до Domain, Runtime, Contract, Agent і коду. Один простір для продукту, архітектури та executable reference.
+  tagline: Від бізнес-процесу до Domain, Capability, Runtime, Contract, Agent і коду. Один простір для продукту, архітектури та executable reference.
   actions:
     - theme: brand
       text: Зрозуміти COS за 10 хв
@@ -18,14 +18,14 @@ features:
     details: Product model, Mental Model, current scope, workflows та bounded contexts без походів по сотнях PHP-файлів.
     link: /00-start/what-is-cos
   - title: Business Workflows
-    details: Sales, Property і Diagnostic від business goal до decisions, failures та code map.
+    details: Sales, Property і Diagnostic від business goal до ownership, capabilities, evidence та code map.
     link: /02-workflows/sales-lead-to-managed-case
   - title: Architecture
     details: Kernel, Domains, cross-domain contracts, runtime, persistence та dependency direction.
     link: /03-architecture/domain-map
-  - title: Build with COS
-    details: Development rules, generated reference, module lifecycle, testing та operations.
-    link: /09-development/adding-a-domain
+  - title: Verify the Model
+    details: Generated reference, capability debt, runtime evidence, module lifecycle, testing та operations.
+    link: /12-reference/README
 ---
 
 <div class="cos-home-shell">
@@ -51,6 +51,8 @@ features:
       <div class="cos-home-flow__arrow">→</div>
       <div class="cos-home-flow__node"><strong>Domain</strong><span>semantic owner</span></div>
       <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Capability</strong><span>declared ability</span></div>
+      <div class="cos-home-flow__arrow">→</div>
       <div class="cos-home-flow__node is-core"><strong>Kernel Runtime</strong><span>generic mechanism</span></div>
       <div class="cos-home-flow__arrow">→</div>
       <div class="cos-home-flow__node"><strong>Result</strong><span>state / audit</span></div>
@@ -63,9 +65,10 @@ features:
         <div class="cos-home-kicker">Current baseline</div>
         <h2>Що реально є в current checkout</h2>
       </div>
-      <p>Цей блок більше не дублює runtime-версії руками. Kernel і Domain manifests читаються безпосередньо з коду під час VitePress build; exact capabilities, events, commands і routes залишаються у generated reference.</p>
+      <p>Перший блок показує health структурованої моделі: processes, capability coverage, evidence, runtime backing і debt. Нижче — executable Kernel та Domain manifests. Обидва зрізи будуються з current checkout, а не з вручну намальованого «все зелене».</p>
     </div>
 
+    <KnowledgeHealth />
     <SystemStatus />
   </section>
 
@@ -92,7 +95,7 @@ features:
       <a class="cos-home-route" href="./12-reference/README.html">
         <small>03 / VERIFY</small>
         <strong>Мені потрібні точні executable facts</strong>
-        <span>Modules, versions, capabilities, events, commands, routes та generated reference.</span>
+        <span>Processes, capabilities, debt, evidence, events, commands, routes та generated reference.</span>
       </a>
     </div>
   </section>

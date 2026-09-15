@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildKnowledgeHealth } from './knowledge-health.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -33,9 +34,28 @@ function humanize(value) {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }
 
+function emptyDomainHealth() {
+  return {
+    processes: 0,
+    steps: 0,
+    capabilityMappedSteps: 0,
+    capabilityGapSteps: 0,
+    evidenceVerifiedSteps: 0,
+    runtimeVerifiedSteps: 0,
+    criticalSteps: 0,
+    criticalSourceVerified: 0,
+    criticalRuntimeVerified: 0,
+    debtItems: 0,
+    highDebtItems: 0,
+    mediumDebtItems: 0,
+    lowDebtItems: 0,
+  };
+}
+
 export function buildSystemStatus() {
   const modules = [];
   const supportingAreas = [];
+  const knowledgeHealth = buildKnowledgeHealth();
 
   if (existsSync(domainsRoot)) {
     for (const entry of readdirSync(domainsRoot, { withFileTypes: true })) {
@@ -65,6 +85,7 @@ export function buildSystemStatus() {
         capabilityCount: countCapabilities(source),
         documented: Boolean(link),
         link,
+        health: knowledgeHealth.domains[id] ?? emptyDomainHealth(),
       });
     }
   }
@@ -73,7 +94,7 @@ export function buildSystemStatus() {
   supportingAreas.sort((a, b) => a.name.localeCompare(b.name, 'en'));
 
   return {
-    authority: 'runtime',
+    authority: 'runtime+structured-docs',
     branch: 'main',
     kernel: {
       name: 'Kernel',
@@ -83,9 +104,10 @@ export function buildSystemStatus() {
     },
     modules,
     supportingAreas,
+    knowledgeHealth,
     documentedModules: modules.filter((module) => module.documented).length,
     totalModules: modules.length,
-    referenceKinds: ['modules', 'capabilities', 'permissions', 'events', 'application/routes', 'commands'],
+    referenceKinds: ['modules', 'capabilities', 'processes', 'capability debt', 'runtime evidence', 'permissions', 'events', 'application/routes', 'commands'],
     referenceLink: '/12-reference/README.html',
     auditLink: '/01-product/documentation-sync.html',
   };
