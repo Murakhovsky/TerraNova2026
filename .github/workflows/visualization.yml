@@ -1,0 +1,45 @@
+name: COS Visualization V0.1-V0.2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/Kernel/Visualization/**'
+      - 'app/Infrastructure/Visualization/**'
+      - 'app/Bootstrap/KernelServices.php'
+      - 'tests/unit/visualization_*.php'
+      - 'tests/architecture/visualization_*.php'
+      - '.github/workflows/visualization.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Kernel/Visualization/**'
+      - 'app/Infrastructure/Visualization/**'
+      - 'app/Bootstrap/KernelServices.php'
+      - 'tests/unit/visualization_*.php'
+      - 'tests/architecture/visualization_*.php'
+      - '.github/workflows/visualization.yml'
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Visualization architecture boundary
+        run: php tests/architecture/visualization_v02.php
+      - name: Visualization graph invariants
+        run: |
+          php tests/unit/visualization_graph_foundation.php
+          php tests/unit/visualization_architecture_graph.php
+      - name: PHP syntax
+        run: |
+          find app/Kernel/Visualization app/Infrastructure/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/KernelServices.php
+          php -l tests/architecture/visualization_v02.php
+          php -l tests/unit/visualization_graph_foundation.php
+          php -l tests/unit/visualization_architecture_graph.php
