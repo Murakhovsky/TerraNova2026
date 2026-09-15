@@ -11,7 +11,11 @@ contract: reference-v1
 
 Reference section відповідає на питання **«що executable code або machine-readable documentation contracts декларують точно?»**.
 
-Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+
+Current Process Registry schema: **v4**.
+
+Capability Debt Registry schema: **v1**.
 
 ## Authority model
 
@@ -35,7 +39,8 @@ Generated files не редагуються вручну у `main`.
 
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
-| Canonical business processes, ownership, topology і runtime coverage | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + generated executable reference |
+| Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + current-checkout runtime evidence |
+| Open capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + module manifests |
 | Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
 | Module extension points і contributions | [Module Extension Points](extension-points.md) | module manifests + Kernel extension registry |
 | Application entry points / use cases | [Application Use Cases](application-use-cases.md) | Domain Application/UseCase structure |
@@ -60,18 +65,6 @@ Canonical vocabulary та терміни COS.
 
 Навігаційний reference по основних Kernel mechanisms і їхній ролі.
 
-## Що не шукати тут
-
-Reference section не повинна пояснювати:
-
-- навіщо існує Domain;
-- як проходить business workflow у зрозумілій для людини формі;
-- чому обрана конкретна architecture;
-- які alternatives були відхилені;
-- як користувач працює з UI.
-
-Для цього є Domain, Workflow, Architecture, ADR та UI sections.
-
 ## Як вибрати джерело
 
 ```text
@@ -81,8 +74,11 @@ Reference section не повинна пояснювати:
 Питання: «Як працює бізнес-процес?»
 → Workflow + ProcessDiagram
 
-Питання: «Яка machine-readable topology процесу, хто відповідає за steps і що mapped у runtime?»
+Питання: «Хто відповідає за process steps і що mapped у runtime?»
 → Business Process Registry
+
+Питання: «Які capability gaps уже визнані і як їх закривати?»
+→ Capability Debt Backlog
 
 Питання: «Хто володіє domain semantics?»
 → Domain / Architecture
@@ -99,8 +95,8 @@ Reference section не повинна пояснювати:
 
 ## Drift protection
 
-CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary та Business Process Registry.
+CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry та Capability Debt Backlog.
 
-Process Registry schema `v2` має structural/ownership/runtime-mapping check: кожний step має declared owner з process actors; усі steps reachable від root; process має terminal; use case, command і event mappings повинні існувати у generated reference того самого checkout; source mappings повинні існувати у repository; `runtime-verified` process не може мати unmapped critical steps.
+Process Registry schema `v4` перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority.
 
-Narrative `Current Scope` і Domain overviews мають окремі version-drift checks проти module manifests. Зміна executable contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.
+Narrative `Current Scope`, Domain overviews і цей Reference Index мають окремі drift checks проти executable/structured authorities. Зміна contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.

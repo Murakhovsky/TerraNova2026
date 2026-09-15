@@ -13,26 +13,11 @@ Workflow починається з business goal, а не з нового Servic
 
 ## 1. Define business contract
 
-Зафіксуйте:
-
-- business goal;
-- actors;
-- trigger/input;
-- expected output/outcome;
-- decision points;
-- failure paths;
-- owning Domain.
-
-Одразу визначте тільки **business state**:
-
-- `as-is` — поточний реальний процес;
-- `to-be` — цільовий процес.
-
-Не записуйте authored `verification`. Verification обчислюється з current-checkout evidence.
+Зафіксуйте business goal, actors, trigger/input, outcome, decision points, failure paths та owning Domain. `process_state` описує лише бізнес-стан: `as-is` або `to-be`. Authored `verification` заборонена: її обчислює current-checkout evidence layer.
 
 ## 2. Draw the business flow
 
-Канонічний workflow має derived Mermaid diagram з Process Registry. Спочатку моделюйте business sequence, а не class graph.
+Спочатку моделюйте business sequence, а не class graph.
 
 ```text
 Trigger
@@ -42,9 +27,7 @@ Business operation / decision
 State or outcome
 ```
 
-Для interaction використовуйте `sequenceDiagram` лише коли interaction semantics явно описані. Для entity lifecycle — `stateDiagram-v2` лише коли існує canonical state model.
-
-Повні conventions: [Business Process Modeling](../02-workflows/business-process-modeling.md).
+Для interaction використовуйте `sequenceDiagram` лише коли interaction semantics явно описані. Для entity lifecycle — `stateDiagram-v2` лише коли існує canonical state model. Повні conventions: [Business Process Modeling](../02-workflows/business-process-modeling.md).
 
 ## 3. Register the process
 
@@ -54,19 +37,7 @@ State or outcome
 docs/.vitepress/processes/<process-id>.json
 ```
 
-Schema `v4` фіксує:
-
-- stable process ID;
-- process Domain;
-- business state (`as-is` / `to-be`);
-- workflow page;
-- trigger, actors та outcomes;
-- steps і edges;
-- primary owner;
-- step domain;
-- canonical capability або explicit capability gap;
-- critical steps;
-- runtime/evidence mappings.
+Current Process Registry schema `v4` фіксує stable process ID, Domain, business state, actors, steps, edges, primary owner, step Domain, canonical capability або explicit capability gap, criticality та runtime/evidence mappings.
 
 Мінімальний mapped step:
 
@@ -89,7 +60,7 @@ Schema `v4` фіксує:
 }
 ```
 
-Якщо semantic capability реально ще не оголошена Domain module, не підміняйте її permission або випадковою сусідньою capability:
+Якщо semantic capability реально ще не оголошена Domain module, не підміняйте її permission або сусідньою capability:
 
 ```json
 {
@@ -99,13 +70,11 @@ Schema `v4` фіксує:
 }
 ```
 
-Це architecture debt, а не причина брехати в registry.
+Це architecture debt, але сам Process Registry володіє лише фактом gap.
 
 ## 4. Assign ownership and capability
 
-Кожний step має одного primary responsible `owner` з declared actors.
-
-Далі вкажіть:
+Кожний step має одного primary responsible `owner` з declared actors і explicit `domain`.
 
 ```text
 Step
@@ -115,11 +84,36 @@ Domain
 Capability або explicit gap
 ```
 
-Capability authority — `contributions.capabilities` у module manifest. Checker читає її через current-checkout evidence catalogue, не через generated Markdown.
+Capability authority — `contributions.capabilities` у module manifest. Checker читає її через current-checkout evidence catalogue, не через generated Markdown. Schema v4 не дозволяє step мовчки переходити в інший Domain.
 
-Поточна schema v4 не дозволяє step мовчки переходити в інший Domain. Cross-domain step потребує наступного explicit registry contract.
+## 5. Register capability debt
 
-## 5. Map execution evidence
+Кожний `capability_gap` мусить мати рівно один matching item у:
+
+```text
+docs/.vitepress/capability-debt.json
+```
+
+Capability Debt Registry schema `v1` зберігає remediation metadata, а не дублює process truth:
+
+```json
+{
+  "id": "sales.lead-to-managed-case:intake",
+  "process_id": "sales.lead-to-managed-case",
+  "step_id": "intake",
+  "gap_type": "missing-domain-capability",
+  "owner_domain": "sales",
+  "severity": "high",
+  "resolution": "declare-domain-capability",
+  "target_capability": "sales.lead.intake"
+}
+```
+
+Severity policy детермінований: critical canonical step → `high`, non-critical canonical step → `medium`. Target capability мусить бути в namespace owning Domain і ще не існувати в module capability authority.
+
+Debt закривається тільки разом: Domain оголошує target capability, process step переходить з gap на capability, matching debt item видаляється. Generated [Capability Debt Backlog](../12-reference/capability-debt.md) покаже залишок автоматично.
+
+## 6. Map execution evidence
 
 Runtime mapping types:
 
@@ -129,20 +123,9 @@ Runtime mapping types:
 - `contract` → canonical module `cross_domain_contracts` declaration;
 - `source` → exact repository path + optional symbol.
 
-Не вигадуйте event/command/contract names «по сенсу». Якщо Evidence Resolver їх не знає, використовуйте реальний source mapping або спершу виправте executable authority.
+Evidence має `source` або `runtime` strength. Derived verification залишається окремою від capability coverage: `documented`, `source-verified`, `runtime-verified`.
 
-Evidence має дві сили:
-
-- `source`: use case, command або exact source існує в current checkout;
-- `runtime`: event/contract присутній у canonical runtime/architecture catalogue.
-
-Derived verification:
-
-- `documented` — не всі critical steps мають resolvable evidence;
-- `source-verified` — усі critical steps source-verified;
-- `runtime-verified` — усі critical steps мають runtime-strength evidence.
-
-## 6. Render the three canonical views
+## 7. Render the three canonical views
 
 Workflow page має рендерити:
 
@@ -152,35 +135,15 @@ Workflow page має рендерити:
 <ProcessDiagram process-id="domain.process-id" view="capability" direction="LR" />
 ```
 
-Вони відповідають на три різні питання:
+Вони відповідають на три різні питання: що відбувається, хто відповідає, яка Domain capability стоїть за step або де capability model має gap.
 
-1. що відбувається;
-2. хто відповідає;
-3. яка Domain capability стоїть за step або де capability model має gap.
+## 8. Connect UI and code
 
-## 7. Connect UI and code
+Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв'язувала бізнес, UX, Domain capability, Runtime і implementation. UI click не є business transition сам по собі.
 
-Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв'язувала бізнес, UX, Domain capability, Runtime і implementation.
+## 9. Verify
 
-UI click не є business transition сам по собі. Diagram має називати business action/result, якщо UI лише доставляє intent.
-
-## 8. Verify
-
-Перевірте:
-
-- happy path;
-- forbidden transitions;
-- duplicate delivery/idempotency;
-- external failure/retry;
-- tenant scope;
-- auditability;
-- Registry topology;
-- ownership;
-- step domain;
-- capability resolution або explicit gap;
-- runtime mappings;
-- derived verification;
-- три `ProcessDiagram` projections.
+Перевірте topology, ownership, step Domain, capability resolution або explicit gap, matching capability debt, runtime mappings, derived verification, три `ProcessDiagram` projections, failure paths, idempotency, tenant scope та auditability.
 
 Запустіть:
 
@@ -192,7 +155,7 @@ npm run docs:check
 npm run docs:build
 ```
 
-`workflow-v2` не пройде check без matching Process Registry definition, ownership view, capability view, valid capability/gap або з фальшивим runtime evidence.
+`workflow-v2` не пройде check без matching Process Registry definition, ownership/capability views, valid capability/gap, matching debt item або з фальшивим runtime evidence.
 
 ## Canonical examples
 
@@ -200,3 +163,4 @@ npm run docs:build
 - [Property Submission → Publication](../02-workflows/property-submission-to-publication.md)
 - [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md)
 - [Business Process Registry](../12-reference/business-processes.md)
+- [Capability Debt Backlog](../12-reference/capability-debt.md)

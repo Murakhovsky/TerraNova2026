@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "id": "diagnostic.session-to-recommendation:methodology",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "methodology",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.methodology.manage"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:session",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "session",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.session.start"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:evidence",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "evidence",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.evidence.capture"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:evaluation",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "evaluation",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.evaluation.run"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:result",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "result",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.result.record"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:complete",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "complete",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.session.complete"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:decision",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "decision",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.recommendation.accept"
+    },
+    {
+      "id": "sales.lead-to-managed-case:intake",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "intake",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.lead.intake"
+    },
+    {
+      "id": "sales.lead-to-managed-case:crm-inbox",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "crm-inbox",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "medium",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.crm.inbox.process"
+    },
+    {
+      "id": "sales.lead-to-managed-case:canonical-state",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "canonical-state",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.lead.state.manage"
+    },
+    {
+      "id": "sales.lead-to-managed-case:assign-owner",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "assign-owner",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.deal.owner.assign"
+    },
+    {
+      "id": "sales.lead-to-managed-case:pipeline",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "pipeline",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.pipeline.stage.manage"
+    },
+    {
+      "id": "sales.lead-to-managed-case:activity",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "activity",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "medium",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.activity.record"
+    },
+    {
+      "id": "sales.lead-to-managed-case:followup",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "followup",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.followup.schedule"
+    },
+    {
+      "id": "sales.lead-to-managed-case:outcome",
+      "process_id": "sales.lead-to-managed-case",
+      "step_id": "outcome",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "sales",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "sales.deal.outcome.record"
+    }
+  ]
+}
