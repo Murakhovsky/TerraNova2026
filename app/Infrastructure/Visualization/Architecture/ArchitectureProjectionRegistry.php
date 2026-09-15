@@ -44,6 +44,7 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
             $v::TYPE_KERNEL,
             $v::TYPE_DOMAIN,
             $v::TYPE_CAPABILITY,
+            $v::TYPE_CONTRACT,
             $v::TYPE_EVENT,
             $v::TYPE_RULE,
             $v::TYPE_ACTION,
@@ -56,6 +57,8 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
         $allRelations = [
             $v::REL_CONTAINS,
             $v::REL_DEPENDS_ON,
+            $v::REL_REQUIRES_CONTRACT,
+            $v::REL_PROVIDES_CONTRACT,
             $v::REL_OWNS,
             $v::REL_CONTRIBUTES,
             $v::REL_CONTRIBUTES_TO,
@@ -79,10 +82,16 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
             ], layout: 'flow'),
             new ArchitectureProjectionDefinition('domain', 'Domain', $allTypes, $allRelations, 2, 'radial'),
             new ArchitectureProjectionDefinition('dependencies', 'Dependencies', [
-                $v::TYPE_KERNEL, $v::TYPE_DOMAIN, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
+                $v::TYPE_KERNEL, $v::TYPE_DOMAIN, $v::TYPE_CONTRACT, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
             ], [
-                $v::REL_CONTAINS, $v::REL_DEPENDS_ON, $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
+                $v::REL_CONTAINS, $v::REL_DEPENDS_ON, $v::REL_REQUIRES_CONTRACT, $v::REL_PROVIDES_CONTRACT,
+                $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
             ], layout: 'hierarchical'),
+            new ArchitectureProjectionDefinition('contracts', 'Contracts', [
+                $v::TYPE_DOMAIN, $v::TYPE_CONTRACT,
+            ], [
+                $v::REL_OWNS, $v::REL_REQUIRES_CONTRACT, $v::REL_PROVIDES_CONTRACT,
+            ], layout: 'flow'),
             new ArchitectureProjectionDefinition('events', 'Events', [
                 $v::TYPE_DOMAIN, $v::TYPE_EVENT, $v::TYPE_RULE, $v::TYPE_ACTION,
             ], [$v::REL_OWNS, $v::REL_TRIGGERS, $v::REL_PRODUCES], layout: 'flow'),
