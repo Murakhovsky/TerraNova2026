@@ -26,11 +26,11 @@ use Interfaces\Web\Service\InboundRequestService;
 use Infrastructure\Integration\N8n\N8nWebhookService;
 use Domains\Property\Application\Service\PropertyManagementService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\CanonicalPropertyManagementWorkflowRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\CanonicalPropertyManagementWriteRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\Management\ComposedPropertyManagementRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyGroupManagementRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyManagementReadRepository;
-use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyManagementWorkflowRepository;
-use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyManagementWriteRepository;
 use Domains\Property\Application\UseCase\PropertyModerationService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
 use Domains\Property\Infrastructure\Presentation\PropertyPresentationService;
@@ -104,16 +104,25 @@ final class WebApplicationServices
             $di->getShared('propertyIdentityWorkflow'),
         ));
 
-        // V0.11 keeps the legacy SQL implementation as a compatibility backend, but the
-        // application-facing repository is now composed from narrow read/write/workflow/group ports.
+        // V0.12 cutover: legacy repository remains a read/media compatibility backend only.
+        // Authoritative Asset/Inventory/Listing mutations flow through propertyCanonicalRuntime.
         $di->setShared('propertyManagementLegacyBackend', fn() => new MysqlPropertyManagementRepository(
             $di->getShared('databaseService'), $di->getShared('mediaStorageService'), $di->getShared('organizationContext')->id(),
         ));
         $di->setShared('propertyManagementRepository', fn() => new ComposedPropertyManagementRepository(
             new LegacyPropertyManagementReadRepository($di->getShared('propertyManagementLegacyBackend')),
             new LegacyPropertyGroupManagementRepository($di->getShared('propertyManagementLegacyBackend')),
-            new LegacyPropertyManagementWriteRepository($di->getShared('propertyManagementLegacyBackend')),
-            new LegacyPropertyManagementWorkflowRepository($di->getShared('propertyManagementLegacyBackend')),
+            new CanonicalPropertyManagementWriteRepository(
+                $di->getShared('propertyCanonicalRuntime'),
+                $di->getShared('propertyManagementLegacyBackend'),
+                $di->getShared('databaseService')->connection(),
+                $di->getShared('organizationContext')->id(),
+            ),
+            new CanonicalPropertyManagementWorkflowRepository(
+                $di->getShared('propertyCanonicalRuntime'),
+                $di->getShared('propertyManagementLegacyBackend'),
+                $di->getShared('organizationContext')->id(),
+            ),
         ));
         $di->setShared('frontendPropertyMediaService', fn() => new PropertyManagementService($di->getShared('propertyManagementRepository')));
         $di->setShared('frontendPropertyPresentationService', fn() => new PropertyPresentationService(
