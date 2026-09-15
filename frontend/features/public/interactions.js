@@ -1,21 +1,3 @@
-const SAVED_KEY = 'tn_saved_properties';
-
-const readSaved = () => {
-  try {
-    return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
-  } catch (error) {
-    return [];
-  }
-};
-
-const writeSaved = (items) => {
-  try {
-    localStorage.setItem(SAVED_KEY, JSON.stringify([...new Set(items)]));
-  } catch (error) {
-    // Persistence is optional presentation state. Backend truth must never depend on it.
-  }
-};
-
 const analyticsEventFor = (element) => {
   const explicit = element.getAttribute('data-analytics-event');
   if (explicit) return explicit;
@@ -25,6 +7,28 @@ const analyticsEventFor = (element) => {
   if (href.startsWith('viber:')) return 'viber_click';
   if (href.includes('t.me/') || href.startsWith('tg:')) return 'telegram_click';
   return '';
+};
+
+const campaignFromLocation = () => {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    utm_source: params.get('utm_source') || '',
+    utm_medium: params.get('utm_medium') || '',
+    utm_campaign: params.get('utm_campaign') || '',
+  };
+};
+
+const fetchFavourites = async (options = {}) => {
+  const response = await fetch('/api/property/favourites', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.ok || !Array.isArray(payload.items)) {
+    throw new Error('Favourites state is unavailable.');
+  }
+  return payload;
 };
 
 export const initPublicInteractions = () => {
@@ -49,15 +53,16 @@ export const initPublicInteractions = () => {
     });
   });
 
-  const savedItems = new Set(readSaved());
+  const savedItems = new Set();
 
   const syncSavedButtons = () => {
     document.querySelectorAll('[data-save-property]').forEach((button) => {
-      const id = button.dataset.saveProperty;
+      const id = button.dataset.saveProperty || '';
       const initialText = button.dataset.initialText || button.textContent || '';
       const selectedText = button.dataset.toggleText || initialText;
       button.dataset.initialText = initialText;
       button.classList.toggle('is-selected', savedItems.has(id));
+      button.setAttribute('aria-pressed', String(savedItems.has(id)));
       button.textContent = savedItems.has(id) ? selectedText : initialText;
     });
   };
@@ -69,7 +74,7 @@ export const initPublicInteractions = () => {
     let visible = 0;
 
     items.forEach((item) => {
-      const selected = savedItems.has(item.dataset.favouriteItem);
+      const selected = savedItems.has(item.dataset.favouriteItem || '');
       item.hidden = !selected;
       if (selected) visible += 1;
     });
@@ -78,19 +83,55 @@ export const initPublicInteractions = () => {
     if (count) count.textContent = String(visible);
   };
 
-  document.addEventListener('click', (event) => {
+  const replaceSavedItems = (items) => {
+    savedItems.clear();
+    items.forEach((id) => {
+      if (typeof id === 'string' && id) savedItems.add(id);
+    });
+    syncSavedButtons();
+    syncFavouriteList();
+  };
+
+  const favouriteWorkspace = document.querySelector('[data-favourite-list]');
+  if (favouriteWorkspace) favouriteWorkspace.setAttribute('aria-busy', 'true');
+  syncSavedButtons();
+  syncFavouriteList();
+
+  fetchFavourites()
+    .then((payload) => replaceSavedItems(payload.items))
+    .catch(() => {
+      document.documentElement.dataset.favouritesState = 'unavailable';
+    })
+    .finally(() => favouriteWorkspace?.removeAttribute('aria-busy'));
+
+  document.addEventListener('click', async (event) => {
     const target = event.target instanceof Element ? event.target.closest('[data-save-property]') : null;
     if (!(target instanceof HTMLElement)) return;
 
-    const id = target.dataset.saveProperty;
-    if (!id) return;
+    const id = target.dataset.saveProperty || '';
+    if (!id || target.dataset.state === 'pending') return;
 
-    if (savedItems.has(id)) savedItems.delete(id);
-    else savedItems.add(id);
+    target.dataset.state = 'pending';
+    target.setAttribute('aria-busy', 'true');
+    if ('disabled' in target) target.disabled = true;
 
-    writeSaved([...savedItems]);
-    syncSavedButtons();
-    syncFavouriteList();
+    try {
+      const body = new URLSearchParams({ public_id: id });
+      const payload = await fetchFavourites({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body,
+      });
+      replaceSavedItems(payload.items);
+      target.dataset.state = 'ready';
+      document.documentElement.dataset.favouritesState = 'ready';
+    } catch (error) {
+      target.dataset.state = 'error';
+      document.documentElement.dataset.favouritesState = 'unavailable';
+    } finally {
+      target.removeAttribute('aria-busy');
+      if ('disabled' in target) target.disabled = false;
+    }
   });
 
   document.querySelectorAll('[data-toggle-text]:not([data-save-property])').forEach((button) => {
@@ -110,31 +151,9 @@ export const initPublicInteractions = () => {
     });
   });
 
-  const analyticsParams = new URLSearchParams(window.location.search);
-  const campaign = {
-    utm_source: analyticsParams.get('utm_source') || '',
-    utm_medium: analyticsParams.get('utm_medium') || '',
-    utm_campaign: analyticsParams.get('utm_campaign') || '',
-  };
-
-  const storedCampaign = (() => {
-    if (campaign.utm_source || campaign.utm_medium || campaign.utm_campaign) {
-      try {
-        sessionStorage.setItem('tn_campaign', JSON.stringify(campaign));
-      } catch (error) {
-        return campaign;
-      }
-    }
-
-    try {
-      return JSON.parse(sessionStorage.getItem('tn_campaign') || 'null') || campaign;
-    } catch (error) {
-      return campaign;
-    }
-  })();
-
+  const campaign = campaignFromLocation();
   document.querySelectorAll('form[method="post"], form:not([method])').forEach((form) => {
-    Object.entries(storedCampaign).forEach(([name, value]) => {
+    Object.entries(campaign).forEach(([name, value]) => {
       if (!value || form.querySelector(`[name="${name}"]`)) return;
       const input = document.createElement('input');
       input.type = 'hidden';
@@ -157,9 +176,9 @@ export const initPublicInteractions = () => {
     payload.set('source_page', window.location.pathname + window.location.search);
     payload.set('target', link.getAttribute('href') || '');
     payload.set('label', (link.textContent || '').trim());
-    payload.set('utm_source', storedCampaign.utm_source || '');
-    payload.set('utm_medium', storedCampaign.utm_medium || '');
-    payload.set('utm_campaign', storedCampaign.utm_campaign || '');
+    payload.set('utm_source', campaign.utm_source || '');
+    payload.set('utm_medium', campaign.utm_medium || '');
+    payload.set('utm_campaign', campaign.utm_campaign || '');
 
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/analytics/track', payload);
@@ -178,7 +197,4 @@ export const initPublicInteractions = () => {
     syncSavedButtons();
     syncFavouriteList();
   });
-
-  syncSavedButtons();
-  syncFavouriteList();
 };

@@ -22,7 +22,7 @@ final class SalesAdminIntegrationController extends WebController
                 (int) $user['id'],
                 SalesCapability::AdminIntegrationsManage->value,
             )) {
-            $this->response->setStatusCode(403, 'Forbidden');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return;
         }
 
@@ -40,17 +40,14 @@ final class SalesAdminIntegrationController extends WebController
             $items = $this->service()->integrations($organizationId);
             foreach ($items as &$item) {
                 $full = $this->service()->integration($organizationId, (int) $item['id']);
-                if ($full !== null) {
-                    $item = array_merge($item, $full);
-                }
+                if ($full !== null) $item = array_merge($item, $full);
             }
             unset($item);
             $this->view->integrations = $items;
             $this->view->integrationCatalog = $this->service()->catalog();
             $this->view->routingOptions = $this->service()->routingOptions($organizationId);
         } catch (Throwable $error) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $error->getMessage();
+            $this->renderFrontendException($error, 'sales_admin.integrations');
         }
     }
 

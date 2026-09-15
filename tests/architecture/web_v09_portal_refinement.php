@@ -11,20 +11,16 @@ $frontendNavigation = file_get_contents($root . '/app/Interfaces/Web/Navigation/
 $propertyNavigation = file_get_contents($root . '/app/Interfaces/Web/Navigation/PropertyNavigationContributor.php');
 $entrypoint = file_get_contents($root . '/frontend/entrypoints/portal-cabinet.js');
 $browserModule = file_get_contents($root . '/frontend/features/portal/cabinet.js');
+$productionModule = file_get_contents($root . '/frontend/core/production.js');
 $styles = file_get_contents($root . '/frontend/features/portal/cabinet.css');
 $vite = file_get_contents($root . '/vite.config.js');
 $frontendAssets = file_get_contents($root . '/tests/architecture/frontend_assets.php');
 
 $requireContains = static function (string $content, string $needle, string $message): void {
-    if (!str_contains($content, $needle)) {
-        throw new RuntimeException($message);
-    }
+    if (!str_contains($content, $needle)) throw new RuntimeException($message);
 };
-
 $requireNotContains = static function (string $content, string $needle, string $message): void {
-    if (str_contains($content, $needle)) {
-        throw new RuntimeException($message);
-    }
+    if (str_contains($content, $needle)) throw new RuntimeException($message);
 };
 
 $requireContains($controller, "preparePortalSurface(\$user, 'Кабінет')", 'Cabinet overview must prepare the Portal surface.');
@@ -56,8 +52,9 @@ $requireContains($propertyNavigation, 'SUBMIT_ROLES', 'Property submission capab
 
 $requireContains($entrypoint, "../features/portal/cabinet.css", 'Portal entrypoint must import feature CSS.');
 $requireContains($entrypoint, "../features/portal/cabinet.js", 'Portal entrypoint must import feature JS.');
+$requireContains($entrypoint, "../core/production.js", 'Portal entrypoint must use the cross-surface production guard.');
 $requireContains($browserModule, '[data-interface-surface="portal"][data-portal-header]', 'Portal browser module must activate only on the dedicated Portal shell.');
-$requireContains($browserModule, 'aria-busy', 'Portal forms must expose progressive submit state.');
+$requireContains($productionModule, 'aria-busy', 'Portal forms must inherit progressive submit state from the shared production guard.');
 $requireContains($browserModule, 'data-portal-menu-button', 'Portal browser module must own mobile shell interaction only.');
 $requireContains($styles, '.tn-portal-header__inner', 'Portal styles must include the dedicated shell.');
 $requireContains($styles, '@media (max-width: 650px)', 'Portal styles must cover the mobile baseline.');
@@ -65,8 +62,6 @@ $requireContains($styles, '@media (prefers-reduced-motion: reduce)', 'Portal sty
 $requireContains($vite, "'portal-cabinet'", 'Vite must expose the portal cabinet entrypoint.');
 $requireContains($frontendAssets, "'portal-cabinet'", 'Frontend asset validation must include the portal cabinet entrypoint.');
 
-if (is_dir($root . '/app/Domains/Portal')) {
-    throw new RuntimeException('WEB V0.9 must not invent a Portal DDD domain.');
-}
+if (is_dir($root . '/app/Domains/Portal')) throw new RuntimeException('WEB V0.9 must not invent a Portal DDD domain.');
 
 echo "WEB V0.9 portal refinement architecture passed.\n";

@@ -1,0 +1,81 @@
+name: WEB V0.12 Frontend Production Closure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/bootstrap_web.php'
+      - 'app/Interfaces/Web/**'
+      - 'frontend/**'
+      - 'tests/architecture/web_v012_production_closure.php'
+      - 'tests/architecture/web_v011_design_system.php'
+      - 'tests/architecture/web_v010_public_surface.php'
+      - 'tests/architecture/web_v09_portal_refinement.php'
+      - 'tests/architecture/frontend_assets.php'
+      - 'docs/architecture/web-v0.12.md'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/web-v012.yml'
+  pull_request:
+    paths:
+      - 'app/bootstrap_web.php'
+      - 'app/Interfaces/Web/**'
+      - 'frontend/**'
+      - 'tests/architecture/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/web-v012.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  production-closure:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: PHP syntax
+        run: |
+          php -l app/bootstrap_web.php
+          php -l app/Interfaces/Web/Controller/Concerns/RendersFrontendFailure.php
+          php -l app/Interfaces/Web/Controller/ControllerBase.php
+          php -l app/Interfaces/Web/Controller/WebController.php
+          php -l app/Interfaces/Web/Controller/ApiController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminTeamController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminPolicyController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminHealthController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminAgentController.php
+          php -l app/Interfaces/Web/Controller/SalesAdminIntegrationController.php
+          php -l app/Interfaces/Web/View/error/failure.phtml
+      - name: Browser module syntax
+        run: |
+          node --check frontend/core/production.js
+          node --check frontend/core/workspace-shell.js
+          node --check frontend/features/public/interactions.js
+          node --check frontend/features/public/surface.js
+          node --check frontend/features/portal/cabinet.js
+          node --check frontend/entrypoints/public-surface.js
+          node --check frontend/entrypoints/portal-cabinet.js
+          node --check frontend/entrypoints/terranova-interface.js
+      - name: WEB V0.12 production architecture
+        run: php tests/architecture/web_v012_production_closure.php
+      - name: Previous surface regression gates
+        run: |
+          php tests/architecture/web_v011_design_system.php
+          php tests/architecture/web_v010_public_surface.php
+          php tests/architecture/web_v09_portal_refinement.php
+          php tests/architecture/frontend_assets.php

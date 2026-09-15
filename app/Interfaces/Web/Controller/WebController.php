@@ -4,12 +4,15 @@ declare(strict_types=1);
 namespace Interfaces\Web\Controller;
 
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
+use Interfaces\Web\Controller\Concerns\RendersFrontendFailure;
 use Interfaces\Web\Security\CsrfTokenManager;
 use Kernel\Tenant\OrganizationContextInterface;
 use Phalcon\Mvc\Controller;
 
 abstract class WebController extends Controller
 {
+    use RendersFrontendFailure;
+
     protected function auth(): AuthenticatedUserContextInterface
     {
         return $this->di->getShared('authService');
@@ -28,7 +31,7 @@ abstract class WebController extends Controller
             return null;
         }
         if (!$this->auth()->isManager($user)) {
-            $this->response->setStatusCode(403, 'Forbidden');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return null;
         }
         return $user;
@@ -42,7 +45,7 @@ abstract class WebController extends Controller
             return null;
         }
         if (!$this->auth()->isAdmin($user)) {
-            $this->response->setStatusCode(403, 'Forbidden');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return null;
         }
         return $user;

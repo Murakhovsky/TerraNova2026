@@ -15,7 +15,10 @@ final class SalesAdminHealthController extends WebController
         if ($user === null) { $this->response->redirect('auth/login'); return; }
         if (!$this->auth()->isAdmin($user) && !$this->di->getShared('salesAccessControl')->hasCapability(
             $this->organization()->id(), (int) $user['id'], SalesCapability::AdminAuditView->value,
-        )) { $this->response->setStatusCode(403, 'Forbidden'); return; }
+        )) {
+            $this->renderFrontendFailure(403, null, 'workspace');
+            return;
+        }
 
         $this->view->title = 'Sales Administration Health & Audit';
         $this->view->metaTitle = 'Sales Health & Audit | Terra Nova COS';
@@ -27,9 +30,7 @@ final class SalesAdminHealthController extends WebController
         try {
             $this->view->administrationHealth = $this->service()->dashboard($this->organization()->id(), 50);
         } catch (Throwable $error) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $error->getMessage();
-            $this->view->administrationHealth = [];
+            $this->renderFrontendException($error, 'sales_admin.health');
         }
     }
 

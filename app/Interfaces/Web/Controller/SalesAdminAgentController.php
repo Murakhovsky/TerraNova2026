@@ -16,8 +16,7 @@ final class SalesAdminAgentController extends WebController
             $this->view->agents = $this->service()->agents($this->organization()->id());
             $this->view->agentCatalog = $this->service()->catalog();
         } catch (Throwable $exception) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $exception->getMessage();
+            $this->renderFrontendException($exception, 'sales_admin.agents');
         }
     }
 
@@ -28,14 +27,14 @@ final class SalesAdminAgentController extends WebController
         $agentName = trim((string) ($name ?: $this->dispatcher->getParam('name')));
         try {
             $this->view->agent = $this->service()->agent($this->organization()->id(), $agentName);
+            if ($this->view->agent === null) {
+                $this->renderFrontendFailure(404, null, 'workspace');
+                return;
+            }
             $this->view->agentCatalog = $this->service()->catalog();
-            $this->view->agentRevisions = $this->view->agent === null
-                ? []
-                : $this->service()->revisions($this->organization()->id(), $agentName, 50);
-            if ($this->view->agent === null) $this->response->setStatusCode(404, 'Not Found');
+            $this->view->agentRevisions = $this->service()->revisions($this->organization()->id(), $agentName, 50);
         } catch (Throwable $exception) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $exception->getMessage();
+            $this->renderFrontendException($exception, 'sales_admin.agent');
         }
     }
 

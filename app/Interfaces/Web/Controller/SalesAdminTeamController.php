@@ -15,7 +15,7 @@ final class SalesAdminTeamController extends WebController
         if ($user === null) { $this->response->redirect('auth/login'); return; }
         if (!$this->auth()->isAdmin($user)
             && !$this->di->getShared('salesAccessControl')->hasCapability($this->organization()->id(), (int) $user['id'], SalesCapability::AdminTeamsManage->value)) {
-            $this->response->setStatusCode(403, 'Forbidden');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return;
         }
         $this->view->title = 'Users, Teams & Authority';
@@ -31,8 +31,7 @@ final class SalesAdminTeamController extends WebController
             $this->view->users = $this->service()->users($this->organization()->id());
             $this->view->teamCatalog = $this->service()->catalog();
         } catch (Throwable $error) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $error->getMessage();
+            $this->renderFrontendException($error, 'sales_admin.teams');
         }
     }
 

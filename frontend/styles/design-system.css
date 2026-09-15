@@ -1,7 +1,7 @@
-@layer tn-foundation, tn-components, tn-patterns, tn-layouts, tn-workspace;
+@layer tn-reset, tn-tokens, tn-foundation, tn-components, tn-patterns, tn-production, tn-layouts, tn-features;
 
-@import './tokens.css';
-@import './foundation.css';
-@import './components.css';
-@import './patterns.css';
-@import '../layouts/surfaces.css';
+@import './tokens.css' layer(tn-tokens);
+@import './foundation.css' layer(tn-foundation);
+@import './components.css' layer(tn-components);
+@import './patterns.css' layer(tn-patterns);
+@import './production.css' layer(tn-production);

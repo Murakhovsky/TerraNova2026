@@ -16,8 +16,7 @@ final class SalesAdminController extends WebController
         try {
             $this->view->pipelines = $this->pipelineService()->pipelines($this->organization()->id());
         } catch (Throwable $exception) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $exception->getMessage();
+            $this->renderFrontendException($exception, 'sales_admin.pipelines');
         }
     }
 
@@ -28,10 +27,11 @@ final class SalesAdminController extends WebController
         $pipelineId = trim((string) ($id ?: $this->dispatcher->getParam('id')));
         try {
             $this->view->pipeline = $this->pipelineService()->pipeline($this->organization()->id(), $pipelineId);
-            if ($this->view->pipeline === null) $this->response->setStatusCode(404, 'Not Found');
+            if ($this->view->pipeline === null) {
+                $this->renderFrontendFailure(404, null, 'workspace');
+            }
         } catch (Throwable $exception) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $exception->getMessage();
+            $this->renderFrontendException($exception, 'sales_admin.pipeline');
         }
     }
 
@@ -43,8 +43,7 @@ final class SalesAdminController extends WebController
             $this->view->rules = $this->ruleService()->rules($this->organization()->id());
             $this->view->ruleCatalog = $this->ruleService()->catalog();
         } catch (Throwable $exception) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $exception->getMessage();
+            $this->renderFrontendException($exception, 'sales_admin.rules');
         }
     }
 
@@ -55,12 +54,14 @@ final class SalesAdminController extends WebController
         $ruleId = trim((string) ($id ?: $this->dispatcher->getParam('id')));
         try {
             $this->view->rule = $this->ruleService()->rule($this->organization()->id(), $ruleId);
+            if ($this->view->rule === null) {
+                $this->renderFrontendFailure(404, null, 'workspace');
+                return;
+            }
             $this->view->ruleCatalog = $this->ruleService()->catalog();
-            $this->view->ruleRevisions = $this->view->rule === null ? [] : $this->ruleService()->revisions($this->organization()->id(), $ruleId, 50);
-            if ($this->view->rule === null) $this->response->setStatusCode(404, 'Not Found');
+            $this->view->ruleRevisions = $this->ruleService()->revisions($this->organization()->id(), $ruleId, 50);
         } catch (Throwable $exception) {
-            $this->response->setStatusCode(503, 'Service Unavailable');
-            $this->view->pageStatus = $exception->getMessage();
+            $this->renderFrontendException($exception, 'sales_admin.rule');
         }
     }
 

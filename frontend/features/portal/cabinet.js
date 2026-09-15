@@ -25,31 +25,11 @@ if (portalHeader && document.body) {
     });
 
     menu.addEventListener('click', (event) => {
-      if (event.target.closest('a')) {
-        closeMenu();
-      }
+      if (event.target.closest('a')) closeMenu();
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        closeMenu();
-      }
+      if (event.key === 'Escape') closeMenu();
     });
   }
-
-  root.querySelectorAll('.tn-portal-page form, .tn-property-form').forEach((form) => {
-    form.addEventListener('submit', () => {
-      if (form.getAttribute('aria-busy') === 'true') {
-        return;
-      }
-
-      form.setAttribute('aria-busy', 'true');
-      form.dataset.submitting = 'true';
-
-      const submitter = form.querySelector('button[type="submit"], input[type="submit"]');
-      if (submitter) {
-        submitter.classList.add('is-pending');
-      }
-    });
-  });
 }

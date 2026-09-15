@@ -1,5 +1,3 @@
-const STORAGE_KEY = 'tn_workspace_collapsed';
-
 const setSidebarOpen = (open) => {
   const sidebar = document.querySelector('[data-workspace-sidebar]');
   const menu = document.querySelector('[data-workspace-menu]');
@@ -71,24 +69,18 @@ export const initWorkspaceShell = () => {
   const menu = document.querySelector('[data-workspace-menu]');
   const more = document.querySelector('[data-workspace-more]');
 
-  let collapsed = false;
-  try {
-    collapsed = localStorage.getItem(STORAGE_KEY) === '1';
-  } catch (error) {
-    collapsed = false;
-  }
-  document.body.classList.toggle('tn-workspace-collapsed', collapsed);
+  const setCollapsed = (collapsed) => {
+    document.body.classList.toggle('tn-workspace-collapsed', collapsed);
+    document.body.dataset.workspaceSidebarCollapsed = String(collapsed);
+    collapse?.setAttribute('aria-pressed', String(collapsed));
+    collapse?.setAttribute('aria-label', collapsed ? 'Розгорнути навігацію' : 'Згорнути навігацію');
+    if (collapse) collapse.textContent = collapsed ? '›' : '‹';
+  };
+
+  setCollapsed(false);
 
   collapse?.addEventListener('click', () => {
-    const next = !document.body.classList.contains('tn-workspace-collapsed');
-    document.body.classList.toggle('tn-workspace-collapsed', next);
-    collapse.setAttribute('aria-label', next ? 'Розгорнути навігацію' : 'Згорнути навігацію');
-    collapse.textContent = next ? '›' : '‹';
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-    } catch (error) {
-      // Workspace remains fully usable when browser storage is unavailable.
-    }
+    setCollapsed(!document.body.classList.contains('tn-workspace-collapsed'));
   });
 
   menu?.addEventListener('click', () => setSidebarOpen(!sidebar.classList.contains('is-mobile-open')));
@@ -99,6 +91,10 @@ export const initWorkspaceShell = () => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || sidebar.contains(target) || menu?.contains(target) || more?.contains(target)) return;
     setSidebarOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && sidebar.classList.contains('is-mobile-open')) setSidebarOpen(false);
   });
 
   initCommandPalette();

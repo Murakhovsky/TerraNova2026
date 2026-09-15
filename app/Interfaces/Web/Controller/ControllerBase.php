@@ -7,6 +7,7 @@ use Domains\Property\Application\Contract\PropertyCatalogInterface;
 use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Domains\Identity\Application\Contract\AuthenticatedUserContextInterface;
 use Domains\Identity\Application\Contract\TelegramAccountLinkInterface;
+use Interfaces\Web\Controller\Concerns\RendersFrontendFailure;
 use Interfaces\Web\Service\ClientCaseService;
 use Domains\Content\Application\Contract\ContentServiceInterface;
 use Interfaces\Web\Service\InboundRequestService;
@@ -22,6 +23,8 @@ use Throwable;
 
 class ControllerBase extends Controller
 {
+    use RendersFrontendFailure;
+
     protected function catalogService(): PropertyCatalogInterface
     {
         return $this->di->getShared('frontendCatalogService');
@@ -87,14 +90,10 @@ class ControllerBase extends Controller
     protected function requireManager(): ?array
     {
         $user = $this->requireUser();
-
-        if (!$user) {
-            return null;
-        }
+        if (!$user) return null;
 
         if (!$this->authService()->isManager($user)) {
-            $this->response->setStatusCode(403, 'Forbidden');
-            $this->response->redirect('cabinet');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return null;
         }
 
@@ -104,14 +103,10 @@ class ControllerBase extends Controller
     protected function requireListingUser(): ?array
     {
         $user = $this->requireUser();
-
-        if (!$user) {
-            return null;
-        }
+        if (!$user) return null;
 
         if (!in_array((string) ($user['role'] ?? ''), ['admin', 'manager', 'realtor', 'partner', 'developer'], true)) {
-            $this->response->setStatusCode(403, 'Forbidden');
-            $this->response->redirect('cabinet');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return null;
         }
 
@@ -121,14 +116,10 @@ class ControllerBase extends Controller
     protected function requireAdmin(): ?array
     {
         $user = $this->requireUser();
-
-        if (!$user) {
-            return null;
-        }
+        if (!$user) return null;
 
         if (!$this->authService()->isAdmin($user)) {
-            $this->response->setStatusCode(403, 'Forbidden');
-            $this->response->redirect('cabinet');
+            $this->renderFrontendFailure(403, null, 'workspace');
             return null;
         }
 
@@ -206,4 +197,3 @@ class ControllerBase extends Controller
         return $this->response;
     }
 }
-
