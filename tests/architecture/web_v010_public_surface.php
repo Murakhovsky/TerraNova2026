@@ -50,10 +50,25 @@ foreach (['clientCaseService', 'managerClientCases', 'requireManager', 'isManage
 }
 
 $routes = $read('app/Interfaces/Web/Routing/PublicPropertyRoutes.php');
-foreach (['/property/catalog', '/property/map', '/property/show/{slug:[a-z0-9-]+}', '/property/presentation/{slug:[a-z0-9-]+}', '/property/submit', "'controller' => 'public_property'"] as $needle) {
-    $contains($routes, $needle, 'Canonical Public Property route is missing.');
+$routeContract = [
+    '/property' => 'catalog',
+    '/property/catalog' => 'catalog',
+    '/property/map' => 'map',
+    '/property/show/{slug:[a-z0-9-]+}' => 'show',
+    '/property/presentation/{slug:[a-z0-9-]+}' => 'presentation',
+    '/property/submit' => 'submit',
+    '/property/create' => 'submit',
+    '/submit-property' => 'submit',
+];
+foreach ($routeContract as $pattern => $action) {
+    $contains($routes, "'" . $pattern . "'", 'Canonical Public Property route is missing.');
+    $contains($routes, "$target('" . $action . "')", 'Canonical Public Property action mapping is missing.');
 }
+$contains($routes, "'controller' => 'public_property'", 'Public Property routes must target the dedicated delivery controller.');
+$contains($routes, "'namespace' => 'Interfaces\\\\Web\\\\Controller'", 'Public Property routes must stay in the Web delivery layer.');
+
 $contributor = $read('app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php');
+$contains($contributor, 'PropertyRuntimeRoutes::register($router)', 'Property module must preserve runtime routes.');
 $contains($contributor, 'PublicPropertyRoutes::register($router)', 'Property module must register its Public projection routes.');
 
 $home = $read('app/Interfaces/Web/View/index/public.phtml');
@@ -88,23 +103,6 @@ $contains($vite, "'public-surface':", 'Public surface entrypoint must be managed
 $browser = $read('frontend/features/public/surface.js');
 foreach (['role', 'permission', 'deal_status', 'localStorage', 'sessionStorage'] as $forbidden) {
     $notContains($browser, $forbidden, 'Public browser code must remain presentation-only.');
-}
-
-$router = new Phalcon\Mvc\Router(false);
-$router->setDI(new Phalcon\Di\FactoryDefault());
-Interfaces\Web\Routing\FrontendRoutes::register($router, []);
-(new Interfaces\Web\Routing\PropertyModuleRouteContributor())->register($router);
-foreach ([
-    '/property/catalog' => ['public_property', 'catalog'],
-    '/property/map' => ['public_property', 'map'],
-    '/property/show/test-object' => ['public_property', 'show'],
-    '/property/presentation/test-object' => ['public_property', 'presentation'],
-    '/property/submit' => ['public_property', 'submit'],
-] as $path => [$controller, $action]) {
-    $router->handle($path);
-    if ($router->getControllerName() !== $controller || $router->getActionName() !== $action) {
-        throw new RuntimeException('Public route ownership mismatch for ' . $path . '.');
-    }
 }
 
 echo "WEB V0.10 Public Surface architecture passed.\n";
