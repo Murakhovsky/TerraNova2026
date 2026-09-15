@@ -228,3 +228,6 @@ jobs:
       - name: External HTTPS application health check
         run: |
           curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
+
+      - name: WEB V0.13 live routing smoke
+        run: bash tests/smoke/web_v013_live_routes.sh "https://$COMPANY_OS_DOMAIN"

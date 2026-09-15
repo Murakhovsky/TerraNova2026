@@ -138,8 +138,23 @@ foreach (["renderFrontendFailure(404", "'not_found'", "'/api/'", "return 'portal
     }
 }
 
+$liveSmokePath = $root . '/tests/smoke/web_v013_live_routes.sh';
+if (!is_file($liveSmokePath)) {
+    throw new RuntimeException('WEB V0.13 live routing smoke script is missing.');
+}
+$liveSmoke = (string) file_get_contents($liveSmokePath);
+foreach (['/cabinet/index', '/admin/index', '/cabinet/telegramConnect', '/spatial/save', '/api/this-route-does-not-exist-v013', 'application/json'] as $needle) {
+    if (!str_contains($liveSmoke, $needle)) {
+        throw new RuntimeException('WEB V0.13 live routing smoke is missing assertion: ' . $needle);
+    }
+}
+$runtimeWorkflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
+if (!str_contains($runtimeWorkflow, 'bash tests/smoke/web_v013_live_routes.sh')) {
+    throw new RuntimeException('AWS dev deploy must execute the WEB V0.13 live routing smoke.');
+}
+
 $documentation = (string) file_get_contents($root . '/docs/architecture/web-v0.13.md');
-foreach (['Router(false)', 'CoreWebRoutes', 'SpatialWebRoutes', 'application-wide 404', 'module route contributors'] as $needle) {
+foreach (['Router(false)', 'CoreWebRoutes', 'SpatialWebRoutes', 'application-wide 404', 'module route contributors', 'live routing smoke'] as $needle) {
     if (!str_contains($documentation, $needle)) {
         throw new RuntimeException('WEB V0.13 documentation is missing contract: ' . $needle);
     }

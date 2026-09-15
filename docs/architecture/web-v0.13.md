@@ -82,6 +82,21 @@ Paths such as `/cabinet/index`, `/admin/index` or arbitrary `/controller/action`
 
 The shared router enables `removeExtraSlashes(true)` so trailing/duplicate slash noise does not require a second route tree. URL normalization must not restore default controller/action discovery.
 
+## Live routing smoke
+
+`tests/smoke/web_v013_live_routes.sh` runs on the deployed AWS dev application after the external HTTPS health check. It validates the routing semantics against the real Phalcon runtime rather than emulating the extension inside architecture CI.
+
+The smoke verifies:
+
+- `/` and `/auth/login` are reachable;
+- unauthenticated `/cabinet`, `/admin` and `/spatial/manage` explicitly resolve and redirect to login;
+- implicit aliases `/cabinet/index` and `/admin/index` return `404`;
+- GET requests cannot reach POST-only `/cabinet/telegramConnect` or `/spatial/save`;
+- an arbitrary Web path returns the canonical rendered `404`;
+- an arbitrary `/api/*` path returns the canonical JSON `404` with `error=not_found`.
+
+This separates concerns deliberately: architecture CI checks declaration contracts without requiring the Phalcon extension, while deployment smoke proves real router behavior on the production-like runtime.
+
 ## Regression gate
 
 `tests/architecture/web_v013_explicit_routing.php` verifies:
@@ -93,7 +108,8 @@ The shared router enables `removeExtraSlashes(true)` so trailing/duplicate slash
 5. canonical entry points resolve to their intended controllers/actions;
 6. default-style aliases and unknown URLs resolve to the canonical error controller;
 7. route registration happens after module route contributors where required for the global fallback;
-8. the 404 controller preserves Public, Portal, Workspace and API failure semantics.
+8. the 404 controller preserves Public, Portal, Workspace and API failure semantics;
+9. the AWS dev pipeline retains the live routing smoke.
 
 The gate is also part of the global `COS Runtime Checks`, so AWS dev deployment cannot proceed when explicit routing regresses.
 
@@ -106,4 +122,5 @@ WEB V0.13 is closed when:
 - the dedicated WEB V0.13 gate succeeds;
 - the existing frontend route gate succeeds;
 - global COS Runtime Checks succeed;
-- AWS dev deployment and external HTTPS health check succeed on the same `main` commit.
+- AWS dev deployment and external HTTPS health check succeed on the same `main` commit;
+- the post-deploy live routing smoke succeeds on that same commit.
