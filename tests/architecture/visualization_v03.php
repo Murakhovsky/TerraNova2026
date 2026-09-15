@@ -50,7 +50,7 @@ $assert(str_contains($bootstrap, "setShared('cosCytoscapeGraphMapper'"), 'Cytosc
 $vite = $read('vite.config.js');
 $assert(str_contains($vite, "'cos-architecture-explorer'"), 'Architecture Explorer Vite entry missing.');
 $client = $read('frontend/features/cos/architecture-explorer.js');
-foreach (['system', 'runtime', 'domain', 'data-architecture-search', 'data-architecture-depth', 'Collapse neighbors'] as $marker) {
+foreach (['data-architecture-search', 'data-architecture-depth', 'data-architecture-fit', 'data-architecture-reset', 'Collapse neighbors'] as $marker) {
     $assert(str_contains($client, $marker), 'Explorer interaction marker missing: ' . $marker);
 }
 $assert(str_contains($client, 'cytoscape@3.34.3'), 'Cytoscape browser dependency must be version-pinned.');

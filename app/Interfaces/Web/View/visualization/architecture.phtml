@@ -4,13 +4,15 @@ $architectureGraph = is_array($architectureGraph ?? null) ? $architectureGraph :
 $summary = is_array($architectureGraph['summary'] ?? null) ? $architectureGraph['summary'] : [];
 $nodeTypes = is_array($summary['node_types'] ?? null) ? $summary['node_types'] : [];
 $domains = is_array($summary['domains'] ?? null) ? $summary['domains'] : [];
+$viewDescriptions = is_array($architectureViewDescriptions ?? null) ? $architectureViewDescriptions : [];
+$defaultView = (string) ($architectureGraph['default_view'] ?? '');
 $pageStatus = $pageStatus ?? null;
 $graphJson = json_encode(
     $architectureGraph,
     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 );
 if (!is_string($graphJson)) {
-    $graphJson = '{"elements":[],"summary":{}}';
+    $graphJson = '{"views":{},"summary":{},"default_view":""}';
 }
 ?>
 
@@ -24,7 +26,7 @@ if (!is_string($graphJson)) {
     <div>
       <p class="tn-kicker">COS Visualization</p>
       <h1>Architecture Explorer</h1>
-      <p>Канонічний Architecture Graph: domains, capabilities, runtime events, actions, agents, handlers, services та extension points.</p>
+      <p>Один канонічний Architecture Graph, кілька серверних projections: система, runtime, domains, dependencies, events, actions, agents, integrations та code surface.</p>
     </div>
     <div class="tn-architecture-hero__stats" aria-label="Graph summary">
       <span><strong><?php echo (int) ($summary['nodes'] ?? 0); ?></strong> nodes</span>
@@ -38,10 +40,14 @@ if (!is_string($graphJson)) {
   <?php endif; ?>
 
   <section class="tn-architecture-toolbar" aria-label="Architecture Explorer controls">
-    <div class="tn-architecture-mode" role="group" aria-label="View mode">
-      <button type="button" class="is-active" data-architecture-mode="system">System</button>
-      <button type="button" data-architecture-mode="runtime">Runtime</button>
-      <button type="button" data-architecture-mode="domain">Domain</button>
+    <div class="tn-architecture-mode" role="group" aria-label="Projection">
+      <?php foreach ($viewDescriptions as $name => $description): ?>
+        <button
+          type="button"
+          class="<?php echo $name === $defaultView ? 'is-active' : ''; ?>"
+          data-architecture-mode="<?php echo $h($name); ?>"
+        ><?php echo $h($description['label'] ?? $name); ?></button>
+      <?php endforeach; ?>
     </div>
     <label class="tn-architecture-search">
       <span>Search</span>
@@ -81,7 +87,7 @@ if (!is_string($graphJson)) {
           </label>
         <?php endforeach; ?>
       </div>
-      <p class="tn-muted">Фільтри змінюють лише view. Канонічний Graph на сервері не мутується.</p>
+      <p class="tn-muted">Projection визначає семантику view на сервері. Локальні фільтри лише звужують вже спроєктований Graph.</p>
     </aside>
 
     <div class="tn-architecture-stage-wrap">

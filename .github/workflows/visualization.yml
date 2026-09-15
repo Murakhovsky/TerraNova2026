@@ -1,4 +1,4 @@
-name: COS Visualization V0.1-V0.3
+name: COS Visualization V0.1-V0.4
 
 on:
   push:
@@ -12,6 +12,8 @@ on:
       - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
       - 'app/Interfaces/Web/Module.php'
       - 'app/Bootstrap/KernelServices.php'
+      - 'app/Bootstrap/VisualizationServices.php'
+      - 'app/config/services_kernel.php'
       - 'frontend/entrypoints/cos-architecture-explorer.js'
       - 'frontend/features/cos/architecture-explorer.*'
       - 'vite.config.js'
@@ -28,6 +30,9 @@ on:
       - 'app/Interfaces/Web/Routing/VisualizationRoutes.php'
       - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
       - 'app/Interfaces/Web/Module.php'
+      - 'app/Bootstrap/KernelServices.php'
+      - 'app/Bootstrap/VisualizationServices.php'
+      - 'app/config/services_kernel.php'
       - 'frontend/entrypoints/cos-architecture-explorer.js'
       - 'frontend/features/cos/architecture-explorer.*'
       - 'vite.config.js'
@@ -54,21 +59,26 @@ jobs:
         run: |
           php tests/architecture/visualization_v02.php
           php tests/architecture/visualization_v03.php
+          php tests/architecture/visualization_v04.php
       - name: Visualization graph invariants
         run: |
           php tests/unit/visualization_graph_foundation.php
           php tests/unit/visualization_architecture_graph.php
           php tests/unit/visualization_cytoscape_mapper.php
+          php tests/unit/visualization_architecture_projections.php
       - name: Frontend build
         run: npm run build
       - name: PHP syntax
         run: |
           find app/Kernel/Visualization app/Infrastructure/Visualization app/Interfaces/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/VisualizationServices.php
           php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
           php -l app/Interfaces/Web/Module.php
           php -l tests/architecture/visualization_v02.php
           php -l tests/architecture/visualization_v03.php
+          php -l tests/architecture/visualization_v04.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
           php -l tests/unit/visualization_cytoscape_mapper.php
+          php -l tests/unit/visualization_architecture_projections.php
