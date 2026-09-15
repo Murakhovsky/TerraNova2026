@@ -45,9 +45,9 @@ $capability = $find('capability', 'property.inventory');
 $assert($capability !== null, 'Current-checkout evidence lost Property inventory capability.');
 $assert(($capability['domain'] ?? null) === 'property', 'Capability evidence must retain Domain ownership.');
 
-foreach (glob($root . '/docs/.vitepress/processes/*.json') ?: [] as $path) {
+foreach (glob($root . '/resources/processes/*.json') ?: [] as $path) {
     $definition = json_decode((string)file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
-    $assert(($definition['schema_version'] ?? 0) >= 3, basename($path) . ' must preserve Process Registry schema v3+ semantics.');
+    $assert(($definition['schema_version'] ?? null) === 4, basename($path) . ' must preserve Process Registry schema v4 semantics.');
     $assert(in_array($definition['state'] ?? null, ['as-is', 'to-be'], true), basename($path) . ' has invalid business state.');
     $assert(!array_key_exists('verification', $definition), basename($path) . ' must not author verification.');
 }
