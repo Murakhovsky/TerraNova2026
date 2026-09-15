@@ -10,6 +10,8 @@ $required = [
     'app/Interfaces/Web/Navigation/SalesNavigationContributor.php',
     'app/Interfaces/Web/Navigation/PropertyNavigationContributor.php',
     'app/Interfaces/Web/Navigation/DiagnosticNavigationContributor.php',
+    'app/Infrastructure/Module/MysqlModuleStateRepository.php',
+    'app/migrations/20260909_000028_cos_module_activation.sql',
     'docs/architecture/web-v0.5.md',
 ];
 foreach ($required as $path) {
@@ -43,6 +45,23 @@ foreach (['OrganizationContextInterface', 'ActiveModuleResolver', 'modules->snap
 }
 if (str_contains($service, 'modules->isEnabled')) {
     throw new RuntimeException('WEB V0.5 navigation must use one effective module snapshot per render instead of resolving module state repeatedly.');
+}
+
+// Module-aware navigation resolves tenant activation on every Portal/Workspace render.
+// The runtime repository and its schema migration must therefore name the same table.
+$moduleStateRepository = (string) file_get_contents($root . '/app/Infrastructure/Module/MysqlModuleStateRepository.php');
+$moduleActivationMigration = (string) file_get_contents($root . '/app/migrations/20260909_000028_cos_module_activation.sql');
+$moduleStateTable = 'cos_organization_modules';
+if (!str_contains($moduleActivationMigration, 'CREATE TABLE IF NOT EXISTS ' . $moduleStateTable . ' (')) {
+    throw new RuntimeException('Module activation migration does not create the canonical state table: ' . $moduleStateTable);
+}
+foreach (['FROM ' . $moduleStateTable, 'INSERT INTO ' . $moduleStateTable] as $needle) {
+    if (!str_contains($moduleStateRepository, $needle)) {
+        throw new RuntimeException('Module state repository is not aligned with the activation schema: ' . $needle);
+    }
+}
+if (preg_match('/\bcos_organization_module\b/', $moduleStateRepository) === 1) {
+    throw new RuntimeException('Module state repository still references the obsolete singular table name.');
 }
 
 $managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');

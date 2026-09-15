@@ -15,7 +15,7 @@ final readonly class MysqlModuleStateRepository implements BulkModuleStateReposi
     public function enabledOverride(string $organizationId, string $moduleId): ?bool
     {
         $row = $this->database->fetchOne(
-            'SELECT enabled FROM cos_organization_module WHERE organization_id = :organization_id AND module_id = :module_id LIMIT 1',
+            'SELECT enabled FROM cos_organization_modules WHERE organization_id = :organization_id AND module_id = :module_id LIMIT 1',
             ['organization_id' => $organizationId, 'module_id' => $moduleId],
         );
 
@@ -26,7 +26,7 @@ final readonly class MysqlModuleStateRepository implements BulkModuleStateReposi
     public function enabledOverrides(string $organizationId): array
     {
         $rows = $this->database->fetchAll(
-            'SELECT module_id, enabled FROM cos_organization_module WHERE organization_id = :organization_id ORDER BY module_id',
+            'SELECT module_id, enabled FROM cos_organization_modules WHERE organization_id = :organization_id ORDER BY module_id',
             ['organization_id' => $organizationId],
         );
 
@@ -41,7 +41,7 @@ final readonly class MysqlModuleStateRepository implements BulkModuleStateReposi
     public function setEnabled(string $organizationId, string $moduleId, bool $enabled): void
     {
         $statement = $this->database->connection()->prepare(<<<'SQL'
-INSERT INTO cos_organization_module (organization_id, module_id, enabled)
+INSERT INTO cos_organization_modules (organization_id, module_id, enabled)
 VALUES (:organization_id, :module_id, :enabled)
 ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), updated_at = CURRENT_TIMESTAMP
 SQL);
