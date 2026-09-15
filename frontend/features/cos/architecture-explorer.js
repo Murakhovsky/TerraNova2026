@@ -1,6 +1,4 @@
 const CYTOSCAPE_SRC = 'https://cdn.jsdelivr.net/npm/cytoscape@3.34.3/dist/cytoscape.min.js';
-const SYSTEM_TYPES = new Set(['kernel', 'domain', 'capability', 'service', 'extension_point', 'group']);
-const RUNTIME_TYPES = new Set(['domain', 'event', 'action', 'agent', 'handler', 'group']);
 
 function loadCytoscape() {
   if (typeof window.cytoscape === 'function') return Promise.resolve(window.cytoscape);
@@ -27,8 +25,8 @@ function loadCytoscape() {
 
 function graphPayload() {
   const source = document.getElementById('cos-architecture-data');
-  if (!source) return { elements: [], summary: {} };
-  try { return JSON.parse(source.textContent || '{}'); } catch { return { elements: [], summary: {} }; }
+  if (!source) return { views: {}, summary: {}, default_view: '' };
+  try { return JSON.parse(source.textContent || '{}'); } catch { return { views: {}, summary: {}, default_view: '' }; }
 }
 
 function adjacency(elements) {
@@ -67,7 +65,12 @@ function safeJson(value) {
 
 function initialize(root, cytoscape) {
   const payload = graphPayload();
-  const elements = Array.isArray(payload.elements) ? payload.elements : [];
+  const views = payload.views && typeof payload.views === 'object' ? payload.views : {};
+  const defaultView = typeof payload.default_view === 'string' && payload.default_view ? payload.default_view : Object.keys(views)[0];
+  let mode = defaultView || '';
+  let elements = Array.isArray(views[mode]?.elements) ? views[mode].elements : [];
+  let neighbors = adjacency(elements);
+
   const stage = root.querySelector('[data-architecture-stage]');
   const loading = root.querySelector('[data-architecture-loading]');
   const error = root.querySelector('[data-architecture-error]');
@@ -77,9 +80,7 @@ function initialize(root, cytoscape) {
   const search = root.querySelector('[data-architecture-search]');
   const typeControls = [...root.querySelectorAll('[data-architecture-type]')];
   const modeControls = [...root.querySelectorAll('[data-architecture-mode]')];
-  const neighbors = adjacency(elements);
   const collapsed = new Set();
-  let mode = 'system';
   let selectedNodeId = null;
 
   if (!stage || !elements.length) {
@@ -88,6 +89,7 @@ function initialize(root, cytoscape) {
     return;
   }
 
+  const layoutOptions = { name: 'cose', animate: false, fit: true, padding: 34, nodeRepulsion: 240000, idealEdgeLength: 90 };
   const cy = cytoscape({
     container: stage,
     elements,
@@ -108,26 +110,23 @@ function initialize(root, cytoscape) {
       { selector: ':selected', style: { 'border-width': 4, 'border-color': '#111827' } },
       { selector: '.is-search-match', style: { 'border-width': 5, 'border-color': '#2563eb' } },
     ],
-    layout: { name: 'cose', animate: false, fit: true, padding: 34, nodeRepulsion: 240000, idealEdgeLength: 90 },
+    layout: layoutOptions,
   });
 
   if (loading) loading.hidden = true;
 
   const selectedTypes = () => new Set(typeControls.filter((control) => control.checked).map((control) => control.value));
+  const rerunLayout = () => cy.layout(layoutOptions).run();
 
-  const rerunLayout = () => cy.layout({ name: 'cose', animate: false, fit: true, padding: 34, nodeRepulsion: 240000, idealEdgeLength: 90 }).run();
-
-  const visibleByMode = () => {
-    if (mode === 'domain') {
-      const domainId = domainSelect?.value || null;
-      return withinDepth(domainId, depthSelect?.value || '2', neighbors) || new Set();
-    }
-    return null;
+  const domainFocus = () => {
+    if (mode !== 'domain') return null;
+    const domainId = domainSelect?.value || null;
+    return withinDepth(domainId, depthSelect?.value || '2', neighbors) || new Set();
   };
 
   const applyFilters = ({ layout = false } = {}) => {
     const types = selectedTypes();
-    const modeNodes = visibleByMode();
+    const domainNodes = domainFocus();
     const focusNodes = mode !== 'domain' && selectedNodeId
       ? withinDepth(selectedNodeId, depthSelect?.value || 'all', neighbors)
       : null;
@@ -136,9 +135,7 @@ function initialize(root, cytoscape) {
     cy.nodes().forEach((node) => {
       const type = node.data('type');
       let allowed = type === 'group' || types.has(type);
-      if (mode === 'system') allowed = allowed && SYSTEM_TYPES.has(type);
-      if (mode === 'runtime') allowed = allowed && RUNTIME_TYPES.has(type);
-      if (modeNodes) allowed = allowed && modeNodes.has(node.id());
+      if (domainNodes) allowed = allowed && domainNodes.has(node.id());
       if (focusNodes) allowed = allowed && focusNodes.has(node.id());
 
       for (const collapsedId of collapsed) {
@@ -156,13 +153,20 @@ function initialize(root, cytoscape) {
     if (layout) rerunLayout();
   };
 
+  const renderEmptyDetails = () => {
+    if (!details) return;
+    details.innerHTML = '<p class="tn-kicker">Selection</p><h2>Node details</h2><p class="tn-muted">Виберіть вузол графа. Тут з’являться type, id, metadata та локальні дії.</p>';
+  };
+
   const renderDetails = (node) => {
+    if (!details) return;
     selectedNodeId = node.id();
     const metadata = node.data('metadata') || {};
     details.innerHTML = `
       <p class="tn-kicker">Selection</p>
       <h2>${escapeHtml(node.data('label') || node.id())}</h2>
       <dl>
+        <dt>Projection</dt><dd>${escapeHtml(mode)}</dd>
         <dt>Type</dt><dd>${escapeHtml(node.data('type') || '—')}</dd>
         <dt>ID</dt><dd><code>${escapeHtml(node.id())}</code></dd>
       </dl>
@@ -184,6 +188,23 @@ function initialize(root, cytoscape) {
     });
   };
 
+  const switchProjection = (nextMode) => {
+    const nextElements = Array.isArray(views[nextMode]?.elements) ? views[nextMode].elements : [];
+    if (!nextElements.length) return;
+    mode = nextMode;
+    elements = nextElements;
+    neighbors = adjacency(elements);
+    selectedNodeId = null;
+    collapsed.clear();
+    cy.elements().remove();
+    cy.add(elements);
+    modeControls.forEach((button) => button.classList.toggle('is-active', button.dataset.architectureMode === mode));
+    if (domainSelect) domainSelect.disabled = mode !== 'domain';
+    if (search) search.value = '';
+    renderEmptyDetails();
+    applyFilters({ layout: true });
+  };
+
   cy.on('tap', 'node', (event) => renderDetails(event.target));
   cy.on('tap', (event) => {
     if (event.target === cy) {
@@ -192,14 +213,7 @@ function initialize(root, cytoscape) {
     }
   });
 
-  modeControls.forEach((button) => button.addEventListener('click', () => {
-    mode = button.dataset.architectureMode || 'system';
-    selectedNodeId = null;
-    modeControls.forEach((item) => item.classList.toggle('is-active', item === button));
-    if (domainSelect) domainSelect.disabled = mode !== 'domain';
-    applyFilters({ layout: true });
-  }));
-
+  modeControls.forEach((button) => button.addEventListener('click', () => switchProjection(button.dataset.architectureMode || defaultView)));
   typeControls.forEach((control) => control.addEventListener('change', () => applyFilters({ layout: true })));
   domainSelect?.addEventListener('change', () => mode === 'domain' && applyFilters({ layout: true }));
   depthSelect?.addEventListener('change', () => applyFilters({ layout: true }));
@@ -216,18 +230,13 @@ function initialize(root, cytoscape) {
 
   root.querySelector('[data-architecture-fit]')?.addEventListener('click', () => cy.fit(cy.elements(':visible'), 40));
   root.querySelector('[data-architecture-reset]')?.addEventListener('click', () => {
-    mode = 'system';
-    selectedNodeId = null;
-    collapsed.clear();
     typeControls.forEach((control) => { control.checked = true; });
-    modeControls.forEach((button) => button.classList.toggle('is-active', button.dataset.architectureMode === 'system'));
     if (depthSelect) depthSelect.value = '2';
-    if (search) search.value = '';
-    cy.nodes().removeClass('is-search-match');
-    applyFilters({ layout: true });
+    switchProjection(defaultView);
   });
 
-  if (domainSelect) domainSelect.disabled = true;
+  if (domainSelect) domainSelect.disabled = mode !== 'domain';
+  modeControls.forEach((button) => button.classList.toggle('is-active', button.dataset.architectureMode === mode));
   applyFilters({ layout: true });
 }
 
