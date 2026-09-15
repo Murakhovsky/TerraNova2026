@@ -92,4 +92,6 @@ System Map читається зверху вниз. Починайте з бі�
 
 [Workflow](../02-workflows/diagnostic-session-to-recommendation.md) → [Overview](../04-domains/diagnostic/overview.md) → [Domain Model](../04-domains/diagnostic/domain-model.md) → [Lifecycle & Evaluation](../04-domains/diagnostic/lifecycle-and-evaluation.md) → [Contracts & Code](../04-domains/diagnostic/contracts-and-code-map.md) → [Executable Reference](../12-reference/application-use-cases.md)
 
+## Source of truth
+
 Generated facts синхронізуються з current `main` checkout під час build.
