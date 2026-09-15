@@ -15,32 +15,30 @@ Property — canonical owner фізичного real-estate asset state у COS.
 ```text
 Property Asset = що фізично існує
 Inventory Item = як organization комерційно працює з активом
-Listing        = як пропозиція представлена/публікується
+Listing        = як пропозиція представлена ринку
+Publication    = де Listing опублікований
 Sales          = попит, pipeline і deal process
 CRM            = people/relationship context
 ```
 
 Квартира не стає фізично `SOLD`; `SOLD` є комерційним станом Inventory.
 
-## Asset model
+## Read this domain
 
-Property `0.12.0` охоплює:
+<div class="cos-system-map">
+  <div class="cos-map-layer">
+    <div class="cos-map-title">Property knowledge path</div>
+    <div class="cos-map-grid">
+      <a class="cos-map-node" href="./domain-model.html"><strong>Domain Model</strong><span>Asset, Inventory, Listing, Publication, structure та ownership.</span></a>
+      <a class="cos-map-node" href="./lifecycle-and-runtime.html"><strong>Lifecycle & Runtime</strong><span>Submission, identity, commercial lifecycle та V0.12 cutover.</span></a>
+      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Contracts & Code</strong><span>Reference ports, network boundary, compatibility та code map.</span></a>
+    </div>
+  </div>
+</div>
 
-- canonical asset registry і structure graph;
-- asset kind/lifecycle/relations;
-- location/address/geo model;
-- identity resolution, external references, provenance і verification;
-- operational identity `CREATE / MERGE / REVIEW` workflow with review audit;
-- canonical aliases for legacy property identifiers;
-- Inventory lifecycle, reservations, transaction type і price state;
-- Listing/Publication lifecycle та media presentation state;
-- append-only history/event contracts;
-- market analytics and evidence-linked Property Intelligence;
-- external Property Network intake/export/sync boundary;
-- RESO Web API connector boundary;
-- canonical runtime writes for Asset, Inventory, Listing and Publication;
-- canonical REST mutation surface;
-- one-way compatibility projection into legacy `tn_properties` for transitional read surfaces.
+## Current scope
+
+Property `0.12.0` охоплює canonical asset registry/structure, identity/provenance, Inventory, Listing/Publication, append-only history, analytics/intelligence, external Property Network/RESO boundary та authoritative canonical runtime writes.
 
 ## Runtime manifest
 
@@ -52,19 +50,7 @@ kernel: >=0.11.0 <0.12.0
 enabled_by_default: true
 ```
 
-AS-IS contributions:
-
-- runtime module service `propertyDomainModule`;
-- canonical runtime service `propertyCanonicalRuntime`;
-- API route contributor `propertyRouteContributor`;
-- configuration provisioner `propertyModuleConfigurationProvisioner`;
-- Web navigation contribution;
-- Property migrations through `V0.12.0`;
-- explicit capability `property.runtime.canonical`.
-
-## V0.12 canonical runtime rule
-
-The authoritative mutation direction is now:
+## Authoritative mutation rule
 
 ```text
 Web / API / Spatial
@@ -77,25 +63,14 @@ Domain Events → Kernel EventBus / Outbox
         ↓
 Compatibility Projection
         ↓
-tn_properties (legacy read surface)
+tn_properties
 ```
 
-`tn_properties` is **not** a canonical source of Property state. New Asset, commercial price/status, Listing publication and 3D-tour presentation mutations must enter through the canonical runtime first.
+`tn_properties` не є canonical source of Property state.
 
-Legacy Property management read/group/media surfaces remain transitional compatibility code where a canonical replacement has not yet been introduced. They may not own Asset/Inventory/Listing business truth. The compatibility projection is the explicit boundary allowed to materialize canonical state into `tn_properties`.
+## Related workflow and reference
 
-## V0.11 hardening rule retained
-
-Identity merge means resolving an incoming observation/submission into one existing canonical asset. It does **not** destructively merge two canonical assets. Ambiguous matches enter explicit review; review decisions are audited.
-
-The RESO adapter implements the V0.10 `PropertyNetworkConnectorInterface`; provider authentication, endpoint details and secrets remain outside Property behind `configuration_reference` and the injected transport port.
-
-## Cross-domain rule
-
-Sales може читати Property через explicit Property reference/read contracts, але не має володіти canonical Property state. Property, у свою чергу, не володіє deal pipeline або CRM relationships.
-
-## Generated facts
-
+- [Property Submission → Publication](../../02-workflows/property-submission-to-publication.md)
 - [Module & Capabilities](../../12-reference/module-capabilities.md)
 - [Events](../../12-reference/event-types.md)
 - [Commands](../../12-reference/commands.md)
