@@ -9,7 +9,9 @@ final class ArchitectureGraphVocabulary
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_CAPABILITY = 'capability';
     public const TYPE_EVENT = 'event';
+    public const TYPE_RULE = 'rule';
     public const TYPE_ACTION = 'action';
+    public const TYPE_POLICY = 'policy';
     public const TYPE_AGENT = 'agent';
     public const TYPE_SERVICE = 'service';
     public const TYPE_HANDLER = 'handler';
@@ -20,6 +22,9 @@ final class ArchitectureGraphVocabulary
     public const REL_OWNS = 'owns';
     public const REL_CONTRIBUTES = 'contributes';
     public const REL_CONTRIBUTES_TO = 'contributes_to';
+    public const REL_TRIGGERS = 'triggers';
+    public const REL_PRODUCES = 'produces';
+    public const REL_GOVERNS = 'governs';
     public const REL_HANDLED_BY = 'handled_by';
     public const REL_PROPOSES = 'proposes';
 

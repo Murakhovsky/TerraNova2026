@@ -1,10 +1,12 @@
-name: COS Visualization V0.1-V0.4
+name: COS Visualization V0.1-V0.4.1
 
 on:
   push:
     branches: [main]
     paths:
       - 'app/Kernel/Visualization/**'
+      - 'app/Kernel/Module/Contract/Bootstrap*ProvidingModuleInterface.php'
+      - 'app/Domains/Sales/Bootstrap/SalesDomainModule.php'
       - 'app/Infrastructure/Visualization/**'
       - 'app/Interfaces/Web/Visualization/**'
       - 'app/Interfaces/Web/View/visualization/**'
@@ -24,6 +26,8 @@ on:
     branches: [main]
     paths:
       - 'app/Kernel/Visualization/**'
+      - 'app/Kernel/Module/Contract/Bootstrap*ProvidingModuleInterface.php'
+      - 'app/Domains/Sales/Bootstrap/SalesDomainModule.php'
       - 'app/Infrastructure/Visualization/**'
       - 'app/Interfaces/Web/Visualization/**'
       - 'app/Interfaces/Web/View/visualization/**'
@@ -60,6 +64,7 @@ jobs:
           php tests/architecture/visualization_v02.php
           php tests/architecture/visualization_v03.php
           php tests/architecture/visualization_v04.php
+          php tests/architecture/visualization_v041.php
       - name: Visualization graph invariants
         run: |
           php tests/unit/visualization_graph_foundation.php
@@ -71,6 +76,9 @@ jobs:
       - name: PHP syntax
         run: |
           find app/Kernel/Visualization app/Infrastructure/Visualization app/Interfaces/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Kernel/Module/Contract/BootstrapRuleProvidingModuleInterface.php
+          php -l app/Kernel/Module/Contract/BootstrapPolicyProvidingModuleInterface.php
+          php -l app/Domains/Sales/Bootstrap/SalesDomainModule.php
           php -l app/Bootstrap/VisualizationServices.php
           php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
@@ -78,6 +86,7 @@ jobs:
           php -l tests/architecture/visualization_v02.php
           php -l tests/architecture/visualization_v03.php
           php -l tests/architecture/visualization_v04.php
+          php -l tests/architecture/visualization_v041.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
           php -l tests/unit/visualization_cytoscape_mapper.php

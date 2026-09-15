@@ -45,7 +45,9 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
             $v::TYPE_DOMAIN,
             $v::TYPE_CAPABILITY,
             $v::TYPE_EVENT,
+            $v::TYPE_RULE,
             $v::TYPE_ACTION,
+            $v::TYPE_POLICY,
             $v::TYPE_AGENT,
             $v::TYPE_SERVICE,
             $v::TYPE_HANDLER,
@@ -57,6 +59,9 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
             $v::REL_OWNS,
             $v::REL_CONTRIBUTES,
             $v::REL_CONTRIBUTES_TO,
+            $v::REL_TRIGGERS,
+            $v::REL_PRODUCES,
+            $v::REL_GOVERNS,
             $v::REL_HANDLED_BY,
             $v::REL_PROPOSES,
         ];
@@ -66,29 +71,35 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
                 $v::TYPE_KERNEL, $v::TYPE_DOMAIN, $v::TYPE_CAPABILITY, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
             ], [
                 $v::REL_CONTAINS, $v::REL_DEPENDS_ON, $v::REL_OWNS, $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
-            ]),
+            ], layout: 'hierarchical'),
             new ArchitectureProjectionDefinition('runtime', 'Runtime', [
-                $v::TYPE_DOMAIN, $v::TYPE_EVENT, $v::TYPE_ACTION, $v::TYPE_AGENT, $v::TYPE_HANDLER,
-            ], [$v::REL_OWNS, $v::REL_HANDLED_BY, $v::REL_PROPOSES]),
-            new ArchitectureProjectionDefinition('domain', 'Domain', $allTypes, $allRelations, 2),
+                $v::TYPE_DOMAIN, $v::TYPE_EVENT, $v::TYPE_RULE, $v::TYPE_ACTION, $v::TYPE_POLICY, $v::TYPE_AGENT, $v::TYPE_HANDLER,
+            ], [
+                $v::REL_OWNS, $v::REL_TRIGGERS, $v::REL_PRODUCES, $v::REL_GOVERNS, $v::REL_HANDLED_BY, $v::REL_PROPOSES,
+            ], layout: 'flow'),
+            new ArchitectureProjectionDefinition('domain', 'Domain', $allTypes, $allRelations, 2, 'radial'),
             new ArchitectureProjectionDefinition('dependencies', 'Dependencies', [
-                $v::TYPE_KERNEL, $v::TYPE_DOMAIN,
-            ], [$v::REL_CONTAINS, $v::REL_DEPENDS_ON]),
+                $v::TYPE_KERNEL, $v::TYPE_DOMAIN, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
+            ], [
+                $v::REL_CONTAINS, $v::REL_DEPENDS_ON, $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
+            ], layout: 'hierarchical'),
             new ArchitectureProjectionDefinition('events', 'Events', [
-                $v::TYPE_DOMAIN, $v::TYPE_EVENT,
-            ], [$v::REL_OWNS]),
+                $v::TYPE_DOMAIN, $v::TYPE_EVENT, $v::TYPE_RULE, $v::TYPE_ACTION,
+            ], [$v::REL_OWNS, $v::REL_TRIGGERS, $v::REL_PRODUCES], layout: 'flow'),
             new ArchitectureProjectionDefinition('actions', 'Actions', [
-                $v::TYPE_DOMAIN, $v::TYPE_ACTION, $v::TYPE_HANDLER, $v::TYPE_AGENT,
-            ], [$v::REL_OWNS, $v::REL_HANDLED_BY, $v::REL_PROPOSES]),
+                $v::TYPE_DOMAIN, $v::TYPE_RULE, $v::TYPE_ACTION, $v::TYPE_POLICY, $v::TYPE_HANDLER, $v::TYPE_AGENT,
+            ], [
+                $v::REL_OWNS, $v::REL_PRODUCES, $v::REL_GOVERNS, $v::REL_HANDLED_BY, $v::REL_PROPOSES,
+            ], layout: 'flow'),
             new ArchitectureProjectionDefinition('agents', 'Agents', [
                 $v::TYPE_DOMAIN, $v::TYPE_AGENT, $v::TYPE_ACTION,
-            ], [$v::REL_OWNS, $v::REL_PROPOSES]),
+            ], [$v::REL_OWNS, $v::REL_PROPOSES], layout: 'radial'),
             new ArchitectureProjectionDefinition('integrations', 'Integrations', [
                 $v::TYPE_DOMAIN, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
-            ], [$v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO]),
+            ], [$v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO], layout: 'hierarchical'),
             new ArchitectureProjectionDefinition('code', 'Code', [
                 $v::TYPE_DOMAIN, $v::TYPE_SERVICE, $v::TYPE_ACTION, $v::TYPE_HANDLER,
-            ], [$v::REL_OWNS, $v::REL_CONTRIBUTES, $v::REL_HANDLED_BY]),
+            ], [$v::REL_OWNS, $v::REL_CONTRIBUTES, $v::REL_HANDLED_BY], layout: 'force'),
         ]);
     }
 
@@ -101,7 +112,11 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
     {
         $result = [];
         foreach ($this->definitions as $name => $definition) {
-            $result[$name] = ['label' => $definition->label];
+            $result[$name] = [
+                'label' => $definition->label,
+                'layout' => $definition->layout,
+                'default_depth' => $definition->defaultDepth,
+            ];
         }
         return $result;
     }

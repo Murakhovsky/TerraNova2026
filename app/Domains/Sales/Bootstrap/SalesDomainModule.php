@@ -33,13 +33,17 @@ use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\AgentProvidingModuleInterface;
+use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
+use Kernel\Module\Contract\BootstrapRuleProvidingModuleInterface;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Module\Contract\PolicyProvidingModuleInterface;
 use Kernel\Module\Contract\RuleProvidingModuleInterface;
 use Kernel\Module\DomainModuleInterface;
+use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\Contract\PolicyContextProviderInterface;
 use Kernel\Policy\Contract\PolicyContextProvidingModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
+use Kernel\Rule\Rule;
 
 final readonly class SalesDomainModule implements
     DomainModuleInterface,
@@ -48,6 +52,8 @@ final readonly class SalesDomainModule implements
     AgentProvidingModuleInterface,
     RuleProvidingModuleInterface,
     PolicyProvidingModuleInterface,
+    BootstrapRuleProvidingModuleInterface,
+    BootstrapPolicyProvidingModuleInterface,
     PolicyContextProvidingModuleInterface
 {
     public function __construct(
@@ -103,4 +109,16 @@ final readonly class SalesDomainModule implements
     public function policyContextProvider(): PolicyContextProviderInterface { return $this->policyContexts; }
     public function rules(string $organizationId): array { return (new SalesRuleCatalog())->rules($organizationId); }
     public function policies(string $organizationId): array { return (new SalesPolicyCatalog())->policies($organizationId); }
+
+    /** @return list<Rule> */
+    public function bootstrapRules(): array
+    {
+        return (new SalesRuleCatalog())->rules('default');
+    }
+
+    /** @return list<ActionPolicy> */
+    public function bootstrapPolicies(): array
+    {
+        return (new SalesPolicyCatalog())->policies('default');
+    }
 }

@@ -23,7 +23,9 @@ $nodes = [
     new Node('domain:property', 'domain', 'Property'),
     new Node('capability:sales.pipeline', 'capability', 'sales.pipeline'),
     new Node('event:deal.changed', 'event', 'deal.changed'),
+    new Node('rule:sales:followup', 'rule', 'Follow-up rule'),
     new Node('action:deal.close', 'action', 'deal.close'),
+    new Node('policy:sales:deal.close', 'policy', 'Close policy'),
     new Node('agent:sales.agent', 'agent', 'sales.agent'),
     new Node('handler:close', 'handler', 'CloseHandler'),
     new Node('service:salesRoute', 'service', 'salesRoute'),
@@ -35,38 +37,60 @@ $edges = [
     new Edge('e3', 'domain:sales', 'domain:property', 'depends_on'),
     new Edge('e4', 'domain:sales', 'capability:sales.pipeline', 'owns'),
     new Edge('e5', 'domain:sales', 'event:deal.changed', 'owns'),
-    new Edge('e6', 'domain:sales', 'action:deal.close', 'owns'),
-    new Edge('e7', 'action:deal.close', 'handler:close', 'handled_by'),
-    new Edge('e8', 'domain:sales', 'agent:sales.agent', 'owns'),
-    new Edge('e9', 'agent:sales.agent', 'action:deal.close', 'proposes'),
-    new Edge('e10', 'domain:sales', 'service:salesRoute', 'contributes'),
-    new Edge('e11', 'service:salesRoute', 'extension_point:web.navigation', 'contributes_to'),
+    new Edge('e6', 'domain:sales', 'rule:sales:followup', 'owns'),
+    new Edge('e7', 'event:deal.changed', 'rule:sales:followup', 'triggers'),
+    new Edge('e8', 'rule:sales:followup', 'action:deal.close', 'produces'),
+    new Edge('e9', 'domain:sales', 'action:deal.close', 'owns'),
+    new Edge('e10', 'domain:sales', 'policy:sales:deal.close', 'owns'),
+    new Edge('e11', 'policy:sales:deal.close', 'action:deal.close', 'governs'),
+    new Edge('e12', 'action:deal.close', 'handler:close', 'handled_by'),
+    new Edge('e13', 'domain:sales', 'agent:sales.agent', 'owns'),
+    new Edge('e14', 'agent:sales.agent', 'action:deal.close', 'proposes'),
+    new Edge('e15', 'domain:sales', 'service:salesRoute', 'contributes'),
+    new Edge('e16', 'service:salesRoute', 'extension_point:web.navigation', 'contributes_to'),
 ];
 $graph = new Graph($nodes, $edges);
 $registry = ArchitectureProjectionRegistry::defaults();
 
 $assert($registry->names() === ['system', 'runtime', 'domain', 'dependencies', 'events', 'actions', 'agents', 'integrations', 'code'], 'Canonical projection order changed.');
-$assert(($registry->descriptions()['dependencies']['label'] ?? null) === 'Dependencies', 'Projection descriptions missing.');
+$descriptions = $registry->descriptions();
+$assert(($descriptions['system']['layout'] ?? null) === 'hierarchical', 'System layout hint missing.');
+$assert(($descriptions['runtime']['layout'] ?? null) === 'flow', 'Runtime layout hint missing.');
+$assert(($descriptions['domain']['layout'] ?? null) === 'radial', 'Domain layout hint missing.');
+$assert(($descriptions['domain']['default_depth'] ?? null) === 2, 'Domain default depth missing.');
 
 $system = $registry->project('system', $graph, new GraphView());
 $assert(in_array('capability:sales.pipeline', $ids($system), true), 'System view lost capabilities.');
 $assert(!in_array('event:deal.changed', $ids($system), true), 'System view leaked runtime events.');
+$assert(!in_array('rule:sales:followup', $ids($system), true), 'System view leaked runtime rules.');
 
 $runtime = $registry->project('runtime', $graph, new GraphView());
-$assert(in_array('event:deal.changed', $ids($runtime), true), 'Runtime view lost events.');
-$assert(in_array('handler:close', $ids($runtime), true), 'Runtime view lost handlers.');
+foreach (['event:deal.changed', 'rule:sales:followup', 'action:deal.close', 'policy:sales:deal.close', 'handler:close', 'agent:sales.agent'] as $id) {
+    $assert(in_array($id, $ids($runtime), true), 'Runtime view lost node: ' . $id);
+}
+foreach (['triggers', 'produces', 'governs', 'handled_by', 'proposes'] as $relation) {
+    $assert(in_array($relation, $relations($runtime), true), 'Runtime view lost relation: ' . $relation);
+}
 $assert(!in_array('service:salesRoute', $ids($runtime), true), 'Runtime view leaked services.');
 
 $dependencies = $registry->project('dependencies', $graph, new GraphView());
-$assert(array_diff(array_unique($relations($dependencies)), ['contains', 'depends_on']) === [], 'Dependency view contains non-dependency relations.');
+$assert(array_diff(array_unique($relations($dependencies)), ['contains', 'depends_on', 'contributes', 'contributes_to']) === [], 'Dependency view contains unexpected relations.');
 $assert(in_array('domain:property', $ids($dependencies), true), 'Dependency view lost dependent domain.');
+$assert(in_array('extension_point:web.navigation', $ids($dependencies), true), 'Dependency view lost extension topology.');
 
 $events = $registry->project('events', $graph, new GraphView());
-$assert($ids($events) === ['domain:sales', 'domain:property', 'event:deal.changed'], 'Event view contains unexpected node types.');
+foreach (['event:deal.changed', 'rule:sales:followup', 'action:deal.close'] as $id) {
+    $assert(in_array($id, $ids($events), true), 'Events flow lost node: ' . $id);
+}
+$assert(!in_array('policy:sales:deal.close', $ids($events), true), 'Events view leaked policy nodes.');
 
 $actions = $registry->project('actions', $graph, new GraphView());
-$assert(in_array('action:deal.close', $ids($actions), true) && in_array('handler:close', $ids($actions), true), 'Action view lost execution path.');
-$assert(in_array('proposes', $relations($actions), true), 'Action view lost agent proposal relation.');
+foreach (['rule:sales:followup', 'action:deal.close', 'policy:sales:deal.close', 'handler:close', 'agent:sales.agent'] as $id) {
+    $assert(in_array($id, $ids($actions), true), 'Actions flow lost node: ' . $id);
+}
+foreach (['produces', 'governs', 'handled_by', 'proposes'] as $relation) {
+    $assert(in_array($relation, $relations($actions), true), 'Actions flow lost relation: ' . $relation);
+}
 
 $agents = $registry->project('agents', $graph, new GraphView());
 $assert(in_array('agent:sales.agent', $ids($agents), true) && !in_array('handler:close', $ids($agents), true), 'Agent view boundary is invalid.');
@@ -79,8 +103,9 @@ $code = $registry->project('code', $graph, new GraphView());
 $assert(in_array('handler:close', $ids($code), true) && in_array('service:salesRoute', $ids($code), true), 'Code view lost implementation nodes.');
 
 $domain = $registry->project('domain', $graph, new GraphView(focus: 'domain:sales', depth: 1));
-$assert(in_array('event:deal.changed', $ids($domain), true), 'Domain neighborhood lost owned event.');
-$assert(in_array('domain:property', $ids($domain), true), 'Domain neighborhood lost dependency.');
+foreach (['event:deal.changed', 'rule:sales:followup', 'policy:sales:deal.close', 'domain:property'] as $id) {
+    $assert(in_array($id, $ids($domain), true), 'Domain depth=1 lost directly connected node: ' . $id);
+}
 $assert(!in_array('handler:close', $ids($domain), true), 'Domain depth=1 unexpectedly crossed two relations.');
 
 $filtered = $registry->project('system', $graph, new GraphView(filters: new GraphFilter(nodeTypes: ['domain'])));
