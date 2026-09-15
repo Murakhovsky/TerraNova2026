@@ -11,7 +11,7 @@ contract: reference-v1
 
 Reference section відповідає на питання **«що executable code або machine-readable documentation contracts декларують точно?»**.
 
-Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, Domain process coverage, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, cross-domain boundaries, Domain process coverage, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
 
 Current Process Registry schema: **v5**.
 
@@ -42,6 +42,7 @@ Generated files не редагуються вручну у `main`.
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
 | Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + current-checkout runtime evidence |
+| Які canonical processes перетинають Domain boundaries і через які contracts/capabilities | [Cross-Domain Process Topology](cross-domain-process-topology.md) | Process Registry v5 cross-domain steps + current-checkout contract evidence |
 | Які installable Domains мають canonical process model | [Domain Process Coverage](domain-process-coverage.md) | `app/Domains/*/module.php` + Process Registry + explicit exemptions |
 | Open capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + module manifests |
 | Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
@@ -77,6 +78,9 @@ Canonical vocabulary та терміни COS.
 Питання: «Як працює бізнес-процес?»
 → Workflow + ProcessDiagram
 
+Питання: «Де business processes перетинають межі Domains?»
+→ Cross-Domain Process Topology
+
 Питання: «Які installable Domains взагалі мають process model?»
 → Domain Process Coverage
 
@@ -101,8 +105,8 @@ Canonical vocabulary та терміни COS.
 
 ## Drift protection
 
-CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry, Domain Process Coverage та Capability Debt Backlog.
+CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry, Cross-Domain Process Topology, Domain Process Coverage та Capability Debt Backlog.
 
-Process Registry schema `v5` додає contract-guarded cross-domain steps поверх backward-compatible v4 same-domain definitions і перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority. Domain Process Coverage gate вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directories з module manifests.
+Process Registry schema `v5` додає contract-guarded cross-domain steps поверх backward-compatible v4 same-domain definitions і перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Cross-Domain Process Topology агрегує лише ті foreign-domain steps, які мають verified `requires` contract і target-Domain capability. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority. Domain Process Coverage gate вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directories з module manifests.
 
 Narrative `Current Scope`, Domain overviews і цей Reference Index мають окремі drift checks проти executable/structured authorities. Зміна contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.
