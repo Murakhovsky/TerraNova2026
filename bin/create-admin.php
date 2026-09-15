@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use Domains\Identity\Infrastructure\Persistence\MySql\OrganizationMembershipSynchronizer;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 
 define('BASE_PATH', dirname(__DIR__));
@@ -60,20 +61,33 @@ ON DUPLICATE KEY UPDATE
     updated_at = CURRENT_TIMESTAMP
 SQL;
 
-$statement = $database->connection()->prepare($sql);
-$statement->execute([
-    'email' => $email,
-    'password_hash' => $passwordHash,
-    'full_name' => $fullName,
-]);
+$connection = $database->connection();
+$connection->beginTransaction();
 
-$account = $database->fetchOne(
-    'SELECT id, email, full_name, role, status FROM tn_users WHERE email = :email LIMIT 1',
-    ['email' => $email]
-);
+try {
+    $statement = $connection->prepare($sql);
+    $statement->execute([
+        'email' => $email,
+        'password_hash' => $passwordHash,
+        'full_name' => $fullName,
+    ]);
 
-if (!$account || ($account['role'] ?? null) !== 'admin' || ($account['status'] ?? null) !== 'active') {
-    fwrite(STDERR, "Admin provisioning verification failed.\n");
+    $account = $database->fetchOne(
+        'SELECT id, email, full_name, role, status FROM tn_users WHERE email = :email LIMIT 1',
+        ['email' => $email]
+    );
+
+    if (!$account || ($account['role'] ?? null) !== 'admin' || ($account['status'] ?? null) !== 'active') {
+        throw new RuntimeException('Admin provisioning verification failed.');
+    }
+
+    (new OrganizationMembershipSynchronizer($database))->syncHomeMembership((int) $account['id']);
+    $connection->commit();
+} catch (Throwable $error) {
+    if ($connection->inTransaction()) {
+        $connection->rollBack();
+    }
+    fwrite(STDERR, "Admin provisioning failed: {$error->getMessage()}\n");
     exit(1);
 }
 
