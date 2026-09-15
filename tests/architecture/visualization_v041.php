@@ -52,7 +52,7 @@ foreach (["layout: 'hierarchical'", "layout: 'flow'", "'radial'", 'TYPE_RULE', '
 }
 
 $controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
-foreach (['function graphAction', "getQuery('focus'", "getQuery('depth'", 'new GraphView(', "'view' => ["] as $marker) {
+foreach (['function graphAction', "getQuery('focus'", "getQuery('depth'", 'new GraphView(', "\$payload['view'] = ["] as $marker) {
     $assert(str_contains($controller, $marker), 'Server-side Architecture Graph projection marker missing: ' . $marker);
 }
 $assert(!str_contains($controller, 'Infrastructure\\'), 'Web Architecture controller must remain free of Infrastructure compile-time dependencies.');
