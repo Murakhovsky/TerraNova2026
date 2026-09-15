@@ -115,6 +115,7 @@ final class WebApplicationServices
             new CanonicalPropertyManagementWriteRepository(
                 $di->getShared('propertyCanonicalRuntime'),
                 $di->getShared('propertyManagementLegacyBackend'),
+                $di->getShared('propertyCompatibilityProjection'),
                 $di->getShared('databaseService')->connection(),
                 $di->getShared('organizationContext')->id(),
             ),
