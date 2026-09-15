@@ -7,19 +7,16 @@ import {
   processVerification,
   resolveRuntimeMapping,
 } from './process-runtime-evidence.mjs';
+import { loadProcessDefinitions } from './process-registry.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
-const registryRoot = path.join(here, 'processes');
 const output = path.join(docsRoot, '12-reference/business-processes.md');
 const checkOnly = process.argv.includes('--check');
 const catalogue = loadRuntimeEvidence();
 
 function loadDefinitions() {
-  return fs.readdirSync(registryRoot)
-    .filter((name) => name.endsWith('.json'))
-    .sort()
-    .map((name) => JSON.parse(fs.readFileSync(path.join(registryRoot, name), 'utf8')))
+  return loadProcessDefinitions()
     .sort((a, b) => a.domain.localeCompare(b.domain) || a.title.localeCompare(b.title));
 }
 
@@ -73,7 +70,7 @@ function render(definitions) {
     '',
     '# Business Process Registry',
     '',
-    'Generated from `docs/.vitepress/processes/*.json`, canonical module capabilities and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
+    'Generated from `resources/processes/*.json`, canonical module capabilities and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
     '',
     'Business state, capability coverage and runtime verification are separate dimensions: a step may be executable in current code while its Domain capability vocabulary is still incomplete.',
     '',

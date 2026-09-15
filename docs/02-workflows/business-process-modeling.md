@@ -17,6 +17,7 @@ COS documentation treats a business process as an operational model, not as deco
 Business meaning
         ↓
 Process Registry definition
+resources/processes/*.json
 steps + owners + domain + capability/gap + edges + criticality + runtime mappings
         ↓                         ↓
 Module capability authority      Runtime Evidence Resolver
@@ -84,7 +85,7 @@ Verification не записується в process JSON. Її рахує eviden
 
 ## Process Registry contract
 
-Кожен `workflow-v2` має matching JSON definition у `docs/.vitepress/processes/`.
+Кожен `workflow-v2` має matching JSON definition у `resources/processes/`.
 
 Schema `v4` лишається валідною для same-domain workflows. Schema `v5` додає contract-guarded cross-domain steps.
 
@@ -205,7 +206,7 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 
 ## Modeling rules
 
-1. Core topology редагується в registry definition, а не одночасно в JSON і Mermaid.
+1. Core topology редагується в `resources/processes/*.json`, а не одночасно в JSON і Mermaid.
 2. Кожний step має одного primary `owner`.
 3. Кожний step має explicit `domain`.
 4. Кожний step має canonical `capability` або explicit `capability_gap`.
@@ -225,7 +226,7 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 flowchart LR
     A[Module manifests / capabilities / contracts] --> B[Cytoscape Architecture Explorer]
     A --> C[Process Registry capability + contract validation]
-    D[Process Registry] --> C
+    D[resources/processes] --> C
     E[Runtime Evidence Resolver] --> C
     C --> F[ProcessDiagram / Mermaid]
     B --> G[COS Documentation / operational understanding]
@@ -236,6 +237,6 @@ Cytoscape показує **з чого COS складається і які capa
 
 ## Change discipline
 
-Зміна business flow, ownership, Domain hop або capability mapping починається з registry definition. Зміна module capabilities/contracts або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities, cross-domain contracts та evidence; generated Reference оновлює coverage; VitePress показує derived views.
+Зміна business flow, ownership, Domain hop або capability mapping починається з `resources/processes/*.json`. Зміна module capabilities/contracts або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities, cross-domain contracts та evidence; generated Reference оновлює coverage; VitePress показує derived views.
 
 Так документація стає перевірюваною моделлю системи, а не музеєм попередніх намірів.

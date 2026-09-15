@@ -2,7 +2,7 @@
 title: Kernel Overview
 description: Відповідальності та межі COS Kernel.
 status: active
-updated: 2026-09-13
+updated: 2026-09-15
 kind: architecture
 ---
 
@@ -10,7 +10,7 @@ kind: architecture
 
 COS Kernel є generic execution layer. Він не знає бізнес-мову конкретного Domain, але забезпечує однакові правила виконання для всіх Domains.
 
-Поточний executable Kernel contract: **`0.11.8`**.
+Поточний executable Kernel contract: **`0.11.9`**.
 
 Детальний canonical document: [`docs/architecture/cos-kernel.md`](../architecture/cos-kernel.md).
 
@@ -30,6 +30,7 @@ COS Kernel є generic execution layer. Він не знає бізнес-мов�
 | Tenant | active organization context |
 | Configuration | validation and provisioning |
 | Module | installable Domain contract and registry |
+| Process | structural business-process model and registry contract; execution semantics remain outside Kernel |
 | Extension | module-owned extension points without hardcoded Domain assembly |
 | Module readiness | deployed/installed/schema/dependency diagnostics |
 | Operations | worker lifecycle, health |
@@ -47,7 +48,8 @@ Kernel не повинен визначати:
 - SQL schema конкретного Domain;
 - HTTP controllers;
 - prompt зміст конкретного business Agent;
-- Web navigation semantics конкретного Domain.
+- Web navigation semantics конкретного Domain;
+- process execution orchestration або inferred cross-domain contracts.
 
 ## Dependency direction
 
@@ -106,6 +108,25 @@ Domain реєструє через manifest/module contract свої contributio
 `DomainModuleRegistry` забезпечує business runtime ownership/routing. `ModuleExtensionRegistry` забезпечує generic extension points для delivery/configuration та інших cross-cutting surfaces.
 
 Детальніше: [Extension Runtime](extension-runtime.md).
+
+## Process structural model
+
+Kernel V0.11.9 додає platform-neutral Process contracts без перенесення business orchestration у Kernel:
+
+```text
+resources/processes/*.json
+  ↓
+ProcessRegistryInterface
+  ↓
+ProcessDefinition
+  ├─ ProcessStep
+  ├─ ProcessEdge
+  └─ RuntimeMapping
+```
+
+Schema v4 підтримує same-domain workflows. Schema v5 дозволяє cross-domain step лише з explicit structural `contract` mapping; current-checkout evidence layer окремо доводить `requires` semantics і counterpart Domain.
+
+Детальніше: [Process V0.1 — Canonical Process Foundation](process-v0.1.md).
 
 ## Extension model
 
