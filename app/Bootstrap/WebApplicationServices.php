@@ -4,7 +4,8 @@ declare(strict_types=1);
 namespace Bootstrap;
 
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlPresentationSales;
-use Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService;
+use Domains\Identity\Infrastructure\Persistence\MySql\OrganizationMembershipSynchronizer;
+use Domains\Identity\Infrastructure\ReadModel\MySql\MembershipSynchronizedAdminDashboardService;
 use Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
 use Domains\Property\Infrastructure\ReadModel\MySql\CatalogService;
@@ -65,7 +66,13 @@ final class WebApplicationServices
             $di->getShared('cosModuleWebNavigationContributors'),
         ));
 
-        $di->setShared('frontendAdminDashboardService', fn() => new AdminDashboardService($di->getShared('databaseService')));
+        $di->setShared('identityOrganizationMembershipSynchronizer', fn() => new OrganizationMembershipSynchronizer(
+            $di->getShared('databaseService'),
+        ));
+        $di->setShared('frontendAdminDashboardService', fn() => new MembershipSynchronizedAdminDashboardService(
+            $di->getShared('databaseService'),
+            $di->getShared('identityOrganizationMembershipSynchronizer'),
+        ));
         $di->setShared('frontendAnalyticsService', fn() => new MysqlPropertyFunnelAnalytics($di->getShared('databaseService')));
         $di->setShared('frontendPublicPageService', fn() => new PublicPageService());
         $di->setShared('contentRepository', fn() => new MysqlContentRepository(
