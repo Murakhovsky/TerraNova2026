@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "id": "sales.lead-to-managed-case",
   "title": "Sales Lead → Managed Case",
   "domain": "sales",

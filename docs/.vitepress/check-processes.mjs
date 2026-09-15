@@ -2,31 +2,33 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import {
+  loadRuntimeEvidence,
+  processVerification,
+  resolveRuntimeMapping,
+} from './process-runtime-evidence.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
-const repoRoot = path.resolve(docsRoot, '..');
 const registryRoot = path.join(here, 'processes');
 
-const VALID_STATES = new Set(['as-is', 'to-be', 'runtime-verified']);
+const VALID_STATES = new Set(['as-is', 'to-be']);
 const VALID_STEP_KINDS = new Set(['operation', 'state', 'decision', 'outcome', 'manual']);
-const VALID_MAPPING_TYPES = new Set(['use_case', 'command', 'event', 'source']);
-
-const references = {
-  use_case: fs.readFileSync(path.join(docsRoot, '12-reference/application-use-cases.md'), 'utf8'),
-  command: fs.readFileSync(path.join(docsRoot, '12-reference/commands.md'), 'utf8'),
-  event: fs.readFileSync(path.join(docsRoot, '12-reference/event-types.md'), 'utf8'),
-};
+const VALID_MAPPING_TYPES = new Set(['use_case', 'command', 'event', 'contract', 'source']);
+const catalogue = loadRuntimeEvidence();
 
 const errors = [];
 const processIds = new Set();
 const workflowPaths = new Set();
 let mappingCount = 0;
+let verifiedMappingCount = 0;
 let stepCount = 0;
 let ownedStepCount = 0;
 let mappedStepCount = 0;
+let verifiedStepCount = 0;
 let criticalCount = 0;
-let mappedCriticalCount = 0;
+let sourceVerifiedCriticalCount = 0;
+let runtimeVerifiedCriticalCount = 0;
 
 function fail(file, message) {
   errors.push(`${file}: ${message}`);
@@ -51,53 +53,24 @@ function parseFrontmatter(content) {
   return values;
 }
 
-function exactReferenceExists(type, ref) {
-  const source = references[type];
-  return source.includes(`\`${ref}\``);
-}
-
-function validateRuntimeMapping(file, processId, stepId, mapping) {
+function validateRuntimeMapping(file, definition, step, mapping) {
   if (!mapping || typeof mapping !== 'object') {
-    fail(file, `process '${processId}' step '${stepId}' contains an invalid runtime mapping`);
+    fail(file, `process '${definition.id}' step '${step.id}' contains an invalid runtime mapping`);
     return;
   }
 
   if (!VALID_MAPPING_TYPES.has(mapping.type)) {
-    fail(file, `process '${processId}' step '${stepId}' uses unsupported mapping type '${mapping.type ?? 'missing'}'`);
+    fail(file, `process '${definition.id}' step '${step.id}' uses unsupported mapping type '${mapping.type ?? 'missing'}'`);
     return;
   }
 
   mappingCount += 1;
-
-  if (mapping.type === 'source') {
-    if (!mapping.path || typeof mapping.path !== 'string') {
-      fail(file, `process '${processId}' step '${stepId}' source mapping requires 'path'`);
-      return;
-    }
-
-    const absolute = path.join(repoRoot, mapping.path);
-    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
-      fail(file, `process '${processId}' step '${stepId}' source path does not exist: ${mapping.path}`);
-      return;
-    }
-
-    if (mapping.symbol) {
-      const source = fs.readFileSync(absolute, 'utf8');
-      if (!source.includes(mapping.symbol)) {
-        fail(file, `process '${processId}' step '${stepId}' source ${mapping.path} does not contain symbol '${mapping.symbol}'`);
-      }
-    }
+  const resolution = resolveRuntimeMapping(mapping, catalogue, definition.domain);
+  if (!resolution.verified) {
+    fail(file, `process '${definition.id}' step '${step.id}' has unresolved ${mapping.type} mapping: ${resolution.reason}`);
     return;
   }
-
-  if (!mapping.ref || typeof mapping.ref !== 'string') {
-    fail(file, `process '${processId}' step '${stepId}' ${mapping.type} mapping requires 'ref'`);
-    return;
-  }
-
-  if (!exactReferenceExists(mapping.type, mapping.ref)) {
-    fail(file, `process '${processId}' step '${stepId}' references missing ${mapping.type} '${mapping.ref}'`);
-  }
+  verifiedMappingCount += 1;
 }
 
 if (!fs.existsSync(registryRoot)) {
@@ -126,11 +99,14 @@ for (const name of files) {
     continue;
   }
 
-  if (definition.schema_version !== 2) fail(file, `schema_version must be 2, got '${definition.schema_version ?? 'missing'}'`);
+  if (definition.schema_version !== 3) fail(file, `schema_version must be 3, got '${definition.schema_version ?? 'missing'}'`);
   if (!definition.id || typeof definition.id !== 'string') fail(file, 'id is required');
   if (!definition.title || typeof definition.title !== 'string') fail(file, 'title is required');
   if (!definition.domain || typeof definition.domain !== 'string') fail(file, 'domain is required');
   if (!VALID_STATES.has(definition.state)) fail(file, `state must be one of ${[...VALID_STATES].join(', ')}`);
+  if (Object.prototype.hasOwnProperty.call(definition, 'verification')) {
+    fail(file, 'verification is derived from runtime evidence and must not be authored');
+  }
   if (!definition.workflow || typeof definition.workflow !== 'string') fail(file, 'workflow is required');
 
   if (definition.id) {
@@ -216,16 +192,14 @@ for (const name of files) {
     }
     if (runtime.length > 0) mappedStepCount += 1;
 
-    if (step.critical === true) {
-      criticalCount += 1;
-      if (runtime.length > 0) mappedCriticalCount += 1;
-      if (definition.state === 'runtime-verified' && runtime.length === 0) {
-        fail(file, `runtime-verified process '${definition.id}' critical step '${step.id}' has no runtime mapping`);
-      }
-    }
-
-    for (const mapping of runtime) validateRuntimeMapping(file, definition.id, step.id, mapping);
+    for (const mapping of runtime) validateRuntimeMapping(file, definition, step, mapping);
   }
+
+  const verification = processVerification(definition, catalogue);
+  verifiedStepCount += verification.verifiedSteps;
+  criticalCount += verification.critical;
+  sourceVerifiedCriticalCount += verification.criticalSourceVerified;
+  runtimeVerifiedCriticalCount += verification.criticalRuntimeVerified;
 
   const edgeKeys = new Set();
   const incoming = new Map([...stepIds].map((id) => [id, 0]));
@@ -281,4 +255,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${mappedStepCount}/${stepCount} steps runtime-mapped, ${mappingCount} runtime mappings, ${mappedCriticalCount}/${criticalCount} critical steps mapped.`);
+console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${mappedStepCount}/${stepCount} steps mapped, ${verifiedStepCount}/${stepCount} steps evidence-verified, ${verifiedMappingCount}/${mappingCount} mappings verified, ${sourceVerifiedCriticalCount}/${criticalCount} critical steps source-verified, ${runtimeVerifiedCriticalCount}/${criticalCount} critical steps runtime-verified.`);
