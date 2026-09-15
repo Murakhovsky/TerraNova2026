@@ -5,10 +5,12 @@ namespace Interfaces\Web;
 
 use Bootstrap\WebApplicationServices;
 use Interfaces\Web\Page\PublicPageService;
+use Interfaces\Web\Routing\CoreWebRoutes;
 use Interfaces\Web\Routing\FrontendRoutes;
 use Interfaces\Web\Routing\ModuleRouteContributorInterface;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\PlatformRoutes;
+use Interfaces\Web\Routing\SpatialWebRoutes;
 use Interfaces\Web\Routing\VisualizationRoutes;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
@@ -32,6 +34,7 @@ class Module implements ModuleDefinitionInterface
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
         PlatformRoutes::register($router);
         VisualizationRoutes::register($router);
+        SpatialWebRoutes::register($router);
 
         $routeRegistrar = $di->getShared('moduleRouteRegistrar');
         if (!$routeRegistrar instanceof ModuleRouteRegistrar) {
@@ -47,6 +50,10 @@ class Module implements ModuleDefinitionInterface
 
             $routeRegistrar->register($moduleId, $service, $router);
         }
+
+        // Register cross-surface routes last so the application-wide not-found
+        // target is installed after all Web/module route contributors.
+        CoreWebRoutes::register($router);
 
         $di->set('view', function () {
             $view = new View();

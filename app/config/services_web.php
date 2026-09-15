@@ -13,7 +13,8 @@ use Phalcon\Mvc\Url as UrlResolver;
 // * Registering a router
 // */
 $di->setShared('router', function () {
-    $router = new Router();
+    $router = new Router(false);
+    $router->removeExtraSlashes(true);
 //    $router->setDefaultModule('economy');
     $router->setDefaultModule('frontend');
     return $router;
