@@ -34,7 +34,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: cos-documentation-${{ github.ref }}
@@ -45,8 +45,10 @@ jobs:
     name: Validate and build docs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout canonical main source
+      - name: Checkout canonical source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -61,6 +63,18 @@ jobs:
 
       - name: Generate reference from current checkout
         run: npm run docs:generate
+
+      - name: One-time sync generated references on PR branch
+        if: github.event_name == 'pull_request'
+        run: |
+          DRIFT=$(git status --porcelain -- docs/12-reference)
+          if [ -n "$DRIFT" ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add docs/12-reference
+            git commit -m 'DOC generated reference sync'
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
 
       - name: Verify committed generated reference drift
         run: |
