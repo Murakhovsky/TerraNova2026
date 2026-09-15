@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Domains\Property\Infrastructure\Persistence\MySql\Management;
 
+use Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface;
 use Domains\Property\Application\Contract\PropertyManagementWriteRepositoryInterface;
 use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
@@ -14,6 +15,7 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
     public function __construct(
         private PropertyCanonicalRuntimeService $runtime,
         private MysqlPropertyManagementRepository $legacyOperations,
+        private PropertyCompatibilityProjectionInterface $compatibility,
         private PDO $connection,
         private string $organizationId,
     ) {}
@@ -53,7 +55,8 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
 
             $legacyId = (int) ($bundle['legacy_property_id'] ?? 0);
             if ($legacyId <= 0) throw new \RuntimeException('Canonical Property projection did not return a compatibility id.');
-            $this->updateOperationalMetadata($legacyId, $input);
+            $this->compatibility->syncOperationalMetadata($this->organizationId, $legacyId, $input);
+            $this->compatibility->recordActivity($this->organizationId, $legacyId, $userId, 'system', 'Чернетку об’єкта створено', 'Створено через canonical Property runtime.');
             if ($files !== []) {
                 $media = $this->legacyOperations->update($legacyId, ['property_title' => $title], $files, $userId);
                 if (empty($media['ok'])) return $media;
@@ -76,7 +79,16 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
     {
         try {
             $this->runtime->applyLegacyStatus($this->organizationId, $propertyId, $status, $note, $this->actor($userId));
-            $this->recordStatusNote($propertyId, $note, $userId);
+            $metadata = trim($note) !== '' ? ['status_note' => mb_substr($note, 0, 500)] : [];
+            $this->compatibility->syncOperationalMetadata($this->organizationId, $propertyId, $metadata);
+            $this->compatibility->recordActivity(
+                $this->organizationId,
+                $propertyId,
+                $userId,
+                'status_change',
+                'Комерційний стан оновлено',
+                trim($note) !== '' ? $note : 'Стан синхронізовано з canonical Property runtime.',
+            );
             return ['ok' => true, 'message' => 'Комерційний стан об’єкта оновлено.'];
         } catch (Throwable $e) {
             return ['ok' => false, 'message' => 'Не вдалося змінити стан об’єкта: ' . $e->getMessage()];
@@ -88,7 +100,7 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
         try {
             $canonical = $this->canonicalInput($input, false);
             $this->runtime->patchBundleByLegacyId($this->organizationId, $propertyId, $canonical + $input, $this->actor($userId));
-            $this->updateOperationalMetadata($propertyId, $input);
+            $this->compatibility->syncOperationalMetadata($this->organizationId, $propertyId, $input);
             if (isset($input['status']) && trim((string) $input['status']) !== '') {
                 $this->runtime->applyLegacyStatus(
                     $this->organizationId,
@@ -98,6 +110,7 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
                     $this->actor($userId),
                 );
             }
+            $this->compatibility->recordActivity($this->organizationId, $propertyId, $userId, 'details_update', 'Картку об’єкта оновлено', 'Canonical Property state synchronized.');
             return ['ok' => true, 'message' => 'Об’єкт оновлено через canonical Property runtime.'];
         } catch (Throwable $e) {
             return ['ok' => false, 'message' => 'Не вдалося оновити об’єкт: ' . $e->getMessage()];
@@ -106,12 +119,23 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
 
     public function update(int $propertyId, array $input, array $files, ?int $userId = null): array
     {
+        // Media storage is still a compatibility surface in V0.12. It does not own Asset,
+        // Inventory or Listing state and may only touch legacy media bookkeeping.
         return $this->legacyOperations->update($propertyId, $input, $files, $userId);
     }
 
     public function addActivityNote(int $propertyId, array $input, ?int $userId = null): array
     {
-        return $this->legacyOperations->addActivityNote($propertyId, $input, $userId);
+        $title = trim((string) ($input['activity_title'] ?? ''));
+        $body = trim((string) ($input['activity_body'] ?? ''));
+        if ($title === '') return ['ok' => false, 'message' => 'Вкажіть коротку назву нотатки.'];
+        if ($body === '') return ['ok' => false, 'message' => 'Додайте текст нотатки.'];
+        try {
+            $this->compatibility->recordActivity($this->organizationId, $propertyId, $userId, 'note', $title, $body);
+            return ['ok' => true, 'message' => 'Нотатку додано в журнал об’єкта.'];
+        } catch (Throwable $e) {
+            return ['ok' => false, 'message' => 'Не вдалося додати нотатку: ' . $e->getMessage()];
+        }
     }
 
     private function canonicalInput(array $input, bool $requireLocation): array
@@ -150,39 +174,6 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
         if (!empty($input['tour_url'])) $features['tour_url'] = (string) $input['tour_url'];
         if (!empty($input['video_url'])) $features['video_url'] = (string) $input['video_url'];
         return $features;
-    }
-
-    private function updateOperationalMetadata(int $propertyId, array $input): void
-    {
-        $allowed = [
-            'property_group_id','commission_type','commission_value','sale_priority','min_price_amount',
-            'reserved_until','reserved_by_case_id','fixed_client_case_id','manager_note','source_note',
-            'status_note','operational_stage','next_action_title','next_action_due_at','next_action_note',
-        ];
-        $set = [];
-        $params = ['id' => $propertyId, 'organization_id' => $this->organizationId];
-        foreach ($allowed as $field) {
-            if (!array_key_exists($field, $input)) continue;
-            $set[] = $field . '=:' . $field;
-            $value = $input[$field];
-            $params[$field] = ($value === '' || $value === 0 || $value === '0') && in_array($field, ['property_group_id','reserved_by_case_id','fixed_client_case_id'], true) ? null : $value;
-        }
-        if ($set === []) return;
-        $set[] = 'updated_at=NOW()';
-        $statement = $this->connection->prepare('UPDATE tn_properties SET ' . implode(',', $set) . ' WHERE id=:id AND organization_id=:organization_id LIMIT 1');
-        $statement->execute($params);
-    }
-
-    private function recordStatusNote(int $propertyId, string $note, ?int $userId): void
-    {
-        if (trim($note) !== '') {
-            $this->connection->prepare('UPDATE tn_properties SET status_note=:note,status_changed_at=NOW() WHERE id=:id AND organization_id=:organization_id LIMIT 1')
-                ->execute(['note' => mb_substr($note, 0, 500), 'id' => $propertyId, 'organization_id' => $this->organizationId]);
-        }
-        $this->legacyOperations->addActivityNote($propertyId, [
-            'activity_title' => 'Комерційний стан оновлено',
-            'activity_body' => trim($note) !== '' ? $note : 'Стан синхронізовано з canonical Property runtime.',
-        ], $userId);
     }
 
     private function fetchOne(string $sql, array $params): ?array
