@@ -17,6 +17,8 @@ contract: architecture-v1
 
 System Map читається зверху вниз. Починайте з бізнес-питання і провалюйтеся до exact executable facts лише тоді, коли вони потрібні.
 
+> **Executable graph:** інтерактивна runtime-карта доступна у COS на [`/cos/architecture`](/cos/architecture). Ця сторінка пояснює mental model; [Architecture Graph Reference](../12-reference/architecture-graph.md) генерується з того самого canonical Visualization vocabulary.
+
 <div class="cos-system-map">
   <div class="cos-map-layer">
     <div class="cos-map-title">1 · Business Workflows</div>
@@ -74,6 +76,10 @@ System Map читається зверху вниз. Починайте з бі�
       <a class="cos-map-node" href="../12-reference/event-types.html"><strong>Events</strong><span>Canonical event inventory.</span></a>
       <a class="cos-map-node" href="../12-reference/commands.html"><strong>Commands</strong><span>Canonical command inventory.</span></a>
       <a class="cos-map-node" href="../12-reference/module-routes.html"><strong>Routes</strong><span>Module-owned route contributions.</span></a>
+      <a class="cos-map-node" href="../12-reference/architecture-graph.html"><strong>Architecture Graph</strong><span>Canonical node types, relations and projections.</span></a>
+      <a class="cos-map-node" href="../12-reference/database.html"><strong>Database</strong><span>Manifest migrations and statically detected table ownership/touches.</span></a>
+      <a class="cos-map-node" href="../12-reference/configuration.html"><strong>Configuration</strong><span>Configuration provisioners and capability declarations.</span></a>
+      <a class="cos-map-node" href="../12-reference/errors-and-failures.html"><strong>Errors & Failures</strong><span>Failure taxonomy and classified implementations.</span></a>
     </div>
   </div>
 </div>
@@ -94,4 +100,4 @@ System Map читається зверху вниз. Починайте з бі�
 
 ## Source of truth
 
-Generated facts синхронізуються з current `main` checkout під час build.
+Generated facts синхронізуються з current `main` checkout під час build. Narrative System Map не дублює graph registry: executable architecture переглядається через `/cos/architecture`, а точний vocabulary/projection catalogue генерується у Reference.

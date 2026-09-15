@@ -2,7 +2,7 @@
 title: Reference Index
 description: Карта exact/generated reference COS і правила вибору правильного джерела фактів.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: reference
 ---
 
@@ -15,7 +15,7 @@ Reference section відповідає на питання **«що executable c
 ## Authority model
 
 ```text
-COS executable metadata / code
+main executable metadata / code
         ↓
 COS generators
         ↓
@@ -39,6 +39,10 @@ Generated files не редагуються вручну у `main`.
 | Canonical runtime event types | [Event Types](event-types.md) | event catalogues / `TYPE` constants |
 | Module-owned routes | [Module Routes](module-routes.md) | route contributors / routing metadata |
 | Permissions / capability authority | [Permissions & Capabilities](permissions-capabilities.md) | executable permission/capability declarations |
+| Module configuration ownership | [Configuration Reference](configuration.md) | module manifests / configuration provisioners |
+| Database migration ownership and table touches | [Database Reference](database.md) | manifest `migration_files` + migration SQL |
+| Canonical execution failure taxonomy | [Errors & Failures Reference](errors-and-failures.md) | `ExecutionFailureKind` + classified failures |
+| Architecture graph vocabulary and projections | [Architecture Graph Reference](architecture-graph.md) | Visualization vocabulary / projection registry |
 
 ## Narrative reference
 
@@ -88,8 +92,6 @@ Reference section не повинна пояснювати:
 
 ## Drift protection
 
-CI перевіряє byte-for-byte sync семи generated reference files між `COS` і `main`.
+CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Після DOC V0.9.2 generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures та architecture graph vocabulary.
 
-Крім того, narrative `Current Scope` та Domain overviews мають окремі version-drift checks проти `COS` module manifests.
-
-Тобто зміна executable contract без оновлення knowledge layer повинна ставати build defect, а не сюрпризом для людини через два місяці.
+Narrative `Current Scope` і Domain overviews мають окремі version-drift checks проти module manifests. Зміна executable contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.

@@ -7,8 +7,12 @@ on:
       - 'docs/**'
       - 'app/Domains/**'
       - 'app/Kernel/Module/**'
+      - 'app/Kernel/Execution/**'
+      - 'app/Infrastructure/Visualization/Architecture/**'
+      - 'app/migrations/**'
       - 'app/Interfaces/Web/Routing/**'
       - 'docker/nginx/default.conf'
+      - 'deploy/configure-company-os-http.sh'
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
       - '.github/workflows/docs.yml'
@@ -18,8 +22,12 @@ on:
       - 'docs/**'
       - 'app/Domains/**'
       - 'app/Kernel/Module/**'
+      - 'app/Kernel/Execution/**'
+      - 'app/Infrastructure/Visualization/Architecture/**'
+      - 'app/migrations/**'
       - 'app/Interfaces/Web/Routing/**'
       - 'docker/nginx/default.conf'
+      - 'deploy/configure-company-os-http.sh'
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
       - '.github/workflows/docs.yml'
@@ -82,7 +90,8 @@ jobs:
       DEV_USER: ${{ secrets.DEV_USER }}
       DEV_PORT: ${{ secrets.DEV_PORT }}
       DEV_PATH: ${{ vars.DEV_PATH }}
-      DEV_HEALTHCHECK_URL: ${{ vars.DEV_HEALTHCHECK_URL }}
+      COMPANY_OS_DOMAIN: company-os.shop
+      COMPANY_OS_DOCS_URL: https://company-os.shop/docs/
     steps:
       - name: Checkout deployment configuration
         uses: actions/checkout@v4
@@ -99,6 +108,8 @@ jobs:
           : "${DEV_USER:?DEV_USER secret is missing}"
           : "${DEV_PORT:?DEV_PORT secret is missing}"
           : "${DEV_PATH:?DEV_PATH environment variable is missing}"
+          : "${COMPANY_OS_DOMAIN:?COMPANY_OS_DOMAIN is missing}"
+          : "${COMPANY_OS_DOCS_URL:?COMPANY_OS_DOCS_URL is missing}"
           test -n "${{ secrets.DEV_SSH_KEY }}" || { echo "DEV_SSH_KEY secret is missing" >&2; exit 1; }
 
       - name: Configure SSH
@@ -133,19 +144,38 @@ jobs:
           "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O /dev/null http://127.0.0.1/docs/
           REMOTE
 
-      - name: Configure host HTTPS documentation route
-        if: env.DEV_HEALTHCHECK_URL != ''
+      - name: Configure company-os.shop HTTPS documentation route
         run: |
-          DEV_DOMAIN="${DEV_HEALTHCHECK_URL#*://}"
-          DEV_DOMAIN="${DEV_DOMAIN%%/*}"
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
-          REMOTE_DOMAIN=$(printf '%q' "$DEV_DOMAIN")
+          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
           rsync -az -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" deploy/configure-dev-tls.sh "$DEV_USER@$DEV_HOST:/tmp/cos-configure-dev-tls.sh"
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "install -m 755 /tmp/cos-configure-dev-tls.sh $REMOTE_PATH/deploy/configure-dev-tls.sh && rm -f /tmp/cos-configure-dev-tls.sh && cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
 
-      - name: External documentation diagnostic
-        if: env.DEV_HEALTHCHECK_URL != ''
-        continue-on-error: true
+      - name: Public documentation DNS preflight
         run: |
-          DOCS_ORIGIN=$(printf '%s' "$DEV_HEALTHCHECK_URL" | sed -E 's#(https?://[^/]+).*#\1#')
-          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "$DOCS_ORIGIN/docs/" > /dev/null
+          getent ahostsv4 "$COMPANY_OS_DOMAIN"
+          python3 - <<'PY'
+          import json
+          import urllib.request
+
+          domain = 'company-os.shop'
+          checks = [
+              ('Google', f'https://dns.google/resolve?name={domain}&type=A', {}),
+              ('Cloudflare', f'https://cloudflare-dns.com/dns-query?name={domain}&type=A', {'Accept': 'application/dns-json'}),
+          ]
+          for provider, url, headers in checks:
+              request = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(request, timeout=10) as response:
+                  payload = json.load(response)
+              answers = [item.get('data') for item in payload.get('Answer', []) if item.get('type') == 1]
+              if payload.get('Status') != 0 or not answers:
+                  raise SystemExit(f'{provider} cannot resolve {domain} to an IPv4 address: {payload}')
+              print(f'{provider}: {domain} -> {", ".join(answers)}')
+          PY
+
+      - name: External company-os.shop documentation diagnostic
+        run: |
+          curl --fail --show-error --silent --location --retry 3 --retry-delay 2 --retry-all-errors "$COMPANY_OS_DOCS_URL" > /tmp/cos-docs-index.html
+          test -s /tmp/cos-docs-index.html
+          curl --fail --show-error --silent --location --retry 3 --retry-delay 2 --retry-all-errors "https://$COMPANY_OS_DOMAIN/docs" > /dev/null
+          echo "Public documentation is healthy: $COMPANY_OS_DOCS_URL"
