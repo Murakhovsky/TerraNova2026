@@ -20,7 +20,7 @@ const props = defineProps({
 const modules = import.meta.glob('../processes/*.json', { eager: true, import: 'default' });
 const definitions = Object.values(modules);
 const validDirections = new Set(['TD', 'TB', 'BT', 'LR', 'RL']);
-const validViews = new Set(['flow', 'ownership', 'capability']);
+const validViews = new Set(['flow', 'ownership', 'capability', 'domain']);
 
 const definition = computed(() => definitions.find((candidate) => candidate.id === props.processId) ?? null);
 
@@ -127,6 +127,34 @@ function renderCapability(process, direction) {
   return lines.join('\n');
 }
 
+function renderDomain(process, direction) {
+  const lines = [
+    `flowchart ${direction}`,
+    `    %% Domain view derived from Process Registry: ${process.id}`,
+  ];
+
+  const domains = [];
+  const seen = new Set();
+  for (const step of process.steps ?? []) {
+    const domain = step.domain ?? process.domain;
+    if (seen.has(domain)) continue;
+    seen.add(domain);
+    domains.push(domain);
+  }
+
+  domains.forEach((domain, index) => {
+    lines.push(`    subgraph domain_${index}["${safeLabel(domain)}"]`);
+    lines.push('        direction TB');
+    for (const step of process.steps ?? []) {
+      if ((step.domain ?? process.domain) === domain) lines.push(`        ${renderNode(step)}`);
+    }
+    lines.push('    end');
+  });
+
+  renderEdges(process, lines);
+  return lines.join('\n');
+}
+
 const mermaidSource = computed(() => {
   const process = definition.value;
   if (!process) return '';
@@ -135,6 +163,7 @@ const mermaidSource = computed(() => {
   const view = validViews.has(props.view) ? props.view : 'flow';
   if (view === 'ownership') return renderOwnership(process, direction);
   if (view === 'capability') return renderCapability(process, direction);
+  if (view === 'domain') return renderDomain(process, direction);
   return renderFlow(process, direction);
 });
 </script>

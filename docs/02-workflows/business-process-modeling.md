@@ -9,7 +9,7 @@ contract: concept-v1
 
 # Business Process Modeling
 
-COS documentation treats a business process as an operational model, not as decorative documentation. The canonical topology lives in the **Process Registry** and Mermaid is a derived projection. Visualization V0.5 separated business truth from runtime evidence; DOC V0.15 adds the explicit bridge from each process step to its owning Domain capability.
+COS documentation treats a business process as an operational model, not as decorative documentation. The canonical topology lives in the **Process Registry** and Mermaid is a derived projection. Visualization V0.5 separated business truth from runtime evidence; DOC V0.15 added the explicit bridge from each process step to its Domain capability; DOC V0.19.1 adds contract-guarded cross-domain steps.
 
 ## Source-of-truth chain
 
@@ -47,7 +47,7 @@ Every canonical workflow page declares `process_state`, and the matching registr
 
 ### Capability coverage
 
-Кожний step schema v4 має explicit `domain` і одне з двох:
+Кожний step має explicit `domain` і одне з двох:
 
 ```json
 {
@@ -86,7 +86,9 @@ Verification не записується в process JSON. Її рахує eviden
 
 Кожен `workflow-v2` має matching JSON definition у `docs/.vitepress/processes/`.
 
-Schema `v4` фіксує:
+Schema `v4` лишається валідною для same-domain workflows. Schema `v5` додає contract-guarded cross-domain steps.
+
+Process definition фіксує:
 
 - stable `id`;
 - process Domain;
@@ -101,16 +103,47 @@ Schema `v4` фіксує:
 - `critical` transitions;
 - runtime/evidence mappings.
 
-Schema v4 зберігає V0.5 invariant: authored `verification` заборонений.
+Authored `verification` заборонений у всіх schema versions.
 
-Поточний v4 також вимагає, щоб step залишався всередині process Domain. Cross-domain step потребуватиме окремого explicit contract у наступній версії registry, а не тихого запозичення чужої capability.
+### Cross-domain step in schema v5
 
-Workflow page рендерить три derived projections:
+Process залишається owned одним root Domain, але окремий step може виконувати capability іншого Domain. Такий перехід не можна просто написати руками:
+
+```json
+{
+  "id": "resolve-property",
+  "domain": "property",
+  "capability": "property.reference",
+  "runtime": [
+    {
+      "type": "contract",
+      "ref": "Domains\\Property\\Contract\\PropertyReferencePort"
+    }
+  ]
+}
+```
+
+Checker дозволяє цей step лише коли current module evidence доводить, що process Domain декларує цей contract як `role: requires`, а `counterpart` дорівнює step Domain.
+
+Для `sales.request-to-property-match` це означає:
+
+```text
+Sales process
+  ↓ requires PropertyReferencePort
+Property / property.reference
+  ↓
+Sales Property Match
+```
+
+Cross-domain execution не створює shared ownership. Property step використовує Property capability; Sales продовжує володіти самим process, Client Case і match relationship.
+
+Workflow page рендерить три базові derived projections, а cross-domain workflow також Domain projection:
 
 ```html
 <ProcessDiagram process-id="domain.process-id" />
 <ProcessDiagram process-id="domain.process-id" view="ownership" direction="LR" />
 <ProcessDiagram process-id="domain.process-id" view="capability" direction="LR" />
+<ProcessDiagram process-id="domain.process-id" view="domain" direction="LR" />
 ```
 
 ## Current-checkout evidence catalogue
@@ -144,6 +177,10 @@ Generated Markdown не є evidence для іншого generated Markdown. Chec
 
 Ця проєкція відповідає **яку здатність Domain реалізує цим кроком і де capability model ще неповна**.
 
+### Domain view
+
+`ProcessDiagram(domain)` групує steps за їхнім actual Domain. Для cross-domain workflow ця проєкція показує Domain hop із того самого registry topology, без другої ручної Mermaid-схеми.
+
 ### Interaction sequence і state lifecycle
 
 Sequence/state diagrams не можна чесно вивести лише з generic `steps + edges`. До появи structured interaction/state semantics вони можуть бути supplemental Mermaid, але не canonical derived projections.
@@ -155,6 +192,7 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 - Ownership coverage;
 - Capability coverage;
 - Capability gaps;
+- Cross-domain steps;
 - Mapped steps;
 - Evidence-verified steps;
 - Runtime-backed steps;
@@ -163,7 +201,7 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 
 Це architecture/documentation coverage, а не KPI бізнесу.
 
-Поточний baseline навмисно показує різну зрілість Domain models: Property уже має semantic module capabilities для canonical workflow, тоді як Sales і Diagnostic мають runtime implementation без достатньо точного business-capability vocabulary.
+Поточний baseline навмисно показує різну зрілість Domain models: Property уже має semantic module capabilities для canonical workflows, тоді як Sales і Diagnostic мають runtime implementation без достатньо точного business-capability vocabulary.
 
 ## Modeling rules
 
@@ -177,7 +215,7 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 8. Process має root, terminal і повну reachability.
 9. Human steps показуються нарівні з automated steps, якщо вони реальні.
 10. Domain decisions відділяються від UI clicks і transport details.
-11. Cross-domain transition називає boundary/contract і не створює shared ownership.
+11. Cross-domain step використовує schema v5+, foreign Domain capability і verified `requires` contract від process Domain; shared ownership не створюється.
 12. Exact command/event inventories не дублюються вручну, якщо існує canonical evidence catalogue.
 13. Sequence/state projections не генеруються з недостатньої семантики заради красивої картинки.
 
@@ -185,8 +223,8 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 
 ```mermaid
 flowchart LR
-    A[Module manifests / capabilities] --> B[Cytoscape Architecture Explorer]
-    A --> C[Process Registry capability validation]
+    A[Module manifests / capabilities / contracts] --> B[Cytoscape Architecture Explorer]
+    A --> C[Process Registry capability + contract validation]
     D[Process Registry] --> C
     E[Runtime Evidence Resolver] --> C
     C --> F[ProcessDiagram / Mermaid]
@@ -194,10 +232,10 @@ flowchart LR
     F --> G
 ```
 
-Cytoscape показує **з чого COS складається і які capabilities належать Domains**. Process Registry + Mermaid показує **як робота рухається через ці capabilities, хто відповідає за steps і наскільки runtime твердження підтверджені current checkout**.
+Cytoscape показує **з чого COS складається і які capabilities/contracts належать Domains**. Process Registry + Mermaid показує **як робота рухається через ці capabilities і Domain boundaries, хто відповідає за steps і наскільки runtime твердження підтверджені current checkout**.
 
 ## Change discipline
 
-Зміна business flow, ownership або capability mapping починається з registry definition. Зміна module capabilities або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities та evidence; generated Reference оновлює coverage; VitePress показує derived views.
+Зміна business flow, ownership, Domain hop або capability mapping починається з registry definition. Зміна module capabilities/contracts або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities, cross-domain contracts та evidence; generated Reference оновлює coverage; VitePress показує derived views.
 
 Так документація стає перевірюваною моделлю системи, а не музеєм попередніх намірів.

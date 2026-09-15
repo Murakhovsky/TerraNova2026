@@ -12,6 +12,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
 const registryRoot = path.join(here, 'processes');
 
+const VALID_PROCESS_SCHEMAS = new Set([4, 5]);
+const CROSS_DOMAIN_SCHEMA = 5;
 const VALID_STATES = new Set(['as-is', 'to-be']);
 const VALID_STEP_KINDS = new Set(['operation', 'state', 'decision', 'outcome', 'manual']);
 const VALID_MAPPING_TYPES = new Set(['use_case', 'command', 'event', 'contract', 'source']);
@@ -33,6 +35,7 @@ let verifiedStepCount = 0;
 let criticalCount = 0;
 let sourceVerifiedCriticalCount = 0;
 let runtimeVerifiedCriticalCount = 0;
+let crossDomainStepCount = 0;
 
 function fail(file, message) {
   errors.push(`${file}: ${message}`);
@@ -65,15 +68,40 @@ function moduleCapabilityExists(domain, capability) {
   );
 }
 
+function validateCrossDomainStep(file, definition, step) {
+  if (step.domain === definition.domain) return;
+
+  crossDomainStepCount += 1;
+  if ((definition.schema_version ?? 0) < CROSS_DOMAIN_SCHEMA) {
+    fail(file, `process '${definition.id}' step '${step.id}' crosses from '${definition.domain}' to '${step.domain}' but cross-domain steps require schema v${CROSS_DOMAIN_SCHEMA}`);
+    return;
+  }
+
+  const contracts = Array.isArray(step.runtime)
+    ? step.runtime.filter((mapping) => mapping?.type === 'contract')
+    : [];
+
+  const validContract = contracts.some((mapping) => {
+    const resolution = resolveRuntimeMapping(mapping, catalogue, definition.domain);
+    const evidence = resolution.evidence;
+    return resolution.verified
+      && evidence?.domain === definition.domain
+      && evidence?.role === 'requires'
+      && evidence?.counterpart === step.domain;
+  });
+
+  if (!validContract) {
+    fail(file, `process '${definition.id}' step '${step.id}' crosses from '${definition.domain}' to '${step.domain}' without a verified requires contract mapping`);
+  }
+}
+
 function validateCapability(file, definition, step) {
   if (!step.domain || typeof step.domain !== 'string') {
     fail(file, `process '${definition.id}' step '${step.id}' requires domain`);
     return;
   }
 
-  if (step.domain !== definition.domain) {
-    fail(file, `process '${definition.id}' step '${step.id}' domain '${step.domain}' differs from process domain '${definition.domain}'; cross-domain steps require a later registry contract`);
-  }
+  validateCrossDomainStep(file, definition, step);
 
   if (typeof step.capability === 'string' && step.capability !== '') {
     if (Object.prototype.hasOwnProperty.call(step, 'capability_gap')) {
@@ -150,7 +178,9 @@ for (const name of files) {
     continue;
   }
 
-  if (definition.schema_version !== 4) fail(file, `schema_version must be 4, got '${definition.schema_version ?? 'missing'}'`);
+  if (!VALID_PROCESS_SCHEMAS.has(definition.schema_version)) {
+    fail(file, `schema_version must be one of ${[...VALID_PROCESS_SCHEMAS].join(', ')}, got '${definition.schema_version ?? 'missing'}'`);
+  }
   if (!definition.id || typeof definition.id !== 'string') fail(file, 'id is required');
   if (!definition.title || typeof definition.title !== 'string') fail(file, 'title is required');
   if (!definition.domain || typeof definition.domain !== 'string') fail(file, 'domain is required');
@@ -199,6 +229,13 @@ for (const name of files) {
       const capabilityPattern = new RegExp(`<ProcessDiagram(?=[^>]*process-id=["']${processId}["'])(?=[^>]*view=["']capability["'])[^>]*/>`);
       if (!capabilityPattern.test(workflowContent)) {
         fail(file, `workflow ${definition.workflow} must render capability view for '${definition.id}'`);
+      }
+      const hasCrossDomainStep = (definition.steps ?? []).some((step) => step?.domain && step.domain !== definition.domain);
+      if (hasCrossDomainStep) {
+        const domainPattern = new RegExp(`<ProcessDiagram(?=[^>]*process-id=["']${processId}["'])(?=[^>]*view=["']domain["'])[^>]*/>`);
+        if (!domainPattern.test(workflowContent)) {
+          fail(file, `cross-domain workflow ${definition.workflow} must render domain view for '${definition.id}'`);
+        }
       }
     }
   }
@@ -312,4 +349,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${capabilityMappedStepCount}/${stepCount} steps capability-mapped, ${capabilityGapStepCount}/${stepCount} capability gaps explicit, ${criticalCapabilityMappedCount}/${criticalCount} critical steps capability-mapped, ${mappedStepCount}/${stepCount} steps mapped, ${verifiedStepCount}/${stepCount} steps evidence-verified, ${verifiedMappingCount}/${mappingCount} mappings verified, ${sourceVerifiedCriticalCount}/${criticalCount} critical steps source-verified, ${runtimeVerifiedCriticalCount}/${criticalCount} critical steps runtime-verified.`);
+console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${capabilityMappedStepCount}/${stepCount} steps capability-mapped, ${capabilityGapStepCount}/${stepCount} capability gaps explicit, ${criticalCapabilityMappedCount}/${criticalCount} critical steps capability-mapped, ${mappedStepCount}/${stepCount} steps mapped, ${verifiedStepCount}/${stepCount} steps evidence-verified, ${verifiedMappingCount}/${mappingCount} mappings verified, ${sourceVerifiedCriticalCount}/${criticalCount} critical steps source-verified, ${runtimeVerifiedCriticalCount}/${criticalCount} critical steps runtime-verified, ${crossDomainStepCount} cross-domain steps contract-guarded.`);

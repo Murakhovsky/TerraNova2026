@@ -1,6 +1,6 @@
 ---
 title: Sales Request → Property Match
-description: Runtime-backed Sales workflow that converts an inbound request into a Client Case and resolves referenced Property facts through the canonical Property boundary.
+description: Runtime-backed cross-domain Sales workflow that converts an inbound request into a Client Case and resolves referenced Property facts through the canonical Property boundary.
 status: active
 updated: 2026-09-15
 kind: workflow
@@ -34,10 +34,12 @@ Sales
 ├── owns: Property Match
 ├── owns: Sales activity and Sales events
 └── requires: PropertyReferencePort
-
+          ↓
 Property
 └── owns: Asset / Inventory / Listing facts
 ```
+
+`Sales → Property` є реальним cross-domain переходом, але не shared ownership. Sales module декларує `PropertyReferencePort` як `requires` contract, а step `resolve-property` виконується в Domain `property` через canonical capability `property.reference`.
 
 Sales не читає Property tables напряму в application flow і не перетворює Property snapshot на власний canonical asset.
 
@@ -55,11 +57,17 @@ Derived verification для процесу зараз `source-verified`: усі 
 
 `Property read boundary` відповідає лише за надання canonical Property facts. Business process, Client Case і Property Match залишаються відповідальністю Sales.
 
+## Domain view
+
+<ProcessDiagram process-id="sales.request-to-property-match" view="domain" direction="LR" />
+
+Ця derived-проєкція показує реальний Domain hop: Sales створює case, переходить через verified `requires` contract у Property для canonical reference resolution, а потім повертається в Sales для запису match і activity/events.
+
 ## Capability view
 
 <ProcessDiagram process-id="sales.request-to-property-match" view="capability" direction="LR" />
 
-Current Sales module capability vocabulary описує переважно workspace/admin authority, а не semantic business operations цього flow. Тому кроки мають explicit capability gaps і matching Capability Debt items замість фальшивого mapping на `sales.workspace.use`.
+Property step вже має canonical `property.reference`. Sales steps усе ще мають explicit capability gaps, бо current Sales module capability vocabulary описує переважно workspace/admin authority, а не semantic business operations цього flow. Тому ці gaps мають matching Capability Debt items замість фальшивого mapping на `sales.workspace.use`.
 
 ## Runtime path
 
@@ -110,9 +118,11 @@ Property facts для UI/read models також enrichment-яться через
 2. Property володіє asset/inventory/listing facts.
 3. Sales не мутує Property через цей flow.
 4. Property resolution проходить через `PropertyReferencePort`.
-5. Tenant boundary передається як `organizationId`.
-6. Match записується тільки після успішного Property resolution.
-7. Capability gap не маскується broad workspace permission.
+5. Cross-domain step легальний лише тому, що Sales manifest декларує verified `requires` contract до Property.
+6. `resolve-property` мапиться на canonical capability `property.reference`, а не на Sales capability gap.
+7. Tenant boundary передається як `organizationId`.
+8. Match записується тільки після успішного Property resolution.
+9. Capability gap не маскується broad workspace permission.
 
 ## Code map
 

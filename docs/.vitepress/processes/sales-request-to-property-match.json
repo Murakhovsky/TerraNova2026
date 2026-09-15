@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "id": "sales.request-to-property-match",
   "title": "Sales Request → Property Match",
   "domain": "sales",
@@ -71,9 +71,8 @@
       "label": "Resolve canonical Property presentation",
       "kind": "operation",
       "owner": "Property read boundary",
-      "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "domain": "property",
+      "capability": "property.reference",
       "critical": true,
       "runtime": [
         {

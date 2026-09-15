@@ -172,16 +172,6 @@
       "target_capability": "sales.client-case.create"
     },
     {
-      "id": "sales.request-to-property-match:resolve-property",
-      "process_id": "sales.request-to-property-match",
-      "step_id": "resolve-property",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.property.reference.resolve"
-    },
-    {
       "id": "sales.request-to-property-match:record-match",
       "process_id": "sales.request-to-property-match",
       "step_id": "record-match",

@@ -37,7 +37,7 @@ State or outcome
 docs/.vitepress/processes/<process-id>.json
 ```
 
-Current Process Registry schema `v4` фіксує stable process ID, Domain, business state, actors, steps, edges, primary owner, step Domain, canonical capability або explicit capability gap, criticality та runtime/evidence mappings.
+Process Registry schema `v4` залишається валідною для same-domain workflows. Schema `v5` додає contract-guarded cross-domain steps. Definition фіксує stable process ID, process Domain, business state, actors, steps, edges, primary owner, step Domain, canonical capability або explicit capability gap, criticality та runtime/evidence mappings.
 
 Мінімальний mapped step:
 
@@ -72,7 +72,7 @@ Current Process Registry schema `v4` фіксує stable process ID, Domain, bus
 
 Це architecture debt, але сам Process Registry володіє лише фактом gap.
 
-## 4. Assign ownership and capability
+## 4. Assign ownership, Domain and capability
 
 Кожний step має одного primary responsible `owner` з declared actors і explicit `domain`.
 
@@ -84,7 +84,26 @@ Domain
 Capability або explicit gap
 ```
 
-Capability authority — `contributions.capabilities` у module manifest. Checker читає її через current-checkout evidence catalogue, не через generated Markdown. Schema v4 не дозволяє step мовчки переходити в інший Domain.
+Capability authority — `contributions.capabilities` у module manifest. Checker читає її через current-checkout evidence catalogue, не через generated Markdown.
+
+Для same-domain process step Domain дорівнює process Domain. Якщо step реально переходить в інший Domain, використовуйте schema v5 і canonical foreign-Domain capability. Такий step обов'язково має містити `contract` runtime mapping, який current module evidence підтверджує як `role: requires` від process Domain до target Domain:
+
+```json
+{
+  "id": "resolve-property",
+  "domain": "property",
+  "capability": "property.reference",
+  "critical": true,
+  "runtime": [
+    {
+      "type": "contract",
+      "ref": "Domains\\Property\\Contract\\PropertyReferencePort"
+    }
+  ]
+}
+```
+
+Просто поставити чужий `domain` або foreign capability недостатньо: `check-processes.mjs` відхилить cross-domain step без verified contract boundary.
 
 ## 5. Register capability debt
 
@@ -125,9 +144,11 @@ Runtime mapping types:
 
 Evidence має `source` або `runtime` strength. Derived verification залишається окремою від capability coverage: `documented`, `source-verified`, `runtime-verified`.
 
-## 7. Render the three canonical views
+Для cross-domain step contract evidence виконує ще одну роль: доводить, що process Domain має право викликати target Domain через declared boundary. Це не дає process Domain ownership над foreign state.
 
-Workflow page має рендерити:
+## 7. Render canonical views
+
+Кожна workflow page має рендерити три базові views:
 
 ```html
 <ProcessDiagram process-id="domain.process-id" />
@@ -135,7 +156,13 @@ Workflow page має рендерити:
 <ProcessDiagram process-id="domain.process-id" view="capability" direction="LR" />
 ```
 
-Вони відповідають на три різні питання: що відбувається, хто відповідає, яка Domain capability стоїть за step або де capability model має gap.
+Cross-domain workflow додатково має рендерити:
+
+```html
+<ProcessDiagram process-id="domain.process-id" view="domain" direction="LR" />
+```
+
+Views відповідають на різні питання: що відбувається, хто відповідає, яка capability стоїть за step, і через які Domain boundaries проходить процес.
 
 ## 8. Connect UI and code
 
@@ -143,7 +170,7 @@ Workflow page повинна вказати UI surfaces та Code map, щоб о
 
 ## 9. Verify
 
-Перевірте topology, ownership, step Domain, capability resolution або explicit gap, matching capability debt, runtime mappings, derived verification, три `ProcessDiagram` projections, failure paths, idempotency, tenant scope та auditability.
+Перевірте topology, ownership, step Domain, capability resolution або explicit gap, matching capability debt, cross-domain contract evidence, runtime mappings, derived verification, required `ProcessDiagram` projections, failure paths, idempotency, tenant scope та auditability.
 
 Запустіть:
 
@@ -155,11 +182,12 @@ npm run docs:check
 npm run docs:build
 ```
 
-`workflow-v2` не пройде check без matching Process Registry definition, ownership/capability views, valid capability/gap, matching debt item або з фальшивим runtime evidence.
+`workflow-v2` не пройде check без matching Process Registry definition, ownership/capability views, valid capability/gap, matching debt item або з фальшивим runtime evidence. Cross-domain workflow також не пройде без schema v5, verified `requires` contract і Domain view.
 
 ## Canonical examples
 
 - [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md)
+- [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md)
 - [Property Submission → Publication](../02-workflows/property-submission-to-publication.md)
 - [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md)
 - [Business Process Registry](../12-reference/business-processes.md)
