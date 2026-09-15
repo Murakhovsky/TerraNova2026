@@ -122,6 +122,7 @@ final class WebApplicationServices
             new CanonicalPropertyManagementWorkflowRepository(
                 $di->getShared('propertyCanonicalRuntime'),
                 $di->getShared('propertyManagementLegacyBackend'),
+                $di->getShared('propertyCompatibilityProjection'),
                 $di->getShared('organizationContext')->id(),
             ),
         ));
