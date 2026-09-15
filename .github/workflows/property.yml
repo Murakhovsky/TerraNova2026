@@ -12,9 +12,11 @@ on:
       - 'app/Bootstrap/PropertyNetworkServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
+      - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
+      - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
@@ -35,9 +37,11 @@ on:
       - 'app/Bootstrap/PropertyNetworkServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
+      - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
+      - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
@@ -72,6 +76,7 @@ jobs:
           php tests/architecture/property_v090_intelligence.php
           php tests/architecture/property_v0100_external_network.php
           php tests/architecture/property_v0110_hardening.php
+          php tests/architecture/property_v0120_runtime_cutover.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -106,6 +111,9 @@ jobs:
       - name: Property V0.11 canonical hardening and RESO interoperability
         run: php tests/unit/property_v0110_identity_reso.php
 
+      - name: Property V0.12 canonical runtime cutover
+        run: php tests/unit/property_v0120_runtime_cutover.php
+
       - name: Property compatibility smoke
         run: |
           php tests/smoke/property_submission.php
@@ -129,8 +137,10 @@ jobs:
           php -l app/Bootstrap/PropertyNetworkServices.php
           php -l app/Bootstrap/SalesServices.php
           php -l app/Bootstrap/WebApplicationServices.php
+          php -l app/Bootstrap/SpatialModule.php
           php -l app/config/services_kernel.php
           php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
+          php -l app/Interfaces/Api/Controller/PropertyCanonicalController.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
           find tests/architecture -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l
