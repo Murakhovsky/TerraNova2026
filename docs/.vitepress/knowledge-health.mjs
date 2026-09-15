@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRuntimeEvidence, processVerification } from './process-runtime-evidence.mjs';
+import { buildCrossDomainProcessTopology } from './cross-domain-process-topology.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const processRoot = path.join(here, 'processes');
@@ -42,6 +43,7 @@ export function buildKnowledgeHealth() {
   const definitions = loadProcesses();
   const debt = loadDebt();
   const catalogue = loadRuntimeEvidence();
+  const crossDomain = buildCrossDomainProcessTopology(definitions, catalogue);
   const domains = {};
 
   const totals = {
@@ -110,6 +112,14 @@ export function buildKnowledgeHealth() {
     authority: 'structured-current-checkout',
     processSchemaVersions,
     debtSchemaVersion: debt.schema_version ?? 0,
+    crossDomainTopology: {
+      schemaVersion: crossDomain.schemaVersion,
+      crossDomainProcessCount: crossDomain.crossDomainProcessCount,
+      crossDomainStepCount: crossDomain.crossDomainStepCount,
+      boundaryCount: crossDomain.boundaryCount,
+      participatingDomainCount: crossDomain.domains.length,
+      referenceLink: crossDomain.referenceLink,
+    },
     ...totals,
     debtItems: (debt.items ?? []).length,
     highDebtItems,

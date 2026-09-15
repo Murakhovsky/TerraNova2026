@@ -36,9 +36,10 @@ function resolveCrossDomainContract(definition, step, catalogue) {
   return null;
 }
 
-export function buildCrossDomainProcessTopology() {
-  const definitions = loadProcesses();
-  const catalogue = loadRuntimeEvidence();
+export function buildCrossDomainProcessTopology(
+  definitions = loadProcesses(),
+  catalogue = loadRuntimeEvidence(),
+) {
   const hops = [];
 
   for (const definition of definitions) {

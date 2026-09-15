@@ -31,6 +31,18 @@ if (health.criticalSourceVerified > health.criticalSteps || health.criticalRunti
 if (!health.processSchemaVersions.includes(5)) fail('Knowledge Health must expose current Process Registry schema v5.');
 if (health.debtSchemaVersion !== 1) fail(`Knowledge Health must expose Capability Debt schema v1, got '${health.debtSchemaVersion}'.`);
 
+const topology = health.crossDomainTopology;
+if (!topology || typeof topology !== 'object') {
+  fail('Knowledge Health must expose Cross-Domain Process Topology summary.');
+} else {
+  if (topology.schemaVersion !== 1) fail(`Knowledge Health cross-domain topology must use schema v1, got '${topology.schemaVersion}'.`);
+  if (topology.crossDomainProcessCount > health.totalProcesses) fail('Cross-domain process count cannot exceed total process count.');
+  if (topology.crossDomainStepCount > health.totalSteps) fail('Cross-domain step count cannot exceed total process steps.');
+  if (topology.boundaryCount > topology.crossDomainStepCount) fail('Cross-domain boundary count cannot exceed cross-domain step count.');
+  if (topology.participatingDomainCount < (topology.crossDomainStepCount > 0 ? 2 : 0)) fail('A non-empty cross-domain topology must contain at least two participating Domains.');
+  if (topology.referenceLink !== '/12-reference/cross-domain-process-topology.html') fail(`Unexpected Cross-Domain Process Topology reference link '${topology.referenceLink}'.`);
+}
+
 const domainTotals = Object.values(health.domains).reduce((totals, domain) => ({
   processes: totals.processes + domain.processes,
   steps: totals.steps + domain.steps,
@@ -91,6 +103,14 @@ if (!themeIndex.includes("app.component('KnowledgeHealth', KnowledgeHealth)")) {
   fail('VitePress theme must register KnowledgeHealth component.');
 }
 
+const knowledgeHealthComponent = fs.readFileSync(path.join(here, 'theme', 'KnowledgeHealth.vue'), 'utf8');
+if (!knowledgeHealthComponent.includes('health.value?.crossDomainTopology')) {
+  fail('Knowledge Health UI must consume Cross-Domain Process Topology summary.');
+}
+if (!knowledgeHealthComponent.includes('topology.referenceLink')) {
+  fail('Knowledge Health UI must link Cross-Domain Process Topology reference.');
+}
+
 const home = fs.readFileSync(path.join(repoRoot, 'docs', 'index.md'), 'utf8');
 if (!home.includes('<KnowledgeHealth />')) fail('Documentation home must render KnowledgeHealth.');
 if (home.indexOf('<KnowledgeHealth />') > home.indexOf('<SystemStatus />')) {
@@ -103,4 +123,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Knowledge Health checks passed: ${health.totalProcesses} processes, ${health.capabilityMappedSteps}/${health.totalSteps} capability-mapped, ${health.evidenceVerifiedSteps}/${health.totalSteps} evidence-verified, ${health.criticalRuntimeVerified}/${health.criticalSteps} critical runtime-backed, ${health.debtItems} debt items.`);
+console.log(`Knowledge Health checks passed: ${health.totalProcesses} processes, ${health.capabilityMappedSteps}/${health.totalSteps} capability-mapped, ${health.evidenceVerifiedSteps}/${health.totalSteps} evidence-verified, ${health.criticalRuntimeVerified}/${health.criticalSteps} critical runtime-backed, ${topology?.crossDomainStepCount ?? 0} cross-domain steps, ${health.debtItems} debt items.`);
