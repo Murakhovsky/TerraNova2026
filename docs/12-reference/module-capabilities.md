@@ -20,19 +20,19 @@ generated: true
 
 | ID | Name | Version | Schema | Kernel constraint | Default | Dependencies | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `diagnostic` | Diagnostics | `0.5.4` | `0.5.4` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Diagnostic/module.php` |
-| `property` | Property | `0.1.1` | `0.1.1` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Property/module.php` |
+| `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Diagnostic/module.php` |
+| `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Property/module.php` |
 | `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | yes | — | `app/Domains/Sales/module.php` |
 
 ## Diagnostics (`diagnostic`)
 
-Business diagnostics, methodology, interviews and reporting.
+Business diagnostics, methodology, interviews, reporting and closed-loop recommendations.
 
-- runtime module service: —;
+- runtime module service: `diagnosticDomainModule`;
 - job handlers: —;
-- API route contributors: —;
+- API route contributors: `diagnosticRouteContributor`;
 - configuration provisioners: —;
-- migrations: —.
+- migrations: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`.
 
 ### Declared capabilities
 
@@ -40,17 +40,32 @@ Manifest capabilities не задекларовані.
 
 ## Property (`property`)
 
-Property catalog, presentation and real-estate workflows.
+Canonical registry and real-estate asset runtime with tenant-safe Asset, Inventory, Listing/Publication writes, domain events, history, intelligence, network interoperability and one-way legacy compatibility projection.
 
-- runtime module service: —;
+- runtime module service: `propertyDomainModule`;
 - job handlers: —;
-- API route contributors: —;
-- configuration provisioners: —;
-- migrations: `app/migrations/20260914_000048_web_v041_property_tenancy.sql`.
+- API route contributors: `propertyRouteContributor`;
+- configuration provisioners: `propertyModuleConfigurationProvisioner`;
+- migrations: `app/migrations/20260914_000048_web_v041_property_tenancy.sql`, `app/migrations/20260914_000050_property_v022_tenant_boundary.sql`, `app/migrations/20260914_000051_property_v030_asset_registry.sql`, `app/migrations/20260914_000052_property_v040_identity_provenance.sql`, `app/migrations/20260914_000053_property_v050_inventory.sql`, `app/migrations/20260914_000054_property_v060_listings_publication.sql`, `app/migrations/20260914_000055_property_v070_history_contracts.sql`, `app/migrations/20260914_000056_property_v090_intelligence.sql`, `app/migrations/20260914_000057_property_v0100_external_network.sql`, `app/migrations/20260914_000058_property_v0110_hardening.sql`, `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql`.
 
 ### Declared capabilities
 
-Manifest capabilities не задекларовані.
+- `property.analytics`;
+- `property.catalog`;
+- `property.history`;
+- `property.identity.review`;
+- `property.intake`;
+- `property.intelligence`;
+- `property.inventory`;
+- `property.listing`;
+- `property.media`;
+- `property.network`;
+- `property.publish`;
+- `property.read`;
+- `property.reference`;
+- `property.registry`;
+- `property.runtime.canonical`;
+- `property.write`;
 
 ## Sales (`sales`)
 

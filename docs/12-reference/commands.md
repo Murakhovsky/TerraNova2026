@@ -19,7 +19,7 @@ generated: true
 | Module | Commands |
 | --- | ---: |
 | `diagnostic` | 1 |
-| `property` | 0 |
+| `property` | 4 |
 | `sales` | 6 |
 
 ## Diagnostics (`diagnostic`)
@@ -30,7 +30,12 @@ generated: true
 
 ## Property (`property`)
 
-Explicit `*Command` DTO contracts не знайдені.
+| Command | Source |
+| --- | --- |
+| `ChangePropertyLifecycleCommand` | `app/Domains/Property/Application/DTO/ChangePropertyLifecycleCommand.php` |
+| `ReclassifyPropertyAssetCommand` | `app/Domains/Property/Application/DTO/ReclassifyPropertyAssetCommand.php` |
+| `RegisterPropertyAssetCommand` | `app/Domains/Property/Application/DTO/RegisterPropertyAssetCommand.php` |
+| `RelocatePropertyAssetCommand` | `app/Domains/Property/Application/DTO/RelocatePropertyAssetCommand.php` |
 
 ## Sales (`sales`)
 

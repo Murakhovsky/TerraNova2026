@@ -14,9 +14,9 @@ generated: true
 
 | Extension point | Kind | Contributions |
 | --- | --- | ---: |
-| `api.routes` | built-in | 1 |
-| `event.consumers` | module-defined | 1 |
-| `tenant.configuration` | built-in | 1 |
+| `api.routes` | built-in | 3 |
+| `event.consumers` | module-defined | 2 |
+| `tenant.configuration` | built-in | 2 |
 | `web.navigation` | module-defined | 3 |
 
 ## `api.routes`
@@ -25,6 +25,8 @@ Kind: **built-in**.
 
 | Module | Service |
 | --- | --- |
+| `diagnostic` | `diagnosticRouteContributor` |
+| `property` | `propertyRouteContributor` |
 | `sales` | `salesRouteContributor` |
 
 ## `event.consumers`
@@ -33,6 +35,7 @@ Kind: **module-defined**.
 
 | Module | Service |
 | --- | --- |
+| `diagnostic` | `diagnosticActionOutcomeHandler` |
 | `sales` | `salesHistoricalEventConsumer` |
 
 ## `tenant.configuration`
@@ -41,6 +44,7 @@ Kind: **built-in**.
 
 | Module | Service |
 | --- | --- |
+| `property` | `propertyModuleConfigurationProvisioner` |
 | `sales` | `salesModuleConfigurationProvisioner` |
 
 ## `web.navigation`

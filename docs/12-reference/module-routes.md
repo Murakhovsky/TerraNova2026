@@ -1,6 +1,6 @@
 ---
 title: Module Routes
-description: Generated ownership map for module API route contributors and their route source files.
+description: Generated ownership map for module API route contributors and route source files.
 status: generated
 kind: reference
 generated: true
@@ -10,29 +10,29 @@ generated: true
 
 # Module Routes
 
-> Джерела істини: `api_route_contributor_services` у module manifests та explicit route source registry у documentation generator.
+> Джерело істини: module manifests + explicit route source registry у current checkout.
 
-Маршрути є Web-layer contribution. Generator перевіряє, що explicit route catalogue збігається з manifest contributor і що всі зареєстровані source files існують.
-
-## Summary
-
-| Module | Manifest contributor | Route source files |
+| Module | Contributor | Route source files |
 | --- | --- | ---: |
-| `diagnostic` | — | 0 |
-| `property` | — | 0 |
+| `diagnostic` | `diagnosticRouteContributor` | 1 |
+| `property` | `propertyRouteContributor` | 1 |
 | `sales` | `salesRouteContributor` | 5 |
+
+## `diagnostic`
+
+- contributor: `app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php`;
+- route source: `app/Interfaces/Web/Routing/DiagnosticRoutes.php`;
+
+## `property`
+
+- contributor: `app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php`;
+- route source: `app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php`;
 
 ## `sales`
 
-- manifest contributor service: `salesRouteContributor`;
-- contributor implementation: `app/Interfaces/Web/Routing/SalesModuleRouteContributor.php`;
-- route sources:
-  - `app/Interfaces/Web/Routing/SalesAdministrationRoutes.php`;
-  - `app/Interfaces/Web/Routing/SalesDirectorRoutes.php`;
-  - `app/Interfaces/Web/Routing/SalesIntegrationRoutes.php`;
-  - `app/Interfaces/Web/Routing/SalesRoutes.php`;
-  - `app/Interfaces/Web/Routing/SalesTeamRoutes.php`;
-
-## Scope
-
-Цей шар документує ownership і source-of-truth для module routes без виконання Phalcon runtime та без парсингу довільного PHP. Endpoint-level table можна будувати окремим typed/structured route catalogue, коли route contract буде формалізований.
+- contributor: `app/Interfaces/Web/Routing/SalesModuleRouteContributor.php`;
+- route source: `app/Interfaces/Web/Routing/SalesAdministrationRoutes.php`;
+- route source: `app/Interfaces/Web/Routing/SalesDirectorRoutes.php`;
+- route source: `app/Interfaces/Web/Routing/SalesIntegrationRoutes.php`;
+- route source: `app/Interfaces/Web/Routing/SalesRoutes.php`;
+- route source: `app/Interfaces/Web/Routing/SalesTeamRoutes.php`;

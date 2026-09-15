@@ -10,66 +10,49 @@ generated: true
 
 # Event Types
 
-> Джерела істини: explicit event catalogues та `TYPE` constants, які формують `EventOwningModuleInterface::eventTypes()`.
-
-Ця сторінка описує **runtime event ownership vocabulary**. Вона не намагається вгадувати події через regex-сканування всього PHP-коду і не змішує event types з consumer subscriptions або фактичними outbox records.
+> Джерело істини: explicit event catalogues у current checkout.
 
 ## Summary
 
-| Module | Event types | Runtime owner source |
-| --- | ---: | --- |
-| `sales` | 25 | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| Module | Event types |
+| --- | ---: |
+| `property` | 17 |
+| `sales` | 16 |
 
 ## Catalogue
 
-| Module | Event type | Declaration | Symbol | Source | Runtime owner |
-| --- | --- | --- | --- | --- | --- |
-| `sales` | `sales.action_outcome.measured` | `event-class` | `Domains\Sales\Automation\Event\ActionOutcomeMeasured::TYPE` | `app/Domains/Sales/Automation/Event/ActionOutcomeMeasured.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.call.completed` | `event-class` | `Domains\Sales\Automation\Event\CallCompleted::TYPE` | `app/Domains/Sales/Automation/Event/CallCompleted.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.client_case.changed` | `event-class` | `Domains\Sales\Automation\Event\ClientCaseChanged::TYPE` | `app/Domains/Sales/Automation/Event/ClientCaseChanged.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.client_case.created` | `event-class` | `Domains\Sales\Automation\Event\ClientCaseCreated::TYPE` | `app/Domains/Sales/Automation/Event/ClientCaseCreated.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.deal.created` | `event-class` | `Domains\Sales\Automation\Event\DealCreated::TYPE` | `app/Domains/Sales/Automation/Event/DealCreated.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.deal.lost` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.deal.owner_assigned` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.deal.stage_changed` | `event-class` | `Domains\Sales\Automation\Event\DealStageChanged::TYPE` | `app/Domains/Sales/Automation/Event/DealStageChanged.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.deal.stuck` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.deal.won` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.followup.completed` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.followup.created` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.followup.missed` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.followup.overdue` | `event-class` | `Domains\Sales\Automation\Event\FollowupOverdue::TYPE` | `app/Domains/Sales/Automation/Event/FollowupOverdue.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.lead.changed` | `event-class` | `Domains\Sales\Automation\Event\LeadChanged::TYPE` | `app/Domains/Sales/Automation/Event/LeadChanged.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.lead.contacted` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.lead.created` | `event-class` | `Domains\Sales\Automation\Event\LeadCreated::TYPE` | `app/Domains/Sales/Automation/Event/LeadCreated.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.lead.disqualified` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.lead.qualified` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.meeting.completed` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.message.received` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.message.sent` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.no_activity_detected` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.task.completed` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-| `sales` | `sales.task.created` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
-
-## Explicit source registry
-
-Documentation tooling підключає event authority явно. Це дешевше, прозоріше і надійніше, ніж змушувати генератор інтерпретувати довільний PHP як археолог.
-
-| Module | Kind | Symbol | Source |
-| --- | --- | --- | --- |
-| `sales` | `catalogue` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\ActionOutcomeMeasured::TYPE` | `app/Domains/Sales/Automation/Event/ActionOutcomeMeasured.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\CallCompleted::TYPE` | `app/Domains/Sales/Automation/Event/CallCompleted.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\ClientCaseChanged::TYPE` | `app/Domains/Sales/Automation/Event/ClientCaseChanged.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\ClientCaseCreated::TYPE` | `app/Domains/Sales/Automation/Event/ClientCaseCreated.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\DealCreated::TYPE` | `app/Domains/Sales/Automation/Event/DealCreated.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\DealStageChanged::TYPE` | `app/Domains/Sales/Automation/Event/DealStageChanged.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\FollowupOverdue::TYPE` | `app/Domains/Sales/Automation/Event/FollowupOverdue.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\LeadChanged::TYPE` | `app/Domains/Sales/Automation/Event/LeadChanged.php` |
-| `sales` | `event-class` | `Domains\Sales\Automation\Event\LeadCreated::TYPE` | `app/Domains/Sales/Automation/Event/LeadCreated.php` |
-
-## Scope
-
-- event type тут означає canonical string, ownership якого реєструє domain module у Kernel;
-- consumer subscriptions документуються окремо через extension points;
-- persistence/outbox records є runtime data, а не частиною static event catalogue;
-- `npm run docs:generate:check` ловить зміну значення зареєстрованого catalogue або `TYPE` constant без оновлення generated reference.
+| Module | Event type | Symbol | Source | Runtime owner |
+| --- | --- | --- | --- | --- |
+| `property` | `property.asset.lifecycle_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.asset.location_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.asset.registered` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.asset.type_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.created` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.inventory.available` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.inventory.created` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.inventory.price_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.inventory.released` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.inventory.reserved` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.inventory.status_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.lifecycle_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.listing.created` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.listing.hidden` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.listing.published` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.relation_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `property` | `property.structure_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `sales` | `sales.deal.lost` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.deal.owner_assigned` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.deal.stuck` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.deal.won` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.followup.completed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.followup.created` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.followup.missed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.lead.contacted` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.lead.disqualified` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.lead.qualified` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.meeting.completed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.message.received` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.message.sent` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.no_activity_detected` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.task.completed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.task.created` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
