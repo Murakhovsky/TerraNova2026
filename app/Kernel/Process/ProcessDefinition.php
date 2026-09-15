@@ -7,7 +7,8 @@ use InvalidArgumentException;
 
 final readonly class ProcessDefinition
 {
-    public const SCHEMA_VERSION = 4;
+    public const SCHEMA_VERSIONS = [4, 5];
+    public const CROSS_DOMAIN_SCHEMA = 5;
     public const STATES = ['as-is', 'to-be'];
 
     /**
@@ -29,8 +30,8 @@ final readonly class ProcessDefinition
         public array $steps,
         public array $edges,
     ) {
-        if ($this->schemaVersion !== self::SCHEMA_VERSION) {
-            throw new InvalidArgumentException(sprintf('Process %s must use schema v%d.', $this->id, self::SCHEMA_VERSION));
+        if (!in_array($this->schemaVersion, self::SCHEMA_VERSIONS, true)) {
+            throw new InvalidArgumentException(sprintf('Process %s must use a supported schema version.', $this->id));
         }
         if (!preg_match('/^[a-z][a-z0-9_.-]*$/', $this->id)) {
             throw new InvalidArgumentException(sprintf('Invalid process id: %s.', $this->id));
@@ -66,7 +67,19 @@ final readonly class ProcessDefinition
                 throw new InvalidArgumentException(sprintf('Process %s step %s owner %s is not a declared actor.', $this->id, $step->id, $step->owner));
             }
             if ($step->domain !== $this->domain) {
-                throw new InvalidArgumentException(sprintf('Process %s step %s domain %s differs from process domain %s.', $this->id, $step->id, $step->domain, $this->domain));
+                if ($this->schemaVersion < self::CROSS_DOMAIN_SCHEMA) {
+                    throw new InvalidArgumentException(sprintf('Process %s step %s crosses into %s but schema v%d+ is required.', $this->id, $step->id, $step->domain, self::CROSS_DOMAIN_SCHEMA));
+                }
+                $hasContractMapping = false;
+                foreach ($step->runtime as $mapping) {
+                    if ($mapping instanceof RuntimeMapping && $mapping->type === 'contract') {
+                        $hasContractMapping = true;
+                        break;
+                    }
+                }
+                if (!$hasContractMapping) {
+                    throw new InvalidArgumentException(sprintf('Process %s cross-domain step %s requires a contract mapping.', $this->id, $step->id));
+                }
             }
             $stepIds[$step->id] = true;
         }
