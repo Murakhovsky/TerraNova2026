@@ -3,22 +3,17 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { loadRuntimeEvidence, processVerification } from './process-runtime-evidence.mjs';
+import { loadProcessDefinitions } from './process-registry.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
-const processRoot = path.join(here, 'processes');
 const debtFile = path.join(here, 'capability-debt.json');
 const output = path.join(docsRoot, '12-reference', 'capability-debt.md');
 const checkOnly = process.argv.includes('--check');
 const catalogue = loadRuntimeEvidence();
 
 function loadProcesses() {
-  const definitions = new Map();
-  for (const name of fs.readdirSync(processRoot).filter((value) => value.endsWith('.json')).sort()) {
-    const definition = JSON.parse(fs.readFileSync(path.join(processRoot, name), 'utf8'));
-    definitions.set(definition.id, definition);
-  }
-  return definitions;
+  return new Map(loadProcessDefinitions().map((definition) => [definition.id, definition]));
 }
 
 function loadDebt() {
@@ -68,7 +63,7 @@ function render(processes, registry) {
     '',
     '# Capability Debt Backlog',
     '',
-    'Generated from `docs/.vitepress/capability-debt.json`, Process Registry gap steps and current-checkout module capability authority. Do not edit this page manually.',
+    'Generated from `docs/.vitepress/capability-debt.json`, canonical `resources/processes/*.json` gap steps and current-checkout module capability authority. Do not edit this page manually.',
     '',
     'Capability debt means the business step is real but the owning Domain does not yet expose a sufficiently semantic discoverable capability. It does **not** mean the runtime implementation is absent.',
     '',
