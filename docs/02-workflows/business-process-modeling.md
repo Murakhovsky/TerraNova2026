@@ -9,14 +9,17 @@ contract: concept-v1
 
 # Business Process Modeling
 
-COS documentation treats a business process as an operational model, not as decorative documentation. The canonical topology lives in the **Process Registry** and Mermaid is a derived projection. Visualization V0.5 separated business truth from runtime evidence; DOC V0.15 adds the explicit bridge from each process step to its owning Domain capability.
+COS treats a business process as an operational model, not as decorative documentation. The canonical topology lives in the platform **Process Registry** under `resources/processes`; `Kernel\\Process` exposes the typed contract, while Mermaid and VitePress are derived consumers. Visualization V0.5 separated business truth from runtime evidence; DOC V0.15 added the explicit bridge from each process step to its owning Domain capability.
 
 ## Source-of-truth chain
 
 ```text
 Business meaning
         ↓
-Process Registry definition
+resources/processes/*.json
+        ↓
+Kernel\\Process / ProcessRegistryInterface
+        ↓
 steps + owners + domain + capability/gap + edges + criticality + runtime mappings
         ↓                         ↓
 Module capability authority      Runtime Evidence Resolver
@@ -30,7 +33,7 @@ Capability coverage              Derived verification
                  Mermaid / VitePress
 ```
 
-A workflow page remains the human narrative around the process, but it does not manually duplicate the same core topology, ownership, capability claim or verification claim.
+A workflow page remains the human narrative around the process, but it does not own or manually duplicate the same core topology, ownership, capability claim or verification claim.
 
 ## Three independent dimensions
 
@@ -84,7 +87,11 @@ Verification не записується в process JSON. Її рахує eviden
 
 ## Process Registry contract
 
-Кожен `workflow-v2` має matching JSON definition у `docs/.vitepress/processes/`.
+Кожен `workflow-v2` має matching canonical JSON definition у:
+
+```text
+resources/processes/<process-id>.json
+```
 
 Schema `v4` фіксує:
 
@@ -104,6 +111,8 @@ Schema `v4` фіксує:
 Schema v4 зберігає V0.5 invariant: authored `verification` заборонений.
 
 Поточний v4 також вимагає, щоб step залишався всередині process Domain. Cross-domain step потребуватиме окремого explicit contract у наступній версії registry, а не тихого запозичення чужої capability.
+
+Runtime consumers отримують definitions через `Kernel\\Process\\ProcessRegistryInterface`; документація використовує thin adapter до тих самих canonical resources і не має власної копії Process Registry.
 
 Workflow page рендерить три derived projections:
 
@@ -167,7 +176,7 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 
 ## Modeling rules
 
-1. Core topology редагується в registry definition, а не одночасно в JSON і Mermaid.
+1. Core topology редагується в canonical registry definition, а не одночасно в JSON і Mermaid.
 2. Кожний step має одного primary `owner`.
 3. Кожний step має explicit `domain`.
 4. Кожний step має canonical `capability` або explicit `capability_gap`.
@@ -180,14 +189,16 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 11. Cross-domain transition називає boundary/contract і не створює shared ownership.
 12. Exact command/event inventories не дублюються вручну, якщо існує canonical evidence catalogue.
 13. Sequence/state projections не генеруються з недостатньої семантики заради красивої картинки.
+14. Documentation не може створювати другий canonical Process Registry source.
 
 ## Relationship to Architecture Explorer
 
 ```mermaid
 flowchart LR
+    P[resources/processes] --> K[Kernel Process Registry]
     A[Module manifests / capabilities] --> B[Cytoscape Architecture Explorer]
     A --> C[Process Registry capability validation]
-    D[Process Registry] --> C
+    K --> C
     E[Runtime Evidence Resolver] --> C
     C --> F[ProcessDiagram / Mermaid]
     B --> G[COS Documentation / operational understanding]
@@ -198,6 +209,6 @@ Cytoscape показує **з чого COS складається і які capa
 
 ## Change discipline
 
-Зміна business flow, ownership або capability mapping починається з registry definition. Зміна module capabilities або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities та evidence; generated Reference оновлює coverage; VitePress показує derived views.
+Зміна business flow, ownership або capability mapping починається з `resources/processes`. Зміна module capabilities або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities та evidence; generated Reference оновлює coverage; VitePress показує derived views.
 
 Так документація стає перевірюваною моделлю системи, а не музеєм попередніх намірів.
