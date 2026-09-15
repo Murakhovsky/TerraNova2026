@@ -23,6 +23,7 @@ const sections = [
 const preferredOrder = new Map([
   ['what-is-cos.md', -30],
   ['mental-model.md', -20],
+  ['reading-paths.md', -15],
   ['repository-map.md', -10],
   ['overview.md', -30],
   ['domain-model.md', -20],
@@ -38,6 +39,13 @@ const preferredOrder = new Map([
   ['execution-lifecycle.md', -20],
   ['agent-runtime.md', -20],
   ['llm-governance.md', -10],
+  ['local-setup.md', -40],
+  ['adding-a-domain.md', -30],
+  ['adding-a-module.md', -29],
+  ['adding-a-workflow.md', -28],
+  ['adding-an-agent.md', -27],
+  ['adding-an-integration.md', -26],
+  ['testing.md', -20],
 ]);
 
 function titleFromMarkdown(path) {
