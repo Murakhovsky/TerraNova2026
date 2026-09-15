@@ -75,6 +75,36 @@ final readonly class MysqlPropertyCompatibilityProjection implements PropertyCom
         return $legacyId;
     }
 
+    public function syncOperationalMetadata(string $organizationId, int $legacyPropertyId, array $metadata): void
+    {
+        if($legacyPropertyId<=0)return;
+        $allowed=[
+            'property_group_id','commission_type','commission_value','sale_priority','min_price_amount',
+            'reserved_until','reserved_by_case_id','fixed_client_case_id','manager_note','source_note',
+            'status_note','operational_stage','next_action_title','next_action_due_at','next_action_note',
+        ];
+        $set=[];$params=['id'=>$legacyPropertyId,'organization_id'=>$organizationId];
+        foreach($allowed as$field){if(!array_key_exists($field,$metadata))continue;$set[]=$field.'=:'.$field;$value=$metadata[$field];
+            $params[$field]=($value===''||$value===0||$value==='0')&&in_array($field,['property_group_id','reserved_by_case_id','fixed_client_case_id'],true)?null:$value;}
+        if($set===[])return;
+        if(array_key_exists('status_note',$metadata))$set[]='status_changed_at=NOW()';
+        $set[]='updated_at=NOW()';
+        $this->exec('UPDATE tn_properties SET '.implode(',',$set).' WHERE id=:id AND organization_id=:organization_id LIMIT 1',$params);
+    }
+
+    public function recordActivity(string $organizationId,int $legacyPropertyId,?int $userId,string $activityType,string $title,?string $body=null,?string $oldValue=null,?string $newValue=null): void
+    {
+        if($legacyPropertyId<=0)return;
+        $this->exec('INSERT INTO tn_property_activities (organization_id,property_id,user_id,activity_type,title,body,old_value,new_value)
+            VALUES (:organization_id,:property_id,:user_id,:activity_type,:title,:body,:old_value,:new_value)',[
+            'organization_id'=>$organizationId,'property_id'=>$legacyPropertyId,'user_id'=>$userId,'activity_type'=>$activityType,
+            'title'=>mb_substr($title,0,180),'body'=>$body,'old_value'=>$oldValue,'new_value'=>$newValue,
+        ]);
+        $this->exec('UPDATE tn_properties SET updated_at=NOW() WHERE id=:id AND organization_id=:organization_id LIMIT 1',[
+            'id'=>$legacyPropertyId,'organization_id'=>$organizationId,
+        ]);
+    }
+
     private function asset(string $org,string $assetId): ?array
     {
         return $this->one('SELECT a.asset_id,a.kind,a.type_code,a.lifecycle,a.legacy_property_id,
