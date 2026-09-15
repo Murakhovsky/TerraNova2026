@@ -62,6 +62,19 @@ jobs:
       - name: Generate reference from current checkout
         run: npm run docs:generate
 
+      - name: Verify committed generated reference drift
+        run: |
+          DRIFT=$(git status --porcelain -- docs/12-reference)
+          if [ -n "$DRIFT" ]; then
+            echo "::group::Generated reference drift"
+            git status --short -- docs/12-reference
+            git diff -- docs/12-reference
+            echo "::endgroup::"
+            echo "::error::Committed docs/12-reference is stale. Run npm run docs:generate and commit the generated reference changes."
+            exit 1
+          fi
+          echo "Committed generated reference matches current checkout."
+
       - name: Verify generated reference
         run: npm run docs:generate:check
 
