@@ -4,6 +4,7 @@ description: How to document and implement a business workflow across Domain, Ru
 status: active
 updated: 2026-09-15
 kind: how-to
+contract: how-to-v1
 ---
 
 # Adding a Workflow

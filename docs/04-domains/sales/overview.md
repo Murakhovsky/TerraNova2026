@@ -4,6 +4,7 @@ description: Ownership, runtime contributions, use-case model і boundaries Sale
 status: active
 updated: 2026-09-15
 kind: domain
+contract: domain-v1
 ---
 
 # Sales Domain Overview

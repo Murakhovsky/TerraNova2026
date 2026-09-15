@@ -2,7 +2,7 @@
 title: Documentation Rules
 description: Правила підтримки COS documentation як живої частини codebase.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: development
 ---
 
@@ -30,15 +30,40 @@ VitePress publication
 
 Оновлюйте docs, якщо змінюється Domain ownership, Kernel lifecycle, module manifest, API/cross-domain contract, Event/Policy semantics, Agent/LLM governance, persistence ownership, deployment/migration workflow або суттєвий user workflow.
 
-## Page types
+## Canonical page contracts
 
-- **Concept** — mental model і vocabulary.
-- **Workflow** — business flow від мети до implementation boundary.
-- **Architecture** — boundaries, dependency direction та invariants.
-- **Domain** — ownership/non-ownership, model, lifecycle, contracts, persistence.
-- **How-to** — покрокова developer/operator інструкція.
-- **Reference** — exact executable facts; генерується, якщо це можливо.
-- **ADR** — Context → Decision → Rationale → Alternatives → Consequences → Verification.
+Шість основних page types мають versioned structural contracts:
+
+| Type | Contract | Purpose |
+| --- | --- | --- |
+| Concept | `concept-v1` | mental model і vocabulary |
+| Workflow | `workflow-v1` | business flow від мети до implementation boundary |
+| Architecture | `architecture-v1` | boundaries, dependency direction та invariants |
+| Domain | `domain-v1` | ownership, model, lifecycle, contracts та code map |
+| How-to | `how-to-v1` | покрокова developer/operator інструкція з verification |
+| Reference | `reference-v1` | exact facts та source of truth |
+
+ADR лишається окремим decision format: Context → Decision → Rationale → Alternatives → Consequences → Verification.
+
+Contract opt-in задається у frontmatter:
+
+```yaml
+kind: workflow
+contract: workflow-v1
+```
+
+`docs:check` перевіряє відповідність `kind`, H1/H2 structure і type-specific required sections. Contract versioning дозволяє посилювати правила без миттєвого переписування всього documentation corpus.
+
+## Page scaffolding
+
+Нові canonical pages створюйте через template tooling:
+
+```bash
+npm run docs:new -- workflow 02-workflows/example-flow.md "Example Flow"
+npm run docs:new -- domain 04-domains/example/overview.md "Example Domain"
+```
+
+Templates живуть у `docs/.vitepress/templates/` і не публікуються як documentation pages.
 
 ## AS-IS vs TARGET
 
@@ -47,7 +72,7 @@ VitePress publication
 
 ## Workflow contract
 
-Canonical workflow page повинна мати щонайменше `Business goal`, `Actors` і `Code map`, а для складних flows також trigger/input, decision points, events, failures, invariants і cross-domain calls.
+`workflow-v1` вимагає щонайменше `Business goal`, `Actors` і `Code map`. Для складних flows також потрібні trigger/input, decision points, events, failures, invariants і cross-domain calls.
 
 ## Generated reference
 
@@ -74,6 +99,7 @@ checkout main commit
 → generate reference
 → verify generated reference
 → check links/frontmatter/version contracts
+→ check page contracts
 → VitePress build
 → deploy /docs
 ```

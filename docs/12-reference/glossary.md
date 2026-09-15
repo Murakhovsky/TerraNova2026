@@ -2,8 +2,9 @@
 title: COS Glossary
 description: Канонічні терміни COS і короткі правила їх використання.
 status: active
-updated: 2026-09-12
+updated: 2026-09-15
 kind: reference
+contract: reference-v1
 ---
 
 # COS Glossary
@@ -174,7 +175,7 @@ Agent, який може сформувати рішення/ActionProposal, а�
 ## Documentation terms
 
 ### AS-IS
-Функціональність/architecture, підтверджена поточним кодом гілки `COS`.
+Функціональність/architecture, підтверджена поточним кодом гілки `main`.
 
 ### TARGET
 Бажаний напрямок або правило, яке ще не реалізоване повністю.

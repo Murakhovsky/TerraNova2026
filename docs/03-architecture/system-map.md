@@ -4,6 +4,7 @@ description: Drill-down карта Product, Workflows, Domains, Runtime, contrac
 status: active
 updated: 2026-09-15
 kind: architecture
+contract: architecture-v1
 ---
 
 # COS System Map

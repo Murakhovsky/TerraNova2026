@@ -2,8 +2,9 @@
 title: Sales Lead → Managed Case
 description: Канонічний Sales workflow від intake до керованого case/deal та automation loop.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: workflow
+contract: workflow-v1
 ---
 
 # Sales Lead → Managed Case

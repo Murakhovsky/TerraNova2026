@@ -2,8 +2,9 @@
 title: Що таке COS
 description: Продуктова й архітектурна роль Company Operating System та короткий шлях до розуміння системи.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: concept
+contract: concept-v1
 ---
 
 # Що таке COS
