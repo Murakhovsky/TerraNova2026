@@ -15,6 +15,7 @@ const registryRoot = path.join(here, 'processes');
 const VALID_STATES = new Set(['as-is', 'to-be']);
 const VALID_STEP_KINDS = new Set(['operation', 'state', 'decision', 'outcome', 'manual']);
 const VALID_MAPPING_TYPES = new Set(['use_case', 'command', 'event', 'contract', 'source']);
+const VALID_CAPABILITY_GAPS = new Set(['missing-domain-capability']);
 const catalogue = loadRuntimeEvidence();
 
 const errors = [];
@@ -24,6 +25,9 @@ let mappingCount = 0;
 let verifiedMappingCount = 0;
 let stepCount = 0;
 let ownedStepCount = 0;
+let capabilityMappedStepCount = 0;
+let capabilityGapStepCount = 0;
+let criticalCapabilityMappedCount = 0;
 let mappedStepCount = 0;
 let verifiedStepCount = 0;
 let criticalCount = 0;
@@ -51,6 +55,53 @@ function parseFrontmatter(content) {
     if (match) values.set(match[1], match[2].trim().replace(/^['"]|['"]$/g, ''));
   }
   return values;
+}
+
+function moduleCapabilityExists(domain, capability) {
+  return catalogue.entries.some((entry) =>
+    entry.type === 'capability'
+    && entry.domain === domain
+    && entry.ref === capability,
+  );
+}
+
+function validateCapability(file, definition, step) {
+  if (!step.domain || typeof step.domain !== 'string') {
+    fail(file, `process '${definition.id}' step '${step.id}' requires domain`);
+    return;
+  }
+
+  if (step.domain !== definition.domain) {
+    fail(file, `process '${definition.id}' step '${step.id}' domain '${step.domain}' differs from process domain '${definition.domain}'; cross-domain steps require a later registry contract`);
+  }
+
+  if (typeof step.capability === 'string' && step.capability !== '') {
+    if (Object.prototype.hasOwnProperty.call(step, 'capability_gap')) {
+      fail(file, `process '${definition.id}' step '${step.id}' cannot declare both capability and capability_gap`);
+    }
+    if (!step.capability.startsWith(`${step.domain}.`)) {
+      fail(file, `process '${definition.id}' step '${step.id}' capability '${step.capability}' is outside domain namespace '${step.domain}.*'`);
+      return;
+    }
+    if (!moduleCapabilityExists(step.domain, step.capability)) {
+      fail(file, `process '${definition.id}' step '${step.id}' references undeclared module capability '${step.capability}'`);
+      return;
+    }
+    capabilityMappedStepCount += 1;
+    if (step.critical === true) criticalCapabilityMappedCount += 1;
+    return;
+  }
+
+  if (step.capability !== null) {
+    fail(file, `process '${definition.id}' step '${step.id}' capability must be a declared capability string or explicit null gap`);
+    return;
+  }
+
+  if (!VALID_CAPABILITY_GAPS.has(step.capability_gap)) {
+    fail(file, `process '${definition.id}' step '${step.id}' capability gap must be one of ${[...VALID_CAPABILITY_GAPS].join(', ')}`);
+    return;
+  }
+  capabilityGapStepCount += 1;
 }
 
 function validateRuntimeMapping(file, definition, step, mapping) {
@@ -99,7 +150,7 @@ for (const name of files) {
     continue;
   }
 
-  if (definition.schema_version !== 3) fail(file, `schema_version must be 3, got '${definition.schema_version ?? 'missing'}'`);
+  if (definition.schema_version !== 4) fail(file, `schema_version must be 4, got '${definition.schema_version ?? 'missing'}'`);
   if (!definition.id || typeof definition.id !== 'string') fail(file, 'id is required');
   if (!definition.title || typeof definition.title !== 'string') fail(file, 'title is required');
   if (!definition.domain || typeof definition.domain !== 'string') fail(file, 'domain is required');
@@ -145,6 +196,10 @@ for (const name of files) {
       if (!ownershipPattern.test(workflowContent)) {
         fail(file, `workflow ${definition.workflow} must render ownership view for '${definition.id}'`);
       }
+      const capabilityPattern = new RegExp(`<ProcessDiagram(?=[^>]*process-id=["']${processId}["'])(?=[^>]*view=["']capability["'])[^>]*/>`);
+      if (!capabilityPattern.test(workflowContent)) {
+        fail(file, `workflow ${definition.workflow} must render capability view for '${definition.id}'`);
+      }
     }
   }
 
@@ -184,6 +239,8 @@ for (const name of files) {
     } else {
       ownedStepCount += 1;
     }
+
+    validateCapability(file, definition, step);
 
     const runtime = step.runtime ?? [];
     if (!Array.isArray(runtime)) {
@@ -255,4 +312,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${mappedStepCount}/${stepCount} steps mapped, ${verifiedStepCount}/${stepCount} steps evidence-verified, ${verifiedMappingCount}/${mappingCount} mappings verified, ${sourceVerifiedCriticalCount}/${criticalCount} critical steps source-verified, ${runtimeVerifiedCriticalCount}/${criticalCount} critical steps runtime-verified.`);
+console.log(`Process Registry checks passed: ${files.length} processes, ${ownedStepCount}/${stepCount} steps owned, ${capabilityMappedStepCount}/${stepCount} steps capability-mapped, ${capabilityGapStepCount}/${stepCount} capability gaps explicit, ${criticalCapabilityMappedCount}/${criticalCount} critical steps capability-mapped, ${mappedStepCount}/${stepCount} steps mapped, ${verifiedStepCount}/${stepCount} steps evidence-verified, ${verifiedMappingCount}/${mappingCount} mappings verified, ${sourceVerifiedCriticalCount}/${criticalCount} critical steps source-verified, ${runtimeVerifiedCriticalCount}/${criticalCount} critical steps runtime-verified.`);

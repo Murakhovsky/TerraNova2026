@@ -85,6 +85,12 @@ Generated reference фіксує:
 
 Ownership view групує ті самі registry steps за відповідальним actor. Він не створює другого workflow і не переносить Domain ownership у UI або adapter layer.
 
+## Capability view
+
+<ProcessDiagram process-id="sales.lead-to-managed-case" view="capability" direction="LR" />
+
+Capability view навмисно показує semantic gap. Sales runtime і evidence вже існують, але current module capability vocabulary переважно описує workspace/admin authority, а не бізнес-функції lead intake, stage execution, follow-up та outcome recording. V0.15 не маскує цю різницю випадковим permission mapping.
+
 ## Events
 
 Sales володіє business events навколо lead, client case/deal, stage, calls, follow-up та action outcomes.

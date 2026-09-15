@@ -119,6 +119,12 @@ AI не має автоматично створювати «істину» бе
 
 Ownership view відділяє автора методології, оператора, deterministic evaluation engine і decision maker. AI boundary присутній як actor процесу, але не отримує штучного ownership над deterministic evaluation.
 
+## Capability view
+
+<ProcessDiagram process-id="diagnostic.session-to-recommendation" view="capability" direction="LR" />
+
+Capability view навмисно показує gap: Diagnostic має реальний source-verified workflow, але module manifest ще не декларує semantic business capabilities для methodology, session, evidence, evaluation і recommendation. Runtime existence не підміняє capability model.
+
 ## Decision points
 
 - methodology version valid/published?

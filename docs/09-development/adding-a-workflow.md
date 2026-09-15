@@ -1,6 +1,6 @@
 ---
 title: Adding a Workflow
-description: How to document and implement a business workflow across Domain, Runtime, UI and code boundaries.
+description: How to document and implement a business workflow across Domain capability, Runtime, UI and code boundaries.
 status: active
 updated: 2026-09-15
 kind: how-to
@@ -20,14 +20,15 @@ Workflow починається з business goal, а не з нового Servic
 - trigger/input;
 - expected output/outcome;
 - decision points;
-- failure paths.
+- failure paths;
+- owning Domain.
 
 Одразу визначте тільки **business state**:
 
 - `as-is` — поточний реальний процес;
 - `to-be` — цільовий процес.
 
-Не записуйте `runtime-verified` у `process_state` і не додавайте authored `verification` у Process Registry. Verification обчислюється з current-checkout evidence.
+Не записуйте authored `verification`. Verification обчислюється з current-checkout evidence.
 
 ## 2. Draw the business flow
 
@@ -41,7 +42,7 @@ Business operation / decision
 State or outcome
 ```
 
-Для actor/system interaction використовуйте `sequenceDiagram` лише коли interaction semantics явно описані. Для lifecycle entity — `stateDiagram-v2` лише коли існує canonical state model. Generic process steps не треба насильно перетворювати на інший тип діаграми.
+Для interaction використовуйте `sequenceDiagram` лише коли interaction semantics явно описані. Для entity lifecycle — `stateDiagram-v2` лише коли існує canonical state model.
 
 Повні conventions: [Business Process Modeling](../02-workflows/business-process-modeling.md).
 
@@ -53,16 +54,72 @@ State or outcome
 docs/.vitepress/processes/<process-id>.json
 ```
 
-Schema `v3` фіксує:
+Schema `v4` фіксує:
 
 - stable process ID;
-- Domain owner;
+- process Domain;
 - business state (`as-is` / `to-be`);
 - workflow page;
 - trigger, actors та outcomes;
 - steps і edges;
+- primary owner;
+- step domain;
+- canonical capability або explicit capability gap;
 - critical steps;
 - runtime/evidence mappings.
+
+Мінімальний mapped step:
+
+```json
+{
+  "id": "inventory",
+  "label": "Create Inventory Item",
+  "kind": "state",
+  "owner": "inventory owner",
+  "domain": "property",
+  "capability": "property.inventory",
+  "critical": true,
+  "runtime": [
+    {
+      "type": "source",
+      "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php",
+      "symbol": "createInventory"
+    }
+  ]
+}
+```
+
+Якщо semantic capability реально ще не оголошена Domain module, не підміняйте її permission або випадковою сусідньою capability:
+
+```json
+{
+  "domain": "sales",
+  "capability": null,
+  "capability_gap": "missing-domain-capability"
+}
+```
+
+Це architecture debt, а не причина брехати в registry.
+
+## 4. Assign ownership and capability
+
+Кожний step має одного primary responsible `owner` з declared actors.
+
+Далі вкажіть:
+
+```text
+Step
+ ↓
+Domain
+ ↓
+Capability або explicit gap
+```
+
+Capability authority — `contributions.capabilities` у module manifest. Checker читає її через current-checkout evidence catalogue, не через generated Markdown.
+
+Поточна schema v4 не дозволяє step мовчки переходити в інший Domain. Cross-domain step потребує наступного explicit registry contract.
+
+## 5. Map execution evidence
 
 Runtime mapping types:
 
@@ -72,27 +129,7 @@ Runtime mapping types:
 - `contract` → canonical module `cross_domain_contracts` declaration;
 - `source` → exact repository path + optional symbol.
 
-Не вигадуйте event/command/contract names «по сенсу». Якщо Runtime Evidence Resolver їх не знає, використовуйте реальний source mapping або спершу виправте canonical executable catalogue.
-
-## 4. Assign ownership
-
-Кожний step має одного primary responsible `owner` з declared actors.
-
-Для кожного state change визначте Domain owner. Cross-domain workflow може координувати кілька Domains, але не створює shared ownership. Cross-domain boundary документуйте через canonical contract, якщо він уже існує в Architecture Graph.
-
-## 5. Map execution evidence
-
-Narrative, Process Registry і executable boundaries зв'яжіть явними mappings:
-
-```text
-Process step
-   ↓
-Use Case / Command / Source
-   ↓
-Event / Contract when canonical runtime evidence exists
-   ↓
-Derived verification
-```
+Не вигадуйте event/command/contract names «по сенсу». Якщо Evidence Resolver їх не знає, використовуйте реальний source mapping або спершу виправте executable authority.
 
 Evidence має дві сили:
 
@@ -105,15 +142,29 @@ Derived verification:
 - `source-verified` — усі critical steps source-verified;
 - `runtime-verified` — усі critical steps мають runtime-strength evidence.
 
-`runtime-verified` тут структурний статус. Він не означає, що production trace фактично пройшов через увесь workflow.
+## 6. Render the three canonical views
 
-## 6. Connect UI and code
+Workflow page має рендерити:
 
-Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв'язувала бізнес, UX, Runtime і implementation.
+```html
+<ProcessDiagram process-id="domain.process-id" />
+<ProcessDiagram process-id="domain.process-id" view="ownership" direction="LR" />
+<ProcessDiagram process-id="domain.process-id" view="capability" direction="LR" />
+```
+
+Вони відповідають на три різні питання:
+
+1. що відбувається;
+2. хто відповідає;
+3. яка Domain capability стоїть за step або де capability model має gap.
+
+## 7. Connect UI and code
+
+Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв'язувала бізнес, UX, Domain capability, Runtime і implementation.
 
 UI click не є business transition сам по собі. Diagram має називати business action/result, якщо UI лише доставляє intent.
 
-## 7. Verify
+## 8. Verify
 
 Перевірте:
 
@@ -123,10 +174,13 @@ UI click не є business transition сам по собі. Diagram має наз
 - external failure/retry;
 - tenant scope;
 - auditability;
-- відповідність Registry topology narrative тексту;
-- відповідність `process_state` фактичному business state;
-- існування всіх runtime mappings;
-- derived verification у generated Business Process Registry.
+- Registry topology;
+- ownership;
+- step domain;
+- capability resolution або explicit gap;
+- runtime mappings;
+- derived verification;
+- три `ProcessDiagram` projections.
 
 Запустіть:
 
@@ -138,7 +192,7 @@ npm run docs:check
 npm run docs:build
 ```
 
-`workflow-v2` не пройде check без `process_state`, ProcessDiagram, matching Process Registry definition або з фальшивим runtime evidence.
+`workflow-v2` не пройде check без matching Process Registry definition, ownership view, capability view, valid capability/gap або з фальшивим runtime evidence.
 
 ## Canonical examples
 

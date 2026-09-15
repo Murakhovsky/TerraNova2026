@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "id": "property.submission-to-publication",
   "title": "Property Submission → Publication",
   "domain": "property",
@@ -26,6 +26,8 @@
       "label": "Accept and validate submission",
       "kind": "operation",
       "owner": "submitter / operator",
+      "domain": "property",
+      "capability": "property.intake",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "PropertySubmissionService" }
@@ -36,6 +38,8 @@
       "label": "Resolve identity / provenance",
       "kind": "decision",
       "owner": "moderator / reviewer",
+      "domain": "property",
+      "capability": "property.identity.review",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "PropertyModerationService" },
@@ -47,6 +51,8 @@
       "label": "Resolve or create canonical Property Asset",
       "kind": "state",
       "owner": "property manager",
+      "domain": "property",
+      "capability": "property.registry",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "registerAsset" }
@@ -57,6 +63,8 @@
       "label": "Create or update Inventory Item",
       "kind": "state",
       "owner": "organization inventory owner",
+      "domain": "property",
+      "capability": "property.inventory",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "createInventory" }
@@ -67,6 +75,8 @@
       "label": "Create or update Listing",
       "kind": "state",
       "owner": "listing/content operator",
+      "domain": "property",
+      "capability": "property.listing",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "createListing" }
@@ -77,6 +87,8 @@
       "label": "Publish and synchronize channel state",
       "kind": "outcome",
       "owner": "publication channel adapter",
+      "domain": "property",
+      "capability": "property.publish",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php", "symbol": "publishListing" }

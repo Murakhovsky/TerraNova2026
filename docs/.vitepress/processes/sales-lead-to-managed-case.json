@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "id": "sales.lead-to-managed-case",
   "title": "Sales Lead → Managed Case",
   "domain": "sales",
@@ -24,6 +24,9 @@
       "label": "Lead intake",
       "kind": "operation",
       "owner": "Sales automation",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ReceivePublicLead" },
@@ -35,6 +38,9 @@
       "label": "Process durable CRM inbox",
       "kind": "operation",
       "owner": "Sales automation",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "ProcessCrmInbox" }
@@ -45,6 +51,9 @@
       "label": "Create or update canonical Sales state",
       "kind": "state",
       "owner": "Sales automation",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
         { "type": "source", "path": "app/Domains/Sales/Automation/Event/LeadCreated.php", "symbol": "sales.lead.created" }
@@ -55,6 +64,9 @@
       "label": "Assign owner",
       "kind": "operation",
       "owner": "manager",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "AssignDealOwner" },
@@ -66,6 +78,9 @@
       "label": "Manage pipeline stage",
       "kind": "operation",
       "owner": "salesperson",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ChangeDealStage" },
@@ -77,6 +92,9 @@
       "label": "Record activity / call",
       "kind": "operation",
       "owner": "salesperson",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "CompleteSalesCall" },
@@ -88,6 +106,9 @@
       "label": "Schedule next action",
       "kind": "operation",
       "owner": "salesperson",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ScheduleDealFollowup" },
@@ -99,6 +120,9 @@
       "label": "Record business outcome",
       "kind": "outcome",
       "owner": "salesperson",
+      "domain": "sales",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
         { "type": "event", "ref": "sales.deal.won" },

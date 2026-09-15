@@ -64,6 +64,12 @@ Property Submission
 
 Ownership view показує, який actor відповідає за кожний canonical step, не змішуючи фізичний Asset, commercial state, presentation і channel delivery в одну безіменну «нерухомість».
 
+## Capability view
+
+<ProcessDiagram process-id="property.submission-to-publication" view="capability" direction="LR" />
+
+Capability view зв'язує ті самі business steps із canonical Property module capabilities. У цьому workflow всі шість кроків мають explicit capability mapping: intake, identity review, registry, inventory, listing і publication.
+
 ## Canonical model
 
 ```mermaid

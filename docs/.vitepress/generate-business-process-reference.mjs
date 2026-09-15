@@ -40,12 +40,21 @@ function mappingLabel(mapping, definition) {
   return `${mapping.type} \`${mapping.ref}\`${suffix}`;
 }
 
+function capabilityLabel(step) {
+  if (typeof step.capability === 'string' && step.capability !== '') {
+    return `\`${step.capability}\``;
+  }
+  return `gap: \`${step.capability_gap ?? 'missing'}\``;
+}
+
 function coverage(definition) {
   const verification = processVerification(definition, catalogue);
   const steps = definition.steps ?? [];
   return {
     ...verification,
     owned: steps.filter((step) => typeof step.owner === 'string' && step.owner !== '').length,
+    capabilityMapped: steps.filter((step) => typeof step.capability === 'string' && step.capability !== '').length,
+    capabilityGaps: steps.filter((step) => step.capability === null).length,
   };
 }
 
@@ -53,7 +62,7 @@ function render(definitions) {
   const lines = [
     '---',
     'title: Business Process Registry',
-    'description: Generated registry of canonical COS business processes, ownership and evidence-backed runtime verification.',
+    'description: Generated registry of canonical COS business processes, ownership, capability coverage and evidence-backed runtime verification.',
     'status: generated',
     'updated: 2026-09-15',
     'kind: reference',
@@ -63,29 +72,31 @@ function render(definitions) {
     '',
     '# Business Process Registry',
     '',
-    'Generated from `docs/.vitepress/processes/*.json` and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
+    'Generated from `docs/.vitepress/processes/*.json`, canonical module capabilities and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
     '',
-    'Business state and verification are separate dimensions: `as-is` / `to-be` describes the process itself; `documented` / `source-verified` / `runtime-verified` describes how strongly its critical steps are backed by current code and canonical runtime registries.',
+    'Business state, capability coverage and runtime verification are separate dimensions: a step may be executable in current code while its Domain capability vocabulary is still incomplete.',
     '',
     '## Process index',
     '',
-    '| Process | Domain | Business state | Verification | Steps | Ownership | Evidence verified | Critical source | Critical runtime | Workflow |',
-    '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
+    '| Process | Domain | Business state | Verification | Steps | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |',
+    '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
   ];
 
   for (const definition of definitions) {
     const stats = coverage(definition);
-    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | \`${stats.level}\` | ${stats.steps} | ${stats.owned}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} | [Open workflow](${workflowLink(definition)}) |`);
+    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | \`${stats.level}\` | ${stats.steps} | ${stats.owned}/${stats.steps} | ${stats.capabilityMapped}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} | [Open workflow](${workflowLink(definition)}) |`);
   }
 
-  lines.push('', '## Verification model', '');
+  lines.push('', '## Verification and capability model', '');
+  lines.push('- `capability mapped` — the step points to a discoverable capability declared by its Domain module and therefore present in the canonical Architecture Graph capability vocabulary.');
+  lines.push('- `capability gap` — the step is real and may have runtime evidence, but the owning Domain does not yet declare a sufficiently semantic module capability for that business operation.');
   lines.push('- `documented` — registry topology exists, but at least one critical step is not backed by resolvable current-checkout evidence.');
   lines.push('- `source-verified` — every critical step has at least one mapping resolved to current source/code evidence.');
   lines.push('- `runtime-verified` — every critical step has at least one canonical runtime/contract-registry mapping. This is structural verification, not proof that a production execution trace was observed.');
-  lines.push('', '| Process | Owned steps | Mapped steps | Evidence-verified steps | Runtime-backed steps | Critical source-verified | Critical runtime-verified |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: |');
+  lines.push('', '| Process | Owned steps | Capability mapped | Capability gaps | Mapped steps | Evidence-verified steps | Runtime-backed steps | Critical source-verified | Critical runtime-verified |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const definition of definitions) {
     const stats = coverage(definition);
-    lines.push(`| ${escapeCell(definition.title)} | ${stats.owned}/${stats.steps} | ${stats.mappedSteps}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.runtimeVerifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} |`);
+    lines.push(`| ${escapeCell(definition.title)} | ${stats.owned}/${stats.steps} | ${stats.capabilityMapped}/${stats.steps} | ${stats.capabilityGaps}/${stats.steps} | ${stats.mappedSteps}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.runtimeVerifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} |`);
   }
 
   for (const definition of definitions) {
@@ -95,17 +106,18 @@ function render(definitions) {
     lines.push(`- **Schema:** \`v${definition.schema_version}\``);
     lines.push(`- **Domain:** \`${definition.domain}\``);
     lines.push(`- **Business state:** \`${definition.state}\``);
+    lines.push(`- **Capability coverage:** ${stats.capabilityMapped}/${stats.steps} steps`);
     lines.push(`- **Derived verification:** \`${stats.level}\``);
     lines.push(`- **Trigger:** ${definition.trigger}`);
     lines.push(`- **Workflow:** [${definition.title}](${workflowLink(definition)})`);
     lines.push('', '**Outcomes**', '');
     for (const outcome of definition.outcomes) lines.push(`- ${outcome}`);
-    lines.push('', '**Ownership and runtime evidence**', '');
-    lines.push('| Step | Owner | Kind | Critical | Executable / evidence mapping |');
-    lines.push('| --- | --- | --- | --- | --- |');
+    lines.push('', '**Ownership, capability and runtime evidence**', '');
+    lines.push('| Step | Owner | Domain | Capability / gap | Kind | Critical | Executable / evidence mapping |');
+    lines.push('| --- | --- | --- | --- | --- | --- | --- |');
     for (const step of definition.steps) {
       const mappings = (step.runtime ?? []).map((mapping) => mappingLabel(mapping, definition)).join('<br>') || '—';
-      lines.push(`| ${escapeCell(step.label)} | ${escapeCell(step.owner ?? '—')} | \`${step.kind}\` | ${step.critical === true ? 'yes' : 'no'} | ${mappings} |`);
+      lines.push(`| ${escapeCell(step.label)} | ${escapeCell(step.owner ?? '—')} | \`${step.domain ?? definition.domain}\` | ${capabilityLabel(step)} | \`${step.kind}\` | ${step.critical === true ? 'yes' : 'no'} | ${mappings} |`);
     }
   }
 
@@ -113,14 +125,18 @@ function render(definitions) {
     '',
     '## Authority and limitations',
     '',
-    '- Registry schema `v3` keeps business state (`as-is` / `to-be`) separate from derived verification.',
+    '- Registry schema `v4` extends V0.5 evidence semantics with an explicit `step → domain → capability` bridge.',
+    '- A declared capability must resolve to the owning module capability vocabulary; a missing semantic capability must be represented explicitly as `capability: null` plus `capability_gap`.',
+    '- Capability coverage is not inferred from class names, routes or permissions. It reports only canonical discoverable module capabilities.',
+    '- Current schema v4 keeps every step inside the process Domain. Cross-domain steps require a later explicit contract instead of silently borrowing another Domain capability.',
+    '- Business state (`as-is` / `to-be`) remains separate from derived runtime verification.',
     '- Verification is never authored in process JSON. It is calculated from mappings resolved against `generate-runtime-evidence.php` and exact source symbols in the current checkout.',
     '- `use_case` and `command` evidence is source-backed from canonical module directories.',
     '- `event` evidence is runtime-backed from explicit Domain event catalogues; `contract` evidence is runtime-backed from canonical module cross-domain contract declarations.',
     '- `source` mappings must resolve to an existing repository file and, when provided, contain the declared symbol.',
     '- `runtime-verified` here means structurally backed by canonical runtime registries for every critical step. It does not mean COS observed an end-to-end production trace. Observed execution evidence belongs to a later runtime-tracing layer.',
-    '- `ProcessDiagram` renders core flow and ownership projections from the same registry definition. Sequence and entity lifecycle diagrams are not inferred from generic steps because the registry does not yet carry those semantics.',
-    '- Coverage ratios expose documentation/evidence completeness; they are not business performance KPIs.',
+    '- `ProcessDiagram` renders core flow, ownership and capability projections from the same registry definition.',
+    '- Coverage ratios expose architecture/documentation completeness; they are not business performance KPIs.',
     '',
   );
 

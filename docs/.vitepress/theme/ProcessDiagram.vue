@@ -20,7 +20,7 @@ const props = defineProps({
 const modules = import.meta.glob('../processes/*.json', { eager: true, import: 'default' });
 const definitions = Object.values(modules);
 const validDirections = new Set(['TD', 'TB', 'BT', 'LR', 'RL']);
-const validViews = new Set(['flow', 'ownership']);
+const validViews = new Set(['flow', 'ownership', 'capability']);
 
 const definition = computed(() => definitions.find((candidate) => candidate.id === props.processId) ?? null);
 
@@ -89,15 +89,53 @@ function renderOwnership(process, direction) {
   return lines.join('\n');
 }
 
+function capabilityKey(step) {
+  if (typeof step.capability === 'string' && step.capability !== '') return `capability:${step.capability}`;
+  return `gap:${step.capability_gap ?? 'missing'}`;
+}
+
+function capabilityLabel(step) {
+  if (typeof step.capability === 'string' && step.capability !== '') return step.capability;
+  return `GAP · ${step.capability_gap ?? 'missing capability'}`;
+}
+
+function renderCapability(process, direction) {
+  const lines = [
+    `flowchart ${direction}`,
+    `    %% Capability view derived from Process Registry: ${process.id}`,
+  ];
+
+  const groups = [];
+  const seen = new Set();
+  for (const step of process.steps ?? []) {
+    const key = capabilityKey(step);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    groups.push({ key, label: capabilityLabel(step) });
+  }
+
+  groups.forEach((group, index) => {
+    lines.push(`    subgraph capability_${index}["${safeLabel(group.label)}"]`);
+    lines.push('        direction TB');
+    for (const step of process.steps ?? []) {
+      if (capabilityKey(step) === group.key) lines.push(`        ${renderNode(step)}`);
+    }
+    lines.push('    end');
+  });
+
+  renderEdges(process, lines);
+  return lines.join('\n');
+}
+
 const mermaidSource = computed(() => {
   const process = definition.value;
   if (!process) return '';
 
   const direction = validDirections.has(props.direction) ? props.direction : 'TD';
   const view = validViews.has(props.view) ? props.view : 'flow';
-  return view === 'ownership'
-    ? renderOwnership(process, direction)
-    : renderFlow(process, direction);
+  if (view === 'ownership') return renderOwnership(process, direction);
+  if (view === 'capability') return renderCapability(process, direction);
+  return renderFlow(process, direction);
 });
 </script>
 

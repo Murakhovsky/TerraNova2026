@@ -47,6 +47,20 @@ foreach ($modules as $moduleId => $module) {
         );
     }
 
+    foreach (($module['contributions']['capabilities'] ?? []) as $capability) {
+        if (!is_string($capability) || trim($capability) === '') {
+            fwrite(STDERR, "Invalid capability declaration in module {$moduleId}.\n");
+            exit(1);
+        }
+        $entries[] = evidence(
+            'capability',
+            $capability,
+            $moduleId,
+            $module['_source'],
+            'source',
+        );
+    }
+
     foreach (($module['contributions']['cross_domain_contracts'] ?? []) as $contract) {
         if (!is_array($contract)) {
             fwrite(STDERR, "Invalid cross-domain contract declaration in module {$moduleId}.\n");
