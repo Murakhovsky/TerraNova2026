@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildKnowledgeHealth } from './knowledge-health.mjs';
+import { buildDomainProcessCoverage } from './domain-process-coverage.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -56,6 +57,7 @@ export function buildSystemStatus() {
   const modules = [];
   const supportingAreas = [];
   const knowledgeHealth = buildKnowledgeHealth();
+  const processCoverage = buildDomainProcessCoverage();
 
   if (existsSync(domainsRoot)) {
     for (const entry of readdirSync(domainsRoot, { withFileTypes: true })) {
@@ -86,6 +88,7 @@ export function buildSystemStatus() {
         documented: Boolean(link),
         link,
         health: knowledgeHealth.domains[id] ?? emptyDomainHealth(),
+        processCoverage: processCoverage.domains[id] ?? null,
       });
     }
   }
@@ -105,9 +108,10 @@ export function buildSystemStatus() {
     modules,
     supportingAreas,
     knowledgeHealth,
+    processCoverage,
     documentedModules: modules.filter((module) => module.documented).length,
     totalModules: modules.length,
-    referenceKinds: ['modules', 'capabilities', 'processes', 'capability debt', 'runtime evidence', 'permissions', 'events', 'application/routes', 'commands'],
+    referenceKinds: ['modules', 'capabilities', 'processes', 'domain process coverage', 'capability debt', 'runtime evidence', 'permissions', 'events', 'application/routes', 'commands'],
     referenceLink: '/12-reference/README.html',
     auditLink: '/01-product/documentation-sync.html',
   };

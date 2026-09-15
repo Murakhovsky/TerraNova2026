@@ -11,11 +11,13 @@ contract: reference-v1
 
 Reference section відповідає на питання **«що executable code або machine-readable documentation contracts декларують точно?»**.
 
-Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, Domain process coverage, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
 
 Current Process Registry schema: **v4**.
 
 Capability Debt Registry schema: **v1**.
+
+Process Coverage Exemptions schema: **v1**.
 
 ## Authority model
 
@@ -40,6 +42,7 @@ Generated files не редагуються вручну у `main`.
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
 | Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + current-checkout runtime evidence |
+| Які installable Domains мають canonical process model | [Domain Process Coverage](domain-process-coverage.md) | `app/Domains/*/module.php` + Process Registry + explicit exemptions |
 | Open capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + module manifests |
 | Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
 | Module extension points і contributions | [Module Extension Points](extension-points.md) | module manifests + Kernel extension registry |
@@ -74,6 +77,9 @@ Canonical vocabulary та терміни COS.
 Питання: «Як працює бізнес-процес?»
 → Workflow + ProcessDiagram
 
+Питання: «Які installable Domains взагалі мають process model?»
+→ Domain Process Coverage
+
 Питання: «Хто відповідає за process steps і що mapped у runtime?»
 → Business Process Registry
 
@@ -95,8 +101,8 @@ Canonical vocabulary та терміни COS.
 
 ## Drift protection
 
-CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry та Capability Debt Backlog.
+CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry, Domain Process Coverage та Capability Debt Backlog.
 
-Process Registry schema `v4` перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority.
+Process Registry schema `v4` перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority. Domain Process Coverage gate вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directories з module manifests.
 
 Narrative `Current Scope`, Domain overviews і цей Reference Index мають окремі drift checks проти executable/structured authorities. Зміна contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.

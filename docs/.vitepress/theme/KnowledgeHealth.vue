@@ -6,8 +6,9 @@ const { theme } = useData();
 
 const snapshot = computed(() => theme.value?.cosSystemStatus ?? null);
 const health = computed(() => snapshot.value?.knowledgeHealth ?? null);
+const coverage = computed(() => snapshot.value?.processCoverage ?? null);
 const domains = computed(() => (snapshot.value?.modules ?? []).filter((module) =>
-  (module.health?.processes ?? 0) > 0 || (module.health?.debtItems ?? 0) > 0,
+  (module.health?.processes ?? 0) > 0 || (module.health?.debtItems ?? 0) > 0 || module.processCoverage?.status === 'exempt',
 ));
 
 function href(path) {
@@ -25,11 +26,12 @@ function ratio(value, total) {
       <div>
         <small>KNOWLEDGE HEALTH · CURRENT CHECKOUT</small>
         <h3>Перевірювана модель COS</h3>
-        <p>Process Registry, capability mapping, runtime evidence і architecture debt рахуються зі structured authorities під час build.</p>
+        <p>Process Registry, Domain coverage, capability mapping, runtime evidence і architecture debt рахуються зі structured authorities під час build.</p>
       </div>
       <div class="cos-knowledge-health__schemas">
         <span>PROCESS v{{ health.processSchemaVersions.join('/') }}</span>
         <span>DEBT v{{ health.debtSchemaVersion }}</span>
+        <span v-if="coverage">COVERAGE v{{ coverage.exemptionSchemaVersion }}</span>
       </div>
     </div>
 
@@ -38,6 +40,11 @@ function ratio(value, total) {
         <small>PROCESSES</small>
         <strong>{{ health.totalProcesses }}</strong>
         <span>{{ health.totalSteps }} canonical steps</span>
+      </a>
+      <a v-if="coverage" :href="href(coverage.referenceLink)" class="cos-health-metric">
+        <small>DOMAIN COVERAGE</small>
+        <strong>{{ ratio(coverage.coverageSatisfiedDomains, coverage.installableDomains) }}</strong>
+        <span>{{ coverage.coveredDomains }} modeled · {{ coverage.exemptDomains }} exempt</span>
       </a>
       <a :href="href(health.processReferenceLink)" class="cos-health-metric">
         <small>CAPABILITY</small>
@@ -70,7 +77,8 @@ function ratio(value, total) {
       >
         <div class="cos-domain-health__top">
           <small>DOMAIN / {{ module.id.toUpperCase() }}</small>
-          <span v-if="module.health.debtItems > 0" class="cos-domain-health__debt">DEBT {{ module.health.debtItems }}</span>
+          <span v-if="module.processCoverage?.status === 'exempt'" class="cos-domain-health__clear">PROCESS EXEMPT</span>
+          <span v-else-if="module.health.debtItems > 0" class="cos-domain-health__debt">DEBT {{ module.health.debtItems }}</span>
           <span v-else class="cos-domain-health__clear">NO DEBT</span>
         </div>
         <strong>{{ module.name }}</strong>
@@ -84,8 +92,9 @@ function ratio(value, total) {
     </div>
 
     <div class="cos-knowledge-health__foot">
-      <span>Capability coverage та runtime verification навмисно не зведені в один декоративний score.</span>
+      <span>Domain coverage, capability coverage та runtime verification навмисно не зведені в один декоративний score.</span>
       <div>
+        <a v-if="coverage" :href="href(coverage.referenceLink)">Domain Coverage ↗</a>
         <a :href="href(health.processReferenceLink)">Process Registry ↗</a>
         <a :href="href(health.debtReferenceLink)">Debt Backlog ↗</a>
       </div>
@@ -160,7 +169,7 @@ function ratio(value, total) {
 
 .cos-knowledge-health__metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.65rem;
 }
 
@@ -286,6 +295,7 @@ function ratio(value, total) {
 
 .cos-knowledge-health__foot > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.8rem;
   flex: 0 0 auto;
 }
@@ -300,17 +310,13 @@ function ratio(value, total) {
   color: var(--vp-c-brand-1) !important;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1100px) {
   .cos-knowledge-health__metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cos-knowledge-health__domains {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .cos-knowledge-health__head,
   .cos-knowledge-health__foot {
     flex-direction: column;
@@ -321,6 +327,10 @@ function ratio(value, total) {
   }
 
   .cos-knowledge-health__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cos-knowledge-health__domains {
     grid-template-columns: 1fr;
   }
 
@@ -330,6 +340,12 @@ function ratio(value, total) {
 
   .cos-knowledge-health__foot {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .cos-knowledge-health__metrics {
+    grid-template-columns: 1fr;
   }
 }
 </style>
