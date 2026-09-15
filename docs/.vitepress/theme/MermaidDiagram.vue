@@ -6,7 +6,11 @@ import { mermaidVersion, renderMermaid } from './mermaid-runtime.mjs';
 const props = defineProps({
   source: {
     type: String,
-    required: true,
+    default: '',
+  },
+  text: {
+    type: String,
+    default: '',
   },
 });
 
@@ -16,6 +20,9 @@ const error = ref('');
 let revision = 0;
 
 function decodeSource() {
+  if (props.text) return props.text;
+  if (!props.source || typeof window === 'undefined') return '';
+
   const binary = window.atob(props.source);
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   return new TextDecoder().decode(bytes);
@@ -30,6 +37,7 @@ async function render() {
 
   try {
     const source = decodeSource();
+    if (!source) throw new Error('Mermaid source is empty.');
     const { svg } = await renderMermaid(source, Boolean(isDark.value));
     if (currentRevision !== revision || !diagram.value) return;
     diagram.value.innerHTML = svg;
@@ -41,7 +49,7 @@ async function render() {
 }
 
 onMounted(render);
-watch(() => props.source, render);
+watch(() => [props.source, props.text], render);
 watch(isDark, render);
 </script>
 

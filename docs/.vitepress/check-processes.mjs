@@ -29,6 +29,10 @@ function fail(file, message) {
   errors.push(`${file}: ${message}`);
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function parseFrontmatter(content) {
   const normalized = content.replace(/\r\n/g, '\n');
   if (!normalized.startsWith('---\n')) return new Map();
@@ -139,15 +143,23 @@ for (const name of files) {
     if (!fs.existsSync(workflowFile)) {
       fail(file, `workflow page does not exist: ${definition.workflow}`);
     } else {
-      const frontmatter = parseFrontmatter(fs.readFileSync(workflowFile, 'utf8'));
+      const workflowContent = fs.readFileSync(workflowFile, 'utf8');
+      const frontmatter = parseFrontmatter(workflowContent);
       if (frontmatter.get('contract') !== 'workflow-v2') {
         fail(file, `workflow ${definition.workflow} must use contract workflow-v2`);
       }
       if (frontmatter.get('process_state') !== definition.state) {
         fail(file, `workflow process_state '${frontmatter.get('process_state') ?? 'missing'}' does not match registry state '${definition.state}'`);
       }
+      if (frontmatter.get('process_id') !== definition.id) {
+        fail(file, `workflow process_id '${frontmatter.get('process_id') ?? 'missing'}' does not match registry id '${definition.id}'`);
+      }
       if (frontmatter.get('title') !== definition.title) {
         fail(file, `workflow title '${frontmatter.get('title') ?? 'missing'}' does not match registry title '${definition.title}'`);
+      }
+      const diagramPattern = new RegExp(`<ProcessDiagram\\s+process-id=["']${escapeRegExp(definition.id)}["']\\s*/>`);
+      if (!diagramPattern.test(workflowContent)) {
+        fail(file, `workflow ${definition.workflow} must render ProcessDiagram for '${definition.id}'`);
       }
     }
   }
@@ -193,6 +205,9 @@ for (const name of files) {
   }
 
   const edgeKeys = new Set();
+  const incoming = new Map([...stepIds].map((id) => [id, 0]));
+  const outgoing = new Map([...stepIds].map((id) => [id, []]));
+
   for (const edge of definition.edges) {
     if (!edge || typeof edge !== 'object' || !edge.from || !edge.to) {
       fail(file, `process '${definition.id}' contains an invalid edge`);
@@ -203,6 +218,28 @@ for (const name of files) {
     const edgeKey = `${edge.from}->${edge.to}:${edge.label ?? ''}`;
     if (edgeKeys.has(edgeKey)) fail(file, `duplicate edge '${edgeKey}'`);
     edgeKeys.add(edgeKey);
+
+    if (stepIds.has(edge.from) && stepIds.has(edge.to)) {
+      incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1);
+      outgoing.get(edge.from)?.push(edge.to);
+    }
+  }
+
+  const roots = [...stepIds].filter((id) => (incoming.get(id) ?? 0) === 0);
+  const terminals = [...stepIds].filter((id) => (outgoing.get(id) ?? []).length === 0);
+  if (roots.length === 0) fail(file, `process '${definition.id}' has no root step`);
+  if (terminals.length === 0) fail(file, `process '${definition.id}' has no terminal step`);
+
+  const reachable = new Set();
+  const queue = [...roots];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (reachable.has(current)) continue;
+    reachable.add(current);
+    for (const next of outgoing.get(current) ?? []) queue.push(next);
+  }
+  for (const stepId of stepIds) {
+    if (!reachable.has(stepId)) fail(file, `process '${definition.id}' step '${stepId}' is not reachable from a root step`);
   }
 }
 

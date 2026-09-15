@@ -9,8 +9,9 @@ export const DOCUMENTATION_CONTRACTS = Object.freeze({
     requiredSections: ['Business goal', 'Actors', 'Code map'],
     requiredFrontmatter: Object.freeze({
       process_state: Object.freeze(['as-is', 'to-be', 'runtime-verified']),
+      process_id: Object.freeze([]),
     }),
-    requiredFenceLanguages: Object.freeze(['mermaid']),
+    requiredPatterns: Object.freeze(['<ProcessDiagram\\s+process-id=']),
   }),
   'architecture-v1': Object.freeze({
     kind: 'architecture',

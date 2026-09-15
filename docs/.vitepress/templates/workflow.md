@@ -6,6 +6,7 @@ updated: {{date}}
 kind: workflow
 contract: workflow-v2
 process_state: as-is
+process_id: TODO_PROCESS_ID
 ---
 
 # {{title}}
@@ -24,15 +25,9 @@ process_state: as-is
 
 ## Workflow
 
-```mermaid
-flowchart TD
-    A[Trigger] --> B[Use Case / Command]
-    B --> C[Domain validation]
-    C --> D[State change / Event]
-    D --> E[Result]
-```
+<ProcessDiagram process-id="TODO_PROCESS_ID" />
 
-Diagram має показувати meaningful business sequence, а не копіювати назви всіх класів.
+Основний business flow генерується з matching definition у `docs/.vitepress/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
 
 ## Decision points
 

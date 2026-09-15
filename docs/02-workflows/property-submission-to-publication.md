@@ -6,6 +6,7 @@ updated: 2026-09-15
 kind: workflow
 contract: workflow-v2
 process_state: as-is
+process_id: property.submission-to-publication
 ---
 
 # Property Submission → Publication
@@ -51,27 +52,9 @@ Property Submission
 
 ## Workflow
 
-```mermaid
-flowchart TD
-    A[Submit property data] --> B[Validate / normalize]
-    B --> C[Capture source / provenance]
-    C --> D{Identity resolved?}
-    D -->|Existing asset| E[Link to canonical Property Asset]
-    D -->|New asset| F[Create canonical Property Asset]
-    D -->|Conflict / uncertain| G[Identity review]
-    G --> D
-    E --> H{Commercial use needed?}
-    F --> H
-    H -->|No| I[Managed Property registry state]
-    H -->|Yes| J[Create / update Inventory Item]
-    J --> K{Market presentation needed?}
-    K -->|No| L[Managed commercial state]
-    K -->|Yes| M[Create / update Listing]
-    M --> N{Publish to channel?}
-    N -->|No| O[Listing ready]
-    N -->|Yes| P[Publication]
-    P --> Q[Channel lifecycle / sync]
-```
+<ProcessDiagram process-id="property.submission-to-publication" />
+
+Основний business flow є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну на цій сторінці.
 
 Ця схема описує business flow поверх current Property model. Вона не означає, що кожен transition реалізований окремим `Application/UseCase` class.
 

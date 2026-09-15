@@ -1,6 +1,6 @@
 ---
 title: Business Process Modeling
-description: Canonical rules for modeling real COS business processes with Mermaid and explicit truth status.
+description: Canonical rules for modeling real COS business processes with Process Registry, Mermaid and explicit truth status.
 status: active
 updated: 2026-09-15
 kind: concept
@@ -9,70 +9,73 @@ contract: concept-v1
 
 # Business Process Modeling
 
-COS documentation treats a business process as an operational model, not as decorative documentation. Mermaid is the visual renderer; the business meaning remains owned by the relevant Domain and current `main` behavior.
+COS documentation treats a business process as an operational model, not as decorative documentation. Starting with DOC V0.12, the canonical flow topology lives in the **Process Registry** and Mermaid is a derived visual projection of that structured definition.
+
+## Source-of-truth chain
+
+```text
+Business meaning / Domain ownership
+        ↓
+Process Registry definition
+steps + edges + criticality + runtime mappings
+        ↓
+ProcessDiagram
+        ↓
+Mermaid flowchart in VitePress
+```
+
+A workflow page remains the human narrative around the process, but it no longer manually duplicates the same core `steps` and `edges` in Mermaid.
 
 ## Truth states
 
-Every canonical workflow page declares `process_state`.
+Every canonical workflow page declares `process_state`, and the matching registry definition declares the same `state`.
 
 | State | Meaning |
 | --- | --- |
 | `as-is` | Реальний поточний бізнес-процес, підтверджений current code, tests, manifests або фактичною operational procedure. Не кожен human step мусить бути executable у COS. |
 | `to-be` | Цільовий процес, який ще не можна читати як поточну поведінку системи. |
-| `runtime-verified` | Критичні transitions мають explicit executable mapping до use cases, commands, events, policies або generated reference поточного `main`. |
+| `runtime-verified` | Критичні transitions мають explicit executable mapping до use cases, commands, events, policies або source symbols current `main`. |
 
 `active` у полі `status` означає стан документа. `process_state` означає стан самого бізнес-процесу. Це різні речі.
 
-## Process Registry
+## Process Registry contract
 
-Починаючи з DOC V0.11 canonical workflow має structured definition у `docs/.vitepress/processes/*.json`.
+Кожен `workflow-v2` має matching JSON definition у `docs/.vitepress/processes/`.
 
-```text
-Process Definition
-  ├── id / domain / truth state
-  ├── trigger / actors / outcomes
-  ├── steps + edges
-  └── runtime mappings
-          ↓
-check-processes.mjs
-          ↓
-Generated Business Process Registry
-          ↓
-Workflow narrative + Mermaid projection
+Definition фіксує:
+
+- stable `id`;
+- owning Domain;
+- trigger і outcomes;
+- actors;
+- ordered process concepts через `steps`;
+- topology через `edges`;
+- `critical` transitions;
+- runtime mappings до generated reference або exact source symbols.
+
+Workflow page фіксує той самий `process_id` і рендерить:
+
+```html
+<ProcessDiagram process-id="domain.process-id" />
 ```
 
-Registry не переноситься в Kernel і поки не оголошується runtime source of truth. Це machine-readable documentation contract, який пов'язує business process із поточним executable reference.
-
-`check-processes.mjs` перевіряє:
-
-- unique process IDs і workflow mappings;
-- відповідність registry state до `process_state` workflow page;
-- unique step IDs і валідні edges;
-- існування заявлених use cases, commands та events у generated reference поточного checkout;
-- існування source mappings і declared symbols;
-- runtime coverage critical steps для `runtime-verified` process.
-
-Generated snapshot: [Business Process Registry](../12-reference/business-processes.md).
+`check-processes.mjs` перевіряє відповідність title/state/id, runtime mappings, edge targets, root/terminal topology, reachability усіх steps і наявність правильного `ProcessDiagram`.
 
 ## Canonical views
 
 Один процес може мати кілька проєкцій, якщо вони відповідають на різні питання.
 
-### Business flow
+### Core business flow
 
-Показує, як робота рухається від trigger до business outcome.
+Core flow генерується тільки з Process Registry.
 
-```mermaid
-flowchart LR
-    A[Trigger] --> B[Work]
-    B --> C{Decision}
-    C -->|Yes| D[Outcome]
-    C -->|No| E[Alternative / failure]
+```text
+Registry steps + edges → ProcessDiagram → Mermaid
 ```
 
 ### Interaction sequence
 
-Показує взаємодію actor, COS, Domain та external system без перенесення business ownership у delivery layer.
+Sequence diagram може залишатися human-maintained, якщо він показує interaction semantics, яких немає в core topology.
 
 ```mermaid
 sequenceDiagram
@@ -88,7 +91,7 @@ sequenceDiagram
 
 ### State lifecycle
 
-Показує lifecycle однієї domain concept/entity. State diagram не повинен підміняти business flow, якщо процес охоплює кілька сутностей та actors.
+State diagram може залишатися окремою проєкцією lifecycle однієї domain concept/entity.
 
 ```mermaid
 stateDiagram-v2
@@ -102,19 +105,21 @@ stateDiagram-v2
 
 ## Modeling rules
 
-1. Diagram починається з business trigger і закінчується business outcome або explicit failure/alternative path.
-2. Human steps показуються нарівні з automated steps, якщо вони реально є частиною процесу.
-3. Domain decisions відділяються від UI clicks і transport details.
-4. Cross-domain transition має називати boundary або contract, а не малювати shared ownership.
-5. Exact command/event/service inventories не дублюються вручну, якщо для них існує generated reference.
-6. `runtime-verified` не використовується лише тому, що частина процесу має код.
-7. Mermaid source зберігається поруч із narrative workflow, щоб diff показував зміну process explanation.
-8. Structured Process Registry definition зберігає machine-checkable topology та runtime mappings.
-9. Якщо registry і narrative розходяться, це documentation defect; жодна з версій не отримує право «ну приблизно ж те саме».
+1. Core process topology редагується в registry definition, а не одночасно в JSON і Mermaid.
+2. Process починається з root step і має хоча б один terminal step.
+3. Усі steps мають бути reachable від root; orphan steps є documentation defect.
+4. Human steps показуються нарівні з automated steps, якщо вони реально є частиною процесу.
+5. Domain decisions відділяються від UI clicks і transport details.
+6. Cross-domain transition має називати boundary або contract, а не малювати shared ownership.
+7. Exact command/event inventories не дублюються вручну, якщо для них існує generated reference.
+8. `runtime-verified` не використовується лише тому, що частина процесу має код.
+9. Supplemental Mermaid diagrams дозволені лише коли вони показують іншу проєкцію: sequence, lifecycle, automation loop, intake detail тощо.
 
 ## Mermaid delivery
 
-VitePress перетворює fenced blocks `mermaid` на docs-layer `MermaidDiagram`. Renderer завантажує pinned Mermaid `11.17.2`, використовує `securityLevel: strict` і перемальовує diagram при зміні light/dark theme.
+VitePress перетворює fenced blocks `mermaid` на docs-layer `MermaidDiagram`. `ProcessDiagram` використовує той самий renderer, але будує Mermaid source напряму з matching Process Registry definition.
+
+Renderer завантажує pinned Mermaid `11.17.2`, використовує `securityLevel: strict` і перемальовує diagram при зміні light/dark theme.
 
 Mermaid є presentation adapter документації. Він не входить у `Kernel\\Visualization` і не стає source of truth для runtime architecture.
 
@@ -125,11 +130,15 @@ Mermaid є presentation adapter документації. Він не входи
 ```mermaid
 flowchart LR
     A[Architecture metadata] --> B[Cytoscape Architecture Explorer]
-    C[Business Process Registry] --> D[Mermaid workflow diagrams]
+    C[Process Registry] --> D[ProcessDiagram / Mermaid]
     B --> E[COS Documentation / operational understanding]
     D --> E
 ```
 
-Cytoscape відповідає переважно на питання **«з чого COS складається і як компоненти пов'язані?»**. Mermaid відповідає на питання **«як реально рухається робота?»**. Process Registry додає третю властивість: **«на які executable contracts спирається ця модель?»**.
+Cytoscape відповідає переважно на питання **«з чого COS складається і як компоненти пов'язані?»**. Process Registry + Mermaid відповідають на питання **«як реально рухається робота і які runtime contracts це підтримують?»**.
 
-Наступний рівень розвитку — генерувати основну Mermaid topology безпосередньо з Process Registry, залишаючи narrative сторінці explanation, альтернативні sequence/state views та business context.
+## Change discipline
+
+Зміна canonical business flow має починатися зі зміни registry definition. Після цього `docs:check` перевіряє topology і executable mappings, а VitePress автоматично показує нову схему.
+
+Це прибирає класичний документаційний антипатерн: код уже живе в одному світі, JSON у другому, а намальована схема ще пам'ятає молодість автора.

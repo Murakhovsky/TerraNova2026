@@ -2,6 +2,7 @@ import DefaultTheme from 'vitepress/theme';
 import Layout from './Layout.vue';
 import SystemStatus from './SystemStatus.vue';
 import MermaidDiagram from './MermaidDiagram.vue';
+import ProcessDiagram from './ProcessDiagram.vue';
 import './custom.css';
 import './mermaid.css';
 
@@ -11,5 +12,6 @@ export default {
   enhanceApp({ app }) {
     app.component('SystemStatus', SystemStatus);
     app.component('MermaidDiagram', MermaidDiagram);
+    app.component('ProcessDiagram', ProcessDiagram);
   },
 };

@@ -6,6 +6,7 @@ updated: 2026-09-15
 kind: workflow
 contract: workflow-v2
 process_state: as-is
+process_id: sales.lead-to-managed-case
 ---
 
 # Sales Lead → Managed Case
@@ -72,20 +73,9 @@ Generated reference фіксує:
 
 ## Workflow
 
-```mermaid
-flowchart TD
-    A[Lead arrives] --> B[Normalize / map source data]
-    B --> C[Create or update canonical Sales state]
-    C --> D[Assign owner]
-    D --> E[Manage in pipeline]
-    E --> F[Activities / calls / messages]
-    F --> G[Follow-up / next action]
-    G --> H{Stage transition}
-    H -->|Continue| E
-    H -->|Outcome reached| I[Outcome]
-```
+<ProcessDiagram process-id="sales.lead-to-managed-case" />
 
-Не кожен step є окремим класом. Workflow описує бізнес-послідовність, а generated reference — executable entry points.
+Основний business flow є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну на цій сторінці.
 
 `process_state: as-is` означає, що схема описує реальний поточний процес, але не стверджує, що кожен human/operational step уже machine-enforced COS runtime.
 

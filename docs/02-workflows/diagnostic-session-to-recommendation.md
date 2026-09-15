@@ -6,6 +6,7 @@ updated: 2026-09-15
 kind: workflow
 contract: workflow-v2
 process_state: as-is
+process_id: diagnostic.session-to-recommendation
 ---
 
 # Diagnostic Session → Recommendation
@@ -106,23 +107,9 @@ AI не має автоматично створювати «істину» бе
 
 ## Workflow
 
-```mermaid
-flowchart TD
-    A[Published Methodology Version] --> B[Start Session]
-    B --> C[Capture Evidence]
-    C --> D[Structure Facts / Metrics]
-    D --> E{Evidence sufficient?}
-    E -->|No| C
-    E -->|Yes| F[Evaluate]
-    F --> G[Record Results]
-    G --> H[Findings / Hypotheses / Recommendations]
-    H --> I{Session coherent?}
-    I -->|No| C
-    I -->|Yes| J[Complete Session]
-    J --> K{Recommendation decision}
-    K -->|Accept| L[Accept / act on Recommendation]
-    K -->|Reject| M[Reject / no action]
-```
+<ProcessDiagram process-id="diagnostic.session-to-recommendation" />
+
+Основний business flow є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну на цій сторінці.
 
 `process_state: as-is` фіксує реальний current Diagnostic process. Окремі human review/decision steps не трактуються як автоматизовані лише через те, що навколо них уже є runtime module.
 
