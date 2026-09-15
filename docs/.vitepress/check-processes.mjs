@@ -7,10 +7,11 @@ import {
   processVerification,
   resolveRuntimeMapping,
 } from './process-runtime-evidence.mjs';
+import { PROCESS_REGISTRY_ROOT } from './process-registry.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
-const registryRoot = path.join(here, 'processes');
+const registryRoot = PROCESS_REGISTRY_ROOT;
 
 const VALID_PROCESS_SCHEMAS = new Set([4, 5]);
 const CROSS_DOMAIN_SCHEMA = 5;
@@ -167,7 +168,7 @@ if (files.length === 0) {
 }
 
 for (const name of files) {
-  const file = `.vitepress/processes/${name}`;
+  const file = `resources/processes/${name}`;
   const absolute = path.join(registryRoot, name);
   let definition;
 
