@@ -2,9 +2,9 @@ name: WEB V0.9 Portal Refinement
 
 on:
   push:
-    branches: [COS]
+    branches: [main]
   pull_request:
-    branches: [COS]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -32,5 +32,7 @@ jobs:
       - name: Syntax and browser module
         run: |
           php -l app/Interfaces/Web/Controller/CabinetController.php
+          php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
+          php -l app/Interfaces/Web/Navigation/PropertyNavigationContributor.php
           php -l tests/architecture/web_v09_portal_refinement.php
           node --check frontend/features/portal/cabinet.js

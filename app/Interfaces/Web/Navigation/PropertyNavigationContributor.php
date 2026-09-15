@@ -5,7 +5,6 @@ namespace Interfaces\Web\Navigation;
 
 final class PropertyNavigationContributor implements ModuleNavigationContributorInterface
 {
-    private const LISTING_ROLES = ['manager', 'admin', 'realtor', 'partner', 'developer'];
     private const SUBMIT_ROLES = ['seller', 'realtor', 'developer', 'partner', 'manager', 'admin'];
 
     public function moduleId(): string
@@ -42,10 +41,9 @@ final class PropertyNavigationContributor implements ModuleNavigationContributor
         $items = [
             ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість', 'order' => 20],
             ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані', 'order' => 30],
+            ['key' => 'properties', 'path' => 'cabinet#properties', 'label' => 'Мої обʼєкти', 'order' => 40],
         ];
-        if (in_array($role, self::LISTING_ROLES, true)) {
-            $items[] = ['key' => 'listing', 'path' => 'property/listing', 'label' => 'Мої обʼєкти', 'order' => 40];
-        }
+
         if (in_array($role, self::SUBMIT_ROLES, true)) {
             $items[] = ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати обʼєкт', 'order' => 50];
         }

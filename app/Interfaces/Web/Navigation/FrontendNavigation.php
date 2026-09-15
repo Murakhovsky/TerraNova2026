@@ -78,6 +78,8 @@ final class FrontendNavigation
             'surface' => 'portal',
             'primary' => [
                 ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Огляд', 'order' => 10],
+                ['key' => 'requests', 'path' => 'cabinet#requests', 'label' => 'Звернення', 'order' => 60],
+                ['key' => 'profile', 'path' => 'cabinet#profile', 'label' => 'Профіль', 'order' => 90],
             ],
             'utility' => [],
         ];

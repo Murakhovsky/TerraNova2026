@@ -1,81 +1,183 @@
-# WEB V0.9 — Portal Refinement
+# WEB V0.9 — Portal / Cabinet Refinement
 
 ## Goal
 
-WEB V0.9 refines the authenticated Portal surface after the Company Workspace migrations. It keeps the existing Cabinet data and business services, but gives Portal pages an explicit frontend bundle, private metadata, responsive behaviour and a regression contract.
+WEB V0.9 turns `/cabinet*` into a real authenticated **Portal surface**.
 
-This is an Interface/Presentation release. It does not create a `Portal` DDD domain and does not move Property, Sales or authentication rules into browser code.
+The frontend contract is now explicit:
 
-## Refined surfaces
+- **Workspace** = company + work;
+- **Portal** = user + interaction with the company;
+- **Public** = external world.
 
-- `/cabinet`
-- `/cabinet/submission/{id}`
+A user being a manager or administrator does not change the ownership of `/cabinet`. Staff can open the Portal as users, while operational work stays in Workspace routes.
 
-Existing routes, server-side ownership checks, Telegram actions and property-submission rules remain unchanged.
+This is an Interface/Presentation release. It does not create a `Portal` DDD domain and does not move Property, Identity or Sales business rules into browser code.
 
-## Surface boundary
+## Portal surface
 
-`shared/manager_header.phtml` already resolves the authenticated role:
+The refined routes are:
 
-- manager/admin users receive Company Workspace navigation;
-- non-team users receive Portal navigation with `data-interface-surface="portal"`.
+- `/cabinet`;
+- `/cabinet/submission/{id}`;
+- existing Telegram connect/disconnect actions.
 
-WEB V0.9 preserves that split. `CabinetController` declares `interfaceSurface = workspace|portal` for presentation context but does not set `workspaceSection = portal`.
+`CabinetController` always declares:
 
-The dedicated `portal-cabinet` browser module activates only when the rendered header identifies the Portal surface. This prevents Portal styling from leaking into a manager visiting `/cabinet`.
+```php
+interfaceSurface = portal
+pageAssetEntries = ['portal-cabinet']
+metaRobots = noindex,nofollow
+```
 
-## Portal navigation ownership
+The controller keeps backend truth for:
 
-The core Portal owns only the Overview destination. Property contributes the role-aware Portal capabilities:
+- authenticated user;
+- effective organization role;
+- role capabilities;
+- ownership checks for submissions;
+- cabinet data;
+- Telegram binding.
 
-- Real Estate catalog;
+Manager-only property operations are no longer assembled inside the Portal controller.
+
+## Portal shell
+
+`shared/portal_header.phtml` is the canonical Portal shell.
+
+It owns:
+
+- Terra Nova Portal identity;
+- module-aware Portal navigation;
+- authenticated user identity;
+- mobile navigation;
+- `aria-current` state;
+- one surface marker: `data-interface-surface="portal"`.
+
+Cabinet views no longer render `shared/manager_header.phtml`.
+
+## Information architecture
+
+Only capabilities backed by current application/runtime behaviour are shown.
+
+### Overview
+
+`/cabinet`
+
+### Real Estate
+
+Property module contributes:
+
+- Catalog;
 - Favourites;
-- My Properties / Listing for permitted roles;
-- Submit Property for permitted roles.
+- My Properties → `/cabinet#properties`;
+- Submit Property when the server-side role allows it.
 
-Module-aware navigation remains authoritative. WEB V0.9 does not duplicate those role rules inside a new navigation layer.
+`My Properties` is intentionally not linked to `property/listing`: Listing remains a Company Workspace capability.
 
-## Frontend bundle
+### Requests
 
-WEB V0.9 adds:
+`/cabinet#requests` renders the existing `cabinetData().inbound_requests` projection.
 
-- `frontend/entrypoints/portal-cabinet.js`;
+### Profile
+
+`/cabinet#profile` currently exposes read-only account identity because no profile-edit application contract exists yet.
+
+A decorative edit form was deliberately not invented.
+
+### Documents / activity
+
+Not shown because there is no current capability contract that supports it.
+
+## Portal states
+
+The server-rendered UI explicitly handles:
+
+- loaded data;
+- empty My Properties;
+- empty submissions;
+- empty requests;
+- controller/service failure;
+- Telegram success/error status;
+- submission not found;
+- submission service unavailable;
+- saving state through `aria-busy`.
+
+Validation remains native/server-side; browser JavaScript does not reproduce business validation rules.
+
+## Responsive behaviour
+
+Portal is mobile-first relative to Workspace.
+
+At `<= 1050px`:
+
+- Portal navigation moves behind a dedicated menu control;
+- dense desktop identity chrome is removed;
+- cards reduce columns.
+
+At `<= 650px`:
+
+- navigation becomes vertical;
+- actions become one-column;
+- page sections use compact spacing;
+- form grids collapse to one column;
+- primary controls target at least 44px interaction height.
+
+Reduced-motion preferences are respected.
+
+## Browser ownership
+
+`frontend/entrypoints/portal-cabinet.js` loads:
+
 - `frontend/features/portal/cabinet.css`;
 - `frontend/features/portal/cabinet.js`.
 
-The bundle provides Portal-scoped responsive layout, table overflow handling and progressive form submit state through `aria-busy`. Existing PHTML remains server-rendered and remains the source of page structure.
+Browser JavaScript owns only presentation behaviour:
 
-## Data and security behaviour
+- Portal mobile navigation;
+- progressive submit state.
 
-The release preserves:
+It does not decide permissions, property state, submission state or business transitions.
 
-- `AuthService::cabinetData()` as the existing Cabinet read source;
-- existing ownership checks for submitted properties;
-- existing manager-only operational additions;
-- current Telegram connect/disconnect workflow;
-- existing 404/503 behaviour.
+## Navigation ownership
 
-Cabinet pages are explicitly `noindex,nofollow`.
+`ModuleAwareNavigationService` remains authoritative.
 
-WEB V0.9 does not claim new CSRF guarantees or alter mutation authorization.
+Core Portal navigation owns generic Portal destinations:
 
-## Explicitly outside WEB V0.9
+- Overview;
+- Requests;
+- Profile.
 
-- a new Portal business domain;
-- `/app/*` route migration;
-- account/profile editing features that do not yet have an application contract;
-- duplicated Property role rules;
-- moving manager operational dashboards into the client Portal;
-- Public site redesign.
+Property contributes Property-specific destinations and submission role gating.
+
+This keeps Portal as an interface surface rather than a new business domain.
+
+## Regression gate
+
+`tests/architecture/web_v09_portal_refinement.php` protects the release against:
+
+- rendering Workspace shell from Cabinet;
+- role-based switching of Portal/Workspace surface ownership;
+- rebuilding manager operational data in Cabinet;
+- duplicated role rules in PHTML;
+- sending My Properties to Workspace Listing;
+- missing Portal bundle/shell/mobile behaviour;
+- accidental creation of `app/Domains/Portal`.
+
+The dedicated workflow runs on `main`.
 
 ## Definition of Done
 
 WEB V0.9 is closed when:
 
-1. Cabinet overview and submission editor load the dedicated Portal bundle;
-2. the browser bundle activates only on a rendered Portal surface;
-3. manager/admin Cabinet access retains Workspace navigation;
-4. Portal navigation remains module-aware and role-gated;
-5. responsive and progressive submit states are present;
-6. Vite asset validation includes `portal-cabinet`;
-7. a dedicated WEB V0.9 architecture gate passes independently of unrelated runtime failures.
+1. `/cabinet*` always owns the Portal surface;
+2. Portal has one dedicated shell and centralized navigation;
+3. Cabinet never renders the Workspace shell;
+4. My Properties, submissions, requests, Telegram and profile projection use shared Portal presentation patterns;
+5. role/capability truth remains server-side;
+6. mobile navigation and one-column mobile forms are usable;
+7. loading/saving, empty and failure states are represented where the current server contract supports them;
+8. the Portal bundle is managed through Vite;
+9. architecture/regression gates protect the boundary;
+10. no `Domains/Portal` exists.

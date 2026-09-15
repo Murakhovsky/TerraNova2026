@@ -6,8 +6,9 @@ $root = dirname(__DIR__, 2);
 $controller = file_get_contents($root . '/app/Interfaces/Web/Controller/CabinetController.php');
 $indexView = file_get_contents($root . '/app/Interfaces/Web/View/cabinet/index.phtml');
 $submissionView = file_get_contents($root . '/app/Interfaces/Web/View/cabinet/submission.phtml');
-$header = file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
-$navigation = file_get_contents($root . '/app/Interfaces/Web/Navigation/PropertyNavigationContributor.php');
+$portalHeader = file_get_contents($root . '/app/Interfaces/Web/View/shared/portal_header.phtml');
+$frontendNavigation = file_get_contents($root . '/app/Interfaces/Web/Navigation/FrontendNavigation.php');
+$propertyNavigation = file_get_contents($root . '/app/Interfaces/Web/Navigation/PropertyNavigationContributor.php');
 $entrypoint = file_get_contents($root . '/frontend/entrypoints/portal-cabinet.js');
 $browserModule = file_get_contents($root . '/frontend/features/portal/cabinet.js');
 $styles = file_get_contents($root . '/frontend/features/portal/cabinet.css');
@@ -26,26 +27,41 @@ $requireNotContains = static function (string $content, string $needle, string $
     }
 };
 
-$requireContains($controller, "prepareCabinetSurface(\$user, 'Кабінет')", 'Cabinet overview must prepare the shared cabinet surface.');
-$requireContains($controller, "prepareCabinetSurface(\$user, 'Редагування поданого об’єкта')", 'Cabinet submission editor must prepare the shared cabinet surface.');
-$requireContains($controller, "\$this->view->metaRobots = 'noindex,nofollow';", 'Portal cabinet must remain private for search engines.');
-$requireContains($controller, "\$this->view->pageAssetEntries = ['portal-cabinet'];", 'Cabinet pages must load the dedicated portal bundle.');
-$requireContains($controller, "\$this->view->interfaceSurface = \$isManager ? 'workspace' : 'portal';", 'Cabinet surface must distinguish team workspace from portal users.');
-$requireNotContains($controller, "workspaceSection = 'portal'", 'Portal must not masquerade as a Company Workspace section.');
-$requireContains($indexView, "partial('shared/manager_header', ['active' => 'cabinet'])", 'Cabinet overview must keep the role-aware shared header.');
-$requireContains($submissionView, "partial('shared/manager_header', ['active' => 'cabinet'])", 'Cabinet submission editor must keep the role-aware shared header.');
-$requireContains($header, 'data-interface-surface="portal"', 'Shared header must expose the Portal interface surface.');
-$requireContains($navigation, "['key' => 'catalog'", 'Property module must contribute catalog navigation to the portal.');
-$requireContains($navigation, "['key' => 'favour'", 'Property module must contribute favourites navigation to the portal.');
-$requireContains($navigation, 'LISTING_ROLES', 'Portal listing access must remain role-gated.');
-$requireContains($navigation, 'SUBMIT_ROLES', 'Portal submission access must remain role-gated.');
+$requireContains($controller, "preparePortalSurface(\$user, 'Кабінет')", 'Cabinet overview must prepare the Portal surface.');
+$requireContains($controller, "preparePortalSurface(\$user, 'Редагування поданого об’єкта')", 'Submission editor must prepare the Portal surface.');
+$requireContains($controller, "\$this->view->interfaceSurface = 'portal';", 'Every cabinet route must render as Portal regardless of staff role.');
+$requireContains($controller, "\$this->view->pageAssetEntries = ['portal-cabinet'];", 'Portal pages must load the dedicated bundle.');
+$requireContains($controller, "\$this->view->metaRobots = 'noindex,nofollow';", 'Portal pages must remain private for search engines.');
+$requireNotContains($controller, 'managerWorkspace', 'Portal controller must not assemble Company Workspace operational data.');
+$requireNotContains($controller, "interfaceSurface = \$isManager", 'Portal surface ownership must not depend on manager role.');
+
+$requireContains($indexView, "partial('shared/portal_header'", 'Cabinet overview must render the dedicated Portal shell.');
+$requireContains($submissionView, "partial('shared/portal_header'", 'Submission editor must render the dedicated Portal shell.');
+$requireNotContains($indexView, "partial('shared/manager_header'", 'Cabinet overview must never render the Workspace shell.');
+$requireNotContains($submissionView, "partial('shared/manager_header'", 'Submission editor must never render the Workspace shell.');
+$requireNotContains($indexView, "in_array(\$userRole", 'Role/capability rules must not be duplicated in Portal PHTML.');
+$requireContains($indexView, 'id="properties"', 'Portal overview must expose the My Properties section.');
+$requireContains($indexView, 'id="requests"', 'Portal overview must expose the Requests section.');
+$requireContains($indexView, 'id="profile"', 'Portal overview must expose the supported read-only Profile section.');
+
+$requireContains($portalHeader, 'data-interface-surface="portal"', 'Dedicated Portal shell must identify its surface.');
+$requireContains($portalHeader, 'frontendNavigationService', 'Portal shell must consume centralized module-aware navigation.');
+$requireContains($portalHeader, 'data-portal-menu-button', 'Portal shell must expose a mobile navigation control.');
+
+$requireContains($frontendNavigation, "'path' => 'cabinet#requests'", 'Core Portal navigation must link to requests supported by cabinet data.');
+$requireContains($frontendNavigation, "'path' => 'cabinet#profile'", 'Core Portal navigation must link to the supported profile projection.');
+$requireContains($propertyNavigation, "'path' => 'cabinet#properties'", 'Property Portal navigation must point My Properties to Portal data, not Workspace Listing.');
+$requireNotContains($propertyNavigation, 'LISTING_ROLES', 'Portal My Properties must not be conflated with Workspace Listing access.');
+$requireContains($propertyNavigation, 'SUBMIT_ROLES', 'Property submission capability must remain role-gated server-side.');
+
 $requireContains($entrypoint, "../features/portal/cabinet.css", 'Portal entrypoint must import feature CSS.');
 $requireContains($entrypoint, "../features/portal/cabinet.js", 'Portal entrypoint must import feature JS.');
-$requireContains($browserModule, '[data-interface-surface="portal"]', 'Portal browser module must activate only on the Portal surface.');
-$requireContains($browserModule, 'dataset.portalCabinet', 'Portal browser module must expose its active state.');
+$requireContains($browserModule, '[data-interface-surface="portal"][data-portal-header]', 'Portal browser module must activate only on the dedicated Portal shell.');
 $requireContains($browserModule, 'aria-busy', 'Portal forms must expose progressive submit state.');
-$requireContains($styles, '.tn-portal-cabinet', 'Portal styles must be surface-scoped.');
+$requireContains($browserModule, 'data-portal-menu-button', 'Portal browser module must own mobile shell interaction only.');
+$requireContains($styles, '.tn-portal-header__inner', 'Portal styles must include the dedicated shell.');
 $requireContains($styles, '@media (max-width: 650px)', 'Portal styles must cover the mobile baseline.');
+$requireContains($styles, '@media (prefers-reduced-motion: reduce)', 'Portal styles must respect reduced motion.');
 $requireContains($vite, "'portal-cabinet'", 'Vite must expose the portal cabinet entrypoint.');
 $requireContains($frontendAssets, "'portal-cabinet'", 'Frontend asset validation must include the portal cabinet entrypoint.');
 

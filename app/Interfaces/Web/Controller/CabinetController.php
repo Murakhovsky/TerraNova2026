@@ -10,36 +10,28 @@ class CabinetController extends ControllerBase
     public function indexAction(): void
     {
         $user = $this->requireUser();
-
         if (!$user) {
             return;
         }
 
-        $isManager = $this->prepareCabinetSurface($user, 'Кабінет');
+        $this->preparePortalSurface($user, 'Кабінет');
         $this->view->user = $user;
-        $this->view->isManager = $isManager;
         $this->view->myProperties = [];
         $this->view->submissions = [];
         $this->view->inboundRequests = [];
-        $this->view->managerWorkspace = [];
         $this->view->pageStatus = null;
         $this->view->telegramBinding = null;
-        $this->view->telegramOutboxStats = [];
         $this->view->telegramStatus = (string) $this->request->getQuery('telegram_status', 'string', '');
 
         try {
             $data = $this->authService()->cabinetData($user);
-            $this->view->myProperties = $data['my_properties'] ?? [];
-            $this->view->submissions = $data['submissions'];
-            $this->view->inboundRequests = $data['inbound_requests'];
+            $this->view->myProperties = (array) ($data['my_properties'] ?? []);
+            $this->view->submissions = (array) ($data['submissions'] ?? []);
+            $this->view->inboundRequests = (array) ($data['inbound_requests'] ?? []);
             $this->view->telegramBinding = $this->telegramAutomationService()->bindingForUser((int) $user['id']);
-
-            if ($isManager) {
-                $this->view->managerWorkspace = $this->managerWorkspace($user);
-                $this->view->telegramOutboxStats = $this->notificationOperations()->outboxStats();
-            }
         } catch (Throwable $e) {
             $this->logFrontendError('cabinet-page', $e);
+            $this->response->setStatusCode(503, 'Service Unavailable');
             $this->view->pageStatus = 'Дані кабінету тимчасово недоступні. Спробуйте оновити сторінку трохи пізніше.';
         }
     }
@@ -58,7 +50,11 @@ class CabinetController extends ControllerBase
             if ($username === '') {
                 throw new \RuntimeException('Telegram bot username is not configured.');
             }
-            $this->response->redirect('https://t.me/' . rawurlencode($username) . '?start=' . rawurlencode((string) $link['token']), true);
+
+            $this->response->redirect(
+                'https://t.me/' . rawurlencode($username) . '?start=' . rawurlencode((string) $link['token']),
+                true
+            );
         } catch (Throwable $e) {
             $this->logFrontendError('telegram-connect', $e);
             $this->response->redirect('cabinet?telegram_status=connect_error');
@@ -84,7 +80,7 @@ class CabinetController extends ControllerBase
             return;
         }
 
-        $this->prepareCabinetSurface($user, 'Редагування поданого об’єкта');
+        $this->preparePortalSurface($user, 'Редагування поданого об’єкта');
         $submissionId = (int) ($id ?: $this->dispatcher->getParam('params') ?: $this->dispatcher->getParam('id'));
         $this->view->submission = null;
         $this->view->media = [];
@@ -117,7 +113,10 @@ class CabinetController extends ControllerBase
 
             $this->view->submission = $submission;
             $this->view->formData = array_merge($submission, (array) $this->request->getPost());
-            $this->view->media = $this->di->getShared('mediaStorageService')->assetsFor('property_submission', $submissionId);
+            $this->view->media = $this->di->getShared('mediaStorageService')->assetsFor(
+                'property_submission',
+                $submissionId
+            );
         } catch (Throwable $e) {
             $this->logFrontendError('cabinet-submission', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
@@ -125,93 +124,29 @@ class CabinetController extends ControllerBase
         }
     }
 
-    private function prepareCabinetSurface(array $user, string $title): bool
+    private function preparePortalSurface(array $user, string $title): void
     {
-        $isManager = $this->authService()->isManager($user);
+        $role = (string) ($user['role'] ?? 'buyer');
+
+        try {
+            if ($this->authService()->isManager($user)) {
+                $role = $this->authService()->isAdmin($user) ? 'admin' : 'manager';
+            }
+        } catch (Throwable $e) {
+            // Keep the account role if organization membership cannot be resolved.
+        }
+
+        $capabilityMatrix = $this->authService()->roleCapabilities();
+        $capabilities = (array) ($capabilityMatrix[$role] ?? []);
+
+        $this->view->user = $user;
         $this->view->title = $title;
         $this->view->metaTitle = $title . ' | Terra Nova CLUB';
         $this->view->metaRobots = 'noindex,nofollow';
         $this->view->pageAssetEntries = ['portal-cabinet'];
-        $this->view->interfaceSurface = $isManager ? 'workspace' : 'portal';
-
-        return $isManager;
-    }
-
-    private function managerWorkspace(array $user): array
-    {
-        $propertyService = $this->propertyMediaService();
-        $agents = $propertyService->agents();
-        $agent = $this->agentForUser($agents, (string) ($user['email'] ?? ''));
-        $scope = [];
-        $scopeNotice = null;
-
-        if (!$this->authService()->isAdmin($user) && $agent) {
-            $scope['agent_id'] = (int) $agent['id'];
-        } elseif (!$this->authService()->isAdmin($user)) {
-            $scopeNotice = 'Для цього користувача ще не знайдено картку агента, тому показано загальну чергу об’єктів.';
-        }
-
-        $filters = fn(array $extra = []): array => $propertyService->adminFilters(array_merge($scope, $extra));
-        $properties = $propertyService->adminProperties($filters(['sort' => 'updated']));
-        $overdue = $propertyService->adminProperties($filters(['quality' => 'overdue_action', 'sort' => 'next_action']));
-        $noNextAction = $propertyService->adminProperties($filters(['quality' => 'no_next_action', 'sort' => 'updated']));
-        $noPhoto = $propertyService->adminProperties($filters(['quality' => 'no_photo', 'sort' => 'updated']));
-        $notReady = $propertyService->adminProperties($filters(['quality' => 'not_ready', 'sort' => 'updated']));
-        $ready = $propertyService->adminProperties($filters(['quality' => 'ready', 'sort' => 'updated']));
-
-        return [
-            'agent' => $agent,
-            'scope' => $scope,
-            'scope_notice' => $scopeNotice,
-            'counts' => [
-                'properties' => count($properties),
-                'overdue' => count($overdue),
-                'no_next_action' => count($noNextAction),
-                'no_photo' => count($noPhoto),
-                'not_ready' => count($notReady),
-                'ready' => count($ready),
-            ],
-            'attention_properties' => $this->uniqueProperties(array_merge($overdue, $noNextAction, $noPhoto, $notReady), 8),
-            'recent_properties' => array_slice($properties, 0, 6),
-            'property_groups' => $propertyService->propertyGroups(false),
-        ];
-    }
-
-    private function agentForUser(array $agents, string $email): ?array
-    {
-        $email = mb_strtolower(trim($email));
-        if ($email === '') {
-            return null;
-        }
-
-        foreach ($agents as $agent) {
-            if (mb_strtolower(trim((string) ($agent['email'] ?? ''))) === $email) {
-                return $agent;
-            }
-        }
-
-        return null;
-    }
-
-    private function uniqueProperties(array $properties, int $limit): array
-    {
-        $seen = [];
-        $unique = [];
-
-        foreach ($properties as $property) {
-            $id = (int) ($property['id'] ?? 0);
-            if ($id <= 0 || isset($seen[$id])) {
-                continue;
-            }
-
-            $seen[$id] = true;
-            $unique[] = $property;
-
-            if (count($unique) >= $limit) {
-                break;
-            }
-        }
-
-        return $unique;
+        $this->view->interfaceSurface = 'portal';
+        $this->view->portalRole = $role;
+        $this->view->portalCapabilities = $capabilities;
+        $this->view->canSubmitProperty = !empty($capabilities['submit_property']);
     }
 }
