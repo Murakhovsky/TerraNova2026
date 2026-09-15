@@ -1,8 +1,8 @@
 ---
 title: Property Domain Overview
-description: Canonical real-estate asset registry, Inventory, Listing, analytics, intelligence, identity hardening і network interoperability.
+description: Canonical real-estate asset runtime, Inventory, Listing/Publication, history, intelligence and external interoperability.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: domain
 ---
 
@@ -24,29 +24,30 @@ CRM            = people/relationship context
 
 ## Asset model
 
-Property `0.11.0` охоплює:
+Property `0.12.0` охоплює:
 
 - canonical asset registry і structure graph;
 - asset kind/lifecycle/relations;
 - location/address/geo model;
 - identity resolution, external references, provenance і verification;
 - operational identity `CREATE / MERGE / REVIEW` workflow with review audit;
-- canonical aliases for legacy property identifiers without runtime fallback to `tn_properties`;
+- canonical aliases for legacy property identifiers;
 - Inventory lifecycle, reservations, transaction type і price state;
-- Listing/Publication lifecycle та media;
-- history/event contracts;
-- market analytics;
-- evidence-linked Property Intelligence;
+- Listing/Publication lifecycle та media presentation state;
+- append-only history/event contracts;
+- market analytics and evidence-linked Property Intelligence;
 - external Property Network intake/export/sync boundary;
-- concrete transport-injected RESO Web API connector adapter for MLS/developer/partner interoperability;
-- decomposed Property management ports behind a compatibility facade.
+- RESO Web API connector boundary;
+- canonical runtime writes for Asset, Inventory, Listing and Publication;
+- canonical REST mutation surface;
+- one-way compatibility projection into legacy `tn_properties` for transitional read surfaces.
 
 ## Runtime manifest
 
 ```text
 id: property
-version: 0.11.0
-schema: 0.11.0
+version: 0.12.0
+schema: 0.12.0
 kernel: >=0.11.0 <0.12.0
 enabled_by_default: true
 ```
@@ -54,19 +55,40 @@ enabled_by_default: true
 AS-IS contributions:
 
 - runtime module service `propertyDomainModule`;
+- canonical runtime service `propertyCanonicalRuntime`;
 - API route contributor `propertyRouteContributor`;
 - configuration provisioner `propertyModuleConfigurationProvisioner`;
 - Web navigation contribution;
-- Property migrations through `V0.11.0`;
-- explicit Property capability catalogue, including `property.identity.review`.
+- Property migrations through `V0.12.0`;
+- explicit capability `property.runtime.canonical`.
 
-## V0.11 hardening rule
+## V0.12 canonical runtime rule
+
+The authoritative mutation direction is now:
+
+```text
+Web / API / Spatial
+        ↓
+PropertyCanonicalRuntimeService
+        ↓
+PropertyAsset / InventoryItem / Listing / Publication
+        ↓
+Domain Events → Kernel EventBus / Outbox
+        ↓
+Compatibility Projection
+        ↓
+tn_properties (legacy read surface)
+```
+
+`tn_properties` is **not** a canonical source of Property state. New Asset, commercial price/status, Listing publication and 3D-tour presentation mutations must enter through the canonical runtime first.
+
+Legacy Property management read/group/media surfaces remain transitional compatibility code where a canonical replacement has not yet been introduced. They may not own Asset/Inventory/Listing business truth. The compatibility projection is the explicit boundary allowed to materialize canonical state into `tn_properties`.
+
+## V0.11 hardening rule retained
 
 Identity merge means resolving an incoming observation/submission into one existing canonical asset. It does **not** destructively merge two canonical assets. Ambiguous matches enter explicit review; review decisions are audited.
 
-Legacy `tn_properties` may be read by the V0.11 one-time compatibility migration, but canonical runtime reference resolution remains on Property-owned canonical tables and `tn_property_asset_legacy_links`.
-
-The RESO adapter implements the existing V0.10 `PropertyNetworkConnectorInterface`; provider authentication, endpoint details and secrets remain outside Property behind `configuration_reference` and the injected transport port.
+The RESO adapter implements the V0.10 `PropertyNetworkConnectorInterface`; provider authentication, endpoint details and secrets remain outside Property behind `configuration_reference` and the injected transport port.
 
 ## Cross-domain rule
 
