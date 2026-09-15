@@ -31,11 +31,13 @@ State or outcome
 
 ## 3. Register the process
 
-Кожен `workflow-v2` має matching JSON definition у:
+Кожен `workflow-v2` має matching canonical JSON definition у platform Process Registry:
 
 ```text
-docs/.vitepress/processes/<process-id>.json
+resources/processes/<process-id>.json
 ```
+
+`resources/processes` є source of truth. `Kernel\\Process\\ProcessRegistryInterface` робить ту саму модель доступною runtime consumers, а Documentation/Visualization лише проєктують її.
 
 Current Process Registry schema `v4` фіксує stable process ID, Domain, business state, actors, steps, edges, primary owner, step Domain, canonical capability або explicit capability gap, criticality та runtime/evidence mappings.
 
