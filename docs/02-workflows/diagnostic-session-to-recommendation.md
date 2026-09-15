@@ -2,8 +2,10 @@
 title: Diagnostic Session → Recommendation
 description: Канонічний Diagnostic workflow від methodology version до evidence, evaluation і recommendations.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: workflow
+contract: workflow-v2
+process_state: as-is
 ---
 
 # Diagnostic Session → Recommendation
@@ -23,68 +25,63 @@ kind: workflow
 
 ## Preparation lifecycle
 
-До початку session methodology проходить окремий lifecycle:
+До початку session methodology проходить окремий lifecycle.
 
-```text
-DraftDiagnosticPack
-    ↓
-validate / revise
-    ↓
-PublishDiagnosticPack
-    ↓
-immutable methodology version
+```mermaid
+flowchart LR
+    A[DraftDiagnosticPack] --> B[Validate / revise]
+    B --> C[PublishDiagnosticPack]
+    C --> D[Immutable methodology version]
 ```
 
-Session має бути pinned до конкретної published version, а не до mutable «latest».
+Session має бути pinned до конкретної published version, а не до mutable `latest`.
 
 ## Session trigger
 
-```text
-StartDiagnosticSession
+```mermaid
+flowchart LR
+    A[Published methodology version] --> B[StartDiagnosticSession]
+    B --> C[Version-pinned diagnostic context]
 ```
 
 Старт створює version-pinned diagnostic context для target, який діагностується.
 
 ## Evidence capture
 
-```text
-Interview / source data
-    ↓
-CaptureDiagnosticEvidence
-    ↓
-Evidence
-    ↓
-Facts / Metrics / Assessments
+```mermaid
+flowchart LR
+    A[Interview / source data] --> B[CaptureDiagnosticEvidence]
+    B --> C[Evidence]
+    C --> D[Facts / Metrics / Assessments]
 ```
 
 Evidence є первинним traceability layer. Derived data без зрозумілого origin не повинні тихо перетворюватися на authoritative conclusions.
 
 ## Evaluation
 
-```text
-Structured facts / metrics / assessments
-    ↓
-EvaluateDiagnosticSession
-    ↓
-Deterministic methodology logic
-    ↓
-Findings / Hypotheses / Recommendations
+```mermaid
+flowchart LR
+    A[Structured facts / metrics / assessments] --> B[EvaluateDiagnosticSession]
+    B --> C[Deterministic methodology logic]
+    C --> D[Findings / Hypotheses / Recommendations]
 ```
 
 LLM output не є прямим substitute для deterministic scoring.
 
 ## AI-assisted path
 
-```text
-Diagnostic context
-    ↓
-Diagnostic AI gateway
-    ↓
-Kernel structured LLM contract
-    ↓
-Provider-neutral execution
-    ↓
-Structured extraction / interpretation
+```mermaid
+sequenceDiagram
+    participant Diagnostic
+    participant Gateway as Diagnostic AI gateway
+    participant Kernel as Kernel structured LLM contract
+    participant Provider as Provider-neutral execution
+    Diagnostic->>Gateway: diagnostic context
+    Gateway->>Kernel: structured request
+    Kernel->>Provider: provider-neutral execution
+    Provider-->>Kernel: structured output
+    Kernel-->>Gateway: validated result
+    Gateway-->>Diagnostic: extraction / interpretation
 ```
 
 AI може допомогти:
@@ -109,25 +106,25 @@ AI не має автоматично створювати «істину» бе
 
 ## Workflow
 
-```text
-Published Methodology Version
-    ↓
-Start Session
-    ↓
-Capture Evidence
-    ↓
-Structure Facts / Metrics
-    ↓
-Evaluate
-    ↓
-Record Results
-    ↓
-Findings / Hypotheses / Recommendations
-    ↓
-Complete Session
-    ↓
-Accept / Reject / Act on Recommendation
+```mermaid
+flowchart TD
+    A[Published Methodology Version] --> B[Start Session]
+    B --> C[Capture Evidence]
+    C --> D[Structure Facts / Metrics]
+    D --> E{Evidence sufficient?}
+    E -->|No| C
+    E -->|Yes| F[Evaluate]
+    F --> G[Record Results]
+    G --> H[Findings / Hypotheses / Recommendations]
+    H --> I{Session coherent?}
+    I -->|No| C
+    I -->|Yes| J[Complete Session]
+    J --> K{Recommendation decision}
+    K -->|Accept| L[Accept / act on Recommendation]
+    K -->|Reject| M[Reject / no action]
 ```
+
+`process_state: as-is` фіксує реальний current Diagnostic process. Окремі human review/decision steps не трактуються як автоматизовані лише через те, що навколо них уже є runtime module.
 
 ## Decision points
 
@@ -142,7 +139,7 @@ Accept / Reject / Act on Recommendation
 ## Failure paths
 
 - draft/unpublished methodology → session start rejected;
-- insufficient evidence → evaluation blocked or confidence reduced;
+- insufficient evidence → evaluation blocked або confidence reduced;
 - dangling evidence reference → derived record rejected;
 - LLM/schema failure → AI step fails without fabricating deterministic result;
 - concurrent write conflict → persistence conflict handling;
@@ -158,9 +155,17 @@ Accept / Reject / Act on Recommendation
 6. Diagnostic does not copy Sales/Finance/HR domain models into itself.
 7. Completion freezes a coherent diagnostic result, not an arbitrary snapshot of half-processed input.
 
-## Runtime maturity note
+## Runtime boundary
 
-Diagnostic has rich methodology/application logic but its current `0.5.4` module manifest still has partial runtime integration: WEB navigation exists, while runtime module service/API/configuration/capability contributions are not yet declared.
+Current Diagnostic `0.6.1` має runtime module service `diagnosticDomainModule`, API route contribution, `diagnosticActionOutcomeHandler`, Web navigation та Diagnostic migration contribution.
+
+Це означає, що стара теза про «partial runtime integration без runtime module» більше не є правдою і вилучена з workflow.
+
+## UI surfaces
+
+Workflow проявляється через Diagnostic interview/session surfaces, reporting/recommendation views та runtime action outcome loop.
+
+UI не є source of truth для methodology/evaluation rules.
 
 ## Code map
 
@@ -172,5 +177,6 @@ app/Domains/Diagnostic/Evaluation
 app/Domains/Diagnostic/AI
 app/Domains/Diagnostic/Report
 app/Domains/Diagnostic/Infrastructure
+app/Domains/Diagnostic/Bootstrap/DiagnosticDomainModule.php
 app/Domains/Diagnostic/module.php
 ```

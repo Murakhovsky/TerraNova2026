@@ -44,6 +44,17 @@ function stripCodeFences(content) {
   return content.replace(/```[\s\S]*?```/g, '').replace(/~~~[\s\S]*?~~~/g, '');
 }
 
+function fenceLanguages(content) {
+  const languages = new Set();
+  for (const match of content.matchAll(/^```\s*([A-Za-z0-9_-]+)[^\n]*$/gm)) {
+    languages.add(match[1].toLowerCase());
+  }
+  for (const match of content.matchAll(/^~~~\s*([A-Za-z0-9_-]+)[^\n]*$/gm)) {
+    languages.add(match[1].toLowerCase());
+  }
+  return languages;
+}
+
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -65,6 +76,24 @@ for (const file of walk(docsRoot)) {
   const kind = frontmatter.get('kind');
   if (kind !== contract.kind) {
     errors.push(`${relative(file)}: contract '${contractName}' requires kind '${contract.kind}', got '${kind ?? 'missing'}'`);
+  }
+
+  for (const [key, allowedValues] of Object.entries(contract.requiredFrontmatter ?? {})) {
+    const value = frontmatter.get(key);
+    if (!value) {
+      errors.push(`${relative(file)}: contract '${contractName}' requires frontmatter '${key}'`);
+      continue;
+    }
+    if (allowedValues.length > 0 && !allowedValues.includes(value)) {
+      errors.push(`${relative(file)}: frontmatter '${key}' must be one of ${allowedValues.join(', ')}, got '${value}'`);
+    }
+  }
+
+  const languages = fenceLanguages(content);
+  for (const language of contract.requiredFenceLanguages ?? []) {
+    if (!languages.has(language.toLowerCase())) {
+      errors.push(`${relative(file)}: contract '${contractName}' requires at least one \`\`\`${language} code fence`);
+    }
   }
 
   const source = stripCodeFences(content);

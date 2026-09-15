@@ -51,15 +51,24 @@ const related = computed(() => {
   const domainMatch = relativePath.match(/^04-domains\/(sales|property|diagnostic)\//);
   if (domainMatch) return withoutCurrent(domainItems(domainMatch[1]), route);
 
+  if (relativePath === '02-workflows/business-process-modeling.md') {
+    return withoutCurrent([
+      item('Sales Lead → Managed Case', domains.sales.workflow, 'Current Sales intake, pipeline and governed automation flow.'),
+      item('Property Submission → Publication', domains.property.workflow, 'Current Property Asset, Inventory, Listing and Publication flow.'),
+      item('Diagnostic Session → Recommendation', domains.diagnostic.workflow, 'Current methodology, evidence, evaluation and recommendation flow.'),
+      item('Adding a Workflow', '/09-development/adding-a-workflow', 'Developer path for adding and verifying a canonical workflow.'),
+    ], route);
+  }
+
   const workflowDomain = workflowDomains[relativePath];
   if (workflowDomain) {
     const meta = domains[workflowDomain];
     const root = `/04-domains/${workflowDomain}`;
     return withoutCurrent([
+      item('Business Process Modeling', '/02-workflows/business-process-modeling', 'Mermaid conventions and AS-IS / TO-BE / runtime-verified truth states.'),
       item(`${meta.label} Domain`, `${root}/overview`, 'Semantic owner of the workflow state.'),
       item('Domain Model', `${root}/domain-model`, 'Vocabulary and invariants behind the workflow.'),
       item('Domain Lifecycle', `${root}/${meta.lifecycle}`, 'State transitions and automation/runtime behavior.'),
-      item('Execution Lifecycle', '/05-runtime/execution-lifecycle', 'Generic COS execution semantics.'),
     ], route);
   }
 

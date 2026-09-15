@@ -1,0 +1,30 @@
+.cos-mermaid-diagram {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+  background: var(--vp-c-bg-soft);
+}
+
+.cos-mermaid-canvas {
+  min-width: 0;
+}
+
+.cos-mermaid-canvas svg {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.cos-mermaid-error {
+  margin-top: 0.75rem;
+  color: var(--vp-c-danger-1);
+  font-size: 0.85rem;
+}
+
+.cos-mermaid-error::before {
+  content: 'Fallback source shown above. ';
+}

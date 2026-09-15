@@ -12,13 +12,14 @@ const meta = computed(() => {
   return {
     kind: value.kind || null,
     status: value.status || null,
+    processState: value.process_state || null,
     domain: value.domain || domainFromPath,
     scope: value.scope || null,
   };
 });
 
 const visible = computed(() => Boolean(
-  meta.value.kind || meta.value.status || meta.value.domain || meta.value.scope,
+  meta.value.kind || meta.value.status || meta.value.processState || meta.value.domain || meta.value.scope,
 ));
 </script>
 
@@ -26,6 +27,9 @@ const visible = computed(() => Boolean(
   <div v-if="visible" class="cos-doc-meta" aria-label="Documentation metadata">
     <span v-if="meta.scope" class="cos-doc-meta-item" :class="`is-${meta.scope}`">
       <strong>SCOPE</strong>&nbsp; {{ meta.scope }}
+    </span>
+    <span v-if="meta.processState" class="cos-doc-meta-item" :class="`is-${meta.processState}`">
+      <strong>PROCESS</strong>&nbsp; {{ meta.processState }}
     </span>
     <span v-if="meta.domain" class="cos-doc-meta-item">
       <strong>DOMAIN</strong>&nbsp; {{ meta.domain }}

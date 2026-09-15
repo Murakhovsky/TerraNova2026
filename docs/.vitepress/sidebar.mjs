@@ -29,6 +29,7 @@ const preferredOrder = new Map([
   ['capabilities.md', -30],
   ['actors-and-authority.md', -20],
   ['system-boundaries.md', -10],
+  ['business-process-modeling.md', -40],
   ['overview.md', -30],
   ['domain-model.md', -20],
   ['lifecycle-and-automation.md', -10],

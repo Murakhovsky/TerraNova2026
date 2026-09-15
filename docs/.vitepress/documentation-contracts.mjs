@@ -3,10 +3,14 @@ export const DOCUMENTATION_CONTRACTS = Object.freeze({
     kind: 'concept',
     minH2: 2,
   }),
-  'workflow-v1': Object.freeze({
+  'workflow-v2': Object.freeze({
     kind: 'workflow',
     minH2: 3,
     requiredSections: ['Business goal', 'Actors', 'Code map'],
+    requiredFrontmatter: Object.freeze({
+      process_state: Object.freeze(['as-is', 'to-be', 'runtime-verified']),
+    }),
+    requiredFenceLanguages: Object.freeze(['mermaid']),
   }),
   'architecture-v1': Object.freeze({
     kind: 'architecture',

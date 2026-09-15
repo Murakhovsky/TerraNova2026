@@ -4,7 +4,8 @@ description: {{title}} business workflow.
 status: draft
 updated: {{date}}
 kind: workflow
-contract: workflow-v1
+contract: workflow-v2
+process_state: as-is
 ---
 
 # {{title}}
@@ -23,9 +24,15 @@ contract: workflow-v1
 
 ## Workflow
 
-```text
-Trigger → Use Case → Domain → Runtime → Result
+```mermaid
+flowchart TD
+    A[Trigger] --> B[Use Case / Command]
+    B --> C[Domain validation]
+    C --> D[State change / Event]
+    D --> E[Result]
 ```
+
+Diagram має показувати meaningful business sequence, а не копіювати назви всіх класів.
 
 ## Decision points
 

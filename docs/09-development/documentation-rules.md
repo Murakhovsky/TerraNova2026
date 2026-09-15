@@ -37,7 +37,7 @@ VitePress publication
 | Type | Contract | Purpose |
 | --- | --- | --- |
 | Concept | `concept-v1` | mental model і vocabulary |
-| Workflow | `workflow-v1` | business flow від мети до implementation boundary |
+| Workflow | `workflow-v2` | real business flow + explicit process truth state + Mermaid diagram |
 | Architecture | `architecture-v1` | boundaries, dependency direction та invariants |
 | Domain | `domain-v1` | ownership, model, lifecycle, contracts та code map |
 | How-to | `how-to-v1` | покрокова developer/operator інструкція з verification |
@@ -49,10 +49,23 @@ Contract opt-in задається у frontmatter:
 
 ```yaml
 kind: workflow
-contract: workflow-v1
+contract: workflow-v2
+process_state: as-is
 ```
 
-`docs:check` перевіряє відповідність `kind`, H1/H2 structure і type-specific required sections. Contract versioning дозволяє посилювати правила без миттєвого переписування всього documentation corpus.
+`docs:check` перевіряє відповідність `kind`, H1/H2 structure, required frontmatter, required sections і наявність Mermaid diagram для `workflow-v2`.
+
+## Process truth states
+
+Workflow має один із трьох process truth states:
+
+- **`as-is`** — реальний поточний process; може містити human/manual steps, які COS ще не виконує сам;
+- **`to-be`** — цільова модель, не поточна поведінка;
+- **`runtime-verified`** — критичні transitions мають explicit executable mapping у current `main`.
+
+Не підвищуйте workflow до `runtime-verified` лише тому, що в ньому згаданий реальний class. Це має бути властивість процесу, а не оптимізм автора.
+
+Повні правила: [Business Process Modeling](../02-workflows/business-process-modeling.md).
 
 ## Page scaffolding
 
@@ -67,12 +80,18 @@ Templates живуть у `docs/.vitepress/templates/` і не публікую�
 
 ## AS-IS vs TARGET
 
-- **AS-IS** — підтверджено current `main` code/tests/manifests.
+Для narrative architecture/product docs:
+
+- **AS-IS** — підтверджено current `main` code/tests/manifests;
 - **TARGET** — direction, ще не повністю executable.
+
+Для workflow pages використовуйте формальне поле `process_state`, а не лише текстові позначки.
 
 ## Workflow contract
 
-`workflow-v1` вимагає щонайменше `Business goal`, `Actors` і `Code map`. Для складних flows також потрібні trigger/input, decision points, events, failures, invariants і cross-domain calls.
+`workflow-v2` вимагає щонайменше `Business goal`, `Actors`, `Code map`, `process_state` та один fenced `mermaid` diagram. Для складних flows також потрібні trigger/input, decision points, events, failures, invariants і cross-domain calls.
+
+Mermaid відображає process knowledge, але не є самостійним source of truth. Exact command/event/service inventories залишаються generated reference.
 
 ## Generated reference
 
@@ -92,6 +111,8 @@ Generated files не редагуються вручну. Build і CI реген
 
 Exact versions не дублюються всюди. Human-readable markers дозволені у `Current Scope` та Domain overview; `docs:check` звіряє їх із `main/app/Domains/*/module.php`.
 
+Workflow pages не повинні зберігати stale maturity statements із hardcoded module versions, якщо ту саму істину можна виразити через поточний manifest/reference.
+
 ## CI
 
 ```text
@@ -99,7 +120,7 @@ checkout main commit
 → generate reference
 → verify generated reference
 → check links/frontmatter/version contracts
-→ check page contracts
+→ check page + workflow contracts
 → VitePress build
 → deploy /docs
 ```

@@ -1,5 +1,6 @@
 import { buildSidebar } from './sidebar.mjs';
 import { buildSystemStatus } from './system-status.mjs';
+import { installMermaidMarkdown } from './mermaid-markdown.mjs';
 
 const docsBase = process.env.COS_DOCS_BASE || '/docs/';
 const cosSystemStatus = buildSystemStatus();
@@ -13,7 +14,12 @@ export default {
   cleanUrls: false,
   lastUpdated: true,
   appearance: true,
-  markdown: { lineNumbers: true },
+  markdown: {
+    lineNumbers: true,
+    config(md) {
+      installMermaidMarkdown(md);
+    },
+  },
   head: [
     ['meta', { name: 'theme-color', content: '#07110f' }],
     ['meta', { name: 'color-scheme', content: 'dark light' }],
@@ -25,7 +31,7 @@ export default {
     nav: [
       { text: 'Start', link: '/00-start/what-is-cos' },
       { text: 'Current State', link: '/01-product/current-scope' },
-      { text: 'Workflows', link: '/02-workflows/sales-lead-to-managed-case' },
+      { text: 'Workflows', link: '/02-workflows/business-process-modeling' },
       { text: 'Architecture', link: '/03-architecture/system-map' },
       { text: 'Domains', link: '/04-domains/sales/overview' },
       { text: 'Reference', link: '/12-reference/README' },

@@ -4,7 +4,8 @@ description: Канонічний Sales workflow від intake до керова
 status: active
 updated: 2026-09-15
 kind: workflow
-contract: workflow-v1
+contract: workflow-v2
+process_state: as-is
 ---
 
 # Sales Lead → Managed Case
@@ -27,20 +28,20 @@ AS-IS є два основні intake paths.
 
 ### Public intake
 
-```text
-public request
-→ ReceivePublicLead
-→ canonical Sales state
+```mermaid
+flowchart LR
+    A[Public request] --> B[ReceivePublicLead]
+    B --> C[Canonical Sales state]
 ```
 
 ### CRM inbound
 
-```text
-external CRM webhook
-→ ReceiveCrmWebhook
-→ durable CRM inbox
-→ ProcessCrmInbox
-→ canonical Sales state
+```mermaid
+flowchart LR
+    A[External CRM webhook] --> B[ReceiveCrmWebhook]
+    B --> C[Durable CRM inbox]
+    C --> D[ProcessCrmInbox]
+    D --> E[Canonical Sales state]
 ```
 
 Provider payload перекладається на adapter boundary і не стає внутрішньою domain model напряму.
@@ -57,7 +58,7 @@ Person relationship
 
 ## Canonical application entry points
 
-Generated `COS` reference фіксує:
+Generated reference фіксує:
 
 - `ReceivePublicLead`;
 - `ReceiveCrmWebhook`;
@@ -71,27 +72,22 @@ Generated `COS` reference фіксує:
 
 ## Workflow
 
-```text
-Lead arrives
-    ↓
-Normalize / map source data
-    ↓
-Create or update canonical Sales state
-    ↓
-Assign owner
-    ↓
-Place/manage in pipeline
-    ↓
-Activities / calls / messages
-    ↓
-Follow-up / next action
-    ↓
-Stage transition
-    ↓
-Outcome
+```mermaid
+flowchart TD
+    A[Lead arrives] --> B[Normalize / map source data]
+    B --> C[Create or update canonical Sales state]
+    C --> D[Assign owner]
+    D --> E[Manage in pipeline]
+    E --> F[Activities / calls / messages]
+    F --> G[Follow-up / next action]
+    G --> H{Stage transition}
+    H -->|Continue| E
+    H -->|Outcome reached| I[Outcome]
 ```
 
 Не кожен step є окремим класом. Workflow описує бізнес-послідовність, а generated reference — executable entry points.
+
+`process_state: as-is` означає, що схема описує реальний поточний процес, але не стверджує, що кожен human/operational step уже machine-enforced COS runtime.
 
 ## Events
 
@@ -103,25 +99,19 @@ State change + Event + Outbox мають залишатися узгоджени
 
 ## Automation loop
 
-```text
-Sales Event
-   ↓
-Rule context / Agent context
-   ↓
-Rule або SalesIntelligenceAgent
-   ↓
-ActionProposal
-   ↓
-Policy
-   ├─ AUTO
-   ├─ APPROVAL_REQUIRED
-   └─ DENIED
-   ↓
-Queue / Action handler
-   ↓
-Sales application port
-   ↓
-Result Event + Audit
+```mermaid
+flowchart TD
+    A[Sales Event] --> B[Rule context / Agent context]
+    B --> C[Rule or SalesIntelligenceAgent]
+    C --> D[ActionProposal]
+    D --> E{Policy decision}
+    E -->|AUTO| F[Queue / Action handler]
+    E -->|APPROVAL_REQUIRED| G[Human approval]
+    G -->|Approved| F
+    G -->|Rejected| H[No execution + Audit]
+    E -->|DENIED| H
+    F --> I[Sales application port]
+    I --> J[Result Event + Audit]
 ```
 
 Agent не має direct mutation authority.

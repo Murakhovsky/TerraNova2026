@@ -1,154 +1,167 @@
 ---
-title: Property Submission → Managed Property
-description: Поточний Property workflow від intake/submission до moderation, catalogue і presentation.
+title: Property Submission → Publication
+description: Канонічний Property workflow від intake/submission до Asset, Inventory, Listing та Publication.
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 kind: workflow
+contract: workflow-v2
+process_state: as-is
 ---
 
-# Property Submission → Managed Property
+# Property Submission → Publication
 
 ## Business goal
 
-Прийняти зовнішні або ручні дані про об'єкт нерухомості, провести їх через submission/moderation boundary та перевести у керований Property state без змішування intake, persistence і presentation.
+Прийняти зовнішні або ручні дані про нерухомість, провести їх через intake та identity/provenance boundary, створити або зв'язати canonical Property Asset і, коли це потрібно бізнесу, провести актив через окремі commercial layers Inventory → Listing → Publication.
 
 ## Actors
 
 - submitter / operator;
-- moderator;
+- moderator / reviewer;
 - property manager;
-- media/storage adapter;
-- catalogue/presentation consumer;
-- Sales consumer через explicit contract.
+- organization inventory owner;
+- listing/content operator;
+- publication channel adapter;
+- Sales consumer через explicit Property boundary.
 
-## Trigger
+## Trigger / input
 
-```text
-property data submitted
+AS-IS процес починається із property submission або іншого дозволеного Property write path.
+
+```mermaid
+flowchart LR
+    A[External / manual property data] --> B[PropertySubmissionService]
+    B --> C[Validation / normalization]
+    C --> D[Submission + provenance context]
 ```
 
-Поточний `COS` має explicit `PropertySubmissionService` і `PropertyModerationService` у `Application/UseCase`.
+Submission є intake boundary. Він не дорівнює canonical Property Asset.
 
 ## Fundamental boundary
 
 ```text
-PropertySubmission
-≠
-managed Property state
+Property Submission
+≠ Property Asset
+≠ Inventory Item
+≠ Listing
+≠ Publication
 ```
 
-Submission — intake candidate/process. Property — domain-managed real-estate state після проходження application boundary.
+Це головна business separation Property V0.12. Фізичний актив існує незалежно від того, чи продає його конкретна організація, як вона його рекламує і на якому каналі публікує.
 
 ## Workflow
 
-```text
-Submit property data
-    ↓
-Validate / normalize
-    ↓
-Persist submission
-    ↓
-Attach submission media
-    ↓
-Moderation
-    ├─ reject / return
-    └─ approve
-          ↓
-Property management/catalog state
-          ↓
-Presentation / analytics
-          ↓
-Sales-facing interaction through contract
+```mermaid
+flowchart TD
+    A[Submit property data] --> B[Validate / normalize]
+    B --> C[Capture source / provenance]
+    C --> D{Identity resolved?}
+    D -->|Existing asset| E[Link to canonical Property Asset]
+    D -->|New asset| F[Create canonical Property Asset]
+    D -->|Conflict / uncertain| G[Identity review]
+    G --> D
+    E --> H{Commercial use needed?}
+    F --> H
+    H -->|No| I[Managed Property registry state]
+    H -->|Yes| J[Create / update Inventory Item]
+    J --> K{Market presentation needed?}
+    K -->|No| L[Managed commercial state]
+    K -->|Yes| M[Create / update Listing]
+    M --> N{Publish to channel?}
+    N -->|No| O[Listing ready]
+    N -->|Yes| P[Publication]
+    P --> Q[Channel lifecycle / sync]
 ```
 
-Ця схема описує business flow. Вона не вигадує statuses, яких немає у model/code.
+Ця схема описує business flow поверх current Property model. Вона не означає, що кожен transition реалізований окремим `Application/UseCase` class.
+
+## Canonical model
+
+```mermaid
+flowchart LR
+    A[Property Asset] --> B[Inventory Item]
+    B --> C[Listing]
+    C --> D[Publication]
+    A -. physical truth .-> A
+    B -. organization commercial state .-> B
+    C -. market presentation .-> C
+    D -. channel-specific state .-> D
+```
+
+- **Property Asset** — фізична нерухомість та її canonical identity/structure;
+- **Inventory Item** — комерційний стан активу для конкретної organization;
+- **Listing** — ринкова презентація пропозиції;
+- **Publication** — channel-specific delivery/lifecycle listing.
+
+Квартира не стає фізично `SOLD`. `SOLD` є commercial state Inventory.
 
 ## Application entry points
 
-Generated reference фіксує поточні explicit entry points:
+Generated [Application Use Cases](../12-reference/application-use-cases.md) наразі фіксує explicit `Application/UseCase` entry points:
 
 - `PropertySubmissionService`;
 - `PropertyModerationService`.
 
-Див. [Application Use Cases](../12-reference/application-use-cases.md).
+Property V0.12 також має canonical runtime, commands/services і capability contributions поза вузькою `Application/UseCase` directory convention. Тому generated use-case index не використовується як повний опис усього Property runtime.
 
-Management і presentation logic також існують у Application contracts/services, але не кожен service class класифікується генератором як `UseCase`.
-
-## Contracts
-
-Поточний Property boundary включає contracts для:
-
-- catalogue;
-- management;
-- submission;
-- moderation;
-- submission media;
-- media storage;
-- presentation;
-- notification;
-- analytics;
-- funnel analytics;
-- location references;
-- Sales-facing presentation integration.
-
-Це дозволяє delivery та consumer layers залежати від contracts, а не від concrete MySQL implementation.
+Див. також [Property Domain Overview](../04-domains/property/overview.md), [Commands](../12-reference/commands.md) та [Module & Capabilities](../12-reference/module-capabilities.md).
 
 ## Decision points
 
 - чи submission валідний;
-- чи достатньо даних для moderation;
-- яке moderation decision;
-- які media належать submission/property relation;
-- чи дані готові до catalogue/presentation use;
-- що можна віддати Sales consumer-у через explicit boundary.
+- чи source/provenance достатньо визначений;
+- чи дані належать існуючому Asset;
+- чи identity потребує review;
+- чи актив має бути включений в inventory конкретної organization;
+- чи потрібна Listing presentation;
+- чи Listing готовий до publication;
+- чи channel operation дозволена і успішна.
 
-## Persistence
+## Runtime boundary
 
-```text
-Application contract
-    ↓
-Property persistence adapter
-    ↓
-MySQL
+Current Property `0.12.0` має canonical runtime module service та authoritative write path.
+
+```mermaid
+flowchart TD
+    A[Web / API / Spatial] --> B[PropertyCanonicalRuntimeService]
+    B --> C[Property Asset / Inventory / Listing / Publication]
+    C --> D[Domain Events]
+    D --> E[Kernel EventBus / Outbox]
+    E --> F[Compatibility Projection]
+    F --> G[tn_properties legacy projection]
 ```
 
-Persistence adapter реалізує business/application contract. Він не визначає domain vocabulary лише через назви колонок історичної таблиці.
+`tn_properties` не є canonical source of Property state.
 
-## Presentation and Sales
+## Sales interaction
 
-Після moderation/management Property може використовуватися:
-
-- catalogue;
-- presentation;
-- analytics;
-- Sales workflows.
-
-Sales-facing integration у поточному `COS` має explicit `PresentationSalesInterface`.
-
-AS-IS це contract boundary для presentation interaction, а не доказ існування повного Property runtime module.
+Sales споживає Property через explicit contracts/read surfaces. Sales володіє попитом, pipeline і deal process; Property не переносить deal ownership у Asset/Inventory тільки тому, що актив продається.
 
 ## Failure paths
 
 - invalid submission → validation failure;
-- media/storage failure → explicit application/infrastructure error;
-- moderation reject → submission не стає managed published state;
+- unresolved identity → review/conflict path, а не silent duplicate Asset;
+- media/storage failure → explicit application/infrastructure failure;
+- forbidden commercial transition → domain/governance rejection;
+- publication/channel failure → retry/sync/audit path без фальшивого published state;
 - persistence failure → operation не повинна частково прикидатися успішною;
-- missing cross-domain contract → consumer не повинен обходити boundary прямим SQL.
+- missing cross-domain contract → consumer не обходить boundary прямим SQL.
 
 ## Invariants
 
-1. Submission lifecycle і managed Property lifecycle не тотожні.
-2. Moderation проходить application boundary.
-3. UI/Web/Telegram не володіють moderation rules.
-4. Media relations не повинні випадково знищувати shared asset.
-5. Cross-domain access проходить explicit contracts.
-6. Persistence adapter реалізує contract, а не диктує business model.
+1. Submission lifecycle не тотожний Property Asset lifecycle.
+2. Property Asset, Inventory, Listing і Publication мають різне ownership/meaning.
+3. Physical asset identity не визначається commercial status.
+4. Cross-domain access проходить explicit contracts.
+5. External network/channel vocabulary не стає canonical Property vocabulary автоматично.
+6. Canonical write path не повертається до `tn_properties` як source of truth.
+7. Business Events належать Property, generic delivery — Kernel/Infrastructure.
 
-## Runtime maturity note
+## UI surfaces
 
-Поточний Property manifest `0.1.1` має WEB navigation contribution, але не має Sales-рівня runtime module service/capability catalogue.
+Workflow проявляється через Property Workspace, public Property surfaces, catalogue/presentation, moderation/intake surfaces та external publication integrations.
 
-Тому цей workflow документує реально існуючий application process, не домальовуючи майбутню pluggable architecture фломастером поверх AS-IS.
+UI може ініціювати operations, але не володіє identity, commercial lifecycle чи publication rules.
 
 ## Code map
 
@@ -157,6 +170,7 @@ app/Domains/Property/Model
 app/Domains/Property/Application/Contract
 app/Domains/Property/Application/UseCase
 app/Domains/Property/Application/Service
-app/Domains/Property/Infrastructure/Persistence
+app/Domains/Property/Infrastructure
+app/Domains/Property/Bootstrap/PropertyDomainModule.php
 app/Domains/Property/module.php
 ```
