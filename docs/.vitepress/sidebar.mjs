@@ -41,8 +41,12 @@ const preferredOrder = new Map([
   ['kernel-overview.md', -20],
   ['extension-runtime.md', -10],
   ['execution-lifecycle.md', -20],
-  ['agent-runtime.md', -20],
-  ['llm-governance.md', -10],
+  ['agent-runtime.md', -40],
+  ['context-and-tools.md', -30],
+  ['memory-model.md', -20],
+  ['agent-evaluation.md', -10],
+  ['llm-boundary.md', 0],
+  ['llm-governance.md', 10],
   ['integration-model.md', -40],
   ['api-and-webhooks.md', -30],
   ['messaging-channels.md', -20],
@@ -58,6 +62,13 @@ const preferredOrder = new Map([
   ['adding-an-agent.md', -27],
   ['adding-an-integration.md', -26],
   ['testing.md', -20],
+  ['deployment-and-health.md', -50],
+  ['module-readiness.md', -40],
+  ['data-and-migrations.md', -30],
+  ['observability-and-incidents.md', -20],
+  ['backup-and-recovery.md', -10],
+  ['security-operations.md', 0],
+  ['documentation-build.md', 10],
 ]);
 
 function titleFromMarkdown(path) {
@@ -71,10 +82,7 @@ function titleFromMarkdown(path) {
 }
 
 function humanize(value) {
-  return value
-    .replace(/^\d+-/, '')
-    .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value.replace(/^\d+-/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function sortEntries(a, b) {
@@ -106,9 +114,5 @@ function itemsForDirectory(path) {
 }
 
 export function buildSidebar() {
-  return sections.map(([directory, text], index) => ({
-    text,
-    collapsed: index > 2,
-    items: itemsForDirectory(join(docsRoot, directory)),
-  }));
+  return sections.map(([directory, text], index) => ({ text, collapsed: index > 2, items: itemsForDirectory(join(docsRoot, directory)) }));
 }
