@@ -2,6 +2,8 @@
 title: Visualization V0.3 — Architecture Explorer
 description: Interactive Cytoscape projection of the canonical COS Architecture Graph.
 status: implemented
+kind: architecture
+updated: 2026-09-15
 ---
 
 # Visualization V0.3 — Architecture Explorer

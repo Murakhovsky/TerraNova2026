@@ -42,8 +42,10 @@ $assert(str_contains($controller, "getShared('cosCytoscapeGraphMapper')"), 'Expl
 $routes = $read('app/Interfaces/Web/Routing/VisualizationRoutes.php');
 $assert(str_contains($routes, "'/cos/architecture'"), 'Architecture Explorer route missing.');
 $module = $read('app/Interfaces/Web/Module.php');
-$assert(str_contains($module, "setShared('cosCytoscapeGraphMapper'"), 'Cytoscape mapper DI registration missing.');
+$assert(!str_contains($module, 'Infrastructure\\'), 'Web Module must remain free of Infrastructure dependencies.');
 $assert(str_contains($module, 'VisualizationRoutes::register($router)'), 'Visualization routes are not registered.');
+$bootstrap = $read('app/Bootstrap/KernelServices.php');
+$assert(str_contains($bootstrap, "setShared('cosCytoscapeGraphMapper'"), 'Cytoscape mapper composition must live in Bootstrap.');
 
 $vite = $read('vite.config.js');
 $assert(str_contains($vite, "'cos-architecture-explorer'"), 'Architecture Explorer Vite entry missing.');

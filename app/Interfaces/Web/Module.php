@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Interfaces\Web;
 
 use Bootstrap\WebApplicationServices;
-use Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper;
 use Interfaces\Web\Page\PublicPageService;
 use Interfaces\Web\Routing\FrontendRoutes;
 use Interfaces\Web\Routing\ModuleRouteContributorInterface;
@@ -28,7 +27,6 @@ class Module implements ModuleDefinitionInterface
     public function registerServices(DiInterface $di): void
     {
         WebApplicationServices::register($di);
-        $di->setShared('cosCytoscapeGraphMapper', static fn (): CytoscapeGraphMapper => new CytoscapeGraphMapper());
 
         $router = $di->getShared('router');
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
