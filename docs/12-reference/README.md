@@ -24,7 +24,7 @@ Process Coverage Exemptions schema: **v1**.
 ```text
 main executable metadata / code
         +
-main structured documentation contracts
+main structured platform/documentation contracts
         ↓
 COS generators
         ↓
@@ -41,7 +41,7 @@ Generated files не редагуються вручну у `main`.
 
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
-| Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + current-checkout runtime evidence |
+| Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `resources/processes/*.json` + current-checkout runtime evidence |
 | Які installable Domains мають canonical process model | [Domain Process Coverage](domain-process-coverage.md) | `app/Domains/*/module.php` + Process Registry + explicit exemptions |
 | Open capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + module manifests |
 | Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
