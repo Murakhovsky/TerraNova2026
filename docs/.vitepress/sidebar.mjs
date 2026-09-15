@@ -43,6 +43,14 @@ const preferredOrder = new Map([
   ['execution-lifecycle.md', -20],
   ['agent-runtime.md', -20],
   ['llm-governance.md', -10],
+  ['integration-model.md', -40],
+  ['api-and-webhooks.md', -30],
+  ['messaging-channels.md', -20],
+  ['external-reliability.md', -10],
+  ['interface-surfaces.md', -40],
+  ['workspace-model.md', -30],
+  ['navigation-and-permissions.md', -20],
+  ['documentation-site.md', -10],
   ['local-setup.md', -40],
   ['adding-a-domain.md', -30],
   ['adding-a-module.md', -29],
@@ -90,16 +98,9 @@ function itemsForDirectory(path) {
       if (entry.isDirectory()) {
         const items = itemsForDirectory(entryPath);
         if (items.length === 0) return null;
-        return {
-          text: humanize(entry.name),
-          collapsed: true,
-          items,
-        };
+        return { text: humanize(entry.name), collapsed: true, items };
       }
-      return {
-        text: titleFromMarkdown(entryPath),
-        link: linkFor(entryPath),
-      };
+      return { text: titleFromMarkdown(entryPath), link: linkFor(entryPath) };
     })
     .filter(Boolean);
 }
