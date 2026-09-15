@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'resources/processes/**'
       - 'app/Domains/**'
       - 'app/Kernel/Module/**'
+      - 'app/Kernel/Process/**'
       - 'app/Kernel/Execution/**'
+      - 'app/Infrastructure/Process/**'
       - 'app/Infrastructure/Visualization/Architecture/**'
+      - 'app/Bootstrap/ProcessServices.php'
       - 'app/migrations/**'
       - 'app/Interfaces/Web/Routing/**'
       - 'deploy/configure-company-os-http.sh'
@@ -20,10 +24,14 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'resources/processes/**'
       - 'app/Domains/**'
       - 'app/Kernel/Module/**'
+      - 'app/Kernel/Process/**'
       - 'app/Kernel/Execution/**'
+      - 'app/Infrastructure/Process/**'
       - 'app/Infrastructure/Visualization/Architecture/**'
+      - 'app/Bootstrap/ProcessServices.php'
       - 'app/migrations/**'
       - 'app/Interfaces/Web/Routing/**'
       - 'deploy/configure-company-os-http.sh'
