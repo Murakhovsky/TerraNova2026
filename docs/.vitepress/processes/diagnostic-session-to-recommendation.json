@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "id": "diagnostic.session-to-recommendation",
   "title": "Diagnostic Session → Recommendation",
   "domain": "diagnostic",

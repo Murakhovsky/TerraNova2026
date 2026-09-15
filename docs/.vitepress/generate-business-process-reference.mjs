@@ -2,12 +2,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import {
+  loadRuntimeEvidence,
+  processVerification,
+  resolveRuntimeMapping,
+} from './process-runtime-evidence.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
 const registryRoot = path.join(here, 'processes');
 const output = path.join(docsRoot, '12-reference/business-processes.md');
 const checkOnly = process.argv.includes('--check');
+const catalogue = loadRuntimeEvidence();
 
 function loadDefinitions() {
   return fs.readdirSync(registryRoot)
@@ -25,22 +31,21 @@ function workflowLink(definition) {
   return `../${definition.workflow}`;
 }
 
-function mappingLabel(mapping) {
+function mappingLabel(mapping, definition) {
+  const resolution = resolveRuntimeMapping(mapping, catalogue, definition.domain);
+  const suffix = resolution.verified ? ` [${resolution.strength}]` : ' [unresolved]';
   if (mapping.type === 'source') {
-    return `source \`${mapping.path}\`${mapping.symbol ? ` · \`${mapping.symbol}\`` : ''}`;
+    return `source \`${mapping.path}\`${mapping.symbol ? ` · \`${mapping.symbol}\`` : ''}${suffix}`;
   }
-  return `${mapping.type} \`${mapping.ref}\``;
+  return `${mapping.type} \`${mapping.ref}\`${suffix}`;
 }
 
 function coverage(definition) {
+  const verification = processVerification(definition, catalogue);
   const steps = definition.steps ?? [];
-  const critical = steps.filter((step) => step.critical === true);
   return {
-    steps: steps.length,
+    ...verification,
     owned: steps.filter((step) => typeof step.owner === 'string' && step.owner !== '').length,
-    runtimeMapped: steps.filter((step) => Array.isArray(step.runtime) && step.runtime.length > 0).length,
-    critical: critical.length,
-    criticalMapped: critical.filter((step) => Array.isArray(step.runtime) && step.runtime.length > 0).length,
   };
 }
 
@@ -48,7 +53,7 @@ function render(definitions) {
   const lines = [
     '---',
     'title: Business Process Registry',
-    'description: Generated registry of canonical COS business processes, ownership and runtime coverage.',
+    'description: Generated registry of canonical COS business processes, ownership and evidence-backed runtime verification.',
     'status: generated',
     'updated: 2026-09-15',
     'kind: reference',
@@ -58,44 +63,48 @@ function render(definitions) {
     '',
     '# Business Process Registry',
     '',
-    'Generated from `docs/.vitepress/processes/*.json`. Do not edit this page manually.',
+    'Generated from `docs/.vitepress/processes/*.json` and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
     '',
-    'The registry connects human workflow documentation to process ownership and executable COS references without pretending that every business step is automated.',
+    'Business state and verification are separate dimensions: `as-is` / `to-be` describes the process itself; `documented` / `source-verified` / `runtime-verified` describes how strongly its critical steps are backed by current code and canonical runtime registries.',
     '',
     '## Process index',
     '',
-    '| Process | Domain | Truth state | Steps | Ownership | Runtime mapped | Critical mapped | Workflow |',
-    '| --- | --- | --- | ---: | ---: | ---: | ---: | --- |',
+    '| Process | Domain | Business state | Verification | Steps | Ownership | Evidence verified | Critical source | Critical runtime | Workflow |',
+    '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
   ];
 
   for (const definition of definitions) {
     const stats = coverage(definition);
-    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | ${stats.steps} | ${stats.owned}/${stats.steps} | ${stats.runtimeMapped}/${stats.steps} | ${stats.criticalMapped}/${stats.critical} | [Open workflow](${workflowLink(definition)}) |`);
+    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | \`${stats.level}\` | ${stats.steps} | ${stats.owned}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} | [Open workflow](${workflowLink(definition)}) |`);
   }
 
-  lines.push('', '## Coverage', '');
-  lines.push('Coverage is structural, not a quality score. `owned` means a responsible actor is declared; `runtime mapped` means at least one executable/reference mapping exists; `critical mapped` is the minimum requirement for `runtime-verified`.');
-  lines.push('', '| Process | Owned steps | Runtime-mapped steps | Runtime-mapped critical steps |', '| --- | ---: | ---: | ---: |');
+  lines.push('', '## Verification model', '');
+  lines.push('- `documented` — registry topology exists, but at least one critical step is not backed by resolvable current-checkout evidence.');
+  lines.push('- `source-verified` — every critical step has at least one mapping resolved to current source/code evidence.');
+  lines.push('- `runtime-verified` — every critical step has at least one canonical runtime/contract-registry mapping. This is structural verification, not proof that a production execution trace was observed.');
+  lines.push('', '| Process | Owned steps | Mapped steps | Evidence-verified steps | Runtime-backed steps | Critical source-verified | Critical runtime-verified |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const definition of definitions) {
     const stats = coverage(definition);
-    lines.push(`| ${escapeCell(definition.title)} | ${stats.owned}/${stats.steps} | ${stats.runtimeMapped}/${stats.steps} | ${stats.criticalMapped}/${stats.critical} |`);
+    lines.push(`| ${escapeCell(definition.title)} | ${stats.owned}/${stats.steps} | ${stats.mappedSteps}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.runtimeVerifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} |`);
   }
 
   for (const definition of definitions) {
+    const stats = coverage(definition);
     lines.push('', `## ${definition.title}`, '');
     lines.push(`- **Process ID:** \`${definition.id}\``);
     lines.push(`- **Schema:** \`v${definition.schema_version}\``);
     lines.push(`- **Domain:** \`${definition.domain}\``);
-    lines.push(`- **Truth state:** \`${definition.state}\``);
+    lines.push(`- **Business state:** \`${definition.state}\``);
+    lines.push(`- **Derived verification:** \`${stats.level}\``);
     lines.push(`- **Trigger:** ${definition.trigger}`);
     lines.push(`- **Workflow:** [${definition.title}](${workflowLink(definition)})`);
     lines.push('', '**Outcomes**', '');
     for (const outcome of definition.outcomes) lines.push(`- ${outcome}`);
-    lines.push('', '**Ownership and runtime mapping**', '');
-    lines.push('| Step | Owner | Kind | Critical | Executable / reference mapping |');
+    lines.push('', '**Ownership and runtime evidence**', '');
+    lines.push('| Step | Owner | Kind | Critical | Executable / evidence mapping |');
     lines.push('| --- | --- | --- | --- | --- |');
     for (const step of definition.steps) {
-      const mappings = (step.runtime ?? []).map(mappingLabel).join('<br>') || '—';
+      const mappings = (step.runtime ?? []).map((mapping) => mappingLabel(mapping, definition)).join('<br>') || '—';
       lines.push(`| ${escapeCell(step.label)} | ${escapeCell(step.owner ?? '—')} | \`${step.kind}\` | ${step.critical === true ? 'yes' : 'no'} | ${mappings} |`);
     }
   }
@@ -104,14 +113,14 @@ function render(definitions) {
     '',
     '## Authority and limitations',
     '',
-    '- Registry schema `v2` requires every process step to declare exactly one responsible `owner` from the process `actors` list.',
-    '- Registry structure, topology, ownership and mappings are machine-checked by `check-processes.mjs`.',
-    '- `use_case`, `command` and `event` mappings must resolve to generated reference from the same checkout.',
+    '- Registry schema `v3` keeps business state (`as-is` / `to-be`) separate from derived verification.',
+    '- Verification is never authored in process JSON. It is calculated from mappings resolved against `generate-runtime-evidence.php` and exact source symbols in the current checkout.',
+    '- `use_case` and `command` evidence is source-backed from canonical module directories.',
+    '- `event` evidence is runtime-backed from explicit Domain event catalogues; `contract` evidence is runtime-backed from canonical module cross-domain contract declarations.',
     '- `source` mappings must resolve to an existing repository file and, when provided, contain the declared symbol.',
-    '- `as-is` means the process is real, not that every step is machine-enforced.',
-    '- `runtime-verified` requires every critical step to have an explicit runtime mapping.',
-    '- `ProcessDiagram` renders both core flow and ownership projection from the same registry definition.',
-    '- Coverage ratios expose documentation completeness; they are not business performance KPIs.',
+    '- `runtime-verified` here means structurally backed by canonical runtime registries for every critical step. It does not mean COS observed an end-to-end production trace. Observed execution evidence belongs to a later runtime-tracing layer.',
+    '- `ProcessDiagram` renders core flow and ownership projections from the same registry definition. Sequence and entity lifecycle diagrams are not inferred from generic steps because the registry does not yet carry those semantics.',
+    '- Coverage ratios expose documentation/evidence completeness; they are not business performance KPIs.',
     '',
   );
 

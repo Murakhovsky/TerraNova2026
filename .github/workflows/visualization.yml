@@ -1,4 +1,4 @@
-name: COS Visualization V0.1-V0.4.2
+name: COS Visualization V0.1-V0.5
 
 on:
   push:
@@ -26,7 +26,17 @@ on:
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
       - 'tests/architecture/cross_domain_dependency_audit.php'
+      - 'docs/.vitepress/processes/**'
+      - 'docs/.vitepress/generate-runtime-evidence.php'
+      - 'docs/.vitepress/process-runtime-evidence.mjs'
+      - 'docs/.vitepress/check-processes.mjs'
+      - 'docs/.vitepress/generate-business-process-reference.mjs'
+      - 'docs/.vitepress/documentation-contracts.mjs'
+      - 'docs/02-workflows/business-process-modeling.md'
+      - 'docs/09-development/adding-a-workflow.md'
+      - 'docs/12-reference/business-processes.md'
       - 'docs/03-architecture/visualization-v0.4.2.md'
+      - 'docs/03-architecture/visualization-v0.5.md'
       - '.github/workflows/visualization.yml'
   pull_request:
     branches: [main]
@@ -53,7 +63,17 @@ on:
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
       - 'tests/architecture/cross_domain_dependency_audit.php'
+      - 'docs/.vitepress/processes/**'
+      - 'docs/.vitepress/generate-runtime-evidence.php'
+      - 'docs/.vitepress/process-runtime-evidence.mjs'
+      - 'docs/.vitepress/check-processes.mjs'
+      - 'docs/.vitepress/generate-business-process-reference.mjs'
+      - 'docs/.vitepress/documentation-contracts.mjs'
+      - 'docs/02-workflows/business-process-modeling.md'
+      - 'docs/09-development/adding-a-workflow.md'
+      - 'docs/12-reference/business-processes.md'
       - 'docs/03-architecture/visualization-v0.4.2.md'
+      - 'docs/03-architecture/visualization-v0.5.md'
       - '.github/workflows/visualization.yml'
   workflow_dispatch:
 
@@ -78,6 +98,7 @@ jobs:
           php tests/architecture/visualization_v04.php
           php tests/architecture/visualization_v041.php
           php tests/architecture/visualization_v042.php
+          php tests/architecture/visualization_v05.php
           php tests/architecture/cross_domain_dependency_audit.php
       - name: Visualization graph invariants
         run: |
@@ -86,6 +107,11 @@ jobs:
           php tests/unit/visualization_cytoscape_mapper.php
           php tests/unit/visualization_architecture_projections.php
           php tests/unit/visualization_cross_domain_contracts.php
+      - name: Process runtime evidence
+        run: |
+          php docs/.vitepress/generate-runtime-evidence.php > /tmp/cos-runtime-evidence.json
+          php -r '$d=json_decode(file_get_contents("/tmp/cos-runtime-evidence.json"), true, 512, JSON_THROW_ON_ERROR); if (($d["schema_version"] ?? null) !== 1) exit(1);'
+          node docs/.vitepress/check-processes.mjs
       - name: Frontend build
         run: npm run build
       - name: PHP syntax
@@ -102,11 +128,13 @@ jobs:
           php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
           php -l app/Interfaces/Web/Module.php
+          php -l docs/.vitepress/generate-runtime-evidence.php
           php -l tests/architecture/visualization_v02.php
           php -l tests/architecture/visualization_v03.php
           php -l tests/architecture/visualization_v04.php
           php -l tests/architecture/visualization_v041.php
           php -l tests/architecture/visualization_v042.php
+          php -l tests/architecture/visualization_v05.php
           php -l tests/architecture/cross_domain_dependency_audit.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
