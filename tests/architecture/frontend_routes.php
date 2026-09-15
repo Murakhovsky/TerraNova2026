@@ -60,13 +60,14 @@ if ($slugPosition === false || $featuredPosition === false || $featuredPosition 
     throw new RuntimeException('Static featured endpoint registration must remain after the property slug route.');
 }
 
-// Detect duplicate literal method+path declarations without loading the Phalcon extension.
+// Detect duplicate completed literal method+path declarations without loading Phalcon.
+// Dynamic expressions such as '/' . $slug are intentionally excluded.
 $identities = [];
 $selfAddPattern = <<<'REGEX'
-~self::add\(\$router,\s*'([^']+)',\s*'([^']+)'~
+~self::add\(\$router,\s*'([^']+)',\s*'([^']+)'\s*,~
 REGEX;
 $directAddPattern = <<<'REGEX'
-~\$router->(add(?:Get|Post|Put|Delete|Patch)?)\(\s*'([^']+)'~
+~\$router->(add(?:Get|Post|Put|Delete|Patch)?)\(\s*'([^']+)'\s*,~
 REGEX;
 if (preg_match_all($selfAddPattern, $frontendRoutes, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
