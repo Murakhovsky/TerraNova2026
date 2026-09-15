@@ -17,7 +17,7 @@ const props = defineProps({
   },
 });
 
-const modules = import.meta.glob('../processes/*.json', { eager: true, import: 'default' });
+const modules = import.meta.glob('../../../resources/processes/*.json', { eager: true, import: 'default' });
 const definitions = Object.values(modules);
 const validDirections = new Set(['TD', 'TB', 'BT', 'LR', 'RL']);
 const validViews = new Set(['flow', 'ownership', 'capability']);
