@@ -85,13 +85,17 @@ foreach (["'terranova-club'", "'terranova-home'"] as $retiredEntry) {
     $notContains($vite, $retiredEntry, 'Retired legacy entrypoint returned to Vite runtime.');
 }
 
-foreach (glob($root . '/frontend/entrypoints/*.js') ?: [] as $entrypoint) {
-    $source = (string) file_get_contents($entrypoint);
-    if (preg_match("/(?:import|@import)[^;\n]*terranova-club(?:\.css|\.js)?/", $source)) {
-        throw new RuntimeException('Canonical entrypoint restored terranova-club runtime dependency: ' . $entrypoint);
+preg_match_all("/resolve\\(import\\.meta\\.dirname, '([^']+\\.js)'\\)/", $vite, $runtimeEntryMatches);
+if (empty($runtimeEntryMatches[1])) {
+    throw new RuntimeException('Unable to resolve canonical Vite runtime entrypoints for legacy audit.');
+}
+foreach (array_unique($runtimeEntryMatches[1]) as $entrypointPath) {
+    $source = $read($entrypointPath);
+    if (preg_match("/(?:import|@import)[^;\\n]*terranova-club(?:\\.css|\\.js)?/", $source)) {
+        throw new RuntimeException('Canonical runtime entrypoint restored terranova-club dependency: ' . $entrypointPath);
     }
-    if (preg_match("/(?:import|@import)[^;\n]*terranova-home(?:\.css|\.js)?/", $source)) {
-        throw new RuntimeException('Canonical entrypoint restored terranova-home runtime dependency: ' . $entrypoint);
+    if (preg_match("/(?:import|@import)[^;\\n]*terranova-home(?:\\.css|\\.js)?/", $source)) {
+        throw new RuntimeException('Canonical runtime entrypoint restored terranova-home dependency: ' . $entrypointPath);
     }
 }
 
@@ -103,8 +107,14 @@ $assetGate = $read('tests/architecture/frontend_assets.php');
 foreach (["'cos-architecture-explorer'", "'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $needle) {
     $contains($assetGate, $needle, 'Frontend asset gate must cover canonical entrypoints.');
 }
-foreach (["'terranova-club'", "'terranova-home'"] as $needle) {
-    $notContains($assetGate, $needle . ',', 'Frontend asset gate must not require retired entrypoint.');
+$entriesStart = strpos($assetGate, '$entries = [');
+$entriesEnd = $entriesStart === false ? false : strpos($assetGate, '];', $entriesStart);
+if ($entriesStart === false || $entriesEnd === false) {
+    throw new RuntimeException('Frontend asset gate entry list cannot be inspected.');
+}
+$assetEntryList = substr($assetGate, $entriesStart, $entriesEnd - $entriesStart);
+foreach (["'terranova-club'", "'terranova-home'"] as $retiredEntry) {
+    $notContains($assetEntryList, $retiredEntry, 'Frontend asset gate must not require retired entrypoint.');
 }
 
 $legacyAudit = $read('docs/architecture/frontend-legacy-audit.md');
