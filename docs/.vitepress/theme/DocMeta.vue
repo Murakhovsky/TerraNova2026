@@ -37,7 +37,7 @@ const visible = computed(() => Boolean(
       <strong>STATUS</strong>&nbsp; {{ meta.status }}
     </span>
     <span class="cos-doc-meta-item is-source">
-      <strong>DOC</strong>&nbsp; main · <strong>CODE</strong>&nbsp; COS
+      <strong>DOC</strong>&nbsp; main · <strong>CODE</strong>&nbsp; main
     </span>
   </div>
 </template>

@@ -133,7 +133,7 @@ jobs:
         run: php tests/architecture/telegram_migration.php
 
   deploy-dev:
-    name: Deploy COS to AWS dev
+    name: Deploy main to AWS dev
     needs: runtime-checks
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

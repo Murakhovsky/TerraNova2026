@@ -1,5 +1,6 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme';
+import Breadcrumbs from './Breadcrumbs.vue';
 import DocMeta from './DocMeta.vue';
 
 const { Layout } = DefaultTheme;
@@ -8,6 +9,7 @@ const { Layout } = DefaultTheme;
 <template>
   <Layout>
     <template #doc-before>
+      <Breadcrumbs />
       <DocMeta />
     </template>
   </Layout>
