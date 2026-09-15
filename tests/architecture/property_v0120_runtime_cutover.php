@@ -23,6 +23,7 @@ $services = $read('app/Bootstrap/PropertyServices.php');
 foreach (['propertyCanonicalRuntimeRepository', 'propertyCompatibilityProjection', 'propertyCanonicalRuntime'] as $service) {
     $assert(str_contains($services, "setShared('" . $service . "'"), 'Canonical Property DI service missing: ' . $service);
 }
+$assert(str_contains($services, 'MysqlLocationReference'), 'Compatibility projection must receive the explicit Reference location adapter.');
 
 $web = $read('app/Bootstrap/WebApplicationServices.php');
 $assert(str_contains($web, 'CanonicalPropertyManagementWriteRepository'), 'Web Property writes must use canonical adapter.');
@@ -51,6 +52,8 @@ $projection = $read('app/Domains/Property/Infrastructure/Persistence/MySql/Mysql
 $assert(str_contains($projection, 'INSERT INTO tn_properties'), 'Compatibility projection must create legacy projection rows.');
 $assert(str_contains($projection, 'UPDATE tn_properties'), 'Compatibility projection must refresh legacy projection rows.');
 $assert(str_contains($projection, 'tn_property_compatibility_projection_state'), 'Compatibility projection must track sync state.');
+$assert(str_contains($projection, 'LocationReferenceInterface'), 'Compatibility projection must cross the Reference boundary through its port.');
+$assert(!preg_match('/(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+tn_locations/i', $projection), 'Property compatibility projection must not write Reference-owned tn_locations directly.');
 
 $routes = $read('app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php');
 foreach (['/api/v1/property-registry/assets', '/inventory/{inventoryId:', '/listings/{listingId:'] as $route) {
