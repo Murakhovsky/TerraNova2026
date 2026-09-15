@@ -1,0 +1,101 @@
+<?php
+$h = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$architectureGraph = is_array($architectureGraph ?? null) ? $architectureGraph : [];
+$summary = is_array($architectureGraph['summary'] ?? null) ? $architectureGraph['summary'] : [];
+$nodeTypes = is_array($summary['node_types'] ?? null) ? $summary['node_types'] : [];
+$domains = is_array($summary['domains'] ?? null) ? $summary['domains'] : [];
+$pageStatus = $pageStatus ?? null;
+$graphJson = json_encode(
+    $architectureGraph,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
+);
+if (!is_string($graphJson)) {
+    $graphJson = '{"elements":[],"summary":{}}';
+}
+?>
+
+<main class="tn-page tn-admin-page tn-architecture-explorer" data-architecture-explorer>
+  <nav class="tn-breadcrumbs">
+    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a><span>/</span>
+    <a href="<?php echo $this->url->get('cos/control-center'); ?>">COS</a><span>/</span><span>Architecture Explorer</span>
+  </nav>
+
+  <section class="tn-listing-hero tn-architecture-hero">
+    <div>
+      <p class="tn-kicker">COS Visualization</p>
+      <h1>Architecture Explorer</h1>
+      <p>Канонічний Architecture Graph: domains, capabilities, runtime events, actions, agents, handlers, services та extension points.</p>
+    </div>
+    <div class="tn-architecture-hero__stats" aria-label="Graph summary">
+      <span><strong><?php echo (int) ($summary['nodes'] ?? 0); ?></strong> nodes</span>
+      <span><strong><?php echo (int) ($summary['edges'] ?? 0); ?></strong> edges</span>
+      <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('cos/control-center'); ?>">Control Center</a>
+    </div>
+  </section>
+
+  <?php if ($pageStatus): ?>
+    <p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p>
+  <?php endif; ?>
+
+  <section class="tn-architecture-toolbar" aria-label="Architecture Explorer controls">
+    <div class="tn-architecture-mode" role="group" aria-label="View mode">
+      <button type="button" class="is-active" data-architecture-mode="system">System</button>
+      <button type="button" data-architecture-mode="runtime">Runtime</button>
+      <button type="button" data-architecture-mode="domain">Domain</button>
+    </div>
+    <label class="tn-architecture-search">
+      <span>Search</span>
+      <input type="search" placeholder="Sales, event, action…" data-architecture-search autocomplete="off">
+    </label>
+    <label>
+      <span>Domain</span>
+      <select data-architecture-domain>
+        <?php foreach ($domains as $domain): ?>
+          <option value="<?php echo $h($domain['id'] ?? ''); ?>"><?php echo $h($domain['label'] ?? $domain['id'] ?? 'Domain'); ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>
+      <span>Depth</span>
+      <select data-architecture-depth>
+        <option value="all">All</option>
+        <option value="1">1 hop</option>
+        <option value="2" selected>2 hops</option>
+        <option value="3">3 hops</option>
+      </select>
+    </label>
+    <div class="tn-architecture-toolbar__actions">
+      <button type="button" data-architecture-fit>Fit</button>
+      <button type="button" data-architecture-reset>Reset</button>
+    </div>
+  </section>
+
+  <section class="tn-architecture-shell">
+    <aside class="tn-architecture-sidebar" aria-label="Node type filters">
+      <div class="tn-section-heading"><div><p class="tn-kicker">Filters</p><h2>Node types</h2></div></div>
+      <div class="tn-architecture-types">
+        <?php foreach ($nodeTypes as $type => $count): ?>
+          <label>
+            <input type="checkbox" value="<?php echo $h($type); ?>" checked data-architecture-type>
+            <span><?php echo $h($type); ?></span><strong><?php echo (int) $count; ?></strong>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <p class="tn-muted">Фільтри змінюють лише view. Канонічний Graph на сервері не мутується.</p>
+    </aside>
+
+    <div class="tn-architecture-stage-wrap">
+      <div class="tn-architecture-stage" data-architecture-stage aria-label="Interactive COS architecture graph"></div>
+      <div class="tn-architecture-loading" data-architecture-loading>Loading Cytoscape…</div>
+      <p class="tn-architecture-error" data-architecture-error hidden></p>
+    </div>
+
+    <aside class="tn-architecture-details" data-architecture-details>
+      <p class="tn-kicker">Selection</p>
+      <h2>Node details</h2>
+      <p class="tn-muted">Виберіть вузол графа. Тут з’являться type, id, metadata та локальні дії.</p>
+    </aside>
+  </section>
+
+  <script type="application/json" id="cos-architecture-data"><?php echo $graphJson; ?></script>
+</main>

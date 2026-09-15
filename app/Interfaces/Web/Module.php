@@ -9,6 +9,7 @@ use Interfaces\Web\Routing\FrontendRoutes;
 use Interfaces\Web\Routing\ModuleRouteContributorInterface;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\PlatformRoutes;
+use Interfaces\Web\Routing\VisualizationRoutes;
 use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\ModuleDefinitionInterface;
 use Phalcon\Mvc\View;
@@ -30,6 +31,7 @@ class Module implements ModuleDefinitionInterface
         $router = $di->getShared('router');
         FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
         PlatformRoutes::register($router);
+        VisualizationRoutes::register($router);
 
         $routeRegistrar = $di->getShared('moduleRouteRegistrar');
         if (!$routeRegistrar instanceof ModuleRouteRegistrar) {

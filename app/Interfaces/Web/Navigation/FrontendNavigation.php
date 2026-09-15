@@ -46,6 +46,7 @@ final class FrontendNavigation
                     'key' => 'cos', 'path' => 'cos/control-center', 'label' => 'COS', 'glyph' => 'OS', 'order' => 50,
                     'children' => [
                         ['key' => 'cos', 'path' => 'cos/control-center', 'label' => 'Overview', 'order' => 10],
+                        ['key' => 'architecture', 'path' => 'cos/architecture', 'label' => 'Architecture', 'order' => 15],
                         ['key' => 'actions', 'path' => 'cos/control-center#actions', 'label' => 'Actions', 'order' => 20],
                         ['key' => 'approvals', 'path' => 'cos/control-center#approvals', 'label' => 'Approvals', 'order' => 30],
                         ['key' => 'agents', 'path' => 'cos/control-center#agents', 'label' => 'Agents', 'order' => 40],
@@ -89,7 +90,7 @@ final class FrontendNavigation
             'sales', 'today', 'pipeline', 'leads', 'deals', 'director', 'sales-admin' => 'sales',
             'inbox', 'cases', 'clients' => 'clients',
             'objects', 'listing', 'locations', 'submissions', 'spatial', 'catalog', 'properties' => 'properties',
-            'cos', 'diagnostics', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit' => 'cos',
+            'cos', 'architecture', 'diagnostics', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit' => 'cos',
             'analytics' => 'analytics',
             'administration', 'content', 'users', 'settings', 'integrations' => 'administration',
             default => $active,

@@ -104,7 +104,7 @@ if ($keys($sales['children'] ?? []) !== ['sales', 'today', 'pipeline', 'leads', 
     throw new RuntimeException('Manager Sales navigation contribution is invalid.');
 }
 $cos = $section($manager['primary'] ?? [], 'cos');
-if ($keys($cos['children'] ?? []) !== ['cos', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit', 'diagnostics']) {
+if ($keys($cos['children'] ?? []) !== ['cos', 'architecture', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit', 'diagnostics']) {
     throw new RuntimeException('Diagnostics module did not extend the COS navigation section in canonical order.');
 }
 $assertNoOrderMetadata($manager['primary'] ?? []);

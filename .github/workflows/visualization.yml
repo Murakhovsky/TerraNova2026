@@ -1,4 +1,4 @@
-name: COS Visualization V0.1-V0.2
+name: COS Visualization V0.1-V0.3
 
 on:
   push:
@@ -6,7 +6,15 @@ on:
     paths:
       - 'app/Kernel/Visualization/**'
       - 'app/Infrastructure/Visualization/**'
+      - 'app/Interfaces/Web/Visualization/**'
+      - 'app/Interfaces/Web/View/visualization/**'
+      - 'app/Interfaces/Web/Routing/VisualizationRoutes.php'
+      - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
+      - 'app/Interfaces/Web/Module.php'
       - 'app/Bootstrap/KernelServices.php'
+      - 'frontend/entrypoints/cos-architecture-explorer.js'
+      - 'frontend/features/cos/architecture-explorer.*'
+      - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
       - '.github/workflows/visualization.yml'
@@ -15,7 +23,14 @@ on:
     paths:
       - 'app/Kernel/Visualization/**'
       - 'app/Infrastructure/Visualization/**'
-      - 'app/Bootstrap/KernelServices.php'
+      - 'app/Interfaces/Web/Visualization/**'
+      - 'app/Interfaces/Web/View/visualization/**'
+      - 'app/Interfaces/Web/Routing/VisualizationRoutes.php'
+      - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
+      - 'app/Interfaces/Web/Module.php'
+      - 'frontend/entrypoints/cos-architecture-explorer.js'
+      - 'frontend/features/cos/architecture-explorer.*'
+      - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
       - '.github/workflows/visualization.yml'
@@ -29,17 +44,31 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
       - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
       - name: Visualization architecture boundary
-        run: php tests/architecture/visualization_v02.php
+        run: |
+          php tests/architecture/visualization_v02.php
+          php tests/architecture/visualization_v03.php
       - name: Visualization graph invariants
         run: |
           php tests/unit/visualization_graph_foundation.php
           php tests/unit/visualization_architecture_graph.php
+          php tests/unit/visualization_cytoscape_mapper.php
+      - name: Frontend build
+        run: npm run build
       - name: PHP syntax
         run: |
-          find app/Kernel/Visualization app/Infrastructure/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l app/Bootstrap/KernelServices.php
+          find app/Kernel/Visualization app/Infrastructure/Visualization app/Interfaces/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
+          php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
+          php -l app/Interfaces/Web/Module.php
           php -l tests/architecture/visualization_v02.php
+          php -l tests/architecture/visualization_v03.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
+          php -l tests/unit/visualization_cytoscape_mapper.php
