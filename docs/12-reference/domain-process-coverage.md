@@ -25,7 +25,7 @@ This reference answers a deliberately uncomfortable question: does every install
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
-| `sales` · Sales | `0.8.6` | `covered` | 1 | 8 | 0/8 | 8 | 8 |
+| `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 0/13 | 13 | 13 |
 
 ## Canonical process ownership
 
@@ -40,6 +40,7 @@ This reference answers a deliberately uncomfortable question: does every install
 ### Sales (`sales`)
 
 - `sales.lead-to-managed-case`
+- `sales.request-to-property-match`
 
 ## Coverage contract
 
