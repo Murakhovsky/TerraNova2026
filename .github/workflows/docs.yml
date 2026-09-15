@@ -11,7 +11,6 @@ on:
       - 'app/Infrastructure/Visualization/Architecture/**'
       - 'app/migrations/**'
       - 'app/Interfaces/Web/Routing/**'
-      - 'docker/nginx/default.conf'
       - 'deploy/configure-company-os-http.sh'
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
@@ -27,7 +26,6 @@ on:
       - 'app/Infrastructure/Visualization/Architecture/**'
       - 'app/migrations/**'
       - 'app/Interfaces/Web/Routing/**'
-      - 'docker/nginx/default.conf'
       - 'deploy/configure-company-os-http.sh'
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
@@ -97,6 +95,7 @@ jobs:
       DEV_PATH: ${{ vars.DEV_PATH }}
       COMPANY_OS_DOMAIN: company-os.shop
       COMPANY_OS_DOCS_URL: https://company-os.shop/docs/
+      COS_PUBLIC_STATIC_ROOT: /var/www/company-os
     steps:
       - name: Checkout deployment configuration
         uses: actions/checkout@v4
@@ -115,6 +114,7 @@ jobs:
           : "${DEV_PATH:?DEV_PATH environment variable is missing}"
           : "${COMPANY_OS_DOMAIN:?COMPANY_OS_DOMAIN is missing}"
           : "${COMPANY_OS_DOCS_URL:?COMPANY_OS_DOCS_URL is missing}"
+          : "${COS_PUBLIC_STATIC_ROOT:?COS_PUBLIC_STATIC_ROOT is missing}"
           test -n "${{ secrets.DEV_SSH_KEY }}" || { echo "DEV_SSH_KEY secret is missing" >&2; exit 1; }
 
       - name: Configure SSH
@@ -125,36 +125,38 @@ jobs:
           ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Publish documentation
+      - name: Publish documentation outside application runtime
         run: |
-          REMOTE_DOCS="$DEV_PATH/public/docs"
-          REMOTE_DOCS_ESCAPED=$(printf '%q' "$REMOTE_DOCS")
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- $REMOTE_DOCS_ESCAPED"
-          rsync -az --delete -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" public/docs/ "$DEV_USER@$DEV_HOST:$REMOTE_DOCS/"
-
-      - name: Enable static documentation index
-        run: |
-          rsync -az -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" docker/nginx/default.conf "$DEV_USER@$DEV_HOST:/tmp/cos-docs-nginx.conf"
-          DEV_PATH_ESCAPED=$(printf '%q' "$DEV_PATH")
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "DEV_PATH=$DEV_PATH_ESCAPED bash -s" <<'REMOTE'
-          set -euo pipefail
-          cat /tmp/cos-docs-nginx.conf > "$DEV_PATH/docker/nginx/default.conf"
-          rm -f /tmp/cos-docs-nginx.conf
-          cd "$DEV_PATH"
-          if docker info >/dev/null 2>&1; then DOCKER=(docker); elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then DOCKER=(sudo -n docker); else exit 21; fi
-          "${DOCKER[@]}" compose exec -T nginx nginx -t
-          "${DOCKER[@]}" compose exec -T nginx nginx -s reload
-          NGINX_ID="$("${DOCKER[@]}" compose ps -q nginx)"
-          test -n "$NGINX_ID"
-          "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O /dev/null http://127.0.0.1/docs/
-          REMOTE
+          REMOTE_STAGE="/tmp/cos-docs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "rm -rf -- '$REMOTE_STAGE' && mkdir -p -- '$REMOTE_STAGE'"
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
+            public/docs/ "$DEV_USER@$DEV_HOST:$REMOTE_STAGE/"
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "sudo -n install -d -m 755 '$COS_PUBLIC_STATIC_ROOT/docs' && \
+             sudo -n rsync -a --delete '$REMOTE_STAGE/' '$COS_PUBLIC_STATIC_ROOT/docs/' && \
+             sudo -n chmod -R a+rX '$COS_PUBLIC_STATIC_ROOT/docs' && \
+             rm -rf -- '$REMOTE_STAGE'"
 
       - name: Configure company-os.shop HTTPS documentation route
         run: |
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
           rsync -az -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" deploy/configure-dev-tls.sh "$DEV_USER@$DEV_HOST:/tmp/cos-configure-dev-tls.sh"
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "install -m 755 /tmp/cos-configure-dev-tls.sh $REMOTE_PATH/deploy/configure-dev-tls.sh && rm -f /tmp/cos-configure-dev-tls.sh && cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "install -m 755 /tmp/cos-configure-dev-tls.sh $REMOTE_PATH/deploy/configure-dev-tls.sh && \
+             rm -f /tmp/cos-configure-dev-tls.sh && \
+             cd $REMOTE_PATH && \
+             COS_PUBLIC_STATIC_ROOT='$COS_PUBLIC_STATIC_ROOT' bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+
+      - name: Origin documentation diagnostic
+        run: |
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "sudo -n test -s '$COS_PUBLIC_STATIC_ROOT/docs/index.html' && \
+             curl --fail --show-error --silent \
+               --resolve '$COMPANY_OS_DOMAIN:443:127.0.0.1' \
+               'https://$COMPANY_OS_DOMAIN/docs/' > /dev/null"
 
       - name: Public documentation DNS preflight
         run: |

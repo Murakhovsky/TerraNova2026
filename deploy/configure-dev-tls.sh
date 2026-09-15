@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 DOMAIN="${1:-company-os.shop}"
 UPSTREAM="${2:-127.0.0.1:8080}"
+PUBLIC_STATIC_ROOT="${COS_PUBLIC_STATIC_ROOT:-/var/www/company-os}"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 SITE_AVAILABLE="/etc/nginx/sites-available/$DOMAIN"
 SITE_ENABLED="/etc/nginx/sites-enabled/$DOMAIN"
@@ -18,7 +19,7 @@ if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true >/dev/null 2>&1; then
   exit 42
 fi
 
-sudo -n install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled "$ACME_ROOT"
+sudo -n install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled "$ACME_ROOT" "$PUBLIC_STATIC_ROOT"
 
 # Bootstrap the apex certificate only when it is absent. HTTP-01 deliberately
 # covers the exact domain, not *.$DOMAIN; wildcard certificates require DNS-01.
@@ -102,21 +103,17 @@ server {
 
     client_max_body_size 100m;
 
+    # Documentation is a deployment artifact, not an application route.
+    # Serve it directly from the host so PHP/Phalcon/container routing cannot
+    # turn a static documentation failure into an application 403/500.
     location = /docs {
         return 301 /docs/;
     }
 
     location ^~ /docs/ {
-        proxy_pass http://$UPSTREAM;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port 443;
-        proxy_read_timeout 120s;
-        proxy_send_timeout 120s;
+        root $PUBLIC_STATIC_ROOT;
+        index index.html;
+        try_files \$uri \$uri/ =404;
     }
 
     location / {
@@ -154,6 +151,15 @@ for _ in $(seq 1 15); do
   if curl --fail --silent --show-error \
       --resolve "$DOMAIN:443:127.0.0.1" \
       "https://$DOMAIN/cos" > /dev/null; then
+    if sudo -n test -r "$PUBLIC_STATIC_ROOT/docs/index.html"; then
+      if ! curl --fail --silent --show-error \
+          --resolve "$DOMAIN:443:127.0.0.1" \
+          "https://$DOMAIN/docs/" > /dev/null; then
+        sleep 2
+        continue
+      fi
+    fi
+
     echo "HTTPS reverse proxy is healthy for $DOMAIN."
     if systemctl list-unit-files certbot.timer >/dev/null 2>&1; then
       sudo -n systemctl enable --now certbot.timer >/dev/null 2>&1 || true
