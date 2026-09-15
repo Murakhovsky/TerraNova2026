@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRuntimeEvidence, processVerification } from './process-runtime-evidence.mjs';
+import { loadProcessDefinitions } from './process-registry.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const processRoot = path.join(here, 'processes');
 const debtFile = path.join(here, 'capability-debt.json');
 
 function emptyDomainHealth() {
@@ -25,21 +25,13 @@ function emptyDomainHealth() {
   };
 }
 
-function loadProcesses() {
-  if (!fs.existsSync(processRoot)) return [];
-  return fs.readdirSync(processRoot)
-    .filter((name) => name.endsWith('.json'))
-    .sort()
-    .map((name) => JSON.parse(fs.readFileSync(path.join(processRoot, name), 'utf8')));
-}
-
 function loadDebt() {
   if (!fs.existsSync(debtFile)) return { schema_version: 0, items: [] };
   return JSON.parse(fs.readFileSync(debtFile, 'utf8'));
 }
 
 export function buildKnowledgeHealth() {
-  const definitions = loadProcesses();
+  const definitions = loadProcessDefinitions();
   const debt = loadDebt();
   const catalogue = loadRuntimeEvidence();
   const domains = {};
