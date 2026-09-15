@@ -195,6 +195,7 @@ jobs:
             --exclude='node_modules/' \
             --exclude='tmp/' \
             --exclude='public/uploads/' \
+            --exclude='public/docs/' \
             -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
             ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 

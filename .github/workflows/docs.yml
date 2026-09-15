@@ -16,6 +16,7 @@ on:
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
       - '.github/workflows/docs.yml'
+      - '.github/workflows/diagnostic.yml'
   pull_request:
     branches: [main]
     paths:
@@ -31,6 +32,7 @@ on:
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
       - '.github/workflows/docs.yml'
+      - '.github/workflows/diagnostic.yml'
   workflow_dispatch:
 
 permissions:
@@ -85,6 +87,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
     env:
       DEV_HOST: ${{ secrets.DEV_HOST }}
       DEV_USER: ${{ secrets.DEV_USER }}
