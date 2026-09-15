@@ -31,6 +31,7 @@ export default defineConfig({
         'analytics-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/analytics-workspace.js'),
         'clients-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/clients-workspace.js'),
         'company-home': resolve(import.meta.dirname, 'frontend/entrypoints/company-home.js'),
+        'cos-architecture-explorer': resolve(import.meta.dirname, 'frontend/entrypoints/cos-architecture-explorer.js'),
         'cos-control-center': resolve(import.meta.dirname, 'frontend/entrypoints/cos-control-center.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'diagnostics-methodology-studio': resolve(import.meta.dirname, 'frontend/entrypoints/diagnostics-methodology-studio.js'),
