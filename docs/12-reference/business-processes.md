@@ -24,7 +24,7 @@ Business state and verification are separate dimensions: `as-is` / `to-be` descr
 
 ## Verification model
 
-- `documented` — registry topology існує, але хоча б один critical step не має resolvable current-checkout evidence.
+- `documented` — registry topology exists, but at least one critical step is not backed by resolvable current-checkout evidence.
 - `source-verified` — every critical step has at least one mapping resolved to current source/code evidence.
 - `runtime-verified` — every critical step has at least one canonical runtime/contract-registry mapping. This is structural verification, not proof that a production execution trace was observed.
 

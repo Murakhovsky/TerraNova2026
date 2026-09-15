@@ -10,9 +10,7 @@ generated: true
 
 # Application Use Cases
 
-> Джерело істини: `app/Domains/*/Application/UseCase/*.php` для зареєстрованих module manifests.
-
-Цей індекс показує application entry points за чинною directory convention. Він не стверджує, що кожен клас є окремою Kernel Command і не намагається вгадувати семантику методів усередині service classes.
+> Джерело істини: `app/Domains/*/Application/UseCase/*.php` у current checkout.
 
 ## Summary
 
@@ -55,7 +53,3 @@ generated: true
 | `ReceiveCrmWebhook` | `app/Domains/Sales/Application/UseCase/ReceiveCrmWebhook.php` |
 | `ReceivePublicLead` | `app/Domains/Sales/Application/UseCase/ReceivePublicLead.php` |
 | `ScheduleDealFollowup` | `app/Domains/Sales/Application/UseCase/ScheduleDealFollowup.php` |
-
-## Scope
-
-Reference навмисно прив’язаний до явної `Application/UseCase` convention. Command services, handlers або operations, що живуть поза цією convention, мають отримати окремий explicit catalogue замість широкого regex-сканування PHP.
