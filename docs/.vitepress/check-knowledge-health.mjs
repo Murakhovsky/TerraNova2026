@@ -28,7 +28,7 @@ if (health.evidenceVerifiedSteps > health.totalSteps || health.runtimeVerifiedSt
 if (health.criticalSourceVerified > health.criticalSteps || health.criticalRuntimeVerified > health.criticalSteps) {
   fail('Critical verification cannot exceed critical step count.');
 }
-if (!health.processSchemaVersions.includes(4)) fail('Knowledge Health must expose current Process Registry schema v4.');
+if (!health.processSchemaVersions.includes(5)) fail('Knowledge Health must expose current Process Registry schema v5.');
 if (health.debtSchemaVersion !== 1) fail(`Knowledge Health must expose Capability Debt schema v1, got '${health.debtSchemaVersion}'.`);
 
 const domainTotals = Object.values(health.domains).reduce((totals, domain) => ({

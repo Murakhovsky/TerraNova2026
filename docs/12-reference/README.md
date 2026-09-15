@@ -13,7 +13,7 @@ Reference section відповідає на питання **«що executable c
 
 Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, Domain process coverage, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
 
-Current Process Registry schema: **v4**.
+Current Process Registry schema: **v5**.
 
 Capability Debt Registry schema: **v1**.
 
@@ -103,6 +103,6 @@ Canonical vocabulary та терміни COS.
 
 CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry, Domain Process Coverage та Capability Debt Backlog.
 
-Process Registry schema `v4` перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority. Domain Process Coverage gate вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directories з module manifests.
+Process Registry schema `v5` додає contract-guarded cross-domain steps поверх backward-compatible v4 same-domain definitions і перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority. Domain Process Coverage gate вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directories з module manifests.
 
 Narrative `Current Scope`, Domain overviews і цей Reference Index мають окремі drift checks проти executable/structured authorities. Зміна contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.

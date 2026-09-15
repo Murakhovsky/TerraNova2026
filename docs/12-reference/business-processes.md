@@ -16,27 +16,28 @@ Business state, capability coverage and runtime verification are separate dimens
 
 ## Process index
 
-| Process | Domain | Business state | Verification | Steps | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Open workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
-| Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Open workflow](../02-workflows/property-submission-to-publication.md) |
-| Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Open workflow](../02-workflows/sales-lead-to-managed-case.md) |
-| Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 5/5 | 0/5 | 5/5 | 4/4 | 1/4 | [Open workflow](../02-workflows/sales-request-to-property-match.md) |
+| Process | Domain | Business state | Verification | Steps | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Open workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
+| Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Open workflow](../02-workflows/property-submission-to-publication.md) |
+| Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Open workflow](../02-workflows/sales-lead-to-managed-case.md) |
+| Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 1/5 | 5/5 | 4/4 | 1/4 | [Open workflow](../02-workflows/sales-request-to-property-match.md) |
 
 ## Verification and capability model
 
 - `capability mapped` — the step points to a discoverable capability declared by its Domain module and therefore present in the canonical Architecture Graph capability vocabulary.
 - `capability gap` — the step is real and may have runtime evidence, but the owning Domain does not yet declare a sufficiently semantic module capability for that business operation.
+- `cross-domain` — the step executes in a Domain different from the process owner and is guarded by a verified `requires` contract from the process Domain to the step Domain.
 - `documented` — registry topology exists, but at least one critical step is not backed by resolvable current-checkout evidence.
 - `source-verified` — every critical step has at least one mapping resolved to current source/code evidence.
 - `runtime-verified` — every critical step has at least one canonical runtime/contract-registry mapping. This is structural verification, not proof that a production execution trace was observed.
 
-| Process | Owned steps | Capability mapped | Capability gaps | Mapped steps | Evidence-verified steps | Runtime-backed steps | Critical source-verified | Critical runtime-verified |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
-| Property Submission → Publication | 6/6 | 6/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
-| Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
-| Sales Request → Property Match | 5/5 | 0/5 | 5/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
+| Process | Owned steps | Capability mapped | Capability gaps | Cross-domain steps | Mapped steps | Evidence-verified steps | Runtime-backed steps | Critical source-verified | Critical runtime-verified |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
+| Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
+| Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
+| Sales Request → Property Match | 5/5 | 1/5 | 4/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 
 ## Diagnostic Session → Recommendation
 
@@ -45,6 +46,7 @@ Business state, capability coverage and runtime verification are separate dimens
 - **Domain:** `diagnostic`
 - **Business state:** `as-is`
 - **Capability coverage:** 0/7 steps
+- **Cross-domain steps:** 0/7
 - **Derived verification:** `source-verified`
 - **Trigger:** A published methodology version is selected for a diagnostic target
 - **Workflow:** [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md)
@@ -74,6 +76,7 @@ Business state, capability coverage and runtime verification are separate dimens
 - **Domain:** `property`
 - **Business state:** `as-is`
 - **Capability coverage:** 6/6 steps
+- **Cross-domain steps:** 0/6
 - **Derived verification:** `source-verified`
 - **Trigger:** External or manual property data enters the Property intake boundary
 - **Workflow:** [Property Submission → Publication](../02-workflows/property-submission-to-publication.md)
@@ -103,6 +106,7 @@ Business state, capability coverage and runtime verification are separate dimens
 - **Domain:** `sales`
 - **Business state:** `as-is`
 - **Capability coverage:** 0/8 steps
+- **Cross-domain steps:** 0/8
 - **Derived verification:** `source-verified`
 - **Trigger:** Inbound public lead or external CRM webhook
 - **Workflow:** [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md)
@@ -129,10 +133,11 @@ Business state, capability coverage and runtime verification are separate dimens
 ## Sales Request → Property Match
 
 - **Process ID:** `sales.request-to-property-match`
-- **Schema:** `v4`
+- **Schema:** `v5`
 - **Domain:** `sales`
 - **Business state:** `as-is`
-- **Capability coverage:** 0/5 steps
+- **Capability coverage:** 1/5 steps
+- **Cross-domain steps:** 1/5
 - **Derived verification:** `source-verified`
 - **Trigger:** Sales operator converts an inbound request into a Client Case with referenced Property context
 - **Workflow:** [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md)
@@ -149,21 +154,22 @@ Business state, capability coverage and runtime verification are separate dimens
 | --- | --- | --- | --- | --- | --- | --- |
 | Load inbound request and referenced Property context | Sales application | `sales` | gap: `missing-domain-capability` | `operation` | yes | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `inboundRequest(` [source] |
 | Create Client Case and link inbound request | Sales application | `sales` | gap: `missing-domain-capability` | `state` | yes | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `createCase(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `attachInboundRequest(` [source] |
-| Resolve canonical Property presentation | Property read boundary | `sales` | gap: `missing-domain-capability` | `operation` | yes | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php` · `getPropertyPresentation(` [source] |
+| Resolve canonical Property presentation | Property read boundary | `property` | `property.reference` | `operation` | yes | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php` · `getPropertyPresentation(` [source] |
 | Record Property Match in Sales | Sales application | `sales` | gap: `missing-domain-capability` | `state` | yes | source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `upsertPropertyMatch(` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `PropertyMatchStatus::Interested` [source] |
 | Record Sales activity and publish case/lead events | Sales application | `sales` | gap: `missing-domain-capability` | `outcome` | no | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `Обʼєкт додано у підбір` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `ClientCaseCreated::create` [source] |
 
 ## Authority and limitations
 
-- Registry schema `v4` extends V0.5 evidence semantics with an explicit `step → domain → capability` bridge.
-- A declared capability must resolve to the owning module capability vocabulary; a missing semantic capability must be represented explicitly as `capability: null` plus `capability_gap`.
+- Registry schema `v5` extends v4 with contract-guarded cross-domain steps. Existing v4 same-domain definitions remain valid.
+- A declared capability must resolve to the step Domain capability vocabulary; a missing semantic capability must be represented explicitly as `capability: null` plus `capability_gap`.
 - Capability coverage is not inferred from class names, routes or permissions. It reports only canonical discoverable module capabilities.
-- Current schema v4 keeps every step inside the process Domain. Cross-domain steps require a later explicit contract instead of silently borrowing another Domain capability.
+- A cross-domain step is legal only when the process definition uses schema v5+ and the step contains a verified `contract` mapping whose current module evidence declares `role: requires` from the process Domain to the step Domain.
+- Cross-domain execution does not create shared state ownership: the step capability belongs to the foreign Domain while the process remains owned by its root Domain.
 - Business state (`as-is` / `to-be`) remains separate from derived runtime verification.
 - Verification is never authored in process JSON. It is calculated from mappings resolved against `generate-runtime-evidence.php` and exact source symbols in the current checkout.
 - `use_case` and `command` evidence is source-backed from canonical module directories.
 - `event` evidence is runtime-backed from explicit Domain event catalogues; `contract` evidence is runtime-backed from canonical module cross-domain contract declarations.
 - `source` mappings must resolve to an existing repository file and, when provided, contain the declared symbol.
 - `runtime-verified` here means structurally backed by canonical runtime registries for every critical step. It does not mean COS observed an end-to-end production trace. Observed execution evidence belongs to a later runtime-tracing layer.
-- `ProcessDiagram` renders core flow, ownership and capability projections from the same registry definition.
+- `ProcessDiagram` renders core flow, ownership, capability and Domain projections from the same registry definition.
 - Coverage ratios expose architecture/documentation completeness; they are not business performance KPIs.

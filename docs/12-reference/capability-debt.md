@@ -16,15 +16,15 @@ Capability debt means the business step is real but the owning Domain does not y
 
 ## Summary
 
-- **Open debt items:** 20
-- **High severity:** 17
+- **Open debt items:** 19
+- **High severity:** 16
 - **Medium severity:** 3
 - **Affected Domains:** 2
 
 | Domain | Open | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
 | `diagnostic` | 7 | 7 | 0 | 0 |
-| `sales` | 13 | 10 | 3 | 0 |
+| `sales` | 12 | 9 | 3 | 0 |
 
 ## Prioritized backlog
 
@@ -46,7 +46,6 @@ Capability debt means the business step is real but the owning Domain does not y
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `create-case` · Create Client Case and link inbound request | `source` | `sales.client-case.create` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `load-request` · Load inbound request and referenced Property context | `source` | `sales.inbound.request.read` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `record-match` · Record Property Match in Sales | `source` | `sales.property-match.record` | `declare-domain-capability` |
-| `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `resolve-property` · Resolve canonical Property presentation | `runtime` | `sales.property.reference.resolve` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `activity` · Record activity / call | `source` | `sales.activity.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `crm-inbox` · Process durable CRM inbox | `source` | `sales.crm.inbox.process` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `activity-events` · Record Sales activity and publish case/lead events | `source` | `sales.activity.record` | `declare-domain-capability` |
