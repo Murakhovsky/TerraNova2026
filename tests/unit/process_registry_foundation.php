@@ -5,7 +5,6 @@ $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
 use Infrastructure\Process\JsonProcessRegistry;
-use InvalidArgumentException;
 use Kernel\Process\ProcessDefinition;
 use Kernel\Process\ProcessEdge;
 use Kernel\Process\ProcessStep;
@@ -54,17 +53,17 @@ if (!$registry->has('diagnostic.session-to-recommendation') || $registry->has('m
 try {
     new RuntimeMapping('imaginary', 'x');
     throw new RuntimeException('RuntimeMapping accepted an unsupported mapping type.');
-} catch (InvalidArgumentException) {}
+} catch (\InvalidArgumentException) {}
 
 try {
     new ProcessStep('x', 'X', 'operation', 'owner', 'property', 'sales.workspace.use');
     throw new RuntimeException('ProcessStep accepted a capability outside its Domain namespace.');
-} catch (InvalidArgumentException) {}
+} catch (\InvalidArgumentException) {}
 
 try {
     new ProcessStep('x', 'X', 'operation', 'owner', 'sales', null, null);
     throw new RuntimeException('ProcessStep accepted an implicit capability gap.');
-} catch (InvalidArgumentException) {}
+} catch (\InvalidArgumentException) {}
 
 $baseStep = new ProcessStep('a', 'A', 'operation', 'owner', 'sales', null, 'missing-domain-capability');
 $foreignStepWithoutContract = new ProcessStep('b', 'B', 'operation', 'owner', 'property', 'property.reference');
@@ -83,7 +82,7 @@ try {
         edges: [new ProcessEdge('a', 'b')],
     );
     throw new RuntimeException('Schema-v5 cross-domain process accepted a foreign step without contract mapping.');
-} catch (InvalidArgumentException) {}
+} catch (\InvalidArgumentException) {}
 
 $foreignStepWithContract = new ProcessStep(
     'b',
