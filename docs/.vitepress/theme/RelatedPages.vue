@@ -7,21 +7,9 @@ const { page } = useData();
 const item = (text, link, description) => ({ text, link, description });
 
 const domains = {
-  sales: {
-    label: 'Sales',
-    workflow: '/02-workflows/sales-lead-to-managed-case',
-    lifecycle: 'lifecycle-and-automation',
-  },
-  property: {
-    label: 'Property',
-    workflow: '/02-workflows/property-submission-to-publication',
-    lifecycle: 'lifecycle-and-runtime',
-  },
-  diagnostic: {
-    label: 'Diagnostic',
-    workflow: '/02-workflows/diagnostic-session-to-recommendation',
-    lifecycle: 'lifecycle-and-evaluation',
-  },
+  sales: { label: 'Sales', workflow: '/02-workflows/sales-lead-to-managed-case', lifecycle: 'lifecycle-and-automation' },
+  property: { label: 'Property', workflow: '/02-workflows/property-submission-to-publication', lifecycle: 'lifecycle-and-runtime' },
+  diagnostic: { label: 'Diagnostic', workflow: '/02-workflows/diagnostic-session-to-recommendation', lifecycle: 'lifecycle-and-evaluation' },
 };
 
 const workflowDomains = {
@@ -57,9 +45,7 @@ const related = computed(() => {
   const route = currentRoute(relativePath);
 
   const domainMatch = relativePath.match(/^04-domains\/(sales|property|diagnostic)\//);
-  if (domainMatch) {
-    return domainItems(domainMatch[1]).filter((entry) => entry.link !== route).slice(0, 4);
-  }
+  if (domainMatch) return domainItems(domainMatch[1]).filter((entry) => entry.link !== route).slice(0, 4);
 
   const workflowDomain = workflowDomains[relativePath];
   if (workflowDomain) {
@@ -71,6 +57,16 @@ const related = computed(() => {
       item('Domain Lifecycle', `${root}/${meta.lifecycle}`, 'State transitions and automation/runtime behavior.'),
       item('Execution Lifecycle', '/05-runtime/execution-lifecycle', 'Generic COS execution semantics.'),
     ];
+  }
+
+  if (relativePath.startsWith('01-product/')) {
+    return [
+      item('Vision & Principles', '/01-product/vision-and-principles', 'Why COS exists and its non-negotiable product laws.'),
+      item('Product Capabilities', '/01-product/capabilities', 'What the system enables across business, runtime and platform layers.'),
+      item('Actors & Authority', '/01-product/actors-and-authority', 'Human, automation, Agent and integration authority model.'),
+      item('System Boundaries', '/01-product/system-boundaries', 'What COS, Domains, interfaces and adapters own.'),
+      item('Current Scope', '/01-product/current-scope', 'Executable AS-IS reality in the current checkout.'),
+    ].filter((entry) => entry.link !== route).slice(0, 4);
   }
 
   if (relativePath.startsWith('05-runtime/')) {
@@ -106,8 +102,8 @@ const related = computed(() => {
     return [
       item('COS Mental Model', '/00-start/mental-model', 'The execution model to keep in your head.'),
       item('Reading Paths', '/00-start/reading-paths', 'Understand, build or operate COS without reading everything.'),
+      item('Product Vision', '/01-product/vision-and-principles', 'Why the system exists and what it refuses to compromise.'),
       item('System Map', '/03-architecture/system-map', 'Interactive architecture drill-down.'),
-      item('Current Scope', '/01-product/current-scope', 'What is executable in the current checkout.'),
       item('Repository Map', '/00-start/repository-map', 'Where the system lives in code.'),
     ].filter((entry) => entry.link !== route).slice(0, 4);
   }
@@ -131,12 +127,7 @@ const related = computed(() => {
     <div class="cos-map-layer">
       <div class="cos-map-title">Related pages</div>
       <div class="cos-map-grid">
-        <a
-          v-for="entry in related"
-          :key="entry.link"
-          class="cos-map-node"
-          :href="pageHref(entry.link)"
-        >
+        <a v-for="entry in related" :key="entry.link" class="cos-map-node" :href="pageHref(entry.link)">
           <strong>{{ entry.text }}</strong>
           <span>{{ entry.description }}</span>
         </a>
