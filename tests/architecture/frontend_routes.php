@@ -62,12 +62,18 @@ if ($slugPosition === false || $featuredPosition === false || $featuredPosition 
 
 // Detect duplicate literal method+path declarations without loading the Phalcon extension.
 $identities = [];
-if (preg_match_all("/self::add\\(\\$router,\\s*'([^']+)',\\s*'([^']+)'/", $frontendRoutes, $matches, PREG_SET_ORDER)) {
+$selfAddPattern = <<<'REGEX'
+~self::add\(\$router,\s*'([^']+)',\s*'([^']+)'~
+REGEX;
+$directAddPattern = <<<'REGEX'
+~\$router->(add(?:Get|Post|Put|Delete|Patch)?)\(\s*'([^']+)'~
+REGEX;
+if (preg_match_all($selfAddPattern, $frontendRoutes, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
         $identities[] = strtolower($match[1]) . ' ' . $match[2];
     }
 }
-if (preg_match_all("/\\$router->(add(?:Get|Post|Put|Delete|Patch)?)\\(\\s*'([^']+)'/", $frontendRoutes, $matches, PREG_SET_ORDER)) {
+if (preg_match_all($directAddPattern, $frontendRoutes, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
         $identities[] = strtolower($match[1]) . ' ' . $match[2];
     }
@@ -78,13 +84,14 @@ if (count($identities) !== count(array_unique($identities))) {
 }
 
 $webBootstrap = (string) file_get_contents($root . '/app/bootstrap_web.php');
+$normalizedBootstrap = str_replace('\\\\', '\\', $webBootstrap);
 foreach (['Modules\\Economy\\Module', 'Modules\\Games\\Module', 'Modules\\Users\\Module'] as $quarantinedModule) {
-    if (str_contains($webBootstrap, $quarantinedModule)) {
+    if (str_contains($normalizedBootstrap, $quarantinedModule)) {
         throw new RuntimeException('Quarantined module is registered in the main web application: ' . $quarantinedModule);
     }
 }
 foreach (['Interfaces\\Web\\Module', 'Bootstrap\\SpatialModule'] as $canonicalModule) {
-    if (!str_contains($webBootstrap, $canonicalModule)) {
+    if (!str_contains($normalizedBootstrap, $canonicalModule)) {
         throw new RuntimeException('Canonical web module is not registered: ' . $canonicalModule);
     }
 }
