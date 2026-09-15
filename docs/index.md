@@ -5,7 +5,7 @@ description: Канонічна WEB-документація Company Operating S
 hero:
   name: Company Operating System
   text: Documentation
-  tagline: Від бізнес-процесу до Domain, Runtime, Contract, Agent і коду без археології по випадкових Service.php.
+  tagline: Від бізнес-процесу до Domain, Runtime, Contract, Agent і коду. Один простір для продукту, архітектури та executable reference.
   actions:
     - theme: brand
       text: Зрозуміти COS за 10 хв
@@ -15,7 +15,7 @@ hero:
       link: /03-architecture/system-map
 features:
   - title: Understand COS
-    details: Product model, Mental Model, current scope, workflows та bounded contexts.
+    details: Product model, Mental Model, current scope, workflows та bounded contexts без походів по сотнях PHP-файлів.
     link: /00-start/what-is-cos
   - title: Business Workflows
     details: Sales, Property і Diagnostic від business goal до decisions, failures та code map.
@@ -26,51 +26,79 @@ features:
   - title: Build with COS
     details: Development rules, generated reference, module lifecycle, testing та operations.
     link: /09-development/adding-a-domain
-  - title: Executable Reference
-    details: Versions, modules, capabilities, events, commands, routes та use cases, згенеровані з поточного main.
-    link: /12-reference/README
 ---
 
-<div class="cos-branch-contract">
-  <span class="cos-badge"><strong>CODE</strong>&nbsp; main</span>
-  <span class="cos-badge"><strong>DOCS</strong>&nbsp; main</span>
-  <span class="cos-badge"><strong>AUTHORITY</strong>&nbsp; current commit</span>
+<div class="cos-home-shell">
+  <div class="cos-home-contract" aria-label="Canonical source contract">
+    <div class="cos-home-contract__item"><span>Canonical code</span><strong>main</strong></div>
+    <div class="cos-home-contract__item"><span>Canonical docs</span><strong>main</strong></div>
+    <div class="cos-home-contract__item"><span>Authority</span><strong>current commit</strong></div>
+  </div>
+
+  <section class="cos-home-section">
+    <div class="cos-home-section__head">
+      <div>
+        <div class="cos-home-kicker">System model</div>
+        <h2>Від проблеми бізнесу до контрольованого результату</h2>
+      </div>
+      <p>COS не ховає бізнес за технічними шарами. Документація веде тією самою дорогою, якою проходить реальна робота системи.</p>
+    </div>
+
+    <div class="cos-home-flow" aria-label="COS canonical execution path">
+      <div class="cos-home-flow__node"><strong>Business</strong><span>problem / goal</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Workflow</strong><span>business flow</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Domain</strong><span>semantic owner</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node is-core"><strong>Kernel Runtime</strong><span>generic mechanism</span></div>
+      <div class="cos-home-flow__arrow">→</div>
+      <div class="cos-home-flow__node"><strong>Result</strong><span>state / audit</span></div>
+    </div>
+  </section>
+
+  <section class="cos-home-section">
+    <div class="cos-home-section__head">
+      <div>
+        <div class="cos-home-kicker">Current baseline</div>
+        <h2>Що реально є в current checkout</h2>
+      </div>
+      <p>Цей блок більше не дублює runtime-версії руками. Kernel і Domain manifests читаються безпосередньо з коду під час VitePress build; exact capabilities, events, commands і routes залишаються у generated reference.</p>
+    </div>
+
+    <SystemStatus />
+  </section>
+
+  <section class="cos-home-section">
+    <div class="cos-home-section__head">
+      <div>
+        <div class="cos-home-kicker">Choose a route</div>
+        <h2>Не треба читати все</h2>
+      </div>
+      <p>Починайте з того рівня, який відповідає вашому питанню. Людство вже винайшло навігацію, тож археологія по Service.php більше не є обов’язковим ритуалом.</p>
+    </div>
+
+    <div class="cos-home-route-grid">
+      <a class="cos-home-route" href="./00-start/mental-model.html">
+        <small>01 / UNDERSTAND</small>
+        <strong>Я хочу зрозуміти COS</strong>
+        <span>Mental model, product scope, domains і ключові business workflows.</span>
+      </a>
+      <a class="cos-home-route" href="./03-architecture/system-map.html">
+        <small>02 / ARCHITECT</small>
+        <strong>Я хочу побачити систему цілком</strong>
+        <span>System map, dependency direction, Kernel, contracts і runtime boundaries.</span>
+      </a>
+      <a class="cos-home-route" href="./12-reference/README.html">
+        <small>03 / VERIFY</small>
+        <strong>Мені потрібні точні executable facts</strong>
+        <span>Modules, versions, capabilities, events, commands, routes та generated reference.</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="cos-home-footer-note">
+    <span>main = code + tests + manifests + docs + generated reference inputs</span>
+    <span>COS Documentation · Terra Nova</span>
+  </div>
 </div>
-
-## Один commit — одна executable reality
-
-```text
-main
-├─ code + tests
-├─ manifests + migrations
-├─ narrative docs
-├─ documentation generators
-└─ CI / deployment metadata
-```
-
-AS-IS documentation перевіряється проти того самого checkout, з якого збирається COS. Cross-branch sync більше немає.
-
-## Канонічний шлях від бізнесу до реалізації
-
-```text
-Business problem
-→ Workflow
-→ Owning Domain
-→ Use Case / Command / Event
-→ Cross-Domain Contract when required
-→ Kernel mechanism
-→ Port
-→ Infrastructure Adapter
-→ Interface / Result / Audit
-```
-
-## Поточний baseline
-
-| Component | Version | Role |
-| --- | --- | --- |
-| Kernel | `0.11.8` | generic execution platform |
-| Sales | `0.8.6` | reference runtime Domain |
-| Diagnostic | `0.6.1` | executable diagnostic runtime |
-| Property | `0.12.0` | canonical asset runtime, inventory/listing writes, compatibility projection, intelligence and network interoperability |
-
-Exact module facts генеруються з `main/app/Domains/*/module.php` у [Generated Reference](./12-reference/README.md).
