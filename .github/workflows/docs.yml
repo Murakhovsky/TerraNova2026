@@ -66,10 +66,21 @@ jobs:
         run: |
           DRIFT=$(git status --porcelain -- docs/12-reference)
           if [ -n "$DRIFT" ]; then
-            echo "::group::Generated reference drift"
+            echo "::group::Generated reference drift summary"
             git status --short -- docs/12-reference
             git diff -- docs/12-reference
             echo "::endgroup::"
+
+            for FILE in docs/12-reference/*.md; do
+              if ! git diff --quiet -- "$FILE" || ! git ls-files --error-unmatch "$FILE" >/dev/null 2>&1; then
+                echo "::group::Generated file: $FILE"
+                printf '%s\n' "---BEGIN-GENERATED-FILE:$FILE---"
+                cat "$FILE"
+                printf '%s\n' "---END-GENERATED-FILE:$FILE---"
+                echo "::endgroup::"
+              fi
+            done
+
             echo "::error::Committed docs/12-reference is stale. Run npm run docs:generate and commit the generated reference changes."
             exit 1
           fi
