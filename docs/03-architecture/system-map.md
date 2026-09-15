@@ -17,7 +17,7 @@ contract: architecture-v1
 
 System Map читається зверху вниз. Починайте з бізнес-питання і провалюйтеся до exact executable facts лише тоді, коли вони потрібні.
 
-> **Executable graph:** інтерактивна runtime-карта доступна у COS на [`/cos/architecture`](/cos/architecture). Ця сторінка пояснює mental model; [Architecture Graph Reference](../12-reference/architecture-graph.md) генерується з того самого canonical Visualization vocabulary.
+> **Executable graph:** інтерактивна runtime-карта доступна у COS на [`/cos/architecture`](https://company-os.shop/cos/architecture). Ця сторінка пояснює mental model; [Architecture Graph Reference](../12-reference/architecture-graph.md) генерується з того самого canonical Visualization vocabulary.
 
 <div class="cos-system-map">
   <div class="cos-map-layer">
