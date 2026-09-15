@@ -11,6 +11,7 @@ $entries = [
     'analytics-workspace',
     'clients-workspace',
     'company-home',
+    'cos-architecture-explorer',
     'cos-control-center',
     'cos-site',
     'diagnostics-methodology-studio',
@@ -19,9 +20,7 @@ $entries = [
     'public-surface',
     'sales-workspace',
     'terranova-catalog-api',
-    'terranova-club',
     'terranova-copy',
-    'terranova-home',
     'terranova-interface',
     'terranova-media-manager',
     'terranova-property-gallery',
@@ -44,4 +43,11 @@ foreach (array_merge($assets['scripts'], $assets['styles']) as $url) {
     if (!is_file($path)) throw new RuntimeException('Manifest asset is missing: ' . $path);
 }
 
-echo "Frontend assets passed: all browser source is built through the Vite manifest.\n";
+$viteConfig = (string) file_get_contents($root . '/vite.config.js');
+foreach (['terranova-club', 'terranova-home'] as $retiredEntrypoint) {
+    if (str_contains($viteConfig, "'{$retiredEntrypoint}'")) {
+        throw new RuntimeException('Retired legacy entrypoint returned to Vite input: ' . $retiredEntrypoint);
+    }
+}
+
+echo "Frontend assets passed: canonical browser source is built through the Vite manifest and retired global entrypoints stay out of runtime.\n";

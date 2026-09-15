@@ -1,5 +1,5 @@
-import '../styles/interface.css';
-import '../styles/workspace-mobile.css';
+import '../styles/design-system.css';
+import '../styles/layouts/workspace.css';
 import { initInterfaceComponents } from '../components/interactive.js';
 import { initWorkspaceShell } from '../core/workspace-shell.js';
 

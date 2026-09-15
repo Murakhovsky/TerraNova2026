@@ -1,0 +1,115 @@
+<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__, 2);
+require $root . '/vendor/autoload.php';
+
+$read = static function (string $path) use ($root): string {
+    $full = $root . '/' . $path;
+    if (!is_file($full)) throw new RuntimeException('WEB V0.11 artifact is missing: ' . $path);
+    return (string) file_get_contents($full);
+};
+$contains = static function (string $source, string $needle, string $message): void {
+    if (!str_contains($source, $needle)) throw new RuntimeException($message . ': ' . $needle);
+};
+$notContains = static function (string $source, string $needle, string $message): void {
+    if (str_contains($source, $needle)) throw new RuntimeException($message . ': ' . $needle);
+};
+
+foreach (['app/Domains/Frontend', 'app/Domains/Public', 'app/Domains/Portal'] as $forbiddenDomain) {
+    if (is_dir($root . '/' . $forbiddenDomain)) {
+        throw new RuntimeException('Frontend surfaces must remain Interface/Presentation concerns: ' . $forbiddenDomain);
+    }
+}
+
+foreach ([
+    'frontend/styles/design-system.css',
+    'frontend/styles/layouts/public.css',
+    'frontend/styles/layouts/portal.css',
+    'frontend/styles/layouts/workspace.css',
+    'frontend/features/public/interactions.js',
+    'docs/architecture/web-v0.11.md',
+    'docs/architecture/frontend-legacy-audit.md',
+] as $path) {
+    $read($path);
+}
+
+$designSystem = $read('frontend/styles/design-system.css');
+$positions = [];
+foreach (['tokens.css', 'foundation.css', 'components.css', 'patterns.css'] as $needle) {
+    $positions[$needle] = strpos($designSystem, $needle);
+    if ($positions[$needle] === false) throw new RuntimeException('Design-system load order is missing: ' . $needle);
+}
+if (!($positions['tokens.css'] < $positions['foundation.css']
+    && $positions['foundation.css'] < $positions['components.css']
+    && $positions['components.css'] < $positions['patterns.css'])) {
+    throw new RuntimeException('Design-system load order must be tokens -> foundation -> components -> patterns.');
+}
+
+$layout = $read('app/Interfaces/Web/View/index.phtml');
+foreach ([
+    "'workspace' => 'terranova-interface'",
+    "'portal' => 'portal-cabinet'",
+    "default => 'public-surface'",
+    'data-interface-surface="<?php echo $escape($interfaceSurface); ?>"',
+    'array_unique',
+] as $needle) {
+    $contains($layout, $needle, 'Root layout is missing canonical surface asset ownership.');
+}
+$notContains($layout, "array_merge(['terranova-club', 'terranova-interface']", 'Root layout must not globally load the historical Public/Workspace bundles.');
+$notContains($layout, "'terranova-club'", 'Root layout must not reference retired terranova-club entrypoint.');
+$notContains($layout, "'terranova-home'", 'Root layout must not reference retired terranova-home entrypoint.');
+
+$publicEntry = $read('frontend/entrypoints/public-surface.js');
+foreach (["../styles/design-system.css", "../styles/layouts/public.css", "../features/public/surface.css", 'initPublicInteractions'] as $needle) {
+    $contains($publicEntry, $needle, 'Public entrypoint is missing canonical design-system/surface ownership.');
+}
+$portalEntry = $read('frontend/entrypoints/portal-cabinet.js');
+foreach (["../styles/design-system.css", "../styles/layouts/portal.css", "../features/portal/cabinet.css"] as $needle) {
+    $contains($portalEntry, $needle, 'Portal entrypoint is missing canonical design-system/surface ownership.');
+}
+$workspaceEntry = $read('frontend/entrypoints/terranova-interface.js');
+foreach (["../styles/design-system.css", "../styles/layouts/workspace.css", 'initWorkspaceShell'] as $needle) {
+    $contains($workspaceEntry, $needle, 'Workspace entrypoint is missing canonical design-system/surface ownership.');
+}
+foreach (['interface.css', 'workspace-mobile.css', 'terranova-club.css'] as $legacyImport) {
+    $notContains($workspaceEntry, $legacyImport, 'Workspace entrypoint must not directly depend on legacy/global stylesheet.');
+}
+
+$vite = $read('vite.config.js');
+foreach (["'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $requiredEntry) {
+    $contains($vite, $requiredEntry, 'Vite is missing canonical surface entrypoint.');
+}
+foreach (["'terranova-club'", "'terranova-home'"] as $retiredEntry) {
+    $notContains($vite, $retiredEntry, 'Retired legacy entrypoint returned to Vite runtime.');
+}
+
+foreach (glob($root . '/frontend/entrypoints/*.js') ?: [] as $entrypoint) {
+    $source = (string) file_get_contents($entrypoint);
+    if (preg_match("/(?:import|@import)[^;\n]*terranova-club(?:\.css|\.js)?/", $source)) {
+        throw new RuntimeException('Canonical entrypoint restored terranova-club runtime dependency: ' . $entrypoint);
+    }
+    if (preg_match("/(?:import|@import)[^;\n]*terranova-home(?:\.css|\.js)?/", $source)) {
+        throw new RuntimeException('Canonical entrypoint restored terranova-home runtime dependency: ' . $entrypoint);
+    }
+}
+
+$publicInteractions = $read('frontend/features/public/interactions.js');
+$notContains($publicInteractions, "preventDefault()", 'Public extraction must not fake successful backend form submissions.');
+$notContains($publicInteractions, "Заявку підготовлено до передачі", 'Historical fake CRM confirmation must not return.');
+
+$assetGate = $read('tests/architecture/frontend_assets.php');
+foreach (["'cos-architecture-explorer'", "'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $needle) {
+    $contains($assetGate, $needle, 'Frontend asset gate must cover canonical entrypoints.');
+}
+foreach (["'terranova-club'", "'terranova-home'"] as $needle) {
+    $notContains($assetGate, $needle . ',', 'Frontend asset gate must not require retired entrypoint.');
+}
+
+$legacyAudit = $read('docs/architecture/frontend-legacy-audit.md');
+foreach (['USED', 'MIGRATED', 'DUPLICATE', 'DEAD', 'localStorage', 'sessionStorage'] as $needle) {
+    $contains($legacyAudit, $needle, 'Legacy audit is incomplete.');
+}
+
+echo "WEB V0.11 design system and legacy extraction architecture passed.\n";

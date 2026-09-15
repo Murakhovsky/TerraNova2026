@@ -1,0 +1,17 @@
+@import '../workspace.css';
+@import '../workspace-mobile.css';
+
+@layer tn-layouts {
+  body[data-interface-surface="workspace"] {
+    margin: 0;
+    color: var(--tn-color-ink);
+    background: var(--tn-color-workspace);
+    font-family: var(--tn-font-sans);
+  }
+
+  body[data-interface-surface="workspace"] *,
+  body[data-interface-surface="workspace"] *::before,
+  body[data-interface-surface="workspace"] *::after {
+    box-sizing: border-box;
+  }
+}

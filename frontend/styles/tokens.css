@@ -63,4 +63,21 @@
   --tn-z-header: 30;
   --tn-z-sidebar: 40;
   --tn-z-overlay: 100;
+
+  /* Compatibility aliases while historical selectors are extracted into surface ownership. */
+  --tn-ink: var(--tn-color-ink);
+  --tn-ink-2: var(--tn-color-ink-soft);
+  --tn-paper: var(--tn-color-paper);
+  --tn-surface: var(--tn-color-surface);
+  --tn-surface-soft: var(--tn-color-surface-subtle);
+  --tn-surface-warm: #fbf7ef;
+  --tn-line: var(--tn-color-border);
+  --tn-border: var(--tn-color-border);
+  --tn-muted: var(--tn-color-muted);
+  --tn-text-muted: var(--tn-color-muted);
+  --tn-gold: var(--tn-color-accent);
+  --tn-green: var(--tn-color-positive);
+  --tn-cyan: var(--tn-color-info);
+  --tn-radius: var(--tn-radius-md);
+  --tn-shadow: var(--tn-shadow-raised);
 }

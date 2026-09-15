@@ -1,0 +1,29 @@
+@layer tn-layouts {
+  body[data-interface-surface="portal"] {
+    margin: 0;
+    color: var(--tn-color-ink);
+    background: var(--tn-color-surface-subtle);
+    font-family: var(--tn-font-sans);
+  }
+
+  body[data-interface-surface="portal"] *,
+  body[data-interface-surface="portal"] *::before,
+  body[data-interface-surface="portal"] *::after {
+    box-sizing: border-box;
+  }
+
+  body[data-interface-surface="portal"] a {
+    color: inherit;
+  }
+
+  body[data-interface-surface="portal"] button,
+  body[data-interface-surface="portal"] input,
+  body[data-interface-surface="portal"] select,
+  body[data-interface-surface="portal"] textarea {
+    font: inherit;
+  }
+
+  body[data-interface-surface="portal"] .tn-page {
+    min-width: 0;
+  }
+}
