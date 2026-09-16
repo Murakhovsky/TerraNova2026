@@ -4,6 +4,16 @@ import '../styles/cos-site.css';
 (() => {
   const header = document.querySelector('.cos-header');
   const menu = document.querySelector('[data-cos-menu]');
+  const pageContextNode = document.querySelector('[data-cos-page]');
+  let pageContext = {};
+
+  if (pageContextNode) {
+    try {
+      pageContext = JSON.parse(pageContextNode.textContent || '{}');
+    } catch {
+      pageContext = {};
+    }
+  }
 
   if (menu && header) {
     menu.addEventListener('click', () => {
@@ -14,9 +24,8 @@ import '../styles/cos-site.css';
 
   document.querySelectorAll('[data-language-switch]').forEach((select) => {
     select.addEventListener('change', () => {
-      const page = window.COS_PAGE || {};
-      const suffix = page.type === 'domain' && page.slug ? `/domains/${page.slug}` : '';
-      window.location.href = `${page.base || '/cos/'}${select.value}${suffix}`;
+      const suffix = pageContext.type === 'domain' && pageContext.slug ? `/domains/${pageContext.slug}` : '';
+      window.location.href = `${pageContext.base || '/cos/'}${select.value}${suffix}`;
     });
   });
 
