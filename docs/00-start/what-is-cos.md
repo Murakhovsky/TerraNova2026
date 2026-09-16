@@ -1,55 +1,85 @@
 ---
 title: Що таке COS
-description: Продуктова й архітектурна роль Company Operating System та короткий шлях до розуміння системи.
+description: Продуктова й архітектурна роль операційної системи компанії та короткий шлях до розуміння системи.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: concept
 contract: concept-v1
 ---
 
 # Що таке COS
 
-**COS (Company Operating System)** — платформа, яка дає компанії спільний контрольований runtime для виконання бізнес-процесів людьми, software, правилами та AI.
+**COS (Company Operating System, операційна система компанії)** — платформа, яка дає компанії спільне контрольоване середовище виконання (runtime) для бізнес-процесів, у яких разом працюють люди, програмне забезпечення, правила, автоматизація та штучний інтелект.
 
 > COS перетворює бізнес-наміри й події на контрольовані, дозволені, спостережувані та пояснювані дії.
 
-COS не є «ще однією CRM». CRM, Sales, Property, Diagnostic, Finance, Support або HR можуть бути окремими Domains.
+COS не є «ще однією CRM». Продажі (Sales), нерухомість (Property), діагностика (Diagnostic), фінанси, підтримка чи персонал можуть існувати як окремі домени (Domains), кожен зі своєю відповідальністю.
 
-## Два execution paths
+## Два шляхи виконання
+
+### Прямий сценарій
 
 ```text
-Direct: User → Use Case / Command → Domain → State → Result / Event
-
-Automation: Business Event → Rule / Agent → Action Proposal → Policy → Execution → Result / Audit
+Користувач
+    ↓
+Варіант використання / команда
+    ↓
+Домен
+    ↓
+Зміна стану
+    ↓
+Результат / подія
 ```
+
+### Автоматизація за подією
+
+```text
+Бізнес-подія
+    ↓
+Правило / агент
+    ↓
+Пропозиція дії
+    ↓
+Політика дозволу
+    ↓
+Виконання
+    ↓
+Результат / аудит
+```
+
+Перший шлях потрібен для звичайної операції, яку безпосередньо ініціює користувач або програмний інтерфейс. Другий застосовується, коли факт у системі має запустити правило, агента або іншу керовану автоматизацію.
 
 ## Архітектурна формула
 
 ```text
-Kernel         = HOW execution works
-Domain         = WHAT business concept means and WHY rules exist
-Application    = orchestration of a concrete business use case
-Infrastructure = technical implementation behind ports
-Interface      = delivery surface
-Bootstrap      = composition root
+Ядро (Kernel)            = ЯК працює виконання
+Домен (Domain)           = ЩО означає бізнес-поняття і ЧОМУ діють правила
+Рівень застосунку        = оркестрація конкретної бізнес-операції
+Інфраструктура           = технічна реалізація за портами взаємодії
+Інтерфейс                = спосіб доставки взаємодії до системи
+Початкове збирання       = місце композиції залежностей
 ```
 
-Kernel `0.11.8` дає shared mechanisms для Event/Outbox, Rules, Agents, Actions, Policies, Approvals, Queue, Audit, Tenancy, Modules, LLM governance, resilience та observability.
+Ядро версії `0.11.8` надає спільні механізми для подій і вихідної черги (Outbox), правил, агентів, дій, політик, погоджень, черг, аудиту, багатокористувацької ізоляції, модулів, керування мовними моделями, стійкості до помилок і спостережуваності.
 
-## Поточні installable Domains
+## Поточні встановлювані домени
+
+| Домен | Версія | Роль |
+| --- | --- | --- |
+| Sales | `0.8.6` | еталонний повний модуль виконання для продажів |
+| Diagnostic | `0.6.1` | модуль діагностики бізнесу |
+| Property | `0.12.0` | реєстр нерухомості, комерційні пропозиції, публікації, аналітика й зовнішня взаємодія |
+
+Точні факти генеруються з декларацій поточного `main`. Деталі: [поточний стан COS](../01-product/current-scope.md).
+
+## Канонічна гілка
 
 ```text
-Sales       0.8.6   reference runtime Domain
-Diagnostic  0.6.1   executable diagnostic runtime
-Property    0.10.0  asset registry + inventory + listing + intelligence + network
+main = код + тести + декларації + документація + вхідні дані для згенерованого довідника + CI/CD
 ```
 
-Exact facts генеруються з current `main` manifests. Деталі: [Current COS Scope](../01-product/current-scope.md).
+`main` є спільною канонічною гілкою для виконуваного коду та документації. Твердження про поточний стан мають підтверджуватися кодом, тестами, деклараціями або згенерованим технічним довідником цього самого коміту.
 
-## Canonical branch
+## Куди далі
 
-```text
-main = executable code + tests + docs + generated-reference inputs + CI/deploy metadata
-```
-
-AS-IS твердження повинні підтверджуватися current `main` commit.
+Для розуміння логіки системи перейдіть до [ментальної моделі COS](./mental-model.md). Для поточного фактичного стану модулів відкрийте [поточний стан COS](../01-product/current-scope.md), а для архітектурного огляду — [карту системи](../03-architecture/system-map.md).

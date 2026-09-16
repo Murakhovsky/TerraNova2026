@@ -1,80 +1,82 @@
 ---
-title: Current COS Scope
-description: Фактичний product та architecture scope поточного main.
+title: Поточний стан COS
+description: Фактичний продуктовий та архітектурний обсяг поточного main.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: product
 ---
 
-# Current COS Scope
+# Поточний стан COS
 
-Ця сторінка описує **AS-IS executable reality поточного `main`**.
+Ця сторінка описує **фактично реалізований стан (AS-IS)** поточного `main`, а не дорожню карту або бажаний майбутній стан.
 
-## Executable baseline
+## Базовий виконуваний стан
 
-| Component | Version | Runtime/module status |
+| Компонент | Версія | Поточний стан |
 | --- | --- | --- |
-| Kernel | `0.11.8` | executable platform contract |
-| Sales | `0.8.6` | full runtime module / reference domain |
-| Diagnostic | `0.6.1` | installable runtime module with API routes and event consumer |
-| Property | `0.12.0` | installable runtime module with canonical Asset/Inventory/Listing writes, compatibility projection, analytics, intelligence and external network interoperability |
+| Kernel | `0.11.8` | виконуваний контракт платформи |
+| Sales | `0.8.6` | повний модуль середовища виконання та еталонний домен |
+| Diagnostic | `0.6.1` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
+| Property | `0.12.0` | встановлюваний модуль із канонічними записами Asset/Inventory/Listing, сумісним представленням, аналітикою, інтелектом і зовнішньою взаємодією |
 
-Machine-readable metadata: [Module and Capability Reference](../12-reference/module-capabilities.md).
+Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
 
-## Sales
+## Sales: продажі та попит
 
-Sales володіє demand lifecycle: Leads, Client Cases/Deals, pipelines, activities, follow-ups, Sales automation, governance, operational read models і Sales-facing integration contracts.
+Sales володіє життєвим циклом попиту: зверненнями (Leads), справами клієнтів та угодами, воронками, активностями, наступними діями, автоматизацією продажів, правилами керування, операційними представленнями для читання та контрактами інтеграцій, потрібними продажам.
 
-## Diagnostic
+## Diagnostic: діагностика бізнесу
 
-Diagnostic володіє methodology/session/evidence/evaluation/recommendation lifecycle. У `0.6.x` він має runtime module service, API route contributor, event consumer і persistent diagnostic runtime.
+Diagnostic володіє життєвим циклом методології, сесії, фактів, оцінювання та рекомендацій. У гілці `0.6.x` він має сервіс модуля середовища виконання, внесок маршрутів API, споживач подій і постійний діагностичний стан.
 
-## Property
+## Property: нерухомість
 
-Property `0.12.0` є canonical runtime для real-estate assets:
+Property `0.12.0` є канонічним середовищем виконання для активів нерухомості.
 
 ```text
-Property Asset
-├─ identity / provenance / verification
-├─ CREATE / MERGE / REVIEW identity workflow + audit
-├─ canonical legacy aliases
-├─ structure / location / relations
-├─ Inventory
-├─ Listing / Publication
-├─ history + domain events
-├─ analytics
-├─ evidence-linked intelligence
-└─ external Property Network + RESO adapter boundary
+Property Asset — актив нерухомості
+├─ ідентичність / походження / перевірка
+├─ CREATE / MERGE / REVIEW — створення / об’єднання / перевірка ідентичності + аудит
+├─ канонічні псевдоніми для сумісності зі старою моделлю
+├─ структура / розташування / зв’язки
+├─ Inventory — комерційний облік
+├─ Listing / Publication — оголошення / публікація
+├─ історія + події домену
+├─ аналітика
+├─ інтелект із прив’язкою до доказів
+└─ зовнішня мережа Property Network + межа адаптера RESO
 ```
 
-Основна runtime direction:
+Основний шлях виконання:
 
 ```text
 Web / API / Spatial
         ↓
-canonical Property runtime
+канонічне середовище виконання Property
         ↓
 Asset / Inventory / Listing / Publication
         ↓
-EventBus / history
+шина подій / історія
         ↓
-legacy compatibility projection
+проєкція сумісності зі старою моделлю
 ```
 
-Комерційний стан відділений від фізичного Property через Inventory. Publication відділена від Inventory через Listing/Publication model. `tn_properties` більше не є authoritative write model для Asset/Inventory/Listing state: Web mutation paths і Spatial tour publication входять через canonical runtime, а legacy table підтримується як transitional projection/read surface. Legacy media/group/read helpers поки залишаються compatibility infrastructure там, де canonical surface ще не потрібна.
+Комерційний стан відділений від фізичного об’єкта нерухомості через Inventory. Публікація відділена від Inventory через моделі Listing і Publication.
 
-## Supporting areas
+`tn_properties` більше не є основною моделлю запису для стану Asset/Inventory/Listing. Шляхи зміни даних у вебінтерфейсі та публікація просторового туру входять через канонічне середовище виконання, а стара таблиця підтримується як перехідна проєкція й поверхня читання. Допоміжні механізми старої моделі для медіа, груп і читання поки залишаються там, де канонічна поверхня ще не потрібна.
 
-Identity, Content і Spatial існують як supporting bounded areas, але їхня runtime/module maturity не обов'язково дорівнює трьом installable Domains вище.
+## Допоміжні предметні області
 
-## Truth rule
+Identity, Content і Spatial існують як окремі допоміжні області відповідальності, але їхня зрілість як модулів середовища виконання не обов’язково дорівнює трьом встановлюваним доменам вище.
+
+## Правило правдивості
 
 ```text
-current main code/tests/manifests
+поточний код / тести / декларації main
         ↓
-generated reference
+згенерований технічний довідник
         ↓
-human-readable current scope
+пояснювальна сторінка поточного стану
 ```
 
-Roadmap/TARGET не видається за AS-IS.
+Цільовий стан (TARGET) і дорожня карта не описуються як уже реалізована поведінка.

@@ -1,33 +1,31 @@
 ---
-title: Repository Map
-description: Карта executable COS codebase та окремого documentation surface у main.
+title: Карта репозиторію
+description: Карта виконуваного коду COS, документації та їхніх основних архітектурних меж у main.
 status: active
-updated: 2026-09-14
+updated: 2026-09-16
 kind: reference
 ---
 
-# Repository Map
+# Карта репозиторію
 
-Ця сторінка пояснює, **де шукати сенс і реалізацію**, а не намагається переписати `tree` команду красивішими літерами.
+Ця сторінка пояснює, **де шукати бізнес-смисл і його реалізацію**, а не намагається переписати дерево файлів красивішими літерами.
 
-## Branch contract
+## Контракт гілки
 
-У документації та executable code різні canonical branches:
+`main` є спільною канонічною гілкою для коду та документації:
 
 ```text
-COS
-├── app/            executable product
-├── tests/          executable verification
-├── docs generators / generated reference authority
-└── ...
-
 main
-└── docs/           canonical narrative documentation + WEB publication
+├── app/            виконуваний продукт
+├── tests/          перевірка поведінки та архітектури
+├── docs/           пояснювальна документація
+├── docs/.vitepress генератори та перевірки документації
+└── ...             конфігурація, CI/CD та допоміжні інструменти
 ```
 
-Тому `main` не є «legacy application» у документаційному mental model. Він є publication branch для knowledge layer. Product AS-IS читаємо з `COS`.
+Твердження про поточний стан мають підтверджуватися кодом, тестами, деклараціями або згенерованим довідником того самого коміту `main`.
 
-## Верхній рівень executable architecture
+## Верхній рівень архітектури
 
 ```text
 app/
@@ -40,52 +38,51 @@ app/
 
 tests/
 bin/
+docs/
 ```
 
-Думати про це варто так:
+Ментальна модель:
 
 ```text
-Interfaces     приймають зовнішню взаємодію
-Application    оркеструє use case
-Domain         визначає business meaning
-Kernel         дає execution mechanisms
-Infrastructure реалізує technical adapters
-Bootstrap      збирає все разом
+Interfaces      приймають зовнішню взаємодію
+Application     оркеструє варіант використання
+Domain          визначає бізнес-смисл
+Kernel          дає універсальні механізми виконання
+Infrastructure  реалізує технічні адаптери
+Bootstrap       збирає залежності разом
 ```
 
 ## `app/Kernel`
 
-Kernel містить generic platform/runtime mechanisms.
+Ядро (Kernel) містить універсальні механізми платформи та середовища виконання (runtime), які не повинні залежати від конкретної бізнес-семантики.
 
-Основні families:
+Основні сімейства механізмів:
 
 ```text
-Action
-Agent
-Approval
-Audit
-Configuration
-Database / Transaction support
-Event
-Llm
-Module
-Observability
-Operations
-Policy
-Queue
-Resilience
-Rule
-Tenant
-Transaction
+Action          дії
+Agent           агенти
+Approval        погодження
+Audit           аудит
+Configuration   конфігурація
+Database        підтримка бази даних
+Event           події
+Llm             мовні моделі
+Module          модулі
+Observability   спостережуваність
+Operations      експлуатаційні механізми
+Policy          політики
+Queue           черги
+Resilience      стійкість до помилок
+Rule            правила
+Tenant          ізоляція організацій
+Transaction     транзакції
 ```
 
-Головне правило: Kernel не повинен залежати від конкретної Sales/Property/Diagnostic business semantics.
-
-Якщо в Kernel з'являється щось на кшталт `if ($domain === 'sales')`, десь архітектура вже тихенько плаче.
+Якщо в ядрі з’являється логіка на кшталт `if ($domain === 'sales')`, десь архітектура вже тихенько плаче.
 
 ## `app/Domains`
 
-Поточний `COS` фізично містить:
+Поточний `main` фізично містить:
 
 ```text
 Content/
@@ -96,11 +93,11 @@ Sales/
 Spatial/
 ```
 
-Але це **не список однаково зрілих installable modules**.
+Це не означає, що всі ці області мають однакову зрілість або однаковий контракт модуля.
 
-### Installable modules
+### Встановлювані модулі
 
-Наявний `module.php`:
+Власний `module.php` мають:
 
 ```text
 Sales/
@@ -108,9 +105,9 @@ Diagnostic/
 Property/
 ```
 
-Їхні exact versions і contributions генеруються у [Module and Capability Reference](../12-reference/module-capabilities.md).
+Їхні точні версії та внески до системи генеруються у [довіднику модулів і можливостей](../12-reference/module-capabilities.md).
 
-### Supporting bounded areas
+### Допоміжні предметні області
 
 ```text
 Identity/
@@ -118,11 +115,11 @@ Content/
 Spatial/
 ```
 
-Вони вже відокремлені від delivery layer, але в поточному `COS` не мають того самого installable module contract.
+Вони вже мають окрему відповідальність, але не обов’язково використовують той самий контракт встановлюваного модуля.
 
-## Sales structure
+## Структура Sales
 
-Sales є найкращим reference для повного Domain layout:
+Sales є найповнішим прикладом структури домену:
 
 ```text
 Domains/Sales/
@@ -148,11 +145,11 @@ Domains/Sales/
 └── README.md
 ```
 
-Не кожен Domain зобов'язаний мати всі ці директорії. Structure має слідувати реальній відповідальності, а не корпоративному культу порожніх папок.
+Назви директорій є частиною коду й не перекладаються. Не кожен домен зобов’язаний мати всі ці директорії: структура має слідувати реальній відповідальності, а не корпоративному культу порожніх папок.
 
-## Diagnostic structure
+## Структура Diagnostic
 
-Diagnostic організований навколо своєї methodology/evidence problem space:
+Diagnostic організований навколо методології, фактів і оцінювання:
 
 ```text
 Domains/Diagnostic/
@@ -168,47 +165,29 @@ Domains/Diagnostic/
 └── module.php
 ```
 
-Це хороший приклад того, чому Domains не повинні механічно копіювати Sales directory tree.
+Це хороший приклад того, чому домени не повинні механічно копіювати дерево Sales.
 
-## Property structure
+## Структура Property
 
-У поточному `COS` Property компактніший:
-
-```text
-Domains/Property/
-├── Model/
-├── Application/
-│   ├── Contract/
-│   ├── Service/
-│   └── UseCase/
-├── Infrastructure/
-│   ├── Persistence/
-│   ├── Presentation/
-│   └── ReadModel/
-└── module.php
-```
-
-Property already has a rich application contract surface, але його installable/runtime maturity ще нижча за Sales.
+Property розвинений навколо реєстру нерухомості, комерційних пропозицій, публікацій та інтеграцій. Точна структура змінюється разом із доменом, тому для конкретних класів і варіантів використання орієнтуйтеся на [документацію Property](../04-domains/property/overview.md) та згенерований довідник.
 
 ## `app/Infrastructure`
 
-Root Infrastructure містить **shared technical implementations**, наприклад provider clients, LLM transport, framework adapters, security, observability, media, integration plumbing.
+Коренева інфраструктура містить спільні технічні реалізації: клієнти зовнішніх постачальників, транспорт до мовних моделей, адаптери каркаса, безпеку, спостережуваність, медіа та інші технічні механізми.
 
-Правило залежностей:
+Напрям залежності:
 
 ```text
 Infrastructure
-    ↓ may implement
-Domain / Kernel contracts
+    ↓ реалізує
+контракти Domain / Kernel
 ```
 
-але не навпаки.
-
-Domain-owned persistence також може жити всередині самого Domain, якщо це краще відображає ownership.
+але не навпаки. Домен не повинен залежати від конкретного зовнішнього постачальника лише тому, що сьогодні саме він реалізує потрібну функцію.
 
 ## `app/Interfaces`
 
-Delivery layer:
+Шар доставки взаємодії:
 
 ```text
 Interfaces/
@@ -219,139 +198,95 @@ Interfaces/
 └── Shared/
 ```
 
-Типовий flow:
+Типовий шлях:
 
 ```text
-HTTP / Telegram / CLI input
+HTTP / Telegram / CLI
     ↓
-Interface adapter
+адаптер інтерфейсу
     ↓
-Application use case / runtime
+варіант використання / середовище виконання
     ↓
-Domain
+домен
 ```
 
-Controller не є місцем для domain transitions, SQL, provider selection або «тимчасової» business logic, яка чомусь переживає три роки.
+Контролер не є місцем для переходів бізнес-стану, SQL, вибору зовнішнього постачальника або «тимчасової» бізнес-логіки, яка чомусь переживає три роки.
 
 ## `app/Bootstrap`
 
-Bootstrap є composition root.
-
-Тут дозволено бачити concrete implementations і зв'язувати:
+Bootstrap є коренем композиції (composition root). Тут дозволено бачити конкретні реалізації та зв’язувати залежності:
 
 ```text
-Domain contract
+контракт домену
     ↓
-Infrastructure adapter
+інфраструктурний адаптер
 
-Module contribution
+внесок модуля
     ↓
-Kernel registry
+реєстр ядра
 
-Interface
+інтерфейс
     ↓
-Application/runtime service
+сервіс застосунку / середовища виконання
 ```
 
-Business class не повинен сам лазити у global DI container в пошуках того, хто сьогодні реалізує його dependency.
+Бізнес-клас не повинен сам ходити в глобальний контейнер залежностей у пошуках того, хто сьогодні реалізує його потребу.
 
-## Де лежить documentation
+## Де лежить документація
 
-Canonical human-readable content:
+Канонічний пояснювальний корпус:
 
 ```text
 main:/docs/
 ```
 
-Основні sections:
+Основні розділи:
 
 ```text
-00-start            onboarding / mental model
-01-product          current product scope
-02-workflows        business workflows
-03-architecture     system boundaries
-04-domains          domain documentation
-05-runtime          execution mechanisms
-06-ai-agents        AI / Agent model
-07-api-integrations integration surfaces
-08-ui               interfaces/documentation WEB
-09-development      developer rules/how-to
-10-operations       build/deployment/operations
-11-decisions        ADR
-12-reference        generated/exact reference
+for-business        для бізнесу та користувачів
+for-integrators     для фахівців із впровадження
+for-developers      вхід у технічну документацію
+00-start            базова технічна модель
+01-product          продукт і поточний стан
+02-workflows        бізнес-процеси
+03-architecture     архітектура й межі
+04-domains          документація доменів
+05-runtime          механізми виконання
+06-ai-agents        ШІ та агенти
+07-api-integrations API та інтеграції
+08-ui               інтерфейси
+09-development      правила розробки
+10-operations       експлуатація
+11-decisions        архітектурні рішення
+12-reference        згенерований і точний довідник
 ```
 
-`public/docs` є build artifact, не source of truth.
-
-## Generated reference
-
-Якщо потрібно дізнатися **точний executable список**, не шукайте його по narrative pages.
-
-Починайте з:
-
-- [Module and Capability Reference](../12-reference/module-capabilities.md)
-- [Module Extension Points](../12-reference/extension-points.md)
-- [Application Use Cases](../12-reference/application-use-cases.md)
-- [Event Types](../12-reference/event-types.md)
-- [Command DTO Reference](../12-reference/commands.md)
-- [Module Routes](../12-reference/module-routes.md)
-- [Permissions & Capabilities](../12-reference/permissions-capabilities.md)
+`public/docs` є результатом збірки, а не джерелом правди.
 
 ## Як знайти код за бізнес-задачею
 
-Не починайте з назви класу. Починайте з ownership.
+Не починайте з назви класу. Починайте з того, хто володіє бізнес-смислом:
 
 ```text
-Business question
+Бізнес-питання
     ↓
-Workflow
+Бізнес-процес
     ↓
-Owning Domain
+Домен-власник
     ↓
-Application Use Case / Automation
+Варіант використання / автоматизація
     ↓
-Contract / Event
+Контракт / подія
     ↓
-Infrastructure Adapter
+Інфраструктурний адаптер
     ↓
-Interface
-```
-
-### Приклад: Sales follow-up
-
-```text
-Sales workflow
-→ Domains/Sales/Application або Automation
-→ Sales Event / Action / Policy
-→ Kernel execution mechanism
-→ outbound Contract
-→ Infrastructure adapter
-```
-
-### Приклад: Property submission
-
-```text
-Property workflow
-→ Domains/Property/Application/UseCase
-→ Property Application contracts
-→ Infrastructure/Persistence
-→ delivery Interface
-```
-
-### Приклад: Diagnostic recommendation
-
-```text
-Diagnostic workflow
-→ Methodology / Session / Evidence
-→ Evaluation
-→ AI boundary when needed
-→ Result / Recommendation
+Інтерфейс
 ```
 
 ## Три правила навігації
 
-1. **Meaning before implementation.** Спочатку Domain/Workflow, потім class.
-2. **Generated facts before copied tables.** Exact versions/events/routes дивимося у Reference.
-3. **COS before main for executable truth.** `main:/docs` пояснює код, але не підміняє його.
+1. **Спочатку зміст, потім реалізація.** Спершу домен і бізнес-процес, потім клас.
+2. **Спочатку згенеровані факти, потім скопійовані таблиці.** Точні версії, події та маршрути дивимося у технічному довіднику.
+3. **Один коміт для істини.** Код і документація поточного стану мають відповідати одному `main`.
 
-Ці три правила економлять дивовижну кількість часу, який інакше йде на вивчення того, чому файл із назвою `ManagerService` керує зовсім не тим, чим здається.
+Ці правила економлять дивовижну кількість часу, який інакше йде на вивчення того, чому файл із назвою `ManagerService` керує зовсім не тим, чим здається.

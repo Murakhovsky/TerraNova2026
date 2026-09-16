@@ -1,90 +1,92 @@
 ---
-title: COS Reading Paths
-description: Short, role-oriented routes through COS documentation for understanding, building and operating the system.
+title: Маршрути читання COS
+description: Короткі маршрути документацією COS для розуміння, розробки та експлуатації системи.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: concept
 ---
 
-# COS Reading Paths
+# Маршрути читання COS
 
 Документацію не треба читати від першої сторінки до останньої. Це не роман, і навіть у романах люди іноді пропускають нудні глави.
 
-## Understand COS
+## Зрозуміти COS
 
-Для продукту, архітектора або нового розробника:
+Для продуктового фахівця, архітектора або нового розробника:
 
 ```text
-What is COS
+Що таке COS
   ↓
-Mental Model
+Ментальна модель
   ↓
-Current Scope
+Поточний стан
   ↓
-System Map
+Карта системи
   ↓
-Business Workflow
+Бізнес-процес
   ↓
-Domain Model
+Модель домену
   ↓
-Runtime Lifecycle
+Життєвий цикл виконання
 ```
 
-Почніть з [What is COS](./what-is-cos.md), потім [Mental Model](./mental-model.md) і [System Map](../03-architecture/system-map.md).
+Почніть із [«Що таке COS»](./what-is-cos.md), потім перейдіть до [ментальної моделі](./mental-model.md) і [карти системи](../03-architecture/system-map.md).
 
-## Build with COS
+## Розробляти COS
 
 Для розробника, який змінює систему:
 
 ```text
-Local Setup
+Локальний запуск
   ↓
-Repository Map
+Карта репозиторію
   ↓
-Domain / Module boundary
+Межа домену або модуля
   ↓
-Workflow or Agent
+Бізнес-процес або агент
   ↓
-Integration
+Інтеграція
   ↓
-Testing
+Тестування
   ↓
-Generated Reference / docs check
+Згенерований довідник / перевірка документації
 ```
 
 <div class="cos-system-map">
   <div class="cos-map-layer">
-    <div class="cos-map-title">Build route</div>
+    <div class="cos-map-title">Маршрут розробки</div>
     <div class="cos-map-grid">
-      <a class="cos-map-node" href="../09-development/local-setup.html"><strong>Local Setup</strong><span>Run runtime and documentation locally.</span></a>
-      <a class="cos-map-node" href="../09-development/adding-a-domain.html"><strong>Add Domain</strong><span>Create a semantic owner and its boundaries.</span></a>
-      <a class="cos-map-node" href="../09-development/adding-a-module.html"><strong>Add Module</strong><span>Package runtime contributions without moving ownership.</span></a>
-      <a class="cos-map-node" href="../09-development/adding-a-workflow.html"><strong>Add Workflow</strong><span>Connect business goal, Domain, Runtime, UI and code.</span></a>
-      <a class="cos-map-node" href="../09-development/adding-an-agent.html"><strong>Add Agent</strong><span>Introduce governed decision logic.</span></a>
-      <a class="cos-map-node" href="../09-development/adding-an-integration.html"><strong>Add Integration</strong><span>Keep provider details behind ports and adapters.</span></a>
-      <a class="cos-map-node" href="../09-development/testing.html"><strong>Testing</strong><span>Verify architecture, behavior and docs integrity.</span></a>
+      <a class="cos-map-node" href="../09-development/local-setup.html"><strong>Локальний запуск</strong><span>Запустити систему та документацію локально.</span></a>
+      <a class="cos-map-node" href="../09-development/adding-a-domain.html"><strong>Додати домен</strong><span>Створити семантичного власника бізнес-поведінки та його межі.</span></a>
+      <a class="cos-map-node" href="../09-development/adding-a-module.html"><strong>Додати модуль</strong><span>Підключити внесок у середовище виконання без перенесення бізнес-відповідальності.</span></a>
+      <a class="cos-map-node" href="../09-development/adding-a-workflow.html"><strong>Додати бізнес-процес</strong><span>Пов’язати бізнес-мету, домен, виконання, інтерфейс і код.</span></a>
+      <a class="cos-map-node" href="../09-development/adding-an-agent.html"><strong>Додати агента</strong><span>Додати контрольовану логіку прийняття рішень.</span></a>
+      <a class="cos-map-node" href="../09-development/adding-an-integration.html"><strong>Додати інтеграцію</strong><span>Сховати деталі зовнішнього постачальника за портами та адаптерами.</span></a>
+      <a class="cos-map-node" href="../09-development/testing.html"><strong>Тестування</strong><span>Перевірити архітектуру, поведінку та цілісність документації.</span></a>
     </div>
   </div>
 </div>
 
-## Operate COS
+## Експлуатувати COS
 
-Для deployment/operations задач:
+Для задач розгортання та експлуатації:
 
 ```text
-Current Scope
+Поточний стан
   ↓
-Module Readiness
+Готовність модулів
   ↓
-Data & Migrations
+Дані та міграції
   ↓
-Audit / Diagnostics
+Аудит / діагностика
   ↓
-Deployment-specific runbooks
+Експлуатаційні інструкції
 ```
 
-Почніть з [Current Scope](../01-product/current-scope.md), [Module Readiness](../10-operations/module-readiness.md) та [Data & Migrations](../10-operations/data-and-migrations.md).
+Почніть із [поточного стану](../01-product/current-scope.md), [готовності модулів](../10-operations/module-readiness.md) та [даних і міграцій](../10-operations/data-and-migrations.md).
 
-## Verify exact facts
+## Перевірити точні факти
 
-Якщо питання звучить «які саме events/routes/capabilities/use cases є зараз?», не шукайте відповідь у narrative page. Ідіть у [Generated Reference](../12-reference/README.md).
+Якщо питання звучить «які саме події, маршрути, можливості або варіанти використання є зараз?», не шукайте відповідь у пояснювальній сторінці. Ідіть у [згенерований технічний довідник](../12-reference/README.md).
+
+Пояснювальна документація відповідає на «що це означає» і «чому так». Згенерований довідник відповідає на «що саме існує в поточному коді».
