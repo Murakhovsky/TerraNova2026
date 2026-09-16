@@ -41,6 +41,7 @@ $viewRoot = $root . '/app/Interfaces/Web/View';
 $inlineAssetExceptions = [
     'app/Interfaces/Web/View/property/pdf.phtml',
 ];
+$violations = [];
 $views = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($viewRoot, FilesystemIterator::SKIP_DOTS),
 );
@@ -56,7 +57,7 @@ foreach ($views as $view) {
 
     $source = (string) file_get_contents($view->getPathname());
     if (preg_match('/<style\b/i', $source) === 1) {
-        throw new RuntimeException('Inline CSS is forbidden in ordinary Web views; move it to frontend feature ownership: ' . $relativePath);
+        $violations[] = 'Inline CSS: ' . $relativePath;
     }
 
     if (preg_match_all('/<script\b([^>]*)>/i', $source, $scripts, PREG_SET_ORDER)) {
@@ -67,9 +68,16 @@ foreach ($views as $view) {
             if (preg_match('/\bsrc\s*=/i', $script[1]) === 1) {
                 continue;
             }
-            throw new RuntimeException('Inline browser JavaScript is forbidden in ordinary Web views; move it to a Vite entrypoint: ' . $relativePath);
+            $violations[] = 'Inline browser JavaScript: ' . $relativePath;
+            break;
         }
     }
+}
+
+if ($violations !== []) {
+    throw new RuntimeException(
+        "Ordinary Web views must remain asset-pure. Violations:\n - " . implode("\n - ", $violations)
+    );
 }
 
 $assets = (new ViteAssetManifest($manifestPath))->assets($entries);
