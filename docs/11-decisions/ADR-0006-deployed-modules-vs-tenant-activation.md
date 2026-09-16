@@ -1,17 +1,17 @@
 ---
-title: ADR-0006 — Deployed module discovery is separate from tenant activation
+title: ADR-0006 — Deployed modules і tenant activation є різними станами
 status: accepted
-updated: 2026-09-12
+updated: 2026-09-16
 kind: decision
 ---
 
-# Context
+# Контекст
 
 У multi-tenant COS наявність module code у deployment не означає, що module встановлений, current, enabled або operationally ready для конкретної organization.
 
 Якщо discovery, installation, configuration і request-time availability звести до одного boolean `enabled`, deployment та tenant lifecycle стають нерозрізненими. Це особливо небезпечно під час upgrades і schema migrations.
 
-# Decision
+# Рішення
 
 **Deployed module catalog і tenant-specific activation/lifecycle є окремими станами.**
 
@@ -19,7 +19,7 @@ kind: decision
 
 ```text
 deployed      module definition є в ModuleCatalog
-installed     існує/допускається installation state для organization
+installed     існує installation state для organization
 current       installed code/schema versions узгоджені з deployed manifest
 configured    tenant configuration просить module enable
 active        effective resolver дозволяє module з урахуванням dependencies
@@ -28,18 +28,18 @@ ready         operational diagnostic не бачить schema/version/dependency
 
 `ActiveModuleResolver` визначає request-time availability. `ModuleReadinessDiagnostic` є read-only control-plane diagnostic і не запускає migrations.
 
-# Rationale
+# Обґрунтування
 
 Розділення потрібне, щоб:
 
-- deploy code без автоматичного ввімкнення feature для всіх tenants;
+- deploy code без автоматичного ввімкнення capability для всіх tenants;
 - робити staged installation/upgrade;
 - бачити version/schema drift;
 - не запускати migrations у звичайному request path;
 - коректно блокувати module, якщо dependency недоступний;
-- підтримувати pre-lifecycle tenants через explicit compatibility semantics.
+- підтримувати compatibility semantics для історичних tenants.
 
-# Alternatives considered
+# Розглянуті альтернативи
 
 ## Module exists in code = module active
 
@@ -53,7 +53,7 @@ ready         operational diagnostic не бачить schema/version/dependency
 
 Відхилено: migration I/O та schema mutation не повинні бути hidden side effect normal runtime access.
 
-# Consequences
+# Наслідки
 
 Позитивні:
 
@@ -65,16 +65,16 @@ ready         operational diagnostic не бачить schema/version/dependency
 Вартість:
 
 - більше lifecycle states;
-- UI/admin повинні показувати їх окремо;
+- UI/admin мають показувати їх окремо;
 - deployment tooling має синхронізувати manifest, installation і migrations.
 
-# Compatibility / Migration
+# Сумісність і міграція
 
-Для pre-lifecycle tenants відсутність explicit installation record може трактуватися як deployment-current compatibility state, доки tenant не отримав explicit lifecycle record. Це compatibility behavior, а не модель для нових installations.
+Для pre-lifecycle tenants compatibility behavior може відрізнятися від нових installations, але нові control-plane features мають описувати стан явно.
 
-Нові control-plane features повинні використовувати readiness diagnostic для пояснення стану, але runtime authorization/access завжди використовує normal module resolver/guards.
+Readiness diagnostic використовується для пояснення operational state, тоді як runtime authorization/access завжди проходить normal module resolver/guards.
 
-# Verification
+# Перевірка
 
 Readiness classification розрізняє:
 
@@ -86,9 +86,9 @@ Readiness classification розрізняє:
 - `DISABLED`;
 - `READY`.
 
-Diagnostic не виконує migrations і не повертає raw DB errors.
+Diagnostic не виконує migrations, не повертає raw DB errors і не замінює runtime module guard.
 
-# Related
+# Пов’язані матеріали
 
 - `docs/10-operations/module-readiness.md`
 - `docs/03-architecture/extension-runtime.md`

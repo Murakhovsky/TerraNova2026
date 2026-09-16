@@ -1,21 +1,21 @@
 ---
-title: ADR-0004 — Modules own extension contributions; shared layers do not hardcode Domains
+title: ADR-0004 — Modules володіють extension contributions, shared layers не hardcode-ять Domains
 status: accepted
-updated: 2026-09-12
+updated: 2026-09-16
 kind: decision
 ---
 
-# Context
+# Контекст
 
-COS Domains мають додавати API routes, tenant configuration, Web navigation та інші surfaces. Центральний shared bootstrap із ручним списком `Sales`, `Property`, `Diagnostic`, ... створює compile-time знання про конкретні Domains і робить кожне розширення зміною platform layer.
+COS Domains мають додавати API routes, tenant configuration, Web navigation, event consumers та інші surfaces. Центральний shared bootstrap із ручним списком `Sales`, `Property`, `Diagnostic`, ... створює compile-time знання про конкретні Domains і робить кожне розширення зміною platform layer.
 
-Kernel V0.9 ввів generic extension runtime.
+Generic extension runtime усуває цю залежність.
 
-# Decision
+# Рішення
 
 **Module декларує власні extension contributions через module contract, а shared runtime збирає їх через `ModuleExtensionRegistry`.**
 
-Поточний pattern:
+Канонічний pattern:
 
 ```text
 module.php / ModuleContributions
@@ -31,26 +31,32 @@ service resolution
 organization/module guard where required
 ```
 
-Стандартні extension points включають:
+Поточні extension points включають:
 
 - `api.routes`;
 - `tenant.configuration`;
-- `web.navigation` як module-owned custom extension.
+- `event.consumers`;
+- `web.navigation`.
+
+Точний список і contributors генерує [Module Extension Points](../12-reference/extension-points.md).
 
 Kernel знає extension point + service id, але не hardcode-ить implementation конкретного Domain.
 
-# Rationale
+`cross_domain_contracts` є окремим механізмом і не вважається extension point: він описує allowed Domain-to-Domain boundaries, а не підключення shared surface.
 
-Це дає справжню modularity всередині modular monolith:
+# Обґрунтування
+
+Це дає реальну modularity усередині modular monolith:
 
 - новий Domain може додати surface через manifest/contribution;
-- Web/API/config consumers не потребують `if sales`/`if property`;
+- Web/API/config consumers не потребують `if sales` / `if property`;
 - module activation залишається tenant-aware;
-- extension contracts можна перевіряти окремо від business semantics.
+- extension contracts можна перевіряти окремо від business semantics;
+- shared layer не росте разом із кількістю Domains.
 
-# Alternatives considered
+# Розглянуті альтернативи
 
-## Central arrays у Bootstrap/Web
+## Центральні arrays у Bootstrap/Web
 
 Відхилено: прості спочатку, але кожен Domain змінює shared assembly і створює hidden coupling.
 
@@ -60,9 +66,9 @@ Kernel знає extension point + service id, але не hardcode-ить implem
 
 ## Service discovery за naming convention
 
-Відхилено: implicit discovery гірше контролюється, складніше валідовується і робить ownership неявним.
+Відхилено: implicit discovery складніше валідовується і робить ownership неявним.
 
-# Consequences
+# Наслідки
 
 Позитивні:
 
@@ -75,25 +81,30 @@ Kernel знає extension point + service id, але не hardcode-ить implem
 
 - extension point names стають довгоживучими contracts;
 - service ids/contributions мають бути валідними;
-- consumer повинен чітко визначити activation/authorization semantics.
+- consumer має чітко визначити activation/authorization semantics.
 
-# Compatibility / Migration
+# Сумісність і міграція
 
-Hardcoded Domain contributor assembly у shared Web/API/bootstrap code має мігрувати до module contributions. Existing global route registration може залишатися, якщо request-time module guard не дозволяє використати surface для неактивного module.
+Hardcoded Domain contributor assembly у shared Web/API/bootstrap code має мігрувати до module contributions.
 
-# Verification
+Existing global route registration допускається лише там, де runtime guards та ownership не створюють паралельну систему доступності.
 
-`ModuleExtensionRegistry`:
+Cross-domain interactions мігрують не в extension registry, а в `cross_domain_contracts` або Event/read-projection boundaries.
 
-- збирає standard і custom extension points;
-- відхиляє invalid extension point names;
-- відхиляє duplicate contribution для того самого module/service;
-- не містить business-specific branching.
+# Перевірка
 
-Architecture/CI guards мають не дозволяти повертати hardcoded Domain navigation/route assembly у shared layers.
+`ModuleExtensionRegistry` має:
 
-# Related
+- збирати built-in і module-defined extension points;
+- відхиляти invalid extension point names;
+- відхиляти duplicate contribution для одного `moduleId + extensionPoint + serviceId`;
+- не містити business-specific branching.
+
+Architecture/CI guards не повинні дозволяти повернення hardcoded Domain navigation/route assembly у shared layers.
+
+# Пов’язані матеріали
 
 - `docs/03-architecture/extension-runtime.md`
-- `docs/08-ui/interface-surfaces.md`
+- `docs/03-architecture/cross-domain-contracts.md`
+- `docs/08-ui/navigation-and-permissions.md`
 - `app/Kernel/Module/ModuleExtensionRegistry.php`

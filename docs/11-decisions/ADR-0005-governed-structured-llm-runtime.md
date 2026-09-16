@@ -1,17 +1,17 @@
 ---
-title: ADR-0005 — Structured LLM access uses centralized governance runtime
+title: ADR-0005 — Structured LLM access проходить через централізований governance runtime
 status: accepted
-updated: 2026-09-12
+updated: 2026-09-16
 kind: decision
 ---
 
-# Context
+# Контекст
 
-COS має кілька LLM consumers: Agent runtime, Diagnostic AI та майбутні domain-specific structured inference use cases. Якщо кожен Domain напряму вибирає provider/model, реалізує retry і рахує cost окремо, platform втрачає контроль над бюджетами, reliability та traceability.
+COS має кілька LLM consumers: Agent runtime, Diagnostic AI та майбутні Domain-specific structured inference use cases. Якщо кожен Domain напряму вибирає provider/model, реалізує retry і рахує cost окремо, platform втрачає контроль над budgets, reliability та traceability.
 
-Kernel V0.10 виніс provider-neutral inference governance у `Kernel\\Llm`.
+Provider-neutral inference governance винесено в `Kernel\Llm` і є частиною поточного Kernel runtime.
 
-# Decision
+# Рішення
 
 **Structured LLM calls проходять через centralized governed runtime.**
 
@@ -37,9 +37,9 @@ Governance context може містити:
 - model hint;
 - token/output constraints.
 
-Domain залишається власником prompt, response schema та business interpretation. Infrastructure залишається власником concrete HTTP/provider transport і secrets.
+Domain залишається власником prompt, response schema та business interpretation. Infrastructure володіє concrete HTTP/provider transport і secrets.
 
-# Rationale
+# Обґрунтування
 
 Централізація потрібна для:
 
@@ -48,50 +48,52 @@ Domain залишається власником prompt, response schema та bu
 - controlled fallback;
 - provider/model replacement без зміни Domain semantics;
 - unified cost/token/latency telemetry;
-- correlation між inference та business execution.
+- correlation між inference та business execution;
+- централізованого застосування reliability та governance rules.
 
-# Alternatives considered
+# Розглянуті альтернативи
 
 ## Direct provider client у кожному Domain
 
 Відхилено: дублює retry/accounting/configuration і дозволяє Domain обходити platform policy.
 
-## LLM abstraction тільки всередині Agent runtime
+## LLM abstraction лише всередині Agent runtime
 
-Відхилено: не кожний structured LLM use case є Agent. Diagnostic AI є окремим domain use case.
+Відхилено: не кожний structured LLM use case є Agent. Diagnostic AI є окремим Domain use case.
 
-## Один глобально hardcoded provider/model
+## Один globally hardcoded provider/model
 
 Відхилено: не дає use-case routing, fallback та еволюції provider strategy.
 
-# Consequences
+# Наслідки
 
 Позитивні:
 
-- єдиний governance point;
+- єдина governance point;
 - tenant cost visibility;
 - explicit reliability semantics;
 - provider-neutral Domain/Agent code.
 
-Вартість/обмеження:
+Вартість і обмеження:
 
-- shared runtime стає критичним dependency для LLM consumers;
+- shared runtime стає critical dependency для LLM consumers;
 - routing/budget configuration потребує operational discipline;
-- current budget check базується на already accumulated spend і не є hard pre-paid reservation поточного request.
+- budget control має чітко визначати, чи перевіряє accumulated spend, reservation або іншу модель accounting;
+- provider outage має локалізуватися через routing/fallback rules, а не поширюватися як business decision.
 
-# Fallback rule
+# Правило fallback
 
-Fallback дозволений лише для failure, явно класифікованого як retryable, і лише якщо routing policy має наступний route.
+Fallback дозволений лише для failure, класифікованого як retryable, і лише якщо routing policy має наступний route.
 
-Configuration/model errors не повинні тихо маскуватися іншим provider.
+Configuration/model/schema errors не повинні тихо маскуватися іншим provider.
 
-# Compatibility / Migration
+# Сумісність і міграція
 
-Existing provider-specific gateways мають адаптуватися до `StructuredLlmClientInterface`/governed client, а не переносити provider selection у Domain.
+Provider-specific gateways адаптуються до shared structured LLM boundary замість перенесення provider selection у Domain.
 
-Agent runtime використовує adapter до shared structured LLM boundary; Diagnostic AI використовує ту саму governance layer без перетворення Diagnostic use case на Agent.
+Agent runtime і Diagnostic AI використовують той самий governance layer, але зберігають різну Domain semantics та власні schemas/prompts.
 
-# Verification
+# Перевірка
 
 Перевіряються:
 
@@ -101,10 +103,12 @@ Agent runtime використовує adapter до shared structured LLM bounda
 - retryable/non-retryable fallback behavior;
 - usage/cost/latency recording;
 - propagation organization/use-case/correlation context;
+- schema validation;
 - відсутність provider secrets у Domain model.
 
-# Related
+# Пов’язані матеріали
 
 - `docs/06-ai-agents/llm-governance.md`
+- `docs/06-ai-agents/llm-boundary.md`
 - `docs/06-ai-agents/agent-runtime.md`
 - `app/Kernel/Llm/`

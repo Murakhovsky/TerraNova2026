@@ -1,19 +1,19 @@
 ---
-title: ADR-0003 — Agents propose actions, they do not mutate state directly
+title: ADR-0003 — Agents пропонують Actions і не мутують state напряму
 status: accepted
-updated: 2026-09-12
+updated: 2026-09-16
 kind: decision
 ---
 
-# Context
+# Контекст
 
 COS використовує LLM-based Agents для interpretation, prioritization і reasoning. Якщо Agent отримує прямий доступ до repositories, integration adapters або Action executors, probabilistic decision і mutation зливаються в одну неконтрольовану boundary.
 
-Тоді неможливо надійно застосувати policy, human approval, idempotency та audit до AI-рішень.
+Тоді неможливо надійно застосувати Policy, human approval, idempotency та Audit до AI-рішень.
 
-# Decision
+# Рішення
 
-**Agent є decision component і може створювати лише validated ActionProposal.**
+**Agent є decision component і може створювати лише validated `ActionProposal`.**
 
 Канонічний path:
 
@@ -40,21 +40,21 @@ Agent не може напряму:
 - самостійно схвалювати власну дію;
 - обходити Policy через tool/provider call.
 
-# Rationale
+# Обґрунтування
 
 Це відділяє probabilistic reasoning від deterministic authority.
 
-Вигоди:
+Переваги:
 
 - одна governance model для AI і deterministic automation;
 - deny/approval rules працюють незалежно від model/provider;
 - structured output можна відхилити до mutation;
-- кожна виконана дія має чітку causal trace;
-- model replacement не змінює authorization semantics.
+- кожна виконана дія має causal trace;
+- заміна model/provider не змінює authorization semantics.
 
-# Alternatives considered
+# Розглянуті альтернативи
 
-## Direct tool calling with mutation authority
+## Direct tool calling із mutation authority
 
 Відхилено як default: provider/tool semantics фактично ставали б authorization layer.
 
@@ -62,15 +62,15 @@ Agent не може напряму:
 
 Відхилено: дублював би Kernel Policy/Approval runtime.
 
-## Заборонити Agents і використовувати тільки Rules
+## Лише Rules без Agents
 
-Відхилено: Rule недостатній для неоднозначного language/context reasoning.
+Відхилено: Rule недостатній для неоднозначного language/context reasoning, де потрібна інтерпретація.
 
-# Consequences
+# Наслідки
 
 Позитивні:
 
-- сильний human/control boundary;
+- сильна human/control boundary;
 - testable proposals;
 - provider-independent safety;
 - повний audit execution path.
@@ -79,13 +79,15 @@ Agent не може напряму:
 
 - більше lifecycle steps;
 - потенційно вища latency;
-- action vocabulary та schemas мають бути явними.
+- action vocabulary і schemas мають бути явними.
 
-# Compatibility / Migration
+# Сумісність і міграція
 
-Усі нові Agent capabilities повинні інтегруватися через `AgentResult`/proposal path. Якщо legacy AI code виконує mutation без Policy, він є migration target, а не допустимим альтернативним runtime.
+Усі нові Agent capabilities інтегруються через `AgentResult`/proposal path. Legacy AI code, який виконує mutation без Policy, є migration target, а не допустимим паралельним runtime.
 
-# Verification
+Tool permission є окремою authority boundary від здатності моделі сформувати tool call.
+
+# Перевірка
 
 Перевіряються:
 
@@ -93,10 +95,12 @@ Agent не може напряму:
 - structured decision validation;
 - unknown/forbidden proposal rejection;
 - Policy/Approval behavior після proposal;
-- відсутність direct Infrastructure/Action executor dependency в Agent code.
+- відсутність direct Infrastructure/Action executor dependency в Agent code;
+- auditability від Agent invocation до execution result.
 
-# Related
+# Пов’язані матеріали
 
 - `docs/06-ai-agents/agent-runtime.md`
 - `docs/06-ai-agents/llm-governance.md`
 - `docs/05-runtime/execution-lifecycle.md`
+- `docs/05-runtime/policies-and-approvals.md`

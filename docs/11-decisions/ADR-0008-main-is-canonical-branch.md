@@ -1,17 +1,17 @@
 ---
-title: ADR-0008 — main is the canonical branch
+title: ADR-0008 — main є канонічною гілкою
 status: accepted
-updated: 2026-09-14
+updated: 2026-09-16
 kind: decision
 ---
 
-# Context
+# Контекст
 
-До 2026-09-14 executable code і documentation publication мали різні branch roles: `COS` використовувався як code authority, а `main` як documentation authority. Після злиття `COS` у `main` ця модель створювала штучний drift: CI мав checkout-ити дві гілки, generated reference синхронізувався між ними, а deploy runtime усе ще залежав від старої branch role.
+До 2026-09-14 executable code і documentation publication мали різні branch roles: `COS` використовувався як code authority, а `main` як documentation authority. Після злиття `COS` у `main` така модель створювала штучний drift: CI мав checkout-ити дві гілки, generated reference синхронізувався між ними, а deployment усе ще залежав від старої branch role.
 
-# Decision
+# Рішення
 
-`main` є єдиною canonical development branch для COS.
+**`main` є єдиною canonical development branch для COS.**
 
 ```text
 main
@@ -19,63 +19,67 @@ main
 ├─ tests
 ├─ module manifests
 ├─ migrations
+├─ Process Registry
 ├─ documentation generators
 ├─ narrative documentation
-├─ generated reference input/output
+├─ generated reference
 └─ CI / deployment metadata
 ```
 
-AS-IS documentation перевіряється проти того самого commit SHA, з якого вона збирається. Generated reference будується локально з `main`, без checkout або sync із `COS`.
+AS-IS documentation перевіряється проти того самого commit SHA, з якого вона збирається. Generated reference будується з current checkout `main`, без checkout або sync із `COS`.
 
-# Rationale
+# Обґрунтування
 
 - один commit описує одну executable reality;
 - немає cross-branch generated-reference drift;
 - code і docs можуть змінюватися атомарно;
+- Process Registry, manifests і narrative docs бачать один tree;
 - CI простіший і дешевший;
 - deploy semantics відповідають development semantics;
 - стару `COS` можна зберігати як historical branch, але вона більше не є authority.
 
-# Alternatives considered
+# Розглянуті альтернативи
 
-## Залишити COS як code branch, main як docs branch
+## `COS` як code branch, `main` як docs branch
 
-Відхилено після merge: це змушувало б штучно підтримувати дві канонічні лінії після того, як код уже об'єднано.
+Відхилено після merge: це вимагало б штучно підтримувати дві канонічні лінії після фактичного об’єднання коду.
 
-## Генерувати reference в COS і копіювати в main
+## Генерувати reference в `COS` і копіювати в `main`
 
 Відхилено: generated facts повинні походити з того самого tree, який проходить tests і deployment.
 
-# Consequences
+# Наслідки
 
 Позитивні:
 
-- `main` стає єдиною точкою інтеграції;
+- `main` є єдиною точкою інтеграції;
 - docs generators читають current code напряму;
-- pull requests і pushes у `main` перевіряють code/docs разом;
-- branch badges, links і operational docs більше не потребують спеціальної двогілкової моделі.
+- pushes/PRs перевіряють code/docs разом;
+- branch badges, links і operational docs не потребують двогілкової моделі;
+- документаційний drift стає звичайною помилкою одного commit, а не міжгілковою археологією.
 
 Operational constraint:
 
-- GitHub Environment `AWS TN2026` має дозволяти deployment із `main`; branch protection environment не є частиною repository code і налаштовується в GitHub settings.
+- GitHub Environment `AWS TN2026` має дозволяти deployment із `main`; environment protection є repository-external configuration і не визначається самим code tree.
 
-# Compatibility / Migration
+# Сумісність і міграція
 
-- старий `sync-generated-reference.mjs` видаляється;
-- `docs:generate` знову запускає PHP generators локально;
-- Docs CI більше не checkout-ить `COS`;
-- runtime deployment trigger переходить на `main`;
+- старі cross-branch sync scripts не є canonical pipeline;
+- `docs:generate` запускає generators у current checkout;
+- Docs CI не checkout-ить `COS` як source authority;
+- runtime/docs deployment triggers орієнтуються на `main`;
 - narrative docs і System Map показують `main` як code/docs authority.
 
-# Verification
+# Перевірка
 
 - `npm run docs:generate` працює з current checkout;
-- `npm run docs:generate:check` проходить після generation;
-- `npm run docs:check` звіряє Kernel/module facts із current checkout;
-- `npm run docs:build` генерує `/public/docs` з current checkout;
-- runtime CI/deploy запускається з `main`.
+- generated-reference drift gate проходить;
+- `npm run docs:generate:check` проходить;
+- `npm run docs:check` звіряє Kernel/module/process facts із current checkout;
+- `npm run docs:build` генерує `/public/docs` із current checkout;
+- runtime CI/deploy запускається з `main` відповідно до workflow configuration.
 
-# Related
+# Пов’язані матеріали
 
 - `docs/10-operations/documentation-build.md`
 - `docs/09-development/documentation-rules.md`
