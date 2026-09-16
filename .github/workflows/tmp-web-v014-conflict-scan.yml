@@ -1,0 +1,33 @@
+name: Temporary WEB V0.14 conflict scan
+
+on:
+  push:
+    branches:
+      - automation/web-v014-lock
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/web-v014-lock
+          fetch-depth: 0
+      - name: Scan merge conflicts against main
+        run: |
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "CONFLICT_FILES_BEGIN"
+            git diff --name-only --diff-filter=U
+            echo "CONFLICT_FILES_END"
+            git merge --abort || true
+            exit 1
+          fi
+          git merge --abort || true
+          echo "No conflicts."
