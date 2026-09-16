@@ -119,26 +119,26 @@ function renderModules(array $modules, string $kernelVersion): string
 {
     $lines = [
         '---',
-        'title: Module and Capability Reference',
-        'description: Generated reference з module manifests та declared capabilities.',
+        'title: Модулі та capabilities',
+        'description: Згенерований довідник із module manifests та задекларованих capabilities.',
         'status: generated',
         'kind: reference',
         'generated: true',
         '---',
         '',
-        '<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->',
+        '<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУЙТЕ ВРУЧНУ. Запустіть `npm run docs:generate`. -->',
         '',
-        '# Module and Capability Reference',
+        '# Модулі та capabilities',
         '',
         '> Джерело істини: `app/Domains/*/module.php` та `app/Kernel/Module/KernelVersion.php`.',
         '',
-        '## Kernel contract version',
+        '## Версія контракту Kernel',
         '',
         sprintf('`Kernel\\Module\\KernelVersion::VERSION = %s`.', $kernelVersion),
         '',
-        '## Registered modules',
+        '## Зареєстровані модулі',
         '',
-        '| ID | Name | Version | Schema | Kernel constraint | Default | Dependencies | Source |',
+        '| ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |',
         '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ];
 
@@ -150,7 +150,7 @@ function renderModules(array $modules, string $kernelVersion): string
             table((string) $module['version']),
             table((string) ($module['schema_version'] ?? '1.0.0')),
             table((string) ($module['kernel_constraint'] ?? '*')),
-            !empty($module['enabled_by_default']) ? 'yes' : 'no',
+            !empty($module['enabled_by_default']) ? 'так' : 'ні',
             table(dependencySummary($module)),
             table((string) $module['_source']),
         );
@@ -165,16 +165,16 @@ function renderModules(array $modules, string $kernelVersion): string
         $lines[] = sprintf('## %s (`%s`)', (string) $module['name'], (string) $module['id']);
         $lines[] = '';
         if (isset($module['description']) && is_string($module['description']) && $module['description'] !== '') {
-            $lines[] = $module['description'];
+            $lines[] = '**Опис із manifest:** ' . $module['description'];
             $lines[] = '';
         }
-        $lines[] = sprintf('- runtime module service: %s;', $runtimeService);
-        $lines[] = sprintf('- job handlers: %s;', inlineList(stringList($contributions['job_handler_services'] ?? [])));
-        $lines[] = sprintf('- API route contributors: %s;', inlineList(stringList($contributions['api_route_contributor_services'] ?? [])));
-        $lines[] = sprintf('- configuration provisioners: %s;', inlineList(stringList($contributions['configuration_provisioner_services'] ?? [])));
-        $lines[] = sprintf('- migrations: %s.', inlineList(stringList($contributions['migration_files'] ?? [])));
+        $lines[] = sprintf('- runtime service модуля: %s;', $runtimeService);
+        $lines[] = sprintf('- обробники jobs: %s;', inlineList(stringList($contributions['job_handler_services'] ?? [])));
+        $lines[] = sprintf('- внески API routes: %s;', inlineList(stringList($contributions['api_route_contributor_services'] ?? [])));
+        $lines[] = sprintf('- постачальники конфігурації: %s;', inlineList(stringList($contributions['configuration_provisioner_services'] ?? [])));
+        $lines[] = sprintf('- міграції: %s.', inlineList(stringList($contributions['migration_files'] ?? [])));
         $lines[] = '';
-        $lines[] = '### Declared capabilities';
+        $lines[] = '### Задекларовані capabilities';
         $lines[] = '';
 
         $capabilities = stringList($contributions['capabilities'] ?? []);
@@ -189,9 +189,9 @@ function renderModules(array $modules, string $kernelVersion): string
     }
 
     $lines[] = '';
-    $lines[] = '## Scope';
+    $lines[] = '## Межі довідника';
     $lines[] = '';
-    $lines[] = 'Ця сторінка описує тільки факти з installable module manifests. Domain directories без `module.php` сюди не потрапляють. Capability enum або runtime authority можуть мати ширший vocabulary і повинні документуватися окремим generated reference.';
+    $lines[] = 'Ця сторінка описує тільки факти з installable module manifests. Domain directories без `module.php` сюди не потрапляють. Capability enum або runtime authority можуть мати ширший vocabulary і документуються окремим generated reference.';
     $lines[] = '';
 
     return implode("\n", $lines);
@@ -202,20 +202,20 @@ function renderExtensions(array $points): string
 {
     $lines = [
         '---',
-        'title: Module Extension Points',
-        'description: Generated registry of Kernel and module-defined extension points.',
+        'title: Точки розширення модулів',
+        'description: Згенерований registry точок розширення Kernel і module-defined extension points.',
         'status: generated',
         'kind: reference',
         'generated: true',
         '---',
         '',
-        '<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->',
+        '<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУЙТЕ ВРУЧНУ. Запустіть `npm run docs:generate`. -->',
         '',
-        '# Module Extension Points',
+        '# Точки розширення модулів',
         '',
         '> Джерело істини: `ModuleExtensionRegistry` та `extension_services` у `app/Domains/*/module.php`.',
         '',
-        '| Extension point | Kind | Contributions |',
+        '| Точка розширення | Тип | Внески |',
         '| --- | --- | ---: |',
     ];
 
@@ -227,7 +227,7 @@ function renderExtensions(array $points): string
         $lines[] = '';
         $lines[] = sprintf('## `%s`', $point);
         $lines[] = '';
-        $lines[] = sprintf('Kind: **%s**.', $definition['kind']);
+        $lines[] = sprintf('Тип: **%s**.', $definition['kind']);
         $lines[] = '';
 
         if ($definition['contributions'] === []) {
@@ -235,7 +235,7 @@ function renderExtensions(array $points): string
             continue;
         }
 
-        $lines[] = '| Module | Service |';
+        $lines[] = '| Модуль | Service |';
         $lines[] = '| --- | --- |';
         foreach ($definition['contributions'] as $contribution) {
             $lines[] = sprintf('| `%s` | `%s` |', table($contribution['module']), table($contribution['service']));
@@ -243,7 +243,7 @@ function renderExtensions(array $points): string
     }
 
     $lines[] = '';
-    $lines[] = '## Registration semantics';
+    $lines[] = '## Семантика реєстрації';
     $lines[] = '';
     $lines[] = 'Built-in points `api.routes` і `tenant.configuration` створюються Kernel registry з typed contribution lists. Інші точки реєструються через manifest `extension_services`. Runtime registry зберігає трійку `module_id + extension_point + service_id`.';
     $lines[] = '';

@@ -1,18 +1,18 @@
 ---
-title: Module Extension Points
-description: Generated registry of Kernel and module-defined extension points.
+title: Точки розширення модулів
+description: Згенерований registry точок розширення Kernel і module-defined extension points.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУЙТЕ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Module Extension Points
+# Точки розширення модулів
 
 > Джерело істини: `ModuleExtensionRegistry` та `extension_services` у `app/Domains/*/module.php`.
 
-| Extension point | Kind | Contributions |
+| Точка розширення | Тип | Внески |
 | --- | --- | ---: |
 | `api.routes` | built-in | 3 |
 | `event.consumers` | module-defined | 2 |
@@ -21,9 +21,9 @@ generated: true
 
 ## `api.routes`
 
-Kind: **built-in**.
+Тип: **built-in**.
 
-| Module | Service |
+| Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticRouteContributor` |
 | `property` | `propertyRouteContributor` |
@@ -31,32 +31,32 @@ Kind: **built-in**.
 
 ## `event.consumers`
 
-Kind: **module-defined**.
+Тип: **module-defined**.
 
-| Module | Service |
+| Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticActionOutcomeHandler` |
 | `sales` | `salesHistoricalEventConsumer` |
 
 ## `tenant.configuration`
 
-Kind: **built-in**.
+Тип: **built-in**.
 
-| Module | Service |
+| Модуль | Service |
 | --- | --- |
 | `property` | `propertyModuleConfigurationProvisioner` |
 | `sales` | `salesModuleConfigurationProvisioner` |
 
 ## `web.navigation`
 
-Kind: **module-defined**.
+Тип: **module-defined**.
 
-| Module | Service |
+| Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
-## Registration semantics
+## Семантика реєстрації
 
 Built-in points `api.routes` і `tenant.configuration` створюються Kernel registry з typed contribution lists. Інші точки реєструються через manifest `extension_services`. Runtime registry зберігає трійку `module_id + extension_point + service_id`.

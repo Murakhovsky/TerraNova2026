@@ -133,32 +133,32 @@ function renderPermissions(array $rows, array $catalogues): string
 
     $lines = [
         '---',
-        'title: Permissions and Capabilities',
-        'description: Generated comparison of runtime capability vocabularies and module manifest declarations.',
+        'title: Дозволи та capabilities',
+        'description: Згенероване порівняння runtime capability vocabularies і декларацій у module manifests.',
         'status: generated',
         'kind: reference',
         'generated: true',
         '---',
         '',
-        '<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->',
+        '<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУЙТЕ ВРУЧНУ. Запустіть `npm run docs:generate`. -->',
         '',
-        '# Permissions and Capabilities',
+        '# Дозволи та capabilities',
         '',
         '> Джерела істини: explicit runtime capability catalogues та `capabilities` у `app/Domains/*/module.php`.',
         '',
         'Ця сторінка навмисно **не виправляє** розбіжності між runtime vocabulary і module manifest. Вона робить drift видимим, щоб архітектурне рішення залишалося явним.',
         '',
-        '## Summary',
+        '## Підсумок',
         '',
-        '| Classification | Count | Meaning |',
+        '| Класифікація | Кількість | Значення |',
         '| --- | ---: | --- |',
         sprintf('| `both` | %d | Capability присутня і в runtime catalogue, і в manifest. |', $both),
         sprintf('| `runtime-only` | %d | Runtime може перевіряти capability, але manifest її не декларує. |', $runtimeOnly),
         sprintf('| `manifest-only` | %d | Manifest декларує capability, але explicit runtime catalogue її не містить. |', $manifestOnly),
         '',
-        '## Catalogue',
+        '## Каталог',
         '',
-        '| Module | Capability | Runtime | Manifest | Classification | Runtime source | Manifest source |',
+        '| Модуль | Capability | Runtime | Manifest | Класифікація | Runtime source | Manifest source |',
         '| --- | --- | --- | --- | --- | --- | --- |',
     ];
 
@@ -167,8 +167,8 @@ function renderPermissions(array $rows, array $catalogues): string
             '| `%s` | `%s` | %s | %s | `%s` | %s | %s |',
             table($row['module']),
             table($row['capability']),
-            $row['runtime'] ? 'yes' : 'no',
-            $row['manifest'] ? 'yes' : 'no',
+            $row['runtime'] ? 'так' : 'ні',
+            $row['manifest'] ? 'так' : 'ні',
             table($row['classification']),
             sourceCell($row['runtime_source']),
             sourceCell($row['manifest_source']),
@@ -176,11 +176,11 @@ function renderPermissions(array $rows, array $catalogues): string
     }
 
     $lines[] = '';
-    $lines[] = '## Runtime catalogue registry';
+    $lines[] = '## Реєстр runtime-каталогів';
     $lines[] = '';
     $lines[] = 'Runtime vocabularies підключаються до генератора **явно**, а не через regex-сканування PHP. Це робить джерело authority передбачуваним і не змушує documentation tooling вгадувати семантику довільних класів.';
     $lines[] = '';
-    $lines[] = '| Module | Symbol | Source |';
+    $lines[] = '| Модуль | Symbol | Джерело |';
     $lines[] = '| --- | --- | --- |';
     foreach ($catalogues as $catalogue) {
         $lines[] = sprintf(
@@ -192,7 +192,7 @@ function renderPermissions(array $rows, array $catalogues): string
     }
 
     $lines[] = '';
-    $lines[] = '## Interpretation';
+    $lines[] = '## Тлумачення';
     $lines[] = '';
     $lines[] = '- `runtime-only` не означає автоматично помилку: capability може бути внутрішньою authorization vocabulary і свідомо не входити до exposed module surface.';
     $lines[] = '- `manifest-only` також не виправляється генератором: це сигнал перевірити, чи існує runtime authority для задекларованого permission.';
