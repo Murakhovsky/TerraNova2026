@@ -1,5 +1,5 @@
 ---
-title: Sales: Lead → керований Client Case
+title: Sales Lead → Managed Case
 description: Канонічний Sales workflow від приймання попиту до керованого case/deal та циклу автоматизації.
 status: active
 updated: 2026-09-16
@@ -9,7 +9,7 @@ process_state: as-is
 process_id: sales.lead-to-managed-case
 ---
 
-# Sales: Lead → керований Client Case
+# Sales Lead → Managed Case
 
 ## Бізнес-мета
 
