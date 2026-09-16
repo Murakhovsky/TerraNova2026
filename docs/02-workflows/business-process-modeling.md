@@ -1,20 +1,22 @@
 ---
-title: Business Process Modeling
-description: Canonical rules for modeling real COS business processes with Process Registry, Domain capabilities, Mermaid and evidence-backed verification.
+title: Моделювання бізнес-процесів
+description: Канонічні правила моделювання реальних бізнес-процесів COS через Process Registry, Domain capabilities, Mermaid та evidence-backed verification.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: concept
 contract: concept-v1
 ---
 
-# Business Process Modeling
+# Моделювання бізнес-процесів
 
-COS documentation treats a business process as an operational model, not as decorative documentation. The canonical topology lives in the **Process Registry** and Mermaid is a derived projection. Visualization V0.5 separated business truth from runtime evidence; DOC V0.15 added the explicit bridge from each process step to its Domain capability; DOC V0.19.1 adds contract-guarded cross-domain steps.
+COS розглядає бізнес-процес як **операційну модель системи**, а не як декоративну діаграму в документації.
 
-## Source-of-truth chain
+Канонічна topology (топологія) процесу живе в **Process Registry**, а Mermaid та інші візуальні представлення є похідними проєкціями.
+
+## Ланцюжок джерел правди
 
 ```text
-Business meaning
+Бізнесовий зміст
         ↓
 Process Registry definition
 resources/processes/*.json
@@ -31,24 +33,24 @@ Capability coverage              Derived verification
                  Mermaid / VitePress
 ```
 
-A workflow page remains the human narrative around the process, but it does not manually duplicate the same core topology, ownership, capability claim or verification claim.
+Workflow page залишається людським поясненням процесу, але не дублює вручну його core topology, ownership, capability claims або verification claims.
 
-## Three independent dimensions
+## Три незалежні виміри
 
-### Business state
+### 1. Бізнесовий стан процесу
 
-Every canonical workflow page declares `process_state`, and the matching registry definition declares the same `state`.
+Кожна канонічна workflow page має `process_state`, а відповідне визначення Process Registry — поле `state` із тим самим значенням.
 
-| State | Meaning |
+| Стан | Значення |
 | --- | --- |
-| `as-is` | Реальний поточний бізнес-процес. Він може містити manual steps і не зобов'язаний бути повністю automated. |
-| `to-be` | Цільовий процес, який ще не можна читати як поточну поведінку компанії або COS. |
+| `as-is` | Реальний поточний бізнес-процес. Він може містити ручні кроки й не зобов’язаний бути повністю автоматизованим. |
+| `to-be` | Цільова модель, яку ще не можна читати як поточну поведінку компанії або COS. |
 
-`status` описує документ. `process_state` описує бізнес-процес.
+`status` описує стан документа. `process_state` описує стан бізнес-процесу.
 
-### Capability coverage
+### 2. Покриття можливостями
 
-Кожний step має explicit `domain` і одне з двох:
+Кожний step (крок) має явний `domain` і одне з двох:
 
 ```json
 {
@@ -57,7 +59,7 @@ Every canonical workflow page declares `process_state`, and the matching registr
 }
 ```
 
-або чесний gap:
+або чесно зафіксовану прогалину:
 
 ```json
 {
@@ -67,48 +69,52 @@ Every canonical workflow page declares `process_state`, and the matching registr
 }
 ```
 
-Capability вважається canonical лише тоді, коли вона оголошена module contribution у `app/Domains/*/module.php`. `check-processes.mjs` перевіряє це через current-checkout evidence catalogue, а не через generated Markdown.
+Capability вважається канонічною лише тоді, коли її оголошено в module contribution `app/Domains/*/module.php`.
 
-Capability gap не означає, що крок не реалізований. Він означає, що Domain capability vocabulary ще не описує цей business operation достатньо точно.
+`check-processes.mjs` перевіряє це через evidence catalogue поточного checkout, а не через згенерований Markdown.
 
-### Derived verification
+Capability gap не означає, що крок не реалізований. Він означає, що словник можливостей Domain ще не описує цю бізнес-операцію достатньо точно.
 
-Verification не записується в process JSON. Її рахує evidence resolver для current checkout.
+### 3. Похідна перевірка
 
-| Verification | Meaning |
+Verification не записується вручну в process JSON. Її обчислює evidence resolver для поточного checkout.
+
+| Рівень | Значення |
 | --- | --- |
-| `documented` | Process topology існує, але хоча б один critical step не має resolvable current-checkout evidence. |
-| `source-verified` | Кожен critical step має хоча б один mapping, підтверджений існуючим source/use case/command. |
-| `runtime-verified` | Кожен critical step має хоча б один mapping до canonical runtime/contract registry. |
+| `documented` | Топологія існує, але хоча б один critical step не має підтверджуваного evidence в поточному checkout. |
+| `source-verified` | Кожний critical step має хоча б один mapping, підтверджений source, Use Case або Command. |
+| `runtime-verified` | Кожний critical step має хоча б один mapping до канонічного runtime або contract registry. |
 
-`runtime-verified` означає structural runtime verification, а не observed production trace.
+`runtime-verified` означає структурну перевірку runtime, а не спостережуваний production trace.
 
-## Process Registry contract
+## Контракт Process Registry
 
-Кожен `workflow-v2` має matching JSON definition у `resources/processes/`.
+Кожний `workflow-v2` має відповідне JSON-визначення в `resources/processes/`.
 
-Schema `v4` лишається валідною для same-domain workflows. Schema `v5` додає contract-guarded cross-domain steps.
+Schema `v4` залишається валідною для same-domain workflows. Schema `v5` додає cross-domain steps, захищені контрактами.
 
 Process definition фіксує:
 
-- stable `id`;
-- process Domain;
-- business `state` (`as-is` або `to-be`);
-- trigger і outcomes;
+- стабільний `id`;
+- Domain процесу;
+- бізнесовий `state` (`as-is` або `to-be`);
+- trigger та outcomes;
 - actors;
 - steps;
 - primary `owner` кожного step;
-- step `domain`;
+- `domain` кожного step;
 - canonical `capability` або explicit `capability_gap`;
 - topology через `edges`;
 - `critical` transitions;
 - runtime/evidence mappings.
 
-Authored `verification` заборонений у всіх schema versions.
+Поле `verification`, задане автором, заборонене в усіх версіях schema.
 
-### Cross-domain step in schema v5
+### Cross-domain step у schema v5
 
-Process залишається owned одним root Domain, але окремий step може виконувати capability іншого Domain. Такий перехід не можна просто написати руками:
+Process залишається власністю одного root Domain, але окремий step може використовувати capability іншого Domain.
+
+Такий перехід не можна просто оголосити текстом:
 
 ```json
 {
@@ -124,9 +130,9 @@ Process залишається owned одним root Domain, але окреми
 }
 ```
 
-Checker дозволяє цей step лише коли current module evidence доводить, що process Domain декларує цей contract як `role: requires`, а `counterpart` дорівнює step Domain.
+Checker дозволяє цей step лише тоді, коли module evidence поточного checkout доводить, що Process Domain декларує цей contract із `role: requires`, а `counterpart` дорівнює Domain кроку.
 
-Для `sales.request-to-property-match` це означає:
+Для `sales.request-to-property-match`:
 
 ```text
 Sales process
@@ -136,9 +142,11 @@ Property / property.reference
 Sales Property Match
 ```
 
-Cross-domain execution не створює shared ownership. Property step використовує Property capability; Sales продовжує володіти самим process, Client Case і match relationship.
+Cross-domain execution не створює shared ownership. Property step використовує Property capability; Sales продовжує володіти процесом, Client Case і relationship Property Match.
 
-Workflow page рендерить три базові derived projections, а cross-domain workflow також Domain projection:
+## Канонічні представлення
+
+Кожна workflow page рендерить три базові проєкції, а cross-domain workflow додатково показує Domain projection:
 
 ```html
 <ProcessDiagram process-id="domain.process-id" />
@@ -147,48 +155,48 @@ Workflow page рендерить три базові derived projections, а cro
 <ProcessDiagram process-id="domain.process-id" view="domain" direction="LR" />
 ```
 
-## Current-checkout evidence catalogue
+### Основний бізнес-потік
 
-`generate-runtime-evidence.php` будує machine-readable catalogue напряму з current checkout.
+`ProcessDiagram(flow)` відповідає на питання **що за чим відбувається**.
 
-| Evidence type | Authority | Strength / role |
+### Представлення відповідальності
+
+`ProcessDiagram(ownership)` групує steps за primary responsible actor і відповідає на питання **хто відповідає**.
+
+### Представлення можливостей
+
+`ProcessDiagram(capability)` групує ті самі steps за canonical capability. Steps без semantic Domain capability показуються як явний `GAP`.
+
+Ця проєкція відповідає на питання **яку здатність Domain реалізує цим кроком і де capability model ще неповна**.
+
+### Представлення доменів
+
+`ProcessDiagram(domain)` групує steps за їхнім фактичним Domain. Для cross-domain workflow воно показує Domain hop із тієї самої topology без другої ручної Mermaid-схеми.
+
+### Sequence та state diagrams
+
+Sequence/state diagrams не можна чесно вивести лише з generic `steps + edges`.
+
+До появи структурованої interaction/state semantics вони можуть бути додатковими Mermaid-діаграмами, але не канонічними derived projections.
+
+## Каталог evidence поточного checkout
+
+`generate-runtime-evidence.php` будує machine-readable catalogue безпосередньо з поточного коду.
+
+| Тип evidence | Авторитетне джерело | Сила / роль |
 | --- | --- | --- |
 | `use_case` | Domain `Application/UseCase/*.php` | source |
 | `command` | Domain `Application/DTO/*Command.php` | source |
-| `source` | exact repository file + optional symbol | source |
+| `source` | точний файл репозиторію + optional symbol | source |
 | `event` | explicit Domain event catalogue | runtime |
 | `contract` | canonical `cross_domain_contracts` declaration | runtime |
 | `capability` | module `contributions.capabilities` | capability authority |
 
-Generated Markdown не є evidence для іншого generated Markdown. Checks і Reference споживають current-checkout authorities.
+Generated Markdown не є evidence для іншого generated Markdown. Checks і Reference споживають первинні джерела поточного checkout.
 
-## Canonical views
+## Покриття
 
-### Core business flow
-
-`ProcessDiagram(flow)` відповідає на питання **що за чим відбувається**.
-
-### Ownership view
-
-`ProcessDiagram(ownership)` групує steps за primary responsible actor і відповідає **хто відповідає**.
-
-### Capability view
-
-`ProcessDiagram(capability)` групує ті самі steps за canonical capability. Steps без semantic Domain capability групуються як explicit GAP.
-
-Ця проєкція відповідає **яку здатність Domain реалізує цим кроком і де capability model ще неповна**.
-
-### Domain view
-
-`ProcessDiagram(domain)` групує steps за їхнім actual Domain. Для cross-domain workflow ця проєкція показує Domain hop із того самого registry topology, без другої ручної Mermaid-схеми.
-
-### Interaction sequence і state lifecycle
-
-Sequence/state diagrams не можна чесно вивести лише з generic `steps + edges`. До появи structured interaction/state semantics вони можуть бути supplemental Mermaid, але не canonical derived projections.
-
-## Coverage
-
-Generated [Business Process Registry](../12-reference/business-processes.md) показує окремо:
+Generated [Business Process Registry](../12-reference/business-processes.md) окремо показує:
 
 - Ownership coverage;
 - Capability coverage;
@@ -202,25 +210,25 @@ Generated [Business Process Registry](../12-reference/business-processes.md) п�
 
 Це architecture/documentation coverage, а не KPI бізнесу.
 
-Поточний baseline навмисно показує різну зрілість Domain models: Property уже має semantic module capabilities для canonical workflows, тоді як Sales і Diagnostic мають runtime implementation без достатньо точного business-capability vocabulary.
+Поточна модель навмисно може показувати різну зрілість Domains: наприклад, Property уже має semantic module capabilities для канонічних workflows, тоді як Sales або Diagnostic можуть мати runtime implementation без достатньо точного business-capability vocabulary.
 
-## Modeling rules
+## Правила моделювання
 
 1. Core topology редагується в `resources/processes/*.json`, а не одночасно в JSON і Mermaid.
 2. Кожний step має одного primary `owner`.
-3. Кожний step має explicit `domain`.
+3. Кожний step має явний `domain`.
 4. Кожний step має canonical `capability` або explicit `capability_gap`.
-5. Capability не вигадується з class name, route чи permission «по сенсу».
-6. `state` містить лише business truth: `as-is` або `to-be`.
-7. Verification ніколи не авториться вручну.
+5. Capability не вигадується з class name, route або permission «за змістом».
+6. `state` містить лише бізнесову правду: `as-is` або `to-be`.
+7. Verification ніколи не задається вручну.
 8. Process має root, terminal і повну reachability.
-9. Human steps показуються нарівні з automated steps, якщо вони реальні.
+9. Реальні людські steps показуються нарівні з automated steps.
 10. Domain decisions відділяються від UI clicks і transport details.
-11. Cross-domain step використовує schema v5+, foreign Domain capability і verified `requires` contract від process Domain; shared ownership не створюється.
+11. Cross-domain step використовує schema `v5+`, capability чужого Domain і підтверджений `requires` contract від Process Domain.
 12. Exact command/event inventories не дублюються вручну, якщо існує canonical evidence catalogue.
-13. Sequence/state projections не генеруються з недостатньої семантики заради красивої картинки.
+13. Sequence/state projections не генеруються з недостатньої семантики лише заради красивої картинки.
 
-## Relationship to Architecture Explorer
+## Зв’язок із Architecture Explorer
 
 ```mermaid
 flowchart LR
@@ -233,10 +241,16 @@ flowchart LR
     F --> G
 ```
 
-Cytoscape показує **з чого COS складається і які capabilities/contracts належать Domains**. Process Registry + Mermaid показує **як робота рухається через ці capabilities і Domain boundaries, хто відповідає за steps і наскільки runtime твердження підтверджені current checkout**.
+Cytoscape показує **з чого складається COS і які capabilities/contracts належать Domains**.
 
-## Change discipline
+Process Registry + Mermaid показують **як робота рухається через ці capabilities і Domain boundaries, хто відповідає за steps і наскільки runtime claims підтверджені поточним checkout**.
 
-Зміна business flow, ownership, Domain hop або capability mapping починається з `resources/processes/*.json`. Зміна module capabilities/contracts або runtime implementation автоматично впливає на checks/coverage. `docs:check` перевіряє topology, ownership, capabilities, cross-domain contracts та evidence; generated Reference оновлює coverage; VitePress показує derived views.
+## Дисципліна змін
+
+Зміна business flow, ownership, Domain hop або capability mapping починається з `resources/processes/*.json`.
+
+Зміна module capabilities/contracts або runtime implementation автоматично впливає на checks і coverage.
+
+`docs:check` перевіряє topology, ownership, capabilities, cross-domain contracts та evidence; generated Reference оновлює coverage; VitePress показує derived views.
 
 Так документація стає перевірюваною моделлю системи, а не музеєм попередніх намірів.
