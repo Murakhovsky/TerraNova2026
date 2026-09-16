@@ -53,29 +53,29 @@ ksort($counts);
 
 $lines = [
     '---',
-    'title: Event Types',
-    'description: Generated reference of module-owned runtime event types.',
+    'title: Типи подій',
+    'description: Згенерований довідник типів runtime-подій, якими володіють модулі.',
     'status: generated',
     'kind: reference',
     'generated: true',
     '---',
     '',
-    '<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->',
+    '<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->',
     '',
-    '# Event Types',
+    '# Типи подій',
     '',
-    '> Джерело істини: explicit event catalogues у current checkout.',
+    '> Джерело істини: явні каталоги подій у поточному checkout.',
     '',
-    '## Summary',
+    '## Підсумок',
     '',
-    '| Module | Event types |',
+    '| Модуль | Типів подій |',
     '| --- | ---: |',
 ];
 foreach ($counts as $module => $count) $lines[] = "| `{$module}` | {$count} |";
 $lines[] = '';
-$lines[] = '## Catalogue';
+$lines[] = '## Каталог';
 $lines[] = '';
-$lines[] = '| Module | Event type | Symbol | Source | Runtime owner |';
+$lines[] = '| Модуль | Тип події | Символ | Джерело | Runtime-власник |';
 $lines[] = '| --- | --- | --- | --- | --- |';
 foreach ($rows as $row) {
     $lines[] = sprintf('| `%s` | `%s` | `%s` | `%s` | `%s` |', $row['module'], $row['event'], $row['symbol'], $row['source'], $row['owner']);

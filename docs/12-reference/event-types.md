@@ -1,27 +1,27 @@
 ---
-title: Event Types
-description: Generated reference of module-owned runtime event types.
+title: Типи подій
+description: Згенерований довідник типів runtime-подій, якими володіють модулі.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Event Types
+# Типи подій
 
-> Джерело істини: explicit event catalogues у current checkout.
+> Джерело істини: явні каталоги подій у поточному checkout.
 
-## Summary
+## Підсумок
 
-| Module | Event types |
+| Модуль | Типів подій |
 | --- | ---: |
 | `property` | 17 |
 | `sales` | 16 |
 
-## Catalogue
+## Каталог
 
-| Module | Event type | Symbol | Source | Runtime owner |
+| Модуль | Тип події | Символ | Джерело | Runtime-власник |
 | --- | --- | --- | --- | --- |
 | `property` | `property.asset.lifecycle_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.asset.location_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |

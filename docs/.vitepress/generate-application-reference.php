@@ -84,13 +84,13 @@ foreach ($outputs as $path => $content) {
 exit($failed ? 1 : 0);
 
 function renderUseCases(array $modules, array $useCases): string {
-    $lines = ['---','title: Application Use Cases','description: Generated index of module-owned Application/UseCase entry points.','status: generated','kind: reference','generated: true','---','','<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->','','# Application Use Cases','', '> Джерело істини: `app/Domains/*/Application/UseCase/*.php` у current checkout.','','## Summary','','| Module | Entry points |','| --- | ---: |'];
+    $lines = ['---','title: Сценарії використання Application','description: Згенерований індекс module-owned точок входу Application/UseCase.','status: generated','kind: reference','generated: true','---','','<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->','','# Сценарії використання Application','', '> Джерело істини: `app/Domains/*/Application/UseCase/*.php` у поточному checkout.','','## Підсумок','','| Модуль | Точок входу |','| --- | ---: |'];
     foreach ($modules as $id => $module) $lines[] = sprintf('| `%s` | %d |', $id, count($useCases[$id] ?? []));
     foreach ($modules as $id => $module) {
         $lines[] = ''; $lines[] = sprintf('## %s (`%s`)', $module['name'] ?? $id, $id); $lines[] = '';
         $entries = $useCases[$id] ?? [];
-        if ($entries === []) { $lines[] = 'Application UseCase entry points не знайдені.'; continue; }
-        $lines[] = '| Symbol | Source |'; $lines[] = '| --- | --- |';
+        if ($entries === []) { $lines[] = 'Точок входу Application UseCase не знайдено.'; continue; }
+        $lines[] = '| Символ | Джерело |'; $lines[] = '| --- | --- |';
         foreach ($entries as $entry) $lines[] = sprintf('| `%s` | `%s` |', $entry['symbol'], $entry['source']);
     }
     $lines[] = '';
@@ -98,7 +98,7 @@ function renderUseCases(array $modules, array $useCases): string {
 }
 
 function renderRoutes(array $modules, array $catalogues): string {
-    $lines = ['---','title: Module Routes','description: Generated ownership map for module API route contributors and route source files.','status: generated','kind: reference','generated: true','---','','<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->','','# Module Routes','', '> Джерело істини: module manifests + explicit route source registry у current checkout.','','| Module | Contributor | Route source files |','| --- | --- | ---: |'];
+    $lines = ['---','title: Маршрути модулів','description: Згенерована карта ownership для module API route contributors і файлів джерел маршрутів.','status: generated','kind: reference','generated: true','---','','<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->','','# Маршрути модулів','', '> Джерело істини: module manifests + явний registry джерел маршрутів у поточному checkout.','','| Модуль | Contributor | Файлів джерел маршрутів |','| --- | --- | ---: |'];
     foreach ($modules as $id => $module) {
         $services = array_values(array_filter(($module['contributions']['api_route_contributor_services'] ?? []), 'is_string'));
         $catalogue = $catalogues[$id] ?? null;
@@ -108,7 +108,7 @@ function renderRoutes(array $modules, array $catalogues): string {
         if (!isset($modules[$id])) continue;
         $lines[] = ''; $lines[] = "## `{$id}`"; $lines[] = '';
         $lines[] = "- contributor: `{$catalogue['contributor']}`;";
-        foreach ($catalogue['sources'] as $source) $lines[] = "- route source: `{$source}`;";
+        foreach ($catalogue['sources'] as $source) $lines[] = "- джерело маршрутів: `{$source}`;";
     }
     $lines[] = '';
     return implode("\n", $lines);

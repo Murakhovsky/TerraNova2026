@@ -64,24 +64,24 @@ function renderCommands(array $modules, array $commands): string
 {
     $lines = [
         '---',
-        'title: Command DTO Reference',
-        'description: Generated index of explicit module-owned Application DTO command contracts.',
+        'title: Довідник Command DTO',
+        'description: Згенерований індекс явних Application DTO command-контрактів, якими володіють модулі.',
         'status: generated',
         'kind: reference',
         'generated: true',
         '---',
         '',
-        '<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->',
+        '<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->',
         '',
-        '# Command DTO Reference',
+        '# Довідник Command DTO',
         '',
         '> Джерело істини: `app/Domains/*/Application/DTO/*Command.php` для зареєстрованих module manifests.',
         '',
-        'Цей catalogue документує тільки explicit command DTO contracts. Він навмисно не класифікує service methods, repositories або UseCase classes як Commands за назвою чи поведінкою.',
+        'Цей каталог документує лише явні command DTO contracts. Він навмисно не класифікує service methods, repositories або UseCase classes як Commands за назвою чи поведінкою.',
         '',
-        '## Summary',
+        '## Підсумок',
         '',
-        '| Module | Commands |',
+        '| Модуль | Commands |',
         '| --- | ---: |',
     ];
 
@@ -96,11 +96,11 @@ function renderCommands(array $modules, array $commands): string
 
         $entries = $commands[$moduleId] ?? [];
         if ($entries === []) {
-            $lines[] = 'Explicit `*Command` DTO contracts не знайдені.';
+            $lines[] = 'Явних `*Command` DTO contracts не знайдено.';
             continue;
         }
 
-        $lines[] = '| Command | Source |';
+        $lines[] = '| Command | Джерело |';
         $lines[] = '| --- | --- |';
         foreach ($entries as $entry) {
             $lines[] = sprintf('| `%s` | `%s` |', table($entry['symbol']), table($entry['source']));
@@ -108,9 +108,9 @@ function renderCommands(array $modules, array $commands): string
     }
 
     $lines[] = '';
-    $lines[] = '## Classification boundary';
+    $lines[] = '## Межа класифікації';
     $lines[] = '';
-    $lines[] = 'Назви на кшталт `ClientCaseCommandService` або `ClientCaseCommandRepositoryInterface` не потрапляють сюди: це services/contracts, а не command message DTO. Так само `Application/UseCase` документується окремим generated reference. Якщо COS пізніше введе typed Kernel Command contract, цей catalogue треба переключити на нього як на сильніший source of truth.';
+    $lines[] = 'Назви на кшталт `ClientCaseCommandService` або `ClientCaseCommandRepositoryInterface` не потрапляють сюди: це services/contracts, а не command message DTO. Так само `Application/UseCase` документується окремим згенерованим довідником. Якщо COS пізніше введе typed Kernel Command contract, цей каталог треба переключити на нього як на сильніше джерело істини.';
     $lines[] = '';
 
     return implode("\n", $lines);

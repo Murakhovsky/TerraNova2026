@@ -1,20 +1,20 @@
 ---
-title: Application Use Cases
-description: Generated index of module-owned Application/UseCase entry points.
+title: Сценарії використання Application
+description: Згенерований індекс module-owned точок входу Application/UseCase.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Application Use Cases
+# Сценарії використання Application
 
-> Джерело істини: `app/Domains/*/Application/UseCase/*.php` у current checkout.
+> Джерело істини: `app/Domains/*/Application/UseCase/*.php` у поточному checkout.
 
-## Summary
+## Підсумок
 
-| Module | Entry points |
+| Модуль | Точок входу |
 | --- | ---: |
 | `diagnostic` | 10 |
 | `property` | 2 |
@@ -22,7 +22,7 @@ generated: true
 
 ## Diagnostics (`diagnostic`)
 
-| Symbol | Source |
+| Символ | Джерело |
 | --- | --- |
 | `AcceptDiagnosticRecommendation` | `app/Domains/Diagnostic/Application/UseCase/AcceptDiagnosticRecommendation.php` |
 | `CancelDiagnosticSession` | `app/Domains/Diagnostic/Application/UseCase/CancelDiagnosticSession.php` |
@@ -37,14 +37,14 @@ generated: true
 
 ## Property (`property`)
 
-| Symbol | Source |
+| Символ | Джерело |
 | --- | --- |
 | `PropertyModerationService` | `app/Domains/Property/Application/UseCase/PropertyModerationService.php` |
 | `PropertySubmissionService` | `app/Domains/Property/Application/UseCase/PropertySubmissionService.php` |
 
 ## Sales (`sales`)
 
-| Symbol | Source |
+| Символ | Джерело |
 | --- | --- |
 | `AssignDealOwner` | `app/Domains/Sales/Application/UseCase/AssignDealOwner.php` |
 | `ChangeDealStage` | `app/Domains/Sales/Application/UseCase/ChangeDealStage.php` |
