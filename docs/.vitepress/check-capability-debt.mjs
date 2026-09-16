@@ -3,10 +3,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { loadRuntimeEvidence } from './process-runtime-evidence.mjs';
+import { loadProcessDefinitions } from './process-registry.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
-const processRoot = path.join(here, 'processes');
 const debtFile = path.join(here, 'capability-debt.json');
 const referenceIndex = path.join(docsRoot, '12-reference', 'README.md');
 const catalogue = loadRuntimeEvidence();
@@ -22,10 +22,7 @@ function fail(message) {
 
 function loadProcesses() {
   const definitions = new Map();
-  for (const name of fs.readdirSync(processRoot).filter((value) => value.endsWith('.json')).sort()) {
-    const definition = JSON.parse(fs.readFileSync(path.join(processRoot, name), 'utf8'));
-    definitions.set(definition.id, definition);
-  }
+  for (const definition of loadProcessDefinitions()) definitions.set(definition.id, definition);
   return definitions;
 }
 

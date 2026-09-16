@@ -27,13 +27,29 @@ process_id: TODO_PROCESS_ID
 
 <ProcessDiagram process-id="TODO_PROCESS_ID" />
 
-Основний business flow генерується з matching schema-v2 definition у `docs/.vitepress/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
+Основний business flow генерується з matching Process Registry definition у `resources/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
 
 ## Ownership view
 
 <ProcessDiagram process-id="TODO_PROCESS_ID" view="ownership" direction="LR" />
 
 Кожний registry step має оголосити primary responsible `owner`, який входить до `actors` process definition.
+
+## Capability view
+
+<ProcessDiagram process-id="TODO_PROCESS_ID" view="capability" direction="LR" />
+
+Кожний step має canonical Domain capability або explicit capability gap.
+
+## Domain view
+
+Для schema-v5 процесу з cross-domain steps додайте:
+
+```html
+<ProcessDiagram process-id="TODO_PROCESS_ID" view="domain" direction="LR" />
+```
+
+Cross-domain step допустимий лише через verified `requires` contract від process Domain до step Domain.
 
 ## Decision points
 
