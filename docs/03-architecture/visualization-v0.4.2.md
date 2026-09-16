@@ -1,20 +1,26 @@
 ---
-title: Visualization V0.4.2 — Cross-Domain Dependency Audit
-description: Machine-readable cross-domain contract topology and CI enforcement for COS bounded-context boundaries.
+title: Visualization V0.4.2 — аудит міждоменних залежностей
+description: Machine-readable topology cross-domain contracts і CI enforcement для меж bounded contexts COS.
 status: implemented
 kind: architecture
-updated: 2026-09-15
+updated: 2026-09-16
 ---
 
-# Visualization V0.4.2 — Cross-Domain Dependency Audit
+# Visualization V0.4.2 — аудит міждоменних залежностей
 
-V0.4.2 closes a gap discovered by the Architecture Explorer: module `dependencies` describe module/runtime requirements, but they do not describe every legitimate business interaction between bounded contexts.
+V0.4.2 закрив прогалину, яку показав Architecture Explorer: module `dependencies` описують module/runtime requirements, але не всі легітимні business interactions між bounded contexts.
 
-A consumer-owned port must not be flattened into a generic `Domain A depends_on Domain B` edge. That loses ownership semantics and can manufacture circular module dependencies where the code actually uses dependency inversion correctly.
+Consumer-owned port не можна спрощувати до generic edge `Domain A depends_on Domain B`. Такий edge губить ownership semantics і може створити уявний circular module dependency там, де код коректно використовує dependency inversion.
 
-## Canonical model
+## Канонічна модель
 
-Cross-domain synchronous boundaries are declared in `ModuleContributions.cross_domain_contracts`:
+Cross-domain synchronous/integration boundaries декларуються в:
+
+```text
+ModuleContributions.cross_domain_contracts
+```
+
+Declaration містить:
 
 ```text
 contract
@@ -24,40 +30,44 @@ kind
 purpose
 ```
 
-The declaring module plus role resolves two semantic participants:
+Declaring module + role визначають semantic participants:
 
 ```text
 Consumer Domain ── requires_contract ──▶ Contract
 Provider Domain ── provides_contract ──▶ Contract
 ```
 
-The contract class namespace records vocabulary ownership separately from consumer/provider roles.
+Namespace contract class окремо фіксує vocabulary ownership. Runtime Visualization не сканує PHP source, щоб вигадати цю topology. Source scanning використовується лише як CI verification layer.
 
-Runtime Visualization never scans PHP source to invent this graph. Source scanning exists only in CI as a verification mechanism.
-
-## Current AS-IS contract topology
+## Поточна AS-IS topology
 
 ### Sales → Property
 
-`Domains\Property\Contract\PropertyReferencePort`
+```text
+Domains\Property\Contract\PropertyReferencePort
+```
 
-Sales requires the canonical Property reference boundary. Property remains authority for Property state.
+Sales `0.8.6` декларує `requires`; Property залишається authority для canonical Property state.
 
 ### Property → Sales
 
-`Domains\Property\Application\Contract\PresentationSalesInterface`
+```text
+Domains\Property\Application\Contract\PresentationSalesInterface
+```
 
-Property presentation requires Sales-owned client-case/share context. The port is consumer-owned by Property and implemented by Sales.
+Property `0.12.0` потребує Sales-owned client-case/share context для presentation workflows. Port consumer-owned з боку Property, але Sales зберігає ownership над своєю бізнес-семантикою.
 
 ### Spatial → Property
 
-`Domains\Spatial\Application\Contract\PropertyTourPublisherInterface`
+```text
+Domains\Spatial\Application\Contract\PropertyTourPublisherInterface
+```
 
-Spatial owns the publication boundary; Property provides canonical tour data through an adapter.
+Spatial володіє publication boundary, а Property декларує `provides` canonical tour data через integration adapter.
 
 ## Contracts projection
 
-Architecture Explorer adds a dedicated `Contracts` projection containing:
+Architecture Explorer має dedicated `Contracts` projection, яка містить:
 
 - Domain nodes;
 - Contract nodes;
@@ -65,49 +75,61 @@ Architecture Explorer adds a dedicated `Contracts` projection containing:
 - `requires_contract` consumer edges;
 - `provides_contract` provider edges.
 
-`Dependencies` also includes contract nodes, but ordinary `depends_on` remains reserved for module/runtime dependency evidence.
+`Dependencies` також може включати contract nodes, але ordinary `depends_on` залишається для module/runtime dependency evidence.
 
 ## CI audit
 
-`tests/architecture/cross_domain_dependency_audit.php` scans `app/Domains/*` and classifies every cross-domain class reference.
+`tests/architecture/cross_domain_dependency_audit.php` сканує `app/Domains/*` і класифікує кожний cross-domain class reference.
 
-Allowed:
+Дозволено:
 
-1. exact class declared as a canonical cross-domain contract;
-2. exact legacy debt entry listed in the audit allowlist.
+1. exact class, який оголошено canonical cross-domain contract;
+2. exact legacy debt entry з audit allowlist.
 
-Everything else fails CI.
+Інші direct cross-domain references падають у CI.
 
-The allowlist is deliberately exact by file and class. A folder named `Legacy` is not diplomatic immunity.
+Allowlist навмисно exact за file + class. Директорія з назвою `Legacy` не є дипломатичним імунітетом.
 
-## Known legacy debt
+## Поточний legacy debt
 
-The audit found seven explicit direct Infrastructure references concentrated in four old Telegram/Phalcon files:
+Audit досі містить сім explicit direct Infrastructure references у чотирьох старих Telegram/Phalcon files:
 
 - Sales `Shows.php` → Property `Objects`;
 - Sales `Shows.php` → Identity `AppUsers`;
-- Sales `Requests.php` → Identity `ListItems` and `Lists`;
+- Sales `Requests.php` → Identity `ListItems` і `Lists`;
 - Property `Objects.php` → Identity `ListItems`;
-- Property `ReObjects.php` → Identity `AppUsers` and `Lists`.
+- Property `ReObjects.php` → Identity `AppUsers` і `Lists`.
 
-These are tolerated only as named migration debt. New references of the same shape are rejected.
+Ці dependencies дозволені лише як named migration debt. Якщо allowlist entry перестає існувати в коді, audit вважає його stale і вимагає видалення. Нові references такого типу не дозволяються.
 
-## Why this matters for V0.5
+## Зв’язок із Process Registry
 
-Business Process Visualization can now reference canonical Domain and Contract nodes instead of redrawing integration semantics inside Mermaid source.
-
-The intended chain becomes:
+Після Process V0.1 cross-domain process step використовує ту саму contract topology, а не малює нову інтеграційну семантику в документації.
 
 ```text
-BusinessProcessDefinition
+resources/processes/*.json
         ↓
-Process / Runtime evidence
+step.domain != process.domain
         ↓
-Domain + Contract topology
+contract runtime mapping
         ↓
-Diagram projection
+module cross_domain_contracts
         ↓
-Mermaid / later BPMN
+target Domain capability
+        ↓
+ProcessDiagram / reference
 ```
 
-`AS-IS`, `TO-BE` and `RUNTIME-VERIFIED` remain process evidence states. They belong to the process model/projection, not to the Mermaid renderer.
+Schema `v5` вимагає structural `contract` mapping для foreign-Domain step, а evidence layer перевіряє, що process Domain реально декларує цей contract як `requires` до target Domain.
+
+## Чому це важливо
+
+Architecture Graph відповідає на питання:
+
+> Які cross-domain boundaries існують у COS?
+
+Process Registry відповідає:
+
+> Які реальні business processes використовують ці boundaries?
+
+Обидва шари спираються на один executable contract vocabulary. Mermaid/Cytoscape лише показують ці факти і не створюють власну версію істини.

@@ -1,14 +1,14 @@
 ---
-title: Cross-Domain Contracts
-description: Правила взаємодії bounded contexts у COS без розмивання ownership.
+title: Міждоменні контракти
+description: Правила взаємодії bounded contexts у COS без розмивання ownership та прямого доступу до чужого стану.
 status: active
-updated: 2026-09-14
+updated: 2026-09-16
 kind: architecture
 ---
 
-# Cross-Domain Contracts
+# Міждоменні контракти
 
-Domains у COS не є ізольованими островами. Вони взаємодіють, але **інтеграція не повинна скасовувати ownership**.
+Domains у COS не є ізольованими островами. Вони взаємодіють, але **інтеграція не скасовує ownership**.
 
 ## Головний принцип
 
@@ -28,9 +28,9 @@ Sales
 → випадково стає співвласником Property model
 ```
 
-Або навпаки. Прямий доступ іноді виглядає швидким, аж поки одна зміна schema не перетворює bounded contexts на комунальну квартиру.
+Прямий доступ іноді виглядає швидшим, аж поки одна зміна schema не перетворює bounded contexts на комунальну квартиру.
 
-## Що саме треба захищати
+## Що захищає межа
 
 Cross-domain boundary має зберігати:
 
@@ -42,27 +42,27 @@ Cross-domain boundary має зберігати:
 - compatibility semantics;
 - failure semantics.
 
-## Основні integration patterns
+## Канонічні способи взаємодії
 
-### 1. Synchronous contract / port
+### Synchronous contract / port
 
-Використовуємо, коли consumer потребує конкретну відповідь під час поточного use case.
+Використовується, коли consumer потребує конкретну відповідь у межах поточного use case.
 
 ```text
-Consumer
-   ↓
+Consumer Domain
+   ↓ requires contract
 Port / Interface
    ↓
-Adapter
+Adapter / provider boundary
    ↓
 Provider capability / read model
 ```
 
 Contract має віддавати рівно те, що потрібно consumer-у, а не весь provider aggregate «про всяк випадок».
 
-### 2. Domain Event
+### Domain Event
 
-Використовуємо, коли consumer реагує на вже здійснений business fact.
+Використовується, коли consumer реагує на вже здійснений business fact.
 
 ```text
 Provider state change
@@ -76,13 +76,13 @@ consumer-owned reaction
 
 Event не є remote command. `something.changed` не повинно означати приховане «зроби мені ось це».
 
-### 3. Read projection
+### Read projection
 
 Для dashboards/search/analytics може існувати dedicated projection, сформована з provider-owned data/events.
 
 Projection може дублювати read data, але не переносить business authority до consumer-а.
 
-### 4. Integration adapter
+### Integration adapter
 
 External providers, legacy tables або чужі APIs проходять translation boundary.
 
@@ -94,50 +94,88 @@ Adapter
 COS contract / canonical vocabulary
 ```
 
-## AS-IS example: Property ↔ Sales presentation
+## Executable authority
 
-Поточний `COS` має explicit contract:
+Поточні synchronous cross-domain dependencies декларуються в `contributions.cross_domain_contracts` у `app/Domains/*/module.php`.
+
+Kernel зберігає typed declaration через `CrossDomainContract`; manifests залишаються джерелом істини для того, хто **requires** або **provides** contract і з яким counterpart Domain він пов’язаний.
+
+Це важливіше за ручну діаграму: architecture view може застаріти, manifest має пройти executable checks.
+
+## Поточні AS-IS межі
+
+### Sales → Property
+
+Sales `0.8.6` декларує:
+
+```text
+Domains\Property\Contract\PropertyReferencePort
+role: requires
+counterpart: property
+kind: synchronous_port
+```
+
+Призначення: отримувати canonical Property references усередині Sales workflows без ownership над Property state.
+
+```text
+Sales process
+    ↓ requires
+PropertyReferencePort
+    ↓
+Property / property.reference
+    ↓
+Sales-owned case / match / activity
+```
+
+Саме цей boundary використовується в cross-domain process `sales.request-to-property-match`.
+
+### Property → Sales
+
+Property `0.12.0` декларує:
 
 ```text
 Domains\Property\Application\Contract\PresentationSalesInterface
+role: requires
+counterpart: sales
+kind: synchronous_port
 ```
 
-Він дозволяє presentation workflow:
+Призначення: використовувати Sales-owned client-case/share context у Property presentation workflows.
 
-- отримати active client case;
-- записати share interaction.
+Property не копіює ClientCase model у себе і не стає власником Sales lifecycle.
 
-Contract methods:
+### Property → Spatial
+
+Property також декларує:
 
 ```text
-activeClientCase(caseId)
-recordShare(caseId, personId, userId, title, body, propertyId, matchNote)
+Domains\Spatial\Application\Contract\PropertyTourPublisherInterface
+role: provides
+counterpart: spatial
+kind: integration_adapter
 ```
 
-Це хороший приклад того, що інтеграція вже названа й винесена в boundary замість прихованого виклику з presentation code.
+Це explicit boundary для publication canonical Property tour data через Spatial-owned integration surface.
 
-Водночас це **не означає**, що поточний Property `0.1.1` вже має універсальну cross-domain platform або Sales-level runtime module. Документуємо рівно те, що існує.
+## Ownership rule
 
-## Ownership example
-
-У цьому сценарії:
+Contract не створює shared ownership.
 
 ```text
-Property Presentation
-    потребує Sales context
-
-Sales
-    володіє ClientCase semantics
-
-Property
-    не копіює ClientCase model у себе
+Consumer intent
+    ↓
+Declared contract
+    ↓
+Provider-owned operation / facts
+    ↓
+Consumer-owned result or relationship
 ```
 
-Так само Sales не повинен ставати власником canonical Property state лише через те, що deal посилається на property.
+Sales може використати Property facts, але Asset / Inventory / Listing не стають Sales entities. Property може використати Sales context, але ClientCase не стає Property entity.
 
 ## Mutation rule
 
-Consumer не повинен напряму мутувати provider persistence.
+Consumer не мутує provider persistence напряму.
 
 Preferred path:
 
@@ -155,35 +193,33 @@ Provider Event
 
 ## Read rule
 
-Cross-domain read повинен мати explicit purpose.
-
-Питання перед додаванням contract method:
+Перед додаванням contract method потрібно відповісти:
 
 1. Який consumer use case його потребує?
 2. Хто володіє даними?
-3. Чи потрібен full object, чи достатньо projection/reference?
+3. Чи потрібен full object, чи projection/reference?
 4. Які tenant/security constraints?
-5. Що відбудеться, якщо provider недоступний/не знайде entity?
-6. Чи не створюємо ми duplicate canonical model?
+5. Що відбудеться, якщо provider недоступний або entity не знайдена?
+6. Чи не створюється duplicate canonical model?
 
-## Events vs calls
+## Events чи synchronous call
 
-Вибираємо synchronous call, коли:
+Synchronous call доречний, коли:
 
 - відповідь потрібна зараз;
-- операція не може продовжитися без provider result.
+- use case не може продовжитися без provider result.
 
-Вибираємо Event, коли:
+Event доречний, коли:
 
 - факт уже стався;
 - consumer може реагувати окремо;
 - coupling у часі не потрібний.
 
-Не треба перетворювати Event Bus на повільний RPC лише тому, що слово `event-driven` виглядає сучасно.
+Не треба перетворювати Event Bus на повільний RPC лише тому, що слово `event-driven` добре виглядає на схемі.
 
-## Forbidden dependencies
+## Заборонені залежності
 
-За замовчуванням небажані:
+За замовчуванням неприпустимі:
 
 ```text
 Domain A → Domain B concrete repository
@@ -193,11 +229,11 @@ Domain A → Interface/Web controller
 Domain A → external provider SDK directly
 ```
 
-Допустима залежність має бути оформлена через contract, event vocabulary або explicit integration adapter.
+Допустима залежність оформлюється через contract, event vocabulary, projection або explicit integration adapter.
 
-## Bootstrap
+## Composition root
 
-Concrete cross-domain composition належить composition root/bootstrap layer.
+Concrete cross-domain composition належить Bootstrap/composition layer.
 
 ```text
 Domain contract
@@ -207,36 +243,35 @@ Bootstrap binds adapter
 Runtime consumer receives dependency
 ```
 
-Domain не повинен сам шукати concrete implementation через глобальний container.
+Domain не шукає concrete implementation через глобальний container і не тягне Web/session context у background runtime.
 
 ## Documentation contract
 
-Коли додається cross-domain interaction, documentation повинна зафіксувати:
+Коли додається cross-domain interaction, документація має зафіксувати:
 
 ```text
-Consumer
+Consumer Domain
 Provider / authority owner
 Business purpose
 Contract / Event
 Data exposed
 Mutation authority
 Failure behavior
+Tenant semantics
 Code map
 ```
 
-## AS-IS / TARGET
+А Process Registry для реального cross-domain step додатково має підтвердити foreign Domain capability та verified `requires` boundary.
 
-AS-IS examples мають підтверджуватися `COS` code/tests.
-
-TARGET architecture можна описувати окремо, але не можна підміняти нею поточні dependencies. Архітектурна діаграма не стає executable лише тому, що стрілки в ній дуже прямі.
-
-## Code map
-
-Поточний explicit example:
+## Карта коду
 
 ```text
+app/Kernel/Module/CrossDomainContract.php
+app/Kernel/Module/ModuleContributions.php
+app/Domains/Sales/module.php
+app/Domains/Property/module.php
+app/Domains/Property/Contract/PropertyReferencePort.php
 app/Domains/Property/Application/Contract/PresentationSalesInterface.php
-app/Domains/Property/Infrastructure/Presentation
-app/Domains/Sales
+app/Domains/Spatial/Application/Contract/PropertyTourPublisherInterface.php
 app/Bootstrap
 ```

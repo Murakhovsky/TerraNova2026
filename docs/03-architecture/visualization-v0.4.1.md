@@ -1,14 +1,14 @@
 ---
-title: Visualization V0.4.1 — Architecture Explorer Hardening
-description: Automation topology, dependency evidence and projection-aware Architecture Explorer behavior.
+title: Visualization V0.4.1 — посилення Architecture Explorer
+description: Automation topology, dependency evidence і projection-aware поведінка Architecture Explorer.
 status: implemented
 kind: architecture
-updated: 2026-09-15
+updated: 2026-09-16
 ---
 
-# Visualization V0.4.1 — Architecture Explorer Hardening
+# Visualization V0.4.1 — посилення Architecture Explorer
 
-Visualization V0.4.1 turns the Explorer from a renderer over module metadata into a stronger architecture inspection surface. The graph remains derived from canonical COS contracts; the hardening deliberately avoids regex/static-source guessing.
+Visualization V0.4.1 перетворив Explorer із renderer-а над module metadata на повноціннішу surface для перевірки архітектури. Graph і далі походить із канонічних контрактів COS; hardening свідомо не покладається на regex/static-source guessing як runtime source of truth.
 
 ```text
 ModuleCatalog + DomainModuleRegistry
@@ -28,7 +28,7 @@ ModuleCatalog + DomainModuleRegistry
 
 ## Automation topology
 
-The canonical graph now represents bootstrap automation definitions explicitly:
+Canonical graph почав явно відображати bootstrap automation definitions:
 
 ```text
 Event ──triggers──> Rule ──produces──> Action ──handled_by──> Handler
@@ -37,31 +37,49 @@ Agent ─────────────proposes─────────
 Policy ────────────governs─────────────┘
 ```
 
-New node types are `rule` and `policy`. New relations are `triggers`, `produces` and `governs`.
+Нові node types: `rule`, `policy`.
 
-Rules and policies exposed here are **bootstrap defaults**, not effective tenant configuration. Kernel therefore has explicit `BootstrapRuleProvidingModuleInterface` and `BootstrapPolicyProvidingModuleInterface` contracts. Tenant-aware `RuleProvidingModuleInterface` / `PolicyProvidingModuleInterface` remain separate and continue to model organization-specific runtime state.
+Нові relations: `triggers`, `produces`, `governs`.
 
-Sales exposes its existing provisioning catalogs through the bootstrap contracts. Visualization consumes only those contracts; it does not call `rules('default')` or `policies('default')` itself.
+Rules і Policies у цій projection є **bootstrap defaults**, а не effective tenant configuration.
+
+Kernel тому розділяє:
+
+```text
+BootstrapRuleProvidingModuleInterface
+BootstrapPolicyProvidingModuleInterface
+```
+
+та tenant-aware runtime contracts:
+
+```text
+RuleProvidingModuleInterface
+PolicyProvidingModuleInterface
+```
+
+Visualization читає лише відповідні contracts і не підміняє tenant-specific state умовним `default` runtime state.
 
 ## Dependency evidence
 
-`depends_on` is no longer an anonymous edge. Dependency metadata records where the fact came from.
+`depends_on` перестав бути анонімним edge. Dependency metadata фіксує provenance факту.
 
-Current canonical evidence sources include:
+Canonical evidence sources включають:
 
-- `manifest.kernel_constraint`: every catalog module depends on the COS Kernel contract it declares;
-- `manifest.dependencies`: explicit module dependency declarations;
-- `runtime_module_contract`: runtime-only modules still depend on Kernel contracts;
-- `automation.agent`: an agent proposes an action owned by another Domain;
-- `automation.rule.trigger`: a bootstrap rule consumes an event owned by another Domain;
-- `automation.rule.effect`: a bootstrap rule produces an action owned by another Domain;
-- `automation.policy`: a bootstrap policy governs an action owned by another Domain.
+- `manifest.kernel_constraint`;
+- `manifest.dependencies`;
+- `runtime_module_contract`;
+- `automation.agent`;
+- `automation.rule.trigger`;
+- `automation.rule.effect`;
+- `automation.policy`.
 
-Derived cross-domain dependencies are created only after canonical Event/Action ownership is known. V0.4.1 does **not** infer arbitrary PHP import dependencies or scan source code for architectural meaning.
+Derived cross-domain dependencies створюються лише після того, як відоме canonical ownership Event/Action.
+
+V0.4.1 не намагається виводити архітектуру з довільних PHP imports. Source scanning може використовуватися для CI verification, але не як runtime architecture truth.
 
 ## Projection-aware layouts
 
-Projection definitions expose renderer-neutral layout intent through the Kernel registry description contract.
+Projection definitions передають renderer-neutral layout intent через Kernel registry description contract.
 
 | Projection | Layout intent |
 | --- | --- |
@@ -75,32 +93,40 @@ Projection definitions expose renderer-neutral layout intent through the Kernel 
 | Integrations | hierarchical |
 | Code | force |
 
-The browser maps these hints to Cytoscape algorithms. Renderer-specific algorithm names remain outside Kernel and Architecture graph semantics.
+Browser layer мапить ці hints на Cytoscape algorithms. Renderer-specific algorithm names не входять у Kernel або Architecture graph semantics.
 
 ## Server-side Domain focus
 
-The Explorer now exposes a manager-only read endpoint:
+Explorer має read endpoint:
 
 ```text
 GET /cos/architecture/graph?view=domain&focus=domain:sales&depth=2
 ```
 
-`focus` and `depth` are applied by `ArchitectureGraphProjection` on the server through `GraphView`. The browser no longer receives the full Domain graph merely to rediscover the same neighborhood itself. `depth=all` uses the full projection.
+`focus` і `depth` застосовуються server-side через `GraphView`. Browser не мусить отримувати повний Domain graph лише для того, щоб локально відкинути більшу його частину.
 
-This matters once the architecture graph grows from dozens to thousands of nodes: transport and projection stay bounded instead of turning the browser into an accidental architecture engine.
+`depth=all` використовує повну projection.
 
 ## Explorer hardening
 
-The active projection now owns its visible statistics and filters. Switching views updates node/edge totals, available node types and layout intent.
+Active projection володіє своїми visible statistics, filters і layout intent.
 
-Node details expose more than raw metadata: projection/layout, version/source, Domain ownership breakdown, incoming/outgoing relations and edge provenance. Raw metadata remains available as a secondary diagnostic view.
+Node details показують не лише raw metadata, а й:
 
-## Boundary rules
+- projection/layout;
+- version/source;
+- Domain ownership breakdown;
+- incoming/outgoing relations;
+- edge provenance.
 
-- `Kernel\\Visualization` remains renderer- and Architecture-agnostic.
-- Bootstrap automation contracts belong to Kernel Module contracts because provisioning, documentation and visualization can all consume them.
-- Tenant-effective Rules/Policies are not embedded into the platform-level Architecture Graph.
-- Architecture semantics remain under `Infrastructure\\Visualization\\Architecture`.
-- Web compiles only against Kernel graph/projection contracts.
-- Cytoscape remains a renderer, not a source of architecture truth.
-- V0.4.1 strengthens known facts; it does not invent dependencies that COS has not yet declared or exposed through canonical runtime ownership.
+Raw metadata лишається secondary diagnostic view.
+
+## Інваріанти
+
+- `Kernel\Visualization` залишається renderer- та Architecture-agnostic.
+- Bootstrap automation contracts належать Kernel Module contracts, бо їх можуть споживати provisioning, documentation і visualization.
+- Tenant-effective Rules/Policies не вбудовуються в platform-level Architecture Graph.
+- Architecture semantics живуть у `Infrastructure\Visualization\Architecture`.
+- Web компілюється проти Kernel graph/projection contracts.
+- Cytoscape залишається renderer-ом, а не джерелом архітектурної істини.
+- V0.4.1 посилює підтверджені факти, але не вигадує undeclared dependencies.

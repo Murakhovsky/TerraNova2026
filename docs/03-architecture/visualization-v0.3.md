@@ -1,47 +1,47 @@
 ---
-title: Visualization V0.3 — Architecture Explorer
-description: Interactive Cytoscape projection of the canonical COS Architecture Graph.
+title: Visualization V0.3 — оглядач архітектури
+description: Інтерактивна Cytoscape-проєкція канонічного Architecture Graph COS.
 status: implemented
 kind: architecture
-updated: 2026-09-15
+updated: 2026-09-16
 ---
 
-# Visualization V0.3 — Architecture Explorer
+# Visualization V0.3 — оглядач архітектури
 
-Visualization V0.3 adds the first interactive renderer on top of the renderer-independent graph foundation introduced in V0.1–V0.2.
+Visualization V0.3 додав перший інтерактивний renderer поверх renderer-independent graph foundation, створеного у V0.1–V0.2.
 
-The source of truth remains the COS graph model:
+Джерелом істини залишається модель графа COS:
 
 ```text
 ModuleCatalog + DomainModuleRegistry
         ↓
 ArchitectureGraphProvider
         ↓
-Kernel\\Visualization\\Graph\\Graph
+Kernel\Visualization\Graph\Graph
         ↓
 CytoscapeGraphMapper
         ↓
 Architecture Explorer
 ```
 
-Cytoscape does not own architecture semantics. It receives a projection containing nodes, edges, metadata and stable relation types.
+Cytoscape не володіє архітектурною семантикою. Він отримує projection із nodes, edges, metadata та stable relation types.
 
 ## Web surface
 
-Manager/admin users can open:
+Manager/admin користувачі відкривають:
 
 ```text
 /cos/architecture
 ```
 
-The workspace provides System, Runtime and Domain modes, node-type filters, domain focus, depth filtering, search, zoom/pan, fit/reset, node metadata and local neighborhood collapse/expand.
+Workspace підтримує System, Runtime і Domain modes, node-type filters, domain focus, depth filtering, search, zoom/pan, fit/reset, node metadata та локальне collapse/expand сусідів.
 
 ## Adapter boundary
 
-`Infrastructure\\Visualization\\Cytoscape\\CytoscapeGraphMapper` is the only PHP adapter that knows the Cytoscape element shape. `Kernel\\Visualization` contains no Cytoscape references.
+`Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper` є PHP adapter, який знає Cytoscape element shape. `Kernel\Visualization` не містить Cytoscape-specific references.
 
-The browser runtime uses the pinned Cytoscape.js `3.34.3` build. The graph payload is embedded as `application/json`, not executable inline JavaScript.
+Browser runtime використовує pinned Cytoscape.js `3.34.3`. Graph payload вбудовується як `application/json`, а не executable inline JavaScript.
 
-## Deliberate limits
+## Межі версії
 
-V0.3 does not add new architecture semantics, projections or server-side view models. Those belong to Visualization V0.4. It also does not add Mermaid or BPMN.
+V0.3 не додавав нову architecture semantics, canonical projections або server-side view models. Це стало наступним етапом Visualization V0.4. Mermaid і BPMN у V0.3 також не входили.

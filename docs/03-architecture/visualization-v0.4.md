@@ -1,14 +1,14 @@
 ---
-title: Visualization V0.4 — Architecture Projections
-description: Canonical server-side views over the COS Architecture Graph.
+title: Visualization V0.4 — архітектурні проєкції
+description: Канонічні server-side views над COS Architecture Graph.
 status: implemented
 kind: architecture
-updated: 2026-09-15
+updated: 2026-09-16
 ---
 
-# Visualization V0.4 — Architecture Projections
+# Visualization V0.4 — архітектурні проєкції
 
-Visualization V0.4 moves view semantics out of the browser. Cytoscape still renders graphs, but it no longer decides what “System”, “Runtime” or “Dependencies” mean.
+Visualization V0.4 переніс view semantics із browser у server-side architecture layer. Cytoscape продовжує рендерити граф, але вже не вирішує сам, що означають `System`, `Runtime` або `Dependencies`.
 
 ```text
 ArchitectureGraphProvider
@@ -26,22 +26,48 @@ CytoscapeGraphMapper
 Explorer
 ```
 
-## Canonical projections
+## Канонічні проєкції етапу V0.4
 
-The registry exposes nine projections from the same canonical graph: `system`, `runtime`, `domain`, `dependencies`, `events`, `actions`, `agents`, `integrations` and `code`.
+Registry на цьому етапі експонував дев’ять projections з одного canonical graph:
 
-Each projection owns its allowed node types and relation vocabulary. `GraphView` remains the generic runtime request and can further constrain node types, relations, focus and depth without changing the source graph.
+```text
+system
+runtime
+domain
+dependencies
+events
+actions
+agents
+integrations
+code
+```
 
-The `domain` projection supports a focused neighborhood with a default depth of two. The interactive Web explorer keeps domain/depth narrowing local after the server has already applied the semantic projection.
+Кожна projection володіє своїми allowed node types та relation vocabulary.
+
+`GraphView` залишається generic runtime request і може додатково обмежувати node types, relations, focus та depth без зміни source graph.
+
+`domain` projection підтримує focused neighborhood із default depth `2`. Interactive Web explorer може локально звужувати domain/depth уже після server-side semantic projection.
 
 ## Boundary rules
 
-`Kernel\\Visualization` knows only `GraphProjectionInterface`, `GraphProjectionRegistryInterface`, `Graph`, `GraphView` and filters. It has no Architecture or Cytoscape vocabulary.
+`Kernel\Visualization` знає лише generic contracts:
 
-Architecture projection definitions live under `Infrastructure\\Visualization\\Architecture`. Their composition is registered by `Bootstrap\\VisualizationServices`.
+- `GraphProjectionInterface`;
+- `GraphProjectionRegistryInterface`;
+- `Graph`;
+- `GraphView`;
+- filters.
 
-The Web controller depends on the Kernel registry contract and receives already-projected graphs. Browser code switches between server-provided projection payloads instead of carrying hard-coded `SYSTEM_TYPES` or `RUNTIME_TYPES` sets.
+Kernel не знає Architecture або Cytoscape vocabulary.
 
-## Current limits
+Architecture projection definitions живуть під `Infrastructure\Visualization\Architecture`, а composition реєструється через `Bootstrap\VisualizationServices`.
 
-V0.4 projects only facts already present in the canonical Architecture Graph. Rules and Policies are not invented until canonical registry/catalog sources exist. The `code` view therefore exposes current implementation-bearing nodes such as services, actions and handlers rather than pretending COS already has a full static-analysis graph.
+Web controller залежить від Kernel registry contract і отримує вже projected graph. Browser code перемикає server-provided projection payloads замість hardcoded наборів типів на кшталт `SYSTEM_TYPES` чи `RUNTIME_TYPES`.
+
+## Межі етапу
+
+V0.4 проєктував лише факти, які вже існували в canonical Architecture Graph. Rules і Policies не мали вигадуватися до появи canonical registry/catalog sources.
+
+`code` view тому показував implementation-bearing nodes, які реально існували, наприклад services, actions і handlers, а не удавав, що COS вже має повний static-analysis graph.
+
+Подальші V0.4.1–V0.4.2 розширили цю основу automation topology, dependency evidence та first-class cross-domain contracts.

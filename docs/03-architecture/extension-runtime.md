@@ -1,16 +1,16 @@
 ---
-title: Extension Runtime
-description: Як COS модулі підключають API, UI та інші extension surfaces без hardcoded Domain assembly.
+title: Середовище розширень
+description: Як COS модулі підключають API, UI, event consumers та інші extension surfaces без hardcoded Domain assembly.
 status: active
-updated: 2026-09-12
+updated: 2026-09-16
 kind: architecture
 ---
 
-# Extension Runtime
+# Середовище розширень
 
-Extension Runtime з'явився в Kernel V0.9, щоб shared runtime не знав наперед усі Domains і всі поверхні, які вони можуть розширювати.
+Extension Runtime потрібен, щоб shared runtime не знав наперед усі Domains і всі поверхні, які вони можуть розширювати.
 
-Його задача проста: **модуль декларує contribution, Kernel реєструє ownership, concrete layer споживає service через contract**.
+Його принцип: **модуль декларує contribution, Kernel реєструє ownership, concrete consumer layer отримує service через contract**.
 
 ## Навіщо це потрібно
 
@@ -25,9 +25,7 @@ if Diagnostic → add Diagnostic navigation
 
 Це працює, доки система маленька. Потім кожен новий Domain змушує змінювати Kernel/Web bootstrap, і «модульність» стає декоративною наклейкою.
 
-Extension Runtime прибирає цю залежність.
-
-## Основний flow
+## Канонічний flow
 
 ```text
 Domain/module.php
@@ -47,7 +45,7 @@ consumer validates concrete interface
 request/runtime use
 ```
 
-Kernel зберігає тільки:
+Kernel зберігає тільки generic extension identity:
 
 - `moduleId`;
 - `extensionPoint`;
@@ -57,27 +55,61 @@ Kernel зберігає тільки:
 
 ## Поточні extension points
 
-Kernel має два нормалізовані built-in extension points:
+Поточний generated registry містить:
 
-- `api.routes`;
-- `tenant.configuration`.
+| Extension point | Тип | Призначення |
+| --- | --- | --- |
+| `api.routes` | built-in | module-owned API/Web route contributors |
+| `tenant.configuration` | built-in | module configuration provisioning |
+| `event.consumers` | module-defined | runtime consumers domain events/outcomes |
+| `web.navigation` | module-defined | module-owned navigation contributions |
 
-Generic `extension_services` дозволяє модулю оголосити інші точки розширення. Поточний реальний приклад:
+Актуальний список і contributors генерується в [Module Extension Points](../12-reference/extension-points.md).
 
-- `web.navigation`.
+## Поточні contributors
 
-Sales, Property і Diagnostic декларують свої Web navigation services у власних `module.php` manifests.
+`api.routes`:
+
+```text
+diagnosticRouteContributor
+propertyRouteContributor
+salesRouteContributor
+```
+
+`event.consumers`:
+
+```text
+diagnosticActionOutcomeHandler
+salesHistoricalEventConsumer
+```
+
+`tenant.configuration`:
+
+```text
+propertyModuleConfigurationProvisioner
+salesModuleConfigurationProvisioner
+```
+
+`web.navigation`:
+
+```text
+diagnosticNavigationContributor
+propertyNavigationContributor
+salesNavigationContributor
+```
+
+Точний inventory не потрібно дублювати вручну поза generated reference; тут важлива архітектурна семантика.
 
 ## ModuleExtensionRegistry
 
-`Kernel\\Module\\ModuleExtensionRegistry` будується з `ModuleCatalog` і збирає contributions усіх deployed modules.
+`Kernel\Module\ModuleExtensionRegistry` будується з `ModuleCatalog` і збирає contributions deployed modules.
 
 Registry дозволяє:
 
-- отримати всі contributions для одного extension point;
+- отримати contributions для одного extension point;
 - перелічити доступні extension points;
 - отримати повну карту extensions;
-- відхилити duplicate contribution того самого `moduleId + extensionPoint + serviceId`;
+- відхилити duplicate contribution одного `moduleId + extensionPoint + serviceId`;
 - перевірити синтаксис extension point identifier.
 
 Формат extension point:
@@ -86,9 +118,9 @@ Registry дозволяє:
 ^[a-z][a-z0-9_.:-]*$
 ```
 
-## Deployment ≠ activation
+## Deployment не дорівнює activation
 
-Registry описує **deployed capabilities**, але це не означає, що кожен module contribution активний для кожної organization.
+Registry описує **deployed contributions**, але це не означає, що кожний contribution активний для кожної organization.
 
 Наприклад Web navigation додатково перевіряє `ActiveModuleResolver` у request time:
 
@@ -102,58 +134,69 @@ module enabled?
     └─ yes → contribution used
 ```
 
-Це важлива різниця між code discovery і tenant activation.
+Тобто code discovery та tenant activation є різними станами.
 
 ## Хто перевіряє concrete contract
 
-Kernel не повинен знати `ModuleNavigationContributorInterface`.
-
-Тому схема така:
+Kernel не повинен знати `ModuleNavigationContributorInterface` або інший surface-specific interface.
 
 ```text
 Kernel registry
     ↓ generic service id
-Web bootstrap
+Web / runtime bootstrap
     ↓ resolve service
-Web layer
-    ↓ validate ModuleNavigationContributorInterface
+Consumer layer
+    ↓ validate concrete interface
 ```
 
-Те саме правило діє для майбутніх extension points: generic registration у Kernel, concrete semantics у layer, який extension споживає.
+Generic registration належить Kernel. Concrete semantics належать layer, який extension споживає.
+
+## Cross-domain contracts не є extension points
+
+`cross_domain_contracts` у module manifest вирішують іншу задачу: вони декларують дозволені synchronous/integration boundaries між Domains.
+
+```text
+extension_services       = хто розширює shared surface
+cross_domain_contracts   = який Domain contract requires/provides інший Domain
+```
+
+Не потрібно змішувати ці механізми лише тому, що обидва живуть у `ModuleContributions`.
 
 ## Коли створювати новий extension point
 
 Новий extension point виправданий, якщо:
 
-1. кілька незалежних модулів можуть підключати одну й ту саму surface;
+1. кілька незалежних modules можуть підключати одну surface;
 2. shared layer не повинен знати список Domains;
 3. contribution можна описати stable service contract;
-4. enable/disable модуля має впливати на доступність contribution;
+4. enable/disable module має впливати на доступність contribution;
 5. extension не є прихованим способом перенести business logic у Kernel.
 
-Не треба створювати extension point для кожного callback. Інакше замість архітектури вийде телефонна книга з dependency injection.
+Не створюйте extension point для кожного callback. Інакше замість архітектури вийде телефонна книга dependency injection.
 
-## Поточні invariants
+## Інваріанти
 
 - Module володіє декларацією contribution.
 - Kernel володіє registry mechanics.
 - Consumer layer володіє concrete interface.
 - Tenant activation перевіряється окремо від deployment discovery.
 - Extension registry не виконує business mutations.
+- Background runtime не залежить від Web/session context для resolution contribution semantics.
 - Domain-specific branching у shared Kernel/Bootstrap має зменшуватися, а не маскуватися іншою назвою.
 
-## Code map
+## Карта коду
 
 ```text
 app/Kernel/Module/ModuleContributions.php
 app/Kernel/Module/ModuleExtensionContribution.php
 app/Kernel/Module/ModuleExtensionRegistry.php
+app/Kernel/Module/CrossDomainContract.php
 app/Bootstrap/ModuleServices.php
 app/Bootstrap/WebApplicationServices.php
 app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php
 app/Domains/*/module.php
 ```
 
-## Версія
+## Поточна версія
 
-Extension Runtime введений у **Kernel V0.9** і є частиною поточного Kernel `0.10.0`.
+Extension Runtime є частиною поточного Kernel `0.11.9`. Історичний номер версії, в якій механізм вперше з’явився, не використовується як поточний runtime contract.
