@@ -30,9 +30,9 @@ const ukrainianTheme = {
   siteTitle: 'COS',
   nav: [
     { text: 'Для бізнесу', link: '/for-business/' },
+    { text: 'Можливості', link: '/for-business/capabilities' },
     { text: 'Для впровадження', link: '/for-integrators/' },
     { text: 'Для розробників', link: '/for-developers/' },
-    { text: 'Стан системи', link: '/01-product/current-scope' },
     { text: 'GitHub', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
   ],
   sidebar: buildSidebar(),
@@ -123,18 +123,20 @@ export default {
     cosSystemStatus,
     i18nRouting(data, route, targetLocale) {
       const relativePath = route.data.relativePath.replace(/\.md$/, '');
+
       if (targetLocale === 'en') {
         if (relativePath === 'index') return '/en/';
-        if (/^for-(business|integrators|developers)\//.test(relativePath)) {
-          return `/en/${relativePath}/`;
-        }
+        if (relativePath.startsWith('for-business/')) return '/en/for-business/';
+        if (relativePath.startsWith('for-integrators/')) return '/en/for-integrators/';
+        if (relativePath.startsWith('for-developers/')) return '/en/for-developers/';
         return '/en/for-developers/';
       }
 
       if (relativePath === 'en/index') return '/';
-      if (relativePath.startsWith('en/')) {
-        return `/${relativePath.slice(3)}/`;
-      }
+      if (relativePath.startsWith('en/for-business/')) return '/for-business/';
+      if (relativePath.startsWith('en/for-integrators/')) return '/for-integrators/';
+      if (relativePath.startsWith('en/for-developers/')) return '/for-developers/';
+      if (relativePath.startsWith('en/')) return '/for-developers/';
       return `/${relativePath}/`;
     },
   },

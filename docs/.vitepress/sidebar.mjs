@@ -20,6 +20,12 @@ const developerSections = [
   ['12-reference', 'Технічний довідник'],
 ];
 
+const directoryLabels = new Map([
+  ['sales', 'Продажі (Sales)'],
+  ['property', 'Нерухомість (Property)'],
+  ['diagnostic', 'Діагностика (Diagnostic)'],
+]);
+
 const preferredOrder = new Map([
   ['what-is-cos.md', -30],
   ['mental-model.md', -20],
@@ -83,6 +89,7 @@ function titleFromMarkdown(path) {
 }
 
 function humanize(value) {
+  if (directoryLabels.has(value)) return directoryLabels.get(value);
   return value.replace(/^\d+-/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
@@ -127,9 +134,10 @@ export function buildSidebar() {
       collapsed: false,
       items: [
         { text: 'Що таке COS', link: '/for-business/' },
-        { text: 'Яку проблему вирішує COS', link: '/for-business/#яку-проблему-вирішує-cos' },
-        { text: 'Що отримує компанія', link: '/for-business/#що-отримує-компанія' },
-        { text: 'Приклади застосування', link: '/for-business/#приклади-застосування' },
+        { text: 'Що COS дає компанії', link: '/for-business/capabilities' },
+        { text: 'Сценарії використання', link: '/for-business/use-cases' },
+        { text: 'Як відбувається впровадження', link: '/for-business/implementation' },
+        { text: 'Часті запитання', link: '/for-business/faq' },
       ],
     },
     {
@@ -137,9 +145,10 @@ export function buildSidebar() {
       collapsed: false,
       items: [
         { text: 'Маршрут впровадження', link: '/for-integrators/' },
-        { text: 'Модель бізнес-процесу', link: '/for-integrators/#модель-впровадження' },
-        { text: 'Інтеграції та дані', link: '/for-integrators/#інтеграції-та-дані' },
-        { text: 'Перевірка готовності', link: '/for-integrators/#критерії-готовності' },
+        { text: 'Дослідження процесу', link: '/for-integrators/discovery' },
+        { text: 'Дані та інтеграції', link: '/for-integrators/data-and-integrations' },
+        { text: 'Автоматизація і ШІ', link: '/for-integrators/automation-and-ai' },
+        { text: 'Перевірка готовності', link: '/for-integrators/readiness' },
       ],
     },
     {
