@@ -32,7 +32,6 @@
   "devDependencies": {
     "playwright-core": "^1.62.1",
     "pngjs": "^7.0.0",
-    "sass": "1.104.1",
     "vite": "^8.2.2"
   }
 }
