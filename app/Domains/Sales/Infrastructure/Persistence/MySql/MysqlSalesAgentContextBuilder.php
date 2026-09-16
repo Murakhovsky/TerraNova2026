@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\Persistence\MySql;
 
+use Domains\Property\Contract\PropertyReferencePort;
 use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Kernel\Agent\AgentInvocation;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
@@ -12,7 +13,7 @@ final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilde
 {
     public function __construct(
         private PDO $connection,
-        private ?SalesPropertyReference $properties = null,
+        private ?PropertyReferencePort $properties = null,
     ) {}
 
     public function build(AgentInvocation $invocation): array
@@ -42,7 +43,8 @@ final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilde
             . 'WHERE client_case_id=:id AND organization_id=:organization_id ORDER BY score DESC,updated_at DESC LIMIT 1',$scope);
         $property=null;
         if ($propertyMatch !== null && $this->properties !== null) {
-            $reference=$this->properties->property((int) $propertyMatch['property_id']);
+            $propertyReference = new SalesPropertyReference($this->properties, $invocation->organizationId);
+            $reference=$propertyReference->property((int) $propertyMatch['property_id']);
             if ($reference !== null) {
                 $property=[
                     'public_id'=>$reference['public_id']??null,
