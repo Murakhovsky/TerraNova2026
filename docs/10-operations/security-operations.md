@@ -22,7 +22,7 @@ Tenant isolation перевіряється не лише в UI/session layer, �
 
 Permissions/capabilities і Policies дають мінімально необхідне право. Agent, worker або integration не отримує глобальну mutation authority «для зручності».
 
-### Secrets
+### Секрети
 
 Provider credentials, API keys, DB passwords і signing secrets:
 
@@ -44,7 +44,7 @@ Prompt/tool injection не повинна давати Agent нові capabiliti
 
 Registered tools/actions, schema validation, Policy та Approval залишаються authority boundary незалежно від тексту model output. Agent не затверджує власну дію і не обходить application use case через прямий доступ до persistence.
 
-## Audit-sensitive operations
+## Операції, чутливі до аудиту
 
 Особливо важливі mutations мають залишати достатній audit trail для відповіді на питання:
 

@@ -52,7 +52,7 @@ Shared platform schema належить platform/kernel infrastructure; domain s
 
 Для concurrency-sensitive aggregates, наприклад Diagnostic session або versioned data, використовуйте optimistic locking, якщо silent overwrite неприйнятний.
 
-## Read models
+## Моделі читання
 
 Read projections можуть денормалізувати дані для workspace/dashboard, але не стають authoritative write model.
 
@@ -66,11 +66,11 @@ Read model
 
 Відновлюваний read model не повинен тихо перетворюватися на друге джерело бізнесової істини.
 
-## Legacy persistence
+## Спадкове зберігання
 
 Phalcon ActiveRecord compatibility adapters у старих Sales/Property/Telegram paths залишаються quarantine zone. Новий Domain code не будується навколо них і не отримує прямий SQL-доступ до чужого Domain лише тому, що таблиця поруч.
 
-## Replay
+## Повторне відтворення
 
 Outbox replay має контрольовано відновлювати selected delivery/consumer state.
 

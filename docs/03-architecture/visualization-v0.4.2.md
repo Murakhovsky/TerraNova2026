@@ -65,7 +65,7 @@ Domains\Spatial\Application\Contract\PropertyTourPublisherInterface
 
 Spatial володіє publication boundary, а Property декларує `provides` canonical tour data через integration adapter.
 
-## Contracts projection
+## Проєкція контрактів
 
 Architecture Explorer має dedicated `Contracts` projection, яка містить:
 
@@ -77,7 +77,7 @@ Architecture Explorer має dedicated `Contracts` projection, яка місти
 
 `Dependencies` також може включати contract nodes, але ordinary `depends_on` залишається для module/runtime dependency evidence.
 
-## CI audit
+## Аудит CI
 
 `tests/architecture/cross_domain_dependency_audit.php` сканує `app/Domains/*` і класифікує кожний cross-domain class reference.
 

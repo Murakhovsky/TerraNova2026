@@ -38,7 +38,7 @@ Working context може бути короткоживучим і відтвор
 
 Історія повідомлень або попередніх рішень може бути корисною для continuity, але не стає канонічною бізнес-правдою автоматично.
 
-### 4. Retrieval index
+### 4. Індекс пошуку
 
 Search/vector/indexed representation є derived read model. Його можна перебудувати з authoritative sources; він не повинен непомітно ставати єдиним місцем, де «зберігається правда».
 
@@ -63,7 +63,7 @@ Agent observation
 → durable store (if allowed)
 ```
 
-## Provenance
+## Походження даних
 
 Для durable memory важливо знати:
 

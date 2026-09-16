@@ -48,7 +48,7 @@ code
 
 `domain` projection підтримує focused neighborhood із default depth `2`. Interactive Web explorer може локально звужувати domain/depth уже після server-side semantic projection.
 
-## Boundary rules
+## Правила меж
 
 `Kernel\Visualization` знає лише generic contracts:
 

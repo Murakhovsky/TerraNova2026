@@ -1,5 +1,6 @@
 ---
 title: ADR-0006 — Deployed modules і tenant activation є різними станами
+description: Рішення відокремити факт deployment модуля від його встановлення, активації та readiness для tenant.
 status: accepted
 updated: 2026-09-16
 kind: decision
@@ -41,7 +42,7 @@ ready         operational diagnostic не бачить schema/version/dependency
 
 # Розглянуті альтернативи
 
-## Module exists in code = module active
+## Модуль існує в коді = модуль активний
 
 Відхилено: неможливі tenant-specific enablement та безпечні upgrades.
 

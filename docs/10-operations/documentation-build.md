@@ -1,5 +1,6 @@
 ---
 title: Збірка документації
+description: Канонічний pipeline генерації, перевірки, збірки та публікації документації COS з поточного main checkout.
 status: active
 updated: 2026-09-16
 kind: operations
@@ -46,7 +47,7 @@ npm run docs:preview
 
 `docs:dev` і `docs:build` перед запуском VitePress можуть регенерувати reference для rendering, але це не скасовує committed-sync requirement у `main`.
 
-## Generated reference
+## Згенерований довідник
 
 Канонічні generated pages включають, зокрема:
 
@@ -70,7 +71,7 @@ domain-process-coverage.md
 
 Authority для них — current code/manifests або explicit structured documentation contracts, а не ручний Markdown.
 
-## Drift gate
+## Перевірка дрейфу
 
 CI після generation перевіряє Git working tree для `docs/12-reference`.
 
@@ -82,7 +83,7 @@ CI після generation перевіряє Git working tree для `docs/12-ref
 
 Це принципово відрізняється від старого порядку `generate → generate:check`, де generator міг спочатку виправити stale file, після чого check урочисто підтверджував власний результат. Людство любить такі перевірки, де екзаменатор спершу сам заповнює тест.
 
-## CI pipeline
+## Конвеєр CI
 
 `.github/workflows/docs.yml`:
 

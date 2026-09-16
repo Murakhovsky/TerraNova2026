@@ -26,7 +26,7 @@ Architecture Explorer
 
 Cytoscape не володіє архітектурною семантикою. Він отримує projection із nodes, edges, metadata та stable relation types.
 
-## Web surface
+## Web-поверхня
 
 Manager/admin користувачі відкривають:
 
@@ -36,7 +36,7 @@ Manager/admin користувачі відкривають:
 
 Workspace підтримує System, Runtime і Domain modes, node-type filters, domain focus, depth filtering, search, zoom/pan, fit/reset, node metadata та локальне collapse/expand сусідів.
 
-## Adapter boundary
+## Межа адаптера
 
 `Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper` є PHP adapter, який знає Cytoscape element shape. `Kernel\Visualization` не містить Cytoscape-specific references.
 

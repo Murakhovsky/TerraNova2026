@@ -1,5 +1,6 @@
 ---
 title: ADR-0008 — main є канонічною гілкою
+description: Рішення вважати main канонічною гілкою для executable contracts, документації, generators і CI/CD.
 status: accepted
 updated: 2026-09-16
 kind: decision

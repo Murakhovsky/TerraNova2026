@@ -1,5 +1,6 @@
 ---
 title: ADR-0002 — MySQL state + Event + Outbox, без Event Sourcing
+description: Рішення зберігати поточний бізнес-стан у MySQL та атомарно фіксувати Event і Outbox без Event Sourcing.
 status: accepted
 updated: 2026-09-16
 kind: decision

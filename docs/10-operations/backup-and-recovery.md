@@ -66,7 +66,7 @@ Idempotency protection є частиною recovery design, а не бонусн
 
 Без виміряного restore duration RTO лишається побажанням, записаним серйозним шрифтом.
 
-## Secrets
+## Секрети
 
 Backup application data не повинен неявно бути backup secret store. Secrets/configuration мають власний recovery process, access policy і rotation procedure.
 

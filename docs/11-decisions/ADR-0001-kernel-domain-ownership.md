@@ -1,5 +1,6 @@
 ---
 title: ADR-0001 — Kernel володіє механізмами, Domains володіють бізнес-семантикою
+description: Рішення про межу відповідальності між універсальними механізмами Kernel і бізнес-семантикою Domains.
 status: accepted
 updated: 2026-09-16
 kind: decision

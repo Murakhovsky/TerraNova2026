@@ -1,5 +1,6 @@
 ---
 title: ADR-0005 — Structured LLM access проходить через централізований governance runtime
+description: Рішення виконувати structured LLM через централізований governance runtime із контрольованими providers і fallback.
 status: accepted
 updated: 2026-09-16
 kind: decision

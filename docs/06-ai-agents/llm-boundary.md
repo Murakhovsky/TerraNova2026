@@ -22,7 +22,7 @@ COS явно розділяє **structured LLM transport (структурова
 
 Його задача — дати Domain/Application можливість запросити структуровану генерацію без залежності від OpenAI, Anthropic або конкретного HTTP SDK і без маскування звичайного model call під Agent lifecycle.
 
-## Infrastructure
+## Інфраструктура
 
 Конкретна HTTP/provider реалізація живе в Infrastructure.
 

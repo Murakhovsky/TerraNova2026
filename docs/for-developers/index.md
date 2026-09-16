@@ -1,5 +1,6 @@
 ---
 title: COS для розробників
+description: Технічна точка входу до архітектури, runtime, розробки, тестування та операцій COS для розробників.
 status: active
 updated: 2026-09-15
 kind: development

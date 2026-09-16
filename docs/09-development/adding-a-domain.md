@@ -54,7 +54,7 @@ app/Domains/<Name>/
 10. Зареєструйте concrete dependencies у `app/Bootstrap`, а не у Web module.
 11. Додайте architecture, smoke та integration tests і пройдіть documentation gates.
 
-## Manifest `module.php`
+## Маніфест `module.php`
 
 Manifest визначає:
 

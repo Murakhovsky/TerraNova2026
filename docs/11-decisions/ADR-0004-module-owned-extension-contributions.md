@@ -1,5 +1,6 @@
 ---
 title: ADR-0004 — Modules володіють extension contributions, shared layers не hardcode-ять Domains
+description: Рішення закріпити extension contributions за модулями, а не за shared layers.
 status: accepted
 updated: 2026-09-16
 kind: decision

@@ -243,7 +243,7 @@ Diagnostic → COS / Diagnostics
 
 до секції COS.
 
-### Core administration
+### Базове адміністрування
 
 `CoreWebRoutes` явно реєструє:
 
@@ -255,7 +255,7 @@ Diagnostic → COS / Diagnostics
 
 `/admin/content` належить content surface і також входить до секції адміністрування.
 
-## 5. Authentication
+## 5. Автентифікація
 
 Authentication є межею доступу, а не продуктовою поверхнею:
 
@@ -283,7 +283,7 @@ internal AJAX/data endpoints
 
 Вони належать до API та integration reference.
 
-## 7. XML sitemap
+## 7. XML-карта сайту
 
 `/sitemap.xml` не є цією продуктовою картою.
 

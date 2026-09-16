@@ -59,7 +59,7 @@ provider client
 
 Так бізнесовий контекст не змішується з transport details конкретного provider.
 
-## Routing policy
+## Політика маршрутизації
 
 `LlmRoutingPolicy` містить:
 
@@ -80,7 +80,7 @@ default route model
 
 Це важливо для централізованого керування вартістю й надійністю: Domain не повинен обходити platform policy через стару назву model у власній definition.
 
-## Provider registry
+## Реєстр провайдерів
 
 `LlmProviderRegistry` містить конкретні clients за `provider id`. Routing policy посилається на provider id, а не на HTTP endpoint.
 
@@ -96,7 +96,7 @@ provider client
 
 Транспорт провайдера можна замінити без зміни Domain/Agent semantics.
 
-## Fallback semantics
+## Семантика резервного маршруту
 
 Fallback відбувається лише якщо `LlmProviderException` класифікований як `retryable` і в routing policy є наступний route.
 

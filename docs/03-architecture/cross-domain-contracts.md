@@ -44,7 +44,7 @@ Cross-domain boundary має зберігати:
 
 ## Канонічні способи взаємодії
 
-### Synchronous contract / port
+### Синхронний контракт / порт
 
 Використовується, коли consumer потребує конкретну відповідь у межах поточного use case.
 
@@ -76,13 +76,13 @@ consumer-owned reaction
 
 Event не є remote command. `something.changed` не повинно означати приховане «зроби мені ось це».
 
-### Read projection
+### Проєкція читання
 
 Для dashboards/search/analytics може існувати dedicated projection, сформована з provider-owned data/events.
 
 Projection може дублювати read data, але не переносить business authority до consumer-а.
 
-### Integration adapter
+### Інтеграційний адаптер
 
 External providers, legacy tables або чужі APIs проходять translation boundary.
 
@@ -94,7 +94,7 @@ Adapter
 COS contract / canonical vocabulary
 ```
 
-## Executable authority
+## Виконуване джерело істини
 
 Поточні synchronous cross-domain dependencies декларуються в `contributions.cross_domain_contracts` у `app/Domains/*/module.php`.
 
@@ -157,7 +157,7 @@ kind: integration_adapter
 
 Це explicit boundary для publication canonical Property tour data через Spatial-owned integration surface.
 
-## Ownership rule
+## Правило володіння
 
 Contract не створює shared ownership.
 
@@ -173,7 +173,7 @@ Consumer-owned result or relationship
 
 Sales може використати Property facts, але Asset / Inventory / Listing не стають Sales entities. Property може використати Sales context, але ClientCase не стає Property entity.
 
-## Mutation rule
+## Правило зміни стану
 
 Consumer не мутує provider persistence напряму.
 
@@ -191,7 +191,7 @@ Provider persistence
 Provider Event
 ```
 
-## Read rule
+## Правило читання
 
 Перед додаванням contract method потрібно відповісти:
 
@@ -231,7 +231,7 @@ Domain A → external provider SDK directly
 
 Допустима залежність оформлюється через contract, event vocabulary, projection або explicit integration adapter.
 
-## Composition root
+## Корінь композиції
 
 Concrete cross-domain composition належить Bootstrap/composition layer.
 
@@ -245,7 +245,7 @@ Runtime consumer receives dependency
 
 Domain не шукає concrete implementation через глобальний container і не тягне Web/session context у background runtime.
 
-## Documentation contract
+## Контракт документації
 
 Коли додається cross-domain interaction, документація має зафіксувати:
 

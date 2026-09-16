@@ -24,7 +24,7 @@ request / event / job
 
 `correlation id` має переживати queue/event/external hops, де це можливо.
 
-## Logs
+## Журнали
 
 Structured log для consequential operation повинен, де доречно, містити:
 
@@ -37,7 +37,7 @@ Structured log для consequential operation повинен, де доречн�
 
 Лог не повинен вимагати від оператора ворожіння по трьох unrelated stack traces, щоб зрозуміти одну бізнесову операцію.
 
-## Metrics
+## Метрики
 
 Корисні категорії:
 
@@ -50,7 +50,7 @@ Structured log для consequential operation повинен, де доречн�
 - approval backlog;
 - Domain-specific operational KPIs.
 
-## Tracing
+## Трасування
 
 Critical cross-boundary flows мають бути reconstructable навіть якщо повний distributed tracing не використовується.
 

@@ -1,5 +1,6 @@
 ---
 title: ADR-0007 — Documentation content і renderer розділені
+description: Рішення відокремити документаційний контент і generated reference від disposable renderer output.
 status: accepted
 updated: 2026-09-16
 kind: decision

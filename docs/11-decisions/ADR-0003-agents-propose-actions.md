@@ -1,5 +1,6 @@
 ---
 title: ADR-0003 — Agents пропонують Actions і не мутують state напряму
+description: Рішення обмежити Agents формуванням ActionProposal без прямої мутації бізнес-стану.
 status: accepted
 updated: 2026-09-16
 kind: decision
@@ -58,7 +59,7 @@ Agent не може напряму:
 
 Відхилено як default: provider/tool semantics фактично ставали б authorization layer.
 
-## Agent-specific permission system
+## Окрема система дозволів для Agent
 
 Відхилено: дублював би Kernel Policy/Approval runtime.
 

@@ -58,7 +58,7 @@ flowchart LR
 
 Evidence є первинним traceability layer. Derived data без зрозумілого походження не повинні непомітно перетворюватися на authoritative conclusions.
 
-## Evaluation
+## Оцінювання
 
 ```mermaid
 flowchart LR

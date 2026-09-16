@@ -66,7 +66,7 @@ Event / result / audit
 
 HTTP status є представленням причини, а не самою бізнес-семантикою.
 
-## Routes
+## Маршрути
 
 Module-owned API routes реєструються через runtime extension surface. Поточний точний список не дублюється вручну: [Маршрути модулів](../12-reference/module-routes.md) генеруються з актуального checkout.
 

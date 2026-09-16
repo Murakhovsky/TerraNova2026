@@ -26,7 +26,7 @@ ModuleCatalog + DomainModuleRegistry
        Cytoscape Explorer
 ```
 
-## Automation topology
+## Топологія автоматизації
 
 Canonical graph почав явно відображати bootstrap automation definitions:
 
@@ -59,7 +59,7 @@ PolicyProvidingModuleInterface
 
 Visualization читає лише відповідні contracts і не підміняє tenant-specific state умовним `default` runtime state.
 
-## Dependency evidence
+## Докази залежностей
 
 `depends_on` перестав бути анонімним edge. Dependency metadata фіксує provenance факту.
 
@@ -77,7 +77,7 @@ Derived cross-domain dependencies створюються лише після т�
 
 V0.4.1 не намагається виводити архітектуру з довільних PHP imports. Source scanning може використовуватися для CI verification, але не як runtime architecture truth.
 
-## Projection-aware layouts
+## Макети з урахуванням проєкції
 
 Projection definitions передають renderer-neutral layout intent через Kernel registry description contract.
 
@@ -95,7 +95,7 @@ Projection definitions передають renderer-neutral layout intent чер�
 
 Browser layer мапить ці hints на Cytoscape algorithms. Renderer-specific algorithm names не входять у Kernel або Architecture graph semantics.
 
-## Server-side Domain focus
+## Серверний фокус Domain
 
 Explorer має read endpoint:
 
@@ -107,7 +107,7 @@ GET /cos/architecture/graph?view=domain&focus=domain:sales&depth=2
 
 `depth=all` використовує повну projection.
 
-## Explorer hardening
+## Посилення Explorer
 
 Active projection володіє своїми visible statistics, filters і layout intent.
 

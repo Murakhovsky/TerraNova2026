@@ -46,7 +46,7 @@ to-be                          source-verified
 
 Verification обчислюється з current-checkout evidence і не записується автором у process definition.
 
-## Runtime Evidence Catalogue
+## Каталог доказів runtime
 
 Machine-readable evidence catalogue генерується через:
 
@@ -108,7 +108,7 @@ Process definition містить topology, owners, step Domain, capability аб
 
 Це замінює старий V0.5-era schema `v3` як поточний contract. Історична роль V0.5 полягала у введенні evidence-backed verification; platform-level Process V0.1 пізніше переніс сам registry у загальну архітектуру COS.
 
-## Cross-domain evidence
+## Міждоменні докази
 
 Visualization V0.4.2 ввів first-class contracts:
 
@@ -133,7 +133,7 @@ Evidence layer перевіряє:
 
 Таким чином Architecture truth і Process truth сходяться на одному executable boundary.
 
-## Capability coverage
+## Покриття можливостей
 
 Capability coverage є окремою від verification.
 
@@ -155,7 +155,7 @@ Visualization V0.5 не генерує `sequenceDiagram` лише з generic ste
 
 Convincing diagram із вигаданою семантикою гірший за відсутність diagram, бо помилка в ньому виглядає як документація.
 
-## Gates
+## Перевірки
 
 Documentation/Visualization checks перевіряють:
 

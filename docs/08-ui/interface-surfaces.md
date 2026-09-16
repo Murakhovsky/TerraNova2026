@@ -44,7 +44,7 @@ Controller не має містити:
 - provider routing;
 - LLM prompt або бізнесову інтерпретацію.
 
-## Tenant
+## Організація / tenant
 
 Delivery layer встановлює active organization/tenant context, але Domain operations усе одно мають явно бути tenant-safe. Session сама по собі не є security boundary.
 
@@ -52,7 +52,7 @@ Delivery layer встановлює active organization/tenant context, але D
 
 UI navigation може залежати від active modules і capabilities. Вимкнений Domain module не повинен залишати мертві меню та routes.
 
-## Read models
+## Моделі читання
 
 Складні workspace/dashboard screens повинні читати projections або read models. Не потрібно змушувати write repository одночасно бути аналітичним запитом із чотирнадцятьма JOIN лише тому, що SQL це дозволяє.
 
