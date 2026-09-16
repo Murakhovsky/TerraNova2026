@@ -122,5 +122,81 @@ const initSalesAgentAdmin = () => {
   });
 };
 
+const initSalesIntegrationAdmin = () => {
+  const root = document.querySelector('[data-sales-integration-admin]');
+  if (!root) return;
+  const csrf = root.dataset.csrf || '';
+  const post = (url, payload) => requestJson(url, csrf, payload, true);
+
+  root.querySelector('[data-create-integration]')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const raw = Object.fromEntries(new FormData(form).entries());
+    const payload = {
+      integration_key: raw.integration_key,
+      name: raw.name || undefined,
+      credentials_reference: raw.credentials_reference || undefined,
+      config: {},
+    };
+    try {
+      await post('/api/sales/admin/integrations', payload);
+      window.location.reload();
+    } catch (error) {
+      window.alert(error.message);
+    }
+  });
+
+  root.querySelectorAll('[data-update-integration]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const card = form.closest('[data-integration-id]');
+      if (!card) return;
+      const data = Object.fromEntries(new FormData(form).entries());
+      const payload = {
+        name: data.name,
+        status: data.status,
+        configuration_version: Number(data.configuration_version),
+      };
+      if (data.credentials_reference) payload.credentials_reference = data.credentials_reference;
+      try {
+        await post(`/api/sales/admin/integrations/${card.dataset.integrationId}`, payload);
+        window.location.reload();
+      } catch (error) {
+        window.alert(error.message);
+      }
+    });
+  });
+
+  root.querySelectorAll('[data-test-integration]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-integration-id]');
+      if (!card) return;
+      try {
+        const result = await post(`/api/sales/admin/integrations/${card.dataset.integrationId}/test`, {});
+        window.alert(`Health: ${result.health_status}${result.reason ? `\n${result.reason}` : ''}`);
+        window.location.reload();
+      } catch (error) {
+        window.alert(error.message);
+      }
+    });
+  });
+
+  root.querySelectorAll('[data-route-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const card = form.closest('[data-integration-id]');
+      if (!card) return;
+      const data = Object.fromEntries(new FormData(form).entries());
+      try {
+        await post(`/api/sales/admin/integrations/${card.dataset.integrationId}/routes`, data);
+        window.location.reload();
+      } catch (error) {
+        window.alert(error.message);
+      }
+    });
+  });
+};
+
 initSalesTeamAdmin();
 initSalesAgentAdmin();
+initSalesIntegrationAdmin();
