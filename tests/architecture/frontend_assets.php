@@ -58,7 +58,10 @@ foreach ($views as $view) {
         throw new RuntimeException('Inline CSS is forbidden in ordinary Web views; move it to frontend feature ownership: ' . $relativePath);
     }
 
-    if (preg_match_all('/<script\b([^>]*)>/i', $source, $scripts, PREG_SET_ORDER)) {
+    // Script attributes can contain dynamic PHP such as src="<?php ... ?>".
+    // Parse the opening tag quote-aware so the PHP closing `?>` does not look
+    // like the end of the HTML tag and create a false inline-JS violation.
+    if (preg_match_all('/<script\b((?:[^>"\']+|"[^"]*"|\'[^\']*\')*)>/i', $source, $scripts, PREG_SET_ORDER)) {
         foreach ($scripts as $script) {
             if (preg_match('/\btype\s*=\s*["\']application\/(?:ld\+json|json)["\']/i', $script[1]) === 1) {
                 continue;
