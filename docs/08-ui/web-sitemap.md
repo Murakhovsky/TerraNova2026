@@ -1,29 +1,31 @@
 ---
-title: Web Sitemap
-description: Canonical product map for Public, Portal and Workspace surfaces, route ownership and SEO visibility.
+title: Карта Web-поверхонь
+description: Канонічна продуктова карта Public, Portal і Workspace, власність маршрутів та правила індексації.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: ui
 ---
 
-# Web Sitemap
+# Карта Web-поверхонь
 
-COS Web is not one flat website. It has three canonical human-facing surfaces:
+COS Web має три людські поверхні:
 
 ```text
-Public    = external world
-Portal    = user + interaction with the company
-Workspace = company + operational work
+Public    = зовнішній світ
+Portal    = користувач і його взаємодія з компанією
+Workspace = компанія й операційна робота
 ```
 
-The sitemap therefore follows surface ownership first, not controller names.
+Карта будується за **призначенням поверхні**, а не за назвами controllers.
 
-## 1. Canonical product map
+> Це продуктова карта, а не повний реєстр технічних routes. Точні module-owned routes генеруються в [Module Routes](../12-reference/module-routes.md). Частина старішого Web усе ще використовує generic routes на кшталт `/property/:action`, тому карта також звіряється з `CoreWebRoutes`, `FrontendRoutes` і navigation contributors.
+
+## 1. Канонічна карта
 
 ```text
 /
 ├── PUBLIC
-│   ├── Real Estate
+│   ├── Нерухомість
 │   │   ├── /property/catalog
 │   │   ├── /property/show/{slug}
 │   │   ├── /property/type/{type}
@@ -31,9 +33,8 @@ The sitemap therefore follows surface ownership first, not controller names.
 │   │   ├── /nerukhomist/{location}/{type}
 │   │   ├── /property/favour
 │   │   └── /property/submit
-│   │       ├── alias: /submit-property
-│   │       └── alias: /property/create
-│   │
+│   │       ├── /submit-property
+│   │       └── /property/create
 │   ├── Terra Nova
 │   │   ├── /terra-nova
 │   │   ├── /agency
@@ -45,283 +46,218 @@ The sitemap therefore follows surface ownership first, not controller names.
 │   │   ├── /contacts
 │   │   ├── /it
 │   │   └── /art
-│   │
-│   ├── Content
+│   ├── Контент
 │   │   ├── /blog
 │   │   ├── /blog/{slug}
 │   │   └── /guide/{slug}
-│   │
-│   └── COS public site
+│   └── COS
 │       ├── /cos
 │       ├── /cos/{lang}
 │       └── /cos/{lang}/domains/{slug}
 │
 ├── PORTAL
 │   ├── /cabinet
-│   │   ├── Overview
-│   │   ├── #properties       My Properties
-│   │   ├── #submissions      Submitted properties
-│   │   ├── #requests         Requests
-│   │   └── #profile          Account profile
-│   │
+│   │   ├── #properties
+│   │   ├── #requests
+│   │   └── #profile
 │   ├── /cabinet/submission/{id}
-│   ├── /property/catalog     shared Public capability
-│   ├── /property/favour      shared Public capability
-│   └── /property/submit      shared Public capability, role-aware link
+│   ├── /property/catalog
+│   ├── /property/favour
+│   └── /property/submit      залежить від ролі
 │
 └── WORKSPACE
-    ├── /admin                         Overview
-    │
+    ├── /admin
     ├── Sales
-    │   ├── /sales/dashboard           Overview
-    │   ├── /sales/today               Today
-    │   ├── /sales/pipeline            Pipeline
-    │   ├── /sales/leads               Leads
-    │   ├── /sales/deals               Deals
-    │   ├── /sales/deals/{id}          Deal workspace
-    │   ├── /sales/director            Director view
-    │   └── /sales/admin               Sales Admin, admin only
-    │
-    ├── Clients
-    │   ├── /client-case/inbox         Inbox
-    │   └── /client-case               Cases
-    │
+    │   ├── /sales/dashboard
+    │   ├── /sales/today
+    │   ├── /sales/pipeline
+    │   ├── /sales/leads
+    │   ├── /sales/deals
+    │   ├── /sales/deals/{id}
+    │   ├── /sales/director
+    │   └── /sales/admin      лише admin
+    ├── Клієнти
+    │   ├── /client-case/inbox
+    │   └── /client-case
     ├── Property
-    │   ├── /property/manage           Inventory
-    │   ├── /property/listing          Commercial listing
-    │   ├── /property/map              Locations
-    │   ├── /property/submissions      Moderation
-    │   ├── /spatial/manage            3D / Spatial
-    │   └── /property/catalog          Public catalog projection
-    │
-    ├── COS Control Center
-    │   ├── /cos/control-center        Overview
-    │   ├── /cos/architecture          Architecture
-    │   ├── /cos/control-center#actions
-    │   ├── /cos/control-center#approvals
-    │   ├── /cos/control-center#agents
-    │   ├── /cos/control-center#rules
-    │   ├── /cos/control-center#events
-    │   ├── /cos/control-center#audit
+    │   ├── /property/manage
+    │   ├── /property/listing
+    │   ├── /property/map
+    │   ├── /property/submissions
+    │   ├── /spatial/manage
+    │   └── /property/catalog
+    ├── COS
+    │   ├── /cos/control-center
+    │   ├── /cos/architecture
+    │   ├── #actions
+    │   ├── #approvals
+    │   ├── #agents
+    │   ├── #rules
+    │   ├── #events
+    │   ├── #audit
     │   └── /admin/diagnostics/methodology-studio
-    │
-    ├── Analytics
-    │   └── /admin/analytics
-    │
-    └── Administration
-        ├── /admin/users               admin only
-        └── /admin/content
+    ├── /admin/analytics
+    ├── /admin/content
+    └── /admin/users          лише admin
 ```
 
-## 2. Public surface
+## 2. Public
 
-Public is the only surface intended for search indexing and anonymous discovery.
+Public є єдиною поверхнею, призначеною для анонімного відкриття та пошукової індексації.
 
-### Primary public navigation
+### Основна навігація
 
-The canonical top-level navigation is:
+`FrontendNavigation::public()` зараз визначає:
 
-1. Real Estate — `/property/catalog`;
-2. Services — `/services`;
-3. Partners — `/partners`;
-4. Terra Nova — `/terra-nova`;
-5. COS — `/cos/en`.
+1. Нерухомість → `/property/catalog`;
+2. Послуги → `/services`;
+3. Партнерам → `/partners`;
+4. Terra Nova → `/terra-nova`;
+5. COS → `/cos/en`.
 
-Additional public pages are discoverable through content links, footer navigation, search, campaigns and SEO landings rather than all being forced into the primary header.
+### Terra Nova
 
-### Real Estate subtree
-
-`Property` owns the real-estate public projection.
+`PublicPageService` визначає десять статичних сторінок:
 
 ```text
-/property/catalog
-├── filters/search
-├── /property/show/{slug}
-├── /property/type/{type}
-├── /property/city/{location}
-└── /nerukhomist/{location}/{type}
+/terra-nova  /agency     /it       /art
+/services    /team       /partners /cases
+/vacancies   /contacts
 ```
 
-`Property` remains the asset source of truth. Public pages are projections of Property and commercial availability, not a second property model.
+### Публічний COS
 
-`/property/favour` is currently a Public capability backed by server session state. It is not a Portal-owned page merely because logged-in users can use it.
-
-`/property/submit` is also currently a Public capability. Portal may link to it conditionally, but Portal does not own the route.
-
-### Terra Nova public pages
-
-Static public pages currently supplied by `PublicPageService`:
-
-- `/terra-nova`;
-- `/agency`;
-- `/it`;
-- `/art`;
-- `/services`;
-- `/team`;
-- `/partners`;
-- `/cases`;
-- `/vacancies`;
-- `/contacts`.
-
-### Content subtree
+`CompanyOsController` підтримує п’ять мов:
 
 ```text
-/blog
-├── /blog/{slug}
-└── /guide/{slug}
+en  de  fr  pl  uk
 ```
 
-Blog posts are editorial content. Guide pages are SEO/content landing pages and must not own business state.
-
-### COS public site
-
-COS marketing/product presentation is a Public surface even though COS Control Center is Workspace.
+Поточний каталог містить **21** сторінку напрямів COS для кожної мови.
 
 ```text
 /cos
-└── /cos/{lang}
-    └── /cos/{lang}/domains/{slug}
+/cos/{lang}
+/cos/{lang}/domains/{slug}
 ```
 
-Supported languages currently are:
+Публічний `/cos/{lang}` і операційний `/cos/control-center` є різними поверхнями.
 
-- `en`;
-- `de`;
-- `fr`;
-- `pl`;
-- `uk`.
+### Нерухомість
 
-The public COS domain catalog currently exposes 21 domain pages per language.
+Property залишається джерелом правди про активи. Public pages є проєкцією канонічних Property та комерційних даних, а не другою моделлю нерухомості.
 
-## 3. Portal surface
+`/property/favour` зараз використовує server-session state. `/property/submit` є Public capability, хоча Portal показує посилання на неї лише дозволеним ролям.
 
-Portal is authenticated user context. It must answer:
+## 3. Portal
 
-> What belongs to me, what have I sent to the company, and what is happening with my interaction?
-
-Canonical root:
+Portal є authenticated user context.
 
 ```text
-/cabinet
+Огляд         → /cabinet
+Нерухомість   → /property/catalog
+Вибрані       → /property/favour
+Мої об’єкти   → /cabinet#properties
+Подати об’єкт → /property/submit, якщо роль дозволяє
+Звернення     → /cabinet#requests
+Профіль       → /cabinet#profile
 ```
 
-Portal information architecture:
-
-```text
-Overview
-Real Estate
-├── Catalog              -> /property/catalog
-├── Favourites           -> /property/favour
-├── My Properties        -> /cabinet#properties
-└── Submit Property      -> /property/submit when capability allows
-Requests                 -> /cabinet#requests
-Profile                  -> /cabinet#profile
-```
-
-Submitted property detail/edit route:
+Детальна сторінка поданого об’єкта:
 
 ```text
 /cabinet/submission/{id}
 ```
 
-Important boundary:
+`Мої об’єкти` не є `/property/listing`: останній маршрут належить Workspace.
 
-- `My Properties` is not `/property/listing`;
-- `/property/listing` is Workspace commercial inventory/listing;
-- manager/admin opening `/cabinet` still receives Portal, not Workspace.
+## 4. Workspace
 
-## 4. Workspace surface
-
-Workspace is company operational context. It is module-composed and role-aware.
-
-Top-level canonical modules:
+Workspace є операційним контекстом компанії. Навігація складається з core та внесків активних modules.
 
 ```text
-Overview
-Sales
-Clients
-Property
-COS
-Analytics
-Administration
+Core       → Огляд, COS, Аналітика, Адміністрування
+Sales      → Sales, Клієнти
+Property   → Нерухомість
+Diagnostic → COS / Diagnostics
 ```
 
 ### Sales
 
+`SalesNavigationContributor` визначає:
+
 ```text
 /sales/dashboard
-├── /sales/today
-├── /sales/pipeline
-├── /sales/leads
-├── /sales/deals
-│   └── /sales/deals/{id}
-├── /sales/director
-└── /sales/admin          admin only
+/sales/today
+/sales/pipeline
+/sales/leads
+/sales/deals
+/sales/director
+/sales/admin       лише admin
 ```
 
-Sales owns demand, opportunity and deal execution. It does not own Property assets or CRM identity.
+`/sales/deals/{id}` є окремим робочим простором угоди.
 
-### Clients
+### Клієнти
 
 ```text
 /client-case/inbox
-└── /client-case
+/client-case
 ```
 
-This is the current Web projection for client cases/inbox. CRM remains the relationship/identity concern rather than a dumping ground for every operational screen.
+Ця секція зараз надходить із Sales navigation contribution.
 
-### Property Workspace
+### Property
+
+`PropertyNavigationContributor` визначає:
 
 ```text
 /property/manage
-├── Inventory
-├── /property/listing
-├── /property/map
-├── /property/submissions
-├── /spatial/manage
-└── /property/catalog
+/property/listing
+/property/map
+/property/submissions
+/spatial/manage
+/property/catalog
 ```
 
-Interpretation:
+`/property/catalog` тут є переходом із Workspace у Public projection, а не окремою Workspace-копією каталогу.
 
-- `manage` = operational asset/inventory work;
-- `listing` = commercial listing workflow;
-- `map` = location/spatial projection;
-- `submissions` = moderation queue;
-- `spatial/manage` = 3D/spatial operations;
-- `catalog` = transition into the Public projection.
-
-### COS Workspace
+### COS і Diagnostic
 
 ```text
 /cos/control-center
-├── Overview
-├── /cos/architecture
-├── #actions
-├── #approvals
-├── #agents
-├── #rules
-├── #events
-├── #audit
-└── /admin/diagnostics/methodology-studio
+/cos/architecture
+/cos/control-center#actions
+/cos/control-center#approvals
+/cos/control-center#agents
+/cos/control-center#rules
+/cos/control-center#events
+/cos/control-center#audit
 ```
 
-The public `/cos/{lang}` tree and Workspace `/cos/control-center` are different surfaces and must not share authorization semantics just because both start with `/cos`.
+`DiagnosticNavigationContributor` не створює top-level section, а додає:
 
-### Administration
+```text
+/admin/diagnostics/methodology-studio
+```
+
+до секції COS.
+
+### Core administration
+
+`CoreWebRoutes` явно реєструє:
 
 ```text
 /admin
-├── /admin/analytics
-├── /admin/content
-└── /admin/users          admin only
+/admin/users
+/admin/analytics
 ```
 
-Administration contains platform/company administration, not Domain business workflows.
+`/admin/content` належить content surface і також входить до секції адміністрування.
 
-## 5. Authentication routes
+## 5. Authentication
 
-Authentication is an access boundary, not a product surface:
+Authentication є межею доступу, а не продуктовою поверхнею:
 
 ```text
 /auth/login
@@ -329,90 +265,109 @@ Authentication is an access boundary, not a product surface:
 /auth/logout
 ```
 
-Authenticated success redirects to `/cabinet`.
+Ці routes явно зареєстровані в `CoreWebRoutes`.
 
-## 6. Routes intentionally excluded from the product sitemap
+## 6. Технічні routes поза продуктовою картою
 
-The following are runtime/delivery infrastructure and must not appear as product navigation:
+Не повинні з’являтися як продуктова навігація:
 
-- `/api/**`;
-- `/webhooks/**`;
-- `/analytics/track`;
-- action endpoints such as approve/reject/execute POST routes;
-- health endpoints;
-- integration callbacks;
-- internal AJAX/data endpoints.
+```text
+/api/**
+/webhooks/**
+/analytics/track
+health endpoints
+integration callbacks
+POST routes approve/reject/execute
+internal AJAX/data endpoints
+```
 
-They belong in API/integration reference, not in the human-facing sitemap.
+Вони належать до API та integration reference.
 
-## 7. SEO sitemap policy
+## 7. XML sitemap
 
-`/sitemap.xml` is not the same artifact as this product sitemap.
+`/sitemap.xml` не є цією продуктовою картою.
 
-The XML sitemap must contain only indexable Public pages. Portal and Workspace pages are never sitemap entries.
-
-Current XML sitemap already includes:
+`SeoController::sitemapAction()` зараз включає:
 
 - `/`;
 - `/property/catalog`;
 - `/property/submit`;
 - `/blog`;
-- all `PublicPageService` pages;
-- Property type pages;
-- Property location pages;
+- усі сторінки `PublicPageService`;
+- Property type та location pages;
 - location + type SEO landing pairs;
-- published property details;
-- blog and guide content items.
+- опубліковані Property details;
+- blog та guide items.
 
-Current gap: COS Public pages (`/cos/{lang}` and `/cos/{lang}/domains/{slug}`) are valid Public content but are not yet generated by `SeoController::sitemapAction()`. This should be closed as a separate SEO/public-discovery change instead of coupling it to Workspace routing.
+### Відома прогалина
 
-## 8. Indexing boundary
-
-Canonical rule:
+Публічні COS pages:
 
 ```text
-Public    -> index,follow when page is intended for discovery
-Portal    -> noindex,nofollow
-Workspace -> noindex,nofollow
-API       -> not an HTML indexing target
+/cos/{lang}
+/cos/{lang}/domains/{slug}
 ```
 
-The base Web layout already classifies `/admin`, `/auth`, `/cabinet`, `/client-case`, `/sales`, `/cos/control-center` and operational Property paths as private for meta robots purposes.
+ще не генеруються `SeoController::sitemapAction()`. Це SEO-прогалина, а не проблема Workspace routing.
 
-`robots.txt` is a crawler hint, not an authorization mechanism. Authentication and capability checks remain mandatory regardless of indexing rules.
+## 8. Індексація
 
-## 9. Ownership rules
+Канонічне правило:
 
-A route belongs to the surface determined by user context and business purpose, not by its URL prefix alone.
+```text
+Public    → index,follow, якщо сторінка призначена для discovery
+Portal    → noindex,nofollow
+Workspace → noindex,nofollow
+API       → не є HTML-ціллю індексації
+```
 
-Examples:
+Базовий Web layout класифікує `/admin`, `/auth`, `/cabinet`, `/client-case`, `/sales`, `/cos/control-center` та операційні Property paths як private для meta robots.
 
-- `/cos/en` -> Public;
-- `/cos/control-center` -> Workspace;
-- `/property/catalog` -> Public, even when opened from Portal or Workspace;
-- `/property/submit` -> Public capability linked from Portal;
-- `/property/listing` -> Workspace;
-- `/cabinet` -> Portal for every role.
+`robots.txt` додатково закриває `/admin`, `/auth`, `/cabinet`, `/client-case` та основні операційні Property paths. Це лише crawler hint, не authorization mechanism.
 
-## 10. Evolution rule
+## 9. Правило власності
 
-New modules should extend this map through their own navigation contributors and application routes.
+Route належить поверхні за призначенням, а не лише за URL prefix:
 
-Do not solve growth by putting everything into `FrontendNavigation`, CRM, Property or `/admin`.
+```text
+/cos/en             → Public
+/cos/control-center → Workspace
+/property/catalog   → Public
+/property/submit    → Public capability, доступна з Portal
+/property/listing   → Workspace
+/cabinet            → Portal для будь-якої ролі
+```
 
-The desired long-term shape is:
+## 10. Джерела перевірки
+
+Стан на `2026-09-16` звірено з:
+
+```text
+app/Interfaces/Web/Routing/CoreWebRoutes.php
+app/Interfaces/Web/Routing/FrontendRoutes.php
+app/Interfaces/Web/Navigation/FrontendNavigation.php
+app/Interfaces/Web/Navigation/*NavigationContributor.php
+app/Interfaces/Web/Page/PublicPageService.php
+app/Interfaces/Web/Controller/CompanyOsController.php
+app/Interfaces/Web/Controller/SeoController.php
+docs/12-reference/module-routes.md
+```
+
+## 11. Правило розвитку
+
+Нові modules мають розширювати карту через власні navigation contributors і routes застосунку, а не шляхом складання всього в `FrontendNavigation`, CRM, Property або `/admin`.
 
 ```text
 Surface
-  -> Module
-      -> Capability
-          -> Page / workflow
-              -> application use case
-                  -> Domain
+  → Module
+      → Capability
+          → Page / Workflow
+              → Application Use Case
+                  → Domain
 ```
 
-This preserves the core COS vertical:
+Це зберігає вертикаль COS:
 
 ```text
-Business -> Workflow -> Domain -> Capability -> Runtime -> Service -> Code
+Business → Workflow → Domain → Capability → Runtime → Service → Code
 ```
