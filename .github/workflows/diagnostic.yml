@@ -43,7 +43,9 @@ jobs:
           php tests/architecture/web_v013_explicit_routing.php
 
       - name: Deployment readiness architecture
-        run: php tests/architecture/deploy_worker_readiness.php
+        run: |
+          php tests/architecture/deploy_worker_readiness.php
+          php tests/architecture/cli_worker_tenant_isolation.php
 
       - name: Diagnostic checks
         run: |

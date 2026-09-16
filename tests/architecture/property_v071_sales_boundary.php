@@ -39,8 +39,19 @@ foreach (["'salesPropertyReference'", "'propertyReferencePort'", "'salesClientCa
 $readModel = file_get_contents($root . '/app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlClientCaseReadModel.php') ?: '';
 $commands = file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php') ?: '';
 $agent = file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php') ?: '';
-foreach ([$readModel, $commands, $agent] as $content) {
-    $assert(str_contains($content, 'SalesPropertyReference'), 'Every Sales property consumer must use the Sales-side Property adapter.');
+foreach ([$readModel, $commands] as $content) {
+    $assert(str_contains($content, 'SalesPropertyReference'), 'Request-scoped Sales property consumers must use the Sales-side Property adapter.');
 }
+$assert(str_contains($agent, 'PropertyReferencePort'), 'Sales agent runtime must depend on the tenant-explicit Property contract.');
+$assert(str_contains($agent, '$invocation->organizationId'), 'Sales agent runtime must scope Property reads from AgentInvocation.');
+$assert(str_contains($agent, 'new SalesPropertyReference'), 'Sales agent runtime may reuse the Sales Property adapter only with the invocation tenant supplied explicitly.');
+
+$agentRegistrationStart = strpos($services, "$di->setShared('salesAgentContextBuilder'");
+$domainRegistrationStart = strpos($services, "$di->setShared('salesDomainModule'");
+$assert($agentRegistrationStart !== false && $domainRegistrationStart !== false && $domainRegistrationStart > $agentRegistrationStart, 'Sales agent registration block is missing.');
+$agentRegistration = substr($services, $agentRegistrationStart, $domainRegistrationStart - $agentRegistrationStart);
+$assert(str_contains($agentRegistration, "getShared('propertyReferencePort')"), 'Sales agent runtime must receive PropertyReferencePort directly.');
+$assert(!str_contains($agentRegistration, "getShared('salesPropertyReference')"), 'Sales agent runtime must not inherit request-scoped SalesPropertyReference.');
+$assert(!str_contains($agentRegistration, 'organizationContext'), 'Sales agent runtime composition must not resolve request/session organization context.');
 
 echo "Property V0.7.1 Sales boundary: OK\n";

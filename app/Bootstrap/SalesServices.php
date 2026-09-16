@@ -40,7 +40,7 @@ $di->setShared('salesPropertyReference', fn (): SalesPropertyReference => new Sa
 // This intentionally supersedes the legacy infrastructure-only registration from InfrastructureServices.
 $di->setShared('salesAgentContextBuilder', fn (): MysqlSalesAgentContextBuilder => new MysqlSalesAgentContextBuilder(
     $this->getShared('databaseService')->connection(),
-    $this->getShared('salesPropertyReference'),
+    $this->getShared('propertyReferencePort'),
 ));
 
 $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainModule(
