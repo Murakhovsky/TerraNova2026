@@ -24,7 +24,8 @@ foreach ([
 
 foreach ([
     'CERT_DIR="/etc/letsencrypt/live/$DOMAIN"',
-    "grep -Fq 'listen 443 ssl;'",
+    'TLS_LISTEN_PATTERN=',
+    'grep -Eq "$TLS_LISTEN_PATTERN" "$SITE_AVAILABLE"',
     'Existing HTTPS vhost preserved for $DOMAIN; HTTP bootstrap skipped.',
 ] as $needle) {
     if (!str_contains($httpBootstrap, $needle)) {
