@@ -1,0 +1,26 @@
+name: Temporary WEB V0.14 validation
+
+on:
+  push:
+    branches: [automation/web-v014-lock]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
+      - run: |
+          php -l tests/architecture/web_v014_standard_stack.php
+          php tests/architecture/web_v014_standard_stack.php
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/web_v012_production_closure.php
