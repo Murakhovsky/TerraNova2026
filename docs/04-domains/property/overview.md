@@ -1,46 +1,57 @@
 ---
-title: Property Domain Overview
-description: Canonical real-estate asset runtime, Inventory, Listing/Publication, history, intelligence and external interoperability.
+title: Огляд домену Property
+description: Канонічне середовище виконання активів нерухомості, Inventory, Listing/Publication, історії, аналітичного інтелекту та зовнішньої взаємодії.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Property Domain Overview
+# Огляд домену Property
 
-Property — canonical owner фізичного real-estate asset state у COS.
+Property є канонічним власником **фізичного стану активу нерухомості** в COS та пов’язаних із ним комерційних представлень.
 
-## Core separation
+## Основний поділ
 
 ```text
 Property Asset = що фізично існує
-Inventory Item = як organization комерційно працює з активом
+Inventory Item = як організація комерційно працює з активом
 Listing        = як пропозиція представлена ринку
 Publication    = де Listing опублікований
-Sales          = попит, pipeline і deal process
-CRM            = people/relationship context
+Sales          = попит, воронка та процес угоди
+CRM            = люди й контекст відносин
 ```
 
-Квартира не стає фізично `SOLD`; `SOLD` є комерційним станом Inventory.
+Квартира не стає фізично `SOLD`. `SOLD` є комерційним станом Inventory. Сам актив продовжує існувати, навіть якщо конкретна організація більше його не продає.
 
-## Read this domain
+Це розділення є одним із ключових інваріантів Property.
+
+## Як читати домен
 
 <div class="cos-system-map">
   <div class="cos-map-layer">
-    <div class="cos-map-title">Property knowledge path</div>
+    <div class="cos-map-title">Маршрут знань Property</div>
     <div class="cos-map-grid">
-      <a class="cos-map-node" href="./domain-model.html"><strong>Domain Model</strong><span>Asset, Inventory, Listing, Publication, structure та ownership.</span></a>
-      <a class="cos-map-node" href="./lifecycle-and-runtime.html"><strong>Lifecycle & Runtime</strong><span>Submission, identity, commercial lifecycle та V0.12 cutover.</span></a>
-      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Contracts & Code</strong><span>Reference ports, network boundary, compatibility та code map.</span></a>
+      <a class="cos-map-node" href="./domain-model.html"><strong>Модель домену</strong><span>Asset, Inventory, Listing, Publication, структура та володіння.</span></a>
+      <a class="cos-map-node" href="./lifecycle-and-runtime.html"><strong>Життєвий цикл і виконання</strong><span>Надходження об’єкта, ідентичність, комерційний цикл і перехід V0.12.</span></a>
+      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Контракти й код</strong><span>Порти довідника, мережева межа, сумісність і карта коду.</span></a>
     </div>
   </div>
 </div>
 
-## Current scope
+## Поточний обсяг
 
-Property `0.12.0` охоплює canonical asset registry/structure, identity/provenance, Inventory, Listing/Publication, append-only history, analytics/intelligence, external Property Network/RESO boundary та authoritative canonical runtime writes.
+Property `0.12.0` охоплює:
 
-## Runtime manifest
+- канонічний реєстр активів і їхню структуру;
+- ідентичність та походження даних;
+- Inventory як комерційний облік;
+- Listing і Publication;
+- незмінювану історію подій;
+- аналітику та інтелект із прив’язкою до доказів;
+- зовнішню мережу Property Network і межу RESO;
+- канонічний шлях запису стану через середовище виконання Property.
+
+## Декларація середовища виконання
 
 ```text
 id: property
@@ -50,7 +61,7 @@ kernel: >=0.11.0 <0.12.0
 enabled_by_default: true
 ```
 
-## Authoritative mutation rule
+## Канонічне правило зміни стану
 
 ```text
 Web / API / Spatial
@@ -66,12 +77,20 @@ Compatibility Projection
 tn_properties
 ```
 
-`tn_properties` не є canonical source of Property state.
+`tn_properties` більше не є канонічним джерелом стану Property. Вона зберігається як перехідна проєкція сумісності там, де старі поверхні читання ще залежать від попередньої моделі.
 
-## Related workflow and reference
+## Межа з Sales і CRM
 
-- [Property Submission → Publication](../../02-workflows/property-submission-to-publication.md)
-- [Module & Capabilities](../../12-reference/module-capabilities.md)
-- [Events](../../12-reference/event-types.md)
-- [Commands](../../12-reference/commands.md)
-- [Routes](../../12-reference/module-routes.md)
+Property відповідає на питання **«що це за актив і як він представлений комерційно»**.
+
+Sales відповідає на питання **«хто має попит, як проходить справа або угода і що потрібно зробити далі»**.
+
+CRM зберігає та організовує контекст людей і відносин. Такий поділ не дає квартирі раптом стати клієнтом, а клієнту випадково успадкувати поле `area_m2`. Людство вже бачило достатньо універсальних таблиць.
+
+## Пов’язаний процес і довідник
+
+- [Надходження Property → публікація](../../02-workflows/property-submission-to-publication.md)
+- [Модулі та можливості](../../12-reference/module-capabilities.md)
+- [Події](../../12-reference/event-types.md)
+- [Команди](../../12-reference/commands.md)
+- [Маршрути](../../12-reference/module-routes.md)

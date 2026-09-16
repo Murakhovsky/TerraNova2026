@@ -1,38 +1,40 @@
 ---
-title: Sales Domain Overview
-description: Ownership, runtime contributions, use-case model і boundaries Sales domain.
+title: Огляд домену Sales
+description: Відповідальність, внески в середовище виконання, варіанти використання та межі домену Sales.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 contract: domain-v1
 ---
 
-# Sales Domain Overview
+# Огляд домену Sales
 
-Sales — reference bounded context COS і найповніша реалізація domain/module pattern у current `main`.
+Sales є еталонним обмеженим контекстом COS і найповнішою реалізацією шаблону домену та модуля в поточному `main`.
 
-## Purpose
+## Призначення
 
 ```text
 Lead → Client Case / Deal → Pipeline → Activities / Follow-up → Outcome
 ```
 
-Sales володіє demand lifecycle, а не generic CRM і не canonical Property.
+Sales володіє **життєвим циклом попиту та продажу**, а не універсальною CRM і не канонічною моделлю нерухомості.
 
-## Read this domain
+У практичному сенсі це означає, що домен відповідає за те, як звернення стає керованою справою або угодою, проходить воронку, накопичує активності та завершується результатом.
+
+## Як читати домен
 
 <div class="cos-system-map">
   <div class="cos-map-layer">
-    <div class="cos-map-title">Sales knowledge path</div>
+    <div class="cos-map-title">Маршрут знань Sales</div>
     <div class="cos-map-grid">
-      <a class="cos-map-node" href="./domain-model.html"><strong>Domain Model</strong><span>Vocabulary, ownership, entities та invariants.</span></a>
-      <a class="cos-map-node" href="./lifecycle-and-automation.html"><strong>Lifecycle & Automation</strong><span>Intake, pipeline, follow-up, decisions та Agent loop.</span></a>
-      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Contracts & Code</strong><span>Ports, adapters, legacy boundary та implementation map.</span></a>
+      <a class="cos-map-node" href="./domain-model.html"><strong>Модель домену</strong><span>Словник, володіння, сутності та інваріанти.</span></a>
+      <a class="cos-map-node" href="./lifecycle-and-automation.html"><strong>Життєвий цикл і автоматизація</strong><span>Приймання звернення, воронка, наступні дії, рішення та агентний цикл.</span></a>
+      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Контракти й код</strong><span>Порти, адаптери, межа зі старою моделлю та карта реалізації.</span></a>
     </div>
   </div>
 </div>
 
-## Runtime manifest
+## Декларація середовища виконання
 
 ```text
 id: sales
@@ -41,18 +43,38 @@ schema: 0.8.6
 kernel: >=0.11.0 <0.12.0
 ```
 
-Manifest декларує runtime module service, CRM inbox job handler, API route contributor, configuration provisioner, event consumer, Web navigation, migrations і capability catalogue.
+Декларація модуля реєструє сервіс середовища виконання, обробник вхідної черги CRM, внесок маршрутів API, постачальника конфігурації, споживача подій, вебнавігацію, міграції та каталог можливостей.
 
-## Automation
+Ці точні внески не потрібно дублювати вручну в пояснювальному тексті. Для цього існує [згенерований довідник модулів і можливостей](../../12-reference/module-capabilities.md).
+
+## Автоматизація
+
+Канонічний шлях автоматизації Sales:
 
 ```text
-Sales Event → Rule / Agent → Action Proposal → Policy → Kernel Execution
+Подія Sales
+    ↓
+Правило / агент
+    ↓
+Пропозиція дії
+    ↓
+Політика
+    ↓
+Виконання через Kernel
 ```
 
-## Related workflow and reference
+Агент або правило може запропонувати наступну дію, але право на зміну стану проходить через доменні інваріанти та модель повноважень COS.
 
-- [Sales Lead → Managed Case](../../02-workflows/sales-lead-to-managed-case.md)
-- [Application Use Cases](../../12-reference/application-use-cases.md)
-- [Commands](../../12-reference/commands.md)
-- [Events](../../12-reference/event-types.md)
-- [Module Routes](../../12-reference/module-routes.md)
+## Межа з CRM
+
+CRM є зовнішньою або внутрішньою системою роботи з контактами й відносинами, але вона не визначає семантику Sales.
+
+Sales володіє власним словником і станом. Конкретний CRM-постачальник підключається через порти та адаптери. Це дозволяє змінити постачальника без переписування доменної моделі продажів.
+
+## Пов’язаний процес і довідник
+
+- [Звернення Sales → керована справа](../../02-workflows/sales-lead-to-managed-case.md)
+- [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
+- [Команди](../../12-reference/commands.md)
+- [Події](../../12-reference/event-types.md)
+- [Маршрути модулів](../../12-reference/module-routes.md)

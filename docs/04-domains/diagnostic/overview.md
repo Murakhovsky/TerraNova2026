@@ -1,39 +1,66 @@
 ---
-title: Diagnostic Domain Overview
-description: Methodology, evidence, evaluation та runtime boundary Diagnostic domain.
+title: Огляд домену Diagnostic
+description: Методологія, докази, оцінювання та межа виконання домену Diagnostic.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Diagnostic Domain Overview
+# Огляд домену Diagnostic
 
-Diagnostic — bounded context для evidence-based business diagnostics.
+Diagnostic є обмеженим контекстом для **діагностики бізнесу на основі доказів**.
 
-## Purpose
+Його задача не «дати розумну відповідь ШІ», а провести відтворюваний процес від методології й фактів до оцінювання, знахідок і рекомендацій.
+
+## Призначення
 
 ```text
-Methodology → Session → Evidence → Facts / Metrics → Assessment → Findings → Recommendations
+Methodology
+    ↓
+Session
+    ↓
+Evidence
+    ↓
+Facts / Metrics
+    ↓
+Assessment
+    ↓
+Findings
+    ↓
+Recommendations
 ```
 
-## Read this domain
+ШІ може допомагати з інтерпретацією неструктурованої інформації, але факт, оцінка та рекомендація мають залишатися різними поняттями. Інакше «модель так сказала» дуже швидко стає новою методологією, що трохи слабкувато для професійної діагностики.
+
+## Як читати домен
 
 <div class="cos-system-map">
   <div class="cos-map-layer">
-    <div class="cos-map-title">Diagnostic knowledge path</div>
+    <div class="cos-map-title">Маршрут знань Diagnostic</div>
     <div class="cos-map-grid">
-      <a class="cos-map-node" href="./domain-model.html"><strong>Domain Model</strong><span>Methodology, session, evidence, records та traceability.</span></a>
-      <a class="cos-map-node" href="./lifecycle-and-evaluation.html"><strong>Lifecycle & Evaluation</strong><span>Publish, execute, score, findings та recommendation loop.</span></a>
-      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Contracts & Code</strong><span>Repositories, methodology engine, target boundary та implementation.</span></a>
+      <a class="cos-map-node" href="./domain-model.html"><strong>Модель домену</strong><span>Методологія, сесія, докази, записи та простежуваність.</span></a>
+      <a class="cos-map-node" href="./lifecycle-and-evaluation.html"><strong>Життєвий цикл і оцінювання</strong><span>Публікація методології, виконання, підрахунок, знахідки та цикл рекомендацій.</span></a>
+      <a class="cos-map-node" href="./contracts-and-code-map.html"><strong>Контракти й код</strong><span>Репозиторії, рушій методології, цільові межі та реалізація.</span></a>
     </div>
   </div>
 </div>
 
-## Ownership
+## Володіння
 
-Diagnostic володіє methodology packs/versions, sessions, evidence, evaluations, findings, hypotheses, recommendations і closed-loop recommendation outcomes.
+Diagnostic володіє:
 
-## Runtime manifest
+- пакетами й версіями методологій;
+- діагностичними сесіями;
+- доказами та вихідними даними;
+- фактами й показниками;
+- оцінюваннями;
+- знахідками та гіпотезами;
+- рекомендаціями;
+- результатами виконання рекомендацій у замкненому циклі.
+
+Він не повинен перетворюватися на загальний аналітичний контейнер для будь-якого звіту, який має слово «AI» у презентації.
+
+## Декларація середовища виконання
 
 ```text
 id: diagnostic
@@ -42,11 +69,24 @@ schema: 0.6.0
 kernel: >=0.11.0 <0.12.0
 ```
 
-AS-IS contributions включають runtime module service `diagnosticDomainModule`, API route contributor, `diagnosticActionOutcomeHandler`, Web navigation та Diagnostic migrations.
+Поточні внески включають сервіс модуля середовища виконання `diagnosticDomainModule`, внесок маршрутів API, обробник `diagnosticActionOutcomeHandler`, вебнавігацію та міграції Diagnostic.
 
-## Related workflow and reference
+Точний склад внесків генерується з декларації модуля і доступний у [довіднику модулів та можливостей](../../12-reference/module-capabilities.md).
 
-- [Diagnostic Session → Recommendation](../../02-workflows/diagnostic-session-to-recommendation.md)
-- [Application Use Cases](../../12-reference/application-use-cases.md)
-- [Module & Capabilities](../../12-reference/module-capabilities.md)
-- [Event Types](../../12-reference/event-types.md)
+## Роль штучного інтелекту
+
+ШІ доречний для:
+
+- витягування фактів із неструктурованих відповідей;
+- класифікації та групування інформації;
+- пошуку суперечностей;
+- формування пояснень і чернеток рекомендацій.
+
+Детерміновані критерії, підрахунки та правила оцінювання повинні залишатися перевірюваними й відтворюваними незалежно від конкретної мовної моделі.
+
+## Пов’язаний процес і довідник
+
+- [Діагностична сесія → рекомендація](../../02-workflows/diagnostic-session-to-recommendation.md)
+- [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
+- [Модулі та можливості](../../12-reference/module-capabilities.md)
+- [Типи подій](../../12-reference/event-types.md)
