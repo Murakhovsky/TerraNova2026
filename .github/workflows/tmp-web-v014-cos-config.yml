@@ -1,0 +1,39 @@
+name: Temporary WEB V0.14 COS config migration
+
+on:
+  push:
+    branches:
+      - automation/web-v014-lock
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/web-v014-lock
+          fetch-depth: 0
+      - name: Replace inline COS config with inert JSON
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/Interfaces/Web/View/company_os/index.phtml')
+          source = path.read_text(encoding='utf-8')
+          old = "<script>window.COS_PAGE={base:<?php echo json_encode($this->url->get('cos/'),JSON_UNESCAPED_SLASHES); ?>,type:'index'};</script>"
+          new = "<script type=\"application/json\" data-cos-page><?php echo json_encode(['base' => $this->url->get('cos/'), 'type' => 'index'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>"
+          if old not in source:
+              raise SystemExit('Expected legacy COS config snippet was not found.')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit migration and remove temporary workflow
+        run: |
+          rm .github/workflows/tmp-web-v014-cos-config.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/Interfaces/Web/View/company_os/index.phtml .github/workflows/tmp-web-v014-cos-config.yml
+          git commit -m "WEB V0.14 — migrate COS page config to inert JSON"
+          git push origin HEAD:automation/web-v014-lock
