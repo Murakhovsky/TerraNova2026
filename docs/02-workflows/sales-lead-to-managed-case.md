@@ -1,33 +1,33 @@
 ---
-title: Sales Lead → Managed Case
-description: Канонічний Sales workflow від intake до керованого case/deal та automation loop.
+title: Sales: Lead → керований Client Case
+description: Канонічний Sales workflow від приймання попиту до керованого case/deal та циклу автоматизації.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: workflow
 contract: workflow-v2
 process_state: as-is
 process_id: sales.lead-to-managed-case
 ---
 
-# Sales Lead → Managed Case
+# Sales: Lead → керований Client Case
 
-## Business goal
+## Бізнес-мета
 
-Перетворити inbound demand на керований Sales process із власником, pipeline state, next action, history та контрольованою automation.
+Перетворити вхідний попит на керований Sales process із відповідальним, станом pipeline, наступною дією, історією та контрольованою автоматизацією.
 
-## Actors
+## Учасники
 
-- client / external source;
-- salesperson;
-- manager;
+- клієнт або зовнішнє джерело;
+- менеджер продажу;
+- керівник;
 - Sales automation;
-- external CRM adapter.
+- adapter зовнішньої CRM.
 
-## Triggers
+## Тригери
 
-AS-IS є два основні intake paths.
+Поточний процес має два основні шляхи приймання.
 
-### Public intake
+### Публічна заявка
 
 ```mermaid
 flowchart LR
@@ -35,7 +35,7 @@ flowchart LR
     B --> C[Canonical Sales state]
 ```
 
-### CRM inbound
+### Вхід із CRM
 
 ```mermaid
 flowchart LR
@@ -45,9 +45,9 @@ flowchart LR
     D --> E[Canonical Sales state]
 ```
 
-Provider payload перекладається на adapter boundary і не стає внутрішньою domain model напряму.
+Payload зовнішнього provider перекладається на adapter boundary і не стає внутрішньою Domain model напряму.
 
-## Core entities / concepts
+## Основні сутності
 
 ```text
 Person relationship
@@ -55,11 +55,11 @@ Person relationship
 ≠ ClientCase / Deal
 ```
 
-Також workflow використовує PipelineStage, statuses, priority, assignment, activity, follow-up та property match.
+Процес також використовує `PipelineStage`, status, priority, assignment, activity, follow-up та property match.
 
-## Canonical application entry points
+## Прикладні точки входу
 
-Generated reference фіксує:
+Generated reference фіксує, зокрема:
 
 - `ReceivePublicLead`;
 - `ReceiveCrmWebhook`;
@@ -69,37 +69,37 @@ Generated reference фіксує:
 - `ScheduleDealFollowup`;
 - `CompleteSalesCall`.
 
-Повний актуальний список: [Application Use Cases](../12-reference/application-use-cases.md).
+Актуальний список: [Application Use Cases](../12-reference/application-use-cases.md).
 
-## Workflow
+## Процес
 
 <ProcessDiagram process-id="sales.lead-to-managed-case" />
 
-Основний business flow є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну на цій сторінці.
+Основний бізнес-потік є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну.
 
-`process_state: as-is` означає, що схема описує реальний поточний процес, але не стверджує, що кожен human/operational step уже machine-enforced COS runtime.
+`process_state: as-is` означає, що схема описує реальний поточний процес, але не стверджує, що кожний людський або операційний крок уже machine-enforced у COS runtime.
 
-## Ownership view
+## Представлення відповідальності
 
 <ProcessDiagram process-id="sales.lead-to-managed-case" view="ownership" direction="LR" />
 
-Ownership view групує ті самі registry steps за відповідальним actor. Він не створює другого workflow і не переносить Domain ownership у UI або adapter layer.
+Це представлення групує ті самі кроки Process Registry за відповідальним actor і не створює другого workflow.
 
-## Capability view
+## Представлення можливостей
 
 <ProcessDiagram process-id="sales.lead-to-managed-case" view="capability" direction="LR" />
 
-Capability view навмисно показує semantic gap. Sales runtime і evidence вже існують, але current module capability vocabulary переважно описує workspace/admin authority, а не бізнес-функції lead intake, stage execution, follow-up та outcome recording. V0.15 не маскує цю різницю випадковим permission mapping.
+Представлення навмисно показує semantic gaps. Sales runtime уже існує, але поточний module capability vocabulary досі сильніше описує workspace/admin authority, ніж бізнесові можливості intake, stage execution, follow-up та outcome recording. Такі прогалини фіксуються явно, а не маскуються випадковими permissions.
 
-## Events
+## Події
 
-Sales володіє business events навколо lead, client case/deal, stage, calls, follow-up та action outcomes.
+Sales володіє бізнесовими Events навколо Lead, Client Case/Deal, stage, calls, follow-up та action outcomes.
 
-Canonical event strings див. у [Event Types](../12-reference/event-types.md), а не в ручному списку на цій сторінці.
+Канонічні event strings дивіться в [Event Types](../12-reference/event-types.md).
 
 State change + Event + Outbox мають залишатися узгодженими там, де downstream automation залежить від події.
 
-## Automation loop
+## Цикл автоматизації
 
 ```mermaid
 flowchart TD
@@ -116,53 +116,49 @@ flowchart TD
     I --> J[Result Event + Audit]
 ```
 
-Agent не має direct mutation authority.
+Agent не має прямого права на мутацію.
 
-## Decision points
+## Точки рішень
 
-Ключові рішення workflow:
-
-- чи intake валідний;
-- чи це create або update;
-- хто owner;
+- чи валідний intake;
+- створити новий запис чи оновити наявний;
+- хто є owner;
 - який pipeline/stage;
-- який next action;
-- чи transition дозволений;
-- чи automation action можна виконати автоматично;
-- чи потрібен human approval.
+- яка наступна дія;
+- чи дозволений transition;
+- чи можна виконати automation Action автоматично;
+- чи потрібне людське погодження.
 
-## Read side
+## Модель читання
 
-Operational UI повинен читати dedicated read models/projections, а не використовувати write repository як універсальний data source.
+Операційний UI має читати dedicated read models/projections, а не використовувати write repository як універсальне джерело даних.
 
-Це дозволяє окремо оптимізувати workspace, history, funnel та management views.
+## Шляхи помилок
 
-## Failure paths
-
-- malformed provider payload → adapter/intake failure;
-- duplicate delivery → idempotent handling;
-- forbidden transition → domain/governance rejection;
+- malformed provider payload → помилка adapter/intake;
+- duplicate delivery → ідемпотентна обробка;
+- forbidden transition → Domain/governance rejection;
 - external side-effect failure → retry/audit path;
-- policy deny → action не виконується;
-- approval required → execution чекає decision.
+- Policy deny → Action не виконується;
+- Approval required → виконання чекає рішення.
 
-## Invariants
+## Інваріанти
 
-1. Усе tenant-scoped.
+1. Усі операції мають tenant scope.
 2. External vocabulary не стає canonical vocabulary автоматично.
 3. Pipeline transition проходить Sales governance.
-4. Automation handler не повинен перетворюватися на SQL script.
-5. Agent лише пропонує дію.
-6. External side effects мають бути idempotent.
+4. Automation handler не перетворюється на SQL script.
+5. Agent лише пропонує Action.
+6. External side effects мають бути ідемпотентними.
 7. Business Event належить Sales, а не Kernel.
 
-## UI surfaces
+## Інтерфейсні поверхні
 
-Workflow проявляється через Sales workspace, operational views, director/admin surfaces та інтеграційні delivery channels.
+Процес проявляється через Sales workspace, operational views, director/admin surfaces та integration delivery channels.
 
-UI не володіє pipeline rules; він лише ініціює або відображає domain operations.
+UI ініціює або відображає Domain operations, але не володіє pipeline rules.
 
-## Code map
+## Карта коду
 
 ```text
 app/Domains/Sales/Model

@@ -1,8 +1,8 @@
 ---
 title: Diagnostic Session → Recommendation
-description: Канонічний Diagnostic workflow від methodology version до evidence, evaluation і recommendations.
+description: Канонічний Diagnostic workflow від версії методології через evidence та evaluation до recommendations.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: workflow
 contract: workflow-v2
 process_state: as-is
@@ -11,20 +11,20 @@ process_id: diagnostic.session-to-recommendation
 
 # Diagnostic Session → Recommendation
 
-## Business goal
+## Бізнес-мета
 
-Провести відтворювану бізнес-діагностику, де кожен висновок можна простежити до methodology version та evidence, а AI допомагає структурувати дані, але не замінює deterministic evaluation.
+Провести відтворювану бізнес-діагностику, де кожний висновок можна простежити до конкретної версії methodology та evidence, а AI допомагає структурувати й інтерпретувати дані, але не підміняє deterministic evaluation.
 
-## Actors
+## Учасники
 
-- methodology author;
-- diagnostic operator / interviewer;
+- автор методології;
+- diagnostic operator або interviewer;
 - respondent;
 - Diagnostic AI boundary;
 - deterministic evaluation engine;
-- reviewer / decision maker.
+- reviewer або decision maker.
 
-## Preparation lifecycle
+## Підготовка методології
 
 До початку session methodology проходить окремий lifecycle.
 
@@ -35,9 +35,9 @@ flowchart LR
     C --> D[Immutable methodology version]
 ```
 
-Session має бути pinned до конкретної published version, а не до mutable `latest`.
+Session має бути прив’язана до конкретної published version, а не до mutable `latest`.
 
-## Session trigger
+## Тригер Session
 
 ```mermaid
 flowchart LR
@@ -45,9 +45,9 @@ flowchart LR
     B --> C[Version-pinned diagnostic context]
 ```
 
-Старт створює version-pinned diagnostic context для target, який діагностується.
+Старт створює diagnostic context, прив’язаний до точної версії методології та target, який діагностується.
 
-## Evidence capture
+## Збирання Evidence
 
 ```mermaid
 flowchart LR
@@ -56,7 +56,7 @@ flowchart LR
     C --> D[Facts / Metrics / Assessments]
 ```
 
-Evidence є первинним traceability layer. Derived data без зрозумілого origin не повинні тихо перетворюватися на authoritative conclusions.
+Evidence є первинним traceability layer. Derived data без зрозумілого походження не повинні непомітно перетворюватися на authoritative conclusions.
 
 ## Evaluation
 
@@ -67,9 +67,9 @@ flowchart LR
     C --> D[Findings / Hypotheses / Recommendations]
 ```
 
-LLM output не є прямим substitute для deterministic scoring.
+LLM output не є прямою заміною deterministic scoring.
 
-## AI-assisted path
+## AI-assisted шлях
 
 ```mermaid
 sequenceDiagram
@@ -85,16 +85,16 @@ sequenceDiagram
     Gateway-->>Diagnostic: extraction / interpretation
 ```
 
-AI може допомогти:
+AI може допомагати:
 
-- витягнути facts із тексту;
+- витягувати facts із тексту;
 - нормалізувати відповіді;
 - інтерпретувати qualitative evidence;
-- підготувати structured input/report material.
+- готувати structured input і матеріал для report.
 
-AI не має автоматично створювати «істину» без evidence/validation boundary.
+AI не створює канонічну «істину» без evidence та validation boundary.
 
-## Result lifecycle
+## Результати Session
 
 Поточні generated application entry points включають:
 
@@ -103,70 +103,70 @@ AI не має автоматично створювати «істину» бе
 - `CancelDiagnosticSession`;
 - `AcceptDiagnosticRecommendation`.
 
-Повний список див. у [Application Use Cases](../12-reference/application-use-cases.md).
+Повний список: [Application Use Cases](../12-reference/application-use-cases.md).
 
-## Workflow
+## Процес
 
 <ProcessDiagram process-id="diagnostic.session-to-recommendation" />
 
-Основний business flow є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну на цій сторінці.
+Основний бізнес-потік є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну.
 
-`process_state: as-is` фіксує реальний current Diagnostic process. Окремі human review/decision steps не трактуються як автоматизовані лише через те, що навколо них уже є runtime module.
+`process_state: as-is` фіксує реальний поточний Diagnostic process. Людські review/decision steps не вважаються автоматизованими лише тому, що навколо них уже існує runtime module.
 
-## Ownership view
+## Представлення відповідальності
 
 <ProcessDiagram process-id="diagnostic.session-to-recommendation" view="ownership" direction="LR" />
 
-Ownership view відділяє автора методології, оператора, deterministic evaluation engine і decision maker. AI boundary присутній як actor процесу, але не отримує штучного ownership над deterministic evaluation.
+Проєкція відділяє автора методології, оператора, deterministic evaluation engine і decision maker. AI boundary є учасником процесу, але не отримує ownership над deterministic evaluation.
 
-## Capability view
+## Представлення можливостей
 
 <ProcessDiagram process-id="diagnostic.session-to-recommendation" view="capability" direction="LR" />
 
-Capability view навмисно показує gap: Diagnostic має реальний source-verified workflow, але module manifest ще не декларує semantic business capabilities для methodology, session, evidence, evaluation і recommendation. Runtime existence не підміняє capability model.
+Проєкція навмисно показує capability gap: Diagnostic має реальний source-verified workflow, але module manifest ще не декларує semantic business capabilities для methodology, session, evidence, evaluation і recommendation. Існування runtime не підміняє capability model.
 
-## Decision points
+## Точки рішень
 
-- methodology version valid/published?
-- evidence sufficient?
-- confidence/coverage thresholds met?
-- evaluation can produce score/finding?
-- recommendation traceable to upstream evidence?
-- session ready to complete?
-- recommendation accepted?
+- чи methodology version валідна й published;
+- чи достатньо evidence;
+- чи виконані thresholds coverage/confidence;
+- чи evaluation може сформувати score або finding;
+- чи recommendation простежується до upstream evidence;
+- чи session готова до завершення;
+- чи recommendation прийнята.
 
-## Failure paths
+## Шляхи помилок
 
-- draft/unpublished methodology → session start rejected;
-- insufficient evidence → evaluation blocked або confidence reduced;
-- dangling evidence reference → derived record rejected;
-- LLM/schema failure → AI step fails without fabricating deterministic result;
-- concurrent write conflict → persistence conflict handling;
-- cancelled session → no pretend-success completion.
+- draft або unpublished methodology → запуск session відхиляється;
+- insufficient evidence → evaluation блокується або confidence знижується;
+- dangling evidence reference → derived record відхиляється;
+- LLM/schema failure → AI-крок завершується помилкою без вигадування deterministic result;
+- concurrent write conflict → застосовується persistence conflict handling;
+- cancelled session → не може завершитися як успішна.
 
-## Invariants
+## Інваріанти
 
-1. Published methodology version is reproducible.
-2. Session is pinned to a version.
-3. Derived results remain traceable to evidence/upstream records.
-4. Deterministic scoring consumes structured data.
-5. LLM transport belongs to Kernel/Infrastructure, prompts/interpretation belong to Diagnostic.
-6. Diagnostic does not copy Sales/Finance/HR domain models into itself.
-7. Completion freezes a coherent diagnostic result, not an arbitrary snapshot of half-processed input.
+1. Published methodology version має бути відтворюваною.
+2. Session прив’язана до конкретної версії.
+3. Derived results простежуються до evidence та upstream records.
+4. Deterministic scoring споживає структуровані дані.
+5. LLM transport належить Kernel/Infrastructure, prompts та interpretation належать Diagnostic.
+6. Diagnostic не копіює Sales, Finance або HR domain models у власне ядро.
+7. Завершення фіксує цілісний diagnostic result, а не випадковий snapshot частково оброблених даних.
 
-## Runtime boundary
+## Межа runtime
 
-Current Diagnostic `0.6.1` має runtime module service `diagnosticDomainModule`, API route contribution, `diagnosticActionOutcomeHandler`, Web navigation та Diagnostic migration contribution.
+Diagnostic `0.6.1` має runtime module service `diagnosticDomainModule`, API route contribution, `diagnosticActionOutcomeHandler`, Web navigation та Diagnostic migration contribution.
 
-Це означає, що стара теза про «partial runtime integration без runtime module» більше не є правдою і вилучена з workflow.
+Тому стара модель «partial runtime integration без runtime module» більше не є актуальною.
 
-## UI surfaces
+## Інтерфейсні поверхні
 
-Workflow проявляється через Diagnostic interview/session surfaces, reporting/recommendation views та runtime action outcome loop.
+Процес проявляється через Diagnostic interview/session surfaces, reporting/recommendation views та runtime action outcome loop.
 
-UI не є source of truth для methodology/evaluation rules.
+UI не є source of truth для methodology або evaluation rules.
 
-## Code map
+## Карта коду
 
 ```text
 app/Domains/Diagnostic/Methodology

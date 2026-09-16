@@ -1,6 +1,6 @@
 ---
 title: {{title}}
-description: {{title}} business workflow.
+description: Бізнес-процес {{title}}.
 status: draft
 updated: {{date}}
 kind: workflow
@@ -11,37 +11,37 @@ process_id: TODO_PROCESS_ID
 
 # {{title}}
 
-## Business goal
+## Бізнес-мета
 
-Опишіть measurable business outcome.
+Опишіть вимірюваний бізнес-результат.
 
-## Actors
+## Учасники
 
-- actor;
+- учасник;
 
-## Trigger / input
+## Тригер / вхідні дані
 
 Опишіть початкову подію або запит.
 
-## Workflow
+## Процес
 
 <ProcessDiagram process-id="TODO_PROCESS_ID" />
 
-Основний business flow генерується з matching Process Registry definition у `resources/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
+Основний бізнес-потік генерується з відповідного Process Registry definition у `resources/processes/*.json`. Не дублюйте вручну ті самі `steps` та `edges` у Mermaid.
 
-## Ownership view
+## Представлення відповідальності
 
 <ProcessDiagram process-id="TODO_PROCESS_ID" view="ownership" direction="LR" />
 
 Кожний registry step має оголосити primary responsible `owner`, який входить до `actors` process definition.
 
-## Capability view
+## Представлення можливостей
 
 <ProcessDiagram process-id="TODO_PROCESS_ID" view="capability" direction="LR" />
 
 Кожний step має canonical Domain capability або explicit capability gap.
 
-## Domain view
+## Представлення доменів
 
 Для schema-v5 процесу з cross-domain steps додайте:
 
@@ -49,29 +49,29 @@ process_id: TODO_PROCESS_ID
 <ProcessDiagram process-id="TODO_PROCESS_ID" view="domain" direction="LR" />
 ```
 
-Cross-domain step допустимий лише через verified `requires` contract від process Domain до step Domain.
+Cross-domain step допустимий лише через verified `requires` contract від Process Domain до Domain кроку.
 
-## Decision points
+## Точки рішень
 
-Опишіть meaningful decisions.
+Опишіть змістовні рішення.
 
-## Events
+## Події
 
-Дайте links на generated event reference замість ручного дублювання exact strings.
+Дайте посилання на generated event reference замість ручного дублювання точних рядків.
 
-## Failure paths
+## Шляхи помилок
 
-Опишіть expected failures, retries/idempotency і denied paths.
+Опишіть очікувані failures, retries/idempotency і denied paths.
 
-## Invariants
+## Інваріанти
 
 Зафіксуйте правила, які не можна порушити.
 
-## UI surfaces
+## Інтерфейсні поверхні
 
 Покажіть delivery surfaces без перенесення business ownership у UI.
 
-## Code map
+## Карта коду
 
 ```text
 app/Domains/...

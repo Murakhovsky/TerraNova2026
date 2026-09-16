@@ -1,8 +1,8 @@
 ---
 title: Property Submission → Publication
-description: Канонічний Property workflow від intake/submission до Asset, Inventory, Listing та Publication.
+description: Канонічний Property workflow від приймання даних до Asset, Inventory, Listing і Publication.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: workflow
 contract: workflow-v2
 process_state: as-is
@@ -11,13 +11,13 @@ process_id: property.submission-to-publication
 
 # Property Submission → Publication
 
-## Business goal
+## Бізнес-мета
 
-Прийняти зовнішні або ручні дані про нерухомість, провести їх через intake та identity/provenance boundary, створити або зв'язати canonical Property Asset і, коли це потрібно бізнесу, провести актив через окремі commercial layers Inventory → Listing → Publication.
+Прийняти зовнішні або ручні дані про нерухомість, провести їх через intake та identity/provenance boundary, створити або зв’язати canonical Property Asset і, коли це потрібно бізнесу, провести актив через окремі комерційні шари `Inventory → Listing → Publication`.
 
-## Actors
+## Учасники
 
-- submitter / operator;
+- submitter або operator;
 - moderator / reviewer;
 - property manager;
 - organization inventory owner;
@@ -25,9 +25,9 @@ process_id: property.submission-to-publication
 - publication channel adapter;
 - Sales consumer через explicit Property boundary.
 
-## Trigger / input
+## Тригер / вхідні дані
 
-AS-IS процес починається із property submission або іншого дозволеного Property write path.
+Поточний процес починається з Property submission або іншого дозволеного Property write path.
 
 ```mermaid
 flowchart LR
@@ -38,7 +38,7 @@ flowchart LR
 
 Submission є intake boundary. Він не дорівнює canonical Property Asset.
 
-## Fundamental boundary
+## Фундаментальна межа
 
 ```text
 Property Submission
@@ -48,29 +48,29 @@ Property Submission
 ≠ Publication
 ```
 
-Це головна business separation Property V0.12. Фізичний актив існує незалежно від того, чи продає його конкретна організація, як вона його рекламує і на якому каналі публікує.
+Це ключове розділення Property. Фізичний актив існує незалежно від того, чи продає його конкретна organization, як вона його представляє і на якому каналі публікує.
 
-## Workflow
+## Процес
 
 <ProcessDiagram process-id="property.submission-to-publication" />
 
-Основний business flow є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну на цій сторінці.
+Основний бізнес-потік є derived view із [Business Process Registry](../12-reference/business-processes.md). `steps` та `edges` не дублюються вручну.
 
-Ця схема описує business flow поверх current Property model. Вона не означає, що кожен transition реалізований окремим `Application/UseCase` class.
+Схема описує бізнес-процес поверх поточної Property model і не стверджує, що кожен transition реалізовано окремим `Application/UseCase` class.
 
-## Ownership view
+## Представлення відповідальності
 
 <ProcessDiagram process-id="property.submission-to-publication" view="ownership" direction="LR" />
 
-Ownership view показує, який actor відповідає за кожний canonical step, не змішуючи фізичний Asset, commercial state, presentation і channel delivery в одну безіменну «нерухомість».
+Проєкція показує відповідального actor для кожного канонічного кроку, не змішуючи фізичний Asset, commercial state, presentation і channel delivery в одну сутність.
 
-## Capability view
+## Представлення можливостей
 
 <ProcessDiagram process-id="property.submission-to-publication" view="capability" direction="LR" />
 
-Capability view зв'язує ті самі business steps із canonical Property module capabilities. У цьому workflow всі шість кроків мають explicit capability mapping: intake, identity review, registry, inventory, listing і publication.
+Усі основні кроки мають явні Property capabilities: intake, identity review, registry, inventory, listing і publication.
 
-## Canonical model
+## Канонічна модель
 
 ```mermaid
 flowchart LR
@@ -85,36 +85,36 @@ flowchart LR
 
 - **Property Asset** — фізична нерухомість та її canonical identity/structure;
 - **Inventory Item** — комерційний стан активу для конкретної organization;
-- **Listing** — ринкова презентація пропозиції;
-- **Publication** — channel-specific delivery/lifecycle listing.
+- **Listing** — ринкове представлення пропозиції;
+- **Publication** — стан і lifecycle публікації на конкретному каналі.
 
 Квартира не стає фізично `SOLD`. `SOLD` є commercial state Inventory.
 
-## Application entry points
+## Прикладні точки входу
 
-Generated [Application Use Cases](../12-reference/application-use-cases.md) наразі фіксує explicit `Application/UseCase` entry points:
+[Application Use Cases](../12-reference/application-use-cases.md) зараз фіксує, зокрема:
 
 - `PropertySubmissionService`;
 - `PropertyModerationService`.
 
-Property V0.12 також має canonical runtime, commands/services і capability contributions поза вузькою `Application/UseCase` directory convention. Тому generated use-case index не використовується як повний опис усього Property runtime.
+Property має також canonical runtime services і commands поза вузькою convention `Application/UseCase`, тому generated use-case index не є повним описом runtime.
 
-Див. також [Property Domain Overview](../04-domains/property/overview.md), [Commands](../12-reference/commands.md) та [Module & Capabilities](../12-reference/module-capabilities.md).
+Див. [Property Domain Overview](../04-domains/property/overview.md), [Commands](../12-reference/commands.md) та [Module & Capabilities](../12-reference/module-capabilities.md).
 
-## Decision points
+## Точки рішень
 
-- чи submission валідний;
-- чи source/provenance достатньо визначений;
+- чи валідний submission;
+- чи достатньо визначено source/provenance;
 - чи дані належать існуючому Asset;
 - чи identity потребує review;
-- чи актив має бути включений в inventory конкретної organization;
-- чи потрібна Listing presentation;
-- чи Listing готовий до publication;
-- чи channel operation дозволена і успішна.
+- чи актив входить в Inventory конкретної organization;
+- чи потрібен Listing;
+- чи Listing готовий до Publication;
+- чи channel operation дозволена й успішна.
 
-## Runtime boundary
+## Межа runtime
 
-Current Property `0.12.0` має canonical runtime module service та authoritative write path.
+Канонічний write path:
 
 ```mermaid
 flowchart TD
@@ -128,37 +128,37 @@ flowchart TD
 
 `tn_properties` не є canonical source of Property state.
 
-## Sales interaction
+## Взаємодія із Sales
 
-Sales споживає Property через explicit contracts/read surfaces. Sales володіє попитом, pipeline і deal process; Property не переносить deal ownership у Asset/Inventory тільки тому, що актив продається.
+Sales споживає Property через explicit contracts/read surfaces. Sales володіє попитом, pipeline та deal process; Property не переносить deal ownership у Asset або Inventory лише тому, що актив продається.
 
-## Failure paths
+## Шляхи помилок
 
 - invalid submission → validation failure;
 - unresolved identity → review/conflict path, а не silent duplicate Asset;
-- media/storage failure → explicit application/infrastructure failure;
-- forbidden commercial transition → domain/governance rejection;
-- publication/channel failure → retry/sync/audit path без фальшивого published state;
-- persistence failure → operation не повинна частково прикидатися успішною;
-- missing cross-domain contract → consumer не обходить boundary прямим SQL.
+- media/storage failure → application/infrastructure failure;
+- forbidden commercial transition → Domain/governance rejection;
+- publication/channel failure → retry/sync/audit без фальшивого published state;
+- persistence failure → операція не повинна частково виглядати успішною;
+- відсутній cross-domain contract → consumer не обходить boundary прямим SQL.
 
-## Invariants
+## Інваріанти
 
 1. Submission lifecycle не тотожний Property Asset lifecycle.
-2. Property Asset, Inventory, Listing і Publication мають різне ownership/meaning.
+2. Property Asset, Inventory, Listing і Publication мають різний зміст і ownership.
 3. Physical asset identity не визначається commercial status.
-4. Cross-domain access проходить explicit contracts.
+4. Cross-domain access проходить через explicit contracts.
 5. External network/channel vocabulary не стає canonical Property vocabulary автоматично.
 6. Canonical write path не повертається до `tn_properties` як source of truth.
 7. Business Events належать Property, generic delivery — Kernel/Infrastructure.
 
-## UI surfaces
+## Інтерфейсні поверхні
 
-Workflow проявляється через Property Workspace, public Property surfaces, catalogue/presentation, moderation/intake surfaces та external publication integrations.
+Процес проявляється через Property Workspace, public Property surfaces, catalogue/presentation, moderation/intake surfaces та external publication integrations.
 
-UI може ініціювати operations, але не володіє identity, commercial lifecycle чи publication rules.
+UI може ініціювати operations, але не володіє identity, commercial lifecycle або publication rules.
 
-## Code map
+## Карта коду
 
 ```text
 app/Domains/Property/Model

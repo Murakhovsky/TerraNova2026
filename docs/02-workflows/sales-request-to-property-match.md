@@ -1,8 +1,8 @@
 ---
 title: Sales Request → Property Match
-description: Runtime-backed cross-domain Sales workflow that converts an inbound request into a Client Case and resolves referenced Property facts through the canonical Property boundary.
+description: Cross-domain Sales workflow, який перетворює вхідну заявку на Client Case і читає факти Property через канонічну межу.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: workflow
 contract: workflow-v2
 process_state: as-is
@@ -11,21 +11,21 @@ process_id: sales.request-to-property-match
 
 # Sales Request → Property Match
 
-## Business goal
+## Бізнес-мета
 
-Перетворити конкретну вхідну заявку на керований Client Case, не копіюючи ownership Property у Sales: Sales зберігає relationship/match, а факти про asset, inventory та listing читає через canonical Property contract.
+Перетворити конкретну вхідну заявку на керований Client Case без перенесення ownership Property у Sales. Sales зберігає relationship і match, а факти про Asset, Inventory та Listing читає через канонічний Property contract.
 
-## Actors
+## Учасники
 
-- salesperson;
-- Sales application;
+- менеджер продажу;
+- Sales Application;
 - Property read boundary.
 
-## Trigger
+## Тригер
 
-Sales operator запускає створення Client Case із вже отриманої inbound request, яка може містити `property_id`.
+Sales operator запускає створення Client Case з уже отриманої inbound request, яка може містити `property_id`.
 
-## Domain boundary
+## Межа доменів
 
 ```text
 Sales
@@ -39,37 +39,37 @@ Property
 └── owns: Asset / Inventory / Listing facts
 ```
 
-`Sales → Property` є реальним cross-domain переходом, але не shared ownership. Sales module декларує `PropertyReferencePort` як `requires` contract, а step `resolve-property` виконується в Domain `property` через canonical capability `property.reference`.
+`Sales → Property` є реальним cross-domain переходом, але не shared ownership. Sales module декларує `PropertyReferencePort` як `requires` contract, а крок `resolve-property` виконується в Domain `property` через capability `property.reference`.
 
-Sales не читає Property tables напряму в application flow і не перетворює Property snapshot на власний canonical asset.
+Sales не читає Property tables напряму й не перетворює Property snapshot на власний canonical asset.
 
-## Workflow
+## Процес
 
 <ProcessDiagram process-id="sales.request-to-property-match" />
 
-Основний flow генерується з Process Registry. `process_state: as-is` означає, що кроки відображають поточний код.
+Основний потік генерується з Process Registry. `process_state: as-is` означає, що кроки відповідають поточному коду.
 
-Derived verification для процесу зараз `source-verified`: усі critical steps мають current-checkout source evidence. Cross-domain `PropertyReferencePort` окремо має runtime-strength evidence з module contract registry.
+Derived verification для процесу є `source-verified`: критичні кроки мають evidence з поточного checkout, а cross-domain `PropertyReferencePort` має runtime-strength evidence з module contract registry.
 
-## Ownership view
+## Представлення відповідальності
 
 <ProcessDiagram process-id="sales.request-to-property-match" view="ownership" direction="LR" />
 
-`Property read boundary` відповідає лише за надання canonical Property facts. Business process, Client Case і Property Match залишаються відповідальністю Sales.
+`Property read boundary` відповідає лише за надання канонічних Property facts. Client Case і Property Match залишаються відповідальністю Sales.
 
-## Domain view
+## Представлення доменів
 
 <ProcessDiagram process-id="sales.request-to-property-match" view="domain" direction="LR" />
 
-Ця derived-проєкція показує реальний Domain hop: Sales створює case, переходить через verified `requires` contract у Property для canonical reference resolution, а потім повертається в Sales для запису match і activity/events.
+Проєкція показує реальний Domain hop: Sales створює case, переходить через підтверджений `requires` contract у Property для resolution канонічного reference, а потім повертається в Sales для запису match і activity/events.
 
-## Capability view
+## Представлення можливостей
 
 <ProcessDiagram process-id="sales.request-to-property-match" view="capability" direction="LR" />
 
-Property step вже має canonical `property.reference`. Sales steps усе ще мають explicit capability gaps, бо current Sales module capability vocabulary описує переважно workspace/admin authority, а не semantic business operations цього flow. Тому ці gaps мають matching Capability Debt items замість фальшивого mapping на `sales.workspace.use`.
+Property step має `property.reference`. Sales steps поки мають explicit capability gaps, бо capability vocabulary модуля переважно описує workspace/admin authority, а не semantic operations цього процесу. Такі gaps мають matching Capability Debt items і не підміняються `sales.workspace.use`.
 
-## Runtime path
+## Шлях виконання
 
 ```text
 SalesInboundService::createCaseFromRequest()
@@ -89,42 +89,44 @@ MysqlClientCaseCommandRepository::upsertPropertyMatch()
 Sales activity + ClientCaseCreated / LeadChanged
 ```
 
-## Decision points
+## Точки рішень
 
-- inbound request існує чи вже прив'язана до Client Case;
-- чи можна resolve/create Person;
+- чи існує inbound request;
+- чи вона вже прив’язана до Client Case;
+- чи можна знайти або створити Person;
 - чи request містить `property_id`;
-- чи Property boundary повернув canonical presentation;
-- якщо Property існує, створити або оновити Sales Property Match;
-- якщо Property не resolve-иться, Client Case все одно може існувати без вигаданого match.
+- чи Property boundary повернув канонічне представлення;
+- чи треба створити або оновити Sales Property Match.
 
-## Data ownership
+Якщо Property не знайдено, Client Case може існувати без вигаданого match.
+
+## Власність даних
 
 `tn_client_case_property_matches` є Sales-owned relationship state. Він посилається на Property reference, але не є копією Property Asset або Inventory.
 
-Property facts для UI/read models також enrichment-яться через `SalesPropertyReference`, зокрема в `MysqlClientCaseReadModel::propertyMatches()`.
+Property facts для UI/read models також збагачуються через `SalesPropertyReference`, зокрема в `MysqlClientCaseReadModel::propertyMatches()`.
 
-## Failure paths
+## Шляхи помилок
 
-- request не знайдена → `request_not_found`;
+- request не знайдено → `request_not_found`;
 - request уже має case → повертається existing case;
-- link request → case не вдався → transaction failure;
-- Property reference відсутня або не resolve-иться → case створюється без Property Match;
+- помилка прив’язки request → case → transaction failure;
+- Property reference відсутній або не resolve-иться → case створюється без Property Match;
 - transaction failure → Sales state не повинен залишатися частково записаним.
 
-## Invariants
+## Інваріанти
 
 1. Sales володіє demand, case та match relationship.
-2. Property володіє asset/inventory/listing facts.
-3. Sales не мутує Property через цей flow.
+2. Property володіє Asset, Inventory та Listing facts.
+3. Sales не мутує Property через цей процес.
 4. Property resolution проходить через `PropertyReferencePort`.
-5. Cross-domain step легальний лише тому, що Sales manifest декларує verified `requires` contract до Property.
-6. `resolve-property` мапиться на canonical capability `property.reference`, а не на Sales capability gap.
+5. Cross-domain step легальний через підтверджений `requires` contract.
+6. `resolve-property` використовує `property.reference`, а не Sales capability gap.
 7. Tenant boundary передається як `organizationId`.
-8. Match записується тільки після успішного Property resolution.
-9. Capability gap не маскується broad workspace permission.
+8. Match записується лише після успішного Property resolution.
+9. Capability gap не маскується широким workspace permission.
 
-## Code map
+## Карта коду
 
 ```text
 app/Domains/Sales/Application/Service/SalesInboundService.php

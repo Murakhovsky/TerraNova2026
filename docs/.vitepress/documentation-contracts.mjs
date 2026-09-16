@@ -6,7 +6,7 @@ export const DOCUMENTATION_CONTRACTS = Object.freeze({
   'workflow-v2': Object.freeze({
     kind: 'workflow',
     minH2: 3,
-    requiredSections: ['Business goal', 'Actors', 'Code map'],
+    requiredSections: ['Бізнес-мета', 'Учасники', 'Карта коду'],
     requiredFrontmatter: Object.freeze({
       process_state: Object.freeze(['as-is', 'to-be']),
       process_id: Object.freeze([]),

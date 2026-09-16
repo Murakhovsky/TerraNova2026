@@ -70,7 +70,7 @@ process_state: as-is
 
 `docs:check` перевіряє `kind`, структуру H1/H2, frontmatter, обов’язкові секції та структурні вимоги контракту.
 
-Для `how-to-v1` канонічний український заголовок перевірки — `## Перевірка`; checker також зберігає сумісність зі старими `Verify` / `Verification` під час міграції корпусу.
+Для `how-to-v1` канонічний український заголовок перевірки — `## Перевірка`; checker також зберігає сумісність зі старими `Verify` / `Verification` під час міграції технічного корпусу.
 
 ## Стани правди Process
 
@@ -109,15 +109,15 @@ Templates живуть у `docs/.vitepress/templates/` і не публікую�
 
 `workflow-v2` вимагає щонайменше:
 
-- business goal;
-- actors;
-- code map;
+- секцію `Бізнес-мета`;
+- секцію `Учасники`;
+- секцію `Карта коду`;
 - `process_state`;
 - `process_id`;
 - відповідний запис у Process Registry;
 - `ProcessDiagram` projections згідно з моделлю процесу.
 
-Під час поточної мовної міграції machine contract ще приймає історичні англійські назви секцій `Business goal`, `Actors`, `Code map`. Їх міграція в український формат повинна відбуватися разом із checker і всіма canonical workflow pages одним узгодженим етапом.
+Ці українські назви секцій є частиною канонічного structural contract і перевіряються `documentation-contracts.mjs` та `check.mjs`. Шаблон `docs/.vitepress/templates/workflow.md` створює нові workflow одразу в цьому форматі.
 
 Diagram відображає process knowledge, але не є самостійним source of truth. Точні commands, events, routes і services залишаються generated reference.
 

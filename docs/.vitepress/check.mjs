@@ -248,7 +248,7 @@ function checkWorkflowContract(file, content, frontmatter) {
 
   checkedWorkflowContracts += 1;
   const source = stripCodeFences(content);
-  const requiredSections = ['Business goal', 'Actors', 'Code map'];
+  const requiredSections = ['Бізнес-мета', 'Учасники', 'Карта коду'];
   for (const section of requiredSections) {
     const pattern = new RegExp(`^##\\s+${section.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*$`, 'mi');
     if (!pattern.test(source)) {
