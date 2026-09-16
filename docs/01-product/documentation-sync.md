@@ -1,94 +1,98 @@
 ---
-title: Documentation Sync Audit
-description: Поточний рівень відповідності COS documentation executable code і межі автоматичної перевірки.
+title: Аудит синхронізації документації
+description: Поточний рівень відповідності документації COS виконуваному коду та межі автоматичної перевірки.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: reference
 scope: as-is
 ---
 
-# Documentation Sync Audit
+# Аудит синхронізації документації
 
-Ця сторінка фіксує не те, що документація **обіцяє**, а те, наскільки її canonical WEB layer прив’язаний до executable state у `main`.
+Ця сторінка фіксує не те, що документація **обіцяє**, а наскільки її канонічний вебшар прив’язаний до фактичного виконуваного стану поточного `main`.
 
 ## Поточний висновок
 
-Стан документації є **високо синхронізованим на рівні executable facts**, але ще не повним на рівні пояснення всіх реалізованих можливостей.
+Документація є **високо синхронізованою на рівні точних виконуваних фактів**, але пояснювальне покриття всіх реалізованих можливостей ще не повне.
 
-На поточному baseline:
+На поточному базовому рівні:
 
-- Kernel version звіряється з `app/Kernel/Module/KernelVersion.php`;
-- усі installable Domains з `app/Domains/*/module.php` мають canonical overview;
-- Domain versions у current scope та overview перевіряються проти manifests;
-- modules/capabilities, permissions, events, application/routes і command DTO reference генеруються з коду;
-- internal Markdown links і canonical frontmatter перевіряються;
-- workflow pages перевіряються на обов’язкові `Business goal`, `Actors`, `Code map` sections;
-- WEB home baseline тепер читає Kernel і Domain manifests безпосередньо з current checkout під час VitePress build.
+- версія Kernel звіряється з `app/Kernel/Module/KernelVersion.php`;
+- усі встановлювані домени з `app/Domains/*/module.php` мають канонічний огляд;
+- версії доменів у поточному стані та оглядах перевіряються проти декларацій модулів;
+- модулі, можливості, дозволи, події, маршрути застосунку та командні DTO генеруються з коду;
+- внутрішні Markdown-посилання та канонічні метадані сторінок перевіряються;
+- нетехнічний український корпус проходить окрему мовну перевірку;
+- структура сторінок бізнес-процесів перевіряється автоматично;
+- головна сторінка документації читає версію Kernel і декларації доменів із поточного checkout під час збірки VitePress.
 
-## Coverage
+## Покриття
 
-| Area | State | Source of truth |
+| Область | Стан | Джерело правди |
 | --- | --- | --- |
-| Kernel version | synchronized | `KernelVersion.php` |
-| Installable Domain versions | synchronized | `app/Domains/*/module.php` |
-| Installable Domain overview presence | 3 / 3 | manifests + `04-domains/*/overview.md` |
-| Modules / capabilities / extensions | generated | runtime manifests / Kernel registry |
-| Permissions | generated | executable permission sources |
-| Event types | generated | executable event catalogues |
-| Application / routes | generated | route/application contributors |
-| Command DTOs | generated | executable command classes |
-| Workflow document structure | checked | docs integrity checker |
-| Narrative semantics | curated | architecture/domain documentation |
+| Версія Kernel | синхронізовано | `KernelVersion.php` |
+| Версії встановлюваних доменів | синхронізовано | `app/Domains/*/module.php` |
+| Канонічні огляди встановлюваних доменів | 3 / 3 | декларації + `04-domains/*/overview.md` |
+| Модулі / можливості / розширення | генеруються | декларації середовища виконання / реєстри Kernel |
+| Дозволи | генеруються | виконувані джерела дозволів |
+| Типи подій | генеруються | виконувані каталоги подій |
+| Застосунок / маршрути | генеруються | внески маршрутів і застосунку |
+| Командні DTO | генеруються | класи команд |
+| Структура бізнес-процесів | перевіряється | перевірки цілісності документації |
+| Мова нетехнічних розділів | перевіряється | `check-language.mjs` |
+| Пояснювальна семантика | підтримується вручну | архітектурна та доменна документація |
 
-## Installable vs supporting areas
+## Встановлювані та допоміжні області
 
-Installable runtime Domains are discovered from `module.php`. Supporting areas without module manifests are not presented as fully installable Domains.
+Встановлювані домени середовища виконання визначаються через `module.php`. Допоміжні області без декларації модуля не показуються як повністю встановлювані домени лише через наявність директорії.
 
-Current supporting areas are documented separately:
+Поточні допоміжні області документуються окремо:
 
 - Content;
 - Identity;
 - Spatial.
 
-See [Supporting Domains and Extracted Areas](../04-domains/supporting-domains.md).
+Дивіться [допоміжні домени та виділені області](../04-domains/supporting-domains.md).
 
 ## Що ще не є повним
 
-### Property depth
+### Глибина Property
 
-Property `0.11.0` already contains a much wider executable surface than one overview page can explain: canonical asset registry, structure, identity/provenance, Inventory, Listing/Publication, history, analytics, intelligence and external network boundary.
+Property `0.12.0` уже містить значно ширшу виконувану поверхню, ніж може пояснити одна сторінка огляду: канонічний реєстр активів, структуру, ідентичність та походження, Inventory, Listing і Publication, історію, аналітику, інтелект і зовнішню мережеву межу.
 
-The overview is correct, but documentation depth is still below code depth. This is a **coverage gap**, not currently detected factual drift.
+Огляд відповідає моделі, але глибина пояснення ще відстає від глибини коду. Це **прогалина покриття**, а не виявлена фактична розбіжність.
 
-### Curated narrative cannot be fully generated
+### Пояснювальний текст неможливо повністю згенерувати
 
-A generator can prove that a route, event or capability exists. It cannot prove that a paragraph correctly explains why a bounded context owns a business concept. Architectural narrative still needs review against code and accepted ADRs.
+Генератор може довести, що маршрут, подія або можливість існує. Він не може довести, що абзац правильно пояснює, чому конкретний обмежений контекст володіє певним бізнес-поняттям.
 
-### Deep technical documents remain outside the numbered canonical tree
+Архітектурний текст усе одно потребує змістовної перевірки проти коду та прийнятих ADR.
 
-The repository still contains historical/deep technical material under paths such as `docs/architecture`, `docs/api`, `docs/sales`, `docs/diagnostic` and standalone technical pages. They remain useful source material, but the numbered `00–12` tree is the canonical navigation layer for the WEB documentation.
+### Глибокі технічні матеріали ще існують поза канонічним деревом
 
-This separation should stay explicit so search results do not quietly turn old implementation notes into product truth.
+У репозиторії залишаються історичні та поглиблені технічні матеріали в `docs/architecture`, `docs/api`, `docs/sales`, `docs/diagnostic` та окремих технічних файлах. Вони корисні як джерело деталей, але нумероване дерево `00–12` є канонічним навігаційним шаром технічної вебдокументації.
 
-## WEB synchronization contract
+Це розділення має залишатися явним, щоб старі нотатки про реалізацію випадково не ставали продуктовою істиною через результати пошуку.
 
-The homepage must not manually maintain runtime versions.
+## Контракт синхронізації вебдокументації
+
+Головна сторінка не повинна вручну зберігати версії середовища виконання.
 
 ```text
 KernelVersion.php ─────┐
-                       ├─> VitePress build ─> System Status UI
+                       ├─> збірка VitePress ─> System Status UI
 Domain module.php ─────┘
 
-Executable registries ─> generated reference
-Curated docs ──────────> concepts / workflows / architecture rationale
+Виконувані реєстри ─> згенерований технічний довідник
+Пояснювальні сторінки ─> поняття / процеси / архітектурні причини
 ```
 
-This keeps two different responsibilities separate:
+Так розділяються дві різні відповідальності:
 
-1. **Facts that code can prove** are derived from code.
-2. **Meaning that humans must explain** remains curated documentation.
+1. **Факти, які може довести код**, походять із коду.
+2. **Зміст, який мають пояснити люди**, залишається підтримуваною вручну документацією.
 
-## Verification commands
+## Команди перевірки
 
 ```bash
 npm run docs:generate:check
@@ -96,4 +100,4 @@ npm run docs:check
 npm run docs:build
 ```
 
-See also [Documentation Site](../08-ui/documentation-site.md) and [Generated Reference](../12-reference/README.md).
+Дивіться також [інтерфейс документації](../08-ui/documentation-site.md) та [згенерований технічний довідник](../12-reference/README.md).

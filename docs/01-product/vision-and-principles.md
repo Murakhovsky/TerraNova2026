@@ -1,76 +1,84 @@
 ---
-title: COS Vision & Core Principles
-description: Product intent and non-negotiable principles that define Company Operating System.
+title: Бачення та основні принципи COS
+description: Продуктовий задум і принципи, які визначають операційну систему компанії COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: product
 ---
 
-# COS Vision & Core Principles
+# Бачення та основні принципи COS
 
-COS існує не як ще одна CRM або набір AI-чатів. Його product goal — дати компанії **керовану операційну систему**, де business work має explicit ownership, state, decisions, authority, execution та audit trail.
+COS існує не як ще одна CRM або набір чатів зі штучним інтелектом. Його продуктова мета — дати компанії **керовану операційну систему**, де робота має явного власника, стан, рішення, повноваження, виконання та історію того, що відбулося.
 
-## Product vision
+## Бачення продукту
 
 ```text
-Business intent / fact
+Бізнес-намір або факт
         ↓
-Known workflow
+Відомий бізнес-процес
         ↓
-Semantic Domain owner
+Домен, який володіє змістом
         ↓
-Deterministic or agent-assisted decision
+Детерміноване або агентне рішення
         ↓
-Explicit authority
+Явні повноваження
         ↓
-Controlled execution
+Контрольоване виконання
         ↓
-Observable result
+Спостережуваний результат
 ```
 
-Людина, automation і Agent повинні працювати через одну систему бізнесових правил, а не через три паралельні реальності.
+Людина, автоматизація та агент повинні працювати через одну систему бізнесових правил, а не через три паралельні реальності.
 
-## Core principles
+## Основні принципи
 
-### 1. Business first
+### 1. Спочатку бізнес
 
-Architecture починається з business operation/workflow. Class hierarchy не є product model.
+Архітектура починається з бізнес-операції та бізнес-процесу (workflow). Ієрархія класів не є продуктовою моделлю.
 
-### 2. Domain ownership
+### 2. Один власник бізнес-смислу
 
-Кожен meaningful business state має одного semantic owner. Інші Domains можуть request, reference і react, але не мутують чужу truth напряму.
+Кожен важливий бізнес-стан має одного семантичного власника. Інші домени можуть запитувати дані, посилатися на них і реагувати на події, але не повинні напряму змінювати чужу істину.
 
-### 3. Kernel is mechanism, not business
+### 3. Ядро є механізмом, а не бізнесом
 
-Kernel дає execution, events, policy, approvals, queue, audit та module/runtime mechanics. Він не вирішує, чи Lead qualified, Property sold або diagnostic finding valid.
+Ядро (Kernel) надає виконання, події, політики, погодження, черги, аудит і механіку модулів. Воно не вирішує, чи звернення кваліфіковане, об’єкт проданий або діагностична знахідка валідна.
 
-### 4. AI proposes; authority decides
+### 4. ШІ пропонує, повноваження вирішують
 
-Agent може інтерпретувати context і запропонувати дію. Право на mutation визначають Policy, permissions і, де потрібно, Human Approval.
+Агент може інтерпретувати контекст і запропонувати дію. Право на зміну стану визначають політика (Policy), дозволи та, коли потрібно, погодження людиною.
 
-### 5. State changes are explainable
+### 5. Зміни стану мають бути пояснюваними
 
-Для важливої операції система повинна дозволяти відновити: хто/що ініціював дію, який Domain володів рішенням, який context використано, що дозволило mutation і який результат отримано.
+Для важливої операції система повинна дозволяти відновити:
 
-### 6. Durable by default where consequence matters
+- хто або що ініціювало дію;
+- який домен володів рішенням;
+- який контекст використовувався;
+- що дозволило зміну стану;
+- який результат отримано.
 
-Події, asynchronous execution і external side effects повинні мати explicit delivery/idempotency semantics там, де втрата або дублювання операції створює business risk.
+### 6. Надійність там, де є наслідки
 
-### 7. Interfaces do not own rules
+Події, асинхронне виконання та зовнішні побічні ефекти повинні мати явні правила доставки та ідемпотентності там, де втрата або дублювання операції створює бізнес-ризик.
 
-Web, API, Telegram, workers та зовнішні adapters є delivery surfaces. Вони не створюють окремі версії business logic.
+### 7. Інтерфейси не володіють правилами
 
-### 8. Exact facts should be generated
+Web, API, Telegram, робітники черги та зовнішні адаптери є поверхнями доставки взаємодії. Вони не створюють окремі версії бізнес-логіки.
 
-Versions, routes, commands, events і capabilities не повинні дублюватися вручну по narrative docs. Executable truth генерується з current checkout.
+### 8. Точні факти мають генеруватися
 
-## Product consequence
+Версії, маршрути, команди, події та можливості не повинні вручну дублюватися по пояснювальних сторінках. Точні виконувані факти генеруються з поточного `main`.
 
-COS не намагається втиснути кожну business capability в один мегамодуль. Product масштабується через bounded Domains + shared governed runtime.
+## Наслідок для продукту
 
-## Read next
+COS не намагається втиснути кожну бізнес-можливість в один мегамодуль. Продукт масштабується через обмежені домени (bounded Domains) і спільне кероване середовище виконання.
 
-- [Capabilities](./capabilities.md)
-- [Actors & Authority](./actors-and-authority.md)
-- [System Boundaries](./system-boundaries.md)
-- [COS Mental Model](../00-start/mental-model.md)
+Це дозволяє розвивати продажі, нерухомість, діагностику, підтримку, фінанси чи інші напрями окремо, але з єдиними правилами виконання, повноважень, аудиту та інтеграцій.
+
+## Що читати далі
+
+- [Можливості COS](./capabilities.md)
+- [Учасники та повноваження](./actors-and-authority.md)
+- [Межі системи](./system-boundaries.md)
+- [Ментальна модель COS](../00-start/mental-model.md)

@@ -1,81 +1,88 @@
 ---
-title: COS System Boundaries
-description: What belongs to COS, what belongs to Domains and integrations, and what COS deliberately does not own.
+title: Межі системи COS
+description: Що належить COS, що належить доменам та інтеграціям і чим COS свідомо не є.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: product
 ---
 
-# COS System Boundaries
+# Межі системи COS
 
-Boundary потрібна не для краси діаграми. Вона визначає, де живе truth і хто має право її змінювати.
+Межа потрібна не для краси діаграми. Вона визначає, **де живе істина і хто має право її змінювати**.
 
-## COS owns
+## Чим володіє COS
 
-На product/platform level COS володіє моделлю керованого виконання:
+На рівні продукту та платформи COS володіє моделлю керованого виконання:
 
-- module/runtime composition;
-- execution context and lifecycle;
-- generic events/durable delivery mechanics;
-- policies, approvals and permissions mechanics;
-- queue/job execution mechanics;
-- audit/diagnostic mechanisms;
-- Agent/tool governance mechanics;
-- common interface/integration patterns.
+- складанням модулів і середовища виконання;
+- контекстом і життєвим циклом виконання;
+- універсальними механізмами подій та надійної доставки;
+- механікою політик, погоджень і дозволів;
+- механікою черг та виконання задач;
+- аудитом і діагностичними механізмами;
+- правилами керування агентами та інструментами;
+- спільними шаблонами інтерфейсів та інтеграцій.
 
-## Domains own
+## Чим володіють домени
 
-Business Domains володіють semantic truth:
+Бізнес-домени володіють семантичною істиною:
 
 ```text
-Sales      → demand lifecycle
-Property   → real-estate asset/commercial presentation truth
-Diagnostic → methodology/session/evidence/evaluation truth
+Sales      → життєвий цикл попиту та продажів
+Property   → істина про актив нерухомості та його комерційне представлення
+Diagnostic → істина про методологію, сесію, докази та оцінювання
 ```
 
-Supporting bounded areas можуть володіти своїми semantics, але не повинні ставати generic dumping ground.
+Допоміжні обмежені області можуть володіти власною семантикою, але не повинні перетворюватися на універсальне звалище для всього, що не вдалося класифікувати.
 
-## Interfaces own delivery, not business truth
+## Інтерфейси володіють доставкою, а не бізнес-істиною
 
 ```text
 Web / API / Telegram / CLI / Worker
           ↓
-Application boundary
+межа застосунку
           ↓
-Domain operation
+операція домену
 ```
 
-Interface може format input/output, authenticate transport context або render UI. Він не повинен самостійно вирішувати canonical business transition.
+Інтерфейс може форматувати вхідні та вихідні дані, автентифікувати транспортний контекст або відображати користувацький інтерфейс. Він не повинен самостійно визначати канонічний бізнес-перехід.
 
-## Integrations own translation
+## Інтеграції володіють перекладом
 
-Provider adapter володіє protocol/vocabulary translation, retry/idempotency details і external transport. Він не переписує Domain vocabulary під Salesforce/RESO/Telegram/іншого постачальника.
+Адаптер постачальника володіє:
 
-## COS deliberately does not mean
+- перекладом протоколу та словника;
+- технічними деталями повторних спроб;
+- ідемпотентністю;
+- зовнішнім транспортом.
+
+Він не повинен переписувати словник домену під Salesforce, RESO, Telegram або будь-якого іншого постачальника.
+
+## Чим COS свідомо не є
 
 COS не є:
 
-- універсальною shared database, яку всі модулі мутують напряму;
-- одним глобальним CRM aggregate для всіх бізнесових понять;
-- LLM orchestration layer без deterministic business core;
-- workflow engine, який сам володіє всіма Domain states;
-- frontend framework;
-- collection of provider SDKs.
+- універсальною спільною базою даних, яку всі модулі змінюють напряму;
+- одним глобальним CRM-об’єктом для всіх бізнесових понять;
+- лише шаром оркестрації мовної моделі без детермінованого бізнес-ядра;
+- рушієм бізнес-процесів, який сам володіє станами всіх доменів;
+- фронтенд-каркасом;
+- колекцією SDK зовнішніх постачальників.
 
-## Boundary test
+## Перевірка правильної межі
 
-Перед додаванням capability задайте п'ять питань:
+Перед додаванням нової можливості поставте п’ять питань:
 
-1. Який business concept ми змінюємо?
-2. Який Domain володіє його truth?
-3. Чи це generic runtime mechanism замість Domain semantics?
-4. Чи provider/interface detail випадково просочується всередину Domain?
-5. Який explicit contract перетинає boundary?
+1. Яке бізнес-поняття ми змінюємо?
+2. Який домен володіє його істиною?
+3. Чи це універсальний механізм середовища виконання, а не доменна семантика?
+4. Чи деталь постачальника або інтерфейсу випадково просочується всередину домену?
+5. Який явний контракт перетинає цю межу?
 
-Якщо відповідь «ну нехай поки буде в shared service», boundary ще не визначена.
+Якщо відповідь звучить як «ну нехай поки буде в shared service», межа ще не визначена. Усі великі архітектурні болота колись починалися з дуже маленького «поки».
 
-## Maps
+## Карти
 
-- [System Map](../03-architecture/system-map.md)
-- [Domain Map](../03-architecture/domain-map.md)
-- [Cross-Domain Contracts](../03-architecture/cross-domain-contracts.md)
+- [Карта системи](../03-architecture/system-map.md)
+- [Карта доменів](../03-architecture/domain-map.md)
+- [Міждоменні контракти](../03-architecture/cross-domain-contracts.md)

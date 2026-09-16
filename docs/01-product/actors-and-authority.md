@@ -1,66 +1,86 @@
 ---
-title: COS Actors & Authority
-description: Human, system and agent actors and the authority model that governs business mutations.
+title: Учасники та повноваження в COS
+description: Людські, системні та агентні учасники й модель повноважень, яка керує змінами бізнес-стану.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: product
 ---
 
-# COS Actors & Authority
+# Учасники та повноваження в COS
 
-COS розділяє **хто ініціює/пропонує дію** і **хто має право дозволити mutation**. Це принципово, особливо коли в систему входять Agents та integrations.
+COS розділяє **хто ініціює або пропонує дію** і **хто має право дозволити зміну стану**. Це принципово важливо, особливо коли в систему входять агенти та зовнішні інтеграції.
 
-## Actor classes
+## Класи учасників
 
-| Actor | Typical role | Authority source |
-|---|---|---|
-| End user / employee | initiates business operation | identity + permissions + Domain rules |
-| Manager / approver | resolves controlled decisions | permissions + approval policy |
-| System automation | deterministic reaction to fact/time | rule + policy + runtime capability |
-| AI Agent | interprets context and proposes action | no inherent mutation authority |
-| Worker / executor | performs approved queued work | runtime lease/job + registered handler |
-| External integration | sends/receives provider data | authenticated adapter + explicit contract |
-| Administrator | configures platform/module surface | administrative permissions, not automatic Domain ownership |
+| Учасник | Типова роль | Джерело повноважень |
+| --- | --- | --- |
+| Кінцевий користувач / працівник | ініціює бізнес-операцію | ідентичність + дозволи + правила домену |
+| Керівник / погоджувач | приймає контрольовані рішення | дозволи + політика погодження |
+| Системна автоматизація | детерміновано реагує на факт або час | правило + політика + можливість середовища виконання |
+| Агент ШІ | інтерпретує контекст і пропонує дію | не має вродженого права змінювати стан |
+| Робітник / виконавець | виконує дозволену роботу з черги | оренда задачі + зареєстрований обробник |
+| Зовнішня інтеграція | надсилає або отримує дані постачальника | автентифікований адаптер + явний контракт |
+| Адміністратор | налаштовує платформу та модулі | адміністративні дозволи, а не автоматичне володіння доменом |
 
-## Authority path
+## Шлях повноважень
 
 ```text
-Actor / Event
+Учасник / подія
     ↓
-Requested or proposed Action
+Запитана або запропонована дія
     ↓
-Identity / tenant context
+Ідентичність / контекст організації
     ↓
-Permission / capability
+Дозвіл / можливість
     ↓
-Domain invariant
+Інваріант домену
     ↓
-Policy
+Політика
  ├─ AUTO
  ├─ APPROVAL_REQUIRED
  └─ DENIED
     ↓
-Approved execution
+Дозволене виконання
 ```
 
-## Agent rule
+## Правило для агента
 
-Agent output є proposal/evidence, не permission. Навіть переконливий JSON не стає повноваженням лише тому, що модель написала його з упевненістю.
+Результат агента є пропозицією або доказом, а не дозволом. Навіть дуже впевнений JSON не отримує повноваження лише тому, що мовна модель написала його без граматичних помилок.
 
-## Human approval
+Агент може:
 
-Approval є окремим lifecycle. Approver має бути визначений system authority model; Agent не затверджує власну пропозицію, а executor не вирішує постфактум, що його job «напевно був дозволений».
+- проаналізувати контекст;
+- класифікувати ситуацію;
+- сформувати структуровану пропозицію;
+- рекомендувати наступну дію.
 
-## External systems
+Але право на зміну бізнес-стану визначають доменні правила, дозволи, політики та, де потрібно, погодження людиною.
 
-Webhook/API caller не отримує authority називати внутрішні Events або встановлювати Domain state напряму. Adapter автентифікує source, нормалізує input і викликає canonical application boundary.
+## Погодження людиною
 
-## Product roles vs implementation roles
+Погодження (Approval) має окремий життєвий цикл. Людина, яка погоджує дію, визначається моделлю повноважень системи.
 
-User-facing role names можуть відрізнятися між companies. COS не повинен hard-code кожну org chart посаду в Kernel. Runtime працює через permissions/capabilities/policies, а Domain визначає semantic operation.
+Агент не погоджує власну пропозицію, а виконавець не вирішує після факту, що його задача «напевно була дозволена».
 
-## Read next
+## Зовнішні системи
 
-- [Policies & Approvals](../05-runtime/policies-and-approvals.md)
-- [Permissions Reference](../12-reference/permissions-capabilities.md)
-- [Agent Runtime](../06-ai-agents/agent-runtime.md)
+Виклик вебхуку або API не отримує права самостійно називати внутрішні події чи встановлювати стан домену.
+
+Адаптер повинен:
+
+1. автентифікувати джерело;
+2. перевірити вхідні дані;
+3. перекласти зовнішній словник у внутрішній контракт;
+4. викликати канонічну межу застосунку або домену.
+
+## Продуктові ролі та ролі реалізації
+
+Назви ролей, які бачить користувач, можуть відрізнятися між компаніями. COS не повинен жорстко прописувати кожну посаду організаційної структури в ядрі.
+
+Середовище виконання працює через дозволи, можливості та політики, а домен визначає семантику самої операції.
+
+## Що читати далі
+
+- [Політики та погодження](../05-runtime/policies-and-approvals.md)
+- [Довідник дозволів](../12-reference/permissions-capabilities.md)
+- [Середовище виконання агентів](../06-ai-agents/agent-runtime.md)
