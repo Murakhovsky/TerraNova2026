@@ -1,4 +1,5 @@
-const requestJson = async (url, csrf, payload) => {
+const requestJson = async (url, csrf, payload, includeCsrfBody = false) => {
+  const bodyPayload = includeCsrfBody ? { ...payload, csrf_token: csrf } : payload;
   const response = await fetch(url, {
     method: 'POST',
     credentials: 'same-origin',
@@ -7,7 +8,7 @@ const requestJson = async (url, csrf, payload) => {
       'X-CSRF-Token': csrf,
       Accept: 'application/json',
     },
-    body: JSON.stringify({ ...payload, csrf_token: csrf }),
+    body: JSON.stringify(bodyPayload),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body.ok !== true) {
@@ -27,7 +28,7 @@ const initSalesTeamAdmin = () => {
     event.preventDefault();
     const form = event.currentTarget;
     try {
-      await requestJson('/api/sales/admin/teams', csrf, Object.fromEntries(new FormData(form).entries()));
+      await requestJson('/api/sales/admin/teams', csrf, Object.fromEntries(new FormData(form).entries()), true);
       window.location.reload();
     } catch (error) {
       window.alert(error.message);
@@ -44,7 +45,7 @@ const initSalesTeamAdmin = () => {
     const teamId = data.team_id;
     delete data.team_id;
     try {
-      await requestJson(`/api/sales/admin/teams/${teamId}/members/${card.dataset.userId}`, csrf, data);
+      await requestJson(`/api/sales/admin/teams/${teamId}/members/${card.dataset.userId}`, csrf, data, true);
       window.location.reload();
     } catch (error) {
       window.alert(error.message);
@@ -57,7 +58,7 @@ const initSalesTeamAdmin = () => {
     if (!card) return;
     const capabilities = [...form.querySelectorAll('input[name="capabilities[]"]:checked')].map((input) => input.value);
     try {
-      await requestJson(`/api/sales/admin/users/${card.dataset.userId}/capabilities`, csrf, { capabilities });
+      await requestJson(`/api/sales/admin/users/${card.dataset.userId}/capabilities`, csrf, { capabilities }, true);
     } catch (error) {
       window.alert(error.message);
     }
