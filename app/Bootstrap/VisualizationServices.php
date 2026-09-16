@@ -4,21 +4,43 @@ declare(strict_types=1);
 use Infrastructure\Visualization\Architecture\ArchitectureGraphProvider;
 use Infrastructure\Visualization\Architecture\ArchitectureProjectionRegistry;
 use Infrastructure\Visualization\Architecture\CrossDomainArchitectureGraphProvider;
+use Infrastructure\Visualization\Architecture\FallbackArchitectureGraphProvider;
+use Kernel\Module\DomainModuleRegistry;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 
-// KernelServices registers the base provider first. Visualization composition deliberately
-// replaces the public service with a contract-aware decorator while preserving the same
-// renderer-neutral GraphProviderInterface boundary for every consumer.
-$di->setShared(
-    'cosArchitectureGraphProvider',
-    fn (): GraphProviderInterface => new CrossDomainArchitectureGraphProvider(
-        new ArchitectureGraphProvider(
-            $this->getShared('cosModuleCatalog'),
-            $this->getShared('cosDomainRegistry'),
-        ),
-        $this->getShared('cosModuleCatalog'),
-    ),
-);
+// Visualization must remain observable even when one operational runtime module cannot
+// be composed. Full runtime topology is preferred; the fallback keeps the structural
+// ModuleCatalog graph available without weakening the strict runtime registry itself.
+$di->setShared('cosArchitectureGraphProvider', function (): GraphProviderInterface {
+    $catalog = $this->getShared('cosModuleCatalog');
+
+    $staticBase = new ArchitectureGraphProvider(
+        $catalog,
+        new DomainModuleRegistry([]),
+    );
+    $staticGraph = new FallbackArchitectureGraphProvider(
+        new CrossDomainArchitectureGraphProvider($staticBase, $catalog),
+        $staticBase,
+    );
+
+    try {
+        $runtimeRegistry = $this->getShared('cosDomainRegistry');
+    } catch (\Throwable $exception) {
+        error_log(sprintf(
+            '[COS Visualization] Runtime module registry unavailable for Architecture Graph: %s: %s',
+            $exception::class,
+            $exception->getMessage(),
+        ));
+        return $staticGraph;
+    }
+
+    $runtimeGraph = new CrossDomainArchitectureGraphProvider(
+        new ArchitectureGraphProvider($catalog, $runtimeRegistry),
+        $catalog,
+    );
+
+    return new FallbackArchitectureGraphProvider($runtimeGraph, $staticGraph);
+});
 
 $di->setShared(
     'cosArchitectureProjectionRegistry',
