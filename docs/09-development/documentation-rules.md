@@ -1,16 +1,16 @@
 ---
-title: Documentation Rules
-description: Правила підтримки COS documentation як живої частини codebase.
+title: Правила документації
+description: Правила підтримки документації COS як живої частини codebase.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: development
 ---
 
-# Documentation Rules
+# Правила документації
 
-## Canonical branch
+## Канонічна гілка
 
-`main` є єдиною canonical development branch.
+`main` є єдиною canonical development branch (канонічною гілкою розробки).
 
 ```text
 main code + tests
@@ -26,26 +26,41 @@ VitePress publication
 
 Нова документація не повинна залежати від checkout іншої branch.
 
-## Коли update обов'язковий
+## Коли оновлення обов’язкове
 
-Оновлюйте docs, якщо змінюється Domain ownership, Kernel lifecycle, module manifest, API/cross-domain contract, Event/Policy semantics, Agent/LLM governance, persistence ownership, deployment/migration workflow або суттєвий user workflow.
+Оновлюйте документацію, якщо змінюється:
 
-## Canonical page contracts
+- Domain ownership;
+- Kernel lifecycle;
+- module manifest;
+- API або cross-domain contract;
+- Event/Policy semantics;
+- Agent/LLM governance;
+- persistence ownership;
+- deployment або migration workflow;
+- суттєвий user workflow;
+- Process Registry або capability coverage.
 
-Шість основних page types мають versioned structural contracts:
+## Канонічні контракти сторінок
 
-| Type | Contract | Purpose |
+Шість основних типів сторінок мають versioned structural contracts:
+
+| Тип | Контракт | Призначення |
 | --- | --- | --- |
-| Concept | `concept-v1` | mental model і vocabulary |
-| Workflow | `workflow-v2` | real business flow + explicit process truth state + Mermaid diagram |
-| Architecture | `architecture-v1` | boundaries, dependency direction та invariants |
-| Domain | `domain-v1` | ownership, model, lifecycle, contracts та code map |
-| How-to | `how-to-v1` | покрокова developer/operator інструкція з verification |
-| Reference | `reference-v1` | exact facts та source of truth |
+| Концепція | `concept-v1` | mental model і vocabulary |
+| Workflow | `workflow-v2` | реальний бізнес-процес, process truth state та Process Diagram |
+| Архітектура | `architecture-v1` | boundaries, dependency direction та invariants |
+| Domain | `domain-v1` | ownership, model, lifecycle, contracts і code map |
+| Інструкція | `how-to-v1` | покрокова developer/operator інструкція з перевіркою |
+| Довідник | `reference-v1` | точні факти та source of truth |
 
-ADR лишається окремим decision format: Context → Decision → Rationale → Alternatives → Consequences → Verification.
+ADR залишається окремим decision format:
 
-Contract opt-in задається у frontmatter:
+```text
+Context → Decision → Rationale → Alternatives → Consequences → Verification
+```
+
+Контракт задається у frontmatter:
 
 ```yaml
 kind: workflow
@@ -53,21 +68,24 @@ contract: workflow-v2
 process_state: as-is
 ```
 
-`docs:check` перевіряє відповідність `kind`, H1/H2 structure, required frontmatter, required sections і наявність Mermaid diagram для `workflow-v2`.
+`docs:check` перевіряє `kind`, структуру H1/H2, frontmatter, обов’язкові секції та структурні вимоги контракту.
 
-## Process truth states
+Для `how-to-v1` канонічний український заголовок перевірки — `## Перевірка`; checker також зберігає сумісність зі старими `Verify` / `Verification` під час міграції корпусу.
 
-Workflow має один із трьох process truth states:
+## Стани правди Process
 
-- **`as-is`** — реальний поточний process; може містити human/manual steps, які COS ще не виконує сам;
-- **`to-be`** — цільова модель, не поточна поведінка;
-- **`runtime-verified`** — критичні transitions мають explicit executable mapping у current `main`.
+Workflow має формальний `process_state`:
 
-Не підвищуйте workflow до `runtime-verified` лише тому, що в ньому згаданий реальний class. Це має бути властивість процесу, а не оптимізм автора.
+- **`as-is`** — реальний поточний процес, включно з ручними кроками;
+- **`to-be`** — цільова модель, яка ще не є поточною поведінкою.
 
-Повні правила: [Business Process Modeling](../02-workflows/business-process-modeling.md).
+Рівень перевірки не задається автором вручну. Evidence layer виводить його з поточного checkout, наприклад `documented`, `source-verified` або `runtime-verified`.
 
-## Page scaffolding
+Не називайте процес runtime-verified лише тому, що в тексті згадано реальний class. Перевірка має випливати з evidence, а не з оптимізму автора.
+
+Повні правила: [Моделювання бізнес-процесів](../02-workflows/business-process-modeling.md).
+
+## Створення сторінок
 
 Нові canonical pages створюйте через template tooling:
 
@@ -76,24 +94,34 @@ npm run docs:new -- workflow 02-workflows/example-flow.md "Example Flow"
 npm run docs:new -- domain 04-domains/example/overview.md "Example Domain"
 ```
 
-Templates живуть у `docs/.vitepress/templates/` і не публікуються як documentation pages.
+Templates живуть у `docs/.vitepress/templates/` і не публікуються як сторінки документації.
 
-## AS-IS vs TARGET
+## AS-IS і TARGET
 
 Для narrative architecture/product docs:
 
-- **AS-IS** — підтверджено current `main` code/tests/manifests;
-- **TARGET** — direction, ще не повністю executable.
+- **AS-IS** — підтверджено поточним `main`: code, tests, manifests або executable reference;
+- **TARGET** — напрямок розвитку, ще не повністю executable.
 
-Для workflow pages використовуйте формальне поле `process_state`, а не лише текстові позначки.
+Для workflow використовуйте формальне поле `process_state`, а не лише текстові позначки.
 
-## Workflow contract
+## Контракт Workflow
 
-`workflow-v2` вимагає щонайменше `Business goal`, `Actors`, `Code map`, `process_state` та один fenced `mermaid` diagram. Для складних flows також потрібні trigger/input, decision points, events, failures, invariants і cross-domain calls.
+`workflow-v2` вимагає щонайменше:
 
-Mermaid відображає process knowledge, але не є самостійним source of truth. Exact command/event/service inventories залишаються generated reference.
+- business goal;
+- actors;
+- code map;
+- `process_state`;
+- `process_id`;
+- відповідний запис у Process Registry;
+- `ProcessDiagram` projections згідно з моделлю процесу.
 
-## Generated reference
+Під час поточної мовної міграції machine contract ще приймає історичні англійські назви секцій `Business goal`, `Actors`, `Code map`. Їх міграція в український формат повинна відбуватися разом із checker і всіма canonical workflow pages одним узгодженим етапом.
+
+Diagram відображає process knowledge, але не є самостійним source of truth. Точні commands, events, routes і services залишаються generated reference.
+
+## Згенерований довідник
 
 ```text
 main manifests / contracts / events / routes
@@ -105,13 +133,29 @@ docs/12-reference/*.md
 VitePress
 ```
 
-Generated files не редагуються вручну. Build і CI регенерують їх з current checkout перед publication.
+Generated files не редагуються вручну. Build і CI регенерують їх із поточного checkout.
 
-## Version rule
+## Правило версій
 
-Exact versions не дублюються всюди. Human-readable markers дозволені у `Current Scope` та Domain overview; `docs:check` звіряє їх із `main/app/Domains/*/module.php`.
+Точні versions не дублюються по всьому корпусу.
 
-Workflow pages не повинні зберігати stale maturity statements із hardcoded module versions, якщо ту саму істину можна виразити через поточний manifest/reference.
+Human-readable markers допустимі в `Current Scope` і Domain overview, де `docs:check` може звірити їх із `app/Domains/*/module.php`.
+
+Workflow pages не повинні містити stale maturity statements із hardcoded module versions, якщо ту саму істину можна отримати з manifest/reference.
+
+## Мова
+
+Українська є основною мовою кореневого корпусу документації.
+
+У developer section англійський технічний термін допускається, коли він:
+
+- точно відповідає ідентифікатору коду;
+- є назвою стандарту, protocol або proper name;
+- на першій змістовній появі має український відповідник, якщо це звичайний інженерний термін.
+
+Звичайні англійські слова в українському реченні не вважаються технічною необхідністю.
+
+Повна політика: [Мова та аудиторії](./language-and-audience-policy.md).
 
 ## CI
 
@@ -120,9 +164,9 @@ checkout main commit
 → generate reference
 → verify generated reference
 → check links/frontmatter/version contracts
-→ check page + workflow contracts
+→ check page/process contracts
 → VitePress build
 → deploy /docs
 ```
 
-Якщо зміна коду робить документацію неправдивою, change не завершений. Це не бюрократія, це мінімальний захист від майбутнього нас, який знову спробує вгадати архітектуру по назві сервісу.
+Якщо зміна коду робить документацію неправдивою, зміна ще не завершена. Це не бюрократія, а дешевий спосіб не змушувати майбутніх людей реконструювати систему за назвами класів і старими нотатками.

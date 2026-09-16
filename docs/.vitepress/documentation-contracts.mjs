@@ -24,7 +24,7 @@ export const DOCUMENTATION_CONTRACTS = Object.freeze({
   'how-to-v1': Object.freeze({
     kind: 'how-to',
     minH2: 3,
-    requiredPatterns: ['^##\\s+(?:\\d+\\.\\s+)?(?:Verify|Verification)\\s*$'],
+    requiredPatterns: ['^##\\s+(?:\\d+\\.\\s+)?(?:Verify|Verification|Перевірка)\\s*$'],
   }),
   'reference-v1': Object.freeze({
     kind: 'reference',

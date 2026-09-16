@@ -1,20 +1,26 @@
 ---
-title: Adding an Integration
-description: How to add external providers through Domain-owned ports, adapters, durable delivery and configuration boundaries.
+title: Додавання інтеграції
+description: Як підключити зовнішнього provider через Domain-owned ports, adapters, надійну доставку та межі конфігурації.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: how-to
 ---
 
-# Adding an Integration
+# Додавання інтеграції
 
-Integration не повинна перетворювати provider API на внутрішню Domain model.
+Integration не повинна перетворювати API зовнішнього provider на внутрішню Domain model.
 
-## 1. Choose the owner
+## 1. Визначте власника
 
-Спочатку визначте, який Domain володіє business operation. CRM provider для Sales реалізує Sales-owned contract; property portal/feed реалізує Property Network boundary; generic transport/mechanism не повинен вигадувати domain semantics.
+Спочатку визначте Domain, який володіє бізнес-операцією.
 
-## 2. Define the port
+Наприклад:
+
+- CRM provider для Sales реалізує Sales-owned contract;
+- property portal або feed реалізує Property Network boundary;
+- generic transport mechanism не вигадує Domain semantics.
+
+## 2. Визначте port
 
 Contract описує **що потрібно Domain**, а не SDK конкретного provider.
 
@@ -26,39 +32,68 @@ Outbound or inbound port
 Provider adapter
 ```
 
-## 3. Translate vocabulary at the edge
+## 3. Перекладайте vocabulary на межі
 
-External statuses, event names, IDs та payload fields перетворюються в canonical vocabulary на adapter boundary. Provider не називає внутрішні Domain Events напряму.
+External statuses, event names, IDs та payload fields перетворюються в canonical vocabulary на adapter boundary.
 
-## 4. Make delivery durable
+Provider не визначає внутрішні Domain Events або state transitions напряму.
 
-Для inbound webhooks/feed records потрібні stable external event/record identity, payload hash/idempotency semantics та durable processing там, де redelivery можлива.
+## 4. Зробіть доставку надійною
 
-Для outbound side effects визначте retry policy, idempotency key та audit/result event.
+Для inbound webhooks і feed records визначте:
 
-## 5. Keep credentials outside the Domain
+- stable external event/record identity;
+- payload hash;
+- idempotency semantics;
+- durable processing там, де можлива redelivery.
 
-Tokens/secrets зберігаються в configuration/secret ownership. Domain model може мати opaque `configuration_reference`, але не provider secret.
+Для outbound side effects визначте:
 
-## 6. Route mutation through use cases
+- timeout;
+- retry policy;
+- idempotency key;
+- error classification;
+- audit і result event.
 
-Adapter не пише business tables напряму. Він викликає application use case/port, після чого Domain validation, transaction, Event/Outbox і Policy semantics залишаються тими самими, що й для інших interfaces.
+## 5. Тримайте credentials поза Domain
 
-## 7. Verify
+Tokens та secrets належать configuration/secret ownership.
+
+Domain model може мати opaque `configuration_reference`, але не повинен зберігати provider secret.
+
+## 6. Проводьте мутацію через Use Case
+
+Adapter не пише бізнесові таблиці напряму.
+
+```text
+External input
+→ Adapter
+→ Application Use Case / Port
+→ Domain validation
+→ Transaction
+→ Event / Outbox
+→ Result
+```
+
+Так Domain rules залишаються однаковими для Web, API, messaging та integration paths.
+
+## 7. Перевірка
 
 Перевірте:
 
-- invalid signature/payload;
+- invalid signature і malformed payload;
 - duplicate delivery;
 - provider timeout/error;
-- retry/idempotency;
+- retry та idempotency;
 - tenant scope;
 - vocabulary mapping;
 - secret redaction;
+- audit/correlation;
 - generated routes/capabilities/reference, якщо integration додає runtime contribution.
 
-## Related architecture
+## Пов’язана архітектура
 
-- [Integration Model](../07-api-integrations/integration-model.md)
+- [Модель інтеграцій](../07-api-integrations/integration-model.md)
 - [Cross-Domain Contracts](../03-architecture/cross-domain-contracts.md)
-- [Events & Outbox](../05-runtime/events-and-outbox.md)
+- [Події та Outbox](../05-runtime/events-and-outbox.md)
+- [Надійність зовнішніх інтеграцій](../07-api-integrations/external-reliability.md)

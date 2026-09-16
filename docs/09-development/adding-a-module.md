@@ -1,27 +1,27 @@
 ---
-title: Adding a Module
-description: How to add a runtime module contribution without leaking business ownership into Kernel or interfaces.
+title: Додавання Module
+description: Як додати runtime module contribution без витоку бізнесової відповідальності в Kernel або Interfaces.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: how-to
 ---
 
-# Adding a Module
+# Додавання Module
 
-Module є runtime packaging/contribution boundary. Він не створює новий business Domain автоматично і не повинен переносити domain semantics у Kernel.
+Module (модуль) є межею пакування та внесків у runtime. Він не створює новий бізнесовий Domain автоматично й не повинен переносити Domain semantics у Kernel.
 
-## Sequence
+## Послідовність
 
 1. Визначте owner: існуючий Domain, supporting capability чи справді новий bounded context.
-2. Створіть/оновіть `module.php` manifest: id, version/schema, Kernel compatibility, capabilities та runtime contributions.
-3. Зареєструйте module-owned services/contributors у Bootstrap, не в конкретному Web controller.
-4. Додайте route/navigation/job/event contributions лише через відповідні extension points.
+2. Створіть або оновіть `module.php`: `id`, version/schema, сумісність із Kernel, capabilities і runtime contributions.
+3. Зареєструйте module-owned services та contributors у Bootstrap, а не в конкретному Web controller.
+4. Додавайте routes, navigation, jobs та event contributions лише через відповідні extension points.
 5. Додайте migrations, якщо module володіє persistence schema.
-6. Додайте capability identifiers, потрібні для activation/permission/runtime checks.
-7. Додайте architecture/smoke tests для dependency direction та bootability.
-8. Запустіть generated documentation reference і перевірте, що module з'явився в [Modules & Capabilities](../12-reference/module-capabilities.md).
+6. Визначте capability identifiers для activation, permission і runtime checks.
+7. Додайте architecture та smoke tests для напряму залежностей і bootability.
+8. Оновіть generated reference та перевірте появу module у [Modules & Capabilities](../12-reference/module-capabilities.md).
 
-## Boundary check
+## Перевірка меж
 
 ```text
 Domain semantics → Domain
@@ -31,8 +31,22 @@ HTTP/UI delivery → Interfaces
 Composition → Bootstrap / Module contribution
 ```
 
-Якщо module manifest починає пояснювати, коли Lead qualified або квартира SOLD, ownership уже поїхав не туди.
+Якщо manifest починає пояснювати, коли Lead є qualified або квартира має стан `SOLD`, бізнесова відповідальність уже опинилась не там.
 
-## Documentation
+## Документація
 
-Оновіть Domain overview, System Map або workflow лише якщо module змінює human mental model. Exact capabilities/routes/version не дублюйте вручну там, де їх генерує Reference.
+Оновлюйте Domain overview, System Map або workflow лише тоді, коли module змінює людську модель системи.
+
+Точні capabilities, routes і version не дублюйте вручну там, де вони вже генеруються в Reference.
+
+## Перевірка
+
+Після зміни module щонайменше виконайте:
+
+```bash
+npm run docs:generate
+npm run docs:generate:check
+npm run docs:check
+```
+
+Для змін runtime також запустіть відповідні architecture/smoke tests репозиторію.

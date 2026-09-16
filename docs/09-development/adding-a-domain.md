@@ -1,29 +1,29 @@
 ---
-title: Adding a Domain
+title: Додавання Domain
 description: Практична інструкція створення нового bounded context у COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: how-to
 ---
 
-# Adding a Domain
+# Додавання Domain
 
-Новий Domain створюється не тому, що з'явилась нова таблиця або сторінка.
+Новий Domain (домен) створюється не тому, що з’явилась нова таблиця, сторінка або набір класів. Він виправданий, коли система отримує окрему бізнесову область із власною мовою, правилами та відповідальністю.
 
-## Коли потрібен Domain
+## Коли потрібен окремий Domain
 
-Має бути більшість із цього:
+Має бути більшість таких ознак:
 
-- власний business vocabulary;
-- власні invariants;
-- state/lifecycle;
-- meaningful use cases;
-- ownership даних;
-- власні business events;
-- окремі policies/automation;
-- потреба в незалежній activation/configuration.
+- власний бізнесовий словник;
+- власні invariants (інваріанти);
+- окремий стан і lifecycle (життєвий цикл);
+- змістовні Use Cases (сценарії використання);
+- власність на дані;
+- власні Domain Events;
+- окремі Policy або Automation;
+- потреба в незалежній активації чи конфігурації.
 
-## Standard path
+## Базова структура
 
 ```text
 app/Domains/<Name>/
@@ -32,81 +32,97 @@ app/Domains/<Name>/
 │   ├── Contract
 │   ├── DTO
 │   └── UseCase
-├── Automation       # лише якщо є automation responsibility
-├── Infrastructure  # domain-owned adapters
-├── Bootstrap        # якщо domain contributes runtime module
-└── module.php       # якщо installable module
+├── Automation       # лише за наявності відповідальності за автоматизацію
+├── Infrastructure  # adapters, якими володіє Domain
+├── Bootstrap        # якщо Domain робить runtime contributions
+└── module.php       # якщо Domain є installable module
 ```
 
-Не створюйте порожні папки «для архітектури».
+Не створюйте порожні директорії «на майбутнє». Архітектура не стає кращою від кількості папок.
 
-## Кроки
+## Послідовність
 
-1. Визначити ownership і те, чого Domain **не** володіє.
-2. Описати vocabulary/value objects/enums.
-3. Виділити application use cases.
-4. Визначити smallest outbound ports у `Application/Contract`.
-5. Реалізувати domain-owned adapters в `Infrastructure`.
-6. Якщо state change важливий для інших процесів — створити Domain Event.
-7. Якщо потрібна automation — додати Rules/Agent/Actions/Policies.
-8. Якщо Domain pluggable/installable — додати `DomainModuleInterface` implementation + `module.php`.
-9. Для installable Domain додати щонайменше один canonical Process Registry workflow або явний process-coverage exemption.
-10. Зареєструвати concrete dependencies у `app/Bootstrap`, не у Web module.
-11. Додати architecture/smoke/integration tests і пройти documentation gates.
+1. Визначте ownership: чим Domain володіє і чим **не** володіє.
+2. Опишіть vocabulary, value objects та enums.
+3. Виділіть прикладні Use Cases.
+4. Визначте мінімальні outbound ports у `Application/Contract`.
+5. Реалізуйте Domain-owned adapters в `Infrastructure`.
+6. Для змін стану, важливих іншим процесам, створіть Domain Event.
+7. За потреби автоматизації додайте Rules, Agent, Actions і Policies.
+8. Якщо Domain має бути підключуваним, додайте реалізацію `DomainModuleInterface` та `module.php`.
+9. Для installable Domain додайте щонайменше один канонічний workflow у Process Registry або явний виняток покриття.
+10. Зареєструйте concrete dependencies у `app/Bootstrap`, а не у Web module.
+11. Додайте architecture, smoke та integration tests і пройдіть documentation gates.
 
-## module.php
+## Manifest `module.php`
 
-Manifest має визначати id, version, schema version, Kernel constraint, dependencies, default activation та contributions.
+Manifest визначає:
 
-Contributions можуть включати runtime module service, job handlers, API route contributors, configuration provisioners, migrations, capabilities.
+- `id`;
+- version і schema version;
+- сумісність із Kernel;
+- dependencies;
+- default activation;
+- runtime contributions;
+- capabilities.
 
-Сам факт появи `module.php` робить Domain installable для documentation coverage gate. Папка Domain без manifest лишається supporting/non-installable area і не отримує process requirement автоматично.
+Contributions можуть включати runtime module service, job handlers, API route contributors, configuration provisioners, migrations та capabilities.
 
-## Canonical process coverage
+Наявність `module.php` робить Domain installable для документаційних перевірок. Директорія без manifest залишається supporting area і не отримує ці вимоги автоматично.
 
-Installable Domain не вважається knowledge-complete лише тому, що його class-и компілюються. Він має бути пов'язаний із реальним бізнес-процесом через Process Registry.
+## Покриття бізнес-процесом
+
+Installable Domain не є повністю описаним лише тому, що його класи компілюються.
 
 ```text
 module.php
    ↓
 installable Domain
    ↓
-Process Registry domain ownership
+Process Registry ownership
    ↓
 Workflow + capability/runtime evidence
 ```
 
-Нормальний шлях — створити canonical workflow через [Adding a Workflow](adding-a-workflow.md).
+Нормальний шлях: створити workflow за інструкцією [Додавання Workflow](adding-a-workflow.md).
 
-Якщо Domain свідомо не має process model, exception реєструється в:
+Якщо Domain свідомо не має process model, виняток реєструється в:
 
 ```text
 docs/.vitepress/process-coverage-exemptions.json
 ```
 
-Exemption мусить назвати `domain`, відповідального `owner` і змістовний `reason`. Це architecture exception, а не спосіб пройти CI до обіду. Коли process з'являється, exemption стає stale і checker його відхиляє.
+Виняток повинен містити `domain`, відповідального `owner` і змістовний `reason`. Коли process з’являється, застарілий exemption має бути видалений.
 
 Поточне покриття: [Domain Process Coverage](../12-reference/domain-process-coverage.md).
 
-## Versioning
+## Версіонування
 
-Kernel compatibility перевіряється executable `KernelVersion` + `VersionConstraint`. Commit label не є contract version.
+Сумісність Kernel перевіряється через executable `KernelVersion` і `VersionConstraint`. Назва коміту не є версією контракту.
 
-## Dependency rule
+## Напрям залежностей
 
 ```text
 Domain → Kernel contracts + same Domain
 Domain -X-> concrete Infrastructure
 Domain -X-> Web/Telegram controllers
-Domain -X-> PDO/Phalcon framework APIs у core logic
+Domain -X-> PDO/Phalcon APIs у core logic
 ```
 
-## Cross-domain relation
+## Cross-domain взаємодія
 
-Domain A не читає таблиці Domain B «бо так швидше». Потрібен explicit application contract, integration event/read projection або інший declared boundary.
+Domain A не читає таблиці Domain B напряму. Використовуйте явний application contract, integration event, read projection або іншу declared boundary.
 
-Process Registry `domain` також не може посилатися на неіснуючий installable Domain. Supporting area спочатку має отримати свідомий module boundary, якщо її справді потрібно зробити installable.
+`domain` у Process Registry також не може посилатися на неіснуючий installable Domain.
 
-## Definition of done
+## Готовність
 
-Domain boundary зрозуміла, tenant scope explicit, writes atomic із events де потрібно, external side effects idempotent, capability/access rules визначені, installable Domain має canonical process coverage або явний exemption, architecture/documentation tests не дозволяють випадковий dependency чи knowledge leak.
+Domain готовий, коли:
+
+- boundary зрозуміла;
+- tenant scope явний;
+- writes атомарні з Events там, де це потрібно;
+- зовнішні side effects ідемпотентні;
+- capability та access rules визначені;
+- installable Domain має process coverage або формальний exemption;
+- architecture/documentation tests не допускають випадкових залежностей.

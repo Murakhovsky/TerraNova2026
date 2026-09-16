@@ -1,23 +1,33 @@
 ---
-title: Adding a Workflow
-description: How to document and implement a business workflow across Domain capability, Runtime, UI and code boundaries.
+title: Додавання Workflow
+description: Як документувати й реалізовувати бізнес-процес через Domain, capability, Runtime, UI та код.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: how-to
 contract: how-to-v1
 ---
 
-# Adding a Workflow
+# Додавання Workflow
 
-Workflow починається з business goal, а не з нового Service class.
+Workflow (бізнес-процес) починається з бізнес-мети, а не з нового `Service` class.
 
-## 1. Define business contract
+## 1. Визначте бізнесовий контракт
 
-Зафіксуйте business goal, actors, trigger/input, outcome, decision points, failure paths та owning Domain. `process_state` описує лише бізнес-стан: `as-is` або `to-be`. Authored `verification` заборонена: її обчислює current-checkout evidence layer.
+Зафіксуйте:
 
-## 2. Draw the business flow
+- бізнес-мету;
+- actors;
+- trigger/input;
+- очікуваний результат;
+- decision points;
+- failure paths;
+- owning Domain.
 
-Спочатку моделюйте business sequence, а не class graph.
+`process_state` описує бізнесовий стан документа: `as-is` або `to-be`. Поле `verification` вручну не задається: його обчислює evidence layer поточного checkout.
+
+## 2. Намалюйте бізнесовий потік
+
+Спочатку моделюйте послідовність бізнесу, а не class graph.
 
 ```text
 Trigger
@@ -27,19 +37,34 @@ Business operation / decision
 State or outcome
 ```
 
-Для interaction використовуйте `sequenceDiagram` лише коли interaction semantics явно описані. Для entity lifecycle — `stateDiagram-v2` лише коли існує canonical state model. Повні conventions: [Business Process Modeling](../02-workflows/business-process-modeling.md).
+`sequenceDiagram` використовуйте для реальної взаємодії учасників, `stateDiagram-v2` для сутностей із канонічною моделлю станів.
 
-## 3. Register the process
+Повні правила: [Моделювання бізнес-процесів](../02-workflows/business-process-modeling.md).
 
-Кожен `workflow-v2` має matching JSON definition у:
+## 3. Зареєструйте Process
+
+Кожен `workflow-v2` має відповідний JSON definition у:
 
 ```text
 resources/processes/<process-id>.json
 ```
 
-Process Registry schema `v4` залишається валідною для same-domain workflows. Schema `v5` додає contract-guarded cross-domain steps. Definition фіксує stable process ID, process Domain, business state, actors, steps, edges, primary owner, step Domain, canonical capability або explicit capability gap, criticality та runtime/evidence mappings.
+Process Registry schema `v4` підтримує same-domain workflows. Schema `v5` додає cross-domain steps, захищені контрактами.
 
-Мінімальний mapped step:
+Definition фіксує:
+
+- стабільний `process_id`;
+- owning Domain процесу;
+- бізнес-стан;
+- actors;
+- steps та edges;
+- primary owner кожного step;
+- Domain кожного step;
+- capability або явний capability gap;
+- criticality;
+- runtime/evidence mappings.
+
+Приклад mapped step:
 
 ```json
 {
@@ -60,21 +85,9 @@ Process Registry schema `v4` залишається валідною для same
 }
 ```
 
-Якщо semantic capability реально ще не оголошена Domain module, не підміняйте її permission або сусідньою capability:
+## 4. Призначте ownership, Domain і capability
 
-```json
-{
-  "domain": "sales",
-  "capability": null,
-  "capability_gap": "missing-domain-capability"
-}
-```
-
-Це architecture debt, але сам Process Registry володіє лише фактом gap.
-
-## 4. Assign ownership, Domain and capability
-
-Кожний step має одного primary responsible `owner` з declared actors і explicit `domain`.
+Кожен step має одного primary owner та явний `domain`.
 
 ```text
 Step
@@ -84,9 +97,11 @@ Domain
 Capability або explicit gap
 ```
 
-Capability authority — `contributions.capabilities` у module manifest. Checker читає її через current-checkout evidence catalogue, не через generated Markdown.
+Джерелом capability authority є `contributions.capabilities` у manifest модуля.
 
-Для same-domain process step Domain дорівнює process Domain. Якщо step реально переходить в інший Domain, використовуйте schema v5 і canonical foreign-Domain capability. Такий step обов'язково має містити `contract` runtime mapping, який current module evidence підтверджує як `role: requires` від process Domain до target Domain:
+Для same-domain process Domain step дорівнює Domain процесу.
+
+Для справжнього cross-domain step використовуйте schema `v5`, capability цільового Domain та `contract` runtime mapping, який підтверджує `role: requires` від Domain процесу до цільового Domain.
 
 ```json
 {
@@ -103,17 +118,27 @@ Capability authority — `contributions.capabilities` у module manifest. Checke
 }
 ```
 
-Просто поставити чужий `domain` або foreign capability недостатньо: `check-processes.mjs` відхилить cross-domain step без verified contract boundary.
+Самого запису чужого `domain` недостатньо: `check-processes.mjs` відхиляє cross-domain step без підтвердженої contract boundary.
 
-## 5. Register capability debt
+## 5. Зафіксуйте capability debt
 
-Кожний `capability_gap` мусить мати рівно один matching item у:
+Якщо потрібна semantic capability ще не оголошена Domain module, не підміняйте її сусідньою capability або permission.
+
+```json
+{
+  "domain": "sales",
+  "capability": null,
+  "capability_gap": "missing-domain-capability"
+}
+```
+
+Кожний `capability_gap` повинен мати один відповідний запис у:
 
 ```text
 docs/.vitepress/capability-debt.json
 ```
 
-Capability Debt Registry schema `v1` зберігає remediation metadata, а не дублює process truth:
+Приклад:
 
 ```json
 {
@@ -128,27 +153,35 @@ Capability Debt Registry schema `v1` зберігає remediation metadata, а �
 }
 ```
 
-Severity policy детермінований: critical canonical step → `high`, non-critical canonical step → `medium`. Target capability мусить бути в namespace owning Domain і ще не існувати в module capability authority.
+Critical canonical step отримує `high`, non-critical step — `medium`.
 
-Debt закривається тільки разом: Domain оголошує target capability, process step переходить з gap на capability, matching debt item видаляється. Generated [Capability Debt Backlog](../12-reference/capability-debt.md) покаже залишок автоматично.
+Debt закривається цілісно: Domain оголошує capability, Process переходить із gap на capability, а відповідний debt item видаляється.
 
-## 6. Map execution evidence
+Поточний стан генерується в [Capability Debt Backlog](../12-reference/capability-debt.md).
 
-Runtime mapping types:
+## 6. Прив’яжіть runtime evidence
 
-- `use_case` → Domain `Application/UseCase/*.php`;
-- `command` → Domain `Application/DTO/*Command.php`;
-- `event` → explicit Domain event catalogue;
-- `contract` → canonical module `cross_domain_contracts` declaration;
-- `source` → exact repository path + optional symbol.
+Підтримувані mapping types:
 
-Evidence має `source` або `runtime` strength. Derived verification залишається окремою від capability coverage: `documented`, `source-verified`, `runtime-verified`.
+- `use_case` → `Application/UseCase/*.php`;
+- `command` → `Application/DTO/*Command.php`;
+- `event` → Domain event catalogue;
+- `contract` → `cross_domain_contracts` declaration;
+- `source` → точний path і, за потреби, symbol.
 
-Для cross-domain step contract evidence виконує ще одну роль: доводить, що process Domain має право викликати target Domain через declared boundary. Це не дає process Domain ownership над foreign state.
+Derived verification відокремлена від capability coverage:
 
-## 7. Render canonical views
+```text
+documented
+source-verified
+runtime-verified
+```
 
-Кожна workflow page має рендерити три базові views:
+Для cross-domain step `contract` evidence також доводить право Domain процесу звертатись до іншого Domain через задекларовану boundary. Воно не передає ownership чужого стану.
+
+## 7. Відобразіть канонічні представлення
+
+Кожна workflow page рендерить три базові views:
 
 ```html
 <ProcessDiagram process-id="domain.process-id" />
@@ -156,21 +189,47 @@ Evidence має `source` або `runtime` strength. Derived verification зал�
 <ProcessDiagram process-id="domain.process-id" view="capability" direction="LR" />
 ```
 
-Cross-domain workflow додатково має рендерити:
+Cross-domain workflow додатково рендерить:
 
 ```html
 <ProcessDiagram process-id="domain.process-id" view="domain" direction="LR" />
 ```
 
-Views відповідають на різні питання: що відбувається, хто відповідає, яка capability стоїть за step, і через які Domain boundaries проходить процес.
+Ці views відповідають на різні питання: що відбувається, хто відповідає, яка capability стоїть за step і які Domain boundaries перетинаються.
 
-## 8. Connect UI and code
+## 8. Зв’яжіть UI та код
 
-Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв'язувала бізнес, UX, Domain capability, Runtime і implementation. UI click не є business transition сам по собі.
+Workflow page повинна вказати UI surfaces та Code map, щоб одна сторінка зв’язувала:
 
-## 9. Verify
+```text
+Business
+→ Workflow
+→ Domain
+→ Capability
+→ Runtime
+→ UI
+→ Code
+```
 
-Перевірте topology, ownership, step Domain, capability resolution або explicit gap, matching capability debt, cross-domain contract evidence, runtime mappings, derived verification, required `ProcessDiagram` projections, failure paths, idempotency, tenant scope та auditability.
+UI click сам по собі не є бізнесовим transition.
+
+## 9. Перевірка
+
+Перевірте:
+
+- topology;
+- ownership;
+- Domain кожного step;
+- capability resolution або explicit gap;
+- відповідний capability debt;
+- cross-domain contract evidence;
+- runtime mappings;
+- derived verification;
+- обов’язкові `ProcessDiagram` projections;
+- failure paths;
+- idempotency;
+- tenant scope;
+- auditability.
 
 Запустіть:
 
@@ -182,9 +241,9 @@ npm run docs:check
 npm run docs:build
 ```
 
-`workflow-v2` не пройде check без matching Process Registry definition, ownership/capability views, valid capability/gap, matching debt item або з фальшивим runtime evidence. Cross-domain workflow також не пройде без schema v5, verified `requires` contract і Domain view.
+`workflow-v2` не пройде перевірку без matching Process Registry definition, ownership/capability views, валідної capability або gap та відповідного debt item. Cross-domain workflow також потребує schema `v5`, підтвердженого `requires` contract і Domain view.
 
-## Canonical examples
+## Канонічні приклади
 
 - [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md)
 - [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md)
