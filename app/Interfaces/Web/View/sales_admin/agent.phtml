@@ -62,30 +62,3 @@ $code = (array) ($agent['code_owned'] ?? []);
     <div class="tn-sales-rule-list"><?php foreach ($revisions as $revision): ?><article class="tn-sales-rule-card"><div><strong><?php echo $h($revision['action'] ?? 'UPDATE'); ?></strong><small>v<?php echo (int) ($revision['entity_version'] ?? 0); ?> · <?php echo $h($revision['actor_type'] ?? ''); ?>:<?php echo $h($revision['actor_id'] ?? ''); ?></small></div><div><small><?php echo $h($revision['created_at'] ?? ''); ?></small></div></article><?php endforeach; ?></div>
   </section>
 </main>
-<script>
-(() => {
-  const root = document.querySelector('[data-sales-agent-admin]');
-  if (!root) return;
-  const name = root.dataset.agentName || '';
-  const csrf = root.dataset.csrf || '';
-  const post = async (suffix, payload) => {
-    const response = await fetch(`/api/sales/admin/agents/${encodeURIComponent(name)}${suffix}`, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'Accept':'application/json'}, body:JSON.stringify(payload)});
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) { const error = new Error(data.error || 'Request failed.'); error.status = response.status; throw error; }
-    return data.data;
-  };
-  const config = root.querySelector('[data-sales-agent-config]');
-  config?.addEventListener('submit', async (event) => {
-    event.preventDefault(); const status = root.querySelector('[data-sales-agent-status]'); status.textContent = 'Saving…';
-    const form = new FormData(config); const payload = {configuration_version:Number(form.get('configuration_version')),enabled:form.get('enabled')==='1',profile:String(form.get('profile')||''),model:String(form.get('model')||''),business_instructions:String(form.get('business_instructions')||''),confidence_threshold:Number(form.get('confidence_threshold')),context_sources:form.getAll('context_sources'),allowed_actions:form.getAll('allowed_actions')};
-    try { const result = await post('', payload); status.textContent = 'Saved.'; config.elements.configuration_version.value = result.configuration_version; }
-    catch (error) { status.textContent = error.status === 409 ? 'Configuration changed elsewhere. Reload required.' : error.message; }
-  });
-  const test = root.querySelector('[data-sales-agent-test]');
-  test?.addEventListener('submit', async (event) => {
-    event.preventDefault(); const status = root.querySelector('[data-sales-agent-test-status]'); const output = root.querySelector('[data-sales-agent-test-result]'); const form = new FormData(test); status.textContent = 'Running read-only test…'; output.hidden = true;
-    try { const result = await post('/test', {subject_type:String(form.get('subject_type')||'deal'),subject_id:String(form.get('subject_id')||''),question:String(form.get('question')||'')}); status.textContent = 'Completed. No actions were executed.'; output.textContent = JSON.stringify(result, null, 2); output.hidden = false; }
-    catch (error) { status.textContent = error.message; }
-  });
-})();
-</script>
