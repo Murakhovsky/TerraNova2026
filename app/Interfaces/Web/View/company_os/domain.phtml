@@ -19,4 +19,8 @@
   <section class="cos-integrations"><p><?php echo $h($copy['integrates']); ?></p><div><span>CRM</span><span>ERP</span><span><?php echo $h($systems['email']); ?></span><span><?php echo $h($systems['messaging']); ?></span><span><?php echo $h($systems['telephony']); ?></span><span><?php echo $h($systems['data']); ?></span><span><?php echo $h($systems['internal']); ?></span></div><small><?php echo $h($copy['human']); ?></small></section>
   <section class="cos-start"><div><p class="cos-kicker"><span></span><?php echo $h($copy['start_domain']); ?></p><h2><?php echo $h($copy['start_title']); ?></h2></div><div><p><?php echo $h($copy['start_copy']); ?></p><a class="cos-button cos-button--light" href="mailto:cos@terranova.ua?subject=COS%20<?php echo rawurlencode($domain['title']); ?>"><?php echo $h($copy['cta']); ?></a></div></section>
 </main><footer class="cos-footer"><a class="cos-brand" href="<?php echo $this->url->get('cos/' . $lang); ?>"><span class="cos-brand__mark">C</span><span>COS<small><?php echo $h($copy['eyebrow']); ?></small></span></a><a href="<?php echo $this->url->get('cos/' . $lang); ?>#domains"><?php echo $h($copy['back']); ?></a><span>© <?php echo date('Y'); ?> Terra Nova</span></footer>
-<script>window.COS_PAGE={base:<?php echo json_encode($this->url->get('cos/'), JSON_UNESCAPED_SLASHES); ?>,type:'domain',slug:<?php echo json_encode(array_search($domain,$domains,true)); ?>};</script>
+<script type="application/json" data-cos-page><?php echo json_encode([
+  'base' => $this->url->get('cos/'),
+  'type' => 'domain',
+  'slug' => array_search($domain, $domains, true),
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
