@@ -1,16 +1,16 @@
 ---
-title: API & Webhooks
-description: HTTP API and webhook delivery rules from transport validation to canonical Domain use cases.
+title: API та webhooks
+description: Правила HTTP API та webhook-входів від транспортної перевірки до канонічних сценаріїв Domain.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: architecture
 ---
 
-# API & Webhooks
+# API та webhooks
 
-API та webhook endpoints є delivery boundary. Вони приймають transport input, але не стають власниками business state.
+API та webhook endpoints є delivery boundary (межею доставки). Вони приймають transport input, але не стають власниками бізнес-стану.
 
-## Canonical API path
+## Канонічний шлях API
 
 ```text
 HTTP request
@@ -30,9 +30,9 @@ Result
 HTTP response
 ```
 
-Controller не повинен містити SQL, pipeline transitions, provider routing або Domain policy catalog.
+Controller не повинен містити SQL, pipeline transitions, provider routing або каталог Domain Policy.
 
-## Webhook path
+## Шлях webhook
 
 ```text
 External provider
@@ -50,9 +50,9 @@ Domain Use Case
 Event / result / audit
 ```
 
-Webhook redelivery вважається нормальною властивістю зовнішнього світу, а не диверсією провайдера. Тому stable external identity, payload hash/idempotency semantics і retry-safe processing повинні бути explicit там, де delivery asynchronous.
+Повторна доставка webhook є нормальною властивістю зовнішнього світу. Тому stable external identity, payload hash, idempotency semantics і retry-safe processing мають бути явними там, де доставка асинхронна.
 
-## Error ownership
+## Власність помилок
 
 Розділяйте:
 
@@ -64,18 +64,18 @@ Webhook redelivery вважається нормальною властивіс�
 - persistence/concurrency failure;
 - external side-effect failure.
 
-HTTP status/response є presentation цієї причини, а не самою business semantics.
+HTTP status є представленням причини, а не самою бізнес-семантикою.
 
 ## Routes
 
-Module-owned API routes реєструються через runtime extension surface. Exact current routes не дублюються тут: [Module Routes](../12-reference/module-routes.md) генерується з current checkout.
+Module-owned API routes реєструються через runtime extension surface. Поточний точний список не дублюється вручну: [Маршрути модулів](../12-reference/module-routes.md) генеруються з актуального checkout.
 
-## Cross-domain rule
+## Cross-domain правило
 
-API endpoint не є приводом обходити Domain ownership. Якщо один HTTP call оркеструє кілька Domains, кожна mutation все одно проходить через owner-specific application boundary.
+API endpoint не є приводом обходити Domain ownership. Якщо один HTTP call оркеструє кілька Domains, кожна мутація все одно проходить через application boundary свого власника.
 
-## Related
+## Пов’язані сторінки
 
-- [Integration Model](./integration-model.md)
-- [External Reliability](./external-reliability.md)
-- [Interface Surfaces](../08-ui/interface-surfaces.md)
+- [Модель інтеграцій](./integration-model.md)
+- [Надійність зовнішніх інтеграцій](./external-reliability.md)
+- [Інтерфейсні поверхні](../08-ui/interface-surfaces.md)

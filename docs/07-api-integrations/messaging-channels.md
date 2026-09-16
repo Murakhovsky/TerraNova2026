@@ -1,16 +1,16 @@
 ---
-title: Messaging Channels
-description: Telegram and future messaging channels as delivery surfaces over shared COS application boundaries.
+title: Канали повідомлень
+description: Telegram та інші канали повідомлень як поверхні доставки над спільними прикладними межами COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: architecture
 ---
 
-# Messaging Channels
+# Канали повідомлень
 
-Telegram, Viber, email/chat adapters та майбутні messaging surfaces не є окремими бізнес-системами. Вони є каналами доступу до тих самих application use cases.
+Telegram, Viber, email, chat adapters та майбутні messaging surfaces не є окремими бізнес-системами. Вони є каналами доступу до тих самих Application Use Cases (сценаріїв використання застосунку).
 
-## Canonical channel path
+## Канонічний шлях каналу
 
 ```text
 Incoming message / callback
@@ -28,28 +28,28 @@ Domain result
 Channel-specific rendering
 ```
 
-## Channel responsibilities
+## Відповідальність каналу
 
-Channel layer може володіти:
+Шар каналу може володіти:
 
-- provider update parsing;
-- callback/message addressing;
-- formatting, buttons і pagination;
+- розбором update конкретного provider;
+- адресацією callback і message;
+- форматуванням, кнопками й pagination;
 - channel rate limits;
-- delivery retry metadata;
-- mapping external user/chat identity to COS identity context.
+- metadata для retry доставки;
+- зіставленням зовнішньої user/chat identity з контекстом ідентичності COS.
 
-Channel layer не володіє:
+Шар каналу не володіє:
 
-- Sales qualification rules;
-- Property commercial lifecycle;
-- Diagnostic scoring semantics;
-- Agent mutation authority;
-- canonical business persistence.
+- правилами кваліфікації Sales;
+- комерційним lifecycle Property;
+- семантикою scoring у Diagnostic;
+- повноваженнями Agent на мутацію;
+- канонічним бізнесовим зберіганням.
 
-## Shared behavior
+## Спільна поведінка
 
-Якщо одна й та сама операція доступна через Web, API і Telegram, усі три surfaces повинні викликати однаковий application boundary.
+Якщо одна операція доступна через Web, API та Telegram, усі три surfaces повинні викликати однаковий application boundary.
 
 ```text
 Web ─────┐
@@ -57,18 +57,18 @@ API ─────┼→ Use Case → Domain
 Telegram ┘
 ```
 
-Різниця має бути в interaction/presentation, а не у правилах бізнесу.
+Різниця має бути у взаємодії та представленні, а не в бізнес-правилах.
 
-## Legacy boundary
+## Межа сумісності
 
-Історичні Telegram ActiveRecord/adapters можуть залишатися compatibility surface під час migration. Нові domain rules або canonical writes не повинні повертатися туди лише тому, що старий bot уже знає назву таблиці.
+Історичні Telegram ActiveRecord/adapters можуть залишатися compatibility surface під час migration. Нові Domain rules або canonical writes не повинні повертатися туди лише тому, що старий bot уже знає назву таблиці.
 
-## Outbound delivery
+## Вихідна доставка
 
-Domain/Event/Automation формує semantic action, після чого channel adapter виконує provider-specific delivery. External message id, retry/error metadata та correlation повинні залишатися transport facts.
+Domain, Event або Automation формує семантичну Action, після чого channel adapter виконує provider-specific delivery. External message id, retry/error metadata та correlation залишаються транспортними фактами.
 
-## Related
+## Пов’язані сторінки
 
-- [Integration Model](./integration-model.md)
-- [External Reliability](./external-reliability.md)
-- [Adding an Integration](../09-development/adding-an-integration.md)
+- [Модель інтеграцій](./integration-model.md)
+- [Надійність зовнішніх інтеграцій](./external-reliability.md)
+- [Додавання інтеграції](../09-development/adding-an-integration.md)

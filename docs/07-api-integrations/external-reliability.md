@@ -1,16 +1,16 @@
 ---
-title: External Reliability
-description: Idempotency, retries, timeouts, dead-letter behavior and observability for external COS integrations.
+title: Надійність зовнішніх інтеграцій
+description: Ідемпотентність, retries, timeouts, dead-letter і спостережуваність для зовнішніх інтеграцій COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: architecture
 ---
 
-# External Reliability
+# Надійність зовнішніх інтеграцій
 
-Зовнішня система може відповісти двічі, через хвилину, не відповісти взагалі або повернути `200`, після якого фактична операція провалиться десь усередині. Інтернет, як завжди, демонструє характер.
+Зовнішня система може відповісти двічі, через хвилину, не відповісти взагалі або повернути `200`, після якого фактична операція впаде десь усередині. Інтернет, як завжди, демонструє характер.
 
-## Reliability contract
+## Контракт надійності
 
 Для consequential external side effect визначте:
 
@@ -24,9 +24,9 @@ Stable operation identity
 → audit + correlation
 ```
 
-## Idempotency
+## Ідемпотентність
 
-Idempotency key має бути scoped так, щоб повторна доставка тієї самої business operation не створювала другий side effect, але нова легітимна операція не блокувалась старим ключем.
+Idempotency key має бути scoped так, щоб повторна доставка тієї самої бізнес-операції не створювала другий side effect, але нова легітимна операція не блокувалась старим ключем.
 
 Типовий scope:
 
@@ -34,38 +34,38 @@ Idempotency key має бути scoped так, щоб повторна дост�
 organization + integration + operation type + stable operation id
 ```
 
-## Retry classification
+## Класифікація retry
 
-Не кожна помилка retryable.
+Не кожна помилка є retryable.
 
-Retry зазвичай доречний для timeout, transient transport failure або provider 5xx/rate-limit semantics. Domain rejection, invalid payload, denied permission або broken mapping не повинні нескінченно крутитися в queue.
+Retry зазвичай доречний для timeout, transient transport failure або provider 5xx/rate-limit semantics. Domain rejection, invalid payload, denied permission або broken mapping не повинні нескінченно крутитися в Queue.
 
-## Durable processing
+## Надійна обробка
 
-Inbound events, для яких втрата має business consequence, повинні проходити через durable inbox/queue boundary. Outbound work з retries повинно мати lease/attempt/result semantics і dead-letter або equivalent terminal state.
+Inbound events, втрата яких має бізнес-наслідки, повинні проходити через durable inbox/queue boundary. Outbound work з retries має мати lease/attempt/result semantics і dead-letter або еквівалентний terminal state.
 
-## Correlation and audit
+## Correlation і audit
 
-Для зовнішньої операції має бути можливо пов'язати:
+Для зовнішньої операції має бути можливо пов’язати:
 
 - originating user/event/action;
 - Domain operation;
 - integration/provider;
-- request attempt(s);
+- request attempts;
 - external identifier;
 - final result/error;
 - retry/dead-letter history.
 
-## Circuit/failure isolation
+## Ізоляція помилок
 
-Provider outage не повинен зупиняти unrelated Domains або весь Kernel. Adapter/runtime boundary має локалізувати failure і дозволити контрольоване degradation.
+Provider outage не повинен зупиняти unrelated Domains або весь Kernel. Adapter/runtime boundary має локалізувати failure і дозволити контрольовану degradation.
 
-## LLM note
+## Примітка про LLM
 
-LLM routing/fallback має власні governed abstractions. Інші integrations не повинні копіювати LLM-specific contracts, але використовують той самий принцип: transport failure не є business decision.
+LLM routing/fallback має власні керовані abstractions. Інші integrations не повинні копіювати LLM-specific contracts, але використовують той самий принцип: transport failure не є business decision.
 
-## Related
+## Пов’язані сторінки
 
-- [Events & Outbox](../05-runtime/events-and-outbox.md)
-- [Audit & Diagnostics](../05-runtime/audit-and-diagnostics.md)
-- [API & Webhooks](./api-and-webhooks.md)
+- [Події та Outbox](../05-runtime/events-and-outbox.md)
+- [Аудит і діагностика виконання](../05-runtime/audit-and-diagnostics.md)
+- [API та webhooks](./api-and-webhooks.md)

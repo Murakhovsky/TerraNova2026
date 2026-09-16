@@ -1,16 +1,16 @@
 ---
-title: Workspace Model
-description: COS operational workspace model connecting read models, commands, context and Domain-owned actions.
+title: Модель робочого простору
+description: Операційна модель workspace COS, яка поєднує read models, commands, context і дії, якими володіють Domains.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: ui
 ---
 
-# Workspace Model
+# Модель робочого простору
 
-COS workspace не є просто набором CRUD-екранів. Його задача — показати людині **поточний operational context, state, next decisions та дозволені actions**.
+Workspace (робочий простір) COS не є просто набором CRUD-екранів. Його задача — показати людині **поточний операційний контекст, стан, наступні рішення та дозволені дії**.
 
-## Workspace anatomy
+## Будова workspace
 
 ```text
 Context / tenant / role
@@ -28,13 +28,15 @@ Result / event
 Refresh projection
 ```
 
-## Read side
+## Сторона читання
 
 Workspace може потребувати denormalized projection, aggregate metrics, history timeline або search index. Це не причина перетворювати write repository на універсальний BI query object.
 
-## Action side
+Read model (модель читання) оптимізується під завдання інтерфейсу й не отримує через це права визначати канонічний бізнес-стан.
 
-UI action повинна map-итися на meaningful application operation:
+## Сторона дій
+
+UI Action повинна відповідати змістовній операції застосунку:
 
 ```text
 Change stage
@@ -45,32 +47,47 @@ Publish listing
 Approve action
 ```
 
-Кнопка не повинна означати «оновити три таблиці цими полями».
+Кнопка не повинна означати «оновити три таблиці цими полями». Це вже не UI, а база даних у плащі.
 
-## Context
+## Контекст
 
-Workspace явно працює в active organization/tenant context. Додатковий context може включати Domain entity, case/deal, Property asset, diagnostic session, selected module або operational filter.
+Workspace явно працює в active organization/tenant context.
 
-## State and feedback
+Додатковий context може включати:
+
+- Domain entity;
+- case/deal;
+- Property Asset;
+- Diagnostic Session;
+- selected module;
+- operational filter.
+
+## Стани та зворотний зв’язок
 
 UI має відрізняти:
 
-- successful mutation;
+- успішну мутацію;
 - validation rejection;
-- permission/policy deny;
-- approval required;
-- asynchronous queued state;
+- permission або Policy deny;
+- `APPROVAL_REQUIRED`;
+- асинхронний queued state;
 - external failure/retry;
-- stale/concurrent update.
+- stale або concurrent update.
 
-Це різні system states, а не один червоний toast «Something went wrong».
+Це різні системні стани, а не один червоний toast `Something went wrong`, який традиційно пояснює приблизно нічого.
 
-## Cross-domain composition
+## Cross-domain композиція
 
-Workspace може показувати дані кількох Domains, але mutation authority не змішується. Sales screen може показувати Property reference, не отримуючи права напряму редагувати canonical Property storage.
+Workspace може показувати дані кількох Domains, але mutation authority не змішується.
 
-## Related
+Sales screen може показувати Property reference, не отримуючи права напряму редагувати canonical Property storage. Композиція інтерфейсу не змінює ownership даних.
 
-- [Interface Surfaces](./interface-surfaces.md)
-- [Navigation & Permissions](./navigation-and-permissions.md)
-- [Execution Lifecycle](../05-runtime/execution-lifecycle.md)
+## Пов’язані сторінки
+
+- [Інтерфейсні поверхні](./interface-surfaces.md)
+- [Навігація та дозволи](./navigation-and-permissions.md)
+- [Життєвий цикл виконання](../05-runtime/execution-lifecycle.md)
+
+## Інваріант
+
+> Workspace збирає контекст і дозволені операції для людини. Він не створює паралельну бізнес-модель поверх Domains.

@@ -1,12 +1,12 @@
 ---
-title: Documentation Site
-description: Як /docs перетворюється на навігаційний documentation surface без дублювання source of truth.
+title: Сайт документації
+description: Як каталог docs перетворюється на навігаційний сайт документації без дублювання джерела правди.
 status: active
-updated: 2026-09-14
+updated: 2026-09-16
 kind: ui
 ---
 
-# Documentation Site
+# Сайт документації
 
 ```text
 main code + docs
@@ -18,30 +18,45 @@ VitePress build
 public/docs
 ```
 
-`public/docs` є disposable static artifact і не редагується вручну.
+`public/docs` є згенерованим статичним артефактом і не редагується вручну.
 
-## UX
+## Взаємодія з користувачем
 
-Documentation surface дає sidebar, local full-text search, page outline, previous/next navigation, deep links, frontmatter metadata, edit-on-GitHub і clickable System Map.
+Сайт документації надає:
 
-## Renderer
+- бічну навігацію;
+- локальний повнотекстовий пошук;
+- структуру поточної сторінки;
+- переходи вперед і назад;
+- прямі посилання на розділи;
+- технічні метадані сторінки там, де вони доречні;
+- перехід до редагування в GitHub;
+- інтерактивні карти й діаграми системи.
 
-Stable VitePress `1.6.4` запускається окремо від основного Vite application build.
+Бізнесові та інтеграторські сторінки не повинні показувати внутрішні технічні метадані лише тому, що VitePress уміє це зробити.
+
+## Збірка
+
+VitePress `1.6.4` запускається окремо від основної збірки Vite-застосунку.
 
 ```text
 npm run build       → public/build
 npm run docs:build  → public/docs
 ```
 
-## Branch model
+## Модель гілки
 
-Окремої documentation/code branch model більше немає. `main` містить code, tests, docs, generators і deployment metadata. Кожен docs build описує current checkout, а не сусідню branch.
+Окремої моделі «документація в одній гілці, код в іншій» більше немає. `main` містить code, tests, docs, generators і deployment metadata.
 
-## Generated reference
+Кожна збірка документації описує той самий checkout, з якого вона запущена.
 
-Modules, capabilities, routes, permissions, use cases, events і commands генеруються з current `main` перед build.
+## Згенерований довідник
 
-## Editing workflow
+Modules, capabilities, routes, permissions, use cases, events і commands генеруються з актуального `main` перед build.
+
+Такі факти не слід дублювати вручну в пояснювальних сторінках.
+
+## Процес редагування
 
 ```text
 change code / architecture in main
@@ -55,7 +70,7 @@ Docs CI validates same commit
 VitePress build / deployment
 ```
 
-## Code map
+## Карта коду
 
 ```text
 docs/
@@ -71,3 +86,7 @@ package.json
 .github/workflows/docs.yml
 public/docs/  generated
 ```
+
+## Інваріант
+
+> Пояснювальна документація описує сенс. Згенерований довідник фіксує факти, які може довести код. Статична збірка лише публікує обидва шари й не стає третім джерелом правди.

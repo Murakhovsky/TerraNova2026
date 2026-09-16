@@ -1,16 +1,16 @@
 ---
-title: Navigation & Permissions
-description: Module-aware navigation and permission-sensitive UI without treating hidden buttons as security.
+title: Навігація та дозволи
+description: Навігація з урахуванням модулів і прав доступу без підміни безпеки прихованими кнопками.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: ui
 ---
 
-# Navigation & Permissions
+# Навігація та дозволи
 
-Navigation у COS відображає доступну product surface, але не є security boundary.
+Navigation у COS відображає доступну продуктову поверхню, але не є security boundary (межею безпеки).
 
-## Navigation inputs
+## Вхідні дані навігації
 
 Visible navigation може залежати від:
 
@@ -22,38 +22,46 @@ Deployed module
 + relevant context
 ```
 
-Вимкнений module не повинен залишати мертві меню/routes, а недоступна capability не повинна рекламувати користувачу дію, яку runtime гарантовано відхилить.
+Вимкнений module не повинен залишати мертві меню або routes, а недоступна capability не повинна показувати користувачу дію, яку runtime гарантовано відхилить.
 
-## Security rule
+## Правило безпеки
 
 ```text
 Hidden button ≠ permission check
 ```
 
-UI приховує або disables недоступну action для нормального UX. Application/runtime boundary **повторно і авторитетно** перевіряє permission/policy перед mutation.
+UI приховує або disables недоступну Action для нормального UX. Application/runtime boundary **повторно й авторитетно** перевіряє permission або Policy перед мутацією.
 
-## Module-owned navigation
+## Навігація, якою володіє модуль
 
-Domain/module navigation contributions мають бути module-owned через extension/runtime mechanisms. Shared Web shell не повинен містити hardcoded knowledge про кожен майбутній Domain.
+Navigation contributions конкретного Domain/module повинні надходити через extension/runtime mechanisms і мати власника.
 
-## Deep links
+Спільний Web shell не повинен містити hardcoded knowledge про кожен майбутній Domain. Інакше модульність закінчується рівно там, де починається головне меню, що було б майже поетично, але технічно сумно.
 
-Прямий URL має проходити ті самі tenant/auth/capability checks, що й navigation click. Неможливість побачити пункт меню не означає неможливість вручну набрати адресу, бо браузери, на жаль, мають адресний рядок.
+## Прямі посилання
 
-## Empty / unavailable states
+Прямий URL має проходити ті самі tenant/auth/capability checks, що й navigation click.
+
+Неможливість побачити пункт меню не означає неможливість вручну ввести адресу. Браузери все ще мають адресний рядок і, схоже, не планують відмовлятися від цієї небезпечної свободи.
+
+## Порожні та недоступні стани
 
 UI має явно відрізняти:
 
-- module not deployed;
-- module not activated for tenant;
-- capability not permitted;
-- data unavailable/empty;
-- transient service failure.
+- module не розгорнутий;
+- module не активований для tenant;
+- capability не дозволена користувачу;
+- дані відсутні або порожні;
+- тимчасову помилку сервісу.
 
 Це допомагає diagnostics і не змушує користувача вважати кожний blank screen філософським висловлюванням дизайнера.
 
-## Related
+## Пов’язані сторінки
 
-- [Permissions & Capabilities Reference](../12-reference/permissions-capabilities.md)
+- [Довідник дозволів і можливостей](../12-reference/permissions-capabilities.md)
 - [Extension Runtime](../03-architecture/extension-runtime.md)
-- [Workspace Model](./workspace-model.md)
+- [Модель робочого простору](./workspace-model.md)
+
+## Інваріант
+
+> Навігація показує доступність. Безпеку визначають перевірки authorization, capability та Policy на авторитетній межі виконання.
