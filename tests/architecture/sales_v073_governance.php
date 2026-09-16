@@ -42,8 +42,11 @@ $contains('app/Interfaces/Web/View/sales_admin/pipelines.phtml', [
     'Clone to draft', 'data-redirect-root',
 ], 'clone UI');
 $contains('app/Interfaces/Web/View/sales_admin/pipeline.phtml', [
-    'Revision history', 'data-revisions', 'before_payload', 'after_payload',
-], 'revision UI');
+    'Revision history', 'data-revisions', 'data-revision-list',
+], 'revision UI shell');
+$contains('frontend/features/sales/admin.js', [
+    'data-revisions', 'before_payload', 'after_payload', 'data-revision-list',
+], 'revision UI behavior');
 
 $workspace = $read('app/Interfaces/Api/Controller/SalesWorkspaceActionsController.php');
 $assert(str_contains($workspace, 'Pending approvals must be rejected through ApprovalService'), 'Sales V0.6.2 consistency boundary is still undocumented.');
@@ -66,4 +69,4 @@ foreach ([
     $assert($code === 0, 'PHP syntax failed for ' . $file . ': ' . implode("\n", $output));
 }
 
-echo "Sales V0.7.3 governance contract passed; V0.6.2 dismiss consistency debt is closed.\n";
+echo "Sales V0.7.3 governance contract passed; revision behavior remains Vite-owned and V0.6.2 dismiss consistency debt is closed.\n";
