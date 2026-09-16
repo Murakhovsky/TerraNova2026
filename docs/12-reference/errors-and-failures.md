@@ -1,31 +1,31 @@
 ---
-title: Errors & Failures Reference
-description: Generated catalogue of canonical execution failure kinds and explicit classified failure implementations.
+title: Довідник помилок і відмов
+description: Згенерований каталог канонічних видів execution failure і явних classified failure implementations.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Errors & Failures Reference
+# Довідник помилок і відмов
 
-> Джерело істини: `ExecutionFailureKind` + PHP classes that explicitly implement the classified failure contract.
+> Джерело істини: `ExecutionFailureKind` + PHP-класи, які явно реалізують classified failure contract.
 
-## Failure kinds
+## Види відмов
 
-| Kind | Retryable |
+| Вид | Можна повторити |
 | --- | --- |
-| `RETRYABLE` | yes |
-| `PERMANENT` | no |
-| `CONCURRENCY_CONFLICT` | yes |
-| `POLICY_DENIED` | no |
-| `BUDGET_EXCEEDED` | no |
-| `EXTERNAL_UNAVAILABLE` | yes |
+| `RETRYABLE` | так |
+| `PERMANENT` | ні |
+| `CONCURRENCY_CONFLICT` | так |
+| `POLICY_DENIED` | ні |
+| `BUDGET_EXCEEDED` | ні |
+| `EXTERNAL_UNAVAILABLE` | так |
 
-## Classified implementations
+## Класифіковані реалізації
 
-| Symbol | Source |
+| Символ | Джерело |
 | --- | --- |
 | `ExecutionFailureException` | `app/Kernel/Execution/ExecutionFailureException.php` |
 | `LlmBudgetExceededException` | `app/Kernel/Llm/LlmBudgetExceededException.php` |

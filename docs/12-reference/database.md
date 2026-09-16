@@ -1,18 +1,18 @@
 ---
-title: Database Reference
-description: Generated map of module-owned migrations and statically detectable SQL table touches.
+title: Довідник бази даних
+description: Згенерована карта module-owned міграцій і статично визначених звернень до SQL-таблиць.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Database Reference
+# Довідник бази даних
 
-> Джерело істини: module manifest `migration_files` + SQL migration text. Dynamic SQL is intentionally not guessed.
+> Джерело істини: `migration_files` у module manifests + текст SQL-міграцій. SQL-коментарі відкидаються перед аналізом; dynamic SQL навмисно не вгадується.
 
-| Module | Migration | Tables touched |
+| Модуль | Міграція | Задіяні таблиці |
 | --- | --- | --- |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
@@ -37,7 +37,6 @@ generated: true
 | `property` | `app/migrations/20260914_000051_property_v030_asset_registry.sql` | `tn_property_commercial_specs` |
 | `property` | `app/migrations/20260914_000051_property_v030_asset_registry.sql` | `tn_property_land_specs` |
 | `property` | `app/migrations/20260914_000051_property_v030_asset_registry.sql` | `tn_property_residential_specs` |
-| `property` | `app/migrations/20260914_000052_property_v040_identity_provenance.sql` | `and` |
 | `property` | `app/migrations/20260914_000052_property_v040_identity_provenance.sql` | `tn_property_assets` |
 | `property` | `app/migrations/20260914_000052_property_v040_identity_provenance.sql` | `tn_property_external_references` |
 | `property` | `app/migrations/20260914_000052_property_v040_identity_provenance.sql` | `tn_property_identity_resolutions` |
@@ -83,7 +82,6 @@ generated: true
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_rules` |
 | `sales` | `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql` | `cos_organizations` |
 | `sales` | `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql` | `sales_deal_stage_history` |
-| `sales` | `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql` | `so` |
 | `sales` | `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql` | `cos_organizations` |
 | `sales` | `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql` | `sales_deal_stage_history` |
 | `sales` | `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql` | `sales_pipeline_stages` |

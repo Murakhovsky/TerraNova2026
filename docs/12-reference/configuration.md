@@ -1,18 +1,18 @@
 ---
-title: Configuration Reference
-description: Generated ownership map for module configuration provisioners and capability declarations.
+title: Довідник конфігурації
+description: Згенерована карта ownership для module configuration provisioners і declarations можливостей.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Configuration Reference
+# Довідник конфігурації
 
-> Джерело істини: `app/Domains/*/module.php` у current checkout.
+> Джерело істини: `app/Domains/*/module.php` у поточному checkout.
 
-| Module | Version | Configuration provisioners | Capabilities |
+| Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
 | `diagnostic` | `0.6.1` | — | 0 |
 | `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 16 |

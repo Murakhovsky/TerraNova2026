@@ -39,10 +39,10 @@ exit($failed ? 1 : 0);
 
 function renderConfiguration(array $modules): string
 {
-    $lines = generatedHeader('Configuration Reference', 'Generated ownership map for module configuration provisioners and capability declarations.');
-    $lines[] = '> Джерело істини: `app/Domains/*/module.php` у current checkout.';
+    $lines = generatedHeader('Довідник конфігурації', 'Згенерована карта ownership для module configuration provisioners і declarations можливостей.');
+    $lines[] = '> Джерело істини: `app/Domains/*/module.php` у поточному checkout.';
     $lines[] = '';
-    $lines[] = '| Module | Version | Configuration provisioners | Capabilities |';
+    $lines[] = '| Модуль | Версія | Configuration provisioners | Можливостей |';
     $lines[] = '| --- | --- | --- | ---: |';
     foreach ($modules as $id => $module) {
         $contributions = $module['contributions'] ?? [];
@@ -75,7 +75,7 @@ function renderDatabase(string $repoRoot, array $modules): string
                 fwrite(STDERR, "Manifest migration not found: {$migration}\n");
                 exit(1);
             }
-            $sql = (string)file_get_contents($path);
+            $sql = stripSqlComments((string)file_get_contents($path));
             $tables = extractSqlTables($sql);
             if ($tables === []) {
                 $rows[] = [$id, $migration, '—'];
@@ -84,10 +84,10 @@ function renderDatabase(string $repoRoot, array $modules): string
             foreach ($tables as $table) $rows[] = [$id, $migration, $table];
         }
     }
-    $lines = generatedHeader('Database Reference', 'Generated map of module-owned migrations and statically detectable SQL table touches.');
-    $lines[] = '> Джерело істини: module manifest `migration_files` + SQL migration text. Dynamic SQL is intentionally not guessed.';
+    $lines = generatedHeader('Довідник бази даних', 'Згенерована карта module-owned міграцій і статично визначених звернень до SQL-таблиць.');
+    $lines[] = '> Джерело істини: `migration_files` у module manifests + текст SQL-міграцій. SQL-коментарі відкидаються перед аналізом; dynamic SQL навмисно не вгадується.';
     $lines[] = '';
-    $lines[] = '| Module | Migration | Tables touched |';
+    $lines[] = '| Модуль | Міграція | Задіяні таблиці |';
     $lines[] = '| --- | --- | --- |';
     foreach ($rows as [$module, $migration, $table]) $lines[] = sprintf('| `%s` | `%s` | %s |', $module, $migration, $table === '—' ? '—' : '`' . $table . '`');
     $lines[] = '';
@@ -109,18 +109,18 @@ function renderFailures(string $repoRoot): string
         }
     }
     ksort($implementations);
-    $lines = generatedHeader('Errors & Failures Reference', 'Generated catalogue of canonical execution failure kinds and explicit classified failure implementations.');
-    $lines[] = '> Джерело істини: `ExecutionFailureKind` + PHP classes that explicitly implement the classified failure contract.';
+    $lines = generatedHeader('Довідник помилок і відмов', 'Згенерований каталог канонічних видів execution failure і явних classified failure implementations.');
+    $lines[] = '> Джерело істини: `ExecutionFailureKind` + PHP-класи, які явно реалізують classified failure contract.';
     $lines[] = '';
-    $lines[] = '## Failure kinds';
+    $lines[] = '## Види відмов';
     $lines[] = '';
-    $lines[] = '| Kind | Retryable |';
+    $lines[] = '| Вид | Можна повторити |';
     $lines[] = '| --- | --- |';
-    foreach ($kindClass::cases() as $case) $lines[] = sprintf('| `%s` | %s |', $case->value, $case->retryable() ? 'yes' : 'no');
+    foreach ($kindClass::cases() as $case) $lines[] = sprintf('| `%s` | %s |', $case->value, $case->retryable() ? 'так' : 'ні');
     $lines[] = '';
-    $lines[] = '## Classified implementations';
+    $lines[] = '## Класифіковані реалізації';
     $lines[] = '';
-    $lines[] = '| Symbol | Source |';
+    $lines[] = '| Символ | Джерело |';
     $lines[] = '| --- | --- |';
     foreach ($implementations as $symbol => $source) $lines[] = sprintf('| `%s` | `%s` |', $symbol, $source);
     if ($implementations === []) $lines[] = '| — | — |';
@@ -130,7 +130,15 @@ function renderFailures(string $repoRoot): string
 
 function generatedHeader(string $title, string $description): array
 {
-    return ['---', "title: {$title}", "description: {$description}", 'status: generated', 'kind: reference', 'generated: true', '---', '', '<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->', '', "# {$title}", ''];
+    return ['---', "title: {$title}", "description: {$description}", 'status: generated', 'kind: reference', 'generated: true', '---', '', '<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->', '', "# {$title}", ''];
+}
+
+function stripSqlComments(string $sql): string
+{
+    $withoutBlocks = preg_replace('~/\*.*?\*/~s', ' ', $sql);
+    $withoutBlocks = is_string($withoutBlocks) ? $withoutBlocks : $sql;
+    $withoutLines = preg_replace('/--[^\r\n]*/', ' ', $withoutBlocks);
+    return is_string($withoutLines) ? $withoutLines : $withoutBlocks;
 }
 
 function extractSqlTables(string $sql): array
