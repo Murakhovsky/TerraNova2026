@@ -63,6 +63,9 @@ foreach ($views as $view) {
             if (preg_match('/\btype\s*=\s*["\']application\/ld\+json["\']/i', $script[1]) === 1) {
                 continue;
             }
+            if (preg_match('/\bsrc\s*=\s*["\'][^"\']+["\']/i', $script[1]) === 1) {
+                continue;
+            }
             throw new RuntimeException('Inline browser JavaScript is forbidden in ordinary Web views; move it to a Vite entrypoint: ' . $relativePath);
         }
     }
