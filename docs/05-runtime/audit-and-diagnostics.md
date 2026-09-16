@@ -1,22 +1,22 @@
 ---
-title: Audit and Diagnostics
-description: Пояснюваність runtime, tracing, health та diagnostic boundaries.
+title: Аудит і діагностика виконання
+description: Пояснюваність runtime, трасування, стан системи та межі технічної діагностики COS.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: runtime
 ---
 
-# Audit and Diagnostics
+# Аудит і діагностика виконання
 
 COS повинен не лише виконати дію, а й пояснити **чому вона відбулася** і де зламався процес, якщо вона не відбулася.
 
-## Audit vs Logs vs Metrics
+## Audit, Logs і Metrics
 
 Це три різні речі.
 
 ### Audit
 
-Business/runtime explanation trail:
+Audit (аудит) є пояснюваним слідом бізнесового й технічного виконання:
 
 - Event;
 - decision;
@@ -24,24 +24,24 @@ Business/runtime explanation trail:
 - Policy;
 - Approval;
 - execution result;
-- actor / agent;
+- actor або Agent;
 - correlation.
 
-`Kernel/Audit/AuditEntry` є generic representation, persistence реалізує Infrastructure.
+`Kernel/Audit/AuditEntry` є загальним представленням, а зберігання реалізує Infrastructure.
 
 ### Logs
 
-Технічні деталі виконання, exception stack, provider errors, worker messages.
+Logs (журнали) містять технічні деталі виконання: stack trace, помилки провайдера, повідомлення worker та іншу діагностичну інформацію.
 
 ### Metrics
 
-Агреговані числові сигнали: latency, throughput, retry rate, denied actions, approval time, queue depth, LLM failures.
+Metrics (метрики) є агрегованими числовими сигналами: latency, throughput, retry rate, denied actions, approval time, queue depth, LLM failures.
 
-Не слід намагатися зробити audit з grep по logs. Це спосіб перетворити incident response на квест.
+Не варто будувати аудит за допомогою `grep` по logs. Це швидкий спосіб перетворити incident response на квест без призу.
 
-## Correlation model
+## Модель кореляції
 
-Наскрізна операція повинна мати можливість бути відновленою через correlation/causation IDs:
+Наскрізна операція повинна відновлюватися через correlation і causation identifiers:
 
 ```text
 Business Event
@@ -61,78 +61,78 @@ Action execution
 Result Event
 ```
 
-## What must be explainable
+## Що має бути пояснюваним
 
-Для Action треба мати відповідь:
+Для Action система повинна дозволяти відповісти:
 
 1. хто або що її ініціювало;
 2. яка Event була причиною;
-3. який Rule/Agent створив proposal;
-4. який context був використаний або referenced;
+3. який Rule або Agent створив proposal;
+4. який context було використано або на який context є посилання;
 5. яка Policy спрацювала;
-6. чому decision був AUTO / APPROVAL_REQUIRED / DENIED;
-7. хто схвалив дію;
-8. який handler виконував;
-9. який external adapter був використаний;
-10. який ExecutionResult отримано.
+6. чому рішення було `AUTO`, `APPROVAL_REQUIRED` або `DENIED`;
+7. хто погодив дію;
+8. який handler її виконував;
+9. який зовнішній adapter було використано;
+10. який `ExecutionResult` отримано.
 
-## Agent diagnostics
+## Діагностика Agent
 
-LLM diagnostics не повинні зберігати raw sensitive context безконтрольно.
+Діагностика LLM не повинна безконтрольно зберігати raw sensitive context.
 
 Поточна модель передбачає:
 
-- SensitiveContextRedactor;
-- structured output validation;
-- agent execution records;
-- retention/removal sensitive input;
-- separation prompt/context від mutation executor.
+- `SensitiveContextRedactor`;
+- перевірку структурованого результату;
+- записи виконання Agent;
+- правила retention/removal для чутливих вхідних даних;
+- відокремлення prompt/context від mutation executor.
 
-Корисні agent metrics:
+Корисні метрики Agent:
 
-- valid structured response rate;
-- rejected proposal rate;
-- policy deny rate;
-- human approval rate;
-- execution success after approval;
-- LLM latency/cost;
-- repeated/retried runs.
+- частка валідних структурованих відповідей;
+- частка відхилених пропозицій;
+- частка `DENIED` від Policy;
+- частка людських погоджень;
+- успішність виконання після погодження;
+- затримка та вартість LLM;
+- повторні й повторно запущені виконання.
 
-## Queue diagnostics
+## Діагностика Queue
 
-Operations повинні показувати:
+Operations мають показувати:
 
 - ready jobs;
 - leased jobs;
 - retries;
 - dead letters;
-- oldest pending age;
-- worker heartbeat;
-- failure reason distribution.
+- вік найстарішого очікуваного job;
+- heartbeat worker;
+- розподіл причин помилок.
 
-## Module diagnostics
+## Діагностика модулів
 
-Для кожного Domain module:
+Для кожного Domain module потрібно бачити:
 
-- discovered?;
-- manifest valid?;
-- compatible with Kernel?;
-- installed?;
-- active for organization?;
-- contributions registered?;
-- ownership conflicts?;
-- required configuration present?;
+- чи його виявлено;
+- чи валідний manifest;
+- чи сумісний він із Kernel;
+- чи встановлений;
+- чи активний для organization;
+- чи зареєстровані contributions;
+- чи є конфлікти ownership;
+- чи присутня необхідна configuration.
 
-## Diagnostic Domain
+## Diagnostic Domain і технічна діагностика
 
-Окремий business Diagnostic domain не треба плутати з technical Kernel diagnostics.
+Окремий бізнесовий Domain `Diagnostic` не треба плутати з технічною діагностикою Kernel.
 
-- **Kernel diagnostics**: здоров'я runtime та infrastructure.
-- **Business diagnostics**: оцінка процесу компанії, scoring, findings, recommendations.
+- **Kernel diagnostics**: здоров’я runtime та Infrastructure.
+- **Business diagnostics**: оцінювання процесів компанії, scoring, findings і recommendations.
 
-Детальний business model знаходиться в `docs/architecture/diagnostic-domain-model.md` і `docs/diagnostic/`.
+Для бізнесової моделі використовуйте канонічні сторінки [Diagnostic Domain](../04-domains/diagnostic/overview.md).
 
-## Incident reading order
+## Порядок читання інциденту
 
 ```text
 1. Health / worker state
@@ -146,8 +146,8 @@ Operations повинні показувати:
 9. Integration adapter logs
 ```
 
-Не починайте з restart worker. Restart без розуміння state іноді просто швидше повторює помилку.
+Не починайте з перезапуску worker. Restart без розуміння стану іноді лише швидше повторює ту саму помилку.
 
-## Invariant
+## Інваріант
 
-> Будь-яка автономна дія COS має бути не лише executable, а й attributable, traceable та explainable.
+> Будь-яка автономна дія COS має бути не лише виконуваною, а й прив’язаною до джерела, відтворюваною по трасі та пояснюваною.

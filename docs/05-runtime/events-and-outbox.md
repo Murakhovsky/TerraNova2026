@@ -1,18 +1,18 @@
 ---
-title: Events and Outbox
-description: Події, metadata, transactional outbox і replay model COS.
+title: Події та Outbox
+description: Доменні події, технічні метадані, транзакційний Outbox і модель повторного відтворення в COS.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: runtime
 ---
 
-# Events and Outbox
+# Події та Outbox
 
-Event layer відділяє бізнес-факт від реакцій на нього.
+Event (подія) відділяє бізнес-факт від реакцій на нього. Це одна з базових меж COS: факт уже стався, а система далі вирішує, що з цим робити.
 
-## Event is a fact
+## Event є фактом
 
-`DomainEvent` описує те, що вже відбулося. Назва події має бути в past tense / fact semantics.
+`DomainEvent` описує те, що вже відбулося. Назва події має передавати факт у минулому часі.
 
 Добре:
 
@@ -27,23 +27,24 @@ sales.deal.stage_changed
 sales.send_followup_now
 ```
 
-Друге є Action/Command intent, а не Event.
+Друге є наміром Action або Command, а не Event.
 
-## Event metadata
+## Метадані події
 
-`EventMetadata` переносить технічний context, потрібний для tracing та isolation:
+`EventMetadata` переносить технічний контекст, потрібний для трасування та ізоляції:
 
-- event identity;
-- organization / tenant;
-- correlation / causation;
-- actor/source, де застосовно;
-- timestamps та інші transport-neutral metadata.
+- ідентифікатор події;
+- організацію або tenant;
+- correlation / causation identifiers;
+- actor/source, де це доречно;
+- часові мітки;
+- інші метадані, незалежні від транспорту.
 
-Business payload і technical metadata не слід змішувати.
+Бізнесові дані події та технічні метадані не слід змішувати в один безформний масив.
 
-## Transactional Outbox
+## Транзакційний Outbox
 
-Головна гарантія:
+Outbox (транзакційний буфер подій) забезпечує головну гарантію:
 
 ```text
 business state
@@ -52,7 +53,7 @@ business state
 = one transaction
 ```
 
-Це прибирає класичну помилку:
+Це прибирає класичну розсинхронізацію:
 
 ```text
 DB saved ✓
@@ -61,48 +62,48 @@ message publish failed ✗
 
 або навпаки.
 
-Після commit окремий worker доставляє Outbox messages durable consumers.
+Після commit окремий worker доставляє записи Outbox надійним споживачам.
 
-## At-least-once
+## Доставка at-least-once
 
-COS не припускає exactly-once delivery через магію та оптимізм.
+COS використовує модель at-least-once: споживач може отримати Event повторно.
 
-Consumer може отримати Event повторно. Тому:
+Тому:
 
-- consumer має durable checkpoint/state;
-- Action і integration calls мають idempotency key;
-- replay не повинен дублювати side effects;
-- external-reference mapping має бути explicit.
+- consumer має мати надійний checkpoint або власний стан доставки;
+- Action та інтеграційні виклики повинні мати idempotency key;
+- повторна доставка не повинна дублювати зовнішні побічні ефекти;
+- зіставлення зовнішніх ідентифікаторів має бути явним.
 
 ## EventBus
 
-`EventBus` є runtime abstraction для publication/subscription semantics. Concrete persistence та delivery implementation належать Infrastructure.
+`EventBus` є абстракцією середовища виконання для публікації та підписки. Конкретне зберігання і механізм доставки належать Infrastructure.
 
-Kernel contract не повинен знати PDO або конкретний broker.
+Kernel-контракт не повинен залежати від PDO чи конкретного брокера повідомлень.
 
 ## Replay
 
-Replay потрібен для відновлення automation після defect/configuration change або для повторного обрахунку consumer logic.
+Replay (повторне відтворення) потрібен для відновлення автоматизації після дефекту, зміни конфігурації або повторного обчислення логіки consumer.
 
-Правильна модель:
+Керований сценарій:
 
-1. обрати контрольований набір Outbox rows;
-2. reset delivery state;
-3. reset відповідні consumer checkpoints;
-4. повторно доставити;
-5. зберегти idempotency guarantees.
+1. вибрати конкретний набір записів Outbox;
+2. скинути їхній стан доставки;
+3. скинути відповідні checkpoints споживачів;
+4. виконати повторну доставку;
+5. зберегти гарантії ідемпотентності.
 
-Replay не означає «запусти всі webhooks ще раз і подивимось».
+Replay не означає «повторно викликати всі webhooks і подивитися, що станеться». Люди вже пробували подібні методології в інших сферах.
 
-## Event ownership
+## Власник події
 
-Кожен business Event має одного owning Domain.
+Кожен бізнесовий Event має одного owning Domain.
 
-`DomainModuleRegistry` перевіряє ownership contributions, щоб два Domains не оголосили себе власниками одного event type.
+`DomainModuleRegistry` перевіряє внески модулів, щоб два Domains не оголосили себе власниками одного типу події.
 
-Kernel володіє лише generic technical events, наприклад Action result lifecycle.
+Kernel володіє лише загальними технічними подіями, наприклад завершенням життєвого циклу Action.
 
-## Naming convention
+## Іменування
 
 Рекомендована схема:
 
@@ -119,33 +120,33 @@ finance.invoice.paid
 inventory.stock.low
 ```
 
-Kernel technical namespace:
+Технічний простір імен Kernel:
 
 ```text
 cos.action.completed
 cos.action.failed
 ```
 
-## Event vs Command vs Action
+## Event, Command і Action
 
-| Concept | Meaning |
+| Поняття | Значення |
 | --- | --- |
 | Event | факт, який уже стався |
-| Command / Use Case | намір виконати application operation |
-| Action | контрольована mutation, що проходить Policy |
+| Command / Use Case | намір виконати операцію застосунку |
+| Action | контрольована мутація, яка проходить Policy |
 
-Не називати всі три «event». Машини терплячі, люди потім плачуть.
+Називати всі три поняття словом «event» технічно можливо. Людям, які потім це підтримують, від того не легше.
 
-## Operational checks
+## Що документувати для подієвого процесу
 
-Для кожного event-driven flow документація повинна містити:
+Для кожного event-driven процесу документація повинна містити:
 
 - owning Domain;
 - producer;
-- payload schema;
-- metadata requirements;
+- схему payload;
+- вимоги до metadata;
 - consumers;
-- idempotency strategy;
-- retry/dead-letter behavior;
-- replay behavior;
-- resulting Actions/Events.
+- стратегію ідемпотентності;
+- правила retry / dead-letter;
+- правила replay;
+- результуючі Actions і Events.

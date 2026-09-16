@@ -1,18 +1,18 @@
 ---
-title: Module Lifecycle
-description: Discovery, installation, activation і contributions Domain modules.
+title: Життєвий цикл модулів
+description: Виявлення, встановлення, активація та внески доменних модулів COS.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: runtime
 ---
 
-# Module Lifecycle
+# Життєвий цикл модулів
 
-COS Domain module — це runtime unit з manifest, capabilities, contributions та lifecycle. Це не Phalcon module і не просто директорія з кодом.
+Domain module (доменний модуль) у COS є одиницею середовища виконання з manifest, capabilities, contributions і власним lifecycle. Це не Phalcon module і не просто директорія з кодом.
 
-## Реальні Kernel components
+## Компоненти Kernel
 
-`app/Kernel/Module` уже містить:
+`app/Kernel/Module` містить, зокрема:
 
 - `DomainModuleInterface`;
 - `DomainModuleRegistry`;
@@ -28,9 +28,7 @@ COS Domain module — це runtime unit з manifest, capabilities, contributions
 - `VersionConstraint`;
 - `KernelVersion`.
 
-## Lifecycle
-
-Conceptual state path:
+## Життєвий цикл
 
 ```text
 code/package exists
@@ -52,28 +50,28 @@ Register contributions/capabilities
 Runtime routing
 ```
 
-Deactivate/uninstall повинні симетрично забрати runtime availability без видалення історичного audit/business data, якщо migration policy прямо не каже інше.
+Деактивація або видалення модуля повинні симетрично забирати його доступність у runtime, не видаляючи історичні аудиторські чи бізнесові дані, якщо політика міграцій прямо не визначає інше.
 
 ## Manifest
 
-Manifest є machine-readable contract модуля. Він повинен описувати щонайменше:
+Manifest є машинозчитуваним контрактом модуля. Він має описувати щонайменше:
 
-- module identity;
-- version;
-- compatible Kernel version;
-- dependencies;
+- ідентичність модуля;
+- версію;
+- сумісну версію Kernel;
+- залежності;
 - capabilities;
-- configuration/provisioning requirements;
-- entrypoint/module definition.
+- вимоги до конфігурації та provisioning;
+- entrypoint або module definition.
 
-Runtime не повинен визначати сумісність за назвою папки або добрим настроєм автора.
+Runtime не повинен визначати сумісність за назвою папки чи гарним настроєм автора.
 
 ## Contributions
 
-Активний Domain module може внести в Kernel registry:
+Активний Domain module може реєструвати в Kernel:
 
-- event ownership;
-- action ownership;
+- власність на Events;
+- власність на Actions;
 - handlers;
 - rules;
 - policies;
@@ -81,11 +79,11 @@ Runtime не повинен визначати сумісність за наз�
 - context builders;
 - capabilities.
 
-Contributions мають унікальне ownership там, де двозначність зробила б routing небезпечним.
+Contributions повинні мати однозначного власника там, де неоднозначність зробила б маршрутизацію небезпечною.
 
-## Per-organization activation
+## Активація для окремої організації
 
-`ActiveModuleResolver` принципово важливий для COS SaaS model: наявність code module у deployment не означає, що він активний для кожної organization.
+`ActiveModuleResolver` принципово важливий для SaaS-моделі COS: наявність коду модуля в deployment не означає, що модуль активний для кожної organization.
 
 ```text
 Installed globally
@@ -93,11 +91,11 @@ Installed globally
 Enabled for tenant
 ```
 
-Це дозволяє мати різні набори business capabilities для різних компаній без форків коду.
+Це дозволяє різним компаніям мати різні набори бізнесових можливостей без форків коду.
 
 ## Capability registry
 
-UI та інші modules мають питати систему про capability, а не вгадувати її за route/class existence.
+UI та інші modules повинні запитувати систему про capability, а не вгадувати її за існуванням route або class.
 
 Добре:
 
@@ -114,15 +112,15 @@ class_exists(SalesController::class)
 → мабуть функція доступна
 ```
 
-## Version compatibility
+## Сумісність версій
 
-Module version і Kernel version мають перевірятися до activation.
+Версії Module і Kernel мають перевірятися до активації.
 
-Несумісний module повинен fail fast на lifecycle boundary, а не падати випадковим `Call to undefined method` через три запити після deployment.
+Несумісний module повинен завершитися помилкою на межі lifecycle, а не випадковим `Call to undefined method` через три запити після deployment.
 
-## Adding a Domain
+## Додавання Domain
 
-Стандартний шлях:
+Стандартний маршрут:
 
 ```text
 1. Domains/<Name>/Domain + Model
@@ -137,12 +135,12 @@ Module version і Kernel version мають перевірятися до activa
 10. verify capabilities and runtime ownership
 ```
 
-## UI implication
+## Наслідок для UI
 
-Admin module manager у майбутньому повинен бути проєкцією `ModuleCatalog + ModuleLifecycleManager + ActiveModuleResolver`, а не окремим списком checkbox-ів зі своєю логікою.
+Майбутній менеджер модулів має бути проєкцією `ModuleCatalog + ModuleLifecycleManager + ActiveModuleResolver`, а не окремим списком прапорців зі своєю паралельною логікою.
 
-Саме тут реалізується потрібна модель: Domain можна підключити/вимкнути як системний модуль, а UI, runtime та API бачать один і той самий стан.
+Саме тут реалізується потрібна модель: Domain можна підключити або вимкнути як системний модуль, а UI, runtime та API бачать один і той самий стан.
 
-## Invariant
+## Інваріант
 
-> Ні Kernel, ні Interface не повинні мати hard-coded знання, що конкретний Domain «завжди існує».
+> Ні Kernel, ні Interface не повинні мати жорстко закодованого знання, що конкретний Domain «завжди існує».

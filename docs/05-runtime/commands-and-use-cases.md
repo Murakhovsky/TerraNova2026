@@ -1,28 +1,28 @@
 ---
-title: Commands and Use Cases
-description: Межа між application intent, domain transaction та automation Action.
+title: Команди та сценарії використання
+description: Межа між наміром застосунку, доменною транзакцією та автоматизованою дією в COS.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: runtime
 ---
 
-# Commands and Use Cases
+# Команди та сценарії використання
 
-У COS є три близькі, але різні поняття: **Use Case**, **Command/intent** і **Action**. Їх не варто зливати в одну універсальну сутність лише тому, що всі вони «щось запускають».
+У COS є три близькі, але різні поняття: **Use Case (сценарій використання)**, **Command (команда)** і **Action (дія)**. Їх не варто зливати в одну універсальну сутність лише тому, що всі вони «щось запускають».
 
-## Application Use Case
+## Сценарій використання
 
-Use Case є entry point бізнес-операції Domain.
+Use Case є точкою входу в бізнес-операцію Domain (домену).
 
 Він:
 
-- приймає typed input/DTO;
-- працює через Domain model та outbound contracts;
-- перевіряє application-level preconditions;
-- відкриває/використовує transaction boundary;
-- змінює business state;
-- створює Domain Event;
-- не залежить від HTTP/Telegram/UI.
+- приймає типізовані вхідні дані або DTO;
+- працює через модель Domain і вихідні контракти;
+- перевіряє передумови рівня застосунку;
+- відкриває або використовує межу транзакції;
+- змінює бізнес-стан;
+- створює Domain Event (доменну подію);
+- не залежить від HTTP, Telegram чи UI.
 
 ```text
 Interface
@@ -32,9 +32,9 @@ Interface
  → Event + Outbox
 ```
 
-## Command / intent
+## Команда
 
-Command — явне прохання виконати application operation. Він може бути окремим DTO або implicit input use case залежно від складності.
+Command є явним запитом виконати операцію застосунку. Залежно від складності він може бути окремим DTO або типізованим входом Use Case.
 
 Приклад семантики:
 
@@ -44,11 +44,11 @@ ChangeDealStage
 RecordInvoicePayment
 ```
 
-Command сформульований у наказовому способі, Event — як факт у минулому.
+Command формулюється як намір щось зробити. Event описує факт, який уже стався.
 
-## Action
+## Дія
 
-Action у COS — інша річ. Це mutation, яка виникла або була сформована в automation/runtime layer і мусить пройти Policy.
+Action у COS є контрольованою мутацією, яка виникла в шарі автоматизації або середовищі виконання й повинна пройти Policy (політику дозволу).
 
 ```text
 sales.send_followup
@@ -56,11 +56,11 @@ sales.sync_crm
 sales.assign_owner
 ```
 
-Action може бути результатом Rule або Agent proposal.
+Action може бути результатом Rule (правила) або пропозиції Agent.
 
-## Чому не зливати UseCase і Action
+## Чому Use Case і Action не є одним поняттям
 
-Людина може виконати нормальний transactional use case, який породжує Event. Автоматизація реагує на Event та створює Action.
+Людина може виконати звичайний транзакційний Use Case, який створює Event. Автоматизація реагує на Event і формує Action.
 
 ```text
 Manager completes call        ← Use Case
@@ -74,11 +74,11 @@ sales.send_followup           ← Action
 Policy / Approval / Execution
 ```
 
-Якщо зробити все Action-ами, бізнес-транзакції стають залежними від automation machinery. Якщо зробити все UseCase-ами, Agent/Policy layer втрачає контрольовану mutation unit.
+Якщо зробити все Action, основні бізнес-транзакції почнуть залежати від механізмів автоматизації. Якщо зробити все Use Case, шар Agent/Policy втратить окрему контрольовану одиницю мутації.
 
-## Interface rule
+## Правило для інтерфейсів
 
-Controller/API command handler має викликати Use Case, а не писати business state напряму.
+Controller або обробник API-команди має викликати Use Case, а не змінювати бізнес-стан напряму.
 
 ```text
 HTTP JSON
@@ -88,9 +88,7 @@ HTTP JSON
  → response mapping
 ```
 
-## Domain Application layer
-
-Рекомендована структура:
+## Приклад структури Application
 
 ```text
 Application/
@@ -99,9 +97,9 @@ Application/
 └── UseCase/     orchestration
 ```
 
-UseCase може залежати від Domain objects і Domain-owned contracts, але не від MySQL adapter, Phalcon Controller або конкретного CRM SDK.
+Use Case може залежати від об’єктів Domain і контрактів, якими володіє Domain, але не від MySQL-адаптера, Phalcon Controller чи конкретного CRM SDK.
 
-## Automation layer
+## Шар автоматизації
 
 ```text
 Automation/
@@ -115,14 +113,14 @@ Automation/
 
 Це окремий рівень реактивної поведінки навколо бізнес-моделі.
 
-## Rule of thumb
+## Практичне правило
 
-Поставити питання:
+Поставте три питання:
 
-- «Користувач/система просить виконати основну бізнес-операцію?» → Use Case/Command.
+- «Користувач або система просить виконати основну бізнес-операцію?» → Use Case / Command.
 - «Щось уже сталося?» → Event.
-- «Runtime вирішив, що треба зробити mutation?» → Action.
+- «Середовище виконання вирішило, що треба виконати мутацію?» → Action.
 
-## Invariant
+## Інваріант
 
-> Use Case змінює Domain згідно бізнес-правил. Event повідомляє про факт. Action проходить контрольований automation execution lifecycle.
+> Use Case змінює Domain відповідно до бізнес-правил. Event повідомляє про факт. Action проходить контрольований життєвий цикл автоматизованого виконання.

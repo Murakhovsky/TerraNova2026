@@ -1,20 +1,20 @@
 ---
-title: Policies and Approvals
-description: Permission gate між Action proposal та mutation.
+title: Політики та погодження
+description: Контроль дозволу між пропозицією Action та фактичною мутацією стану.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: runtime
 ---
 
-# Policies and Approvals
+# Політики та погодження
 
-Policy layer відповідає на просте, але фундаментальне питання:
+Policy (політика дозволу) відповідає на фундаментальне питання:
 
-> **Чи має ця Action право бути виконаною в цьому context?**
+> **Чи має ця Action право бути виконаною в цьому контексті?**
 
-## Policy decisions
+## Рішення Policy
 
-Kernel використовує три outcomes:
+Kernel використовує три результати:
 
 ```text
 AUTO
@@ -24,7 +24,7 @@ DENIED
 
 ### AUTO
 
-Action може перейти в execution path без ручного підтвердження.
+Action може перейти до виконання без ручного підтвердження.
 
 ### APPROVAL_REQUIRED
 
@@ -36,41 +36,39 @@ Action не виконується.
 
 ## Default deny
 
-Якщо для Action немає явної matching policy, безпечна поведінка — `DENIED`.
+Якщо для Action немає явної відповідної Policy, безпечна поведінка — `DENIED`.
 
-Це особливо важливо для dynamically installed Domains та AI-generated proposals. Новий action type не повинен автоматично отримувати право на mutation просто тому, що хтось забув додати policy.
+Це особливо важливо для динамічно встановлених Domains та пропозицій, сформованих AI. Новий тип Action не повинен автоматично отримувати право на мутацію лише тому, що хтось забув описати політику.
 
 ## ActionPolicy
 
-Policy повинна оцінювати action + execution context, а не містити provider-specific code.
+Policy повинна оцінювати Action разом із контекстом виконання, а не містити код конкретного провайдера.
 
 Типові фактори:
 
-- action type;
-- organization;
+- тип Action;
+- організація;
 - actor;
-- payload attributes;
-- risk level;
-- monetary threshold;
-- external/internal destination;
-- current business state.
+- атрибути payload;
+- рівень ризику;
+- грошовий поріг;
+- зовнішнє або внутрішнє призначення;
+- поточний бізнес-стан.
 
-## Policy is not permission UI
+## Policy не дорівнює правам доступу до UI
 
-Role-based UI access і Action Policy — різні рівні.
+Доступ до сторінки й дозвіл на виконання мутації є різними рівнями.
 
 ```text
-Can user open page?      → interface authorization
+Can user open page?        → interface authorization
 Can proposed mutation run? → Kernel Policy
 ```
 
-Навіть admin UI не повинно обходити Policy, якщо action виконується через COS runtime.
+Навіть адміністративний UI не повинен обходити Policy, якщо Action виконується через COS runtime.
 
-## Approval lifecycle
+## Життєвий цикл Approval
 
-Approval є окремою durable сутністю.
-
-Conceptual flow:
+Approval (погодження) є окремою надійно збереженою сутністю.
 
 ```text
 ActionProposal
@@ -86,50 +84,50 @@ Human decision
    └─ REJECTED → terminal / no execution
 ```
 
-Approval має містити достатній context, щоб людина розуміла:
+Approval має містити достатньо контексту, щоб людина розуміла:
 
 - що саме буде зроблено;
 - над якою сутністю;
-- хто/що запропонував дію;
-- чому Policy вимагає approval;
-- ключові ризики / payload;
-- correlation з Event/Agent run.
+- хто або що запропонувало дію;
+- чому Policy вимагає погодження;
+- ключові ризики й дані пропозиції;
+- зв’язок із Event або запуском Agent.
 
-## Agent safety boundary
+## Межа безпеки Agent
 
 Agent не може:
 
-- змінити PolicyDecision;
-- створити собі AUTO permission;
-- approve власну Action;
-- викликати ActionExecutor напряму;
-- обійти queue/idempotency path.
+- змінити `PolicyDecision`;
+- самостійно отримати режим `AUTO`;
+- погодити власну Action;
+- викликати `ActionExecutor` напряму;
+- обійти Queue або механізм ідемпотентності.
 
-Agent лише генерує structured proposal.
+Agent лише створює структуровану пропозицію.
 
-## Approval is not a second workflow engine
+## Approval не є другим workflow engine
 
-Human Approval має бути вузьким gate усередині execution lifecycle.
+Human Approval має бути вузьким контрольним шлюзом усередині життєвого циклу виконання.
 
-Бізнес-процес, SLA, нагадування та escalation можуть реагувати на approval events, але сама Approval сутність не повинна знати весь бізнес-workflow.
+Бізнес-процес, SLA, нагадування та ескалації можуть реагувати на події Approval, але сама сутність Approval не повинна знати весь бізнес-процес.
 
-## Audit requirements
+## Вимоги до аудиту
 
-Для policy/approval потрібно зберігати:
+Для Policy та Approval потрібно зберігати:
 
-- evaluated policy;
-- decision;
-- reason;
-- relevant context snapshot/reference;
-- approver identity;
-- decision timestamp;
-- rejection/approval note, якщо є;
-- Action identity;
+- яку Policy оцінено;
+- рішення;
+- причину;
+- посилання на релевантний контекст або його snapshot;
+- ідентичність approver;
+- час рішення;
+- примітку до погодження чи відхилення, якщо вона є;
+- ідентифікатор Action;
 - correlation ID.
 
-## Recommended policy design
+## Рекомендована модель
 
-Domain володіє policy catalog для власних Actions. Kernel володіє generic evaluation mechanism.
+Domain володіє каталогом Policy для власних Actions. Kernel володіє загальним механізмом їх оцінювання.
 
 ```text
 Sales action semantics → Sales policy definitions
@@ -138,6 +136,6 @@ Policy persistence     → Infrastructure adapter
 Approval interface     → Web/API/etc.
 ```
 
-## Invariant
+## Інваріант
 
-> Жоден mutation path, що вважається COS Action, не повинен мати альтернативний «короткий шлях» повз Policy та Audit.
+> Жоден шлях мутації, який вважається COS Action, не повинен мати альтернативного короткого шляху повз Policy та Audit.
