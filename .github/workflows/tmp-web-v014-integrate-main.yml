@@ -1,0 +1,113 @@
+name: Temporary WEB V0.14 integrate main
+
+on:
+  push:
+    branches:
+      - automation/web-v014-lock
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/web-v014-lock
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Merge latest main and resolve the known overlap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+
+          if [ "$merge_status" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            expected="app/Interfaces/Web/View/company_os/index.phtml"
+            if [ "$conflicts" != "$expected" ]; then
+              echo "Unexpected merge conflicts:"
+              printf '%s\n' "$conflicts"
+              exit 1
+            fi
+            git checkout --ours -- "$expected"
+            git add "$expected"
+          fi
+
+          # Main already owns the consolidated Sales Admin runtime. Keep it and
+          # remove the temporary split modules created while cleaning legacy views.
+          git checkout origin/main -- frontend/features/sales/admin.js
+          git checkout origin/main -- frontend/entrypoints/sales-workspace.js
+          git checkout origin/main -- app/Interfaces/Web/View/sales_admin/actions.phtml
+          git checkout origin/main -- app/Interfaces/Web/View/sales_admin/integrations.phtml
+          git checkout origin/main -- app/Interfaces/Web/View/sales_admin/pipeline.phtml
+          git checkout origin/main -- app/Interfaces/Web/View/sales_admin/pipelines.phtml
+          rm -f frontend/features/sales/integrations-admin.js
+          rm -f frontend/features/sales/pipeline-admin.js
+          rm -f frontend/features/sales/policy-admin.js
+
+          # Preserve main's safer PHP-aware script-tag parser, then extend its
+          # manifest coverage with the new opt-in COS UI runtime.
+          git checkout origin/main -- tests/architecture/frontend_assets.php
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tests/architecture/frontend_assets.php')
+          source = path.read_text(encoding='utf-8')
+          needle = "    'cos-site',\n"
+          replacement = needle + "    'cos-ui-runtime',\n"
+          if "    'cos-ui-runtime',\n" not in source:
+              if needle not in source:
+                  raise SystemExit('Unable to locate cos-site manifest entry.')
+              source = source.replace(needle, replacement, 1)
+          path.write_text(source, encoding='utf-8')
+          PY
+
+          # Temporary migration/validation machinery must never enter main.
+          rm -f .github/workflows/tmp-web-v014-lock.yml
+          rm -f .github/workflows/tmp-web-v014-validate.yml
+          rm -f .github/workflows/tmp-web-v014-conflict-scan.yml
+          rm -f .github/workflows/tmp-web-v014-integrate-main.yml
+
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Unresolved conflicts remain:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          git add -A
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run WEB V0.14 regression gates
+        run: |
+          php -l tests/architecture/web_v014_standard_stack.php
+          php tests/architecture/web_v014_standard_stack.php
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/web_v012_production_closure.php
+
+      - name: Commit integrated staging tree
+        run: |
+          git commit -m "WEB V0.14 — integrate latest main and close staging"
+          git push origin HEAD:automation/web-v014-lock
