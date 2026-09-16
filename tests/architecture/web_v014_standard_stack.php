@@ -128,6 +128,10 @@ $contains($vite, "'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entry
 $assetGate = $read('tests/architecture/frontend_assets.php');
 $contains($assetGate, "'cos-ui-runtime'", 'Shared asset gate must validate the standard UI runtime bundle');
 
+$cosIndex = $read('app/Interfaces/Web/View/company_os/index.phtml');
+$contains($cosIndex, 'type="application/json" data-cos-page', 'COS page context must be inert JSON consumed by the Vite runtime');
+$notContains($cosIndex, 'window.COS_PAGE', 'COS page context must not restore inline browser JavaScript');
+
 $docs = $read('docs/architecture/web-v0.14.md');
 foreach (['server-first', 'Bootstrap 5.3.8', 'HTMX 2.0.10', 'Tabulator', 'Chart.js', 'SortableJS', 'Flatpickr', 'FullCalendar', 'Vue'] as $needle) {
     $contains($docs, $needle, 'WEB V0.14 architecture documentation is incomplete');
