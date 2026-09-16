@@ -21,4 +21,3 @@ $pipelines = $pipelines ?? [];
     <?php if (!$pipelines): ?><p class="tn-sales-empty">Pipelines ще немає.</p><?php endif; ?></div>
   </section>
 </main>
-<script>(()=>{for(const f of document.querySelectorAll('[data-sales-admin-json]'))f.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));const csrf=d.csrf_token;delete d.csrf_token;const s=f.querySelector('[data-admin-status]');try{const r=await fetch(f.dataset.url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(d)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Save failed');const id=j?.data?.pipeline?.id;if(f.dataset.redirectRoot&&id){location.href=f.dataset.redirectRoot+encodeURIComponent(id);return;}location.reload();}catch(x){if(s)s.textContent=x.message;}});})();</script>
