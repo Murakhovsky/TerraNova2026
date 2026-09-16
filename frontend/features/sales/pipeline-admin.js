@@ -1,7 +1,7 @@
 const pipelineAdminRoot = document.querySelector('[data-sales-admin]');
 
 if (pipelineAdminRoot) {
-  const send = async (url, csrf, data) => {
+  const send = async (url, csrf, data, { reload = true } = {}) => {
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
@@ -14,8 +14,30 @@ if (pipelineAdminRoot) {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'Save failed');
-    window.location.reload();
+    if (reload) window.location.reload();
+    return payload;
   };
+
+  pipelineAdminRoot.querySelectorAll('[data-sales-admin-json]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      const csrf = data.csrf_token;
+      delete data.csrf_token;
+      const status = form.querySelector('[data-admin-status]');
+      try {
+        const payload = await send(form.dataset.url, csrf, data, { reload: false });
+        const pipelineId = payload?.data?.pipeline?.id;
+        if (form.dataset.redirectRoot && pipelineId) {
+          window.location.assign(`${form.dataset.redirectRoot}${encodeURIComponent(pipelineId)}`);
+          return;
+        }
+        window.location.reload();
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
+    });
+  });
 
   pipelineAdminRoot.querySelectorAll('[data-admin-json]').forEach((form) => {
     form.addEventListener('submit', (event) => {
@@ -59,7 +81,8 @@ if (pipelineAdminRoot) {
       event.preventDefault();
       const edges = [...transitions.querySelectorAll('[data-edge]:checked')].map((edge) => {
         const key = `${edge.dataset.from}:${edge.dataset.to}`;
-        const approval = transitions.querySelector(`[data-approval-for="${CSS.escape(key)}"]`);
+        const approval = [...transitions.querySelectorAll('[data-approval-for]')]
+          .find((control) => control.dataset.approvalFor === key);
         return {
           from_stage_id: edge.dataset.from,
           to_stage_id: edge.dataset.to,
