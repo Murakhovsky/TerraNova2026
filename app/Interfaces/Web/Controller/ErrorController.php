@@ -3,22 +3,24 @@ declare(strict_types=1);
 
 namespace Interfaces\Web\Controller;
 
+use Phalcon\Http\ResponseInterface;
+
 final class ErrorController extends ControllerBase
 {
-    public function notFoundAction(): void
+    public function notFoundAction(): ?ResponseInterface
     {
         $path = $this->requestPath();
 
         if ($path === '/api' || str_starts_with($path, '/api/') || str_starts_with($path, '/webhooks/')) {
-            $this->json([
+            return $this->json([
                 'ok' => false,
                 'error' => 'not_found',
                 'message' => 'Маршрут не знайдено.',
             ], 404);
-            return;
         }
 
         $this->renderFrontendFailure(404, null, $this->surfaceFor($path));
+        return null;
     }
 
     private function requestPath(): string

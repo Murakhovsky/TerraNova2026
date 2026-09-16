@@ -132,7 +132,16 @@ if ($moduleRoutesPosition === false || $coreRoutesPosition === false || $coreRou
 }
 
 $errorController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/ErrorController.php');
-foreach (["renderFrontendFailure(404", "'not_found'", "'/api/'", "return 'portal'", "return 'workspace'", "return 'public'"] as $needle) {
+foreach ([
+    "renderFrontendFailure(404",
+    "'not_found'",
+    "'/api/'",
+    "return 'portal'",
+    "return 'workspace'",
+    "return 'public'",
+    'public function notFoundAction(): ?ResponseInterface',
+    'return $this->json([',
+] as $needle) {
     if (!str_contains($errorController, $needle)) {
         throw new RuntimeException('Canonical 404 controller is missing behavior: ' . $needle);
     }
