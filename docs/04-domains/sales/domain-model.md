@@ -1,19 +1,19 @@
 ---
-title: Sales Domain Model
-description: Canonical vocabulary, ownership, invariants and entity relationships of the Sales bounded context.
+title: Модель домену Sales
+description: Канонічний словник, володіння, інваріанти та зв’язки сутностей обмеженого контексту Sales.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Sales Domain Model
+# Модель домену Sales
 
-Sales описує **demand lifecycle**: від вхідного інтересу до керованого client case / deal, його pipeline state, activities, next action та outcome.
+Sales описує **життєвий цикл попиту**: від вхідного інтересу до керованої справи клієнта або угоди, її стану у воронці, активностей, наступної дії та результату.
 
-## Core model
+## Основна модель
 
 ```text
-Person relationship
+Відносини з людиною
       ↓
      Lead
       ↓
@@ -22,51 +22,66 @@ ClientCase / Deal
  ├─ status / priority
  ├─ Activities
  ├─ Follow-up / next contact
- ├─ PropertyMatch → Property reference
+ ├─ PropertyMatch → посилання на Property
  └─ Outcome
 ```
 
-`Person`, `Lead` і `ClientCase / Deal` не є трьома назвами одного запису. Person описує сторону взаємодії, Lead — вхідний demand signal, ClientCase / Deal — керований процес продажу.
+`Person`, `Lead` і `ClientCase / Deal` не є трьома назвами одного запису.
 
-## Canonical vocabulary
+- `Person` описує сторону взаємодії та відносини з людиною;
+- `Lead` є вхідним сигналом попиту;
+- `ClientCase / Deal` є керованим процесом продажу.
 
-Новий Sales code використовує typed vocabulary з `app/Domains/Sales/Model`, зокрема `PipelineStage`, `ClientCaseStatus`, `ClientCaseType`, `SalesPriority`, `LeadStatus`, `PropertyMatchStatus`, `SalesActivityType` і `SalesCurrency`.
+Такий поділ дозволяє одній людині мати кілька звернень або справ без перетворення CRM-запису на універсальний контейнер для всього.
 
-External CRM values перекладаються на adapter boundary. Provider vocabulary не визначає внутрішні Sales stages, statuses або Events.
+## Канонічний словник
 
-## Ownership
+Новий код Sales використовує типізований словник із `app/Domains/Sales/Model`, зокрема:
+
+- `PipelineStage`;
+- `ClientCaseStatus`;
+- `ClientCaseType`;
+- `SalesPriority`;
+- `LeadStatus`;
+- `PropertyMatchStatus`;
+- `SalesActivityType`;
+- `SalesCurrency`.
+
+Значення зовнішньої CRM перекладаються на межі адаптера. Словник конкретного постачальника не визначає внутрішні етапи, статуси або події Sales.
+
+## Володіння
 
 Sales **володіє**:
 
-- inbound leads та qualification state;
-- client cases / deals;
-- pipeline, stage, status, priority та assignment;
-- Sales activities, follow-up і next contact;
-- property matches як demand-side references;
-- Sales business events, rules, agents, actions та policies;
-- canonical translation між Sales operations та зовнішнім CRM.
+- вхідними зверненнями та станом кваліфікації;
+- справами клієнтів та угодами;
+- воронкою, етапом, статусом, пріоритетом і призначенням відповідального;
+- активностями продажів, наступними контактами та наступними діями;
+- `PropertyMatch` як посиланням на нерухомість із боку попиту;
+- бізнес-подіями, правилами, агентами, діями та політиками Sales;
+- канонічним перекладом між операціями Sales і зовнішньою CRM.
 
 Sales **не володіє**:
 
-- canonical Property Asset / Inventory / Listing;
-- generic CRM relationship model поза Sales use case;
-- authentication/membership;
-- files/media;
-- generic Queue, EventBus або LLM transport;
-- provider credentials.
+- канонічними `PropertyAsset`, `Inventory` або `Listing`;
+- універсальною моделлю відносин CRM поза сценаріями продажів;
+- автентифікацією та членством у компанії;
+- файлами й медіа як загальносистемними механізмами;
+- універсальними `Queue`, `EventBus` або транспортом до мовних моделей;
+- секретами зовнішніх постачальників.
 
-## Domain invariants
+## Інваріанти домену
 
-1. Sales state завжди tenant-scoped.
-2. External provider vocabulary не стає canonical vocabulary автоматично.
-3. Pipeline transition проходить Sales governance, а не controller/UI logic.
-4. Cross-domain Property data читаються через explicit reference/read contracts.
-5. State-changing use case узгоджує business state, Sales Event та Outbox у transaction boundary там, де Event запускає downstream processing.
-6. Automation action не отримує право виконати mutation в обхід Policy.
+1. Стан Sales завжди ізольований у межах організації.
+2. Словник зовнішнього постачальника не стає канонічним словником автоматично.
+3. Перехід між етапами воронки проходить правила Sales, а не логіку контролера чи інтерфейсу.
+4. Дані Property читаються через явні посилання та контракти читання.
+5. Варіант використання, який змінює стан, узгоджує бізнес-стан, подію Sales та Outbox в одній транзакційній межі там, де подія запускає подальшу обробку.
+6. Автоматизована дія не отримує права виконати зміну стану в обхід політики.
 
-## Read next
+## Що читати далі
 
-- [Lifecycle & Automation](./lifecycle-and-automation.md)
-- [Contracts & Code Map](./contracts-and-code-map.md)
-- [Sales Lead → Managed Case](../../02-workflows/sales-lead-to-managed-case.md)
-- [Generated Application Use Cases](../../12-reference/application-use-cases.md)
+- [Життєвий цикл і автоматизація](./lifecycle-and-automation.md)
+- [Контракти й карта коду](./contracts-and-code-map.md)
+- [Звернення Sales → керована справа](../../02-workflows/sales-lead-to-managed-case.md)
+- [Згенеровані варіанти використання](../../12-reference/application-use-cases.md)

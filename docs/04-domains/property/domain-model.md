@@ -1,16 +1,16 @@
 ---
-title: Property Domain Model
-description: Canonical Property Asset, Inventory, Listing and Publication model with ownership boundaries.
+title: Модель домену Property
+description: Канонічна модель Property Asset, Inventory, Listing і Publication з чіткими межами володіння.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Property Domain Model
+# Модель домену Property
 
-Property є canonical registry фізичних real-estate assets та власником Property-specific commercial projections.
+Property є канонічним реєстром фізичних активів нерухомості та власником специфічних для Property комерційних проєкцій.
 
-## Fundamental separation
+## Фундаментальний поділ
 
 ```text
 PROPERTY ≠ INVENTORY ≠ LISTING ≠ PUBLICATION
@@ -18,21 +18,48 @@ PROPERTY ≠ INVENTORY ≠ LISTING ≠ PUBLICATION
 
 ### Property Asset
 
-Відповідає на питання **що фізично існує**: stable identity, type, location, lifecycle, structure, typed physical specs, relations, media, provenance та canonical history.
+Відповідає на питання **що фізично існує**:
+
+- стабільна ідентичність;
+- тип активу;
+- розташування;
+- життєвий цикл;
+- структура;
+- типізовані фізичні характеристики;
+- зв’язки;
+- медіа;
+- походження даних;
+- канонічна історія.
 
 ### Inventory Item
 
-Відповідає **що конкретна organization може комерціалізувати зараз**: transaction type, asking price, availability, reservation/commercial state та terms.
+Відповідає на питання **що конкретна організація може комерційно робити з активом зараз**:
+
+- тип угоди;
+- запитувана ціна;
+- доступність;
+- бронювання та інший комерційний стан;
+- умови пропозиції.
 
 ### Listing
 
-Відповідає **як Inventory Item представлено ринку**: marketing title/description, presentation price, SEO/public features і media references.
+Відповідає на питання **як Inventory Item представлено ринку**:
+
+- маркетингова назва та опис;
+- публічна ціна;
+- SEO та публічні характеристики;
+- посилання на медіа.
 
 ### Publication
 
-Відповідає **де Listing опублікований**: channel, external id/url, publication state та sync lifecycle.
+Відповідає на питання **де Listing опублікований**:
 
-## Structure graph
+- канал;
+- зовнішній ідентифікатор або URL;
+- стан публікації;
+- життєвий цикл синхронізації.
+
+## Граф структури
 
 ```text
 Development
@@ -42,20 +69,49 @@ Development
              └─ Unit
 ```
 
-Також природно існують `LandPlot`, `House`, `CommercialUnit`, parking/storage та інші typed assets. Не кожен asset зобов'язаний мати всю ієрархію.
+Також природно існують `LandPlot`, `House`, `CommercialUnit`, паркомісця, комори та інші типізовані активи.
 
-## Observation vs truth
+Не кожен актив зобов’язаний мати всю ієрархію. Окремий будинок може існувати без Development, а земельна ділянка не повинна вигадувати собі під’їзд лише заради однакової таблиці.
 
-`PropertySubmission`, `PropertySource`, `ExternalReference`, `DataProvenance` і `PropertyNetworkRecord` описують intake та походження інформації. Вони не є другим canonical Property registry.
+## Спостереження та канонічна істина
 
-`PropertyIntelligenceSnapshot` є derived inference, прив'язаним до facts/evidence. Intelligence не переписує canonical Asset або Inventory facts.
+`PropertySubmission`, `PropertySource`, `ExternalReference`, `DataProvenance` і `PropertyNetworkRecord` описують надходження та походження інформації. Вони не є другим канонічним реєстром Property.
 
-## Ownership boundary
+`PropertyIntelligenceSnapshot` є похідним висновком, прив’язаним до фактів і доказів. Аналітичний інтелект не переписує канонічні факти Asset або Inventory.
 
-Property не володіє people/relationships, Sales pipeline/demand lifecycle, payments, legal documents або provider secrets. Інші Domains request/reference/react через explicit contracts та Events.
+```text
+Зовнішнє спостереження
+    ↓
+Submission / provenance
+    ↓
+перевірка та зіставлення ідентичності
+    ↓
+канонічний Property Asset
+```
 
-## Read next
+## Межа володіння
 
-- [Lifecycle & Runtime](./lifecycle-and-runtime.md)
-- [Contracts & Code Map](./contracts-and-code-map.md)
-- [Property Submission → Publication](../../02-workflows/property-submission-to-publication.md)
+Property не володіє:
+
+- людьми та відносинами;
+- воронкою продажів і життєвим циклом попиту;
+- платежами;
+- юридичними документами як окремим доменом;
+- секретами зовнішніх постачальників.
+
+Інші домени можуть запитувати, посилатися та реагувати через явні контракти й події.
+
+## Ключові інваріанти
+
+1. Фізична ідентичність активу відділена від комерційної пропозиції.
+2. Комерційний стан належить Inventory, а не Property Asset.
+3. Представлення для ринку належить Listing, а конкретний канал публікації належить Publication.
+4. Зовнішнє спостереження не стає канонічним фактом без перевірки ідентичності та походження.
+5. Похідна аналітика не має права непомітно змінювати первинні факти.
+6. Інші домени взаємодіють із Property через явні контракти, а не прямий доступ до таблиць.
+
+## Що читати далі
+
+- [Життєвий цикл і виконання](./lifecycle-and-runtime.md)
+- [Контракти й карта коду](./contracts-and-code-map.md)
+- [Надходження Property → публікація](../../02-workflows/property-submission-to-publication.md)

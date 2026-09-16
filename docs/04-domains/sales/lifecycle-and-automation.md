@@ -1,65 +1,65 @@
 ---
-title: Sales Lifecycle & Automation
-description: Sales lifecycle from intake through pipeline execution, follow-up, outcome and governed automation.
+title: Життєвий цикл і автоматизація Sales
+description: Життєвий цикл Sales від приймання попиту через воронку, наступні дії, результат і керовану автоматизацію.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Sales Lifecycle & Automation
+# Життєвий цикл і автоматизація Sales
 
-## Canonical lifecycle
+## Канонічний життєвий цикл
 
 ```text
-Inbound demand
+Вхідний попит
    ↓
-Normalize / map source
+Нормалізація / визначення джерела
    ↓
-Lead create or update
+Створення або оновлення Lead
    ↓
-Qualification / assignment
+Кваліфікація / призначення відповідального
    ↓
 ClientCase / Deal
    ↓
-Pipeline stage
+Етап воронки
    ↓
-Activities / calls / messages
+Активності / дзвінки / повідомлення
    ↓
-Follow-up / next action
+Наступна дія / наступний контакт
    ↓
-Outcome
+Результат
 ```
 
-Public intake та CRM webhook є різними delivery paths, але повинні завершуватися canonical Sales state, а не двома паралельними моделями продажу.
+Публічне звернення та вебхук CRM є різними шляхами доставки, але мають завершуватися в одному канонічному стані Sales, а не створювати дві паралельні моделі продажу.
 
-## Direct execution
+## Пряме виконання
 
-Людина або interface викликає application use case:
+Людина або інтерфейс викликає варіант використання рівня застосунку:
 
 ```text
-Interface
+Інтерфейс
   ↓
-Use Case / DTO
+Варіант використання / DTO
   ↓
-Sales validation + contracts
+Перевірка Sales + контракти
   ↓
-Persistence mutation
+Зміна збереженого стану
   ↓
-Sales Event
+Подія Sales
   ↓
-Result
+Результат
 ```
 
-Controller, Telegram command чи worker не дублює pipeline rules і не виконує Sales SQL напряму.
+Контролер, команда Telegram або робітник черги не дублює правила воронки й не виконує SQL Sales напряму.
 
-## Automation loop
+## Цикл автоматизації
 
 ```text
-Sales Event
+Подія Sales
    ↓
-Rule context / Agent context
+Контекст правила / агента
    ↓
-Rule або Sales Agent
+Правило або агент Sales
    ↓
 ActionProposal
    ↓
@@ -68,29 +68,38 @@ Policy
    ├─ APPROVAL_REQUIRED
    └─ DENIED
    ↓
-Queue / Action handler
+Черга / обробник дії
    ↓
-Sales application port
+Порт застосунку Sales
    ↓
-Result Event + Audit
+Подія результату + аудит
 ```
 
-Agent створює proposal, але не має direct mutation authority.
+Агент створює пропозицію (`ActionProposal`), але не має прямого права змінювати стан.
 
-## Operational rules
+## Операційні правила
 
-- duplicate external delivery обробляється idempotently;
-- external side effects мають бути retry-safe;
-- forbidden stage transition завершується domain/governance rejection;
-- approval-required action не виконується до рішення;
-- read side може мати окремі projections для workspace, history, funnel та management views.
+- повторна доставка однієї зовнішньої події обробляється ідемпотентно;
+- зовнішні побічні ефекти мають бути безпечними для повторної спроби;
+- заборонений перехід між етапами завершується відмовою на рівні домену або керування;
+- дія, що потребує погодження, не виконується до рішення відповідальної людини;
+- сторона читання може мати окремі проєкції для робочого простору, історії, воронки та управлінських представлень.
 
-## Execution reference
+## Де закінчується автоматизація
 
-Exact use cases, commands та events не дублюються вручну:
+Автоматизація Sales може визначити, що настав час наступної дії, сформувати повідомлення або запропонувати зміну етапу. Але вона не повинна:
 
-- [Application Use Cases](../../12-reference/application-use-cases.md)
-- [Commands](../../12-reference/commands.md)
-- [Event Types](../../12-reference/event-types.md)
-- [Execution Lifecycle](../../05-runtime/execution-lifecycle.md)
-- [Policies & Approvals](../../05-runtime/policies-and-approvals.md)
+- обходити доменні інваріанти;
+- напряму змінювати Property;
+- сама призначати собі повноваження;
+- приховувати від аудиту причину зміни стану.
+
+## Точний технічний довідник
+
+Точні варіанти використання, команди та події не дублюються вручну:
+
+- [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
+- [Команди](../../12-reference/commands.md)
+- [Типи подій](../../12-reference/event-types.md)
+- [Життєвий цикл виконання](../../05-runtime/execution-lifecycle.md)
+- [Політики та погодження](../../05-runtime/policies-and-approvals.md)

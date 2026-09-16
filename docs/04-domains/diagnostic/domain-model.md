@@ -1,20 +1,20 @@
 ---
-title: Diagnostic Domain Model
-description: Methodology, session, evidence and traceability model of the Diagnostic bounded context.
+title: Модель домену Diagnostic
+description: Модель методології, сесії, доказів і простежуваності обмеженого контексту Diagnostic.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Diagnostic Domain Model
+# Модель домену Diagnostic
 
-Diagnostic є generic bounded context для evidence-based business diagnostics. Він не імпортує Sales, Finance, HR чи інший target Domain як власну модель.
+Diagnostic є універсальним обмеженим контекстом для **діагностики бізнесу на основі доказів**. Він не імпортує Sales, Finance, HR або інший цільовий домен як частину власної моделі.
 
-## Core model
+## Основна модель
 
 ```text
 Methodology Pack
-   ↓ publish immutable version
+   ↓ публікація незмінної версії
 Diagnostic Session
    ↓
 Evidence
@@ -30,13 +30,33 @@ Hypotheses
 Recommendations
 ```
 
-## Methodology ownership
+Кожен рівень має окремий зміст. Доказ не є фактом, факт не є оцінкою, а оцінка не є рекомендацією.
 
-`DiagnosticPack` керує lifecycle methodology pack. Published version immutable; revision створює наступний draft. Session завжди pinned до exact pack id/version, з яким стартувала.
+Це здається очевидним рівно до того моменту, поки система не починає генерувати переконливі висновки з припущень, які ніхто не перевірив.
 
-## Traceability
+## Володіння методологією
 
-Кожен derived diagnostic record декларує evidence та/або upstream references. Session відхиляє dangling references і повинна дозволяти побудувати повний traceability graph:
+`DiagnosticPack` керує життєвим циклом пакета методології.
+
+Опублікована версія є незмінною. Перегляд створює наступну чернетку, а не переписує методологію, за якою вже були проведені діагностичні сесії.
+
+Сесія завжди прив’язана до точного `pack id/version`, з яким вона стартувала.
+
+```text
+Draft
+  ↓ validate
+Published version N
+  ↓
+Session A ────────┐
+                  │ завжди відтворюється за N
+Revision → Draft N+1
+```
+
+## Простежуваність
+
+Кожен похідний діагностичний запис декларує докази та/або попередні посилання, на яких він базується.
+
+Сесія відхиляє висячі посилання й повинна дозволяти побудувати повний граф простежуваності:
 
 ```text
 Recommendation
@@ -46,20 +66,27 @@ Recommendation
   ← Evidence
 ```
 
-## Neutral target
+Тому рекомендація має бути не лише «розумною», а й пояснюваною через конкретний ланцюг фактів.
 
-Methodology визначає target через neutral `DiagnosticTarget`. Target-specific vocabulary живе в methodology pack або target bounded context, а не всередині generic Diagnostic core.
+## Нейтральна ціль діагностики
 
-## Core invariants
+Методологія визначає ціль через нейтральний `DiagnosticTarget`.
 
-1. Published methodology version immutable.
-2. Session pinned до конкретної methodology version.
-3. Derived record має traceable upstream evidence/reference.
-4. Diagnostic не мутує target Domain state напряму.
-5. Tenant scope та optimistic locking залишаються explicit persistence guarantees.
+Специфічний словник цільового домену живе в пакеті методології або в самому цільовому обмеженому контексті, а не всередині універсального ядра Diagnostic.
 
-## Read next
+Наприклад, діагностика Sales може аналізувати воронку продажів, але через це Diagnostic не повинен ставати власником `PipelineStage`.
 
-- [Lifecycle & Evaluation](./lifecycle-and-evaluation.md)
-- [Contracts & Code Map](./contracts-and-code-map.md)
-- [Diagnostic Session → Recommendation](../../02-workflows/diagnostic-session-to-recommendation.md)
+## Основні інваріанти
+
+1. Опублікована версія методології є незмінною.
+2. Сесія прив’язана до конкретної версії методології.
+3. Похідний запис має простежувані попередні докази або посилання.
+4. Diagnostic не змінює стан цільового домену напряму.
+5. Ізоляція за організацією та оптимістичне блокування залишаються явними гарантіями збереження.
+6. Результат мовної моделі не стає детермінованим фактом без відповідного контракту перевірки.
+
+## Що читати далі
+
+- [Життєвий цикл і оцінювання](./lifecycle-and-evaluation.md)
+- [Контракти й карта коду](./contracts-and-code-map.md)
+- [Діагностична сесія → рекомендація](../../02-workflows/diagnostic-session-to-recommendation.md)

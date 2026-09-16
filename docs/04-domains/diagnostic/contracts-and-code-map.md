@@ -1,14 +1,14 @@
 ---
-title: Diagnostic Contracts & Code Map
-description: Diagnostic repositories, methodology engine, target-neutral boundaries and runtime code map.
+title: Контракти й карта коду Diagnostic
+description: Репозиторії Diagnostic, рушій методології, нейтральні межі цільового домену та карта коду середовища виконання.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Diagnostic Contracts & Code Map
+# Контракти й карта коду Diagnostic
 
-## Dependency model
+## Модель залежностей
 
 ```text
 API / Interfaces
@@ -22,38 +22,78 @@ Application Contracts
 Infrastructure repositories
 ```
 
-Target Domain integrations повинні входити через neutral identifiers/contracts. Diagnostic не отримує прямої залежності на Sales aggregate лише тому, що methodology діагностує Sales.
+Інтеграції з цільовими доменами повинні входити через нейтральні ідентифікатори та контракти.
 
-## Main surfaces
+Diagnostic не отримує прямої залежності від агрегату Sales лише тому, що конкретна методологія діагностує продажі.
 
-| Surface | Responsibility |
-|---|---|
-| `Model/` | packs, sessions, records, invariants, policies |
-| `Methodology/` | loading, validation, deterministic evaluation |
-| `Application/DTO` | immutable operation inputs |
-| `Application/Contract` | pack/session repository ports |
-| `Application/UseCase` | lifecycle orchestration |
-| `Automation/Event` | Diagnostic-owned facts |
-| `Infrastructure/` | tenant-scoped persistence |
-| `Bootstrap/` | runtime module contribution |
+## Основні поверхні
 
-## Runtime contributions
+| Поверхня | Відповідальність |
+| --- | --- |
+| `Model/` | пакети, сесії, записи, інваріанти та політики |
+| `Methodology/` | завантаження, перевірка й детерміноване оцінювання |
+| `Application/DTO` | незмінні вхідні дані операцій |
+| `Application/Contract` | порти репозиторіїв пакетів і сесій |
+| `Application/UseCase` | оркестрація життєвого циклу |
+| `Automation/Event` | факти, якими володіє Diagnostic |
+| `Infrastructure/` | збереження з ізоляцією за організацією |
+| `Bootstrap/` | внесок модуля до середовища виконання |
 
-Current module contributes `diagnosticDomainModule`, API route contribution, `diagnosticActionOutcomeHandler`, Web navigation and Diagnostic migrations.
+## Внески до середовища виконання
 
-## Persistence guarantees
+Поточний модуль додає:
 
-Published methodology must remain reproducible. Session persistence therefore keeps tenant scope, exact pack/version identity, canonical methodology hash and optimistic locking/concurrency guarantees.
+- `diagnosticDomainModule`;
+- внесок маршрутів API;
+- `diagnosticActionOutcomeHandler`;
+- вебнавігацію;
+- міграції Diagnostic.
 
-## Code root
+Точний склад зчитується з декларації модуля і не повинен підтримуватися вручну в кількох сторінках.
+
+## Гарантії збереження
+
+Опублікована методологія повинна залишатися відтворюваною. Тому збереження сесії підтримує:
+
+- ізоляцію за організацією;
+- точну ідентичність пакета та версії;
+- канонічний хеш методології;
+- оптимістичне блокування та гарантії конкурентного доступу.
+
+Якщо дві паралельні операції намагаються змінити ту саму сесію, система не повинна тихо перетворювати їх на новий творчий жанр діагностики.
+
+## Межа цільового домену
+
+Diagnostic може споживати факти про Sales, Property, Finance або інший домен через явний контракт або зафіксований доказ.
+
+Він не повинен:
+
+- імпортувати внутрішню модель цільового домену як свою;
+- напряму змінювати його таблиці;
+- використовувати приватний стан домену як приховану умову методології;
+- виконувати цільову рекомендацію замість домену-власника.
+
+```text
+Цільовий домен
+    ↓ факт / контракт / доказ
+Diagnostic
+    ↓ рекомендація
+людина або цільовий домен
+    ↓ результат
+Diagnostic evidence
+```
+
+## Корінь коду
 
 ```text
 app/Domains/Diagnostic/
 ```
 
-## Exact executable facts
+Основний технічний поділ усередині кореня відповідає моделі: `Model`, `Methodology`, `Application`, `Automation`, `Infrastructure` та `Bootstrap`.
 
-- [Application Use Cases](../../12-reference/application-use-cases.md)
-- [Module & Capabilities](../../12-reference/module-capabilities.md)
-- [Module Routes](../../12-reference/module-routes.md)
-- [Event Types](../../12-reference/event-types.md)
+## Точні виконувані факти
+
+- [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
+- [Модулі та можливості](../../12-reference/module-capabilities.md)
+- [Маршрути модулів](../../12-reference/module-routes.md)
+- [Типи подій](../../12-reference/event-types.md)

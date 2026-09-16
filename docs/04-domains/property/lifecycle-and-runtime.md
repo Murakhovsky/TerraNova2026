@@ -1,23 +1,23 @@
 ---
-title: Property Lifecycle & Runtime
-description: Canonical Property intake, identity, Inventory, Listing, Publication and V0.12 runtime lifecycle.
+title: Життєвий цикл і виконання Property
+description: Канонічний життєвий цикл надходження Property, ідентичності, Inventory, Listing, Publication та переходу V0.12.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Property Lifecycle & Runtime
+# Життєвий цикл і виконання Property
 
-## End-to-end lifecycle
+## Наскрізний життєвий цикл
 
 ```text
-External observation / Submission
+Зовнішнє спостереження / Submission
         ↓
-Validation + identity resolution
+Перевірка + визначення ідентичності
         ↓
 CREATE / MERGE / REVIEW
         ↓
-Canonical PropertyAsset
+Канонічний PropertyAsset
         ↓
 InventoryItem
         ↓
@@ -25,12 +25,14 @@ Listing
         ↓
 Publication
         ↓
-Channel / External Network
+Канал / зовнішня мережа
 ```
 
-`MERGE` означає resolve incoming observation до вже існуючого canonical asset. Це не destructive merge двох canonical assets. Ambiguous match переходить у explicit review з audit trail.
+`MERGE` означає зіставлення нового спостереження з уже наявним канонічним активом. Це не руйнівне об’єднання двох канонічних активів.
 
-## Inventory lifecycle
+Якщо збіг неоднозначний, ситуація переходить у явну перевірку (`REVIEW`) з аудиторською історією.
+
+## Життєвий цикл Inventory
 
 ```text
 AVAILABLE
@@ -39,9 +41,11 @@ AVAILABLE
 → OFF_MARKET / WITHDRAWN
 ```
 
-Це lifecycle комерційної пропозиції organization, а не фізичного Property Asset. Продана квартира продовжує існувати як квартира.
+Це життєвий цикл **комерційної пропозиції конкретної організації**, а не фізичного Property Asset.
 
-## V0.12 authoritative mutation path
+Продана квартира продовжує існувати як квартира. Змінюється лише те, як конкретна організація може з нею комерційно працювати.
+
+## Канонічний шлях зміни стану V0.12
 
 ```text
 Web / API / Spatial
@@ -57,19 +61,48 @@ Compatibility Projection
 tn_properties
 ```
 
-`tn_properties` є transitional projection/read surface. Нові Asset, Inventory, Listing, Publication та Spatial presentation mutations повинні входити через canonical runtime.
+`tn_properties` є перехідною проєкцією та поверхнею читання. Нові зміни Asset, Inventory, Listing, Publication і просторової презентації повинні входити через канонічне середовище виконання.
 
-## Network lifecycle
+Це важлива межа переходу: старий запис може залишатися потрібним для сумісності, але він більше не диктує модель домену.
 
-External Network sync зберігає durable run/record ledger, idempotency metadata та source identity. Incoming UPSERT проходить через `PropertySubmission`; incoming DELETE стає tombstone і не видаляє canonical truth автоматично.
+## Життєвий цикл зовнішньої мережі
 
-## History and intelligence
+Синхронізація із зовнішньою Property Network зберігає стійкий журнал запусків і записів, метадані ідемпотентності та ідентичність джерела.
 
-Property/Inventory/Publication changes мають append-only history contracts. Analytics та Intelligence будуються поверх canonical facts і не отримують права тихо змінювати ці facts.
+Вхідний `UPSERT` проходить через `PropertySubmission`.
 
-## Runtime reference
+Вхідний `DELETE` створює позначку видалення (tombstone) і не видаляє канонічну істину автоматично. Зовнішній постачальник може повідомити, що запис у нього зник, але не отримує через це магічне право стерти фізичний актив із COS.
 
-- [Execution Lifecycle](../../05-runtime/execution-lifecycle.md)
-- [Events & Outbox](../../05-runtime/events-and-outbox.md)
-- [Event Types](../../12-reference/event-types.md)
-- [Module Capabilities](../../12-reference/module-capabilities.md)
+## Історія та аналітичний інтелект
+
+Зміни Property, Inventory і Publication мають контракти незмінюваної історії (append-only history).
+
+Аналітика та інтелект будуються поверх канонічних фактів і не отримують права тихо змінювати ці факти.
+
+```text
+Канонічні факти
+    ↓
+Історія / аналітика / докази
+    ↓
+Похідний висновок
+```
+
+а не навпаки.
+
+## Відмови та неоднозначність
+
+Операція не повинна вигадувати канонічний актив, якщо:
+
+- ідентичність недостатньо підтверджена;
+- два кандидати однаково ймовірні;
+- зовнішнє джерело суперечить уже перевіреному факту;
+- для зміни критичного стану бракує повноважень.
+
+У таких випадках потрібен явний стан перевірки, конфлікту або відмови, а не мовчазне «ну схоже ж».
+
+## Технічний довідник
+
+- [Життєвий цикл виконання](../../05-runtime/execution-lifecycle.md)
+- [Події та Outbox](../../05-runtime/events-and-outbox.md)
+- [Типи подій](../../12-reference/event-types.md)
+- [Можливості модулів](../../12-reference/module-capabilities.md)

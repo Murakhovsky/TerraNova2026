@@ -1,14 +1,14 @@
 ---
-title: Sales Contracts & Code Map
-description: Application ports, infrastructure boundaries, runtime composition and code map for Sales.
+title: Контракти й карта коду Sales
+description: Порти застосунку, інфраструктурні межі, композиція середовища виконання та карта коду Sales.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Sales Contracts & Code Map
+# Контракти й карта коду Sales
 
-## Dependency direction
+## Напрям залежностей
 
 ```text
 Interfaces
@@ -20,52 +20,74 @@ Application Contracts ← Domain Model
 Infrastructure adapters
 ```
 
-Sales business rules не повинні залежати від Web, Telegram, конкретного CRM provider або Phalcon ActiveRecord.
+Бізнес-правила Sales не повинні залежати від Web, Telegram, конкретного постачальника CRM або Phalcon ActiveRecord.
 
-## Main surfaces
+## Основні поверхні
 
-| Surface | Responsibility |
-|---|---|
-| `Model/` | typed vocabulary та business invariants |
-| `Application/DTO` | immutable input/output across boundaries |
-| `Application/Contract` | repositories, gateways та outbound ports |
-| `Application/UseCase` | transactional orchestration |
-| `Automation/Event` | Sales-owned facts |
-| `Automation/Rule` | deterministic reactions |
-| `Automation/Agent` | proposal-producing agent definitions |
-| `Automation/Action` | controlled delegation to application ports |
-| `Automation/Policy` | AUTO / APPROVAL_REQUIRED / DENIED |
-| `Infrastructure/` | persistence, CRM adapters, read models |
-| `Bootstrap/` | runtime contribution registration |
+| Поверхня | Відповідальність |
+| --- | --- |
+| `Model/` | типізований словник та бізнес-інваріанти |
+| `Application/DTO` | незмінні вхідні й вихідні дані на межах |
+| `Application/Contract` | репозиторії, шлюзи та вихідні порти |
+| `Application/UseCase` | транзакційна оркестрація |
+| `Automation/Event` | факти, якими володіє Sales |
+| `Automation/Rule` | детерміновані реакції |
+| `Automation/Agent` | визначення агентів, що створюють пропозиції |
+| `Automation/Action` | контрольована передача виконання до портів застосунку |
+| `Automation/Policy` | `AUTO` / `APPROVAL_REQUIRED` / `DENIED` |
+| `Infrastructure/` | збереження даних, адаптери CRM, моделі читання |
+| `Bootstrap/` | реєстрація внесків у середовище виконання |
 
-## Composition root
+## Корінь композиції
 
-Common Sales services compose in:
+Спільні сервіси Sales збираються в:
 
 ```text
 app/Bootstrap/SalesServices.php
 ```
 
-Web, API, CLI, Telegram і workers повинні resolve ті самі use cases, а не створювати окрему business logic per interface.
+Web, API, CLI, Telegram і робітники повинні отримувати ті самі варіанти використання, а не створювати окрему бізнес-логіку для кожного інтерфейсу.
 
-## Legacy compatibility boundary
+## Межа сумісності зі старою моделлю
 
-`Infrastructure/Persistence/Phalcon/Telegram` залишається quarantined compatibility adapter для історичних `request_*` records. Нові business rules, rendering чи Telegram behavior туди не додаються.
+`Infrastructure/Persistence/Phalcon/Telegram` залишається ізольованим адаптером сумісності для історичних записів `request_*`.
 
-## Cross-domain contracts
+Нові бізнес-правила, відображення інтерфейсу або нова поведінка Telegram туди не додаються. Цей шар існує для контрольованого переходу, а не для нескінченного продовження старої архітектури під новими назвами.
 
-Sales може reference Property, але не модифікує Property storage. Generic runtime mechanisms отримуються від Kernel. External CRM sync реалізується adapter-ами за Sales-owned contracts.
+## Міждоменні контракти
 
-## Exact executable facts
+Sales може посилатися на Property, але не змінює сховище Property напряму.
 
-- [Module & Capabilities](../../12-reference/module-capabilities.md)
-- [Module Routes](../../12-reference/module-routes.md)
-- [Application Use Cases](../../12-reference/application-use-cases.md)
-- [Events](../../12-reference/event-types.md)
+Універсальні механізми середовища виконання отримуються від Kernel. Синхронізація із зовнішньою CRM реалізується адаптерами за контрактами, якими володіє Sales.
 
-## Code root
+```text
+Sales
+  ↓ порт / контракт
+Infrastructure adapter
+  ↓
+CRM provider
+```
+
+і окремо:
+
+```text
+Sales
+  ↓ reference/read contract
+Property
+```
+
+## Точні виконувані факти
+
+- [Модулі та можливості](../../12-reference/module-capabilities.md)
+- [Маршрути модулів](../../12-reference/module-routes.md)
+- [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
+- [Події](../../12-reference/event-types.md)
+
+## Корінь коду
 
 ```text
 app/Domains/Sales/
 app/Bootstrap/SalesServices.php
 ```
+
+Якщо зміна Sales вимагає редагувати контролер, адаптер CRM і модель домену для одного й того самого правила, варто перевірити, чи правило випадково не розмазалося по шарах. Шари створені саме для того, щоб не грати в архітектурний квест «знайди всі місця, де захована знижка».

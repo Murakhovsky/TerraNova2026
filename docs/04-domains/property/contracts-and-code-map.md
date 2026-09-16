@@ -1,49 +1,75 @@
 ---
-title: Property Contracts & Code Map
-description: Cross-domain ports, network adapters, canonical runtime boundaries and implementation map for Property.
+title: Контракти й карта коду Property
+description: Міждоменні порти, мережеві адаптери, канонічні межі середовища виконання та карта реалізації Property.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Property Contracts & Code Map
+# Контракти й карта коду Property
 
-## Main dependency rule
+## Основне правило залежності
 
-> A Domain owns its state. Other Domains may request, reference and react, but never modify that state directly.
+> Домен володіє власним станом. Інші домени можуть запитувати, посилатися й реагувати, але не змінюють цей стан напряму.
 
-Sales therefore consumes Property through explicit Property reference/read contracts. It does not query or mutate canonical Property tables as part of Sales business logic.
+Тому Sales споживає Property через явні контракти посилань і читання. Бізнес-логіка Sales не звертається до канонічних таблиць Property напряму і не змінює їх.
 
-## Key boundaries
+## Ключові межі
 
-### Property reference boundary
+### Межа посилань на Property
 
-`PropertyReferencePort` exposes stable Property references/presentations to consumers without transferring ownership of Property state.
+`PropertyReferencePort` відкриває стабільні посилання та представлення Property для інших споживачів без передачі права власності на стан Property.
 
-### External Property Network
+```text
+Sales / інший домен
+        ↓
+PropertyReferencePort
+        ↓
+Property read model / reference
+```
 
-`PropertyNetworkConnectorInterface` isolates MLS, developer APIs, portal feeds and other providers from the Property core. Provider credentials/configuration remain outside Property behind configuration references and injected transport.
+### Зовнішня Property Network
 
-### Location reference
+`PropertyNetworkConnectorInterface` ізолює MLS, API девелоперів, фіди порталів та інших постачальників від ядра Property.
 
-Reference location materialization remains owned by Reference and is accessed through `LocationReferenceInterface`. Property must not write reference-location storage directly.
+Облікові дані та конфігурація постачальника залишаються поза Property за посиланнями на конфігурацію та ін’єктованим транспортом.
 
-### Canonical runtime
+### Довідник локацій
 
-`PropertyCanonicalRuntimeService` is the authoritative operational write boundary for Asset, Inventory, Listing and Publication in V0.12.
+Матеріалізація довідкових локацій залишається відповідальністю Reference і доступна через `LocationReferenceInterface`.
 
-## Compatibility rule
+Property не повинен напряму змінювати сховище довідкових локацій.
 
-Legacy `tn_properties`, historical presentation code and Telegram Realty/Object models may serve isolated compatibility reads/projections. Вони не можуть визначати canonical Asset/Inventory/Listing truth.
+### Канонічне середовище виконання
 
-## Code map
+`PropertyCanonicalRuntimeService` є основною операційною межею запису для Asset, Inventory, Listing і Publication у V0.12.
+
+Це означає, що новий запис не повинен обходити сервіс лише тому, що стара таблиця технічно все ще доступна з PHP.
+
+## Правило сумісності
+
+Старі `tn_properties`, історичний код презентації та Telegram-моделі Realty/Object можуть залишатися ізольованими поверхнями читання або проєкціями сумісності.
+
+Вони не можуть визначати канонічну істину Asset, Inventory або Listing.
+
+```text
+Канонічна модель
+      ↓
+проєкція сумісності
+      ↓
+старий інтерфейс / читання
+```
+
+Напрям має бути саме таким, а не навпаки.
+
+## Карта коду
 
 ```text
 app/Domains/Property/
-├─ Model / domain vocabulary
-├─ Application / use cases and services
-├─ Infrastructure / persistence, network, read models, adapters
-├─ Bootstrap / module contribution
+├─ Model / словник домену
+├─ Application / варіанти використання та сервіси
+├─ Infrastructure / збереження, мережа, моделі читання, адаптери
+├─ Bootstrap / внесок модуля
 └─ module.php
 
 app/Bootstrap/PropertyServices.php
@@ -51,10 +77,40 @@ app/Bootstrap/PropertyNetworkServices.php
 app/Interfaces/Api/Controller/PropertyCanonicalController.php
 ```
 
-## Exact executable facts
+Назви директорій і класів не перекладаються, оскільки це точні ідентифікатори коду.
 
-- [Module & Capabilities](../../12-reference/module-capabilities.md)
-- [Application Use Cases](../../12-reference/application-use-cases.md)
-- [Commands](../../12-reference/commands.md)
-- [Events](../../12-reference/event-types.md)
-- [Routes](../../12-reference/module-routes.md)
+## Міждоменні сценарії
+
+Типовий шлях із боку Sales:
+
+```text
+Sales use case
+    ↓
+PropertyReferencePort
+    ↓
+стабільне представлення Property
+```
+
+Типовий шлях із зовнішньої мережі:
+
+```text
+зовнішній постачальник
+    ↓
+PropertyNetworkConnectorInterface
+    ↓
+PropertySubmission
+    ↓
+перевірка / ідентичність
+    ↓
+канонічний Property Asset
+```
+
+Жоден із цих шляхів не передає зовнішньому учаснику право напряму змінювати доменне сховище.
+
+## Точні виконувані факти
+
+- [Модулі та можливості](../../12-reference/module-capabilities.md)
+- [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
+- [Команди](../../12-reference/commands.md)
+- [Події](../../12-reference/event-types.md)
+- [Маршрути](../../12-reference/module-routes.md)

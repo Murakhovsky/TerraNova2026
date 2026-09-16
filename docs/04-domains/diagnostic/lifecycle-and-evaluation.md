@@ -1,54 +1,97 @@
 ---
-title: Diagnostic Lifecycle & Evaluation
-description: Methodology publication, session execution, deterministic evaluation and recommendation lifecycle.
+title: Життєвий цикл і оцінювання Diagnostic
+description: Публікація методології, виконання сесії, детерміноване оцінювання та життєвий цикл рекомендацій.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: domain
 ---
 
-# Diagnostic Lifecycle & Evaluation
+# Життєвий цикл і оцінювання Diagnostic
 
-## Lifecycle
+## Життєвий цикл
 
 ```text
-Draft methodology
-   ↓ validate
-Publish immutable version
+Чернетка методології
+   ↓ перевірка
+Публікація незмінної версії
    ↓
-Start version-pinned session
+Запуск сесії, прив’язаної до версії
    ↓
-Capture evidence-backed facts / metrics
+Збір фактів і показників, підтверджених доказами
    ↓
-Evaluate session
+Оцінювання сесії
    ↓
-Assessments / findings
+Assessments / Findings
    ↓
-Hypotheses / recommendations
+Hypotheses / Recommendations
    ↓
-Complete and freeze session
+Завершення та фіксація сесії
 ```
 
-## Deterministic methodology engine
+Після завершення сесія повинна залишатися відтворюваною: той самий пакет методології, ті самі вхідні факти та зрозумілий ланцюг, за яким сформовано результат.
 
-`Methodology/` компілює та виконує structured methodology. Loader не виконує business interpretation; validator відхиляє broken references, invalid ranges та circular dependencies до evaluation.
+## Детермінований рушій методології
 
-Rules читають structured `fact.*`, `metric.*` та `assessment.*` values. Unstructured text або довільний LLM output не є неявним входом deterministic scoring engine.
+`Methodology/` компілює та виконує структуровану методологію.
 
-## Coverage and confidence
+Завантажувач не виконує бізнес-інтерпретацію. Валідатор відхиляє до початку оцінювання:
 
-Criterion може вимагати minimum coverage/confidence. Якщо threshold не виконано, score не повинен вигадуватися або тихо агрегуватися як повноцінний результат.
+- зламані посилання;
+- невалідні діапазони;
+- циклічні залежності;
+- структурні суперечності методології.
 
-## AI boundary
+Правила читають структуровані значення `fact.*`, `metric.*` та `assessment.*`.
 
-AI може допомагати збирати/структурувати evidence, формувати controlled hypotheses або recommendation proposals, але deterministic facts, methodology version і traceability chain залишаються explicit. LLM не отримує права переписувати methodology semantics після публікації.
+Неструктурований текст або довільна відповідь мовної моделі не є неявним входом детермінованого рушія оцінювання.
 
-## Closed loop
+## Покриття та впевненість
 
-Recommendation outcome повертається в Diagnostic як evidence про результат рекомендації. Це дозволяє оцінювати usefulness methodology, не змішуючи Diagnostic із виконанням target-domain operations.
+Критерій може вимагати мінімальний рівень покриття або впевненості.
 
-## Runtime links
+Якщо поріг не виконано, оцінка не повинна:
 
-- [Agent Runtime](../../06-ai-agents/agent-runtime.md)
-- [LLM Governance](../../06-ai-agents/llm-governance.md)
-- [Audit & Diagnostics](../../05-runtime/audit-and-diagnostics.md)
-- [Event Types](../../12-reference/event-types.md)
+- вигадуватися;
+- тихо агрегуватися як повноцінний результат;
+- маскувати відсутність доказів красивою середньою цифрою.
+
+Стан «даних недостатньо» є нормальним і корисним результатом діагностики.
+
+## Межа штучного інтелекту
+
+ШІ може допомагати:
+
+- збирати й структурувати докази;
+- витягувати факти з тексту;
+- формувати контрольовані гіпотези;
+- готувати пропозиції рекомендацій;
+- пояснювати вже отримані детерміновані результати.
+
+Але детерміновані факти, версія методології та ланцюг простежуваності залишаються явними.
+
+Мовна модель не отримує права переписувати семантику опублікованої методології після старту сесії. Інакше повторюваність діагностики перетворюється на настрій постачальника LLM у конкретний вівторок.
+
+## Замкнений цикл рекомендацій
+
+Результат виконання рекомендації повертається в Diagnostic як доказ того, що сталося після рекомендації.
+
+```text
+Recommendation
+    ↓
+виконання в цільовому домені / людьми
+    ↓
+Outcome
+    ↓
+Evidence для Diagnostic
+```
+
+Це дозволяє оцінювати корисність методології та рекомендацій, не змішуючи Diagnostic із фактичним виконанням операцій цільового домену.
+
+Diagnostic може дізнатися, що рекомендація виконана й дала результат. Але сам факт виконання Sales-операції все одно належить Sales.
+
+## Посилання на середовище виконання
+
+- [Середовище виконання агентів](../../06-ai-agents/agent-runtime.md)
+- [Керування мовними моделями](../../06-ai-agents/llm-governance.md)
+- [Аудит і діагностика](../../05-runtime/audit-and-diagnostics.md)
+- [Типи подій](../../12-reference/event-types.md)
