@@ -2,7 +2,7 @@
 title: Cross-Domain Process Topology
 description: Derived view of canonical COS business processes that cross Domain boundaries through declared contracts and target capabilities.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: concept
 contract: concept-v1
 ---
@@ -15,7 +15,7 @@ contract: concept-v1
 
 <CrossDomainProcessTopology />
 
-Це derived Mermaid projection з `docs/.vitepress/processes/*.json`. Вона не є окремим source of truth і не зберігає власну копію бізнес-процесів.
+Це derived Mermaid projection з `resources/processes/*.json`. Вона не є окремим source of truth і не зберігає власну копію бізнес-процесів.
 
 Evidence-enriched версія з contract strength, process/step IDs і boundary aggregation генерується у [Cross-Domain Process Topology Reference](../12-reference/cross-domain-process-topology.md).
 

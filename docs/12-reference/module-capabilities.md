@@ -14,7 +14,7 @@ generated: true
 
 ## Kernel contract version
 
-`Kernel\Module\KernelVersion::VERSION = 0.11.8`.
+`Kernel\Module\KernelVersion::VERSION = 0.11.9`.
 
 ## Registered modules
 

@@ -2,7 +2,7 @@
 title: Reference Index
 description: Карта exact/generated reference COS і правила вибору правильного джерела фактів.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: reference
 contract: reference-v1
 ---
@@ -41,7 +41,7 @@ Generated files не редагуються вручну у `main`.
 
 | Потрібно дізнатися | Відкрити | Source authority |
 | --- | --- | --- |
-| Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `docs/.vitepress/processes/*.json` + current-checkout runtime evidence |
+| Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `resources/processes/*.json` + current-checkout runtime evidence |
 | Які canonical processes перетинають Domain boundaries і через які contracts/capabilities | [Cross-Domain Process Topology](cross-domain-process-topology.md) | Process Registry v5 cross-domain steps + current-checkout contract evidence |
 | Які installable Domains мають canonical process model | [Domain Process Coverage](domain-process-coverage.md) | `app/Domains/*/module.php` + Process Registry + explicit exemptions |
 | Open capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + module manifests |

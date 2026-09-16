@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadProcessDefinitions } from './process-registry.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..', '..');
 const modulesRoot = path.join(repoRoot, 'app', 'Domains');
-const processRoot = path.join(here, 'processes');
 const exemptionFile = path.join(here, 'process-coverage-exemptions.json');
 const debtFile = path.join(here, 'capability-debt.json');
 
@@ -35,14 +35,6 @@ function loadModules() {
   return modules;
 }
 
-function loadProcesses() {
-  if (!fs.existsSync(processRoot)) return [];
-  return fs.readdirSync(processRoot)
-    .filter((name) => name.endsWith('.json'))
-    .sort()
-    .map((name) => JSON.parse(fs.readFileSync(path.join(processRoot, name), 'utf8')));
-}
-
 function loadJson(file, fallback) {
   if (!fs.existsSync(file)) return fallback;
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -50,7 +42,7 @@ function loadJson(file, fallback) {
 
 export function buildDomainProcessCoverage() {
   const modules = loadModules();
-  const processes = loadProcesses();
+  const processes = loadProcessDefinitions();
   const exemptions = loadJson(exemptionFile, { schema_version: 0, items: [] });
   const debt = loadJson(debtFile, { schema_version: 0, items: [] });
 

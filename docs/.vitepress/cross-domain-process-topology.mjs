@@ -1,19 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { loadRuntimeEvidence, resolveRuntimeMapping } from './process-runtime-evidence.mjs';
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const processRoot = path.join(here, 'processes');
-
-function loadProcesses() {
-  if (!fs.existsSync(processRoot)) return [];
-  return fs.readdirSync(processRoot)
-    .filter((name) => name.endsWith('.json'))
-    .sort()
-    .map((name) => JSON.parse(fs.readFileSync(path.join(processRoot, name), 'utf8')))
-    .sort((a, b) => a.domain.localeCompare(b.domain) || a.title.localeCompare(b.title));
-}
+import { loadProcessDefinitions } from './process-registry.mjs';
 
 function resolveCrossDomainContract(definition, step, catalogue) {
   const contracts = Array.isArray(step.runtime)
@@ -37,7 +23,7 @@ function resolveCrossDomainContract(definition, step, catalogue) {
 }
 
 export function buildCrossDomainProcessTopology(
-  definitions = loadProcesses(),
+  definitions = loadProcessDefinitions(),
   catalogue = loadRuntimeEvidence(),
 ) {
   const hops = [];
