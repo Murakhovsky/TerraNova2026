@@ -59,6 +59,11 @@ export const initBootstrapPresentation = (root = document) => {
 };
 
 const initHtmxContract = () => {
+  htmx.config.allowEval = false;
+  htmx.config.allowScriptTags = false;
+  htmx.config.selfRequestsOnly = true;
+  htmx.config.historyCacheSize = 0;
+
   document.body.addEventListener('htmx:configRequest', (event) => {
     const verb = String(event.detail?.verb ?? '').toLowerCase();
     if (!mutationVerbs.has(verb)) return;
