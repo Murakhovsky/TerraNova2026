@@ -10,9 +10,6 @@ $ownerId = (int) $this->request->getQuery('owner_id', 'int', 0);
 $unassigned = (int) $this->request->getQuery('unassigned', 'int', 0) === 1;
 $tabs = [['All',''], ['New','new'], ['Contacted','contacted'], ['Qualified','qualified'], ['Disqualified','disqualified']];
 ?>
-<style>
-.tn-sales-lead-drawer{display:none;position:fixed;inset:0;z-index:80}.tn-sales-lead-drawer:target{display:block}.tn-sales-lead-drawer__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.48)}.tn-sales-lead-drawer__panel{position:absolute;inset:0 0 0 auto;width:min(520px,100vw);overflow:auto;background:var(--tn-surface,#fff);padding:24px;box-shadow:-20px 0 60px rgba(0,0,0,.22)}.tn-sales-lead-drawer__head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.tn-sales-lead-drawer__close{text-decoration:none;font-size:24px;line-height:1}.tn-sales-lead-drawer__body{display:grid;gap:16px}
-</style>
 <main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace data-sales-lead-inbox data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
   <?php $this->partial('components/sales/navigation', ['active' => 'leads']); ?>
   <?php $this->partial('components/ui/page_header', ['eyebrow' => 'Sales · Lead Inbox', 'title' => 'Вхідні ліди', 'description' => 'Кваліфікуй, призначай і створюй Deal прямо з черги.', 'actions' => [['label' => 'Today', 'href' => 'sales/today', 'variant' => 'primary']], 'meta' => ['value' => count($leads), 'label' => 'у вибірці']]); ?>

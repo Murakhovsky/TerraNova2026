@@ -36,6 +36,38 @@ foreach (glob($root . '/resources/*.{js,jsx,ts,tsx,css,scss,vue}', GLOB_BRACE) ?
     throw new RuntimeException('Frontend source was restored under resources: ' . $legacySource);
 }
 
+$viewRoot = $root . '/app/Interfaces/Web/View';
+$inlineAssetExceptions = [
+    'app/Interfaces/Web/View/property/pdf.phtml',
+];
+$views = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($viewRoot, FilesystemIterator::SKIP_DOTS),
+);
+foreach ($views as $view) {
+    if (!$view->isFile() || strtolower($view->getExtension()) !== 'phtml') {
+        continue;
+    }
+
+    $relativePath = str_replace('\\', '/', substr($view->getPathname(), strlen($root) + 1));
+    if (in_array($relativePath, $inlineAssetExceptions, true)) {
+        continue;
+    }
+
+    $source = (string) file_get_contents($view->getPathname());
+    if (preg_match('/<style\b/i', $source) === 1) {
+        throw new RuntimeException('Inline CSS is forbidden in ordinary Web views; move it to frontend feature ownership: ' . $relativePath);
+    }
+
+    if (preg_match_all('/<script\b([^>]*)>/i', $source, $scripts, PREG_SET_ORDER)) {
+        foreach ($scripts as $script) {
+            if (preg_match('/\btype\s*=\s*["\']application\/ld\+json["\']/i', $script[1]) === 1) {
+                continue;
+            }
+            throw new RuntimeException('Inline browser JavaScript is forbidden in ordinary Web views; move it to a Vite entrypoint: ' . $relativePath);
+        }
+    }
+}
+
 $assets = (new ViteAssetManifest($manifestPath))->assets($entries);
 if (count($assets['scripts']) !== count($entries)) throw new RuntimeException('Not every frontend entrypoint is present in the Vite manifest.');
 foreach (array_merge($assets['scripts'], $assets['styles']) as $url) {
@@ -50,4 +82,4 @@ foreach (['terranova-club', 'terranova-home'] as $retiredEntrypoint) {
     }
 }
 
-echo "Frontend assets passed: canonical browser source is built through the Vite manifest and retired global entrypoints stay out of runtime.\n";
+echo "Frontend assets passed: canonical browser source is built through the Vite manifest, ordinary Web views remain asset-pure, and retired global entrypoints stay out of runtime.\n";

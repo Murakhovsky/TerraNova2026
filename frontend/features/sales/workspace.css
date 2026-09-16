@@ -46,6 +46,14 @@
   .tn-sales-stage-form .tn-ui-field { flex: 1 1 260px; }
   .tn-sales-inline-status { min-height: 20px; color: var(--tn-color-muted); font-size: var(--tn-font-sm); }
 
+  .tn-sales-lead-drawer { display: none; position: fixed; inset: 0; z-index: 80; }
+  .tn-sales-lead-drawer:target { display: block; }
+  .tn-sales-lead-drawer__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.48); }
+  .tn-sales-lead-drawer__panel { position: absolute; inset: 0 0 0 auto; width: min(520px,100vw); overflow: auto; background: var(--tn-color-surface); padding: var(--tn-space-5); box-shadow: -20px 0 60px rgba(0,0,0,.22); }
+  .tn-sales-lead-drawer__head { display: flex; justify-content: space-between; gap: var(--tn-space-3); align-items: center; margin-bottom: var(--tn-space-4); }
+  .tn-sales-lead-drawer__close { text-decoration: none; font-size: 24px; line-height: 1; }
+  .tn-sales-lead-drawer__body { display: grid; gap: var(--tn-space-3); }
+
   .tn-sales-intelligence-loading { display: grid; gap: var(--tn-space-3); }
   .tn-sales-intelligence-loading .tn-ui-skeleton:nth-child(1) { width: 34%; height: 26px; }
   .tn-sales-intelligence-loading .tn-ui-skeleton:nth-child(2) { width: 78%; }
