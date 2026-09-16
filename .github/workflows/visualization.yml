@@ -1,4 +1,4 @@
-name: COS Visualization V0.1-V0.5
+name: COS Visualization V0.1-V0.5.2
 
 on:
   push:
@@ -109,6 +109,7 @@ jobs:
           php tests/unit/visualization_cytoscape_mapper.php
           php tests/unit/visualization_architecture_projections.php
           php tests/unit/visualization_cross_domain_contracts.php
+          php tests/unit/visualization_fallback_graph_provider.php
       - name: Process runtime evidence
         run: |
           php docs/.vitepress/generate-runtime-evidence.php > /tmp/cos-runtime-evidence.json
@@ -143,3 +144,4 @@ jobs:
           php -l tests/unit/visualization_cytoscape_mapper.php
           php -l tests/unit/visualization_architecture_projections.php
           php -l tests/unit/visualization_cross_domain_contracts.php
+          php -l tests/unit/visualization_fallback_graph_provider.php
