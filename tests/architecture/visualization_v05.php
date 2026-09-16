@@ -45,7 +45,9 @@ $capability = $find('capability', 'property.inventory');
 $assert($capability !== null, 'Current-checkout evidence lost Property inventory capability.');
 $assert(($capability['domain'] ?? null) === 'property', 'Capability evidence must retain Domain ownership.');
 
-foreach (glob($root . '/docs/.vitepress/processes/*.json') ?: [] as $path) {
+$definitions = glob($root . '/resources/processes/*.json') ?: [];
+$assert($definitions !== [], 'Canonical Process Registry resources are missing.');
+foreach ($definitions as $path) {
     $definition = json_decode((string)file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
     $assert(($definition['schema_version'] ?? 0) >= 3, basename($path) . ' must preserve Process Registry schema v3+ semantics.');
     $assert(in_array($definition['state'] ?? null, ['as-is', 'to-be'], true), basename($path) . ' has invalid business state.');
@@ -56,6 +58,7 @@ $checker = (string)file_get_contents($root . '/docs/.vitepress/check-processes.m
 $assert(!str_contains($checker, 'docs/12-reference'), 'Process verifier must not treat generated Markdown as runtime evidence.');
 $assert(str_contains($checker, "new Set(['as-is', 'to-be'])"), 'Process verifier must keep business state separate from verification.');
 $assert(str_contains($checker, 'processVerification'), 'Process verifier must derive evidence status.');
+$assert(str_contains($checker, 'PROCESS_REGISTRY_ROOT'), 'Process verifier must consume the platform Process Registry authority.');
 
 $checkOutput = [];
 $checkExit = 0;

@@ -10,7 +10,7 @@ generated: true
 
 # Business Process Registry
 
-Generated from `docs/.vitepress/processes/*.json`, canonical module capabilities and the current-checkout runtime evidence catalogue. Do not edit this page manually.
+Generated from `resources/processes/*.json`, canonical module capabilities and the current-checkout runtime evidence catalogue. Do not edit this page manually.
 
 Business state, capability coverage and runtime verification are separate dimensions: a step may be executable in current code while its Domain capability vocabulary is still incomplete.
 

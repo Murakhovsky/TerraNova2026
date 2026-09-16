@@ -1,0 +1,117 @@
+name: COS Process V0.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/Kernel/Process/**'
+      - 'app/Infrastructure/Process/**'
+      - 'app/Bootstrap/ProcessServices.php'
+      - 'app/Kernel/Module/KernelVersion.php'
+      - 'app/config/services_kernel.php'
+      - 'resources/processes/**'
+      - 'docs/.vitepress/process-registry.mjs'
+      - 'docs/.vitepress/check-processes.mjs'
+      - 'docs/.vitepress/check-capability-debt.mjs'
+      - 'docs/.vitepress/check-knowledge-health.mjs'
+      - 'docs/.vitepress/check-domain-process-coverage.mjs'
+      - 'docs/.vitepress/check-cross-domain-process-topology.mjs'
+      - 'docs/.vitepress/knowledge-health.mjs'
+      - 'docs/.vitepress/domain-process-coverage.mjs'
+      - 'docs/.vitepress/cross-domain-process-topology.mjs'
+      - 'docs/.vitepress/generate-business-process-reference.mjs'
+      - 'docs/.vitepress/generate-capability-debt-reference.mjs'
+      - 'docs/.vitepress/generate-cross-domain-process-topology-reference.mjs'
+      - 'docs/.vitepress/process-runtime-evidence.mjs'
+      - 'docs/.vitepress/theme/ProcessDiagram.vue'
+      - 'docs/02-workflows/**'
+      - 'docs/03-architecture/process-v0.1.md'
+      - 'docs/09-development/adding-a-workflow.md'
+      - 'docs/12-reference/business-processes.md'
+      - 'docs/12-reference/cross-domain-process-topology.md'
+      - 'docs/12-reference/capability-debt.md'
+      - 'docs/12-reference/domain-process-coverage.md'
+      - 'docs/12-reference/README.md'
+      - 'tests/unit/process_*.php'
+      - 'tests/architecture/process_*.php'
+      - 'tests/architecture/visualization_v05.php'
+      - '.github/workflows/process.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Kernel/Process/**'
+      - 'app/Infrastructure/Process/**'
+      - 'app/Bootstrap/ProcessServices.php'
+      - 'app/Kernel/Module/KernelVersion.php'
+      - 'app/config/services_kernel.php'
+      - 'resources/processes/**'
+      - 'docs/.vitepress/process-registry.mjs'
+      - 'docs/.vitepress/check-processes.mjs'
+      - 'docs/.vitepress/check-capability-debt.mjs'
+      - 'docs/.vitepress/check-knowledge-health.mjs'
+      - 'docs/.vitepress/check-domain-process-coverage.mjs'
+      - 'docs/.vitepress/check-cross-domain-process-topology.mjs'
+      - 'docs/.vitepress/knowledge-health.mjs'
+      - 'docs/.vitepress/domain-process-coverage.mjs'
+      - 'docs/.vitepress/cross-domain-process-topology.mjs'
+      - 'docs/.vitepress/generate-business-process-reference.mjs'
+      - 'docs/.vitepress/generate-capability-debt-reference.mjs'
+      - 'docs/.vitepress/generate-cross-domain-process-topology-reference.mjs'
+      - 'docs/.vitepress/process-runtime-evidence.mjs'
+      - 'docs/.vitepress/theme/ProcessDiagram.vue'
+      - 'docs/02-workflows/**'
+      - 'docs/03-architecture/process-v0.1.md'
+      - 'docs/09-development/adding-a-workflow.md'
+      - 'docs/12-reference/business-processes.md'
+      - 'docs/12-reference/cross-domain-process-topology.md'
+      - 'docs/12-reference/capability-debt.md'
+      - 'docs/12-reference/domain-process-coverage.md'
+      - 'docs/12-reference/README.md'
+      - 'tests/unit/process_*.php'
+      - 'tests/architecture/process_*.php'
+      - 'tests/architecture/visualization_v05.php'
+      - '.github/workflows/process.yml'
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+
+      - name: Process architecture boundary
+        run: php tests/architecture/process_v01.php
+
+      - name: Process registry invariants
+        run: php tests/unit/process_registry_foundation.php
+
+      - name: Process evidence and schema-v5 compatibility
+        run: |
+          php tests/architecture/visualization_v05.php
+          node docs/.vitepress/check-processes.mjs
+          node docs/.vitepress/check-capability-debt.mjs
+          node docs/.vitepress/check-knowledge-health.mjs
+          node docs/.vitepress/check-domain-process-coverage.mjs
+          node docs/.vitepress/check-cross-domain-process-topology.mjs
+
+      - name: Documentation contracts
+        run: |
+          npm run docs:generate:check
+          npm run docs:check
+          COS_DOCS_BASE='/docs/' npm run docs:build
+
+      - name: PHP syntax
+        run: |
+          find app/Kernel/Process app/Infrastructure/Process -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/ProcessServices.php
+          php -l tests/unit/process_registry_foundation.php
+          php -l tests/architecture/process_v01.php

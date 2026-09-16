@@ -34,7 +34,7 @@ State or outcome
 Кожен `workflow-v2` має matching JSON definition у:
 
 ```text
-docs/.vitepress/processes/<process-id>.json
+resources/processes/<process-id>.json
 ```
 
 Process Registry schema `v4` залишається валідною для same-domain workflows. Schema `v5` додає contract-guarded cross-domain steps. Definition фіксує stable process ID, process Domain, business state, actors, steps, edges, primary owner, step Domain, canonical capability або explicit capability gap, criticality та runtime/evidence mappings.
