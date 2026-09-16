@@ -41,7 +41,6 @@ $viewRoot = $root . '/app/Interfaces/Web/View';
 $inlineAssetExceptions = [
     'app/Interfaces/Web/View/property/pdf.phtml',
 ];
-$violations = [];
 $views = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($viewRoot, FilesystemIterator::SKIP_DOTS),
 );
@@ -57,27 +56,28 @@ foreach ($views as $view) {
 
     $source = (string) file_get_contents($view->getPathname());
     if (preg_match('/<style\b/i', $source) === 1) {
-        $violations[] = 'Inline CSS: ' . $relativePath;
+        throw new RuntimeException('Inline CSS is forbidden in ordinary Web views; move it to frontend feature ownership: ' . $relativePath);
     }
 
-    if (preg_match_all('/<script\b([^>]*)>/i', $source, $scripts, PREG_SET_ORDER)) {
+    // PHP expressions inside an HTML attribute contain a PHP closing delimiter, which a
+    // naive opening-tag regex mistakes for the end of the script tag. Replace template
+    // expressions only for static tag inspection; the original view source is untouched.
+    $scriptScanSource = preg_replace('/<\?php\b.*?\?>/s', 'PHP_EXPR', $source);
+    if (!is_string($scriptScanSource)) {
+        throw new RuntimeException('Unable to prepare Web view for script asset inspection: ' . $relativePath);
+    }
+
+    if (preg_match_all('/<script\b([^>]*)>/i', $scriptScanSource, $scripts, PREG_SET_ORDER)) {
         foreach ($scripts as $script) {
             if (preg_match('/\btype\s*=\s*["\']application\/(?:ld\+json|json)["\']/i', $script[1]) === 1) {
                 continue;
             }
-            if (preg_match('/\bsrc\s*=/i', $script[1]) === 1) {
+            if (preg_match('/\bsrc\s*=\s*["\'][^"\']+["\']/i', $script[1]) === 1) {
                 continue;
             }
-            $violations[] = 'Inline browser JavaScript: ' . $relativePath;
-            break;
+            throw new RuntimeException('Inline browser JavaScript is forbidden in ordinary Web views; move it to a Vite entrypoint: ' . $relativePath);
         }
     }
-}
-
-if ($violations !== []) {
-    throw new RuntimeException(
-        "Ordinary Web views must remain asset-pure. Violations:\n - " . implode("\n - ", $violations)
-    );
 }
 
 $assets = (new ViteAssetManifest($manifestPath))->assets($entries);

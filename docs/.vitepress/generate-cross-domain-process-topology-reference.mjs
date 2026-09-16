@@ -24,51 +24,51 @@ function shortContract(ref) {
 function render(topology) {
   const lines = [
     '---',
-    'title: Cross-Domain Process Topology',
-    'description: Generated topology of canonical business-process hops across COS Domain boundaries, including required contracts, target capabilities and evidence strength.',
+    'title: Міждоменна топологія бізнес-процесів',
+    'description: Згенерована topology канонічних переходів бізнес-процесів через межі COS Domains, включно з required contracts, target capabilities та evidence strength.',
     'status: generated',
-    'updated: 2026-09-15',
+    'updated: 2026-09-16',
     'kind: reference',
     'contract: reference-v1',
     'generated: true',
     '---',
     '',
-    '# Cross-Domain Process Topology',
+    '# Міждоменна топологія бізнес-процесів',
     '',
-    'Generated from Process Registry schema v5+ cross-domain steps and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
+    'Згенеровано з cross-domain кроків Process Registry schema v5+ і каталогу runtime evidence поточного checkout. Не редагуйте цю сторінку вручну.',
     '',
-    'This view answers **where a business process leaves its owning Domain, which canonical contract authorizes that hop, which target capability is used, and how the contract is evidenced**.',
+    'Це представлення показує, **де бізнес-процес залишає свій Domain-власник, який канонічний contract дозволяє цей перехід, яка target capability використовується і як contract підтверджено evidence**.',
     '',
-    '## Summary',
+    '## Підсумок',
     '',
-    `- **Canonical processes scanned:** ${topology.processCount}`,
-    `- **Cross-domain processes:** ${topology.crossDomainProcessCount}`,
-    `- **Cross-domain steps:** ${topology.crossDomainStepCount}`,
-    `- **Unique boundaries:** ${topology.boundaryCount}`,
-    `- **Participating Domains:** ${topology.domains.length}`,
+    `- **Перевірено канонічних процесів:** ${topology.processCount}`,
+    `- **Cross-domain процесів:** ${topology.crossDomainProcessCount}`,
+    `- **Cross-domain кроків:** ${topology.crossDomainStepCount}`,
+    `- **Унікальних меж:** ${topology.boundaryCount}`,
+    `- **Domains-учасників:** ${topology.domains.length}`,
     '',
-    '## Domain topology',
+    '## Топологія доменів',
     '',
   ];
 
   if (topology.boundaries.length === 0) {
-    lines.push('No canonical cross-domain process hops are currently declared.', '');
+    lines.push('Канонічних cross-domain переходів процесів наразі не задекларовано.', '');
   } else {
     lines.push('```mermaid', 'flowchart LR');
     for (const domain of topology.domains) {
       lines.push(`    ${nodeId(domain)}["${domain}"]`);
     }
     for (const boundary of topology.boundaries) {
-      const label = `${shortContract(boundary.contract)} · ${boundary.capability ?? 'capability gap'} · ${boundary.stepCount} step${boundary.stepCount === 1 ? '' : 's'}`;
+      const label = `${shortContract(boundary.contract)} · ${boundary.capability ?? 'прогалина capability'} · ${boundary.stepCount} ${boundary.stepCount === 1 ? 'крок' : 'кроків'}`;
       lines.push(`    ${nodeId(boundary.fromDomain)} -->|${label}| ${nodeId(boundary.toDomain)}`);
     }
     lines.push('```', '');
   }
 
   lines.push(
-    '## Process hops',
+    '## Переходи процесів',
     '',
-    '| Process | Step | From | To | Contract | Target capability | Evidence |',
+    '| Процес | Крок | З Domain | До Domain | Contract | Target capability | Evidence |',
     '| --- | --- | --- | --- | --- | --- | --- |',
   );
 
@@ -80,11 +80,11 @@ function render(topology) {
     }
   }
 
-  lines.push('', '## Boundary aggregation', '');
+  lines.push('', '## Агрегація меж', '');
   if (topology.boundaries.length === 0) {
-    lines.push('No boundaries to aggregate.', '');
+    lines.push('Немає меж для агрегації.', '');
   } else {
-    lines.push('| Boundary | Contract | Capability | Processes | Steps | Evidence |', '| --- | --- | --- | ---: | ---: | --- |');
+    lines.push('| Межа | Contract | Capability | Процесів | Кроків | Evidence |', '| --- | --- | --- | ---: | ---: | --- |');
     for (const boundary of topology.boundaries) {
       lines.push(`| \`${boundary.fromDomain} → ${boundary.toDomain}\` | \`${escapeCell(boundary.contract)}\` | ${boundary.capability ? `\`${boundary.capability}\`` : 'gap'} | ${boundary.processCount} | ${boundary.stepCount} | \`${boundary.evidenceStrength}\` |`);
     }
@@ -92,15 +92,15 @@ function render(topology) {
   }
 
   lines.push(
-    '## Authority and limitations',
+    '## Авторитетність і обмеження',
     '',
-    '- Process Registry owns process topology and the Domain assigned to each step.',
-    '- Module `cross_domain_contracts` declarations own synchronous Domain-boundary authority.',
-    '- Runtime Evidence Resolver verifies that a process-owner Domain declares a `requires` contract toward the target Domain.',
-    '- Target capability remains owned by the target Domain; a cross-domain hop never creates shared state ownership.',
-    '- This reference aggregates canonical modeled hops only. It does not infer hidden dependencies from SQL, imports, service locators or HTTP calls.',
-    '- Evidence strength describes structural current-checkout evidence. It is not an observed production execution trace.',
-    '- The interactive documentation view is a projection of Process Registry semantics. This generated page is the evidence-enriched reference.',
+    '- Process Registry володіє topology процесу і Domain, призначеним кожному кроку.',
+    '- Декларації module `cross_domain_contracts` володіють authority синхронних Domain boundaries.',
+    '- Runtime Evidence Resolver перевіряє, що Domain-власник процесу декларує `requires` contract до target Domain.',
+    '- Target capability залишається у власності target Domain; cross-domain перехід ніколи не створює shared state ownership.',
+    '- Цей довідник агрегує лише канонічні змодельовані переходи. Він не виводить hidden dependencies із SQL, imports, service locators або HTTP calls.',
+    '- Evidence strength описує структурне evidence поточного checkout. Це не observed production execution trace.',
+    '- Interactive documentation view є projection семантики Process Registry. Ця generated page є evidence-enriched reference.',
     '',
   );
 

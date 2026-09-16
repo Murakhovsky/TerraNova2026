@@ -26,25 +26,25 @@ if (is_file($projectionPath)) {
     }
 }
 
-$lines = ['---','title: Architecture Graph Reference','description: Generated vocabulary and projection catalogue for the canonical COS Architecture Graph.','status: generated','kind: reference','generated: true','---','','<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->','','# Architecture Graph Reference','', '> Джерело істини: `ArchitectureGraphVocabulary` + `ArchitectureProjectionRegistry` у current checkout.','','## Node types','','| Constant | Value |','| --- | --- |'];
+$lines = ['---','title: Довідник графа архітектури','description: Згенерований словник і каталог projections для канонічного COS Architecture Graph.','status: generated','kind: reference','generated: true','---','','<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->','','# Довідник графа архітектури','', '> Джерело істини: `ArchitectureGraphVocabulary` + `ArchitectureProjectionRegistry` у поточному checkout.','','## Типи вузлів','','| Константа | Значення |','| --- | --- |'];
 foreach ($types as $name => $value) $lines[] = sprintf('| `%s` | `%s` |', $name, $value);
 $lines[] = '';
-$lines[] = '## Relations';
+$lines[] = '## Зв’язки';
 $lines[] = '';
-$lines[] = '| Constant | Value |';
+$lines[] = '| Константа | Значення |';
 $lines[] = '| --- | --- |';
 foreach ($relations as $name => $value) $lines[] = sprintf('| `%s` | `%s` |', $name, $value);
 $lines[] = '';
-$lines[] = '## Canonical projections';
+$lines[] = '## Канонічні projections';
 $lines[] = '';
-$lines[] = '| Projection | Label |';
+$lines[] = '| Projection | Мітка |';
 $lines[] = '| --- | --- |';
 foreach ($projectionNames as $name => $label) $lines[] = sprintf('| `%s` | %s |', $name, $label);
-if ($projectionNames === []) $lines[] = '| — | No static projection definitions detected. |';
+if ($projectionNames === []) $lines[] = '| — | Статичних projection definitions не знайдено. |';
 $lines[] = '';
-$lines[] = '## Executable surface';
+$lines[] = '## Виконувана поверхня';
 $lines[] = '';
-$lines[] = 'The live Architecture Explorer is exposed by the Web interface at `/cos/architecture`; this page documents the vocabulary behind that executable graph rather than duplicating its rendering.';
+$lines[] = 'Живий Architecture Explorer доступний у Web interface за `/cos/architecture`; ця сторінка документує vocabulary виконуваного графа, а не дублює його rendering.';
 $lines[] = '';
 $content = implode("\n", $lines);
 $path = $repoRoot . '/docs/12-reference/architecture-graph.md';

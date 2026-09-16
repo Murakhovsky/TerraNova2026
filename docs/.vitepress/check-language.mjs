@@ -1,45 +1,40 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
 
-const publicRoots = [
+const strictRoots = [
   path.join(docsRoot, 'for-business'),
   path.join(docsRoot, 'for-integrators'),
 ];
 
-const explicitFiles = [path.join(docsRoot, 'index.md')];
+const structuralRoots = [
+  ...fs.readdirSync(docsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^\d{2}-/.test(entry.name))
+    .map((entry) => path.join(docsRoot, entry.name)),
+  path.join(docsRoot, 'for-developers'),
+];
+
+const explicitStrictFiles = [path.join(docsRoot, 'index.md')];
 
 const allowedLatin = new Set([
-  'COS',
-  'CRM',
-  'API',
-  'HTTP',
-  'HTTPS',
-  'JSON',
-  'XML',
-  'CSV',
-  'OAuth',
-  'REST',
-  'SQL',
-  'ERP',
-  'B2B',
-  'SaaS',
-  'Telegram',
-  'Viber',
-  'WhatsApp',
-  'Google',
-  'Microsoft',
-  'Meta',
-  'OpenAI',
-  'SAP',
-  'Sales',
-  'Property',
-  'Diagnostic',
-  'Terra',
-  'Nova',
+  'COS', 'CRM', 'API', 'HTTP', 'HTTPS', 'JSON', 'XML', 'CSV', 'OAuth', 'REST', 'SQL', 'ERP', 'B2B', 'SaaS',
+  'Telegram', 'Viber', 'WhatsApp', 'Google', 'Microsoft', 'Meta', 'OpenAI', 'SAP',
+  'Sales', 'Property', 'Diagnostic', 'Terra', 'Nova',
+]);
+
+const technicalHeadingWords = new Set([
+  ...allowedLatin,
+  'Kernel', 'Runtime', 'Process', 'Registry', 'Capability', 'Capabilities', 'Event', 'Events', 'Outbox',
+  'Rule', 'Rules', 'Agent', 'Agents', 'Action', 'Actions', 'Policy', 'Policies', 'Approval', 'Queue', 'Audit',
+  'LLM', 'AI', 'Module', 'Modules', 'Extension', 'Extensions', 'Point', 'Points', 'Command', 'DTO', 'Application',
+  'Use', 'Case', 'Cases', 'Web', 'UI', 'Workspace', 'Portal', 'Public', 'Domain', 'Domains', 'Architecture', 'Explorer',
+  'Visualization', 'Reference', 'Graph', 'Contract', 'Contracts', 'Integration', 'Integrations', 'Interface', 'Interfaces',
+  'Code', 'Map', 'AS', 'IS', 'TARGET', 'PHP', 'MySQL', 'AWS', 'CI', 'CLI', 'Vite', 'VitePress', 'Mermaid', 'BPMN',
+  'Cytoscape', 'JavaScript', 'CSS', 'HTML', 'ADR', 'MCP', 'SEO', 'URL', 'URLs', 'CRUD', 'DTOs', 'FQCN',
 ]);
 
 function walkMarkdown(directory) {
@@ -57,16 +52,41 @@ function relative(file) {
   return path.relative(docsRoot, file).split(path.sep).join('/');
 }
 
+function hasUkrainian(value) {
+  return /[А-Яа-яІіЇїЄєҐґ]/u.test(value ?? '');
+}
+
 function visibleLine(line) {
   return line
     .replace(/<!--.*?-->/g, '')
     .replace(/`[^`]*`/g, '')
-    .replace(/\]\([^)]*\)/g, ']')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/https?:\/\/\S+/g, '')
     .replace(/<[^>]+>/g, '');
 }
 
-function scanFile(file) {
+function parseFrontmatter(source) {
+  const match = source.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!match) return {};
+  const result = {};
+  for (const key of ['title', 'description']) {
+    const value = match[1].match(new RegExp(`^${key}:\\s*(.+)$`, 'm'))?.[1]?.trim();
+    if (value) result[key] = value.replace(/^['"]|['"]$/g, '');
+  }
+  return result;
+}
+
+function isTechnicalHeading(text) {
+  const visible = visibleLine(text)
+    .replace(/V\d+(?:\.\d+)*/gi, ' ')
+    .replace(/\b\d+(?:\.\d+)*\b/g, ' ')
+    .replace(/[→←↔–—/:()\[\],.&+*=|]/g, ' ');
+  const tokens = visible.match(/\b[A-Za-z][A-Za-z0-9.+-]*\b/g) ?? [];
+  if (tokens.length === 0) return true;
+  return tokens.every((token) => technicalHeadingWords.has(token));
+}
+
+function scanStrictFile(file) {
   const lines = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').split('\n');
   const errors = [];
   let inFrontmatter = lines[0]?.trim() === '---';
@@ -106,14 +126,75 @@ function scanFile(file) {
   return errors;
 }
 
-const files = [...new Set([...explicitFiles, ...publicRoots.flatMap(walkMarkdown)])];
-const errors = files.flatMap(scanFile);
+function scanStructuralFile(file) {
+  const source = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+  const lines = source.split('\n');
+  const frontmatter = parseFrontmatter(source);
+  const errors = [];
+
+  if (!frontmatter.description || !hasUkrainian(frontmatter.description)) {
+    errors.push(`${relative(file)}: frontmatter description має містити український опис`);
+  }
+
+  let inFrontmatter = lines[0]?.trim() === '---';
+  let inFence = false;
+  let fenceMarker = null;
+  let headingCount = 0;
+  let localizedHeadingCount = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const raw = lines[index];
+    const trimmed = raw.trim();
+
+    if (inFrontmatter) {
+      if (index > 0 && trimmed === '---') inFrontmatter = false;
+      continue;
+    }
+
+    const fence = trimmed.match(/^(```|~~~)/)?.[1];
+    if (fence) {
+      if (!inFence) {
+        inFence = true;
+        fenceMarker = fence;
+      } else if (fence === fenceMarker) {
+        inFence = false;
+        fenceMarker = null;
+      }
+      continue;
+    }
+    if (inFence) continue;
+
+    const heading = raw.match(/^(#{1,3})\s+(.+?)\s*$/);
+    if (!heading) continue;
+    headingCount += 1;
+    const text = visibleLine(heading[2]);
+    if (hasUkrainian(text)) {
+      localizedHeadingCount += 1;
+      continue;
+    }
+    if (isTechnicalHeading(text)) continue;
+    errors.push(`${relative(file)}:${index + 1}: англомовний структурний заголовок '${heading[2]}'`);
+  }
+
+  if (headingCount > 0 && localizedHeadingCount === 0 && !hasUkrainian(frontmatter.title ?? '')) {
+    errors.push(`${relative(file)}: немає жодного україномовного структурного заголовка`);
+  }
+
+  return errors;
+}
+
+const strictFiles = [...new Set([...explicitStrictFiles, ...strictRoots.flatMap(walkMarkdown)])];
+const structuralFiles = [...new Set(structuralRoots.flatMap(walkMarkdown))];
+const errors = [
+  ...strictFiles.flatMap(scanStrictFile),
+  ...structuralFiles.flatMap(scanStructuralFile),
+];
 
 if (errors.length > 0) {
   console.error(`Перевірка мови не пройдена (${errors.length}):`);
   for (const error of errors) console.error(`- ${error}`);
-  console.error('Нетехнічна українська документація не повинна містити звичайну англійську лексику.');
+  console.error('Публічна українська документація не повинна містити звичайну англійську лексику; технічний корпус має мати українську metadata/heading оболонку.');
   process.exit(1);
 }
 
-console.log(`Перевірка мови пройдена: ${files.length} публічних та інтеграторських сторінок.`);
+console.log(`Перевірка мови пройдена: ${strictFiles.length} strict pages + ${structuralFiles.length} canonical technical pages.`);

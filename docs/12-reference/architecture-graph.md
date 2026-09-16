@@ -1,20 +1,20 @@
 ---
-title: Architecture Graph Reference
-description: Generated vocabulary and projection catalogue for the canonical COS Architecture Graph.
+title: Довідник графа архітектури
+description: Згенерований словник і каталог projections для канонічного COS Architecture Graph.
 status: generated
 kind: reference
 generated: true
 ---
 
-<!-- GENERATED FILE: DO NOT EDIT MANUALLY. Run `npm run docs:generate`. -->
+<!-- ЗГЕНЕРОВАНИЙ ФАЙЛ: НЕ РЕДАГУВАТИ ВРУЧНУ. Запустіть `npm run docs:generate`. -->
 
-# Architecture Graph Reference
+# Довідник графа архітектури
 
-> Джерело істини: `ArchitectureGraphVocabulary` + `ArchitectureProjectionRegistry` у current checkout.
+> Джерело істини: `ArchitectureGraphVocabulary` + `ArchitectureProjectionRegistry` у поточному checkout.
 
-## Node types
+## Типи вузлів
 
-| Constant | Value |
+| Константа | Значення |
 | --- | --- |
 | `TYPE_ACTION` | `action` |
 | `TYPE_AGENT` | `agent` |
@@ -29,9 +29,9 @@ generated: true
 | `TYPE_RULE` | `rule` |
 | `TYPE_SERVICE` | `service` |
 
-## Relations
+## Зв’язки
 
-| Constant | Value |
+| Константа | Значення |
 | --- | --- |
 | `REL_CONTAINS` | `contains` |
 | `REL_CONTRIBUTES` | `contributes` |
@@ -46,9 +46,9 @@ generated: true
 | `REL_REQUIRES_CONTRACT` | `requires_contract` |
 | `REL_TRIGGERS` | `triggers` |
 
-## Canonical projections
+## Канонічні projections
 
-| Projection | Label |
+| Projection | Мітка |
 | --- | --- |
 | `system` | System |
 | `runtime` | Runtime |
@@ -61,6 +61,6 @@ generated: true
 | `integrations` | Integrations |
 | `code` | Code |
 
-## Executable surface
+## Виконувана поверхня
 
-The live Architecture Explorer is exposed by the Web interface at `/cos/architecture`; this page documents the vocabulary behind that executable graph rather than duplicating its rendering.
+Живий Architecture Explorer доступний у Web interface за `/cos/architecture`; ця сторінка документує vocabulary виконуваного графа, а не дублює його rendering.

@@ -11,7 +11,13 @@ $domains = is_array($canonicalSummary['domains'] ?? null) ? $canonicalSummary['d
 $pageStatus = $pageStatus ?? null;
 $graphJson = json_encode(
     $architectureGraph,
-    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
+    JSON_UNESCAPED_UNICODE
+        | JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG
+        | JSON_HEX_AMP
+        | JSON_HEX_APOS
+        | JSON_HEX_QUOT
+        | JSON_INVALID_UTF8_SUBSTITUTE,
 );
 if (!is_string($graphJson)) {
     $graphJson = '{"views":{},"summary":{},"default_view":""}';
@@ -22,6 +28,7 @@ if (!is_string($graphJson)) {
   class="tn-page tn-admin-page tn-architecture-explorer"
   data-architecture-explorer
   data-architecture-endpoint="<?php echo $h($this->url->get('cos/architecture/graph')); ?>"
+  data-architecture-default-view="<?php echo $h($defaultView); ?>"
 >
   <nav class="tn-breadcrumbs">
     <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a><span>/</span>

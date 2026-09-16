@@ -144,8 +144,10 @@ fi
 
 echo "Worker container is ready: running with restart_count=0"
 
-# This is the blocking application check. Run it inside the server so a public
-# CDN/WAF/TLS issue cannot make a healthy deployment look broken.
+# docker compose does not recreate nginx when only a bind-mounted config file
+# changes. Validate and reload it explicitly so the running process consumes the
+# just-synced proxy contract instead of serving yesterday's configuration with
+# today's files mounted underneath it.
 NGINX_ID="$("${COMPOSE[@]}" ps -q nginx)"
 if [[ -z "$NGINX_ID" ]]; then
   echo "Nginx container was not created." >&2
@@ -153,6 +155,22 @@ if [[ -z "$NGINX_ID" ]]; then
   exit 28
 fi
 
+if ! "${DOCKER[@]}" exec "$NGINX_ID" nginx -t; then
+  echo "Nginx container rejected the synced configuration." >&2
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx >&2 || true
+  exit 28
+fi
+
+if ! "${DOCKER[@]}" exec "$NGINX_ID" nginx -s reload; then
+  echo "Nginx container could not reload the synced configuration." >&2
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx >&2 || true
+  exit 28
+fi
+
+echo "Nginx container configuration validated and reloaded."
+
+# This is the blocking application check. Run it inside the server so a public
+# CDN/WAF/TLS issue cannot make a healthy deployment look broken.
 APP_HEALTHY=0
 for _ in $(seq 1 15); do
   if "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O /dev/null http://127.0.0.1/cos; then

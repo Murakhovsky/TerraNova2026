@@ -59,40 +59,40 @@ function coverage(definition) {
 function render(definitions) {
   const lines = [
     '---',
-    'title: Business Process Registry',
-    'description: Generated registry of canonical COS business processes, ownership, capability coverage and evidence-backed runtime verification.',
+    'title: Реєстр бізнес-процесів',
+    'description: Згенерований реєстр канонічних бізнес-процесів COS, ownership, покриття capabilities і runtime verification на основі evidence.',
     'status: generated',
-    'updated: 2026-09-15',
+    'updated: 2026-09-16',
     'kind: reference',
     'contract: reference-v1',
     'generated: true',
     '---',
     '',
-    '# Business Process Registry',
+    '# Реєстр бізнес-процесів',
     '',
-    'Generated from `resources/processes/*.json`, canonical module capabilities and the current-checkout runtime evidence catalogue. Do not edit this page manually.',
+    'Згенеровано з `resources/processes/*.json`, канонічних module capabilities і каталогу runtime evidence поточного checkout. Не редагуйте цю сторінку вручну.',
     '',
-    'Business state, capability coverage and runtime verification are separate dimensions: a step may be executable in current code while its Domain capability vocabulary is still incomplete.',
+    'Бізнес-стан, покриття capabilities і runtime verification є окремими вимірами: крок може виконуватися поточним кодом, навіть якщо vocabulary можливостей його Domain ще неповний.',
     '',
-    '## Process index',
+    '## Індекс процесів',
     '',
-    '| Process | Domain | Business state | Verification | Steps | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |',
+    '| Процес | Domain | Бізнес-стан | Verification | Кроків | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |',
     '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
   ];
 
   for (const definition of definitions) {
     const stats = coverage(definition);
-    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | \`${stats.level}\` | ${stats.steps} | ${stats.crossDomain} | ${stats.owned}/${stats.steps} | ${stats.capabilityMapped}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} | [Open workflow](${workflowLink(definition)}) |`);
+    lines.push(`| ${escapeCell(definition.title)} | \`${definition.domain}\` | \`${definition.state}\` | \`${stats.level}\` | ${stats.steps} | ${stats.crossDomain} | ${stats.owned}/${stats.steps} | ${stats.capabilityMapped}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} | [Відкрити workflow](${workflowLink(definition)}) |`);
   }
 
-  lines.push('', '## Verification and capability model', '');
-  lines.push('- `capability mapped` — the step points to a discoverable capability declared by its Domain module and therefore present in the canonical Architecture Graph capability vocabulary.');
-  lines.push('- `capability gap` — the step is real and may have runtime evidence, but the owning Domain does not yet declare a sufficiently semantic module capability for that business operation.');
-  lines.push('- `cross-domain` — the step executes in a Domain different from the process owner and is guarded by a verified `requires` contract from the process Domain to the step Domain.');
-  lines.push('- `documented` — registry topology exists, but at least one critical step is not backed by resolvable current-checkout evidence.');
-  lines.push('- `source-verified` — every critical step has at least one mapping resolved to current source/code evidence.');
-  lines.push('- `runtime-verified` — every critical step has at least one canonical runtime/contract-registry mapping. This is structural verification, not proof that a production execution trace was observed.');
-  lines.push('', '| Process | Owned steps | Capability mapped | Capability gaps | Cross-domain steps | Mapped steps | Evidence-verified steps | Runtime-backed steps | Critical source-verified | Critical runtime-verified |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
+  lines.push('', '## Модель перевірки та можливостей', '');
+  lines.push('- `capability mapped` — крок посилається на discoverable capability, задекларовану його Domain module і присутню в канонічному vocabulary capabilities Architecture Graph.');
+  lines.push('- `capability gap` — крок реальний і може мати runtime evidence, але Domain-власник ще не декларує достатньо семантичну module capability для цієї бізнес-операції.');
+  lines.push('- `cross-domain` — крок виконується в Domain, відмінному від власника процесу, і захищений перевіреним `requires` contract від Domain процесу до Domain кроку.');
+  lines.push('- `documented` — topology реєстру існує, але щонайменше один критичний крок не підтверджений resolvable evidence поточного checkout.');
+  lines.push('- `source-verified` — кожний критичний крок має щонайменше один mapping, який резолвиться до поточного source/code evidence.');
+  lines.push('- `runtime-verified` — кожний критичний крок має щонайменше один mapping до канонічного runtime/contract registry. Це структурна перевірка, а не доказ спостереженого production execution trace.');
+  lines.push('', '| Процес | Кроків з owner | Capability mapped | Capability gaps | Cross-domain кроки | Mapped кроки | Evidence-verified кроки | Runtime-backed кроки | Critical source-verified | Critical runtime-verified |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const definition of definitions) {
     const stats = coverage(definition);
     lines.push(`| ${escapeCell(definition.title)} | ${stats.owned}/${stats.steps} | ${stats.capabilityMapped}/${stats.steps} | ${stats.capabilityGaps}/${stats.steps} | ${stats.crossDomain}/${stats.steps} | ${stats.mappedSteps}/${stats.steps} | ${stats.verifiedSteps}/${stats.steps} | ${stats.runtimeVerifiedSteps}/${stats.steps} | ${stats.criticalSourceVerified}/${stats.critical} | ${stats.criticalRuntimeVerified}/${stats.critical} |`);
@@ -104,40 +104,40 @@ function render(definitions) {
     lines.push(`- **Process ID:** \`${definition.id}\``);
     lines.push(`- **Schema:** \`v${definition.schema_version}\``);
     lines.push(`- **Domain:** \`${definition.domain}\``);
-    lines.push(`- **Business state:** \`${definition.state}\``);
-    lines.push(`- **Capability coverage:** ${stats.capabilityMapped}/${stats.steps} steps`);
-    lines.push(`- **Cross-domain steps:** ${stats.crossDomain}/${stats.steps}`);
+    lines.push(`- **Бізнес-стан:** \`${definition.state}\``);
+    lines.push(`- **Покриття capabilities:** ${stats.capabilityMapped}/${stats.steps} кроків`);
+    lines.push(`- **Cross-domain кроки:** ${stats.crossDomain}/${stats.steps}`);
     lines.push(`- **Derived verification:** \`${stats.level}\``);
-    lines.push(`- **Trigger:** ${definition.trigger}`);
+    lines.push(`- **Тригер:** ${definition.trigger}`);
     lines.push(`- **Workflow:** [${definition.title}](${workflowLink(definition)})`);
-    lines.push('', '**Outcomes**', '');
+    lines.push('', '**Результати**', '');
     for (const outcome of definition.outcomes) lines.push(`- ${outcome}`);
-    lines.push('', '**Ownership, capability and runtime evidence**', '');
-    lines.push('| Step | Owner | Domain | Capability / gap | Kind | Critical | Executable / evidence mapping |');
+    lines.push('', '**Відповідальність, capabilities і runtime evidence**', '');
+    lines.push('| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |');
     lines.push('| --- | --- | --- | --- | --- | --- | --- |');
     for (const step of definition.steps) {
       const mappings = (step.runtime ?? []).map((mapping) => mappingLabel(mapping, definition)).join('<br>') || '—';
-      lines.push(`| ${escapeCell(step.label)} | ${escapeCell(step.owner ?? '—')} | \`${step.domain ?? definition.domain}\` | ${capabilityLabel(step)} | \`${step.kind}\` | ${step.critical === true ? 'yes' : 'no'} | ${mappings} |`);
+      lines.push(`| ${escapeCell(step.label)} | ${escapeCell(step.owner ?? '—')} | \`${step.domain ?? definition.domain}\` | ${capabilityLabel(step)} | \`${step.kind}\` | ${step.critical === true ? 'так' : 'ні'} | ${mappings} |`);
     }
   }
 
   lines.push(
     '',
-    '## Authority and limitations',
+    '## Авторитетність і обмеження',
     '',
-    '- Registry schema `v5` extends v4 with contract-guarded cross-domain steps. Existing v4 same-domain definitions remain valid.',
-    '- A declared capability must resolve to the step Domain capability vocabulary; a missing semantic capability must be represented explicitly as `capability: null` plus `capability_gap`.',
-    '- Capability coverage is not inferred from class names, routes or permissions. It reports only canonical discoverable module capabilities.',
-    '- A cross-domain step is legal only when the process definition uses schema v5+ and the step contains a verified `contract` mapping whose current module evidence declares `role: requires` from the process Domain to the step Domain.',
-    '- Cross-domain execution does not create shared state ownership: the step capability belongs to the foreign Domain while the process remains owned by its root Domain.',
-    '- Business state (`as-is` / `to-be`) remains separate from derived runtime verification.',
-    '- Verification is never authored in process JSON. It is calculated from mappings resolved against `generate-runtime-evidence.php` and exact source symbols in the current checkout.',
-    '- `use_case` and `command` evidence is source-backed from canonical module directories.',
-    '- `event` evidence is runtime-backed from explicit Domain event catalogues; `contract` evidence is runtime-backed from canonical module cross-domain contract declarations.',
-    '- `source` mappings must resolve to an existing repository file and, when provided, contain the declared symbol.',
-    '- `runtime-verified` here means structurally backed by canonical runtime registries for every critical step. It does not mean COS observed an end-to-end production trace. Observed execution evidence belongs to a later runtime-tracing layer.',
-    '- `ProcessDiagram` renders core flow, ownership, capability and Domain projections from the same registry definition.',
-    '- Coverage ratios expose architecture/documentation completeness; they are not business performance KPIs.',
+    '- Registry schema `v5` розширює v4 contract-guarded cross-domain кроками. Наявні same-domain definitions v4 залишаються валідними.',
+    '- Задекларована capability має резолвитися до vocabulary capabilities Domain кроку; відсутня semantic capability має бути явно представлена як `capability: null` + `capability_gap`.',
+    '- Покриття capabilities не виводиться з назв класів, routes або permissions. Воно показує лише канонічні discoverable module capabilities.',
+    '- Cross-domain крок легальний лише для schema v5+ і за наявності перевіреного `contract` mapping, чиє module evidence декларує `role: requires` від Domain процесу до Domain кроку.',
+    '- Cross-domain виконання не створює shared state ownership: capability кроку належить foreign Domain, а процес залишається у власності root Domain.',
+    '- Бізнес-стан (`as-is` / `to-be`) відділений від derived runtime verification.',
+    '- Verification ніколи не задається вручну в process JSON. Вона обчислюється з mappings, перевірених через `generate-runtime-evidence.php`, і точних source symbols поточного checkout.',
+    '- Evidence типів `use_case` і `command` підтверджується source з канонічних module directories.',
+    '- Evidence типу `event` підтверджується runtime з explicit Domain event catalogues; `contract` — з канонічних module cross-domain contract declarations.',
+    '- `source` mappings мають резолвитися до наявного repository file і, якщо symbol заданий, містити оголошений symbol.',
+    '- `runtime-verified` тут означає структурне підтвердження canonical runtime registries для кожного критичного кроку. Це не означає, що COS спостерігав end-to-end production trace.',
+    '- `ProcessDiagram` рендерить core flow, ownership, capability і Domain projections з того самого registry definition.',
+    '- Coverage ratios показують повноту architecture/documentation, а не business performance KPI.',
     '',
   );
 
