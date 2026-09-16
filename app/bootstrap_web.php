@@ -9,6 +9,7 @@ error_reporting(E_ALL);
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
 require APP_PATH . '/config/environment.php';
+require APP_PATH . '/config/trusted_proxy.php';
 
 require BASE_PATH . '/vendor/autoload.php';
 Dotenv\Dotenv::createImmutable(BASE_PATH)->safeLoad();
