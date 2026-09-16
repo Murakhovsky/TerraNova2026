@@ -108,7 +108,7 @@ for (const key of gapSteps.keys()) {
 
 if (fs.existsSync(referenceIndex)) {
   const index = fs.readFileSync(referenceIndex, 'utf8');
-  if (!index.includes('Current Process Registry schema: **v5**.')) {
+  if (!index.includes('Поточна максимальна Process Registry schema: **v5**.')) {
     fail('Reference Index must declare current Process Registry schema v5.');
   }
   if (!index.includes('Capability Debt Registry schema: **v1**.')) {
