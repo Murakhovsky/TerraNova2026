@@ -6,6 +6,8 @@ $dockerNginx = (string) file_get_contents($root . '/docker/nginx/default.conf');
 $httpBootstrap = (string) file_get_contents($root . '/deploy/configure-company-os-http.sh');
 $tls = (string) file_get_contents($root . '/deploy/configure-dev-tls.sh');
 $devDeploy = (string) file_get_contents($root . '/deploy/dev.sh');
+$bootstrapWeb = (string) file_get_contents($root . '/app/bootstrap_web.php');
+$trustedProxy = (string) file_get_contents($root . '/app/config/trusted_proxy.php');
 $workflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
 
 foreach ([
@@ -52,6 +54,35 @@ foreach ([
     if (!str_contains($devDeploy, $needle)) {
         throw new RuntimeException('Container nginx reload contract is missing: ' . $needle);
     }
+}
+
+if (!str_contains($bootstrapWeb, "require APP_PATH . '/config/trusted_proxy.php';")) {
+    throw new RuntimeException('Web bootstrap must normalize trusted proxy request metadata before DI services are created.');
+}
+
+foreach ([
+    'HTTP_X_FORWARDED_PROTO',
+    "\$server['HTTPS'] = 'on';",
+    "\$server['REQUEST_SCHEME'] = \$scheme;",
+    "\$server['SERVER_PORT'] = '443';",
+] as $needle) {
+    if (!str_contains($trustedProxy, $needle)) {
+        throw new RuntimeException('Application trusted-proxy normalization contract is missing: ' . $needle);
+    }
+}
+
+require $root . '/app/config/trusted_proxy.php';
+$proxiedHttps = [
+    'HTTP_X_FORWARDED_PROTO' => 'https',
+    'HTTPS' => 'off',
+    'REQUEST_SCHEME' => 'http',
+    'SERVER_PORT' => '80',
+];
+normalizeTrustedProxyRequest($proxiedHttps);
+if (($proxiedHttps['HTTPS'] ?? null) !== 'on'
+    || ($proxiedHttps['REQUEST_SCHEME'] ?? null) !== 'https'
+    || ($proxiedHttps['SERVER_PORT'] ?? null) !== '443') {
+    throw new RuntimeException('Trusted HTTPS proxy metadata is not normalized for the PHP runtime.');
 }
 
 if (!str_contains($workflow, 'bash tests/smoke/https_proxy_contract.sh')) {
