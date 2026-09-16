@@ -58,7 +58,15 @@ foreach ($views as $view) {
         throw new RuntimeException('Inline CSS is forbidden in ordinary Web views; move it to frontend feature ownership: ' . $relativePath);
     }
 
-    if (preg_match_all('/<script\b([^>]*)>/i', $source, $scripts, PREG_SET_ORDER)) {
+    // PHP expressions inside an HTML attribute contain a PHP closing delimiter, which a
+    // naive opening-tag regex mistakes for the end of the script tag. Replace template
+    // expressions only for static tag inspection; the original view source is untouched.
+    $scriptScanSource = preg_replace('/<\?php\b.*?\?>/s', 'PHP_EXPR', $source);
+    if (!is_string($scriptScanSource)) {
+        throw new RuntimeException('Unable to prepare Web view for script asset inspection: ' . $relativePath);
+    }
+
+    if (preg_match_all('/<script\b([^>]*)>/i', $scriptScanSource, $scripts, PREG_SET_ORDER)) {
         foreach ($scripts as $script) {
             if (preg_match('/\btype\s*=\s*["\']application\/(?:ld\+json|json)["\']/i', $script[1]) === 1) {
                 continue;

@@ -55,11 +55,19 @@ foreach (['data-architecture-search', 'data-architecture-depth', 'data-architect
 }
 $assert(str_contains($client, 'cytoscape@3.34.3'), 'Cytoscape browser dependency must be version-pinned.');
 
+$entrypoint = $read('frontend/entrypoints/cos-architecture-explorer.js');
+$assert(str_contains($entrypoint, 'hydrateArchitecturePayload'), 'Explorer entrypoint must recover an unusable embedded payload.');
+$assert(str_contains($entrypoint, "credentials: 'same-origin'"), 'Explorer hydration recovery must preserve the authenticated manager session.');
+$assert(str_contains($entrypoint, "url.searchParams.set('depth', 'all')"), 'Explorer hydration recovery must request complete server projections.');
+$assert(str_contains($entrypoint, "await import('../features/cos/architecture-explorer.js')"), 'Explorer feature must boot only after hydration recovery has run.');
+
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $assert(str_contains($view, 'type="application/json"'), 'Architecture payload must be embedded as non-executable JSON.');
 $assert(str_contains($view, 'data-architecture-stage'), 'Architecture graph stage missing.');
+$assert(str_contains($view, 'data-architecture-default-view='), 'Architecture shell must expose the server-selected default projection independently from JSON hydration.');
+$assert(str_contains($view, 'JSON_INVALID_UTF8_SUBSTITUTE'), 'Architecture payload serialization must survive malformed UTF-8 metadata.');
 
 $navigation = $read('app/Interfaces/Web/Navigation/FrontendNavigation.php');
 $assert(str_contains($navigation, "'path' => 'cos/architecture'"), 'Architecture Explorer must be discoverable from COS navigation.');
 
-echo "Visualization V0.3 architecture boundary passed.\n";
+echo "Visualization V0.3/V0.5.1 architecture boundary passed.\n";
