@@ -45,6 +45,7 @@ jobs:
       - name: Deployment readiness architecture
         run: |
           php tests/architecture/deploy_worker_readiness.php
+          php tests/architecture/deploy_https_proxy.php
           php tests/architecture/cli_worker_tenant_isolation.php
 
       - name: Diagnostic checks
@@ -206,7 +207,7 @@ jobs:
             -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
             ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
-      - name: Configure company-os.shop HTTP reverse proxy
+      - name: Ensure company-os.shop bootstrap reverse proxy
         run: |
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
@@ -233,6 +234,9 @@ jobs:
       - name: External HTTPS application health check
         run: |
           curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
+
+      - name: HTTPS reverse-proxy contract smoke
+        run: bash tests/smoke/https_proxy_contract.sh "https://$COMPANY_OS_DOMAIN"
 
       - name: WEB V0.13 live routing smoke
         run: bash tests/smoke/web_v013_live_routes.sh "https://$COMPANY_OS_DOMAIN"
