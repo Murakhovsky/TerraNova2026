@@ -1,16 +1,16 @@
 ---
-title: Observability & Incident Signals
-description: Logs, metrics, traces, queue signals and incident triage model for COS operations.
+title: Спостережуваність та інциденти
+description: Logs, metrics, traces, queue signals і модель triage для операцій COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: operations
 ---
 
-# Observability & Incident Signals
+# Спостережуваність та інциденти
 
-COS observability має дозволяти перейти від «щось не працює» до конкретної причинно-наслідкової траси.
+Спостережуваність COS має дозволяти перейти від «щось не працює» до конкретної причинно-наслідкової траси.
 
-## Correlation spine
+## Кореляційний ланцюжок
 
 ```text
 request / event / job
@@ -21,6 +21,8 @@ request / event / job
 → persistence / external calls
 → result / error
 ```
+
+`correlation id` має переживати queue/event/external hops, де це можливо.
 
 ## Logs
 
@@ -33,6 +35,8 @@ Structured log для consequential operation повинен, де доречн�
 - outcome/error class;
 - provider/integration reference без secret leakage.
 
+Лог не повинен вимагати від оператора ворожіння по трьох unrelated stack traces, щоб зрозуміти одну бізнесову операцію.
+
 ## Metrics
 
 Корисні категорії:
@@ -40,16 +44,29 @@ Structured log для consequential operation повинен, де доречн�
 - request/use-case latency та error rate;
 - event/outbox backlog;
 - queue depth, attempts, dead-letter count;
+- worker heartbeat/readiness;
 - external provider latency/failure;
 - Agent/LLM latency, usage/cost, schema failures;
 - approval backlog;
-- domain-specific operational KPIs.
+- Domain-specific operational KPIs.
 
 ## Tracing
 
-Critical cross-boundary flows мають бути reconstructable навіть якщо повний distributed tracing не використовується. Correlation id повинен переживати queue/event/external hops, де це можливо.
+Critical cross-boundary flows мають бути reconstructable навіть якщо повний distributed tracing не використовується.
 
-## Incident triage
+Для важливої операції має бути можливо відновити:
+
+```text
+хто / що ініціював
+→ який Domain прийняв запит
+→ яке рішення Policy/Agent було прийнято
+→ які записи та події створено
+→ чи потрапила робота в queue
+→ який external effect виконано
+→ який фінальний result/error
+```
+
+## Triage інциденту
 
 Порядок діагностики:
 
@@ -57,17 +74,22 @@ Critical cross-boundary flows мають бути reconstructable навіть �
 2. знайти correlation/request/job;
 3. визначити Domain owner/use case;
 4. перевірити permission/policy/approval result;
-5. перевірити DB transaction/event/outbox;
+5. перевірити DB transaction/Event/Outbox;
 6. перевірити queue/worker;
 7. перевірити зовнішній provider;
-8. зафіксувати root cause та recovery action.
+8. визначити blast radius;
+9. зафіксувати root cause, recovery action і follow-up control.
 
-## Alert quality
+## Якість alert-ів
 
-Alert повинен означати actionable condition. Якщо система надсилає 400 повідомлень про кожен retry, люди швидко винаходять найнадійніший monitoring tool: mute.
+Alert має означати actionable condition.
 
-## Related
+Якщо система надсилає 400 повідомлень про кожен retry, люди швидко винаходять найнадійніший monitoring tool: mute.
+
+Тому alerting має відрізняти transient retry від terminal failure, локальну помилку одного tenant від системної деградації та warning від реального incident condition.
+
+## Пов’язані сторінки
 
 - [Audit & Diagnostics](../05-runtime/audit-and-diagnostics.md)
-- [External Reliability](../07-api-integrations/external-reliability.md)
-- [Deployment & Health](./deployment-and-health.md)
+- [Надійність зовнішніх інтеграцій](../07-api-integrations/external-reliability.md)
+- [Розгортання та перевірка стану](./deployment-and-health.md)

@@ -1,67 +1,82 @@
 ---
-title: Deployment & Health
-description: Operational deployment contract, readiness and health verification for COS environments.
+title: Розгортання та перевірка стану
+description: Операційний контракт розгортання, готовності та перевірки працездатності середовищ COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: operations
 ---
 
-# Deployment & Health
+# Розгортання та перевірка стану
 
-Deployment вважається завершеним не коли файли опинились на сервері, а коли **schema, runtime, workers, routes і critical health checks узгоджені з одним commit**.
+Розгортання вважається завершеним не тоді, коли файли опинилися на сервері, а коли **schema, runtime, workers, routes і критичні health checks узгоджені з одним commit**.
 
-## Deployment sequence
+## Послідовність розгортання
 
 ```text
-Build / validate commit
+Зібрати та перевірити commit
         ↓
-Apply compatible migrations
+Застосувати сумісні migrations
         ↓
-Deploy application/runtime
+Розгорнути application/runtime
         ↓
-Start/reload services and workers
+Запустити або перезавантажити services і workers
         ↓
 Health / readiness checks
         ↓
-Critical smoke checks
+Критичні smoke checks
         ↓
-Observe errors/queues
+Спостерігати errors / queues
 ```
 
-Exact environment commands можуть відрізнятися; ця сторінка визначає contract, а environment-specific deployment files залишаються executable authority.
+Точні команди конкретного середовища можуть відрізнятися. Ця сторінка визначає операційний контракт, а environment-specific deployment files залишаються виконуваним джерелом істини.
 
-## Health levels
+## Рівні перевірки
 
-### Process health
+### Стан процесу
 
-Процес/container живий. Це найслабший сигнал.
+Process/container живий. Це найслабший сигнал і сам по собі майже нічого не доводить.
 
-### Dependency readiness
+### Готовність залежностей
 
-Required DB/runtime dependencies доступні, configuration валідна, migrations сумісні.
+Необхідні DB/runtime dependencies доступні, configuration валідна, migrations сумісні з поточним кодом.
 
-### Application health
+### Стан застосунку
 
-Canonical health endpoint відповідає і application bootstrap проходить.
+Канонічний health endpoint відповідає, а application bootstrap завершується без помилки.
 
-### Business smoke
+### Бізнесова smoke-перевірка
 
-Кілька критичних read/write flows працюють через normal application boundary.
+Кілька критичних read/write flows працюють через нормальні application boundaries, а не лише через прямий SQL чи ручний обхід.
 
-## Worker readiness
+## Готовність worker-ів
 
-Queue/outbox/async consumers мають окремо перевірятися на bootability, lease/heartbeat semantics і backlog/error state. Зелений Web endpoint не доводить, що worker не помер учора ввечері.
+Queue/outbox/async consumers перевіряються окремо на:
 
-## Rollback rule
+- bootability;
+- lease/heartbeat semantics;
+- backlog;
+- retry/error state;
+- dead-letter state, якщо він використовується.
 
-Rollback application code не повинен автоматично означати blind rollback schema. Migration strategy має враховувати backward compatibility та irreversible data transforms.
+Зелений Web endpoint не доводить, що worker не помер учора ввечері. Комп’ютери мають неприємну звичку ламатися саме там, де люди перестали дивитися.
 
-## Documentation deployment
+## Правило rollback
 
-Documentation має власний build/deploy pipeline: [Documentation Build](./documentation-build.md). Narrative docs і generated reference повинні відповідати тому самому current commit.
+Rollback application code не означає автоматичний rollback schema.
 
-## Related
+Migration strategy має враховувати:
 
-- [Module Readiness](./module-readiness.md)
-- [Data & Migrations](./data-and-migrations.md)
-- [Observability & Incident Signals](./observability-and-incidents.md)
+- backward compatibility;
+- порядок deploy/rollback;
+- незворотні data transforms;
+- сумісність старого коду з уже застосованою schema.
+
+## Розгортання документації
+
+Документація має власний build/deploy pipeline: [Збірка документації](./documentation-build.md). Narrative docs і generated reference повинні відповідати тому самому поточному commit.
+
+## Пов’язані сторінки
+
+- [Готовність модулів](./module-readiness.md)
+- [Дані та міграції](./data-and-migrations.md)
+- [Спостережуваність та інциденти](./observability-and-incidents.md)

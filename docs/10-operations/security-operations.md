@@ -1,22 +1,24 @@
 ---
-title: Security Operations
-description: Operational security baseline for identity, tenant isolation, secrets, integrations, agents and audit.
+title: Операційна безпека
+description: Операційний security baseline для identity, tenant isolation, secrets, integrations, agents та audit.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: operations
 ---
 
-# Security Operations
+# Операційна безпека
 
-Security в COS проходить через всі execution layers. Вона не живе в одному middleware з героїчною назвою `SecurityService`.
+Security у COS проходить через усі execution layers. Вона не живе в одному middleware з героїчною назвою `SecurityService`.
 
-## Operational baseline
+## Базові правила
 
-### Identity and tenant isolation
+### Identity та tenant isolation
 
-Кожна consequential operation має працювати в explicit identity/organization context. Tenant isolation перевіряється не лише UI/session layer, а й application/persistence boundaries.
+Кожна consequential operation має працювати в explicit identity/organization context.
 
-### Least authority
+Tenant isolation перевіряється не лише в UI/session layer, а й на application/persistence boundaries. CLI workers і background jobs отримують tenant context зі своєї operation/job/event семантики, а не через Web session.
+
+### Мінімально необхідні повноваження
 
 Permissions/capabilities і Policies дають мінімально необхідне право. Agent, worker або integration не отримує глобальну mutation authority «для зручності».
 
@@ -27,23 +29,40 @@ Provider credentials, API keys, DB passwords і signing secrets:
 - не зберігаються в Domain records як plain business data;
 - не потрапляють у prompts/logs/audit payloads;
 - мають controlled configuration/secret resolution;
-- rotation не повинна вимагати зміни Domain model.
+- можуть бути rotated без зміни Domain model;
+- мають бути scoped настільки вузько, наскільки дозволяє provider/runtime.
 
-### External input
+### Зовнішні дані
 
-API/webhooks/messages/documents/LLM context є untrusted input до моменту validation/normalization. Provider authenticity та payload validity є окремими checks.
+API/webhooks/messages/documents/LLM context є untrusted input до validation/normalization.
 
-### Agent boundary
+Provider authenticity, payload validity і business authorization є різними перевірками. Успішна signature verification не означає автоматичне право змінити Domain state.
 
-Prompt/tool injection не повинна давати Agent нові capabilities. Registered tools/actions, schema validation, Policy та Approval залишаються authority boundary незалежно від тексту model output.
+### Межа Agent
+
+Prompt/tool injection не повинна давати Agent нові capabilities.
+
+Registered tools/actions, schema validation, Policy та Approval залишаються authority boundary незалежно від тексту model output. Agent не затверджує власну дію і не обходить application use case через прямий доступ до persistence.
 
 ## Audit-sensitive operations
 
-Особливо важливі mutations повинні залишати достатній audit trail для відповіді: actor, tenant, operation, authority decision, before/after або semantic change, external effect/result.
+Особливо важливі mutations мають залишати достатній audit trail для відповіді на питання:
 
-## Incident response
+```text
+actor
++ tenant
++ operation
++ authority decision
++ semantic change / before-after reference
++ external effect
++ final result
+```
 
-Для security incident потрібен мінімальний flow:
+Audit trail не повинен містити secrets або необмежені sensitive payloads лише тому, що «так зручніше для дебагу».
+
+## Реагування на security incident
+
+Мінімальний flow:
 
 ```text
 Detect
@@ -52,15 +71,21 @@ Detect
 → identify affected tenants/data/actions
 → rotate/revoke
 → repair/reconcile state
+→ verify recovery
 → document root cause
 ```
 
-## Dependency and deployment hygiene
+Для consequential external actions окремо перевіряйте, чи не потрібно reconcile фактичний стан у provider після containment.
 
-Production deployment повинен використовувати pinned/reviewed dependencies, CI checks, non-secret artifacts та environment-specific secrets. Dev convenience не переноситься автоматично в production authority.
+## Dependency та deployment hygiene
 
-## Related
+Production deployment використовує pinned/reviewed dependencies, CI checks, non-secret artifacts і environment-specific secrets.
 
-- [Actors & Authority](../01-product/actors-and-authority.md)
+Dev convenience не переноситься автоматично в production authority. Debug routes, broad credentials, permissive CORS, temporary admin shortcuts та test keys не повинні виживати лише тому, що ніхто не згадав їх прибрати.
+
+## Пов’язані сторінки
+
+- [Учасники та повноваження](../01-product/actors-and-authority.md)
 - [LLM Governance](../06-ai-agents/llm-governance.md)
-- [API & Webhooks](../07-api-integrations/api-and-webhooks.md)
+- [API та Webhooks](../07-api-integrations/api-and-webhooks.md)
+- [Спостережуваність та інциденти](./observability-and-incidents.md)
