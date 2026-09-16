@@ -20,12 +20,14 @@ fi
 sudo -n install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/letsencrypt
 
 # A normal deploy must never replace a working TLS vhost with an HTTP-only one.
-# The HTTP configuration below is only a bootstrap path for a fresh host or a
-# host that does not yet have a usable HTTPS vhost/certificate pair.
+# Accept valid listen variants such as `listen 443 ssl http2;`,
+# `listen 443 default_server ssl;` and `listen [::]:443 ssl;` rather than
+# depending on one literal spelling of the nginx directive.
+TLS_LISTEN_PATTERN='^[[:space:]]*listen[[:space:]]+([^;[:space:]]*:)?443([[:space:]]+[^;[:space:]]+)*[[:space:]]+ssl([[:space:]]+[^;[:space:]]+)*[[:space:]]*;'
 if sudo -n test -r "$SITE_AVAILABLE" \
     && sudo -n test -r "$CERT_DIR/fullchain.pem" \
     && sudo -n test -r "$CERT_DIR/privkey.pem" \
-    && sudo -n grep -Fq 'listen 443 ssl;' "$SITE_AVAILABLE"; then
+    && sudo -n grep -Eq "$TLS_LISTEN_PATTERN" "$SITE_AVAILABLE"; then
   sudo -n ln -sfn "$SITE_AVAILABLE" "$SITE_ENABLED"
   sudo -n nginx -t
   sudo -n systemctl reload nginx
