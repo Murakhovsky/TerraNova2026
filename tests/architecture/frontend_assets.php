@@ -58,8 +58,8 @@ foreach ($views as $view) {
         throw new RuntimeException('Inline CSS is forbidden in ordinary Web views; move it to frontend feature ownership: ' . $relativePath);
     }
 
-    // PHP expressions inside an HTML attribute contain their own `?>`, which a naive
-    // `<script ...>` regex mistakes for the end of the opening tag. Replace template
+    // PHP expressions inside an HTML attribute contain a PHP closing delimiter, which a
+    // naive opening-tag regex mistakes for the end of the script tag. Replace template
     // expressions only for static tag inspection; the original view source is untouched.
     $scriptScanSource = preg_replace('/<\?php\b.*?\?>/s', 'PHP_EXPR', $source);
     if (!is_string($scriptScanSource)) {
