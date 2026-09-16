@@ -1,58 +1,58 @@
 ---
-title: Agent Evaluation
-description: Evaluation model for agent quality, reliability, authority safety and operational usefulness in COS.
+title: Оцінювання Agent
+description: Модель оцінювання якості, надійності, безпеки повноважень та бізнесової користі Agent у COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: agent
 ---
 
-# Agent Evaluation
+# Оцінювання Agent
 
-Agent не можна оцінювати лише за тим, наскільки переконливо він написав відповідь. Для COS важливо, чи він прийняв **корисне, відтворюване і безпечне рішення в межах authority**.
+Agent не можна оцінювати лише за тим, наскільки переконливо він написав відповідь. Для COS важливо, чи він прийняв **корисне, відтворюване й безпечне рішення в межах своїх повноважень**.
 
-## Evaluation dimensions
+## Виміри оцінювання
 
-### Decision quality
+### Якість рішення
 
-- правильність classification/recommendation;
-- relevance до business goal;
-- quality of evidence/reasoning output;
-- consistency on equivalent inputs.
+- правильність classification або recommendation;
+- релевантність до бізнес-мети;
+- якість evidence/reasoning output;
+- узгодженість на еквівалентних inputs.
 
-### Context discipline
+### Дисципліна контексту
 
 - чи використано достатній context;
 - чи не підтягнуто зайві sensitive data;
-- чи references/provenance коректні;
+- чи коректні references і provenance;
 - чи Agent не вигадує відсутні facts.
 
-### Tool/action safety
+### Безпека інструментів і дій
 
-- чи proposal відповідає registered capability;
-- чи mutation не bypass-ить Policy/Approval;
-- чи invalid/unsafe output коректно rejected;
-- чи tool arguments проходять schema validation.
+- чи proposal відповідає зареєстрованій capability;
+- чи мутація не обходить Policy/Approval;
+- чи invalid або unsafe output коректно відхиляється;
+- чи аргументи tool проходять schema validation.
 
-### Operational reliability
+### Операційна надійність
 
-- structured output validity;
+- валідність structured output;
 - latency;
-- provider/model failure rate;
+- частота помилок provider/model;
 - fallback behavior;
 - token/cost budget;
-- retry/idempotency consequences.
+- наслідки retry та idempotency.
 
-### Business usefulness
+### Бізнесова корисність
 
-- accepted recommendation rate;
-- approval outcome;
+- частка прийнятих рекомендацій;
+- результат Approval;
 - downstream action/result;
-- measured business outcome, де це можливо;
-- false-positive/false-negative cost.
+- виміряний бізнес-результат, де це можливо;
+- вартість false-positive і false-negative.
 
 ## Evaluation set
 
-Для meaningful Agent потрібен versioned evaluation set:
+Для значущого Agent потрібен versioned evaluation set (версійований набір перевірок):
 
 ```text
 Input facts/context
@@ -63,27 +63,36 @@ Input facts/context
 + outcome rubric
 ```
 
-Не всі кейси мають одну exact відповідь. Rubric може перевіряти дозволений set рішень та invariants.
+Не всі кейси мають одну точну відповідь. Rubric може перевіряти допустимий набір рішень та інваріанти.
 
-## Required adversarial cases
+## Обов’язкові adversarial cases
 
 Перевіряйте щонайменше:
 
-- missing context;
-- contradictory facts;
-- malicious/untrusted text in context;
+- відсутній context;
+- суперечливі facts;
+- malicious/untrusted text у context;
 - invalid structured output;
-- proposal outside capability;
-- request for unauthorized mutation;
+- proposal поза capability;
+- запит на unauthorized mutation;
 - provider timeout/fallback;
-- duplicated execution request;
-- sensitive-data leakage.
+- дубльований execution request;
+- витік sensitive data.
 
-## Version correlation
+## Кореляція версій
 
-Evaluation result має бути прив'язаний до agent definition, context schema, instruction/prompt version, output schema, model/provider route та relevant policy version.
+Evaluation result має бути прив’язаний до:
 
-## Production feedback
+- agent definition;
+- context schema;
+- instruction/prompt version;
+- output schema;
+- model/provider route;
+- relevant policy version.
+
+Інакше неможливо зрозуміти, що саме змінило результат.
+
+## Зворотний зв’язок із production
 
 Production telemetry не замінює offline evaluation, але доповнює її:
 
@@ -93,8 +102,8 @@ proposal → policy → approval → execution → outcome
 
 Саме повний ланцюг показує, чи Agent реально корисний, а не просто генерує інтелектуально оформлену зайнятість.
 
-## Related
+## Пов’язані сторінки
 
-- [Agent Runtime](./agent-runtime.md)
-- [Memory Model](./memory-model.md)
-- [Audit & Diagnostics](../05-runtime/audit-and-diagnostics.md)
+- [Середовище виконання Agent](./agent-runtime.md)
+- [Модель пам’яті Agent](./memory-model.md)
+- [Аудит і діагностика виконання](../05-runtime/audit-and-diagnostics.md)

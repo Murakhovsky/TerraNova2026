@@ -1,18 +1,18 @@
 ---
-title: Agent Runtime
-description: Як AI Agent приймає рішення в COS без прямого доступу до mutation layer.
+title: Середовище виконання Agent
+description: Як AI Agent приймає рішення в COS без прямого доступу до шару мутацій.
 status: active
-updated: 2026-09-12
+updated: 2026-09-16
 kind: agent
 ---
 
-# Agent Runtime
+# Середовище виконання Agent
 
-Agent у COS є **decision component**, а не автономним root user системи.
+Agent у COS є **компонентом прийняття рішень**, а не автономним root user системи.
 
-Реальна реалізація знаходиться в `app/Kernel/Agent` і включає `AgentDefinition`, `AgentInvocation`, `AgentExecution`, `AgentResult`, `AgentRuntime`, routed context builder, sensitive context redactor, structured decision validator та adapter до governed structured LLM runtime.
+Реалізація знаходиться в `app/Kernel/Agent` і включає `AgentDefinition`, `AgentInvocation`, `AgentExecution`, `AgentResult`, `AgentRuntime`, маршрутизований context builder, `SensitiveContextRedactor`, `StructuredDecisionValidator` та adapter до керованого LLM runtime.
 
-## Runtime flow
+## Потік виконання
 
 ```text
 Event / Job
@@ -40,35 +40,35 @@ normal Action → Policy → Approval → Queue → Execution
 
 ## AgentDefinition
 
-Definition описує стабільний contract Agent-а:
+Definition описує стабільний контракт Agent:
 
-- identity;
-- purpose;
-- model/runtime configuration;
-- expected structured output;
-- allowed proposal/action vocabulary;
-- domain ownership.
+- ідентичність;
+- призначення;
+- конфігурацію model/runtime;
+- очікуваний структурований результат;
+- дозволений словник proposal/action;
+- Domain-власника.
 
-Business-specific agent definitions належать Domain, generic execution — Kernel.
+Специфічні для бізнесу Agent definitions належать Domain. Загальний механізм виконання належить Kernel.
 
-## Context ownership
+## Власність на контекст
 
-Agent не має самостійно ходити по database/integrations за будь-якими даними, які йому захотілися.
+Agent не повинен самостійно ходити по database або integrations за будь-якими даними, які йому захотілися.
 
 Domain context builder визначає:
 
 - які факти потрібні;
-- як вони tenant-scope-яться;
+- як вони обмежуються tenant;
 - які поля дозволено передати LLM;
-- як формується compact decision context.
+- як формується компактний контекст рішення.
 
-`RoutedAgentContextBuilder` дозволяє Kernel направити запит до правильного domain-owned builder без знання Sales/Finance/etc.
+`RoutedAgentContextBuilder` дозволяє Kernel направити запит до правильного builder, яким володіє Domain, без знання внутрішньої логіки Sales, Finance чи інших Domains.
 
-## Sensitive context
+## Чутливий контекст
 
-Перед передачею та збереженням agent input проходить redaction.
+Перед передачею та збереженням вхідні дані Agent проходять redaction (вилучення чутливих даних).
 
-`SensitiveContextRedactor` є safety/privacy boundary, а не cosmetic preprocessing.
+`SensitiveContextRedactor` є межею безпеки й приватності, а не косметичним preprocessing.
 
 Принцип:
 
@@ -77,43 +77,41 @@ minimum necessary context
 > full database dump
 ```
 
-## Governed LLM boundary
+## Керована межа LLM
 
-Починаючи з Kernel V0.10, Agent runtime не звертається напряму до concrete provider client.
+Agent runtime не звертається напряму до конкретного provider client.
 
-`StructuredAgentLlmClient` переводить Agent request у `StructuredLlmRequest`, який проходить через shared LLM governance layer.
+`StructuredAgentLlmClient` переводить Agent request у `StructuredLlmRequest`, який проходить через спільний шар LLM governance.
 
-Для governed call важливі:
+Для такого виклику важливі:
 
-- `organizationId` — tenant budget/accounting scope;
-- `useCase` — routing/metrics scope;
-- `correlationId` — traceability;
-- requested model — compatibility hint, якщо немає explicit use-case routing policy.
+- `organizationId` — область бюджету й обліку tenant;
+- `useCase` — область routing та metrics;
+- `correlationId` — трасування;
+- requested model — підказка сумісності, якщо немає явної політики маршрутизації.
 
-Explicit use-case routing policy має пріоритет над model hint Agent-а.
+Явна routing policy для `useCase` має пріоритет над model hint Agent.
 
-Детально: [LLM Governance](llm-governance.md).
+Детальніше: [Керування LLM](./llm-governance.md).
 
-## Structured output
+## Структурований результат
 
-LLM response не вважається валідним decision лише тому, що JSON парситься.
+LLM response не вважається валідним рішенням лише тому, що JSON успішно розібрався.
 
-`StructuredDecisionValidator` повинен відхилити:
+`StructuredDecisionValidator` повинен відхиляти:
 
-- unknown action type;
+- невідомий тип Action;
 - malformed payload;
-- missing required fields;
-- forbidden/unsupported proposal;
-- schema mismatch;
-- інші contract violations.
+- відсутні обов’язкові поля;
+- заборонений або непідтримуваний proposal;
+- невідповідність schema;
+- інші порушення контракту.
 
-Invalid response не створює mutation.
+Невалідна відповідь не створює мутацію.
 
-## Proposal-only rule
+## Правило proposal-only
 
-Agent може запропонувати Action, але не може викликати Action executor напряму.
-
-Це означає:
+Agent може запропонувати Action, але не може викликати executor напряму.
 
 ```text
 LLM says “send message”
@@ -121,7 +119,7 @@ LLM says “send message”
 message sent
 ```
 
-Між ними ще стоять:
+Між ними стоять:
 
 ```text
 validated proposal
@@ -132,73 +130,73 @@ validated proposal
 → Handler
 ```
 
-LLM routing/fallback також не змінює це правило. Інший provider може допомогти отримати decision, але не може обійти Policy.
+Routing або fallback LLM не змінюють цього правила. Інший provider може допомогти отримати рішення, але не отримує права обійти Policy.
 
-## Deterministic vs agentic decisions
+## Детерміновані й agentic-рішення
 
-Якщо рішення можна надійно виразити Rule, воно не повинно автоматично ставати LLM task.
+Якщо рішення надійно виражається Rule, воно не повинно автоматично ставати LLM task.
 
-Використовувати Agent там, де потрібні:
+Agent доречний для:
 
-- interpretation;
-- prioritization;
-- synthesis;
-- natural-language understanding;
-- ambiguous context reasoning;
-- recommendation among bounded choices.
+- інтерпретації;
+- пріоритизації;
+- синтезу;
+- розуміння природної мови;
+- міркування в неоднозначному контексті;
+- рекомендації серед обмеженого набору варіантів.
 
-Використовувати Rule для:
+Rule доречне для:
 
-- thresholds;
-- exact states;
-- mandatory fields;
-- deterministic eligibility;
-- hard compliance constraints.
+- порогів;
+- точних станів;
+- обов’язкових полів;
+- детермінованої відповідності;
+- жорстких обмежень.
 
-## Failure model
+## Модель помилок
 
 Agent runtime має розрізняти щонайменше:
 
-- invalid structured decision;
-- budget denied;
+- невалідне структуроване рішення;
+- відмову через бюджет;
 - retryable provider failure;
 - non-retryable provider failure;
-- exhausted provider routes;
-- downstream Action/Policy failure.
+- вичерпані маршрути провайдерів;
+- помилку downstream Action або Policy.
 
-Retryable LLM provider failure може привести до configured fallback route. Non-retryable provider failure не повинен тихо маскуватися переходом на інший provider.
+Retryable помилка LLM provider може привести до configured fallback route. Non-retryable помилка не повинна тихо маскуватися переходом на іншого provider.
 
-## Testing agents
+## Тестування Agent
 
-Agent testing має розділяти:
+Тестування треба розділяти на:
 
 1. context builder tests;
 2. redaction tests;
-3. structured schema validation;
+3. перевірку structured schema;
 4. fixture-based LLM decision tests;
-5. LLM routing/budget/fallback tests;
-6. policy behavior for proposed actions;
-7. end-to-end action execution tests окремо.
+5. routing/budget/fallback tests;
+6. перевірку Policy для запропонованих Actions;
+7. окремі наскрізні тести виконання Action.
 
-Не треба тестувати весь COS одним prompt і радіти, що він «схоже відповів правильно».
+Тестувати весь COS одним prompt і радіти, що він «схоже відповів правильно», все ще не є методологією.
 
-## Metrics
+## Метрики
 
-Мінімум:
+Мінімально корисні:
 
-- invocation count;
-- valid/invalid output rate;
-- LLM latency;
+- кількість запусків;
+- частка валідних і невалідних результатів;
+- затримка LLM;
 - input/output tokens;
-- LLM cost;
-- fallback count;
-- budget denials;
-- proposal distribution;
+- вартість LLM;
+- кількість fallback;
+- відмови за бюджетом;
+- розподіл proposals;
 - denied actions;
 - approval-required actions;
-- eventual execution success;
-- retries/failures.
+- фактична успішність виконання;
+- retries і failures.
 
-## Invariant
+## Інваріант
 
-> Agent має право думати в межах context contract. Право діяти визначає Kernel Policy runtime.
+> Agent має право міркувати в межах контракту контексту. Право діяти визначає Kernel Policy runtime.

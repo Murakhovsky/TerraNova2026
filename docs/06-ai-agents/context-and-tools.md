@@ -1,48 +1,48 @@
 ---
-title: Context and Tools
-description: Межа між Agent reasoning, domain context і керованими tools/actions.
+title: Контекст та інструменти
+description: Межа між міркуванням Agent, доменним контекстом і керованими інструментами та діями.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: agent
 ---
 
-# Context and Tools
+# Контекст та інструменти
 
-У COS важливо розділяти **context for reasoning** і **capability for action**.
+У COS важливо розділяти **context for reasoning (контекст для міркування)** і **capability for action (можливість виконати дію)**.
 
-## Context
+## Контекст
 
-Context — це read-only набір фактів, достатній для рішення.
+Context є read-only набором фактів, достатнім для конкретного рішення.
 
-Domain визначає його через context builder. Kernel лише маршрутизує та застосовує generic safety mechanisms.
+Domain визначає його через context builder. Kernel лише маршрутизує запит і застосовує загальні механізми безпеки.
 
 Добрий context:
 
-- tenant-scoped;
+- обмежений tenant;
 - мінімальний;
 - структурований;
 - має зрозуміле походження;
-- не містить зайвих secrets/PII;
-- стабільний enough для evaluation/replay.
+- не містить зайвих secrets або PII;
+- достатньо стабільний для evaluation і replay.
 
-## Context is not memory dump
+## Context не є дампом пам’яті
 
-Не слід передавати Agent-у:
+Не слід передавати Agent:
 
-- всі CRM записи;
+- всі записи CRM;
 - повну історію компанії;
 - unrestricted SQL result;
 - credentials;
 - internal tokens;
-- raw documents, якщо потрібні лише три факти.
+- сирі документи, якщо для рішення потрібні лише кілька фактів.
 
-Більше context не означає краще reasoning. Часто це просто дорожчий спосіб зменшити signal-to-noise.
+Більше context не означає краще reasoning. Часто це лише дорожчий спосіб зменшити співвідношення сигналу до шуму.
 
 ## Redaction
 
-Перед LLM call sensitive data проходять через `SensitiveContextRedactor`.
+Перед викликом LLM чутливі дані проходять `SensitiveContextRedactor`.
 
-Redaction policy має бути централізованою настільки, наскільки це generic concern, але Domain може визначати, які business fields узагалі допустимі в його agent context.
+Redaction policy має бути централізованою настільки, наскільки це загальна відповідальність. Domain при цьому визначає, які бізнесові поля взагалі дозволено включати до його Agent context.
 
 ## Tools у поточній архітектурі
 
@@ -58,24 +58,24 @@ Agent reasoning
  → Infrastructure adapter
 ```
 
-Фактично Action + handler + port є керованим tool boundary для mutation.
+Фактично Action + handler + port є керованою межею інструмента для мутацій.
 
-## Read tools
+## Інструменти читання
 
-Для richer agents можуть з'являтися explicit read capabilities. Вони мають:
+Для складніших Agents можуть існувати явні read capabilities. Вони повинні:
 
-- бути registered/owned;
-- tenant-scope-итись;
-- мати deterministic input/output schema;
-- не створювати hidden side effects;
-- логувати usage, якщо це operationally important;
-- повертати мінімально потрібні дані.
+- бути зареєстрованими й мати власника;
+- обмежуватися tenant;
+- мати детерміновану input/output schema;
+- не створювати прихованих side effects;
+- журналювати використання, якщо це операційно важливо;
+- повертати лише потрібні дані.
 
-## Write tools
+## Інструменти запису
 
-Write capability не повинна bypass Action lifecycle.
+Write capability не повинна обходити життєвий цикл Action.
 
-Навіть якщо зовнішній LLM framework називає це `tool_call`, всередині COS mutation має перетворитися на контрольовану Action.
+Навіть якщо зовнішній LLM framework називає це `tool_call`, всередині COS мутація має перетворитися на контрольовану Action.
 
 ```text
 LLM tool call request
@@ -85,9 +85,9 @@ LLM tool call request
 → execution
 ```
 
-## Domain ports as capability boundary
+## Domain ports як межа можливостей
 
-Domain-owned outbound contracts визначають, що Domain взагалі вміє просити у зовнішнього світу.
+Вихідні контракти, якими володіє Domain, визначають, що Domain взагалі може просити у зовнішнього світу.
 
 Приклади Sales:
 
@@ -96,23 +96,23 @@ Domain-owned outbound contracts визначають, що Domain взагалі
 - `FollowupRepositoryInterface`;
 - `CrmGatewayInterface`.
 
-Infrastructure реалізує ці contracts конкретними MySQL/CRM/messaging adapters.
+Infrastructure реалізує ці contracts конкретними MySQL, CRM та messaging adapters.
 
-Agent не повинен знати provider names.
+Agent не повинен знати назви провайдерів.
 
-## Context versioning
+## Версіонування контексту
 
-Для critical Agent decisions корисно мати можливість відтворити:
+Для критичних рішень Agent корисно мати можливість відтворити:
 
-- context schema version;
-- agent definition version;
-- prompt/instruction version;
+- версію context schema;
+- версію agent definition;
+- версію prompt/instruction;
 - model/provider metadata;
-- structured output schema version.
+- версію structured output schema.
 
-Це дозволяє відрізнити «модель прийняла інше рішення» від «ми тихо змінили context builder три дні тому».
+Це дозволяє відрізнити «модель прийняла інше рішення» від «ми непомітно змінили context builder».
 
-## Future MCP / external tool ecosystem
+## MCP та зовнішні інструменти
 
 MCP або інший tool protocol має входити в COS як Infrastructure/Integration adapter, а не як обхід Kernel.
 
@@ -124,7 +124,7 @@ COS capability / port
  → external MCP tool
 ```
 
-або для agent-proposed mutation:
+Для мутації, яку пропонує Agent:
 
 ```text
 Agent proposal
@@ -132,8 +132,8 @@ Agent proposal
  → MCP-backed handler
 ```
 
-Таким чином заміна MCP server/provider не змінює бізнес-rule або policy.
+Тоді заміна MCP server або provider не змінює бізнес-Rule чи Policy.
 
-## Invariant
+## Інваріант
 
 > Context дає Agent факти. Action дає системі намір. Policy дає право. Adapter дає технічну можливість виконати дію.

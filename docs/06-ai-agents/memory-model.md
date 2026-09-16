@@ -1,20 +1,20 @@
 ---
-title: Agent Memory Model
-description: Architecture rules for working context, retrieval, durable business facts and future agent memory in COS.
+title: Модель пам’яті Agent
+description: Архітектурні правила для робочого контексту, пошуку, довготривалих бізнес-фактів і майбутньої пам’яті Agent у COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: agent
 ---
 
-# Agent Memory Model
+# Модель пам’яті Agent
 
-У COS слово `memory` не повинно означати «складемо все, що колись бачила модель, у великий prompt і сподіваємося на характер». Потрібно розрізняти кілька різних речей.
+У COS слово `memory` не повинно означати «складемо все, що колись бачила модель, у великий prompt і сподіватимемося на характер». Треба розрізняти кілька різних типів інформації.
 
-> Ця сторінка визначає architecture contract. Вона не стверджує, що окремий універсальний Memory subsystem уже повністю реалізований AS-IS.
+> Ця сторінка визначає архітектурний контракт. Вона не стверджує, що окремий універсальний Memory subsystem уже повністю реалізований AS-IS.
 
-## Memory classes
+## Класи пам’яті
 
-### 1. Canonical business facts
+### 1. Канонічні бізнес-факти
 
 ```text
 Sales / Property / Diagnostic / other Domain state
@@ -22,9 +22,9 @@ Sales / Property / Diagnostic / other Domain state
 
 Це не Agent memory. Це authoritative Domain truth із власним lifecycle, audit і permissions.
 
-### 2. Working context
+### 2. Робочий контекст
 
-Мінімальний read-only context, зібраний для конкретного reasoning/execution turn.
+Мінімальний read-only context, зібраний для конкретного reasoning або execution turn.
 
 ```text
 Domain facts + relevant history + constraints + tool metadata
@@ -32,23 +32,29 @@ Domain facts + relevant history + constraints + tool metadata
 → Agent
 ```
 
-Working context може бути ephemeral і відтворюваним з canonical sources.
+Working context може бути короткоживучим і відтворюваним із канонічних джерел.
 
-### 3. Conversation / interaction history
+### 3. Історія взаємодії
 
-Історія повідомлень або попередніх рішень може бути корисною для continuity, але не стає canonical business truth автоматично.
+Історія повідомлень або попередніх рішень може бути корисною для continuity, але не стає канонічною бізнес-правдою автоматично.
 
 ### 4. Retrieval index
 
-Search/vector/indexed representation є derived read model. Його можна rebuild-ити з authoritative sources; він не повинен тихо ставати єдиним місцем, де «зберігається правда».
+Search/vector/indexed representation є derived read model. Його можна перебудувати з authoritative sources; він не повинен непомітно ставати єдиним місцем, де «зберігається правда».
 
-### 5. Durable learned memory
+### 5. Довготривала learned memory
 
-Якщо COS у майбутньому зберігає learned preference, observation або inferred pattern, запис має explicit owner, provenance, confidence, retention policy та invalidation rules.
+Якщо COS у майбутньому зберігає learned preference, observation або inferred pattern, запис має мати:
 
-## Write rule
+- явного власника;
+- provenance;
+- confidence;
+- retention policy;
+- правила invalidation/update.
 
-Agent не повинен самовільно вирішувати, що «варто запам'ятати назавжди».
+## Правило запису
+
+Agent не повинен самовільно вирішувати, що «варто запам’ятати назавжди».
 
 ```text
 Agent observation
@@ -63,21 +69,33 @@ Agent observation
 
 - звідки взято факт;
 - чи це observation, inference або user-provided statement;
-- коли він створений/підтверджений;
+- коли його створено або підтверджено;
 - який tenant/domain scope;
 - confidence/version;
-- як його invalidate/update.
+- як його invalidate або update.
 
-## Privacy and minimization
+## Приватність і мінімізація
 
 Memory не повинна бути обхідним шляхом навколо context minimization. Sensitive data, secrets і зайва PII не зберігаються «про запас» лише тому, що колись можуть знадобитися.
 
-## Replayability
+## Відтворюваність
 
-Для critical Agent decision бажано мати references на exact context snapshot/schema, agent version, instruction version і model metadata. Це дає можливість пояснити різницю між зміною model behavior і зміною memory/context source.
+Для критичних рішень Agent бажано зберігати references на:
 
-## Related
+- точний context snapshot або schema;
+- agent version;
+- instruction version;
+- model metadata;
+- джерела retrieved information.
 
-- [Context & Tools](./context-and-tools.md)
-- [Agent Evaluation](./agent-evaluation.md)
-- [LLM Governance](./llm-governance.md)
+Це дозволяє відрізнити зміну behavior моделі від зміни memory/context source.
+
+## Інваріант
+
+> Канонічна бізнес-правда живе в Domain. Agent працює з контрольованим контекстом. Пам’ять, яка переживає один запуск, повинна мати власника, походження та правила життєвого циклу.
+
+## Пов’язані сторінки
+
+- [Контекст та інструменти](./context-and-tools.md)
+- [Оцінювання Agent](./agent-evaluation.md)
+- [Керування LLM](./llm-governance.md)
