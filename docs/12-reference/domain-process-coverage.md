@@ -1,33 +1,33 @@
 ---
-title: Domain Process Coverage
-description: Generated coverage of installable COS Domains by canonical Process Registry models.
+title: Покриття доменів бізнес-процесами
+description: Згенероване покриття installable COS Domains канонічними моделями Process Registry.
 status: generated
-updated: 2026-09-15
+updated: 2026-09-16
 kind: reference
 contract: reference-v1
 generated: true
 ---
 
-# Domain Process Coverage
+# Покриття доменів бізнес-процесами
 
-Generated from installable `app/Domains/*/module.php`, Process Registry definitions and explicit process-coverage exemptions. Do not edit this page manually.
+Згенеровано з installable `app/Domains/*/module.php`, definitions Process Registry і явних process-coverage exemptions. Не редагуйте цю сторінку вручну.
 
-This reference answers a deliberately uncomfortable question: does every installable business Domain have at least one canonical process model, or has it explicitly justified why it does not?
+Цей довідник відповідає на навмисно незручне питання: чи кожний installable business Domain має щонайменше одну канонічну process model, або явно пояснив, чому її немає?
 
-## Summary
+## Підсумок
 
 - **Installable Domains:** 3
-- **Covered by canonical process:** 3
-- **Explicit exemptions:** 0
-- **Missing coverage:** 0
+- **Покрито канонічним процесом:** 3
+- **Явних exemptions:** 0
+- **Без покриття:** 0
 
-| Domain | Version | Status | Processes | Steps | Capability mapped | Capability gaps | Debt |
+| Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
 
-## Canonical process ownership
+## Канонічне ownership процесів
 
 ### Diagnostics (`diagnostic`)
 
@@ -42,22 +42,22 @@ This reference answers a deliberately uncomfortable question: does every install
 - `sales.lead-to-managed-case`
 - `sales.request-to-property-match`
 
-## Coverage contract
+## Контракт покриття
 
-1. Only directories with a canonical `module.php` are installable Domains for this gate.
-2. Every installable Domain must own at least one Process Registry definition or have one explicit exemption.
-3. Every Process Registry `domain` must resolve to an installable module manifest.
-4. An exemption is invalid once the Domain gains a canonical process.
-5. Supporting Domain directories without `module.php` are not silently promoted to installable Domains by documentation.
+1. Для цього gate installable Domains є лише directories з канонічним `module.php`.
+2. Кожний installable Domain має володіти щонайменше однією Process Registry definition або мати один explicit exemption.
+3. Кожний `domain` у Process Registry має резолвитися до installable module manifest.
+4. Exemption стає невалідним, щойно Domain отримує канонічний process.
+5. Supporting Domain directories без `module.php` не підвищуються документацією до installable Domains мовчки.
 
 ## Exemptions
 
-No active exemptions.
+Активних exemptions немає.
 
-## Authority and limitations
+## Авторитетність і обмеження
 
-- Module manifests define which Domains are installable.
-- Process Registry defines canonical process ownership.
-- `process-coverage-exemptions.json` records only explicit architecture exceptions.
-- Domain directories without `module.php` remain supporting/non-installable areas and are not coverage failures.
-- Coverage means a Domain has a canonical process model; it does not claim the model is complete, automated or runtime-verified.
+- Module manifests визначають, які Domains є installable.
+- Process Registry визначає канонічне ownership процесів.
+- `process-coverage-exemptions.json` зберігає лише явні architecture exceptions.
+- Domain directories без `module.php` залишаються supporting/non-installable areas і не є помилками coverage.
+- Coverage означає наявність канонічної process model; воно не стверджує, що модель повна, автоматизована або runtime-verified.

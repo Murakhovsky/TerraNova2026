@@ -1,34 +1,34 @@
 ---
-title: Capability Debt Backlog
-description: Generated backlog of unresolved Domain capability vocabulary gaps linked to canonical COS business-process steps.
+title: Беклог боргу можливостей
+description: Згенерований backlog невирішених прогалин vocabulary capabilities, пов’язаних із канонічними кроками бізнес-процесів COS.
 status: generated
-updated: 2026-09-15
+updated: 2026-09-16
 kind: reference
 contract: reference-v1
 generated: true
 ---
 
-# Capability Debt Backlog
+# Беклог боргу можливостей
 
-Generated from `docs/.vitepress/capability-debt.json`, Process Registry gap steps and current-checkout module capability authority. Do not edit this page manually.
+Згенеровано з `docs/.vitepress/capability-debt.json`, кроків Process Registry із capability gaps і module capability authority поточного checkout. Не редагуйте цю сторінку вручну.
 
-Capability debt means the business step is real but the owning Domain does not yet expose a sufficiently semantic discoverable capability. It does **not** mean the runtime implementation is absent.
+Capability debt означає, що бізнес-крок реальний, але Domain-власник ще не експонує достатньо семантичну discoverable capability. Це **не** означає відсутність runtime implementation.
 
-## Summary
+## Підсумок
 
-- **Open debt items:** 19
+- **Відкритих debt items:** 19
 - **High severity:** 16
 - **Medium severity:** 3
-- **Affected Domains:** 2
+- **Зачеплених Domains:** 2
 
-| Domain | Open | High | Medium | Low |
+| Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
 | `diagnostic` | 7 | 7 | 0 | 0 |
 | `sales` | 12 | 9 | 3 | 0 |
 
-## Prioritized backlog
+## Пріоритетний backlog
 
-| Severity | Domain | Process / step | Runtime evidence | Target capability | Resolution |
+| Severity | Domain | Процес / крок | Runtime evidence | Target capability | Resolution |
 | --- | --- | --- | --- | --- | --- |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `complete` · Complete coherent session | `source` | `diagnostic.session.complete` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `decision` · Review / accept recommendation | `source` | `diagnostic.recommendation.accept` | `declare-domain-capability` |
@@ -50,30 +50,30 @@ Capability debt means the business step is real but the owning Domain does not y
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `crm-inbox` · Process durable CRM inbox | `source` | `sales.crm.inbox.process` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `activity-events` · Record Sales activity and publish case/lead events | `source` | `sales.activity.record` | `declare-domain-capability` |
 
-## Resolution contract
+## Контракт закриття боргу
 
-A debt item is resolved only when all of the following become true:
+Debt item вважається закритим лише коли виконані всі умови:
 
-1. The owning Domain declares the target capability in its canonical module `contributions.capabilities`.
-2. The matching Process Registry step replaces `capability: null` + `capability_gap` with that declared capability.
-3. The matching item is removed from `capability-debt.json`.
-4. Documentation generation and checks pass from the same checkout.
+1. Domain-власник декларує target capability у канонічному module `contributions.capabilities`.
+2. Відповідний крок Process Registry замінює `capability: null` + `capability_gap` на цю задекларовану capability.
+3. Відповідний item видалено з `capability-debt.json`.
+4. Генерація документації та перевірки проходять з того самого checkout.
 
-`check-capability-debt.mjs` enforces the 1:1 relation between Process Registry gaps and debt items. It also rejects stale debt whose target capability already exists, wrong Domain ownership, invalid severity, or target names outside the owning Domain namespace.
+`check-capability-debt.mjs` забезпечує зв’язок 1:1 між Process Registry gaps і debt items. Він також відхиляє stale debt, якщо target capability вже існує, неправильний Domain ownership, невалідну severity або target name поза namespace Domain-власника.
 
-## Severity policy
+## Політика severity
 
-- `high` — the capability gap is attached to a critical process step.
-- `medium` — the gap is attached to a non-critical but canonical process step.
-- `low` — reserved for future non-canonical/optional debt classes; current workflow debt does not use it.
+- `high` — capability gap прив’язаний до критичного кроку процесу.
+- `medium` — gap прив’язаний до некритичного, але канонічного кроку процесу.
+- `low` — зарезервовано для майбутніх неканонічних/optional класів debt; поточний workflow debt його не використовує.
 
-Severity describes architecture-model debt, not operational incident severity.
+Severity описує architecture-model debt, а не severity operational incident.
 
-## Authority and limitations
+## Авторитетність і обмеження
 
-- Process Registry owns the fact that a capability gap exists.
-- Capability Debt Registry owns the remediation metadata for that gap.
-- Domain module manifests remain the authority for capabilities that actually exist.
-- Runtime Evidence Resolver remains the authority for source/runtime verification.
-- Generated Markdown is a projection only and is never used as executable authority.
-- Resolving debt may require a Domain patch release; this documentation layer does not silently mutate Domain manifests.
+- Process Registry володіє фактом існування capability gap.
+- Capability Debt Registry володіє remediation metadata для цієї прогалини.
+- Domain module manifests залишаються authority для capabilities, які реально існують.
+- Runtime Evidence Resolver залишається authority для source/runtime verification.
+- Generated Markdown є лише projection і ніколи не використовується як executable authority.
+- Закриття debt може вимагати Domain patch release; documentation layer не мутує Domain manifests мовчки.
