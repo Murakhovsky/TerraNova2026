@@ -1,29 +1,29 @@
 ---
-title: COS Glossary
+title: Глосарій COS
 description: Канонічні терміни COS і короткі правила їх використання.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: reference
 contract: reference-v1
 ---
 
-# COS Glossary
+# Глосарій COS
 
-Цей glossary фіксує значення слів у контексті COS. Якщо одна й та сама назва означає п'ять різних речей, архітектура дуже швидко починає розмовляти сама з собою.
+Цей глосарій фіксує значення слів у контексті COS. Якщо одна й та сама назва означає п’ять різних речей, архітектура дуже швидко починає розмовляти сама з собою.
 
-## Business / Domain
+## Бізнес і Domain
 
 ### Domain
-Bounded business context, який володіє власною мовою, state, invariants, use cases і business events. Приклади: Sales, Diagnostic, Property.
+Bounded business context, який володіє власною мовою, state, invariants, use cases і business Events. Приклади: Sales, Diagnostic, Property.
 
 ### Entity
 Business object з identity та lifecycle усередині Domain.
 
 ### Value Object
-Об'єкт, значення якого визначається даними, а не окремою identity.
+Об’єкт, значення якого визначається даними, а не окремою identity.
 
 ### Invariant
-Правило, яке Domain повинен зберігати завжди, незалежно від Interface або provider.
+Правило, яке Domain має зберігати незалежно від Interface або provider.
 
 ### Use Case
 Application-level операція, яка координує Domain behavior для конкретної бізнес-мети.
@@ -31,19 +31,42 @@ Application-level операція, яка координує Domain behavior д
 ### Business Event / Domain Event
 Immutable факт про те, що вже сталося в Domain. Event не є наказом виконати наступну дію.
 
+### Capability
+Канонічно задекларована здатність Domain/module, яку можуть використовувати platform, UI, authorization, Process Registry та introspection.
+
+### Capability Gap
+Явна прогалина, коли process step існує, але owning Domain ще не має достатньо точної semantic capability у manifest. Gap не означає автоматично, що runtime не реалізований.
+
+## Process
+
+### Process Registry
+Платформний registry канонічних business-process definitions у `resources/processes/*.json`.
+
+### Process Definition
+Machine-readable модель процесу: id, root Domain, state, actors, steps, edges, ownership, capabilities/gaps, criticality та runtime mappings.
+
+### Process Step
+Окремий meaningful крок процесу з primary owner, Domain, capability або explicit gap та optional runtime evidence.
+
+### Process State
+Authored business truth: `as-is` або `to-be`. Не плутати з derived verification.
+
+### Derived Verification
+Рівень підтвердження process mappings поточним checkout: `documented`, `source-verified`, `runtime-verified`. Не задається автором вручну.
+
 ## Runtime
 
 ### Kernel
-Generic execution mechanisms COS. Kernel знає Action, Policy, Queue, Event, Agent, Module тощо, але не знає, що означає «кваліфікований лід».
+Generic execution mechanisms COS. Kernel знає Action, Policy, Queue, Event, Agent, Module, Process structure тощо, але не знає, що означає «кваліфікований лід».
 
 ### Runtime
-Виконуваний lifecycle механізму: від input/event до decision, permission, execution, result, audit.
+Виконуваний lifecycle механізму: від input/event через decision та authority до execution, result і audit.
 
 ### Rule
-Deterministic decision logic. Однаковий валідний context повинен давати однаковий результат.
+Deterministic decision logic. Однаковий валідний context має давати однаковий результат.
 
 ### Agent
-LLM-based decision component, який працює в bounded context contract і повертає structured result/proposal. Не має прямого mutation authority.
+LLM-based decision component, який працює в bounded context contract і повертає structured result/proposal. Не має прямої mutation authority.
 
 ### ActionProposal
 Структурована пропозиція виконати Action. Proposal ще не означає permission або execution.
@@ -70,12 +93,12 @@ Durable asynchronous work item для Queue runtime.
 Структурований результат виконання Action/Job.
 
 ### Audit
-Trace того, що сталося, хто/що прийняло рішення, яка Policy спрацювала і який був результат.
+Trace того, що сталося, хто або що прийняло рішення, яка Policy спрацювала і який був результат.
 
-## Delivery / Reliability
+## Delivery і reliability
 
 ### Outbox
-Durable record business event/delivery intent, записаний узгоджено з business state transaction.
+Durable record business Event/delivery intent, записаний узгоджено з business state transaction.
 
 ### At-least-once delivery
 Delivery model, у якому повідомлення може бути доставлене повторно. Тому side effects мають бути idempotent.
@@ -87,15 +110,18 @@ Delivery model, у якому повідомлення може бути дос�
 Durable inbound processing boundary для external/asynchronous messages, який допомагає з idempotency та retries.
 
 ### Correlation ID
-Identifier для зв'язування частин одного logical flow між runtime, integrations, LLM calls, audit і metrics.
+Identifier для зв’язування частин одного logical flow між runtime, integrations, LLM calls, audit і metrics.
 
-## Architecture boundaries
+## Архітектурні межі
 
 ### Port
 Contract, через який Domain/Application звертається до зовнішньої capability без знання concrete implementation.
 
 ### Adapter
 Concrete implementation Port для MySQL, CRM, LLM, messaging або іншої external system.
+
+### Cross-domain Contract
+Явно задекларована межа між Domains у `cross_domain_contracts`, яка фіксує contract FQCN, роль `requires`/`provides`, counterpart, kind і purpose. Не створює shared ownership.
 
 ### Interface
 Delivery surface, наприклад Web, API, Telegram, CLI. Interface приймає external input і викликає application/runtime capabilities.
@@ -112,19 +138,16 @@ Projection/query contract для читання даних під конкрет
 ## Modules
 
 ### Module
-Installable/runtime-manageable COS unit, який має manifest, version compatibility та contributions.
+Installable/runtime-manageable COS unit із manifest, version compatibility та contributions.
 
 ### Module Manifest
-Declarative metadata module: id, version, schema version, Kernel constraint, dependencies та інші properties.
+Declarative metadata module: id, version, schema version, Kernel constraint, dependencies, capabilities та contributions.
 
 ### Module Contribution
-Runtime/service capability, яку module реєструє у shared platform mechanisms.
+Runtime/service contribution, яку module реєструє у shared platform mechanisms.
 
 ### Extension Point
-Named surface, куди modules можуть declaratively підключати services без hardcoded Domain assembly. Наприклад `web.navigation`.
-
-### Capability
-Discoverable feature, яку module декларує для platform/UI/authorization or introspection use.
+Named surface, куди modules declaratively підключають services без hardcoded Domain assembly. Наприклад `web.navigation`.
 
 ### Deployed Module
 Module code/manifest присутній у поточному deployment.
@@ -144,12 +167,12 @@ Operational diagnostic не бачить installation/version/schema/dependency 
 ## Tenant model
 
 ### Organization / Tenant
-Business isolation scope COS. Дані, configuration, module activation, budgets та багато runtime operations прив'язуються до organization.
+Business isolation scope COS. Дані, configuration, module activation, budgets та багато runtime operations прив’язуються до organization.
 
 ### Tenant-scoped
-Operation/query, яка явно обмежена поточною organization і не може випадково прочитати/змінити state іншого tenant.
+Operation/query, яка явно обмежена поточною organization і не може випадково прочитати або змінити state іншого tenant.
 
-## LLM / AI
+## LLM і AI
 
 ### Structured LLM
 Provider-neutral LLM call із визначеним request/response contract, а не довільний chat transcript.
@@ -172,19 +195,19 @@ Shared runtime для routing, provider registry, fallback, organization budgets
 ### Proposal-only Agent
 Agent, який може сформувати рішення/ActionProposal, але не має права напряму виконувати mutation.
 
-## Documentation terms
+## Терміни документації
 
 ### AS-IS
-Функціональність/architecture, підтверджена поточним кодом гілки `main`.
+Функціональність або architecture, підтверджена поточним `main` code/tests/manifests/structured contracts.
 
 ### TARGET
 Бажаний напрямок або правило, яке ще не реалізоване повністю.
 
 ### Source of Truth
-Авторитетне джерело для конкретного типу факту. Для executable behavior — код і tests; для rationale — ADR; для пояснення поточного architecture/workflow — current docs.
+Авторитетне джерело для конкретного типу факту. Для executable behavior це code/tests/manifests; для process topology це Process Registry; для rationale це ADR; для пояснення поточної architecture/workflow це current docs.
 
 ### ADR
-Architecture Decision Record: документ, який фіксує context, рішення, rationale, alternatives і consequences.
+Architecture Decision Record: документ, який фіксує контекст, рішення, обґрунтування, альтернативи, наслідки та перевірку.
 
 ## Коротка ментальна формула
 

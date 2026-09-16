@@ -1,68 +1,74 @@
 ---
-title: Kernel Components Reference
+title: Компоненти Kernel
 description: Швидкий каталог основних COS Kernel components і відповідальностей.
 status: active
-updated: 2026-09-12
+updated: 2026-09-16
 kind: reference
 ---
 
-# Kernel Components Reference
+# Компоненти Kernel
 
-Це короткий індекс, а не заміна коду або `docs/architecture/cos-kernel.md`.
+Це короткий навігаційний довідник. Exact classes і contracts визначає поточний код.
 
-Поточна executable версія Kernel: **`0.10.2`**.
+Поточна executable версія Kernel: **`0.11.9`**.
 
-| Area | Key components | Purpose |
+| Область | Ключові компоненти | Призначення |
 | --- | --- | --- |
-| Action | `Action`, `ActionProposal`, `ActionStatus`, `ExecutionResult`, `ActionService`, `ActionExecutor` | контрольована mutation lifecycle |
+| Action | `Action`, `ActionProposal`, `ActionStatus`, `ExecutionResult`, `ActionService`, `ActionExecutor` | контрольований mutation lifecycle |
 | Agent | `AgentDefinition`, `AgentInvocation`, `AgentExecution`, `AgentResult`, `AgentRuntime`, `StructuredAgentLlmClient` | structured decision runtime поверх governed LLM |
-| Agent safety | `SensitiveContextRedactor`, `StructuredDecisionValidator`, `RoutedAgentContextBuilder` | context safety, validation, domain routing |
+| Agent safety | `SensitiveContextRedactor`, `StructuredDecisionValidator`, `RoutedAgentContextBuilder` | context safety, validation, Domain routing |
 | Approval | `Approval`, `ApprovalStatus` + contracts/services | human decision gate |
 | Audit | `AuditEntry` + repository contract | explanation trail |
-| Event | `DomainEvent`, `EventMetadata`, `EventBus`, `OutboxMessage` | immutable facts and durable delivery |
+| Event | `DomainEvent`, `EventMetadata`, `EventBus`, `OutboxMessage` | immutable facts і durable delivery |
 | Policy | `ActionPolicy`, `PolicyDecision`, `PolicyEvaluation` | permission/risk gate |
 | Queue | `Job` + contracts/handlers/services | durable asynchronous execution |
-| Execution runtime | `RuleEngineEventHandler`, `QueuedActionProposalSink`, `ActionPolicyService`, `AgentRunJobHandler`, `ActionExecutionJobHandler`, `WorkerSupervisor` | canonical decision → policy → queue → execution lifecycle |
-| Module | `DomainModuleInterface`, `DomainModuleRegistry` | Domain runtime contributions and ownership routing |
+| Execution runtime | `RuleEngineEventHandler`, `QueuedActionProposalSink`, `ActionPolicyService`, `AgentRunJobHandler`, `ActionExecutionJobHandler`, `WorkerSupervisor` | decision → policy → queue → execution lifecycle |
+| Process | `ProcessDefinition`, `ProcessStep`, `ProcessEdge`, `RuntimeMapping`, `ProcessRegistryInterface` | універсальна структура process topology без Domain-specific semantics |
+| Module | `DomainModuleInterface`, `DomainModuleRegistry` | Domain runtime contributions і ownership routing |
 | Module lifecycle | `ModuleManifest`, `ModuleDiscovery`, `ModuleCatalog`, `ModuleInstallation`, `ModuleLifecycleManager`, `ActiveModuleResolver` | install/activate/deactivate module runtime |
-| Module extensions | `ModuleContributions`, `ModuleExtensionContribution`, `ModuleExtensionRegistry` | module-owned API/config/UI/other extension surfaces |
+| Module extensions | `ModuleContributions`, `ModuleExtensionContribution`, `ModuleExtensionRegistry` | module-owned shared extension surfaces |
+| Cross-domain contracts | `CrossDomainContract` + `ModuleContributions.cross_domain_contracts` | declared Domain-to-Domain boundaries з `requires`/`provides` semantics |
 | Module readiness | `ModuleReadinessDiagnostic` | installed/deployed/schema/dependency operational diagnostics |
-| Capabilities | `ModuleCapabilityRegistry` | discoverable module features |
-| Versioning | `KernelVersion`, `VersionConstraint` | module/kernel compatibility |
+| Capabilities | `ModuleCapabilityRegistry` | discoverable module capabilities |
+| Versioning | `KernelVersion`, `VersionConstraint` | module/Kernel compatibility |
 | Tenant | Kernel Tenant contracts/services | organization isolation |
-| Transaction | Kernel transaction contract | transaction boundary without PDO dependency |
+| Transaction | Kernel transaction contract | transaction boundary без PDO dependency |
 | Configuration | Kernel configuration contracts/services | validated module/runtime provisioning |
 | Operations | worker/health contracts | operational runtime lifecycle |
 | Observability | metric/logging contracts | technical telemetry |
 | LLM request | `StructuredLlmRequest`, `StructuredLlmResponse` | provider-neutral structured inference contract |
-| LLM routing | `LlmRoute`, `LlmRoutingPolicy`, `LlmProviderRegistry` | provider/model routing and lookup |
+| LLM routing | `LlmRoute`, `LlmRoutingPolicy`, `LlmProviderRegistry` | provider/model routing і lookup |
 | LLM governance | `GovernedStructuredLlmClient`, `LlmGovernanceRepositoryInterface`, `LlmUsageRecord` | budgets, fallback, usage accounting, metrics |
 | LLM failures | `LlmProviderException`, `LlmBudgetExceededException` | explicit provider/budget failure semantics |
 
-## Ownership map
+## Карта ownership
 
 ```text
 Kernel/Action        owns execution mechanics
-Domain/Automation    owns action meaning + handlers
+Domain/Automation    owns Action meaning + handlers
 Infrastructure       owns concrete external adapters
 
 Kernel/Agent         owns safe invocation/decision mechanics
-Domain/Automation    owns agent definition/context semantics
+Domain/Automation    owns Agent definition/context semantics
 Kernel/Llm           owns provider-neutral governance mechanics
 Infrastructure/Llm   owns provider implementation + persistence adapter
 
 Kernel/Policy        owns evaluation mechanics
-Domain/Automation    owns business policy catalog
+Domain/Automation    owns business Policy catalog
 
 Kernel/Event         owns event envelope/outbox mechanics
-Domain               owns business event vocabulary
+Domain               owns business Event vocabulary
+
+Kernel/Process       owns process structure/invariants/contracts
+resources/processes  owns canonical business-process definitions
+Domain/module.php    owns capabilities + cross-domain contract declarations
 
 Kernel/Module        owns module lifecycle/registry/extension mechanics
 Domain/module.php    owns module declarations/contributions
 Consumer layer       owns concrete extension interface semantics
 ```
 
-## Execution runtime shorthand
+## Коротка схема execution runtime
 
 ```text
 Event
@@ -82,9 +88,27 @@ ActionExecutionJobHandler
 ActionService / ActionExecutor
 ```
 
-Rule та Agent не виконують side effects напряму. Вони створюють proposal, який обов'язково проходить policy gate та durable execution path.
+Rule та Agent не виконують side effects напряму. Вони створюють proposal, який проходить authority gate та durable execution path.
 
-## Module extension shorthand
+## Коротка схема Process
+
+```text
+resources/processes/*.json
+        ↓
+JsonProcessRegistry
+        ↓
+Kernel\Process model
+        ↓
+Process consumers
+        ├─ Documentation / ProcessDiagram
+        ├─ Visualization
+        ├─ Diagnostics
+        └─ future runtime consumers
+```
+
+Process V0.1 не є execution engine. Kernel перевіряє structural invariants, а capabilities та cross-domain evidence звіряються module/evidence layer.
+
+## Коротка схема module extensions
 
 ```text
 module.php
@@ -98,16 +122,16 @@ consumer resolves service
 active-module check where required
 ```
 
-Built-in normalized points:
+Поточні extension points:
 
 - `api.routes`;
-- `tenant.configuration`.
-
-Current generic point used by Web:
-
+- `tenant.configuration`;
+- `event.consumers`;
 - `web.navigation`.
 
-## LLM governance shorthand
+Cross-domain contracts не є extension points і мають окрему typed model.
+
+## Коротка схема LLM governance
 
 ```text
 StructuredLlmRequest
@@ -123,26 +147,27 @@ Provider
 UsageRecord + Metrics
 ```
 
-Fallback дозволений лише для retryable `LlmProviderException` і configured next route.
+Fallback дозволений лише для retryable provider failure і configured next route.
 
-## Runtime status shorthand
+## Категорії стану
 
-Документація повинна використовувати такі категорії:
+Для документації використовуйте:
 
 - **implemented** — є production/runtime code path;
 - **partial** — механізм є, але coverage/integration неповні;
 - **target** — architecture rule або planned capability;
 - **legacy** — попередня implementation, яку не слід використовувати як новий pattern.
 
-## Safe extension checklist
+## Перевірка нового Kernel component
 
-Перед додаванням нового Kernel component перевірити:
+Перед додаванням компонента перевірте:
 
 1. Чи це generic mechanism для кількох Domains?
-2. Чи не містить назва/logic business vocabulary конкретного Domain?
-3. Чи можна responsibility реалізувати Domain contribution/extension замість зміни Kernel?
-4. Чи contract не тягне Infrastructure dependency всередину Kernel?
-5. Чи є lifecycle, idempotency, tenant isolation та audit implications?
+2. Чи назва/logic не містить business vocabulary конкретного Domain?
+3. Чи responsibility не можна реалізувати Domain contribution/contract замість зміни Kernel?
+4. Чи contract не тягне concrete Infrastructure dependency у Kernel?
+5. Чи враховані lifecycle, idempotency, tenant isolation та audit implications?
 6. Чи новий extension point має stable consumer contract, а не є випадковим callback?
+7. Якщо це Process concern, чи Kernel справді має знати лише structure, а не Domain semantics?
 
-Якщо відповідь на перше питання «ні», компонент майже напевно належить не в Kernel.
+Якщо на перше питання відповідь «ні», компонент майже напевно належить не в Kernel.

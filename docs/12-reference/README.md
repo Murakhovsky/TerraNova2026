@@ -1,25 +1,25 @@
 ---
-title: Reference Index
-description: Карта exact/generated reference COS і правила вибору правильного джерела фактів.
+title: Індекс технічного довідника
+description: Карта точного/generated reference COS і правила вибору правильного джерела фактів.
 status: active
 updated: 2026-09-16
 kind: reference
 contract: reference-v1
 ---
 
-# Reference Index
+# Індекс технічного довідника
 
-Reference section відповідає на питання **«що executable code або machine-readable documentation contracts декларують точно?»**.
+Цей розділ відповідає на питання: **що executable code або machine-readable documentation contracts декларують точно?**
 
-Якщо потрібен сенс, починайте з Workflow/Domain/Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, cross-domain boundaries, Domain process coverage, capability debt або runtime mappings бізнес-процесу, приходьте сюди. Інакше prose дуже швидко стає базою даних, тільки гіршою.
+Якщо потрібен сенс, починайте з Workflow, Domain або Architecture. Якщо потрібні точні names, versions, routes, capabilities, process ownership, cross-domain boundaries, Domain process coverage, capability debt чи runtime mappings, дивіться Reference. Інакше prose дуже швидко стає базою даних, тільки гіршою.
 
-Current Process Registry schema: **v5**.
+Поточна максимальна Process Registry schema: **v5**. Same-domain definitions також підтримують schema **v4**.
 
 Capability Debt Registry schema: **v1**.
 
 Process Coverage Exemptions schema: **v1**.
 
-## Authority model
+## Модель авторитетності
 
 ```text
 main executable metadata / code
@@ -32,81 +32,83 @@ generated Markdown
         ↓ byte-for-byte sync
 main:/docs/12-reference
         ↓
-VitePress WEB
+VitePress Web
 ```
 
-Generated files не редагуються вручну у `main`.
+Generated files у `docs/12-reference` не редагуються вручну. Зміна їхньої структури або мови робиться в generator/structured authority, після чого generated output комітиться разом зі зміною.
 
-## Generated reference
+## Згенерований довідник
 
-| Потрібно дізнатися | Відкрити | Source authority |
+| Потрібно дізнатися | Відкрити | Авторитетне джерело |
 | --- | --- | --- |
-| Canonical business processes, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `resources/processes/*.json` + current-checkout runtime evidence |
-| Які canonical processes перетинають Domain boundaries і через які contracts/capabilities | [Cross-Domain Process Topology](cross-domain-process-topology.md) | Process Registry v5 cross-domain steps + current-checkout contract evidence |
+| Канонічні бізнес-процеси, ownership, topology, capability coverage і runtime verification | [Business Process Registry](business-processes.md) | `resources/processes/*.json` + current-checkout runtime evidence |
+| Які процеси перетинають Domain boundaries і через які contracts/capabilities | [Cross-Domain Process Topology](cross-domain-process-topology.md) | Process Registry v5 + current-checkout contract evidence |
 | Які installable Domains мають canonical process model | [Domain Process Coverage](domain-process-coverage.md) | `app/Domains/*/module.php` + Process Registry + explicit exemptions |
-| Open capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + module manifests |
-| Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php`, KernelVersion |
+| Визнаний capability-model debt, severity і target capabilities | [Capability Debt Backlog](capability-debt.md) | `docs/.vitepress/capability-debt.json` + Process Registry gaps + manifests |
+| Modules, versions, schema versions, capabilities, migrations | [Module & Capability Reference](module-capabilities.md) | `app/Domains/*/module.php` + `KernelVersion` |
 | Module extension points і contributions | [Module Extension Points](extension-points.md) | module manifests + Kernel extension registry |
-| Application entry points / use cases | [Application Use Cases](application-use-cases.md) | Domain Application/UseCase structure |
+| Application entry points / use cases | [Application Use Cases](application-use-cases.md) | Domain `Application/UseCase` structure |
 | Explicit Command DTO contracts | [Command DTO Reference](commands.md) | `Application/DTO/*Command.php` |
-| Canonical runtime event types | [Event Types](event-types.md) | event catalogues / `TYPE` constants |
+| Canonical runtime Event types | [Event Types](event-types.md) | event catalogues / `TYPE` constants |
 | Module-owned routes | [Module Routes](module-routes.md) | route contributors / routing metadata |
 | Permissions / capability authority | [Permissions & Capabilities](permissions-capabilities.md) | executable permission/capability declarations |
-| Module configuration ownership | [Configuration Reference](configuration.md) | module manifests / configuration provisioners |
-| Database migration ownership and table touches | [Database Reference](database.md) | manifest `migration_files` + migration SQL |
+| Module configuration ownership | [Configuration Reference](configuration.md) | manifests / configuration provisioners |
+| Database migration ownership і table touches | [Database Reference](database.md) | manifest `migration_files` + migration SQL |
 | Canonical execution failure taxonomy | [Errors & Failures Reference](errors-and-failures.md) | `ExecutionFailureKind` + classified failures |
-| Architecture graph vocabulary and projections | [Architecture Graph Reference](architecture-graph.md) | Visualization vocabulary / projection registry |
+| Architecture graph vocabulary і projections | [Architecture Graph Reference](architecture-graph.md) | Visualization vocabulary / projection registry |
 
-## Narrative reference
+## Ручний довідник
 
-Не все варто генерувати. Meaning та cross-cutting explanation лишаються human-maintained.
+Не все варто генерувати. Meaning і cross-cutting explanation залишаються human-maintained.
 
-### [Glossary](glossary.md)
+### [Глосарій](glossary.md)
 
-Canonical vocabulary та терміни COS.
+Канонічні терміни й правила їх використання.
 
-### [Kernel Components](kernel-components.md)
+### [Компоненти Kernel](kernel-components.md)
 
-Навігаційний reference по основних Kernel mechanisms і їхній ролі.
+Навігаційний довідник основних Kernel mechanisms і їхньої відповідальності.
 
 ## Як вибрати джерело
 
 ```text
-Питання: «Навіщо?»
+«Навіщо?»
 → Concept / Product / ADR
 
-Питання: «Як працює бізнес-процес?»
+«Як працює бізнес-процес?»
 → Workflow + ProcessDiagram
 
-Питання: «Де business processes перетинають межі Domains?»
+«Де процеси перетинають межі Domains?»
 → Cross-Domain Process Topology
 
-Питання: «Які installable Domains взагалі мають process model?»
+«Які installable Domains мають process model?»
 → Domain Process Coverage
 
-Питання: «Хто відповідає за process steps і що mapped у runtime?»
+«Хто відповідає за process steps і що mapped у runtime?»
 → Business Process Registry
 
-Питання: «Які capability gaps уже визнані і як їх закривати?»
+«Які capability gaps уже визнані?»
 → Capability Debt Backlog
 
-Питання: «Хто володіє domain semantics?»
+«Хто володіє Domain semantics?»
 → Domain / Architecture
 
-Питання: «Як виконується?»
+«Як виконується?»
 → Runtime
 
-Питання: «Яке точне ім'я/version/route/event?»
+«Яке точне ім’я/version/route/event?»
 → Generated Reference
 
-Питання: «Де код?»
-→ Code Map + generated source path
+«Де код?»
+→ Карта коду + generated source path
 ```
 
-## Drift protection
+## Захист від drift
 
-CI генерує reference з поточного `main`, а потім перевіряє byte-for-byte sync перед VitePress build. Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry, Cross-Domain Process Topology, Domain Process Coverage та Capability Debt Backlog.
+CI генерує reference з поточного `main`, перевіряє committed output byte-for-byte, після чого запускає contracts/process/knowledge checks і VitePress build.
 
-Process Registry schema `v5` додає contract-guarded cross-domain steps поверх backward-compatible v4 same-domain definitions і перевіряє topology, ownership, step Domain, canonical capability або explicit capability gap та runtime evidence. Cross-Domain Process Topology агрегує лише ті foreign-domain steps, які мають verified `requires` contract і target-Domain capability. Capability Debt Registry schema `v1` вимагає рівно один debt item для кожного process capability gap і відхиляє stale debt, якщо target capability уже з'явилась у module authority. Domain Process Coverage gate вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directories з module manifests.
+Generated layer охоплює modules/capabilities, extension points, use cases, commands, events, routes, permissions, configuration ownership, database migrations, execution failures, architecture graph vocabulary, Business Process Registry, Cross-Domain Process Topology, Domain Process Coverage та Capability Debt Backlog.
 
-Narrative `Current Scope`, Domain overviews і цей Reference Index мають окремі drift checks проти executable/structured authorities. Зміна contract без синхронізації knowledge layer має ставати build defect, а не сюрпризом через два місяці.
+Process Registry schema v5 додає contract-guarded cross-domain steps поверх backward-compatible v4 same-domain definitions. Cross-Domain Process Topology агрегує лише foreign-domain steps із verified `requires` contract та target-Domain capability. Capability Debt Registry вимагає matching debt item для process capability gap і відхиляє stale debt після появи target capability. Domain Process Coverage вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directory з module manifest.
+
+Зміна executable або structured contract без синхронізації knowledge layer має бути build defect, а не сюрпризом через два місяці.
