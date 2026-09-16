@@ -59,6 +59,37 @@ const initCommandPalette = () => {
   });
 };
 
+const initHashNavigation = (sidebar) => {
+  const normalizePath = (path) => path.replace(/\/+$/, '') || '/';
+  const syncHashNavigation = () => {
+    if (!window.location.hash) return;
+
+    const currentPath = normalizePath(window.location.pathname);
+    const links = [...sidebar.querySelectorAll('[data-workspace-subnav-link]')];
+    const match = links.find((link) => {
+      const target = new URL(link.href, window.location.href);
+      return normalizePath(target.pathname) === currentPath
+        && target.hash !== ''
+        && target.hash === window.location.hash;
+    });
+
+    if (!match) return;
+
+    links.forEach((link) => {
+      const target = new URL(link.href, window.location.href);
+      if (normalizePath(target.pathname) !== currentPath) return;
+      link.classList.remove('is-active');
+      link.removeAttribute('aria-current');
+    });
+
+    match.classList.add('is-active');
+    match.setAttribute('aria-current', 'location');
+  };
+
+  syncHashNavigation();
+  window.addEventListener('hashchange', syncHashNavigation);
+};
+
 export const initWorkspaceShell = () => {
   const sidebar = document.querySelector('[data-workspace-sidebar]');
   if (!sidebar) return;
@@ -97,5 +128,6 @@ export const initWorkspaceShell = () => {
     if (event.key === 'Escape' && sidebar.classList.contains('is-mobile-open')) setSidebarOpen(false);
   });
 
+  initHashNavigation(sidebar);
   initCommandPalette();
 };
