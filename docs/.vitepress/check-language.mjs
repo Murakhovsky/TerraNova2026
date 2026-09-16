@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docsRoot = path.resolve(here, '..');
+const repoRoot = path.resolve(docsRoot, '..');
 
 const strictRoots = [
   path.join(docsRoot, 'for-business'),
@@ -35,7 +36,45 @@ const technicalHeadingWords = new Set([
   'Visualization', 'Reference', 'Graph', 'Contract', 'Contracts', 'Integration', 'Integrations', 'Interface', 'Interfaces',
   'Code', 'Map', 'AS', 'IS', 'TARGET', 'PHP', 'MySQL', 'AWS', 'CI', 'CLI', 'Vite', 'VitePress', 'Mermaid', 'BPMN',
   'Cytoscape', 'JavaScript', 'CSS', 'HTML', 'ADR', 'MCP', 'SEO', 'URL', 'URLs', 'CRUD', 'DTOs', 'FQCN',
+  'Identity', 'Content', 'Spatial', 'Bootstrap', 'Asset', 'Inventory', 'Item', 'Listing', 'Publication',
+  'ModuleExtensionRegistry', 'EventBus', 'ActionPolicy', 'AgentDefinition', 'AUTO', 'DENIED', 'n8n',
 ]);
+
+const exactTechnicalHeadings = new Set([
+  'Property Asset',
+  'Inventory Item',
+  'Listing',
+  'Publication',
+  'Identity',
+  'Content',
+  'Spatial',
+  'Bootstrap',
+  'ModuleExtensionRegistry',
+  'EventBus',
+  'AUTO',
+  'DENIED',
+  'ActionPolicy',
+  'AgentDefinition',
+  'n8n',
+]);
+
+function loadProcessTitles() {
+  const processRoot = path.join(repoRoot, 'resources', 'processes');
+  if (!fs.existsSync(processRoot)) return new Set();
+  const titles = new Set();
+  for (const entry of fs.readdirSync(processRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(processRoot, entry.name), 'utf8'));
+      if (typeof data.title === 'string' && data.title.trim()) titles.add(data.title.trim());
+    } catch {
+      // Process contract checks own malformed JSON. Language validation should not duplicate that responsibility.
+    }
+  }
+  return titles;
+}
+
+const processTitles = loadProcessTitles();
 
 function walkMarkdown(directory) {
   if (!fs.existsSync(directory)) return [];
@@ -69,14 +108,19 @@ function parseFrontmatter(source) {
   const match = source.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!match) return {};
   const result = {};
-  for (const key of ['title', 'description']) {
+  for (const key of ['title', 'description', 'generated']) {
     const value = match[1].match(new RegExp(`^${key}:\\s*(.+)$`, 'm'))?.[1]?.trim();
     if (value) result[key] = value.replace(/^['"]|['"]$/g, '');
   }
   return result;
 }
 
-function isTechnicalHeading(text) {
+function isTechnicalHeading(text, file) {
+  const trimmed = text.trim();
+  if (processTitles.has(trimmed)) return true;
+  if (exactTechnicalHeadings.has(trimmed)) return true;
+  if (relative(file) === '12-reference/glossary.md') return true;
+
   const visible = visibleLine(text)
     .replace(/V\d+(?:\.\d+)*/gi, ' ')
     .replace(/\b\d+(?:\.\d+)*\b/g, ' ')
@@ -136,6 +180,10 @@ function scanStructuralFile(file) {
     errors.push(`${relative(file)}: frontmatter description має містити український опис`);
   }
 
+  // Generated reference headings contain executable names and registry-owned titles.
+  // Their presentation shell is localized by the generators; machine-derived headings are authority data.
+  if (frontmatter.generated === 'true') return errors;
+
   let inFrontmatter = lines[0]?.trim() === '---';
   let inFence = false;
   let fenceMarker = null;
@@ -172,7 +220,7 @@ function scanStructuralFile(file) {
       localizedHeadingCount += 1;
       continue;
     }
-    if (isTechnicalHeading(text)) continue;
+    if (isTechnicalHeading(text, file)) continue;
     errors.push(`${relative(file)}:${index + 1}: англомовний структурний заголовок '${heading[2]}'`);
   }
 
