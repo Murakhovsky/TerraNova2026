@@ -5,6 +5,7 @@ $root = dirname(__DIR__, 2);
 $dockerNginx = (string) file_get_contents($root . '/docker/nginx/default.conf');
 $httpBootstrap = (string) file_get_contents($root . '/deploy/configure-company-os-http.sh');
 $tls = (string) file_get_contents($root . '/deploy/configure-dev-tls.sh');
+$devDeploy = (string) file_get_contents($root . '/deploy/dev.sh');
 $workflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
 
 foreach ([
@@ -40,6 +41,16 @@ foreach ([
 ] as $needle) {
     if (!str_contains($tls, $needle)) {
         throw new RuntimeException('TLS reverse-proxy contract is missing: ' . $needle);
+    }
+}
+
+foreach ([
+    'exec "$NGINX_ID" nginx -t',
+    'exec "$NGINX_ID" nginx -s reload',
+    'Nginx container configuration validated and reloaded.',
+] as $needle) {
+    if (!str_contains($devDeploy, $needle)) {
+        throw new RuntimeException('Container nginx reload contract is missing: ' . $needle);
     }
 }
 
