@@ -16,7 +16,17 @@
     "test:sales-browser": "node tests/browser/sales_workspace.mjs"
   },
   "dependencies": {
+    "@popperjs/core": "2.11.8",
     "@sparkjsdev/spark": "^2.1.0",
+    "bootstrap": "5.3.8",
+    "bootstrap-icons": "1.13.1",
+    "chart.js": "4.5.1",
+    "flatpickr": "4.6.13",
+    "fullcalendar": "7.1.0",
+    "htmx.org": "2.0.10",
+    "sortablejs": "1.15.7",
+    "tabulator-tables": "6.5.2",
+    "temporal-polyfill": "1.0.5",
     "three": "^0.185.1"
   },
   "devDependencies": {

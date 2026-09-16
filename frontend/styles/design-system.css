@@ -1,4 +1,4 @@
-@layer tn-reset, tn-tokens, tn-foundation, tn-components, tn-patterns, tn-production, tn-layouts, tn-features;
+@layer tn-vendor, tn-reset, tn-tokens, tn-foundation, tn-components, tn-patterns, tn-production, tn-layouts, tn-features;
 
 @import './tokens.css' layer(tn-tokens);
 @import './foundation.css' layer(tn-foundation);

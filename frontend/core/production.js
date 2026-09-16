@@ -1,6 +1,6 @@
 const submitControls = (form) => form.querySelectorAll('button[type="submit"], input[type="submit"]');
 
-const resetFormState = (form) => {
+export const resetFormState = (form) => {
   form.removeAttribute('aria-busy');
   delete form.dataset.submitting;
   submitControls(form).forEach((control) => {

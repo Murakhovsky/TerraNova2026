@@ -1,0 +1,73 @@
+:root {
+  --bs-body-font-family: var(--tn-font-sans);
+  --bs-body-color: var(--tn-color-ink);
+  --bs-body-bg: var(--tn-color-surface);
+  --bs-border-color: var(--tn-color-border);
+  --bs-border-radius: var(--tn-radius-sm);
+  --bs-border-radius-lg: var(--tn-radius-md);
+  --bs-border-radius-xl: var(--tn-radius-lg);
+  --bs-link-color: var(--tn-color-positive);
+  --bs-link-hover-color: var(--tn-color-ink);
+}
+
+.btn {
+  --bs-btn-border-radius: var(--tn-radius-sm);
+  min-height: 40px;
+  font-weight: 750;
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--tn-color-ink);
+  --bs-btn-border-color: var(--tn-color-ink);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--tn-color-ink-soft);
+  --bs-btn-hover-border-color: var(--tn-color-ink-soft);
+  --bs-btn-active-bg: var(--tn-color-ink-soft);
+  --bs-btn-active-border-color: var(--tn-color-ink-soft);
+}
+
+.form-control,
+.form-select {
+  color: var(--tn-color-ink);
+  background-color: var(--tn-color-surface);
+  border-color: var(--tn-color-border);
+  border-radius: var(--tn-radius-sm);
+}
+
+.form-control:focus,
+.form-select:focus {
+  color: var(--tn-color-ink);
+  border-color: var(--tn-color-info);
+  box-shadow: 0 0 0 3px var(--tn-color-focus);
+}
+
+.dropdown-menu,
+.modal-content,
+.offcanvas,
+.toast {
+  color: var(--tn-color-ink);
+  background: var(--tn-color-surface);
+  border-color: var(--tn-color-border);
+  border-radius: var(--tn-radius-md);
+  box-shadow: var(--tn-shadow-overlay);
+}
+
+.dropdown-item:active,
+.dropdown-item.active {
+  color: var(--tn-color-ink);
+  background: var(--tn-color-selected);
+}
+
+.nav-tabs {
+  --bs-nav-tabs-border-color: var(--tn-color-border);
+  --bs-nav-tabs-link-active-color: var(--tn-color-ink);
+  --bs-nav-tabs-link-active-bg: var(--tn-color-surface);
+  --bs-nav-tabs-link-active-border-color: var(--tn-color-border) var(--tn-color-border) var(--tn-color-surface);
+}
+
+.table {
+  --bs-table-color: var(--tn-color-ink);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--tn-color-border);
+}

@@ -14,6 +14,7 @@ $entries = [
     'cos-architecture-explorer',
     'cos-control-center',
     'cos-site',
+    'cos-ui-runtime',
     'diagnostics-methodology-studio',
     'portal-cabinet',
     'property-workspace',

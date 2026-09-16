@@ -1,0 +1,60 @@
+name: WEB V0.14 Frontend Standard Stack
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'frontend/core/cos-ui-runtime.js'
+      - 'frontend/core/production.js'
+      - 'frontend/core/libraries/**'
+      - 'frontend/entrypoints/cos-ui-runtime.js'
+      - 'frontend/styles/design-system.css'
+      - 'frontend/styles/vendor/**'
+      - 'tests/architecture/frontend_assets.php'
+      - 'tests/architecture/web_v012_production_closure.php'
+      - 'tests/architecture/web_v014_standard_stack.php'
+      - 'docs/architecture/web-v0.14.md'
+      - '.github/workflows/web-v014.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'frontend/core/cos-ui-runtime.js'
+      - 'frontend/core/production.js'
+      - 'frontend/core/libraries/**'
+      - 'frontend/entrypoints/cos-ui-runtime.js'
+      - 'frontend/styles/design-system.css'
+      - 'frontend/styles/vendor/**'
+      - 'tests/architecture/frontend_assets.php'
+      - 'tests/architecture/web_v012_production_closure.php'
+      - 'tests/architecture/web_v014_standard_stack.php'
+      - 'docs/architecture/web-v0.14.md'
+      - '.github/workflows/web-v014.yml'
+
+jobs:
+  standard-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - name: Build frontend assets
+        run: npm run build
+      - name: Frontend standard stack gates
+        run: |
+          php -l tests/architecture/web_v014_standard_stack.php
+          php tests/architecture/web_v014_standard_stack.php
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/web_v012_production_closure.php

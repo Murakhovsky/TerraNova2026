@@ -34,6 +34,7 @@ export default defineConfig({
         'cos-architecture-explorer': resolve(import.meta.dirname, 'frontend/entrypoints/cos-architecture-explorer.js'),
         'cos-control-center': resolve(import.meta.dirname, 'frontend/entrypoints/cos-control-center.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
+        'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
         'diagnostics-methodology-studio': resolve(import.meta.dirname, 'frontend/entrypoints/diagnostics-methodology-studio.js'),
         'portal-cabinet': resolve(import.meta.dirname, 'frontend/entrypoints/portal-cabinet.js'),
         'property-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/property-workspace.js'),
