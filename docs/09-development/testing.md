@@ -1,43 +1,43 @@
 ---
-title: Testing COS
-description: Test layers and verification strategy for architecture, domain behavior, integration, frontend and documentation.
+title: Тестування COS
+description: Рівні тестування та стратегія перевірки архітектури, поведінки доменів, інтеграцій, інтерфейсів і документації.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: how-to
 ---
 
-# Testing COS
+# Тестування COS
 
-COS використовує кілька test layers. Один зелений endpoint не доводить, що Domain ownership, transaction boundary або idempotency залишилися здоровими.
+COS використовує кілька рівнів тестування. Один зелений HTTP-маршрут не доводить, що володіння домену, транзакційна межа або ідемпотентність залишилися здоровими.
 
-## Test layers
+## Рівні тестування
 
-### Architecture
+### Архітектура
 
-`tests/architecture` перевіряє dependency direction, module/runtime contracts та version-specific architecture gates.
+`tests/architecture` перевіряє напрям залежностей, контракти модулів і середовища виконання та архітектурні ворота для конкретних версій.
 
-### Unit / domain behavior
+### Модульні тести та поведінка домену
 
-Domain-specific unit scripts перевіряють model invariants, policies, deterministic evaluation і окремі services/use cases.
+Спеціалізовані тести домену перевіряють інваріанти моделі, політики, детерміноване оцінювання та окремі сервіси й варіанти використання.
 
-### Smoke
+### Димові перевірки (smoke tests)
 
-`tests/smoke` проходить meaningful runtime flows без повного зовнішнього середовища.
+`tests/smoke` проходить змістовні наскрізні сценарії середовища виконання без повного зовнішнього оточення.
 
-### Integration
+### Інтеграційні тести
 
-`tests/integration` потрібен там, де важливі real MySQL semantics, migrations, locking, tenant isolation, transaction/outbox behavior або adapter boundaries.
+`tests/integration` потрібен там, де важливі реальні властивості MySQL, міграції, блокування, ізоляція організацій, поведінка транзакції та Outbox або межі адаптерів.
 
-### Frontend / browser
+### Інтерфейс і браузер
 
-NPM scripts містять frontend API checks та Sales browser scenario:
+NPM-команди містять перевірки API інтерфейсу та браузерний сценарій Sales:
 
 ```bash
 npm run test:frontend
 npm run test:sales-browser
 ```
 
-### Documentation
+### Документація
 
 ```bash
 npm run docs:generate
@@ -46,18 +46,42 @@ npm run docs:check
 npm run docs:build
 ```
 
-## Minimum verification by change type
+`docs:check` перевіряє структуру сторінок, посилання, версії модулів, контракти документації та мовний бар’єр для нетехнічних розділів.
 
-| Change | Minimum |
-|---|---|
-| Domain invariant | unit + relevant smoke |
-| Persistence / migration | integration + architecture gate |
-| Event / Outbox / Queue | smoke + integration/idempotency path |
-| Module manifest / route | architecture + generated reference check |
-| Agent / Policy | deterministic policy cases + invalid proposal/evaluation cases |
-| UI workflow | frontend/browser + relevant API/use-case test |
-| Documentation architecture | `docs:generate:check` + `docs:check` + `docs:build` |
+## Мінімальна перевірка за типом зміни
 
-## Failure cases are first-class
+| Зміна | Мінімальна перевірка |
+| --- | --- |
+| Інваріант домену | модульний тест + відповідна димова перевірка |
+| Збереження даних / міграція | інтеграційний тест + архітектурна перевірка |
+| Подія / Outbox / черга | димова + інтеграційна перевірка ідемпотентності |
+| Декларація модуля / маршрут | архітектурна перевірка + перевірка згенерованого довідника |
+| Агент / політика | детерміновані сценарії політики + невалідні пропозиції та оцінювання |
+| Процес в інтерфейсі | інтерфейсний або браузерний тест + відповідний тест API чи варіанта використання |
+| Архітектура документації | `docs:generate:check` + `docs:check` + `docs:build` |
 
-Перевіряйте forbidden transitions, duplicate delivery, stale/optimistic-lock writes, policy deny, approval-required path, external failure/retry і tenant boundary. Happy path без failure semantics для COS є лише демонстрацією оптимізму.
+## Сценарії помилок є повноцінною частиною тестування
+
+Перевіряйте:
+
+- заборонені переходи стану;
+- повторну доставку тієї самої події;
+- застарілий запис або конфлікт оптимістичного блокування;
+- заборону політикою;
+- шлях, що потребує погодження;
+- помилку зовнішньої системи й повторну спробу;
+- межу організації та відсутність витоку даних між організаціями.
+
+Успішний сценарій без перевірки відмов для COS є лише демонстрацією оптимізму. Оптимізм корисний у житті, але як стратегія тестування він напрочуд дорогий.
+
+## Перед комітом
+
+Для зміни документації мінімальний локальний набір:
+
+```bash
+npm run docs:generate:check
+npm run docs:check
+npm run docs:build
+```
+
+Для зміни виконуваного коду додавайте тести того шару, чию поведінку або межу ви змінюєте, а не просто найближчий зелений сценарій.

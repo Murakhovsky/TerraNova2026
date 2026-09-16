@@ -1,43 +1,45 @@
 ---
-title: Local Setup
-description: Canonical local runtime and documentation setup for COS development.
+title: Локальний запуск COS
+description: Канонічне локальне середовище виконання та документації для розробки COS.
 status: active
-updated: 2026-09-15
+updated: 2026-09-16
 kind: how-to
 ---
 
-# Local Setup
+# Локальний запуск COS
 
-Поточний runtime baseline: PHP 8.2+ і Phalcon 5.9+. Production image використовує PHP 8.3 / Phalcon 5.19. MySQL є durable source of truth; Redis не є обов'язковим runtime dependency.
+Поточна базова конфігурація середовища виконання: PHP 8.2+ і Phalcon 5.9+. Робочий образ для розгортання використовує PHP 8.3 / Phalcon 5.19. MySQL є надійним джерелом правди для стану; Redis не є обов’язковою залежністю середовища виконання.
 
-## Docker path
+## Шлях через Docker
 
 1. Скопіюйте `.env.docker.example` у `.env.docker`.
-2. Замініть placeholders/secrets.
-3. Запустіть stack:
+2. Замініть шаблонні значення та секрети на локальні.
+3. Запустіть набір сервісів:
 
 ```bash
 docker compose --env-file .env.docker up -d --build
 ```
 
-`migrate` one-shot service застосовує SQL migrations до старту application/worker services.
+Одноразовий сервіс `migrate` застосовує SQL-міграції до запуску сервісів застосунку та робітника.
 
-Перевірка runtime:
+Перевірка середовища виконання:
 
 ```text
 GET /api/health
 ```
 
-## Native PHP path
+## Шлях через локальний PHP
 
-Після налаштування project PHP extensions і MySQL:
+Після налаштування потрібних розширень PHP та MySQL:
 
 ```bash
 php app/bootstrap_cli.php migration up
 php -S 127.0.0.1:8080 -t public public/router.php
 ```
 
-## Documentation
+## Документація
+
+Згенерувати довідники, перевірити їх і запустити документацію локально:
 
 ```bash
 npm run docs:generate
@@ -46,12 +48,22 @@ npm run docs:check
 npm run docs:dev
 ```
 
-Для production-equivalent documentation build:
+Для збірки, еквівалентної робочому розгортанню:
 
 ```bash
 npm run docs:build
 ```
 
-## Before changing architecture
+Команда `docs:check` також запускає перевірку мови для бізнесового та інтеграторського корпусу.
 
-Прочитайте [Repository Map](../00-start/repository-map.md), [System Map](../03-architecture/system-map.md) та relevant Domain overview. Це дешевше, ніж спочатку написати dependency у неправильний бік, а потім урочисто її рефакторити.
+## Перед зміною архітектури
+
+Прочитайте [карту репозиторію](../00-start/repository-map.md), [карту системи](../03-architecture/system-map.md) та огляд відповідного домену. Це дешевше, ніж спочатку провести залежність у неправильний бік, а потім урочисто її рефакторити.
+
+## Швидка перевірка після запуску
+
+Після підняття локального середовища переконайтеся щонайменше в трьох речах:
+
+- `/api/health` відповідає без помилки;
+- потрібні міграції застосовані;
+- документація проходить `npm run docs:check` перед комітом змін у її канонічний корпус.

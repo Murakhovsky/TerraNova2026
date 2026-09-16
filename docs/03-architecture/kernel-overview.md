@@ -1,173 +1,173 @@
 ---
-title: Kernel Overview
-description: Відповідальності та межі COS Kernel.
+title: Огляд ядра COS
+description: Відповідальності та межі ядра COS.
 status: active
-updated: 2026-09-13
+updated: 2026-09-16
 kind: architecture
 ---
 
-# Kernel Overview
+# Огляд ядра COS
 
-COS Kernel є generic execution layer. Він не знає бізнес-мову конкретного Domain, але забезпечує однакові правила виконання для всіх Domains.
+Ядро COS (Kernel) є універсальним шаром виконання. Воно не знає бізнес-мову конкретного домену, але забезпечує однакові правила виконання для всіх доменів.
 
-Поточний executable Kernel contract: **`0.11.8`**.
+Поточний executable Kernel contract: **`0.11.8`**. Це службовий маркер версії, тобто поточний **виконуваний контракт ядра**.
 
-Детальний canonical document: [`docs/architecture/cos-kernel.md`](../architecture/cos-kernel.md).
+Детальний канонічний документ: [`docs/architecture/cos-kernel.md`](../architecture/cos-kernel.md).
 
-## Kernel owns mechanisms
+## Чим володіє ядро
 
-| Area | Responsibility |
+| Область | Відповідальність |
 | --- | --- |
-| Event | immutable facts, metadata, publication, outbox |
-| Rule | deterministic condition evaluation |
-| Agent | structured LLM decision runtime |
-| Action | proposal, lifecycle, controlled mutation |
-| Policy | AUTO / APPROVAL_REQUIRED / DENIED |
-| Approval | human decision lifecycle |
-| Queue | durable jobs, retries, leases, dead letters |
-| Audit | explanation and execution trail |
-| Transaction | transaction contract without PDO coupling |
-| Tenant | active organization context |
-| Configuration | validation and provisioning |
-| Module | installable Domain contract and registry |
-| Extension | module-owned extension points without hardcoded Domain assembly |
-| Module readiness | deployed/installed/schema/dependency diagnostics |
-| Operations | worker lifecycle, health |
-| Observability | metrics/logging contracts |
-| LLM governance | routing, provider registry, fallback, budgets, usage accounting |
+| Event — подія | незмінні факти, метадані, публікація, вихідна черга (Outbox) |
+| Rule — правило | детерміноване оцінювання умов |
+| Agent — агент | структуроване виконання рішень за участю мовної моделі |
+| Action — дія | пропозиція, життєвий цикл і контрольована зміна стану |
+| Policy — політика | `AUTO` / `APPROVAL_REQUIRED` / `DENIED` |
+| Approval — погодження | життєвий цикл людського рішення |
+| Queue — черга | надійні задачі, повторні спроби, оренда задач і невиправні помилки |
+| Audit — аудит | пояснення й траса виконання |
+| Transaction — транзакція | контракт транзакції без жорсткої прив’язки до PDO |
+| Tenant — організаційний контекст | активна організація та ізоляція даних |
+| Configuration — конфігурація | перевірка й надання конфігурації |
+| Module — модуль | контракт встановлюваного домену та реєстр |
+| Extension — розширення | точки розширення модулів без жорстко прописаного складання доменів |
+| Module readiness — готовність модуля | діагностика розгортання, встановлення, схеми та залежностей |
+| Operations — експлуатація | життєвий цикл робітників і контроль працездатності |
+| Observability — спостережуваність | контракти показників і журналювання |
+| LLM governance — керування мовними моделями | маршрутизація, реєстр постачальників, резервування, бюджети та облік використання |
 
-## Kernel does not own
+## Чим ядро не володіє
 
-Kernel не повинен визначати:
+Ядро не повинно визначати:
 
-- Sales stages;
-- Finance rules;
-- Inventory semantics;
-- конкретний CRM або LLM provider;
-- SQL schema конкретного Domain;
-- HTTP controllers;
-- prompt зміст конкретного business Agent;
-- Web navigation semantics конкретного Domain.
+- етапи продажів;
+- фінансові правила конкретного бізнесу;
+- семантику Inventory;
+- конкретного постачальника CRM або мовної моделі;
+- схему SQL конкретного домену;
+- HTTP-контролери;
+- зміст запиту до мовної моделі для конкретного бізнес-агента;
+- семантику вебнавігації конкретного домену.
 
-## Dependency direction
-
-```text
-Kernel         -> PHP only
-Domain         -> Kernel + same Domain
-Infrastructure -> Kernel/Domain contracts
-Interfaces     -> exposed Application/Kernel services
-Bootstrap      -> all concrete layers
-```
-
-Architecture tests повинні ловити зворотні залежності до того, як вони перетворяться на «тимчасове рішення 2026 року», яке переживе три покоління розробників.
-
-## Universal runtime loop
+## Напрям залежностей
 
 ```text
-Event
-  ↓
-Rule / Agent
-  ↓
-ActionProposal
-  ↓
-Action
-  ↓
-Policy
-  ├─ DENIED
-  ├─ APPROVAL_REQUIRED
-  └─ AUTO
-       ↓
-Queue / Executor
-       ↓
-Handler
-       ↓
-Domain Port
-       ↓
-Infrastructure Adapter
-       ↓
-ExecutionResult
-       ↓
-Result Event + Audit + Metrics
+Kernel         → лише PHP та універсальні контракти
+Domain         → Kernel + той самий Domain
+Infrastructure → контракти Kernel / Domain
+Interfaces     → відкриті сервіси Application / Kernel
+Bootstrap      → усі конкретні шари
 ```
 
-## Domain module contract
+Архітектурні тести повинні ловити зворотні залежності до того, як вони перетворяться на «тимчасове рішення 2026 року», яке переживе три покоління розробників.
 
-Domain реєструє через manifest/module contract свої contributions. Поточна модель включає, залежно від модуля:
+## Універсальний цикл виконання
 
-- runtime module service;
-- job handler services;
-- API route contributor services;
-- configuration provisioner services;
-- generic `extension_services`;
-- migration files;
-- capabilities;
-- Domain runtime contributions: events, actions, handlers, agents, context builders, rules, policies.
+```text
+Подія (Event)
+  ↓
+Правило / агент
+  ↓
+Пропозиція дії (ActionProposal)
+  ↓
+Дія (Action)
+  ↓
+Політика (Policy)
+  ├─ DENIED              заборонено
+  ├─ APPROVAL_REQUIRED   потрібне погодження
+  └─ AUTO                автоматично
+       ↓
+Черга / виконавець
+       ↓
+Обробник
+       ↓
+Порт домену
+       ↓
+Інфраструктурний адаптер
+       ↓
+Результат виконання (ExecutionResult)
+       ↓
+Подія результату + аудит + показники
+```
 
-`DomainModuleRegistry` забезпечує business runtime ownership/routing. `ModuleExtensionRegistry` забезпечує generic extension points для delivery/configuration та інших cross-cutting surfaces.
+## Контракт модуля домену
 
-Детальніше: [Extension Runtime](extension-runtime.md).
+Домен реєструє через декларацію `module.php` власні внески до платформи. Залежно від модуля вони можуть включати:
 
-## Extension model
+- сервіс модуля середовища виконання;
+- сервіси обробників задач;
+- сервіси, що додають маршрути API;
+- сервіси надання конфігурації;
+- універсальні `extension_services`;
+- файли міграцій;
+- можливості;
+- внески домену до середовища виконання: події, дії, обробники, агенти, побудовники контексту, правила й політики.
 
-Kernel V0.9 прибрав необхідність hardcode-ити кожен Domain у shared bootstrap для нових extension surfaces.
+`DomainModuleRegistry` забезпечує володіння та маршрутизацію бізнес-виконання. `ModuleExtensionRegistry` забезпечує універсальні точки розширення для інтерфейсів, конфігурації та інших наскрізних механізмів.
+
+Детальніше: [середовище розширень](extension-runtime.md).
+
+## Модель розширень
+
+Починаючи з Kernel V0.9, нова поверхня розширення не вимагає жорстко прописувати кожен домен у спільному Bootstrap.
 
 ```text
 module.php
   ↓
-ModuleContributions
+ModuleContributions — внески модуля
   ↓
-ModuleCatalog
+ModuleCatalog — каталог модулів
   ↓
-ModuleExtensionRegistry
+ModuleExtensionRegistry — реєстр розширень
   ↓
-consumer resolves service
+споживач знаходить сервіс
   ↓
-request-time active-module guard where required
+перевірка активності модуля під час запиту, якщо потрібна
 ```
 
-Kernel реєструє ownership як `module_id + extension_point + service_id`. Concrete service contract перевіряє рівень-споживач, наприклад Web layer для `web.navigation`.
+Ядро реєструє володіння як `module_id + extension_point + service_id`. Конкретний контракт сервісу перевіряє шар-споживач, наприклад вебшар для `web.navigation`.
 
-## Governed LLM model
+## Керована модель мовних моделей
 
-Kernel V0.10 робить structured LLM access керованим runtime-механізмом:
+Kernel V0.10 зробив структурований доступ до LLM керованим механізмом середовища виконання:
 
 ```text
-StructuredLlmRequest
+StructuredLlmRequest — структурований запит
   ↓
-Budget check
+перевірка бюджету
   ↓
-Routing policy
+політика маршрутизації
   ↓
-Provider registry
+реєстр постачальників
   ↓
-Provider
+постачальник
   ↓
-Usage record + metrics
+запис використання + показники
 ```
 
-Fallback дозволений тільки для retryable provider failures. Non-retryable error не маскується переходом на інший provider.
+Перехід до резервного постачальника дозволений лише для помилок, які допускають повторну спробу. Невідновлювана помилка не маскується переходом на іншу модель.
 
-`organizationId`, `useCase` і `correlationId` проходять через request context, що дозволяє tenant budgets, use-case routing та traceability.
+`organizationId`, `useCase` і `correlationId` проходять через контекст запиту, що дозволяє бюджети організації, маршрутизацію за сценаріями та простежуваність.
 
-Детальніше: [LLM Governance](../06-ai-agents/llm-governance.md).
+Детальніше: [керування мовними моделями](../06-ai-agents/llm-governance.md).
 
-## Persistence guarantees
+## Гарантії збереження та виконання
 
 Поточна архітектура базується на таких гарантіях:
 
-- MySQL є source of truth;
-- COS не є Event Sourcing;
-- state + Event + Outbox зберігаються транзакційно;
-- delivery at-least-once;
-- side effects idempotent;
-- tenant-scoped queries і mutations;
-- LLM не виконує mutation напряму;
-- Policy перевіряється перед Action execution;
-- async work проходить через durable Queue;
-- execution має audit trail;
-- module readiness не виконує migration side effects;
-- LLM usage має organization/use-case telemetry і може бути обмежений monthly budget.
+- MySQL є основним джерелом правди;
+- COS не використовує Event Sourcing як основну модель збереження стану;
+- стан + подія + Outbox зберігаються транзакційно;
+- доставка виконується щонайменше один раз (at-least-once);
+- побічні ефекти повинні бути ідемпотентними;
+- запити та зміни ізольовані за організацією;
+- мовна модель не змінює стан напряму;
+- політика перевіряється перед виконанням дії;
+- асинхронна робота проходить через надійну чергу;
+- виконання залишає аудиторську трасу;
+- перевірка готовності модуля не запускає побічні ефекти міграцій;
+- використання LLM має телеметрію за організацією та сценарієм і може обмежуватися місячним бюджетом.
 
 ## Головний інваріант
 
-> Domain визначає, **що означає дія**. Kernel визначає, **як вона безпечно проходить lifecycle**.
+> Домен визначає, **що означає дія**. Ядро визначає, **як вона безпечно проходить життєвий цикл**.

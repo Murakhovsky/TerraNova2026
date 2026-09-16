@@ -1,178 +1,178 @@
 ---
-title: Execution Lifecycle
-description: Наскрізний runtime від бізнес-транзакції до результату.
+title: Життєвий цикл виконання
+description: Наскрізний шлях виконання COS від бізнес-транзакції до результату.
 status: active
-updated: 2026-09-11
+updated: 2026-09-16
 kind: runtime
 ---
 
-# Execution Lifecycle
+# Життєвий цикл виконання
 
-Ця сторінка описує наскрізний execution path COS.
+Ця сторінка описує наскрізний шлях виконання (execution path) COS.
 
-## Phase 1. Business state change
+## Етап 1. Зміна бізнес-стану
 
-Ініціатором може бути Web/API/CLI/Telegram/webhook/worker або інший internal process.
+Ініціатором може бути Web, API, CLI, Telegram, вебхук, робітник черги або інший внутрішній процес.
 
-Interface викликає Domain Application use case. Use case:
+Інтерфейс викликає варіант використання рівня застосунку. Він:
 
-1. перевіряє domain invariants;
-2. змінює business state;
-3. створює Domain Event;
-4. зберігає state + Event + Outbox в одній transaction boundary.
+1. перевіряє інваріанти домену;
+2. змінює бізнес-стан;
+3. створює подію домену (Domain Event);
+4. зберігає стан, подію та Outbox в одній транзакційній межі.
 
 ```text
-Interface
+Інтерфейс
   ↓
-Application Use Case
+Варіант використання рівня застосунку
   ↓
-Domain Model
+Модель домену
   ↓
-Transaction(state + event + outbox)
+Транзакція: стан + подія + Outbox
 ```
 
-## Phase 2. Event delivery
+## Етап 2. Доставка події
 
-Після commit durable consumer читає Outbox.
+Після фіксації транзакції надійний споживач читає Outbox.
 
-Важлива властивість: automation не є частиною початкового DB request. Це ізолює business transaction від LLM latency, CRM outage або тимчасової помилки integration provider.
+Автоматизація не є частиною початкового запиту до бази даних. Це ізолює бізнес-транзакцію від затримки мовної моделі, недоступності CRM або тимчасової помилки зовнішнього постачальника.
 
-Delivery — at-least-once. Отже consumer та всі downstream mutations повинні бути idempotent.
+Доставка працює за принципом щонайменше однієї спроби (at-least-once), тому споживачі та всі наступні зміни повинні бути ідемпотентними.
 
-## Phase 3. Context construction
+## Етап 3. Побудова контексту
 
-Event сам по собі містить факт, але для рішення часто потрібен додатковий context.
+Подія містить факт, але для рішення часто потрібен додатковий контекст.
 
-Domain-owned context provider збирає tenant-scoped дані для:
+Постачальник контексту, яким володіє домен, збирає ізольовані за організацією дані для:
 
-- Rule;
-- Agent;
-- Policy;
-- Action handler, якщо це частина його contract.
+- правила (Rule);
+- агента (Agent);
+- політики (Policy);
+- обробника дії, якщо це частина його контракту.
 
-Context не повинен будуватися довільним SQL всередині Agent.
+Контекст не повинен будуватися довільним SQL усередині агента.
 
-## Phase 4. Decision
+## Етап 4. Рішення
 
-### Rule path
+### Шлях правила
 
-Rule оцінює deterministic condition.
+Правило оцінює детерміновану умову:
 
 ```text
-Event + RuleContext → true/false / deterministic result
+Подія + контекст правила → так / ні або детермінований результат
 ```
 
-### Agent path
+### Шлях агента
 
-AgentRuntime:
+`AgentRuntime`:
 
-1. знаходить AgentDefinition;
-2. отримує context через routed context builder;
-3. redacts sensitive data;
-4. викликає LLM contract;
-5. validates structured decision;
-6. повертає AgentResult / ActionProposal.
+1. знаходить `AgentDefinition`;
+2. отримує контекст через відповідний побудовник контексту;
+3. приховує чутливі дані;
+4. викликає контракт мовної моделі;
+5. перевіряє структуроване рішення;
+6. повертає `AgentResult` або `ActionProposal`.
 
-Agent не має доступу до ActionExecutor або infrastructure adapters.
+Агент не має доступу до `ActionExecutor` або інфраструктурних адаптерів.
 
-## Phase 5. Action materialization
+## Етап 5. Матеріалізація дії
 
-ActionProposal перетворюється на Action з типом, payload, tenant context, idempotency identity та lifecycle status.
+`ActionProposal` перетворюється на `Action` із типом, корисним навантаженням, контекстом організації, ідентичністю для ідемпотентності та станом життєвого циклу.
 
-Action є одиницею виконання, а не просто довільним масивом JSON.
+Дія є одиницею виконання, а не просто довільним масивом JSON.
 
-## Phase 6. Policy gate
+## Етап 6. Перевірка політикою
 
-Перед mutation виконується Policy evaluation.
+Перед зміною стану виконується оцінювання політики:
 
 ```text
-AUTO              → execute/schedule
-APPROVAL_REQUIRED → create Approval
-DENIED            → stop + audit
+AUTO              → виконати або поставити в чергу
+APPROVAL_REQUIRED → створити погодження
+DENIED            → зупинити + записати аудит
 ```
 
-Відсутність matching policy не означає “мабуть можна”. Default deny.
+Відсутність відповідної політики не означає «мабуть можна». Базове правило — заборона без явного дозволу (default deny).
 
-## Phase 7. Human approval
+## Етап 7. Погодження людиною
 
-Для sensitive actions Approval фіксує людське рішення. Approval не обходить Action lifecycle, а повертає схвалену Action в нормальний execution path.
+Для чутливих дій погодження (Approval) фіксує людське рішення. Воно не обходить життєвий цикл дії, а повертає схвалену дію до нормального шляху виконання.
 
-Відхилена Action не виконується.
+Відхилена дія не виконується.
 
-## Phase 8. Durable execution
+## Етап 8. Надійне виконання
 
-LLM work, mutations та integration calls, для яких потрібна reliability, виконуються через Queue.
+Робота з мовною моделлю, зміни стану та інтеграційні виклики, для яких потрібна надійність, виконуються через чергу (Queue).
 
-Queue забезпечує:
+Черга забезпечує:
 
-- durable persistence;
-- lease/claim;
-- retry;
-- attempt count;
-- delayed availability;
-- dead-letter behavior;
-- worker recovery.
+- надійне збереження;
+- захоплення задачі робітником на обмежений час;
+- повторні спроби;
+- лічильник спроб;
+- відкладену доступність;
+- стан невиправної помилки (dead letter);
+- відновлення робітника.
 
-## Phase 9. Handler routing
+## Етап 9. Маршрутизація обробника
 
-ActionExecutor визначає handler через registered Domain module contributions.
+`ActionExecutor` визначає обробник через зареєстровані внески модуля домену:
 
 ```text
-Action type
+Тип дії
    ↓
 DomainModuleRegistry
    ↓
-Action handler
+Обробник дії
    ↓
-Outbound port
+Вихідний порт
    ↓
-Infrastructure adapter
+Інфраструктурний адаптер
 ```
 
-У Kernel немає `if sales`, `if finance` або provider-specific logic.
+У ядрі немає логіки `if sales`, `if finance` або логіки, прив’язаної до конкретного зовнішнього постачальника.
 
-## Phase 10. Result
+## Етап 10. Результат
 
-Handler повертає `ExecutionResult`.
+Обробник повертає `ExecutionResult`.
 
-Kernel завершує Action lifecycle і створює generic technical result Event:
+Ядро завершує життєвий цикл дії та створює універсальну технічну подію результату:
 
 - `cos.action.completed`;
 - `cos.action.failed`.
 
-Якщо execution змінив business state, відповідний Domain створює власний business Event.
+Якщо виконання змінило бізнес-стан, відповідний домен створює власну бізнес-подію.
 
-## Phase 11. Audit and metrics
+## Етап 11. Аудит і показники
 
-Кожен важливий decision/execution point має бути корельований через IDs і tenant context.
+Кожна важлива точка рішення або виконання має бути пов’язана через ідентифікатори та контекст організації.
 
-На виході можна відновити:
+На виході повинна відновлюватися траса:
 
 ```text
-Event
- → rule/agent decision
- → proposal
- → policy
- → approval
- → job
- → action
- → handler
- → result
+Подія
+ → рішення правила або агента
+ → пропозиція
+ → політика
+ → погодження
+ → задача черги
+ → дія
+ → обробник
+ → результат
 ```
 
-## Failure boundaries
+## Межі відмов
 
-| Failure | Expected behavior |
+| Відмова | Очікувана поведінка |
 | --- | --- |
-| Domain transaction fails | no committed state/event/outbox |
-| Consumer fails | event remains retryable |
-| LLM fails | job retry/fail; no mutation |
-| structured output invalid | reject decision; no action |
-| Policy denies | no execution |
-| Approval rejected | no execution |
-| External CRM unavailable | retry/idempotent integration path |
-| Handler fails | failed result + audit + retry strategy |
+| Транзакція домену не пройшла | стан, подія й Outbox не фіксуються |
+| Споживач упав | подія залишається доступною для повторної спроби |
+| LLM недоступна | повтор або відмова задачі, без зміни бізнес-стану |
+| Структурована відповідь невалідна | рішення відхиляється, дія не створюється |
+| Політика заборонила | виконання не відбувається |
+| Погодження відхилене | виконання не відбувається |
+| Зовнішня CRM недоступна | повторюваний та ідемпотентний шлях інтеграції |
+| Обробник упав | результат помилки + аудит + стратегія повтору |
 
-## Runtime invariant
+## Інваріант середовища виконання
 
-> Жодна автоматизація або Agent не має створювати side effect шляхом, який неможливо пояснити через Event → Decision → Action → Policy → Execution → Result.
+> Жодна автоматизація або агент не має створювати побічний ефект шляхом, який неможливо пояснити через послідовність: подія → рішення → дія → політика → виконання → результат.

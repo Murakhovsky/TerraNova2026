@@ -1,142 +1,144 @@
 ---
-title: Integration Model
-description: Правила інтеграції CRM, Telegram, LLM, webhooks та зовнішніх сервісів у COS.
+title: Модель інтеграцій COS
+description: Правила інтеграції CRM, Telegram, мовних моделей, вебхуків та зовнішніх сервісів у COS.
 status: active
-updated: 2026-09-12
+updated: 2026-09-16
 kind: architecture
 ---
 
-# Integration Model
+# Модель інтеграцій COS
 
 ## Основне правило
 
-External system не визначає внутрішню business model.
+Зовнішня система не визначає внутрішню бізнес-модель COS.
+
+Вихідна взаємодія:
 
 ```text
-Domain
-→ outbound port
-→ Infrastructure adapter/router
-→ external provider
+Домен
+→ вихідний порт
+→ інфраструктурний адаптер / маршрутизатор
+→ зовнішній постачальник
 ```
 
-Inbound:
+Вхідна взаємодія:
 
 ```text
-provider/webhook/channel
-→ Interface/Infrastructure validation
-→ durable inbox або application DTO
-→ Domain use case
+постачальник / вебхук / канал
+→ перевірка на рівні інтерфейсу або інфраструктури
+→ надійна вхідна черга або DTO застосунку
+→ варіант використання домену
 ```
 
 ## CRM
 
-Sales володіє canonical CRM semantics через contracts (`CrmGatewayInterface`, inbound/provider interfaces, organization resolver, secret resolver).
+Sales володіє канонічною семантикою взаємодії з CRM через контракти на кшталт `CrmGatewayInterface`, вхідних інтерфейсів постачальника, визначення організації та отримання секретів.
 
-Provider selection і HTTP/provider details належать Infrastructure.
+Вибір конкретного постачальника, HTTP-запити та інші технічні деталі належать інфраструктурі.
 
-Inbound CRM flow має HMAC/secret validation, durable inbox, idempotency, retry/dead-letter і external reference mapping.
+Вхідний потік CRM повинен мати перевірку HMAC або секрету, надійну вхідну чергу, ідемпотентність, повторні спроби, стан невиправної помилки та зіставлення зовнішніх ідентифікаторів.
 
 ## Telegram
 
-Telegram — delivery channel, не Domain.
+Telegram є каналом доставки, а не доменом.
 
-Новий Telegram code належить `Interfaces/Telegram` та викликає ті самі use cases, що Web/API/CLI.
+Новий код Telegram належить `Interfaces/Telegram` і викликає ті самі варіанти використання, що Web, API та CLI.
 
-Legacy Telegram ActiveRecord models у Sales/Property persistence є compatibility adapters і не повинні розростатися.
+Старі моделі ActiveRecord у збереженні Sales або Property є адаптерами сумісності й не повинні перетворюватися на новий центр бізнес-логіки.
 
-## LLM
+## Мовні моделі
 
 Є дві різні абстракції:
 
-- `Kernel\\Llm` — provider-neutral **governed structured LLM runtime**;
-- `Kernel\\Agent` — controlled decision runtime, який може створювати `ActionProposal`.
+- `Kernel\\Llm` — нейтральне до постачальника **кероване середовище структурованих запитів до мовних моделей**;
+- `Kernel\\Agent` — контрольоване середовище прийняття рішень, яке може створювати `ActionProposal`.
 
-Не кожен structured LLM call є Agent.
+Не кожен структурований виклик мовної моделі є агентом.
 
-Поточний LLM integration path:
+Поточний шлях інтеграції:
 
 ```text
-Domain / Agent / Diagnostic
+Домен / агент / діагностика
     ↓
-StructuredLlmRequest
+StructuredLlmRequest — структурований запит
     ↓
-GovernedStructuredLlmClient
+GovernedStructuredLlmClient — керований клієнт
     ↓
-budget + routing policy
+бюджет + політика маршрутизації
     ↓
-provider registry
+реєстр постачальників
     ↓
-Infrastructure/Llm client
+Infrastructure/Llm client — інфраструктурний клієнт
     ↓
-external LLM provider
+зовнішній постачальник мовної моделі
     ↓
-usage accounting + metrics
+облік використання + показники
 ```
 
-Concrete provider transport належить `Infrastructure/Llm`.
+Конкретний транспорт до постачальника належить `Infrastructure/Llm`.
 
-### Routing і fallback
+### Маршрутизація та резервування
 
-Provider/model selection централізується через `LlmRoutingPolicy` і `LlmProviderRegistry`.
+Вибір постачальника й моделі централізований у `LlmRoutingPolicy` та `LlmProviderRegistry`.
 
-Explicit `useCase` policy має пріоритет над request/domain model hint. Fallback дозволений лише на retryable provider failure і лише якщо policy містить наступний route.
+Явна політика для `useCase` має пріоритет над підказкою моделі з конкретного запиту або домену. Перехід до резервного маршруту дозволений лише при помилці постачальника, яка допускає повторну спробу, і лише якщо політика містить наступний маршрут.
 
-### Tenant governance
+### Керування за організацією
 
-Коли request має `organizationId`, shared runtime може:
+Коли запит містить `organizationId`, спільне середовище виконання може:
 
-- перевірити monthly budget;
-- записати usage/cost;
-- tenant-scope-ити metrics;
-- корелювати request за `correlationId`;
-- групувати telemetry за `useCase`.
+- перевірити місячний бюджет;
+- записати використання та вартість;
+- ізолювати показники за організацією;
+- пов’язати запит через `correlationId`;
+- групувати телеметрію за `useCase`.
 
-Деталі: [LLM Governance](../06-ai-agents/llm-governance.md).
+Деталі: [керування мовними моделями](../06-ai-agents/llm-governance.md).
 
-## Webhooks
+## Вебхуки
 
-Webhook endpoint повинен:
+Точка приймання вебхуку повинна:
 
-1. перевірити authenticity;
-2. нормалізувати transport input;
-3. забезпечити idempotency/inbox, якщо подія asynchronous;
-4. передати canonical command/use case;
-5. не виконувати business SQL самостійно.
+1. перевірити справжність запиту;
+2. нормалізувати транспортні вхідні дані;
+3. забезпечити ідемпотентність і надійну вхідну чергу, якщо подія асинхронна;
+4. передати канонічну команду або варіант використання;
+5. не виконувати бізнес-SQL самостійно.
 
-## Module-owned integration surfaces
+## Інтеграційні поверхні, якими володіють модулі
 
-Kernel V0.9 дозволяє modules декларувати integration/delivery contributions через Extension Runtime.
+Починаючи з Kernel V0.9, модулі можуть декларативно додавати інтеграційні та інтерфейсні внески через середовище розширень (Extension Runtime).
 
 Поточні приклади:
 
-- `api.routes`;
-- `tenant.configuration`;
-- `web.navigation`.
+- `api.routes` — маршрути API;
+- `tenant.configuration` — конфігурація організації;
+- `web.navigation` — вебнавігація.
 
-Shared Bootstrap не повинен містити hardcoded список Domain-specific contributors там, де surface може бути module-owned.
+Спільний Bootstrap не повинен містити жорстко прописаний список доменних постачальників, якщо поверхнею може володіти сам модуль.
 
-Деталі: [Extension Runtime](../03-architecture/extension-runtime.md).
+Деталі: [середовище розширень](../03-architecture/extension-runtime.md).
 
 ## n8n
 
-n8n може бути orchestration/integration adapter, але не місцем canonical business rules.
+n8n може бути адаптером оркестрації та інтеграції, але не місцем канонічних бізнес-правил.
 
-Якщо правило впливає на domain state і має бути однаковим для Web/API/Telegram/Agent, воно належить Domain/Kernel, не n8n workflow.
+Якщо правило впливає на стан домену й має однаково працювати для Web, API, Telegram та агента, воно належить домену або ядру, а не окремому процесу n8n.
 
-## External side effects
+## Зовнішні побічні ефекти
 
-External calls повинні мати, де це застосовно:
+Зовнішні виклики повинні мати, де це доречно:
 
-- organization-scoped idempotency keys;
-- retry policy;
-- timeout/error classification;
-- circuit breaker або еквівалентний failure protection;
-- audit/telemetry;
-- correlation id;
-- explicit provider boundary.
+- ключі ідемпотентності з урахуванням організації;
+- політику повторних спроб;
+- обмеження часу очікування та класифікацію помилок;
+- автоматичний захист від повторюваних збоїв (circuit breaker) або еквівалент;
+- аудит і телеметрію;
+- кореляційний ідентифікатор;
+- явну межу конкретного постачальника.
 
-Для LLM retry/fallback classification уже централізована в governed runtime. Інші integrations не повинні копіювати LLM-specific abstractions, але мають дотримуватися того самого принципу: transport failure ≠ business decision.
+Для мовних моделей класифікація повторів і резервування вже централізована в керованому середовищі виконання. Інші інтеграції не повинні копіювати специфічні абстракції LLM, але мають дотримуватися того самого принципу: **технічна помилка транспорту не є бізнес-рішенням**.
 
-## Ownership test
+## Перевірка правильності межі
 
-Якщо завтра CRM/Telegram/LLM provider зміниться, Domain business behavior має залишитися тим самим. Якщо для заміни провайдера треба переписати rules/use cases, boundary проведений погано.
+Якщо завтра зміниться постачальник CRM, Telegram або мовної моделі, бізнес-поведінка домену повинна залишитися тією самою. Якщо для заміни постачальника потрібно переписати правила або варіанти використання, архітектурну межу проведено погано.
