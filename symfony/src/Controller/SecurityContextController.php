@@ -4,21 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Security\LegacySecurityUser;
-use Symfony\Bundle\SecurityBundle\Security;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 final class SecurityContextController
 {
-    public function __construct(private readonly Security $security)
+    public function __construct(private readonly TenantContextProviderInterface $tenantContext)
     {
     }
 
     public function __invoke(): JsonResponse
     {
-        $user = $this->security->getUser();
-        if (!$user instanceof LegacySecurityUser) {
+        $context = $this->tenantContext->current();
+        if ($context === null) {
             return new JsonResponse([
                 'ok' => false,
                 'error' => 'Manager authorization required.',
@@ -28,10 +27,13 @@ final class SecurityContextController
         return new JsonResponse([
             'ok' => true,
             'data' => [
-                'user_id' => $user->id(),
-                'organization_id' => $user->organizationId(),
-                'organization_role' => $user->organizationRole(),
-                'roles' => $user->getRoles(),
+                'user_id' => (int) $context->userId()->value(),
+                'organization_id' => $context->organizationId()->value(),
+                'organization_role' => $context->role()->value(),
+                'permissions' => array_map(
+                    static fn ($permission): string => $permission->value(),
+                    $context->permissions(),
+                ),
             ],
         ]);
     }

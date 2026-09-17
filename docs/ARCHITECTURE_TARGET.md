@@ -20,11 +20,12 @@ Domain and Shared Kernel code must never depend on Symfony, Phalcon, HTTP, persi
 app/
   Kernel/
     Shared/
+    Identity/
+    Tenant/
     Agent/
     Tool/
     Workflow/
     Integration/
-    Identity/
     Audit/
     Knowledge/
   Domains/
@@ -55,6 +56,8 @@ docker/
 ## Shared Kernel decisions
 
 - Canonical tenant primitive is `OrganizationId`, matching the current COS data model and `organization_id`. `CompanyId` is not introduced until it represents a distinct business concept.
+- `Organization` is the tenant business identity. `Tenant` is not a duplicate entity; `Kernel/Tenant` owns runtime context, tenant isolation and authorization boundaries around an Organization.
+- New request/application code consumes `TenantContextProviderInterface -> TenantContext`. The older `Kernel\Tenant\OrganizationContextInterface` remains only as a legacy delivery compatibility bridge during migration.
 - Shared Kernel contains only stable cross-domain primitives and contracts.
 - `Clock` is a contract in Shared; concrete system/frozen clock implementations belong outside Domain.
 - `Money` stores integer minor units and a normalized three-letter currency code; floats are not part of the domain contract.

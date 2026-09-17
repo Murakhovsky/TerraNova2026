@@ -1,0 +1,50 @@
+name: Kernel Tenant Foundation
+
+on:
+  push:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Tenant/**'
+      - 'symfony/src/Security/RoleTenantPermissionResolver.php'
+      - 'symfony/src/Security/SecurityTenantContextProvider.php'
+      - 'symfony/src/Security/TenantPermissionVoter.php'
+      - 'symfony/src/Controller/SecurityContextController.php'
+      - 'symfony/config/services.yaml'
+      - 'symfony/tests/canonical_core_layout.php'
+      - 'tests/unit/kernel_tenant_foundation.php'
+      - 'tests/architecture/kernel_tenant_boundaries.php'
+      - '.github/workflows/kernel-tenant.yml'
+  pull_request:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Tenant/**'
+      - 'symfony/src/Security/RoleTenantPermissionResolver.php'
+      - 'symfony/src/Security/SecurityTenantContextProvider.php'
+      - 'symfony/src/Security/TenantPermissionVoter.php'
+      - 'symfony/src/Controller/SecurityContextController.php'
+      - 'symfony/config/services.yaml'
+      - 'symfony/tests/canonical_core_layout.php'
+      - 'tests/unit/kernel_tenant_foundation.php'
+      - 'tests/architecture/kernel_tenant_boundaries.php'
+      - '.github/workflows/kernel-tenant.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Kernel Tenant has no framework or infrastructure dependencies
+        run: php tests/architecture/kernel_tenant_boundaries.php
+      - name: Run Kernel Tenant unit contract without Symfony kernel
+        run: php tests/unit/kernel_tenant_foundation.php
+      - name: Lint Kernel Tenant
+        run: find app/Kernel/Tenant -type f -name '*.php' -print0 | xargs -0 -n1 php -l

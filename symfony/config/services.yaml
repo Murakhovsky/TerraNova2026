@@ -43,6 +43,14 @@ services:
   Kernel\Identity\Contract\IdentityResolverInterface:
     alias: App\Infrastructure\LegacyIdentityResolver
 
+  Kernel\Tenant\Contract\TenantPermissionResolverInterface:
+    alias: App\Security\RoleTenantPermissionResolver
+
+  Kernel\Tenant\Service\TenantContextFactory: ~
+
+  Kernel\Tenant\Contract\TenantContextProviderInterface:
+    alias: App\Security\SecurityTenantContextProvider
+
   Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
     arguments:
       $connection: '@legacy_cos.pdo'
