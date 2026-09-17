@@ -6,8 +6,8 @@ namespace Domains\Diagnostic\Evaluation;
 use Domains\Diagnostic\Methodology\CompiledDiagnosticPack;
 
 /**
- * @deprecated Sales-specific entrypoints belong to Domains\Sales\Diagnostics.
- * This compatibility facade stays inside Diagnostic without importing Sales.
+ * @deprecated Sales-specific entrypoints belong to the Sales Diagnostics bounded context.
+ * This compatibility facade stays inside Diagnostic without importing another business context.
  */
 final readonly class SalesEvaluationRunner
 {
