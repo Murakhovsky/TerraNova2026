@@ -7,14 +7,14 @@ RUN apk add --no-cache icu-libs libzip unzip git \
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-WORKDIR /var/www/html
+WORKDIR /var/www/html/symfony
 
 COPY symfony/composer.json symfony/composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
 
 COPY symfony/ ./
-COPY app/Kernel/Operations/ ./legacy/Kernel/Operations/
-COPY app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php ./legacy/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php
+COPY app/Kernel/ /var/www/html/app/Kernel/
+COPY app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php /var/www/html/app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php
 
 RUN composer dump-autoload --no-dev --classmap-authoritative \
     && mkdir -p var/cache var/log \
