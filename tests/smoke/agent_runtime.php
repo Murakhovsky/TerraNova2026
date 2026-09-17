@@ -48,7 +48,15 @@ $llm = new class implements LlmClientInterface {
         ], 'fake', 'fake-structured');
     }
 };
-$agent = new AgentDefinition('sales', '1', 'prompt', 'p1', 's1', ['sales.send_followup']);
+$agent = new AgentDefinition(
+    'sales',
+    '1',
+    'prompt',
+    'p1',
+    's1',
+    ['sales.send_followup'],
+    configurationManaged: false,
+);
 $invocation = new AgentInvocation('default', 'deal', '184', 'Best next step?', 'correlation-1');
 $runtime = new AgentRuntime($contextBuilder, $llm, new StructuredDecisionValidator(), $runs);
 $execution = $runtime->run($agent, $invocation);
