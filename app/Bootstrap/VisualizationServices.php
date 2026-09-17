@@ -1,11 +1,13 @@
 <?php
 declare(strict_types=1);
 
+use Infrastructure\Visualization\Architecture\ArchitectureGraphHealthAnalyzer;
 use Infrastructure\Visualization\Architecture\ArchitectureGraphProvider;
 use Infrastructure\Visualization\Architecture\ArchitectureProjectionRegistry;
 use Infrastructure\Visualization\Architecture\CrossDomainArchitectureGraphProvider;
 use Infrastructure\Visualization\Architecture\FallbackArchitectureGraphProvider;
 use Kernel\Module\DomainModuleRegistry;
+use Kernel\Visualization\Graph\GraphHealthAnalyzerInterface;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 
 // Visualization must remain observable even when one operational runtime module cannot
@@ -47,4 +49,9 @@ $di->setShared('cosArchitectureGraphProvider', function (): GraphProviderInterfa
 $di->setShared(
     'cosArchitectureProjectionRegistry',
     fn (): ArchitectureProjectionRegistry => ArchitectureProjectionRegistry::defaults(),
+);
+
+$di->setShared(
+    'cosArchitectureGraphHealthAnalyzer',
+    fn (): GraphHealthAnalyzerInterface => new ArchitectureGraphHealthAnalyzer(),
 );
