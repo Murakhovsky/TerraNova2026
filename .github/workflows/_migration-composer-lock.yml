@@ -1,0 +1,41 @@
+name: MIGRATION Composer Lock Generator
+
+on:
+  push:
+    branches:
+      - migration/application-cqrs-messenger
+    paths:
+      - 'symfony/composer.json'
+      - '.github/workflows/_migration-composer-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: migration/application-cqrs-messenger
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Update Symfony Messenger lock
+        working-directory: symfony
+        run: composer update symfony/messenger --with-all-dependencies --no-interaction --prefer-dist
+
+      - name: Commit deterministic lock
+        run: |
+          if git diff --quiet -- symfony/composer.lock; then
+            echo 'composer.lock already up to date'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add symfony/composer.lock
+          git commit -m 'MIGRATION: lock Symfony Messenger dependencies'
+          git push origin HEAD:migration/application-cqrs-messenger
