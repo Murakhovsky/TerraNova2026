@@ -16,22 +16,33 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 3
+- **Installable Domains:** 6
 - **Покрито канонічним процесом:** 3
 - **Явних exemptions:** 0
-- **Без покриття:** 0
+- **Без покриття:** 3
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
+| `finance` · Finance | `0.1.0` | `missing` | 0 | 0 | 0/0 | 0 | 0 |
+| `procurement` · Procurement | `0.1.0` | `missing` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
+| `service` · Service | `0.1.0` | `missing` | 0 | 0 | 0/0 | 0 | 0 |
 
 ## Канонічне ownership процесів
 
 ### Diagnostics (`diagnostic`)
 
 - `diagnostic.session-to-recommendation`
+
+### Finance (`finance`)
+
+- **Відсутнє покриття:** немає канонічного process і немає explicit exemption.
+
+### Procurement (`procurement`)
+
+- **Відсутнє покриття:** немає канонічного process і немає explicit exemption.
 
 ### Property (`property`)
 
@@ -41,6 +52,10 @@ generated: true
 
 - `sales.lead-to-managed-case`
 - `sales.request-to-property-match`
+
+### Service (`service`)
+
+- **Відсутнє покриття:** немає канонічного process і немає explicit exemption.
 
 ## Контракт покриття
 
