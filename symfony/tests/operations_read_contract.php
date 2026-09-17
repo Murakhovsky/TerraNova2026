@@ -8,6 +8,7 @@ use Kernel\Operations\Service\OperationsSectionReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+require __DIR__ . '/canonical_core_layout.php';
 
 final class OperationsReadModelStub implements OperationsReadModelInterface
 {
