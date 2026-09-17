@@ -48,7 +48,15 @@ $llm = new class implements LlmClientInterface {
         ], 'fake', 'fake');
     }
 };
-$agent = new AgentDefinition('sales_intelligence', '1', 'Follow policy.', 'p1', 's1', ['sales.request_manager_review']);
+$agent = new AgentDefinition(
+    'sales_intelligence',
+    '1',
+    'Follow policy.',
+    'p1',
+    's1',
+    ['sales.request_manager_review'],
+    configurationManaged: false,
+);
 $runtime = new AgentRuntime($builder, $llm, new StructuredDecisionValidator(), $runs, null, new SensitiveContextRedactor());
 $runtime->run($agent, new AgentInvocation('tenant-a', 'deal', '42', 'Next step?', 'correlation-1'));
 
