@@ -1,0 +1,67 @@
+name: Kernel Workflow Engine
+
+on:
+  push:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Kernel/Workflow/**'
+      - 'symfony/src/Infrastructure/Workflow/**'
+      - 'symfony/composer.json'
+      - 'symfony/composer.lock'
+      - 'symfony/config/services.yaml'
+      - 'tests/unit/kernel_workflow_engine.php'
+      - 'tests/architecture/kernel_workflow_boundaries.php'
+      - 'symfony/tests/workflow_state_manager_contract.php'
+      - '.github/workflows/kernel-workflow.yml'
+  pull_request:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Kernel/Workflow/**'
+      - 'symfony/src/Infrastructure/Workflow/**'
+      - 'symfony/composer.json'
+      - 'symfony/composer.lock'
+      - 'symfony/config/services.yaml'
+      - 'tests/unit/kernel_workflow_engine.php'
+      - 'tests/architecture/kernel_workflow_boundaries.php'
+      - 'symfony/tests/workflow_state_manager_contract.php'
+      - '.github/workflows/kernel-workflow.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: php tests/architecture/kernel_workflow_boundaries.php
+      - run: php tests/unit/kernel_workflow_engine.php
+      - run: find app/Kernel/Workflow -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  symfony-state-machine:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_SECRET: ci-only-secret
+      LEGACY_SESSION_SAVE_PATH: /tmp
+      LEGACY_SESSION_COOKIE_NAME: PHPSESSID
+      LEGACY_DB_HOST: 127.0.0.1
+      LEGACY_DB_PORT: 3306
+      LEGACY_DB_NAME: cos
+      LEGACY_DB_USER: cos
+      LEGACY_DB_PASSWORD: ci-only-password
+      COS_ORGANIZATION_ID: default
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - working-directory: symfony
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - working-directory: symfony
+        run: php tests/workflow_state_manager_contract.php
+      - working-directory: symfony
+        run: php bin/console lint:container

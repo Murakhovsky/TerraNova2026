@@ -81,6 +81,9 @@ services:
   Kernel\Application\Bus\EventBusInterface:
     alias: App\Infrastructure\Messenger\SymfonyEventBus
 
+  Kernel\Workflow\Contract\WorkflowStateManagerInterface:
+    alias: App\Infrastructure\Workflow\SymfonyWorkflowStateManager
+
   Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
     arguments:
       $connection: '@legacy_cos.pdo'
