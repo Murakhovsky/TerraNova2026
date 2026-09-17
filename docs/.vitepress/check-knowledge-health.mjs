@@ -8,26 +8,15 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..', '..');
 const errors = [];
 const health = buildKnowledgeHealth();
-
-function fail(message) {
-  errors.push(message);
-}
+const fail = (message) => errors.push(message);
 
 if (health.authority !== 'structured-current-checkout') fail(`Unexpected knowledge-health authority '${health.authority}'.`);
 if (health.totalProcesses <= 0) fail('Knowledge Health must contain at least one canonical process.');
 if (health.totalSteps <= 0) fail('Knowledge Health must contain canonical process steps.');
-if (health.capabilityMappedSteps + health.capabilityGapSteps !== health.totalSteps) {
-  fail('Capability mapped steps + capability gaps must equal total process steps.');
-}
-if (health.debtItems !== health.capabilityGapSteps) {
-  fail(`Capability debt must track every gap exactly: debt=${health.debtItems}, gaps=${health.capabilityGapSteps}.`);
-}
-if (health.evidenceVerifiedSteps > health.totalSteps || health.runtimeVerifiedSteps > health.totalSteps) {
-  fail('Evidence coverage cannot exceed total process steps.');
-}
-if (health.criticalSourceVerified > health.criticalSteps || health.criticalRuntimeVerified > health.criticalSteps) {
-  fail('Critical verification cannot exceed critical step count.');
-}
+if (health.capabilityMappedSteps + health.capabilityGapSteps !== health.totalSteps) fail('Capability mapped steps + capability gaps must equal total process steps.');
+if (health.debtItems !== health.capabilityGapSteps) fail(`Capability debt must track every gap exactly: debt=${health.debtItems}, gaps=${health.capabilityGapSteps}.`);
+if (health.evidenceVerifiedSteps > health.totalSteps || health.runtimeVerifiedSteps > health.totalSteps) fail('Evidence coverage cannot exceed total process steps.');
+if (health.criticalSourceVerified > health.criticalSteps || health.criticalRuntimeVerified > health.criticalSteps) fail('Critical verification cannot exceed critical step count.');
 if (!health.processSchemaVersions.includes(5)) fail('Knowledge Health must expose current Process Registry schema v5.');
 if (health.debtSchemaVersion !== 1) fail(`Knowledge Health must expose Capability Debt schema v1, got '${health.debtSchemaVersion}'.`);
 
@@ -43,21 +32,7 @@ if (!topology || typeof topology !== 'object') {
   if (topology.referenceLink !== '/12-reference/cross-domain-process-topology.html') fail(`Unexpected Cross-Domain Process Topology reference link '${topology.referenceLink}'.`);
 }
 
-const domainTotals = Object.values(health.domains).reduce((totals, domain) => ({
-  processes: totals.processes + domain.processes,
-  steps: totals.steps + domain.steps,
-  capabilityMappedSteps: totals.capabilityMappedSteps + domain.capabilityMappedSteps,
-  capabilityGapSteps: totals.capabilityGapSteps + domain.capabilityGapSteps,
-  evidenceVerifiedSteps: totals.evidenceVerifiedSteps + domain.evidenceVerifiedSteps,
-  runtimeVerifiedSteps: totals.runtimeVerifiedSteps + domain.runtimeVerifiedSteps,
-  criticalSteps: totals.criticalSteps + domain.criticalSteps,
-  criticalSourceVerified: totals.criticalSourceVerified + domain.criticalSourceVerified,
-  criticalRuntimeVerified: totals.criticalRuntimeVerified + domain.criticalRuntimeVerified,
-  debtItems: totals.debtItems + domain.debtItems,
-  highDebtItems: totals.highDebtItems + domain.highDebtItems,
-  mediumDebtItems: totals.mediumDebtItems + domain.mediumDebtItems,
-  lowDebtItems: totals.lowDebtItems + domain.lowDebtItems,
-}), {
+const emptyTotals = {
   processes: 0,
   steps: 0,
   capabilityMappedSteps: 0,
@@ -71,9 +46,13 @@ const domainTotals = Object.values(health.domains).reduce((totals, domain) => ({
   highDebtItems: 0,
   mediumDebtItems: 0,
   lowDebtItems: 0,
-});
+};
+const domainTotals = Object.values(health.domains).reduce((totals, domain) => {
+  for (const key of Object.keys(emptyTotals)) totals[key] += domain[key];
+  return totals;
+}, { ...emptyTotals });
 
-const comparisons = [
+for (const [key, expected] of [
   ['processes', health.totalProcesses],
   ['steps', health.totalSteps],
   ['capabilityMappedSteps', health.capabilityMappedSteps],
@@ -87,35 +66,27 @@ const comparisons = [
   ['highDebtItems', health.highDebtItems],
   ['mediumDebtItems', health.mediumDebtItems],
   ['lowDebtItems', health.lowDebtItems],
-];
-for (const [key, expected] of comparisons) {
+]) {
   if (domainTotals[key] !== expected) fail(`Domain health sum mismatch for ${key}: domains=${domainTotals[key]}, total=${expected}.`);
 }
 
 const systemStatus = fs.readFileSync(path.join(here, 'system-status.mjs'), 'utf8');
-if (!systemStatus.includes("import { buildKnowledgeHealth } from './knowledge-health.mjs';")) {
-  fail('System Status must consume the canonical Knowledge Health builder.');
-}
+if (!systemStatus.includes("import { buildKnowledgeHealth } from './knowledge-health.mjs';")) fail('System Status must consume the canonical Knowledge Health builder.');
 if (!systemStatus.includes('knowledgeHealth,')) fail('System Status snapshot must expose knowledgeHealth.');
 
 const themeIndex = fs.readFileSync(path.join(here, 'theme', 'index.mjs'), 'utf8');
-if (!themeIndex.includes("app.component('KnowledgeHealth', KnowledgeHealth)")) {
-  fail('VitePress theme must register KnowledgeHealth component.');
-}
+if (!themeIndex.includes("app.component('KnowledgeHealth', KnowledgeHealth)")) fail('VitePress theme must register KnowledgeHealth component.');
 
 const knowledgeHealthComponent = fs.readFileSync(path.join(here, 'theme', 'KnowledgeHealth.vue'), 'utf8');
-if (!knowledgeHealthComponent.includes('health.value?.crossDomainTopology')) {
-  fail('Knowledge Health UI must consume Cross-Domain Process Topology summary.');
-}
-if (!knowledgeHealthComponent.includes('topology.referenceLink')) {
-  fail('Knowledge Health UI must link Cross-Domain Process Topology reference.');
-}
+if (!knowledgeHealthComponent.includes('health.value?.crossDomainTopology')) fail('Knowledge Health UI must consume Cross-Domain Process Topology summary.');
+if (!knowledgeHealthComponent.includes('topology.referenceLink')) fail('Knowledge Health UI must link Cross-Domain Process Topology reference.');
 
 const home = fs.readFileSync(path.join(repoRoot, 'docs', 'index.md'), 'utf8');
-if (!home.includes('<KnowledgeHealth />')) fail('Documentation home must render KnowledgeHealth.');
-if (home.indexOf('<KnowledgeHealth />') > home.indexOf('<SystemStatus />')) {
-  fail('Knowledge Health must be shown before executable System Status on the documentation home.');
-}
+const localizedHome = fs.readFileSync(path.join(here, 'theme', 'LocalizedHome.vue'), 'utf8');
+if (!home.includes('<LocalizedHome />')) fail('Documentation home must render the unified LocalizedHome composition.');
+if (!localizedHome.includes('<KnowledgeHealth />')) fail('LocalizedHome must render KnowledgeHealth.');
+if (!localizedHome.includes('<SystemStatus />')) fail('LocalizedHome must render executable SystemStatus.');
+if (localizedHome.indexOf('<KnowledgeHealth />') > localizedHome.indexOf('<SystemStatus />')) fail('Knowledge Health must be shown before executable System Status on the documentation home.');
 
 if (errors.length > 0) {
   console.error(`Knowledge Health checks failed (${errors.length}):`);
