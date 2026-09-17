@@ -1,0 +1,39 @@
+name: Workflow Composer Lock Refresh
+
+on:
+  push:
+    branches: [migration/workflow-engine]
+    paths:
+      - 'symfony/composer.json'
+      - '.github/workflows/workflow-lock-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: migration/workflow-engine
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - name: Resolve Symfony Workflow dependency
+        run: |
+          cd symfony
+          composer update symfony/workflow --with-all-dependencies --no-interaction --prefer-dist --no-progress --no-plugins --no-scripts
+          cd ..
+      - name: Commit deterministic lock file
+        run: |
+          if git diff --quiet -- symfony/composer.lock; then
+            echo 'composer.lock already current'
+            exit 0
+          fi
+          git config user.name 'Murakhovsky'
+          git config user.email '41971803+Murakhovsky@users.noreply.github.com'
+          git add symfony/composer.lock
+          git commit -m 'MIGRATION: lock Symfony Workflow runtime'
+          git push origin HEAD:migration/workflow-engine
