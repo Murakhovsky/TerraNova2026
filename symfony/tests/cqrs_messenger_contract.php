@@ -12,8 +12,6 @@ use Kernel\Application\Event\EventHandlerInterface;
 use Kernel\Application\Event\EventInterface;
 use Kernel\Application\Query\QueryHandlerInterface;
 use Kernel\Application\Query\QueryInterface;
-use LogicException;
-use RuntimeException;
 use Symfony\Component\Messenger\Handler\HandlersLocator;
 use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
@@ -21,7 +19,7 @@ use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
 function expectCqrs(bool $condition, string $message): void
 {
     if (!$condition) {
-        throw new RuntimeException($message);
+        throw new \RuntimeException($message);
     }
 }
 
@@ -37,6 +35,14 @@ final class MessengerProbeCommandHandler implements CommandHandlerInterface
     public function __invoke(MessengerProbeCommand $command): string
     {
         return 'command:' . $command->value;
+    }
+}
+
+final class MessengerSecondCommandHandler implements CommandHandlerInterface
+{
+    public function __invoke(MessengerProbeCommand $command): string
+    {
+        return 'second-command:' . $command->value;
     }
 }
 
@@ -62,7 +68,17 @@ final readonly class MessengerProbeEvent implements EventInterface
     }
 }
 
-final class MessengerProbeEventHandler implements EventHandlerInterface
+final class MessengerFirstEventHandler implements EventHandlerInterface
+{
+    public int $calls = 0;
+
+    public function __invoke(MessengerProbeEvent $event): void
+    {
+        ++$this->calls;
+    }
+}
+
+final class MessengerSecondEventHandler implements EventHandlerInterface
 {
     public int $calls = 0;
 
@@ -90,8 +106,8 @@ $queryMessenger = new MessageBus([
 $queryBus = new SymfonyQueryBus($queryMessenger);
 expectCqrs($queryBus->ask(new MessengerProbeQuery('ok')) === 'query:ok', 'Query bus must return the single handler result.');
 
-$firstEventHandler = new MessengerProbeEventHandler();
-$secondEventHandler = new MessengerProbeEventHandler();
+$firstEventHandler = new MessengerFirstEventHandler();
+$secondEventHandler = new MessengerSecondEventHandler();
 $eventMessenger = new MessageBus([
     new HandleMessageMiddleware(new HandlersLocator([
         MessengerProbeEvent::class => [$firstEventHandler, $secondEventHandler],
@@ -108,13 +124,13 @@ $noHandlerEventBus->publish(new MessengerProbeEvent('no-handler'));
 
 $duplicateCommandBus = new SymfonyCommandBus(new MessageBus([
     new HandleMessageMiddleware(new HandlersLocator([
-        MessengerProbeCommand::class => [new MessengerProbeCommandHandler(), new MessengerProbeCommandHandler()],
+        MessengerProbeCommand::class => [new MessengerProbeCommandHandler(), new MessengerSecondCommandHandler()],
     ])),
 ]));
 try {
     $duplicateCommandBus->dispatch(new MessengerProbeCommand('duplicate'));
-    throw new RuntimeException('Command bus must reject multiple handler results.');
-} catch (LogicException) {
+    throw new \RuntimeException('Command bus must reject multiple handler results.');
+} catch (\LogicException) {
 }
 
 echo "Symfony Messenger CQRS contract passed.\n";
