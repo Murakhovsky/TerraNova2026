@@ -36,6 +36,10 @@ services:
       LEGACY_DB_NAME: ${SYMFONY_LEGACY_DB_NAME:-cos}
       LEGACY_DB_USER: ${SYMFONY_LEGACY_DB_USER:-cos_symfony_ro}
       LEGACY_DB_PASSWORD: ${SYMFONY_LEGACY_DB_PASSWORD:-ci-readonly-password}
+      LEGACY_SESSION_SAVE_PATH: /var/www/html/legacy-sessions
+      LEGACY_SESSION_COOKIE_NAME: ${SYMFONY_LEGACY_SESSION_COOKIE_NAME:-PHPSESSID}
+    volumes:
+      - legacy_php_sessions:/var/www/html/legacy-sessions:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -90,6 +94,9 @@ services:
 volumes:
   symfony_mysql_data:
   symfony_redis_data:
+  legacy_php_sessions:
+    external: true
+    name: cos_php_sessions
 
 networks:
   frontend:
