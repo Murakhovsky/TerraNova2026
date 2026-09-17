@@ -35,7 +35,11 @@ routes: none
 process model: explicitly deferred
 ```
 
-Finance не виконує платежі й не знає про конкретні банки, PSP або ERP. Майбутні зовнішні системи повинні входити через Platform Integration. Відсутність executable process у V1 зафіксована explicit architecture exemption, а не прихована як випадковий борг.
+Відсутність executable process у V1 зафіксована explicit architecture exemption, а не прихована як випадковий борг.
+
+## Межі
+
+Finance не виконує платежі й не знає про конкретні банки, PSP або ERP. Майбутні зовнішні системи повинні входити через Platform Integration, а persistence і orchestration з'являться тільки разом із окремим Finance runtime slice.
 
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Покриття доменів процесами](../../12-reference/domain-process-coverage.md)
