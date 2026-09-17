@@ -32,7 +32,11 @@ routes: none
 process model: explicitly deferred
 ```
 
-Marketplace, ERP та supplier API не входять у Domain. Вони мають підключатися через Platform Integration adapters. Відсутність executable process у V1 є explicit architecture exemption до початку реалізації Procurement runtime.
+Відсутність executable process у V1 є explicit architecture exemption до початку реалізації Procurement runtime.
+
+## Межі
+
+Marketplace, ERP та supplier API не входять у Domain. Вони мають підключатися через Platform Integration adapters; persistence, orchestration і executable process definitions з'являться тільки разом із окремим Procurement runtime slice.
 
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Покриття доменів процесами](../../12-reference/domain-process-coverage.md)
