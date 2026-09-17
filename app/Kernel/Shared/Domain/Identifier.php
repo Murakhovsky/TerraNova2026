@@ -8,7 +8,9 @@ use Stringable;
 
 abstract readonly class Identifier extends ValueObject implements Stringable
 {
-    final protected function __construct(private string $value)
+    private string $value;
+
+    final protected function __construct(string $value)
     {
         $value = trim($value);
         if ($value === '' || strlen($value) > 190) {
