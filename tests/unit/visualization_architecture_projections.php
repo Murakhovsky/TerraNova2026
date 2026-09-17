@@ -58,10 +58,11 @@ $registry = ArchitectureProjectionRegistry::defaults();
 
 $assert($registry->names() === ['system', 'runtime', 'domain', 'dependencies', 'contracts', 'events', 'actions', 'agents', 'integrations', 'code'], 'Canonical projection order changed.');
 $descriptions = $registry->descriptions();
-$assert(($descriptions['system']['layout'] ?? null) === 'hierarchical', 'System layout hint missing.');
+$assert(($descriptions['system']['layout'] ?? null) === 'radial', 'System must use a cycle-safe radial layout hint.');
 $assert(($descriptions['runtime']['layout'] ?? null) === 'flow', 'Runtime layout hint missing.');
 $assert(($descriptions['domain']['layout'] ?? null) === 'radial', 'Domain layout hint missing.');
 $assert(($descriptions['domain']['default_depth'] ?? null) === 2, 'Domain default depth missing.');
+$assert(($descriptions['dependencies']['layout'] ?? null) === 'force', 'Dependencies must use a network-safe force layout hint.');
 $assert(($descriptions['contracts']['layout'] ?? null) === 'flow', 'Contracts layout hint missing.');
 
 $system = $registry->project('system', $graph, new GraphView());
@@ -69,6 +70,7 @@ $assert(in_array('capability:sales.pipeline', $ids($system), true), 'System view
 $assert(!in_array('event:deal.changed', $ids($system), true), 'System view leaked runtime events.');
 $assert(!in_array('rule:sales:followup', $ids($system), true), 'System view leaked runtime rules.');
 $assert(!in_array('contract:property-reference', $ids($system), true), 'System view leaked contract topology.');
+$assert(!in_array('depends_on', $relations($system), true), 'System view must not mix dependency topology into composition.');
 
 $runtime = $registry->project('runtime', $graph, new GraphView());
 foreach (['event:deal.changed', 'rule:sales:followup', 'action:deal.close', 'policy:sales:deal.close', 'handler:close', 'agent:sales.agent'] as $id) {
