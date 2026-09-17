@@ -5,27 +5,24 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use Kernel\Operations\Service\OperationsSectionReader;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
  * Migration-only read API for proving semantic parity with the legacy
- * CosRuntimeController before authentication and public routing move.
+ * CosRuntimeController before public routing moves to Symfony.
  *
- * The organization is fixed by runtime configuration. It is deliberately
- * not accepted from the request so this temporary surface cannot bypass
- * tenant isolation.
+ * Tenant identity is resolved from the authenticated request context and is
+ * never accepted from request parameters.
  */
 final class OperationsReadController
 {
-    private readonly string $organizationId;
-
     public function __construct(
         private readonly OperationsSectionReader $operations,
-        string $organizationId,
+        private readonly TenantContextProviderInterface $tenantContext,
     ) {
-        $organizationId = trim($organizationId);
-        $this->organizationId = $organizationId !== '' ? $organizationId : 'default';
     }
 
     public function actions(): JsonResponse
@@ -65,9 +62,19 @@ final class OperationsReadController
 
     private function section(string $section, ?string $id = null): JsonResponse
     {
+        $context = $this->tenantContext->current();
+        if ($context === null) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => 'Authenticated tenant context required.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $organizationId = $context->organizationId()->value();
+
         try {
             if ($id !== null) {
-                $item = $this->operations->item($this->organizationId, $section, $id, 100);
+                $item = $this->operations->item($organizationId, $section, $id, 100);
 
                 return $item !== null
                     ? new JsonResponse(['ok' => true, 'data' => $item])
@@ -76,7 +83,7 @@ final class OperationsReadController
 
             return new JsonResponse([
                 'ok' => true,
-                'data' => $this->operations->section($this->organizationId, $section, 100),
+                'data' => $this->operations->section($organizationId, $section, 100),
             ]);
         } catch (Throwable) {
             return new JsonResponse([

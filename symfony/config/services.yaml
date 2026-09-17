@@ -13,8 +13,6 @@ services:
   App\Controller\OperationsReadController:
     public: true
     tags: ['controller.service_arguments']
-    arguments:
-      $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   App\Security\LegacySessionReader:
     arguments:
@@ -42,6 +40,14 @@ services:
 
   Kernel\Identity\Contract\IdentityResolverInterface:
     alias: App\Infrastructure\LegacyIdentityResolver
+
+  Kernel\Tenant\Contract\TenantPermissionResolverInterface:
+    alias: App\Security\RoleTenantPermissionResolver
+
+  Kernel\Tenant\Service\TenantContextFactory: ~
+
+  Kernel\Tenant\Contract\TenantContextProviderInterface:
+    alias: App\Security\SecurityTenantContextProvider
 
   Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
     arguments:
