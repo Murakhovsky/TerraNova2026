@@ -13,6 +13,11 @@ cos_symfony_core_health:
   controller: App\Controller\CoreHealthController
   methods: [GET]
 
+cos_symfony_migration_auth_context:
+  path: /migration/api/cos/auth-context
+  controller: App\Controller\SecurityContextController
+  methods: [GET]
+
 cos_symfony_migration_actions:
   path: /migration/api/cos/actions
   controller: App\Controller\OperationsReadController::actions
