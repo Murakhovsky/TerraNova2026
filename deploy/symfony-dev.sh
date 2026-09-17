@@ -68,6 +68,7 @@ ensure_secret SYMFONY_LEGACY_DB_PASSWORD 24
 LEGACY_NETWORK="${COS_LEGACY_DOCKER_NETWORK:-cos_backend}"
 LEGACY_MYSQL_CONTAINER="${COS_LEGACY_MYSQL_CONTAINER:-cos-mysql-1}"
 LEGACY_PHP_CONTAINER="${COS_LEGACY_PHP_CONTAINER:-cos-php-1}"
+LEGACY_SESSION_VOLUME="${COS_LEGACY_SESSION_VOLUME:-cos_php_sessions}"
 
 if ! "${DOCKER[@]}" network inspect "$LEGACY_NETWORK" >/dev/null 2>&1; then
   echo "Legacy COS Docker network is unavailable: $LEGACY_NETWORK" >&2
@@ -77,6 +78,11 @@ fi
 if ! "${DOCKER[@]}" inspect "$LEGACY_MYSQL_CONTAINER" >/dev/null 2>&1; then
   echo "Legacy COS MySQL container is unavailable: $LEGACY_MYSQL_CONTAINER" >&2
   exit 46
+fi
+
+if ! "${DOCKER[@]}" volume inspect "$LEGACY_SESSION_VOLUME" >/dev/null 2>&1; then
+  echo "Legacy COS session volume is unavailable: $LEGACY_SESSION_VOLUME" >&2
+  exit 53
 fi
 
 LEGACY_DB_NAME="$("${DOCKER[@]}" exec "$LEGACY_MYSQL_CONTAINER" printenv MYSQL_DATABASE | tr -d '\r\n')"
@@ -158,24 +164,19 @@ if [[ "$CORE_HEALTHY" != "1" ]]; then
   exit 50
 fi
 
-OPERATIONS_READ_HEALTHY=0
-for attempt in $(seq 1 20); do
-  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/migration/api/cos/events 2>/dev/null; then
-    OPERATIONS_READ_HEALTHY=1
-    echo "Operations read API check passed on attempt $attempt."
-    break
-  fi
-  sleep 2
-done
-
-if [[ "$OPERATIONS_READ_HEALTHY" != "1" ]]; then
-  echo "Symfony Operations read API could not query the legacy COS database." >&2
+PROTECTED_STATUS="$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out '%{http_code}' http://127.0.0.1:8081/migration/api/cos/events)"
+if [[ "$PROTECTED_STATUS" != "403" ]] || [[ "$(cat /tmp/cos-symfony-protected.json)" != '{"ok":false,"error":"Manager authorization required."}' ]]; then
+  echo "Symfony Security did not protect the Operations migration API as expected." >&2
+  cat /tmp/cos-symfony-protected.json >&2 || true
+  echo >&2
   "${COMPOSE[@]}" ps -a >&2 || true
   "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
   exit 51
 fi
 
+echo "Operations migration API is protected by the legacy-session Symfony Security bridge."
+
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
 echo "Shared core read-model probe is available at http://127.0.0.1:8081/migration/core-health"
-echo "Operations read migration API is available at http://127.0.0.1:8081/migration/api/cos/events"
+echo "Protected Operations migration API is available at http://127.0.0.1:8081/migration/api/cos/events"
