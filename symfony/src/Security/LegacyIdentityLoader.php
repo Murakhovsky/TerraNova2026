@@ -12,20 +12,26 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 final class LegacyIdentityLoader implements UserProviderInterface
 {
-    public function __construct(private readonly PDO $connection)
-    {
+    private readonly string $organizationId;
+
+    public function __construct(
+        private readonly PDO $connection,
+        string $organizationId,
+    ) {
+        $organizationId = trim($organizationId);
+        $this->organizationId = $organizationId !== '' ? $organizationId : 'default';
     }
 
     public function loadUserByIdentifier(string $identifier): UserInterface
     {
-        [$id, $selectedOrganization] = array_pad(explode('|', $identifier, 2), 2, '');
+        [$id, $sessionOrganization] = array_pad(explode('|', $identifier, 2), 2, '');
         if (!ctype_digit($id) || (int) $id <= 0) {
             $this->notFound($identifier);
         }
 
         $userId = (int) $id;
-        $selectedOrganization = rawurldecode($selectedOrganization);
-        if ($selectedOrganization !== '' && !preg_match('/^[A-Za-z0-9._:-]{1,190}$/', $selectedOrganization)) {
+        $sessionOrganization = rawurldecode($sessionOrganization);
+        if ($sessionOrganization !== '' && !preg_match('/^[A-Za-z0-9._:-]{1,190}$/', $sessionOrganization)) {
             $this->notFound($identifier);
         }
 
@@ -39,26 +45,10 @@ final class LegacyIdentityLoader implements UserProviderInterface
             $this->notFound($identifier);
         }
 
-        $membership = null;
-        if ($selectedOrganization !== '') {
-            $membership = $this->membership($userId, $selectedOrganization);
-        }
-
-        $homeOrganization = trim((string) ($user['organization_id'] ?? ''));
-        if ($membership === null && $homeOrganization !== '') {
-            $membership = $this->membership($userId, $homeOrganization);
-        }
-
-        if ($membership === null) {
-            $fallback = $this->connection->prepare(
-                "SELECT organization_id, role FROM cos_organization_memberships "
-                . "WHERE user_id = :user_id AND status = 'ACTIVE' ORDER BY created_at LIMIT 1"
-            );
-            $fallback->execute(['user_id' => $userId]);
-            $candidate = $fallback->fetch(PDO::FETCH_ASSOC);
-            $membership = is_array($candidate) ? $candidate : null;
-        }
-
+        // The migration API is deliberately pinned to COS_ORGANIZATION_ID until
+        // dynamic tenant routing moves to Symfony. Authorize only membership in
+        // that same tenant so a manager in another organization cannot read it.
+        $membership = $this->membership($userId, $this->organizationId);
         if ($membership === null) {
             $this->notFound($identifier);
         }
