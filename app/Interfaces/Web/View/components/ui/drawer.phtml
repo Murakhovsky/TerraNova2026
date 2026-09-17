@@ -1,0 +1,22 @@
+<?php
+$id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($id ?? 'ui-drawer'));
+$title = trim((string) ($title ?? ''));
+$description = trim((string) ($description ?? ''));
+$bodyPartial = trim((string) ($bodyPartial ?? ''));
+$bodyParams = is_array($bodyParams ?? null) ? $bodyParams : [];
+$actions = is_array($actions ?? null) ? $actions : [];
+$h = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+?>
+<dialog id="<?php echo $h($id); ?>" class="tn-ui-drawer" data-ui-drawer>
+  <header class="tn-ui-drawer__head">
+    <div>
+      <h2><?php echo $h($title); ?></h2>
+      <?php if ($description !== ''): ?><p><?php echo $h($description); ?></p><?php endif; ?>
+    </div>
+    <button class="tn-ui-drawer__close" type="button" data-ui-drawer-close aria-label="Close drawer">×</button>
+  </header>
+  <div class="tn-ui-drawer__body">
+    <?php if ($bodyPartial !== ''): ?><?php $this->partial($bodyPartial, $bodyParams); ?><?php endif; ?>
+  </div>
+  <?php if ($actions): ?><footer class="tn-ui-drawer__foot"><?php $this->partial('components/ui/action_bar', ['actions' => $actions, 'align' => 'end', 'ariaLabel' => 'Drawer actions']); ?></footer><?php endif; ?>
+</dialog>
