@@ -35,6 +35,13 @@ final class LegacyIdentityLoader implements UserProviderInterface
             $this->notFound($identifier);
         }
 
+        // During the migration the Operations surface is pinned to one tenant.
+        // A legacy session explicitly switched to another tenant must not be
+        // accepted here, even if the same user also belongs to this tenant.
+        if ($sessionOrganization !== '' && !hash_equals($this->organizationId, $sessionOrganization)) {
+            $this->notFound($identifier);
+        }
+
         $statement = $this->connection->prepare(
             "SELECT id, organization_id, email, full_name, status FROM tn_users "
             . "WHERE id = :id AND status = 'active' LIMIT 1"
