@@ -23,7 +23,7 @@ generated: true
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
+| `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 9 | 0/9 | 9 | 9 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
 

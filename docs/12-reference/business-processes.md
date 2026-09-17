@@ -18,7 +18,7 @@ generated: true
 
 | Процес | Domain | Бізнес-стан | Verification | Кроків | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
+| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 9 | 0 | 9/9 | 0/9 | 9/9 | 8/8 | 0/8 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
 | Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 1/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
@@ -34,7 +34,7 @@ generated: true
 
 | Процес | Кроків з owner | Capability mapped | Capability gaps | Cross-domain кроки | Mapped кроки | Evidence-verified кроки | Runtime-backed кроки | Critical source-verified | Critical runtime-verified |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
+| Diagnostic Session → Recommendation | 9/9 | 0/9 | 9/9 | 0/9 | 9/9 | 9/9 | 0/9 | 8/8 | 0/8 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
 | Sales Request → Property Match | 5/5 | 1/5 | 4/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
@@ -45,8 +45,8 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `diagnostic`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 0/7 кроків
-- **Cross-domain кроки:** 0/7
+- **Покриття capabilities:** 0/9 кроків
+- **Cross-domain кроки:** 0/9
 - **Derived verification:** `source-verified`
 - **Тригер:** A published methodology version is selected for a diagnostic target
 - **Workflow:** [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md)
@@ -62,11 +62,13 @@ generated: true
 | Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
 | --- | --- | --- | --- | --- | --- | --- |
 | Draft and publish methodology version | methodology author | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `DraftDiagnosticPack` [source]<br>use_case `PublishDiagnosticPack` [source] |
+| Revise published methodology into a new draft | methodology author | `diagnostic` | gap: `missing-domain-capability` | `operation` | ні | use_case `ReviseDiagnosticPack` [source] |
 | Start version-pinned session | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `StartDiagnosticSession` [source] |
 | Capture evidence | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `CaptureDiagnosticEvidence` [source] |
 | Evaluate structured evidence | deterministic evaluation engine | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `EvaluateDiagnosticSession` [source] |
 | Record findings and recommendation | deterministic evaluation engine | `diagnostic` | gap: `missing-domain-capability` | `state` | так | use_case `RecordDiagnosticResult` [source] |
 | Complete coherent session | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `CompleteDiagnosticSession` [source] |
+| Cancel non-terminal session | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `outcome` | так | use_case `CancelDiagnosticSession` [source] |
 | Review / accept recommendation | reviewer / decision maker | `diagnostic` | gap: `missing-domain-capability` | `decision` | так | use_case `AcceptDiagnosticRecommendation` [source] |
 
 ## Property Submission → Publication

@@ -16,20 +16,21 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 19
-- **High severity:** 16
-- **Medium severity:** 3
+- **Відкритих debt items:** 21
+- **High severity:** 17
+- **Medium severity:** 4
 - **Зачеплених Domains:** 2
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
-| `diagnostic` | 7 | 7 | 0 | 0 |
+| `diagnostic` | 9 | 8 | 1 | 0 |
 | `sales` | 12 | 9 | 3 | 0 |
 
 ## Пріоритетний backlog
 
 | Severity | Domain | Процес / крок | Runtime evidence | Target capability | Resolution |
 | --- | --- | --- | --- | --- | --- |
+| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `cancelled` · Cancel non-terminal session | `source` | `diagnostic.session.cancel` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `complete` · Complete coherent session | `source` | `diagnostic.session.complete` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `decision` · Review / accept recommendation | `source` | `diagnostic.recommendation.accept` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `evaluation` · Evaluate structured evidence | `source` | `diagnostic.evaluation.run` | `declare-domain-capability` |
@@ -46,6 +47,7 @@ Capability debt означає, що бізнес-крок реальний, а�
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `create-case` · Create Client Case and link inbound request | `source` | `sales.client-case.create` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `load-request` · Load inbound request and referenced Property context | `source` | `sales.inbound.request.read` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `record-match` · Record Property Match in Sales | `source` | `sales.property-match.record` | `declare-domain-capability` |
+| `medium` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `revision` · Revise published methodology into a new draft | `source` | `diagnostic.methodology.revise` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `activity` · Record activity / call | `source` | `sales.activity.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `crm-inbox` · Process durable CRM inbox | `source` | `sales.crm.inbox.process` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `activity-events` · Record Sales activity and publish case/lead events | `source` | `sales.activity.record` | `declare-domain-capability` |
