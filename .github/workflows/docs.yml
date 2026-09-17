@@ -2,7 +2,7 @@ name: COS Documentation
 
 on:
   push:
-    branches: [main]
+    branches: [main, documentation]
     paths:
       - 'docs/**'
       - 'resources/processes/**'
@@ -53,7 +53,7 @@ jobs:
     name: Validate and build docs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout canonical main source
+      - name: Checkout current documentation source
         uses: actions/checkout@v4
 
       - name: Setup Node

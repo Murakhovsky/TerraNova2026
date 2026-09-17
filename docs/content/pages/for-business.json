@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "business",
+  "route": "/for-business/",
+  "title_key": "pages.business.title",
+  "blocks": [
+    { "type": "heading", "level": 1, "id": "top", "key": "pages.business.title" },
+    { "type": "paragraph", "key": "pages.business.intro" },
+    { "type": "paragraph", "key": "pages.business.summary" },
+    { "type": "heading", "level": 2, "id": "start", "key": "pages.business.startTitle" },
+    { "type": "link-list", "items": [
+      { "key": "pages.business.startCapabilities", "href": "/for-business/capabilities" },
+      { "key": "pages.business.startUseCases", "href": "/for-business/use-cases" },
+      { "key": "pages.business.startImplementation", "href": "/for-business/implementation" },
+      { "key": "pages.business.startFaq", "href": "/for-business/faq" }
+    ] },
+    { "type": "heading", "level": 2, "id": "problem", "key": "pages.business.problemTitle" },
+    { "type": "paragraph", "key": "pages.business.problemText" },
+    { "type": "list", "items": [
+      "pages.business.problem1",
+      "pages.business.problem2",
+      "pages.business.problem3",
+      "pages.business.problem4",
+      "pages.business.problem5",
+      "pages.business.problem6"
+    ] },
+    { "type": "heading", "level": 2, "id": "gains", "key": "pages.business.gainsTitle" },
+    { "type": "list", "items": [
+      "pages.business.gain1",
+      "pages.business.gain2",
+      "pages.business.gain3",
+      "pages.business.gain4",
+      "pages.business.gain5"
+    ] },
+    { "type": "heading", "level": 2, "id": "not-cos", "key": "pages.business.notTitle" },
+    { "type": "paragraph", "key": "pages.business.notText" },
+    { "type": "heading", "level": 2, "id": "fit", "key": "pages.business.fitTitle" },
+    { "type": "paragraph", "key": "pages.business.fitText" },
+    { "type": "heading", "level": 2, "id": "next", "key": "pages.business.nextTitle" },
+    { "type": "paragraph", "key": "pages.business.nextText" }
+  ]
+}

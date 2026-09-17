@@ -1,113 +1,21 @@
-import { buildSidebar, buildEnglishSidebar } from './sidebar.mjs';
+import { buildSidebar } from './sidebar.mjs';
 import { buildSystemStatus } from './system-status.mjs';
 import { installMermaidMarkdown } from './mermaid-markdown.mjs';
+import { buildI18nConfig } from './i18n.mjs';
 
 const docsBase = process.env.COS_DOCS_BASE || '/docs/';
 const cosSystemStatus = buildSystemStatus();
-
-const ukrainianSearch = {
-  provider: 'local',
-  options: {
-    translations: {
-      button: {
-        buttonText: 'Пошук',
-        buttonAriaLabel: 'Пошук у документації',
-      },
-      modal: {
-        noResultsText: 'Нічого не знайдено',
-        resetButtonTitle: 'Очистити',
-        footer: {
-          selectText: 'вибрати',
-          navigateText: 'перейти',
-          closeText: 'закрити',
-        },
-      },
-    },
-  },
-};
-
-const ukrainianTheme = {
-  siteTitle: 'COS',
-  nav: [
-    { text: 'Для бізнесу', link: '/for-business/' },
-    { text: 'Можливості', link: '/for-business/capabilities' },
-    { text: 'Для впровадження', link: '/for-integrators/' },
-    { text: 'Для розробників', link: '/for-developers/' },
-    { text: 'GitHub', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
-  ],
-  sidebar: buildSidebar(),
-  sidebarMenuLabel: 'Навігація',
-  returnToTopLabel: 'На початок',
-  darkModeSwitchLabel: 'Тема',
-  langMenuLabel: 'Змінити мову',
-  outline: { level: [2, 3], label: 'На цій сторінці' },
-  search: ukrainianSearch,
-  editLink: {
-    pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/main/docs/:path',
-    text: 'Редагувати сторінку',
-  },
-  lastUpdated: { text: 'Оновлено', formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
-  docFooter: { prev: 'Попередня сторінка', next: 'Наступна сторінка' },
-  socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' }],
-  footer: {
-    message: 'Канонічна гілка: main · Джерело правди: поточний код, тести, декларації та документація.',
-    copyright: 'Terra Nova · COS',
-  },
-};
-
-const englishTheme = {
-  siteTitle: 'COS',
-  nav: [
-    { text: 'For business', link: '/en/for-business/' },
-    { text: 'For implementation', link: '/en/for-integrators/' },
-    { text: 'For developers', link: '/en/for-developers/' },
-    { text: 'GitHub', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
-  ],
-  sidebar: buildEnglishSidebar(),
-  sidebarMenuLabel: 'Navigation',
-  returnToTopLabel: 'Back to top',
-  darkModeSwitchLabel: 'Theme',
-  langMenuLabel: 'Change language',
-  outline: { level: [2, 3], label: 'On this page' },
-  search: { provider: 'local' },
-  editLink: {
-    pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/main/docs/:path',
-    text: 'Edit this page',
-  },
-  lastUpdated: { text: 'Updated', formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
-  docFooter: { prev: 'Previous page', next: 'Next page' },
-  socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' }],
-  footer: {
-    message: 'Canonical branch: main · Source of truth: current code, tests, manifests and documentation.',
-    copyright: 'Terra Nova · COS',
-  },
-};
+const cosI18n = buildI18nConfig();
 
 export default {
   title: 'COS',
-  description: 'Документація операційної системи компанії COS.',
+  description: 'Company Operating System: product, implementation and development documentation.',
+  lang: 'en-US',
   base: docsBase,
   outDir: '../public/docs',
   cleanUrls: false,
   lastUpdated: true,
   appearance: true,
-  locales: {
-    root: {
-      label: 'Українська',
-      lang: 'uk-UA',
-      title: 'COS',
-      description: 'Операційна система компанії: можливості, впровадження та розробка.',
-      themeConfig: ukrainianTheme,
-    },
-    en: {
-      label: 'English',
-      lang: 'en-US',
-      link: '/en/',
-      title: 'COS',
-      description: 'Company Operating System: product, implementation and development documentation.',
-      themeConfig: englishTheme,
-    },
-  },
   markdown: {
     lineNumbers: true,
     config(md) {
@@ -121,23 +29,31 @@ export default {
   ],
   themeConfig: {
     cosSystemStatus,
-    i18nRouting(data, route, targetLocale) {
-      const relativePath = route.data.relativePath.replace(/\.md$/, '');
-
-      if (targetLocale === 'en') {
-        if (relativePath === 'index') return '/en/';
-        if (relativePath.startsWith('for-business/')) return '/en/for-business/';
-        if (relativePath.startsWith('for-integrators/')) return '/en/for-integrators/';
-        if (relativePath.startsWith('for-developers/')) return '/en/for-developers/';
-        return '/en/for-developers/';
-      }
-
-      if (relativePath === 'en/index') return '/';
-      if (relativePath.startsWith('en/for-business/')) return '/for-business/';
-      if (relativePath.startsWith('en/for-integrators/')) return '/for-integrators/';
-      if (relativePath.startsWith('en/for-developers/')) return '/for-developers/';
-      if (relativePath.startsWith('en/')) return '/for-developers/';
-      return `/${relativePath}/`;
+    cosI18n,
+    siteTitle: 'COS',
+    nav: [
+      { text: 'For business', link: '/for-business/' },
+      { text: 'Capabilities', link: '/for-business/capabilities' },
+      { text: 'For implementation', link: '/for-integrators/' },
+      { text: 'For developers', link: '/for-developers/' },
+      { text: 'GitHub', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
+    ],
+    sidebar: buildSidebar('en'),
+    sidebarMenuLabel: 'Navigation',
+    returnToTopLabel: 'Back to top',
+    darkModeSwitchLabel: 'Theme',
+    outline: { level: [2, 3], label: 'On this page' },
+    search: { provider: 'local' },
+    editLink: {
+      pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/documentation/docs/:path',
+      text: 'Edit this page',
+    },
+    lastUpdated: { text: 'Updated', formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
+    docFooter: { prev: 'Previous page', next: 'Next page' },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/documentation' }],
+    footer: {
+      message: 'English is the default language · One canonical page structure · Locale selected with ?lang=<locale>.',
+      copyright: 'Terra Nova · COS',
     },
   },
 };

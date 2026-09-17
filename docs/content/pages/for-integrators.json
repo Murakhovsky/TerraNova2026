@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "integrators",
+  "route": "/for-integrators/",
+  "title_key": "pages.integrators.title",
+  "blocks": [
+    { "type": "heading", "level": 1, "id": "top", "key": "pages.integrators.title" },
+    { "type": "paragraph", "key": "pages.integrators.intro" },
+    { "type": "paragraph", "key": "pages.integrators.principle" },
+    { "type": "heading", "level": 2, "id": "route", "key": "pages.integrators.routeTitle" },
+    { "type": "link-list", "items": [
+      { "key": "pages.integrators.routeDiscovery", "href": "/for-integrators/discovery" },
+      { "key": "pages.integrators.routeData", "href": "/for-integrators/data-and-integrations" },
+      { "key": "pages.integrators.routeAutomation", "href": "/for-integrators/automation-and-ai" },
+      { "key": "pages.integrators.routeReadiness", "href": "/for-integrators/readiness" }
+    ] },
+    { "type": "heading", "level": 2, "id": "sequence", "key": "pages.integrators.sequenceTitle" },
+    { "type": "ordered-list", "items": [
+      "pages.integrators.sequence1",
+      "pages.integrators.sequence2",
+      "pages.integrators.sequence3",
+      "pages.integrators.sequence4",
+      "pages.integrators.sequence5",
+      "pages.integrators.sequence6",
+      "pages.integrators.sequence7",
+      "pages.integrators.sequence8",
+      "pages.integrators.sequence9",
+      "pages.integrators.sequence10"
+    ] },
+    { "type": "heading", "level": 2, "id": "result", "key": "pages.integrators.resultTitle" },
+    { "type": "paragraph", "key": "pages.integrators.resultText" },
+    { "type": "heading", "level": 2, "id": "technical", "key": "pages.integrators.technicalTitle" },
+    { "type": "paragraph", "key": "pages.integrators.technicalText" }
+  ]
+}

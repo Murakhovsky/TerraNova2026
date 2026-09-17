@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "developers",
+  "route": "/for-developers/",
+  "title_key": "pages.developers.title",
+  "blocks": [
+    { "type": "heading", "level": 1, "id": "top", "key": "pages.developers.title" },
+    { "type": "paragraph", "key": "pages.developers.intro" },
+    { "type": "heading", "level": 2, "id": "route", "key": "pages.developers.routeTitle" },
+    { "type": "link-list", "items": [
+      { "key": "pages.developers.route1", "href": "/00-start/what-is-cos" },
+      { "key": "pages.developers.route2", "href": "/00-start/mental-model" },
+      { "key": "pages.developers.route3", "href": "/03-architecture/system-map" },
+      { "key": "pages.developers.route4", "href": "/03-architecture/domain-map" },
+      { "key": "pages.developers.route5", "href": "/05-runtime/execution-lifecycle" },
+      { "key": "pages.developers.route6", "href": "/07-api-integrations/integration-model" },
+      { "key": "pages.developers.route7", "href": "/09-development/local-setup" },
+      { "key": "pages.developers.route8", "href": "/09-development/testing" },
+      { "key": "pages.developers.route9", "href": "/12-reference/" }
+    ] },
+    { "type": "heading", "level": 2, "id": "principle", "key": "pages.developers.principleTitle" },
+    { "type": "paragraph", "key": "pages.developers.principleText" },
+    { "type": "heading", "level": 2, "id": "before-change", "key": "pages.developers.beforeTitle" },
+    { "type": "list", "items": [
+      "pages.developers.before1",
+      "pages.developers.before2",
+      "pages.developers.before3",
+      "pages.developers.before4",
+      "pages.developers.before5",
+      "pages.developers.before6",
+      "pages.developers.before7"
+    ] }
+  ]
+}
