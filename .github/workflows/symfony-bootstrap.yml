@@ -141,4 +141,4 @@ jobs:
       - name: Verify server-local endpoints
         run: |
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "curl --fail --show-error --silent http://127.0.0.1:8081/health && echo && curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health"
+            "curl --fail --show-error --silent http://127.0.0.1:8081/health && echo && curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health && echo && curl --fail --show-error --silent --output /dev/null http://127.0.0.1:8081/migration/api/cos/events && echo operations-read-ok"

@@ -67,6 +67,7 @@ ensure_secret SYMFONY_LEGACY_DB_PASSWORD 24
 
 LEGACY_NETWORK="${COS_LEGACY_DOCKER_NETWORK:-cos_backend}"
 LEGACY_MYSQL_CONTAINER="${COS_LEGACY_MYSQL_CONTAINER:-cos-mysql-1}"
+LEGACY_PHP_CONTAINER="${COS_LEGACY_PHP_CONTAINER:-cos-php-1}"
 
 if ! "${DOCKER[@]}" network inspect "$LEGACY_NETWORK" >/dev/null 2>&1; then
   echo "Legacy COS Docker network is unavailable: $LEGACY_NETWORK" >&2
@@ -85,6 +86,20 @@ if [[ ! "$LEGACY_DB_NAME" =~ ^[A-Za-z0-9_]+$ ]]; then
 fi
 upsert_value SYMFONY_LEGACY_DB_NAME "$LEGACY_DB_NAME"
 upsert_value SYMFONY_LEGACY_DB_HOST "$LEGACY_MYSQL_CONTAINER"
+
+LEGACY_ORGANIZATION_ID="default"
+if "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
+  DETECTED_ORGANIZATION_ID="$("${DOCKER[@]}" exec "$LEGACY_PHP_CONTAINER" sh -c 'printf "%s" "${COS_ORGANIZATION_ID:-default}"' 2>/dev/null || true)"
+  if [[ -n "$DETECTED_ORGANIZATION_ID" ]]; then
+    LEGACY_ORGANIZATION_ID="$DETECTED_ORGANIZATION_ID"
+  fi
+fi
+if [[ ! "$LEGACY_ORGANIZATION_ID" =~ ^[A-Za-z0-9._:-]+$ ]]; then
+  echo "Legacy COS organization id is invalid or unavailable." >&2
+  exit 52
+fi
+upsert_value COS_ORGANIZATION_ID "$LEGACY_ORGANIZATION_ID"
+echo "Symfony migration tenant is fixed to legacy COS organization: $LEGACY_ORGANIZATION_ID"
 
 LEGACY_DB_PASSWORD="$(read_value SYMFONY_LEGACY_DB_PASSWORD)"
 if [[ ! "$LEGACY_DB_PASSWORD" =~ ^[a-f0-9]{48}$ ]]; then
@@ -143,6 +158,24 @@ if [[ "$CORE_HEALTHY" != "1" ]]; then
   exit 50
 fi
 
+OPERATIONS_READ_HEALTHY=0
+for attempt in $(seq 1 20); do
+  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/migration/api/cos/events 2>/dev/null; then
+    OPERATIONS_READ_HEALTHY=1
+    echo "Operations read API check passed on attempt $attempt."
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$OPERATIONS_READ_HEALTHY" != "1" ]]; then
+  echo "Symfony Operations read API could not query the legacy COS database." >&2
+  "${COMPOSE[@]}" ps -a >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
+  exit 51
+fi
+
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
 echo "Shared core read-model probe is available at http://127.0.0.1:8081/migration/core-health"
+echo "Operations read migration API is available at http://127.0.0.1:8081/migration/api/cos/events"
