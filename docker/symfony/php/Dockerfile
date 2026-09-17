@@ -15,6 +15,7 @@ RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-
 COPY symfony/ ./
 COPY app/Kernel/ /var/www/html/app/Kernel/
 COPY app/Platform/ /var/www/html/app/Platform/
+COPY app/Domains/ /var/www/html/app/Domains/
 COPY app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php /var/www/html/app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php
 
 RUN composer dump-autoload --no-dev --classmap-authoritative \
