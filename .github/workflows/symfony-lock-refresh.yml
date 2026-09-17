@@ -1,0 +1,36 @@
+name: Refresh Symfony Composer Lock
+
+on:
+  push:
+    branches:
+      - infra/symfony-composer-lock
+    paths:
+      - '.github/workflows/symfony-lock-refresh.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refresh lock metadata for PHP 8.3 runtime
+        run: |
+          docker run --rm \
+            -v "$PWD/symfony:/app" \
+            -w /app \
+            composer:2 \
+            composer update --lock --no-install --no-interaction --no-progress --no-scripts
+          test -s symfony/composer.lock
+
+      - name: Commit refreshed lock
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add symfony/composer.lock
+          git diff --cached --quiet && exit 0
+          git commit -m "INFRA — refresh Symfony dependency lock metadata"
+          git push origin HEAD:infra/symfony-composer-lock
