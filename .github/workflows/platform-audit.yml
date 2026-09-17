@@ -1,0 +1,34 @@
+name: Platform Audit Observability
+
+on:
+  push:
+    branches: [main, migration/symfony, migration/platform-audit]
+    paths:
+      - 'app/Platform/Audit/**'
+      - 'app/Infrastructure/Audit/**'
+      - 'tests/unit/platform_audit_foundation.php'
+      - 'tests/architecture/platform_audit_boundaries.php'
+      - '.github/workflows/platform-audit.yml'
+  pull_request:
+    branches: [main, migration/symfony, migration/platform-knowledge]
+    paths:
+      - 'app/Platform/Audit/**'
+      - 'app/Infrastructure/Audit/**'
+      - 'tests/unit/platform_audit_foundation.php'
+      - 'tests/architecture/platform_audit_boundaries.php'
+      - '.github/workflows/platform-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: php tests/architecture/platform_audit_boundaries.php
+      - run: php tests/unit/platform_audit_foundation.php
+      - run: find app/Platform/Audit app/Infrastructure/Audit -type f -name '*.php' -print0 | xargs -0 -n1 php -l
