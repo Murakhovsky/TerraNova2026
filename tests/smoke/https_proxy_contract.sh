@@ -76,4 +76,10 @@ if ! grep -Eiq ';[[:space:]]*HttpOnly([;[:space:]]|$)' <<< "$SESSION_COOKIE"; th
   exit 67
 fi
 
+if ! grep -Eiq ';[[:space:]]*(Expires|Max-Age)=' <<< "$SESSION_COOKIE"; then
+  echo "HTTPS session cookie is browser-session-only and will be lost when the browser/computer closes." >&2
+  echo "$SESSION_COOKIE" >&2
+  exit 68
+fi
+
 echo "HTTPS reverse-proxy contract passed for $DOMAIN."
