@@ -1,0 +1,53 @@
+name: WEB V0.16 Canonical Component System
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/styles/design-system.css'
+      - 'frontend/styles/canonical-components.css'
+      - 'frontend/components/interactive.js'
+      - 'app/Interfaces/Web/View/components/ui/**'
+      - 'app/Interfaces/Web/View/sales_admin/agent.phtml'
+      - 'app/Interfaces/Web/View/sales_admin/agents.phtml'
+      - 'tests/architecture/web_v016_canonical_components.php'
+      - 'docs/architecture/web-v0.16.md'
+      - '.github/workflows/web-v016.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/styles/design-system.css'
+      - 'frontend/styles/canonical-components.css'
+      - 'frontend/components/interactive.js'
+      - 'app/Interfaces/Web/View/components/ui/**'
+      - 'app/Interfaces/Web/View/sales_admin/agent.phtml'
+      - 'app/Interfaces/Web/View/sales_admin/agents.phtml'
+      - 'tests/architecture/web_v016_canonical_components.php'
+      - 'docs/architecture/web-v0.16.md'
+      - '.github/workflows/web-v016.yml'
+
+jobs:
+  canonical-components:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - name: Build frontend assets
+        run: npm run build
+      - name: Validate canonical component templates
+        run: find app/Interfaces/Web/View/components/ui -name '*.phtml' -print0 | xargs -0 -n1 php -l
+      - name: Canonical component gates
+        run: |
+          php -l tests/architecture/web_v016_canonical_components.php
+          php tests/architecture/web_v016_canonical_components.php
+          php tests/architecture/web_v015_visual_language.php
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/web_v012_production_closure.php
