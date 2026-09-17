@@ -3,6 +3,28 @@ export const initInterfaceComponents = () => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
+    const drawerOpenTrigger = target.closest('[data-ui-drawer-open]');
+    if (drawerOpenTrigger instanceof HTMLElement) {
+      const id = drawerOpenTrigger.dataset.uiDrawerOpen;
+      const drawer = id ? document.getElementById(id) : null;
+      if (drawer instanceof HTMLDialogElement) drawer.showModal();
+      return;
+    }
+
+    const drawerCloseTrigger = target.closest('[data-ui-drawer-close]');
+    if (drawerCloseTrigger instanceof HTMLElement) {
+      const drawer = drawerCloseTrigger.closest('[data-ui-drawer]');
+      if (drawer instanceof HTMLDialogElement) drawer.close();
+      return;
+    }
+
+    if (target instanceof HTMLDialogElement && target.matches('[data-ui-drawer]')) {
+      const rect = target.getBoundingClientRect();
+      const isPanelClick = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+      if (!isPanelClick) target.close();
+      return;
+    }
+
     const openTrigger = target.closest('[data-ui-dialog-open]');
     if (openTrigger instanceof HTMLElement) {
       const id = openTrigger.dataset.uiDialogOpen;
