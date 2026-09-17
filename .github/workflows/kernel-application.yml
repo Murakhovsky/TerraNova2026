@@ -1,0 +1,91 @@
+name: Kernel Application CQRS Foundation
+
+on:
+  push:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Application/**'
+      - 'symfony/src/Infrastructure/Messenger/**'
+      - 'symfony/config/packages/messenger.yaml'
+      - 'symfony/config/services.yaml'
+      - 'symfony/composer.json'
+      - 'symfony/composer.lock'
+      - 'symfony/tests/cqrs_messenger_contract.php'
+      - 'symfony/tests/canonical_core_layout.php'
+      - 'tests/unit/kernel_application_foundation.php'
+      - 'tests/architecture/kernel_application_boundaries.php'
+      - '.github/workflows/kernel-application.yml'
+  pull_request:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Application/**'
+      - 'symfony/src/Infrastructure/Messenger/**'
+      - 'symfony/config/packages/messenger.yaml'
+      - 'symfony/config/services.yaml'
+      - 'symfony/composer.json'
+      - 'symfony/composer.lock'
+      - 'symfony/tests/cqrs_messenger_contract.php'
+      - 'symfony/tests/canonical_core_layout.php'
+      - 'tests/unit/kernel_application_foundation.php'
+      - 'tests/architecture/kernel_application_boundaries.php'
+      - '.github/workflows/kernel-application.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Kernel Application has no framework or infrastructure dependencies
+        run: php tests/architecture/kernel_application_boundaries.php
+      - name: Run Kernel Application CQRS contract without Symfony kernel
+        run: php tests/unit/kernel_application_foundation.php
+      - name: Lint Kernel Application
+        run: find app/Kernel/Application -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  symfony-messenger-contract:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_SECRET: ci-only-secret
+      LEGACY_SESSION_SAVE_PATH: /tmp
+      LEGACY_SESSION_COOKIE_NAME: PHPSESSID
+      LEGACY_DB_HOST: 127.0.0.1
+      LEGACY_DB_PORT: 3306
+      LEGACY_DB_NAME: cos
+      LEGACY_DB_USER: cos
+      LEGACY_DB_PASSWORD: ci-only-password
+      COS_ORGANIZATION_ID: default
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - name: Install locked Symfony runtime
+        working-directory: symfony
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify canonical Core autoload and adapters
+        working-directory: symfony
+        run: php tests/canonical_core_layout.php
+      - name: Verify Messenger adapter semantics
+        working-directory: symfony
+        run: php tests/cqrs_messenger_contract.php
+      - name: Verify named CQRS buses and Core aliases
+        working-directory: symfony
+        run: |
+          php bin/console debug:container command.bus >/dev/null
+          php bin/console debug:container query.bus >/dev/null
+          php bin/console debug:container event.bus >/dev/null
+          php bin/console debug:container 'Kernel\Application\Bus\CommandBusInterface' >/dev/null
+          php bin/console debug:container 'Kernel\Application\Bus\QueryBusInterface' >/dev/null
+          php bin/console debug:container 'Kernel\Application\Bus\EventBusInterface' >/dev/null
+          php bin/console lint:container
