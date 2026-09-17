@@ -42,8 +42,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare isolated legacy network contract
-        run: docker network create cos_backend
+      - name: Prepare isolated legacy resource contracts
+        run: |
+          docker network create cos_backend
+          docker volume create cos_php_sessions
 
       - name: Validate compose contract
         run: docker compose -f docker-compose.symfony.yml config --quiet
@@ -54,13 +56,49 @@ jobs:
       - name: Boot isolated stack
         run: docker compose -f docker-compose.symfony.yml up -d
 
+      - name: Seed legacy identity fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          CREATE TABLE tn_users (
+            id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+            organization_id VARCHAR(190) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            full_name VARCHAR(255) NOT NULL,
+            status VARCHAR(32) NOT NULL
+          );
+          CREATE TABLE cos_organization_memberships (
+            organization_id VARCHAR(190) NOT NULL,
+            user_id BIGINT UNSIGNED NOT NULL,
+            role VARCHAR(64) NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (organization_id, user_id)
+          );
+          INSERT INTO tn_users (id, organization_id, email, full_name, status) VALUES
+            (1001, 'default', 'manager@example.test', 'CI Manager', 'active'),
+            (1002, 'default', 'realtor@example.test', 'CI Realtor', 'active'),
+            (1003, 'other-org', 'other@example.test', 'Other Manager', 'active');
+          INSERT INTO cos_organization_memberships (organization_id, user_id, role, status) VALUES
+            ('default', 1001, 'manager', 'ACTIVE'),
+            ('default', 1002, 'realtor', 'ACTIVE'),
+            ('other-org', 1003, 'manager', 'ACTIVE');
+          SQL
+          docker run --rm -v cos_php_sessions:/sessions alpine:3.21 sh -c '
+            printf "%s" "tn_auth_user_id|i:1001;cos_organization_id|s:7:\"default\";" > /sessions/sess_ci-manager-session0001
+            printf "%s" "tn_auth_user_id|i:1002;cos_organization_id|s:7:\"default\";" > /sessions/sess_ci-realtor-session0002
+            printf "%s" "tn_auth_user_id|i:1003;cos_organization_id|s:9:\"other-org\";" > /sessions/sess_ci-other-manager0003
+            chmod 644 /sessions/sess_*
+          '
+
       - name: Verify shared COS autoload contract
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php -r '
             require "vendor/autoload.php";
             if (!interface_exists("Kernel\\Operations\\Contract\\OperationsReadModelInterface")) { exit(11); }
             if (!class_exists("Infrastructure\\Platform\\ReadModel\\MySql\\MysqlOperationsReadModel")) { exit(12); }
-            echo "shared COS read-model classes load under Symfony\n";
+            if (!class_exists("App\\Security\\LegacySessionAuthenticator")) { exit(13); }
+            echo "shared COS read-model and Symfony security bridge classes load\n";
           '
 
       - name: Verify operations read API contract
@@ -79,21 +117,54 @@ jobs:
           docker compose -f docker-compose.symfony.yml logs --no-color --tail=250
           exit 1
 
-      - name: Verify operations controller is HTTP-routable
+      - name: Verify legacy-session security bridge
         run: |
-          status=$(curl --silent --show-error --output /tmp/cos-operations-response.json --write-out '%{http_code}' http://127.0.0.1:8081/migration/api/cos/events)
+          forbidden='{"ok":false,"error":"Manager authorization required."}'
+
+          status=$(curl --silent --show-error --output /tmp/no-session.json --write-out '%{http_code}' \
+            http://127.0.0.1:8081/migration/api/cos/auth-context)
+          test "$status" = "403"
+          test "$(cat /tmp/no-session.json)" = "$forbidden"
+
+          status=$(curl --silent --show-error --output /tmp/manager.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/migration/api/cos/auth-context)
+          test "$status" = "200"
+          grep -q '"organization_id":"default"' /tmp/manager.json
+          grep -q '"organization_role":"manager"' /tmp/manager.json
+          grep -q '"ROLE_MANAGER"' /tmp/manager.json
+
+          status=$(curl --silent --show-error --output /tmp/realtor.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            http://127.0.0.1:8081/migration/api/cos/auth-context)
+          test "$status" = "403"
+          test "$(cat /tmp/realtor.json)" = "$forbidden"
+
+          status=$(curl --silent --show-error --output /tmp/other-manager.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-other-manager0003' \
+            http://127.0.0.1:8081/migration/api/cos/auth-context)
+          test "$status" = "403"
+          test "$(cat /tmp/other-manager.json)" = "$forbidden"
+
+          echo "legacy session manager bridge, role gate and tenant gate are enforced"
+
+      - name: Verify operations routes are protected
+        run: |
+          status=$(curl --silent --show-error --output /tmp/cos-operations-response.json --write-out '%{http_code}' \
+            http://127.0.0.1:8081/migration/api/cos/events)
           echo "HTTP $status"
           cat /tmp/cos-operations-response.json
           echo
-          test "$status" = "500"
-          test "$(cat /tmp/cos-operations-response.json)" = '{"ok":false,"error":"COS runtime query failed."}'
-          echo "operations controller is callable through Symfony HTTP routing"
+          test "$status" = "403"
+          test "$(cat /tmp/cos-operations-response.json)" = '{"ok":false,"error":"Manager authorization required."}'
+          echo "operations routes are protected by Symfony Security"
 
       - name: Stop validation stack
         if: always()
         run: |
           docker compose -f docker-compose.symfony.yml down -v --remove-orphans || true
           docker network rm cos_backend || true
+          docker volume rm cos_php_sessions || true
 
   deploy-dev:
     name: Deploy parallel Symfony stack to AWS dev
@@ -152,5 +223,14 @@ jobs:
 
       - name: Verify server-local endpoints
         run: |
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "curl --fail --show-error --silent http://127.0.0.1:8081/health && echo && curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health && echo && curl --fail --show-error --silent --output /dev/null http://127.0.0.1:8081/migration/api/cos/events && echo operations-read-ok"
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" '
+            set -e
+            curl --fail --show-error --silent http://127.0.0.1:8081/health
+            echo
+            curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health
+            echo
+            status=$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" http://127.0.0.1:8081/migration/api/cos/events)
+            test "$status" = "403"
+            test "$(cat /tmp/cos-symfony-protected.json)" = "{\"ok\":false,\"error\":\"Manager authorization required.\"}"
+            echo security-boundary-ok
+          '

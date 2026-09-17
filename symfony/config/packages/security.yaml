@@ -1,0 +1,17 @@
+security:
+  providers:
+    legacy_users:
+      id: App\Security\LegacyIdentityLoader
+
+  firewalls:
+    migration_api:
+      pattern: '^/migration/api/cos(?:/|$)'
+      stateless: true
+      provider: legacy_users
+      custom_authenticators:
+        - App\Security\LegacySessionAuthenticator
+      entry_point: App\Security\LegacySessionAuthenticator
+      access_denied_handler: App\Security\JsonAccessDeniedHandler
+
+  access_control:
+    - { path: '^/migration/api/cos(?:/|$)', roles: ROLE_MANAGER }
