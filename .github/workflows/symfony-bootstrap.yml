@@ -77,6 +77,13 @@ jobs:
           docker compose -f docker-compose.symfony.yml logs --no-color --tail=250
           exit 1
 
+      - name: Verify operations controller is HTTP-routable
+        run: |
+          status=$(curl --silent --show-error --output /tmp/cos-operations-response.json --write-out '%{http_code}' http://127.0.0.1:8081/migration/api/cos/events)
+          test "$status" = "500"
+          test "$(cat /tmp/cos-operations-response.json)" = '{"ok":false,"error":"COS runtime query failed."}'
+          echo "operations controller is callable through Symfony HTTP routing"
+
       - name: Stop validation stack
         if: always()
         run: |
