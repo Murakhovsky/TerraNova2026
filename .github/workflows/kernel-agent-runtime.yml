@@ -9,6 +9,8 @@ on:
       - 'app/Kernel/Agent/**'
       - 'tests/unit/kernel_agent_runtime.php'
       - 'tests/architecture/kernel_agent_runtime_boundaries.php'
+      - 'tests/smoke/agent_runtime.php'
+      - 'tests/smoke/agent_safety.php'
       - '.github/workflows/kernel-agent-runtime.yml'
   pull_request:
     branches:
@@ -18,6 +20,8 @@ on:
       - 'app/Kernel/Agent/**'
       - 'tests/unit/kernel_agent_runtime.php'
       - 'tests/architecture/kernel_agent_runtime_boundaries.php'
+      - 'tests/smoke/agent_runtime.php'
+      - 'tests/smoke/agent_safety.php'
       - '.github/workflows/kernel-agent-runtime.yml'
   workflow_dispatch:
 
