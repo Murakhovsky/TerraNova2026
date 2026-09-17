@@ -1,0 +1,38 @@
+name: Kernel Tool Foundation
+
+on:
+  push:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Tool/**'
+      - 'tests/unit/kernel_tool_foundation.php'
+      - 'tests/architecture/kernel_tool_boundaries.php'
+      - '.github/workflows/kernel-tool.yml'
+  pull_request:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Tool/**'
+      - 'tests/unit/kernel_tool_foundation.php'
+      - 'tests/architecture/kernel_tool_boundaries.php'
+      - '.github/workflows/kernel-tool.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Kernel Tool has no framework or infrastructure dependencies
+        run: php tests/architecture/kernel_tool_boundaries.php
+      - name: Run Kernel Tool unit contract without Symfony kernel
+        run: php tests/unit/kernel_tool_foundation.php
+      - name: Lint Kernel Tool
+        run: find app/Kernel/Tool -type f -name '*.php' -print0 | xargs -0 -n1 php -l
