@@ -32,3 +32,7 @@ services:
 
   Kernel\Operations\Contract\OperationsReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel
+
+  Kernel\Operations\Service\OperationsSectionReader:
+    arguments:
+      $operations: '@Kernel\Operations\Contract\OperationsReadModelInterface'

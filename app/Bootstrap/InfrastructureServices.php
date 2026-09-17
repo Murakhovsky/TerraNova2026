@@ -42,6 +42,7 @@ use Kernel\Llm\GovernedStructuredLlmClient;
 use Kernel\Llm\LlmProviderRegistry;
 use Kernel\Llm\LlmRoute;
 use Kernel\Llm\LlmRoutingPolicy;
+use Kernel\Operations\Service\OperationsSectionReader;
 use Kernel\Resilience\ExternalCallExecutor;
 
 $connection = static fn ($container) => $container->getShared('databaseService')->connection();
@@ -75,6 +76,7 @@ $di->setShared('cosJobQueue', fn (): MysqlJobQueue => new MysqlJobQueue(
 ));
 $di->setShared('cosConfigurationStore', fn (): MysqlConfigurationStore => new MysqlConfigurationStore($connection($this)));
 $di->setShared('cosOperationsReadModel', fn (): MysqlOperationsReadModel => new MysqlOperationsReadModel($connection($this)));
+$di->setShared('cosOperationsSectionReader', fn (): OperationsSectionReader => new OperationsSectionReader($this->getShared('cosOperationsReadModel')));
 $di->setShared('cosMetrics', fn (): MysqlMetricsRecorder => new MysqlMetricsRecorder($connection($this)));
 $di->setShared('cosLogger', fn (): JsonFileLogger => new JsonFileLogger(BASE_PATH . '/tmp/logs/cos.jsonl'));
 $di->setShared('cosExternalCircuitBreakerStore', fn (): MysqlCircuitBreakerStore => new MysqlCircuitBreakerStore($connection($this)));
@@ -118,79 +120,42 @@ $di->setShared('cosLlmProviderRegistry', function (): LlmProviderRegistry {
             (string) $config->endpoint,
             (string) $config->token,
             (string) $config->model,
-            $primaryId,
+            (int) $config->timeoutSeconds,
         ),
     ];
-
-    $fallbackEndpoint = trim((string) (getenv('LLM_FALLBACK_ENDPOINT') ?: ''));
-    if ($fallbackEndpoint !== '') {
-        $fallbackId = trim((string) (getenv('LLM_FALLBACK_PROVIDER') ?: 'fallback'));
-        if ($fallbackId === $primaryId) {
-            throw new RuntimeException('LLM fallback provider id must differ from the primary provider id.');
-        }
+    $fallbackId = trim((string) ($config->fallbackProvider ?? ''));
+    if ($fallbackId !== '' && $fallbackId !== $primaryId) {
         $providers[$fallbackId] = new HttpStructuredLlmClient(
-            $fallbackEndpoint,
-            (string) (getenv('LLM_FALLBACK_TOKEN') ?: ''),
-            (string) (getenv('LLM_FALLBACK_MODEL') ?: $config->model),
-            $fallbackId,
+            (string) ($config->fallbackEndpoint ?? $config->endpoint),
+            (string) ($config->fallbackToken ?? $config->token),
+            (string) ($config->fallbackModel ?? $config->model),
+            (int) ($config->fallbackTimeoutSeconds ?? $config->timeoutSeconds),
         );
     }
-
-    return new LlmProviderRegistry($providers);
+    return new LlmProviderRegistry($providers, $primaryId);
 });
-
-$di->setShared('cosLlmRoutingPolicy', function (): LlmRoutingPolicy {
-    $config = $this->getConfig()->llm;
-    $registry = $this->getShared('cosLlmProviderRegistry');
-    $primaryId = trim((string) $config->provider) !== '' ? trim((string) $config->provider) : 'primary';
-    $defaults = [new LlmRoute($primaryId, (string) $config->model)];
-
-    $fallbackEndpoint = trim((string) (getenv('LLM_FALLBACK_ENDPOINT') ?: ''));
-    if ($fallbackEndpoint !== '') {
-        $fallbackId = trim((string) (getenv('LLM_FALLBACK_PROVIDER') ?: 'fallback'));
-        $defaults[] = new LlmRoute(
-            $fallbackId,
-            (string) (getenv('LLM_FALLBACK_MODEL') ?: $config->model),
-        );
-    }
-
-    $useCaseRoutes = [];
-    $routesJson = trim((string) (getenv('LLM_ROUTES_JSON') ?: ''));
-    if ($routesJson !== '') {
-        $decoded = json_decode($routesJson, true, flags: JSON_THROW_ON_ERROR);
-        if (!is_array($decoded)) {
-            throw new RuntimeException('LLM_ROUTES_JSON must decode to an object of use-case routes.');
-        }
-        foreach ($decoded as $useCase => $routeDefinitions) {
-            if (!is_string($useCase) || !is_array($routeDefinitions)) {
-                throw new RuntimeException('Invalid LLM use-case routing definition.');
-            }
-            $routes = [];
-            foreach ($routeDefinitions as $definition) {
-                if (!is_array($definition)) {
-                    throw new RuntimeException(sprintf('Invalid LLM route for use case %s.', $useCase));
-                }
-                $provider = trim((string) ($definition['provider'] ?? ''));
-                $model = trim((string) ($definition['model'] ?? ''));
-                if ($provider === '' || $model === '' || !$registry->has($provider)) {
-                    throw new RuntimeException(sprintf('Invalid or unavailable LLM route for use case %s.', $useCase));
-                }
-                $routes[] = new LlmRoute($provider, $model);
-            }
-            $useCaseRoutes[$useCase] = $routes;
-        }
-    }
-
-    return new LlmRoutingPolicy($defaults, $useCaseRoutes);
-});
-
-$di->setShared('cosLlmClient', fn (): GovernedStructuredLlmClient => new GovernedStructuredLlmClient(
+$di->setShared('cosLlmRoutingPolicy', fn (): LlmRoutingPolicy => new LlmRoutingPolicy([
+    LlmRoute::fromArray([
+        'id' => 'high-risk-primary',
+        'intent_types' => ['deal.approve', 'deal.execute', 'finance.approve', 'finance.execute'],
+        'provider' => $this->getShared('cosLlmProviderRegistry')->primaryId(),
+        'model' => (string) $this->getConfig()->llm->model,
+        'fallback_provider' => null,
+        'fallback_model' => null,
+        'max_retries' => 1,
+    ]),
+    LlmRoute::fromArray([
+        'id' => 'default',
+        'provider' => $this->getShared('cosLlmProviderRegistry')->primaryId(),
+        'model' => (string) $this->getConfig()->llm->model,
+        'fallback_provider' => trim((string) ($this->getConfig()->llm->fallbackProvider ?? '')) ?: null,
+        'fallback_model' => trim((string) ($this->getConfig()->llm->fallbackModel ?? '')) ?: null,
+        'max_retries' => 2,
+    ]),
+]));
+$di->setShared('cosStructuredLlm', fn (): GovernedStructuredLlmClient => new GovernedStructuredLlmClient(
     $this->getShared('cosLlmProviderRegistry'),
     $this->getShared('cosLlmRoutingPolicy'),
     $this->getShared('cosLlmGovernanceRepository'),
     $this->getShared('cosMetrics'),
-    strtoupper((string) (getenv('LLM_BUDGET_CURRENCY') ?: 'USD')),
-    max(1, (int) (getenv('COS_EXTERNAL_CIRCUIT_FAILURE_THRESHOLD') ?: 5)),
-    max(1, min(86400, (int) (getenv('COS_EXTERNAL_CIRCUIT_OPEN_SECONDS') ?: 60))),
-    $this->getShared('cosExternalCallExecutor'),
 ));
