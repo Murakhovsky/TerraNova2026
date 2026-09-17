@@ -30,7 +30,7 @@ foreach ($agents as $agent) {
   <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind'=>'error','title'=>'Agents unavailable','message'=>$pageStatus]); ?><?php endif; ?>
 
   <section class="tn-ui-panel tn-ui-panel--flush tn-workspace-section">
-    <div class="tn-ui-panel__head" style="padding:16px 18px 0"><div><p class="tn-ui-eyebrow">Configured agents</p><h2>Runtime profiles</h2></div><span><?php echo count($agents); ?></span></div>
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Configured agents</p><h2>Runtime profiles</h2></div><span><?php echo count($agents); ?></span></div>
     <?php $this->partial('components/ui/data_table', [
       'columns' => [
         ['key' => 'agent', 'label' => 'Agent'],
