@@ -7,7 +7,10 @@ on:
       - 'app/Interfaces/Web/View/property/submissions.phtml'
       - 'app/Interfaces/Web/View/admin/analytics.phtml'
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
+      - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
+      - 'frontend/features/clients/workspace.css'
+      - 'frontend/features/clients/workspace.js'
       - 'frontend/styles/components.css'
       - 'tests/architecture/web_v017_workspace_canonicalization.php'
       - 'docs/architecture/web-v0.17.md'
@@ -18,7 +21,10 @@ on:
       - 'app/Interfaces/Web/View/property/submissions.phtml'
       - 'app/Interfaces/Web/View/admin/analytics.phtml'
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
+      - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
+      - 'frontend/features/clients/workspace.css'
+      - 'frontend/features/clients/workspace.js'
       - 'frontend/styles/components.css'
       - 'tests/architecture/web_v017_workspace_canonicalization.php'
       - 'docs/architecture/web-v0.17.md'
@@ -45,6 +51,7 @@ jobs:
           php -l app/Interfaces/Web/View/property/submissions.phtml
           php -l app/Interfaces/Web/View/admin/analytics.phtml
           php -l app/Interfaces/Web/View/diagnostic_report/show.phtml
+          php -l app/Interfaces/Web/View/cos/index.phtml
           php -l app/Interfaces/Web/View/components/ui/kpi_card.phtml
       - name: Workspace canonicalization gates
         run: |
@@ -54,5 +61,6 @@ jobs:
           php tests/architecture/web_v015_visual_language.php
           php tests/architecture/web_v08_analytics_workspace.php
           php tests/architecture/web_v07_property_workspace.php
+          php tests/architecture/web_v06_clients_workspace.php
           php tests/architecture/frontend_assets.php
           php tests/architecture/web_v012_production_closure.php
