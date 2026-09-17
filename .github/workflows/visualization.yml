@@ -1,4 +1,4 @@
-name: COS Visualization V0.1-V0.5.4
+name: COS Visualization V0.1-V0.5.5
 
 on:
   push:
@@ -106,6 +106,7 @@ jobs:
           php tests/architecture/visualization_v042.php
           php tests/architecture/visualization_v05.php
           php tests/architecture/visualization_v053.php
+          php tests/architecture/visualization_v055.php
           php tests/architecture/cross_domain_dependency_audit.php
       - name: Visualization graph invariants
         run: |
@@ -115,6 +116,7 @@ jobs:
           php tests/unit/visualization_architecture_projections.php
           php tests/unit/visualization_cross_domain_contracts.php
           php tests/unit/visualization_fallback_graph_provider.php
+          php tests/unit/visualization_graph_health.php
       - name: Process runtime evidence
         run: |
           php docs/.vitepress/generate-runtime-evidence.php > /tmp/cos-runtime-evidence.json
@@ -145,6 +147,7 @@ jobs:
           php -l tests/architecture/visualization_v042.php
           php -l tests/architecture/visualization_v05.php
           php -l tests/architecture/visualization_v053.php
+          php -l tests/architecture/visualization_v055.php
           php -l tests/architecture/cross_domain_dependency_audit.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
@@ -152,3 +155,4 @@ jobs:
           php -l tests/unit/visualization_architecture_projections.php
           php -l tests/unit/visualization_cross_domain_contracts.php
           php -l tests/unit/visualization_fallback_graph_provider.php
+          php -l tests/unit/visualization_graph_health.php
