@@ -6,8 +6,6 @@ use Kernel\Visualization\Graph\GraphProjectionRegistryInterface;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 use Kernel\Visualization\Graph\GraphView;
 use Phalcon\Di\FactoryDefault\Cli as FactoryDefault;
-use RuntimeException;
-use Throwable;
 
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
