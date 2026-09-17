@@ -57,6 +57,45 @@ WEB V0.17 переводить канонічну систему компоне�
 
 Структура даних і генерація діагностичного звіту не змінюються.
 
+## Хвиля 2
+
+### COS Control Center
+
+`app/Interfaces/Web/View/cos/index.phtml`
+
+Control Center переведений із власної паралельної admin-мови на канонічний Workspace shell:
+- `tn-listing-hero` → `PageHeader`;
+- `tn-cos-metrics` → `KPI Card`;
+- `tn-admin-tabs` → canonical `Tabs`;
+- `tn-admin-panel` → `Panel`;
+- `tn-cos-status-*` → semantic `Status`;
+- primary/secondary execution controls → canonical buttons;
+- action/page status використовує Calm Technical alert geometry.
+
+Domain-specific content не штучно уніфікується. JSON details, decision cards, approval cards та audit list лишаються COS feature-patterns усередині канонічного shell. Це важливе правило: компонентна система стандартизує повторювану UX-мову, а не стирає доменну специфіку.
+
+Щільні таблиці Control Center поки зберігають спеціалізовану markup-структуру, оскільки містять `details`, execution forms і approval anchors, які поточний `DataTable` contract не повинен симулювати сирим HTML.
+
+### Client Case
+
+`frontend/features/clients/workspace.css`
+`frontend/features/clients/workspace.js`
+
+Client Case має складний operational UI: create/update forms, inbound triage, funnel, quick updates, matches, activities та AI actions. Повна механічна заміна view markup одним комітом створила б непотрібний regression risk.
+
+Тому хвиля 2 вводить контрольований compatibility bridge:
+- старий card-like hero візуально переходить до плоского структурного `PageHeader` pattern;
+- metrics використовують геометрію canonical KPI;
+- tabs переходять на line/navigation pattern canonical Tabs;
+- panels отримують `Calm Technical` radius, border і restrained elevation;
+- inputs/selects/textareas використовують canonical surface/focus geometry;
+- generic form actions переходять із graphite на cobalt action signal;
+- старий beige/gold form feedback прибраний;
+- local positive-green brand accents прибрані з kicker/status presentation;
+- duplicate submit-state JS видалений, Client Case покладається на спільний `initProductionUX` guard базового Workspace.
+
+Цей bridge навмисно не оголошується фінальною server-component міграцією Client Case. Наступна контрольована хвиля повинна окремо перевести `index`, `inbox` та `show` на `PageHeader / EntityHeader / FilterBar / Panel / Status` без зміни workflow forms і funnel behavior.
+
 ## KPI tone contract
 
 WEB V0.17 закриває API `KPI Card` до п'яти tones:
@@ -70,17 +109,6 @@ danger
 ```
 
 `brand` використовує cobalt accent із COS Design Tokens. Довільні CSS-tone назви більше не є частиною контракту компонента.
-
-## Що навмисно не входить у хвилю 1
-
-Великі legacy-heavy поверхні не переписуються одним ризиковим комітом. До хвилі 2 переходять:
-- Client Case list / inbox / entity view;
-- COS Control Center;
-- решта Property operational tables;
-- Sales Administration screens, які ще мають локальні `sales-admin-*` primitives;
-- Content / Spatial / Users administration.
-
-Причина проста: канонізація повинна бути механічною presentation-міграцією. Якщо view одночасно містить складні форми, workflow logic і великий локальний JS contract, її треба переносити окремою контрольованою хвилею, а не масовою заміною класів.
 
 ## Regression policy
 
@@ -106,17 +134,35 @@ Diagnostic Report:
   tn-card
 ```
 
-Architecture gate перевіряє не лише наявність canonical components, а й відсутність цих старих патернів у мігрованих views.
+Для COS Control Center у хвилі 2 заборонені legacy shell primitives:
+
+```text
+tn-listing-hero
+tn-cos-metrics
+tn-admin-tabs
+tn-admin-panel
+tn-cos-status--*
+```
+
+Для Client Case compatibility bridge gate фіксує:
+- відсутність старого beige/gold accent;
+- cobalt focus/action signal;
+- використання canonical COS tokens;
+- відсутність дубльованого submit-state JS.
+
+Architecture gate перевіряє не лише наявність canonical components, а й відсутність старих патернів у завершених частинах міграції.
 
 ## Definition of Done
 
 Хвиля міграції вважається завершеною, коли:
 - бізнес-дані та routes не змінені;
 - view використовує канонічні компоненти для заголовка, станів, KPI, таблиць і panels там, де вони застосовні;
+- domain-specific pattern лишається локальним лише там, де canonical primitive справді не покриває сценарій;
 - legacy primitive не дублює канонічний контракт;
 - PHTML проходить syntax validation;
 - production Vite build проходить;
 - WEB V0.16 та WEB V0.15 gates лишаються зеленими;
-- окремий WEB V0.17 gate захищає мігровані screens від регресії.
+- окремий WEB V0.17 gate захищає мігровані surfaces від регресії;
+- зміни проходять live AWS dev deploy без зміни runtime/business behavior.
 
-Наступна хвиля 2 має переносити складні Workspace surfaces по одному доменному кластеру, починаючи з Client Case та COS Control Center.
+Після хвилі 2 головний залишковий борг WEB V0.17: server-component міграція Client Case views, решта Property operational tables, локальні Sales Administration primitives та Content / Spatial / Users administration.

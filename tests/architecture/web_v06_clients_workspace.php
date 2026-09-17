@@ -10,6 +10,8 @@ $required = [
     'app/Interfaces/Web/View/client_case/index.phtml',
     'app/Interfaces/Web/View/client_case/show.phtml',
     'frontend/entrypoints/clients-workspace.js',
+    'frontend/entrypoints/terranova-interface.js',
+    'frontend/core/production.js',
     'frontend/features/clients/workspace.css',
     'frontend/features/clients/workspace.js',
     'docs/architecture/web-v0.6.md',
@@ -66,9 +68,25 @@ foreach (["../features/clients/workspace.css", "../features/clients/workspace.js
 }
 
 $clientJs = (string) file_get_contents($root . '/frontend/features/clients/workspace.js');
-foreach (['data-client-workspace', "addEventListener('submit'", 'aria-busy'] as $needle) {
-    if (!str_contains($clientJs, $needle)) {
-        throw new RuntimeException('Clients Workspace progressive enhancement is incomplete: ' . $needle);
+if (!str_contains($clientJs, 'data-client-workspace')) {
+    throw new RuntimeException('Clients Workspace progressive enhancement must keep explicit workspace scoping.');
+}
+foreach (["addEventListener('submit'", 'dataset.submitting', "classList.add('is-pending')"] as $legacySubmitGuard) {
+    if (str_contains($clientJs, $legacySubmitGuard)) {
+        throw new RuntimeException('Clients Workspace must not duplicate shared production form behavior: ' . $legacySubmitGuard);
+    }
+}
+
+$interfaceEntrypoint = (string) file_get_contents($root . '/frontend/entrypoints/terranova-interface.js');
+$productionJs = (string) file_get_contents($root . '/frontend/core/production.js');
+foreach (["import { initProductionUX } from '../core/production.js'", 'initProductionUX();'] as $needle) {
+    if (!str_contains($interfaceEntrypoint, $needle)) {
+        throw new RuntimeException('Shared Workspace entrypoint must initialize production form behavior: ' . $needle);
+    }
+}
+foreach (["addEventListener('submit'", 'dataset.submitting', "setAttribute('aria-busy', 'true')", "classList.add('is-pending')", "addEventListener('pageshow'"] as $needle) {
+    if (!str_contains($productionJs, $needle)) {
+        throw new RuntimeException('Shared production form guard is incomplete: ' . $needle);
     }
 }
 
@@ -96,4 +114,4 @@ foreach (['client-case/inbox', "'key' => 'clients'", "'key' => 'cases'"] as $nee
     }
 }
 
-echo "WEB V0.6 Clients Workspace architecture passed: Inbox, Cases and Case Workspace use the shared layout-owned shell and dedicated Vite bundle.\n";
+echo "WEB V0.6 Clients Workspace architecture passed: Inbox, Cases and Case Workspace use the shared layout-owned shell, dedicated Vite bundle and shared production form guard.\n";

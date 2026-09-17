@@ -20,47 +20,72 @@ $json = static function ($value): string {
         : (string) $value;
 };
 $shortId = static fn($value) => substr((string) $value, 0, 8);
-$statusClass = static fn($status) => 'tn-cos-status tn-cos-status--' . preg_replace('/[^a-z0-9-]+/', '-', strtolower(str_replace('_', '-', (string) $status)));
+$statusTone = static function ($status): string {
+    $value = strtoupper(str_replace('-', '_', trim((string) $status)));
+    if (in_array($value, ['ACTIVE', 'ENABLED', 'ALLOW', 'APPROVED', 'EXECUTED', 'COMPLETED', 'SUCCESS', 'SUCCEEDED', 'WON', 'CONNECTED'], true)) return 'positive';
+    if (in_array($value, ['FAILED', 'ERROR', 'REJECTED', 'DENY', 'DENIED', 'DEAD', 'BLOCKED', 'CANCELLED'], true)) return 'danger';
+    if (in_array($value, ['PENDING', 'PENDING_APPROVAL', 'QUEUED', 'RETRY', 'WARNING'], true)) return 'warning';
+    if (in_array($value, ['RUNNING', 'PROPOSED', 'PROCESSING', 'INFO'], true)) return 'info';
+    return 'neutral';
+};
 $actionStatus = $actionStatus ?? null;
 $pageStatus = $pageStatus ?? null;
 $csrfToken = $csrfToken ?? '';
+$kpis = [
+    ['label' => 'Events', 'value' => $stats['events'] ?? 0],
+    ['label' => 'Decisions', 'value' => $stats['decisions'] ?? 0],
+    ['label' => 'Open Actions', 'value' => $stats['open_actions'] ?? 0, 'tone' => 'brand'],
+    ['label' => 'Approvals', 'value' => $stats['pending_approvals'] ?? 0, 'tone' => ((int) ($stats['pending_approvals'] ?? 0)) > 0 ? 'warning' : 'neutral'],
+    ['label' => 'Results', 'value' => $stats['completed_results'] ?? 0, 'tone' => 'positive'],
+    ['label' => 'Dead jobs', 'value' => $stats['dead_jobs'] ?? 0, 'tone' => ((int) ($stats['dead_jobs'] ?? 0)) > 0 ? 'danger' : 'neutral'],
+    ['label' => 'Active Rules', 'value' => $stats['active_rules'] ?? 0],
+    ['label' => 'Agent runs 24h', 'value' => $stats['agent_runs_24h'] ?? 0],
+];
+$tabs = [
+    ['key' => 'events', 'label' => 'Events', 'href' => '#events'],
+    ['key' => 'rules', 'label' => 'Rules', 'href' => '#rules'],
+    ['key' => 'agents', 'label' => 'Agents', 'href' => '#agents'],
+    ['key' => 'policies', 'label' => 'Policies', 'href' => '#policies'],
+    ['key' => 'integrations', 'label' => 'Integrations', 'href' => '#integrations'],
+    ['key' => 'decisions', 'label' => 'Decisions', 'href' => '#decisions'],
+    ['key' => 'actions', 'label' => 'Proposed Actions', 'href' => '#actions'],
+    ['key' => 'approvals', 'label' => 'Approvals', 'href' => '#approvals'],
+    ['key' => 'results', 'label' => 'Results', 'href' => '#results'],
+    ['key' => 'audit', 'label' => 'Audit', 'href' => '#audit'],
+];
 ?>
 
-<main class="tn-page tn-admin-page tn-cos-page">
-  <nav class="tn-breadcrumbs">
-    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a><span>/</span><span>COS Control Center</span>
-  </nav>
+<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-cos-page">
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Company Operating System',
+    'title' => 'Control Center',
+    'description' => 'Спостережуваний ланцюг рішень: від бізнес-події до результату й аудиту.',
+    'actions' => [[
+      'label' => 'Відкрити Deals',
+      'href' => 'client-case',
+      'variant' => 'ghost',
+    ]],
+  ]); ?>
 
-  <section class="tn-listing-hero tn-cos-hero">
-    <div><p class="tn-kicker">Company Operating System</p><h1>Control Center</h1><p>Спостережуваний ланцюг рішень: від бізнес-події до результату й аудиту.</p></div>
-    <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case'); ?>">Відкрити Deals</a>
-  </section>
+  <?php if ($actionStatus): ?><div class="tn-ui-alert tn-ui-alert--positive tn-workspace-section" role="status"><?php echo $h($actionStatus); ?></div><?php endif; ?>
+  <?php if ($pageStatus): ?><div class="tn-ui-alert tn-ui-alert--danger tn-workspace-section" role="alert"><?php echo $h($pageStatus); ?></div><?php endif; ?>
 
-  <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
-  <?php if ($pageStatus): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
-
-  <section class="tn-cos-metrics">
-    <?php foreach ([
-      'Events' => $stats['events'] ?? 0,
-      'Decisions' => $stats['decisions'] ?? 0,
-      'Open Actions' => $stats['open_actions'] ?? 0,
-      'Approvals' => $stats['pending_approvals'] ?? 0,
-      'Results' => $stats['completed_results'] ?? 0,
-      'Dead jobs' => $stats['dead_jobs'] ?? 0,
-      'Active Rules' => $stats['active_rules'] ?? 0,
-      'Agent runs 24h' => $stats['agent_runs_24h'] ?? 0,
-    ] as $label => $value): ?>
-      <article><span><?php echo $h($label); ?></span><strong><?php echo (int) $value; ?></strong></article>
+  <section class="tn-ui-kpi-grid tn-workspace-section" aria-label="COS runtime summary">
+    <?php foreach ($kpis as $kpi): ?>
+      <?php $this->partial('components/ui/kpi_card', [
+        'label' => $kpi['label'],
+        'value' => (int) $kpi['value'],
+        'tone' => $kpi['tone'] ?? 'neutral',
+      ]); ?>
     <?php endforeach; ?>
   </section>
 
-  <nav class="tn-admin-tabs tn-cos-tabs" aria-label="COS sections">
-    <a href="#events">Events</a><a href="#rules">Rules</a><a href="#agents">Agents</a><a href="#policies">Policies</a><a href="#integrations">Integrations</a><a href="#decisions">Decisions</a><a href="#actions">Proposed Actions</a>
-    <a href="#approvals">Approvals</a><a href="#results">Results</a><a href="#audit">Audit</a>
-  </nav>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/tabs', ['items' => $tabs, 'label' => 'COS sections']); ?>
+  </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="events">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Input</p><h2>Events</h2></div><span><?php echo count($events); ?> останніх</span></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="events">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Input</p><h2>Events</h2><p><?php echo count($events); ?> останніх</p></div></div>
     <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Event</th><th>Aggregate</th><th>Payload</th><th>Occurred</th><th>Correlation</th></tr></thead><tbody>
       <?php foreach ($events as $event): ?><tr>
         <td><strong><?php echo $h($event['type']); ?></strong><span><?php echo $h($shortId($event['id'])); ?></span></td>
@@ -72,37 +97,37 @@ $csrfToken = $csrfToken ?? '';
     </tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="rules">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Deterministic automation</p><h2>Rules</h2></div><span><?php echo count($rules); ?> configured</span></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="rules">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Deterministic automation</p><h2>Rules</h2><p><?php echo count($rules); ?> configured</p></div></div>
     <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Rule</th><th>Trigger</th><th>Status</th><th>Priority</th><th>Effect</th></tr></thead><tbody>
-      <?php foreach ($rules as $rule): ?><tr><td><strong><?php echo $h($rule['name']); ?></strong><span><?php echo $h($rule['code']); ?></span></td><td><?php echo $h($rule['trigger_type']); ?></td><td><span class="<?php echo $statusClass($rule['status']); ?>"><?php echo $h($rule['status']); ?></span></td><td><?php echo (int)$rule['priority']; ?></td><td><details><summary>Configuration</summary><pre><?php echo $h($json($rule['effect'])); ?></pre></details></td></tr><?php endforeach; ?>
+      <?php foreach ($rules as $rule): ?><tr><td><strong><?php echo $h($rule['name']); ?></strong><span><?php echo $h($rule['code']); ?></span></td><td><?php echo $h($rule['trigger_type']); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $rule['status'], 'tone' => $statusTone($rule['status'])]); ?></td><td><?php echo (int)$rule['priority']; ?></td><td><details><summary>Configuration</summary><pre><?php echo $h($json($rule['effect'])); ?></pre></details></td></tr><?php endforeach; ?>
       <?php if (!$rules): ?><tr><td colspan="5">Rules ще не provisioned.</td></tr><?php endif; ?>
     </tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="agents">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Intelligence runtime</p><h2>Agents</h2></div><span><?php echo count($agentRuns); ?> runs</span></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="agents">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Intelligence runtime</p><h2>Agents</h2><p><?php echo count($agentRuns); ?> runs</p></div></div>
     <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Agent</th><th>Subject</th><th>Status</th><th>Confidence</th><th>Runtime</th></tr></thead><tbody>
-      <?php foreach ($agentRuns as $run): ?><tr><td><strong><?php echo $h($run['agent_name']); ?></strong><span><?php echo $h($run['agent_version'].' · '.$run['model']); ?></span></td><td><?php echo $h(($run['subject_type']?:'—').' #'.($run['subject_id']?:'—')); ?></td><td><span class="<?php echo $statusClass($run['status']); ?>"><?php echo $h($run['status']); ?></span></td><td><?php echo $run['confidence']!==null?$h(round((float)$run['confidence']*100).'%'):'—'; ?></td><td><?php echo $h(($run['duration_ms']??0).' ms'); ?></td></tr><?php endforeach; ?>
+      <?php foreach ($agentRuns as $run): ?><tr><td><strong><?php echo $h($run['agent_name']); ?></strong><span><?php echo $h($run['agent_version'].' · '.$run['model']); ?></span></td><td><?php echo $h(($run['subject_type']?:'—').' #'.($run['subject_id']?:'—')); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $run['status'], 'tone' => $statusTone($run['status'])]); ?></td><td><?php echo $run['confidence']!==null?$h(round((float)$run['confidence']*100).'%'):'—'; ?></td><td><?php echo $h(($run['duration_ms']??0).' ms'); ?></td></tr><?php endforeach; ?>
       <?php if (!$agentRuns): ?><tr><td colspan="5">Agent runs ще немає.</td></tr><?php endif; ?>
     </tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="policies">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Governance</p><h2>Policies</h2></div><span><?php echo count($policies); ?> configured</span></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Policy</th><th>Action</th><th>Decision</th><th>Status</th></tr></thead><tbody><?php foreach ($policies as $policy): ?><tr><td><strong><?php echo $h($policy['name']); ?></strong><span><?php echo $h($policy['code']); ?></span></td><td><?php echo $h($policy['action_type']); ?></td><td><span class="<?php echo $statusClass($policy['decision']); ?>"><?php echo $h($policy['decision']); ?></span></td><td><?php echo $h($policy['status']); ?></td></tr><?php endforeach; ?></tbody></table></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="policies">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Governance</p><h2>Policies</h2><p><?php echo count($policies); ?> configured</p></div></div>
+    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Policy</th><th>Action</th><th>Decision</th><th>Status</th></tr></thead><tbody><?php foreach ($policies as $policy): ?><tr><td><strong><?php echo $h($policy['name']); ?></strong><span><?php echo $h($policy['code']); ?></span></td><td><?php echo $h($policy['action_type']); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $policy['decision'], 'tone' => $statusTone($policy['decision'])]); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $policy['status'], 'tone' => $statusTone($policy['status'])]); ?></td></tr><?php endforeach; ?><?php if (!$policies): ?><tr><td colspan="4">Policies ще не налаштовані.</td></tr><?php endif; ?></tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="integrations">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Infrastructure boundary</p><h2>Integrations</h2></div><span><?php echo count($integrations); ?> connected</span></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Name</th><th>Provider</th><th>Type</th><th>Status</th></tr></thead><tbody><?php foreach ($integrations as $integration): ?><tr><td><strong><?php echo $h($integration['name']); ?></strong></td><td><?php echo $h($integration['provider']); ?></td><td><?php echo $h($integration['type']); ?></td><td><span class="<?php echo $statusClass($integration['status']); ?>"><?php echo $h($integration['status']); ?></span></td></tr><?php endforeach; ?><?php if (!$integrations): ?><tr><td colspan="4">Інтеграції не налаштовані.</td></tr><?php endif; ?></tbody></table></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="integrations">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Infrastructure boundary</p><h2>Integrations</h2><p><?php echo count($integrations); ?> connected</p></div></div>
+    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Name</th><th>Provider</th><th>Type</th><th>Status</th></tr></thead><tbody><?php foreach ($integrations as $integration): ?><tr><td><strong><?php echo $h($integration['name']); ?></strong></td><td><?php echo $h($integration['provider']); ?></td><td><?php echo $h($integration['type']); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $integration['status'], 'tone' => $statusTone($integration['status'])]); ?></td></tr><?php endforeach; ?><?php if (!$integrations): ?><tr><td colspan="4">Інтеграції не налаштовані.</td></tr><?php endif; ?></tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="decisions">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Intelligence</p><h2>Decisions</h2></div><span><?php echo count($decisions); ?> останніх</span></div>
+  <section class="tn-ui-panel tn-cos-section tn-workspace-section" id="decisions">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Intelligence</p><h2>Decisions</h2><p><?php echo count($decisions); ?> останніх</p></div></div>
     <div class="tn-cos-card-grid">
       <?php foreach ($decisions as $decision): ?><article class="tn-cos-decision-card">
-        <div><span class="<?php echo $statusClass($decision['decision']); ?>"><?php echo $h($decision['decision']); ?></span><strong><?php echo $h(round((float) ($decision['confidence'] ?? 0) * 100)); ?>%</strong></div>
+        <div><?php $this->partial('components/ui/status_badge', ['label' => $decision['decision'], 'tone' => $statusTone($decision['decision'])]); ?><strong><?php echo $h(round((float) ($decision['confidence'] ?? 0) * 100)); ?>%</strong></div>
         <h3><?php echo $h($decision['type']); ?></h3><p><?php echo $h($decision['reason'] ?: 'Причина не вказана.'); ?></p>
         <small><?php echo $h(($decision['agent_name'] ?: $decision['source_type']) . ' · ' . ($decision['model'] ?: $decision['source_id'])); ?></small>
       </article><?php endforeach; ?>
@@ -110,51 +135,51 @@ $csrfToken = $csrfToken ?? '';
     </div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="actions">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Execution intent</p><h2>Proposed Actions</h2></div><span><?php echo count($actions); ?> останніх</span></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="actions">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Execution intent</p><h2>Proposed Actions</h2><p><?php echo count($actions); ?> останніх</p></div></div>
     <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Action</th><th>Target</th><th>Status / Risk</th><th>Parameters</th><th></th></tr></thead><tbody>
       <?php foreach ($actions as $action): ?><tr>
         <td><strong><?php echo $h($action['type']); ?></strong><span><?php echo $h($action['source_type'] . ' · ' . $shortId($action['id'])); ?></span></td>
         <td><?php echo $h(($action['target_type'] ?: '—') . ' #' . ($action['target_id'] ?: '—')); ?></td>
-        <td><span class="<?php echo $statusClass($action['status']); ?>"><?php echo $h($action['status']); ?></span><span>Risk: <?php echo $h($action['risk_level']); ?></span></td>
+        <td><?php $this->partial('components/ui/status_badge', ['label' => $action['status'], 'tone' => $statusTone($action['status'])]); ?><span>Risk: <?php echo $h($action['risk_level']); ?></span></td>
         <td><details><summary>JSON</summary><pre><?php echo $h($json($action['parameters'])); ?></pre></details></td>
         <td class="tn-cos-actions">
-          <?php if ($action['status'] === 'QUEUED'): ?><form action="<?php echo $this->url->get('cos/action/' . $action['id'] . '/execute'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-btn tn-btn--dark" type="submit">Execute</button></form><?php endif; ?>
-          <?php if ($action['status'] === 'PENDING_APPROVAL' && $action['approval_status'] === 'PENDING'): ?><a class="tn-row-link" href="#approval-<?php echo $h($action['approval_id']); ?>">Approve</a><?php endif; ?>
+          <?php if ($action['status'] === 'QUEUED'): ?><form action="<?php echo $this->url->get('cos/action/' . $action['id'] . '/execute'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-ui-button tn-ui-button--primary" type="submit">Execute</button></form><?php endif; ?>
+          <?php if ($action['status'] === 'PENDING_APPROVAL' && $action['approval_status'] === 'PENDING'): ?><a class="tn-ui-button tn-ui-button--ghost" href="#approval-<?php echo $h($action['approval_id']); ?>">Approve</a><?php endif; ?>
         </td>
       </tr><?php endforeach; ?>
       <?php if (!$actions): ?><tr><td colspan="5">Actions ще немає.</td></tr><?php endif; ?>
     </tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="approvals">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Human control</p><h2>Approvals</h2></div><span><?php echo count($approvals); ?> останніх</span></div>
+  <section class="tn-ui-panel tn-cos-section tn-workspace-section" id="approvals">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Human control</p><h2>Approvals</h2><p><?php echo count($approvals); ?> останніх</p></div></div>
     <div class="tn-cos-card-grid">
       <?php foreach ($approvals as $approval): ?><article class="tn-cos-approval-card" id="approval-<?php echo $h($approval['id']); ?>">
-        <div><span class="<?php echo $statusClass($approval['status']); ?>"><?php echo $h($approval['status']); ?></span><small>Risk: <?php echo $h($approval['risk_level']); ?></small></div>
+        <div><?php $this->partial('components/ui/status_badge', ['label' => $approval['status'], 'tone' => $statusTone($approval['status'])]); ?><small>Risk: <?php echo $h($approval['risk_level']); ?></small></div>
         <h3><?php echo $h($approval['action_type']); ?></h3><p><?php echo $h($approval['reason'] ?: 'Потрібне рішення менеджера.'); ?></p>
         <small><?php echo $h(($approval['target_type'] ?: 'target') . ' #' . ($approval['target_id'] ?: '—')); ?></small>
         <?php if ($approval['status'] === 'PENDING'): ?><div class="tn-cos-inline-actions">
-          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/approve'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-btn tn-btn--dark" type="submit">Approve</button></form>
-          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/reject'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-btn tn-btn--ghost" type="submit">Reject</button></form>
+          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/approve'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-ui-button tn-ui-button--primary" type="submit">Approve</button></form>
+          <form action="<?php echo $this->url->get('cos/approval/' . $approval['id'] . '/reject'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-ui-button tn-ui-button--ghost" type="submit">Reject</button></form>
         </div><?php endif; ?>
       </article><?php endforeach; ?>
       <?php if (!$approvals): ?><p class="tn-muted">Approval-запитів ще немає.</p><?php endif; ?>
     </div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="results">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Outcome</p><h2>Results</h2></div><span><?php echo count($results); ?> останніх</span></div>
+  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="results">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Outcome</p><h2>Results</h2><p><?php echo count($results); ?> останніх</p></div></div>
     <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Action</th><th>Attempt</th><th>Status</th><th>Output / error</th><th>Finished</th></tr></thead><tbody>
-      <?php foreach ($results as $result): ?><tr><td><strong><?php echo $h($result['action_type']); ?></strong><span><?php echo $h(($result['target_type'] ?: '—') . ' #' . ($result['target_id'] ?: '—')); ?></span></td><td>#<?php echo (int) $result['attempt']; ?></td><td><span class="<?php echo $statusClass($result['status']); ?>"><?php echo $h($result['status']); ?></span></td><td><details><summary><?php echo $result['error'] ? 'Error' : 'Output'; ?></summary><pre><?php echo $h($result['error'] ?: $json($result['result'])); ?></pre></details></td><td><?php echo $h($result['finished_at']); ?></td></tr><?php endforeach; ?>
+      <?php foreach ($results as $result): ?><tr><td><strong><?php echo $h($result['action_type']); ?></strong><span><?php echo $h(($result['target_type'] ?: '—') . ' #' . ($result['target_id'] ?: '—')); ?></span></td><td>#<?php echo (int) $result['attempt']; ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $result['status'], 'tone' => $statusTone($result['status'])]); ?></td><td><details><summary><?php echo $result['error'] ? 'Error' : 'Output'; ?></summary><pre><?php echo $h($result['error'] ?: $json($result['result'])); ?></pre></details></td><td><?php echo $h($result['finished_at']); ?></td></tr><?php endforeach; ?>
       <?php if (!$results): ?><tr><td colspan="5">Результатів ще немає.</td></tr><?php endif; ?>
     </tbody></table></div>
   </section>
 
-  <section class="tn-admin-panel tn-cos-section" id="audit">
-    <div class="tn-section-heading"><div><p class="tn-kicker">Traceability</p><h2>Audit</h2></div><span><?php echo count($audit); ?> останніх</span></div>
+  <section class="tn-ui-panel tn-cos-section tn-workspace-section" id="audit">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Traceability</p><h2>Audit</h2><p><?php echo count($audit); ?> останніх</p></div></div>
     <div class="tn-cos-audit-list">
-      <?php foreach ($audit as $entry): ?><article><span class="<?php echo $statusClass($entry['category']); ?>"><?php echo $h($entry['category']); ?></span><div><strong><?php echo $h(($entry['action'] ?: 'recorded') . ' · ' . $entry['subject_type'] . ' #' . $entry['subject_id']); ?></strong><p><?php echo $h($entry['reason'] ?: $entry['actor_type'] . ' ' . $entry['actor_id']); ?></p></div><time><?php echo $h($entry['created_at']); ?></time></article><?php endforeach; ?>
+      <?php foreach ($audit as $entry): ?><article><?php $this->partial('components/ui/status_badge', ['label' => $entry['category'], 'tone' => $statusTone($entry['category'])]); ?><div><strong><?php echo $h(($entry['action'] ?: 'recorded') . ' · ' . $entry['subject_type'] . ' #' . $entry['subject_id']); ?></strong><p><?php echo $h($entry['reason'] ?: $entry['actor_type'] . ' ' . $entry['actor_id']); ?></p></div><time><?php echo $h($entry['created_at']); ?></time></article><?php endforeach; ?>
       <?php if (!$audit): ?><p class="tn-muted">Audit-записів ще немає.</p><?php endif; ?>
     </div>
   </section>
