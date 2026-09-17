@@ -15,8 +15,11 @@ generated: true
 | Модуль | Contributor | Файлів джерел маршрутів |
 | --- | --- | ---: |
 | `diagnostic` | `diagnosticRouteContributor` | 1 |
+| `finance` | — | 0 |
+| `procurement` | — | 0 |
 | `property` | `propertyRouteContributor` | 1 |
 | `sales` | `salesRouteContributor` | 5 |
+| `service` | — | 0 |
 
 ## `diagnostic`
 

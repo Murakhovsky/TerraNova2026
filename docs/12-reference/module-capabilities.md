@@ -21,8 +21,11 @@ generated: true
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
+| `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
+| `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
+| `service` | Service | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Service/module.php` |
 
 ## Diagnostics (`diagnostic`)
 
@@ -33,6 +36,34 @@ generated: true
 - внески API routes: `diagnosticRouteContributor`;
 - постачальники конфігурації: —;
 - міграції: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`.
+
+### Задекларовані capabilities
+
+Manifest capabilities не задекларовані.
+
+## Finance (`finance`)
+
+**Опис із manifest:** Finance boundary for accounts, transactions, invoices, payments, budgets, expenses and revenue.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+Manifest capabilities не задекларовані.
+
+## Procurement (`procurement`)
+
+**Опис із manifest:** Procurement boundary for suppliers, purchase requests, quotes, orders and deliveries.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
 
 ### Задекларовані capabilities
 
@@ -89,6 +120,20 @@ Manifest capabilities не задекларовані.
 - `sales.admin.view`;
 - `sales.director.view`;
 - `sales.workspace.use`;
+
+## Service (`service`)
+
+**Опис із manifest:** Service operations boundary for cases, requests, tickets, SLA, assignment and resolution.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+Manifest capabilities не задекларовані.
 
 ## Межі довідника
 

@@ -9,6 +9,7 @@ use App\Infrastructure\Messenger\SymfonyEventBus;
 use App\Infrastructure\Messenger\SymfonyQueryBus;
 use App\Security\LegacySessionAuthenticator;
 use App\Security\SecurityTenantContextProvider;
+use Domains\Sales\Domain\Lead\LeadId;
 use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\EventBusInterface;
@@ -58,6 +59,7 @@ $canonicalClasses = [
     TenantContextFactory::class => $appRoot . '/Kernel/Tenant/',
     OperationsReadModelInterface::class => $appRoot . '/Kernel/Operations/',
     OperationsSectionReader::class => $appRoot . '/Kernel/Operations/',
+    LeadId::class => $appRoot . '/Domains/Sales/Domain/Lead/',
     MysqlOperationsReadModel::class => $appRoot . '/Infrastructure/',
 ];
 
@@ -111,5 +113,6 @@ expectCanonical(
 
 $organization = OrganizationId::fromString('default');
 expectCanonical((string) $organization === 'default', 'Canonical Shared Kernel primitive must execute inside Symfony runtime.');
+expectCanonical((string) LeadId::fromString('lead-1') === 'lead-1', 'Canonical Sales Domain primitive must execute inside Symfony runtime.');
 
-echo "Symfony autoloads canonical COS app/ and adapts Kernel Application/Identity/Tenant without legacy code copies.\n";
+echo "Symfony autoloads canonical COS Kernel, Platform and Domains from app/ and adapts Kernel Application/Identity/Tenant without legacy code copies.\n";

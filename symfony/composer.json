@@ -23,6 +23,7 @@
       "App\\": "src/",
       "Kernel\\": "../app/Kernel/",
       "Platform\\": "../app/Platform/",
+      "Domains\\": "../app/Domains/",
       "Infrastructure\\": "../app/Infrastructure/"
     }
   },
