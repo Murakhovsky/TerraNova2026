@@ -7,6 +7,7 @@ use Kernel\Action\ActionProposal;
 use Kernel\Agent\AgentDefinition;
 use Kernel\Agent\AgentExecution;
 use Kernel\Agent\AgentInvocation;
+use Kernel\Agent\Contract\AgentAuditInterface;
 use Kernel\Agent\Contract\AgentConfigurationProviderInterface;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use Kernel\Agent\Contract\AgentRunRepositoryInterface;
@@ -14,6 +15,7 @@ use Kernel\Agent\Contract\ContextRedactorInterface;
 use Kernel\Agent\Contract\DecisionRepositoryInterface;
 use Kernel\Agent\Contract\LlmClientInterface;
 use Kernel\Agent\Contract\OrganizationAwareLlmClientInterface;
+use Kernel\Agent\Model\AgentAuditEvent;
 use RuntimeException;
 use Throwable;
 
@@ -27,6 +29,7 @@ final readonly class AgentRuntime
         private ?DecisionRepositoryInterface $decisions = null,
         private ?ContextRedactorInterface $redactor = null,
         private ?AgentConfigurationProviderInterface $configurations = null,
+        private ?AgentAuditInterface $audit = null,
     ) {}
 
     public function run(AgentDefinition $agent, AgentInvocation $invocation): AgentExecution
@@ -51,6 +54,10 @@ final readonly class AgentRuntime
         $context = $this->selectContext($context, $agent->contextSources);
         $context = $this->redactor?->redact($context) ?? $context;
         $this->runs->start($runId, $agent, $invocation, $context);
+        $this->audit?->record($runId, $agent, $invocation, AgentAuditEvent::REASONING_REQUEST, [
+            'question' => $invocation->question,
+            'context' => $context,
+        ]);
 
         try {
             $response = $this->llm instanceof OrganizationAwareLlmClientInterface
@@ -74,6 +81,22 @@ final readonly class AgentRuntime
                     $response->costCurrency,
                 );
             }
+            $this->audit?->record(
+                $runId,
+                $agent,
+                $invocation,
+                AgentAuditEvent::REASONING_RESULT,
+                [
+                    'output' => $response->output,
+                    'provider' => $response->provider,
+                    'model' => $response->model,
+                    'input_tokens' => $response->inputTokens,
+                    'output_tokens' => $response->outputTokens,
+                ],
+                cost: $response->costAmount,
+                costUnit: $response->costCurrency,
+            );
+
             try {
                 $result = $this->validator->validate($response->output, $agent);
                 if ($agent->resultValidatorClass !== null) {
@@ -84,11 +107,20 @@ final readonly class AgentRuntime
                     (new $validatorClass())->validate($result, $agent);
                 }
             } catch (Throwable $exception) {
-                $this->runs->fail($runId, $exception, $this->duration($started), true);
+                $duration = $this->duration($started);
+                $this->runs->fail($runId, $exception, $duration, true);
+                $this->audit?->record($runId, $agent, $invocation, AgentAuditEvent::FAILURE, [], $duration, error: $exception->getMessage());
                 $failureRecorded = true;
                 throw $exception;
             }
 
+            $this->audit?->record($runId, $agent, $invocation, AgentAuditEvent::DECISION, [
+                'decision' => $result->decision,
+                'reason' => $result->reason,
+                'confidence' => $result->confidence,
+                'evidence' => $result->evidence,
+                'proposed_actions' => $result->proposedActions,
+            ]);
             $this->decisions?->save($runId, $agent, $invocation, $result);
 
             $proposals = [];
@@ -96,7 +128,7 @@ final readonly class AgentRuntime
                 foreach ($result->proposedActions as $index => $action) {
                     $targetType = $action['target_type'] ?? $invocation->subjectType;
                     $targetId = $action['target_id'] ?? $invocation->subjectId;
-                    $proposals[] = new ActionProposal(
+                    $proposal = new ActionProposal(
                         $action['type'],
                         $targetType,
                         $targetId,
@@ -107,14 +139,34 @@ final readonly class AgentRuntime
                         $agent->defaultRiskLevel,
                         implode(':', [$runId, $index, $action['type'], $targetId]),
                     );
+                    $proposals[] = $proposal;
+                    $this->audit?->record($runId, $agent, $invocation, AgentAuditEvent::ACTION, [
+                        'type' => $action['type'],
+                        'target_type' => $targetType,
+                        'target_id' => $targetId,
+                        'parameters' => $action['parameters'],
+                    ]);
                 }
             }
 
-            $this->runs->complete($runId, $result, $response, $this->duration($started));
+            $duration = $this->duration($started);
+            $this->runs->complete($runId, $result, $response, $duration);
+            $this->audit?->record(
+                $runId,
+                $agent,
+                $invocation,
+                AgentAuditEvent::RESULT,
+                ['decision' => $result->decision, 'confidence' => $result->confidence, 'proposal_count' => count($proposals)],
+                $duration,
+                $response->costAmount,
+                $response->costCurrency,
+            );
             return new AgentExecution($runId, $result, $proposals);
         } catch (Throwable $exception) {
             if (!$failureRecorded) {
-                $this->runs->fail($runId, $exception, $this->duration($started));
+                $duration = $this->duration($started);
+                $this->runs->fail($runId, $exception, $duration);
+                $this->audit?->record($runId, $agent, $invocation, AgentAuditEvent::FAILURE, [], $duration, error: $exception->getMessage());
             }
             throw $exception;
         }

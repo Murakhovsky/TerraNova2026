@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+use Infrastructure\Audit\KernelAuditSink;
+use Infrastructure\Audit\PlatformAgentAudit;
 use Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository;
 use Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRunRepository;
 use Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRetention;
@@ -8,6 +10,7 @@ use Infrastructure\Platform\Persistence\MySql\Agent\MysqlDecisionRepository;
 use Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository;
 use Infrastructure\Platform\Persistence\MySql\Configuration\MysqlConfigurationStore;
 use Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository;
+use Infrastructure\Platform\Persistence\MySql\Audit\MysqlAgentTraceRepository;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventOutbox;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
@@ -44,6 +47,7 @@ use Kernel\Llm\LlmRoute;
 use Kernel\Llm\LlmRoutingPolicy;
 use Kernel\Operations\Service\OperationsSectionReader;
 use Kernel\Resilience\ExternalCallExecutor;
+use Platform\Audit\Service\AuditRecorder;
 
 $connection = static fn ($container) => $container->getShared('databaseService')->connection();
 
@@ -59,6 +63,13 @@ $di->setShared('cosEventConsumptions', fn (): MysqlEventConsumptionRepository =>
 $di->setShared('cosRuleRepository', fn (): MysqlRuleRepository => new MysqlRuleRepository($connection($this)));
 $di->setShared('cosRuleEvaluationRepository', fn (): MysqlRuleEvaluationRepository => new MysqlRuleEvaluationRepository($connection($this)));
 $di->setShared('cosAuditRepository', fn (): MysqlAuditRepository => new MysqlAuditRepository($connection($this)));
+$di->setShared('cosAgentTraceRepository', fn (): MysqlAgentTraceRepository => new MysqlAgentTraceRepository($connection($this)));
+$di->setShared('cosPlatformAuditSink', fn (): KernelAuditSink => new KernelAuditSink($this->getShared('cosAuditRepository')));
+$di->setShared('cosPlatformAuditRecorder', fn (): AuditRecorder => new AuditRecorder($this->getShared('cosPlatformAuditSink')));
+$di->setShared('cosPlatformAgentAudit', fn (): PlatformAgentAudit => new PlatformAgentAudit(
+    $this->getShared('cosAgentTraceRepository'),
+    $this->getShared('cosPlatformAuditRecorder'),
+));
 $di->setShared('cosActionRepository', fn (): MysqlActionRepository => new MysqlActionRepository($connection($this)));
 $di->setShared('cosPolicyRepository', fn (): MysqlPolicyRepository => new MysqlPolicyRepository($connection($this)));
 $di->setShared('cosPolicyEvaluationRepository', fn (): MysqlPolicyEvaluationRepository => new MysqlPolicyEvaluationRepository($connection($this)));
