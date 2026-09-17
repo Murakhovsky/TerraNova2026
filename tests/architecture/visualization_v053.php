@@ -19,6 +19,7 @@ $controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExp
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $smoke = $read('bin/architecture-graph-smoke.php');
 $deploy = $read('deploy/dev.sh');
+$visualizationServices = $read('app/Bootstrap/VisualizationServices.php');
 
 foreach ([
     "'resolve_provider'",
@@ -49,6 +50,19 @@ foreach ([
 }
 
 $assert(
+    str_contains($visualizationServices, "'cosArchitectureProjectionRegistry'"),
+    'Visualization composition root must register the projection registry.',
+);
+$assert(
+    !str_contains($visualizationServices, 'static fn (): ArchitectureProjectionRegistry'),
+    'Phalcon DI service factories must remain bindable; projection registry factory cannot be static.',
+);
+$assert(
+    str_contains($visualizationServices, 'fn (): ArchitectureProjectionRegistry => ArchitectureProjectionRegistry::defaults()'),
+    'Projection registry must resolve through a bindable DI factory.',
+);
+
+$assert(
     str_contains($deploy, 'php /var/www/html/bin/architecture-graph-smoke.php'),
     'AWS deploy must execute the Architecture Graph smoke inside the deployed PHP container.',
 );
@@ -57,4 +71,4 @@ $assert(
     'Architecture Graph deployment smoke must fail deployment with a dedicated exit code.',
 );
 
-echo "Visualization V0.5.3 diagnostics and live smoke contract passed.\n";
+echo "Visualization V0.5.3 diagnostics, DI binding and live smoke contract passed.\n";

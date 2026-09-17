@@ -42,7 +42,9 @@ $di->setShared('cosArchitectureGraphProvider', function (): GraphProviderInterfa
     return new FallbackArchitectureGraphProvider($runtimeGraph, $staticGraph);
 });
 
+// Phalcon DI binds service factories to the container instance. This factory must not
+// be static, otherwise Closure::call() cannot bind it and the resolved service becomes invalid.
 $di->setShared(
     'cosArchitectureProjectionRegistry',
-    static fn (): ArchitectureProjectionRegistry => ArchitectureProjectionRegistry::defaults(),
+    fn (): ArchitectureProjectionRegistry => ArchitectureProjectionRegistry::defaults(),
 );
