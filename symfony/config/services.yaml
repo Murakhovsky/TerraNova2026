@@ -3,9 +3,9 @@ services:
     autowire: true
     autoconfigure: true
 
-  App\\:
+  App\:
     resource: '../src/'
 
-  App\\Controller\\:
+  App\Controller\:
     resource: '../src/Controller/'
     tags: ['controller.service_arguments']
