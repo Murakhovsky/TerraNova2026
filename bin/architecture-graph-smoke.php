@@ -2,6 +2,7 @@
 <?php
 declare(strict_types=1);
 
+use Kernel\Visualization\Graph\GraphHealthAnalyzerInterface;
 use Kernel\Visualization\Graph\GraphProjectionRegistryInterface;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 use Kernel\Visualization\Graph\GraphView;
@@ -36,10 +37,25 @@ try {
         throw new RuntimeException('cosCytoscapeGraphMapper is not callable.');
     }
 
+    $stage = 'resolve_health_analyzer';
+    $healthAnalyzer = $di->getShared('cosArchitectureGraphHealthAnalyzer');
+    if (!$healthAnalyzer instanceof GraphHealthAnalyzerInterface) {
+        throw new RuntimeException('cosArchitectureGraphHealthAnalyzer does not implement GraphHealthAnalyzerInterface.');
+    }
+
     $stage = 'build_canonical_graph';
     $canonical = $provider->provide();
     if (count($canonical->nodes()) === 0) {
         throw new RuntimeException('Canonical Architecture Graph contains zero nodes.');
+    }
+
+    $stage = 'analyze_canonical_graph';
+    $health = $healthAnalyzer->analyze($canonical);
+    if (!isset($health['status'], $health['total'], $health['errors'], $health['warnings'], $health['info'], $health['issues'])) {
+        throw new RuntimeException('Architecture Graph health analyzer returned an invalid payload.');
+    }
+    if (!is_array($health['issues'])) {
+        throw new RuntimeException('Architecture Graph health issues must be an array.');
     }
 
     $names = $registry->names();
@@ -68,8 +84,10 @@ try {
     }
 
     echo sprintf(
-        "Architecture Graph runtime smoke passed: canonical_nodes=%d projection=%s projection_nodes=%d projection_edges=%d\n",
+        "Architecture Graph runtime smoke passed: canonical_nodes=%d health=%s issues=%d projection=%s projection_nodes=%d projection_edges=%d\n",
         count($canonical->nodes()),
+        (string) $health['status'],
+        (int) $health['total'],
         $viewName,
         (int) ($summary['nodes'] ?? count($projected->nodes())),
         (int) ($summary['edges'] ?? count($projected->edges())),
