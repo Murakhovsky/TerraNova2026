@@ -23,7 +23,7 @@ services:
 
   App\Security\LegacyIdentityLoader:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   legacy_cos.pdo:
@@ -35,6 +35,13 @@ services:
       $database: '%env(LEGACY_DB_NAME)%'
       $user: '%env(LEGACY_DB_USER)%'
       $password: '%env(LEGACY_DB_PASSWORD)%'
+
+  App\Infrastructure\LegacyIdentityResolver:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Identity\Contract\IdentityResolverInterface:
+    alias: App\Infrastructure\LegacyIdentityResolver
 
   Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
     arguments:
