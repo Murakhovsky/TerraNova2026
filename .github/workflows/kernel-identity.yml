@@ -1,0 +1,46 @@
+name: Kernel Identity Foundation
+
+on:
+  push:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Identity/**'
+      - 'symfony/src/Infrastructure/LegacyIdentityResolver.php'
+      - 'symfony/src/Security/LegacyIdentityLoader.php'
+      - 'symfony/src/Security/LegacySecurityUser.php'
+      - 'symfony/config/services.yaml'
+      - 'tests/unit/kernel_identity_foundation.php'
+      - 'tests/architecture/kernel_identity_boundaries.php'
+      - '.github/workflows/kernel-identity.yml'
+  pull_request:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Identity/**'
+      - 'symfony/src/Infrastructure/LegacyIdentityResolver.php'
+      - 'symfony/src/Security/LegacyIdentityLoader.php'
+      - 'symfony/src/Security/LegacySecurityUser.php'
+      - 'symfony/config/services.yaml'
+      - 'tests/unit/kernel_identity_foundation.php'
+      - 'tests/architecture/kernel_identity_boundaries.php'
+      - '.github/workflows/kernel-identity.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Kernel Identity has no framework or infrastructure dependencies
+        run: php tests/architecture/kernel_identity_boundaries.php
+      - name: Run Kernel Identity unit contract without Symfony kernel
+        run: php tests/unit/kernel_identity_foundation.php
+      - name: Lint Kernel Identity
+        run: find app/Kernel/Identity -type f -name '*.php' -print0 | xargs -0 -n1 php -l
