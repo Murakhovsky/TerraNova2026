@@ -10,6 +10,10 @@ services:
     resource: '../src/Controller/'
     tags: ['controller.service_arguments']
 
+  App\Controller\OperationsReadController:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   legacy_cos.pdo:
     class: PDO
     factory: ['@App\Infrastructure\LegacyConnectionFactory', 'create']
