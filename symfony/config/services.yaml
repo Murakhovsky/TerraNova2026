@@ -9,3 +9,20 @@ services:
   App\Controller\:
     resource: '../src/Controller/'
     tags: ['controller.service_arguments']
+
+  legacy_cos.pdo:
+    class: PDO
+    factory: ['@App\Infrastructure\LegacyConnectionFactory', 'create']
+    arguments:
+      $host: '%env(LEGACY_DB_HOST)%'
+      $port: '%env(int:LEGACY_DB_PORT)%'
+      $database: '%env(LEGACY_DB_NAME)%'
+      $user: '%env(LEGACY_DB_USER)%'
+      $password: '%env(LEGACY_DB_PASSWORD)%'
+
+  Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Operations\Contract\OperationsReadModelInterface:
+    alias: Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel

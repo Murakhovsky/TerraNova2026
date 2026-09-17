@@ -7,3 +7,8 @@ cos_symfony_health:
   path: /health
   controller: App\Controller\HealthController::health
   methods: [GET]
+
+cos_symfony_core_health:
+  path: /migration/core-health
+  controller: App\Controller\HealthController::coreHealth
+  methods: [GET]
