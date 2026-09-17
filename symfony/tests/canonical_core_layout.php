@@ -4,9 +4,18 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use App\Infrastructure\LegacyIdentityResolver;
+use App\Infrastructure\Messenger\SymfonyCommandBus;
+use App\Infrastructure\Messenger\SymfonyEventBus;
+use App\Infrastructure\Messenger\SymfonyQueryBus;
 use App\Security\LegacySessionAuthenticator;
 use App\Security\SecurityTenantContextProvider;
 use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
+use Kernel\Application\Bus\CommandBusInterface;
+use Kernel\Application\Bus\EventBusInterface;
+use Kernel\Application\Bus\QueryBusInterface;
+use Kernel\Application\Command\CommandInterface;
+use Kernel\Application\Event\EventInterface;
+use Kernel\Application\Query\QueryInterface;
 use Kernel\Identity\Contract\IdentityResolverInterface;
 use Kernel\Identity\Model\AuthenticatedIdentity;
 use Kernel\Identity\Model\OrganizationRole;
@@ -34,6 +43,12 @@ expectCanonical($appRoot !== false, 'Canonical root app/ must exist next to Symf
 
 $canonicalClasses = [
     OrganizationId::class => $appRoot . '/Kernel/Shared/',
+    CommandInterface::class => $appRoot . '/Kernel/Application/',
+    QueryInterface::class => $appRoot . '/Kernel/Application/',
+    EventInterface::class => $appRoot . '/Kernel/Application/',
+    CommandBusInterface::class => $appRoot . '/Kernel/Application/',
+    QueryBusInterface::class => $appRoot . '/Kernel/Application/',
+    EventBusInterface::class => $appRoot . '/Kernel/Application/',
     OrganizationRole::class => $appRoot . '/Kernel/Identity/',
     AuthenticatedIdentity::class => $appRoot . '/Kernel/Identity/',
     IdentityResolverInterface::class => $appRoot . '/Kernel/Identity/',
@@ -58,7 +73,14 @@ foreach ($canonicalClasses as $class => $expectedPrefix) {
     expectCanonical(!str_contains($resolved, '/legacy/'), sprintf('%s must not load from a legacy copy.', $class));
 }
 
-foreach ([LegacySessionAuthenticator::class, LegacyIdentityResolver::class, SecurityTenantContextProvider::class] as $adapterClass) {
+foreach ([
+    LegacySessionAuthenticator::class,
+    LegacyIdentityResolver::class,
+    SecurityTenantContextProvider::class,
+    SymfonyCommandBus::class,
+    SymfonyQueryBus::class,
+    SymfonyEventBus::class,
+] as $adapterClass) {
     $adapterFile = (new ReflectionClass($adapterClass))->getFileName();
     expectCanonical(
         is_string($adapterFile) && str_starts_with((string) realpath($adapterFile), $symfonyRoot . '/src/'),
@@ -74,8 +96,20 @@ expectCanonical(
     is_subclass_of(SecurityTenantContextProvider::class, TenantContextProviderInterface::class),
     'Symfony Security must adapt the Kernel Tenant context provider contract.',
 );
+expectCanonical(
+    is_subclass_of(SymfonyCommandBus::class, CommandBusInterface::class),
+    'Symfony Messenger command bus must adapt the Kernel Application command bus contract.',
+);
+expectCanonical(
+    is_subclass_of(SymfonyQueryBus::class, QueryBusInterface::class),
+    'Symfony Messenger query bus must adapt the Kernel Application query bus contract.',
+);
+expectCanonical(
+    is_subclass_of(SymfonyEventBus::class, EventBusInterface::class),
+    'Symfony Messenger event bus must adapt the Kernel Application event bus contract.',
+);
 
 $organization = OrganizationId::fromString('default');
 expectCanonical((string) $organization === 'default', 'Canonical Shared Kernel primitive must execute inside Symfony runtime.');
 
-echo "Symfony autoloads canonical COS app/ and adapts Kernel Identity/Tenant without legacy code copies.\n";
+echo "Symfony autoloads canonical COS app/ and adapts Kernel Application/Identity/Tenant without legacy code copies.\n";
