@@ -63,6 +63,40 @@ foreach (['tn-page-header', 'tn-card-grid', 'class="tn-card"'] as $legacy) {
     $requireNotContains($diagnostic, $legacy, 'Diagnostic report must not restore legacy card/header primitives.');
 }
 
+$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/kpi_card'",
+    "partial('components/ui/tabs'",
+    "partial('components/ui/status_badge'",
+    'tn-ui-panel',
+    'tn-workspace-page--wide',
+] as $needle) {
+    $requireContains($cos, $needle, 'COS Control Center must use canonical shell contracts.');
+}
+foreach (['tn-listing-hero', 'tn-cos-metrics', 'tn-admin-tabs', 'tn-admin-panel', 'tn-cos-status--'] as $legacy) {
+    $requireNotContains($cos, $legacy, 'COS Control Center must not restore its legacy shell/status primitives.');
+}
+
+$clientCss = $read('frontend/features/clients/workspace.css');
+$clientJs = $read('frontend/features/clients/workspace.js');
+foreach ([
+    'Compatibility bridge while Client Case PHTML moves to canonical components.',
+    'var(--tn-color-accent)',
+    'var(--tn-color-accent-soft)',
+    'var(--tn-color-accent-border)',
+    'var(--tn-shadow-ui)',
+] as $needle) {
+    $requireContains($clientCss, $needle, 'Client Case compatibility layer must follow Calm Technical tokens.');
+}
+foreach (['rgba(198, 155, 79', 'var(--tn-color-positive);\n    font-size: 10px'] as $legacy) {
+    $requireNotContains($clientCss, $legacy, 'Client Case compatibility layer must not restore the old beige/gold presentation language.');
+}
+$requireContains($clientJs, "workspace.classList.add('tn-client-workspace')", 'Client Case workspace scoping must remain explicit.');
+foreach (['addEventListener(\'submit\'', 'dataset.submitting', "classList.add('is-pending')"] as $duplicateSubmitBehavior) {
+    $requireNotContains($clientJs, $duplicateSubmitBehavior, 'Client Case must rely on the shared production form guard instead of duplicating submit-state behavior.');
+}
+
 $kpi = $read('app/Interfaces/Web/View/components/ui/kpi_card.phtml');
 $components = $read('frontend/styles/components.css');
 $requireContains($kpi, "['neutral', 'brand', 'positive', 'warning', 'danger']", 'KPI tone API must remain closed and semantic.');
@@ -70,7 +104,7 @@ $requireContains($components, '.tn-ui-kpi--brand', 'Canonical KPI brand tone mus
 $requireContains($components, 'var(--tn-color-accent-border)', 'KPI brand tone must be owned by COS design tokens.');
 
 $docs = $read('docs/architecture/web-v0.17.md');
-foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'хвиля 2'] as $needle) {
+foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'Хвиля 2'] as $needle) {
     $requireContains($docs, $needle, 'WEB V0.17 documentation is incomplete.');
 }
 
