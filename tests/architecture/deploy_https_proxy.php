@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
 $dockerNginx = (string) file_get_contents($root . '/docker/nginx/default.conf');
+$dockerCompose = (string) file_get_contents($root . '/docker-compose.yml');
+$dockerfile = (string) file_get_contents($root . '/docker/php/Dockerfile');
+$servicesWeb = (string) file_get_contents($root . '/app/config/services_web.php');
 $httpBootstrap = (string) file_get_contents($root . '/deploy/configure-company-os-http.sh');
 $tls = (string) file_get_contents($root . '/deploy/configure-dev-tls.sh');
 $devDeploy = (string) file_get_contents($root . '/deploy/dev.sh');
@@ -69,6 +72,32 @@ foreach ([
     if (!str_contains($trustedProxy, $needle)) {
         throw new RuntimeException('Application trusted-proxy normalization contract is missing: ' . $needle);
     }
+}
+
+foreach ([
+    "'lifetime' => \$sessionLifetime",
+    "ini_set('session.gc_maxlifetime', (string) \$sessionLifetime);",
+    "'savePath' => \$sessionPath",
+    "COS_SESSION_LIFETIME_SECONDS",
+] as $needle) {
+    if (!str_contains($servicesWeb, $needle)) {
+        throw new RuntimeException('Persistent web-session contract is missing: ' . $needle);
+    }
+}
+
+foreach ([
+    'COS_SESSION_LIFETIME_SECONDS: ${COS_SESSION_LIFETIME_SECONDS:-2592000}',
+    'COS_SESSION_SAVE_PATH: /var/www/html/tmp/sessions',
+    'php_sessions:/var/www/html/tmp/sessions',
+    'php_sessions:',
+] as $needle) {
+    if (!str_contains($dockerCompose, $needle)) {
+        throw new RuntimeException('Persistent Docker session-volume contract is missing: ' . $needle);
+    }
+}
+
+if (!str_contains($dockerfile, '/var/www/html/tmp/sessions')) {
+    throw new RuntimeException('PHP image must prepare the persistent session mount point.');
 }
 
 require $root . '/app/config/trusted_proxy.php';
