@@ -11,6 +11,8 @@ on:
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
       - 'app/Kernel/**'
+      - 'app/Platform/**'
+      - 'app/Domains/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
@@ -23,6 +25,8 @@ on:
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
       - 'app/Kernel/**'
+      - 'app/Platform/**'
+      - 'app/Domains/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   workflow_dispatch:
@@ -99,7 +103,8 @@ jobs:
             if (!class_exists("Infrastructure\\Platform\\ReadModel\\MySql\\MysqlOperationsReadModel")) { exit(12); }
             if (!class_exists("App\\Security\\LegacySessionAuthenticator")) { exit(13); }
             if (!class_exists("Kernel\\Tenant\\Model\\TenantContext")) { exit(14); }
-            echo "shared COS read-model, Tenant Core and Symfony security bridge classes load\n";
+            if (!class_exists("Domains\\Sales\\Domain\\Lead\\LeadId")) { exit(15); }
+            echo "canonical COS Kernel, Platform/Infrastructure, Domains and Symfony security bridge classes load\n";
           '
 
       - name: Verify operations read API contract
@@ -221,6 +226,8 @@ jobs:
             ./docker-compose.symfony.yml \
             ./deploy/symfony-dev.sh \
             ./app/Kernel/ \
+            ./app/Platform/ \
+            ./app/Domains/ \
             ./app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php \
             "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
