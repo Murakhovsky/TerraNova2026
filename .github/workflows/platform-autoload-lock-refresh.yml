@@ -1,0 +1,40 @@
+name: Platform Autoload Lock Refresh
+
+on:
+  push:
+    branches: [migration/platform-integration]
+    paths:
+      - 'composer.json'
+      - 'symfony/composer.json'
+      - '.github/workflows/platform-autoload-lock-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: migration/platform-integration
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - name: Refresh root lock metadata
+        run: composer update --lock --no-interaction --prefer-dist --no-progress --no-plugins --no-scripts
+      - name: Refresh Symfony lock metadata
+        working-directory: symfony
+        run: composer update --lock --no-interaction --prefer-dist --no-progress --no-plugins --no-scripts
+      - name: Commit deterministic lock files
+        run: |
+          if git diff --quiet -- composer.lock symfony/composer.lock; then
+            echo 'Lock files already current'
+            exit 0
+          fi
+          git config user.name 'Murakhovsky'
+          git config user.email '41971803+Murakhovsky@users.noreply.github.com'
+          git add composer.lock symfony/composer.lock
+          git commit -m 'MIGRATION: refresh Platform autoload lock metadata'
+          git push origin HEAD:migration/platform-integration
