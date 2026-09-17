@@ -7,15 +7,17 @@ use InvalidArgumentException;
 
 final readonly class Money extends ValueObject
 {
-    public function __construct(
-        private int $minorUnits,
-        private string $currency,
-    ) {
+    private int $minorUnits;
+    private string $currency;
+
+    public function __construct(int $minorUnits, string $currency)
+    {
         $currency = strtoupper(trim($currency));
         if (preg_match('/^[A-Z]{3}$/', $currency) !== 1) {
             throw new InvalidArgumentException('Currency must be an ISO-like three-letter code.');
         }
 
+        $this->minorUnits = $minorUnits;
         $this->currency = $currency;
     }
 
