@@ -1,0 +1,32 @@
+name: Platform Notification Foundation
+
+on:
+  push:
+    branches: [main, migration/symfony, migration/platform-notification]
+    paths:
+      - 'app/Platform/Notification/**'
+      - 'tests/unit/platform_notification_foundation.php'
+      - 'tests/architecture/platform_notification_boundaries.php'
+      - '.github/workflows/platform-notification.yml'
+  pull_request:
+    branches: [main, migration/symfony, migration/platform-audit]
+    paths:
+      - 'app/Platform/Notification/**'
+      - 'tests/unit/platform_notification_foundation.php'
+      - 'tests/architecture/platform_notification_boundaries.php'
+      - '.github/workflows/platform-notification.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: php tests/architecture/platform_notification_boundaries.php
+      - run: php tests/unit/platform_notification_foundation.php
+      - run: find app/Platform/Notification -type f -name '*.php' -print0 | xargs -0 -n1 php -l
