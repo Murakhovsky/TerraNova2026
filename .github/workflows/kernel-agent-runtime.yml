@@ -1,0 +1,42 @@
+name: Kernel Agent Runtime
+
+on:
+  push:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Agent/**'
+      - 'tests/unit/kernel_agent_runtime.php'
+      - 'tests/architecture/kernel_agent_runtime_boundaries.php'
+      - '.github/workflows/kernel-agent-runtime.yml'
+  pull_request:
+    branches:
+      - main
+      - migration/symfony
+    paths:
+      - 'app/Kernel/Agent/**'
+      - 'tests/unit/kernel_agent_runtime.php'
+      - 'tests/architecture/kernel_agent_runtime_boundaries.php'
+      - '.github/workflows/kernel-agent-runtime.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Kernel Agent has no framework or infrastructure dependencies
+        run: php tests/architecture/kernel_agent_runtime_boundaries.php
+      - name: Run canonical Agent Runtime contract
+        run: php tests/unit/kernel_agent_runtime.php
+      - name: Run existing Agent smoke contracts
+        run: |
+          php tests/smoke/agent_runtime.php
+          php tests/smoke/agent_safety.php
+      - name: Lint Kernel Agent
+        run: find app/Kernel/Agent -type f -name '*.php' -print0 | xargs -0 -n1 php -l
