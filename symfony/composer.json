@@ -27,9 +27,15 @@
       "symfony/flex": true,
       "symfony/runtime": true
     },
+    "platform": {
+      "php": "8.3.0"
+    },
     "sort-packages": true
   },
   "extra": {
+    "runtime": {
+      "disable_dotenv": true
+    },
     "symfony": {
       "allow-contrib": false,
       "require": "7.4.*"

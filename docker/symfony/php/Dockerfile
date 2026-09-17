@@ -9,7 +9,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /var/www/html
 
-COPY symfony/composer.json ./composer.json
+COPY symfony/composer.json symfony/composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
 
 COPY symfony/ ./
