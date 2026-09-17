@@ -21,7 +21,7 @@ foreach (['cosAgentTraceRepository', 'cosPlatformAuditSink', 'cosPlatformAuditRe
 }
 
 $kernel = $read('app/Bootstrap/KernelServices.php');
-$expect(str_contains($kernel, "$this->getShared('cosPlatformAgentAudit')"), 'AgentRuntime must receive the durable Platform audit adapter.');
+$expect(str_contains($kernel, '$this->getShared(\'cosPlatformAgentAudit\')'), 'AgentRuntime must receive the durable Platform audit adapter.');
 
 $tool = $read('app/Infrastructure/Audit/PlatformToolAudit.php');
 $expect(str_contains($tool, 'findByCorrelationId('), 'Tool trace attachment must resolve by tenant-scoped correlation id.');
