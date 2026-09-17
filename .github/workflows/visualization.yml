@@ -1,4 +1,4 @@
-name: COS Visualization V0.1-V0.5.2
+name: COS Visualization V0.1-V0.5.3
 
 on:
   push:
@@ -20,6 +20,8 @@ on:
       - 'app/Bootstrap/KernelServices.php'
       - 'app/Bootstrap/VisualizationServices.php'
       - 'app/config/services_kernel.php'
+      - 'bin/architecture-graph-smoke.php'
+      - 'deploy/dev.sh'
       - 'frontend/entrypoints/cos-architecture-explorer.js'
       - 'frontend/features/cos/architecture-explorer.*'
       - 'vite.config.js'
@@ -58,6 +60,8 @@ on:
       - 'app/Bootstrap/KernelServices.php'
       - 'app/Bootstrap/VisualizationServices.php'
       - 'app/config/services_kernel.php'
+      - 'bin/architecture-graph-smoke.php'
+      - 'deploy/dev.sh'
       - 'frontend/entrypoints/cos-architecture-explorer.js'
       - 'frontend/features/cos/architecture-explorer.*'
       - 'vite.config.js'
@@ -101,6 +105,7 @@ jobs:
           php tests/architecture/visualization_v041.php
           php tests/architecture/visualization_v042.php
           php tests/architecture/visualization_v05.php
+          php tests/architecture/visualization_v053.php
           php tests/architecture/cross_domain_dependency_audit.php
       - name: Visualization graph invariants
         run: |
@@ -131,6 +136,7 @@ jobs:
           php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
           php -l app/Interfaces/Web/Module.php
+          php -l bin/architecture-graph-smoke.php
           php -l docs/.vitepress/generate-runtime-evidence.php
           php -l tests/architecture/visualization_v02.php
           php -l tests/architecture/visualization_v03.php
@@ -138,6 +144,7 @@ jobs:
           php -l tests/architecture/visualization_v041.php
           php -l tests/architecture/visualization_v042.php
           php -l tests/architecture/visualization_v05.php
+          php -l tests/architecture/visualization_v053.php
           php -l tests/architecture/cross_domain_dependency_audit.php
           php -l tests/unit/visualization_graph_foundation.php
           php -l tests/unit/visualization_architecture_graph.php
