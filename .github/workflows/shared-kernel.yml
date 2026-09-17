@@ -1,0 +1,33 @@
+name: Shared Kernel Foundation
+
+on:
+  push:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Kernel/Shared/**'
+      - 'tests/unit/shared_kernel_foundation.php'
+      - 'tests/architecture/shared_kernel_boundaries.php'
+      - '.github/workflows/shared-kernel.yml'
+  pull_request:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Kernel/Shared/**'
+      - 'tests/unit/shared_kernel_foundation.php'
+      - 'tests/architecture/shared_kernel_boundaries.php'
+      - '.github/workflows/shared-kernel.yml'
+
+jobs:
+  pure-php-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Shared Kernel has no framework dependencies
+        run: php tests/architecture/shared_kernel_boundaries.php
+      - name: Run Shared Kernel unit contract without Symfony kernel
+        run: php tests/unit/shared_kernel_foundation.php
+      - name: Lint Shared Kernel
+        run: find app/Kernel/Shared -type f -name '*.php' -print0 | xargs -0 -n1 php -l
