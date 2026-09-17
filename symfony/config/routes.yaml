@@ -10,5 +10,5 @@ cos_symfony_health:
 
 cos_symfony_core_health:
   path: /migration/core-health
-  controller: App\Controller\HealthController::coreHealth
+  controller: App\Controller\CoreHealthController
   methods: [GET]
