@@ -28,6 +28,6 @@ $expect(str_contains($tool, 'findByCorrelationId('), 'Tool trace attachment must
 
 $sink = $read('app/Infrastructure/Audit/KernelAuditSink.php');
 $expect(str_contains($sink, "'agent' => 'AGENT'"), 'Platform actor types must be normalized for the legacy audit enum.');
-$expect(str_contains($sink, "'result' => $record->output"), 'Platform audit output must survive the Kernel audit bridge.');
+$expect(str_contains($sink, "'result' => \$record->output"), 'Platform audit output must survive the Kernel audit bridge.');
 
 echo "Platform Audit runtime wiring OK\n";
