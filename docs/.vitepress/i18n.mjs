@@ -28,12 +28,16 @@ export function translate(locale, key, fallback = null) {
   return fallback ?? key;
 }
 
-export function buildLocaleMetadata() {
+export function buildI18nConfig() {
   return {
     schemaVersion: localeRegistry.schema_version,
     defaultLocale,
     queryParameter: localeRegistry.query_parameter,
     storageKey: localeRegistry.storage_key,
+    fallbackPolicy: localeRegistry.fallback_policy,
     locales: Object.entries(localeRegistry.locales).map(([code, meta]) => ({ code, ...meta })),
   };
 }
+
+// Compatibility alias for build-time consumers that only need locale metadata.
+export const buildLocaleMetadata = buildI18nConfig;
