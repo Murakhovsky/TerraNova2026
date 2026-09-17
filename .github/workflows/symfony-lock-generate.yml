@@ -9,6 +9,9 @@ on:
       - '.github/workflows/symfony-lock-generate.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   generate-lock:
     runs-on: ubuntu-latest
@@ -23,6 +26,15 @@ jobs:
             composer:2 \
             composer update --no-dev --no-install --no-interaction --prefer-dist --no-progress --no-scripts
           test -s symfony/composer.lock
+
+      - name: Commit generated lock
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add symfony/composer.lock
+          git diff --cached --quiet && exit 0
+          git commit -m "INFRA — lock Symfony dependencies"
+          git push origin HEAD:infra/symfony-composer-lock
 
       - name: Upload composer lock
         uses: actions/upload-artifact@v4
