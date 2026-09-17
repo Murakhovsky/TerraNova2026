@@ -6,16 +6,21 @@ namespace Infrastructure\Audit;
 use DateTimeImmutable;
 use Kernel\Tool\Contract\ToolAuditInterface;
 use Kernel\Tool\Model\ToolExecution;
+use Platform\Audit\Contract\AgentTraceRepositoryInterface;
 use Platform\Audit\Model\ActivityRecord;
 use Platform\Audit\Model\ActivityStatus;
 use Platform\Audit\Model\Actor;
 use Platform\Audit\Model\ResourceReference;
+use Platform\Audit\Model\TraceEvent;
+use Platform\Audit\Model\TraceEventType;
 use Platform\Audit\Service\AuditRecorder;
 
 final readonly class PlatformToolAudit implements ToolAuditInterface
 {
-    public function __construct(private AuditRecorder $audit)
-    {
+    public function __construct(
+        private AuditRecorder $audit,
+        private ?AgentTraceRepositoryInterface $traces = null,
+    ) {
     }
 
     public function record(ToolExecution $execution): void
@@ -50,5 +55,21 @@ final readonly class PlatformToolAudit implements ToolAuditInterface
             timestamp: new DateTimeImmutable(),
             metadata: ['attempts' => $execution->attempts(), 'tool_effect' => $execution->definition->effect()->value],
         ));
+
+        if ($this->traces === null) return;
+        $history = $this->traces->find($invocation->correlationId());
+        if ($history === null) return;
+
+        $sequence = count($history->events()) + 1;
+        $history->append(new TraceEvent($sequence, TraceEventType::TOOL_CALL, [
+            'tool' => $invocation->toolName(),
+            'input' => $invocation->input(),
+        ], ActivityStatus::STARTED, new DateTimeImmutable()));
+        $history->append(new TraceEvent($sequence + 1, TraceEventType::TOOL_RESULT, [
+            'tool' => $invocation->toolName(),
+            'output' => $result?->output() ?? [],
+            'attempts' => $execution->attempts(),
+        ], $status, new DateTimeImmutable(), error: $execution->error()));
+        $this->traces->save($history);
     }
 }

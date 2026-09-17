@@ -6,7 +6,9 @@ on:
     paths:
       - 'app/Platform/Audit/**'
       - 'app/Infrastructure/Audit/**'
+      - 'app/Kernel/Agent/**'
       - 'tests/unit/platform_audit_foundation.php'
+      - 'tests/unit/platform_audit_agent_runtime.php'
       - 'tests/architecture/platform_audit_boundaries.php'
       - '.github/workflows/platform-audit.yml'
   pull_request:
@@ -14,7 +16,9 @@ on:
     paths:
       - 'app/Platform/Audit/**'
       - 'app/Infrastructure/Audit/**'
+      - 'app/Kernel/Agent/**'
       - 'tests/unit/platform_audit_foundation.php'
+      - 'tests/unit/platform_audit_agent_runtime.php'
       - 'tests/architecture/platform_audit_boundaries.php'
       - '.github/workflows/platform-audit.yml'
   workflow_dispatch:
@@ -31,4 +35,7 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: php tests/architecture/platform_audit_boundaries.php
       - run: php tests/unit/platform_audit_foundation.php
-      - run: find app/Platform/Audit app/Infrastructure/Audit -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: php tests/unit/platform_audit_agent_runtime.php
+      - run: php tests/smoke/agent_runtime.php
+      - run: php tests/smoke/agent_safety.php
+      - run: find app/Platform/Audit app/Infrastructure/Audit app/Kernel/Agent -type f -name '*.php' -print0 | xargs -0 -n1 php -l
