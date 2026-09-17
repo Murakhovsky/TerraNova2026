@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 use App\Infrastructure\LegacyIdentityResolver;
 use App\Security\LegacySessionAuthenticator;
+use App\Security\SecurityTenantContextProvider;
 use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
 use Kernel\Identity\Contract\IdentityResolverInterface;
 use Kernel\Identity\Model\AuthenticatedIdentity;
@@ -12,6 +13,10 @@ use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Operations\Contract\OperationsReadModelInterface;
 use Kernel\Operations\Service\OperationsSectionReader;
 use Kernel\Shared\Domain\OrganizationId;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use Kernel\Tenant\Model\Permission;
+use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Service\TenantContextFactory;
 
 function expectCanonical(bool $condition, string $message): void
 {
@@ -32,6 +37,10 @@ $canonicalClasses = [
     OrganizationRole::class => $appRoot . '/Kernel/Identity/',
     AuthenticatedIdentity::class => $appRoot . '/Kernel/Identity/',
     IdentityResolverInterface::class => $appRoot . '/Kernel/Identity/',
+    Permission::class => $appRoot . '/Kernel/Tenant/',
+    TenantContext::class => $appRoot . '/Kernel/Tenant/',
+    TenantContextProviderInterface::class => $appRoot . '/Kernel/Tenant/',
+    TenantContextFactory::class => $appRoot . '/Kernel/Tenant/',
     OperationsReadModelInterface::class => $appRoot . '/Kernel/Operations/',
     OperationsSectionReader::class => $appRoot . '/Kernel/Operations/',
     MysqlOperationsReadModel::class => $appRoot . '/Infrastructure/',
@@ -49,7 +58,7 @@ foreach ($canonicalClasses as $class => $expectedPrefix) {
     expectCanonical(!str_contains($resolved, '/legacy/'), sprintf('%s must not load from a legacy copy.', $class));
 }
 
-foreach ([LegacySessionAuthenticator::class, LegacyIdentityResolver::class] as $adapterClass) {
+foreach ([LegacySessionAuthenticator::class, LegacyIdentityResolver::class, SecurityTenantContextProvider::class] as $adapterClass) {
     $adapterFile = (new ReflectionClass($adapterClass))->getFileName();
     expectCanonical(
         is_string($adapterFile) && str_starts_with((string) realpath($adapterFile), $symfonyRoot . '/src/'),
@@ -61,8 +70,12 @@ expectCanonical(
     is_subclass_of(LegacyIdentityResolver::class, IdentityResolverInterface::class),
     'Legacy identity storage must adapt the Kernel Identity resolver contract.',
 );
+expectCanonical(
+    is_subclass_of(SecurityTenantContextProvider::class, TenantContextProviderInterface::class),
+    'Symfony Security must adapt the Kernel Tenant context provider contract.',
+);
 
 $organization = OrganizationId::fromString('default');
 expectCanonical((string) $organization === 'default', 'Canonical Shared Kernel primitive must execute inside Symfony runtime.');
 
-echo "Symfony autoloads canonical COS app/ and adapts Kernel Identity without legacy code copies.\n";
+echo "Symfony autoloads canonical COS app/ and adapts Kernel Identity/Tenant without legacy code copies.\n";
