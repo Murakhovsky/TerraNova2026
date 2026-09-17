@@ -42,6 +42,7 @@ use Kernel\Llm\GovernedStructuredLlmClient;
 use Kernel\Llm\LlmProviderRegistry;
 use Kernel\Llm\LlmRoute;
 use Kernel\Llm\LlmRoutingPolicy;
+use Kernel\Operations\Service\OperationsSectionReader;
 use Kernel\Resilience\ExternalCallExecutor;
 
 $connection = static fn ($container) => $container->getShared('databaseService')->connection();
@@ -75,6 +76,7 @@ $di->setShared('cosJobQueue', fn (): MysqlJobQueue => new MysqlJobQueue(
 ));
 $di->setShared('cosConfigurationStore', fn (): MysqlConfigurationStore => new MysqlConfigurationStore($connection($this)));
 $di->setShared('cosOperationsReadModel', fn (): MysqlOperationsReadModel => new MysqlOperationsReadModel($connection($this)));
+$di->setShared('cosOperationsSectionReader', fn (): OperationsSectionReader => new OperationsSectionReader($this->getShared('cosOperationsReadModel')));
 $di->setShared('cosMetrics', fn (): MysqlMetricsRecorder => new MysqlMetricsRecorder($connection($this)));
 $di->setShared('cosLogger', fn (): JsonFileLogger => new JsonFileLogger(BASE_PATH . '/tmp/logs/cos.jsonl'));
 $di->setShared('cosExternalCircuitBreakerStore', fn (): MysqlCircuitBreakerStore => new MysqlCircuitBreakerStore($connection($this)));
