@@ -23,18 +23,26 @@ final class ArchitectureExplorerController extends WebController
         $this->view->workspaceSection = 'cos';
         $this->view->pageAssetEntries = ['cos-architecture-explorer'];
         $this->view->pageStatus = null;
+        $this->view->architectureDiagnostic = null;
+        $stage = 'resolve_provider';
 
         try {
             $provider = $this->graphProvider();
+            $stage = 'resolve_projection_registry';
             $registry = $this->projectionRegistry();
+            $stage = 'resolve_mapper';
             $mapper = $this->graphMapper();
+            $stage = 'build_canonical_graph';
             $canonical = $provider->provide();
+            $stage = 'describe_projections';
             $descriptions = $registry->descriptions();
 
+            $stage = 'map_canonical_graph';
             /** @var array<string,mixed> $canonicalPayload */
             $canonicalPayload = $mapper->map($canonical);
             $views = [];
             foreach ($registry->names() as $name) {
+                $stage = 'project_' . $name;
                 $description = $descriptions[$name] ?? ['label' => $name, 'layout' => 'auto', 'default_depth' => null];
                 $view = new GraphView(layout: (string) ($description['layout'] ?? 'auto'));
                 $views[$name] = $this->projectionPayload($mapper, $registry, $canonical, $name, $view, $description);
@@ -48,7 +56,9 @@ final class ArchitectureExplorerController extends WebController
                 'default_view' => $defaultView,
             ];
             $this->view->architectureViewDescriptions = $descriptions;
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            $this->reportFailure('index', $stage, $exception);
+            $diagnostic = $this->failureDiagnostic($stage, $exception);
             $this->response->setStatusCode(503, 'Service Unavailable');
             $this->view->architectureGraph = [
                 'views' => [],
@@ -56,7 +66,8 @@ final class ArchitectureExplorerController extends WebController
                 'default_view' => '',
             ];
             $this->view->architectureViewDescriptions = [];
-            $this->view->pageStatus = 'Architecture Graph тимчасово недоступний.';
+            $this->view->architectureDiagnostic = $diagnostic;
+            $this->view->pageStatus = $diagnostic['message'];
         }
 
         $this->view->pick('visualization/architecture');
@@ -70,10 +81,13 @@ final class ArchitectureExplorerController extends WebController
 
         $this->view->disable();
         $this->response->setContentType('application/json', 'UTF-8');
+        $stage = 'resolve_provider';
 
         try {
             $provider = $this->graphProvider();
+            $stage = 'resolve_projection_registry';
             $registry = $this->projectionRegistry();
+            $stage = 'resolve_mapper';
             $mapper = $this->graphMapper();
             $name = trim((string) $this->request->getQuery('view', 'string', 'domain'));
 
@@ -82,6 +96,7 @@ final class ArchitectureExplorerController extends WebController
                 return;
             }
 
+            $stage = 'build_canonical_graph';
             $canonical = $provider->provide();
             $focus = trim((string) $this->request->getQuery('focus', 'string', ''));
             $depthValue = trim((string) $this->request->getQuery('depth', 'string', ''));
@@ -106,6 +121,7 @@ final class ArchitectureExplorerController extends WebController
                 return;
             }
 
+            $stage = 'project_' . $name;
             $description = $registry->descriptions()[$name] ?? ['label' => $name, 'layout' => 'auto', 'default_depth' => null];
             $view = new GraphView(
                 focus: $focus !== '' ? $focus : null,
@@ -115,8 +131,14 @@ final class ArchitectureExplorerController extends WebController
 
             $payload = $this->projectionPayload($mapper, $registry, $canonical, $name, $view, $description);
             $this->json(200, ['ok' => true, 'graph' => $payload]);
-        } catch (Throwable) {
-            $this->json(503, ['ok' => false, 'error' => 'Architecture Graph is temporarily unavailable.']);
+        } catch (Throwable $exception) {
+            $this->reportFailure('graph', $stage, $exception);
+            $diagnostic = $this->failureDiagnostic($stage, $exception);
+            $this->json(503, [
+                'ok' => false,
+                'error' => $diagnostic['message'],
+                'diagnostic' => $diagnostic,
+            ]);
         }
     }
 
@@ -170,6 +192,33 @@ final class ArchitectureExplorerController extends WebController
             'default_depth' => $description['default_depth'] ?? null,
         ];
         return $payload;
+    }
+
+    /** @return array{stage:string,exception:string,detail:string,message:string} */
+    private function failureDiagnostic(string $stage, Throwable $exception): array
+    {
+        $detail = preg_replace('/\s+/', ' ', trim($exception->getMessage())) ?: 'No exception message.';
+        if (strlen($detail) > 320) {
+            $detail = substr($detail, 0, 317) . '...';
+        }
+
+        return [
+            'stage' => $stage,
+            'exception' => $exception::class,
+            'detail' => $detail,
+            'message' => sprintf('Architecture Graph failure [%s] %s: %s', $stage, $exception::class, $detail),
+        ];
+    }
+
+    private function reportFailure(string $surface, string $stage, Throwable $exception): void
+    {
+        error_log(sprintf(
+            '[COS Visualization] Architecture Explorer %s failed at %s: %s: %s',
+            $surface,
+            $stage,
+            $exception::class,
+            $exception->getMessage(),
+        ));
     }
 
     /** @param array<string,mixed> $payload */
