@@ -105,6 +105,9 @@ jobs:
       - name: Verify operations read API contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/operations_read_contract.php
 
+      - name: Verify tenant voter contract
+        run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php
+
       - name: Verify Symfony health endpoint
         run: |
           for attempt in $(seq 1 30); do
