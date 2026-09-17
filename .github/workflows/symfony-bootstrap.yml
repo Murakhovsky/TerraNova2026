@@ -36,6 +36,7 @@ jobs:
       SYMFONY_DB_PASSWORD: ci-db-password
       SYMFONY_LEGACY_DB_PASSWORD: ci-readonly-password
       SYMFONY_LEGACY_DB_NAME: cos
+      COS_ORGANIZATION_ID: default
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +60,9 @@ jobs:
             if (!class_exists("Infrastructure\\Platform\\ReadModel\\MySql\\MysqlOperationsReadModel")) { exit(12); }
             echo "shared COS read-model classes load under Symfony\n";
           '
+
+      - name: Verify operations read API contract
+        run: docker compose -f docker-compose.symfony.yml exec -T php php tests/operations_read_contract.php
 
       - name: Verify Symfony health endpoint
         run: |
@@ -137,4 +141,4 @@ jobs:
       - name: Verify server-local endpoints
         run: |
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "curl --fail --show-error --silent http://127.0.0.1:8081/health && echo && curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health"
+            "curl --fail --show-error --silent http://127.0.0.1:8081/health && echo && curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health && echo && curl --fail --show-error --silent --output /dev/null http://127.0.0.1:8081/migration/api/cos/events && echo operations-read-ok"

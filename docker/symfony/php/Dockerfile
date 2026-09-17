@@ -22,7 +22,7 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
 
 USER www-data
 
-RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret \
+RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=default \
     LEGACY_DB_HOST=127.0.0.1 LEGACY_DB_PORT=3306 LEGACY_DB_NAME=cos \
     LEGACY_DB_USER=cos_symfony_ro LEGACY_DB_PASSWORD=build-only-password \
     php bin/console cache:warmup

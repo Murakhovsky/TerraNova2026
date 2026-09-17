@@ -12,3 +12,40 @@ cos_symfony_core_health:
   path: /migration/core-health
   controller: App\Controller\CoreHealthController
   methods: [GET]
+
+cos_symfony_migration_actions:
+  path: /migration/api/cos/actions
+  controller: App\Controller\OperationsReadController::actions
+  methods: [GET]
+
+cos_symfony_migration_action:
+  path: /migration/api/cos/actions/{id}
+  controller: App\Controller\OperationsReadController::action
+  methods: [GET]
+  requirements:
+    id: '[a-f0-9]{32}'
+
+cos_symfony_migration_approvals:
+  path: /migration/api/cos/approvals
+  controller: App\Controller\OperationsReadController::approvals
+  methods: [GET]
+
+cos_symfony_migration_agents:
+  path: /migration/api/cos/agents
+  controller: App\Controller\OperationsReadController::agents
+  methods: [GET]
+
+cos_symfony_migration_rules:
+  path: /migration/api/cos/rules
+  controller: App\Controller\OperationsReadController::rules
+  methods: [GET]
+
+cos_symfony_migration_events:
+  path: /migration/api/cos/events
+  controller: App\Controller\OperationsReadController::events
+  methods: [GET]
+
+cos_symfony_migration_audit:
+  path: /migration/api/cos/audit
+  controller: App\Controller\OperationsReadController::audit
+  methods: [GET]
