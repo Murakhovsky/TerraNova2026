@@ -10,7 +10,7 @@ on:
       - 'docker/symfony/**'
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
-      - 'app/Kernel/Operations/**'
+      - 'app/Kernel/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
@@ -22,7 +22,7 @@ on:
       - 'docker/symfony/**'
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
-      - 'app/Kernel/Operations/**'
+      - 'app/Kernel/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   workflow_dispatch:
@@ -211,7 +211,7 @@ jobs:
             ./docker/symfony/ \
             ./docker-compose.symfony.yml \
             ./deploy/symfony-dev.sh \
-            ./app/Kernel/Operations/ \
+            ./app/Kernel/ \
             ./app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php \
             "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
