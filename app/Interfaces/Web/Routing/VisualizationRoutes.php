@@ -22,5 +22,12 @@ final class VisualizationRoutes
             'controller' => 'architecture_explorer',
             'action' => 'graph',
         ]);
+
+        $router->addGet('/cos/architecture/health', [
+            'namespace' => 'Interfaces\\Web\\Visualization\\Controller',
+            'module' => 'frontend',
+            'controller' => 'architecture_explorer',
+            'action' => 'health',
+        ]);
     }
 }
