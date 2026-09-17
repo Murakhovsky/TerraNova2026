@@ -72,7 +72,7 @@ Asset / Inventory / Listing / Publication
 
 `tn_properties` більше не є основною моделлю запису для стану Asset/Inventory/Listing. Шляхи зміни даних у вебінтерфейсі та публікація просторового туру входять через канонічне середовище виконання, а стара таблиця підтримується як перехідна проєкція й поверхня читання. Допоміжні механізми старої моделі для медіа, груп і читання поки залишаються там, де канонічна поверхня ще не потрібна.
 
-## V1 skeleton domains
+## Каркасні домени V1
 
 Finance, Procurement і Service вже є installable Domains із канонічними моделями та Application contracts, але **не вдають із себе готові runtime-модулі**. Для них немає DB migrations, route contributors або виконуваних process definitions. Це навмисно зафіксовано explicit process-coverage exemptions до відповідних runtime slices.
 
