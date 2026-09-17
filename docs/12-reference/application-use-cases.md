@@ -17,8 +17,11 @@ generated: true
 | Модуль | Точок входу |
 | --- | ---: |
 | `diagnostic` | 10 |
+| `finance` | 0 |
+| `procurement` | 0 |
 | `property` | 2 |
 | `sales` | 7 |
+| `service` | 0 |
 
 ## Diagnostics (`diagnostic`)
 
@@ -34,6 +37,14 @@ generated: true
 | `RecordDiagnosticResult` | `app/Domains/Diagnostic/Application/UseCase/RecordDiagnosticResult.php` |
 | `ReviseDiagnosticPack` | `app/Domains/Diagnostic/Application/UseCase/ReviseDiagnosticPack.php` |
 | `StartDiagnosticSession` | `app/Domains/Diagnostic/Application/UseCase/StartDiagnosticSession.php` |
+
+## Finance (`finance`)
+
+Точок входу Application UseCase не знайдено.
+
+## Procurement (`procurement`)
+
+Точок входу Application UseCase не знайдено.
 
 ## Property (`property`)
 
@@ -53,3 +64,7 @@ generated: true
 | `ReceiveCrmWebhook` | `app/Domains/Sales/Application/UseCase/ReceiveCrmWebhook.php` |
 | `ReceivePublicLead` | `app/Domains/Sales/Application/UseCase/ReceivePublicLead.php` |
 | `ScheduleDealFollowup` | `app/Domains/Sales/Application/UseCase/ScheduleDealFollowup.php` |
+
+## Service (`service`)
+
+Точок входу Application UseCase не знайдено.

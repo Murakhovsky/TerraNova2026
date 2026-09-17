@@ -1,4 +1,20 @@
 {
   "schema_version": 1,
-  "items": []
+  "items": [
+    {
+      "domain": "finance",
+      "owner": "COS Architecture",
+      "reason": "V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation."
+    },
+    {
+      "domain": "procurement",
+      "owner": "COS Architecture",
+      "reason": "V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation."
+    },
+    {
+      "domain": "service",
+      "owner": "COS Architecture",
+      "reason": "V1 skeleton only; executable Service process models are intentionally deferred until Service runtime implementation."
+    }
+  ]
 }

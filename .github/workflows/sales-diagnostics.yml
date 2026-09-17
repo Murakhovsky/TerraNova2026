@@ -5,6 +5,7 @@ on:
     branches: [main, migration/symfony, migration/sales-diagnostics-foundation]
     paths:
       - 'app/Domains/Sales/Diagnostics/**'
+      - 'app/Domains/Diagnostic/Evaluation/EvaluationDatasetRunner.php'
       - 'app/Domains/Diagnostic/Evaluation/SalesEvaluationRunner.php'
       - 'tests/unit/sales_diagnostics_foundation.php'
       - 'tests/architecture/sales_diagnostics_boundaries.php'
@@ -14,6 +15,7 @@ on:
     branches: [main, migration/symfony]
     paths:
       - 'app/Domains/Sales/Diagnostics/**'
+      - 'app/Domains/Diagnostic/Evaluation/EvaluationDatasetRunner.php'
       - 'app/Domains/Diagnostic/Evaluation/SalesEvaluationRunner.php'
       - 'tests/unit/sales_diagnostics_foundation.php'
       - 'tests/architecture/sales_diagnostics_boundaries.php'
@@ -34,4 +36,5 @@ jobs:
       - run: php tests/architecture/sales_diagnostics_boundaries.php
       - run: php tests/unit/sales_diagnostics_foundation.php
       - run: find app/Domains/Sales/Diagnostics -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: php -l app/Domains/Diagnostic/Evaluation/EvaluationDatasetRunner.php
       - run: php -l app/Domains/Diagnostic/Evaluation/SalesEvaluationRunner.php

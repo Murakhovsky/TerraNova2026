@@ -19,14 +19,25 @@ generated: true
 | Модуль | Commands |
 | --- | ---: |
 | `diagnostic` | 1 |
+| `finance` | 0 |
+| `procurement` | 0 |
 | `property` | 4 |
 | `sales` | 6 |
+| `service` | 0 |
 
 ## Diagnostics (`diagnostic`)
 
 | Command | Джерело |
 | --- | --- |
 | `StartDiagnosticSessionCommand` | `app/Domains/Diagnostic/Application/DTO/StartDiagnosticSessionCommand.php` |
+
+## Finance (`finance`)
+
+Явних `*Command` DTO contracts не знайдено.
+
+## Procurement (`procurement`)
+
+Явних `*Command` DTO contracts не знайдено.
 
 ## Property (`property`)
 
@@ -47,6 +58,10 @@ generated: true
 | `RecordCompletedCallCommand` | `app/Domains/Sales/Application/DTO/RecordCompletedCallCommand.php` |
 | `ScheduleFollowupCommand` | `app/Domains/Sales/Application/DTO/ScheduleFollowupCommand.php` |
 | `SendMessageCommand` | `app/Domains/Sales/Application/DTO/SendMessageCommand.php` |
+
+## Service (`service`)
+
+Явних `*Command` DTO contracts не знайдено.
 
 ## Межа класифікації
 

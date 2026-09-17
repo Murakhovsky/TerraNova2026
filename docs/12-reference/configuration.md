@@ -15,12 +15,27 @@ generated: true
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
 | `diagnostic` | `0.6.1` | — | 0 |
+| `finance` | `0.1.0` | — | 0 |
+| `procurement` | `0.1.0` | — | 0 |
 | `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 16 |
 | `sales` | `0.8.6` | `salesModuleConfigurationProvisioner` | 10 |
+| `service` | `0.1.0` | — | 0 |
 
 ## `diagnostic`
 
 - manifest: `app/Domains/Diagnostic/module.php`;
+- configuration provisioners: —;
+- capabilities: —.
+
+## `finance`
+
+- manifest: `app/Domains/Finance/module.php`;
+- configuration provisioners: —;
+- capabilities: —.
+
+## `procurement`
+
+- manifest: `app/Domains/Procurement/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
 
@@ -35,3 +50,9 @@ generated: true
 - manifest: `app/Domains/Sales/module.php`;
 - configuration provisioners: `salesModuleConfigurationProvisioner`;
 - capabilities: `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
+
+## `service`
+
+- manifest: `app/Domains/Service/module.php`;
+- configuration provisioners: —;
+- capabilities: —.
