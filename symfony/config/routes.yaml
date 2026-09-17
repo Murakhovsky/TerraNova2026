@@ -1,0 +1,9 @@
+cos_symfony_home:
+  path: /
+  controller: App\\Controller\\HealthController::index
+  methods: [GET]
+
+cos_symfony_health:
+  path: /health
+  controller: App\\Controller\\HealthController::health
+  methods: [GET]
