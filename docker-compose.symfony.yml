@@ -34,7 +34,7 @@ services:
       LEGACY_DB_HOST: ${SYMFONY_LEGACY_DB_HOST:-cos-mysql-1}
       LEGACY_DB_PORT: 3306
       LEGACY_DB_NAME: ${SYMFONY_LEGACY_DB_NAME:-cos}
-      LEGACY_DB_USER: cos_symfony_ro
+      LEGACY_DB_USER: ${SYMFONY_LEGACY_DB_USER:-cos_symfony_ro}
       LEGACY_DB_PASSWORD: ${SYMFONY_LEGACY_DB_PASSWORD:-ci-readonly-password}
     depends_on:
       mysql:
