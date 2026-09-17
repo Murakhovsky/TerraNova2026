@@ -16,16 +16,38 @@ final readonly class KernelAuditSink implements AuditSinkInterface
 
     public function append(ActivityRecord $record): void
     {
+        $actorType = match (strtolower($record->actor->type)) {
+            'user' => 'USER',
+            'agent' => 'AGENT',
+            'worker' => 'WORKER',
+            'integration' => 'INTEGRATION',
+            default => 'SYSTEM',
+        };
+
         $this->repository->append(new AuditEntry(
             id: $record->id,
             organizationId: $record->organizationId->value(),
             category: 'platform_activity',
-            actorType: $record->actor->type,
+            actorType: $actorType,
             actorId: $record->actor->id,
             subjectType: $record->resource->type,
             subjectId: $record->resource->id,
             reason: $record->error,
-            data: $record->toArray(),
+            data: [
+                'action' => $record->action,
+                'input_references' => $record->input,
+                'changes' => [
+                    'status' => $record->status->value,
+                    'duration_ms' => $record->durationMs,
+                    'cost' => $record->cost,
+                    'cost_unit' => $record->costUnit,
+                    'agent' => $record->agent,
+                    'tool' => $record->tool,
+                    'workflow' => $record->workflow,
+                ],
+                'result' => $record->output,
+                'metadata' => $record->metadata + ['platform_activity' => true],
+            ],
             correlationId: $record->correlationId,
             createdAt: $record->timestamp,
         ));

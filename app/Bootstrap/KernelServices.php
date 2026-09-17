@@ -158,6 +158,7 @@ $di->setShared('cosAgentRuntime', fn (): AgentRuntime => new AgentRuntime(
     $this->getShared('cosDecisionRepository'),
     new SensitiveContextRedactor(),
     $this->getShared('cosAgentConfigurationProvider'),
+    $this->getShared('cosPlatformAgentAudit'),
 ));
 $di->setShared('cosAgentRunJobHandler', fn (): AgentRunJobHandler => new AgentRunJobHandler(
     $this->getShared('cosAgentRuntime'),

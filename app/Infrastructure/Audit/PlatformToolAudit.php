@@ -56,9 +56,14 @@ final readonly class PlatformToolAudit implements ToolAuditInterface
             metadata: ['attempts' => $execution->attempts(), 'tool_effect' => $execution->definition->effect()->value],
         ));
 
-        if ($this->traces === null) return;
-        $history = $this->traces->find($invocation->correlationId());
-        if ($history === null) return;
+        if ($this->traces === null) {
+            return;
+        }
+
+        $history = $this->traces->findByCorrelationId($invocation->organizationId(), $invocation->correlationId());
+        if ($history === null) {
+            return;
+        }
 
         $sequence = count($history->events()) + 1;
         $history->append(new TraceEvent($sequence, TraceEventType::TOOL_CALL, [

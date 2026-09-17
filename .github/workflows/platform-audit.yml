@@ -6,20 +6,30 @@ on:
     paths:
       - 'app/Platform/Audit/**'
       - 'app/Infrastructure/Audit/**'
+      - 'app/Infrastructure/Platform/Persistence/MySql/Audit/**'
       - 'app/Kernel/Agent/**'
+      - 'app/Bootstrap/InfrastructureServices.php'
+      - 'app/Bootstrap/KernelServices.php'
+      - 'app/migrations/20260917_000061_platform_agent_trace.sql'
       - 'tests/unit/platform_audit_foundation.php'
       - 'tests/unit/platform_audit_agent_runtime.php'
       - 'tests/architecture/platform_audit_boundaries.php'
+      - 'tests/architecture/platform_audit_runtime_wiring.php'
       - '.github/workflows/platform-audit.yml'
   pull_request:
     branches: [main, migration/symfony, migration/platform-knowledge]
     paths:
       - 'app/Platform/Audit/**'
       - 'app/Infrastructure/Audit/**'
+      - 'app/Infrastructure/Platform/Persistence/MySql/Audit/**'
       - 'app/Kernel/Agent/**'
+      - 'app/Bootstrap/InfrastructureServices.php'
+      - 'app/Bootstrap/KernelServices.php'
+      - 'app/migrations/20260917_000061_platform_agent_trace.sql'
       - 'tests/unit/platform_audit_foundation.php'
       - 'tests/unit/platform_audit_agent_runtime.php'
       - 'tests/architecture/platform_audit_boundaries.php'
+      - 'tests/architecture/platform_audit_runtime_wiring.php'
       - '.github/workflows/platform-audit.yml'
   workflow_dispatch:
 
@@ -34,8 +44,9 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: php tests/architecture/platform_audit_boundaries.php
+      - run: php tests/architecture/platform_audit_runtime_wiring.php
       - run: php tests/unit/platform_audit_foundation.php
       - run: php tests/unit/platform_audit_agent_runtime.php
       - run: php tests/smoke/agent_runtime.php
       - run: php tests/smoke/agent_safety.php
-      - run: find app/Platform/Audit app/Infrastructure/Audit app/Kernel/Agent -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: find app/Platform/Audit app/Infrastructure/Audit app/Infrastructure/Platform/Persistence/MySql/Audit app/Kernel/Agent -type f -name '*.php' -print0 | xargs -0 -n1 php -l
