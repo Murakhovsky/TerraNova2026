@@ -12,7 +12,7 @@ final class HealthController
     {
         return new JsonResponse([
             'service' => 'cos-symfony',
-            'status' => 'bootstrap-ready',
+            'status' => 'migration-runtime-ready',
             'framework' => 'Symfony 7.4 LTS',
         ]);
     }

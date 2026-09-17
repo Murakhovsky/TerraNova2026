@@ -5,11 +5,14 @@ on:
     branches:
       - main
       - infra/symfony-lts-bootstrap
+      - migration/symfony-core-readmodel
     paths:
       - 'symfony/**'
       - 'docker/symfony/**'
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
+      - 'app/Kernel/Operations/**'
+      - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
     branches: [main]
@@ -18,6 +21,8 @@ on:
       - 'docker/symfony/**'
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
+      - 'app/Kernel/Operations/**'
+      - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   workflow_dispatch:
 
@@ -28,8 +33,13 @@ jobs:
       SYMFONY_APP_SECRET: ci-only-secret
       SYMFONY_DB_ROOT_PASSWORD: ci-root-password
       SYMFONY_DB_PASSWORD: ci-db-password
+      SYMFONY_LEGACY_DB_PASSWORD: ci-readonly-password
+      SYMFONY_LEGACY_DB_NAME: cos
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare isolated legacy network contract
+        run: docker network create cos_backend
 
       - name: Validate compose contract
         run: docker compose -f docker-compose.symfony.yml config --quiet
@@ -39,6 +49,15 @@ jobs:
 
       - name: Boot isolated stack
         run: docker compose -f docker-compose.symfony.yml up -d
+
+      - name: Verify shared COS autoload contract
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T php php -r '
+            require "vendor/autoload.php";
+            if (!interface_exists("Kernel\\Operations\\Contract\\OperationsReadModelInterface")) { exit(11); }
+            if (!class_exists("Infrastructure\\Platform\\ReadModel\\MySql\\MysqlOperationsReadModel")) { exit(12); }
+            echo "shared COS read-model classes load under Symfony\n";
+          '
 
       - name: Verify Symfony health endpoint
         run: |
@@ -55,7 +74,9 @@ jobs:
 
       - name: Stop validation stack
         if: always()
-        run: docker compose -f docker-compose.symfony.yml down -v --remove-orphans
+        run: |
+          docker compose -f docker-compose.symfony.yml down -v --remove-orphans || true
+          docker network rm cos_backend || true
 
   deploy-dev:
     name: Deploy parallel Symfony stack to AWS dev
@@ -92,7 +113,7 @@ jobs:
           ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Sync Symfony bootstrap files
+      - name: Sync Symfony migration slice
         run: |
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- $REMOTE_PATH"
@@ -102,6 +123,8 @@ jobs:
             ./docker/symfony/ \
             ./docker-compose.symfony.yml \
             ./deploy/symfony-dev.sh \
+            ./app/Kernel/Operations/ \
+            ./app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php \
             "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
       - name: Deploy parallel Symfony runtime
@@ -110,7 +133,7 @@ jobs:
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
             "cd $REMOTE_PATH && bash deploy/symfony-dev.sh"
 
-      - name: Verify server-local endpoint
+      - name: Verify server-local endpoints
         run: |
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "curl --fail --show-error --silent http://127.0.0.1:8081/health"
+            "curl --fail --show-error --silent http://127.0.0.1:8081/health && echo && curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health"

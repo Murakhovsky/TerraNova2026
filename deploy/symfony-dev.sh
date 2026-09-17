@@ -27,22 +27,81 @@ CONFIG_DIR="${COS_SYMFONY_CONFIG_DIR:-$HOME/.config/cos-symfony}"
 ENV_FILE="$CONFIG_DIR/runtime.env"
 mkdir -p "$CONFIG_DIR"
 chmod 700 "$CONFIG_DIR"
+umask 077
+touch "$ENV_FILE"
+chmod 600 "$ENV_FILE"
 
-if [[ ! -f "$ENV_FILE" ]]; then
-  if ! command -v openssl >/dev/null 2>&1; then
-    echo "openssl is required to generate Symfony runtime secrets." >&2
-    exit 43
-  fi
-
-  umask 077
-  cat > "$ENV_FILE" <<EOF
-SYMFONY_APP_SECRET=$(openssl rand -hex 32)
-SYMFONY_DB_ROOT_PASSWORD=$(openssl rand -hex 24)
-SYMFONY_DB_PASSWORD=$(openssl rand -hex 24)
-EOF
-  chmod 600 "$ENV_FILE"
-  echo "Created persistent Symfony runtime secrets in $ENV_FILE"
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "openssl is required to manage Symfony runtime secrets." >&2
+  exit 43
 fi
+
+ensure_secret() {
+  local key="$1"
+  local bytes="$2"
+  if ! grep -q "^${key}=" "$ENV_FILE"; then
+    printf '%s=%s\n' "$key" "$(openssl rand -hex "$bytes")" >> "$ENV_FILE"
+    echo "Added persistent runtime secret: $key"
+  fi
+}
+
+upsert_value() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+}
+
+read_value() {
+  local key="$1"
+  awk -F= -v key="$key" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' "$ENV_FILE"
+}
+
+ensure_secret SYMFONY_APP_SECRET 32
+ensure_secret SYMFONY_DB_ROOT_PASSWORD 24
+ensure_secret SYMFONY_DB_PASSWORD 24
+ensure_secret SYMFONY_LEGACY_DB_PASSWORD 24
+
+LEGACY_NETWORK="${COS_LEGACY_DOCKER_NETWORK:-cos_backend}"
+LEGACY_MYSQL_CONTAINER="${COS_LEGACY_MYSQL_CONTAINER:-cos-mysql-1}"
+
+if ! "${DOCKER[@]}" network inspect "$LEGACY_NETWORK" >/dev/null 2>&1; then
+  echo "Legacy COS Docker network is unavailable: $LEGACY_NETWORK" >&2
+  exit 45
+fi
+
+if ! "${DOCKER[@]}" inspect "$LEGACY_MYSQL_CONTAINER" >/dev/null 2>&1; then
+  echo "Legacy COS MySQL container is unavailable: $LEGACY_MYSQL_CONTAINER" >&2
+  exit 46
+fi
+
+LEGACY_DB_NAME="$("${DOCKER[@]}" exec "$LEGACY_MYSQL_CONTAINER" printenv MYSQL_DATABASE | tr -d '\r\n')"
+if [[ ! "$LEGACY_DB_NAME" =~ ^[A-Za-z0-9_]+$ ]]; then
+  echo "Legacy COS database name is invalid or unavailable." >&2
+  exit 47
+fi
+upsert_value SYMFONY_LEGACY_DB_NAME "$LEGACY_DB_NAME"
+upsert_value SYMFONY_LEGACY_DB_HOST "$LEGACY_MYSQL_CONTAINER"
+
+LEGACY_DB_PASSWORD="$(read_value SYMFONY_LEGACY_DB_PASSWORD)"
+if [[ ! "$LEGACY_DB_PASSWORD" =~ ^[a-f0-9]{48}$ ]]; then
+  echo "Symfony legacy read-only password has an unexpected format." >&2
+  exit 48
+fi
+
+printf -v LEGACY_GRANTS \
+  "CREATE USER IF NOT EXISTS 'cos_symfony_ro'@'%%' IDENTIFIED BY '%s'; ALTER USER 'cos_symfony_ro'@'%%' IDENTIFIED BY '%s'; GRANT SELECT ON \`%s\`.* TO 'cos_symfony_ro'@'%%'; FLUSH PRIVILEGES;" \
+  "$LEGACY_DB_PASSWORD" "$LEGACY_DB_PASSWORD" "$LEGACY_DB_NAME"
+
+if ! printf '%s\n' "$LEGACY_GRANTS" | "${DOCKER[@]}" exec -i "$LEGACY_MYSQL_CONTAINER" sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'; then
+  echo "Could not provision the Symfony read-only account in legacy COS MySQL." >&2
+  exit 49
+fi
+
+echo "Legacy COS read-only database account is ready."
 
 COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE" -f docker-compose.symfony.yml)
 
@@ -53,14 +112,37 @@ COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE" -f docker-compose.symfony
 for attempt in $(seq 1 30); do
   if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/health 2>/dev/null; then
     echo "Symfony health check passed on attempt $attempt."
-    "${COMPOSE[@]}" ps
-    echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
-    exit 0
+    break
   fi
   sleep 2
 done
 
-echo "Symfony runtime failed its health check." >&2
-"${COMPOSE[@]}" ps -a >&2 || true
-"${COMPOSE[@]}" logs --no-color --tail=250 nginx php mysql redis >&2 || true
-exit 44
+if ! "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/health 2>/dev/null; then
+  echo "Symfony runtime failed its health check." >&2
+  "${COMPOSE[@]}" ps -a >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mysql redis >&2 || true
+  exit 44
+fi
+
+CORE_HEALTHY=0
+for attempt in $(seq 1 20); do
+  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /tmp/core-health.json http://127.0.0.1/migration/core-health 2>/dev/null; then
+    CORE_HEALTHY=1
+    echo "Shared COS read-model check passed on attempt $attempt."
+    "${DOCKER[@]}" exec cos-symfony-nginx-1 cat /tmp/core-health.json
+    echo
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$CORE_HEALTHY" != "1" ]]; then
+  echo "Symfony could not execute the shared COS OperationsReadModel against the legacy database." >&2
+  "${COMPOSE[@]}" ps -a >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
+  exit 50
+fi
+
+"${COMPOSE[@]}" ps
+echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
+echo "Shared core read-model probe is available at http://127.0.0.1:8081/migration/core-health"
