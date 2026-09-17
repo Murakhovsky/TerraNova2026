@@ -9,6 +9,7 @@ $summary = is_array($defaultPayload['summary'] ?? null) ? $defaultPayload['summa
 $nodeTypes = is_array($summary['node_types'] ?? null) ? $summary['node_types'] : [];
 $domains = is_array($canonicalSummary['domains'] ?? null) ? $canonicalSummary['domains'] : [];
 $pageStatus = $pageStatus ?? null;
+$architectureDiagnostic = is_array($architectureDiagnostic ?? null) ? $architectureDiagnostic : null;
 $graphJson = json_encode(
     $architectureGraph,
     JSON_UNESCAPED_UNICODE
@@ -105,6 +106,14 @@ if (!is_string($graphJson)) {
     </aside>
 
     <div class="tn-architecture-stage-wrap">
+      <?php if ($architectureDiagnostic): ?>
+        <div class="tn-form-status is-visible" data-architecture-backend-diagnostic>
+          <strong>Backend diagnostic</strong><br>
+          stage: <?php echo $h($architectureDiagnostic['stage'] ?? 'unknown'); ?><br>
+          exception: <?php echo $h($architectureDiagnostic['exception'] ?? 'unknown'); ?><br>
+          detail: <?php echo $h($architectureDiagnostic['detail'] ?? 'No details.'); ?>
+        </div>
+      <?php endif; ?>
       <div class="tn-architecture-stage" data-architecture-stage aria-label="Interactive COS architecture graph"></div>
       <div class="tn-architecture-loading" data-architecture-loading>Loading Architecture Graph…</div>
       <p class="tn-architecture-error" data-architecture-error hidden></p>

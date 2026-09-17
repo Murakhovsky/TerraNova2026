@@ -144,6 +144,15 @@ fi
 
 echo "Worker container is ready: running with restart_count=0"
 
+# Visualization is an operational observability surface. Exercise the same DI,
+# graph provider, projection registry and Cytoscape mapper inside the deployed PHP
+# image so a blank Architecture Explorer fails deployment with an exact stage.
+if ! "${DOCKER[@]}" exec "$PHP_ID" php /var/www/html/bin/architecture-graph-smoke.php; then
+  echo "Architecture Graph runtime smoke failed inside the deployed PHP container." >&2
+  "${COMPOSE[@]}" logs --no-color --tail=250 php >&2 || true
+  exit 30
+fi
+
 # docker compose does not recreate nginx when only a bind-mounted config file
 # changes. Validate and reload it explicitly so the running process consumes the
 # just-synced proxy contract instead of serving yesterday's configuration with
