@@ -1,0 +1,116 @@
+name: Symfony LTS Parallel Bootstrap
+
+on:
+  push:
+    branches:
+      - main
+      - infra/symfony-lts-bootstrap
+    paths:
+      - 'symfony/**'
+      - 'docker/symfony/**'
+      - 'docker-compose.symfony.yml'
+      - 'deploy/symfony-dev.sh'
+      - '.github/workflows/symfony-bootstrap.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'symfony/**'
+      - 'docker/symfony/**'
+      - 'docker-compose.symfony.yml'
+      - 'deploy/symfony-dev.sh'
+      - '.github/workflows/symfony-bootstrap.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      SYMFONY_APP_SECRET: ci-only-secret
+      SYMFONY_DB_ROOT_PASSWORD: ci-root-password
+      SYMFONY_DB_PASSWORD: ci-db-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose contract
+        run: docker compose -f docker-compose.symfony.yml config --quiet
+
+      - name: Build Symfony runtime
+        run: docker compose -f docker-compose.symfony.yml build php nginx
+
+      - name: Boot isolated stack
+        run: docker compose -f docker-compose.symfony.yml up -d
+
+      - name: Verify Symfony health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8081/health > /tmp/cos-symfony-health.json; then
+              cat /tmp/cos-symfony-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f docker-compose.symfony.yml ps -a
+          docker compose -f docker-compose.symfony.yml logs --no-color --tail=250
+          exit 1
+
+      - name: Stop validation stack
+        if: always()
+        run: docker compose -f docker-compose.symfony.yml down -v --remove-orphans
+
+  deploy-dev:
+    name: Deploy parallel Symfony stack to AWS dev
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: AWS TN2026
+    concurrency:
+      group: cos-symfony-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        run: |
+          : "${DEV_HOST:?DEV_HOST secret is missing}"
+          : "${DEV_USER:?DEV_USER secret is missing}"
+          : "${DEV_PORT:?DEV_PORT secret is missing}"
+          : "${DEV_SSH_KEY:?DEV_SSH_KEY secret is missing}"
+          : "${DEV_PATH:?DEV_PATH environment variable is missing}"
+
+      - name: Configure SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/dev_deploy_key
+          chmod 600 ~/.ssh/dev_deploy_key
+          ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Sync Symfony bootstrap files
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- $REMOTE_PATH"
+          rsync -az --relative \
+            -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
+            ./symfony/ \
+            ./docker/symfony/ \
+            ./docker-compose.symfony.yml \
+            ./deploy/symfony-dev.sh \
+            "$DEV_USER@$DEV_HOST:$DEV_PATH/"
+
+      - name: Deploy parallel Symfony runtime
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/symfony-dev.sh"
+
+      - name: Verify server-local endpoint
+        run: |
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "curl --fail --show-error --silent http://127.0.0.1:8081/health"
