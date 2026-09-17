@@ -36,7 +36,7 @@
     },
     {
       "id": "revision",
-      "label": "Revise published methodology into a new draft",
+      "label": "Revise and publish a new methodology version",
       "kind": "operation",
       "owner": "methodology author",
       "domain": "diagnostic",
@@ -44,7 +44,8 @@
       "capability_gap": "missing-domain-capability",
       "critical": false,
       "runtime": [
-        { "type": "use_case", "ref": "ReviseDiagnosticPack" }
+        { "type": "use_case", "ref": "ReviseDiagnosticPack" },
+        { "type": "use_case", "ref": "PublishDiagnosticPack" }
       ]
     },
     {
@@ -141,8 +142,8 @@
   ],
   "edges": [
     { "from": "methodology", "to": "revision", "label": "revision required" },
-    { "from": "revision", "to": "methodology", "label": "publish new version" },
     { "from": "methodology", "to": "session", "label": "select published version" },
+    { "from": "revision", "to": "session", "label": "select revised published version" },
     { "from": "session", "to": "evidence" },
     { "from": "session", "to": "cancelled", "label": "cancel" },
     { "from": "evidence", "to": "evaluation" },
