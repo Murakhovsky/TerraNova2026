@@ -3,6 +3,17 @@ services:
     autowire: true
     autoconfigure: true
 
+  _instanceof:
+    Kernel\Application\Command\CommandHandlerInterface:
+      tags:
+        - { name: 'messenger.message_handler', bus: 'command.bus' }
+    Kernel\Application\Query\QueryHandlerInterface:
+      tags:
+        - { name: 'messenger.message_handler', bus: 'query.bus' }
+    Kernel\Application\Event\EventHandlerInterface:
+      tags:
+        - { name: 'messenger.message_handler', bus: 'event.bus' }
+
   App\:
     resource: '../src/'
 
@@ -48,6 +59,27 @@ services:
 
   Kernel\Tenant\Contract\TenantContextProviderInterface:
     alias: App\Security\SecurityTenantContextProvider
+
+  App\Infrastructure\Messenger\SymfonyCommandBus:
+    arguments:
+      $messageBus: '@command.bus'
+
+  App\Infrastructure\Messenger\SymfonyQueryBus:
+    arguments:
+      $messageBus: '@query.bus'
+
+  App\Infrastructure\Messenger\SymfonyEventBus:
+    arguments:
+      $messageBus: '@event.bus'
+
+  Kernel\Application\Bus\CommandBusInterface:
+    alias: App\Infrastructure\Messenger\SymfonyCommandBus
+
+  Kernel\Application\Bus\QueryBusInterface:
+    alias: App\Infrastructure\Messenger\SymfonyQueryBus
+
+  Kernel\Application\Bus\EventBusInterface:
+    alias: App\Infrastructure\Messenger\SymfonyEventBus
 
   Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
     arguments:
