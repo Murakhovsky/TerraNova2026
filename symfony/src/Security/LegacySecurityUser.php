@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use Kernel\Identity\Model\AuthenticatedIdentity;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 final class LegacySecurityUser implements UserInterface
 {
     public function __construct(
         private readonly string $identifier,
-        private readonly int $id,
-        private readonly string $organizationId,
-        private readonly string $organizationRole,
-        private readonly string $email,
+        private readonly AuthenticatedIdentity $identity,
     ) {
     }
 
@@ -24,18 +22,16 @@ final class LegacySecurityUser implements UserInterface
 
     public function getRoles(): array
     {
-        $role = strtolower(trim($this->organizationRole));
+        $role = $this->identity->role()->value();
         $roles = ['ROLE_USER'];
 
-        if ($role !== '') {
-            $roles[] = 'ROLE_' . strtoupper((string) preg_replace('/[^a-z0-9_]+/i', '_', $role));
-        }
+        $roles[] = 'ROLE_' . strtoupper((string) preg_replace('/[^a-z0-9_]+/i', '_', $role));
 
-        if (in_array($role, ['manager', 'admin'], true)) {
+        if ($this->identity->isManager()) {
             $roles[] = 'ROLE_MANAGER';
         }
 
-        if ($role === 'admin') {
+        if ($this->identity->isAdmin()) {
             $roles[] = 'ROLE_ADMIN';
         }
 
@@ -48,21 +44,26 @@ final class LegacySecurityUser implements UserInterface
 
     public function id(): int
     {
-        return $this->id;
+        return (int) $this->identity->userId()->value();
     }
 
     public function organizationId(): string
     {
-        return $this->organizationId;
+        return $this->identity->organizationId()->value();
     }
 
     public function organizationRole(): string
     {
-        return $this->organizationRole;
+        return $this->identity->role()->value();
     }
 
     public function email(): string
     {
-        return $this->email;
+        return $this->identity->email();
+    }
+
+    public function identity(): AuthenticatedIdentity
+    {
+        return $this->identity;
     }
 }
