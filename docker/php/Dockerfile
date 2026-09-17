@@ -10,8 +10,9 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-cos.ini
 WORKDIR /var/www/html
 
 # Runtime logs/uploads are intentionally excluded from the Docker build context,
-# so create their writable directories in the image explicitly.
-RUN mkdir -p /var/www/html/tmp/logs /var/www/html/public/uploads \
+# so create their writable directories in the image explicitly. The session
+# directory is also the mount point for the persistent php_sessions volume.
+RUN mkdir -p /var/www/html/tmp/logs /var/www/html/tmp/sessions /var/www/html/public/uploads \
     && chown -R phalcon:phalcon /var/www/html/tmp /var/www/html/public
 
 COPY --chown=phalcon:phalcon composer.json composer.lock ./
