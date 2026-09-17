@@ -1,0 +1,50 @@
+name: WEB V0.15 COS Visual Language
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/styles/tokens.css'
+      - 'frontend/styles/components.css'
+      - 'frontend/styles/patterns.css'
+      - 'frontend/styles/workspace-visual-language.css'
+      - 'frontend/styles/layouts/workspace.css'
+      - 'frontend/features/cos/control-center.css'
+      - 'tests/architecture/web_v015_visual_language.php'
+      - 'docs/architecture/web-v0.15.md'
+      - '.github/workflows/web-v015.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/styles/tokens.css'
+      - 'frontend/styles/components.css'
+      - 'frontend/styles/patterns.css'
+      - 'frontend/styles/workspace-visual-language.css'
+      - 'frontend/styles/layouts/workspace.css'
+      - 'frontend/features/cos/control-center.css'
+      - 'tests/architecture/web_v015_visual_language.php'
+      - 'docs/architecture/web-v0.15.md'
+      - '.github/workflows/web-v015.yml'
+
+jobs:
+  visual-language:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - name: Build frontend assets
+        run: npm run build
+      - name: Calm Technical visual language gates
+        run: |
+          php -l tests/architecture/web_v015_visual_language.php
+          php tests/architecture/web_v015_visual_language.php
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/web_v012_production_closure.php

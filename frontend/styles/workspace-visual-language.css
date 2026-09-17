@@ -1,0 +1,185 @@
+@layer tn-workspace-visual {
+  body[data-interface-surface="workspace"],
+  body.tn-has-workspace {
+    color: var(--tn-color-ink);
+    background: var(--tn-color-workspace);
+  }
+
+  .tn-workspace-sidebar {
+    color: var(--tn-color-on-graphite);
+    background: var(--tn-color-graphite);
+    border-right-color: var(--tn-color-graphite-border);
+    box-shadow: none;
+  }
+
+  .tn-workspace-brand__mark {
+    color: #fff;
+    background: var(--tn-color-accent);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: var(--tn-radius-sm);
+    box-shadow: 0 4px 18px rgba(83, 103, 255, .2);
+  }
+
+  .tn-workspace-brand__copy strong {
+    color: var(--tn-color-on-graphite);
+    font-weight: 730;
+    letter-spacing: -.015em;
+  }
+
+  .tn-workspace-brand__copy small,
+  .tn-workspace-nav-caption {
+    color: rgba(243, 245, 247, .4);
+  }
+
+  .tn-workspace-collapse {
+    color: var(--tn-color-on-graphite-muted);
+    background: transparent;
+    border-color: rgba(255, 255, 255, .09);
+  }
+
+  .tn-workspace-collapse:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+  }
+
+  .tn-workspace-nav-item {
+    min-height: 40px;
+    color: rgba(243, 245, 247, .67);
+    border: 1px solid transparent;
+    border-radius: var(--tn-radius-sm);
+    font-weight: 620;
+  }
+
+  .tn-workspace-nav-item:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .055);
+  }
+
+  .tn-workspace-nav-item.is-active {
+    color: #fff;
+    background: rgba(83, 103, 255, .16);
+    border-color: rgba(83, 103, 255, .26);
+  }
+
+  .tn-workspace-nav-item__glyph {
+    color: rgba(243, 245, 247, .55);
+    background: transparent;
+    border-color: rgba(255, 255, 255, .08);
+    border-radius: var(--tn-radius-sm);
+  }
+
+  .tn-workspace-nav-item.is-active .tn-workspace-nav-item__glyph {
+    color: #cfd5ff;
+    background: rgba(83, 103, 255, .12);
+    border-color: rgba(83, 103, 255, .32);
+  }
+
+  .tn-workspace-subnav a {
+    color: rgba(243, 245, 247, .48);
+    border-radius: var(--tn-radius-xs);
+  }
+
+  .tn-workspace-subnav a:hover,
+  .tn-workspace-subnav a.is-active {
+    color: #fff;
+    background: rgba(255, 255, 255, .045);
+  }
+
+  .tn-workspace-topbar {
+    min-height: var(--tn-topbar-height);
+    background: rgba(250, 251, 252, .94);
+    border-bottom-color: var(--tn-color-border);
+    box-shadow: 0 1px 0 rgba(16, 24, 40, .02);
+    backdrop-filter: blur(12px);
+  }
+
+  .tn-workspace-topbar__context small {
+    color: var(--tn-color-muted-quiet);
+    font-weight: 720;
+    letter-spacing: .065em;
+  }
+
+  .tn-workspace-topbar__context strong {
+    color: var(--tn-color-ink);
+    font-weight: 710;
+    letter-spacing: -.015em;
+  }
+
+  .tn-workspace-search-trigger {
+    min-height: 38px;
+    color: var(--tn-color-muted);
+    background: var(--tn-color-surface);
+    border-color: var(--tn-color-border);
+    border-radius: var(--tn-radius-sm);
+    box-shadow: var(--tn-shadow-ui);
+  }
+
+  .tn-workspace-search-trigger:hover {
+    border-color: var(--tn-color-border-strong);
+    background: var(--tn-color-surface-raised);
+  }
+
+  .tn-workspace-search-trigger kbd {
+    color: var(--tn-color-muted);
+    background: var(--tn-color-surface-subtle);
+    border-color: var(--tn-color-border);
+    border-radius: var(--tn-radius-xs);
+  }
+
+  .tn-workspace-profile {
+    min-height: 38px;
+    border: 1px solid transparent;
+  }
+
+  .tn-workspace-profile:hover {
+    background: var(--tn-color-surface);
+    border-color: var(--tn-color-border);
+  }
+
+  .tn-workspace-profile > span {
+    color: #fff;
+    background: var(--tn-color-graphite-raised);
+    border: 1px solid var(--tn-color-border-strong);
+  }
+
+  .tn-command-palette__backdrop {
+    background: rgba(12, 15, 20, .56);
+    backdrop-filter: blur(2px);
+  }
+
+  .tn-command-palette__panel {
+    border-radius: var(--tn-radius-lg);
+    box-shadow: var(--tn-shadow-overlay);
+  }
+
+  .tn-command-palette__search input {
+    background: var(--tn-color-surface);
+  }
+
+  .tn-command-palette__list a:hover {
+    background: var(--tn-color-selected);
+  }
+
+  /* Canonical workspace content width and rhythm. */
+  body.tn-has-workspace .tn-page {
+    color: var(--tn-color-ink);
+  }
+
+  body.tn-has-workspace :where(.tn-ui-card, .tn-ui-panel, .tn-ui-table-wrap) {
+    box-shadow: var(--tn-shadow-ui);
+  }
+
+  body.tn-has-workspace :where(h1, h2, h3) {
+    text-wrap: balance;
+  }
+
+  @media (max-width: 650px) {
+    .tn-workspace-sidebar {
+      background: var(--tn-color-graphite);
+    }
+
+    .tn-workspace-topbar {
+      background: rgba(250, 251, 252, .97);
+    }
+  }
+}

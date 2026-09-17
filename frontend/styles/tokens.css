@@ -1,24 +1,46 @@
 :root {
-  --tn-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* COS Visual Language: Calm Technical / Graphite + Cobalt */
+  --tn-font-sans: Geist, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --tn-color-ink: #111714;
-  --tn-color-ink-soft: #26332d;
-  --tn-color-muted: #66716c;
-  --tn-color-paper: #f6f3ed;
+  /* Neutral hierarchy */
+  --tn-color-ink: #17191c;
+  --tn-color-ink-soft: #343940;
+  --tn-color-muted: #68707b;
+  --tn-color-muted-quiet: #9299a3;
+  --tn-color-paper: #f5f6f8;
   --tn-color-surface: #ffffff;
-  --tn-color-surface-subtle: #f8faf9;
-  --tn-color-workspace: #f1f4f2;
-  --tn-color-border: rgba(17, 23, 20, 0.13);
-  --tn-color-border-strong: rgba(17, 23, 20, 0.24);
-  --tn-color-accent: #c69b4f;
-  --tn-color-accent-hover: #b88b3d;
-  --tn-color-positive: #3e5d4a;
-  --tn-color-warning: #a66b16;
-  --tn-color-danger: #9b3f3f;
-  --tn-color-info: #3f8589;
-  --tn-color-selected: rgba(62, 93, 74, 0.11);
-  --tn-color-focus: rgba(63, 169, 173, 0.24);
-  --tn-color-disabled: rgba(17, 23, 20, 0.38);
+  --tn-color-surface-subtle: #f0f2f5;
+  --tn-color-surface-raised: #fafbfc;
+  --tn-color-workspace: #f5f6f8;
+  --tn-color-border: #dfe3e8;
+  --tn-color-border-strong: #c8ced6;
+
+  /* Navigation */
+  --tn-color-graphite: #17191d;
+  --tn-color-graphite-raised: #202329;
+  --tn-color-graphite-border: rgba(255, 255, 255, 0.08);
+  --tn-color-on-graphite: #f3f5f7;
+  --tn-color-on-graphite-muted: rgba(243, 245, 247, 0.62);
+
+  /* Brand signal */
+  --tn-color-accent: #5367ff;
+  --tn-color-accent-hover: #4052e8;
+  --tn-color-accent-strong: #3144d8;
+  --tn-color-accent-soft: #eef0ff;
+  --tn-color-accent-border: #cfd5ff;
+
+  /* Semantic signal colors stay independent from brand. */
+  --tn-color-positive: #267451;
+  --tn-color-positive-soft: #e9f6ef;
+  --tn-color-warning: #9b6818;
+  --tn-color-warning-soft: #fff5df;
+  --tn-color-danger: #b13b46;
+  --tn-color-danger-soft: #fff0f1;
+  --tn-color-info: #326f9e;
+  --tn-color-info-soft: #edf6fc;
+  --tn-color-selected: rgba(83, 103, 255, 0.09);
+  --tn-color-focus: rgba(83, 103, 255, 0.28);
+  --tn-color-disabled: rgba(23, 25, 28, 0.36);
 
   --tn-space-1: 4px;
   --tn-space-2: 8px;
@@ -31,30 +53,33 @@
   --tn-space-12: 48px;
   --tn-space-16: 64px;
 
+  /* Tighter geometry is part of the COS product character. */
   --tn-radius-xs: 4px;
-  --tn-radius-sm: 8px;
-  --tn-radius-md: 12px;
-  --tn-radius-lg: 16px;
+  --tn-radius-sm: 6px;
+  --tn-radius-md: 8px;
+  --tn-radius-lg: 10px;
   --tn-radius-pill: 999px;
 
+  /* Dense enough for enterprise work, large enough for modern displays. */
   --tn-font-xs: 12px;
   --tn-font-sm: 13px;
   --tn-font-md: 14px;
   --tn-font-base: 16px;
   --tn-font-lg: 18px;
   --tn-font-xl: 20px;
-  --tn-font-2xl: 24px;
+  --tn-font-2xl: 26px;
   --tn-font-3xl: 32px;
   --tn-font-4xl: 40px;
   --tn-font-display: 56px;
 
-  --tn-shadow-raised: 0 24px 70px rgba(17, 23, 20, 0.12);
-  --tn-shadow-ui: 0 8px 28px rgba(17, 23, 20, 0.08);
-  --tn-shadow-overlay: 0 24px 80px rgba(17, 23, 20, 0.22);
+  /* Structure comes from borders and contrast. Shadows are reserved for elevation. */
+  --tn-shadow-raised: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.04);
+  --tn-shadow-ui: 0 1px 2px rgba(16, 24, 40, 0.035);
+  --tn-shadow-overlay: 0 18px 50px rgba(16, 24, 40, 0.2);
 
   --tn-sidebar-width: 256px;
   --tn-sidebar-collapsed-width: 72px;
-  --tn-topbar-height: 68px;
+  --tn-topbar-height: 64px;
 
   --tn-breakpoint-mobile: 650px;
   --tn-breakpoint-tablet: 1050px;
@@ -70,7 +95,7 @@
   --tn-paper: var(--tn-color-paper);
   --tn-surface: var(--tn-color-surface);
   --tn-surface-soft: var(--tn-color-surface-subtle);
-  --tn-surface-warm: #fbf7ef;
+  --tn-surface-warm: var(--tn-color-surface-raised);
   --tn-line: var(--tn-color-border);
   --tn-border: var(--tn-color-border);
   --tn-muted: var(--tn-color-muted);
