@@ -11,6 +11,8 @@ services:
     tags: ['controller.service_arguments']
 
   App\Controller\OperationsReadController:
+    public: true
+    tags: ['controller.service_arguments']
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 

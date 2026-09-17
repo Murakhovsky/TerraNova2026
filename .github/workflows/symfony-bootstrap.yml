@@ -34,8 +34,10 @@ jobs:
       SYMFONY_APP_SECRET: ci-only-secret
       SYMFONY_DB_ROOT_PASSWORD: ci-root-password
       SYMFONY_DB_PASSWORD: ci-db-password
-      SYMFONY_LEGACY_DB_PASSWORD: ci-readonly-password
-      SYMFONY_LEGACY_DB_NAME: cos
+      SYMFONY_LEGACY_DB_HOST: mysql
+      SYMFONY_LEGACY_DB_NAME: cos_symfony
+      SYMFONY_LEGACY_DB_USER: cos
+      SYMFONY_LEGACY_DB_PASSWORD: ci-db-password
       COS_ORGANIZATION_ID: default
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +78,16 @@ jobs:
           docker compose -f docker-compose.symfony.yml ps -a
           docker compose -f docker-compose.symfony.yml logs --no-color --tail=250
           exit 1
+
+      - name: Verify operations controller is HTTP-routable
+        run: |
+          status=$(curl --silent --show-error --output /tmp/cos-operations-response.json --write-out '%{http_code}' http://127.0.0.1:8081/migration/api/cos/events)
+          echo "HTTP $status"
+          cat /tmp/cos-operations-response.json
+          echo
+          test "$status" = "500"
+          test "$(cat /tmp/cos-operations-response.json)" = '{"ok":false,"error":"COS runtime query failed."}'
+          echo "operations controller is callable through Symfony HTTP routing"
 
       - name: Stop validation stack
         if: always()
