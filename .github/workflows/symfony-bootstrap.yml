@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-      - infra/symfony-lts-bootstrap
-      - migration/symfony-core-readmodel
+      - migration/symfony
     paths:
       - 'symfony/**'
       - 'docker/symfony/**'
@@ -15,7 +14,9 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - migration/symfony
     paths:
       - 'symfony/**'
       - 'docker/symfony/**'
@@ -81,7 +82,7 @@ jobs:
   deploy-dev:
     name: Deploy parallel Symfony stack to AWS dev
     needs: validate
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: AWS TN2026
     concurrency:
