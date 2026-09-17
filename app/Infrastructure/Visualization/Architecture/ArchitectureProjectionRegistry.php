@@ -70,23 +70,29 @@ final class ArchitectureProjectionRegistry implements GraphProjectionRegistryInt
         ];
 
         return new self([
+            // System is a composition surface: Kernel -> Domains -> capabilities/services.
+            // Dependency cycles belong to the dedicated Dependencies projection and must not
+            // distort the primary architecture overview.
             new ArchitectureProjectionDefinition('system', 'System', [
                 $v::TYPE_KERNEL, $v::TYPE_DOMAIN, $v::TYPE_CAPABILITY, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
             ], [
-                $v::REL_CONTAINS, $v::REL_DEPENDS_ON, $v::REL_OWNS, $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
-            ], layout: 'hierarchical'),
+                $v::REL_CONTAINS, $v::REL_OWNS, $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
+            ], layout: 'radial'),
             new ArchitectureProjectionDefinition('runtime', 'Runtime', [
                 $v::TYPE_DOMAIN, $v::TYPE_EVENT, $v::TYPE_RULE, $v::TYPE_ACTION, $v::TYPE_POLICY, $v::TYPE_AGENT, $v::TYPE_HANDLER,
             ], [
                 $v::REL_OWNS, $v::REL_TRIGGERS, $v::REL_PRODUCES, $v::REL_GOVERNS, $v::REL_HANDLED_BY, $v::REL_PROPOSES,
             ], layout: 'flow'),
             new ArchitectureProjectionDefinition('domain', 'Domain', $allTypes, $allRelations, 2, 'radial'),
+            // Dependencies are a network, not a tree. The graph legitimately contains
+            // reciprocal Kernel contracts and cross-domain runtime evidence, so a force
+            // projection is more truthful than pretending it is hierarchical.
             new ArchitectureProjectionDefinition('dependencies', 'Dependencies', [
                 $v::TYPE_KERNEL, $v::TYPE_DOMAIN, $v::TYPE_CONTRACT, $v::TYPE_SERVICE, $v::TYPE_EXTENSION_POINT,
             ], [
                 $v::REL_CONTAINS, $v::REL_DEPENDS_ON, $v::REL_REQUIRES_CONTRACT, $v::REL_PROVIDES_CONTRACT,
                 $v::REL_CONTRIBUTES, $v::REL_CONTRIBUTES_TO,
-            ], layout: 'hierarchical'),
+            ], layout: 'force'),
             new ArchitectureProjectionDefinition('contracts', 'Contracts', [
                 $v::TYPE_DOMAIN, $v::TYPE_CONTRACT,
             ], [
