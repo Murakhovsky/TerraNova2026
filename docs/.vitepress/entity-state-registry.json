@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "reviewed_main_revision": "25d256a144cdb6098f895e21df75d3acab405132",
+  "entities": [
+    {
+      "id": "diagnostic.pack",
+      "name": "Diagnostic Pack",
+      "domain": "diagnostic",
+      "representation": "domain-model",
+      "identity": "pack id + immutable version",
+      "source": {
+        "path": "app/Domains/Diagnostic/Model/DiagnosticPack.php",
+        "symbol": "final class DiagnosticPack"
+      },
+      "state": {
+        "name": "DiagnosticPackStatus",
+        "semantics": "versioned-lifecycle",
+        "source_path": "app/Domains/Diagnostic/Model/DiagnosticPackStatus.php",
+        "symbol": "enum DiagnosticPackStatus",
+        "values": ["draft", "published", "retired"],
+        "terminal_values": ["retired"]
+      },
+      "process_steps": [
+        "diagnostic.session-to-recommendation:methodology",
+        "diagnostic.session-to-recommendation:revision"
+      ]
+    },
+    {
+      "id": "diagnostic.session",
+      "name": "Diagnostic Session",
+      "domain": "diagnostic",
+      "representation": "domain-model",
+      "identity": "session id pinned to pack id + version",
+      "source": {
+        "path": "app/Domains/Diagnostic/Model/DiagnosticSession.php",
+        "symbol": "final class DiagnosticSession"
+      },
+      "state": {
+        "name": "DiagnosticSessionStatus",
+        "semantics": "lifecycle",
+        "source_path": "app/Domains/Diagnostic/Model/DiagnosticSessionStatus.php",
+        "symbol": "enum DiagnosticSessionStatus",
+        "values": ["planned", "in_progress", "completed", "cancelled"],
+        "terminal_values": ["completed", "cancelled"]
+      },
+      "process_steps": [
+        "diagnostic.session-to-recommendation:session",
+        "diagnostic.session-to-recommendation:evidence",
+        "diagnostic.session-to-recommendation:evaluation",
+        "diagnostic.session-to-recommendation:result",
+        "diagnostic.session-to-recommendation:complete",
+        "diagnostic.session-to-recommendation:cancelled"
+      ]
+    },
+    {
+      "id": "property.asset",
+      "name": "Property Asset",
+      "domain": "property",
+      "representation": "domain-model",
+      "identity": "tenant-scoped stable canonical asset id",
+      "source": {
+        "path": "app/Domains/Property/Model/PropertyAsset.php",
+        "symbol": "final readonly class PropertyAsset"
+      },
+      "state": {
+        "name": "PropertyLifecycle",
+        "semantics": "physical-lifecycle",
+        "source_path": "app/Domains/Property/Model/PropertyLifecycle.php",
+        "symbol": "final readonly class PropertyLifecycle",
+        "values": ["unknown", "planned", "under_construction", "completed", "renovation", "damaged", "demolished"],
+        "terminal_values": ["demolished"]
+      },
+      "process_steps": [
+        "property.submission-to-publication:asset",
+        "sales.request-to-property-match:resolve-property"
+      ]
+    },
+    {
+      "id": "property.inventory",
+      "name": "Inventory Item",
+      "domain": "property",
+      "representation": "domain-model",
+      "identity": "organization inventory id referencing one canonical Property Asset",
+      "source": {
+        "path": "app/Domains/Property/Model/InventoryItem.php",
+        "symbol": "final readonly class InventoryItem"
+      },
+      "state": {
+        "name": "InventoryStatus",
+        "semantics": "commercial-state",
+        "source_path": "app/Domains/Property/Model/InventoryStatus.php",
+        "symbol": "final readonly class InventoryStatus",
+        "values": ["available", "reserved", "on_hold", "under_offer", "sold", "rented", "off_market", "withdrawn"],
+        "closed_values": ["sold", "rented", "withdrawn"]
+      },
+      "process_steps": ["property.submission-to-publication:inventory"]
+    },
+    {
+      "id": "property.listing",
+      "name": "Listing",
+      "domain": "property",
+      "representation": "domain-model",
+      "identity": "listing id presenting organization inventory to the market",
+      "source": {
+        "path": "app/Domains/Property/Model/Listing.php",
+        "symbol": "final readonly class Listing"
+      },
+      "state": {
+        "name": "ListingStatus",
+        "semantics": "presentation-lifecycle",
+        "source_path": "app/Domains/Property/Model/ListingStatus.php",
+        "symbol": "final readonly class ListingStatus",
+        "values": ["draft", "ready", "published", "hidden", "expired", "archived"]
+      },
+      "process_steps": ["property.submission-to-publication:listing"]
+    },
+    {
+      "id": "property.publication",
+      "name": "Publication",
+      "domain": "property",
+      "representation": "domain-model",
+      "identity": "channel-specific publication id for a Listing",
+      "source": {
+        "path": "app/Domains/Property/Model/Publication.php",
+        "symbol": "final readonly class Publication"
+      },
+      "state": {
+        "name": "PublicationState",
+        "semantics": "channel-state",
+        "source_path": "app/Domains/Property/Model/PublicationState.php",
+        "symbol": "final readonly class PublicationState",
+        "values": ["draft", "queued", "published", "hidden", "expired", "failed", "archived"]
+      },
+      "process_steps": ["property.submission-to-publication:publication"]
+    },
+    {
+      "id": "sales.lead",
+      "name": "Lead",
+      "domain": "sales",
+      "representation": "application-persisted",
+      "identity": "tenant-scoped inbound demand record linked into Sales canonical state",
+      "source": {
+        "path": "app/Domains/Sales/Application/UseCase/ReceivePublicLead.php",
+        "symbol": "LeadCreated::create"
+      },
+      "state": {
+        "name": "LeadStatus",
+        "semantics": "demand-qualification",
+        "source_path": "app/Domains/Sales/Model/LeadStatus.php",
+        "symbol": "enum LeadStatus",
+        "values": ["new", "contacted", "qualified", "viewing_planned", "viewing", "negotiation", "won", "lost", "disqualified", "spam", "closed"]
+      },
+      "process_steps": [
+        "sales.lead-to-managed-case:intake",
+        "sales.lead-to-managed-case:canonical-state"
+      ]
+    },
+    {
+      "id": "sales.client-case",
+      "name": "Client Case / Deal",
+      "domain": "sales",
+      "representation": "application-persisted",
+      "identity": "tenant-scoped client case id representing a managed sales process",
+      "source": {
+        "path": "app/Domains/Sales/Application/Service/ClientCaseCommandService.php",
+        "symbol": "final readonly class ClientCaseCommandService"
+      },
+      "state": {
+        "name": "ClientCaseStatus",
+        "semantics": "case-lifecycle",
+        "source_path": "app/Domains/Sales/Model/ClientCaseStatus.php",
+        "symbol": "enum ClientCaseStatus",
+        "values": ["active", "paused", "closed", "lost"],
+        "terminal_values": ["closed", "lost"]
+      },
+      "process_steps": [
+        "sales.lead-to-managed-case:canonical-state",
+        "sales.lead-to-managed-case:assign-owner",
+        "sales.lead-to-managed-case:pipeline",
+        "sales.lead-to-managed-case:activity",
+        "sales.lead-to-managed-case:followup",
+        "sales.lead-to-managed-case:outcome",
+        "sales.request-to-property-match:create-case"
+      ]
+    },
+    {
+      "id": "sales.property-match",
+      "name": "Property Match",
+      "domain": "sales",
+      "representation": "association-record",
+      "identity": "Sales-owned association between Client Case and referenced Property",
+      "source": {
+        "path": "app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php",
+        "symbol": "upsertPropertyMatch("
+      },
+      "state": {
+        "name": "PropertyMatchStatus",
+        "semantics": "demand-supply-match",
+        "source_path": "app/Domains/Sales/Model/PropertyMatchStatus.php",
+        "symbol": "enum PropertyMatchStatus",
+        "values": ["suggested", "sent", "interested", "viewing", "rejected", "deal"]
+      },
+      "process_steps": [
+        "sales.request-to-property-match:record-match",
+        "sales.request-to-property-match:activity-events"
+      ]
+    }
+  ]
+}
