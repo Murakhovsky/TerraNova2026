@@ -4,4 +4,5 @@
 @import './foundation.css' layer(tn-foundation);
 @import './components.css' layer(tn-components);
 @import './patterns.css' layer(tn-patterns);
+@import './canonical-components.css';
 @import './production.css' layer(tn-production);
