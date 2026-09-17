@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use Kernel\Operations\Contract\OperationsReadModelInterface;
+use Kernel\Operations\Service\OperationsSectionReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Throwable;
 
@@ -21,7 +21,7 @@ final class OperationsReadController
     private readonly string $organizationId;
 
     public function __construct(
-        private readonly OperationsReadModelInterface $operations,
+        private readonly OperationsSectionReader $operations,
         string $organizationId,
     ) {
         $organizationId = trim($organizationId);
@@ -66,23 +66,18 @@ final class OperationsReadController
     private function section(string $section, ?string $id = null): JsonResponse
     {
         try {
-            $overview = $this->operations->overview($this->organizationId, 100);
-            $items = $overview[$section] ?? [];
-
             if ($id !== null) {
-                foreach ($items as $item) {
-                    if (($item['id'] ?? null) === $id) {
-                        return new JsonResponse(['ok' => true, 'data' => $item]);
-                    }
-                }
+                $item = $this->operations->item($this->organizationId, $section, $id, 100);
 
-                return new JsonResponse([
-                    'ok' => false,
-                    'error' => 'Resource not found.',
-                ], 404);
+                return $item !== null
+                    ? new JsonResponse(['ok' => true, 'data' => $item])
+                    : new JsonResponse(['ok' => false, 'error' => 'Resource not found.'], 404);
             }
 
-            return new JsonResponse(['ok' => true, 'data' => $items]);
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->operations->section($this->organizationId, $section, 100),
+            ]);
         } catch (Throwable) {
             return new JsonResponse([
                 'ok' => false,

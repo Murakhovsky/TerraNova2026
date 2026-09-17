@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Controller\OperationsReadController;
 use Kernel\Operations\Contract\OperationsReadModelInterface;
+use Kernel\Operations\Service\OperationsSectionReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -64,7 +65,14 @@ function expectContract(bool $condition, string $message): void
 }
 
 $readModel = new OperationsReadModelStub();
-$controller = new OperationsReadController($readModel, 'tenant-a');
+$reader = new OperationsSectionReader($readModel);
+$controller = new OperationsReadController($reader, 'tenant-a');
+
+expectContract($reader->section('tenant-a', 'actions', 100) === [
+    ['id' => str_repeat('a', 32), 'status' => 'QUEUED'],
+], 'shared reader list semantics');
+expectContract(($reader->item('tenant-a', 'actions', str_repeat('a', 32), 100)['status'] ?? null) === 'QUEUED', 'shared reader detail semantics');
+expectContract($reader->item('tenant-a', 'actions', str_repeat('f', 32), 100) === null, 'shared reader missing detail semantics');
 
 $actions = $controller->actions();
 expectContract($actions->getStatusCode() === 200, 'actions status');
@@ -75,8 +83,11 @@ expectContract(payload($actions) === [
 expectContract($readModel->lastOrganizationId === 'tenant-a', 'organization must come from fixed runtime configuration');
 expectContract($readModel->lastLimit === 100, 'legacy controller limit parity');
 
-$agents = payload($controller->agents());
-expectContract(($agents['data'][0]['agent_name'] ?? null) === 'sales', 'agents must map to agent_runs');
+expectContract((payload($controller->approvals())['data'][0]['status'] ?? null) === 'PENDING', 'approvals mapping');
+expectContract((payload($controller->agents())['data'][0]['agent_name'] ?? null) === 'sales', 'agents must map to agent_runs');
+expectContract((payload($controller->rules())['data'][0]['id'] ?? null) === 'rule-1', 'rules mapping');
+expectContract((payload($controller->events())['data'][0]['id'] ?? null) === 'event-1', 'events mapping');
+expectContract((payload($controller->audit())['data'][0]['id'] ?? null) === 'audit-1', 'audit mapping');
 
 $action = $controller->action(str_repeat('a', 32));
 expectContract($action->getStatusCode() === 200, 'action detail status');
@@ -91,4 +102,4 @@ $failed = $controller->events();
 expectContract($failed->getStatusCode() === 500, 'read-model failure status');
 expectContract(payload($failed) === ['ok' => false, 'error' => 'COS runtime query failed.'], 'read-model failure payload parity');
 
-echo "Operations read API contract matches legacy read semantics.\n";
+echo "Operations read API and legacy runtime share one section/detail semantic service.\n";

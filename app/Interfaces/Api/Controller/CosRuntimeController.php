@@ -8,7 +8,7 @@ use Interfaces\Web\Controller\WebController;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Service\ActionService;
 use Kernel\Approval\Service\ApprovalService;
-use Kernel\Operations\Contract\OperationsReadModelInterface;
+use Kernel\Operations\Service\OperationsSectionReader;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Handler\ActionExecutionJobHandler;
 use Phalcon\Http\Response;
@@ -78,15 +78,15 @@ final class CosRuntimeController extends WebController
         $user = $this->manager();
         if ($user instanceof Response) return $user;
         try {
-            /** @var OperationsReadModelInterface $query */
-            $query = $this->di->getShared('cosOperationsReadModel');
-            $overview = $query->overview($this->organization()->id(), 100);
-            $items = $overview[$section] ?? [];
+            /** @var OperationsSectionReader $query */
+            $query = $this->di->getShared('cosOperationsSectionReader');
             if ($id !== null) {
-                foreach ($items as $item) if (($item['id'] ?? null) === $id) return $this->json(200, ['ok' => true, 'data' => $item]);
-                return $this->json(404, ['ok' => false, 'error' => 'Resource not found.']);
+                $item = $query->item($this->organization()->id(), $section, $id, 100);
+                return $item !== null
+                    ? $this->json(200, ['ok' => true, 'data' => $item])
+                    : $this->json(404, ['ok' => false, 'error' => 'Resource not found.']);
             }
-            return $this->json(200, ['ok' => true, 'data' => $items]);
+            return $this->json(200, ['ok' => true, 'data' => $query->section($this->organization()->id(), $section, 100)]);
         } catch (Throwable) {
             return $this->json(500, ['ok' => false, 'error' => 'COS runtime query failed.']);
         }
