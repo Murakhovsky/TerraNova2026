@@ -24,6 +24,7 @@ services:
   App\Security\LegacyIdentityLoader:
     arguments:
       $connection: '@legacy_cos.pdo'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   legacy_cos.pdo:
     class: PDO
