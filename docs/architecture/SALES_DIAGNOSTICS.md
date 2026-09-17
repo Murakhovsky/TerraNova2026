@@ -18,4 +18,4 @@ The generic `Domains/Diagnostic` capability remains the canonical engine and run
 
 AI may collect evidence, infer candidate facts, interview users, and formulate explanations. AI must not calculate the canonical score or redefine methodology rules. `SalesDiagnosticEvaluator` delegates scoring and validation to the deterministic generic `MethodologyEngine`.
 
-The legacy `Domains\\Diagnostic\\Evaluation\\SalesEvaluationRunner` remains as a deprecated adapter and delegates to `Domains\\Sales\\Diagnostics\\Evaluation\\SalesEvaluationRunner`.
+The generic `Domains\\Diagnostic\\Evaluation\\EvaluationDatasetRunner` owns deterministic benchmark execution without importing any business bounded context. `Domains\\Sales\\Diagnostics\\Evaluation\\SalesEvaluationRunner` is the canonical Sales entrypoint. The legacy `Domains\\Diagnostic\\Evaluation\\SalesEvaluationRunner` remains only as a deprecated compatibility facade and delegates to the generic runner, never back into Sales.

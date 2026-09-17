@@ -3,67 +3,19 @@ declare(strict_types=1);
 
 namespace Domains\Sales\Diagnostics\Evaluation;
 
-use DateTimeImmutable;
-use Domains\Diagnostic\Evaluation\EvaluationMetrics;
+use Domains\Diagnostic\Evaluation\EvaluationDatasetRunner;
 use Domains\Diagnostic\Methodology\CompiledDiagnosticPack;
-use Domains\Diagnostic\Methodology\Engine\MethodologyEngine;
-use Domains\Diagnostic\Methodology\Input\DiagnosticInput;
-use Domains\Diagnostic\Methodology\Input\EvidenceSignal;
-use Domains\Diagnostic\Methodology\Input\ObservedValue;
 
+/** Sales-owned benchmark entrypoint backed by the generic deterministic Diagnostic runner. */
 final readonly class SalesEvaluationRunner
 {
-    public function __construct(
-        private MethodologyEngine $engine = new MethodologyEngine(),
-        private EvaluationMetrics $metrics = new EvaluationMetrics(),
-    ) {
+    public function __construct(private EvaluationDatasetRunner $runner = new EvaluationDatasetRunner())
+    {
     }
 
     /** @param array<string,mixed> $dataset @return array<string,float|int> */
     public function run(CompiledDiagnosticPack $pack, array $dataset): array
     {
-        $findingExpected = [];
-        $findingActual = [];
-        $recommendationExpected = [];
-        $recommendationActual = [];
-        $questionScores = [];
-        $now = new DateTimeImmutable('2026-09-06T10:00:00+03:00');
-
-        foreach ($dataset['cases'] ?? [] as $case) {
-            $signal = new EvidenceSignal($case['input_evidence'][0]['id'], 'CRM', (float) $case['input_evidence'][0]['reliability'], 1, $now);
-            $facts = [];
-            foreach ($case['input_facts'] as $id => $value) $facts[$id] = new ObservedValue($value, [$signal]);
-            $metrics = [];
-            foreach ($case['input_metrics'] as $id => $value) $metrics[$id] = new ObservedValue($value, [$signal]);
-
-            $result = $this->engine->evaluate(new DiagnosticInput($facts, $metrics, $now), $pack->pack);
-            $actual = array_map(static fn ($finding): string => $finding->ruleId, $result->findings);
-            $expected = $case['expected_findings'];
-            $findingExpected = array_merge($findingExpected, array_map(static fn ($id): string => $case['id'] . ':' . $id, $expected));
-            $findingActual = array_merge($findingActual, array_map(static fn ($id): string => $case['id'] . ':' . $id, $actual));
-
-            $actualRecommendations = [];
-            foreach ($pack->recommendationsById as $recommendation) {
-                if (array_intersect($recommendation->triggerRules, $actual)) $actualRecommendations[] = $recommendation->id;
-            }
-            $recommendationExpected = array_merge($recommendationExpected, array_map(static fn ($id): string => $case['id'] . ':' . $id, $case['expected_recommendations']));
-            $recommendationActual = array_merge($recommendationActual, array_map(static fn ($id): string => $case['id'] . ':' . $id, $actualRecommendations));
-            $questionScores[] = count($pack->questionsById) > 0 ? 1 : 0;
-        }
-
-        $universe = [];
-        foreach ($dataset['cases'] ?? [] as $case) foreach ($pack->rulesById as $id => $rule) $universe[] = $case['id'] . ':' . $id;
-        $findings = $this->metrics->classification($findingExpected, $findingActual, $universe);
-        $recommendations = $this->metrics->classification($recommendationExpected, $recommendationActual);
-
-        return [
-            'cases' => count($dataset['cases'] ?? []),
-            'finding_precision' => $findings->precision,
-            'finding_recall' => $findings->recall,
-            'false_positive_rate' => $findings->falsePositiveRate,
-            'hallucination_rate' => $findings->hallucinationRate,
-            'recommendation_accuracy' => $recommendations->accuracy,
-            'question_relevance' => array_sum($questionScores) / max(1, count($questionScores)),
-        ];
+        return $this->runner->run($pack, $dataset);
     }
 }

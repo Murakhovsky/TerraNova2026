@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Domains\Diagnostic\Evaluation;
 
 use Domains\Diagnostic\Methodology\CompiledDiagnosticPack;
-use Domains\Sales\Diagnostics\Evaluation\SalesEvaluationRunner as CanonicalSalesEvaluationRunner;
 
-/** @deprecated Sales-specific evaluation belongs to Domains\Sales\Diagnostics. */
+/**
+ * @deprecated Sales-specific entrypoints belong to Domains\Sales\Diagnostics.
+ * This compatibility facade stays inside Diagnostic without importing Sales.
+ */
 final readonly class SalesEvaluationRunner
 {
-    public function __construct(private CanonicalSalesEvaluationRunner $runner = new CanonicalSalesEvaluationRunner())
+    public function __construct(private EvaluationDatasetRunner $runner = new EvaluationDatasetRunner())
     {
     }
 
