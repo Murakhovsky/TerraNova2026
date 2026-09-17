@@ -35,6 +35,19 @@
       ]
     },
     {
+      "id": "revision",
+      "label": "Revise published methodology into a new draft",
+      "kind": "operation",
+      "owner": "methodology author",
+      "domain": "diagnostic",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": false,
+      "runtime": [
+        { "type": "use_case", "ref": "ReviseDiagnosticPack" }
+      ]
+    },
+    {
       "id": "session",
       "label": "Start version-pinned session",
       "kind": "operation",
@@ -100,6 +113,19 @@
       ]
     },
     {
+      "id": "cancelled",
+      "label": "Cancel non-terminal session",
+      "kind": "outcome",
+      "owner": "diagnostic operator / interviewer",
+      "domain": "diagnostic",
+      "capability": null,
+      "capability_gap": "missing-domain-capability",
+      "critical": true,
+      "runtime": [
+        { "type": "use_case", "ref": "CancelDiagnosticSession" }
+      ]
+    },
+    {
       "id": "decision",
       "label": "Review / accept recommendation",
       "kind": "decision",
@@ -114,12 +140,18 @@
     }
   ],
   "edges": [
-    { "from": "methodology", "to": "session" },
+    { "from": "methodology", "to": "revision", "label": "revision required" },
+    { "from": "revision", "to": "methodology", "label": "publish new version" },
+    { "from": "methodology", "to": "session", "label": "select published version" },
     { "from": "session", "to": "evidence" },
+    { "from": "session", "to": "cancelled", "label": "cancel" },
     { "from": "evidence", "to": "evaluation" },
+    { "from": "evidence", "to": "cancelled", "label": "cancel" },
     { "from": "evaluation", "to": "evidence", "label": "insufficient evidence" },
     { "from": "evaluation", "to": "result", "label": "sufficient" },
+    { "from": "evaluation", "to": "cancelled", "label": "cancel" },
     { "from": "result", "to": "complete" },
+    { "from": "result", "to": "cancelled", "label": "cancel before terminal" },
     { "from": "complete", "to": "decision" }
   ]
 }

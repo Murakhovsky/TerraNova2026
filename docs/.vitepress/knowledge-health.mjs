@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { loadRuntimeEvidence, processVerification } from './process-runtime-evidence.mjs';
 import { loadProcessDefinitions } from './process-registry.mjs';
 import { buildCrossDomainProcessTopology } from './cross-domain-process-topology.mjs';
+import { buildProcessUseCaseCoverage } from './process-use-case-coverage.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const debtFile = path.join(here, 'capability-debt.json');
@@ -23,6 +24,10 @@ function emptyDomainHealth() {
     highDebtItems: 0,
     mediumDebtItems: 0,
     lowDebtItems: 0,
+    useCases: 0,
+    useCasesMapped: 0,
+    useCasesExempt: 0,
+    useCasesUncovered: 0,
   };
 }
 
@@ -36,6 +41,7 @@ export function buildKnowledgeHealth() {
   const debt = loadDebt();
   const catalogue = loadRuntimeEvidence();
   const crossDomain = buildCrossDomainProcessTopology(definitions, catalogue);
+  const useCaseCoverage = buildProcessUseCaseCoverage(definitions);
   const domains = {};
 
   const totals = {
@@ -98,12 +104,30 @@ export function buildKnowledgeHealth() {
     }
   }
 
+  for (const [domain, stats] of Object.entries(useCaseCoverage.domains)) {
+    domains[domain] ??= emptyDomainHealth();
+    domains[domain].useCases = stats.total;
+    domains[domain].useCasesMapped = stats.mapped;
+    domains[domain].useCasesExempt = stats.exempt;
+    domains[domain].useCasesUncovered = stats.uncovered;
+  }
+
   const processSchemaVersions = [...new Set(definitions.map((definition) => definition.schema_version))].sort();
 
   return {
     authority: 'structured-current-checkout',
     processSchemaVersions,
     debtSchemaVersion: debt.schema_version ?? 0,
+    processUseCaseCoverage: {
+      schemaVersion: useCaseCoverage.schemaVersion,
+      exemptionSchemaVersion: useCaseCoverage.exemptionSchemaVersion,
+      total: useCaseCoverage.total,
+      mapped: useCaseCoverage.mapped,
+      exempt: useCaseCoverage.exempt,
+      uncovered: useCaseCoverage.uncovered,
+      coverageSatisfied: useCaseCoverage.coverageSatisfied,
+      referenceLink: useCaseCoverage.referenceLink,
+    },
     crossDomainTopology: {
       schemaVersion: crossDomain.schemaVersion,
       crossDomainProcessCount: crossDomain.crossDomainProcessCount,

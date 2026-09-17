@@ -12,6 +12,16 @@
       "target_capability": "diagnostic.methodology.manage"
     },
     {
+      "id": "diagnostic.session-to-recommendation:revision",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "revision",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "medium",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.methodology.revise"
+    },
+    {
       "id": "diagnostic.session-to-recommendation:session",
       "process_id": "diagnostic.session-to-recommendation",
       "step_id": "session",
@@ -60,6 +70,16 @@
       "severity": "high",
       "resolution": "declare-domain-capability",
       "target_capability": "diagnostic.session.complete"
+    },
+    {
+      "id": "diagnostic.session-to-recommendation:cancelled",
+      "process_id": "diagnostic.session-to-recommendation",
+      "step_id": "cancelled",
+      "gap_type": "missing-domain-capability",
+      "owner_domain": "diagnostic",
+      "severity": "high",
+      "resolution": "declare-domain-capability",
+      "target_capability": "diagnostic.session.cancel"
     },
     {
       "id": "diagnostic.session-to-recommendation:decision",
