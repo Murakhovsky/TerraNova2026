@@ -75,6 +75,7 @@
 
   .tn-ui-panel--compact { padding: var(--tn-space-4); }
   .tn-ui-panel--flush { padding: 0; overflow: hidden; }
+  .tn-ui-panel--flush > .tn-ui-panel__head { padding: 16px 18px 0; }
   .tn-ui-panel__body { min-width: 0; }
   .tn-ui-panel__body + .tn-ui-panel__foot { margin-top: var(--tn-space-4); }
   .tn-ui-panel__foot {
@@ -181,6 +182,8 @@
     min-width: 0;
   }
   .tn-ui-action-bar__group { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tn-space-2); }
+  .tn-ui-action-bar--start { justify-content: flex-start; }
+  .tn-ui-action-bar--between { justify-content: space-between; }
   .tn-ui-action-bar--end { justify-content: flex-end; }
   .tn-ui-action-bar--sticky {
     position: sticky;
