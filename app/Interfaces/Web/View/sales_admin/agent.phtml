@@ -10,16 +10,24 @@ $code = (array) ($agent['code_owned'] ?? []);
 ?>
 <main class="tn-page tn-workspace-page tn-sales-workspace tn-sales-agent-admin" data-sales-agent-admin data-agent-name="<?php echo $h($name); ?>" data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
   <?php $this->partial('components/sales/navigation', ['active' => 'sales-agents']); ?>
-  <?php $this->partial('components/ui/page_header', [
+  <?php $this->partial('components/ui/entity_header', [
     'eyebrow' => 'Sales · Administration · Intelligence',
-    'title' => 'Sales Intelligence Agent',
-    'description' => 'Tune business behavior without changing the immutable schema, safety contract or Kernel execution controls.',
+    'identity' => 'Sales Intelligence Agent',
+    'title' => $name,
+    'subtitle' => 'Tune business behavior without changing the immutable schema, safety contract or Kernel execution controls.',
+    'status' => ['label' => !empty($agent['enabled']) ? 'Enabled' : 'Disabled', 'tone' => !empty($agent['enabled']) ? 'positive' : 'neutral'],
+    'meta' => [
+      ['label' => 'Profile', 'value' => $agent['profile'] ?? 'default'],
+      ['label' => 'Model', 'value' => !empty($agent['model']) ? $agent['model'] : 'Platform default'],
+      ['label' => 'Ownership', 'value' => $agent['ownership'] ?? 'SYSTEM'],
+      ['label' => 'Config', 'value' => 'v' . (int) ($agent['configuration_version'] ?? 1)],
+    ],
     'actions' => [['label' => 'All agents', 'href' => 'sales/admin/agents', 'variant' => 'ghost']],
   ]); ?>
   <?php if ($pageStatus ?? null): ?><?php $this->partial('components/ui/state', ['kind'=>'error','title'=>'Agent unavailable','message'=>$pageStatus]); ?><?php endif; ?>
 
   <section class="tn-ui-panel tn-workspace-section">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Admin-owned runtime configuration</p><h2><?php echo $h($name); ?></h2></div><span><?php echo $h($agent['ownership'] ?? 'SYSTEM'); ?> · v<?php echo (int) ($agent['configuration_version'] ?? 1); ?></span></div>
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Admin-owned runtime configuration</p><h2>Business behavior</h2></div><span><?php echo $h($agent['ownership'] ?? 'SYSTEM'); ?> · v<?php echo (int) ($agent['configuration_version'] ?? 1); ?></span></div>
     <form data-sales-agent-config>
       <input type="hidden" name="configuration_version" value="<?php echo (int) ($agent['configuration_version'] ?? 1); ?>">
       <label class="tn-ui-field"><span>Enabled</span><select class="tn-ui-input" name="enabled"><option value="1" <?php echo !empty($agent['enabled']) ? 'selected' : ''; ?>>Enabled</option><option value="0" <?php echo empty($agent['enabled']) ? 'selected' : ''; ?>>Disabled</option></select></label>
