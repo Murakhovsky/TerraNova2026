@@ -68,6 +68,8 @@
   .tn-ui-kpi > span { color: var(--tn-color-muted); font-size: var(--tn-font-sm); font-weight: 650; }
   .tn-ui-kpi > strong { color: var(--tn-color-ink); font-size: var(--tn-font-2xl); font-weight: 760; letter-spacing: -.03em; line-height: 1.05; }
   .tn-ui-kpi > small { color: var(--tn-color-muted); font-size: var(--tn-font-xs); line-height: 1.4; }
+  .tn-ui-kpi--brand { border-color: var(--tn-color-accent-border); background: linear-gradient(180deg, var(--tn-color-surface) 0%, var(--tn-color-accent-soft) 150%); }
+  .tn-ui-kpi--brand > strong { color: var(--tn-color-accent-strong); }
   .tn-ui-kpi--warning { border-color: color-mix(in srgb, var(--tn-color-warning) 22%, var(--tn-color-border)); }
   .tn-ui-kpi--danger { border-color: color-mix(in srgb, var(--tn-color-danger) 22%, var(--tn-color-border)); }
   .tn-ui-kpi--positive { border-color: color-mix(in srgb, var(--tn-color-positive) 22%, var(--tn-color-border)); }
