@@ -1,6 +1,6 @@
 {
   "name": "estatebook/cos-symfony",
-  "description": "Parallel Symfony LTS runtime for COS migration",
+  "description": "Canonical Symfony LTS runtime for COS Core migration",
   "type": "project",
   "license": "proprietary",
   "require": {
@@ -19,8 +19,8 @@
   "autoload": {
     "psr-4": {
       "App\\": "src/",
-      "Kernel\\": "legacy/Kernel/",
-      "Infrastructure\\": "legacy/Infrastructure/"
+      "Kernel\\": "../app/Kernel/",
+      "Infrastructure\\": "../app/Infrastructure/"
     }
   },
   "config": {
