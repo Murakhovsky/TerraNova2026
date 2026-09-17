@@ -9,6 +9,7 @@ on:
       - 'composer.lock'
       - 'symfony/composer.json'
       - 'symfony/composer.lock'
+      - 'docker/symfony/php/Dockerfile'
       - 'tests/unit/platform_integration_foundation.php'
       - 'tests/architecture/platform_integration_boundaries.php'
       - '.github/workflows/platform-integration.yml'
@@ -20,6 +21,7 @@ on:
       - 'composer.lock'
       - 'symfony/composer.json'
       - 'symfony/composer.lock'
+      - 'docker/symfony/php/Dockerfile'
       - 'tests/unit/platform_integration_foundation.php'
       - 'tests/architecture/platform_integration_boundaries.php'
       - '.github/workflows/platform-integration.yml'
@@ -41,4 +43,5 @@ jobs:
       - working-directory: symfony
         run: composer install --no-interaction --prefer-dist --no-progress
       - working-directory: symfony
-        run: php -r "require 'vendor/autoload.php'; echo class_exists('Platform\\Integration\\Model\\ConnectorDefinition') ? 'Symfony Platform autoload OK'.PHP_EOL : exit(1);"
+        run: |
+          php -r "require 'vendor/autoload.php'; echo class_exists('Platform\\Integration\\Model\\ConnectorDefinition') ? 'Symfony Platform autoload OK'.PHP_EOL : exit(1);"
