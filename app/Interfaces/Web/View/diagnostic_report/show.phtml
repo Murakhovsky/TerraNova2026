@@ -11,43 +11,63 @@ $scalar = static function (mixed $value) use ($e): string {
 };
 ?>
 <?php $this->partial('shared/manager_header', ['active' => 'diagnostics']); ?>
-<main class="tn-page tn-workspace-page tn-workspace-page--wide">
-    <header class="tn-page-header">
-        <div>
-            <small>Diagnostic report</small>
-            <h1><?php echo $e($report['diagnosticId'] ?? $sessionId); ?></h1>
-            <p><?php echo $e($report['executiveSummary'] ?? ''); ?></p>
-        </div>
-    </header>
+<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-diagnostic-report">
+    <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => 'Diagnostic report',
+        'title' => (string) ($report['diagnosticId'] ?? $sessionId),
+        'description' => (string) ($report['executiveSummary'] ?? ''),
+        'meta' => [
+            'value' => (string) ($reportEnvelope['report_version'] ?? '1'),
+            'label' => 'версія звіту',
+        ],
+    ]); ?>
 
-    <section class="tn-card-grid">
-        <article class="tn-card"><small>Health</small><strong><?php echo number_format((float) ($report['overallHealth'] ?? 0), 1); ?>/100</strong></article>
-        <article class="tn-card"><small>Coverage</small><strong><?php echo $percent($report['coverage'] ?? 0); ?></strong></article>
-        <article class="tn-card"><small>Confidence</small><strong><?php echo $percent($report['confidence'] ?? 0); ?></strong></article>
-        <article class="tn-card"><small>Report version</small><strong><?php echo $e($reportEnvelope['report_version'] ?? '1'); ?></strong></article>
+    <section class="tn-ui-kpi-grid tn-workspace-section" aria-label="Diagnostic summary">
+        <?php $this->partial('components/ui/kpi_card', [
+            'label' => 'Health',
+            'value' => number_format((float) ($report['overallHealth'] ?? 0), 1) . '/100',
+            'tone' => ((float) ($report['overallHealth'] ?? 0)) >= 70 ? 'positive' : (((float) ($report['overallHealth'] ?? 0)) >= 40 ? 'warning' : 'danger'),
+        ]); ?>
+        <?php $this->partial('components/ui/kpi_card', [
+            'label' => 'Coverage',
+            'value' => $percent($report['coverage'] ?? 0),
+        ]); ?>
+        <?php $this->partial('components/ui/kpi_card', [
+            'label' => 'Confidence',
+            'value' => $percent($report['confidence'] ?? 0),
+        ]); ?>
+        <?php $this->partial('components/ui/kpi_card', [
+            'label' => 'Report version',
+            'value' => (string) ($reportEnvelope['report_version'] ?? '1'),
+        ]); ?>
     </section>
 
     <?php
     $sections = [
-        'topProblems' => 'Top problems',
-        'criticalRisks' => 'Critical risks',
-        'opportunities' => 'Opportunities',
-        'strengths' => 'Strengths',
-        'quickWins' => 'Quick wins',
-        'findings' => 'Findings',
-        'rootCauses' => 'Root causes',
-        'recommendations' => 'Recommendations',
-        'roadmap' => 'Roadmap',
-        'unknowns' => 'Unknowns',
-        'contradictions' => 'Contradictions',
+        'topProblems' => ['title' => 'Top problems', 'eyebrow' => 'Priority'],
+        'criticalRisks' => ['title' => 'Critical risks', 'eyebrow' => 'Risk'],
+        'opportunities' => ['title' => 'Opportunities', 'eyebrow' => 'Potential'],
+        'strengths' => ['title' => 'Strengths', 'eyebrow' => 'Capability'],
+        'quickWins' => ['title' => 'Quick wins', 'eyebrow' => 'Execution'],
+        'findings' => ['title' => 'Findings', 'eyebrow' => 'Evidence'],
+        'rootCauses' => ['title' => 'Root causes', 'eyebrow' => 'Diagnosis'],
+        'recommendations' => ['title' => 'Recommendations', 'eyebrow' => 'Action'],
+        'roadmap' => ['title' => 'Roadmap', 'eyebrow' => 'Sequence'],
+        'unknowns' => ['title' => 'Unknowns', 'eyebrow' => 'Uncertainty'],
+        'contradictions' => ['title' => 'Contradictions', 'eyebrow' => 'Evidence quality'],
     ];
-    foreach ($sections as $key => $title):
+    foreach ($sections as $key => $section):
         $items = $list($report[$key] ?? []);
         if ($items === []) continue;
     ?>
-        <section class="tn-card">
-            <h2><?php echo $e($title); ?></h2>
-            <div class="tn-stack">
+        <section class="tn-ui-panel tn-workspace-section">
+            <div class="tn-ui-panel__head">
+                <div>
+                    <p class="tn-ui-eyebrow"><?php echo $e($section['eyebrow']); ?></p>
+                    <h2><?php echo $e($section['title']); ?></h2>
+                </div>
+            </div>
+            <div class="tn-ui-panel__body tn-stack">
                 <?php foreach ($items as $item): ?>
                     <article class="tn-list-row">
                         <?php if (is_array($item)): ?>
@@ -65,9 +85,11 @@ $scalar = static function (mixed $value) use ($e): string {
 
     <?php $measurements = $list($reportEnvelope['measurements'] ?? []); ?>
     <?php if ($measurements !== []): ?>
-        <section class="tn-card">
-            <h2>Measured outcomes</h2>
-            <div class="tn-stack">
+        <section class="tn-ui-panel tn-workspace-section">
+            <div class="tn-ui-panel__head">
+                <div><p class="tn-ui-eyebrow">Outcomes</p><h2>Measured outcomes</h2></div>
+            </div>
+            <div class="tn-ui-panel__body tn-stack">
                 <?php foreach ($measurements as $measurement): ?>
                     <article class="tn-list-row">
                         <strong><?php echo $e($measurement['metric_code'] ?? 'metric'); ?></strong>
