@@ -98,7 +98,8 @@ jobs:
             if (!interface_exists("Kernel\\Operations\\Contract\\OperationsReadModelInterface")) { exit(11); }
             if (!class_exists("Infrastructure\\Platform\\ReadModel\\MySql\\MysqlOperationsReadModel")) { exit(12); }
             if (!class_exists("App\\Security\\LegacySessionAuthenticator")) { exit(13); }
-            echo "shared COS read-model and Symfony security bridge classes load\n";
+            if (!class_exists("Kernel\\Tenant\\Model\\TenantContext")) { exit(14); }
+            echo "shared COS read-model, Tenant Core and Symfony security bridge classes load\n";
           '
 
       - name: Verify operations read API contract
@@ -117,7 +118,7 @@ jobs:
           docker compose -f docker-compose.symfony.yml logs --no-color --tail=250
           exit 1
 
-      - name: Verify legacy-session security bridge
+      - name: Verify legacy-session security and tenant-context bridge
         run: |
           forbidden='{"ok":false,"error":"Manager authorization required."}'
 
@@ -132,7 +133,12 @@ jobs:
           test "$status" = "200"
           grep -q '"organization_id":"default"' /tmp/manager.json
           grep -q '"organization_role":"manager"' /tmp/manager.json
-          grep -q '"ROLE_MANAGER"' /tmp/manager.json
+          grep -q '"cos.tenant.access"' /tmp/manager.json
+          grep -q '"cos.tenant.manage"' /tmp/manager.json
+          if grep -q '"cos.tenant.admin"' /tmp/manager.json; then
+            echo 'manager unexpectedly received tenant admin permission'
+            exit 1
+          fi
 
           status=$(curl --silent --show-error --output /tmp/realtor.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-realtor-session0002' \
@@ -146,7 +152,7 @@ jobs:
           test "$status" = "403"
           test "$(cat /tmp/other-manager.json)" = "$forbidden"
 
-          echo "legacy session manager bridge, role gate and tenant gate are enforced"
+          echo "legacy session identity, role gate, tenant context and tenant isolation are enforced"
 
       - name: Verify operations routes are protected
         run: |
