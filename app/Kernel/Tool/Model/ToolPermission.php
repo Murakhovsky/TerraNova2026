@@ -8,7 +8,9 @@ use Kernel\Shared\Domain\ValueObject;
 
 final readonly class ToolPermission extends ValueObject
 {
-    public function __construct(private string $name)
+    private string $name;
+
+    public function __construct(string $name)
     {
         $name = strtolower(trim($name));
         if ($name === '' || strlen($name) > 190 || preg_match('/^[a-z0-9._:-]+$/', $name) !== 1) {
