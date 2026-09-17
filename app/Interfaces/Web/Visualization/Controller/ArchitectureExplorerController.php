@@ -5,6 +5,7 @@ namespace Interfaces\Web\Visualization\Controller;
 
 use Interfaces\Web\Controller\WebController;
 use Kernel\Visualization\Graph\Graph;
+use Kernel\Visualization\Graph\GraphHealthAnalyzerInterface;
 use Kernel\Visualization\Graph\GraphProjectionRegistryInterface;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 use Kernel\Visualization\Graph\GraphView;
@@ -24,6 +25,7 @@ final class ArchitectureExplorerController extends WebController
         $this->view->pageAssetEntries = ['cos-architecture-explorer'];
         $this->view->pageStatus = null;
         $this->view->architectureDiagnostic = null;
+        $this->view->architectureHealth = null;
         $stage = 'resolve_provider';
 
         try {
@@ -32,8 +34,12 @@ final class ArchitectureExplorerController extends WebController
             $registry = $this->projectionRegistry();
             $stage = 'resolve_mapper';
             $mapper = $this->graphMapper();
+            $stage = 'resolve_health_analyzer';
+            $healthAnalyzer = $this->healthAnalyzer();
             $stage = 'build_canonical_graph';
             $canonical = $provider->provide();
+            $stage = 'analyze_canonical_graph';
+            $this->view->architectureHealth = $healthAnalyzer->analyze($canonical);
             $stage = 'describe_projections';
             $descriptions = $registry->descriptions();
 
@@ -142,6 +148,37 @@ final class ArchitectureExplorerController extends WebController
         }
     }
 
+    public function healthAction(): void
+    {
+        if ($this->requireManager() === null) {
+            return;
+        }
+
+        $this->view->disable();
+        $this->response->setContentType('application/json', 'UTF-8');
+        $stage = 'resolve_provider';
+
+        try {
+            $provider = $this->graphProvider();
+            $stage = 'resolve_health_analyzer';
+            $analyzer = $this->healthAnalyzer();
+            $stage = 'build_canonical_graph';
+            $graph = $provider->provide();
+            $stage = 'analyze_canonical_graph';
+            $health = $analyzer->analyze($graph);
+
+            $this->json(200, ['ok' => true, 'health' => $health]);
+        } catch (Throwable $exception) {
+            $this->reportFailure('health', $stage, $exception);
+            $diagnostic = $this->failureDiagnostic($stage, $exception);
+            $this->json(503, [
+                'ok' => false,
+                'error' => $diagnostic['message'],
+                'diagnostic' => $diagnostic,
+            ]);
+        }
+    }
+
     private function graphProvider(): GraphProviderInterface
     {
         $provider = $this->di->getShared('cosArchitectureGraphProvider');
@@ -158,6 +195,15 @@ final class ArchitectureExplorerController extends WebController
             throw new RuntimeException('Invalid architecture projection registry.');
         }
         return $registry;
+    }
+
+    private function healthAnalyzer(): GraphHealthAnalyzerInterface
+    {
+        $analyzer = $this->di->getShared('cosArchitectureGraphHealthAnalyzer');
+        if (!$analyzer instanceof GraphHealthAnalyzerInterface) {
+            throw new RuntimeException('Invalid architecture graph health analyzer.');
+        }
+        return $analyzer;
     }
 
     private function graphMapper(): object

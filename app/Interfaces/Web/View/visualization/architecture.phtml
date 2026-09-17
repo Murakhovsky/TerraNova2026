@@ -10,6 +10,9 @@ $nodeTypes = is_array($summary['node_types'] ?? null) ? $summary['node_types'] :
 $domains = is_array($canonicalSummary['domains'] ?? null) ? $canonicalSummary['domains'] : [];
 $pageStatus = $pageStatus ?? null;
 $architectureDiagnostic = is_array($architectureDiagnostic ?? null) ? $architectureDiagnostic : null;
+$architectureHealth = is_array($architectureHealth ?? null) ? $architectureHealth : null;
+$healthStatus = (string) ($architectureHealth['status'] ?? 'unknown');
+$healthIssues = is_array($architectureHealth['issues'] ?? null) ? $architectureHealth['issues'] : [];
 $graphJson = json_encode(
     $architectureGraph,
     JSON_UNESCAPED_UNICODE
@@ -46,12 +49,42 @@ if (!is_string($graphJson)) {
       <span><strong data-architecture-view-label><?php echo $h($viewDescriptions[$defaultView]['label'] ?? $defaultView); ?></strong> view</span>
       <span><strong data-architecture-node-count><?php echo (int) ($summary['nodes'] ?? 0); ?></strong> nodes</span>
       <span><strong data-architecture-edge-count><?php echo (int) ($summary['edges'] ?? 0); ?></strong> edges</span>
+      <span><strong><?php echo $h($healthStatus); ?></strong> health</span>
       <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('cos/control-center'); ?>">Control Center</a>
     </div>
   </section>
 
   <?php if ($pageStatus): ?>
     <p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p>
+  <?php endif; ?>
+
+  <?php if ($architectureHealth): ?>
+    <section class="tn-admin-panel" aria-label="Architecture graph health">
+      <div class="tn-section-heading">
+        <div>
+          <p class="tn-kicker">Graph Health</p>
+          <h2><?php echo $h(strtoupper($healthStatus)); ?></h2>
+        </div>
+        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('cos/architecture/health'); ?>">JSON health</a>
+      </div>
+      <p class="tn-muted">
+        <?php echo (int) ($architectureHealth['errors'] ?? 0); ?> errors ·
+        <?php echo (int) ($architectureHealth['warnings'] ?? 0); ?> warnings ·
+        <?php echo (int) ($architectureHealth['info'] ?? 0); ?> info
+      </p>
+      <?php if ($healthIssues): ?>
+        <ul>
+          <?php foreach (array_slice($healthIssues, 0, 5) as $issue): ?>
+            <li>
+              <strong><?php echo $h($issue['severity'] ?? 'info'); ?> / <?php echo $h($issue['code'] ?? 'unknown'); ?></strong>
+              <?php echo $h($issue['message'] ?? 'Architecture health issue.'); ?>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php else: ?>
+        <p>Структурних проблем Architecture Graph не виявлено.</p>
+      <?php endif; ?>
+    </section>
   <?php endif; ?>
 
   <section class="tn-architecture-toolbar" aria-label="Architecture Explorer controls">
