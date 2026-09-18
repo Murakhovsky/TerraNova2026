@@ -95,6 +95,28 @@ jobs:
             chmod 644 /sessions/sess_*
           '
 
+      - name: Verify Doctrine MySQL persistence boundary
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/persistence_contract.php
+          php tests/architecture/symfony_persistence_boundary.php
+
+      - name: Verify Redis Messenger and Scheduler runtime
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:messenger
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:scheduler cos
+          docker compose -f docker-compose.symfony.yml exec -T worker rm -f var/runtime/scheduler-heartbeat.json || true
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:async:probe --token=ci
+          for attempt in $(seq 1 20); do
+            if docker compose -f docker-compose.symfony.yml exec -T worker grep -q '"token":"ci"' var/runtime/scheduler-heartbeat.json 2>/dev/null; then
+              echo "Redis async worker processed the probe."
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 worker scheduler redis
+          exit 1
+
       - name: Verify shared COS autoload contract
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php -r '
@@ -127,7 +149,7 @@ jobs:
             sleep 2
           done
           docker compose -f docker-compose.symfony.yml ps -a
-          docker compose -f docker-compose.symfony.yml logs --no-color --tail=250
+          docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 nginx php worker scheduler mysql redis
           exit 1
 
       - name: Verify legacy-session security and tenant-context bridge
@@ -244,7 +266,7 @@ jobs:
             ./app/Kernel/ \
             ./app/Platform/ \
             ./app/Domains/ \
-            ./app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php \
+            ./app/Infrastructure/ \
             "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
       - name: Deploy parallel Symfony runtime

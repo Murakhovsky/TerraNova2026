@@ -1,6 +1,28 @@
 framework:
   messenger:
+    failure_transport: failed
     default_bus: command.bus
+
+    transports:
+      async:
+        dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+        options:
+          group: cos_workers
+          consumer: '%env(MESSENGER_CONSUMER_NAME)%'
+          delete_after_ack: true
+        retry_strategy:
+          max_retries: 5
+          delay: 2000
+          multiplier: 2
+          max_delay: 60000
+          jitter: 0.1
+
+      failed:
+        dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
+        options:
+          group: cos_failed
+          consumer: '%env(MESSENGER_CONSUMER_NAME)%'
+
     buses:
       command.bus:
         default_middleware:
@@ -17,3 +39,6 @@ framework:
           enabled: true
           allow_no_handlers: true
           allow_no_senders: true
+
+    routing:
+      'App\Application\System\Command\SchedulerHeartbeatCommand': async

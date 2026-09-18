@@ -14,7 +14,11 @@ use Kernel\Application\Query\QueryHandlerInterface;
 use Kernel\Application\Query\QueryInterface;
 use Symfony\Component\Messenger\Handler\HandlersLocator;
 use Symfony\Component\Messenger\MessageBus;
+use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
+use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
+use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Component\Messenger\Stamp\SentStamp;
 
 function expectCqrs(bool $condition, string $message): void
 {
@@ -96,6 +100,16 @@ $commandMessenger = new MessageBus([
 ]);
 $commandBus = new SymfonyCommandBus($commandMessenger);
 expectCqrs($commandBus->dispatch(new MessengerProbeCommand('ok')) === 'command:ok', 'Command bus must return the single handler result.');
+
+$asyncCommandBus = new SymfonyCommandBus(new MessageBus([
+    new class implements MiddlewareInterface {
+        public function handle(Envelope $envelope, StackInterface $stack): Envelope
+        {
+            return $envelope->with(new SentStamp('async'));
+        }
+    },
+]));
+expectCqrs($asyncCommandBus->dispatch(new MessengerProbeCommand('queued')) === null, 'Async command dispatch must return without requiring an in-process handler result.');
 
 $queryHandler = new MessengerProbeQueryHandler();
 $queryMessenger = new MessageBus([

@@ -53,11 +53,17 @@ jobs:
       LEGACY_DB_USER: cos
       LEGACY_DB_PASSWORD: ci-only-password
       COS_ORGANIZATION_ID: default
+      DATABASE_URL: "mysql://cos:ci-only-password@127.0.0.1:3306/cos_symfony?serverVersion=8.4.0&charset=utf8mb4"
+      REDIS_URL: redis://127.0.0.1:6379
+      MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_async
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_failed
+      MESSENGER_CONSUMER_NAME: ci
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: redis
           tools: composer:v2
       - working-directory: symfony
         run: composer install --no-interaction --prefer-dist --no-progress

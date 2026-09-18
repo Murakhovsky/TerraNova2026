@@ -128,6 +128,21 @@ COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE" -f docker-compose.symfony
 
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" build --pull php nginx
+"${COMPOSE[@]}" up -d mysql redis
+
+for attempt in $(seq 1 30); do
+  if "${COMPOSE[@]}" exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+if ! "${COMPOSE[@]}" exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null 2>&1; then
+  echo "Symfony MySQL did not become ready for Doctrine migrations." >&2
+  exit 54
+fi
+
+"${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 "${COMPOSE[@]}" up -d --remove-orphans
 
 for attempt in $(seq 1 30); do
@@ -141,7 +156,7 @@ done
 if ! "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/health 2>/dev/null; then
   echo "Symfony runtime failed its health check." >&2
   "${COMPOSE[@]}" ps -a >&2 || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mysql redis >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php worker scheduler mysql redis >&2 || true
   exit 44
 fi
 
@@ -175,6 +190,33 @@ if [[ "$PROTECTED_STATUS" != "403" ]] || [[ "$(cat /tmp/cos-symfony-protected.js
 fi
 
 echo "Operations migration API is protected by the legacy-session Symfony Security bridge."
+
+"${COMPOSE[@]}" exec -T worker rm -f var/runtime/scheduler-heartbeat.json || true
+PROBE_TOKEN="deploy-async-probe"
+"${COMPOSE[@]}" exec -T php php bin/console cos:async:probe --token="$PROBE_TOKEN" >/dev/null
+ASYNC_HEALTHY=0
+for attempt in $(seq 1 20); do
+  if "${COMPOSE[@]}" exec -T worker grep -q '"token":"deploy-async-probe"' var/runtime/scheduler-heartbeat.json 2>/dev/null; then
+    ASYNC_HEALTHY=1
+    break
+  fi
+  sleep 1
+done
+if [[ "$ASYNC_HEALTHY" != "1" ]]; then
+  echo "Redis-backed Messenger worker did not process the async probe." >&2
+  "${COMPOSE[@]}" logs --no-color --tail=250 worker redis >&2 || true
+  exit 55
+fi
+
+for service in worker scheduler; do
+  container_id=$("${COMPOSE[@]}" ps -q "$service")
+  if [[ -z "$container_id" ]] || [[ "$("${DOCKER[@]}" inspect -f '{{.State.Running}}' "$container_id")" != "true" ]]; then
+    echo "Symfony $service service is not running." >&2
+    exit 56
+  fi
+done
+
+echo "Doctrine migrations, Redis Messenger worker and Symfony Scheduler are healthy."
 
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
