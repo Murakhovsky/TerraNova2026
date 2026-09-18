@@ -11,6 +11,6 @@ final readonly class UpdatePropertyCommandHandler implements CommandHandlerInter
     public function __construct(private PropertyWriteService $writes) {}
     public function __invoke(UpdatePropertyCommand $command):array
     {
-        return $this->writes->update($command->organizationId,$command->actorId,$command->correlationId,$command->reference,$command->input);
+        return $this->writes->update($command->organizationId,$command->actorId,$command->correlationId,$command->reference,$command->idempotencyKey,$command->input);
     }
 }
