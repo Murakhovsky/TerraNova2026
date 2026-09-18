@@ -15,5 +15,6 @@ final readonly class ChangeInventoryStatusCommand implements CommandInterface
         public string $inventoryId,
         public string $status,
         public ?string $reason,
+        public string $idempotencyKey,
     ) {}
 }
