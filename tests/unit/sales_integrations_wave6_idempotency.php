@@ -1,10 +1,24 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
-require dirname(__DIR__, 2) . '/symfony/src/Application/Integration/IntegrationMutationAudit.php';
-require dirname(__DIR__, 2) . '/symfony/src/Application/Integration/Command/ManageSalesIntegrationCommand.php';
-require dirname(__DIR__, 2) . '/symfony/src/Application/Integration/Command/ManageSalesIntegrationCommandHandler.php';
+$root = dirname(__DIR__, 2);
+foreach ([
+    'app/Kernel/Application/Command/CommandInterface.php',
+    'app/Kernel/Application/Command/CommandHandlerInterface.php',
+    'app/Kernel/Shared/Domain/ValueObject.php',
+    'app/Kernel/Shared/Domain/Identifier.php',
+    'app/Kernel/Shared/Domain/OrganizationId.php',
+    'app/Kernel/Transaction/Contract/TransactionManagerInterface.php',
+    'app/Kernel/Audit/AuditEntry.php',
+    'app/Kernel/Audit/Contract/AuditRepositoryInterface.php',
+    'app/Domains/Sales/Application/Contract/SalesIntegrationAdministrationInterface.php',
+    'app/Domains/Sales/Application/Contract/SalesMutationReceiptRepositoryInterface.php',
+    'symfony/src/Application/Integration/IntegrationMutationAudit.php',
+    'symfony/src/Application/Integration/Command/ManageSalesIntegrationCommand.php',
+    'symfony/src/Application/Integration/Command/ManageSalesIntegrationCommandHandler.php',
+] as $file) {
+    require_once $root . '/' . $file;
+}
 
 use App\Application\Integration\Command\ManageSalesIntegrationCommand;
 use App\Application\Integration\Command\ManageSalesIntegrationCommandHandler;
