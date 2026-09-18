@@ -35,7 +35,7 @@ existing ports and MySQL adapters
 
 HTML renderer не визначає business ownership. Після Wave 7 інтерактивний runtime ownership належить Symfony.
 
-## Core Sales Workspace
+## Основний Sales Workspace
 
 На Symfony V1 переведені:
 
@@ -57,7 +57,7 @@ HTML renderer не визначає business ownership. Після Wave 7 інт
 
 Frontend використовує нормальні HTTP semantics: `GET`, `POST`, `PATCH`, `PUT`, а не універсальний legacy POST.
 
-## Sales Administration
+## Адміністрування Sales
 
 Symfony frontend administration boundary використовує існуючі application contracts, а не дублює конфігураційну логіку.
 
@@ -99,7 +99,7 @@ Symfony mutations:
 - Action execution проходить через Symfony Messenger;
 - credentials integrations не повертаються у frontend.
 
-## Frontend guard
+## Захист frontend boundary
 
 CI рекурсивно перевіряє Sales JavaScript та Sales views.
 
