@@ -491,6 +491,19 @@ jobs:
 
           echo "Sales Wave 2 create/update/convert/activity/stage/next-action runtime passed."
 
+      - name: Verify Sales Wave 5 Diagnostics cutover
+        run: |
+          php tests/architecture/symfony_sales_diagnostics_wave5_boundary.php
+          php tests/unit/sales_diagnostics_wave5_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave5-diagnostic-routes.txt
+          grep -q 'cos_api_v1_diagnostics_create' /tmp/wave5-diagnostic-routes.txt
+          grep -q 'cos_api_v1_diagnostics_interview_answer' /tmp/wave5-diagnostic-routes.txt
+          grep -q 'cos_api_v1_diagnostics_evidence' /tmp/wave5-diagnostic-routes.txt
+          grep -q 'cos_api_v1_diagnostics_assessment' /tmp/wave5-diagnostic-routes.txt
+          grep -q 'cos_api_v1_diagnostics_recommendation_action' /tmp/wave5-diagnostic-routes.txt
+          echo "Sales Diagnostics Wave 5 Symfony boundary passed."
+
       - name: Verify Sales Wave 3 deterministic automation cutover
         run: |
           php tests/architecture/symfony_sales_automation_wave3_boundary.php
