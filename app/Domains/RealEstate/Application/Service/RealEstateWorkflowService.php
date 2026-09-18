@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use Domains\Property\Application\Contract\PropertyInventoryCommandInterface;
 use Domains\Property\Contract\PropertyReferencePort;
 use Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface;
+use Domains\RealEstate\Application\Contract\RealEstateMutationReceiptInterface;
 use Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface;
 use Domains\RealEstate\Automation\Event\RealEstateDomainEvents;
 use Domains\RealEstate\Automation\Event\RealEstateEventType;
@@ -26,6 +27,7 @@ final readonly class RealEstateWorkflowService
 {
     public function __construct(
         private RealEstateRepositoryInterface $repository,
+        private RealEstateMutationReceiptInterface $receipts,
         private SalesOpportunityReferenceInterface $sales,
         private PropertyReferencePort $properties,
         private PropertyInventoryCommandInterface $inventory,
@@ -77,8 +79,15 @@ final readonly class RealEstateWorkflowService
             trim((string)($input['subject']??'Property match')),
         );
         $metadata=$this->metadata($actorId,$correlationId);
+        $fingerprint=$this->fingerprint([
+            'opportunity_id'=>$opportunityId,
+            'property_id'=>$propertyId,
+            'inventory_id'=>$case->inventoryId,
+            'subject'=>$case->subject,
+        ]);
 
-        $created=$this->transactions->transactional(function()use($case,$actorId,$metadata,$idempotencyKey):bool{
+        $created=$this->transactions->transactional(function()use($case,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
+            if(!$this->receipts->claim($case->organizationId->value(),'property_match',$idempotencyKey,$fingerprint))return false;
             if(!$this->repository->createCase($case,$actorId))return false;
             $this->events->publish(RealEstateDomainEvents::create(
                 RealEstateEventType::PROPERTY_MATCHED,
@@ -119,8 +128,15 @@ final readonly class RealEstateWorkflowService
         $offer=new Offer($offerId,$case->organizationId,$case->propertyId,$partyId,new Money($amountMinor,$currency));
         $next=$case->transitionTo(BrokerageProcess::OFFERED);
         $metadata=$this->metadata($actorId,$correlationId);
+        $fingerprint=$this->fingerprint([
+            'case_id'=>$caseId,
+            'party_id'=>$partyId,
+            'amount_minor'=>$amountMinor,
+            'currency'=>$currency,
+        ]);
 
-        $created=$this->transactions->transactional(function()use($caseId,$offer,$next,$actorId,$metadata,$idempotencyKey):bool{
+        $created=$this->transactions->transactional(function()use($caseId,$offer,$next,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
+            if(!$this->receipts->claim($next->organizationId->value(),'offer',$idempotencyKey,$fingerprint))return false;
             if(!$this->repository->createOffer($caseId,$offer,$actorId))return false;
             $this->repository->saveCase($next,$actorId);
             $this->events->publish(RealEstateDomainEvents::create(
@@ -168,8 +184,15 @@ final readonly class RealEstateWorkflowService
         $showing=new Showing($showingId,$case->organizationId,$case->propertyId,$clientId);
         $next=$case->transitionTo(BrokerageProcess::VIEWING);
         $metadata=$this->metadata($actorId,$correlationId);
+        $fingerprint=$this->fingerprint([
+            'case_id'=>$caseId,
+            'client_id'=>$clientId,
+            'scheduled_at'=>$scheduledAt->format(DATE_ATOM),
+            'notes'=>$notes,
+        ]);
 
-        $created=$this->transactions->transactional(function()use($caseId,$showing,$scheduledAt,$notes,$next,$actorId,$metadata,$idempotencyKey):bool{
+        $created=$this->transactions->transactional(function()use($caseId,$showing,$scheduledAt,$notes,$next,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
+            if(!$this->receipts->claim($next->organizationId->value(),'viewing',$idempotencyKey,$fingerprint))return false;
             if(!$this->repository->createShowing($caseId,$showing,$scheduledAt,$notes,$actorId))return false;
             $this->repository->saveCase($next,$actorId);
             $this->events->publish(RealEstateDomainEvents::create(
@@ -200,14 +223,19 @@ final readonly class RealEstateWorkflowService
     {
         $case=$this->case($organizationId,$caseId);
         if($case->inventoryId===null)throw new InvalidArgumentException('Matched case has no reservable inventory.');
-        if($case->status===BrokerageProcess::RESERVED){
-            return ['case'=>$this->view($organizationId,$caseId),'reservation'=>['replayed'=>true]];
-        }
 
         $metadata=$this->metadata($actorId,$correlationId);
         $reservationId='RSV-'.$this->stableId($organizationId.':reservation:'.$idempotencyKey);
+        $fingerprint=$this->fingerprint([
+            'case_id'=>$caseId,
+            'inventory_id'=>$case->inventoryId,
+            'expires_at'=>$input['expires_at']??null,
+            'reason'=>$input['reason']??'brokerage_reservation',
+        ]);
         try{
-            $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey):array{
+            $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey,$fingerprint):?array{
+                if(!$this->receipts->claim($case->organizationId->value(),'reservation',$idempotencyKey,$fingerprint))return null;
+                if($case->status===BrokerageProcess::RESERVED)return null;
                 $reservation=$this->inventory->reserve(
                     $case->organizationId->value(),
                     $case->inventoryId,
@@ -244,7 +272,9 @@ final readonly class RealEstateWorkflowService
             throw $exception;
         }
 
-        return ['case'=>$this->view($organizationId,$caseId),'reservation'=>$result];
+        return $result===null
+            ?['case'=>$this->view($organizationId,$caseId),'reservation'=>['replayed'=>true]]
+            :['case'=>$this->view($organizationId,$caseId),'reservation'=>$result];
     }
 
     /** @return array<string,mixed> */
@@ -303,6 +333,22 @@ final readonly class RealEstateWorkflowService
     private function metadata(int $actorId,string $correlationId):EventMetadata
     {
         return new EventMetadata($correlationId,null,'USER',(string)$actorId);
+    }
+
+    /** @param array<string,mixed> $value */
+    private function fingerprint(array $value):string
+    {
+        $normalize=function(mixed $item)use(&$normalize):mixed{
+            if(!is_array($item))return $item;
+            if(array_is_list($item))return array_map($normalize,$item);
+            ksort($item,SORT_STRING);
+            foreach($item as $key=>$nested)$item[$key]=$normalize($nested);
+            return $item;
+        };
+        return hash('sha256',(string)json_encode(
+            $normalize($value),
+            JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRESERVE_ZERO_FRACTION,
+        ));
     }
 
     private function stableId(string $value):string
