@@ -5,7 +5,10 @@ namespace App\Application\Diagnostic\Command;
 
 use App\Application\Diagnostic\DiagnosticMutationAudit;
 use Domains\Diagnostic\Application\Service\DiagnosticRuntimeService;
+use DomainException;
 use Kernel\Application\Command\CommandHandlerInterface;
+use Kernel\Identity\Contract\IdentityResolverInterface;
+use Kernel\Shared\Domain\UserId;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class AcceptDiagnosticRecommendationCommandHandler implements CommandHandlerInterface
@@ -21,6 +24,11 @@ final readonly class AcceptDiagnosticRecommendationCommandHandler implements Com
     {
         return $this->transactions->transactional(function () use ($command): array {
             $org=$command->organizationId->value();
+            $owner=$this->identities->resolve(UserId::fromString((string)$command->ownerId),$command->organizationId);
+            if($owner===null){
+                throw new DomainException('Recommendation action owner is not an active member of this organization.');
+            }
+
             $result=$this->runtime->accept(
                 $org,
                 $command->sessionId,
