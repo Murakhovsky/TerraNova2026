@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace App\Application\Integration\Command;
 
+use App\Application\Integration\Contract\CrmWebhookCredentialResolverInterface;
 use App\Application\Integration\IntegrationMutationAudit;
 use Domains\Sales\Application\Contract\CrmInboxRepositoryInterface;
 use Domains\Sales\Application\Contract\CrmIngressResolverInterface;
-use Domains\Sales\Application\Contract\CrmWebhookSecretResolverInterface;
 use InvalidArgumentException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Command\CommandHandlerInterface;
