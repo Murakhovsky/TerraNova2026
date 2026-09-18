@@ -30,8 +30,9 @@ final readonly class RunSalesAutomationCommandHandler implements CommandHandlerI
         // This command already runs inside the async worker. Drain the Sales outbox
         // in the same causal execution after detector transactions have committed.
         // A separate queued drain creates an avoidable ordering/race window.
+        $drainLimit = min(5000, max(200, $limit * 4));
         $result['outbox_published'] = $this->outbox->drain(
-            $limit,
+            $drainLimit,
             'sales-automation:' . ($command->runId ?? 'run'),
         );
 
