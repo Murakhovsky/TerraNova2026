@@ -32,6 +32,48 @@ return [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Diagnostic\\Methodology\\Model\\MethodologyPack',
+                'role' => 'requires',
+                'counterpart' => 'diagnostic',
+                'kind' => 'methodology_contract',
+                'purpose' => 'Reuse the canonical deterministic Diagnostic methodology model for Sales-specific diagnostic definitions.',
+            ],
+            [
+                'contract' => 'Domains\\Diagnostic\\Methodology\\CompiledDiagnosticPack',
+                'role' => 'requires',
+                'counterpart' => 'diagnostic',
+                'kind' => 'methodology_contract',
+                'purpose' => 'Execute Sales benchmark datasets against a compiled canonical Diagnostic methodology.',
+            ],
+            [
+                'contract' => 'Domains\\Diagnostic\\Evaluation\\EvaluationDatasetRunner',
+                'role' => 'requires',
+                'counterpart' => 'diagnostic',
+                'kind' => 'evaluation_contract',
+                'purpose' => 'Reuse canonical deterministic benchmark evaluation without duplicating scoring logic in Sales.',
+            ],
+            [
+                'contract' => 'Domains\\Diagnostic\\Methodology\\Engine\\MethodologyEngine',
+                'role' => 'requires',
+                'counterpart' => 'diagnostic',
+                'kind' => 'evaluation_contract',
+                'purpose' => 'Delegate Sales diagnostic scoring and validation to the canonical deterministic engine.',
+            ],
+            [
+                'contract' => 'Domains\\Diagnostic\\Methodology\\Input\\DiagnosticInput',
+                'role' => 'requires',
+                'counterpart' => 'diagnostic',
+                'kind' => 'methodology_contract',
+                'purpose' => 'Pass canonical evidence-backed diagnostic input into deterministic Sales evaluation.',
+            ],
+            [
+                'contract' => 'Domains\\Diagnostic\\Methodology\\Result\\DiagnosticResult',
+                'role' => 'requires',
+                'counterpart' => 'diagnostic',
+                'kind' => 'methodology_contract',
+                'purpose' => 'Expose canonical deterministic diagnostic result semantics through the Sales wrapper.',
+            ],
+            [
                 'contract' => 'Domains\\Property\\Contract\\PropertyReferencePort',
                 'role' => 'requires',
                 'counterpart' => 'property',

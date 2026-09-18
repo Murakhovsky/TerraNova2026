@@ -4,6 +4,8 @@ declare(strict_types=1);
 use Domains\Sales\Automation\Event\DealCreated;
 use Domains\Sales\Automation\Event\DealStageChanged;
 use Domains\Sales\Automation\Event\FollowupOverdue;
+use Domains\Sales\Automation\Event\LeadCreated;
+use Domains\Sales\Automation\Event\SalesEventType;
 use Domains\Sales\Automation\Policy\SalesPolicyCatalog;
 use Domains\Sales\Automation\Rule\SalesRuleCatalog;
 use Kernel\Action\Action;
@@ -60,13 +62,16 @@ $executor = new ActionExecutor([
 ], $executionGate);
 
 $scenarios = [
-    [DealCreated::TYPE, 'deal-1', ['deal' => ['status' => 'active', 'stage_code' => 'NEW']], 'sales.create_qualification_task'],
-    [DealStageChanged::TYPE, 'deal-2', ['deal' => ['status' => 'active', 'stage_code' => 'QUALIFIED', 'next_contact_at' => null]], 'sales.create_followup_task'],
-    [FollowupOverdue::TYPE, 'deal-3', ['deal' => ['status' => 'active'], 'activity' => ['completed_at' => null, 'is_overdue' => true]], 'sales.escalate_overdue_followup'],
+    [DealCreated::TYPE, 'deal', 'deal-1', ['deal' => ['status' => 'active', 'stage_code' => 'NEW']], 'sales.create_qualification_task'],
+    [DealStageChanged::TYPE, 'deal', 'deal-2', ['deal' => ['status' => 'active', 'stage_code' => 'QUALIFIED', 'next_contact_at' => null]], 'sales.create_followup_task'],
+    [FollowupOverdue::TYPE, 'deal', 'deal-3', ['deal' => ['status' => 'active'], 'activity' => ['completed_at' => null, 'is_overdue' => true]], 'sales.escalate_overdue_followup'],
+    [SalesEventType::NO_ACTIVITY_DETECTED, 'deal', 'deal-4', ['deal' => ['no_activity_48h' => true, 'high_value' => false]], 'sales.create_followup'],
+    [SalesEventType::DEAL_STUCK, 'deal', 'deal-5', ['deal' => ['stuck_in_stage' => true]], 'sales.request_manager_review'],
+    [LeadCreated::TYPE, 'lead', 'lead-1', ['lead' => ['status' => 'new', 'owner_id' => 7]], 'sales.create_lead_followup_task'],
 ];
 
-foreach ($scenarios as $index => [$type, $dealId, $context, $expectedAction]) {
-    $event = new DomainEvent('event-' . $index, 'default', $type, 'deal', $dealId, [], $metadata, new DateTimeImmutable());
+foreach ($scenarios as $index => [$type, $aggregateType, $aggregateId, $context, $expectedAction]) {
+    $event = new DomainEvent('event-' . $index, 'default', $type, $aggregateType, $aggregateId, [], $metadata, new DateTimeImmutable());
     $matched = array_values(array_filter(
         $engine->evaluate($event, $context, $rules),
         static fn ($evaluation): bool => $evaluation->matched,
@@ -112,4 +117,4 @@ if ($matched !== []) {
     throw new RuntimeException('A Deal with a next contact must not produce a follow-up Action.');
 }
 
-echo "Deterministic Sales processes passed: 3 full loops, 1 negative.\n";
+echo "Deterministic Sales processes passed: 6 full loops, 1 negative.\n";

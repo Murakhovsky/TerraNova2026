@@ -2,7 +2,24 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-require $root . '/vendor/autoload.php';
+$autoload = $root . '/vendor/autoload.php';
+if (is_file($autoload)) {
+    require $autoload;
+} else {
+    spl_autoload_register(static function (string $class) use ($root): void {
+        foreach ([
+            'Kernel\\' => '/app/Kernel/',
+            'Platform\\' => '/app/Platform/',
+            'Domains\\' => '/app/Domains/',
+            'Infrastructure\\' => '/app/Infrastructure/',
+        ] as $prefix => $directory) {
+            if (!str_starts_with($class, $prefix)) continue;
+            $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) require $file;
+            return;
+        }
+    });
+}
 
 use Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface;
@@ -17,8 +34,10 @@ $events = [];
 $claims = [];
 $attention = new class($claims) implements SalesAttentionRepositoryInterface {
     public function __construct(private array &$claims) {}
+    public function activeOrganizations(): array { return ['org-1']; }
     public function inactiveDeals(string $organizationId, DateTimeImmutable $cutoff, int $limit): array { return [['id' => 'deal-1', 'last_activity_at' => '2026-09-01 00:00:00']]; }
     public function missedFollowups(string $organizationId, DateTimeImmutable $now, int $limit): array { return [['id' => 'followup-1', 'client_case_id' => 'deal-1', 'due_at' => '2026-09-05 00:00:00']]; }
+    public function stuckDeals(string $organizationId, DateTimeImmutable $now, int $limit): array { return [['id' => 'deal-2', 'stage_id' => 'stage-1', 'entered_at' => '2026-09-01 00:00:00', 'last_activity_at' => '2026-09-01 00:00:00', 'stuck_after_seconds' => 86400]]; }
     public function claimSignal(string $organizationId, string $type, string $key, string $marker): bool
     {
         $claim = "$organizationId:$type:$key";
@@ -45,8 +64,9 @@ $store = new class($events) implements EventStoreInterface {
 $service = new SalesMonitoringService($attention, $outcomes, new EventBus($store, $tx), $tx);
 $now = new DateTimeImmutable('2026-09-06T12:00:00Z');
 if ($service->detectNoActivity('org-1', $now) !== 1 || $service->detectNoActivity('org-1', $now) !== 0) throw new RuntimeException('No-activity monitoring is not idempotent.');
-if ($service->detectMissedFollowups('org-1', $now) !== 1 || $service->detectMissedFollowups('org-1', $now) !== 0) throw new RuntimeException('Missed follow-up monitoring is not idempotent.');
+if ($service->detectMissedFollowups('org-1', $now) !== 1 || $service->detectMissedFollowups('org-1', $now) !== 0) throw new RuntimeException('Overdue follow-up monitoring is not idempotent.');
+if ($service->detectStuckDeals('org-1', $now) !== 1 || $service->detectStuckDeals('org-1', $now) !== 0) throw new RuntimeException('Pipeline SLA monitoring is not idempotent.');
 $types = array_map(fn(DomainEvent $event) => $event->type, $events);
-if ($types !== ['sales.no_activity_detected', 'sales.followup.missed']) throw new RuntimeException('Sales monitoring canonical events are incorrect.');
+if ($types !== ['sales.no_activity_detected', 'sales.followup.overdue', 'sales.deal.stuck']) throw new RuntimeException('Sales monitoring canonical events are incorrect.');
 
 echo "Sales monitoring producers passed.\n";

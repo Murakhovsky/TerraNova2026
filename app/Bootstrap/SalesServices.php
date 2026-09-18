@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Bootstrap\InboundCaseResolverAdapter;
 use Domains\Sales\Application\Service\ClientCaseCommandService;
 use Domains\Sales\Application\Service\SalesInboundService;
+use Domains\Sales\Application\Service\SalesAutomationRunner;
 use Domains\Sales\Application\Service\SalesMonitoringService;
 use Domains\Sales\Application\Service\SalesOperationService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
@@ -13,6 +14,7 @@ use Domains\Sales\Application\UseCase\ProcessCrmInbox;
 use Domains\Sales\Application\UseCase\ReceiveCrmWebhook;
 use Domains\Sales\Application\UseCase\ReceivePublicLead;
 use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
+use Domains\Sales\Application\UseCase\ScheduleLeadFollowup;
 use Domains\Sales\Automation\Job\CrmInboxJobHandler;
 use Domains\Sales\Bootstrap\SalesDomainModule;
 use Domains\Sales\Bootstrap\SalesModuleConfigurationProvisioner;
@@ -20,6 +22,7 @@ use Domains\Sales\Domain\Policy\StageTransitionPolicy;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository;
@@ -53,6 +56,7 @@ $di->setShared('salesDomainModule', fn (): SalesDomainModule => new SalesDomainM
     $this->getShared('salesChangeDealStage'),
     $this->getShared('salesOperationService'),
     $this->getShared('salesAssignDealOwner'),
+    $this->getShared('salesScheduleLeadFollowup'),
 ));
 $di->setShared('salesModuleConfigurationProvisioner', fn (): SalesModuleConfigurationProvisioner => new SalesModuleConfigurationProvisioner(
     $this->getShared('cosConfigurationProvisioner'),
@@ -96,6 +100,12 @@ $di->setShared('salesAssignDealOwner', fn (): AssignDealOwner => new AssignDealO
 $di->setShared('salesScheduleDealFollowup', fn (): ScheduleDealFollowup => new ScheduleDealFollowup(
     $this->getShared('salesFollowupRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
 ));
+$di->setShared('salesLeadFollowupRepository', fn (): MysqlLeadFollowupRepository => new MysqlLeadFollowupRepository(
+    $this->getShared('databaseService')->connection(),
+));
+$di->setShared('salesScheduleLeadFollowup', fn (): ScheduleLeadFollowup => new ScheduleLeadFollowup(
+    $this->getShared('salesLeadFollowupRepository'), $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
 $di->setShared('salesOperationService', fn (): SalesOperationService => new SalesOperationService(
     $this->getShared('cosCrmGateway'), $this->getShared('salesOperationRepository'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
@@ -103,6 +113,9 @@ $di->setShared('salesOperationService', fn (): SalesOperationService => new Sale
 $di->setShared('salesMonitoringService', fn (): SalesMonitoringService => new SalesMonitoringService(
     $this->getShared('salesAttentionRepository'), $this->getShared('salesOutcomeRepository'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesAutomationRunner', fn (): SalesAutomationRunner => new SalesAutomationRunner(
+    $this->getShared('salesAttentionRepository'), $this->getShared('salesMonitoringService'),
 ));
 $di->setShared('salesClientCaseService', fn (): ClientCaseCommandService => new ClientCaseCommandService(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),

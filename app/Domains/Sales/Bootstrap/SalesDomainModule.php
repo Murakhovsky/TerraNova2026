@@ -9,9 +9,11 @@ use Domains\Sales\Application\Service\SalesOperationService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
 use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
+use Domains\Sales\Application\UseCase\ScheduleLeadFollowup;
 use Domains\Sales\Automation\Action\AssignOwnerHandler;
 use Domains\Sales\Automation\Action\ChangeDealStageHandler;
 use Domains\Sales\Automation\Action\CreateFollowupTaskHandler;
+use Domains\Sales\Automation\Action\CreateLeadFollowupTaskHandler;
 use Domains\Sales\Automation\Action\RequestDocumentHandler;
 use Domains\Sales\Automation\Action\ScheduleFollowupHandler;
 use Domains\Sales\Automation\Action\ScheduleMeetingHandler;
@@ -66,6 +68,7 @@ final readonly class SalesDomainModule implements
         private ChangeDealStage $changeDealStage,
         private SalesOperationService $operations,
         private AssignDealOwner $assignDealOwner,
+        private ScheduleLeadFollowup $scheduleLeadFollowup,
     ) {
     }
 
@@ -83,7 +86,7 @@ final readonly class SalesDomainModule implements
     public function actionTypes(): array
     {
         return [
-            ...CreateFollowupTaskHandler::TYPES, ...UpdateDealHandler::TYPES, ChangeDealStageHandler::TYPE,
+            ...CreateFollowupTaskHandler::TYPES, CreateLeadFollowupTaskHandler::TYPE, ...UpdateDealHandler::TYPES, ChangeDealStageHandler::TYPE,
             AssignOwnerHandler::TYPE, RequestDocumentHandler::TYPE, ScheduleMeetingHandler::TYPE,
             ...SendMessageHandler::TYPES, ...ScheduleFollowupHandler::TYPES,
         ];
@@ -93,6 +96,7 @@ final readonly class SalesDomainModule implements
     {
         return [
             new CreateFollowupTaskHandler($this->crm),
+            new CreateLeadFollowupTaskHandler($this->scheduleLeadFollowup),
             new UpdateDealHandler($this->deals),
             new ChangeDealStageHandler($this->changeDealStage),
             new AssignOwnerHandler($this->assignDealOwner),

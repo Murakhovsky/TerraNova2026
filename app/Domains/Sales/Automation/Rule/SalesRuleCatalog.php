@@ -19,6 +19,30 @@ final class SalesRuleCatalog
     {
         return [
             new Rule(
+                $this->id($organizationId, 'sales-new-lead-followup-v1'),
+                $organizationId,
+                'Новий Lead потребує першого контакту',
+                \Domains\Sales\Automation\Event\LeadCreated::TYPE,
+                [
+                    ['field' => 'lead.status', 'operator' => '=', 'value' => 'new'],
+                    ['field' => 'lead.owner_id', 'operator' => 'IS_NOT_NULL'],
+                ],
+                [
+                    'type' => 'CREATE_ACTION',
+                    'action_type' => 'sales.create_lead_followup_task',
+                    'target_type' => 'lead',
+                    'target_id' => '{{event.aggregate_id}}',
+                    'parameters' => [
+                        'title' => 'Перший контакт з новим Lead',
+                        'body' => 'Зв’язатися з Lead та зафіксувати результат першого контакту.',
+                        'due_in_minutes' => 30,
+                    ],
+                    'execution_mode' => 'AUTO',
+                    'risk_level' => 'LOW',
+                ],
+                priority: 5,
+            ),
+            new Rule(
                 $this->id($organizationId, 'sales-new-deal-qualification-v1'),
                 $organizationId,
                 'Новий Deal потребує кваліфікації',
@@ -154,7 +178,7 @@ final class SalesRuleCatalog
                 $this->id($organizationId, 'sales-deal-stuck-v1'),
                 $organizationId,
                 'Deal застряг на етапі',
-                ClientCaseChanged::TYPE,
+                SalesEventType::DEAL_STUCK,
                 [['field' => 'deal.stuck_in_stage', 'operator' => '=', 'value' => true]],
                 [
                     'type' => 'CREATE_ACTION',

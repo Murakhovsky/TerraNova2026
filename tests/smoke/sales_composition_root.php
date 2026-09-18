@@ -5,6 +5,7 @@ use Domains\Sales\Application\Service\SalesOperationService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
 use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
+use Domains\Sales\Application\UseCase\ScheduleLeadFollowup;
 use Domains\Sales\Bootstrap\SalesDomainModule;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder;
@@ -57,6 +58,7 @@ $di->setShared('salesPolicyContextProvider', $withoutConstructor(MysqlSalesPolic
 $di->setShared('salesChangeDealStage', $withoutConstructor(ChangeDealStage::class));
 $di->setShared('salesOperationService', $operations);
 $di->setShared('salesAssignDealOwner', $withoutConstructor(AssignDealOwner::class));
+$di->setShared('salesScheduleLeadFollowup', $withoutConstructor(ScheduleLeadFollowup::class));
 
 $module = $di->getShared('salesDomainModule');
 if (!$module instanceof SalesDomainModule || $module->name() !== 'sales') throw new RuntimeException('salesDomainModule did not resolve correctly.');

@@ -100,6 +100,9 @@ final class SalesRuleDefinitionCatalog
             'sales.create_qualification_task' => $this->action('sales.create_qualification_task', 'Create Qualification Task', ['title', 'body', 'due_in_minutes'], [
                 'title' => 'Qualify sales request', 'due_in_minutes' => 240,
             ]),
+            'sales.create_lead_followup_task' => $this->action('sales.create_lead_followup_task', 'Create Lead Follow-up Task', ['title', 'body', 'due_at', 'due_in_minutes'], [
+                'title' => 'Contact new lead', 'due_in_minutes' => 30,
+            ]),
             'sales.create_followup_task' => $this->action('sales.create_followup_task', 'Create Follow-up', ['title', 'body', 'due_in_minutes'], [
                 'title' => 'Follow-up', 'due_in_minutes' => 1440,
             ]),

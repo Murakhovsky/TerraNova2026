@@ -69,6 +69,11 @@ services:
     arguments:
       $messageBus: '@command.bus'
 
+  App\Application\Sales\Command\RunSalesAutomationCommandHandler:
+    arguments:
+      $automation: '@Domains\Sales\Application\Service\SalesAutomationRunner'
+      $commands: '@Kernel\Application\Bus\CommandBusInterface'
+
   App\Infrastructure\Messenger\SymfonyQueryBus:
     arguments:
       $messageBus: '@query.bus'
@@ -99,6 +104,10 @@ services:
   Kernel\Operations\Service\OperationsSectionReader:
     arguments:
       $operations: '@Kernel\Operations\Contract\OperationsReadModelInterface'
+
+  App\Scheduler\CosScheduleProvider:
+    arguments:
+      $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -148,6 +157,409 @@ services:
 
   Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory
+
+  Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Transaction\Contract\TransactionManagerInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager
+
+  Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Event\Contract\EventStoreInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore
+
+  Kernel\Event\EventBus:
+    arguments:
+      $store: '@Kernel\Event\Contract\EventStoreInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository
+
+  Domains\Sales\Application\Service\SalesMonitoringService:
+    arguments:
+      $attention: '@Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface'
+      $outcomes: '@Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Application\Service\SalesAutomationRunner:
+    arguments:
+      $attention: '@Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface'
+      $monitoring: '@Domains\Sales\Application\Service\SalesMonitoringService'
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\LeadFollowupRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository
+
+  Domains\Sales\Application\UseCase\ScheduleLeadFollowup:
+    arguments:
+      $followups: '@Domains\Sales\Application\Contract\LeadFollowupRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Infrastructure\Platform\Persistence\MySql\MysqlExternalReferenceStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\MysqlExternalReferenceStore
+
+  Infrastructure\Integration\Crm\Aida\AidaCrmAdapter:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $references: '@Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface'
+
+  Infrastructure\Integration\Crm\CrmRegistry:
+    arguments:
+      $providers:
+        - '@Infrastructure\Integration\Crm\Aida\AidaCrmAdapter'
+
+  Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\OrganizationCrmResolverInterface:
+    alias: Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver
+
+  Infrastructure\Integration\Crm\RoutedCrmGateway:
+    arguments:
+      $resolver: '@Domains\Sales\Application\Contract\OrganizationCrmResolverInterface'
+      $registry: '@Infrastructure\Integration\Crm\CrmRegistry'
+
+  Domains\Sales\Application\Contract\CrmGatewayInterface:
+    alias: Infrastructure\Integration\Crm\RoutedCrmGateway
+
+  Domains\Sales\Application\Contract\MessageGatewayInterface:
+    alias: Infrastructure\Integration\Crm\RoutedCrmGateway
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $references: '@Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface'
+
+  Domains\Sales\Application\Contract\FollowupRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\DealRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\PipelineRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesOperationRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesRuleContextProvider:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPolicyContextProvider:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $properties: '@Domains\Property\Contract\PropertyReferencePort'
+
+  Domains\Sales\Application\UseCase\ScheduleDealFollowup:
+    arguments:
+      $followups: '@Domains\Sales\Application\Contract\FollowupRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Domain\Policy\StageTransitionPolicy: ~
+
+  Domains\Sales\Application\UseCase\ChangeDealStage:
+    arguments:
+      $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
+      $pipelines: '@Domains\Sales\Application\Contract\PipelineRepositoryInterface'
+      $policy: '@Domains\Sales\Domain\Policy\StageTransitionPolicy'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Application\UseCase\AssignDealOwner:
+    arguments:
+      $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Application\Service\SalesOperationService:
+    arguments:
+      $gateway: '@Domains\Sales\Application\Contract\MessageGatewayInterface'
+      $operations: '@Domains\Sales\Application\Contract\SalesOperationRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Bootstrap\SalesDomainModule:
+    arguments:
+      $crm: '@Domains\Sales\Application\Contract\CrmGatewayInterface'
+      $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
+      $scheduleFollowup: '@Domains\Sales\Application\UseCase\ScheduleDealFollowup'
+      $ruleContexts: '@Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesRuleContextProvider'
+      $agentContexts: '@Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder'
+      $policyContexts: '@Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPolicyContextProvider'
+      $changeDealStage: '@Domains\Sales\Application\UseCase\ChangeDealStage'
+      $operations: '@Domains\Sales\Application\Service\SalesOperationService'
+      $assignDealOwner: '@Domains\Sales\Application\UseCase\AssignDealOwner'
+      $scheduleLeadFollowup: '@Domains\Sales\Application\UseCase\ScheduleLeadFollowup'
+
+  App\Infrastructure\Module\ModuleCatalogFactory:
+    arguments:
+      $domainsPath: '%kernel.project_dir%/../app/Domains'
+
+  Kernel\Module\ModuleCatalog:
+    factory: ['@App\Infrastructure\Module\ModuleCatalogFactory', 'create']
+
+  App\Infrastructure\Module\PdoModuleStateRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Module\Contract\ModuleStateRepositoryInterface:
+    alias: App\Infrastructure\Module\PdoModuleStateRepository
+
+  App\Infrastructure\Module\PdoModuleLifecycleRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Module\Contract\ModuleLifecycleRepositoryInterface:
+    alias: App\Infrastructure\Module\PdoModuleLifecycleRepository
+
+  Kernel\Module\ActiveModuleResolver:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+      $states: '@Kernel\Module\Contract\ModuleStateRepositoryInterface'
+      $installations: '@Kernel\Module\Contract\ModuleLifecycleRepositoryInterface'
+
+  Kernel\Module\DomainModuleRegistry:
+    arguments:
+      $modules:
+        - '@Domains\Sales\Bootstrap\SalesDomainModule'
+
+  Kernel\Rule\Service\ConditionEvaluator: ~
+
+  Kernel\Rule\Service\DeterministicProcessEngine:
+    arguments:
+      $conditions: '@Kernel\Rule\Service\ConditionEvaluator'
+
+  Kernel\Policy\Service\PolicyEngine:
+    arguments:
+      $conditionEvaluator: '@Kernel\Rule\Service\ConditionEvaluator'
+
+  Kernel\Rule\Service\RoutedRuleContextProvider:
+    arguments:
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+
+  Kernel\Policy\Service\PolicyContextBuilder:
+    arguments:
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+
+  Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Rule\Contract\RuleRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleRepository
+
+  Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleEvaluationRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Rule\Contract\RuleEvaluationRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleEvaluationRepository
+
+  Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Policy\Contract\PolicyRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository
+
+  Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Policy\Contract\PolicyEvaluationRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository
+
+  Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Action\Contract\ActionRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository
+
+  Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Approval\Contract\ApprovalRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository
+
+  Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Audit\Contract\AuditRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository
+
+  Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Queue\Contract\JobQueueInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue
+
+  App\Infrastructure\Automation\SalesActionHandlerRegistryFactory: ~
+
+  Kernel\Action\Service\ActionHandlerRegistry:
+    factory: ['@App\Infrastructure\Automation\SalesActionHandlerRegistryFactory', 'create']
+    arguments:
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+
+  Kernel\Action\Service\ModuleActionExecutionGate:
+    arguments:
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Kernel\Action\Service\ActionExecutor:
+    arguments:
+      $handlers: '@Kernel\Action\Service\ActionHandlerRegistry'
+      $executionGate: '@Kernel\Action\Service\ModuleActionExecutionGate'
+
+  Kernel\Action\Service\ActionService:
+    arguments:
+      $actions: '@Kernel\Action\Contract\ActionRepositoryInterface'
+      $executor: '@Kernel\Action\Service\ActionExecutor'
+      $events: '@Kernel\Event\Contract\EventStoreInterface'
+      $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $metrics: null
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+  Kernel\Policy\Service\ActionPolicyService:
+    arguments:
+      $actions: '@Kernel\Action\Service\ActionService'
+      $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
+      $evaluations: '@Kernel\Policy\Contract\PolicyEvaluationRepositoryInterface'
+      $approvals: '@Kernel\Approval\Contract\ApprovalRepositoryInterface'
+      $engine: '@Kernel\Policy\Service\PolicyEngine'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $contexts: '@Kernel\Policy\Service\PolicyContextBuilder'
+
+  App\Infrastructure\Automation\SymfonySalesActionProposalSink:
+    arguments:
+      $policies: '@Kernel\Policy\Service\ActionPolicyService'
+      $commandBus: '@command.bus'
+      $legacyJobs: '@Kernel\Queue\Contract\JobQueueInterface'
+
+  Kernel\Rule\Service\RuleEngineEventHandler:
+    arguments:
+      $rules: '@Kernel\Rule\Contract\RuleRepositoryInterface'
+      $contexts: '@Kernel\Rule\Service\RoutedRuleContextProvider'
+      $evaluations: '@Kernel\Rule\Contract\RuleEvaluationRepositoryInterface'
+      $actions: '@App\Infrastructure\Automation\SymfonySalesActionProposalSink'
+      $engine: '@Kernel\Rule\Service\DeterministicProcessEngine'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealStageHistoryStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesDealStageHistoryStoreInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealStageHistoryStore
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealOwnerHistoryStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesDealOwnerHistoryStoreInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealOwnerHistoryStore
+
+  Domains\Sales\Application\Service\SalesDealStageHistoryProjector:
+    arguments:
+      $history: '@Domains\Sales\Application\Contract\SalesDealStageHistoryStoreInterface'
+
+  Domains\Sales\Application\Service\SalesDealOwnerHistoryProjector:
+    arguments:
+      $history: '@Domains\Sales\Application\Contract\SalesDealOwnerHistoryStoreInterface'
+
+  Domains\Sales\Automation\Event\SalesHistoricalEventConsumer:
+    arguments:
+      $stageProjector: '@Domains\Sales\Application\Service\SalesDealStageHistoryProjector'
+      $ownerProjector: '@Domains\Sales\Application\Service\SalesDealOwnerHistoryProjector'
+      $ownerHistory: '@Domains\Sales\Application\Contract\SalesDealOwnerHistoryStoreInterface'
+      $pipelines: '@Domains\Sales\Application\Contract\PipelineRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $eventStore: '@Kernel\Event\Contract\EventStoreInterface'
+
+  App\Infrastructure\Automation\SalesEventOutbox:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Event\Contract\EventOutboxInterface:
+    alias: App\Infrastructure\Automation\SalesEventOutbox
+
+  Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Event\Contract\EventConsumptionRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository
+
+  Kernel\Event\Service\DurableEventDispatcher:
+    arguments:
+      $consumptions: '@Kernel\Event\Contract\EventConsumptionRepositoryInterface'
+      $consumers:
+        kernel.rule-engine.v1: '@Kernel\Rule\Service\RuleEngineEventHandler'
+        sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
+
+  Kernel\Event\Service\OutboxPublisher:
+    arguments:
+      $outbox: '@Kernel\Event\Contract\EventOutboxInterface'
+      $events: '@Kernel\Event\Contract\EventStoreInterface'
+      $dispatcher: '@Kernel\Event\Service\DurableEventDispatcher'
+      $metrics: null
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+  Kernel\Queue\Handler\ActionExecutionJobHandler:
+    arguments:
+      $actions: '@Kernel\Action\Service\ActionService'
 
   App\Application\Sales\Query\GetClientCaseStatsQueryHandler: ~
 
