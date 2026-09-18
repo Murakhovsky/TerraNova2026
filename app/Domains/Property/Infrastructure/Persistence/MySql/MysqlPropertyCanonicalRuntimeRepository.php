@@ -97,7 +97,9 @@ final readonly class MysqlPropertyCanonicalRuntimeRepository implements Property
 
     public function findInventory(string $organizationId, string $inventoryId): ?InventoryItem
     {
-        $row=$this->one('SELECT * FROM tn_property_inventory_items WHERE organization_id=:organization_id AND inventory_id=:inventory_id LIMIT 1',['organization_id'=>$organizationId,'inventory_id'=>$inventoryId]);
+        $sql='SELECT * FROM tn_property_inventory_items WHERE organization_id=:organization_id AND inventory_id=:inventory_id LIMIT 1';
+        if($this->connection->inTransaction())$sql.=' FOR UPDATE';
+        $row=$this->one($sql,['organization_id'=>$organizationId,'inventory_id'=>$inventoryId]);
         return $row === null ? null : $this->inventory($row);
     }
 
