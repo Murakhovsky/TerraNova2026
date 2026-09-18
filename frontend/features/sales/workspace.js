@@ -264,10 +264,23 @@ const initLeadInbox = (root) => {
   root.querySelectorAll('[data-lead-id]').forEach((card) => {
     const id = card.dataset.leadId || '';
     const status = card.querySelector('[data-sales-lead-status-text]');
-    const run = async (endpoint, data = {}) => {
+    const run = async (operation, data = {}) => {
+      const request = {
+        status: { endpoint: `/api/v1/sales/leads/${id}`, method: 'PATCH' },
+        owner: { endpoint: `/api/v1/sales/leads/${id}`, method: 'PATCH' },
+        deal: { endpoint: `/api/v1/sales/leads/${id}/opportunity`, method: 'POST' },
+        followups: { endpoint: `/api/v1/sales/leads/${id}/followups`, method: 'POST' },
+      }[operation];
+      if (!request) throw new Error('Unsupported Lead operation.');
+
       setStatus(status, 'Зберігаю…', 'loading');
       try {
-        const result = await postJson(`/api/sales/leads/${id}/${endpoint}`, data, csrf);
+        const result = await requestJson(request.endpoint, {
+          method: request.method,
+          data,
+          csrf,
+          idempotencyKey: createMutationKey(),
+        });
         setStatus(status, 'Готово.', 'success');
         return result;
       } catch (error) {
