@@ -35,6 +35,6 @@ response DTO / JSON
 
 Controller не виконує SQL, не викликає GPT/Telegram/external SDK і не містить domain decisions. Він також не приймає tenant identity з query/body: identity та tenant context формуються Security layer.
 
-Для payload-bearing endpoints стандартом є Serializer + Validator перед створенням Command/Query. На поточному status slice payload відсутній, тому ці компоненти не викликаються штучно; їх підключення до runtime package set виконується разом із першим write/read DTO, що реально потребує deserialization та validation.
+Для payload-bearing endpoints Symfony Serializer + Validator уже входять до runtime package set. Канонічний `JsonRequestMapper` виконує deserialization і validation до створення Command/Query; status slice не має payload, тому mapper там природно не викликається.
 
 Legacy migration routes `/migration/api/cos/*` залишаються паралельно, доки відповідні vertical slices не переключені на `/api/v1/*`.

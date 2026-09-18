@@ -112,6 +112,7 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/operations_read_contract.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_contract.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_controller_boundary.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_request_mapper.php
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php
