@@ -94,11 +94,11 @@ $activity = (new AddSalesOpportunityActivityCommandHandler($factory))(new AddSal
 wave2($activity->ok && ($activity->data['activity_id'] ?? null) === 801, 'Activity handler failed.');
 
 $stage = (new ChangeSalesOpportunityStageCommandHandler($factory))(new ChangeSalesOpportunityStageCommand($org, $actor, 701, '12', 'corr-stage'));
-wave2($stage->successful && $stage->stageId === '12', 'Stage handler failed.');
+wave2($stage->ok && ($stage->data['stage_id'] ?? null) === '12', 'Stage handler failed.');
 
 $dueAt = new DateTimeImmutable('+1 day');
 $next = (new ScheduleSalesNextActionCommandHandler($factory))(new ScheduleSalesNextActionCommand($org, $actor, 701, 'Follow-up', 'Body', $dueAt, 'corr-next', 'idem-next'));
-wave2($next->successful && $next->externalId === '901', 'Next Action handler failed.');
+wave2($next->ok && ($next->data['activity_id'] ?? null) === '901', 'Next Action handler failed.');
 
 wave2($factory->organizations === array_fill(0, 6, 'tenant-wave2'), 'Every command must resolve its writer from the explicit tenant.');
 wave2(($service->calls[0][4] ?? null) === 'idem-create', 'Create Lead idempotency key was not forwarded.');
