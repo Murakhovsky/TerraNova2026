@@ -659,6 +659,7 @@ jobs:
           php tests/architecture/symfony_sales_automation_wave3_boundary.php
           php tests/unit/sales_attention_detectors.php
           php tests/unit/sales_wave3_automation.php
+          php tests/unit/sales_wave3_outbox_drainer.php
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
 
           docker compose -f docker-compose.symfony.yml exec -e COS_SALES_AUTOMATION_SCHEDULER_ENABLED=1 -T php \
