@@ -3,13 +3,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Automation;
 
+use App\Application\Sales\Command\RunSalesAgentCommand;
 use App\Application\System\Command\ExecuteSalesActionCommand;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
 use Kernel\Event\DomainEvent;
 use Kernel\Policy\Service\ActionPolicyService;
-use Kernel\Queue\Contract\JobQueueInterface;
-use Kernel\Queue\Handler\AgentRunJobHandler;
 use Kernel\Rule\Contract\ActionProposalSinkInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -20,7 +19,6 @@ final readonly class SymfonySalesActionProposalSink implements ActionProposalSin
     public function __construct(
         private ActionPolicyService $policies,
         private MessageBusInterface $commandBus,
-        private JobQueueInterface $legacyJobs,
     ) {
     }
 
@@ -28,21 +26,16 @@ final readonly class SymfonySalesActionProposalSink implements ActionProposalSin
     {
         if (str_starts_with($proposal->type, self::AGENT_ACTION_PREFIX)) {
             $agentName = substr($proposal->type, strlen(self::AGENT_ACTION_PREFIX));
-            $this->legacyJobs->enqueue(
-                $event->organizationId,
-                AgentRunJobHandler::TYPE,
-                [
-                    'agent_name' => $agentName,
-                    'subject_type' => $proposal->targetType ?? $event->aggregateType,
-                    'subject_id' => $proposal->targetId ?? $event->aggregateId,
-                    'question' => (string) ($proposal->parameters['question'] ?? 'Recommend the safest next action.'),
-                    'context_references' => ['event_id' => $event->id, 'rule_id' => $proposal->sourceId],
-                ],
-                $event->metadata->correlationId,
-                $proposal->idempotencyKey,
-                3,
-                90,
-            );
+            $this->commandBus->dispatch(new RunSalesAgentCommand(
+                organizationId: $event->organizationId,
+                agentName: $agentName,
+                subjectType: $proposal->targetType ?? $event->aggregateType,
+                subjectId: $proposal->targetId ?? $event->aggregateId,
+                question: (string) ($proposal->parameters['question'] ?? 'Recommend the safest next action.'),
+                correlationId: $event->metadata->correlationId,
+                idempotencyKey: $proposal->idempotencyKey,
+                contextReferences: ['event_id' => $event->id, 'rule_id' => $proposal->sourceId],
+            ));
             return;
         }
 

@@ -203,6 +203,186 @@ services:
       $attention: '@Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface'
       $monitoring: '@Domains\Sales\Application\Service\SalesMonitoringService'
 
+
+  Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Operations\Contract\MetricsRecorderInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder
+
+  Infrastructure\Llm\MysqlLlmGovernanceRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Infrastructure\Platform\Persistence\MySql\Resilience\MysqlCircuitBreakerStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Resilience\ExternalCallExecutor:
+    arguments:
+      $circuits: '@Infrastructure\Platform\Persistence\MySql\Resilience\MysqlCircuitBreakerStore'
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+  Infrastructure\Llm\HttpStructuredLlmClient:
+    arguments:
+      $endpoint: '%env(LLM_ENDPOINT)%'
+      $token: '%env(LLM_TOKEN)%'
+      $model: '%env(LLM_MODEL)%'
+      $provider: '%env(LLM_PROVIDER)%'
+
+  Kernel\Llm\LlmProviderRegistry:
+    arguments:
+      $providers:
+        primary: '@Infrastructure\Llm\HttpStructuredLlmClient'
+
+  wave4.llm.primary_route:
+    class: Kernel\Llm\LlmRoute
+    arguments:
+      $provider: 'primary'
+      $model: '%env(LLM_MODEL)%'
+
+  Kernel\Llm\LlmRoutingPolicy:
+    arguments:
+      $defaultRoutes:
+        - '@wave4.llm.primary_route'
+
+  Kernel\Llm\GovernedStructuredLlmClient:
+    arguments:
+      $providers: '@Kernel\Llm\LlmProviderRegistry'
+      $routing: '@Kernel\Llm\LlmRoutingPolicy'
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $resilience: '@Kernel\Resilience\ExternalCallExecutor'
+
+  Kernel\Agent\Service\StructuredAgentLlmClient:
+    arguments:
+      $client: '@Kernel\Llm\GovernedStructuredLlmClient'
+
+  App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
+    arguments:
+      $mode: '%env(COS_AGENT_LLM_MODE)%'
+      $production: '@Kernel\Agent\Service\StructuredAgentLlmClient'
+
+  Kernel\Agent\Contract\LlmClientInterface:
+    alias: App\Infrastructure\AI\EnvironmentSalesAgentLlmClient
+
+  Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRunRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $retentionDays: 30
+
+  Kernel\Agent\Contract\AgentRunRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRunRepository
+
+  Infrastructure\Platform\Persistence\MySql\Agent\MysqlDecisionRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Agent\Contract\DecisionRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Agent\MysqlDecisionRepository
+
+  Infrastructure\Platform\Persistence\MySql\Configuration\MysqlAgentConfigurationProvider:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Agent\Contract\AgentConfigurationProviderInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlAgentConfigurationProvider
+
+  Infrastructure\Platform\Persistence\MySql\Audit\MysqlAgentTraceRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Platform\Audit\Contract\AgentTraceRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Audit\MysqlAgentTraceRepository
+
+  Infrastructure\Audit\KernelAuditSink:
+    arguments:
+      $repository: '@Kernel\Audit\Contract\AuditRepositoryInterface'
+
+  Platform\Audit\Service\AuditRecorder:
+    arguments:
+      $sink: '@Infrastructure\Audit\KernelAuditSink'
+
+  Infrastructure\Audit\PlatformAgentAudit:
+    arguments:
+      $traces: '@Platform\Audit\Contract\AgentTraceRepositoryInterface'
+      $audit: '@Platform\Audit\Service\AuditRecorder'
+
+  Kernel\Agent\Contract\AgentAuditInterface:
+    alias: Infrastructure\Audit\PlatformAgentAudit
+
+  Kernel\Agent\Service\RoutedAgentContextBuilder:
+    arguments:
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+
+  Kernel\Agent\Service\StructuredDecisionValidator: ~
+
+  Kernel\Agent\Service\SensitiveContextRedactor: ~
+
+  Kernel\Agent\Service\AgentRuntime:
+    arguments:
+      $contexts: '@Kernel\Agent\Service\RoutedAgentContextBuilder'
+      $llm: '@Kernel\Agent\Contract\LlmClientInterface'
+      $validator: '@Kernel\Agent\Service\StructuredDecisionValidator'
+      $runs: '@Kernel\Agent\Contract\AgentRunRepositoryInterface'
+      $decisions: '@Kernel\Agent\Contract\DecisionRepositoryInterface'
+      $redactor: '@Kernel\Agent\Service\SensitiveContextRedactor'
+      $configurations: '@Kernel\Agent\Contract\AgentConfigurationProviderInterface'
+      $audit: '@Kernel\Agent\Contract\AgentAuditInterface'
+
+  App\Infrastructure\Automation\SalesActionProposalTool:
+    arguments:
+      $policies: '@Kernel\Policy\Service\ActionPolicyService'
+      $commands: '@Kernel\Application\Bus\CommandBusInterface'
+
+  Kernel\Tool\Service\ToolRegistry:
+    arguments:
+      $tools:
+        - '@App\Infrastructure\Automation\SalesActionProposalTool'
+
+  Kernel\Tool\Contract\ToolRegistryInterface:
+    alias: Kernel\Tool\Service\ToolRegistry
+
+  App\Infrastructure\Automation\SalesAgentToolPermissionChecker:
+    arguments:
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Kernel\Tool\Contract\ToolPermissionCheckerInterface:
+    alias: App\Infrastructure\Automation\SalesAgentToolPermissionChecker
+
+  Kernel\Tool\Service\JsonSchemaToolInputValidator: ~
+
+  Kernel\Tool\Contract\ToolInputValidatorInterface:
+    alias: Kernel\Tool\Service\JsonSchemaToolInputValidator
+
+  Infrastructure\Audit\PlatformToolAudit:
+    arguments:
+      $audit: '@Platform\Audit\Service\AuditRecorder'
+      $traces: '@Platform\Audit\Contract\AgentTraceRepositoryInterface'
+
+  Kernel\Tool\Contract\ToolAuditInterface:
+    alias: Infrastructure\Audit\PlatformToolAudit
+
+  Kernel\Tool\Service\ToolRuntime:
+    arguments:
+      $registry: '@Kernel\Tool\Contract\ToolRegistryInterface'
+      $permissions: '@Kernel\Tool\Contract\ToolPermissionCheckerInterface'
+      $validator: '@Kernel\Tool\Contract\ToolInputValidatorInterface'
+      $audit: '@Kernel\Tool\Contract\ToolAuditInterface'
+
+  Kernel\Tool\Contract\ToolRuntimeInterface:
+    alias: Kernel\Tool\Service\ToolRuntime
+
+  App\Application\Sales\Command\RunSalesAgentCommandHandler:
+    arguments:
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
+
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository:
     arguments:
       $connection: '@legacy_cos.pdo'
@@ -485,7 +665,6 @@ services:
     arguments:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
       $commandBus: '@command.bus'
-      $legacyJobs: '@Kernel\Queue\Contract\JobQueueInterface'
 
   Kernel\Rule\Service\RuleEngineEventHandler:
     arguments:

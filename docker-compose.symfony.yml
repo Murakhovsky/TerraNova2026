@@ -6,6 +6,11 @@ x-symfony-environment: &symfony-environment
   APP_SECRET: ${SYMFONY_APP_SECRET}
   COS_ORGANIZATION_ID: ${COS_ORGANIZATION_ID:-default}
   COS_SALES_AUTOMATION_SCHEDULER_ENABLED: ${COS_SALES_AUTOMATION_SCHEDULER_ENABLED:-1}
+  COS_AGENT_LLM_MODE: ${COS_AGENT_LLM_MODE:-http}
+  LLM_ENDPOINT: ${LLM_ENDPOINT:-}
+  LLM_TOKEN: ${LLM_TOKEN:-}
+  LLM_MODEL: ${LLM_MODEL:-}
+  LLM_PROVIDER: ${LLM_PROVIDER:-http}
   DATABASE_URL: "mysql://cos:${SYMFONY_DB_PASSWORD}@mysql:3306/cos_symfony?serverVersion=8.4.0&charset=utf8mb4"
   REDIS_URL: redis://redis:6379
   MESSENGER_TRANSPORT_DSN: redis://redis:6379/cos_async

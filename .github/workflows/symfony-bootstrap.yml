@@ -44,6 +44,11 @@ jobs:
       SYMFONY_LEGACY_DB_PASSWORD: ci-db-password
       COS_ORGANIZATION_ID: default
       COS_SALES_AUTOMATION_SCHEDULER_ENABLED: "0"
+      COS_AGENT_LLM_MODE: "fixture"
+      LLM_ENDPOINT: ""
+      LLM_TOKEN: ""
+      LLM_MODEL: "wave4-ci"
+      LLM_PROVIDER: "fixture"
     steps:
       - uses: actions/checkout@v4
 
@@ -141,6 +146,11 @@ jobs:
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave3.sql
+
+      - name: Seed Sales Wave 4 Agent Tool fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave4.sql
 
       - name: Verify Doctrine MySQL persistence boundary
         run: |
@@ -542,6 +552,11 @@ jobs:
               mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
               "SELECT id,type,status,attempts,last_error FROM cos_jobs ORDER BY created_at;"
             docker compose -f docker-compose.symfony.yml logs --no-color --tail=350 worker scheduler php mysql redis || true
+            docker compose -f docker-compose.symfony.yml exec -T worker sh -lc 'test -f var/log/prod.log && tail -n 350 var/log/prod.log || true' || true
+            docker compose -f docker-compose.symfony.yml exec -T php php bin/console messenger:failed:show --max=20 -vv || true
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT o.event_id,o.status,o.attempts,o.last_error,e.type,e.aggregate_type,e.aggregate_id,e.correlation_id FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id ORDER BY o.id;" || true
             exit 1
           fi
 
@@ -624,6 +639,95 @@ jobs:
           test "$non_sales_status_after" = "PENDING"
 
           echo "Sales Wave 3 deterministic Scheduler/Messenger automation runtime passed."
+
+      - name: Verify Sales Wave 4 Agent Tool cutover
+        run: |
+          php tests/architecture/symfony_sales_agent_wave4_boundary.php
+          php tests/unit/sales_wave4_agent_tool.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:messenger > /tmp/wave4-messenger.txt
+          grep -q 'RunSalesAgentCommand' /tmp/wave4-messenger.txt
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          INSERT INTO cos_events
+            (id,organization_id,type,aggregate_type,aggregate_id,payload,metadata,schema_version,
+             correlation_id,causation_id,actor_type,actor_id,occurred_at)
+          VALUES
+            ('wave4-call-event','default','sales.call.completed','deal','101',
+             JSON_OBJECT('status','completed','result','customer_interested'),
+             JSON_OBJECT('correlation_id','wave4-agent-corr'),1,
+             'wave4-agent-corr',NULL,'SYSTEM','wave4-fixture',NOW(6));
+          INSERT INTO cos_event_outbox(event_id,organization_id,status,available_at)
+          VALUES('wave4-call-event','default','PENDING',NOW(6));
+          SQL
+
+          docker compose -f docker-compose.symfony.yml exec -T php \
+            php bin/console cos:sales:automation:enqueue --organization=default --limit=200 --no-activity-hours=48
+
+          wave4_complete=0
+          for attempt in $(seq 1 90); do
+            agent_runs=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT COUNT(*) FROM cos_agent_runs WHERE organization_id='default' AND agent_name='sales_intelligence' AND correlation_id='wave4-agent-corr' AND status='COMPLETED';" | tr -d '[:space:]')
+            agent_actions=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT COUNT(*) FROM cos_actions WHERE organization_id='default' AND type='sales.request_manager_review' AND target_type='deal' AND target_id='101' AND source_type='AGENT' AND correlation_id='wave4-agent-corr' AND status='COMPLETED';" | tr -d '[:space:]')
+            if [ "$agent_runs" = "1" ] && [ "$agent_actions" = "1" ]; then
+              wave4_complete=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$wave4_complete" != "1" ]; then
+            echo "Wave 4 Agent -> Tool -> Sales flow did not complete."
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT id,agent_name,status,provider,model,correlation_id,error FROM cos_agent_runs ORDER BY created_at;"
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT id,type,target_type,target_id,source_type,source_id,status,correlation_id,last_error FROM cos_actions ORDER BY created_at;"
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT event_id,status,attempts,last_error FROM cos_event_outbox ORDER BY id;"
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=500 worker scheduler php mysql redis || true
+            docker compose -f docker-compose.symfony.yml exec -T worker sh -lc 'test -f var/log/prod.log && tail -n 500 var/log/prod.log || true' || true
+            docker compose -f docker-compose.symfony.yml exec -T php php bin/console messenger:failed:show --max=20 -vv || true
+            exit 1
+          fi
+
+          decisions=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_decisions WHERE organization_id='default' AND source_type='AGENT' AND subject_type='deal' AND subject_id='101' AND correlation_id='wave4-agent-corr';" | tr -d '[:space:]')
+          test "$decisions" = "1"
+
+          agent_tasks=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_client_case_activities WHERE organization_id='default' AND client_case_id=101 AND activity_type='task' AND title='Agent review of Sales opportunity';" | tr -d '[:space:]')
+          test "$agent_tasks" = "1"
+
+          trace_types=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(DISTINCT event_type) FROM cos_agent_trace_events t INNER JOIN cos_agent_runs r ON r.id=t.run_id WHERE r.organization_id='default' AND r.correlation_id='wave4-agent-corr' AND event_type IN ('reasoning_request','reasoning_result','decision','action','result','tool_call','tool_result');" | tr -d '[:space:]')
+          test "$trace_types" = "7"
+
+          tool_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND category='platform_activity' AND action='tool.execute' AND correlation_id='wave4-agent-corr' AND JSON_UNQUOTE(JSON_EXTRACT(changes,'$.tool'))='sales.action.propose';" | tr -d '[:space:]')
+          test "$tool_audit" = "1"
+
+          legacy_agent_jobs=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_jobs WHERE organization_id='default' AND type='AGENT_RUN' AND correlation_id='wave4-agent-corr';" | tr -d '[:space:]')
+          test "$legacy_agent_jobs" = "0"
+
+          event_status=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT status FROM cos_event_outbox WHERE event_id='wave4-call-event';" | tr -d '[:space:]')
+          test "$event_status" = "PUBLISHED"
+
+          echo "Sales Wave 4 Agent -> Tool -> Sales runtime passed without legacy AGENT_RUN jobs."
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php

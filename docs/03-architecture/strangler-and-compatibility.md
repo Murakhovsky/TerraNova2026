@@ -108,3 +108,72 @@ Symfony не дублює бізнес-правила. Tenant scope походи
 
 Канонічний опис: [Перенесення запису Sales](./sales-write-cutover.md).
 
+
+
+## 42. Друга фаза, хвиля 3 — deterministic Sales automation
+
+Третя business-cutover wave переносить Sales monitoring та deterministic automation у Symfony Scheduler + Messenger, але залишає Rule/Policy/Action business runtime канонічним і framework-independent.
+
+Канонічний execution path:
+
+```text
+Scheduler
+    ↓
+Messenger
+    ↓
+Sales detector
+    ↓
+Domain Event + Outbox
+    ↓
+Rule
+    ↓
+Policy
+    ↓
+Action
+    ↓
+Messenger
+    ↓
+Sales use case
+    ↓
+Audit
+```
+
+Wave 3 закритий тільки після tenant-safe/idempotent detector execution, Sales-only Outbox strangler boundary і end-to-end Docker smoke.
+
+## 43. Друга фаза, хвиля 4 — Agent → Tool → Sales
+
+Четверта business-cutover wave прибирає Symfony Sales agent execution із legacy `cos_jobs / AgentRunJobHandler` compatibility path.
+
+Канонічний Agent execution path:
+
+```text
+Sales Event
+    ↓
+Rule
+    ↓
+Symfony Messenger
+    ↓
+AgentRuntime
+    ↓
+structured Agent decision
+    ↓
+ToolRuntime
+    ↓
+sales.action.propose
+    ↓
+Policy
+    ↓
+Action
+    ↓
+Symfony Messenger
+    ↓
+Sales use case / CRM port
+    ↓
+Audit + Agent trace + Tool trace
+```
+
+Agent не отримує прямий write-доступ до CRM або Sales repositories. Write capability `sales.action.propose` є керованим Tool, який може лише передати структурований намір у канонічний Policy/Action lifecycle.
+
+Для Symfony cutover заборонено повертати `agent.run.*` у legacy `AGENT_RUN` job. Legacy queue залишається compatibility runtime лише для ще не перенесених entrypoints.
+
+CI використовує deterministic LLM adapter, але той самий Agent definition, output validation, ToolRuntime, Policy, Action handler та persistence contracts, що й production. Production default використовує HTTP structured LLM adapter через environment configuration.
