@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Application\Sales\Command\RunSalesAutomationCommand;
-use App\Application\System\Command\DrainSalesOutboxCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -42,11 +41,6 @@ final class EnqueueSalesAutomationCommand extends Command
             new RunSalesAutomationCommand($organization !== '' ? $organization : null, $hours, $limit, 'manual'),
             [new TransportNamesStamp(['async'])],
         );
-        $this->commandBus->dispatch(
-            new DrainSalesOutboxCommand($limit, 'manual-sales-outbox'),
-            [new TransportNamesStamp(['async'])],
-        );
-
         $output->writeln('Sales automation cycle queued.');
 
         return Command::SUCCESS;
