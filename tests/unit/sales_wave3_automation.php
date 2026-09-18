@@ -2,7 +2,24 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-require $root . '/vendor/autoload.php';
+$autoload = $root . '/vendor/autoload.php';
+if (is_file($autoload)) {
+    require $autoload;
+} else {
+    spl_autoload_register(static function (string $class) use ($root): void {
+        foreach ([
+            'Kernel\\' => '/app/Kernel/',
+            'Platform\\' => '/app/Platform/',
+            'Domains\\' => '/app/Domains/',
+            'Infrastructure\\' => '/app/Infrastructure/',
+        ] as $prefix => $directory) {
+            if (!str_starts_with($class, $prefix)) continue;
+            $file = $root . $directory . str_replace('\\\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) require $file;
+            return;
+        }
+    });
+}
 
 use DateTimeImmutable;
 use Domains\Sales\Application\Contract\LeadFollowupRepositoryInterface;
