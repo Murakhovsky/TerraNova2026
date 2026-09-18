@@ -552,6 +552,11 @@ jobs:
               mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
               "SELECT id,type,status,attempts,last_error FROM cos_jobs ORDER BY created_at;"
             docker compose -f docker-compose.symfony.yml logs --no-color --tail=350 worker scheduler php mysql redis || true
+            docker compose -f docker-compose.symfony.yml exec -T worker sh -lc 'test -f var/log/prod.log && tail -n 350 var/log/prod.log || true' || true
+            docker compose -f docker-compose.symfony.yml exec -T php php bin/console messenger:failed:show --max=20 -vv || true
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT o.event_id,o.status,o.attempts,o.last_error,e.type,e.aggregate_type,e.aggregate_id,e.correlation_id FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id ORDER BY o.id;" || true
             exit 1
           fi
 
@@ -687,6 +692,8 @@ jobs:
               mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
               "SELECT event_id,status,attempts,last_error FROM cos_event_outbox ORDER BY id;"
             docker compose -f docker-compose.symfony.yml logs --no-color --tail=500 worker scheduler php mysql redis || true
+            docker compose -f docker-compose.symfony.yml exec -T worker sh -lc 'test -f var/log/prod.log && tail -n 500 var/log/prod.log || true' || true
+            docker compose -f docker-compose.symfony.yml exec -T php php bin/console messenger:failed:show --max=20 -vv || true
             exit 1
           fi
 
