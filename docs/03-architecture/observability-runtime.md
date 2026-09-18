@@ -29,3 +29,7 @@ Kernel\Observability\StructuredLoggerInterface
 ```
 
 Symfony-specific subscriber живе в Infrastructure.
+
+## Межі відповідальності
+
+Correlation context не замінює Audit. Observability описує виконання request і runtime-поведінку; Audit фіксує значущі дії, рішення та зміни стану. Correlation id може зв'язувати ці записи, але не перетворює технічний log на бізнес-аудит.
