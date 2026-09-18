@@ -7,6 +7,7 @@ $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
 $declared = [];
+$domainIdsByDirectory = [];
 foreach (glob($root . '/app/Domains/*/module.php') ?: [] as $moduleFile) {
     $raw = require $moduleFile;
     if (!is_array($raw)) {
@@ -14,6 +15,7 @@ foreach (glob($root . '/app/Domains/*/module.php') ?: [] as $moduleFile) {
     }
     $definition = ModuleDefinition::fromArray($raw, $moduleFile);
     $domain = $definition->manifest->id;
+    $domainIdsByDirectory[basename(dirname($moduleFile))] = $domain;
     foreach ($definition->contributions->crossDomainContracts as $contract) {
         $consumer = $contract->consumerDomain($domain);
         $provider = $contract->providerDomain($domain);
@@ -62,7 +64,7 @@ $violations = [];
 $domainDirectories = glob($root . '/app/Domains/*', GLOB_ONLYDIR) ?: [];
 foreach ($domainDirectories as $domainDirectory) {
     $sourceDomain = basename($domainDirectory);
-    $sourceId = strtolower($sourceDomain);
+    $sourceId = $domainIdsByDirectory[$sourceDomain] ?? strtolower($sourceDomain);
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($domainDirectory));
 
     foreach ($iterator as $file) {
@@ -82,7 +84,8 @@ foreach ($domainDirectories as $domainDirectory) {
             if (!preg_match('/^Domains\\\\([A-Z][A-Za-z0-9]*)\\\\/', $fqcn, $targetMatch)) {
                 continue;
             }
-            $targetId = strtolower($targetMatch[1]);
+            $targetNamespace = $targetMatch[1];
+            $targetId = $domainIdsByDirectory[$targetNamespace] ?? strtolower($targetNamespace);
             if ($targetId === $sourceId) {
                 continue;
             }
