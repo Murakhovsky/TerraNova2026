@@ -35,6 +35,15 @@ CREATE TABLE IF NOT EXISTS tn_real_estate_offers (
     KEY ix_real_estate_offer_case (organization_id, case_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS tn_real_estate_operation_receipts (
+    organization_id VARCHAR(64) NOT NULL,
+    operation_type VARCHAR(80) NOT NULL,
+    idempotency_key VARCHAR(191) NOT NULL,
+    payload_fingerprint CHAR(64) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (organization_id, operation_type, idempotency_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS tn_real_estate_showings (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     organization_id VARCHAR(64) NOT NULL,
