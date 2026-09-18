@@ -23,5 +23,6 @@ $di->setShared('realEstateWorkflow', fn (): RealEstateWorkflowService => new Rea
     $this->getShared('propertyInventoryCommands'),
     $this->getShared('eventBus'),
     $this->getShared('cosTransactionManager'),
+    $this->getShared('cosAuditRepository'),
 ));
 $di->setShared('realEstateDomainModule', fn (): RealEstateDomainModule => new RealEstateDomainModule());
