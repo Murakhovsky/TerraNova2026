@@ -172,6 +172,13 @@ services:
   Domains\Property\Application\Contract\PropertyInventoryCommandInterface:
     alias: Domains\Property\Application\Service\CanonicalPropertyInventoryCommands
 
+  App\Infrastructure\Persistence\Property\PdoPropertyMutationReceipt:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Property\Application\Contract\PropertyMutationReceiptInterface:
+    alias: App\Infrastructure\Persistence\Property\PdoPropertyMutationReceipt
+
   Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateRepository:
     arguments:
       $connection: '@legacy_cos.pdo'
