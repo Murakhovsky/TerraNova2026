@@ -60,8 +60,37 @@ final readonly class DiagnosticController
     public function recommendations(string $id):JsonResponse{$c=$this->readContext(false);if($c instanceof JsonResponse)return $c;return $this->dispatch(fn()=>$this->queries->ask(new GetDiagnosticRecommendationsQuery($c->organizationId(),$id)));}
     public function recommendationAction(Request $request,string $id,string $recommendationId):JsonResponse
     {
-        $c=$this->mutationContext($request,true);if($c instanceof JsonResponse)return $c;$key=$this->idempotencyKey($request);if($key instanceof JsonResponse)return $key;
-        return $this->dispatch(fn()=>$this->commands->dispatch(new AcceptDiagnosticRecommendationCommand($c->organizationId(),(int)$c->userId()->value(),$id,$recommendationId,$this->correlationId($request))),202);
+        $c=$this->mutationContext($request,true);
+        if($c instanceof JsonResponse)return $c;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        $input=$this->input($request);
+        $ownerId=(int)($input['owner_id']??0);
+        if($ownerId<=0)return $this->error(422,'owner_id_required','A positive owner_id is required.');
+
+        $rawDueAt=trim((string)($input['due_at']??''));
+        if($rawDueAt==='')return $this->error(422,'due_at_required','due_at is required.');
+        try{$dueAt=new \DateTimeImmutable($rawDueAt);}catch(\Throwable){
+            return $this->error(422,'invalid_due_at','due_at must be a valid date-time.');
+        }
+        if($dueAt<=new \DateTimeImmutable())return $this->error(422,'invalid_due_at','due_at must be in the future.');
+
+        $workflowCode=trim((string)($input['workflow_code']??\Domains\Diagnostic\Application\UseCase\AcceptDiagnosticRecommendation::WORKFLOW));
+        if($workflowCode===''||preg_match('/^[a-z][a-z0-9._:-]*$/',$workflowCode)!==1){
+            return $this->error(422,'invalid_workflow_code','workflow_code is invalid.');
+        }
+
+        return $this->dispatch(fn()=>$this->commands->dispatch(new AcceptDiagnosticRecommendationCommand(
+            $c->organizationId(),
+            (int)$c->userId()->value(),
+            $id,
+            $recommendationId,
+            $ownerId,
+            $dueAt,
+            $workflowCode,
+            $this->correlationId($request),
+        )),202);
     }
 
     private function readContext(bool $manage):TenantContext|JsonResponse

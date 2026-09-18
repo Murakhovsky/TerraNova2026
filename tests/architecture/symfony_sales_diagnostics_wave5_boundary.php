@@ -10,6 +10,7 @@ foreach(['/api/v1/diagnostics','/api/v1/diagnostics/{id}','/api/v1/diagnostics/{
 $controller=$read('symfony/src/Http/Api/V1/Controller/DiagnosticController.php');
 foreach(['CommandBusInterface','QueryBusInterface','TenantContextProviderInterface','LegacySessionCsrfValidator','ActiveModuleResolver','TenantPermissions::MANAGE','X-Idempotency-Key','_cos_correlation_id'] as $needle)$assert(str_contains($controller,$needle),'Controller boundary missing: '.$needle);
 $assert(!str_contains($controller,'PDO'),'Diagnostic controller must not access PDO.');
+foreach(['owner_id_required','due_at_required','invalid_workflow_code'] as $needle)$assert(str_contains($controller,$needle),'Recommendation operational assignment validation missing: '.$needle);
 
 $pipeline=$read('app/Domains/Diagnostic/Application/Service/DiagnosticEvidencePipeline.php');
 foreach(['EvidenceType::tryFrom','CaptureDiagnosticEvidence','contradictions','facts_ingested','metrics_ingested'] as $needle)$assert(str_contains($pipeline,$needle),'Evidence pipeline missing: '.$needle);
@@ -31,7 +32,7 @@ foreach([
 }
 
 $accept=$read('app/Domains/Diagnostic/Application/UseCase/AcceptDiagnosticRecommendation.php');
-foreach(['ActionService','IMPLEMENT_DIAGNOSTIC_RECOMMENDATION','APPROVAL_REQUIRED'] as $needle)$assert(str_contains($accept,$needle),'Recommendation → Action missing: '.$needle);
+foreach(['ActionService','IMPLEMENT_DIAGNOSTIC_RECOMMENDATION','APPROVAL_REQUIRED',"'owner_id'=>","'due_at'=>","'workflow_code'=>"] as $needle)$assert(str_contains($accept,$needle),'Recommendation → Action missing: '.$needle);
 
 $services=$read('symfony/config/services.yaml');
 foreach(['Domains\\Diagnostic\\Bootstrap\\DiagnosticDomainModule','Domains\\Diagnostic\\Application\\Contract\\DiagnosticRuntimeRepositoryInterface','diagnostic.action-outcome.v1'] as $needle)$assert(str_contains($services,$needle),'Symfony wiring missing: '.$needle);

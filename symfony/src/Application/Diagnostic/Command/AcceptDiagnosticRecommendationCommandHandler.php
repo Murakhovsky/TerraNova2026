@@ -21,7 +21,14 @@ final readonly class AcceptDiagnosticRecommendationCommandHandler implements Com
     {
         return $this->transactions->transactional(function () use ($command): array {
             $org=$command->organizationId->value();
-            $result=$this->runtime->accept($org,$command->sessionId,$command->recommendationId);
+            $result=$this->runtime->accept(
+                $org,
+                $command->sessionId,
+                $command->recommendationId,
+                $command->ownerId,
+                $command->dueAt,
+                $command->workflowCode,
+            );
             if(($result['replayed']??false)!==true){
                 $this->audit->record($org,$command->actorId,$command->correlationId,'diagnostic.recommendation_to_action',$command->sessionId,['recommendation_id'=>$command->recommendationId,'action_id'=>$result['action_id']??null]);
             }

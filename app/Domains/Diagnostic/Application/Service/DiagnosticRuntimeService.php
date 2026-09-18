@@ -221,15 +221,39 @@ final readonly class DiagnosticRuntimeService
         return $report;
     }
 
-    public function accept(string $organizationId,string $sessionId,string $recommendationId):array
+    public function accept(
+        string $organizationId,
+        string $sessionId,
+        string $recommendationId,
+        ?int $ownerId=null,
+        ?DateTimeImmutable $dueAt=null,
+        string $workflowCode=AcceptDiagnosticRecommendation::WORKFLOW,
+    ):array
     {
         $row=$this->runtime->recommendation($organizationId,$sessionId,$recommendationId)??throw new DomainException('Recommendation was not found.');
+        $expectedAssignment=$ownerId!==null&&$dueAt!==null?[
+            'owner_id'=>$ownerId,
+            'due_at'=>$dueAt->format(DATE_ATOM),
+            'workflow_code'=>$workflowCode,
+        ]:null;
+
         if(trim((string)($row['action_id']??''))!==''){
+            $stored=is_array($row['payload']['action_assignment']??null)?$row['payload']['action_assignment']:null;
+            if($expectedAssignment!==null && $stored!==$expectedAssignment){
+                throw new DomainException('Recommendation already has an action with a different operational assignment.');
+            }
             return ['recommendation'=>$row['payload'],'action_id'=>(string)$row['action_id'],'action_status'=>'EXISTING','replayed'=>true];
         }
+
         $r=$this->recommendationFromArray($row['payload']);
-        $action=$this->acceptRecommendation->execute($organizationId,$sessionId,$r);
+        $action=$this->acceptRecommendation->execute($organizationId,$sessionId,$r,$ownerId,$dueAt,$workflowCode);
         $payload=$this->recommendationArray($r);
+        $payload['action_assignment']=[
+            'owner_id'=>$action->parameters['owner_id']??null,
+            'owner_role'=>$action->parameters['owner_role']??null,
+            'due_at'=>$action->parameters['due_at']??null,
+            'workflow_code'=>$action->parameters['workflow_code']??null,
+        ];
         $this->runtime->saveRecommendation($organizationId,$sessionId,$recommendationId,$payload,$r->status->value,new DateTimeImmutable(),$action->id);
         return ['recommendation'=>$payload,'action_id'=>$action->id,'action_status'=>$action->status->value,'replayed'=>false];
     }

@@ -82,6 +82,8 @@ Mutation endpoints вимагають:
 
 ## Перехід Recommendation → Action
 
+Recommendation не є кінцевим артефактом. Канонічний Symfony write вимагає конкретні `owner_id` і `due_at`; `workflow_code` за замовчуванням дорівнює `diagnostic.recommendation.implementation`. Повторне призначення тієї самої Recommendation з іншими operational assignment даними відхиляється як conflict.
+
 Recommendation не є кінцевим артефактом:
 
 ```text
