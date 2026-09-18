@@ -19,6 +19,7 @@ final readonly class AddSalesOpportunityActivityCommandHandler implements Comman
             $command->opportunityId,
             $command->input,
             $command->actorId,
+            $command->correlationId,
         );
     }
 }
