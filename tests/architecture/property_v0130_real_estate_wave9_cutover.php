@@ -30,7 +30,7 @@ foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings
 }
 
 $workflow=$read('app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php');
-foreach(['SalesOpportunityReferenceInterface','PropertyReferencePort','PropertyInventoryCommandInterface','createCase(','createOffer(','createShowing(','events->publish'] as $needle){
+foreach(['SalesOpportunityReferenceInterface','PropertyReferencePort','PropertyInventoryCommandInterface','AuditRepositoryInterface','createCase(','createOffer(','createShowing(','events->publish','appendAudit'] as $needle){
     $assert(str_contains($workflow,$needle),'RealEstate workflow missing boundary/runtime behavior: '.$needle);
 }
 $assert(!preg_match('/\btn_(?:property|sales|crm)_/i',$workflow),'RealEstate application service must not read another domain tables directly.');
@@ -74,6 +74,9 @@ foreach([
 ] as $route){
     $assert(str_contains($routes,$route),'Wave 9 Symfony route missing: '.$route);
 }
+
+$propertyHandler=$read('symfony/src/Application/Property/Command/PropertyMutationCommandHandler.php');
+$assert(str_contains($propertyHandler,'AuditRepositoryInterface')&&str_contains($propertyHandler,'transactions->transactional'),'Property mutations must audit inside the shared transaction.');
 
 $propertyController=$read('symfony/src/Http/Api/V1/Controller/PropertyController.php');
 $realEstateController=$read('symfony/src/Http/Api/V1/Controller/RealEstateController.php');
