@@ -883,6 +883,13 @@ services:
   Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel
 
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Approval\Contract\ApprovalAuthorityInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority
+
   Kernel\Approval\Service\ApprovalService:
     arguments:
       $approvals: '@Kernel\Approval\Contract\ApprovalRepositoryInterface'
@@ -890,7 +897,7 @@ services:
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
       $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
       $queue: null
-      $authority: null
+      $authority: '@Kernel\Approval\Contract\ApprovalAuthorityInterface'
 
 
   # Sales Wave 7 — Frontend admin cutover
