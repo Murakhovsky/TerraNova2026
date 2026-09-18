@@ -45,7 +45,7 @@ Write-сценарії вимагають tenant `MANAGE`, активний Sale
 
 Configuration writes виконуються транзакційно. Semantic idempotency використовує canonical payload hash: той самий key з тим самим payload є replay, а той самий key з іншим payload повертає conflict.
 
-## CRM webhook ingress
+## Приймання CRM webhook
 
 Канонічний шлях inbound event:
 
@@ -73,7 +73,7 @@ Webhook secret визначається за конкретними `integration
 
 Підпис обчислюється як HMAC-SHA256 від raw HTTP body. Credential references зберігаються як references на зовнішні secrets і не повертаються через API.
 
-## Idempotency inbound events
+## Ідемпотентність вхідних подій
 
 Унікальна зовнішня identity:
 
@@ -105,7 +105,7 @@ ProcessCrmInboxCommand
 
 Messenger використовує наявну retry policy та failed transport.
 
-## Communications
+## Комунікації
 
 Outbound communication проходить через канонічний Sales operation:
 
@@ -153,7 +153,7 @@ Communications:
 - opportunity завжди перевіряється persistence layer у межах organization;
 - mutation проходить через existing SalesOperationService, а не прямий SQL з controller.
 
-## Definition of Done Wave 6
+## Критерії завершення Wave 6
 
 Wave 6 вважається завершеним, коли одночасно виконуються:
 
