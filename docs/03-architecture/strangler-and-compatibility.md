@@ -24,7 +24,7 @@ Legacy база не стає Domain API. Symfony composition root явно зв
 
 Новий HTTP або Console код не може бачити `PDO`, SQL або `legacy_cos.pdo`.
 
-## 34. Strangler migration
+## 34. Перехід методом strangler
 
 Перший бізнесовий Symfony slice після системних probes:
 
@@ -50,7 +50,7 @@ Tenant береться із `TenantContext`, а не з query parameter або 
 
 Існуючий frontend не переписується. Новий versioned endpoint додається паралельно; старий UI може переходити на нього окремим slice без одночасної зміни URL, payload і persistence.
 
-## 36. Console
+## 36. Консольні команди
 
 Symfony Console стає канонічною точкою для нових operational commands. `cos:sales:client-case-stats --organization=...` використовує той самий QueryBus і той самий Application handler, що й HTTP. CLI не отримує окремої бізнес-логіки.
 

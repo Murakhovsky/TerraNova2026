@@ -9,7 +9,7 @@ contract: architecture-v1
 
 # Надійність Symfony runtime
 
-## 38. Runtime hardening
+## 38. Посилення надійності runtime
 
 `worker` і `scheduler` є окремими first-class processes одного Symfony image.
 
