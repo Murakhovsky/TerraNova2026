@@ -26,7 +26,8 @@ CREATE TABLE sales_deal_stage_history (
     correlation_id VARCHAR(128) NULL,
     history_quality VARCHAR(32) NOT NULL,
     projected_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    KEY idx_wave3_history_open (organization_id, deal_id, left_at)
+    KEY idx_wave3_history_open (organization_id, deal_id, left_at),
+    UNIQUE KEY uq_wave3_history_event (organization_id, source_event_id)
 );
 
 INSERT INTO sales_stage_metric_thresholds
@@ -47,6 +48,7 @@ VALUES
 
 -- Kernel deterministic runtime tables required by Symfony Wave 3.
 ALTER TABLE cos_actions
+    MODIFY COLUMN created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     ADD COLUMN source_type VARCHAR(32) NOT NULL DEFAULT 'SYSTEM' AFTER parameters,
     ADD COLUMN execution_mode VARCHAR(32) NOT NULL DEFAULT 'MANUAL' AFTER status,
     ADD COLUMN idempotency_key VARCHAR(191) NULL AFTER risk_level,
