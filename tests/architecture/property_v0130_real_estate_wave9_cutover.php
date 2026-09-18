@@ -61,6 +61,11 @@ foreach([
 ] as $needle){
     $assert(str_contains($symfonyServices,$needle),'Symfony Wave 9 DI missing: '.$needle);
 }
+$ownership=$read('app/Infrastructure/Platform/Persistence/TableOwnership.php');
+foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings','tn_real_estate_operation_receipts'] as $table){
+    $assert(str_contains($ownership,"'".$table."'"),'RealEstate table ownership missing: '.$table);
+}
+
 $kernel=$read('app/config/services_kernel.php');
 $assert(str_contains($kernel,'RealEstateServices.php'),'Common composition root must load RealEstate runtime.');
 
@@ -115,6 +120,7 @@ foreach([$propertyController,$realEstateController] as $controller){
     $assert(str_contains($controller,'X-Idempotency-Key'),'Wave 9 consequential writes must expose idempotency boundary.');
     $assert(str_contains($controller,'TenantContextProviderInterface'),'Wave 9 API must derive tenant from authenticated context.');
     $assert(str_contains($controller,'ActiveModuleResolver'),'Wave 9 API must enforce module activation.');
+    $assert(str_contains($controller,'TenantPermissions::MANAGE'),'Wave 9 mutations must require tenant manage permission.');
 }
 $assert(!str_contains($propertyController,'PropertyMutationCommand'),'Property controller must dispatch explicit business commands.');
 $assert(!str_contains($realEstateController,'RealEstateMutationCommand'),'RealEstate controller must dispatch explicit business commands.');
