@@ -14,7 +14,7 @@ if (is_file($autoload)) {
             'Infrastructure\\' => '/app/Infrastructure/',
         ] as $prefix => $directory) {
             if (!str_starts_with($class, $prefix)) continue;
-            $file = $root . $directory . str_replace('\\\\', '/', substr($class, strlen($prefix))) . '.php';
+            $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
             if (is_file($file)) require $file;
             return;
         }
