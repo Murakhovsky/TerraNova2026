@@ -659,12 +659,47 @@ jobs:
           php tests/architecture/symfony_sales_automation_wave3_boundary.php
           php tests/unit/sales_attention_detectors.php
           php tests/unit/sales_wave3_automation.php
+          php tests/unit/sales_wave3_outbox_drainer.php
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
 
           docker compose -f docker-compose.symfony.yml exec -e COS_SALES_AUTOMATION_SCHEDULER_ENABLED=1 -T php \
             php bin/console debug:scheduler cos > /tmp/wave3-scheduler.txt
           grep -q 'RunSalesAutomationCommand' /tmp/wave3-scheduler.txt
           grep -q 'DrainSalesOutboxCommand' /tmp/wave3-scheduler.txt
+
+          # Wave 3 owns its detector preconditions. Earlier Wave 6 communication
+          # scenarios legitimately touch Deal 101, so restore the stale-deal
+          # snapshot immediately before the automation scenario instead of
+          # depending on fixture seed order.
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          UPDATE tn_client_cases
+          SET status='active',
+              stage_id=10,
+              stage='new',
+              assigned_user_id=1001,
+              last_activity_at=NOW(6)-INTERVAL 3 DAY,
+              next_contact_at=NOW(6)-INTERVAL 2 HOUR
+          WHERE organization_id='default' AND id=101;
+
+          UPDATE sales_deal_stage_history
+          SET entered_at=NOW(6)-INTERVAL 3 DAY,
+              left_at=NULL,
+              history_quality='COMPLETE'
+          WHERE id='wave3-default-101' AND organization_id='default' AND deal_id='101';
+
+          UPDATE tn_client_case_activities
+          SET due_at=NOW(6)-INTERVAL 2 HOUR,
+              completed_at=NULL
+          WHERE organization_id='default'
+            AND client_case_id=101
+            AND activity_type='followup'
+            AND title='Wave 3 overdue follow-up';
+
+          DELETE FROM sales_operation_receipts
+          WHERE organization_id='default'
+            AND operation_type IN ('no_activity','followup_missed','deal_stuck');
+          SQL
 
           csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
           status=$(curl --silent --show-error --output /tmp/wave3-lead.json --write-out '%{http_code}' \
