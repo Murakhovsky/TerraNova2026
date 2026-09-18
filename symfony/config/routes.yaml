@@ -59,3 +59,8 @@ cos_api_v1_status:
   path: /api/v1/status
   controller: App\Http\Api\V1\Controller\ApiStatusController
   methods: [GET]
+
+cos_api_v1_sales_client_case_stats:
+  path: /api/v1/sales/client-cases/stats
+  controller: App\Http\Api\V1\Controller\SalesClientCaseStatsController
+  methods: [GET]

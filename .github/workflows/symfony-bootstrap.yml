@@ -87,6 +87,37 @@ jobs:
             ('default', 1001, 'manager', 'ACTIVE'),
             ('default', 1002, 'realtor', 'ACTIVE'),
             ('other-org', 1003, 'manager', 'ACTIVE');
+
+          CREATE TABLE sales_pipelines (
+            id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+            organization_id VARCHAR(190) NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            is_default TINYINT(1) NOT NULL DEFAULT 0
+          );
+          CREATE TABLE sales_pipeline_stages (
+            id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+            pipeline_id BIGINT UNSIGNED NOT NULL,
+            organization_id VARCHAR(190) NOT NULL,
+            code VARCHAR(64) NOT NULL,
+            sort_order INT NOT NULL DEFAULT 0
+          );
+          CREATE TABLE tn_client_cases (
+            id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+            organization_id VARCHAR(190) NOT NULL,
+            stage_id BIGINT UNSIGNED NULL,
+            stage VARCHAR(64) NOT NULL
+          );
+          INSERT INTO sales_pipelines (id, organization_id, status, is_default) VALUES
+            (1, 'default', 'ACTIVE', 1),
+            (2, 'other-org', 'ACTIVE', 1);
+          INSERT INTO sales_pipeline_stages (id, pipeline_id, organization_id, code, sort_order) VALUES
+            (10, 1, 'default', 'NEW', 10),
+            (11, 1, 'default', 'WON', 20),
+            (20, 2, 'other-org', 'NEW', 10);
+          INSERT INTO tn_client_cases (id, organization_id, stage_id, stage) VALUES
+            (101, 'default', 10, 'new'),
+            (102, 'default', 11, 'won'),
+            (201, 'other-org', 20, 'new');
           SQL
           docker run --rm -v cos_php_sessions:/sessions alpine:3.21 sh -c '
             printf "%s" "tn_auth_user_id|i:1001;cos_organization_id|s:7:\"default\";" > /sessions/sess_ci-manager-session0001
@@ -135,6 +166,21 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_contract.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_controller_boundary.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_request_mapper.php
+
+      - name: Verify Sales strangler slice
+        run: |
+          php tests/architecture/symfony_sales_strangler_boundary.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/sales_strangler_query_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:sales:client-case-stats --organization=default > /tmp/sales-cli.json
+          grep -q '"all": 2' /tmp/sales-cli.json
+          status=$(curl --silent --show-error --output /tmp/sales-stats.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/client-cases/stats)
+          test "$status" = "200"
+          grep -q '"organization_id":"default"' /tmp/sales-stats.json
+          grep -q '"all":2' /tmp/sales-stats.json
+          grep -q '"NEW":1' /tmp/sales-stats.json
+          grep -q '"WON":1' /tmp/sales-stats.json
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php
