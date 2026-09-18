@@ -19,6 +19,19 @@ ALTER TABLE cos_decisions
     ADD KEY idx_wave4_decision_source (organization_id,source_type,source_id),
     ADD KEY idx_wave4_decision_correlation (organization_id,correlation_id);
 
+CREATE TABLE tn_client_case_property_matches (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id VARCHAR(190) NOT NULL,
+    client_case_id BIGINT UNSIGNED NOT NULL,
+    property_id BIGINT UNSIGNED NOT NULL,
+    match_status VARCHAR(32) NOT NULL DEFAULT 'suggested',
+    score DECIMAL(8,4) NULL,
+    note VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_wave4_case_property (organization_id,client_case_id,property_id)
+);
+
 CREATE TABLE cos_agent_runs (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     organization_id VARCHAR(190) NOT NULL,
