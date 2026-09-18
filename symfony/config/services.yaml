@@ -69,6 +69,11 @@ services:
     arguments:
       $messageBus: '@command.bus'
 
+  App\Application\Sales\Command\RunSalesAutomationCommandHandler:
+    arguments:
+      $automation: '@Domains\Sales\Application\Service\SalesAutomationRunner'
+      $commandBus: '@command.bus'
+
   App\Infrastructure\Messenger\SymfonyQueryBus:
     arguments:
       $messageBus: '@query.bus'
