@@ -137,6 +137,9 @@ services:
   Domains\Property\Contract\PropertyReferencePort:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort
 
+  Domains\Property\Contract\PropertyBrokerageReferencePort:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort
+
   # Wave 9 — Property / RealEstate business cutover
   Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRuntimeRepository:
     arguments:
