@@ -343,7 +343,11 @@ jobs:
             --data '{"priority":"high","owner_id":1001}' \
             "http://127.0.0.1:8081/api/v1/sales/leads/$lead_id/opportunity")
           echo "Convert Lead HTTP $status"; cat /tmp/wave2-convert.json; echo
-          test "$status" = "201"
+          if [ "$status" != "201" ]; then
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 php nginx mysql || true
+            docker compose -f docker-compose.symfony.yml exec -T php sh -lc 'test -f var/log/prod.log && tail -n 250 var/log/prod.log || true' || true
+            exit 1
+          fi
           opportunity_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave2-convert.json"),true); echo (int)($j["data"]["case_id"]??0);')
           test "$opportunity_id" -gt 0
 
