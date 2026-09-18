@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.13.0',
+    'version' => '0.12.0',
     'schema_version' => '0.12.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Canonical Property registry with tenant-safe Asset, Inventory and Listing runtime, Symfony business read/write cutover, history, intelligence, network interoperability and one-way legacy compatibility projection.',
