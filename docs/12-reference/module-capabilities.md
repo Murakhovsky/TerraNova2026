@@ -20,12 +20,29 @@ generated: true
 
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
+| `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
+| `real_estate` | Real Estate | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | property | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
 | `service` | Service | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Service/module.php` |
+
+## Construction (`construction`)
+
+**Опис із manifest:** Construction delivery boundary for projects, sites, objects, estimates, contractors, work, materials, milestones and inspections.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+Manifest capabilities не задекларовані.
 
 ## Diagnostics (`diagnostic`)
 
@@ -44,6 +61,20 @@ Manifest capabilities не задекларовані.
 ## Finance (`finance`)
 
 **Опис із manifest:** Finance boundary for accounts, transactions, invoices, payments, budgets, expenses and revenue.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+Manifest capabilities не задекларовані.
+
+## HR (`hr`)
+
+**Опис із manifest:** Human-resources boundary for employees, positions, candidates, recruitment, onboarding and performance.
 
 - runtime service модуля: —;
 - обробники jobs: —;
@@ -97,6 +128,20 @@ Manifest capabilities не задекларовані.
 - `property.registry`;
 - `property.runtime.canonical`;
 - `property.write`;
+
+## Real Estate (`real_estate`)
+
+**Опис із manifest:** Brokerage orchestration boundary over canonical Property assets without duplicating the Property registry.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+Manifest capabilities не задекларовані.
 
 ## Sales (`sales`)
 

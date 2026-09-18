@@ -16,12 +16,19 @@ generated: true
 
 | Модуль | Точок входу |
 | --- | ---: |
+| `construction` | 0 |
 | `diagnostic` | 10 |
 | `finance` | 0 |
+| `hr` | 0 |
 | `procurement` | 0 |
 | `property` | 2 |
+| `real_estate` | 0 |
 | `sales` | 7 |
 | `service` | 0 |
+
+## Construction (`construction`)
+
+Точок входу Application UseCase не знайдено.
 
 ## Diagnostics (`diagnostic`)
 
@@ -42,6 +49,10 @@ generated: true
 
 Точок входу Application UseCase не знайдено.
 
+## HR (`hr`)
+
+Точок входу Application UseCase не знайдено.
+
 ## Procurement (`procurement`)
 
 Точок входу Application UseCase не знайдено.
@@ -52,6 +63,10 @@ generated: true
 | --- | --- |
 | `PropertyModerationService` | `app/Domains/Property/Application/UseCase/PropertyModerationService.php` |
 | `PropertySubmissionService` | `app/Domains/Property/Application/UseCase/PropertySubmissionService.php` |
+
+## Real Estate (`real_estate`)
+
+Точок входу Application UseCase не знайдено.
 
 ## Sales (`sales`)
 

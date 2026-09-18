@@ -14,12 +14,21 @@ generated: true
 
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
+| `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `0.6.1` | — | 0 |
 | `finance` | `0.1.0` | — | 0 |
+| `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 16 |
+| `real_estate` | `0.1.0` | — | 0 |
 | `sales` | `0.8.6` | `salesModuleConfigurationProvisioner` | 10 |
 | `service` | `0.1.0` | — | 0 |
+
+## `construction`
+
+- manifest: `app/Domains/Construction/module.php`;
+- configuration provisioners: —;
+- capabilities: —.
 
 ## `diagnostic`
 
@@ -30,6 +39,12 @@ generated: true
 ## `finance`
 
 - manifest: `app/Domains/Finance/module.php`;
+- configuration provisioners: —;
+- capabilities: —.
+
+## `hr`
+
+- manifest: `app/Domains/HR/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
 
@@ -44,6 +59,12 @@ generated: true
 - manifest: `app/Domains/Property/module.php`;
 - configuration provisioners: `propertyModuleConfigurationProvisioner`;
 - capabilities: `property.registry`, `property.read`, `property.write`, `property.intake`, `property.media`, `property.catalog`, `property.inventory`, `property.listing`, `property.publish`, `property.history`, `property.reference`, `property.analytics`, `property.intelligence`, `property.network`, `property.identity.review`, `property.runtime.canonical`.
+
+## `real_estate`
+
+- manifest: `app/Domains/RealEstate/module.php`;
+- configuration provisioners: —;
+- capabilities: —.
 
 ## `sales`
 
