@@ -33,7 +33,7 @@ RealEstate володіє brokerage case, match, offer і viewing. Sales зал�
 Sales Opportunity
       ↓  SalesOpportunityReferenceInterface
 RealEstate
-      ↓  PropertyReferencePort
+      ↓  PropertyBrokerageReferencePort
 Property facts
       ↓
 RealEstate Match → Offer → Viewing
@@ -70,7 +70,7 @@ RealEstateWorkflowService::match()
   ↓
 SalesOpportunityReferenceInterface
   ↓
-PropertyReferencePort
+PropertyBrokerageReferencePort
   ↓
 BrokerageProcess: matched
   ↓
@@ -94,7 +94,7 @@ BrokerageProcess: reserved
 ## Інваріанти
 
 1. Sales opportunity перевіряється через RealEstate anti-corruption port.
-2. Property facts читаються тільки через `PropertyReferencePort`.
+2. Property facts читаються тільки через `PropertyBrokerageReferencePort`.
 3. Reservation виконує Property Domain через `PropertyInventoryCommandInterface`.
 4. RealEstate ніколи не змінює Property tables напряму.
 5. RealEstate ніколи не читає Sales tables напряму.
@@ -110,7 +110,7 @@ symfony/src/Application/RealEstate/Command/*
 app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php
 app/Domains/RealEstate/Application/Contract/SalesOpportunityReferenceInterface.php
 app/Domains/RealEstate/Infrastructure/Sales/SalesOpportunityReferenceAdapter.php
-app/Domains/Property/Contract/PropertyReferencePort.php
+app/Domains/Property/Contract/PropertyBrokerageReferencePort.php
 app/Domains/Property/Application/Contract/PropertyInventoryCommandInterface.php
 app/Domains/Property/Application/Service/CanonicalPropertyInventoryCommands.php
 ```
