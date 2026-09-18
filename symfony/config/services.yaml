@@ -872,3 +872,22 @@ services:
       $pipelines: '@Domains\Sales\Application\Contract\PipelineRepositoryInterface'
       $changeDealStage: '@Domains\Sales\Application\UseCase\ChangeDealStage'
       $operations: '@Domains\Sales\Application\Service\SalesOperationService'
+
+
+  # Sales Wave 7 — Frontend cutover read/write facade
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $base: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
+
+  Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel
+
+  Kernel\Approval\Service\ApprovalService:
+    arguments:
+      $approvals: '@Kernel\Approval\Contract\ApprovalRepositoryInterface'
+      $actions: '@Kernel\Action\Service\ActionService'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
+      $queue: null
+      $authority: null
