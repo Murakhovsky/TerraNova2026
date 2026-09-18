@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Scheduler;
 
 use App\Application\Sales\Command\RunSalesAutomationCommand;
+use App\Application\Sales\Command\RunSalesAutomationCommand;
+use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Messenger\Message\RedispatchMessage;
@@ -26,6 +28,14 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             RecurringMessage::every(
                 '15 minutes',
                 new RedispatchMessage(new SchedulerHeartbeatCommand('scheduled'), 'async'),
+            ),
+            RecurringMessage::every(
+                '5 minutes',
+                new RedispatchMessage(new RunSalesAutomationCommand(runId: 'scheduler'), 'async'),
+            ),
+            RecurringMessage::every(
+                '1 minute',
+                new RedispatchMessage(new DrainSalesOutboxCommand(200, 'scheduler-sales-outbox'), 'async'),
             ),
         );
     }
