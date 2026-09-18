@@ -24,6 +24,21 @@ foreach ([
     }
 }
 
+
+$runHandler = $read('symfony/src/Application/Sales/Command/RunSalesAutomationCommandHandler.php');
+foreach ([
+    'DrainSalesOutboxCommand',
+    '$this->automation->run(',
+    '$this->commandBus->dispatch(new DrainSalesOutboxCommand(',
+] as $needle) {
+    if (!str_contains($runHandler, $needle)) {
+        throw new RuntimeException('Wave 3 causal scan-to-outbox contract missing: ' . $needle);
+    }
+}
+if (strpos($runHandler, '$this->automation->run(') > strpos($runHandler, '$this->commandBus->dispatch(new DrainSalesOutboxCommand(')) {
+    throw new RuntimeException('Wave 3 outbox drain must be dispatched only after the detector scan completes.');
+}
+
 foreach ([
     'RunSalesAutomationCommand',
     'DrainSalesOutboxCommand',
