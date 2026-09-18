@@ -18,12 +18,19 @@ generated: true
 
 | Модуль | Commands |
 | --- | ---: |
+| `construction` | 0 |
 | `diagnostic` | 1 |
 | `finance` | 0 |
+| `hr` | 0 |
 | `procurement` | 0 |
 | `property` | 4 |
+| `real_estate` | 0 |
 | `sales` | 6 |
 | `service` | 0 |
+
+## Construction (`construction`)
+
+Явних `*Command` DTO contracts не знайдено.
 
 ## Diagnostics (`diagnostic`)
 
@@ -32,6 +39,10 @@ generated: true
 | `StartDiagnosticSessionCommand` | `app/Domains/Diagnostic/Application/DTO/StartDiagnosticSessionCommand.php` |
 
 ## Finance (`finance`)
+
+Явних `*Command` DTO contracts не знайдено.
+
+## HR (`hr`)
 
 Явних `*Command` DTO contracts не знайдено.
 
@@ -47,6 +58,10 @@ generated: true
 | `ReclassifyPropertyAssetCommand` | `app/Domains/Property/Application/DTO/ReclassifyPropertyAssetCommand.php` |
 | `RegisterPropertyAssetCommand` | `app/Domains/Property/Application/DTO/RegisterPropertyAssetCommand.php` |
 | `RelocatePropertyAssetCommand` | `app/Domains/Property/Application/DTO/RelocatePropertyAssetCommand.php` |
+
+## Real Estate (`real_estate`)
+
+Явних `*Command` DTO contracts не знайдено.
 
 ## Sales (`sales`)
 

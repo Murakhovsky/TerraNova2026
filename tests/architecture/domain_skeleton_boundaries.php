@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $base = dirname(__DIR__, 2) . '/app/Domains';
-$domains = ['Service', 'Finance', 'Procurement'];
+$domains = ['Service', 'Finance', 'Procurement', 'HR', 'Construction', 'RealEstate'];
 $forbidden = ['Symfony\\', 'Phalcon\\', 'PDO', 'Infrastructure\\', 'Platform\\', 'Interfaces\\'];
 
 foreach ($domains as $domain) {
@@ -24,5 +24,4 @@ foreach ($domains as $domain) {
         }
     }
 }
-
-echo "Service, Finance and Procurement skeletons are framework and infrastructure independent.\n";
+echo "V1 Domain skeletons are framework and infrastructure independent.\n";

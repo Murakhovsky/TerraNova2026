@@ -1,4 +1,4 @@
-name: Service Finance Procurement Skeletons
+name: V1 Domain Skeletons
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
       - 'app/Domains/Service/**'
       - 'app/Domains/Finance/**'
       - 'app/Domains/Procurement/**'
+      - 'app/Domains/HR/**'
+      - 'app/Domains/Construction/**'
+      - 'app/Domains/RealEstate/**'
       - 'tests/unit/domain_skeletons.php'
       - 'tests/architecture/domain_skeleton_boundaries.php'
       - 'docs/architecture/DOMAIN_SKELETONS.md'
@@ -17,6 +20,9 @@ on:
       - 'app/Domains/Service/**'
       - 'app/Domains/Finance/**'
       - 'app/Domains/Procurement/**'
+      - 'app/Domains/HR/**'
+      - 'app/Domains/Construction/**'
+      - 'app/Domains/RealEstate/**'
       - 'tests/unit/domain_skeletons.php'
       - 'tests/architecture/domain_skeleton_boundaries.php'
       - 'docs/architecture/DOMAIN_SKELETONS.md'
@@ -35,4 +41,4 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: php tests/architecture/domain_skeleton_boundaries.php
       - run: php tests/unit/domain_skeletons.php
-      - run: find app/Domains/Service app/Domains/Finance app/Domains/Procurement -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: find app/Domains/Service app/Domains/Finance app/Domains/Procurement app/Domains/HR app/Domains/Construction app/Domains/RealEstate -type f -name '*.php' -print0 | xargs -0 -n1 php -l

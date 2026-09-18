@@ -2,5 +2,12 @@ framework:
   secret: '%env(APP_SECRET)%'
   router:
     utf8: true
+  serializer:
+    enabled: true
+    default_context:
+      allow_extra_attributes: false
+  validation:
+    enabled: true
+    enable_attributes: true
   php_errors:
     log: true

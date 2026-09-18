@@ -24,7 +24,10 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function supports(Request $request): ?bool
     {
-        return str_starts_with($request->getPathInfo(), '/migration/api/cos');
+        $path = $request->getPathInfo();
+
+        return str_starts_with($path, '/migration/api/cos')
+            || str_starts_with($path, '/api/v1');
     }
 
     public function authenticate(Request $request): Passport

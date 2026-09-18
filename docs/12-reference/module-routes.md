@@ -14,10 +14,13 @@ generated: true
 
 | Модуль | Contributor | Файлів джерел маршрутів |
 | --- | --- | ---: |
+| `construction` | — | 0 |
 | `diagnostic` | `diagnosticRouteContributor` | 1 |
 | `finance` | — | 0 |
+| `hr` | — | 0 |
 | `procurement` | — | 0 |
 | `property` | `propertyRouteContributor` | 1 |
+| `real_estate` | — | 0 |
 | `sales` | `salesRouteContributor` | 5 |
 | `service` | — | 0 |
 

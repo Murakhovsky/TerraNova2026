@@ -1,0 +1,34 @@
+name: Platform Documents
+
+on:
+  push:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Platform/Documents/**'
+      - 'tests/unit/platform_documents.php'
+      - 'tests/architecture/platform_documents_boundaries.php'
+      - 'docs/03-architecture/documents-capability.md'
+      - '.github/workflows/platform-documents.yml'
+  pull_request:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Platform/Documents/**'
+      - 'tests/unit/platform_documents.php'
+      - 'tests/architecture/platform_documents_boundaries.php'
+      - 'docs/03-architecture/documents-capability.md'
+      - '.github/workflows/platform-documents.yml'
+  workflow_dispatch:
+
+jobs:
+  documents-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: php tests/architecture/platform_documents_boundaries.php
+      - run: php tests/unit/platform_documents.php
+      - run: find app/Platform/Documents -type f -name '*.php' -print0 | xargs -0 -n1 php -l

@@ -1,14 +1,23 @@
 # V1 Domain Skeletons
 
-Service, Finance and Procurement are declared as COS Domains before their runtime implementation. Their `module.php` manifests are discoverable by Kernel Module infrastructure but disabled by default and intentionally declare no runtime service, routes, jobs, capabilities or database migrations.
+Service, Finance, Procurement, HR, Construction та Real Estate оголошені як installable COS Domains до повної runtime-реалізації. Їхні `module.php` manifests discoverable через Kernel Module infrastructure, вимкнені за замовчуванням і навмисно не декларують runtime services, routes, jobs, capabilities або database migrations.
 
 ## Service
-Canonical vocabulary: `ServiceCase` (business name: Case), `Request`, `Ticket`, `SLA`, `Assignment`, `Resolution`. PHP class `ServiceCase` avoids the reserved `case` keyword.
+Канонічний словник: `ServiceCase`, `Request`, `Ticket`, `SLA`, `Assignment`, `Resolution`.
 
 ## Finance
-Canonical vocabulary: `Account`, `Transaction`, `Invoice`, `Payment`, `Budget`, `Expense`, `Revenue`. Monetary fields use `Kernel\\Shared\\Domain\\Money`; persistence, ledger rules, accounting policy, taxation and payment-provider integration are outside this skeleton.
+Канонічний словник: `Account`, `Transaction`, `Invoice`, `Payment`, `Budget`, `Expense`, `Revenue`. Грошові значення використовують `Kernel\\Shared\\Domain\\Money`.
 
 ## Procurement
-Canonical vocabulary: `Supplier`, `PurchaseRequest`, `Quote`, `Order`, `Delivery`.
+Канонічний словник: `Supplier`, `PurchaseRequest`, `Quote`, `Order`, `Delivery`.
 
-These skeletons establish language and module boundaries only. They must not be treated as completed business capabilities until Application use cases, persistence adapters, permissions, workflows and public interfaces are implemented deliberately.
+## HR
+Канонічний словник: `Employee`, `Position`, `Candidate`, `Recruitment`, `Onboarding`, `Performance`.
+
+## Construction
+Канонічний словник: `Project`, `Site`, `ConstructionObject`, `Estimate`, `Contractor`, `Work`, `Material`, `Milestone`, `Inspection`. `ConstructionObject` відповідає бізнес-поняттю Object.
+
+## Real Estate
+Real Estate є брокерським orchestration Domain поверх Property. Він не дублює canonical Property registry, inventory, catalog, listing/publication або presentation lifecycle.
+
+Ці skeletons фіксують мову та module boundaries. Вони не вважаються завершеними business capabilities, доки окремо не реалізовані Application use cases, persistence adapters, permissions, workflows і public interfaces.
