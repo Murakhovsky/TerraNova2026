@@ -3,7 +3,11 @@ declare(strict_types=1);
 
 namespace App\Http\Api\V1\Controller;
 
-use App\Application\Property\Command\PropertyMutationCommand;
+use App\Application\Property\Command\ChangeInventoryStatusCommand;
+use App\Application\Property\Command\CreateInventoryCommand;
+use App\Application\Property\Command\CreatePropertyCommand;
+use App\Application\Property\Command\ReserveInventoryCommand;
+use App\Application\Property\Command\UpdatePropertyCommand;
 use App\Application\Property\Query\GetPropertyQuery;
 use App\Application\Property\Query\SearchPropertiesQuery;
 use App\Security\LegacySessionCsrfValidator;
@@ -67,50 +71,105 @@ final readonly class PropertyController
 
     public function create(Request $request): JsonResponse
     {
-        return $this->mutate($request,PropertyMutationCommand::CREATE,null,true,201);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        try{
+            return $this->ok($this->commands->dispatch(new CreatePropertyCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $key,
+                $this->input($request),
+            )),201);
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function update(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,PropertyMutationCommand::UPDATE,$id,false,200);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        try{
+            return $this->ok($this->commands->dispatch(new UpdatePropertyCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $id,
+                $key,
+                $this->input($request),
+            )));
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function createInventory(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,PropertyMutationCommand::CREATE_INVENTORY,$id,true,201);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        try{
+            return $this->ok($this->commands->dispatch(new CreateInventoryCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $id,
+                $key,
+                $this->input($request),
+            )),201);
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function changeInventoryStatus(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,PropertyMutationCommand::CHANGE_INVENTORY_STATUS,$id,false,200);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+        $input=$this->input($request);
+
+        try{
+            return $this->ok($this->commands->dispatch(new ChangeInventoryStatusCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $id,
+                trim((string)($input['status']??'')),
+                ($reason=trim((string)($input['reason']??'')))!==''?$reason:null,
+                $key,
+            )));
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function reserveInventory(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,PropertyMutationCommand::RESERVE_INVENTORY,$id,true,201);
-    }
-
-    private function mutate(Request $request,string $operation,?string $reference,bool $idempotencyRequired,int $status): JsonResponse
-    {
         $tenant=$this->context($request,true);
         if($tenant instanceof JsonResponse)return $tenant;
-
-        $key=trim((string)$request->headers->get('X-Idempotency-Key',''));
-        if($idempotencyRequired&&($key===''||mb_strlen($key)>191)){
-            return $this->error(422,'idempotency_key_required','A valid X-Idempotency-Key is required.');
-        }
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
 
         try{
-            $data=$this->commands->dispatch(new PropertyMutationCommand(
+            return $this->ok($this->commands->dispatch(new ReserveInventoryCommand(
                 $tenant->organizationId(),
                 (int)$tenant->userId()->value(),
                 $this->correlationId($request),
-                $operation,
-                $reference,
+                $id,
+                $key,
                 $this->input($request),
-                $key!==''?$key:null,
-            ));
-            return $this->ok($data,$status);
+            )),201);
         }catch(Throwable $error){
             return $this->failure($error);
         }
@@ -133,6 +192,14 @@ final readonly class PropertyController
         $actor=$tenant->userId()->value();
         if(!ctype_digit($actor)||(int)$actor<=0)return $this->error(403,'invalid_actor','Authenticated actor is invalid.');
         return $tenant;
+    }
+
+    private function idempotencyKey(Request $request): string|JsonResponse
+    {
+        $key=trim((string)$request->headers->get('X-Idempotency-Key',''));
+        return $key===''||mb_strlen($key)>191
+            ?$this->error(422,'idempotency_key_required','A valid X-Idempotency-Key is required.')
+            :$key;
     }
 
     /** @return array<string,mixed> */
