@@ -802,14 +802,26 @@ jobs:
           status=$(curl --silent --show-error --output /tmp/wave9-property-view.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
             "http://127.0.0.1:8081/api/v1/properties/$asset_id")
+          echo "Wave 9 Property view HTTP $status"; cat /tmp/wave9-property-view.json; echo
           test "$status" = "200"
-          grep -q "\"inventory_id\":\"$inventory_id\"" /tmp/wave9-property-view.json
+          WAVE9_ASSET_ID="$asset_id" WAVE9_INVENTORY_ID="$inventory_id" php -r '
+            $j=json_decode(file_get_contents("/tmp/wave9-property-view.json"),true,512,JSON_THROW_ON_ERROR);
+            if (($j["data"]["property"]["asset_id"]??null)!==getenv("WAVE9_ASSET_ID")) exit(21);
+            if (($j["data"]["inventory"]["inventory_id"]??null)!==getenv("WAVE9_INVENTORY_ID")) exit(22);
+          '
 
           status=$(curl --silent --show-error --output /tmp/wave9-property-search.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
             "http://127.0.0.1:8081/api/v1/properties?q=$asset_id")
+          echo "Wave 9 Property search HTTP $status"; cat /tmp/wave9-property-search.json; echo
           test "$status" = "200"
-          grep -q "\"asset_id\":\"$asset_id\"" /tmp/wave9-property-search.json
+          WAVE9_ASSET_ID="$asset_id" php -r '
+            $j=json_decode(file_get_contents("/tmp/wave9-property-search.json"),true,512,JSON_THROW_ON_ERROR);
+            foreach (($j["data"]["items"]??[]) as $item) {
+                if (($item["property"]["asset_id"]??null)===getenv("WAVE9_ASSET_ID")) exit(0);
+            }
+            exit(23);
+          '
 
           match_payload=$(printf '{"property_id":"%s","inventory_id":"%s","subject":"Wave 9 brokerage match"}' "$asset_id" "$inventory_id")
           status=$(curl --silent --show-error --output /tmp/wave9-match.json --write-out '%{http_code}' \
