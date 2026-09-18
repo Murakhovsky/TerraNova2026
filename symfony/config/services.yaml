@@ -186,6 +186,13 @@ services:
   Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface:
     alias: Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateRepository
 
+  Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateMutationReceipt:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\RealEstate\Application\Contract\RealEstateMutationReceiptInterface:
+    alias: Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateMutationReceipt
+
   Domains\RealEstate\Infrastructure\Sales\SalesOpportunityReferenceAdapter:
     arguments:
       $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
