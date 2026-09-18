@@ -8,6 +8,7 @@ use Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface;
 use Domains\Sales\Application\DTO\RecordActionOutcomeCommand;
 use Domains\Sales\Automation\Event\ActionOutcomeMeasured;
+use Domains\Sales\Automation\Event\FollowupOverdue;
 use Domains\Sales\Automation\Event\SalesEventType;
 use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
@@ -76,11 +77,52 @@ final readonly class SalesMonitoringService
                 $this->events->publish(new DomainEvent(
                     $eventId,
                     $organizationId,
-                    SalesEventType::FOLLOWUP_MISSED,
+                    FollowupOverdue::TYPE,
                     'deal',
                     (string) $followup['client_case_id'],
                     ['followup_id' => (string) $followup['id'], 'due_at' => $followup['due_at']],
                     new EventMetadata($eventId, null, 'SYSTEM', 'sales-followup-detector'),
+                    $now,
+                ));
+                $count++;
+            });
+        }
+
+        return $count;
+    }
+
+    public function detectStuckDeals(
+        string $organizationId,
+        DateTimeImmutable $now,
+        int $limit = 100,
+    ): int {
+        $count = 0;
+
+        foreach ($this->attention->stuckDeals($organizationId, $now, $limit) as $deal) {
+            $this->transactions->transactional(function () use ($organizationId, $now, $deal, &$count): void {
+                $window = implode(':', [
+                    (string) ($deal['id'] ?? ''),
+                    (string) ($deal['stage_id'] ?? ''),
+                    (string) ($deal['entered_at'] ?? ''),
+                ]);
+                $eventId = bin2hex(random_bytes(16));
+                if (!$this->attention->claimSignal($organizationId, 'deal_stuck', $window, $eventId)) {
+                    return;
+                }
+
+                $this->events->publish(new DomainEvent(
+                    $eventId,
+                    $organizationId,
+                    SalesEventType::DEAL_STUCK,
+                    'deal',
+                    (string) $deal['id'],
+                    [
+                        'stage_id' => (string) ($deal['stage_id'] ?? ''),
+                        'entered_at' => $deal['entered_at'] ?? null,
+                        'last_activity_at' => $deal['last_activity_at'] ?? null,
+                        'stuck_after_seconds' => (int) ($deal['stuck_after_seconds'] ?? 0),
+                    ],
+                    new EventMetadata($eventId, null, 'SYSTEM', 'sales-pipeline-sla-detector'),
                     $now,
                 ));
                 $count++;
