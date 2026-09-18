@@ -6,6 +6,7 @@ namespace App\Application\Property\Service;
 use DateTimeImmutable;
 use Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyInventoryCommandInterface;
+use Domains\Property\Application\Contract\PropertyMutationReceiptInterface;
 use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
 use Domains\Property\Contract\PropertyReferencePort;
 use InvalidArgumentException;
@@ -21,6 +22,7 @@ final readonly class PropertyWriteService
         private PropertyInventoryCommandInterface $inventory,
         private PropertyCanonicalRuntimeRepositoryInterface $repository,
         private PropertyReferencePort $properties,
+        private PropertyMutationReceiptInterface $receipts,
         private TransactionManagerInterface $transactions,
         private AuditRepositoryInterface $audit,
     ) {}
