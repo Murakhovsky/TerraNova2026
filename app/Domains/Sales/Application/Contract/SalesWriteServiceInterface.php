@@ -14,13 +14,13 @@ interface SalesWriteServiceInterface
     public function createLead(array $input, int $actorId, string $correlationId, string $idempotencyKey): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */
-    public function updateLead(int $leadId, array $input, int $actorId): ClientCaseCommandResult;
+    public function updateLead(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */
-    public function convertLeadToOpportunity(int $leadId, array $input, int $actorId): ClientCaseCommandResult;
+    public function convertLeadToOpportunity(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */
-    public function addOpportunityActivity(int $opportunityId, array $input, int $actorId): ClientCaseCommandResult;
+    public function addOpportunityActivity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult;
 
     public function changeOpportunityStage(
         int $opportunityId,
