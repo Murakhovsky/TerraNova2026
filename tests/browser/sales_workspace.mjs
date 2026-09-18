@@ -20,8 +20,8 @@ const absolute = (path) => new URL(path, baseUrl).toString();
 const assertOk = (response, label) => {
   if (!response || response.status() >= 400) throw new Error(`${label} returned ${response?.status() ?? 'no response'}`);
 };
-const waitMutation = (page, fragment, action, label) => Promise.all([
-  page.waitForResponse((response) => response.url().includes(fragment) && response.request().method() === 'POST'),
+const waitMutation = (page, fragment, action, label, method = 'POST') => Promise.all([
+  page.waitForResponse((response) => response.url().includes(fragment) && response.request().method() === method),
   action(),
 ]).then(([response]) => {
   assertOk(response, label);
@@ -47,7 +47,7 @@ try {
     }
     const input = page.locator('[data-sales-global-search-input]').first();
     await input.fill('test');
-    const searchResponse = await page.waitForResponse((response) => response.url().includes('/api/sales/search'));
+    const searchResponse = await page.waitForResponse((response) => response.url().includes('/api/v1/sales/search'));
     assertOk(searchResponse, `${profile.name}: Sales search`);
     await page.locator('[data-sales-global-search-results]:not([hidden])').waitFor({ state: 'visible' });
     await context.close();
@@ -62,7 +62,7 @@ try {
   const leadCard = leadQualify.locator('xpath=ancestor::*[@data-lead-id][1]');
   const leadId = await leadCard.getAttribute('data-lead-id');
   if (!leadId) throw new Error('Qualify fixture lead must expose data-lead-id.');
-  await waitMutation(page, `/api/sales/leads/${leadId}/`, () => leadQualify.click(), 'Qualify Lead');
+  await waitMutation(page, `/api/v1/sales/leads/${leadId}`, () => leadQualify.click(), 'Qualify Lead', 'PATCH');
   assertOk(await page.goto(absolute('/sales/leads?status=qualified'), { waitUntil: 'networkidle' }), 'Qualified Lead postcondition');
   await assertCount(page.locator(`[data-lead-id="${leadId}"]`), 1, 'Qualified Lead must persist after reload');
 
@@ -81,7 +81,7 @@ try {
   const approvalPanel = approval.locator('xpath=ancestor::*[@data-sales-approval][1]');
   const approvalId = await approvalPanel.getAttribute('data-approval-id');
   if (!approvalId) throw new Error('Pending approval must expose data-approval-id.');
-  await waitMutation(page, `/api/sales/approvals/${approvalId}/`, () => approval.click(), 'Approve COS action');
+  await waitMutation(page, `/api/v1/sales/approvals/${approvalId}/approve`, () => approval.click(), 'Approve COS action');
   assertOk(await page.reload({ waitUntil: 'networkidle' }), 'Approval postcondition');
   await assertCount(page.locator(`[data-sales-approval][data-approval-id="${approvalId}"]`), 0, 'Approved action must leave pending approvals after reload');
 
@@ -100,7 +100,7 @@ try {
   if (!targetZone) throw new Error('Mutation fixture requires at least two Pipeline stages.');
   const targetStage = await targetZone.getAttribute('data-stage-id');
   if (!targetStage) throw new Error('Target Pipeline stage must expose data-stage-id.');
-  await waitMutation(page, `/api/sales/deals/${dealId}/stage`, () => card.dragTo(targetZone), 'Change Deal stage');
+  await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/stage`, () => card.dragTo(targetZone), 'Change Deal stage');
   assertOk(await page.reload({ waitUntil: 'networkidle' }), 'Deal stage postcondition');
   const movedCard = page.locator(`[data-sales-deal-card][data-deal-id="${dealId}"]`);
   await assertCount(movedCard, 1, 'Moved Deal must remain in Pipeline after reload');
@@ -117,7 +117,7 @@ try {
   const messageForm = page.locator('form[data-sales-operation-form][data-operation="message"]');
   await messageForm.locator('select[name="channel"]').selectOption('WEB');
   await messageForm.locator('textarea[name="body"]').fill(messageBody);
-  await waitMutation(page, `/api/sales/deals/${dealId}/messages`, () => messageForm.locator('button').filter({ hasText: 'Send Message' }).click(), 'Send Message');
+  await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/communications`, () => messageForm.locator('button').filter({ hasText: 'Send Message' }).click(), 'Send Message');
   assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
   await assertCount(page.locator('.tn-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
 
@@ -128,8 +128,8 @@ try {
   const actionPanel = execute.locator('xpath=ancestor::*[@data-sales-action][1]');
   const actionId = await actionPanel.getAttribute('data-action-id');
   if (!actionId) throw new Error('Executable COS action must expose data-action-id.');
-  await waitMutation(page, `/api/sales/actions/${actionId}/execute`, () => execute.click(), 'Execute COS action');
-  const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/sales/deals/${dealId}/intelligence`) && response.request().method() === 'GET');
+  await waitMutation(page, `/api/v1/sales/actions/${actionId}/execute`, () => execute.click(), 'Execute COS action');
+  const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/sales/opportunities/${dealId}/intelligence`) && response.request().method() === 'GET');
   assertOk(await page.goto(absolute(dealHref), { waitUntil: 'domcontentloaded' }), 'COS action postcondition');
   assertOk(await intelligenceResponse, 'Reloaded Deal intelligence');
   await page.locator('[data-sales-intelligence]').waitFor({ state: 'visible' });
