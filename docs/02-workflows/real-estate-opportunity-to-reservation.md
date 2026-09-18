@@ -31,7 +31,7 @@ RealEstate володіє brokerage case, match, offer і viewing. Sales зал�
 
 ```text
 Sales Opportunity
-      ↓  SalesOpportunityReferenceInterface
+      ↓  SalesWorkspaceReadModelInterface → SalesOpportunityReferenceAdapter
 RealEstate
       ↓  PropertyBrokerageReferencePort
 Property facts
@@ -93,7 +93,7 @@ BrokerageProcess: reserved
 
 ## Інваріанти
 
-1. Sales opportunity перевіряється через RealEstate anti-corruption port.
+1. Sales opportunity читається через канонічний `SalesWorkspaceReadModelInterface`, прихований за RealEstate anti-corruption adapter.
 2. Property facts читаються тільки через `PropertyBrokerageReferencePort`.
 3. Reservation виконує Property Domain через `PropertyInventoryCommandInterface`.
 4. RealEstate ніколи не змінює Property tables напряму.
