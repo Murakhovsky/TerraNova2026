@@ -269,3 +269,80 @@ cos_api_v1_sales_communication_send:
   controller: App\Http\Api\V1\Controller\SalesCommunicationController::send
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
+
+
+# Sales Wave 7 — Frontend cutover
+cos_api_v1_sales_search:
+  path: /api/v1/sales/search
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::search
+  methods: [GET]
+
+cos_api_v1_sales_opportunity_intelligence:
+  path: /api/v1/sales/opportunities/{id}/intelligence
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::intelligence
+  methods: [GET]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_quick_update:
+  path: /api/v1/sales/opportunities/{id}
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::quickUpdate
+  methods: [PATCH]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_owner:
+  path: /api/v1/sales/opportunities/{id}/owner
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::owner
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_meeting:
+  path: /api/v1/sales/opportunities/{id}/meetings
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::meeting
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_activity_complete:
+  path: /api/v1/sales/opportunities/{id}/activities/{activityId}/complete
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::completeActivity
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+    activityId: '[1-9][0-9]*'
+
+cos_api_v1_sales_opportunity_activity_reschedule:
+  path: /api/v1/sales/opportunities/{id}/activities/{activityId}/reschedule
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::rescheduleActivity
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+    activityId: '[1-9][0-9]*'
+
+cos_api_v1_sales_lead_followup:
+  path: /api/v1/sales/leads/{id}/followups
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::leadFollowup
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_approval_approve:
+  path: /api/v1/sales/approvals/{id}/approve
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::approve
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_sales_approval_reject:
+  path: /api/v1/sales/approvals/{id}/reject
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::reject
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_sales_action_execute:
+  path: /api/v1/sales/actions/{id}/execute
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::execute
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_sales_action_dismiss:
+  path: /api/v1/sales/actions/{id}/dismiss
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::dismiss
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
