@@ -20,13 +20,15 @@ generated: true
 | --- | ---: | --- |
 | `both` | 10 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 16 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 24 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
 | Модуль | Capability | Runtime | Manifest | Класифікація | Runtime source | Manifest source |
 | --- | --- | --- | --- | --- | --- | --- |
 | `property` | `property.analytics` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.business.cutover` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.catalog` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.history` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.identity.review` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
@@ -42,6 +44,12 @@ generated: true
 | `property` | `property.registry` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.runtime.canonical` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.write` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `real_estate` | `real_estate.api.v1` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
+| `real_estate` | `real_estate.brokerage` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
+| `real_estate` | `real_estate.offer` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
+| `real_estate` | `real_estate.property_match` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
+| `real_estate` | `real_estate.reservation` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
+| `real_estate` | `real_estate.viewing` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `sales` | `sales.admin.agents.manage` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.admin.audit.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.admin.integrations.manage` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
