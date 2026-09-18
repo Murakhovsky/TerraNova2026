@@ -8,7 +8,7 @@ $assert = static function (bool $condition, string $message): void {
 };
 
 $module = require $root . '/app/Domains/Property/module.php';
-$assert(($module['version'] ?? null) === '0.12.0', 'Property manifest must declare V0.12.0.');
+$assert(in_array(($module['version'] ?? null), ['0.12.0','0.13.0'], true), 'Property manifest must retain or supersede V0.12.0 runtime semantics.');
 $assert(($module['schema_version'] ?? null) === '0.12.0', 'Property schema must declare V0.12.0.');
 $assert(in_array('property.runtime.canonical', $module['contributions']['capabilities'] ?? [], true), 'Canonical runtime capability is missing.');
 $migrationPath = 'app/migrations/20260915_000059_property_v0120_runtime_cutover.sql';
