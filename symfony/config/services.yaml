@@ -485,7 +485,6 @@ services:
     arguments:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
       $commandBus: '@command.bus'
-      $legacyJobs: '@Kernel\Queue\Contract\JobQueueInterface'
 
   Kernel\Rule\Service\RuleEngineEventHandler:
     arguments:
