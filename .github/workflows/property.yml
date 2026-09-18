@@ -16,6 +16,7 @@ on:
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
@@ -53,6 +54,7 @@ on:
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
@@ -166,6 +168,7 @@ jobs:
           php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php
           php -l app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php
           php -l app/Infrastructure/Platform/Analytics/PropertyIntelligenceCoordinator.php
+          php -l app/Infrastructure/Platform/Persistence/TableOwnership.php
           php -l app/Bootstrap/PropertyServices.php
           php -l app/Bootstrap/PropertyIdentityServices.php
           php -l app/Bootstrap/PropertyAnalyticsServices.php
