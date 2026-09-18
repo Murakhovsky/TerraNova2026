@@ -150,7 +150,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,activity_type,title,body,created_at FROM tn_client_case_activities '
-                . 'WHERE organization_id=:organization_id AND client_case_id=:deal_id',
+                . 'WHERE organization_id=:organization_id AND client_case_id=:deal_id ORDER BY created_at DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => $dealId],
             ),
         );
@@ -168,7 +168,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,channel,direction,sender,recipient,body,occurred_at FROM sales_communications '
-                . 'WHERE organization_id=:organization_id AND deal_id=:deal_id',
+                . 'WHERE organization_id=:organization_id AND deal_id=:deal_id ORDER BY occurred_at DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => $dealId],
             ),
         );
@@ -186,7 +186,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,type,CAST(payload AS CHAR) payload,occurred_at,correlation_id FROM cos_events '
-                . 'WHERE organization_id=:organization_id AND aggregate_type IN ("deal","client_case") AND aggregate_id=:deal_id',
+                . 'WHERE organization_id=:organization_id AND aggregate_type IN ("deal","client_case") AND aggregate_id=:deal_id ORDER BY occurred_at DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => (string) $dealId],
             ),
         );
@@ -204,7 +204,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,type,CAST(parameters AS CHAR) parameters,created_at,correlation_id,status FROM cos_actions '
-                . 'WHERE organization_id=:organization_id AND target_type IN ("deal","client_case") AND target_id=:deal_id',
+                . 'WHERE organization_id=:organization_id AND target_type IN ("deal","client_case") AND target_id=:deal_id ORDER BY created_at DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => (string) $dealId],
             ),
         );
