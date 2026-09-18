@@ -51,6 +51,7 @@ $symfonyServices=$read('symfony/config/services.yaml');
 foreach([
     'PropertyCanonicalRuntimeRepositoryInterface',
     'PropertyInventoryCommandInterface',
+    'PropertyMutationReceiptInterface',
     'RealEstateRepositoryInterface',
     'SalesOpportunityReferenceInterface',
     'RealEstateWorkflowService',
@@ -75,8 +76,34 @@ foreach([
     $assert(str_contains($routes,$route),'Wave 9 Symfony route missing: '.$route);
 }
 
-$propertyHandler=$read('symfony/src/Application/Property/Command/PropertyMutationCommandHandler.php');
-$assert(str_contains($propertyHandler,'AuditRepositoryInterface')&&str_contains($propertyHandler,'transactions->transactional'),'Property mutations must audit inside the shared transaction.');
+$propertyWrites=$read('symfony/src/Application/Property/Service/PropertyWriteService.php');
+$assert(str_contains($propertyWrites,'AuditRepositoryInterface')&&str_contains($propertyWrites,'transactions->transactional'),'Property mutations must audit inside the shared transaction.');
+$assert(str_contains($propertyWrites,'PropertyMutationReceiptInterface')&&str_contains($propertyWrites,'receipts->claim'),'Property writes must use atomic mutation receipts.');
+
+$receipt=$read('symfony/src/Infrastructure/Persistence/Property/PdoPropertyMutationReceipt.php');
+foreach(['INSERT IGNORE INTO cos_external_references','cos_reference','external_id'] as $needle){
+    $assert(str_contains($receipt,$needle),'Property idempotency receipt missing atomic persistence behavior: '.$needle);
+}
+
+foreach([
+    'CreatePropertyCommand.php',
+    'UpdatePropertyCommand.php',
+    'CreateInventoryCommand.php',
+    'ChangeInventoryStatusCommand.php',
+    'ReserveInventoryCommand.php',
+] as $command){
+    $assert(is_file($root.'/symfony/src/Application/Property/Command/'.$command),'Missing explicit Property business command: '.$command);
+}
+foreach([
+    'MatchPropertyCommand.php',
+    'CreatePropertyOfferCommand.php',
+    'SchedulePropertyViewingCommand.php',
+    'ReserveMatchedPropertyCommand.php',
+] as $command){
+    $assert(is_file($root.'/symfony/src/Application/RealEstate/Command/'.$command),'Missing explicit RealEstate business command: '.$command);
+}
+$assert(!is_file($root.'/symfony/src/Application/Property/Command/PropertyMutationCommand.php'),'Generic Property mutation command must not exist after Wave 9 cutover.');
+$assert(!is_file($root.'/symfony/src/Application/RealEstate/Command/RealEstateMutationCommand.php'),'Generic RealEstate mutation command must not exist after Wave 9 cutover.');
 
 $propertyController=$read('symfony/src/Http/Api/V1/Controller/PropertyController.php');
 $realEstateController=$read('symfony/src/Http/Api/V1/Controller/RealEstateController.php');
@@ -86,6 +113,15 @@ foreach([$propertyController,$realEstateController] as $controller){
     $assert(str_contains($controller,'LegacySessionCsrfValidator'),'Wave 9 browser writes must enforce CSRF.');
     $assert(str_contains($controller,'X-Idempotency-Key'),'Wave 9 consequential writes must expose idempotency boundary.');
     $assert(str_contains($controller,'TenantContextProviderInterface'),'Wave 9 API must derive tenant from authenticated context.');
+    $assert(str_contains($controller,'ActiveModuleResolver'),'Wave 9 API must enforce module activation.');
+}
+$assert(!str_contains($propertyController,'PropertyMutationCommand'),'Property controller must dispatch explicit business commands.');
+$assert(!str_contains($realEstateController,'RealEstateMutationCommand'),'RealEstate controller must dispatch explicit business commands.');
+foreach(['CreatePropertyCommand','UpdatePropertyCommand','CreateInventoryCommand','ChangeInventoryStatusCommand','ReserveInventoryCommand'] as $command){
+    $assert(str_contains($propertyController,$command),'Property controller missing explicit command: '.$command);
+}
+foreach(['MatchPropertyCommand','CreatePropertyOfferCommand','SchedulePropertyViewingCommand','ReserveMatchedPropertyCommand'] as $command){
+    $assert(str_contains($realEstateController,$command),'RealEstate controller missing explicit command: '.$command);
 }
 
 echo "Property / RealEstate Wave 9 architecture: OK\n";
