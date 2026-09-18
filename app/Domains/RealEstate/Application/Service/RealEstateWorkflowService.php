@@ -14,6 +14,8 @@ use Domains\RealEstate\Domain\BrokerageProcess;
 use Domains\RealEstate\Domain\Offer;
 use Domains\RealEstate\Domain\Showing;
 use InvalidArgumentException;
+use Kernel\Audit\AuditEntry;
+use Kernel\Audit\Contract\AuditRepositoryInterface;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Kernel\Shared\Domain\Money;
@@ -29,6 +31,7 @@ final readonly class RealEstateWorkflowService
         private PropertyInventoryCommandInterface $inventory,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
+        private AuditRepositoryInterface $audit,
     ) {}
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
@@ -83,6 +86,11 @@ final readonly class RealEstateWorkflowService
                 ['opportunity_id'=>$case->opportunityId,'property_id'=>$case->propertyId,'inventory_id'=>$case->inventoryId],
                 $metadata,
             ));
+            $this->appendAudit($case,'property_matched',$actorId,$metadata->correlationId,[
+                'opportunity_id'=>$case->opportunityId,
+                'property_id'=>$case->propertyId,
+                'inventory_id'=>$case->inventoryId,
+            ]);
             return true;
         });
 
@@ -120,6 +128,11 @@ final readonly class RealEstateWorkflowService
                 ['offer_id'=>$offer->id,'amount_minor'=>$offer->amount->minorUnits(),'currency'=>$offer->amount->currency()],
                 $metadata,
             ));
+            $this->appendAudit($next,'offer_created',$actorId,$metadata->correlationId,[
+                'offer_id'=>$offer->id,
+                'amount_minor'=>$offer->amount->minorUnits(),
+                'currency'=>$offer->amount->currency(),
+            ]);
             return true;
         });
 
@@ -163,6 +176,10 @@ final readonly class RealEstateWorkflowService
                 ['showing_id'=>$showing->id,'scheduled_at'=>$scheduledAt->format(DATE_ATOM)],
                 $metadata,
             ));
+            $this->appendAudit($next,'viewing_scheduled',$actorId,$metadata->correlationId,[
+                'showing_id'=>$showing->id,
+                'scheduled_at'=>$scheduledAt->format(DATE_ATOM),
+            ]);
             return true;
         });
 
@@ -207,6 +224,10 @@ final readonly class RealEstateWorkflowService
                     ['inventory_id'=>$next->inventoryId,'reservation_id'=>$reservation['reservation_id']??null],
                     $metadata,
                 ));
+                $this->appendAudit($next,'property_reserved',$actorId,$metadata->correlationId,[
+                    'inventory_id'=>$next->inventoryId,
+                    'reservation_id'=>$reservation['reservation_id']??null,
+                ]);
                 return $reservation;
             });
         }catch(InvalidArgumentException $exception){
@@ -253,6 +274,24 @@ final readonly class RealEstateWorkflowService
             ||$stored->getTimestamp()!==$scheduledAt->getTimestamp()){
             throw new InvalidArgumentException('Idempotency key was reused with a different Viewing payload.');
         }
+    }
+
+    /** @param array<string,mixed> $data */
+    private function appendAudit(BrokerageProcess $case,string $action,int $actorId,string $correlationId,array $data):void
+    {
+        $this->audit->append(new AuditEntry(
+            bin2hex(random_bytes(16)),
+            $case->organizationId->value(),
+            'real_estate.mutation',
+            'USER',
+            (string)$actorId,
+            'brokerage_case',
+            $case->id,
+            null,
+            ['action'=>$action,...$data],
+            $correlationId,
+            new DateTimeImmutable(),
+        ));
     }
 
     private function metadata(int $actorId,string $correlationId):EventMetadata
