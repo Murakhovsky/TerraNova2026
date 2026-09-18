@@ -2,7 +2,7 @@
 title: Поточний стан COS
 description: Фактичний продуктовий та архітектурний обсяг поточного main.
 status: active
-updated: 2026-09-17
+updated: 2026-09-18
 kind: product
 ---
 
@@ -21,6 +21,9 @@ kind: product
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
+| Construction | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
+| Hr | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
+| Real_estate | `0.1.0` | встановлюваний V1 brokerage orchestration skeleton поверх Property; runtime і persistence навмисно відкладені |
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
 
@@ -74,7 +77,7 @@ Asset / Inventory / Listing / Publication
 
 ## Каркасні домени V1
 
-Finance, Procurement і Service вже є installable Domains із канонічними моделями та Application contracts, але **не вдають із себе готові runtime-модулі**. Для них немає DB migrations, route contributors або виконуваних process definitions. Це навмисно зафіксовано explicit process-coverage exemptions до відповідних runtime slices.
+Finance, Procurement, Service, HR, Construction і Real Estate вже є installable Domains із канонічними моделями та Application contracts, але **не вдають із себе готові runtime-модулі**. Для них немає DB migrations, route contributors або виконуваних process definitions. Real Estate додатково залежить від Property і не дублює його canonical registry. Це навмисно зафіксовано explicit process-coverage exemptions до відповідних runtime slices.
 
 ## Допоміжні предметні області
 
