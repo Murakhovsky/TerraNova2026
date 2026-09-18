@@ -63,6 +63,7 @@ jobs:
           php tests/smoke/diagnostic_v061.php
           php tests/architecture/symfony_sales_diagnostics_wave5_boundary.php
           php tests/unit/sales_diagnostics_wave5_contract.php
+          php tests/unit/sales_diagnostics_wave5_action_assignment.php
           node --check frontend/features/diagnostics/methodology-studio-v055.js
           php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
 
