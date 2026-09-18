@@ -43,7 +43,7 @@ Legacy MySQL adapters
 
 Другий Diagnostic engine не створюється. Наявні methodology, interview extraction, deterministic criteria/rule evaluation, findings та recommendation lifecycle залишаються авторитетними.
 
-## Evidence pipeline
+## Конвеєр Evidence
 
 Evidence підтримує `interview`, `system_data` для CRM і metrics, `document`, `external_source`, `observation` та `survey`.
 
@@ -80,7 +80,7 @@ Mutation endpoints вимагають:
 
 Створення використовує deterministic session id. Interview retries зберігають idempotency key. Evidence отримує deterministic evidence id. Completion є terminal-state idempotent. Recommendation → Action використовує Kernel Action idempotency та режим `APPROVAL_REQUIRED`.
 
-## Recommendation → Action
+## Перехід Recommendation → Action
 
 Recommendation не є кінцевим артефактом:
 
