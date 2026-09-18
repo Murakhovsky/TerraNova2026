@@ -62,7 +62,7 @@ final readonly class SalesInboundService
         return $ok ? ClientCaseCommandResult::success('attached') : ClientCaseCommandResult::failure('request_not_found');
     }
 
-    public function updateRequest(int $requestId, array $input, ?array $user = null): ClientCaseCommandResult
+    public function updateRequest(int $requestId, array $input, ?array $user = null, ?string $correlationId = null): ClientCaseCommandResult
     {
         $request = $this->commands->inboundRequest($this->organizationId, $requestId);
         if (!$request) return ClientCaseCommandResult::failure('not_found', ['case_id' => null]);
@@ -79,7 +79,7 @@ final readonly class SalesInboundService
         $completedAt = !empty($input['completed']) ? date('Y-m-d H:i:s') : null;
         $caseId = (int) ($request['client_case_id'] ?? 0);
         $case = $caseId > 0 ? $this->readModel->case($caseId) : null;
-        $correlationId = ClientCaseEvents::id();
+        $correlationId = trim((string) $correlationId) !== '' ? trim((string) $correlationId) : ClientCaseEvents::id();
 
         return $this->transactions->transactional(function () use ($requestId, $input, $user, $request, $status, $managerId, $managerNote, $nextContact, $lastContacted, $activityType, $activityBody, $completedAt, $caseId, $case, $correlationId): ClientCaseCommandResult {
             if (!$this->commands->updateInboundRequest($this->organizationId, $requestId, [
@@ -153,7 +153,7 @@ final readonly class SalesInboundService
         });
     }
 
-    public function createCaseFromRequest(int $requestId, array $input = [], ?array $user = null): ClientCaseCommandResult
+    public function createCaseFromRequest(int $requestId, array $input = [], ?array $user = null, ?string $correlationId = null): ClientCaseCommandResult
     {
         $request = $this->commands->inboundRequest($this->organizationId, $requestId);
         if (!$request) return ClientCaseCommandResult::failure('request_not_found', ['case_id' => null]);
@@ -162,8 +162,9 @@ final readonly class SalesInboundService
         $phone = ClientCaseInput::nullable((string) ($request['phone'] ?? ''), 50);
         $email = ClientCaseInput::email((string) ($request['email'] ?? ''));
         $managerId = $this->commands->activeManagerId($this->organizationId, $input['assigned_user_id'] ?? ($user['id'] ?? null));
+        $correlationId = trim((string) $correlationId) !== '' ? trim((string) $correlationId) : ClientCaseEvents::id();
 
-        return $this->transactions->transactional(function () use ($requestId, $request, $input, $user, $name, $phone, $email, $managerId): ClientCaseCommandResult {
+        return $this->transactions->transactional(function () use ($requestId, $request, $input, $user, $name, $phone, $email, $managerId, $correlationId): ClientCaseCommandResult {
             $personId = ClientCasePeople::findOrCreate($this->commands, $this->organizationId, ['full_name' => $name, 'phone' => $phone, 'email' => $email, 'telegram' => null, 'notes' => null]);
             $caseInput = [
                 'full_name' => $name, 'type' => ClientCaseInput::caseTypeFromInbound($request), 'title' => ClientCaseInput::caseTitleFromInbound($request, $name),
@@ -192,7 +193,7 @@ final readonly class SalesInboundService
             }
             $created = $this->readModel->case($caseId);
             if (!$created) throw new RuntimeException('Created client case could not be reloaded.');
-            $metadata = ClientCaseEvents::metadata($user);
+            $metadata = ClientCaseEvents::metadata($user, $correlationId);
             $this->events->publish(ClientCaseCreated::create(ClientCaseEvents::id(), $this->organizationId, (string) $caseId, [
                 'person_id' => $personId,
                 'pipeline_id' => $created['pipeline_id'] ?? null,
