@@ -8,6 +8,8 @@ use Kernel\Shared\Domain\OrganizationId;
 
 final readonly class SendSalesCommunicationCommand implements CommandInterface
 {
+    public const SUPPORTED_CHANNELS = ['TELEGRAM', 'EMAIL', 'PHONE', 'WEB', 'WHATSAPP', 'VIBER'];
+
     public function __construct(
         public OrganizationId $organizationId,
         public int $actorId,
