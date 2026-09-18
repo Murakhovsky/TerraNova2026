@@ -5,7 +5,7 @@ namespace Domains\RealEstate\Application\Service;
 
 use DateTimeImmutable;
 use Domains\Property\Application\Contract\PropertyInventoryCommandInterface;
-use Domains\Property\Contract\PropertyReferencePort;
+use Domains\Property\Contract\PropertyBrokerageReferencePort;
 use Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface;
 use Domains\RealEstate\Application\Contract\RealEstateMutationReceiptInterface;
 use Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface;
@@ -29,7 +29,7 @@ final readonly class RealEstateWorkflowService
         private RealEstateRepositoryInterface $repository,
         private RealEstateMutationReceiptInterface $receipts,
         private SalesOpportunityReferenceInterface $sales,
-        private PropertyReferencePort $properties,
+        private PropertyBrokerageReferencePort $properties,
         private PropertyInventoryCommandInterface $inventory,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
