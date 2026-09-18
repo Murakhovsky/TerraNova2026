@@ -40,6 +40,11 @@ final readonly class SalesAgentToolPermissionChecker implements ToolPermissionCh
             return false;
         }
 
+        $agent = $this->domains->agent($agentName);
+        if (!in_array($actionType, $agent->allowedActionTypes, true)) {
+            return false;
+        }
+
         return $this->modules->isEnabled($invocation->organizationId()->value(), 'sales');
     }
 }
