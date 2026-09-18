@@ -33,7 +33,25 @@ function wave4(bool $condition, string $message): void
 }
 
 $definition = SalesIntelligenceAgent::definition();
-$client = new EnvironmentSalesAgentLlmClient('fixture', '', '', 'wave4-fixture', 'fixture');
+$production = new class implements \Kernel\Agent\Contract\OrganizationAwareLlmClientInterface {
+    public int $calls = 0;
+    public function structured(\Kernel\Agent\AgentDefinition $agent, string $question, array $context): \Kernel\Agent\LlmResponse
+    {
+        $this->calls++;
+        throw new RuntimeException('Production LLM must not be called in Wave 4 fixture mode.');
+    }
+    public function structuredForOrganization(
+        string $organizationId,
+        \Kernel\Agent\AgentDefinition $agent,
+        string $question,
+        array $context,
+        ?string $correlationId = null,
+    ): \Kernel\Agent\LlmResponse {
+        $this->calls++;
+        throw new RuntimeException('Production LLM must not be called in Wave 4 fixture mode.');
+    }
+};
+$client = new EnvironmentSalesAgentLlmClient('fixture', $production);
 $response = $client->structuredForOrganization(
     'default',
     $definition,
@@ -46,6 +64,7 @@ $result = (new StructuredDecisionValidator())->validate($response->output, $defi
 (new SalesIntelligenceResultValidator())->validate($result, $definition);
 
 wave4($response->provider === 'fixture', 'Wave 4 test Agent must not call an external provider.');
+wave4($production->calls === 0, 'Wave 4 fixture mode leaked into the governed production LLM path.');
 wave4($result->confidence === 0.92, 'Wave 4 deterministic confidence changed unexpectedly.');
 wave4(count($result->proposedActions) === 1, 'Wave 4 fixture must produce exactly one governed proposal.');
 wave4($result->proposedActions[0]['type'] === 'sales.request_manager_review', 'Wave 4 fixture proposed the wrong Sales action.');
