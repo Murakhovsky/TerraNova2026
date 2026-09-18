@@ -58,9 +58,6 @@ final readonly class RealEstateWorkflowService
         $propertyId=trim((string)($property['asset_id']??''));
         if($propertyId==='')throw new InvalidArgumentException('Property has no canonical asset id.');
 
-        $existing=$this->repository->findMatch($organizationId,$opportunityId,$propertyId);
-        if($existing!==null)return $this->view($organizationId,$existing->id)+['replayed'=>true];
-
         $inventoryId=trim((string)($input['inventory_id']??($presentation['inventory']['inventory_id']??'')));
         if($inventoryId!==''){
             $inventory=$this->properties->getInventorySnapshot($organizationId,$inventoryId);
@@ -232,45 +229,37 @@ final readonly class RealEstateWorkflowService
             'expires_at'=>$input['expires_at']??null,
             'reason'=>$input['reason']??'brokerage_reservation',
         ]);
-        try{
-            $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey,$fingerprint):?array{
-                if(!$this->receipts->claim($case->organizationId->value(),'reservation',$idempotencyKey,$fingerprint))return null;
-                if($case->status===BrokerageProcess::RESERVED)return null;
-                $reservation=$this->inventory->reserve(
-                    $case->organizationId->value(),
-                    $case->inventoryId,
-                    [
-                        'reservation_id'=>$reservationId,
-                        'reserved_for_reference'=>'real_estate_case:'.$case->id,
-                        'expires_at'=>$input['expires_at']??null,
-                        'reason'=>$input['reason']??'brokerage_reservation',
-                    ],
-                    (string)$actorId,
-                    $correlationId,
-                );
-                $next=$case->transitionTo(BrokerageProcess::RESERVED);
-                $this->repository->saveCase($next,$actorId);
-                $this->events->publish(RealEstateDomainEvents::create(
-                    RealEstateEventType::PROPERTY_RESERVED,
-                    $next->organizationId->value(),
-                    $next->id,
-                    ['inventory_id'=>$next->inventoryId,'reservation_id'=>$reservation['reservation_id']??null],
-                    $metadata,
-                ));
-                $this->appendAudit($next,'property_reserved',$actorId,$metadata->correlationId,[
-                    'inventory_id'=>$next->inventoryId,
-                    'reservation_id'=>$reservation['reservation_id']??null,
-                    'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
-                ]);
-                return $reservation;
-            });
-        }catch(InvalidArgumentException $exception){
-            $fresh=$this->repository->findCase($organizationId,$caseId);
-            if($fresh!==null&&$fresh->status===BrokerageProcess::RESERVED){
-                return ['case'=>$this->view($organizationId,$caseId),'reservation'=>['replayed'=>true]];
-            }
-            throw $exception;
-        }
+        $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey,$fingerprint):?array{
+            if(!$this->receipts->claim($case->organizationId->value(),'reservation',$idempotencyKey,$fingerprint))return null;
+            if($case->status===BrokerageProcess::RESERVED)return null;
+            $reservation=$this->inventory->reserve(
+                $case->organizationId->value(),
+                $case->inventoryId,
+                [
+                    'reservation_id'=>$reservationId,
+                    'reserved_for_reference'=>'real_estate_case:'.$case->id,
+                    'expires_at'=>$input['expires_at']??null,
+                    'reason'=>$input['reason']??'brokerage_reservation',
+                ],
+                (string)$actorId,
+                $correlationId,
+            );
+            $next=$case->transitionTo(BrokerageProcess::RESERVED);
+            $this->repository->saveCase($next,$actorId);
+            $this->events->publish(RealEstateDomainEvents::create(
+                RealEstateEventType::PROPERTY_RESERVED,
+                $next->organizationId->value(),
+                $next->id,
+                ['inventory_id'=>$next->inventoryId,'reservation_id'=>$reservation['reservation_id']??null],
+                $metadata,
+            ));
+            $this->appendAudit($next,'property_reserved',$actorId,$metadata->correlationId,[
+                'inventory_id'=>$next->inventoryId,
+                'reservation_id'=>$reservation['reservation_id']??null,
+                'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
+            ]);
+            return $reservation;
+        });
 
         return $result===null
             ?['case'=>$this->view($organizationId,$caseId),'reservation'=>['replayed'=>true]]
