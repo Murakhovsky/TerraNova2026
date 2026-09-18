@@ -47,6 +47,8 @@ Do not commit directly to `main`.
 
 ## Symfony migration workflow
 
+Symfony Foundation was closed on 2026-09-18 after migration points 1–38 were merged to `main`. From this point onward, migration work is business-cutover work: each new slice must correspond to a concrete executable business scenario. Foundation-only refactoring requires a demonstrated need from an active slice, security/correctness issue, production incident, or measured runtime problem.
+
 During the migration only:
 
 1. `migration/symfony` is the integration stream.
