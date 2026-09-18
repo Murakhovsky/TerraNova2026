@@ -75,7 +75,7 @@ final readonly class SalesFrontendController
     {
         return $this->mutate(
             $request,
-            SalesFrontendMutationCommand::QUICK_UPDATE,
+            SalesFrontendMutationCommand::QUICK_EDIT,
             $id,
             $this->input($request),
         );
