@@ -49,7 +49,7 @@
       "runtime": [
         {
           "type": "contract",
-          "ref": "Domains\\Property\\Contract\\PropertyReferencePort"
+          "ref": "Domains\\Property\\Contract\\PropertyBrokerageReferencePort"
         },
         {
           "type": "source",
@@ -144,11 +144,29 @@
     }
   ],
   "edges": [
-    {"from": "validate-opportunity", "to": "resolve-property"},
-    {"from": "resolve-property", "to": "record-match"},
-    {"from": "record-match", "to": "create-offer"},
-    {"from": "create-offer", "to": "schedule-viewing"},
-    {"from": "schedule-viewing", "to": "reserve-inventory"},
-    {"from": "reserve-inventory", "to": "record-reservation"}
+    {
+      "from": "validate-opportunity",
+      "to": "resolve-property"
+    },
+    {
+      "from": "resolve-property",
+      "to": "record-match"
+    },
+    {
+      "from": "record-match",
+      "to": "create-offer"
+    },
+    {
+      "from": "create-offer",
+      "to": "schedule-viewing"
+    },
+    {
+      "from": "schedule-viewing",
+      "to": "reserve-inventory"
+    },
+    {
+      "from": "reserve-inventory",
+      "to": "record-reservation"
+    }
   ]
 }
