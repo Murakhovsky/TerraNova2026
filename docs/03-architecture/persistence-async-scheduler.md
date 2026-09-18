@@ -1,5 +1,5 @@
 ---
-title: Persistence, черги та планувальник
+title: Зберігання даних, черги та планувальник
 description: Канонічна межа MySQL/Doctrine, Redis Messenger, Symfony Scheduler і runtime workers під час Symfony migration.
 status: active
 updated: 2026-09-18
@@ -7,9 +7,9 @@ kind: architecture
 contract: architecture-v1
 ---
 
-# Persistence, черги та планувальник
+# Зберігання даних, черги та планувальник
 
-## Database без одночасної зміни СУБД
+## База даних без одночасної зміни СУБД
 
 На цьому етапі COS **не переходить на PostgreSQL**. Канонічна Symfony persistence база лишається MySQL:
 
@@ -37,7 +37,7 @@ Legacy tables не оголошуються Doctrine entities заднім чи�
 
 Нові persistence records розміщуються в `symfony/src/Persistence/Doctrine/Entity`, а нові schema changes — у `symfony/migrations`. Старі `app/migrations/*.sql` не конвертуються масово.
 
-## Async / Queue
+## Асинхронні задачі та черги
 
 Symfony Messenger має Redis transport `async` і окремий `failed` stream. `CommandBusInterface` підтримує два режими: synchronous command із рівно одним handler result та asynchronous command, який отримує `SentStamp` і повертає caller без очікування handler.
 
@@ -59,13 +59,13 @@ AgentRuntime / Integration port
 
 Поточний harmless `SchedulerHeartbeatCommand` є runtime probe цього маршруту. Він не є бізнес-функцією.
 
-## Scheduler
+## Планувальник
 
 `CosScheduleProvider` створює schedule `cos`. Scheduler process лише визначає due messages; важка робота redispatch-иться в `async`, де її виконує звичайний worker.
 
 Цей механізм є канонічним для scheduled agents, reports, synchronization, follow-ups, diagnostics і cleanup. Domain-specific recurring messages додаються лише разом із реальним Application command/use case, а не як порожні cron-заглушки.
 
-## Docker runtime
+## Середовище виконання Docker
 
 Поточний мінімальний Symfony stack:
 
