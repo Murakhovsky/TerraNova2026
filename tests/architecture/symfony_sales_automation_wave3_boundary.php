@@ -62,10 +62,17 @@ foreach ([
 foreach ([
     'ActionPolicyService',
     'ExecuteSalesActionCommand',
-    'AgentRunJobHandler::TYPE',
 ] as $needle) {
     if (!str_contains($sink, $needle)) {
         throw new RuntimeException('Wave 3 action proposal sink contract missing: ' . $needle);
+    }
+}
+
+// Wave 4 supersedes the legacy AgentRunJobHandler compatibility branch while preserving
+// the deterministic Wave 3 Policy/Action execution path for non-agent proposals.
+foreach (['AgentRunJobHandler::TYPE', 'JobQueueInterface', 'AGENT_RUN'] as $legacyAgentNeedle) {
+    if (str_contains($sink, $legacyAgentNeedle)) {
+        throw new RuntimeException('Wave 3 regression: migrated Symfony sink returned to legacy agent queue: ' . $legacyAgentNeedle);
     }
 }
 
