@@ -52,8 +52,11 @@ final readonly class SalesCommunicationController
         $input = $this->input($request);
         $channel = strtoupper(trim((string) ($input['channel'] ?? '')));
         $body = trim((string) ($input['body'] ?? ''));
-        if ($channel === '' || $body === '') {
-            return $this->error(422, 'communication_payload_required', 'channel and body are required.');
+        if (!in_array($channel, SendSalesCommunicationCommand::SUPPORTED_CHANNELS, true)) {
+            return $this->error(422, 'invalid_communication_channel', 'Unsupported communication channel.');
+        }
+        if ($body === '' || mb_strlen($body) > 4000) {
+            return $this->error(422, 'invalid_communication_body', 'body is required and must not exceed 4000 characters.');
         }
 
         $correlation = $request->attributes->get('_cos_correlation_id');
