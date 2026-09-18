@@ -120,9 +120,9 @@ jobs:
             (201, 'other-org', 20, 'new');
           SQL
           docker run --rm -v cos_php_sessions:/sessions alpine:3.21 sh -c '
-            printf "%s" "tn_auth_user_id|i:1001;cos_organization_id|s:7:\"default\";" > /sessions/sess_ci-manager-session0001
-            printf "%s" "tn_auth_user_id|i:1002;cos_organization_id|s:7:\"default\";" > /sessions/sess_ci-realtor-session0002
-            printf "%s" "tn_auth_user_id|i:1003;cos_organization_id|s:9:\"other-org\";" > /sessions/sess_ci-other-manager0003
+            printf "%s" "tn_auth_user_id|i:1001;cos_organization_id|s:7:\"default\";cos_csrf_token|s:64:\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\";" > /sessions/sess_ci-manager-session0001
+            printf "%s" "tn_auth_user_id|i:1002;cos_organization_id|s:7:\"default\";cos_csrf_token|s:64:\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\";" > /sessions/sess_ci-realtor-session0002
+            printf "%s" "tn_auth_user_id|i:1003;cos_organization_id|s:9:\"other-org\";cos_csrf_token|s:64:\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\";" > /sessions/sess_ci-other-manager0003
             chmod 644 /sessions/sess_*
           '
 
@@ -130,6 +130,11 @@ jobs:
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave1.sql
+
+      - name: Seed Sales Wave 2 write fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave2.sql
 
       - name: Verify Doctrine MySQL persistence boundary
         run: |
@@ -278,6 +283,192 @@ jobs:
           status=$(curl --silent --show-error --output /tmp/sales-wave1-no-session.json --write-out '%{http_code}' \
             http://127.0.0.1:8081/api/v1/sales/leads)
           test "$status" = "403"
+
+      - name: Verify Sales Wave 2 write cutover
+        run: |
+          php tests/architecture/symfony_sales_write_wave2_boundary.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/legacy_session_csrf_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/sales_write_wave2_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/symfony-wave2-routes.txt
+          grep -q 'cos_api_v1_sales_lead_create' /tmp/symfony-wave2-routes.txt
+          grep -q 'cos_api_v1_sales_opportunity_next_action' /tmp/symfony-wave2-routes.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+          status=$(curl --silent --show-error --dump-header /tmp/wave2-create.headers --output /tmp/wave2-create.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-create-lead' \
+            -H 'X-Idempotency-Key: wave2-create-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"full_name":"Wave Two Lead","phone":"+380000000777","email":"wave2@example.test","source":"symfony-wave2","manager_note":"Created by Wave 2","owner_id":1001}' \
+            http://127.0.0.1:8081/api/v1/sales/leads)
+          echo "Create Lead HTTP $status"; cat /tmp/wave2-create.json; echo
+          test "$status" = "201"
+          grep -qi '^X-Correlation-ID: wave2-create-lead' /tmp/wave2-create.headers
+          lead_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave2-create.json"),true); echo (int)($j["data"]["lead_id"]??0);')
+          test "$lead_id" -gt 0
+
+          status=$(curl --silent --show-error --output /tmp/wave2-create-duplicate.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-create-lead-duplicate' \
+            -H 'X-Idempotency-Key: wave2-create-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"full_name":"Should Not Duplicate","phone":"+380000000778"}' \
+            http://127.0.0.1:8081/api/v1/sales/leads)
+          echo "Duplicate Lead HTTP $status"; cat /tmp/wave2-create-duplicate.json; echo
+          test "$status" = "200"
+          duplicate_lead_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave2-create-duplicate.json"),true); echo (int)($j["data"]["lead_id"]??0);')
+          test "$duplicate_lead_id" = "$lead_id"
+
+          status=$(curl --silent --show-error --output /tmp/wave2-update.json --write-out '%{http_code}' \
+            --request PATCH \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-update-lead' \
+            -H 'Content-Type: application/json' \
+            --data '{"status":"contacted","manager_note":"Contact completed","owner_id":1001}' \
+            "http://127.0.0.1:8081/api/v1/sales/leads/$lead_id")
+          echo "Update Lead HTTP $status"; cat /tmp/wave2-update.json; echo
+          test "$status" = "200"
+          grep -q '"code":"updated"' /tmp/wave2-update.json
+
+          status=$(curl --silent --show-error --output /tmp/wave2-convert.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-convert-lead' \
+            -H 'Content-Type: application/json' \
+            --data '{"priority":"high","owner_id":1001}' \
+            "http://127.0.0.1:8081/api/v1/sales/leads/$lead_id/opportunity")
+          echo "Convert Lead HTTP $status"; cat /tmp/wave2-convert.json; echo
+          test "$status" = "201"
+          opportunity_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave2-convert.json"),true); echo (int)($j["data"]["case_id"]??0);')
+          test "$opportunity_id" -gt 0
+
+          status=$(curl --silent --show-error --output /tmp/wave2-convert-duplicate.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-convert-lead-duplicate' \
+            -H 'Content-Type: application/json' \
+            --data '{"priority":"normal","owner_id":1001}' \
+            "http://127.0.0.1:8081/api/v1/sales/leads/$lead_id/opportunity")
+          test "$status" = "200"
+          grep -q '"code":"already_attached"' /tmp/wave2-convert-duplicate.json
+
+          status=$(curl --silent --show-error --output /tmp/wave2-activity.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-add-activity' \
+            -H 'Content-Type: application/json' \
+            --data '{"activity_type":"note","title":"Wave 2 activity","body":"Activity through Symfony"}' \
+            "http://127.0.0.1:8081/api/v1/sales/opportunities/$opportunity_id/activities")
+          echo "Activity HTTP $status"; cat /tmp/wave2-activity.json; echo
+          test "$status" = "201"
+          grep -q '"activity_id":' /tmp/wave2-activity.json
+
+          status=$(curl --silent --show-error --output /tmp/wave2-stage.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-stage-change' \
+            -H 'Content-Type: application/json' \
+            --data '{"stage_id":"12"}' \
+            "http://127.0.0.1:8081/api/v1/sales/opportunities/$opportunity_id/stage")
+          echo "Stage HTTP $status"; cat /tmp/wave2-stage.json; echo
+          test "$status" = "200"
+          grep -q '"stage_id":"12"' /tmp/wave2-stage.json
+          grep -q '"changed":true' /tmp/wave2-stage.json
+
+          due_at=$(date -u -d '+2 days' '+%Y-%m-%dT%H:%M:%S+00:00')
+          status=$(curl --silent --show-error --output /tmp/wave2-next.json --write-out '%{http_code}' \
+            --request PUT \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-next-action' \
+            -H 'X-Idempotency-Key: wave2-next-001' \
+            -H 'Content-Type: application/json' \
+            --data "{\"title\":\"Wave 2 follow-up\",\"body\":\"Call the client\",\"due_at\":\"$due_at\"}" \
+            "http://127.0.0.1:8081/api/v1/sales/opportunities/$opportunity_id/next-action")
+          echo "Next Action HTTP $status"; cat /tmp/wave2-next.json; echo
+          test "$status" = "201"
+          next_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave2-next.json"),true); echo (int)($j["data"]["activity_id"]??0);')
+          test "$next_id" -gt 0
+
+          status=$(curl --silent --show-error --output /tmp/wave2-next-duplicate.json --write-out '%{http_code}' \
+            --request PUT \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave2-next-action-duplicate' \
+            -H 'X-Idempotency-Key: wave2-next-001' \
+            -H 'Content-Type: application/json' \
+            --data "{\"title\":\"Duplicate follow-up\",\"due_at\":\"$due_at\"}" \
+            "http://127.0.0.1:8081/api/v1/sales/opportunities/$opportunity_id/next-action")
+          test "$status" = "200"
+          duplicate_next_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave2-next-duplicate.json"),true); echo (int)($j["data"]["activity_id"]??0);')
+          test "$duplicate_next_id" = "$next_id"
+          grep -q '"duplicate":true' /tmp/wave2-next-duplicate.json
+
+          status=$(curl --silent --show-error --output /tmp/wave2-cross-tenant-lead.json --write-out '%{http_code}' \
+            --request PATCH \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'Content-Type: application/json' \
+            --data '{"status":"contacted"}' \
+            http://127.0.0.1:8081/api/v1/sales/leads/401)
+          test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/wave2-cross-tenant-opportunity.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'Content-Type: application/json' \
+            --data '{"stage_id":"21"}' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/201/stage)
+          test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/wave2-no-csrf.json --write-out '%{http_code}' \
+            --request PATCH \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H 'Content-Type: application/json' \
+            --data '{"status":"qualified"}' \
+            "http://127.0.0.1:8081/api/v1/sales/leads/$lead_id")
+          test "$status" = "400"
+          grep -q '"error":"invalid_csrf_token"' /tmp/wave2-no-csrf.json
+
+          status=$(curl --silent --show-error --output /tmp/wave2-no-session.json --write-out '%{http_code}' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: unauthenticated' \
+            -H 'Content-Type: application/json' \
+            --data '{"full_name":"No Session","phone":"+380000000999"}' \
+            http://127.0.0.1:8081/api/v1/sales/leads)
+          test "$status" = "403"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_leads WHERE organization_id='default' AND email='wave2@example.test';" > /tmp/wave2-lead-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave2-lead-count.txt)" = "1"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM sales_operation_receipts WHERE organization_id='default' AND operation_type='api.lead.create' AND idempotency_key='wave2-create-001';" > /tmp/wave2-receipt-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave2-receipt-count.txt)" = "1"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_external_references WHERE organization_id='default' AND provider='aida' AND entity_type='followup' AND cos_reference='action:wave2-next-001';" > /tmp/wave2-next-ref-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave2-next-ref-count.txt)" = "1"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_events WHERE organization_id='default' AND correlation_id IN ('wave2-create-lead','wave2-update-lead','wave2-convert-lead','wave2-add-activity','wave2-stage-change','wave2-next-action');" > /tmp/wave2-event-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave2-event-count.txt)" -ge "6"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id='default';" > /tmp/wave2-outbox-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave2-outbox-count.txt)" -ge "6"
+
+          echo "Sales Wave 2 create/update/convert/activity/stage/next-action runtime passed."
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php
