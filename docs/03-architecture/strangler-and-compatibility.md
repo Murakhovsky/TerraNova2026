@@ -92,7 +92,7 @@ Legacy Sales retirement
 
 `migration/symfony` залишається тимчасовим integration stream до повного retirement старого runtime, але foundation-only work після цієї точки не є самостійною метою міграції.
 
-## 40. Phase II Wave 1 — Sales read cutover
+## 40. Друга фаза, хвиля 1 — перенесення читання Sales
 
 Перший business-cutover wave переносить Sales dashboard, Lead list/detail, Opportunity list/workspace та Pipelines у `/api/v1/sales/*` через QueryBus і чинний `SalesWorkspaceReadModelInterface`.
 
