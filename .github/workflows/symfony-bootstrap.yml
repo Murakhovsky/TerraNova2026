@@ -19,6 +19,7 @@ on:
     branches:
       - main
       - migration/symfony
+      - 'migration/wave*'
     paths:
       - 'symfony/**'
       - 'docker/symfony/**'
