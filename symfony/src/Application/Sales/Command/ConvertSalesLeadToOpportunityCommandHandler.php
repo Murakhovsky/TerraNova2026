@@ -19,6 +19,7 @@ final readonly class ConvertSalesLeadToOpportunityCommandHandler implements Comm
             $command->leadId,
             $command->input,
             $command->actorId,
+            $command->correlationId,
         );
     }
 }
