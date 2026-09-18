@@ -137,6 +137,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave2.sql
 
+      - name: Seed Sales Wave 3 automation fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave3.sql
+
       - name: Verify Doctrine MySQL persistence boundary
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -474,6 +479,151 @@ jobs:
           test "$(tr -d '[:space:]' < /tmp/wave2-outbox-count.txt)" -ge "7"
 
           echo "Sales Wave 2 create/update/convert/activity/stage/next-action runtime passed."
+
+      - name: Verify Sales Wave 3 deterministic automation cutover
+        run: |
+          php tests/architecture/symfony_sales_automation_wave3_boundary.php
+          php tests/unit/sales_attention_detectors.php
+          php tests/unit/sales_wave3_automation.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+
+          docker compose -f docker-compose.symfony.yml exec -e COS_SALES_AUTOMATION_SCHEDULER_ENABLED=1 -T php \
+            php bin/console debug:scheduler cos > /tmp/wave3-scheduler.txt
+          grep -q 'RunSalesAutomationCommand' /tmp/wave3-scheduler.txt
+          grep -q 'DrainSalesOutboxCommand' /tmp/wave3-scheduler.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+          status=$(curl --silent --show-error --output /tmp/wave3-lead.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave3-fresh-lead' \
+            -H 'X-Idempotency-Key: wave3-fresh-lead-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"full_name":"Wave Three Fresh Lead","phone":"+380000003333","email":"wave3@example.test","source":"symfony-wave3","owner_id":1001}' \
+            http://127.0.0.1:8081/api/v1/sales/leads)
+          echo "Wave 3 fresh Lead HTTP $status"; cat /tmp/wave3-lead.json; echo
+          test "$status" = "201"
+          wave3_lead_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave3-lead.json"),true); echo (int)($j["data"]["lead_id"]??0);')
+          test "$wave3_lead_id" -gt 0
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          INSERT INTO cos_events
+            (id,organization_id,type,aggregate_type,aggregate_id,payload,metadata,schema_version,
+             correlation_id,causation_id,actor_type,actor_id,occurred_at)
+          VALUES
+            ('wave3-property-event','default','property.test','property','999',
+             JSON_OBJECT('fixture',true),JSON_OBJECT('correlation_id','wave3-property-corr'),1,
+             'wave3-property-corr',NULL,'SYSTEM','wave3-fixture',NOW(6));
+          INSERT INTO cos_event_outbox(event_id,organization_id,status,available_at)
+          VALUES('wave3-property-event','default','PENDING',NOW(6));
+          SQL
+
+          docker compose -f docker-compose.symfony.yml exec -T php \
+            php bin/console cos:sales:automation:enqueue --organization=default --limit=200 --no-activity-hours=48
+
+          wave3_complete=0
+          for attempt in $(seq 1 90); do
+            completed=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT COUNT(DISTINCT type) FROM cos_actions WHERE organization_id='default' AND status='COMPLETED' AND type IN ('sales.create_lead_followup_task','sales.escalate_overdue_followup','sales.create_followup','sales.request_manager_review');" | tr -d '[:space:]')
+            if [ "$completed" = "4" ]; then
+              wave3_complete=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$wave3_complete" != "1" ]; then
+            echo "Wave 3 actions did not complete."
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT id,type,target_type,target_id,status,last_error FROM cos_actions ORDER BY created_at;"
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT id,type,status,attempts,last_error FROM cos_jobs ORDER BY created_at;"
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=350 worker scheduler php mysql redis || true
+            exit 1
+          fi
+
+          lead_tasks=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_lead_activities WHERE lead_id=$wave3_lead_id AND activity_type='task' AND title='First contact with new Lead';" | tr -d '[:space:]')
+          test "$lead_tasks" = "1"
+
+          overdue_tasks=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_client_case_activities WHERE organization_id='default' AND client_case_id=101 AND activity_type='task' AND title='Urgent overdue follow-up';" | tr -d '[:space:]')
+          test "$overdue_tasks" -ge "1"
+
+          manager_reviews=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_client_case_activities WHERE organization_id='default' AND client_case_id=101 AND activity_type='task' AND title='Review stuck Deal';" | tr -d '[:space:]')
+          test "$manager_reviews" -ge "1"
+
+          recovery_followups=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_client_case_activities WHERE organization_id='default' AND client_case_id=101 AND activity_type='followup' AND title='Re-engage customer' AND due_at>NOW();" | tr -d '[:space:]')
+          test "$recovery_followups" -ge "1"
+
+          detector_events=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(DISTINCT type) FROM cos_events WHERE organization_id='default' AND type IN ('sales.no_activity_detected','sales.followup.overdue','sales.deal.stuck');" | tr -d '[:space:]')
+          test "$detector_events" = "3"
+
+          other_detector_events=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_events WHERE organization_id='other-org' AND type IN ('sales.no_activity_detected','sales.followup.overdue','sales.deal.stuck');" | tr -d '[:space:]')
+          test "$other_detector_events" = "0"
+
+          matched_rules=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_rule_evaluations WHERE organization_id='default' AND matched=1;" | tr -d '[:space:]')
+          test "$matched_rules" -ge "4"
+
+          auto_policies=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_policy_evaluations WHERE organization_id='default' AND decision='AUTO';" | tr -d '[:space:]')
+          test "$auto_policies" -ge "4"
+
+          policy_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND category='POLICY_DECISION';" | tr -d '[:space:]')
+          test "$policy_audit" -ge "4"
+
+          execution_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND category='ACTION_EXECUTION';" | tr -d '[:space:]')
+          test "$execution_audit" -ge "4"
+
+          non_sales_status=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT status FROM cos_event_outbox WHERE event_id='wave3-property-event';" | tr -d '[:space:]')
+          test "$non_sales_status" = "PENDING"
+
+          actions_before=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_actions WHERE organization_id='default' AND type IN ('sales.create_lead_followup_task','sales.escalate_overdue_followup','sales.create_followup','sales.request_manager_review');" | tr -d '[:space:]')
+
+          docker compose -f docker-compose.symfony.yml exec -T php \
+            php bin/console cos:sales:automation:enqueue --organization=default --limit=200 --no-activity-hours=48
+          sleep 6
+
+          actions_after=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_actions WHERE organization_id='default' AND type IN ('sales.create_lead_followup_task','sales.escalate_overdue_followup','sales.create_followup','sales.request_manager_review');" | tr -d '[:space:]')
+          test "$actions_after" = "$actions_before"
+
+          lead_tasks_after=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_lead_activities WHERE lead_id=$wave3_lead_id AND activity_type='task' AND title='First contact with new Lead';" | tr -d '[:space:]')
+          test "$lead_tasks_after" = "1"
+
+          non_sales_status_after=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT status FROM cos_event_outbox WHERE event_id='wave3-property-event';" | tr -d '[:space:]')
+          test "$non_sales_status_after" = "PENDING"
+
+          echo "Sales Wave 3 deterministic Scheduler/Messenger automation runtime passed."
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php
