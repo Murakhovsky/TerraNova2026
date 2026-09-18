@@ -204,13 +204,66 @@ services:
       $monitoring: '@Domains\Sales\Application\Service\SalesMonitoringService'
 
 
-  App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
+  Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder:
     arguments:
-      $mode: '%env(COS_AGENT_LLM_MODE)%'
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Operations\Contract\MetricsRecorderInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder
+
+  Infrastructure\Llm\MysqlLlmGovernanceRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Infrastructure\Platform\Persistence\MySql\Resilience\MysqlCircuitBreakerStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Resilience\ExternalCallExecutor:
+    arguments:
+      $circuits: '@Infrastructure\Platform\Persistence\MySql\Resilience\MysqlCircuitBreakerStore'
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+  Infrastructure\Llm\HttpStructuredLlmClient:
+    arguments:
       $endpoint: '%env(LLM_ENDPOINT)%'
       $token: '%env(LLM_TOKEN)%'
       $model: '%env(LLM_MODEL)%'
       $provider: '%env(LLM_PROVIDER)%'
+
+  Kernel\Llm\LlmProviderRegistry:
+    arguments:
+      $providers:
+        primary: '@Infrastructure\Llm\HttpStructuredLlmClient'
+
+  wave4.llm.primary_route:
+    class: Kernel\Llm\LlmRoute
+    arguments:
+      $provider: 'primary'
+      $model: '%env(LLM_MODEL)%'
+
+  Kernel\Llm\LlmRoutingPolicy:
+    arguments:
+      $defaultRoutes:
+        - '@wave4.llm.primary_route'
+
+  Kernel\Llm\GovernedStructuredLlmClient:
+    arguments:
+      $providers: '@Kernel\Llm\LlmProviderRegistry'
+      $routing: '@Kernel\Llm\LlmRoutingPolicy'
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $resilience: '@Kernel\Resilience\ExternalCallExecutor'
+
+  Kernel\Agent\Service\StructuredAgentLlmClient:
+    arguments:
+      $client: '@Kernel\Llm\GovernedStructuredLlmClient'
+
+  App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
+    arguments:
+      $mode: '%env(COS_AGENT_LLM_MODE)%'
+      $production: '@Kernel\Agent\Service\StructuredAgentLlmClient'
 
   Kernel\Agent\Contract\LlmClientInterface:
     alias: App\Infrastructure\AI\EnvironmentSalesAgentLlmClient
