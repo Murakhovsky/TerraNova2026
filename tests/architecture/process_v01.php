@@ -37,7 +37,7 @@ $assert(str_contains($read('app/config/services_kernel.php'), "'/Bootstrap/Proce
 $assert(str_contains($read('app/Kernel/Module/KernelVersion.php'), "VERSION = '0.11.9'"), 'KernelVersion must expose additive Process contract revision.');
 
 $definitions = glob($root . '/resources/processes/*.json') ?: [];
-$assert(count($definitions) === 4, 'Canonical Process Registry source must contain four current definitions.');
+$assert(count($definitions) === 5, 'Canonical Process Registry source must contain five current definitions.');
 $schemas = [];
 foreach ($definitions as $path) {
     $definition = json_decode((string)file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
@@ -63,6 +63,22 @@ $assert(($resolveProperty['capability'] ?? null) === 'property.reference', 'Cros
 $contracts = array_values(array_filter($resolveProperty['runtime'] ?? [], static fn (array $mapping): bool => ($mapping['type'] ?? null) === 'contract'));
 $assert(count($contracts) === 1, 'Cross-domain Property step must declare one contract mapping.');
 $assert(($contracts[0]['ref'] ?? null) === 'Domains\\Property\\Contract\\PropertyReferencePort', 'Cross-domain Property step must use PropertyReferencePort.');
+
+$realEstate = json_decode((string)file_get_contents($root . '/resources/processes/real-estate-opportunity-to-reservation.json'), true, flags: JSON_THROW_ON_ERROR);
+$assert(($realEstate['schema_version'] ?? null) === 5, 'RealEstate Opportunity → Reservation must use schema v5.');
+$assert(($realEstate['domain'] ?? null) === 'real_estate', 'RealEstate process must be owned by real_estate.');
+$crossDomains = array_values(array_filter(
+    $realEstate['steps'] ?? [],
+    static fn (array $step): bool => ($step['domain'] ?? 'real_estate') !== 'real_estate',
+));
+$assert(count($crossDomains) === 3, 'RealEstate process must expose Sales validation plus two Property boundary steps.');
+foreach ($crossDomains as $step) {
+    $contracts = array_values(array_filter(
+        $step['runtime'] ?? [],
+        static fn (array $mapping): bool => ($mapping['type'] ?? null) === 'contract',
+    ));
+    $assert(count($contracts) >= 1, 'Each RealEstate cross-domain process step requires a contract mapping.');
+}
 
 $consumers = [
     'docs/.vitepress/check-processes.mjs',
