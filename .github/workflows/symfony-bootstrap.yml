@@ -362,7 +362,7 @@ jobs:
             -H "X-CSRF-Token: $csrf" \
             -H 'X-Correlation-ID: wave2-add-activity' \
             -H 'Content-Type: application/json' \
-            --data '{"activity_type":"note","title":"Wave 2 activity","body":"Activity through Symfony"}' \
+            --data '{"activity_type":"task","title":"Wave 2 activity","body":"Activity through Symfony"}' \
             "http://127.0.0.1:8081/api/v1/sales/opportunities/$opportunity_id/activities")
           echo "Activity HTTP $status"; cat /tmp/wave2-activity.json; echo
           test "$status" = "201"
@@ -461,12 +461,12 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT COUNT(*) FROM cos_events WHERE organization_id='default' AND correlation_id IN ('wave2-create-lead','wave2-update-lead','wave2-convert-lead','wave2-add-activity','wave2-stage-change','wave2-next-action');" > /tmp/wave2-event-count.txt
-          test "$(tr -d '[:space:]' < /tmp/wave2-event-count.txt)" -ge "6"
+          test "$(tr -d '[:space:]' < /tmp/wave2-event-count.txt)" -ge "7"
 
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT COUNT(*) FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id='default';" > /tmp/wave2-outbox-count.txt
-          test "$(tr -d '[:space:]' < /tmp/wave2-outbox-count.txt)" -ge "6"
+          test "$(tr -d '[:space:]' < /tmp/wave2-outbox-count.txt)" -ge "7"
 
           echo "Sales Wave 2 create/update/convert/activity/stage/next-action runtime passed."
 
