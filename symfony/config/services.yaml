@@ -802,3 +802,72 @@ services:
     arguments:
       $handlers:
         - '@Domains\Diagnostic\Automation\Handler\ImplementDiagnosticRecommendationActionHandler'
+
+
+  # Sales Wave 6 — Communications / Integrations cutover
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository
+
+  Infrastructure\Integration\Crm\MysqlCrmInboxRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\CrmInboxRepositoryInterface:
+    alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
+
+  Domains\Sales\Application\Contract\CrmInboxPendingRepositoryInterface:
+    alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
+
+  Infrastructure\Integration\Crm\MysqlCrmIngressResolver:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\CrmIngressResolverInterface:
+    alias: Infrastructure\Integration\Crm\MysqlCrmIngressResolver
+
+  Infrastructure\Integration\Crm\EnvironmentCrmWebhookSecretResolver:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\CrmWebhookSecretResolverInterface:
+    alias: Infrastructure\Integration\Crm\EnvironmentCrmWebhookSecretResolver
+
+  Infrastructure\Integration\Crm\MysqlCrmInboundApplier:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\CrmInboundApplierInterface:
+    alias: Infrastructure\Integration\Crm\MysqlCrmInboundApplier
+
+  Infrastructure\Integration\Crm\CrmRegistrySalesIntegrationHealthProbe:
+    arguments:
+      $registry: '@Infrastructure\Integration\Crm\CrmRegistry'
+
+  Domains\Sales\Application\Contract\SalesIntegrationHealthProbeInterface:
+    alias: Infrastructure\Integration\Crm\CrmRegistrySalesIntegrationHealthProbe
+
+  Domains\Sales\Automation\Integration\SalesIntegrationDefinitionCatalog: ~
+
+  Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesIntegrationAdministration:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $healthProbe: '@Domains\Sales\Application\Contract\SalesIntegrationHealthProbeInterface'
+      $definitions: '@Domains\Sales\Automation\Integration\SalesIntegrationDefinitionCatalog'
+
+  Domains\Sales\Application\Contract\SalesIntegrationAdministrationInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesIntegrationAdministration
+
+  Domains\Sales\Application\UseCase\ProcessCrmInbox:
+    arguments:
+      $inbox: '@Domains\Sales\Application\Contract\CrmInboxRepositoryInterface'
+      $applier: '@Domains\Sales\Application\Contract\CrmInboundApplierInterface'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $pipelines: '@Domains\Sales\Application\Contract\PipelineRepositoryInterface'
+      $changeDealStage: '@Domains\Sales\Application\UseCase\ChangeDealStage'
+      $operations: '@Domains\Sales\Application\Service\SalesOperationService'
