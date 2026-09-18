@@ -56,4 +56,4 @@ foreach(['reserve','changeStatus'] as $method){
     $assert($inventoryPort->hasMethod($method),'Property Inventory command port missing method: '.$method);
 }
 
-echo "Property V0.13 / RealEstate V0.2 Wave 9 domain: OK\n";
+echo "Property / RealEstate Wave 9 domain: OK\n";
