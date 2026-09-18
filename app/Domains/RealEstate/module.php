@@ -19,11 +19,11 @@ return [
         'extension_services' => [],
         'cross_domain_contracts' => [
             [
-                'contract' => 'Domains\\Property\\Contract\\PropertyReferencePort',
+                'contract' => 'Domains\\Property\\Contract\\PropertyBrokerageReferencePort',
                 'role' => 'requires',
                 'counterpart' => 'property',
                 'kind' => 'synchronous_port',
-                'purpose' => 'Resolve canonical Property and Inventory snapshots without reading Property storage directly.',
+                'purpose' => 'Resolve canonical Property and Inventory snapshots for brokerage without reading Property storage directly.',
             ],
             [
                 'contract' => 'Domains\\Property\\Application\\Contract\\PropertyInventoryCommandInterface',
