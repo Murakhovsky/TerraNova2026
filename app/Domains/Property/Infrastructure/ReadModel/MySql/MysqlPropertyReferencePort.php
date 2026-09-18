@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 namespace Domains\Property\Infrastructure\ReadModel\MySql;
 
+use Domains\Property\Contract\PropertyBrokerageReferencePort;
 use Domains\Property\Contract\PropertyReferencePort;
 use PDO;
 
-final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
+final readonly class MysqlPropertyReferencePort implements PropertyReferencePort, PropertyBrokerageReferencePort
 {
     public function __construct(private PDO $connection) {}
 
