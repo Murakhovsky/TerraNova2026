@@ -30,6 +30,8 @@ foreach([
     $assert(str_contains($source,'TransactionManagerInterface'),'Wave 5 write handler lacks transaction boundary: '.$handlerFile);
     $assert(str_contains($source,'->transactional('),'Wave 5 write handler does not execute transactionally: '.$handlerFile);
 }
+$acceptHandler=$read('symfony/src/Application/Diagnostic/Command/AcceptDiagnosticRecommendationCommandHandler.php');
+foreach(['IdentityResolverInterface','UserId::fromString','active member of this organization'] as $needle)$assert(str_contains($acceptHandler,$needle),'Recommendation owner tenant validation missing: '.$needle);
 
 $accept=$read('app/Domains/Diagnostic/Application/UseCase/AcceptDiagnosticRecommendation.php');
 foreach(['ActionService','IMPLEMENT_DIAGNOSTIC_RECOMMENDATION','APPROVAL_REQUIRED',"'owner_id'=>","'due_at'=>","'workflow_code'=>"] as $needle)$assert(str_contains($accept,$needle),'Recommendation → Action missing: '.$needle);
