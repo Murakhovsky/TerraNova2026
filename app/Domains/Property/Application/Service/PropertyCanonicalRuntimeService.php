@@ -93,13 +93,19 @@ final readonly class PropertyCanonicalRuntimeService
 
     public function reserveInventory(string $organizationId,string $inventoryId,array $input,?string $actorId=null,?string $correlationId=null): array
     {
-        $item=$this->inventory($organizationId,$inventoryId);if(!in_array($item->status->value,[InventoryStatus::AVAILABLE,InventoryStatus::UNDER_OFFER],true))throw new InvalidArgumentException('Inventory item is not reservable.');
-        if($this->repository->findActiveReservation($organizationId,$inventoryId)!==null)throw new InvalidArgumentException('Inventory item already has an active reservation.');
-        $reservation=new InventoryReservation($organizationId,$this->id((string)($input['reservation_id']??''),'RSV'),$inventoryId,$this->string($input['reserved_for_reference']??null),new DateTimeImmutable(),$this->date($input['expires_at']??null),null,$this->string($input['reason']??null));
-        $reserved=$item->changeStatus(InventoryStatus::from(InventoryStatus::RESERVED));$meta=$this->metadata($actorId,$correlationId);
-        return $this->transactions->transactional(function()use($item,$reserved,$reservation,$meta){$re=InventoryDomainEvents::reserved($reservation,$meta);$se=InventoryDomainEvents::statusChanged($reserved,$item->status,$reserved->status,$meta);
+        $meta=$this->metadata($actorId,$correlationId);
+        return $this->transactions->transactional(function()use($organizationId,$inventoryId,$input,$meta){
+            // MysqlPropertyCanonicalRuntimeRepository locks this row with FOR UPDATE while the transaction is active.
+            // Competing reservations therefore serialize before the active-reservation check.
+            $item=$this->inventory($organizationId,$inventoryId);
+            if(!in_array($item->status->value,[InventoryStatus::AVAILABLE,InventoryStatus::UNDER_OFFER],true))throw new InvalidArgumentException('Inventory item is not reservable.');
+            if($this->repository->findActiveReservation($organizationId,$inventoryId)!==null)throw new InvalidArgumentException('Inventory item already has an active reservation.');
+            $reservation=new InventoryReservation($organizationId,$this->id((string)($input['reservation_id']??''),'RSV'),$inventoryId,$this->string($input['reserved_for_reference']??null),new DateTimeImmutable(),$this->date($input['expires_at']??null),null,$this->string($input['reason']??null));
+            $reserved=$item->changeStatus(InventoryStatus::from(InventoryStatus::RESERVED));
+            $re=InventoryDomainEvents::reserved($reservation,$meta);$se=InventoryDomainEvents::statusChanged($reserved,$item->status,$reserved->status,$meta);
             $this->repository->saveReservation($reservation);$this->repository->saveInventory($reserved,null,$se->id,'reservation:'.$reservation->reservationId);$this->events->publish($re);$this->events->publish($se);$this->compatibility->sync($reserved->organizationId,$reserved->propertyAssetId);
-            return ['inventory'=>$reserved->toArray(),'reservation_id'=>$reservation->reservationId];});
+            return ['inventory'=>$reserved->toArray(),'reservation_id'=>$reservation->reservationId];
+        });
     }
 
     public function releaseReservation(string $organizationId,string $inventoryId,?string $actorId=null,?string $correlationId=null): array
