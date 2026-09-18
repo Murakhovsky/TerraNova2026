@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Bootstrap\InboundCaseResolverAdapter;
 use Domains\Sales\Application\Service\ClientCaseCommandService;
 use Domains\Sales\Application\Service\SalesInboundService;
+use Domains\Sales\Application\Service\SalesAutomationRunner;
 use Domains\Sales\Application\Service\SalesMonitoringService;
 use Domains\Sales\Application\Service\SalesOperationService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
@@ -112,6 +113,9 @@ $di->setShared('salesOperationService', fn (): SalesOperationService => new Sale
 $di->setShared('salesMonitoringService', fn (): SalesMonitoringService => new SalesMonitoringService(
     $this->getShared('salesAttentionRepository'), $this->getShared('salesOutcomeRepository'),
     $this->getShared('eventBus'), $this->getShared('cosTransactionManager'),
+));
+$di->setShared('salesAutomationRunner', fn (): SalesAutomationRunner => new SalesAutomationRunner(
+    $this->getShared('salesAttentionRepository'), $this->getShared('salesMonitoringService'),
 ));
 $di->setShared('salesClientCaseService', fn (): ClientCaseCommandService => new ClientCaseCommandService(
     $this->getShared('salesClientCaseReadModel'), $this->getShared('salesClientCaseCommands'),
