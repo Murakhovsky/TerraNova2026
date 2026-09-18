@@ -141,11 +141,24 @@ final readonly class MysqlDiagnosticSessionRepository implements DiagnosticSessi
             'SELECT * FROM diagnostic_evidence WHERE organization_id = :organization_id AND session_id = :session_id ORDER BY captured_at, evidence_id'
         );
         $statement->execute(['organization_id' => $organizationId, 'session_id' => $sessionId]);
-        return array_map(fn (array $row): Evidence => new Evidence(
-            (string) $row['evidence_id'], EvidenceType::from((string) $row['evidence_type']),
-            (string) $row['title'], (string) $row['source_reference'], new DateTimeImmutable((string) $row['captured_at']),
-            $this->decodeArray((string) $row['metadata_json']),
-        ), $statement->fetchAll(PDO::FETCH_ASSOC));
+        return array_map(function (array $row): Evidence {
+            $metadata = $this->decodeArray((string) $row['metadata_json']);
+            return new Evidence(
+                (string) $row['evidence_id'],
+                EvidenceType::from((string) $row['evidence_type']),
+                (string) $row['title'],
+                (string) $row['source_reference'],
+                new DateTimeImmutable((string) $row['captured_at']),
+                $metadata,
+                isset($metadata['source_reference']) && $metadata['source_reference'] !== null ? (string) $metadata['source_reference'] : null,
+                (string) ($metadata['collection_method'] ?? 'unknown'),
+                (float) ($metadata['reliability'] ?? 1.0),
+                (float) ($metadata['directness'] ?? 1.0),
+                isset($metadata['scope']) && $metadata['scope'] !== null ? (string) $metadata['scope'] : null,
+                isset($metadata['sample_size']) && $metadata['sample_size'] !== null ? (int) $metadata['sample_size'] : null,
+                $metadata['raw_value'] ?? null,
+            );
+        }, $statement->fetchAll(PDO::FETCH_ASSOC));
     }
 
     /** @return list<DiagnosticRecord> */

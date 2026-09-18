@@ -248,6 +248,9 @@ services:
       $defaultRoutes:
         - '@wave4.llm.primary_route'
 
+  Kernel\Llm\StructuredLlmClientInterface:
+    alias: Kernel\Llm\GovernedStructuredLlmClient
+
   Kernel\Llm\GovernedStructuredLlmClient:
     arguments:
       $providers: '@Kernel\Llm\LlmProviderRegistry'
@@ -546,6 +549,7 @@ services:
     arguments:
       $modules:
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
+        - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
@@ -727,6 +731,7 @@ services:
       $consumers:
         kernel.rule-engine.v1: '@Kernel\Rule\Service\RuleEngineEventHandler'
         sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
+        diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:
@@ -748,3 +753,52 @@ services:
 
   Kernel\Observability\StructuredLoggerInterface:
     alias: Infrastructure\Observability\JsonFileLogger
+
+  # Wave 5: Sales Diagnostics cutover. Existing Diagnostic domain remains authoritative.
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository:
+    arguments: ['@legacy_cos.pdo']
+  Domains\Diagnostic\Application\Contract\DiagnosticPackRepositoryInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository
+
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository:
+    arguments: ['@legacy_cos.pdo']
+  Domains\Diagnostic\Application\Contract\DiagnosticSessionRepositoryInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository
+
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticRuntimeRepository:
+    arguments: ['@legacy_cos.pdo']
+  Domains\Diagnostic\Application\Contract\DiagnosticRuntimeRepositoryInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticRuntimeRepository
+
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticAssessmentProjection:
+    arguments: ['@legacy_cos.pdo']
+  Domains\Diagnostic\Application\Contract\DiagnosticAssessmentProjectionInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticAssessmentProjection
+
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyStudioRepository:
+    arguments: ['@legacy_cos.pdo']
+  Domains\Diagnostic\Application\Contract\MethodologyStudioRepositoryInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyStudioRepository
+
+  Domains\Diagnostic\Application\Service\MethodologyStudioService: ~
+  Domains\Diagnostic\Application\UseCase\StartDiagnosticSession: ~
+  Domains\Diagnostic\Application\UseCase\CaptureDiagnosticEvidence: ~
+  Domains\Diagnostic\Application\UseCase\RecordDiagnosticResult: ~
+  Domains\Diagnostic\Application\UseCase\EvaluateDiagnosticSession: ~
+  Domains\Diagnostic\Application\UseCase\CompleteDiagnosticSession: ~
+  Domains\Diagnostic\Application\UseCase\AcceptDiagnosticRecommendation: ~
+
+  Domains\Diagnostic\Infrastructure\AI\StructuredLlmAiGateway: ~
+  Domains\Diagnostic\AI\AiGatewayInterface:
+    alias: Domains\Diagnostic\Infrastructure\AI\StructuredLlmAiGateway
+  Domains\Diagnostic\Interview\FactExtractionService: ~
+  Domains\Diagnostic\Interview\HypothesisGenerationService: ~
+  Domains\Diagnostic\Application\Service\DiagnosticRuntimeService: ~
+  Domains\Diagnostic\Application\Service\DiagnosticEvidencePipeline: ~
+
+  Domains\Diagnostic\Automation\Handler\ImplementDiagnosticRecommendationActionHandler: ~
+  Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler: ~
+  Domains\Diagnostic\Bootstrap\DiagnosticDomainModule:
+    arguments:
+      $handlers:
+        - '@Domains\Diagnostic\Automation\Handler\ImplementDiagnosticRecommendationActionHandler'

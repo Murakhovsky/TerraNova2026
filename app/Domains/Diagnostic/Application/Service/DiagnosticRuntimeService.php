@@ -94,9 +94,6 @@ final readonly class DiagnosticRuntimeService
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session was not found.');
         $state=$this->state($organizationId,$sessionId,$row);
         $next=$row['status']==='active'?$this->nextDecision($row,$state):null;
-        if($next!==null && $row['current_question_id']!==$next->questionId){
-            $this->runtime->saveState($organizationId,$sessionId,$row['state'],$next->questionId,(int)$row['state_revision']);
-        }
         return $this->snapshot($row,$session,$state,$next);
     }
 
@@ -106,16 +103,25 @@ final readonly class DiagnosticRuntimeService
         if($row['status']!=='active') return null;
         $state=$this->state($organizationId,$sessionId,$row);
         $next=$this->nextDecision($row,$state);
-        $this->runtime->saveState($organizationId,$sessionId,$row['state'],$next?->questionId,(int)$row['state_revision']);
         return $next===null?null:$this->questionArray($next);
     }
 
-    public function answer(string $organizationId,string $sessionId,string $answer,string $actorId):array
+    public function answer(string $organizationId,string $sessionId,string $answer,string $actorId,?string $idempotencyKey=null):array
     {
         if(trim($answer)==='') throw new DomainException('Answer must not be empty.');
         $row=$this->runtime->get($organizationId,$sessionId)??throw new DomainException('Diagnostic runtime was not found.');
         if($row['status']!=='active') throw new DomainException('Diagnostic runtime is not active.');
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session was not found.');
+        $idempotencyKey=trim((string)$idempotencyKey);
+        if($idempotencyKey!==''){
+            foreach($row['state']['history']??[] as $turn){
+                if(is_array($turn) && ($turn['idempotency_key']??null)===$idempotencyKey){
+                    $state=$this->state($organizationId,$sessionId,$row);
+                    $next=$this->nextDecision($row,$state);
+                    return $this->snapshot($row,$session,$state,$next)+['replayed'=>true];
+                }
+            }
+        }
         $pack=$this->compiled($organizationId,$row);
         $state=$this->state($organizationId,$sessionId,$row,$pack);
         $questionId=(string)($row['current_question_id']??'');
@@ -129,7 +135,8 @@ final readonly class DiagnosticRuntimeService
         if($candidateEvidence===[]) $candidateEvidence=[['title'=>'Interview answer','value'=>$answer]];
         foreach($candidateEvidence as $i=>$item){
             if(!is_array($item)) continue;
-            $id=substr(hash('sha256',$sessionId.':'.$decision->questionId.':'.count($row['state']['history']).':'.$i),0,64);
+            $seed=$idempotencyKey!==''?$idempotencyKey:(string)count($row['state']['history']);
+            $id=substr(hash('sha256',$sessionId.':'.$decision->questionId.':'.$seed.':'.$i),0,64);
             $evidence=new Evidence($id,EvidenceType::Interview,(string)($item['title']??'Interview answer'),'diagnostic_interview',$now,['question_id'=>$decision->questionId,'confidence'=>(float)($item['confidence']??.65),'quality'=>(float)($item['quality']??.8),'claim'=>$item['value']??$answer],null,'ai_extraction',.65,.8,null,null,$item['value']??$answer);
             $this->captureEvidence->execute($organizationId,$sessionId,$evidence,'USER',$actorId);
             $newEvidenceIds[]=$id;
@@ -151,7 +158,7 @@ final readonly class DiagnosticRuntimeService
                 $runtimeState['metrics'][$key]=['value'=>(float)$metric['value'],'evidence_ids'=>$newEvidenceIds,'updated_at'=>$now->format(DATE_ATOM)];
             }
         }
-        $runtimeState['history'][]=['question_id'=>$decision->questionId,'area_id'=>$pack->questionsById[$decision->questionId]->areaId??'','answer'=>$answer,'status'=>'ANSWERED','at'=>$now->format(DATE_ATOM),'uncertainties'=>$extracted->uncertainties,'missing_information'=>$extracted->missingInformation];
+        $runtimeState['history'][]=['question_id'=>$decision->questionId,'area_id'=>$pack->questionsById[$decision->questionId]->areaId??'','answer'=>$answer,'status'=>'ANSWERED','at'=>$now->format(DATE_ATOM),'idempotency_key'=>$idempotencyKey!==''?$idempotencyKey:null,'uncertainties'=>$extracted->uncertainties,'missing_information'=>$extracted->missingInformation];
         $runtimeState['remaining_questions']=max(0,(int)$runtimeState['remaining_questions']-1);
         $started=new DateTimeImmutable((string)$row['started_at']);
         $elapsedMinutes=max(0,(int)floor(($now->getTimestamp()-$started->getTimestamp())/60));
@@ -162,7 +169,7 @@ final readonly class DiagnosticRuntimeService
         $next=$this->questions->decide($nextState,$pack,$runtimeState['history'],DiagnosticMode::from((string)$row['mode']),(int)$runtimeState['remaining_questions'],(int)$runtimeState['remaining_minutes']);
         $this->runtime->saveState($organizationId,$sessionId,$runtimeState,$next?->questionId,(int)$runtimeState['revision']);
         $fresh=$this->runtime->get($organizationId,$sessionId)??$row;
-        return $this->snapshot($fresh,$this->sessions->get($organizationId,$sessionId)??$session,$nextState,$next);
+        return $this->snapshot($fresh,$this->sessions->get($organizationId,$sessionId)??$session,$nextState,$next)+['replayed'=>false];
     }
 
     public function complete(string $organizationId,string $sessionId,string $actorId):array
@@ -217,11 +224,14 @@ final readonly class DiagnosticRuntimeService
     public function accept(string $organizationId,string $sessionId,string $recommendationId):array
     {
         $row=$this->runtime->recommendation($organizationId,$sessionId,$recommendationId)??throw new DomainException('Recommendation was not found.');
+        if(trim((string)($row['action_id']??''))!==''){
+            return ['recommendation'=>$row['payload'],'action_id'=>(string)$row['action_id'],'action_status'=>'EXISTING','replayed'=>true];
+        }
         $r=$this->recommendationFromArray($row['payload']);
         $action=$this->acceptRecommendation->execute($organizationId,$sessionId,$r);
         $payload=$this->recommendationArray($r);
         $this->runtime->saveRecommendation($organizationId,$sessionId,$recommendationId,$payload,$r->status->value,new DateTimeImmutable(),$action->id);
-        return ['recommendation'=>$payload,'action_id'=>$action->id,'action_status'=>$action->status->value];
+        return ['recommendation'=>$payload,'action_id'=>$action->id,'action_status'=>$action->status->value,'replayed'=>false];
     }
 
     public function startReDiagnostic(string $organizationId,string $sourceSessionId,string $actorId):array
