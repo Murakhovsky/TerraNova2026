@@ -65,6 +65,11 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
             return ClientCaseCommandResult::failure('invalid_email');
         }
 
+        $rawNextContact = trim((string) ($input['next_contact_at'] ?? ''));
+        if ($rawNextContact !== '' && strtotime($rawNextContact) === false) {
+            return ClientCaseCommandResult::failure('invalid_next_contact_at');
+        }
+
         $requestedOwner = (int) ($input['owner_id'] ?? $input['assigned_user_id'] ?? $actorId);
         $ownerId = $this->commands->activeManagerId($this->organizationId, $requestedOwner);
         if ($requestedOwner > 0 && $ownerId === null) {
@@ -107,7 +112,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
                 'deal_type' => $this->dealType((string) ($input['deal_type'] ?? 'consultation')),
                 'message' => ($message = trim((string) ($input['message'] ?? ''))) !== '' ? mb_substr($message, 0, 4000) : null,
                 'source_page' => mb_substr(trim((string) ($input['source'] ?? 'manager-api')), 0, 255),
-                'request_intent' => mb_substr(trim((string) ($input['request_intent'] ?? 'general_contact')), 0, 64),
+                'request_intent' => $this->requestIntent((string) ($input['request_intent'] ?? 'general_contact')),
                 'manager_note' => ($note = trim((string) ($input['manager_note'] ?? ''))) !== '' ? mb_substr($note, 0, 4000) : null,
                 'assigned_user_id' => $ownerId,
                 'next_contact_at' => $this->dateTimeOrNull($input['next_contact_at'] ?? null),
@@ -181,8 +186,13 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
 
     public function convertLeadToOpportunity(int $leadId, array $input, int $actorId): ClientCaseCommandResult
     {
+        $requestedOwner = (int) ($input['owner_id'] ?? $actorId);
+        if ($requestedOwner <= 0 || $this->commands->activeManagerId($this->organizationId, $requestedOwner) === null) {
+            return ClientCaseCommandResult::failure('invalid_owner');
+        }
+
         return $this->inbound->createCaseFromRequest($leadId, [
-            'assigned_user_id' => (int) ($input['owner_id'] ?? $actorId),
+            'assigned_user_id' => $requestedOwner,
             'priority' => strtolower(trim((string) ($input['priority'] ?? 'normal'))),
         ], ['id' => $actorId]);
     }
@@ -283,5 +293,11 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
     {
         return in_array($value = strtolower(trim($value)), ['sale','rent','investment','consultation'], true)
             ? $value : 'consultation';
+    }
+
+    private function requestIntent(string $value): string
+    {
+        return in_array($value = strtolower(trim($value)), ['presentation','viewing','similar_search','general_contact'], true)
+            ? $value : 'general_contact';
     }
 }
