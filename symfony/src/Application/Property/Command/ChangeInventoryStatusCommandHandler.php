@@ -12,7 +12,7 @@ final readonly class ChangeInventoryStatusCommandHandler implements CommandHandl
     public function __invoke(ChangeInventoryStatusCommand $command):array
     {
         return $this->writes->changeInventoryStatus(
-            $command->organizationId,$command->actorId,$command->correlationId,$command->inventoryId,$command->status,$command->reason,
+            $command->organizationId,$command->actorId,$command->correlationId,$command->inventoryId,$command->status,$command->reason,$command->idempotencyKey,
         );
     }
 }
