@@ -27,8 +27,14 @@ final readonly class DiagnosticEvidencePipeline
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session was not found.');
 
         $evidenceId=substr(hash('sha256',$organizationId.':'.$sessionId.':'.$idempotencyKey),0,64);
+        $requestHash=self::fingerprint($input);
         foreach($session->evidence() as $existing){
-            if($existing->id===$evidenceId) return ['evidence_id'=>$evidenceId,'replayed'=>true,'facts_ingested'=>0,'metrics_ingested'=>0];
+            if($existing->id!==$evidenceId)continue;
+            $stored=(string)($existing->metadata['idempotency_request_hash']??'');
+            if($stored!==''&&!hash_equals($stored,$requestHash)){
+                throw new DomainException('Diagnostic idempotency key was reused with different evidence payload.');
+            }
+            return ['evidence_id'=>$evidenceId,'replayed'=>true,'facts_ingested'=>0,'metrics_ingested'=>0];
         }
 
         $type=EvidenceType::tryFrom(strtolower(trim((string)($input['type']??''))))??throw new DomainException('Unsupported evidence type.');
@@ -41,7 +47,14 @@ final readonly class DiagnosticEvidencePipeline
         $scope=($v=trim((string)($input['scope']??'')))!==''?$v:null;
         $sampleSize=isset($input['sample_size'])?(int)$input['sample_size']:null; $rawValue=$input['raw_value']??null;
         $metadata=is_array($input['metadata']??null)?$input['metadata']:[];
-        $metadata += ['source_reference'=>$sourceReference,'collection_method'=>$collectionMethod,'reliability'=>$reliability,'directness'=>$directness,'scope'=>$scope,'sample_size'=>$sampleSize,'raw_value'=>$rawValue];
+        $metadata['source_reference']=$sourceReference;
+        $metadata['collection_method']=$collectionMethod;
+        $metadata['reliability']=$reliability;
+        $metadata['directness']=$directness;
+        $metadata['scope']=$scope;
+        $metadata['sample_size']=$sampleSize;
+        $metadata['raw_value']=$rawValue;
+        $metadata['idempotency_request_hash']=$requestHash;
 
         $evidence=new Evidence($evidenceId,$type,$title,$source,new DateTimeImmutable(),$metadata,$sourceReference,$collectionMethod,$reliability,$directness,$scope,$sampleSize,$rawValue);
         $this->captureEvidence->execute($organizationId,$sessionId,$evidence,'USER',$actorId);
@@ -72,6 +85,21 @@ final readonly class DiagnosticEvidencePipeline
         $revision=max((int)($runtime['state_revision']??0),(int)($state['revision']??0))+1; $state['revision']=$revision;
         $this->runtime->saveState($organizationId,$sessionId,$state,isset($runtime['current_question_id'])?(string)$runtime['current_question_id']:null,$revision);
         return ['evidence_id'=>$evidenceId,'replayed'=>false,'facts_ingested'=>$facts,'metrics_ingested'=>$metrics,'revision'=>$revision];
+    }
+
+    /** @param array<string,mixed> $value */
+    private static function fingerprint(array $value): string
+    {
+        return hash('sha256',json_encode(self::normalize($value),JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+    }
+
+    private static function normalize(mixed $value): mixed
+    {
+        if(!is_array($value))return $value;
+        if(array_is_list($value))return array_map(self::normalize(...),$value);
+        ksort($value);
+        foreach($value as $key=>$item)$value[$key]=self::normalize($item);
+        return $value;
     }
 
     /** @return list<array<string,mixed>> */

@@ -24,14 +24,36 @@ final readonly class StartDiagnosticCommandHandler implements CommandHandlerInte
         return $this->transactions->transactional(function () use ($command): array {
             $org=$command->organizationId->value();
             $session=substr(hash('sha256','diagnostic:start:'.$org.':'.$command->idempotencyKey),0,32);
-            if($this->repository->get($org,$session)!==null){
+            $requestHash=self::fingerprint($command->input);
+            $existing=$this->repository->get($org,$session);
+            if($existing!==null){
+                $stored=(string)($existing['state']['idempotency_request_hash']??'');
+                if($stored!=='' && !hash_equals($stored,$requestHash)){
+                    throw new \DomainException('Diagnostic idempotency key was reused with a different creation payload.');
+                }
                 return $this->runtime->resume($org,$session)+['replayed'=>true];
             }
             $input=$command->input;
             $input['session_id']=$session;
+            $input['idempotency_request_hash']=$requestHash;
             $result=$this->runtime->start($org,$input,(string)$command->actorId);
             $this->audit->record($org,$command->actorId,$command->correlationId,'diagnostic.created',$session,['pack_id'=>$input['pack_id']??null,'target_domain'=>$input['domain']??null]);
             return $result+['replayed'=>false];
         });
+    }
+
+    /** @param array<string,mixed> $value */
+    private static function fingerprint(array $value): string
+    {
+        return hash('sha256',json_encode(self::normalize($value),JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+    }
+
+    private static function normalize(mixed $value): mixed
+    {
+        if(!is_array($value))return $value;
+        if(array_is_list($value))return array_map(self::normalize(...),$value);
+        ksort($value);
+        foreach($value as $key=>$item)$value[$key]=self::normalize($item);
+        return $value;
     }
 }

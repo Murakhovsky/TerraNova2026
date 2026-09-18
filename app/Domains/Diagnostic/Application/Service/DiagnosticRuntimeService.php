@@ -83,7 +83,7 @@ final readonly class DiagnosticRuntimeService
             $now,'USER',$actorId
         );
         $questionBudget=max(1,(int)($input['question_budget']??40)); $timeBudget=max(1,(int)($input['time_budget_minutes']??90));
-        $state=['pack_id'=>$packId,'methodology_version'=>$methodologyVersion,'facts'=>[],'metrics'=>[],'history'=>[],'contradictions'=>[],'revision'=>0,'question_budget'=>$questionBudget,'time_budget_minutes'=>$timeBudget,'remaining_questions'=>$questionBudget,'remaining_minutes'=>$timeBudget];
+        $state=['pack_id'=>$packId,'methodology_version'=>$methodologyVersion,'idempotency_request_hash'=>(string)($input['idempotency_request_hash']??''),'facts'=>[],'metrics'=>[],'history'=>[],'contradictions'=>[],'revision'=>0,'question_budget'=>$questionBudget,'time_budget_minutes'=>$timeBudget,'remaining_questions'=>$questionBudget,'remaining_minutes'=>$timeBudget];
         $this->runtime->create($organizationId,$sessionId,$mode->value,$state,isset($input['parent_session_id'])?(string)$input['parent_session_id']:null,$now);
         return $this->resume($organizationId,$sessionId);
     }
@@ -116,6 +116,9 @@ final readonly class DiagnosticRuntimeService
         if($idempotencyKey!==''){
             foreach($row['state']['history']??[] as $turn){
                 if(is_array($turn) && ($turn['idempotency_key']??null)===$idempotencyKey){
+                    if((string)($turn['answer']??'')!==$answer){
+                        throw new DomainException('Diagnostic idempotency key was reused with a different interview answer.');
+                    }
                     $state=$this->state($organizationId,$sessionId,$row);
                     $next=$this->nextDecision($row,$state);
                     return $this->snapshot($row,$session,$state,$next)+['replayed'=>true];

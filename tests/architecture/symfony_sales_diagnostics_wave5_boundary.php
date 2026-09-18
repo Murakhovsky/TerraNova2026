@@ -17,6 +17,11 @@ foreach(['EvidenceType::tryFrom','CaptureDiagnosticEvidence','contradictions','f
 
 $runtime=$read('app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeService.php');
 $assert(str_contains($runtime,"'idempotency_key'=>"),'Interview answer idempotency is missing.');
+$assert(str_contains($runtime,'different interview answer'),'Interview idempotency payload conflict is missing.');
+$startHandler=$read('symfony/src/Application/Diagnostic/Command/StartDiagnosticCommandHandler.php');
+$assert(str_contains($startHandler,'idempotency_request_hash'),'Diagnostic creation request fingerprint is missing.');
+$assert(str_contains($pipeline,'idempotency_request_hash'),'Evidence request fingerprint is missing.');
+$assert(str_contains($pipeline,'different evidence payload'),'Evidence idempotency payload conflict is missing.');
 $assert(!str_contains($runtime,'saveState($organizationId,$sessionId,$row[\'state\'],$next?->questionId'),'GET next-question must be read-only.');
 
 foreach([
