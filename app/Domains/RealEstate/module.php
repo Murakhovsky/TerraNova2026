@@ -33,7 +33,7 @@ return [
                 'purpose' => 'Request canonical inventory status changes and reservations from Property ownership.',
             ],
             [
-                'contract' => 'Domains\\RealEstate\\Application\\Contract\\SalesOpportunityReferenceInterface',
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesWorkspaceReadModelInterface',
                 'role' => 'requires',
                 'counterpart' => 'sales',
                 'kind' => 'anti_corruption_port',
