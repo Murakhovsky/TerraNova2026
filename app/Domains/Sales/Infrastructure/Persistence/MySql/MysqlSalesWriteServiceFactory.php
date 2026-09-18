@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\Persistence\MySql;
 
 use Domains\Property\Contract\PropertyReferencePort;
+use Domains\Sales\Application\Contract\SalesAssignmentAuthorityInterface;
 use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use Domains\Sales\Application\Contract\SalesWriteServiceInterface;
 use Domains\Sales\Application\Service\ClientCaseCommandService;
@@ -28,6 +29,7 @@ final readonly class MysqlSalesWriteServiceFactory implements SalesWriteServiceF
     public function __construct(
         private PDO $connection,
         private PropertyReferencePort $properties,
+        private SalesAssignmentAuthorityInterface $assignmentAuthority,
     ) {
     }
 
@@ -46,7 +48,7 @@ final readonly class MysqlSalesWriteServiceFactory implements SalesWriteServiceF
         $pipelines = new MysqlPipelineRepository($this->connection);
         $deals = new MysqlDealRepository($this->connection);
         $stages = new ChangeDealStage($deals, $pipelines, new StageTransitionPolicy(), $events, $transactions);
-        $owners = new AssignDealOwner($deals, $events, $transactions);
+        $owners = new AssignDealOwner($deals, $events, $transactions, $this->assignmentAuthority);
         $completeCall = new CompleteSalesCall(new MysqlSalesActivityRepository($this->connection), $events, $transactions);
         $cases = new ClientCaseCommandService(
             $readModel,
