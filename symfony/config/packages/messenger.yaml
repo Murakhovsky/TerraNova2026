@@ -42,3 +42,4 @@ framework:
 
     routing:
       'App\Application\System\Command\SchedulerHeartbeatCommand': async
+      'App\Application\Sales\Command\RunSalesAutomationCommand': async
