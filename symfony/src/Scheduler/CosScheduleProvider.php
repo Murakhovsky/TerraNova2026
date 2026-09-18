@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Scheduler;
 
+use App\Application\Sales\Command\RunSalesAutomationCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Messenger\Message\RedispatchMessage;
@@ -18,6 +19,10 @@ final class CosScheduleProvider implements ScheduleProviderInterface
     public function getSchedule(): Schedule
     {
         return $this->schedule ??= (new Schedule())->with(
+            RecurringMessage::every(
+                '5 minutes',
+                new RedispatchMessage(new RunSalesAutomationCommand(), 'async'),
+            ),
             RecurringMessage::every(
                 '15 minutes',
                 new RedispatchMessage(new SchedulerHeartbeatCommand('scheduled'), 'async'),
