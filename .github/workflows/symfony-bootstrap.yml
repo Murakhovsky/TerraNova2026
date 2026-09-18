@@ -50,6 +50,7 @@ jobs:
       LLM_TOKEN: ""
       LLM_MODEL: "wave4-ci"
       LLM_PROVIDER: "fixture"
+      WAVE6_CRM_WEBHOOK_SECRET: "wave6-ci-webhook-secret"
     steps:
       - uses: actions/checkout@v4
 
@@ -152,6 +153,11 @@ jobs:
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave4.sql
+
+      - name: Seed Sales Wave 6 Communications / Integrations fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave6.sql
 
       - name: Verify Doctrine MySQL persistence boundary
         run: |
@@ -503,6 +509,150 @@ jobs:
           grep -q 'cos_api_v1_diagnostics_assessment' /tmp/wave5-diagnostic-routes.txt
           grep -q 'cos_api_v1_diagnostics_recommendation_action' /tmp/wave5-diagnostic-routes.txt
           echo "Sales Diagnostics Wave 5 Symfony boundary passed."
+
+      - name: Verify Sales Wave 6 Communications / Integrations cutover
+        run: |
+          php tests/architecture/symfony_sales_integrations_wave6_boundary.php
+          php tests/unit/sales_integrations_wave6_idempotency.php
+          find symfony/src/Application/Integration -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l symfony/src/Http/Api/V1/Controller/SalesIntegrationController.php
+          php -l symfony/src/Http/Api/V1/Controller/SalesCommunicationController.php
+          php -l symfony/src/Infrastructure/Integration/MysqlCrmWebhookCredentialResolver.php
+          php -l app/Infrastructure/Integration/Crm/MysqlCrmInboxRepository.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave6-routes.txt
+          grep -q 'cos_api_v1_sales_integrations' /tmp/wave6-routes.txt
+          grep -q 'cos_api_v1_crm_integration_webhook' /tmp/wave6-routes.txt
+          grep -q 'cos_api_v1_sales_communication_send' /tmp/wave6-routes.txt
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:messenger > /tmp/wave6-messenger.txt
+          grep -q 'ProcessCrmInboxCommand' /tmp/wave6-messenger.txt
+          grep -q 'SweepCrmInboxCommand' /tmp/wave6-messenger.txt
+          grep -q 'SendSalesCommunicationCommand' /tmp/wave6-messenger.txt
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:scheduler cos > /tmp/wave6-scheduler.txt
+          grep -q 'SweepCrmInboxCommand' /tmp/wave6-scheduler.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+          status=$(curl --silent --show-error --output /tmp/wave6-integrations.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/integrations)
+          test "$status" = "200"
+          grep -q '"credentials_configured":true' /tmp/wave6-integrations.json
+          if grep -q 'credentials_reference' /tmp/wave6-integrations.json; then
+            echo "Credential reference leaked through integration API."
+            exit 1
+          fi
+
+          status=$(curl --silent --show-error --output /tmp/wave6-integrations-realtor.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            http://127.0.0.1:8081/api/v1/sales/integrations)
+          test "$status" = "403"
+
+          status=$(curl --silent --show-error --output /tmp/wave6-send.json --write-out '%{http_code}' \
+            --request POST \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave6-send-message' \
+            -H 'X-Idempotency-Key: wave6-send-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"channel":"EMAIL","body":"Wave 6 integration message"}' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101/communications)
+          echo "Wave 6 outbound communication HTTP $status"; cat /tmp/wave6-send.json; echo
+          test "$status" = "202"
+
+          wave6_send_complete=0
+          for attempt in $(seq 1 30); do
+            receipt=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT COUNT(*) FROM sales_operation_receipts WHERE organization_id='default' AND operation_type='api.communication.send' AND idempotency_key='wave6-send-001' AND mutation_id LIKE 'done:%';" | tr -d '[:space:]')
+            if [ "$receipt" = "1" ]; then
+              wave6_send_complete=1
+              break
+            fi
+            sleep 1
+          done
+          test "$wave6_send_complete" = "1"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM sales_communications WHERE organization_id='default' AND deal_id=101 AND direction='OUTBOUND' AND body='Wave 6 integration message';" > /tmp/wave6-outbound-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave6-outbound-count.txt)" = "1"
+
+          status=$(curl --silent --show-error --output /tmp/wave6-send-replay.json --write-out '%{http_code}' \
+            --request POST \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave6-send-message-replay' \
+            -H 'X-Idempotency-Key: wave6-send-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"channel":"EMAIL","body":"Wave 6 integration message"}' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101/communications)
+          test "$status" = "202"
+          sleep 2
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM sales_communications WHERE organization_id='default' AND deal_id=101 AND direction='OUTBOUND' AND body='Wave 6 integration message';" > /tmp/wave6-outbound-replay-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave6-outbound-replay-count.txt)" = "1"
+
+          integration_id=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT id FROM cos_integrations WHERE organization_id='default' AND capability='CRM' AND provider='aida' AND status='ACTIVE' LIMIT 1;" | tr -d '[:space:]')
+          test "$integration_id" -gt 0
+
+          webhook_body='{"event_id":"wave6-webhook-001","event_type":"message.received","entity_type":"message","external_id":"wave6-inbound-message-001","deal_external_id":"101","body":"Wave 6 inbound message","channel":"EMAIL","sender":"customer@example.test","recipient":"manager@example.test"}'
+          signature=$(php -r 'echo hash_hmac("sha256", $argv[1], getenv("WAVE6_CRM_WEBHOOK_SECRET"));' "$webhook_body")
+          status=$(curl --silent --show-error --output /tmp/wave6-webhook.json --write-out '%{http_code}' \
+            --request POST \
+            -H 'Content-Type: application/json' \
+            -H 'X-Correlation-ID: wave6-webhook-correlation' \
+            -H 'X-CRM-Event-Id: wave6-webhook-001' \
+            -H "X-CRM-Signature: sha256=$signature" \
+            --data "$webhook_body" \
+            "http://127.0.0.1:8081/api/v1/integrations/crm/$integration_id/webhook")
+          echo "Wave 6 inbound webhook HTTP $status"; cat /tmp/wave6-webhook.json; echo
+          test "$status" = "202"
+
+          wave6_webhook_complete=0
+          for attempt in $(seq 1 30); do
+            inbox_status=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT status FROM cos_crm_inbox WHERE organization_id='default' AND provider='aida' AND external_event_id='wave6-webhook-001' LIMIT 1;" | tr -d '[:space:]')
+            if [ "$inbox_status" = "COMPLETED" ]; then
+              wave6_webhook_complete=1
+              break
+            fi
+            sleep 1
+          done
+          test "$wave6_webhook_complete" = "1"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM sales_communications WHERE organization_id='default' AND deal_id=101 AND direction='INBOUND' AND external_id='wave6-inbound-message-001';" > /tmp/wave6-inbound-count.txt
+          test "$(tr -d '[:space:]' < /tmp/wave6-inbound-count.txt)" = "1"
+
+          status=$(curl --silent --show-error --output /tmp/wave6-webhook-replay.json --write-out '%{http_code}' \
+            --request POST \
+            -H 'Content-Type: application/json' \
+            -H 'X-Correlation-ID: wave6-webhook-replay' \
+            -H 'X-CRM-Event-Id: wave6-webhook-001' \
+            -H "X-CRM-Signature: sha256=$signature" \
+            --data "$webhook_body" \
+            "http://127.0.0.1:8081/api/v1/integrations/crm/$integration_id/webhook")
+          test "$status" = "202"
+
+          conflict_body='{"event_id":"wave6-webhook-001","event_type":"message.received","entity_type":"message","external_id":"wave6-inbound-message-001","deal_external_id":"101","body":"DIFFERENT PAYLOAD","channel":"EMAIL","sender":"customer@example.test","recipient":"manager@example.test"}'
+          conflict_signature=$(php -r 'echo hash_hmac("sha256", $argv[1], getenv("WAVE6_CRM_WEBHOOK_SECRET"));' "$conflict_body")
+          status=$(curl --silent --show-error --output /tmp/wave6-webhook-conflict.json --write-out '%{http_code}' \
+            --request POST \
+            -H 'Content-Type: application/json' \
+            -H 'X-Correlation-ID: wave6-webhook-conflict' \
+            -H 'X-CRM-Event-Id: wave6-webhook-001' \
+            -H "X-CRM-Signature: sha256=$conflict_signature" \
+            --data "$conflict_body" \
+            "http://127.0.0.1:8081/api/v1/integrations/crm/$integration_id/webhook")
+          test "$status" = "409"
+
+          echo "Sales Wave 6 communications / integrations runtime passed."
 
       - name: Verify Sales Wave 3 deterministic automation cutover
         run: |

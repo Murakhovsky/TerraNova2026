@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Scheduler;
 
+use App\Application\Integration\Command\SweepCrmInboxCommand;
 use App\Application\Sales\Command\RunSalesAutomationCommand;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -31,6 +32,10 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             RecurringMessage::every(
                 '15 minutes',
                 new RedispatchMessage(new SchedulerHeartbeatCommand('scheduled'), 'async'),
+            ),
+            RecurringMessage::every(
+                '1 minute',
+                new RedispatchMessage(new SweepCrmInboxCommand(200), 'async'),
             ),
         ];
 
