@@ -17,8 +17,8 @@ generated: true
 ## Підсумок
 
 - **Installable Domains:** 9
-- **Покрито канонічним процесом:** 3
-- **Явних exemptions:** 6
+- **Покрито канонічним процесом:** 4
+- **Явних exemptions:** 5
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
@@ -29,7 +29,7 @@ generated: true
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
-| `real_estate` · Real Estate | `0.2.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `real_estate` · Real Estate | `0.2.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 | `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
 | `service` · Service | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 
@@ -65,8 +65,7 @@ generated: true
 
 ### Real Estate (`real_estate`)
 
-- **Exempt:** V1 brokerage orchestration skeleton; executable Real Estate process models are deferred until the first vertical slice is migrated from legacy behavior.
-- **Owner:** COS Architecture
+- `real_estate.opportunity-to-reservation`
 
 ### Sales (`sales`)
 
@@ -94,7 +93,6 @@ generated: true
 | `finance` | COS Architecture | V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
-| `real_estate` | COS Architecture | V1 brokerage orchestration skeleton; executable Real Estate process models are deferred until the first vertical slice is migrated from legacy behavior. |
 | `service` | COS Architecture | V1 skeleton only; executable Service process models are intentionally deferred until Service runtime implementation. |
 
 ## Авторитетність і обмеження
