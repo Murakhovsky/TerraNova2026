@@ -43,6 +43,7 @@ jobs:
       SYMFONY_LEGACY_DB_USER: cos
       SYMFONY_LEGACY_DB_PASSWORD: ci-db-password
       COS_ORGANIZATION_ID: default
+      COS_SALES_AUTOMATION_SCHEDULER_ENABLED: "0"
     steps:
       - uses: actions/checkout@v4
 
