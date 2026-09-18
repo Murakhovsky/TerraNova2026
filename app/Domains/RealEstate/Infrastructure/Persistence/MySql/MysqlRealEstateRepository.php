@@ -62,6 +62,15 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
         );
     }
 
+    public function findOffer(string $organizationId, string $offerId): ?array
+    {
+        return $this->one(
+            'SELECT offer_id,case_id,property_asset_id,party_id,amount_minor,currency,status
+             FROM tn_real_estate_offers WHERE organization_id=:organization_id AND offer_id=:offer_id LIMIT 1',
+            ['organization_id'=>$organizationId,'offer_id'=>$offerId],
+        );
+    }
+
     public function saveOffer(string $caseId, Offer $offer, int $actorId): void
     {
         $this->exec(
@@ -79,6 +88,15 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
                 'currency'=>$offer->amount->currency(),
                 'created_by'=>$actorId,
             ],
+        );
+    }
+
+    public function findShowing(string $organizationId, string $showingId): ?array
+    {
+        return $this->one(
+            'SELECT showing_id,case_id,property_asset_id,client_id,scheduled_at,status,notes
+             FROM tn_real_estate_showings WHERE organization_id=:organization_id AND showing_id=:showing_id LIMIT 1',
+            ['organization_id'=>$organizationId,'showing_id'=>$showingId],
         );
     }
 
