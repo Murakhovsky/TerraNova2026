@@ -100,6 +100,10 @@ services:
     arguments:
       $operations: '@Kernel\Operations\Contract\OperationsReadModelInterface'
 
+  App\Scheduler\CosScheduleProvider:
+    arguments:
+      $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
+
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
       $runtimeDirectory: '%kernel.project_dir%/var/runtime'
