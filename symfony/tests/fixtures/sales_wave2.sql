@@ -36,7 +36,10 @@ INSERT INTO sales_pipeline_stages
     (id,pipeline_id,organization_id,code,sort_order,name,probability_default,is_terminal,is_won,is_lost,status)
 VALUES
     (12,1,'default','QUALIFIED',15,'Qualified',40,0,0,0,'ACTIVE'),
-    (21,2,'other-org','QUALIFIED',15,'Qualified',40,0,0,0,'ACTIVE');
+    (13,1,'default','LOST',30,'Lost',0,1,0,1,'ACTIVE'),
+    (21,2,'other-org','QUALIFIED',15,'Qualified',40,0,0,0,'ACTIVE'),
+    (22,2,'other-org','WON',20,'Won',100,1,1,0,'ACTIVE'),
+    (23,2,'other-org','LOST',30,'Lost',0,1,0,1,'ACTIVE');
 
 CREATE TABLE sales_pipeline_transitions (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
