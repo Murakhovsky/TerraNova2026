@@ -10,7 +10,7 @@ ALTER TABLE tn_people
     ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER created_at;
 
 UPDATE tn_people SET public_id=CONCAT('PN-', LPAD(id,5,'0')) WHERE public_id IS NULL;
-ALTER TABLE tn_people ADD UNIQUE KEY uq_wave2_people_public_id (public_id);
+ALTER TABLE tn_people ADD UNIQUE KEY uq_wave2_people_org_public_id (organization_id, public_id);
 
 ALTER TABLE tn_leads
     MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -70,7 +70,8 @@ ALTER TABLE tn_client_cases
     ADD COLUMN started_at DATETIME NULL AFTER parameters_json,
     ADD COLUMN lost_reason TEXT NULL AFTER closed_at,
     ADD COLUMN lost_reason_id VARCHAR(40) NULL AFTER lost_reason,
-    ADD COLUMN lost_reason_note TEXT NULL AFTER lost_reason_id;
+    ADD COLUMN lost_reason_note TEXT NULL AFTER lost_reason_id,
+    ADD UNIQUE KEY uq_wave2_cases_org_public_id (organization_id, public_id);
 
 CREATE TABLE tn_property_types (
     id INT UNSIGNED NOT NULL PRIMARY KEY,
