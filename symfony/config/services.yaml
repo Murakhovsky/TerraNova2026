@@ -120,3 +120,26 @@ services:
 
   Platform\Storage\Contract\FileStorageInterface:
     alias: Infrastructure\Storage\LocalFileStorage
+
+  Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Property\Contract\PropertyReferencePort:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\ClientCaseReadModelFactoryInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
+
+  App\Application\Sales\Query\GetClientCaseStatsQueryHandler: ~
+
+  Infrastructure\Observability\JsonFileLogger:
+    arguments:
+      $file: '%kernel.project_dir%/var/log/cos-runtime.jsonl'
+
+  Kernel\Observability\StructuredLoggerInterface:
+    alias: Infrastructure\Observability\JsonFileLogger

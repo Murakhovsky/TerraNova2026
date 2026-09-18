@@ -59,6 +59,8 @@ services:
   worker:
     image: cos-symfony-php:local
     restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
     command: ["php", "bin/console", "messenger:consume", "async", "--keepalive=5", "--time-limit=3600", "--memory-limit=256M", "--failure-limit=1"]
     environment:
       <<: *symfony-environment
@@ -72,6 +74,8 @@ services:
   scheduler:
     image: cos-symfony-php:local
     restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
     command: ["php", "bin/console", "messenger:consume", "scheduler_cos", "--time-limit=3600", "--memory-limit=128M", "--failure-limit=1"]
     environment:
       <<: *symfony-environment

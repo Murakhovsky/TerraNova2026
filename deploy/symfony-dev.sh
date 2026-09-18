@@ -210,9 +210,21 @@ fi
 
 for service in worker scheduler; do
   container_id=$("${COMPOSE[@]}" ps -q "$service")
-  if [[ -z "$container_id" ]] || [[ "$("${DOCKER[@]}" inspect -f '{{.State.Running}}' "$container_id")" != "true" ]]; then
+  if [[ -z "$container_id" ]]; then
+    echo "Symfony $service container is missing." >&2
+    exit 56
+  fi
+
+  running=$("${DOCKER[@]}" inspect -f '{{.State.Running}}' "$container_id")
+  restart_count=$("${DOCKER[@]}" inspect -f '{{.RestartCount}}' "$container_id")
+  if [[ "$running" != "true" ]]; then
     echo "Symfony $service service is not running." >&2
     exit 56
+  fi
+  if [[ "$restart_count" != "0" ]]; then
+    echo "Symfony $service restarted unexpectedly during deployment: restart_count=$restart_count" >&2
+    "${COMPOSE[@]}" logs --no-color --tail=250 "$service" >&2 || true
+    exit 57
   fi
 done
 
