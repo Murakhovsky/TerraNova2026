@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.12.0',
+    'version' => '0.13.0',
     'schema_version' => '0.12.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical registry and real-estate asset runtime with tenant-safe Asset, Inventory, Listing/Publication writes, domain events, history, intelligence, network interoperability and one-way legacy compatibility projection.',
+    'description' => 'Canonical Property registry with tenant-safe Asset, Inventory and Listing runtime, Symfony business read/write cutover, history, intelligence, network interoperability and one-way legacy compatibility projection.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
@@ -49,7 +49,7 @@ return [
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
             'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
-            'property.intelligence','property.network','property.identity.review','property.runtime.canonical',
+            'property.intelligence','property.network','property.identity.review','property.runtime.canonical','property.api.v1','property.business.cutover',
         ],
     ],
 ];
