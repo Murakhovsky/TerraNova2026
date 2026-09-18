@@ -1,13 +1,13 @@
 ---
-title: Sales Read Cutover
-description: Wave 1 Phase II migration of canonical Sales read scenarios to Symfony API v1 without duplicating Sales persistence.
+title: Перенесення читання Sales
+description: Перша хвиля другої фази міграції: перенесення канонічних сценаріїв читання Sales у Symfony API v1 без дублювання даних.
 status: active
 updated: 2026-09-18
 kind: architecture
 contract: architecture-v1
 ---
 
-# Sales Read Cutover
+# Перенесення читання Sales
 
 ## Мета
 
@@ -54,7 +54,7 @@ Lead та Opportunity lists use bounded `page` / `per_page`. Application handler
 
 SQL sorting remains whitelist-only inside the Infrastructure read model. User input is never concatenated directly into an arbitrary column or direction.
 
-## Tenant isolation
+## Ізоляція орендарів
 
 Organization scope comes only from `TenantContext`. The client cannot select an organization through URL or query parameters.
 
@@ -65,11 +65,11 @@ Wave 1 integration gates seed multiple organizations and verify:
 - pipeline lists do not expose another tenant;
 - unauthenticated access remains blocked by Symfony Security.
 
-## Compatibility
+## Сумісність
 
 Existing `/api/sales/*` and current frontend remain unchanged during this wave. Wave 1 creates the versioned read path required for later frontend cutover. Old endpoints are retired only after their consumers move to `/api/v1/sales/*`.
 
-## Definition of done
+## Критерії завершення
 
 Wave 1 is complete when:
 
