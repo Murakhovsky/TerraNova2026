@@ -829,13 +829,6 @@ services:
   Domains\Sales\Application\Contract\CrmIngressResolverInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmIngressResolver
 
-  Infrastructure\Integration\Crm\EnvironmentCrmWebhookSecretResolver:
-    arguments:
-      $connection: '@legacy_cos.pdo'
-
-  Domains\Sales\Application\Contract\CrmWebhookSecretResolverInterface:
-    alias: Infrastructure\Integration\Crm\EnvironmentCrmWebhookSecretResolver
-
   Infrastructure\Integration\Crm\MysqlCrmInboundApplier:
     arguments:
       $connection: '@legacy_cos.pdo'
