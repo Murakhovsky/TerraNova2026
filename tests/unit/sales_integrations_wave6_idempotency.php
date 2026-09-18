@@ -2,11 +2,13 @@
 declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require dirname(__DIR__, 2) . '/symfony/src/Application/Integration/IntegrationMutationAudit.php';
+require dirname(__DIR__, 2) . '/symfony/src/Application/Integration/Command/ManageSalesIntegrationCommand.php';
+require dirname(__DIR__, 2) . '/symfony/src/Application/Integration/Command/ManageSalesIntegrationCommandHandler.php';
 
 use App\Application\Integration\Command\ManageSalesIntegrationCommand;
 use App\Application\Integration\Command\ManageSalesIntegrationCommandHandler;
 use App\Application\Integration\IntegrationMutationAudit;
-use DomainException;
 use Domains\Sales\Application\Contract\SalesIntegrationAdministrationInterface;
 use Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface;
 use Kernel\Audit\AuditEntry;
