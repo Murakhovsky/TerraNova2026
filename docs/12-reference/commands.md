@@ -25,7 +25,7 @@ generated: true
 | `procurement` | 0 |
 | `property` | 4 |
 | `real_estate` | 0 |
-| `sales` | 6 |
+| `sales` | 7 |
 | `service` | 0 |
 
 ## Construction (`construction`)
@@ -72,6 +72,7 @@ generated: true
 | `RecordActionOutcomeCommand` | `app/Domains/Sales/Application/DTO/RecordActionOutcomeCommand.php` |
 | `RecordCompletedCallCommand` | `app/Domains/Sales/Application/DTO/RecordCompletedCallCommand.php` |
 | `ScheduleFollowupCommand` | `app/Domains/Sales/Application/DTO/ScheduleFollowupCommand.php` |
+| `ScheduleLeadFollowupCommand` | `app/Domains/Sales/Application/DTO/ScheduleLeadFollowupCommand.php` |
 | `SendMessageCommand` | `app/Domains/Sales/Application/DTO/SendMessageCommand.php` |
 
 ## Service (`service`)
