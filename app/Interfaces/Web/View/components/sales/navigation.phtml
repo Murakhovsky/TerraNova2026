@@ -21,7 +21,7 @@ try {
 }
 $this->partial('components/ui/tabs', ['items' => $items, 'active' => $active, 'label' => 'Sales workspace']);
 ?>
-<div class="tn-sales-global-search" data-sales-global-search data-endpoint="<?php echo $h($this->url->get('api/sales/search')); ?>">
+<div class="tn-sales-global-search" data-sales-global-search data-endpoint="<?php echo $h($this->url->get('api/v1/sales/search')); ?>">
   <!-- The GET form remains useful without JavaScript by falling back to the Deals search. -->
   <form class="tn-sales-global-search__form" method="get" action="<?php echo $h($this->url->get('sales/deals')); ?>" data-sales-global-search-form role="search">
     <label class="tn-ui-field tn-sales-global-search__field">
