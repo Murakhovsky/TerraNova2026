@@ -29,7 +29,7 @@ generated: true
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
-| `real_estate` · Real Estate | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `real_estate` · Real Estate | `0.2.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
 | `service` · Service | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 
