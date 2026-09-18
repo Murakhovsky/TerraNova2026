@@ -51,6 +51,9 @@ $event=RealEstateDomainEvents::create(
 $assert($event->organizationId==='org-wave9','RealEstate event lost tenant identity.');
 $assert($event->aggregateType==='brokerage_case'&&$event->aggregateId==='RE-001','RealEstate event lost brokerage aggregate identity.');
 
+$receiptPort=new ReflectionClass(Domains\RealEstate\Application\Contract\RealEstateMutationReceiptInterface::class);
+$assert($receiptPort->hasMethod('claim'),'RealEstate mutation receipt contract must expose atomic claim.');
+
 $inventoryPort=new ReflectionClass(Domains\Property\Application\Contract\PropertyInventoryCommandInterface::class);
 foreach(['reserve','changeStatus'] as $method){
     $assert($inventoryPort->hasMethod($method),'Property Inventory command port missing method: '.$method);
