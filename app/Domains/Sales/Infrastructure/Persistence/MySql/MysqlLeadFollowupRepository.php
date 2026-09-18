@@ -19,6 +19,11 @@ final readonly class MysqlLeadFollowupRepository implements LeadFollowupReposito
 
     public function schedule(ScheduleLeadFollowupCommand $command): OperationResult
     {
+        $ownsTransaction = !$this->connection->inTransaction();
+        if ($ownsTransaction) {
+            $this->connection->beginTransaction();
+        }
+
         try {
             $receipt = $this->connection->prepare(
                 'SELECT mutation_id FROM sales_operation_receipts '
@@ -31,6 +36,9 @@ final readonly class MysqlLeadFollowupRepository implements LeadFollowupReposito
             ]);
             $existing = $receipt->fetchColumn();
             if ($existing !== false) {
+                if ($ownsTransaction) {
+                    $this->connection->commit();
+                }
                 return OperationResult::success((string) $existing, ['duplicate' => true]);
             }
 
@@ -48,6 +56,9 @@ final readonly class MysqlLeadFollowupRepository implements LeadFollowupReposito
                 'due_at' => $dueAt,
             ]);
             if ($statement->rowCount() !== 1) {
+                if ($ownsTransaction && $this->connection->inTransaction()) {
+                    $this->connection->rollBack();
+                }
                 return OperationResult::failure('Lead was not found in the current organization.');
             }
 
@@ -71,12 +82,23 @@ final readonly class MysqlLeadFollowupRepository implements LeadFollowupReposito
                 'mutation_id' => $activityId,
             ]);
 
+            if ($ownsTransaction) {
+                $this->connection->commit();
+            }
+
             return OperationResult::success($activityId, [
                 'duplicate' => false,
                 'due_at' => $command->dueAt->format(DATE_ATOM),
             ]);
         } catch (Throwable $exception) {
-            return OperationResult::failure($exception->getMessage());
+            if ($ownsTransaction && $this->connection->inTransaction()) {
+                $this->connection->rollBack();
+                return OperationResult::failure($exception->getMessage());
+            }
+
+            // When the Application layer owns the transaction, an infrastructure failure
+            // must escape so the enclosing transaction rolls back atomically.
+            throw $exception;
         }
     }
 }
