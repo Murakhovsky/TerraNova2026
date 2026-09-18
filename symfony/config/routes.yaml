@@ -54,3 +54,8 @@ cos_symfony_migration_audit:
   path: /migration/api/cos/audit
   controller: App\Controller\OperationsReadController::audit
   methods: [GET]
+
+cos_api_v1_status:
+  path: /api/v1/status
+  controller: App\Http\Api\V1\Controller\ApiStatusController
+  methods: [GET]

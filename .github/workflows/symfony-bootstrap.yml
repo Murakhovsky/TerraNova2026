@@ -107,8 +107,11 @@ jobs:
             echo "canonical COS Kernel, Platform/Infrastructure, Domains and Symfony security bridge classes load\n";
           '
 
-      - name: Verify operations read API contract
-        run: docker compose -f docker-compose.symfony.yml exec -T php php tests/operations_read_contract.php
+      - name: Verify operations and API v1 application contracts
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/operations_read_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_controller_boundary.php
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php
@@ -135,6 +138,11 @@ jobs:
           test "$status" = "403"
           test "$(cat /tmp/no-session.json)" = "$forbidden"
 
+          status=$(curl --silent --show-error --output /tmp/api-v1-no-session.json --write-out '%{http_code}' \
+            http://127.0.0.1:8081/api/v1/status)
+          test "$status" = "403"
+          test "$(cat /tmp/api-v1-no-session.json)" = "$forbidden"
+
           status=$(curl --silent --show-error --output /tmp/manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
             http://127.0.0.1:8081/migration/api/cos/auth-context)
@@ -147,6 +155,13 @@ jobs:
             echo 'manager unexpectedly received tenant admin permission'
             exit 1
           fi
+
+          status=$(curl --silent --show-error --output /tmp/api-v1-manager.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/status)
+          test "$status" = "200"
+          grep -q '"api_version":"v1"' /tmp/api-v1-manager.json
+          grep -q '"runtime":"symfony"' /tmp/api-v1-manager.json
 
           status=$(curl --silent --show-error --output /tmp/realtor.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-realtor-session0002' \
