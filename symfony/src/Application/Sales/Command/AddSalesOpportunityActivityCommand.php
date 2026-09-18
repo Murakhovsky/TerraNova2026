@@ -13,6 +13,7 @@ final readonly class AddSalesOpportunityActivityCommand implements CommandInterf
         public OrganizationId $organizationId,
         public int $actorId,
         public int $opportunityId,
+        public string $correlationId,
         public array $input,
     ) {
     }
