@@ -1,0 +1,30 @@
+name: Symfony API Dependency Lock
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/symfony-deps-lock.yml'
+  workflow_dispatch:
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - name: Resolve Serializer and Validator
+        working-directory: symfony
+        run: composer require 'symfony/serializer:7.4.*' 'symfony/validator:7.4.*' --no-interaction --no-install
+      - name: Emit resolved Composer files
+        working-directory: symfony
+        run: |
+          echo '---BEGIN-SYMFONY-COMPOSER-JSON---'
+          cat composer.json
+          echo '---END-SYMFONY-COMPOSER-JSON---'
+          echo '---BEGIN-SYMFONY-COMPOSER-LOCK---'
+          cat composer.lock
+          echo '---END-SYMFONY-COMPOSER-LOCK---'
