@@ -19,6 +19,7 @@ final readonly class UpdateSalesLeadCommandHandler implements CommandHandlerInte
             $command->leadId,
             $command->input,
             $command->actorId,
+            $command->correlationId,
         );
     }
 }
