@@ -290,6 +290,8 @@ services:
       $events: '@Kernel\Event\EventBus'
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
 
+  Domains\Sales\Domain\Policy\StageTransitionPolicy: ~
+
   Domains\Sales\Application\UseCase\ChangeDealStage:
     arguments:
       $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
