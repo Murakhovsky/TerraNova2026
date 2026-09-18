@@ -39,6 +39,7 @@ final readonly class RealEstateWorkflowService
         string $organizationId,
         int $actorId,
         int $opportunityId,
+        string $idempotencyKey,
         array $input,
         string $correlationId,
     ): array {
@@ -77,7 +78,7 @@ final readonly class RealEstateWorkflowService
         );
         $metadata=$this->metadata($actorId,$correlationId);
 
-        $created=$this->transactions->transactional(function()use($case,$actorId,$metadata):bool{
+        $created=$this->transactions->transactional(function()use($case,$actorId,$metadata,$idempotencyKey):bool{
             if(!$this->repository->createCase($case,$actorId))return false;
             $this->events->publish(RealEstateDomainEvents::create(
                 RealEstateEventType::PROPERTY_MATCHED,
@@ -90,6 +91,7 @@ final readonly class RealEstateWorkflowService
                 'opportunity_id'=>$case->opportunityId,
                 'property_id'=>$case->propertyId,
                 'inventory_id'=>$case->inventoryId,
+                'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
             ]);
             return true;
         });
@@ -98,7 +100,7 @@ final readonly class RealEstateWorkflowService
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
-    public function createOffer(string $organizationId,int $actorId,string $caseId,array $input,string $correlationId):array
+    public function createOffer(string $organizationId,int $actorId,string $caseId,string $idempotencyKey,array $input,string $correlationId):array
     {
         $case=$this->case($organizationId,$caseId);
         $partyId=trim((string)($input['party_id']??''));
@@ -106,7 +108,7 @@ final readonly class RealEstateWorkflowService
         $amountMinor=array_key_exists('amount_minor',$input)?(int)$input['amount_minor']:(int)round(((float)($input['amount']??0))*100);
         if($amountMinor<=0)throw new InvalidArgumentException('Offer amount must be positive.');
         $currency=strtoupper((string)($input['currency']??'USD'));
-        $offerId=trim((string)($input['offer_id']??''))?:$this->id('OFR');
+        $offerId='OFR-'.$this->stableId($organizationId.':offer:'.$idempotencyKey);
 
         $existing=$this->repository->findOffer($organizationId,$offerId);
         if($existing!==null){
@@ -118,7 +120,7 @@ final readonly class RealEstateWorkflowService
         $next=$case->transitionTo(BrokerageProcess::OFFERED);
         $metadata=$this->metadata($actorId,$correlationId);
 
-        $created=$this->transactions->transactional(function()use($caseId,$offer,$next,$actorId,$metadata):bool{
+        $created=$this->transactions->transactional(function()use($caseId,$offer,$next,$actorId,$metadata,$idempotencyKey):bool{
             if(!$this->repository->createOffer($caseId,$offer,$actorId))return false;
             $this->repository->saveCase($next,$actorId);
             $this->events->publish(RealEstateDomainEvents::create(
@@ -132,6 +134,7 @@ final readonly class RealEstateWorkflowService
                 'offer_id'=>$offer->id,
                 'amount_minor'=>$offer->amount->minorUnits(),
                 'currency'=>$offer->amount->currency(),
+                'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
             ]);
             return true;
         });
@@ -145,14 +148,14 @@ final readonly class RealEstateWorkflowService
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
-    public function scheduleViewing(string $organizationId,int $actorId,string $caseId,array $input,string $correlationId):array
+    public function scheduleViewing(string $organizationId,int $actorId,string $caseId,string $idempotencyKey,array $input,string $correlationId):array
     {
         $case=$this->case($organizationId,$caseId);
         $clientId=trim((string)($input['client_id']??''));
         $raw=trim((string)($input['scheduled_at']??''));
         if($clientId===''||$raw==='')throw new InvalidArgumentException('client_id and scheduled_at are required.');
 
-        $showingId=trim((string)($input['showing_id']??''))?:$this->id('SHW');
+        $showingId='SHW-'.$this->stableId($organizationId.':viewing:'.$idempotencyKey);
         $scheduledAt=new DateTimeImmutable($raw);
         $notes=trim((string)($input['notes']??''))?:null;
 
@@ -166,7 +169,7 @@ final readonly class RealEstateWorkflowService
         $next=$case->transitionTo(BrokerageProcess::VIEWING);
         $metadata=$this->metadata($actorId,$correlationId);
 
-        $created=$this->transactions->transactional(function()use($caseId,$showing,$scheduledAt,$notes,$next,$actorId,$metadata):bool{
+        $created=$this->transactions->transactional(function()use($caseId,$showing,$scheduledAt,$notes,$next,$actorId,$metadata,$idempotencyKey):bool{
             if(!$this->repository->createShowing($caseId,$showing,$scheduledAt,$notes,$actorId))return false;
             $this->repository->saveCase($next,$actorId);
             $this->events->publish(RealEstateDomainEvents::create(
@@ -179,6 +182,7 @@ final readonly class RealEstateWorkflowService
             $this->appendAudit($next,'viewing_scheduled',$actorId,$metadata->correlationId,[
                 'showing_id'=>$showing->id,
                 'scheduled_at'=>$scheduledAt->format(DATE_ATOM),
+                'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
             ]);
             return true;
         });
@@ -192,7 +196,7 @@ final readonly class RealEstateWorkflowService
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
-    public function reserve(string $organizationId,int $actorId,string $caseId,array $input,string $correlationId):array
+    public function reserve(string $organizationId,int $actorId,string $caseId,string $idempotencyKey,array $input,string $correlationId):array
     {
         $case=$this->case($organizationId,$caseId);
         if($case->inventoryId===null)throw new InvalidArgumentException('Matched case has no reservable inventory.');
@@ -201,13 +205,14 @@ final readonly class RealEstateWorkflowService
         }
 
         $metadata=$this->metadata($actorId,$correlationId);
+        $reservationId='RSV-'.$this->stableId($organizationId.':reservation:'.$idempotencyKey);
         try{
-            $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata):array{
+            $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey):array{
                 $reservation=$this->inventory->reserve(
                     $case->organizationId->value(),
                     $case->inventoryId,
                     [
-                        'reservation_id'=>$input['reservation_id']??null,
+                        'reservation_id'=>$reservationId,
                         'reserved_for_reference'=>'real_estate_case:'.$case->id,
                         'expires_at'=>$input['expires_at']??null,
                         'reason'=>$input['reason']??'brokerage_reservation',
@@ -227,6 +232,7 @@ final readonly class RealEstateWorkflowService
                 $this->appendAudit($next,'property_reserved',$actorId,$metadata->correlationId,[
                     'inventory_id'=>$next->inventoryId,
                     'reservation_id'=>$reservation['reservation_id']??null,
+                    'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
                 ]);
                 return $reservation;
             });
@@ -302,10 +308,5 @@ final readonly class RealEstateWorkflowService
     private function stableId(string $value):string
     {
         return strtoupper(substr(hash('sha256',$value),0,20));
-    }
-
-    private function id(string $prefix):string
-    {
-        return $prefix.'-'.strtoupper(bin2hex(random_bytes(10)));
     }
 }
