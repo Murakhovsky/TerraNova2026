@@ -23,7 +23,7 @@ generated: true
 | `procurement` | 0 |
 | `property` | 2 |
 | `real_estate` | 0 |
-| `sales` | 7 |
+| `sales` | 8 |
 | `service` | 0 |
 
 ## Construction (`construction`)
@@ -79,6 +79,7 @@ generated: true
 | `ReceiveCrmWebhook` | `app/Domains/Sales/Application/UseCase/ReceiveCrmWebhook.php` |
 | `ReceivePublicLead` | `app/Domains/Sales/Application/UseCase/ReceivePublicLead.php` |
 | `ScheduleDealFollowup` | `app/Domains/Sales/Application/UseCase/ScheduleDealFollowup.php` |
+| `ScheduleLeadFollowup` | `app/Domains/Sales/Application/UseCase/ScheduleLeadFollowup.php` |
 
 ## Service (`service`)
 
