@@ -8,11 +8,14 @@ on:
       - 'app/Infrastructure/Audit/**'
       - 'app/Infrastructure/Platform/Persistence/MySql/Audit/**'
       - 'app/Kernel/Agent/**'
+      - 'app/Kernel/Observability/**'
+      - 'app/Infrastructure/Observability/**'
       - 'app/Bootstrap/InfrastructureServices.php'
       - 'app/Bootstrap/KernelServices.php'
       - 'app/migrations/20260917_000061_platform_agent_trace.sql'
       - 'tests/unit/platform_audit_foundation.php'
       - 'tests/unit/platform_audit_agent_runtime.php'
+      - 'tests/unit/kernel_execution_context.php'
       - 'tests/architecture/platform_audit_boundaries.php'
       - 'tests/architecture/platform_audit_runtime_wiring.php'
       - '.github/workflows/platform-audit.yml'
@@ -23,11 +26,14 @@ on:
       - 'app/Infrastructure/Audit/**'
       - 'app/Infrastructure/Platform/Persistence/MySql/Audit/**'
       - 'app/Kernel/Agent/**'
+      - 'app/Kernel/Observability/**'
+      - 'app/Infrastructure/Observability/**'
       - 'app/Bootstrap/InfrastructureServices.php'
       - 'app/Bootstrap/KernelServices.php'
       - 'app/migrations/20260917_000061_platform_agent_trace.sql'
       - 'tests/unit/platform_audit_foundation.php'
       - 'tests/unit/platform_audit_agent_runtime.php'
+      - 'tests/unit/kernel_execution_context.php'
       - 'tests/architecture/platform_audit_boundaries.php'
       - 'tests/architecture/platform_audit_runtime_wiring.php'
       - '.github/workflows/platform-audit.yml'
@@ -47,6 +53,7 @@ jobs:
       - run: php tests/architecture/platform_audit_runtime_wiring.php
       - run: php tests/unit/platform_audit_foundation.php
       - run: php tests/unit/platform_audit_agent_runtime.php
+      - run: php tests/unit/kernel_execution_context.php
       - run: php tests/smoke/agent_runtime.php
       - run: php tests/smoke/agent_safety.php
-      - run: find app/Platform/Audit app/Infrastructure/Audit app/Infrastructure/Platform/Persistence/MySql/Audit app/Kernel/Agent -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: find app/Platform/Audit app/Infrastructure/Audit app/Infrastructure/Platform/Persistence/MySql/Audit app/Infrastructure/Observability app/Kernel/Agent app/Kernel/Observability -type f -name '*.php' -print0 | xargs -0 -n1 php -l

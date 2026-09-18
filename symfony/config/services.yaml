@@ -136,3 +136,10 @@ services:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
 
   App\Application\Sales\Query\GetClientCaseStatsQueryHandler: ~
+
+  Infrastructure\Observability\JsonFileLogger:
+    arguments:
+      $file: '%kernel.project_dir%/var/log/cos-runtime.jsonl'
+
+  Kernel\Observability\StructuredLoggerInterface:
+    alias: Infrastructure\Observability\JsonFileLogger

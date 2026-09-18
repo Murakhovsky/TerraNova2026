@@ -166,6 +166,7 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_contract.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_controller_boundary.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_request_mapper.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/http_correlation_contract.php
 
       - name: Verify Sales strangler slice
         run: |
@@ -207,10 +208,12 @@ jobs:
           test "$status" = "403"
           test "$(cat /tmp/no-session.json)" = "$forbidden"
 
-          status=$(curl --silent --show-error --output /tmp/api-v1-no-session.json --write-out '%{http_code}' \
+          status=$(curl --silent --show-error --dump-header /tmp/api-v1-no-session.headers --output /tmp/api-v1-no-session.json --write-out '%{http_code}' \
+            -H 'X-Correlation-ID: ci-api-v1-no-session' \
             http://127.0.0.1:8081/api/v1/status)
           test "$status" = "403"
           test "$(cat /tmp/api-v1-no-session.json)" = "$forbidden"
+          grep -qi '^X-Correlation-ID: ci-api-v1-no-session' /tmp/api-v1-no-session.headers
 
           status=$(curl --silent --show-error --output /tmp/manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
@@ -329,8 +332,9 @@ jobs:
             echo
             curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health
             echo
-            status=$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" http://127.0.0.1:8081/migration/api/cos/events)
+            status=$(curl --silent --show-error --dump-header /tmp/cos-symfony-protected.headers --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" -H "X-Correlation-ID: aws-symfony-smoke" http://127.0.0.1:8081/migration/api/cos/events)
             test "$status" = "403"
+            grep -qi "^X-Correlation-ID: aws-symfony-smoke" /tmp/cos-symfony-protected.headers
             test "$(cat /tmp/cos-symfony-protected.json)" = "{\"ok\":false,\"error\":\"Manager authorization required.\"}"
             echo security-boundary-ok
           '
