@@ -23,6 +23,8 @@ if (is_file($autoload)) {
     });
 }
 
+require_once $root . '/symfony/src/Application/System/Service/SalesOutboxDrainer.php';
+
 use App\Application\System\Service\SalesOutboxDrainer;
 use Kernel\Event\Contract\EventConsumptionRepositoryInterface;
 use Kernel\Event\Contract\EventOutboxInterface;
