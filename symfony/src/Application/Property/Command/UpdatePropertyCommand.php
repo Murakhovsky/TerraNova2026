@@ -14,6 +14,7 @@ final readonly class UpdatePropertyCommand implements CommandInterface
         public int $actorId,
         public string $correlationId,
         public string $reference,
+        public string $idempotencyKey,
         public array $input,
     ) {}
 }
