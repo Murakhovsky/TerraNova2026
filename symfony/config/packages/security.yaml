@@ -14,5 +14,8 @@ security:
       access_denied_handler: App\Security\JsonAccessDeniedHandler
 
   access_control:
+    - { path: '^/api/v1/integrations/crm/[1-9][0-9]*/webhook    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
+    - { path: '^/migration/api/cos(?:/|$)', roles: ROLE_MANAGER }
+, roles: PUBLIC_ACCESS }
     - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
     - { path: '^/migration/api/cos(?:/|$)', roles: ROLE_MANAGER }
