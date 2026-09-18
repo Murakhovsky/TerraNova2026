@@ -16,7 +16,7 @@ final readonly class ReceiveCrmWebhookCommandHandler implements CommandHandlerIn
 {
     public function __construct(
         private CrmIngressResolverInterface $ingress,
-        private CrmWebhookSecretResolverInterface $secrets,
+        private CrmWebhookCredentialResolverInterface $secrets,
         private CrmInboxRepositoryInterface $inbox,
         private TransactionManagerInterface $transactions,
         private CommandBusInterface $commands,
@@ -50,7 +50,7 @@ final readonly class ReceiveCrmWebhookCommandHandler implements CommandHandlerIn
             throw new InvalidArgumentException('CRM webhook payload is too large.');
         }
 
-        $secret = $this->secrets->secretFor($organizationId, $provider);
+        $secret = $this->secrets->secretFor($command->integrationId, $organizationId, $provider);
         $expected = hash_hmac('sha256', $command->rawPayload, $secret);
         $provided = str_starts_with($command->signature, 'sha256=')
             ? substr($command->signature, 7)
@@ -60,14 +60,37 @@ final readonly class ReceiveCrmWebhookCommandHandler implements CommandHandlerIn
             throw new InvalidArgumentException('Invalid CRM webhook signature.');
         }
 
-        $inboxId = $this->transactions->transactional(fn (): string => $this->inbox->receive(
+        $inboxId = $this->transactions->transactional(function () use (
+            $command,
             $organizationId,
             $provider,
             $externalEventId,
             $eventType,
-            $command->payload,
-            $command->correlationId,
-        ));
+        ): string {
+            $inboxId = $this->inbox->receive(
+                $organizationId,
+                $provider,
+                $externalEventId,
+                $eventType,
+                $command->payload,
+                $command->correlationId,
+            );
+
+            $this->audit->integration(
+                $organizationId,
+                $provider,
+                $command->correlationId,
+                'crm.webhook.accepted',
+                $inboxId,
+                [
+                    'integration_id' => $command->integrationId,
+                    'external_event_id' => $externalEventId,
+                    'event_type' => $eventType,
+                ],
+            );
+
+            return $inboxId;
+        });
 
         // Dispatch after the inbox transaction commits. The periodic sweep is the
         // recovery path for the narrow DB-commit -> Redis-dispatch failure window.
@@ -76,19 +99,6 @@ final readonly class ReceiveCrmWebhookCommandHandler implements CommandHandlerIn
             $inboxId,
             $command->correlationId,
         ));
-
-        $this->audit->integration(
-            $organizationId,
-            $provider,
-            $command->correlationId,
-            'crm.webhook.accepted',
-            $inboxId,
-            [
-                'integration_id' => $command->integrationId,
-                'external_event_id' => $externalEventId,
-                'event_type' => $eventType,
-            ],
-        );
 
         return [
             'inbox_id' => $inboxId,
