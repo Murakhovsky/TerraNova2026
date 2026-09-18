@@ -18,6 +18,18 @@ $runtime=$read('app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeServ
 $assert(str_contains($runtime,"'idempotency_key'=>"),'Interview answer idempotency is missing.');
 $assert(!str_contains($runtime,'saveState($organizationId,$sessionId,$row[\'state\'],$next?->questionId'),'GET next-question must be read-only.');
 
+foreach([
+    'StartDiagnosticCommandHandler.php',
+    'AnswerDiagnosticInterviewCommandHandler.php',
+    'CaptureDiagnosticEvidenceCommandHandler.php',
+    'CompleteDiagnosticCommandHandler.php',
+    'AcceptDiagnosticRecommendationCommandHandler.php',
+] as $handlerFile){
+    $source=$read('symfony/src/Application/Diagnostic/Command/'.$handlerFile);
+    $assert(str_contains($source,'TransactionManagerInterface'),'Wave 5 write handler lacks transaction boundary: '.$handlerFile);
+    $assert(str_contains($source,'->transactional('),'Wave 5 write handler does not execute transactionally: '.$handlerFile);
+}
+
 $accept=$read('app/Domains/Diagnostic/Application/UseCase/AcceptDiagnosticRecommendation.php');
 foreach(['ActionService','IMPLEMENT_DIAGNOSTIC_RECOMMENDATION','APPROVAL_REQUIRED'] as $needle)$assert(str_contains($accept,$needle),'Recommendation → Action missing: '.$needle);
 

@@ -175,7 +175,7 @@ final readonly class DiagnosticRuntimeService
     public function complete(string $organizationId,string $sessionId,string $actorId):array
     {
         $row=$this->runtime->get($organizationId,$sessionId)??throw new DomainException('Diagnostic runtime was not found.');
-        if($row['status']==='completed') return $this->report($organizationId,$sessionId);
+        if($row['status']==='completed') return $this->report($organizationId,$sessionId)+['replayed'=>true];
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session was not found.');
         $now=new DateTimeImmutable();
         $this->materializeInputs($organizationId,$sessionId,$row['state'],$session->records(),$now,$actorId);
@@ -210,7 +210,7 @@ final readonly class DiagnosticRuntimeService
         $this->runtime->complete($organizationId,$sessionId,$now);
         $schedule=new ReDiagnosticSchedule($sessionId,$now,30);
         $scheduled=$this->runtime->schedule($organizationId,$sessionId,30,$schedule->dueAt,$now);
-        return ['report_version'=>$version,'report'=>$reportArray,'recommendations'=>array_map(fn($r)=>$this->recommendationArray($r),$recommendations),'re_diagnostic'=>$scheduled];
+        return ['report_version'=>$version,'report'=>$reportArray,'recommendations'=>array_map(fn($r)=>$this->recommendationArray($r),$recommendations),'re_diagnostic'=>$scheduled,'replayed'=>false];
     }
 
     public function report(string $organizationId,string $sessionId):array
