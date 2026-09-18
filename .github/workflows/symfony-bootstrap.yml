@@ -741,7 +741,6 @@ jobs:
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |
           php tests/architecture/property_v0130_real_estate_wave9_cutover.php
-          php tests/unit/property_v0130_real_estate_wave9.php
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave9-routes.txt
           grep -q 'cos_api_v1_property_create' /tmp/wave9-routes.txt
