@@ -64,6 +64,7 @@ foreach ([
     'tool.sales.action.propose.execute',
     "ownerOfAgent",
     "ownerOfAction",
+    "allowedActionTypes",
     "isEnabled",
 ] as $needle) {
     if (!str_contains($permission, $needle)) {
