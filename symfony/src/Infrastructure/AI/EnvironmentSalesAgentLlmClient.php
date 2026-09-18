@@ -3,27 +3,21 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use Infrastructure\Llm\HttpStructuredLlmClient;
 use Kernel\Agent\AgentDefinition;
 use Kernel\Agent\Contract\OrganizationAwareLlmClientInterface;
 use Kernel\Agent\LlmResponse;
 
-final class EnvironmentSalesAgentLlmClient implements OrganizationAwareLlmClientInterface
+final readonly class EnvironmentSalesAgentLlmClient implements OrganizationAwareLlmClientInterface
 {
-    private ?HttpStructuredLlmClient $http = null;
-
     public function __construct(
-        private readonly string $mode,
-        private readonly string $endpoint,
-        private readonly string $token,
-        private readonly string $model,
-        private readonly string $provider,
+        private string $mode,
+        private OrganizationAwareLlmClientInterface $production,
     ) {
     }
 
     public function structured(AgentDefinition $agent, string $question, array $context): LlmResponse
     {
-        return $this->execute($agent, $question, $context);
+        return $this->execute(null, $agent, $question, $context, null);
     }
 
     public function structuredForOrganization(
@@ -33,13 +27,19 @@ final class EnvironmentSalesAgentLlmClient implements OrganizationAwareLlmClient
         array $context,
         ?string $correlationId = null,
     ): LlmResponse {
-        return $this->execute($agent, $question, $context);
+        return $this->execute($organizationId, $agent, $question, $context, $correlationId);
     }
 
-    private function execute(AgentDefinition $agent, string $question, array $context): LlmResponse
-    {
+    private function execute(
+        ?string $organizationId,
+        AgentDefinition $agent,
+        string $question,
+        array $context,
+        ?string $correlationId,
+    ): LlmResponse {
         if (strtolower(trim($this->mode)) === 'fixture') {
             $dealId = (string) ($context['deal']['id'] ?? 'unknown');
+
             return new LlmResponse([
                 'decision' => 'MANAGER_REVIEW',
                 'reason' => 'Deterministic Wave 4 fixture recommends a governed manager review.',
@@ -69,13 +69,16 @@ final class EnvironmentSalesAgentLlmClient implements OrganizationAwareLlmClient
             ], 'fixture', 'wave4-deterministic', 10, 20, 0.0, 'USD');
         }
 
-        $this->http ??= new HttpStructuredLlmClient(
-            $this->endpoint,
-            $this->token,
-            $this->model,
-            $this->provider !== '' ? $this->provider : 'http',
-        );
+        if ($organizationId !== null) {
+            return $this->production->structuredForOrganization(
+                $organizationId,
+                $agent,
+                $question,
+                $context,
+                $correlationId,
+            );
+        }
 
-        return $this->http->structured($agent, $question, $context);
+        return $this->production->structured($agent, $question, $context);
     }
 }
