@@ -92,3 +92,11 @@ Legacy Sales retirement
 
 `migration/symfony` залишається тимчасовим integration stream до повного retirement старого runtime, але foundation-only work після цієї точки не є самостійною метою міграції.
 
+## 40. Phase II Wave 1 — Sales read cutover
+
+Перший business-cutover wave переносить Sales dashboard, Lead list/detail, Opportunity list/workspace та Pipelines у `/api/v1/sales/*` через QueryBus і чинний `SalesWorkspaceReadModelInterface`.
+
+Wave не створює другу Sales persistence model і не переписує frontend. Legacy MySQL залишається read-only compatibility source за Infrastructure adapter boundary; tenant scope надходить тільки з `TenantContext`.
+
+Канонічний опис: [Sales Read Cutover](./sales-read-cutover.md).
+
