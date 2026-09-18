@@ -6,13 +6,17 @@ namespace App\Http\Api\V1\Controller;
 use App\Application\RealEstate\Command\RealEstateMutationCommand;
 use App\Application\RealEstate\Query\GetRealEstateCaseQuery;
 use App\Security\LegacySessionCsrfValidator;
-use InvalidArgumentException;
+use DomainException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
+use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Model\TenantPermissions;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Throwable;
 
 final readonly class RealEstateController
@@ -22,14 +26,22 @@ final readonly class RealEstateController
         private CommandBusInterface $commands,
         private TenantContextProviderInterface $tenants,
         private LegacySessionCsrfValidator $csrf,
+        private ActiveModuleResolver $modules,
     ) {}
 
     public function view(string $id): JsonResponse
     {
-        $tenant=$this->tenants->current();
-        if($tenant===null)return $this->error(403,'tenant_context_required','Tenant context required.');
-        $data=$this->queries->ask(new GetRealEstateCaseQuery($tenant->organizationId(),$id));
-        return $data===null?$this->error(404,'case_not_found','RealEstate brokerage case was not found.'):$this->ok($data);
+        $tenant=$this->context(null,false);
+        if($tenant instanceof JsonResponse)return $tenant;
+
+        try{
+            $data=$this->queries->ask(new GetRealEstateCaseQuery($tenant->organizationId(),$id));
+            return $data===null
+                ?$this->error(404,'case_not_found','RealEstate brokerage case was not found.')
+                :$this->ok($data);
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function match(Request $request,string $id): JsonResponse
@@ -54,46 +66,58 @@ final readonly class RealEstateController
 
     private function mutate(Request $request,string $operation,string|int $subjectId,int $status): JsonResponse
     {
-        $context=$this->context($request);
-        if($context instanceof JsonResponse)return $context;
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+
         $key=trim((string)$request->headers->get('X-Idempotency-Key',''));
-        if($key==='')return $this->error(422,'idempotency_key_required','X-Idempotency-Key is required.');
+        if($key===''||mb_strlen($key)>191){
+            return $this->error(422,'idempotency_key_required','A valid X-Idempotency-Key is required.');
+        }
 
         $input=$this->input($request);
+        $stable=strtoupper(substr(hash('sha256',$tenant->organizationId()->value().':'.$key),0,20));
         if($operation===RealEstateMutationCommand::OFFER){
-            $input['offer_id']='OFR-'.strtoupper(substr(hash('sha256',$context['organization_id']->value().':'.$key),0,20));
+            $input['offer_id']='OFR-'.$stable;
         }elseif($operation===RealEstateMutationCommand::VIEWING){
-            $input['showing_id']='SHW-'.strtoupper(substr(hash('sha256',$context['organization_id']->value().':'.$key),0,20));
+            $input['showing_id']='SHW-'.$stable;
         }elseif($operation===RealEstateMutationCommand::RESERVE){
-            $input['reservation_id']='RSV-'.strtoupper(substr(hash('sha256',$context['organization_id']->value().':'.$key),0,20));
+            $input['reservation_id']='RSV-'.$stable;
         }
 
         try{
-            return $this->ok($this->commands->dispatch(new RealEstateMutationCommand(
-                $context['organization_id'],$context['actor_id'],$context['correlation_id'],$operation,$subjectId,$input,
-            )),$status);
-        }catch(InvalidArgumentException|\ValueError $e){
-            $notFound=str_contains(strtolower($e->getMessage()),'not found');
-            return $this->error($notFound?404:422,$notFound?'not_found':'validation_error',$e->getMessage());
-        }catch(Throwable $e){
-            return $this->error(500,'real_estate_mutation_failed',$e->getMessage());
+            $data=$this->commands->dispatch(new RealEstateMutationCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $operation,
+                $subjectId,
+                $input,
+            ));
+            return $this->ok($data,$status);
+        }catch(Throwable $error){
+            return $this->failure($error);
         }
     }
 
-    /** @return array{organization_id:\Kernel\Shared\Domain\OrganizationId,actor_id:int,correlation_id:string}|JsonResponse */
-    private function context(Request $request): array|JsonResponse
+    private function context(?Request $request,bool $mutation): TenantContext|JsonResponse
     {
         $tenant=$this->tenants->current();
         if($tenant===null)return $this->error(403,'tenant_context_required','Tenant context required.');
-        if(!$this->csrf->isValid($request))return $this->error(400,'invalid_csrf_token','Invalid CSRF token.');
+        if(!$tenant->allows(TenantPermissions::ACCESS)||!$tenant->isManager()){
+            return $this->error(403,'manager_required','RealEstate manager authorization required.');
+        }
+        foreach(['sales','property','real_estate'] as $module){
+            if(!$this->modules->isEnabled($tenant->organizationId()->value(),$module)){
+                return $this->error(403,$module.'_module_disabled',ucfirst(str_replace('_',' ',$module)).' module is disabled for this organization.');
+            }
+        }
+        if($mutation&&($request===null||!$this->csrf->isValid($request))){
+            return $this->error(400,'invalid_csrf_token','Invalid CSRF token.');
+        }
+
         $actor=$tenant->userId()->value();
         if(!ctype_digit($actor)||(int)$actor<=0)return $this->error(403,'invalid_actor','Authenticated actor is invalid.');
-        $correlation=$request->attributes->get('_cos_correlation_id');
-        return [
-            'organization_id'=>$tenant->organizationId(),
-            'actor_id'=>(int)$actor,
-            'correlation_id'=>$correlation instanceof CorrelationId?$correlation->value():CorrelationId::generate()->value(),
-        ];
+        return $tenant;
     }
 
     /** @return array<string,mixed> */
@@ -102,6 +126,33 @@ final readonly class RealEstateController
         $decoded=json_decode((string)$request->getContent(),true);
         return is_array($decoded)&&!array_is_list($decoded)?$decoded:$request->request->all();
     }
+
+    private function correlationId(Request $request): string
+    {
+        $value=$request->attributes->get('_cos_correlation_id');
+        return $value instanceof CorrelationId?$value->value():CorrelationId::generate()->value();
+    }
+
+    private function failure(Throwable $error): JsonResponse
+    {
+        $root=$error instanceof HandlerFailedException&&$error->getPrevious() instanceof Throwable
+            ?$error->getPrevious():$error;
+        $message=$root->getMessage();
+        $normalized=strtolower($message);
+        $status=match(true){
+            str_contains($normalized,'not found')=>404,
+            str_contains($normalized,'already'),
+            str_contains($normalized,'idempotency'),
+            str_contains($normalized,'not reservable'),
+            str_contains($normalized,'not allowed')=>409,
+            $root instanceof DomainException,
+            $root instanceof \InvalidArgumentException,
+            $root instanceof \ValueError=>422,
+            default=>500,
+        };
+        return $this->error($status,'real_estate_operation_failed',$message);
+    }
+
     private function ok(mixed $data,int $status=200): JsonResponse{return new JsonResponse(['ok'=>true,'data'=>$data],$status);}
     private function error(int $status,string $code,string $message): JsonResponse{return new JsonResponse(['ok'=>false,'error'=>$code,'message'=>$message],$status);}
 }
