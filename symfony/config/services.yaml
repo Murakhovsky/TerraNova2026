@@ -891,3 +891,70 @@ services:
       $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
       $queue: null
       $authority: null
+
+
+  # Sales Wave 7 — Frontend admin cutover
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesAccessControlInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineAdministration:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesPipelineAdministrationInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineAdministration
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineGovernance:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesPipelineGovernanceInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineGovernance
+
+  Domains\Sales\Automation\Rule\SalesRuleDefinitionCatalog: ~
+
+  Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesRuleAdministration:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $definitions: '@Domains\Sales\Automation\Rule\SalesRuleDefinitionCatalog'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $conditions: '@Kernel\Rule\Service\ConditionEvaluator'
+      $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
+      $policyEngine: '@Kernel\Policy\Service\PolicyEngine'
+
+  Domains\Sales\Application\Contract\SalesRuleAdministrationInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesRuleAdministration
+
+  Domains\Sales\Automation\Policy\SalesPolicyDefinitionCatalog: ~
+
+  Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesPolicyAdministration:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $definitions: '@Domains\Sales\Automation\Policy\SalesPolicyDefinitionCatalog'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
+      $contexts: '@Kernel\Policy\Service\PolicyContextBuilder'
+      $engine: '@Kernel\Policy\Service\PolicyEngine'
+
+  Domains\Sales\Application\Contract\SalesPolicyAdministrationInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesPolicyAdministration
+
+  Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesAgentAdministration:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $configurations: '@Infrastructure\Platform\Persistence\MySql\Configuration\MysqlAgentConfigurationProvider'
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+
+  Domains\Sales\Application\Contract\SalesAgentAdministrationInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesAgentAdministration
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesTeamAdministrationInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration
