@@ -139,3 +139,69 @@ cos_api_v1_sales_opportunity_next_action:
   requirements:
     id: '[1-9][0-9]*'
 
+cos_api_v1_diagnostics_create:
+  path: /api/v1/diagnostics
+  controller: App\Http\Api\V1\Controller\DiagnosticController::create
+  methods: [POST]
+
+cos_api_v1_diagnostics_view:
+  path: /api/v1/diagnostics/{id}
+  controller: App\Http\Api\V1\Controller\DiagnosticController::view
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_interview_next:
+  path: /api/v1/diagnostics/{id}/interview/next
+  controller: App\Http\Api\V1\Controller\DiagnosticController::nextQuestion
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_interview_answer:
+  path: /api/v1/diagnostics/{id}/interview/answers
+  controller: App\Http\Api\V1\Controller\DiagnosticController::answer
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_evidence:
+  path: /api/v1/diagnostics/{id}/evidence
+  controller: App\Http\Api\V1\Controller\DiagnosticController::evidence
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_complete:
+  path: /api/v1/diagnostics/{id}/complete
+  controller: App\Http\Api\V1\Controller\DiagnosticController::complete
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_report:
+  path: /api/v1/diagnostics/{id}/report
+  controller: App\Http\Api\V1\Controller\DiagnosticController::report
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_assessment:
+  path: /api/v1/diagnostics/{id}/assessment
+  controller: App\Http\Api\V1\Controller\DiagnosticController::assessment
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_findings:
+  path: /api/v1/diagnostics/{id}/findings
+  controller: App\Http\Api\V1\Controller\DiagnosticController::findings
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_recommendations:
+  path: /api/v1/diagnostics/{id}/recommendations
+  controller: App\Http\Api\V1\Controller\DiagnosticController::recommendations
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32,64}' }
+
+cos_api_v1_diagnostics_recommendation_action:
+  path: /api/v1/diagnostics/{id}/recommendations/{recommendationId}/action
+  controller: App\Http\Api\V1\Controller\DiagnosticController::recommendationAction
+  methods: [POST]
+  requirements:
+    id: '[a-f0-9]{32,64}'
+    recommendationId: '[A-Za-z0-9._:-]+'

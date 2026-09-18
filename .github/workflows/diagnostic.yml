@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, 'migration/wave*']
 jobs:
   runtime-checks:
     runs-on: ubuntu-latest
@@ -61,6 +61,9 @@ jobs:
           php tests/smoke/diagnostic_v054.php
           php tests/smoke/diagnostic_v055.php
           php tests/smoke/diagnostic_v061.php
+          php tests/architecture/symfony_sales_diagnostics_wave5_boundary.php
+          php tests/unit/sales_diagnostics_wave5_contract.php
+          php tests/unit/sales_diagnostics_wave5_action_assignment.php
           node --check frontend/features/diagnostics/methodology-studio-v055.js
           php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
 
@@ -74,6 +77,8 @@ jobs:
           php -l app/Interfaces/Web/Routing/DiagnosticRoutes.php
           php -l app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php
           php -l tests/smoke/diagnostic_v061.php
+          find symfony/src/Application/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l symfony/src/Http/Api/V1/Controller/DiagnosticController.php
 
       - name: Sales architecture and runtime checks
         run: |
