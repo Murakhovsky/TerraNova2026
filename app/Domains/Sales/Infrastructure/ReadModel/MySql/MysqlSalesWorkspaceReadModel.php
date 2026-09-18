@@ -45,14 +45,48 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         $owner = (int) ($filters['owner_id'] ?? 0);
         if ($owner > 0) { $where[] = 'l.assigned_user_id = :owner_id'; $params['owner_id'] = $owner; }
         $limit = $this->limit($filters['limit'] ?? 100);
+        $offset = $this->offset($filters['offset'] ?? 0);
+        $orderBy = $this->leadOrder($filters);
         return $this->all(
             'SELECT l.id, l.full_name name, l.source_page source, l.status, l.assigned_user_id owner_id, u.full_name owner_name, '
             . 'l.created_at, l.last_contacted_at last_contact_at, l.next_contact_at next_action_at, '
             . 'CASE WHEN l.next_contact_at < NOW() THEN "HIGH" WHEN l.status = "new" THEN "MEDIUM" ELSE "NORMAL" END ai_priority, l.client_case_id deal_id '
             . 'FROM tn_leads l LEFT JOIN tn_users u ON u.id = l.assigned_user_id AND u.organization_id = l.organization_id '
-            . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY l.created_at DESC LIMIT ' . $limit,
+            . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $orderBy . ' LIMIT ' . $limit . ' OFFSET ' . $offset,
             $params,
         );
+    }
+
+    public function lead(string $organizationId, int $leadId): ?array
+    {
+        if ($leadId <= 0) return null;
+
+        $lead = $this->one(
+            'SELECT l.*, l.source_page source, l.assigned_user_id owner_id, u.full_name owner_name, '
+            . 'l.last_contacted_at last_contact_at, l.next_contact_at next_action_at, l.client_case_id deal_id '
+            . 'FROM tn_leads l LEFT JOIN tn_users u ON u.id = l.assigned_user_id AND u.organization_id = l.organization_id '
+            . 'WHERE l.organization_id = :organization_id AND l.id = :lead_id LIMIT 1',
+            ['organization_id' => $organizationId, 'lead_id' => $leadId],
+        );
+        if ($lead === null) return null;
+
+        $lead['activities'] = $this->safeAll(
+            'SELECT a.id,a.user_id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.created_at '
+            . 'FROM tn_lead_activities a INNER JOIN tn_leads l ON l.id=a.lead_id '
+            . 'WHERE l.organization_id=:organization_id AND a.lead_id=:lead_id ORDER BY a.created_at DESC LIMIT 100',
+            ['organization_id' => $organizationId, 'lead_id' => $leadId],
+        );
+
+        $dealId = (int) ($lead['client_case_id'] ?? 0);
+        $lead['opportunity'] = $dealId > 0 ? $this->deal($organizationId, $dealId) : null;
+        $lead['communications'] = $dealId > 0 ? $this->safeAll(
+            'SELECT id,channel,direction,sender,recipient,body,occurred_at '
+            . 'FROM sales_communications WHERE organization_id=:organization_id AND deal_id=:deal_id '
+            . 'ORDER BY occurred_at DESC LIMIT 50',
+            ['organization_id' => $organizationId, 'deal_id' => $dealId],
+        ) : [];
+
+        return $lead;
     }
 
     public function deals(string $organizationId, array $filters = []): array
@@ -67,6 +101,8 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         if ($owner > 0) { $where[] = 'c.assigned_user_id = :owner_id'; $params['owner_id'] = $owner; }
         if (($filters['risk'] ?? '') === 'high') $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
         $limit = $this->limit($filters['limit'] ?? 100);
+        $offset = $this->offset($filters['offset'] ?? 0);
+        $orderBy = $this->dealOrder($filters);
         return $this->all(
             'SELECT c.id, c.public_id, c.title, c.status, c.priority, c.pipeline_id, c.stage_id, '
             . 'COALESCE(s.code, UPPER(c.stage)) stage_code, COALESCE(s.name, c.stage) stage_name, s.sort_order stage_order, '
@@ -77,7 +113,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id '
             . 'LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id '
             . 'LEFT JOIN sales_pipeline_stages s ON s.id = c.stage_id AND s.organization_id = c.organization_id '
-            . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY COALESCE(s.sort_order, 0), c.updated_at DESC LIMIT ' . $limit,
+            . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $orderBy . ' LIMIT ' . $limit . ' OFFSET ' . $offset,
             $params,
         );
     }
@@ -210,6 +246,32 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
     }
 
     private function limit(mixed $value): int { return max(1, min((int) $value, 250)); }
+
+    private function offset(mixed $value): int { return max(0, min((int) $value, 100000)); }
+
+    private function leadOrder(array $filters): string
+    {
+        $direction = strtolower((string) ($filters['direction'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+        return match ((string) ($filters['sort'] ?? 'created_at')) {
+            'name' => 'l.full_name ' . $direction . ', l.id DESC',
+            'status' => 'l.status ' . $direction . ', l.created_at DESC',
+            'next_action' => 'l.next_contact_at IS NULL, l.next_contact_at ' . $direction . ', l.created_at DESC',
+            'owner' => 'u.full_name IS NULL, u.full_name ' . $direction . ', l.created_at DESC',
+            default => 'l.created_at ' . $direction . ', l.id DESC',
+        };
+    }
+
+    private function dealOrder(array $filters): string
+    {
+        $direction = strtolower((string) ($filters['direction'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+        return match ((string) ($filters['sort'] ?? 'stage')) {
+            'created_at' => 'c.created_at ' . $direction . ', c.id DESC',
+            'updated_at' => 'c.updated_at ' . $direction . ', c.id DESC',
+            'value' => 'COALESCE(c.deal_value,c.budget_max,0) ' . $direction . ', c.updated_at DESC',
+            'next_action' => 'c.next_contact_at IS NULL, c.next_contact_at ' . $direction . ', c.updated_at DESC',
+            default => 'COALESCE(s.sort_order,0) ' . $direction . ', c.updated_at DESC',
+        };
+    }
 
     /** @return list<array<string, mixed>> */
     private function all(string $sql, array $params = []): array
