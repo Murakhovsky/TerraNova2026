@@ -108,10 +108,15 @@ $cases = $read('app/Domains/Sales/Application/Service/ClientCaseCommandService.p
 $assert(str_contains($writeInterface, 'quickUpdateOpportunity'), 'Wave 7 quick-update write port is missing.');
 $assert(str_contains($writeService, 'quickUpdateOpportunity'), 'Wave 7 quick-update implementation is missing.');
 $assert(str_contains($cases, '$requestedCorrelationId'), 'Wave 7 quick update does not preserve correlation.');
+$writeFactory = $read('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesWriteServiceFactory.php');
+$assert(str_contains($writeFactory, 'SalesAssignmentAuthorityInterface'), 'Wave 7 writer must receive Sales assignment authority.');
+$assert(str_contains($writeFactory, '$this->assignmentAuthority'), 'Wave 7 owner assignment must preserve Sales authority.');
 
 $services = $read('symfony/config/services.yaml');
 foreach ([
     'SalesWorkspaceOperationalReadModelInterface',
+    'SalesAssignmentAuthorityInterface',
+    'MysqlSalesAssignmentAuthority',
     'SalesAccessControlInterface',
     'SalesPipelineAdministrationInterface',
     'SalesPipelineGovernanceInterface',
