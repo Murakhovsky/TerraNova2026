@@ -13,6 +13,7 @@ final class SalesPolicyCatalog
     {
         return [
             new ActionPolicy($this->id($organizationId, 'sales-auto-qualification-task-v1'), $organizationId, 'sales.create_qualification_task', [], PolicyDecision::Auto, 10),
+            new ActionPolicy($this->id($organizationId, 'sales-auto-lead-followup-task-v1'), $organizationId, 'sales.create_lead_followup_task', [], PolicyDecision::Auto, 10),
             new ActionPolicy($this->id($organizationId, 'sales-auto-followup-task-v1'), $organizationId, 'sales.create_followup_task', [], PolicyDecision::Auto, 10),
             new ActionPolicy($this->id($organizationId, 'sales-auto-overdue-escalation-v1'), $organizationId, 'sales.escalate_overdue_followup', [], PolicyDecision::Auto, 10),
             new ActionPolicy($this->id($organizationId, 'policy-send-followup-auto-v1'), $organizationId, 'sales.send_followup', [], PolicyDecision::Auto, 10),
