@@ -33,8 +33,13 @@ final readonly class PropertyWriteService
         return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$idempotencyKey,$input):array{
             $org=$organizationId->value();
             $assetId='PROP-'.$this->stableId($org,'create',$idempotencyKey);
-            $existing=$this->properties->getPropertyPresentation($org,$assetId);
-            if($existing!==null)return $existing+['replayed'=>true];
+            if(!$this->receipts->claim($org,'create',$idempotencyKey,$this->fingerprint([
+                'asset_id'=>$assetId,'input'=>$input,
+            ]))){
+                return ($this->properties->getPropertyPresentation($org,$assetId)
+                    ?? throw new InvalidArgumentException('Property idempotency receipt exists but Property was not found.'))
+                    + ['replayed'=>true];
+            }
 
             $input['asset_id']=$assetId;
             $result=$this->runtime->registerAsset($org,$input,(string)$actorId,$correlationId);
@@ -44,11 +49,19 @@ final readonly class PropertyWriteService
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
-    public function update(OrganizationId $organizationId,int $actorId,string $correlationId,string $reference,array $input):array
+    public function update(OrganizationId $organizationId,int $actorId,string $correlationId,string $reference,string $idempotencyKey,array $input):array
     {
-        return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$reference,$input):array{
-            $result=$this->runtime->updateAsset($organizationId->value(),$reference,$input,(string)$actorId,$correlationId);
-            $this->appendAudit($organizationId,$actorId,$correlationId,'property.update','property',$reference,null);
+        return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$reference,$idempotencyKey,$input):array{
+            $org=$organizationId->value();
+            if(!$this->receipts->claim($org,'update',$idempotencyKey,$this->fingerprint([
+                'reference'=>$reference,'input'=>$input,
+            ]))){
+                return ($this->properties->getPropertyPresentation($org,$reference)
+                    ?? throw new InvalidArgumentException('Property idempotency receipt exists but Property was not found.'))
+                    + ['replayed'=>true];
+            }
+            $result=$this->runtime->updateAsset($org,$reference,$input,(string)$actorId,$correlationId);
+            $this->appendAudit($organizationId,$actorId,$correlationId,'property.update','property',$reference,$idempotencyKey);
             return $result;
         });
     }
@@ -59,8 +72,13 @@ final readonly class PropertyWriteService
         return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$propertyReference,$idempotencyKey,$input):array{
             $org=$organizationId->value();
             $inventoryId='INV-'.$this->stableId($org,'create_inventory',$idempotencyKey);
-            $existing=$this->properties->getInventorySnapshot($org,$inventoryId);
-            if($existing!==null)return $existing+['replayed'=>true];
+            if(!$this->receipts->claim($org,'create_inventory',$idempotencyKey,$this->fingerprint([
+                'property_reference'=>$propertyReference,'inventory_id'=>$inventoryId,'input'=>$input,
+            ]))){
+                return ($this->properties->getInventorySnapshot($org,$inventoryId)
+                    ?? throw new InvalidArgumentException('Inventory idempotency receipt exists but Inventory was not found.'))
+                    + ['replayed'=>true];
+            }
 
             $input['inventory_id']=$inventoryId;
             $result=$this->runtime->createInventory($org,$propertyReference,$input,(string)$actorId,$correlationId);
@@ -77,14 +95,23 @@ final readonly class PropertyWriteService
         string $inventoryId,
         string $status,
         ?string $reason,
+        string $idempotencyKey,
     ):array {
         if(trim($status)==='')throw new InvalidArgumentException('status is required.');
 
-        return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$inventoryId,$status,$reason):array{
+        return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$inventoryId,$status,$reason,$idempotencyKey):array{
+            $org=$organizationId->value();
+            if(!$this->receipts->claim($org,'inventory_status',$idempotencyKey,$this->fingerprint([
+                'inventory_id'=>$inventoryId,'status'=>$status,'reason'=>$reason,
+            ]))){
+                return ($this->properties->getInventorySnapshot($org,$inventoryId)
+                    ?? throw new InvalidArgumentException('Inventory idempotency receipt exists but Inventory was not found.'))
+                    + ['replayed'=>true];
+            }
             $result=$this->inventory->changeStatus(
-                $organizationId->value(),$inventoryId,$status,$reason,(string)$actorId,$correlationId,
+                $org,$inventoryId,$status,$reason,(string)$actorId,$correlationId,
             );
-            $this->appendAudit($organizationId,$actorId,$correlationId,'property.inventory.status_changed','property_inventory',$inventoryId,null,[
+            $this->appendAudit($organizationId,$actorId,$correlationId,'property.inventory.status_changed','property_inventory',$inventoryId,$idempotencyKey,[
                 'status'=>$status,'reason'=>$reason,
             ]);
             return $result;
@@ -103,10 +130,12 @@ final readonly class PropertyWriteService
         return $this->transactions->transactional(function()use($organizationId,$actorId,$correlationId,$inventoryId,$idempotencyKey,$input):array{
             $org=$organizationId->value();
             $reservationId='RSV-'.$this->stableId($org,'reserve_inventory',$idempotencyKey);
-            $active=$this->repository->findActiveReservation($org,$inventoryId);
-            if($active!==null){
-                if($active->reservationId!==$reservationId){
-                    throw new InvalidArgumentException('Inventory item already has an active reservation.');
+            if(!$this->receipts->claim($org,'reserve_inventory',$idempotencyKey,$this->fingerprint([
+                'inventory_id'=>$inventoryId,'reservation_id'=>$reservationId,'input'=>$input,
+            ]))){
+                $active=$this->repository->findActiveReservation($org,$inventoryId);
+                if($active===null||$active->reservationId!==$reservationId){
+                    throw new InvalidArgumentException('Reservation idempotency receipt exists but reservation state does not match.');
                 }
                 return [
                     'reservation_id'=>$active->reservationId,
@@ -151,6 +180,22 @@ final readonly class PropertyWriteService
             ],
             $correlationId,
             new DateTimeImmutable(),
+        ));
+    }
+
+    /** @param array<string,mixed> $value */
+    private function fingerprint(array $value):string
+    {
+        $normalize=function(mixed $item)use(&$normalize):mixed{
+            if(!is_array($item))return $item;
+            if(array_is_list($item))return array_map($normalize,$item);
+            ksort($item,SORT_STRING);
+            foreach($item as $key=>$nested)$item[$key]=$normalize($nested);
+            return $item;
+        };
+        return hash('sha256',(string)json_encode(
+            $normalize($value),
+            JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRESERVE_ZERO_FRACTION,
         ));
     }
 
