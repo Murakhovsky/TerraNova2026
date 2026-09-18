@@ -182,6 +182,9 @@ final readonly class PropertyController
         if(!$tenant->allows(TenantPermissions::ACCESS)||!$tenant->isManager()){
             return $this->error(403,'manager_required','Property manager authorization required.');
         }
+        if($mutation&&!$tenant->allows(TenantPermissions::MANAGE)){
+            return $this->error(403,'manage_permission_required','Tenant manage permission required.');
+        }
         if(!$this->modules->isEnabled($tenant->organizationId()->value(),'property')){
             return $this->error(403,'property_module_disabled','Property module is disabled for this organization.');
         }
