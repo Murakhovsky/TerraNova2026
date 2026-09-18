@@ -30,8 +30,8 @@ flowchart LR
     domain_real_estate["real_estate"]
     domain_sales["sales"]
     domain_real_estate -->|PropertyInventoryCommandInterface · property.inventory · 1 крок| domain_property
-    domain_real_estate -->|PropertyReferencePort · property.reference · 1 крок| domain_property
-    domain_real_estate -->|SalesOpportunityReferenceInterface · sales.workspace.use · 1 крок| domain_sales
+    domain_real_estate -->|PropertyBrokerageReferencePort · property.reference · 1 крок| domain_property
+    domain_real_estate -->|SalesWorkspaceReadModelInterface · sales.workspace.use · 1 крок| domain_sales
     domain_sales -->|PropertyReferencePort · property.reference · 1 крок| domain_property
 ```
 
@@ -40,8 +40,8 @@ flowchart LR
 | Процес | Крок | З Domain | До Domain | Contract | Target capability | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | [Opportunity → Property Reservation](../02-workflows/real-estate-opportunity-to-reservation.md) | `reserve-inventory` · Reserve Property Inventory | `real_estate` | `property` | `Domains\Property\Application\Contract\PropertyInventoryCommandInterface` | `property.inventory` | `runtime` |
-| [Opportunity → Property Reservation](../02-workflows/real-estate-opportunity-to-reservation.md) | `resolve-property` · Resolve canonical Property and Inventory | `real_estate` | `property` | `Domains\Property\Contract\PropertyReferencePort` | `property.reference` | `runtime` |
-| [Opportunity → Property Reservation](../02-workflows/real-estate-opportunity-to-reservation.md) | `validate-opportunity` · Validate Sales opportunity | `real_estate` | `sales` | `Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface` | `sales.workspace.use` | `runtime` |
+| [Opportunity → Property Reservation](../02-workflows/real-estate-opportunity-to-reservation.md) | `resolve-property` · Resolve canonical Property and Inventory | `real_estate` | `property` | `Domains\Property\Contract\PropertyBrokerageReferencePort` | `property.reference` | `runtime` |
+| [Opportunity → Property Reservation](../02-workflows/real-estate-opportunity-to-reservation.md) | `validate-opportunity` · Validate Sales opportunity | `real_estate` | `sales` | `Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface` | `sales.workspace.use` | `runtime` |
 | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) | `resolve-property` · Resolve canonical Property presentation | `sales` | `property` | `Domains\Property\Contract\PropertyReferencePort` | `property.reference` | `runtime` |
 
 ## Агрегація меж
@@ -49,8 +49,8 @@ flowchart LR
 | Межа | Contract | Capability | Процесів | Кроків | Evidence |
 | --- | --- | --- | ---: | ---: | --- |
 | `real_estate → property` | `Domains\Property\Application\Contract\PropertyInventoryCommandInterface` | `property.inventory` | 1 | 1 | `runtime` |
-| `real_estate → property` | `Domains\Property\Contract\PropertyReferencePort` | `property.reference` | 1 | 1 | `runtime` |
-| `real_estate → sales` | `Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface` | `sales.workspace.use` | 1 | 1 | `runtime` |
+| `real_estate → property` | `Domains\Property\Contract\PropertyBrokerageReferencePort` | `property.reference` | 1 | 1 | `runtime` |
+| `real_estate → sales` | `Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface` | `sales.workspace.use` | 1 | 1 | `runtime` |
 | `sales → property` | `Domains\Property\Contract\PropertyReferencePort` | `property.reference` | 1 | 1 | `runtime` |
 
 ## Авторитетність і обмеження
