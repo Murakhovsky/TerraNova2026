@@ -110,7 +110,8 @@ final readonly class DiagnosticController
     private function correlationId(Request $request):string{$value=$request->attributes->get('_cos_correlation_id');return $value instanceof CorrelationId?$value->value():CorrelationId::generate()->value();}
     private function dispatch(callable $operation,int $successStatus=200):JsonResponse
     {
-        try{return new JsonResponse(['ok'=>true,'data'=>$operation()],$successStatus);}catch(Throwable $error){$root=$error;if($error instanceof HandlerFailedException&&$error->getPrevious() instanceof Throwable)$root=$error->getPrevious();$message=$root->getMessage();$status=str_contains(strtolower($message),'not found')?404:(($root instanceof DomainException&&str_contains(strtolower($message),'transition'))?409:422);return $this->error($status,'diagnostic_operation_failed',$message);}
+        try{return new JsonResponse(['ok'=>true,'data'=>$operation()],$successStatus);}catch(Throwable $error){$root=$error;if($error instanceof HandlerFailedException&&$error->getPrevious() instanceof Throwable)$root=$error->getPrevious();$message=$root->getMessage();$normalized=strtolower($message);
+            $status=str_contains($normalized,'not found')?404:(($root instanceof DomainException&&(str_contains($normalized,'transition')||str_contains($normalized,'already has an action')))?409:422);return $this->error($status,'diagnostic_operation_failed',$message);}
     }
     private function error(int $status,string $code,string $message):JsonResponse{return new JsonResponse(['ok'=>false,'error'=>$code,'message'=>$message],$status);}
 }
