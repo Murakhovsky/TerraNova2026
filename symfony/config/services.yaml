@@ -149,6 +149,51 @@ services:
   Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory
 
+  Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Transaction\Contract\TransactionManagerInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager
+
+  Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Event\Contract\EventStoreInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore
+
+  Kernel\Event\EventBus:
+    arguments:
+      $store: '@Kernel\Event\Contract\EventStoreInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository
+
+  Domains\Sales\Application\Service\SalesMonitoringService:
+    arguments:
+      $attention: '@Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface'
+      $outcomes: '@Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Application\Service\SalesAutomationRunner:
+    arguments:
+      $attention: '@Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface'
+      $monitoring: '@Domains\Sales\Application\Service\SalesMonitoringService'
+
   App\Application\Sales\Query\GetClientCaseStatsQueryHandler: ~
 
   Infrastructure\Observability\JsonFileLogger:
