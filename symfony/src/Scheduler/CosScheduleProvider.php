@@ -5,7 +5,7 @@ namespace App\Scheduler;
 
 use App\Application\System\Command\SchedulerHeartbeatCommand;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
-use Symfony\Component\Scheduler\Messenger\RedispatchMessage;
+use Symfony\Component\Messenger\Message\RedispatchMessage;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule;
 use Symfony\Component\Scheduler\ScheduleProviderInterface;

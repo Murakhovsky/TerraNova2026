@@ -59,7 +59,7 @@ services:
   worker:
     image: cos-symfony-php:local
     restart: unless-stopped
-    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=256M", "--failure-limit=1"]
+    command: ["php", "bin/console", "messenger:consume", "async", "--keepalive=5", "--time-limit=3600", "--memory-limit=256M", "--failure-limit=1"]
     environment:
       <<: *symfony-environment
       MESSENGER_CONSUMER_NAME: ${SYMFONY_MESSENGER_CONSUMER_NAME:-worker-1}
