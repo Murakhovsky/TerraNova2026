@@ -1,6 +1,6 @@
 ---
 title: Перенесення читання Sales
-description: Перша хвиля другої фази міграції: перенесення канонічних сценаріїв читання Sales у Symfony API v1 без дублювання даних.
+description: "Перша хвиля другої фази міграції: перенесення канонічних сценаріїв читання Sales у Symfony API v1 без дублювання даних."
 status: active
 updated: 2026-09-18
 kind: architecture
