@@ -13,6 +13,7 @@ final readonly class UpdateSalesLeadCommand implements CommandInterface
         public OrganizationId $organizationId,
         public int $actorId,
         public int $leadId,
+        public string $correlationId,
         public array $input,
     ) {
     }
