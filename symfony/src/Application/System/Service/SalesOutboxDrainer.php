@@ -17,7 +17,7 @@ final readonly class SalesOutboxDrainer
         int $idleRetries = 2,
         int $idleDelayMicroseconds = 25_000,
     ): int {
-        $limit = max(1, min(1000, $limit));
+        $limit = max(1, min(5000, $limit));
         $workerId = trim((string) $workerId);
         if ($workerId === '') {
             $workerId = 'symfony-sales-outbox-' . getmypid();
