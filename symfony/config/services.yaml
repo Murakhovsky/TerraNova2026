@@ -202,7 +202,12 @@ services:
 
   Domains\RealEstate\Application\Service\RealEstateWorkflowService: ~
   Domains\Property\Bootstrap\PropertyDomainModule: ~
-  Domains\RealEstate\Bootstrap\RealEstateDomainModule: ~
+
+  Domains\RealEstate\Rule\RealEstateRuleContextProvider: ~
+
+  Domains\RealEstate\Bootstrap\RealEstateDomainModule:
+    arguments:
+      $ruleContextProvider: '@Domains\RealEstate\Rule\RealEstateRuleContextProvider'
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
