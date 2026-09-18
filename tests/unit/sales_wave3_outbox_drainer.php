@@ -2,11 +2,28 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-require $root . '/vendor/autoload.php';
-require_once $root . '/symfony/src/Application/System/Service/SalesOutboxDrainer.php';
+$autoload = $root . '/vendor/autoload.php';
+if (is_file($autoload)) {
+    require $autoload;
+} else {
+    spl_autoload_register(static function (string $class) use ($root): void {
+        foreach ([
+            'App\\' => '/symfony/src/',
+            'Kernel\\' => '/app/Kernel/',
+        ] as $prefix => $directory) {
+            if (!str_starts_with($class, $prefix)) {
+                continue;
+            }
+            $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+            return;
+        }
+    });
+}
 
 use App\Application\System\Service\SalesOutboxDrainer;
-use DateTimeImmutable;
 use Kernel\Event\Contract\EventConsumptionRepositoryInterface;
 use Kernel\Event\Contract\EventOutboxInterface;
 use Kernel\Event\Contract\EventStoreInterface;
@@ -15,7 +32,6 @@ use Kernel\Event\EventMetadata;
 use Kernel\Event\OutboxMessage;
 use Kernel\Event\Service\DurableEventDispatcher;
 use Kernel\Event\Service\OutboxPublisher;
-use Throwable;
 
 final class Wave3Outbox implements EventOutboxInterface
 {
