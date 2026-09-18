@@ -76,6 +76,10 @@ generated: true
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_assets` |
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_compatibility_projection_state` |
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_residential_specs` |
+| `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_cases` |
+| `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_offers` |
+| `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_operation_receipts` |
+| `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_showings` |
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_configuration_revisions` |
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_organizations` |
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_policies` |
