@@ -269,3 +269,351 @@ cos_api_v1_sales_communication_send:
   controller: App\Http\Api\V1\Controller\SalesCommunicationController::send
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
+
+
+# Sales Wave 7 — Frontend cutover
+cos_api_v1_sales_search:
+  path: /api/v1/sales/search
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::search
+  methods: [GET]
+
+cos_api_v1_sales_opportunity_intelligence:
+  path: /api/v1/sales/opportunities/{id}/intelligence
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::intelligence
+  methods: [GET]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_quick_update:
+  path: /api/v1/sales/opportunities/{id}
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::quickUpdate
+  methods: [PATCH]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_owner:
+  path: /api/v1/sales/opportunities/{id}/owner
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::owner
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_meeting:
+  path: /api/v1/sales/opportunities/{id}/meetings
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::meeting
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_opportunity_activity_complete:
+  path: /api/v1/sales/opportunities/{id}/activities/{activityId}/complete
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::completeActivity
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+    activityId: '[1-9][0-9]*'
+
+cos_api_v1_sales_opportunity_activity_reschedule:
+  path: /api/v1/sales/opportunities/{id}/activities/{activityId}/reschedule
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::rescheduleActivity
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+    activityId: '[1-9][0-9]*'
+
+cos_api_v1_sales_lead_followup:
+  path: /api/v1/sales/leads/{id}/followups
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::leadFollowup
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_sales_approval_approve:
+  path: /api/v1/sales/approvals/{id}/approve
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::approve
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_sales_approval_reject:
+  path: /api/v1/sales/approvals/{id}/reject
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::reject
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_sales_action_execute:
+  path: /api/v1/sales/actions/{id}/execute
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::execute
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_sales_action_dismiss:
+  path: /api/v1/sales/actions/{id}/dismiss
+  controller: App\Http\Api\V1\Controller\SalesFrontendController::dismiss
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+
+# Sales Wave 7 — Frontend administration cutover
+cos_api_v1_sales_admin_pipelines:
+  path: /api/v1/sales/admin/pipelines
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::pipelines
+  methods: [GET]
+
+cos_api_v1_sales_admin_pipeline_create:
+  path: /api/v1/sales/admin/pipelines
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::createPipeline
+  methods: [POST]
+
+cos_api_v1_sales_admin_pipeline:
+  path: /api/v1/sales/admin/pipelines/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::pipeline
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_update:
+  path: /api/v1/sales/admin/pipelines/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updatePipeline
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_clone:
+  path: /api/v1/sales/admin/pipelines/{id}/clone
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::clonePipeline
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_stage_create:
+  path: /api/v1/sales/admin/pipelines/{id}/stages
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::createStage
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_stage_update:
+  path: /api/v1/sales/admin/stages/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updateStage
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_reorder:
+  path: /api/v1/sales/admin/pipelines/{id}/stages/reorder
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::reorderStages
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_transitions:
+  path: /api/v1/sales/admin/pipelines/{id}/transitions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::transitions
+  methods: [PUT]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_lost_reasons:
+  path: /api/v1/sales/admin/pipelines/{id}/lost-reasons
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::pipelineLostReasons
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_lost_reason_create:
+  path: /api/v1/sales/admin/pipelines/{id}/lost-reasons
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::createLostReason
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_lost_reason_update:
+  path: /api/v1/sales/admin/lost-reasons/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updateLostReason
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_validate:
+  path: /api/v1/sales/admin/pipelines/{id}/validate
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::pipelineValidate
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_pipeline_revisions:
+  path: /api/v1/sales/admin/pipelines/{id}/revisions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::pipelineRevisions
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_api_v1_sales_admin_rules_catalog:
+  path: /api/v1/sales/admin/rules/catalog
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::ruleCatalog
+  methods: [GET]
+
+cos_api_v1_sales_admin_rules:
+  path: /api/v1/sales/admin/rules
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::rules
+  methods: [GET]
+
+cos_api_v1_sales_admin_rule_create:
+  path: /api/v1/sales/admin/rules
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::createRule
+  methods: [POST]
+
+cos_api_v1_sales_admin_rule:
+  path: /api/v1/sales/admin/rules/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::rule
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_update:
+  path: /api/v1/sales/admin/rules/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updateRule
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_activate:
+  path: /api/v1/sales/admin/rules/{id}/activate
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::activateRule
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_disable:
+  path: /api/v1/sales/admin/rules/{id}/disable
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::disableRule
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_archive:
+  path: /api/v1/sales/admin/rules/{id}/archive
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::archiveRule
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_restore:
+  path: /api/v1/sales/admin/rules/{id}/restore-system
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::restoreRule
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_dry_run:
+  path: /api/v1/sales/admin/rules/{id}/dry-run
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::ruleDryRun
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_rule_revisions:
+  path: /api/v1/sales/admin/rules/{id}/revisions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::ruleRevisions
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_agents_catalog:
+  path: /api/v1/sales/admin/agents/catalog
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::agentCatalog
+  methods: [GET]
+
+cos_api_v1_sales_admin_agents:
+  path: /api/v1/sales/admin/agents
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::agents
+  methods: [GET]
+
+cos_api_v1_sales_admin_agent:
+  path: /api/v1/sales/admin/agents/{name}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::agent
+  methods: [GET]
+  requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
+
+cos_api_v1_sales_admin_agent_update:
+  path: /api/v1/sales/admin/agents/{name}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updateAgent
+  methods: [PATCH]
+  requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
+
+cos_api_v1_sales_admin_agent_test:
+  path: /api/v1/sales/admin/agents/{name}/test
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::testAgent
+  methods: [POST]
+  requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
+
+cos_api_v1_sales_admin_agent_revisions:
+  path: /api/v1/sales/admin/agents/{name}/revisions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::agentRevisions
+  methods: [GET]
+  requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
+
+cos_api_v1_sales_admin_policies_catalog:
+  path: /api/v1/sales/admin/policies/catalog
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::policyCatalog
+  methods: [GET]
+
+cos_api_v1_sales_admin_policy_actions:
+  path: /api/v1/sales/admin/policies/actions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::policyActions
+  methods: [GET]
+
+cos_api_v1_sales_admin_policies:
+  path: /api/v1/sales/admin/policies
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::createPolicy
+  methods: [POST]
+
+cos_api_v1_sales_admin_policy_update:
+  path: /api/v1/sales/admin/policies/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updatePolicy
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_policy_archive:
+  path: /api/v1/sales/admin/policies/{id}/archive
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::archivePolicy
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_policy_preview:
+  path: /api/v1/sales/admin/policies/preview
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::previewPolicy
+  methods: [POST]
+
+cos_api_v1_sales_admin_policy_revisions:
+  path: /api/v1/sales/admin/policies/{id}/revisions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::policyRevisions
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_teams_catalog:
+  path: /api/v1/sales/admin/teams/catalog
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::teamCatalog
+  methods: [GET]
+
+cos_api_v1_sales_admin_team_users:
+  path: /api/v1/sales/admin/teams/users
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::teamUsers
+  methods: [GET]
+
+cos_api_v1_sales_admin_teams:
+  path: /api/v1/sales/admin/teams
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::teams
+  methods: [GET]
+
+cos_api_v1_sales_admin_team_create:
+  path: /api/v1/sales/admin/teams
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::createTeam
+  methods: [POST]
+
+cos_api_v1_sales_admin_team:
+  path: /api/v1/sales/admin/teams/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::team
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_team_update:
+  path: /api/v1/sales/admin/teams/{id}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::updateTeam
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_api_v1_sales_admin_team_member:
+  path: /api/v1/sales/admin/teams/{id}/members/{userId}
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::teamMember
+  methods: [PUT]
+  requirements:
+    id: '[A-Za-z0-9_.-]{8,64}'
+    userId: '[1-9][0-9]*'
+
+cos_api_v1_sales_admin_user_capabilities:
+  path: /api/v1/sales/admin/users/{userId}/capabilities
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::userCapabilities
+  methods: [PUT]
+  requirements: { userId: '[1-9][0-9]*' }
+
+cos_api_v1_sales_admin_team_revisions:
+  path: /api/v1/sales/admin/teams/{id}/revisions
+  controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::teamRevisions
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.:-]{1,191}' }

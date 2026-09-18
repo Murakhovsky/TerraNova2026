@@ -96,7 +96,17 @@ foreach (['/quick', '/activities', '/followups', '/meetings', '/owner'] as $rout
 $assert(str_contains($frontendRoutes, "'/api/sales/deals/{id:[0-9]+}/stage'"), 'Canonical stage route is missing.');
 foreach (['quickUpdateAction', 'activityAction', 'followupAction', 'meetingAction', 'ownerAction'] as $method) $assert(str_contains($api, $method), 'Missing manager operation API method ' . $method);
 foreach (['data-operation="quick"', 'data-operation="owner"', 'data-operation="followup"', 'data-operation="meeting"', 'data-operation="activity"'] as $marker) $assert(str_contains($view, $marker), 'Deal workspace is missing ' . $marker);
-foreach (['quick:', 'owner:', 'activity:', 'followup:', 'meeting:'] as $marker) $assert(str_contains($js, $marker), 'Sales JS is missing operation mapping ' . $marker);
+foreach ([
+    "operation === 'quick'",
+    "operation === 'owner'",
+    "operation === 'activity'",
+    "operation === 'followup'",
+    "operation === 'meeting'",
+    '/api/v1/sales/opportunities/',
+] as $marker) {
+    $assert(str_contains($js, $marker), 'Sales JS is missing Wave 7 operation mapping ' . $marker);
+}
+$assert(!str_contains($js, '/api/sales/'), 'Sales JS must not call legacy Sales API after Wave 7.');
 $assert(str_contains($repo, "'followup'"), 'Follow-up repository must persist followup activity type.');
 
 foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-deal-card', 'draggable="true"', 'data-csrf='] as $marker) {

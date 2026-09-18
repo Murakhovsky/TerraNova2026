@@ -218,6 +218,20 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         ], ['id' => $actorId], $correlationId);
     }
 
+    public function quickUpdateOpportunity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
+    {
+        if ($opportunityId <= 0) {
+            return ClientCaseCommandResult::failure('not_found');
+        }
+
+        return $this->cases->quickUpdate(
+            $opportunityId,
+            $input,
+            ['id' => $actorId],
+            $correlationId,
+        );
+    }
+
     public function changeOpportunityStage(
         int $opportunityId,
         string $targetStageId,

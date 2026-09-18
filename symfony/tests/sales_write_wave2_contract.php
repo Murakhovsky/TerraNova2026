@@ -55,6 +55,12 @@ $service = new class implements SalesWriteServiceInterface {
         return ClientCaseCommandResult::success('activity_added', ['activity_id' => 801]);
     }
 
+    public function quickUpdateOpportunity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
+    {
+        $this->calls[] = ['quick', $opportunityId, $input, $actorId, $correlationId];
+        return ClientCaseCommandResult::success('updated', ['case_id' => $opportunityId]);
+    }
+
     public function changeOpportunityStage(int $opportunityId, string $targetStageId, int $actorId, string $correlationId, ?string $lostReasonId = null, ?string $lostReasonNote = null): ChangeDealStageResult
     {
         $this->calls[] = ['stage', $opportunityId, $targetStageId, $actorId, $correlationId, $lostReasonId, $lostReasonNote];

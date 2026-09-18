@@ -15,7 +15,7 @@ const requestJson = async (url, { method = 'GET', data = null, csrf = '' } = {})
   }
   const response = await fetch(url, options);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.ok === false) throw new Error(payload.error || `Request failed (${response.status})`);
+  if (!response.ok || payload.ok === false) throw new Error(payload.message || payload.error || `Request failed (${response.status})`);
   return payload.data ?? payload;
 };
 
@@ -28,7 +28,7 @@ const initCreate = (root) => {
     const data = Object.fromEntries(new FormData(form).entries());
     status.textContent = 'Creating…';
     try {
-      const rule = await requestJson('/api/sales/admin/rules', {
+      const rule = await requestJson('/api/v1/sales/admin/rules', {
         method: 'POST', csrf: root.dataset.csrf || '',
         data: {
           name: String(data.name || '').trim(),
@@ -180,7 +180,7 @@ const initEditor = (root) => {
 
   const save = async () => {
     statusMessage.textContent = 'Saving…';
-    current = await requestJson(`/api/sales/admin/rules/${encodeURIComponent(ruleId)}`, { method:'POST', csrf, data: readPayload() });
+    current = await requestJson(`/api/v1/sales/admin/rules/${encodeURIComponent(ruleId)}`, { method:'PATCH', csrf, data: readPayload() });
     resetFromCurrent();
     statusMessage.textContent = `Saved as DRAFT · cfg v${current.configuration_version}`;
   };
@@ -210,7 +210,7 @@ const initEditor = (root) => {
     const action = button.dataset.ruleLifecycle;
     statusMessage.textContent = `${action}…`;
     try {
-      current = await requestJson(`/api/sales/admin/rules/${encodeURIComponent(ruleId)}/${action}`, {
+      current = await requestJson(`/api/v1/sales/admin/rules/${encodeURIComponent(ruleId)}/${action}`, {
         method:'POST', csrf, data:{ configuration_version:Number(root.dataset.version || 0) },
       });
       resetFromCurrent();
@@ -224,7 +224,7 @@ const initEditor = (root) => {
     const note = root.querySelector('[data-rule-preview-note]');
     statusMessage.textContent = 'Running read-only preview…';
     try {
-      const result = await requestJson(`/api/sales/admin/rules/${encodeURIComponent(ruleId)}/dry-run`);
+      const result = await requestJson(`/api/v1/sales/admin/rules/${encodeURIComponent(ruleId)}/dry-run`);
       const metrics = [
         ['Matched deals', result.matched_deals], ['Would trigger', result.would_trigger],
         ['AUTO', result.would_auto], ['Approval required', result.would_require_approval],

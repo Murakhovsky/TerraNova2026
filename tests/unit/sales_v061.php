@@ -68,7 +68,7 @@ foreach (['Funnel', 'Pipeline health', 'Manager performance', 'Pending approvals
     $assert(str_contains($director, $marker), 'Director 2.0 missing: ' . $marker);
 }
 
-foreach (['initLeadInbox', 'initToday', 'data-sales-approval', "message: 'messages'", '/api/sales/actions/', "data-decision=\"execute\"", 'error.status === 409'] as $marker) {
+foreach (['initLeadInbox', 'initToday', 'data-sales-approval', "operation === 'message'", '/api/v1/sales/actions/', "data-decision=\"execute\"", 'error.status === 409'] as $marker) {
     $assert(str_contains($js, $marker), 'Sales workspace JS missing V0.6.1 interaction: ' . $marker);
 }
 

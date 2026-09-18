@@ -22,6 +22,9 @@ interface SalesWriteServiceInterface
     /** @param array<string,mixed> $input */
     public function addOpportunityActivity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult;
 
+    /** @param array<string,mixed> $input */
+    public function quickUpdateOpportunity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult;
+
     public function changeOpportunityStage(
         int $opportunityId,
         string $targetStageId,

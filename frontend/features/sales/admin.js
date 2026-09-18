@@ -1,18 +1,32 @@
-const requestJson = async (url, csrf, payload, includeCsrfBody = false) => {
+const createMutationKey = () => (
+  globalThis.crypto?.randomUUID?.() || `admin-${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
+
+const requestJson = async (
+  url,
+  csrf,
+  payload = {},
+  includeCsrfBody = false,
+  method = 'POST',
+  idempotency = false,
+) => {
   const bodyPayload = includeCsrfBody ? { ...payload, csrf_token: csrf } : payload;
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-CSRF-Token': csrf,
+    Accept: 'application/json',
+  };
+  if (idempotency) headers['X-Idempotency-Key'] = createMutationKey();
+
   const response = await fetch(url, {
-    method: 'POST',
+    method,
     credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': csrf,
-      Accept: 'application/json',
-    },
+    headers,
     body: JSON.stringify(bodyPayload),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body.ok !== true) {
-    const error = new Error(body.error || 'Request failed.');
+    const error = new Error(body.message || body.error || 'Request failed.');
     error.status = response.status;
     throw error;
   }
@@ -28,7 +42,7 @@ const initSalesTeamAdmin = () => {
     event.preventDefault();
     const form = event.currentTarget;
     try {
-      await requestJson('/api/sales/admin/teams', csrf, Object.fromEntries(new FormData(form).entries()), true);
+      await requestJson('/api/v1/sales/admin/teams', csrf, Object.fromEntries(new FormData(form).entries()), false, 'POST');
       window.location.reload();
     } catch (error) {
       window.alert(error.message);
@@ -45,7 +59,7 @@ const initSalesTeamAdmin = () => {
     const teamId = data.team_id;
     delete data.team_id;
     try {
-      await requestJson(`/api/sales/admin/teams/${teamId}/members/${card.dataset.userId}`, csrf, data, true);
+      await requestJson(`/api/v1/sales/admin/teams/${teamId}/members/${card.dataset.userId}`, csrf, data, false, 'PUT');
       window.location.reload();
     } catch (error) {
       window.alert(error.message);
@@ -58,7 +72,7 @@ const initSalesTeamAdmin = () => {
     if (!card) return;
     const capabilities = [...form.querySelectorAll('input[name="capabilities[]"]:checked')].map((input) => input.value);
     try {
-      await requestJson(`/api/sales/admin/users/${card.dataset.userId}/capabilities`, csrf, { capabilities }, true);
+      await requestJson(`/api/v1/sales/admin/users/${card.dataset.userId}/capabilities`, csrf, { capabilities }, false, 'PUT');
     } catch (error) {
       window.alert(error.message);
     }
@@ -70,7 +84,7 @@ const initSalesAgentAdmin = () => {
   if (!root) return;
   const name = root.dataset.agentName || '';
   const csrf = root.dataset.csrf || '';
-  const post = (suffix, payload) => requestJson(`/api/sales/admin/agents/${encodeURIComponent(name)}${suffix}`, csrf, payload);
+  const post = (suffix, payload) => requestJson(`/api/v1/sales/admin/agents/${encodeURIComponent(name)}${suffix}`, csrf, payload, false, suffix === '' ? 'PATCH' : 'POST');
 
   const config = root.querySelector('[data-sales-agent-config]');
   config?.addEventListener('submit', async (event) => {
@@ -126,7 +140,7 @@ const initSalesIntegrationAdmin = () => {
   const root = document.querySelector('[data-sales-integration-admin]');
   if (!root) return;
   const csrf = root.dataset.csrf || '';
-  const post = (url, payload) => requestJson(url, csrf, payload, true);
+  const post = (url, payload, method = 'POST') => requestJson(url, csrf, payload, false, method, true);
 
   root.querySelector('[data-create-integration]')?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -139,7 +153,7 @@ const initSalesIntegrationAdmin = () => {
       config: {},
     };
     try {
-      await post('/api/sales/admin/integrations', payload);
+      await post('/api/v1/sales/integrations', payload);
       window.location.reload();
     } catch (error) {
       window.alert(error.message);
@@ -159,7 +173,7 @@ const initSalesIntegrationAdmin = () => {
       };
       if (data.credentials_reference) payload.credentials_reference = data.credentials_reference;
       try {
-        await post(`/api/sales/admin/integrations/${card.dataset.integrationId}`, payload);
+        await post(`/api/v1/sales/integrations/${card.dataset.integrationId}`, payload, 'PATCH');
         window.location.reload();
       } catch (error) {
         window.alert(error.message);
@@ -172,7 +186,7 @@ const initSalesIntegrationAdmin = () => {
       const card = button.closest('[data-integration-id]');
       if (!card) return;
       try {
-        const result = await post(`/api/sales/admin/integrations/${card.dataset.integrationId}/test`, {});
+        const result = await post(`/api/v1/sales/integrations/${card.dataset.integrationId}/test`, {});
         window.alert(`Health: ${result.health_status}${result.reason ? `\n${result.reason}` : ''}`);
         window.location.reload();
       } catch (error) {
@@ -188,7 +202,7 @@ const initSalesIntegrationAdmin = () => {
       if (!card) return;
       const data = Object.fromEntries(new FormData(form).entries());
       try {
-        await post(`/api/sales/admin/integrations/${card.dataset.integrationId}/routes`, data);
+        await post(`/api/v1/sales/integrations/${card.dataset.integrationId}/routes`, data);
         window.location.reload();
       } catch (error) {
         window.alert(error.message);
@@ -206,7 +220,7 @@ const initSalesPipelineListAdmin = () => {
       delete data.csrf_token;
       const status = form.querySelector('[data-admin-status]');
       try {
-        const result = await requestJson(form.dataset.url || '', csrf, data);
+        const result = await requestJson(form.dataset.url || '', csrf, data, false, form.dataset.method || 'POST');
         const id = result?.pipeline?.id;
         if (form.dataset.redirectRoot && id) {
           window.location.href = `${form.dataset.redirectRoot}${encodeURIComponent(id)}`;
@@ -224,7 +238,7 @@ const initSalesPipelineAdmin = () => {
   const root = document.querySelector('[data-sales-admin]');
   if (!root) return;
 
-  const send = (url, csrf, payload) => requestJson(url, csrf, payload);
+  const send = (url, csrf, payload, method = 'POST') => requestJson(url, csrf, payload, false, method);
 
   root.querySelectorAll('[data-admin-json]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
@@ -237,7 +251,7 @@ const initSalesPipelineAdmin = () => {
       });
       if ('is_default' in data) data.is_default = data.is_default === '1';
       try {
-        await send(form.dataset.url || '', csrf, data);
+        await send(form.dataset.url || '', csrf, data, form.dataset.method || 'POST');
         window.location.reload();
       } catch (error) {
         const status = form.querySelector('[data-admin-status]');
@@ -256,7 +270,7 @@ const initSalesPipelineAdmin = () => {
           id: input.dataset.stageId,
           sort_order: Number(input.value),
         })),
-      });
+      }, reorder.dataset.method || 'POST');
       window.location.reload();
     } catch (error) {
       const status = reorder.querySelector('[data-admin-status]');
@@ -281,7 +295,7 @@ const initSalesPipelineAdmin = () => {
       await send(transitions.dataset.url || '', transitions.dataset.csrf || '', {
         version: Number(transitions.dataset.version),
         transitions: graph,
-      });
+      }, transitions.dataset.method || 'PUT');
       window.location.reload();
     } catch (error) {
       const status = transitions.querySelector('[data-admin-status]');
@@ -345,7 +359,7 @@ const initSalesPolicyAdmin = () => {
   const read = (form) => Object.fromEntries(
     [...new FormData(form)].map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]),
   );
-  const post = (url, payload) => requestJson(url, csrf, payload);
+  const post = (url, payload, method = 'POST') => requestJson(url, csrf, payload, false, method);
 
   root.querySelector('[data-create]')?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -355,7 +369,7 @@ const initSalesPolicyAdmin = () => {
       payload.enabled = payload.enabled === '1';
       payload.allowed_roles = payload.allowed_roles ? payload.allowed_roles.split(/[ ,;]+/) : [];
       payload.conditions = JSON.parse(payload.conditions || '[]');
-      await post('/api/sales/admin/policies', payload);
+      await post('/api/v1/sales/admin/policies', payload);
       window.location.reload();
     } catch (error) {
       if (status) status.textContent = error.message;
@@ -371,7 +385,7 @@ const initSalesPolicyAdmin = () => {
         const payload = read(form);
         payload.enabled = payload.enabled === '1';
         payload.conditions = JSON.parse(payload.conditions || '[]');
-        await post(`/api/sales/admin/policies/${encodeURIComponent(row.dataset.id || '')}`, payload);
+        await post(`/api/v1/sales/admin/policies/${encodeURIComponent(row.dataset.id || '')}`, payload, 'PATCH');
         window.location.reload();
       } catch (error) {
         if (status) status.textContent = error.message;
@@ -379,7 +393,7 @@ const initSalesPolicyAdmin = () => {
     });
     row.querySelector('[data-archive]')?.addEventListener('click', async () => {
       try {
-        await post(`/api/sales/admin/policies/${encodeURIComponent(row.dataset.id || '')}/archive`, {
+        await post(`/api/v1/sales/admin/policies/${encodeURIComponent(row.dataset.id || '')}/archive`, {
           configuration_version: Number(form?.elements?.configuration_version?.value || 0),
         });
         window.location.reload();
@@ -393,7 +407,7 @@ const initSalesPolicyAdmin = () => {
     event.preventDefault();
     const output = root.querySelector('[data-preview-result]');
     try {
-      const result = await post('/api/sales/admin/policies/preview', read(event.currentTarget));
+      const result = await post('/api/v1/sales/admin/policies/preview', read(event.currentTarget));
       if (output) {
         output.textContent = `Decision: ${result.decision}\nMatched policy: ${result.matched_policy_name || result.matched_policy || 'none'}\nReason: ${result.reason}\nExecuted: ${result.executed ? 'yes' : 'no'}`;
       }

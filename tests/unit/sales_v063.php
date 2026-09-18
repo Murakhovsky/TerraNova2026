@@ -49,7 +49,7 @@ foreach (['name="owner_id"', 'name="priority"', 'name="source"', 'attention_reas
 foreach (['Funnel', 'Historical stage transitions', 'Pipeline health', 'Manager performance', 'Pending approvals'] as $marker) {
     $assert(str_contains($director, $marker), 'Director missing: ' . $marker);
 }
-foreach (['initLeadInbox', 'initToday', 'data-sales-approval', "message: 'messages'", '/api/sales/actions/', 'data-decision="execute"', 'error.status === 409', 'concurrent_stage_change'] as $marker) {
+foreach (['initLeadInbox', 'initToday', 'data-sales-approval', "operation === 'message'", '/api/v1/sales/actions/', 'data-decision="execute"', 'error.status === 409', 'concurrent_stage_change'] as $marker) {
     $assert(str_contains($js, $marker), 'JS missing: ' . $marker);
 }
 

@@ -18,21 +18,50 @@ const setStatus = (target, message = '', state = 'neutral') => {
   target.dataset.state = state;
 };
 
-const postJson = async (endpoint, data, csrf) => {
+const createMutationKey = () => (
+  globalThis.crypto?.randomUUID?.() || `frontend-${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
+
+const requestJson = async (endpoint, {
+  method = 'POST',
+  data = {},
+  csrf = '',
+  idempotencyKey = '',
+  signal,
+} = {}) => {
+  const headers = { Accept: 'application/json' };
+  if (method !== 'GET') {
+    headers['Content-Type'] = 'application/json';
+    headers['X-CSRF-Token'] = csrf || '';
+  }
+  if (idempotencyKey) headers['X-Idempotency-Key'] = idempotencyKey;
+
   const response = await fetch(endpoint, {
-    method: 'POST',
+    method,
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf || '', Accept: 'application/json' },
-    body: JSON.stringify(data || {}),
+    headers,
+    body: method === 'GET' ? undefined : JSON.stringify(data || {}),
+    signal,
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.ok) {
-    const error = new Error(payload.error || 'Sales operation failed.');
+    const error = new Error(payload.message || payload.error || 'Sales operation failed.');
     error.status = response.status;
+    error.code = payload.error || '';
     throw error;
   }
   return payload.data || payload;
 };
+
+const postJson = (endpoint, data, csrf, idempotencyKey = '') => requestJson(endpoint, {
+  method: 'POST', data, csrf, idempotencyKey,
+});
+const patchJson = (endpoint, data, csrf, idempotencyKey = '') => requestJson(endpoint, {
+  method: 'PATCH', data, csrf, idempotencyKey,
+});
+const putJson = (endpoint, data, csrf, idempotencyKey = '') => requestJson(endpoint, {
+  method: 'PUT', data, csrf, idempotencyKey,
+});
 
 const getJson = async (endpoint, signal) => {
   const response = await fetch(endpoint, {
@@ -50,33 +79,46 @@ const getJson = async (endpoint, signal) => {
 };
 
 const postStageChange = (dealId, stageId, csrf) => postJson(
-  `/api/sales/deals/${encodeURIComponent(dealId)}/stage`,
+  `/api/v1/sales/opportunities/${encodeURIComponent(dealId)}/stage`,
   { stage_id: stageId },
   csrf,
 );
 
-const operationEndpoint = (dealId, operation) => {
-  const suffix = {
-    quick: 'quick',
-    owner: 'owner',
-    activity: 'activities',
-    followup: 'followups',
-    meeting: 'meetings',
-    message: 'messages',
-  }[operation];
-  return suffix ? `/api/sales/deals/${encodeURIComponent(dealId)}/${suffix}` : null;
+const operationRequest = (dealId, operation, data) => {
+  const id = encodeURIComponent(dealId);
+  if (operation === 'quick') return { endpoint: `/api/v1/sales/opportunities/${id}`, method: 'PATCH', data };
+  if (operation === 'owner') return { endpoint: `/api/v1/sales/opportunities/${id}/owner`, method: 'POST', data };
+  if (operation === 'activity') {
+    return {
+      endpoint: `/api/v1/sales/opportunities/${id}/activities`,
+      method: 'POST',
+      data: data.activity_type === 'call' ? { ...data, completed: true } : data,
+    };
+  }
+  if (operation === 'followup') return { endpoint: `/api/v1/sales/opportunities/${id}/next-action`, method: 'PUT', data };
+  if (operation === 'meeting') return { endpoint: `/api/v1/sales/opportunities/${id}/meetings`, method: 'POST', data };
+  if (operation === 'message') return { endpoint: `/api/v1/sales/opportunities/${id}/communications`, method: 'POST', data };
+  return null;
 };
 
 const submitOperation = async (root, form) => {
-  const endpoint = operationEndpoint(root.dataset.dealId, form.dataset.operation || '');
+  const data = readForm(form);
+  const request = operationRequest(root.dataset.dealId, form.dataset.operation || '', data);
   const status = form.querySelector('[data-sales-operation-status]');
   const button = form.querySelector('button[type="submit"]');
-  if (!endpoint) return;
+  if (!request) return;
 
+  form.dataset.idempotencyKey ||= createMutationKey();
   button?.setAttribute('disabled', 'disabled');
   setStatus(status, 'Зберігаю…', 'loading');
   try {
-    await postJson(endpoint, readForm(form), root.dataset.csrf || '');
+    await requestJson(request.endpoint, {
+      method: request.method,
+      data: request.data,
+      csrf: root.dataset.csrf || '',
+      idempotencyKey: form.dataset.idempotencyKey,
+    });
+    delete form.dataset.idempotencyKey;
     setStatus(status, 'Готово.', 'success');
     window.setTimeout(() => window.location.reload(), 300);
   } catch (error) {
@@ -133,7 +175,7 @@ const loadIntelligence = async (root) => {
   if (!target || !root.dataset.dealId) return;
   target.setAttribute('aria-busy', 'true');
   try {
-    const data = await getJson(`/api/sales/deals/${encodeURIComponent(root.dataset.dealId)}/intelligence`);
+    const data = await getJson(`/api/v1/sales/opportunities/${encodeURIComponent(root.dataset.dealId)}/intelligence`);
     target.innerHTML = intelligenceMarkup(data);
     initActionControls(target, root.dataset.csrf || '');
   } catch (error) {
@@ -152,7 +194,7 @@ const initApprovalControls = (root, csrf) => root.querySelectorAll('[data-sales-
     button.setAttribute('disabled', 'disabled');
     setStatus(status, decision === 'approve' ? 'Approving…' : 'Rejecting…', 'loading');
     try {
-      await postJson(`/api/sales/approvals/${encodeURIComponent(id)}/${decision}`, {}, csrf);
+      await postJson(`/api/v1/sales/approvals/${encodeURIComponent(id)}/${decision}`, {}, csrf);
       setStatus(status, decision === 'approve' ? 'Approved.' : 'Rejected.', 'success');
       window.setTimeout(() => panel.remove(), 250);
     } catch (error) {
@@ -171,7 +213,7 @@ const initActionControls = (root, csrf) => root.querySelectorAll('[data-sales-ac
     button.setAttribute('disabled', 'disabled');
     setStatus(status, decision === 'execute' ? 'Queueing…' : 'Dismissing…', 'loading');
     try {
-      await postJson(`/api/sales/actions/${encodeURIComponent(id)}/${decision}`, {}, csrf);
+      await postJson(`/api/v1/sales/actions/${encodeURIComponent(id)}/${decision}`, {}, csrf);
       panel.querySelectorAll('button').forEach((control) => control.setAttribute('disabled', 'disabled'));
       setStatus(status, decision === 'execute' ? 'Queued.' : 'Dismissed.', 'success');
     } catch (error) {
@@ -192,7 +234,7 @@ const initToday = (root) => {
     button.setAttribute('disabled', 'disabled');
     setStatus(status, 'Completing activity…', 'loading');
     try {
-      await postJson(`/api/sales/deals/${panel.dataset.dealId}/activities/${panel.dataset.activityId}/complete`, {}, csrf);
+      await postJson(`/api/v1/sales/opportunities/${panel.dataset.dealId}/activities/${panel.dataset.activityId}/complete`, {}, csrf);
       panel.closest('.tn-sales-list-row')?.remove();
       setStatus(status, 'Activity completed.', 'success');
     } catch (error) {
@@ -208,7 +250,7 @@ const initToday = (root) => {
     if (!dueAt) return;
     setStatus(status, 'Rescheduling…', 'loading');
     try {
-      await postJson(`/api/sales/deals/${panel.dataset.dealId}/activities/${panel.dataset.activityId}/reschedule`, { due_at: dueAt }, csrf);
+      await postJson(`/api/v1/sales/opportunities/${panel.dataset.dealId}/activities/${panel.dataset.activityId}/reschedule`, { due_at: dueAt }, csrf);
       setStatus(status, 'Activity rescheduled.', 'success');
       window.setTimeout(() => window.location.reload(), 250);
     } catch (error) {
@@ -222,10 +264,23 @@ const initLeadInbox = (root) => {
   root.querySelectorAll('[data-lead-id]').forEach((card) => {
     const id = card.dataset.leadId || '';
     const status = card.querySelector('[data-sales-lead-status-text]');
-    const run = async (endpoint, data = {}) => {
+    const run = async (operation, data = {}) => {
+      const request = {
+        status: { endpoint: `/api/v1/sales/leads/${id}`, method: 'PATCH' },
+        owner: { endpoint: `/api/v1/sales/leads/${id}`, method: 'PATCH' },
+        deal: { endpoint: `/api/v1/sales/leads/${id}/opportunity`, method: 'POST' },
+        followups: { endpoint: `/api/v1/sales/leads/${id}/followups`, method: 'POST' },
+      }[operation];
+      if (!request) throw new Error('Unsupported Lead operation.');
+
       setStatus(status, 'Зберігаю…', 'loading');
       try {
-        const result = await postJson(`/api/sales/leads/${id}/${endpoint}`, data, csrf);
+        const result = await requestJson(request.endpoint, {
+          method: request.method,
+          data,
+          csrf,
+          idempotencyKey: createMutationKey(),
+        });
         setStatus(status, 'Готово.', 'success');
         return result;
       } catch (error) {
@@ -342,7 +397,7 @@ const initSalesGlobalSearch = (root) => {
   const form = root.querySelector('[data-sales-global-search-form]');
   const results = root.querySelector('[data-sales-global-search-results]');
   const status = root.querySelector('[data-sales-global-search-status]');
-  const endpoint = root.dataset.endpoint || '/api/sales/search';
+  const endpoint = root.dataset.endpoint || '/api/v1/sales/search';
   if (!input || !results) return;
 
   let timer = null;
