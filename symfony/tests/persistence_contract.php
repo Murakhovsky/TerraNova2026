@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Tools\DsnParser;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -17,7 +18,8 @@ $url = (string) getenv('DATABASE_URL');
 expectPersistence(str_starts_with($url, 'mysql://'), 'Symfony canonical database must remain MySQL during this migration slice.');
 expectPersistence(!str_starts_with($url, 'postgresql://'), 'PostgreSQL migration must not be coupled to the Symfony migration.');
 
-$connection = DriverManager::getConnection(['url' => $url]);
+$params = (new DsnParser(['mysql' => 'pdo_mysql']))->parse($url);
+$connection = DriverManager::getConnection($params);
 $database = (string) $connection->fetchOne('SELECT DATABASE()');
 $version = (string) $connection->fetchOne('SELECT VERSION()');
 
