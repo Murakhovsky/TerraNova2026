@@ -62,6 +62,7 @@ final readonly class SalesWriteController
             $context['organization_id'],
             $context['actor_id'],
             (int) $id,
+            $context['correlation_id'],
             $this->input($request),
         ));
 
