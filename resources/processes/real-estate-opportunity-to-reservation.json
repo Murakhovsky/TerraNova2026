@@ -1,0 +1,154 @@
+{
+  "schema_version": 5,
+  "id": "real_estate.opportunity-to-reservation",
+  "title": "Opportunity → Property Reservation",
+  "domain": "real_estate",
+  "state": "as-is",
+  "workflow": "02-workflows/real-estate-opportunity-to-reservation.md",
+  "trigger": "A Sales opportunity needs a concrete Property matched and progressed toward reservation",
+  "outcomes": [
+    "Sales opportunity is validated without RealEstate reading Sales storage directly",
+    "Canonical Property and Inventory are resolved through Property contracts",
+    "Brokerage match, offer and viewing are traceable in RealEstate",
+    "Reservation is executed by Property ownership and reflected in the brokerage case"
+  ],
+  "actors": [
+    "Sales opportunity boundary",
+    "RealEstate broker",
+    "Property boundary"
+  ],
+  "steps": [
+    {
+      "id": "validate-opportunity",
+      "label": "Validate Sales opportunity",
+      "kind": "operation",
+      "owner": "Sales opportunity boundary",
+      "domain": "sales",
+      "capability": "sales.workspace.use",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "contract",
+          "ref": "Domains\\RealEstate\\Application\\Contract\\SalesOpportunityReferenceInterface"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/RealEstate/Infrastructure/Sales/SalesOpportunityReferenceAdapter.php",
+          "symbol": "exists("
+        }
+      ]
+    },
+    {
+      "id": "resolve-property",
+      "label": "Resolve canonical Property and Inventory",
+      "kind": "operation",
+      "owner": "Property boundary",
+      "domain": "property",
+      "capability": "property.reference",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "contract",
+          "ref": "Domains\\Property\\Contract\\PropertyReferencePort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php",
+          "symbol": "getPropertyPresentation("
+        }
+      ]
+    },
+    {
+      "id": "record-match",
+      "label": "Create brokerage Property Match",
+      "kind": "state",
+      "owner": "RealEstate broker",
+      "domain": "real_estate",
+      "capability": "real_estate.property_match",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php",
+          "symbol": "function match("
+        }
+      ]
+    },
+    {
+      "id": "create-offer",
+      "label": "Create Property Offer",
+      "kind": "state",
+      "owner": "RealEstate broker",
+      "domain": "real_estate",
+      "capability": "real_estate.offer",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php",
+          "symbol": "function createOffer("
+        }
+      ]
+    },
+    {
+      "id": "schedule-viewing",
+      "label": "Schedule Property Viewing",
+      "kind": "state",
+      "owner": "RealEstate broker",
+      "domain": "real_estate",
+      "capability": "real_estate.viewing",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php",
+          "symbol": "function scheduleViewing("
+        }
+      ]
+    },
+    {
+      "id": "reserve-inventory",
+      "label": "Reserve Property Inventory",
+      "kind": "operation",
+      "owner": "Property boundary",
+      "domain": "property",
+      "capability": "property.inventory",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "contract",
+          "ref": "Domains\\Property\\Application\\Contract\\PropertyInventoryCommandInterface"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Property/Application/Service/CanonicalPropertyInventoryCommands.php",
+          "symbol": "function reserve("
+        }
+      ]
+    },
+    {
+      "id": "record-reservation",
+      "label": "Record brokerage reservation outcome",
+      "kind": "outcome",
+      "owner": "RealEstate broker",
+      "domain": "real_estate",
+      "capability": "real_estate.reservation",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php",
+          "symbol": "function reserve("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "validate-opportunity", "to": "resolve-property"},
+    {"from": "resolve-property", "to": "record-match"},
+    {"from": "record-match", "to": "create-offer"},
+    {"from": "create-offer", "to": "schedule-viewing"},
+    {"from": "schedule-viewing", "to": "reserve-inventory"},
+    {"from": "reserve-inventory", "to": "record-reservation"}
+  ]
+}
