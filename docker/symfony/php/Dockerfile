@@ -21,7 +21,7 @@ COPY app/Domains/ /var/www/html/app/Domains/
 COPY app/Infrastructure/ /var/www/html/app/Infrastructure/
 
 RUN composer dump-autoload --no-dev --classmap-authoritative \
-    && mkdir -p var/cache var/log \
+    && mkdir -p var/cache var/log var/storage \
     && chown -R www-data:www-data var
 
 USER www-data

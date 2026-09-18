@@ -6,6 +6,7 @@ namespace Infrastructure\Llm;
 use Kernel\Agent\AgentDefinition;
 use Kernel\Agent\Contract\LlmClientInterface;
 use Kernel\Agent\LlmResponse;
+use Kernel\Agent\Service\AgentOutputSchemaFactory;
 use Kernel\Llm\LlmProviderException;
 use Kernel\Llm\StructuredLlmClientInterface;
 use Kernel\Llm\StructuredLlmRequest;
@@ -26,6 +27,7 @@ final class HttpStructuredLlmClient implements LlmClientInterface, StructuredLlm
         private readonly int $maxAttempts = 3,
         private readonly int $failureThreshold = 5,
         private readonly int $circuitSeconds = 60,
+        private readonly ?AgentOutputSchemaFactory $agentSchemas = null,
     ) {}
 
     public function structured(AgentDefinition $agent, string $question, array $context): LlmResponse
@@ -34,7 +36,7 @@ final class HttpStructuredLlmClient implements LlmClientInterface, StructuredLlm
             systemPrompt: $agent->systemPrompt,
             userPrompt: $question,
             context: $context,
-            responseSchema: $this->agentResponseSchema($agent),
+            responseSchema: ($this->agentSchemas ?? new AgentOutputSchemaFactory())->create($agent),
             model: $agent->model,
         ));
 
@@ -93,42 +95,6 @@ final class HttpStructuredLlmClient implements LlmClientInterface, StructuredLlm
             isset($decoded['cost']['amount']) ? (float) $decoded['cost']['amount'] : null,
             isset($decoded['cost']['currency']) ? (string) $decoded['cost']['currency'] : null,
         );
-    }
-
-    private function agentResponseSchema(AgentDefinition $agent): array
-    {
-        return [
-            'type' => 'object',
-            'required' => ['decision', 'reason', 'confidence', 'proposed_actions'],
-            'properties' => [
-                'decision' => ['type' => 'string'],
-                'reason' => ['type' => 'string'],
-                'confidence' => ['type' => 'number', 'minimum' => 0, 'maximum' => 1],
-                'proposed_actions' => [
-                    'type' => 'array',
-                    'maxItems' => max(0, $agent->maxActionsPerRun),
-                    'items' => [
-                        'type' => 'object',
-                        'required' => ['type', 'parameters'],
-                        'properties' => [
-                            'type' => $agent->allowedActionTypes === []
-                                ? ['type' => 'string']
-                                : ['type' => 'string', 'enum' => $agent->allowedActionTypes],
-                            'parameters' => ['type' => 'object'],
-                            'target_type' => ['type' => ['string', 'null']],
-                            'target_id' => ['type' => ['string', 'null']],
-                        ],
-                        'additionalProperties' => false,
-                    ],
-                ],
-                'evidence' => [
-                    'type' => 'array',
-                    'maxItems' => 20,
-                    'items' => ['type' => ['string', 'object']],
-                ],
-            ],
-            'additionalProperties' => false,
-        ];
     }
 
     /** @return array{string, int} */

@@ -7,7 +7,7 @@ on:
       - migration/symfony
     paths:
       - 'app/Kernel/Identity/**'
-      - 'symfony/src/Infrastructure/LegacyIdentityResolver.php'
+      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyIdentityRepositoryAdapter.php'
       - 'symfony/src/Security/LegacyIdentityLoader.php'
       - 'symfony/src/Security/LegacySecurityUser.php'
       - 'symfony/config/services.yaml'
@@ -20,7 +20,7 @@ on:
       - migration/symfony
     paths:
       - 'app/Kernel/Identity/**'
-      - 'symfony/src/Infrastructure/LegacyIdentityResolver.php'
+      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyIdentityRepositoryAdapter.php'
       - 'symfony/src/Security/LegacyIdentityLoader.php'
       - 'symfony/src/Security/LegacySecurityUser.php'
       - 'symfony/config/services.yaml'
