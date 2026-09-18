@@ -39,7 +39,7 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
         }
 
         return match ($command->operation) {
-            SalesFrontendMutationCommand::QUICK_UPDATE => $this->quickUpdate($command),
+            SalesFrontendMutationCommand::QUICK_EDIT => $this->quickUpdate($command),
             SalesFrontendMutationCommand::OWNER => $this->owner($command),
             SalesFrontendMutationCommand::MEETING => $this->meeting($command),
             SalesFrontendMutationCommand::COMPLETE_ACTIVITY => $this->completeActivity($command),
