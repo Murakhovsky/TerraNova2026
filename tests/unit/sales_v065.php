@@ -37,9 +37,10 @@ $assert(str_contains($normalizedRoutes, "'controller'=>'sales_workspace_search'"
 foreach (['isManager', 'salesWorkspaceOperationalReadModel', 'organization()->id()', 'mb_strlen($query) < 2'] as $marker) {
     $assert(str_contains($searchController, $marker), 'Search API boundary missing: ' . $marker);
 }
-foreach (['data-sales-global-search', 'data-sales-global-search-input', 'api/sales/search', 'sales/deals'] as $marker) {
+foreach (['data-sales-global-search', 'data-sales-global-search-input', 'api/v1/sales/search', 'sales/deals'] as $marker) {
     $assert(str_contains($navigation, $marker), 'Global Sales Search UI missing: ' . $marker);
 }
+$assert(!str_contains($navigation, "'api/sales/search'"), 'Wave 7 UI must not generate the legacy Sales Search endpoint.');
 foreach (['initSalesGlobalSearch', 'AbortController', 'metaKey', 'data-sales-global-search-results', 'setStatus'] as $marker) {
     $assert(str_contains($js, $marker), 'Global/async Sales UX missing: ' . $marker);
 }
