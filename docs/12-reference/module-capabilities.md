@@ -26,7 +26,7 @@ generated: true
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
-| `real_estate` | Real Estate | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | property | `app/Domains/RealEstate/module.php` |
+| `real_estate` | Real Estate | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
 | `service` | Service | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Service/module.php` |
 
@@ -102,7 +102,7 @@ Manifest capabilities не задекларовані.
 
 ## Property (`property`)
 
-**Опис із manifest:** Canonical registry and real-estate asset runtime with tenant-safe Asset, Inventory, Listing/Publication writes, domain events, history, intelligence, network interoperability and one-way legacy compatibility projection.
+**Опис із manifest:** Canonical registry for Property with tenant-safe Asset, Inventory and Listing runtime, Symfony business read/write cutover, history, intelligence, network interoperability and one-way legacy compatibility projection.
 
 - runtime service модуля: `propertyDomainModule`;
 - обробники jobs: —;
@@ -113,6 +113,8 @@ Manifest capabilities не задекларовані.
 ### Задекларовані capabilities
 
 - `property.analytics`;
+- `property.api.v1`;
+- `property.business.cutover`;
 - `property.catalog`;
 - `property.history`;
 - `property.identity.review`;
@@ -131,17 +133,22 @@ Manifest capabilities не задекларовані.
 
 ## Real Estate (`real_estate`)
 
-**Опис із manifest:** Brokerage orchestration boundary over canonical Property assets without duplicating the Property registry.
+**Опис із manifest:** Brokerage orchestration over canonical Property assets: Opportunity → Property Match → Offer → Viewing → Reservation.
 
-- runtime service модуля: —;
+- runtime service модуля: `realEstateDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: —.
+- міграції: `app/migrations/20260918_000062_real_estate_wave9_cutover.sql`.
 
 ### Задекларовані capabilities
 
-Manifest capabilities не задекларовані.
+- `real_estate.api.v1`;
+- `real_estate.brokerage`;
+- `real_estate.offer`;
+- `real_estate.property_match`;
+- `real_estate.reservation`;
+- `real_estate.viewing`;
 
 ## Sales (`sales`)
 
