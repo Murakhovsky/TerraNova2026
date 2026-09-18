@@ -8,12 +8,10 @@ use App\Application\Sales\Command\ChangeSalesOpportunityStageCommand;
 use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommand;
 use App\Application\Sales\Command\CreateSalesLeadCommand;
 use App\Application\Sales\Command\ScheduleSalesNextActionCommand;
+use App\Application\Sales\Command\SalesMutationResult;
 use App\Application\Sales\Command\UpdateSalesLeadCommand;
 use App\Security\LegacySessionCsrfValidator;
 use DateTimeImmutable;
-use Domains\Sales\Application\DTO\ChangeDealStageResult;
-use Domains\Sales\Application\DTO\ClientCaseCommandResult;
-use Domains\Sales\Application\DTO\OperationResult;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Observability\CorrelationId;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -40,7 +38,7 @@ final readonly class SalesWriteController
             return $this->error(422, 'idempotency_key_required', 'X-Idempotency-Key is required.');
         }
 
-        /** @var ClientCaseCommandResult $result */
+        /** @var SalesMutationResult $result */
         $result = $this->commands->dispatch(new CreateSalesLeadCommand(
             $context['organization_id'],
             $context['actor_id'],
@@ -49,7 +47,7 @@ final readonly class SalesWriteController
             $this->input($request),
         ));
 
-        return $this->clientCaseResult($result, $result->code === 'created' ? 201 : 200);
+        return $this->mutationResult($result, $result->code === 'created' ? 201 : 200);
     }
 
     public function updateLead(Request $request, string $id): JsonResponse
@@ -57,7 +55,7 @@ final readonly class SalesWriteController
         $context = $this->context($request);
         if ($context instanceof JsonResponse) return $context;
 
-        /** @var ClientCaseCommandResult $result */
+        /** @var SalesMutationResult $result */
         $result = $this->commands->dispatch(new UpdateSalesLeadCommand(
             $context['organization_id'],
             $context['actor_id'],
@@ -66,7 +64,7 @@ final readonly class SalesWriteController
             $this->input($request),
         ));
 
-        return $this->clientCaseResult($result, 200);
+        return $this->mutationResult($result, 200);
     }
 
     public function convertLead(Request $request, string $id): JsonResponse
@@ -74,7 +72,7 @@ final readonly class SalesWriteController
         $context = $this->context($request);
         if ($context instanceof JsonResponse) return $context;
 
-        /** @var ClientCaseCommandResult $result */
+        /** @var SalesMutationResult $result */
         $result = $this->commands->dispatch(new ConvertSalesLeadToOpportunityCommand(
             $context['organization_id'],
             $context['actor_id'],
@@ -83,7 +81,7 @@ final readonly class SalesWriteController
             $this->input($request),
         ));
 
-        return $this->clientCaseResult($result, $result->code === 'created' ? 201 : 200);
+        return $this->mutationResult($result, $result->code === 'created' ? 201 : 200);
     }
 
     public function addActivity(Request $request, string $id): JsonResponse
@@ -91,7 +89,7 @@ final readonly class SalesWriteController
         $context = $this->context($request);
         if ($context instanceof JsonResponse) return $context;
 
-        /** @var ClientCaseCommandResult $result */
+        /** @var SalesMutationResult $result */
         $result = $this->commands->dispatch(new AddSalesOpportunityActivityCommand(
             $context['organization_id'],
             $context['actor_id'],
@@ -100,7 +98,7 @@ final readonly class SalesWriteController
             $this->input($request),
         ));
 
-        return $this->clientCaseResult($result, 201);
+        return $this->mutationResult($result, 201);
     }
 
     public function changeStage(Request $request, string $id): JsonResponse
@@ -114,7 +112,7 @@ final readonly class SalesWriteController
             return $this->error(422, 'stage_id_required', 'stage_id is required.');
         }
 
-        /** @var ChangeDealStageResult $result */
+        /** @var SalesMutationResult $result */
         $result = $this->commands->dispatch(new ChangeSalesOpportunityStageCommand(
             $context['organization_id'],
             $context['actor_id'],
@@ -124,24 +122,7 @@ final readonly class SalesWriteController
             ($reason = trim((string) ($input['lost_reason_id'] ?? ''))) !== '' ? $reason : null,
             ($note = trim((string) ($input['lost_reason_note'] ?? ''))) !== '' ? $note : null,
         ));
-
-        if (!$result->successful) {
-            $reason = $result->reason ?? 'stage_change_failed';
-            if ($reason === 'concurrent_stage_change') {
-                return $this->error(409, 'concurrent_stage_change', 'Opportunity stage changed concurrently. Reload and retry.');
-            }
-            if (str_contains(strtolower($reason), 'deal was not found')) {
-                return $this->error(404, 'not_found', 'Opportunity not found.');
-            }
-            return $this->error(422, 'invalid_stage_transition', $reason);
-        }
-
-        return $this->ok([
-            'changed' => $result->changed,
-            'previous_stage_id' => $result->previousStageId,
-            'stage_id' => $result->stageId,
-            'requires_approval' => $result->requiresApproval,
-        ]);
+        return $this->mutationResult($result, 200);
     }
 
     public function setNextAction(Request $request, string $id): JsonResponse
@@ -165,7 +146,7 @@ final readonly class SalesWriteController
             return $this->error(422, 'invalid_due_at', 'due_at must be a valid date-time.');
         }
 
-        /** @var OperationResult $result */
+        /** @var SalesMutationResult $result */
         $result = $this->commands->dispatch(new ScheduleSalesNextActionCommand(
             $context['organization_id'],
             $context['actor_id'],
@@ -176,19 +157,10 @@ final readonly class SalesWriteController
             $context['correlation_id'],
             $idempotencyKey,
         ));
-
-        if (!$result->successful) {
-            $error = $result->error ?? 'next_action_failed';
-            if (str_contains(strtolower($error), 'deal was not found')) {
-                return $this->error(404, 'not_found', 'Opportunity not found.');
-            }
-            return $this->error(422, $this->stableCode($error, 'next_action_failed'), $error);
-        }
-
-        return $this->ok([
-            'activity_id' => $result->externalId,
-            ...$result->data,
-        ], ($result->data['duplicate'] ?? false) === true ? 200 : 201);
+        return $this->mutationResult(
+            $result,
+            $result->code === 'next_action_created' ? 201 : 200,
+        );
     }
 
     /** @return array{organization_id:\Kernel\Shared\Domain\OrganizationId,actor_id:int,correlation_id:string}|JsonResponse */
@@ -231,7 +203,7 @@ final readonly class SalesWriteController
         return $request->request->all();
     }
 
-    private function clientCaseResult(ClientCaseCommandResult $result, int $successStatus): JsonResponse
+    private function mutationResult(SalesMutationResult $result, int $successStatus): JsonResponse
     {
         if ($result->ok) {
             return $this->ok(['code' => $result->code, ...$result->data], $successStatus);
@@ -239,11 +211,15 @@ final readonly class SalesWriteController
 
         $status = match ($result->code) {
             'not_found', 'request_not_found', 'case_not_found' => 404,
-            'idempotency_conflict' => 409,
+            'idempotency_conflict', 'concurrent_stage_change' => 409,
             default => 422,
         };
 
-        return $this->error($status, $result->code, $this->messageFor($result->code));
+        return $this->error(
+            $status,
+            $result->code,
+            $result->message ?? str_replace('_', ' ', $result->code),
+        );
     }
 
     private function ok(mixed $data, int $status = 200): JsonResponse
@@ -260,28 +236,4 @@ final readonly class SalesWriteController
         ], $status);
     }
 
-    private function messageFor(string $code): string
-    {
-        return match ($code) {
-            'contact_required' => 'Lead requires a name and phone or email.',
-            'invalid_email' => 'Email address is invalid.',
-            'invalid_owner' => 'Owner is not an active manager in this organization.',
-            'invalid_status' => 'Lead status is invalid.',
-            'invalid_next_contact_at' => 'next_contact_at must be a valid date-time.',
-            'no_changes' => 'No supported Lead changes were supplied.',
-            'request_not_found', 'not_found', 'case_not_found' => 'Sales resource was not found.',
-            'activity_title_required' => 'Activity title is required.',
-            'invalid_activity_type' => 'Activity type is invalid.',
-            'idempotency_key_required' => 'X-Idempotency-Key is required.',
-            'idempotency_conflict' => 'The idempotent operation is already in progress.',
-            default => str_replace('_', ' ', $code),
-        };
-    }
-
-    private function stableCode(string $value, string $fallback): string
-    {
-        $value = strtolower(trim($value));
-        $value = preg_replace('/[^a-z0-9]+/', '_', $value) ?? '';
-        return trim($value, '_') !== '' ? trim($value, '_') : $fallback;
-    }
 }
