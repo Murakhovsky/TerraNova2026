@@ -46,6 +46,6 @@ framework:
       'App\Application\Sales\Command\RunSalesAgentCommand': async
       'App\Application\System\Command\DrainSalesOutboxCommand': async
       'App\Application\System\Command\ExecuteSalesActionCommand': async
-      'App\\Application\\Integration\\Command\\ProcessCrmInboxCommand': async
-      'App\\Application\\Integration\\Command\\SweepCrmInboxCommand': async
-      'App\\Application\\Integration\\Command\\SendSalesCommunicationCommand': async
+      'App\Application\Integration\Command\${cls}': async
+      'App\Application\Integration\Command\${cls}': async
+      'App\Application\Integration\Command\${cls}': async
