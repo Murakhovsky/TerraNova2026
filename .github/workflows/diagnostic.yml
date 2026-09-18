@@ -90,6 +90,8 @@ jobs:
           php tests/smoke/crm_webhook.php
           php tests/smoke/public_lead.php
           php tests/unit/sales_attention_detectors.php
+          php tests/architecture/symfony_sales_automation_wave3_boundary.php
+          php tests/unit/sales_wave3_outbox_drainer.php
           php tests/unit/sales_runtime_contract.php
           php tests/unit/sales_v03.php
           php tests/unit/sales_v04.php
