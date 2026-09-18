@@ -45,4 +45,3 @@ framework:
       'App\Application\Sales\Command\RunSalesAutomationCommand': async
       'App\Application\System\Command\DrainSalesOutboxCommand': async
       'App\Application\System\Command\ExecuteSalesActionCommand': async
-      'App\Application\Sales\Command\RunSalesAutomationCommand': async
