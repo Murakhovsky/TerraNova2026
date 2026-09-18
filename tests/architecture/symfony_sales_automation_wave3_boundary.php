@@ -27,16 +27,35 @@ foreach ([
 
 $runHandler = $read('symfony/src/Application/Sales/Command/RunSalesAutomationCommandHandler.php');
 foreach ([
-    'DrainSalesOutboxCommand',
+    'SalesOutboxDrainer',
     '$this->automation->run(',
-    '$this->commands->dispatch(new DrainSalesOutboxCommand(',
+    '$this->outbox->drain(',
+    '$limit * 4',
 ] as $needle) {
     if (!str_contains($runHandler, $needle)) {
         throw new RuntimeException('Wave 3 causal scan-to-outbox contract missing: ' . $needle);
     }
 }
-if (strpos($runHandler, '$this->automation->run(') > strpos($runHandler, '$this->commands->dispatch(new DrainSalesOutboxCommand(')) {
-    throw new RuntimeException('Wave 3 outbox drain must be dispatched only after the detector scan completes.');
+if (strpos($runHandler, '$this->automation->run(') > strpos($runHandler, '$this->outbox->drain(')) {
+    throw new RuntimeException('Wave 3 outbox drain must run only after the detector scan completes.');
+}
+foreach (['CommandBusInterface', '$this->commands->dispatch(new DrainSalesOutboxCommand('] as $raceNeedle) {
+    if (str_contains($runHandler, $raceNeedle)) {
+        throw new RuntimeException('Wave 3 regression: scan-to-drain path became an async queue hop again: ' . $raceNeedle);
+    }
+}
+
+$drainer = $read('symfony/src/Application/System/Service/SalesOutboxDrainer.php');
+foreach ([
+    'OutboxPublisher',
+    '$this->publisher->runOne($workerId)',
+    '$idleRetries',
+    'usleep($idleDelayMicroseconds)',
+    'min(5000, $limit)',
+] as $needle) {
+    if (!str_contains($drainer, $needle)) {
+        throw new RuntimeException('Wave 3 deterministic outbox drainer contract missing: ' . $needle);
+    }
 }
 
 foreach ([
