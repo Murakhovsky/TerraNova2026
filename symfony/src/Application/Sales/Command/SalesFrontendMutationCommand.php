@@ -8,7 +8,7 @@ use Kernel\Shared\Domain\OrganizationId;
 
 final readonly class SalesFrontendMutationCommand implements CommandInterface
 {
-    public const QUICK_UPDATE = 'quick_update';
+    public const QUICK_EDIT = 'quick_edit';
     public const OWNER = 'owner';
     public const MEETING = 'meeting';
     public const COMPLETE_ACTIVITY = 'complete_activity';
