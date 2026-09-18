@@ -146,7 +146,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         });
     }
 
-    public function updateLead(int $leadId, array $input, int $actorId): ClientCaseCommandResult
+    public function updateLead(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
     {
         if ($leadId <= 0) return ClientCaseCommandResult::failure('not_found');
 
@@ -181,10 +181,10 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         $changes['activity_title'] = 'Lead updated from Symfony API';
         $changes['activity_body'] = mb_substr(trim((string) ($input['note'] ?? '')), 0, 4000);
 
-        return $this->inbound->updateRequest($leadId, $changes, ['id' => $actorId]);
+        return $this->inbound->updateRequest($leadId, $changes, ['id' => $actorId], $correlationId);
     }
 
-    public function convertLeadToOpportunity(int $leadId, array $input, int $actorId): ClientCaseCommandResult
+    public function convertLeadToOpportunity(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
     {
         $requestedOwner = (int) ($input['owner_id'] ?? $actorId);
         if ($requestedOwner <= 0 || $this->commands->activeManagerId($this->organizationId, $requestedOwner) === null) {
@@ -194,10 +194,10 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         return $this->inbound->createCaseFromRequest($leadId, [
             'assigned_user_id' => $requestedOwner,
             'priority' => strtolower(trim((string) ($input['priority'] ?? 'normal'))),
-        ], ['id' => $actorId]);
+        ], ['id' => $actorId], $correlationId);
     }
 
-    public function addOpportunityActivity(int $opportunityId, array $input, int $actorId): ClientCaseCommandResult
+    public function addOpportunityActivity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
     {
         $type = strtolower(trim((string) ($input['activity_type'] ?? 'note')));
         if (!in_array($type, SalesActivityType::values(), true)) {
@@ -215,7 +215,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
             'completed' => !empty($input['completed']),
             'call_result' => mb_substr(trim((string) ($input['call_result'] ?? '')), 0, 100),
             'duration_seconds' => max(0, (int) ($input['duration_seconds'] ?? 0)),
-        ], ['id' => $actorId]);
+        ], ['id' => $actorId], $correlationId);
     }
 
     public function changeOpportunityStage(
