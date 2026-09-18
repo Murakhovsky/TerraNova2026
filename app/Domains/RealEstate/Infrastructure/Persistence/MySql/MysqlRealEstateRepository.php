@@ -38,27 +38,25 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
         return $row === null ? null : $this->caseFromRow($row);
     }
 
-    public function saveCase(BrokerageProcess $case, int $actorId): void
+    public function createCase(BrokerageProcess $case, int $actorId): bool
     {
-        $this->exec(
-            'INSERT INTO tn_real_estate_cases
+        return $this->execCount(
+            'INSERT IGNORE INTO tn_real_estate_cases
                 (organization_id,case_id,opportunity_id,property_asset_id,inventory_id,subject,status,created_by,updated_by)
              VALUES
-                (:organization_id,:case_id,:opportunity_id,:property_asset_id,:inventory_id,:subject,:status,:created_by,:updated_by)
-             ON DUPLICATE KEY UPDATE
-                inventory_id=VALUES(inventory_id),subject=VALUES(subject),status=VALUES(status),
-                updated_by=VALUES(updated_by),updated_at=NOW()',
-            [
-                'organization_id'=>$case->organizationId->value(),
-                'case_id'=>$case->id,
-                'opportunity_id'=>$case->opportunityId,
-                'property_asset_id'=>$case->propertyId,
-                'inventory_id'=>$case->inventoryId,
-                'subject'=>$case->subject,
-                'status'=>$case->status,
-                'created_by'=>$actorId,
-                'updated_by'=>$actorId,
-            ],
+                (:organization_id,:case_id,:opportunity_id,:property_asset_id,:inventory_id,:subject,:status,:created_by,:updated_by)',
+            $this->caseParams($case,$actorId),
+        ) === 1;
+    }
+
+    public function saveCase(BrokerageProcess $case, int $actorId): void
+    {
+        $params=$this->caseParams($case,$actorId);
+        $this->exec(
+            'UPDATE tn_real_estate_cases SET
+                inventory_id=:inventory_id,subject=:subject,status=:status,updated_by=:updated_by,updated_at=NOW()
+             WHERE organization_id=:organization_id AND case_id=:case_id LIMIT 1',
+            $params,
         );
     }
 
@@ -71,10 +69,10 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
         );
     }
 
-    public function saveOffer(string $caseId, Offer $offer, int $actorId): void
+    public function createOffer(string $caseId, Offer $offer, int $actorId): bool
     {
-        $this->exec(
-            'INSERT INTO tn_real_estate_offers
+        return $this->execCount(
+            'INSERT IGNORE INTO tn_real_estate_offers
                 (organization_id,offer_id,case_id,property_asset_id,party_id,amount_minor,currency,status,created_by)
              VALUES
                 (:organization_id,:offer_id,:case_id,:property_asset_id,:party_id,:amount_minor,:currency,"proposed",:created_by)',
@@ -88,7 +86,7 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
                 'currency'=>$offer->amount->currency(),
                 'created_by'=>$actorId,
             ],
-        );
+        ) === 1;
     }
 
     public function findShowing(string $organizationId, string $showingId): ?array
@@ -100,10 +98,10 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
         );
     }
 
-    public function saveShowing(string $caseId, Showing $showing, DateTimeImmutable $scheduledAt, ?string $notes, int $actorId): void
+    public function createShowing(string $caseId, Showing $showing, DateTimeImmutable $scheduledAt, ?string $notes, int $actorId): bool
     {
-        $this->exec(
-            'INSERT INTO tn_real_estate_showings
+        return $this->execCount(
+            'INSERT IGNORE INTO tn_real_estate_showings
                 (organization_id,showing_id,case_id,property_asset_id,client_id,scheduled_at,status,notes,created_by)
              VALUES
                 (:organization_id,:showing_id,:case_id,:property_asset_id,:client_id,:scheduled_at,"scheduled",:notes,:created_by)',
@@ -117,7 +115,7 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
                 'notes'=>$notes,
                 'created_by'=>$actorId,
             ],
-        );
+        ) === 1;
     }
 
     public function view(string $organizationId, string $caseId): ?array
@@ -157,6 +155,28 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
             (string)$row['subject'],
             (string)$row['status'],
         );
+    }
+
+    /** @return array<string,mixed> */
+    private function caseParams(BrokerageProcess $case,int $actorId): array
+    {
+        return [
+            'organization_id'=>$case->organizationId->value(),
+            'case_id'=>$case->id,
+            'opportunity_id'=>$case->opportunityId,
+            'property_asset_id'=>$case->propertyId,
+            'inventory_id'=>$case->inventoryId,
+            'subject'=>$case->subject,
+            'status'=>$case->status,
+            'created_by'=>$actorId,
+            'updated_by'=>$actorId,
+        ];
+    }
+
+    private function execCount(string $sql,array $params): int
+    {
+        $statement=$this->connection->prepare($sql);$statement->execute($params);
+        return $statement->rowCount();
     }
 
     private function one(string $sql, array $params): ?array
