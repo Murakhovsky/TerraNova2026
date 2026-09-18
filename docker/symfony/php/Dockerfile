@@ -1,8 +1,8 @@
 FROM php:8.3-fpm-alpine
 
-RUN apk add --no-cache icu-libs libzip unzip git \
-    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev \
-    && docker-php-ext-install -j"$(nproc)" intl pdo_mysql opcache pcntl zip \
+RUN apk add --no-cache icu-libs libzip libcurl unzip git \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev curl-dev \
+    && docker-php-ext-install -j"$(nproc)" curl intl pdo_mysql opcache pcntl zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del .build-deps
@@ -33,6 +33,11 @@ RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=de
     MESSENGER_FAILED_TRANSPORT_DSN="redis://127.0.0.1:6379/cos_failed" \
     MESSENGER_CONSUMER_NAME=build \
     COS_SALES_AUTOMATION_SCHEDULER_ENABLED=1 \
+    COS_AGENT_LLM_MODE=fixture \
+    LLM_ENDPOINT="" \
+    LLM_TOKEN="" \
+    LLM_MODEL="wave4-build" \
+    LLM_PROVIDER="fixture" \
     LEGACY_DB_HOST=127.0.0.1 LEGACY_DB_PORT=3306 LEGACY_DB_NAME=cos \
     LEGACY_DB_USER=cos_symfony_ro LEGACY_DB_PASSWORD=build-only-password \
     php bin/console cache:warmup
