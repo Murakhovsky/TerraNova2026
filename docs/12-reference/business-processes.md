@@ -20,6 +20,7 @@ generated: true
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
+| Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
 | Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 1/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
 
@@ -36,6 +37,7 @@ generated: true
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
+| Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
 | Sales Request → Property Match | 5/5 | 1/5 | 4/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 
@@ -98,6 +100,37 @@ generated: true
 | Create or update Inventory Item | organization inventory owner | `property` | `property.inventory` | `state` | так | source `app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php` · `createInventory` [source] |
 | Create or update Listing | listing/content operator | `property` | `property.listing` | `state` | так | source `app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php` · `createListing` [source] |
 | Publish and synchronize channel state | publication channel adapter | `property` | `property.publish` | `outcome` | так | source `app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php` · `publishListing` [source] |
+
+## Opportunity → Property Reservation
+
+- **Process ID:** `real_estate.opportunity-to-reservation`
+- **Schema:** `v5`
+- **Domain:** `real_estate`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 7/7 кроків
+- **Cross-domain кроки:** 3/7
+- **Derived verification:** `source-verified`
+- **Тригер:** A Sales opportunity needs a concrete Property matched and progressed toward reservation
+- **Workflow:** [Opportunity → Property Reservation](../02-workflows/real-estate-opportunity-to-reservation.md)
+
+**Результати**
+
+- Sales opportunity is validated without RealEstate reading Sales storage directly
+- Canonical Property and Inventory are resolved through Property contracts
+- Brokerage match, offer and viewing are traceable in RealEstate
+- Reservation is executed by Property ownership and reflected in the brokerage case
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Validate Sales opportunity | Sales opportunity boundary | `sales` | `sales.workspace.use` | `operation` | так | contract `Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface` [runtime]<br>source `app/Domains/RealEstate/Infrastructure/Sales/SalesOpportunityReferenceAdapter.php` · `exists(` [source] |
+| Resolve canonical Property and Inventory | Property boundary | `property` | `property.reference` | `operation` | так | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `getPropertyPresentation(` [source] |
+| Create brokerage Property Match | RealEstate broker | `real_estate` | `real_estate.property_match` | `state` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function match(` [source] |
+| Create Property Offer | RealEstate broker | `real_estate` | `real_estate.offer` | `state` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function createOffer(` [source] |
+| Schedule Property Viewing | RealEstate broker | `real_estate` | `real_estate.viewing` | `state` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function scheduleViewing(` [source] |
+| Reserve Property Inventory | Property boundary | `property` | `property.inventory` | `operation` | так | contract `Domains\Property\Application\Contract\PropertyInventoryCommandInterface` [runtime]<br>source `app/Domains/Property/Application/Service/CanonicalPropertyInventoryCommands.php` · `function reserve(` [source] |
+| Record brokerage reservation outcome | RealEstate broker | `real_estate` | `real_estate.reservation` | `outcome` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function reserve(` [source] |
 
 ## Sales Lead → Managed Case
 
