@@ -18,6 +18,9 @@ interface SalesWorkspaceReadModelInterface
     /** @return list<array<string, mixed>> */
     public function leads(string $organizationId, array $filters = []): array;
 
+    /** @return array<string, mixed>|null */
+    public function lead(string $organizationId, int $leadId): ?array;
+
     /** @return list<array<string, mixed>> */
     public function deals(string $organizationId, array $filters = []): array;
 
