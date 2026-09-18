@@ -76,7 +76,7 @@ final readonly class DiagnosticController
         }
         if($dueAt<=new \DateTimeImmutable())return $this->error(422,'invalid_due_at','due_at must be in the future.');
 
-        $workflowCode=trim((string)($input['workflow_code']??\Domains\Diagnostic\Application\UseCase\AcceptDiagnosticRecommendation::WORKFLOW));
+        $workflowCode=trim((string)($input['workflow_code']??AcceptDiagnosticRecommendationCommand::DEFAULT_WORKFLOW));
         if($workflowCode===''||preg_match('/^[a-z][a-z0-9._:-]*$/',$workflowCode)!==1){
             return $this->error(422,'invalid_workflow_code','workflow_code is invalid.');
         }
