@@ -37,21 +37,21 @@ $service = new class implements SalesWriteServiceInterface {
         return ClientCaseCommandResult::success('created', ['lead_id' => 501]);
     }
 
-    public function updateLead(int $leadId, array $input, int $actorId): ClientCaseCommandResult
+    public function updateLead(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
     {
-        $this->calls[] = ['update', $leadId, $input, $actorId];
+        $this->calls[] = ['update', $leadId, $input, $actorId, $correlationId];
         return ClientCaseCommandResult::success('updated', ['case_id' => 0]);
     }
 
-    public function convertLeadToOpportunity(int $leadId, array $input, int $actorId): ClientCaseCommandResult
+    public function convertLeadToOpportunity(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
     {
-        $this->calls[] = ['convert', $leadId, $input, $actorId];
+        $this->calls[] = ['convert', $leadId, $input, $actorId, $correlationId];
         return ClientCaseCommandResult::success('created', ['case_id' => 701]);
     }
 
-    public function addOpportunityActivity(int $opportunityId, array $input, int $actorId): ClientCaseCommandResult
+    public function addOpportunityActivity(int $opportunityId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
     {
-        $this->calls[] = ['activity', $opportunityId, $input, $actorId];
+        $this->calls[] = ['activity', $opportunityId, $input, $actorId, $correlationId];
         return ClientCaseCommandResult::success('activity_added', ['activity_id' => 801]);
     }
 
@@ -84,13 +84,13 @@ $actor = 77;
 $create = (new CreateSalesLeadCommandHandler($factory))(new CreateSalesLeadCommand($org, $actor, 'corr-create', 'idem-create', ['full_name' => 'Lead']));
 wave2($create->ok && ($create->data['lead_id'] ?? null) === 501, 'Create Lead handler did not return the canonical result.');
 
-$update = (new UpdateSalesLeadCommandHandler($factory))(new UpdateSalesLeadCommand($org, $actor, 501, ['status' => 'contacted']));
+$update = (new UpdateSalesLeadCommandHandler($factory))(new UpdateSalesLeadCommand($org, $actor, 501, 'corr-update', ['status' => 'contacted']));
 wave2($update->ok, 'Update Lead handler failed.');
 
-$convert = (new ConvertSalesLeadToOpportunityCommandHandler($factory))(new ConvertSalesLeadToOpportunityCommand($org, $actor, 501, ['priority' => 'high']));
+$convert = (new ConvertSalesLeadToOpportunityCommandHandler($factory))(new ConvertSalesLeadToOpportunityCommand($org, $actor, 501, 'corr-convert', ['priority' => 'high']));
 wave2($convert->ok && ($convert->data['case_id'] ?? null) === 701, 'Lead conversion handler failed.');
 
-$activity = (new AddSalesOpportunityActivityCommandHandler($factory))(new AddSalesOpportunityActivityCommand($org, $actor, 701, ['activity_type' => 'note', 'title' => 'Note']));
+$activity = (new AddSalesOpportunityActivityCommandHandler($factory))(new AddSalesOpportunityActivityCommand($org, $actor, 701, 'corr-activity', ['activity_type' => 'note', 'title' => 'Note']));
 wave2($activity->ok && ($activity->data['activity_id'] ?? null) === 801, 'Activity handler failed.');
 
 $stage = (new ChangeSalesOpportunityStageCommandHandler($factory))(new ChangeSalesOpportunityStageCommand($org, $actor, 701, '12', 'corr-stage'));
