@@ -52,3 +52,14 @@ INSERT INTO sales_user_capabilities
     (organization_id,user_id,capability,status,granted_by,created_at,updated_at)
 VALUES
     ('default',1001,'sales.admin.pipeline.manage','ACTIVE','wave7-fixture',NOW(6),NOW(6));
+
+
+-- Wave 7 exercises the operational Sales projection introduced after the
+-- original Wave 3 fixture. Production V0.8.3 added these compatibility fields.
+ALTER TABLE sales_deal_stage_history
+    ADD COLUMN stage_id BIGINT UNSIGNED NULL AFTER projected_at,
+    ADD COLUMN is_backfill TINYINT(1) NOT NULL DEFAULT 0 AFTER stage_id;
+
+UPDATE sales_deal_stage_history
+SET stage_id = to_stage_id
+WHERE stage_id IS NULL;
