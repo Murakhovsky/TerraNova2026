@@ -1,6 +1,6 @@
 ---
 title: Opportunity → Property Reservation
-description: Canonical Wave 9 brokerage workflow from Sales opportunity through Property match, offer and viewing to Property-owned reservation.
+description: Канонічний brokerage-процес Wave 9: від Sales opportunity через Property Match, Offer і Viewing до бронювання Inventory у Property Domain.
 status: active
 updated: 2026-09-18
 kind: workflow
