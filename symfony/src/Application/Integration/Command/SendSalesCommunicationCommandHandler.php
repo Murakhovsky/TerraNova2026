@@ -33,7 +33,9 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
         }
 
         $channel = strtoupper(trim($command->channel));
-        if (!in_array($channel, CommunicationChannel::values(), true)) {
+        if (!in_array($channel, SendSalesCommunicationCommand::SUPPORTED_CHANNELS, true)
+            || !in_array($channel, CommunicationChannel::values(), true)
+        ) {
             throw new DomainException('Unsupported communication channel.');
         }
 
@@ -104,7 +106,7 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
                 self::OPERATION,
                 $key,
                 $pending,
-                'done:' . $hash . ':' . str_replace(':', '_', $externalId),
+                'done:' . $hash . ':' . substr(hash('sha256', $externalId), 0, 16),
             )) {
                 throw new RuntimeException('Communication receipt could not be completed.');
             }
@@ -145,7 +147,7 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
 
         return [
             'replayed' => true,
-            'external_id' => ($parts[2] ?? 'none') !== 'none' ? ($parts[2] ?? null) : null,
+            'delivery_token' => $parts[2] ?? null,
         ];
     }
 }
