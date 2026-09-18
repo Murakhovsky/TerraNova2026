@@ -72,7 +72,7 @@ final readonly class ManageSalesIntegrationCommandHandler implements CommandHand
 
             $result = $this->executeMutation($command, $organizationId);
             $reference = $this->mutationReference($command, $result);
-            $completed = 'done:' . $payloadHash . ':' . $reference;
+            $completed = 'done:' . $payloadHash . ':' . substr(hash('sha256', $reference), 0, 16);
 
             if (!$this->receipts->complete($organizationId, $operationType, $key, $pending, $completed)) {
                 throw new RuntimeException('Integration mutation receipt could not be completed.');
