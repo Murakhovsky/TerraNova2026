@@ -29,7 +29,7 @@
       "runtime": [
         {
           "type": "contract",
-          "ref": "Domains\\RealEstate\\Application\\Contract\\SalesOpportunityReferenceInterface"
+          "ref": "Domains\\Sales\\Application\\Contract\\SalesWorkspaceReadModelInterface"
         },
         {
           "type": "source",
