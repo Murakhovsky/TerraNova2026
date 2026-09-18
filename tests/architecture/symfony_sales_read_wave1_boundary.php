@@ -41,10 +41,10 @@ if (!str_contains($interface, 'public function lead(string $organizationId, int 
     throw new RuntimeException('Canonical Sales read contract is missing lead detail.');
 }
 if (!str_contains($services, "Domains\\Sales\\Application\\Contract\\SalesWorkspaceReadModelInterface:")
-    || !str_contains($services, "$connection: '@legacy_cos.pdo'")) {
+    || !str_contains($services, "\$connection: '@legacy_cos.pdo'")) {
     throw new RuntimeException('Symfony must bind the canonical Sales read model through the legacy Infrastructure adapter only.');
 }
-foreach (['organization_id = :organization_id', 'ORDER BY ' . "' . " . '$orderBy', 'OFFSET ' . "' . " . '$offset'] as $needle) {
+foreach (['organization_id = :organization_id', '$offset = $this->offset', '$orderBy = $this->leadOrder', '$orderBy = $this->dealOrder'] as $needle) {
     if (!str_contains($readModel, $needle)) {
         throw new RuntimeException('Sales read model is missing tenant/pagination hardening: ' . $needle);
     }
