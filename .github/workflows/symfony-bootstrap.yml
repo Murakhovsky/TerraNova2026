@@ -126,6 +126,11 @@ jobs:
             chmod 644 /sessions/sess_*
           '
 
+      - name: Seed Sales Wave 1 read fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave1.sql
+
       - name: Verify Doctrine MySQL persistence boundary
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -183,6 +188,96 @@ jobs:
           grep -q '"all":2' /tmp/sales-stats.json
           grep -q '"NEW":1' /tmp/sales-stats.json
           grep -q '"WON":1' /tmp/sales-stats.json
+
+      - name: Verify Sales Wave 1 read cutover
+        run: |
+          php tests/architecture/symfony_sales_read_wave1_boundary.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/sales_read_wave1_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/symfony-routes.txt
+          grep -q 'cos_api_v1_sales_dashboard' /tmp/symfony-routes.txt
+          grep -q 'cos_api_v1_sales_opportunity' /tmp/symfony-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-dashboard.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/dashboard)
+          echo "Sales dashboard HTTP $status"
+          cat /tmp/sales-wave1-dashboard.json
+          echo
+          test "$status" = "200"
+          grep -q '"active_deals"' /tmp/sales-wave1-dashboard.json
+          grep -q '"new_leads"' /tmp/sales-wave1-dashboard.json
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-leads.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            'http://127.0.0.1:8081/api/v1/sales/leads?page=1&per_page=1&sort=name&direction=asc')
+          echo "Sales leads HTTP $status"
+          cat /tmp/sales-wave1-leads.json
+          echo
+          test "$status" = "200"
+          grep -q '"per_page":1' /tmp/sales-wave1-leads.json
+          grep -q '"has_more":true' /tmp/sales-wave1-leads.json
+          grep -q '"Default Lead"' /tmp/sales-wave1-leads.json
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-lead.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/leads/301)
+          echo "Sales lead detail HTTP $status"
+          cat /tmp/sales-wave1-lead.json
+          echo
+          test "$status" = "200"
+          grep -q '"organization_id":"default"' /tmp/sales-wave1-lead.json
+          grep -q '"activities"' /tmp/sales-wave1-lead.json
+          grep -q '"opportunity"' /tmp/sales-wave1-lead.json
+          grep -q '"communications"' /tmp/sales-wave1-lead.json
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-cross-tenant-lead.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/leads/401)
+          test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-opportunities.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            'http://127.0.0.1:8081/api/v1/sales/opportunities?page=1&per_page=1&sort=value&direction=desc')
+          echo "Sales opportunities HTTP $status"
+          cat /tmp/sales-wave1-opportunities.json
+          echo
+          test "$status" = "200"
+          grep -q '"per_page":1' /tmp/sales-wave1-opportunities.json
+          grep -q '"has_more":true' /tmp/sales-wave1-opportunities.json
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-opportunity.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101)
+          echo "Sales opportunity detail HTTP $status"
+          cat /tmp/sales-wave1-opportunity.json
+          echo
+          test "$status" = "200"
+          grep -q '"opportunity"' /tmp/sales-wave1-opportunity.json
+          grep -q '"timeline"' /tmp/sales-wave1-opportunity.json
+          grep -q '"CASE-101"' /tmp/sales-wave1-opportunity.json
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-cross-tenant-opportunity.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/201)
+          test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-pipelines.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/pipelines)
+          echo "Sales pipelines HTTP $status"
+          cat /tmp/sales-wave1-pipelines.json
+          echo
+          test "$status" = "200"
+          grep -q '"Default Sales"' /tmp/sales-wave1-pipelines.json
+          if grep -q '"Other Sales"' /tmp/sales-wave1-pipelines.json; then
+            echo 'Sales pipelines leaked another tenant'
+            exit 1
+          fi
+
+          status=$(curl --silent --show-error --output /tmp/sales-wave1-no-session.json --write-out '%{http_code}' \
+            http://127.0.0.1:8081/api/v1/sales/leads)
+          test "$status" = "403"
 
       - name: Verify tenant voter contract
         run: docker compose -f docker-compose.symfony.yml exec -T php php tests/tenant_voter_contract.php

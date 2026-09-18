@@ -64,3 +64,38 @@ cos_api_v1_sales_client_case_stats:
   path: /api/v1/sales/client-cases/stats
   controller: App\Http\Api\V1\Controller\SalesClientCaseStatsController
   methods: [GET]
+
+cos_api_v1_sales_dashboard:
+  path: /api/v1/sales/dashboard
+  controller: App\Http\Api\V1\Controller\SalesReadController::dashboard
+  methods: [GET]
+
+cos_api_v1_sales_leads:
+  path: /api/v1/sales/leads
+  controller: App\Http\Api\V1\Controller\SalesReadController::leads
+  methods: [GET]
+
+cos_api_v1_sales_lead:
+  path: /api/v1/sales/leads/{id}
+  controller: App\Http\Api\V1\Controller\SalesReadController::lead
+  methods: [GET]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_api_v1_sales_opportunities:
+  path: /api/v1/sales/opportunities
+  controller: App\Http\Api\V1\Controller\SalesReadController::opportunities
+  methods: [GET]
+
+cos_api_v1_sales_opportunity:
+  path: /api/v1/sales/opportunities/{id}
+  controller: App\Http\Api\V1\Controller\SalesReadController::opportunity
+  methods: [GET]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_api_v1_sales_pipelines:
+  path: /api/v1/sales/pipelines
+  controller: App\Http\Api\V1\Controller\SalesReadController::pipelines
+  methods: [GET]
+
