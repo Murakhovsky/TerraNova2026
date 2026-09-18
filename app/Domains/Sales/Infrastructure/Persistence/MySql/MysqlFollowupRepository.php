@@ -38,8 +38,8 @@ final readonly class MysqlFollowupRepository implements FollowupRepositoryInterf
                 'organization_id' => $command->organizationId,
             ]);
             $statement = $this->connection->prepare(
-                "INSERT INTO tn_client_case_activities (organization_id, client_case_id, activity_type, title, body, due_at) "
-                . "SELECT :organization_id, id, 'followup', :title, :body, :due_at FROM tn_client_cases "
+                "INSERT INTO tn_client_case_activities (organization_id, client_case_id, person_id, user_id, activity_type, title, body, due_at) "
+                . "SELECT :organization_id, id, person_id, assigned_user_id, 'followup', :title, :body, :due_at FROM tn_client_cases "
                 . 'WHERE id = :id AND organization_id = :organization_scope'
             );
             $statement->execute([
