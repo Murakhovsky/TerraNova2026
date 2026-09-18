@@ -100,3 +100,11 @@ Wave не створює другу Sales persistence model і не перепи
 
 Канонічний опис: [Sales Read Cutover](./sales-read-cutover.md).
 
+## 41. Друга фаза, хвиля 2 — перенесення запису Sales
+
+Другий business-cutover wave переносить Create Lead, Update Lead, Lead → Opportunity, Activities, Pipeline transitions та Next Action у `/api/v1/sales/*` через CommandBus і чинні Sales Application services/use cases.
+
+Symfony не дублює бізнес-правила. Tenant scope походить із `TenantContext`, mutations захищені CSRF, а retry-sensitive операції мають idempotency boundary. Legacy frontend і `/api/sales/*` залишаються compatibility path до окремого frontend cutover.
+
+Канонічний опис: [Перенесення запису Sales](./sales-write-cutover.md).
+

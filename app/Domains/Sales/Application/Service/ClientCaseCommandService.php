@@ -220,7 +220,7 @@ final readonly class ClientCaseCommandService
         return $ok ? ClientCaseCommandResult::success('updated') : ClientCaseCommandResult::failure('not_found');
     }
 
-    public function addActivity(int $caseId, array $input, ?array $user = null): ClientCaseCommandResult
+    public function addActivity(int $caseId, array $input, ?array $user = null, ?string $correlationId = null): ClientCaseCommandResult
     {
         $case = $this->readModel->case($caseId);
         if (!$case) return ClientCaseCommandResult::failure('not_found');
@@ -228,16 +228,17 @@ final readonly class ClientCaseCommandService
         $type = $this->allowed((string) ($input['activity_type'] ?? 'note'), SalesActivityType::values(), 'note');
         if ($type === 'call' && $completedAt !== null) {
             $eventId = bin2hex(random_bytes(16));
+            $effectiveCorrelationId = trim((string) $correlationId) !== '' ? trim((string) $correlationId) : $eventId;
             $result = trim(mb_substr((string) ($input['call_result'] ?? $input['result'] ?? ''), 0, 100));
-            $this->completeCall->execute(new RecordCompletedCallCommand(
+            $activityId = $this->completeCall->execute(new RecordCompletedCallCommand(
                 $this->organizationId, (string) $caseId, (string) $case['person_id'], isset($user['id']) ? (string) $user['id'] : null,
                 mb_substr(trim((string) ($input['title'] ?? 'Дзвінок')), 0, 180), $this->nullable((string) ($input['body'] ?? '')),
                 max(0, (int) ($input['duration_seconds'] ?? $input['duration'] ?? 0)), $result !== '' ? $result : 'completed',
-                $eventId, $eventId, isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system',
+                $eventId, $effectiveCorrelationId, isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system',
             ));
-            return ClientCaseCommandResult::success('activity_added');
+            return ClientCaseCommandResult::success('activity_added', ['activity_id' => (int) $activityId]);
         }
-        $this->transactions->transactional(function () use ($case, $caseId, $input, $user, $completedAt, $type): void {
+        $activityId = $this->transactions->transactional(function () use ($case, $caseId, $input, $user, $completedAt, $type, $correlationId): int {
             $activityId = $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
                 'activity_type' => $type, 'title' => mb_substr(trim((string) ($input['title'] ?? 'Нотатка')), 0, 180),
                 'body' => $this->nullable((string) ($input['body'] ?? '')), 'due_at' => $this->dateTime((string) ($input['due_at'] ?? '')),
@@ -257,12 +258,18 @@ final readonly class ClientCaseCommandService
                 $this->events->publish(new DomainEvent(
                     $eventId, $this->organizationId, $eventType, 'deal', (string) $caseId,
                     ['activity_id' => (string) $activityId, 'person_id' => (string) $case['person_id']],
-                    new EventMetadata($eventId, null, isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system'),
+                    new EventMetadata(
+                        trim((string) $correlationId) !== '' ? trim((string) $correlationId) : $eventId,
+                        null,
+                        isset($user['id']) ? 'USER' : 'SYSTEM',
+                        isset($user['id']) ? (string) $user['id'] : 'system',
+                    ),
                     new \DateTimeImmutable(),
                 ));
             }
+            return $activityId;
         });
-        return ClientCaseCommandResult::success('activity_added');
+        return ClientCaseCommandResult::success('activity_added', ['activity_id' => (int) $activityId]);
     }
 
     public function addPropertyMatch(int $caseId, int $propertyId, array $input, ?array $user = null): ClientCaseCommandResult

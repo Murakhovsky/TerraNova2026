@@ -18,8 +18,11 @@ $contains = static function (string $content, string $needle, string $message): 
 };
 
 $repository = $read('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php');
-$contains($repository, 'INSERT INTO sales_deal_stage_history', 'Deal creation must seed durable stage history.');
-$contains($repository, 'VALUES (:organization_id,:deal_id,:pipeline_id,:stage_id,NOW(),NULL,0)', 'Initial stage history must be exact, open and non-backfill.');
+if (str_contains($repository, 'INSERT INTO sales_deal_stage_history')) {
+    throw new RuntimeException('Client Case creation must not write the event-owned stage history projection directly.');
+}
+$inbound = $read('app/Domains/Sales/Application/Service/SalesInboundService.php');
+$contains($inbound, 'ClientCaseCreated::create', 'Deal creation must publish the canonical creation event for durable history projection.');
 
 $projection = $read('app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php');
 $contains($projection, '$visits[$pipelineId][$dealId][$stageId] ??= $enteredAt;', 'Historical funnel must retain the first exact stage timestamp.');

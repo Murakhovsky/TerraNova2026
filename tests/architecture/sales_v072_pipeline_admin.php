@@ -9,7 +9,12 @@ $mustContain = static function (string $path, array $needles, string $label) use
 
 $mustContain('app/migrations/20260910_000031_sales_v072_pipeline_administration.sql', ["ENUM('DRAFT','ACTIVE','DISABLED','ARCHIVED')",'initial_stage_id','configuration_version','sales_lost_reasons','lost_reason_id','source_stage.is_terminal = 1','source_stage.is_terminal = 0'], 'migration');
 $mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlPipelineRepository.php', ['initial_stage_id','s.status = "ACTIVE"','isValidLostReason','lostReasons'], 'runtime repository');
-$mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php', ['s.id = p.initial_stage_id','s.status = "ACTIVE"','sales_deal_stage_history'], 'creation boundary');
+$mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php', ['s.id = p.initial_stage_id','s.status = "ACTIVE"'], 'creation boundary');
+$clientCaseRepository = (string) file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php');
+if (str_contains($clientCaseRepository, 'INSERT INTO sales_deal_stage_history')) {
+    throw new RuntimeException('Sales creation boundary must not write the event-owned history projection directly.');
+}
+$mustContain('app/Domains/Sales/Application/Service/SalesInboundService.php', ['ClientCaseCreated::create'], 'creation event boundary');
 $mustContain('app/Domains/Sales/Application/UseCase/ChangeDealStage.php', ['An active lost reason is required when moving a Deal to LOST.','defaultLostReasonId','isValidLostReason',"['lost_reason_id']"], 'lost lifecycle');
 $mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlDealRepository.php', ['lost_reason_id','lost_reason_note'], 'deal persistence');
 $dealRepository = (string) file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlDealRepository.php');

@@ -99,3 +99,43 @@ cos_api_v1_sales_pipelines:
   controller: App\Http\Api\V1\Controller\SalesReadController::pipelines
   methods: [GET]
 
+cos_api_v1_sales_lead_create:
+  path: /api/v1/sales/leads
+  controller: App\Http\Api\V1\Controller\SalesWriteController::createLead
+  methods: [POST]
+
+cos_api_v1_sales_lead_update:
+  path: /api/v1/sales/leads/{id}
+  controller: App\Http\Api\V1\Controller\SalesWriteController::updateLead
+  methods: [PATCH]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_api_v1_sales_lead_convert:
+  path: /api/v1/sales/leads/{id}/opportunity
+  controller: App\Http\Api\V1\Controller\SalesWriteController::convertLead
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_api_v1_sales_opportunity_activity_create:
+  path: /api/v1/sales/opportunities/{id}/activities
+  controller: App\Http\Api\V1\Controller\SalesWriteController::addActivity
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_api_v1_sales_opportunity_stage:
+  path: /api/v1/sales/opportunities/{id}/stage
+  controller: App\Http\Api\V1\Controller\SalesWriteController::changeStage
+  methods: [POST]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_api_v1_sales_opportunity_next_action:
+  path: /api/v1/sales/opportunities/{id}/next-action
+  controller: App\Http\Api\V1\Controller\SalesWriteController::setNextAction
+  methods: [PUT]
+  requirements:
+    id: '[1-9][0-9]*'
+

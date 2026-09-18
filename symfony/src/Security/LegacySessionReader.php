@@ -20,22 +20,8 @@ final class LegacySessionReader
     /** @return array{user_id:int, organization_id:?string}|null */
     public function read(string $sessionId): ?array
     {
-        if (!preg_match('/^[A-Za-z0-9,-]{16,128}$/', $sessionId)) {
-            return null;
-        }
-
-        $path = rtrim($this->savePath, '/') . '/sess_' . $sessionId;
-        if (!is_file($path)) {
-            return null;
-        }
-
-        $size = filesize($path);
-        if ($size === false || $size < 1 || $size > 1048576) {
-            return null;
-        }
-
-        $payload = file_get_contents($path);
-        if (!is_string($payload) || $payload === '') {
+        $payload = $this->payload($sessionId);
+        if ($payload === null) {
             return null;
         }
 
@@ -62,5 +48,40 @@ final class LegacySessionReader
             'user_id' => $userId,
             'organization_id' => $organizationId,
         ];
+    }
+
+    public function csrfToken(string $sessionId): ?string
+    {
+        $payload = $this->payload($sessionId);
+        if ($payload === null) {
+            return null;
+        }
+
+        if (preg_match('/(?:^|[;}])cos_csrf_token\|s:(\d+):"([A-Fa-f0-9]{32,128})";/', $payload, $match) !== 1) {
+            return null;
+        }
+
+        $token = $match[2];
+        return (int) $match[1] === strlen($token) ? $token : null;
+    }
+
+    private function payload(string $sessionId): ?string
+    {
+        if (!preg_match('/^[A-Za-z0-9,-]{16,128}$/', $sessionId)) {
+            return null;
+        }
+
+        $path = rtrim($this->savePath, '/') . '/sess_' . $sessionId;
+        if (!is_file($path)) {
+            return null;
+        }
+
+        $size = filesize($path);
+        if ($size === false || $size < 1 || $size > 1048576) {
+            return null;
+        }
+
+        $payload = file_get_contents($path);
+        return is_string($payload) && $payload !== '' ? $payload : null;
     }
 }

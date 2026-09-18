@@ -129,17 +129,10 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
             'stage_id' => $initial['id'],
             'probability' => $initial['probability_default'],
         ] + array_diff_key($case, array_flip(['stage'])));
-        $caseId = (int) $this->connection->lastInsertId();
-        $history = $this->connection->prepare('INSERT INTO sales_deal_stage_history
-            (organization_id,deal_id,pipeline_id,stage_id,entered_at,left_at,is_backfill)
-            VALUES (:organization_id,:deal_id,:pipeline_id,:stage_id,NOW(),NULL,0)');
-        $history->execute([
-            'organization_id' => $organizationId,
-            'deal_id' => $caseId,
-            'pipeline_id' => (string) $initial['pipeline_id'],
-            'stage_id' => (string) $initial['id'],
-        ]);
-        return $caseId;
+        // Stage history is event-owned from V0.8.1 onward. ClientCaseCreated is
+        // persisted atomically with this transaction and the durable historical
+        // consumer projects the canonical initial stage row.
+        return (int) $this->connection->lastInsertId();
     }
 
     public function updateCase(string $organizationId, int $caseId, array $case): bool

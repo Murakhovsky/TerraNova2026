@@ -142,6 +142,13 @@ services:
   Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory
+
   App\Application\Sales\Query\GetClientCaseStatsQueryHandler: ~
 
   Infrastructure\Observability\JsonFileLogger:
