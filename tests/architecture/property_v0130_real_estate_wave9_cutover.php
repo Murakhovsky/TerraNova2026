@@ -37,7 +37,7 @@ foreach(['RealEstateEventType::values()','brokerage_case_id','event_type'] as $n
 }
 
 $workflow=$read('app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php');
-foreach(['SalesOpportunityReferenceInterface','PropertyReferencePort','PropertyInventoryCommandInterface','RealEstateMutationReceiptInterface','AuditRepositoryInterface','receipts->claim','createCase(','createOffer(','createShowing(','events->publish','appendAudit'] as $needle){
+foreach(['SalesOpportunityReferenceInterface','PropertyBrokerageReferencePort','PropertyInventoryCommandInterface','RealEstateMutationReceiptInterface','AuditRepositoryInterface','receipts->claim','createCase(','createOffer(','createShowing(','events->publish','appendAudit'] as $needle){
     $assert(str_contains($workflow,$needle),'RealEstate workflow missing boundary/runtime behavior: '.$needle);
 }
 $assert(!preg_match('/\btn_(?:property|sales|crm)_/i',$workflow),'RealEstate application service must not read another domain tables directly.');
@@ -57,6 +57,8 @@ $assert(str_contains($canonicalRepository,'FOR UPDATE'),'Property reservation pa
 $symfonyServices=$read('symfony/config/services.yaml');
 foreach([
     'PropertyCanonicalRuntimeRepositoryInterface',
+    'PropertyReferencePort',
+    'PropertyBrokerageReferencePort',
     'PropertyInventoryCommandInterface',
     'PropertyMutationReceiptInterface',
     'RealEstateRepositoryInterface',
