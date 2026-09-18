@@ -29,6 +29,13 @@ foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings
     $assert(str_contains($migrationSql,$needle),'RealEstate migration missing: '.$needle);
 }
 
+$realEstateModule=$read('app/Domains/RealEstate/Bootstrap/RealEstateDomainModule.php');
+$realEstateRuleContext=$read('app/Domains/RealEstate/Rule/RealEstateRuleContextProvider.php');
+$assert(str_contains($realEstateModule,'ruleContextProvider()'),'RealEstate EventOwning module must expose ruleContextProvider().');
+foreach(['RealEstateEventType::values()','brokerage_case_id','event_type'] as $needle){
+    $assert(str_contains($realEstateRuleContext,$needle),'RealEstate rule context provider missing: '.$needle);
+}
+
 $workflow=$read('app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php');
 foreach(['SalesOpportunityReferenceInterface','PropertyReferencePort','PropertyInventoryCommandInterface','RealEstateMutationReceiptInterface','AuditRepositoryInterface','receipts->claim','createCase(','createOffer(','createShowing(','events->publish','appendAudit'] as $needle){
     $assert(str_contains($workflow,$needle),'RealEstate workflow missing boundary/runtime behavior: '.$needle);
