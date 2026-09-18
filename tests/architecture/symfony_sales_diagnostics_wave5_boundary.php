@@ -10,6 +10,7 @@ foreach(['/api/v1/diagnostics','/api/v1/diagnostics/{id}','/api/v1/diagnostics/{
 $controller=$read('symfony/src/Http/Api/V1/Controller/DiagnosticController.php');
 foreach(['CommandBusInterface','QueryBusInterface','TenantContextProviderInterface','LegacySessionCsrfValidator','ActiveModuleResolver','TenantPermissions::MANAGE','X-Idempotency-Key','_cos_correlation_id'] as $needle)$assert(str_contains($controller,$needle),'Controller boundary missing: '.$needle);
 $assert(!str_contains($controller,'PDO'),'Diagnostic controller must not access PDO.');
+$assert(!str_contains($controller,'Domains\\'),'Diagnostic API controller must not depend on Domains directly.');
 foreach(['owner_id_required','due_at_required','invalid_workflow_code'] as $needle)$assert(str_contains($controller,$needle),'Recommendation operational assignment validation missing: '.$needle);
 
 $pipeline=$read('app/Domains/Diagnostic/Application/Service/DiagnosticEvidencePipeline.php');
