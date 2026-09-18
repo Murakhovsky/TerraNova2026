@@ -7,7 +7,7 @@ kind: architecture
 contract: architecture-v1
 ---
 
-# Platform Documents
+# Документи як Platform capability
 
 Documents є Platform capability, а не бізнес-доменом. Нею користуються Sales, Finance, HR, Construction, Procurement та інші bounded contexts.
 
