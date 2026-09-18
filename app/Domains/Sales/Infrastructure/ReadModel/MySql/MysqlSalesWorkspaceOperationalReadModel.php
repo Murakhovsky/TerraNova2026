@@ -73,6 +73,11 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         );
     }
 
+    public function lead(string $organizationId, int $leadId): ?array
+    {
+        return $this->base->lead($organizationId, $leadId);
+    }
+
     public function deals(string $organizationId, array $filters = []): array
     {
         $where = ['c.organization_id = :organization_id'];
