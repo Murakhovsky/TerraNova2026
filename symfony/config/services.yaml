@@ -137,6 +137,59 @@ services:
   Domains\Property\Contract\PropertyReferencePort:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort
 
+  # Wave 9 — Property / RealEstate business cutover
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRuntimeRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRuntimeRepository
+
+  App\Infrastructure\Persistence\Legacy\LegacyPropertyLocationReferenceAdapter:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Property\Application\Contract\LocationReferenceInterface:
+    alias: App\Infrastructure\Persistence\Legacy\LegacyPropertyLocationReferenceAdapter
+
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCompatibilityProjection:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $locations: '@Domains\Property\Application\Contract\LocationReferenceInterface'
+
+  Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCompatibilityProjection
+
+  Domains\Property\Application\Service\PropertyCanonicalRuntimeService:
+    arguments:
+      $repository: '@Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface'
+      $compatibility: '@Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Property\Application\Service\CanonicalPropertyInventoryCommands: ~
+
+  Domains\Property\Application\Contract\PropertyInventoryCommandInterface:
+    alias: Domains\Property\Application\Service\CanonicalPropertyInventoryCommands
+
+  Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface:
+    alias: Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateRepository
+
+  Domains\RealEstate\Infrastructure\Sales\SalesOpportunityReferenceAdapter:
+    arguments:
+      $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
+
+  Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface:
+    alias: Domains\RealEstate\Infrastructure\Sales\SalesOpportunityReferenceAdapter
+
+  Domains\RealEstate\Application\Service\RealEstateWorkflowService: ~
+  Domains\Property\Bootstrap\PropertyDomainModule: ~
+  Domains\RealEstate\Bootstrap\RealEstateDomainModule: ~
+
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
       $connection: '@legacy_cos.pdo'
@@ -558,6 +611,8 @@ services:
       $modules:
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
+        - '@Domains\Property\Bootstrap\PropertyDomainModule'
+        - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
