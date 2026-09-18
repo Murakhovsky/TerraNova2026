@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace App\Http\Api\V1\Controller;
 
-use App\Application\RealEstate\Command\RealEstateMutationCommand;
+use App\Application\RealEstate\Command\CreatePropertyOfferCommand;
+use App\Application\RealEstate\Command\MatchPropertyCommand;
+use App\Application\RealEstate\Command\ReserveMatchedPropertyCommand;
+use App\Application\RealEstate\Command\SchedulePropertyViewingCommand;
 use App\Application\RealEstate\Query\GetRealEstateCaseQuery;
 use App\Security\LegacySessionCsrfValidator;
 use DomainException;
@@ -46,54 +49,83 @@ final readonly class RealEstateController
 
     public function match(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,RealEstateMutationCommand::MATCH,(int)$id,201);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        try{
+            return $this->ok($this->commands->dispatch(new MatchPropertyCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                (int)$id,
+                $key,
+                $this->input($request),
+            )),201);
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function offer(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,RealEstateMutationCommand::OFFER,$id,201);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        try{
+            return $this->ok($this->commands->dispatch(new CreatePropertyOfferCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $id,
+                $key,
+                $this->input($request),
+            )),201);
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function viewing(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,RealEstateMutationCommand::VIEWING,$id,201);
+        $tenant=$this->context($request,true);
+        if($tenant instanceof JsonResponse)return $tenant;
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
+
+        try{
+            return $this->ok($this->commands->dispatch(new SchedulePropertyViewingCommand(
+                $tenant->organizationId(),
+                (int)$tenant->userId()->value(),
+                $this->correlationId($request),
+                $id,
+                $key,
+                $this->input($request),
+            )),201);
+        }catch(Throwable $error){
+            return $this->failure($error);
+        }
     }
 
     public function reserve(Request $request,string $id): JsonResponse
     {
-        return $this->mutate($request,RealEstateMutationCommand::RESERVE,$id,201);
-    }
-
-    private function mutate(Request $request,string $operation,string|int $subjectId,int $status): JsonResponse
-    {
         $tenant=$this->context($request,true);
         if($tenant instanceof JsonResponse)return $tenant;
-
-        $key=trim((string)$request->headers->get('X-Idempotency-Key',''));
-        if($key===''||mb_strlen($key)>191){
-            return $this->error(422,'idempotency_key_required','A valid X-Idempotency-Key is required.');
-        }
-
-        $input=$this->input($request);
-        $stable=strtoupper(substr(hash('sha256',$tenant->organizationId()->value().':'.$key),0,20));
-        if($operation===RealEstateMutationCommand::OFFER){
-            $input['offer_id']='OFR-'.$stable;
-        }elseif($operation===RealEstateMutationCommand::VIEWING){
-            $input['showing_id']='SHW-'.$stable;
-        }elseif($operation===RealEstateMutationCommand::RESERVE){
-            $input['reservation_id']='RSV-'.$stable;
-        }
+        $key=$this->idempotencyKey($request);
+        if($key instanceof JsonResponse)return $key;
 
         try{
-            $data=$this->commands->dispatch(new RealEstateMutationCommand(
+            return $this->ok($this->commands->dispatch(new ReserveMatchedPropertyCommand(
                 $tenant->organizationId(),
                 (int)$tenant->userId()->value(),
                 $this->correlationId($request),
-                $operation,
-                $subjectId,
-                $input,
-            ));
-            return $this->ok($data,$status);
+                $id,
+                $key,
+                $this->input($request),
+            )),201);
         }catch(Throwable $error){
             return $this->failure($error);
         }
@@ -108,7 +140,11 @@ final readonly class RealEstateController
         }
         foreach(['sales','property','real_estate'] as $module){
             if(!$this->modules->isEnabled($tenant->organizationId()->value(),$module)){
-                return $this->error(403,$module.'_module_disabled',ucfirst(str_replace('_',' ',$module)).' module is disabled for this organization.');
+                return $this->error(
+                    403,
+                    $module.'_module_disabled',
+                    ucfirst(str_replace('_',' ',$module)).' module is disabled for this organization.',
+                );
             }
         }
         if($mutation&&($request===null||!$this->csrf->isValid($request))){
@@ -118,6 +154,14 @@ final readonly class RealEstateController
         $actor=$tenant->userId()->value();
         if(!ctype_digit($actor)||(int)$actor<=0)return $this->error(403,'invalid_actor','Authenticated actor is invalid.');
         return $tenant;
+    }
+
+    private function idempotencyKey(Request $request): string|JsonResponse
+    {
+        $key=trim((string)$request->headers->get('X-Idempotency-Key',''));
+        return $key===''||mb_strlen($key)>191
+            ?$this->error(422,'idempotency_key_required','A valid X-Idempotency-Key is required.')
+            :$key;
     }
 
     /** @return array<string,mixed> */
