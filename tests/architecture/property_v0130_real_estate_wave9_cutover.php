@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $property=require $root.'/app/Domains/Property/module.php';
-$assert(($property['version']??null)==='0.13.0','Wave 9 requires Property V0.13.0.');
-$assert(($property['schema_version']??null)==='0.12.0','Property V0.13 does not invent a schema migration when none is required.');
+$assert(($property['version']??null)==='0.12.0','Wave 9 must not bump Property lifecycle version without an explicit tenant upgrade.');
+$assert(($property['schema_version']??null)==='0.12.0','Wave 9 keeps the current Property schema version.');
 foreach(['property.api.v1','property.business.cutover'] as $capability){
     $assert(in_array($capability,$property['contributions']['capabilities']??[],true),'Missing Property Wave 9 capability: '.$capability);
 }
@@ -85,4 +85,4 @@ foreach([$propertyController,$realEstateController] as $controller){
     $assert(str_contains($controller,'TenantContextProviderInterface'),'Wave 9 API must derive tenant from authenticated context.');
 }
 
-echo "Property V0.13 / RealEstate V0.2 Wave 9 architecture: OK\n";
+echo "Property / RealEstate Wave 9 architecture: OK\n";
