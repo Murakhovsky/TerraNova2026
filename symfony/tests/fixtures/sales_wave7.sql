@@ -63,3 +63,21 @@ ALTER TABLE sales_deal_stage_history
 UPDATE sales_deal_stage_history
 SET stage_id = to_stage_id
 WHERE stage_id IS NULL;
+
+
+-- Wave 1 used a deliberately tiny Action Outcome table. The canonical runtime
+-- workspace schema links every outcome to the Action and records metric provenance.
+ALTER TABLE cos_action_outcomes
+    ADD COLUMN action_id VARCHAR(64) NULL AFTER organization_id,
+    ADD COLUMN metric VARCHAR(160) NULL AFTER action_id,
+    ADD COLUMN value JSON NULL AFTER metric,
+    ADD COLUMN attribution_type VARCHAR(32) NULL AFTER value,
+    ADD COLUMN evidence JSON NULL AFTER attribution_type,
+    ADD COLUMN created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) AFTER measured_at;
+
+UPDATE cos_action_outcomes
+SET action_id = 'action-1',
+    metric = 'fixture.outcome',
+    value = JSON_OBJECT('fixture', true),
+    attribution_type = 'MANUAL'
+WHERE action_id IS NULL;
