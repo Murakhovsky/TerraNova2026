@@ -159,6 +159,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave6.sql
 
+      - name: Seed Sales Wave 7 Frontend cutover fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave7.sql
+
       - name: Verify Doctrine MySQL persistence boundary
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -653,6 +658,80 @@ jobs:
           test "$status" = "409"
 
           echo "Sales Wave 6 communications / integrations runtime passed."
+
+      - name: Verify Sales Wave 7 Frontend cutover
+        run: |
+          php tests/architecture/symfony_sales_frontend_wave7_boundary.php
+          node --check frontend/features/sales/workspace.js
+          node --check frontend/features/sales/admin.js
+          node --check frontend/features/sales/rule-editor.js
+          find symfony/src/Application/Sales/Admin -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l symfony/src/Application/Sales/Query/SalesFrontendQuery.php
+          php -l symfony/src/Application/Sales/Query/SalesFrontendQueryHandler.php
+          php -l symfony/src/Application/Sales/Command/SalesFrontendMutationCommand.php
+          php -l symfony/src/Application/Sales/Command/SalesFrontendMutationCommandHandler.php
+          php -l symfony/src/Http/Api/V1/Controller/SalesFrontendController.php
+          php -l symfony/src/Http/Api/V1/Controller/SalesAdminFrontendController.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_search' /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_opportunity_quick_update' /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_admin_pipelines' /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_admin_rules' /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_admin_agents' /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_admin_policies' /tmp/wave7-routes.txt
+          grep -q 'cos_api_v1_sales_admin_teams' /tmp/wave7-routes.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+          status=$(curl --silent --show-error --output /tmp/wave7-search.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            'http://127.0.0.1:8081/api/v1/sales/search?q=Default&limit=6')
+          echo "Wave 7 search HTTP $status"; cat /tmp/wave7-search.json; echo
+          test "$status" = "200"
+          grep -q '"items"' /tmp/wave7-search.json
+
+          status=$(curl --silent --show-error --output /tmp/wave7-intelligence.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101/intelligence)
+          echo "Wave 7 intelligence HTTP $status"; cat /tmp/wave7-intelligence.json; echo
+          test "$status" = "200"
+          grep -q '"actions"' /tmp/wave7-intelligence.json
+
+          status=$(curl --silent --show-error --output /tmp/wave7-quick.json --write-out '%{http_code}' \
+            --request PATCH \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave7-quick-update' \
+            -H 'Content-Type: application/json' \
+            --data '{"priority":"high"}' \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101)
+          echo "Wave 7 quick update HTTP $status"; cat /tmp/wave7-quick.json; echo
+          test "$status" = "200"
+
+          priority=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT priority FROM tn_client_cases WHERE organization_id='default' AND id=101;" | tr -d '[:space:]')
+          test "$priority" = "high"
+
+          status=$(curl --silent --show-error --output /tmp/wave7-admin-pipelines.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/admin/pipelines)
+          echo "Wave 7 pipeline admin HTTP $status"; cat /tmp/wave7-admin-pipelines.json; echo
+          test "$status" = "200"
+
+          status=$(curl --silent --show-error --output /tmp/wave7-admin-rules-denied.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/api/v1/sales/admin/rules)
+          echo "Wave 7 rule admin without capability HTTP $status"; cat /tmp/wave7-admin-rules-denied.json; echo
+          test "$status" = "403"
+
+          status=$(curl --silent --show-error --output /tmp/wave7-realtor-search.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            'http://127.0.0.1:8081/api/v1/sales/search?q=Default&limit=6')
+          test "$status" = "403"
+
+          echo "Sales Wave 7 frontend cutover runtime passed."
 
       - name: Verify Sales Wave 3 deterministic automation cutover
         run: |
