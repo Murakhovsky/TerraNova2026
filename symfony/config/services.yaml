@@ -54,8 +54,12 @@ services:
     arguments:
       $connection: '@legacy_cos.pdo'
 
+  App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
   Kernel\Identity\Contract\IdentityResolverInterface:
-    alias: App\Infrastructure\LegacyIdentityResolver
+    alias: App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter
 
   Kernel\Tenant\Contract\TenantPermissionResolverInterface:
     alias: App\Security\RoleTenantPermissionResolver
@@ -99,3 +103,10 @@ services:
   Kernel\Operations\Service\OperationsSectionReader:
     arguments:
       $operations: '@Kernel\Operations\Contract\OperationsReadModelInterface'
+
+  App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
+    arguments:
+      $runtimeDirectory: '%kernel.project_dir%/var/runtime'
+
+  App\Application\System\Contract\RuntimeHeartbeatSinkInterface:
+    alias: App\Infrastructure\Runtime\FileRuntimeHeartbeatSink
