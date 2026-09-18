@@ -30,6 +30,12 @@ foreach ([
     $assert(str_contains($routes, $route), 'Missing Wave 6 route: ' . $route);
 }
 
+$security = $read('symfony/config/packages/security.yaml');
+$authenticator = $read('symfony/src/Security/LegacySessionAuthenticator.php');
+$assert(str_contains($security, "integrations/crm/[1-9][0-9]*/webhook"), 'Signed CRM webhook public access rule is missing.');
+$assert(str_contains($security, 'PUBLIC_ACCESS'), 'Signed CRM webhook must not require a legacy browser session.');
+$assert(str_contains($authenticator, 'integrations/crm/[1-9][0-9]*/webhook'), 'Legacy session authenticator must exclude signed CRM webhook.');
+
 $integrationController = $read('symfony/src/Http/Api/V1/Controller/SalesIntegrationController.php');
 foreach ([
     'CommandBusInterface',
