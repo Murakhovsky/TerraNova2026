@@ -137,7 +137,7 @@ jobs:
       - name: Property V0.12 canonical runtime cutover
         run: php tests/unit/property_v0120_runtime_cutover.php
 
-      - name: Property V0.13 / RealEstate V0.2 Wave 9
+      - name: Property / RealEstate Wave 9 cutover
         run: php tests/unit/property_v0130_real_estate_wave9.php
 
       - name: Property compatibility smoke
