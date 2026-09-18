@@ -13,7 +13,13 @@ interface RealEstateRepositoryInterface
     public function findCase(string $organizationId, string $caseId): ?BrokerageProcess;
     public function findMatch(string $organizationId, int $opportunityId, string $propertyId): ?BrokerageProcess;
     public function saveCase(BrokerageProcess $case, int $actorId): void;
+
+    /** @return array<string,mixed>|null */
+    public function findOffer(string $organizationId, string $offerId): ?array;
     public function saveOffer(string $caseId, Offer $offer, int $actorId): void;
+
+    /** @return array<string,mixed>|null */
+    public function findShowing(string $organizationId, string $showingId): ?array;
     public function saveShowing(string $caseId, Showing $showing, DateTimeImmutable $scheduledAt, ?string $notes, int $actorId): void;
 
     /** @return array<string,mixed>|null */
