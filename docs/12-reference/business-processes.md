@@ -124,8 +124,8 @@ generated: true
 
 | Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
 | --- | --- | --- | --- | --- | --- | --- |
-| Validate Sales opportunity | Sales opportunity boundary | `sales` | `sales.workspace.use` | `operation` | так | contract `Domains\RealEstate\Application\Contract\SalesOpportunityReferenceInterface` [runtime]<br>source `app/Domains/RealEstate/Infrastructure/Sales/SalesOpportunityReferenceAdapter.php` · `exists(` [source] |
-| Resolve canonical Property and Inventory | Property boundary | `property` | `property.reference` | `operation` | так | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `getPropertyPresentation(` [source] |
+| Validate Sales opportunity | Sales opportunity boundary | `sales` | `sales.workspace.use` | `operation` | так | contract `Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface` [runtime]<br>source `app/Domains/RealEstate/Infrastructure/Sales/SalesOpportunityReferenceAdapter.php` · `exists(` [source] |
+| Resolve canonical Property and Inventory | Property boundary | `property` | `property.reference` | `operation` | так | contract `Domains\Property\Contract\PropertyBrokerageReferencePort` [runtime]<br>source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `getPropertyPresentation(` [source] |
 | Create brokerage Property Match | RealEstate broker | `real_estate` | `real_estate.property_match` | `state` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function match(` [source] |
 | Create Property Offer | RealEstate broker | `real_estate` | `real_estate.offer` | `state` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function createOffer(` [source] |
 | Schedule Property Viewing | RealEstate broker | `real_estate` | `real_estate.viewing` | `state` | так | source `app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php` · `function scheduleViewing(` [source] |
