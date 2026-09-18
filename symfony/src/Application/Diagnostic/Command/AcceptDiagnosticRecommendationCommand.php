@@ -9,6 +9,8 @@ use Kernel\Shared\Domain\OrganizationId;
 
 final readonly class AcceptDiagnosticRecommendationCommand implements CommandInterface
 {
+    public const DEFAULT_WORKFLOW = 'diagnostic.recommendation.implementation';
+
     public function __construct(
         public OrganizationId $organizationId,
         public int $actorId,
