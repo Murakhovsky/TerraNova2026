@@ -155,7 +155,7 @@ final readonly class ClientCaseCommandService
         });
     }
 
-    public function quickUpdate(int $caseId, array $input, ?array $user = null): ClientCaseCommandResult
+    public function quickUpdate(int $caseId, array $input, ?array $user = null, ?string $requestedCorrelationId = null): ClientCaseCommandResult
     {
         $case = $this->readModel->case($caseId);
         if (!$case) return ClientCaseCommandResult::failure('not_found');
@@ -175,7 +175,7 @@ final readonly class ClientCaseCommandService
             : ($case['assigned_user_id'] ?? null);
         $nextContact = array_key_exists('next_contact_at', $input)
             ? $this->dateTime((string) ($input['next_contact_at'] ?? '')) : ($case['next_contact_at'] ?? null);
-        $correlationId = bin2hex(random_bytes(16));
+        $correlationId = trim((string) $requestedCorrelationId) !== '' ? trim((string) $requestedCorrelationId) : bin2hex(random_bytes(16));
         $simpleChanges = [];
         if ((string) ($case['priority'] ?? '') !== $priority) {
             $simpleChanges['priority'] = ['from' => (string) ($case['priority'] ?? ''), 'to' => $priority];
