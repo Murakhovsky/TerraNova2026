@@ -11,3 +11,6 @@ framework:
     enable_attributes: true
   php_errors:
     log: true
+  cache:
+    app: cache.adapter.filesystem
+    prefix_seed: cos/symfony

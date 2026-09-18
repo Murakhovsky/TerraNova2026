@@ -50,10 +50,6 @@ services:
       $user: '%env(LEGACY_DB_USER)%'
       $password: '%env(LEGACY_DB_PASSWORD)%'
 
-  App\Infrastructure\LegacyIdentityResolver:
-    arguments:
-      $connection: '@legacy_cos.pdo'
-
   App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter:
     arguments:
       $connection: '@legacy_cos.pdo'
@@ -110,3 +106,17 @@ services:
 
   App\Application\System\Contract\RuntimeHeartbeatSinkInterface:
     alias: App\Infrastructure\Runtime\FileRuntimeHeartbeatSink
+
+  App\Infrastructure\Cache\SymfonyCacheStore:
+    arguments:
+      $pool: '@cache.app'
+
+  Platform\Cache\Contract\CacheStoreInterface:
+    alias: App\Infrastructure\Cache\SymfonyCacheStore
+
+  Infrastructure\Storage\LocalFileStorage:
+    arguments:
+      $rootDirectory: '%kernel.project_dir%/var/storage'
+
+  Platform\Storage\Contract\FileStorageInterface:
+    alias: Infrastructure\Storage\LocalFileStorage

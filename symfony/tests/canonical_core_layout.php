@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use App\Infrastructure\LegacyIdentityResolver;
+use App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter;
 use App\Infrastructure\Messenger\SymfonyCommandBus;
 use App\Infrastructure\Messenger\SymfonyEventBus;
 use App\Infrastructure\Messenger\SymfonyQueryBus;
@@ -77,7 +77,7 @@ foreach ($canonicalClasses as $class => $expectedPrefix) {
 
 foreach ([
     LegacySessionAuthenticator::class,
-    LegacyIdentityResolver::class,
+    LegacyIdentityRepositoryAdapter::class,
     SecurityTenantContextProvider::class,
     SymfonyCommandBus::class,
     SymfonyQueryBus::class,
@@ -91,8 +91,8 @@ foreach ([
 }
 
 expectCanonical(
-    is_subclass_of(LegacyIdentityResolver::class, IdentityResolverInterface::class),
-    'Legacy identity storage must adapt the Kernel Identity resolver contract.',
+    is_subclass_of(LegacyIdentityRepositoryAdapter::class, IdentityResolverInterface::class),
+    'Legacy identity repository adapter must implement the Kernel Identity resolver contract.',
 );
 expectCanonical(
     is_subclass_of(SecurityTenantContextProvider::class, TenantContextProviderInterface::class),

@@ -1,0 +1,85 @@
+name: Platform Runtime Contracts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/Platform/Cache/**'
+      - 'app/Platform/Search/**'
+      - 'app/Platform/Storage/**'
+      - 'app/Infrastructure/Storage/**'
+      - 'symfony/src/Infrastructure/Cache/**'
+      - 'symfony/config/packages/framework.yaml'
+      - 'symfony/config/services.yaml'
+      - 'tests/unit/platform_runtime_contracts.php'
+      - 'tests/architecture/runtime_configuration_boundary.php'
+      - 'symfony/tests/platform_cache_contract.php'
+      - '.github/workflows/platform-runtime-contracts.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Platform/Cache/**'
+      - 'app/Platform/Search/**'
+      - 'app/Platform/Storage/**'
+      - 'app/Infrastructure/Storage/**'
+      - 'symfony/src/Infrastructure/Cache/**'
+      - 'symfony/config/packages/framework.yaml'
+      - 'symfony/config/services.yaml'
+      - 'tests/unit/platform_runtime_contracts.php'
+      - 'tests/architecture/runtime_configuration_boundary.php'
+      - 'symfony/tests/platform_cache_contract.php'
+      - '.github/workflows/platform-runtime-contracts.yml'
+  workflow_dispatch:
+
+jobs:
+  pure-php-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify configuration boundary
+        run: php tests/architecture/runtime_configuration_boundary.php
+      - name: Verify cache search storage contracts
+        run: php tests/unit/platform_runtime_contracts.php
+      - name: Lint platform runtime contracts
+        run: |
+          find app/Platform/Cache app/Platform/Search app/Platform/Storage app/Infrastructure/Storage -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  symfony-cache:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_SECRET: ci-only-secret
+      DATABASE_URL: "mysql://cos:ci-only-password@127.0.0.1:3306/cos_symfony?serverVersion=8.4.0&charset=utf8mb4"
+      REDIS_URL: redis://127.0.0.1:6379
+      MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_async
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_failed
+      MESSENGER_CONSUMER_NAME: ci
+      LEGACY_SESSION_SAVE_PATH: /tmp
+      LEGACY_SESSION_COOKIE_NAME: PHPSESSID
+      LEGACY_DB_HOST: 127.0.0.1
+      LEGACY_DB_PORT: 3306
+      LEGACY_DB_NAME: cos
+      LEGACY_DB_USER: cos
+      LEGACY_DB_PASSWORD: ci-only-password
+      COS_ORGANIZATION_ID: default
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: redis
+          tools: composer:v2
+      - name: Install Symfony runtime
+        working-directory: symfony
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify Symfony cache adapter
+        working-directory: symfony
+        run: |
+          php tests/platform_cache_contract.php
+          php bin/console debug:container 'Platform\Cache\Contract\CacheStoreInterface' >/dev/null
+          php bin/console debug:container 'Platform\Storage\Contract\FileStorageInterface' >/dev/null
+          php bin/console lint:container

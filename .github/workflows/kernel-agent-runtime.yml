@@ -7,7 +7,10 @@ on:
       - migration/symfony
     paths:
       - 'app/Kernel/Agent/**'
+      - 'app/Infrastructure/AI/**'
+      - 'app/Infrastructure/Llm/HttpStructuredLlmClient.php'
       - 'tests/unit/kernel_agent_runtime.php'
+      - 'tests/unit/infrastructure_ai_provider.php'
       - 'tests/architecture/kernel_agent_runtime_boundaries.php'
       - 'tests/smoke/agent_runtime.php'
       - 'tests/smoke/agent_safety.php'
@@ -18,7 +21,10 @@ on:
       - migration/symfony
     paths:
       - 'app/Kernel/Agent/**'
+      - 'app/Infrastructure/AI/**'
+      - 'app/Infrastructure/Llm/HttpStructuredLlmClient.php'
       - 'tests/unit/kernel_agent_runtime.php'
+      - 'tests/unit/infrastructure_ai_provider.php'
       - 'tests/architecture/kernel_agent_runtime_boundaries.php'
       - 'tests/smoke/agent_runtime.php'
       - 'tests/smoke/agent_safety.php'
@@ -37,7 +43,9 @@ jobs:
       - name: Verify Kernel Agent has no framework or infrastructure dependencies
         run: php tests/architecture/kernel_agent_runtime_boundaries.php
       - name: Run canonical Agent Runtime contract
-        run: php tests/unit/kernel_agent_runtime.php
+        run: |
+          php tests/unit/kernel_agent_runtime.php
+          php tests/unit/infrastructure_ai_provider.php
       - name: Run existing Agent smoke contracts
         run: |
           php tests/smoke/agent_runtime.php
