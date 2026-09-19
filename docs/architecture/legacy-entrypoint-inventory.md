@@ -6,14 +6,14 @@ Inventory date: 2026-09-19. This file is the migration ledger for externally rea
 |---|---|---|---|---|
 | `public/index.php` | Web | Platform | keep | canonical HTTP front controller |
 | `public/router.php` | Local web | Platform | keep | PHP built-in-server router |
-| `public/tgAdmin_webhook.php` | Telegram | Sales/Operations | keep | stable URL routed through `Interfaces\\Telegram\\Controller\\WebhookController` |
+| `public/tgAdmin_webhook.php` | Telegram | Operations | tombstone | HTTP 410 only; stale webhook configurations cannot boot application code |
 | `public/games.php` | Games | Games | removed | product and dedicated entrypoint removed 2026-08-28 |
 | `public/webtools.php` | DevTools | none | removed | Phalcon DevTools is not a Composer dependency and must not be public |
 | `app/bootstrap_web.php` | Web | Platform | keep | composition root for public web/API |
-| `app/bootstrap_tg.php` | Telegram | Platform | keep | canonical Telegram composition with `Interfaces\\Telegram\\Module` |
+| `app/bootstrap_tg.php` | Telegram | Platform | removed | legacy inbound bot runtime retired |
 | `app/bootstrap_games.php` | Games | Games | removed | Games runtime removed 2026-08-28 |
 | `app/bootstrap_cli.php` | CLI | Platform | removed | Symfony Console owns operational/admin commands |
-| `bin/telegram-webhook.php` | Telegram | Operations | keep | explicit webhook runner |
+| `bin/telegram-webhook.php` | Telegram | Operations | removed | inbound bot/webhook retired |
 | `bin/telegram-worker.php` | Telegram | Operations | keep | supervised worker; next runtime-retirement slice |
 | `bin/migrate.php` | deployment | Platform | keep | framework-neutral schema migration bootstrap for compatibility stack |
 | `bin/integration-worker.php` | integrations | Operations | removed | Symfony `cos:integration:n8n:process` + `integration-worker` service |
