@@ -31,6 +31,23 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return false;
         }
 
+        if (str_starts_with($path, '/api/spatial/')) {
+            if ($path === '/api/spatial/auth/token'
+                || preg_match('/^Bearer\\s+\\S+$/i', trim((string) $request->headers->get('Authorization', ''))) === 1) {
+                return false;
+            }
+
+            $publicScene = $request->isMethod('GET')
+                && preg_match('#^/api/spatial/scenes/[A-Za-z0-9-]+$#', $path) === 1;
+            $publicEvent = $request->isMethod('POST') && $path === '/api/spatial/events';
+            if (($publicScene || $publicEvent)
+                && (string) $request->cookies->get($this->sessions->cookieName(), '') === '') {
+                return false;
+            }
+
+            return true;
+        }
+
         return str_starts_with($path, '/api/v1');
     }
 
