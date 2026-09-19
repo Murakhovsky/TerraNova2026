@@ -1,0 +1,144 @@
+{
+  "schema_version": 4,
+  "id": "service.request-to-close",
+  "title": "Service Request → Ticket Close",
+  "domain": "service",
+  "state": "as-is",
+  "workflow": "02-workflows/service-request-to-close.md",
+  "trigger": "A service request requires tracked ownership, SLA control and resolution",
+  "outcomes": [
+    "Service request and case are traceable",
+    "Ticket ownership and SLA history are preserved",
+    "Escalations are explicit and ordered",
+    "Resolution is recorded before close",
+    "Request and case close automatically when their tickets are complete"
+  ],
+  "actors": [
+    "service manager",
+    "service assignee",
+    "requester"
+  ],
+  "steps": [
+    {
+      "id": "create-request",
+      "label": "Create Service Request",
+      "kind": "state",
+      "owner": "service manager",
+      "domain": "service",
+      "capability": "service.request",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function createRequest("
+        }
+      ]
+    },
+    {
+      "id": "create-ticket",
+      "label": "Create Service Ticket",
+      "kind": "state",
+      "owner": "service manager",
+      "domain": "service",
+      "capability": "service.ticket",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function createTicket("
+        }
+      ]
+    },
+    {
+      "id": "assign-ticket",
+      "label": "Assign Ticket",
+      "kind": "state",
+      "owner": "service manager",
+      "domain": "service",
+      "capability": "service.assignment",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function assignTicket("
+        }
+      ]
+    },
+    {
+      "id": "set-sla",
+      "label": "Set SLA",
+      "kind": "state",
+      "owner": "service manager",
+      "domain": "service",
+      "capability": "service.sla",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function setSla("
+        }
+      ]
+    },
+    {
+      "id": "escalate",
+      "label": "Escalate Ticket",
+      "kind": "operation",
+      "owner": "service manager",
+      "domain": "service",
+      "capability": "service.escalation",
+      "critical": false,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function escalate("
+        }
+      ]
+    },
+    {
+      "id": "resolve",
+      "label": "Resolve Ticket",
+      "kind": "outcome",
+      "owner": "service assignee",
+      "domain": "service",
+      "capability": "service.resolution",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function resolve("
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "label": "Close Ticket",
+      "kind": "outcome",
+      "owner": "service manager",
+      "domain": "service",
+      "capability": "service.ticket",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Service/Application/Service/ServiceWorkflowService.php",
+          "symbol": "function close("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "create-request", "to": "create-ticket" },
+    { "from": "create-ticket", "to": "assign-ticket" },
+    { "from": "assign-ticket", "to": "set-sla" },
+    { "from": "set-sla", "to": "resolve", "label": "normal path" },
+    { "from": "set-sla", "to": "escalate", "label": "risk / SLA breach" },
+    { "from": "escalate", "to": "resolve" },
+    { "from": "resolve", "to": "close" }
+  ]
+}
