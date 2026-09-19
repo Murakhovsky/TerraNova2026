@@ -6,31 +6,36 @@ $assert = static function (bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
 };
 
-$bootstrap = (string) file_get_contents($root . '/app/bootstrap_cli.php');
-$services = (string) file_get_contents($root . '/app/Bootstrap/SalesServices.php');
+$command = (string) file_get_contents($root . '/symfony/src/Command/KernelWorkerCommand.php');
+$services = (string) file_get_contents($root . '/symfony/config/services.yaml');
 $agent = (string) file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php');
-$worker = (string) file_get_contents($root . '/app/Interfaces/Cli/Task/WorkerTask.php');
+$legacyCompose = (string) file_get_contents($root . '/docker-compose.yml');
 
-$assert(str_contains($bootstrap, 'FactoryDefault'), 'CLI bootstrap must use the CLI DI container.');
-$assert(str_contains($worker, "getShared('cosWorkerSupervisor')"), 'Worker task must resolve the canonical worker supervisor.');
+$assert(str_contains($command, 'WorkerSupervisor'), 'Symfony Kernel worker command must use the canonical WorkerSupervisor.');
+$assert(str_contains($command, "name: 'cos:kernel:worker'"), 'Canonical Kernel worker command name is missing.');
+foreach ([
+    'Kernel\\Operations\\Service\\WorkerSupervisor:',
+    'Kernel\\Queue\\Service\\QueueWorker:',
+    'Kernel\\Queue\\Service\\JobHandlerRegistry:',
+    'Kernel\\Queue\\Handler\\AgentRunJobHandler:',
+    'runtime.sales_crm_job_handler:',
+] as $needle) {
+    $assert(str_contains($services, $needle), 'Symfony worker composition is missing: ' . $needle);
+}
 
-$agentRegistrationStart = strpos($services, "$di->setShared('salesAgentContextBuilder'");
-$domainRegistrationStart = strpos($services, "$di->setShared('salesDomainModule'");
-$assert($agentRegistrationStart !== false && $domainRegistrationStart !== false && $domainRegistrationStart > $agentRegistrationStart, 'Sales agent DI registration is missing.');
-$agentRegistration = substr($services, $agentRegistrationStart, $domainRegistrationStart - $agentRegistrationStart);
-
-$assert(str_contains($agentRegistration, "getShared('propertyReferencePort')"), 'Worker-safe Sales agent context must receive PropertyReferencePort.');
-$assert(!str_contains($agentRegistration, "getShared('salesPropertyReference')"), 'Worker-safe Sales agent context must not resolve request-scoped SalesPropertyReference.');
-$assert(!str_contains($agentRegistration, 'organizationContext'), 'Worker-safe Sales agent context must not resolve session-backed organizationContext.');
-$assert(!str_contains($agentRegistration, 'authService'), 'Worker-safe Sales agent context must not resolve web authentication.');
-$assert(!str_contains($agentRegistration, "getShared('session')"), 'Worker-safe Sales agent context must never resolve a web session.');
+$agentRegistration = strstr($services, 'Domains\\Sales\\Infrastructure\\Persistence\\MySql\\MysqlSalesAgentContextBuilder:', false);
+$assert(is_string($agentRegistration), 'Symfony Sales agent context registration is missing.');
+$agentRegistration = substr($agentRegistration, 0, 500);
+$assert(str_contains($agentRegistration, "PropertyReferencePort'"), 'Worker-safe Sales agent context must receive PropertyReferencePort.');
+$assert(!str_contains($agentRegistration, 'organizationContext'), 'Canonical worker must not resolve session-backed organizationContext.');
+$assert(!str_contains($agentRegistration, 'authService'), 'Canonical worker must not resolve web authentication.');
 
 $assert(str_contains($agent, 'PropertyReferencePort'), 'Sales agent context builder must depend on PropertyReferencePort.');
 $assert(str_contains($agent, '$invocation->organizationId'), 'Sales agent context builder must use AgentInvocation organizationId for tenant scope.');
-$assert(str_contains($agent, 'new SalesPropertyReference($this->properties, $invocation->organizationId)'), 'Sales agent Property adapter must be constructed with explicit invocation tenant scope.');
-
+$assert(str_contains($agent, 'new SalesPropertyReference($this->properties, $invocation->organizationId)'), 'Sales Property adapter must be constructed with explicit invocation tenant scope.');
 $assert(!str_contains($agent, 'organizationContext'), 'Sales agent context builder must remain independent from request/session organization context.');
 $assert(!str_contains($agent, 'authService'), 'Sales agent context builder must remain independent from web authentication.');
-$assert(!str_contains($agent, "getShared('session')"), 'Sales agent context builder must remain independent from web sessions.');
 
-echo "CLI worker tenant isolation contract passed.\n";
+$assert(!str_contains($legacyCompose, 'app/bootstrap_cli.php", "worker", "run'), 'Legacy Phalcon CLI worker must stay retired.');
+
+echo "Canonical worker tenant isolation contract passed.\n";
