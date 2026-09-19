@@ -1100,3 +1100,96 @@ services:
 
   Domains\Sales\Application\Contract\SalesTeamAdministrationInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration
+
+  # Runtime cleanup slice 3 — canonical module-control composition
+  Infrastructure\Platform\Persistence\MySql\Configuration\MysqlConfigurationStore:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Configuration\Contract\ConfigurationStoreInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlConfigurationStore
+
+  Kernel\Configuration\Service\ConfigurationValidator:
+    arguments:
+      $registry: '@Kernel\Module\DomainModuleRegistry'
+
+  Kernel\Configuration\Service\ConfigurationProvisioner:
+    arguments:
+      $registry: '@Kernel\Module\DomainModuleRegistry'
+      $validator: '@Kernel\Configuration\Service\ConfigurationValidator'
+      $store: '@Kernel\Configuration\Contract\ConfigurationStoreInterface'
+
+  Domains\Sales\Bootstrap\SalesModuleConfigurationProvisioner:
+    arguments:
+      $configuration: '@Kernel\Configuration\Service\ConfigurationProvisioner'
+
+  Domains\Property\Bootstrap\PropertyModuleConfigurationProvisioner:
+    arguments:
+      $configuration: '@Kernel\Configuration\Service\ConfigurationProvisioner'
+
+  Infrastructure\Platform\Persistence\MySql\Migration\SqlStatementSplitter: ~
+
+  Infrastructure\Platform\Persistence\MySql\Migration\MigrationRunner:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $directory: '%kernel.project_dir%/../app/migrations'
+      $splitter: '@Infrastructure\Platform\Persistence\MySql\Migration\SqlStatementSplitter'
+
+  Kernel\Database\MigrationRunnerInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Migration\MigrationRunner
+
+  Kernel\Module\ModuleLifecycleManager:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+      $states: '@Kernel\Module\Contract\ModuleStateRepositoryInterface'
+      $installations: '@Kernel\Module\Contract\ModuleLifecycleRepositoryInterface'
+
+  Kernel\Module\ModuleCapabilityRegistry:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+
+  Kernel\Module\EffectiveModuleContext:
+    arguments:
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $capabilities: '@Kernel\Module\ModuleCapabilityRegistry'
+
+  Kernel\Module\ModuleReadinessDiagnostic:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $migrations: '@Kernel\Database\MigrationRunnerInterface'
+
+  Kernel\Module\ModuleTenantProvisioner:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+      $migrations: '@Kernel\Database\MigrationRunnerInterface'
+      $configurationProvisioners:
+        - { module_id: 'property', service: '@Domains\Property\Bootstrap\PropertyModuleConfigurationProvisioner' }
+        - { module_id: 'sales', service: '@Domains\Sales\Bootstrap\SalesModuleConfigurationProvisioner' }
+
+  Kernel\Module\ModuleControlService:
+    arguments:
+      $lifecycle: '@Kernel\Module\ModuleLifecycleManager'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $provisioner: '@Kernel\Module\ModuleTenantProvisioner'
+
+  # Runtime cleanup slice 3 — Methodology Studio / Workbench composition
+  Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess:
+    arguments:
+      $database: '@legacy_cos.pdo'
+
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyWorkbenchRepository:
+    arguments:
+      $database: '@legacy_cos.pdo'
+
+  Domains\Diagnostic\Application\Contract\MethodologyWorkbenchRepositoryInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyWorkbenchRepository
+
+  Domains\Diagnostic\Application\Service\MethodologyWorkbenchService:
+    arguments:
+      $studio: '@Domains\Diagnostic\Application\Service\MethodologyStudioService'
+      $studioRepository: '@Domains\Diagnostic\Application\Contract\MethodologyStudioRepositoryInterface'
+      $workbenchRepository: '@Domains\Diagnostic\Application\Contract\MethodologyWorkbenchRepositoryInterface'

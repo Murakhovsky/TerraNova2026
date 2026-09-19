@@ -44,7 +44,7 @@ function ensureWorkbenchUi(){
 
 async function configureAccessButton(){
  try{
-   capabilities=await request('/api/admin/diagnostics/permissions');
+   capabilities=await request('/api/v1/admin/diagnostics/permissions');
    const button=q('[data-v055-action="permissions"]');if(button)button.hidden=!capabilities.publish;
    if(scenarioCache.length)renderScenarioManager();
    if(q('[data-v055-graph]'))renderDependencyGraph(true);
@@ -53,7 +53,7 @@ async function configureAccessButton(){
 
 async function loadScenarioManager(){
  const {pack,version:methodology}=context();if(!pack||!methodology)return;
- const data=await request(`/api/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios`);
+ const data=await request(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios`);
  scenarioCache=data.scenarios||[];renderScenarioManager();
 }
 
@@ -98,20 +98,20 @@ function openCloneDialog(id){
 
 async function runScenario(id){
  const {pack,version:methodology}=context();
- const data=await post(`/api/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios/${encodeURIComponent(id)}/run`);
+ const data=await post(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios/${encodeURIComponent(id)}/run`);
  notify(`${id}: ${data.result.status}`);await loadScenarioManager();
 }
 
 async function deleteScenario(id){
  if(!confirm(`Delete regression scenario ${id}?`))return;
  const {pack,version:methodology}=context();
- await post(`/api/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios/${encodeURIComponent(id)}/delete`);
+ await post(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios/${encodeURIComponent(id)}/delete`);
  notify('Scenario deleted');await loadScenarioManager();
 }
 
 async function loadDependencyEntities(){
  const {pack,version:methodology}=context();if(!pack||!methodology)return [];
- const data=await request(`/api/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/entities`);
+ const data=await request(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/entities`);
  return data.entities||[];
 }
 
@@ -146,7 +146,7 @@ async function renderDependencyGraph(force=false){
 
 async function removeDependency(id){
  const {pack,version:methodology}=context();
- await post(`/api/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/entities/dependency/${encodeURIComponent(id)}/delete`);
+ await post(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/entities/dependency/${encodeURIComponent(id)}/delete`);
  notify('Dependency removed');
  q('[data-version]')?.dispatchEvent(new Event('change',{bubbles:true}));
  setTimeout(()=>renderDependencyGraph(true),100);
@@ -198,7 +198,7 @@ function renderRunDetail(run){
 
 async function openRun(id){
  openDrawer('run-detail');const drawer=q('[data-drawer="run-detail"]');if(drawer)drawer.dataset.sessionId=id;const mount=q('[data-v055-run-detail]');mount.textContent='Loading run…';
- let run=runCache.get(id);if(!run){const data=await request(`/api/admin/diagnostics/runs/${encodeURIComponent(id)}/details`);run=data.run;runCache.set(id,run)}
+ let run=runCache.get(id);if(!run){const data=await request(`/api/v1/admin/diagnostics/runs/${encodeURIComponent(id)}/details`);run=data.run;runCache.set(id,run)}
  renderRunDetail(run);
 }
 
@@ -212,7 +212,7 @@ function enhanceRuns(){
  });
 }
 async function loadRunsEnhanced(){
- const data=await request('/api/admin/diagnostics/runs');window.__diagnosticRuns=data.runs||[];
+ const data=await request('/api/v1/admin/diagnostics/runs');window.__diagnosticRuns=data.runs||[];
  const mount=q('[data-runs]');if(!mount)return;
  mount.innerHTML=(data.runs||[]).map(x=>`<article class="run-item v055-row"><div><strong>${esc(x.target_subject_id)} · ${esc(x.pack_id)} v${esc(x.methodology_version)}</strong><br><span>${esc(x.status)} · coverage ${x.coverage===null?'n/a':esc(x.coverage)+'%'} · findings ${esc(x.findings)} · critical ${esc(x.critical_findings)}</span><br><small>${esc(x.started_at||'Not started')}</small></div><button type="button" data-v055-open-run="${esc(x.session_id)}" ${capabilities.edit?'':'disabled'}>Open details</button></article>`).join('')||'No diagnostic runs yet.';
 }
@@ -228,7 +228,7 @@ function renderPermissions(matrix){
  mount.innerHTML=`<div class="v055-table-scroll"><table><thead><tr><th>User</th><th>Role</th><th>Capabilities</th></tr></thead><tbody>${(matrix.users||[]).map(user=>`<tr><td><strong>${esc(user.full_name)}</strong><br><small>${esc(user.email)} · #${esc(user.user_id)}</small></td><td>${esc(user.role)}</td><td>${permissions.map(p=>permissionSelect(user,p)).join('')}</td></tr>`).join('')}</tbody></table></div>
   <h3>Permission audit</h3>${(matrix.audit||[]).map(row=>`<article class="v055-line"><strong>${esc(row.target_name||'#'+row.target_user_id)}</strong><span>${esc(row.permission)}: ${esc(row.old_mode)} → ${esc(row.new_mode)}</span><small>by ${esc(row.actor_name||'#'+row.actor_user_id)} · ${esc(row.created_at)}</small></article>`).join('')||'<p>No permission changes recorded.</p>'}`;
 }
-async function openPermissions(){openDrawer('permissions');const data=await request('/api/admin/diagnostics/permissions/matrix');renderPermissions(data.matrix)}
+async function openPermissions(){openDrawer('permissions');const data=await request('/api/v1/admin/diagnostics/permissions/matrix');renderPermissions(data.matrix)}
 
 ensureWorkbenchUi();configureAccessButton();
 
@@ -259,7 +259,7 @@ root.addEventListener('change',async event=>{
  if(event.target.matches('[data-version]')){scenarioCache=[];setTimeout(()=>renderDependencyGraph(true),120)}
  if(event.target.matches('[data-v055-permission]')){
   try{
-   const data=await post('/api/admin/diagnostics/permissions/override',{target_user_id:Number(event.target.dataset.user),permission:event.target.dataset.permission,mode:event.target.value});
+   const data=await post('/api/v1/admin/diagnostics/permissions/override',{target_user_id:Number(event.target.dataset.user),permission:event.target.dataset.permission,mode:event.target.value});
    renderPermissions(data.matrix);await configureAccessButton();notify('Permission updated');
   }catch(error){notify(error.message,true);await openPermissions()}
  }
@@ -269,7 +269,7 @@ document.querySelector('[data-v055-clone-form]')?.addEventListener('submit',asyn
  if(event.submitter?.value==='cancel')return;event.preventDefault();
  const form=event.currentTarget,dialog=form.closest('dialog'),fd=new FormData(form),{pack,version:methodology}=context();
  try{
-  await post(`/api/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios/${encodeURIComponent(fd.get('source'))}/clone`,{id:fd.get('id'),name:fd.get('name')});
+  await post(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(pack)}/versions/${encodeURIComponent(methodology)}/workbench/scenarios/${encodeURIComponent(fd.get('source'))}/clone`,{id:fd.get('id'),name:fd.get('name')});
   dialog.close();notify('Scenario cloned');await loadScenarioManager();
  }catch(error){notify(error.message,true)}
 });

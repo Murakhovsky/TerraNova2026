@@ -57,7 +57,7 @@ async function loadCriteria(){
  const version=q('[data-version]')?.value||'';
  if(!currentPack||!version)return [];
  const key=currentPack+'|'+version;if(criteriaCacheKey===key)return criteria;
- const response=await fetch(`/api/admin/diagnostics/packs/${encodeURIComponent(currentPack)}/versions/${encodeURIComponent(version)}/entities`,{headers:{'Accept':'application/json'}});
+ const response=await fetch(`/api/v1/admin/diagnostics/packs/${encodeURIComponent(currentPack)}/versions/${encodeURIComponent(version)}/entities`,{headers:{'Accept':'application/json'}});
  const payload=await response.json();
  if(!response.ok||!payload.ok)throw new Error(payload.error||'Unable to load methodology entities.');
  methodologyEntities=payload.data?.entities||[];criteria=methodologyEntities.filter(row=>row.entity_type==='CRITERION');criteriaCacheKey=key;return criteria;

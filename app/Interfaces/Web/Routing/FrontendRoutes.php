@@ -61,34 +61,6 @@ final class FrontendRoutes
         self::add($router, 'add', '/cos/{lang:[a-z]{2}}/domains/{slug:[a-z0-9-]+}', 'Interfaces\\Web\\Controller', 'company_os', 'domain');
         self::add($router, 'add', '/cos/control-center', 'Interfaces\\Web\\Controller', 'cos', 'index');
 
-        self::add($router, 'addGet', '/api/health', 'Interfaces\\Api\\Controller', 'health', 'index');
-        self::add($router, 'addGet', '/api/admin/diagnostics/packs', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'packs');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'packs');
-        self::add($router, 'addGet', '/api/admin/diagnostics/history', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'history');
-        self::add($router, 'addGet', '/api/admin/diagnostics/runs', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'runs');
-        self::add($router, 'addGet', '/api/admin/diagnostics/permissions', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'permissions');
-        self::add($router, 'addGet', '/api/admin/diagnostics/permissions/matrix', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'permissionMatrix');
-        self::add($router, 'addPost', '/api/admin/diagnostics/permissions/override', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'permissionOverride');
-        self::add($router, 'addGet', '/api/admin/diagnostics/runs/{session:[a-zA-Z0-9_.:-]+}/details', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'run');
-        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'pack');
-        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'versions');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities/{type:[a-z_]+}', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'entity');
-        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'entities');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/entities/{type:[a-z_]+}/{entity:[a-z0-9_.-]+}/delete', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'deleteEntity');
-        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/scenarios', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'scenarios');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/scenarios', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'scenario');
-        self::add($router, 'addGet', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/workbench/scenarios', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'scenarios');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/workbench/scenarios/{scenario:[a-z0-9_.-]+}/delete', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'deleteScenario');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/workbench/scenarios/{scenario:[a-z0-9_.-]+}/clone', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'cloneScenario');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/workbench/scenarios/{scenario:[a-z0-9_.-]+}/run', 'Interfaces\\Api\\Controller', 'diagnostic_methodology_workbench', 'runScenario');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/validate', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'validate');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/simulate', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'simulate');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/clone', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'clone');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/publish', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'publish');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/regression', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'regression');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/archive', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'archive');
-        self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/activate', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'activate');
-
         foreach (['economy', 'games', 'users'] as $deprecatedModule) {
             self::add($router, 'add', '/' . $deprecatedModule, 'Interfaces\\Web\\Controller', 'deprecated_module', 'gone');
             self::add($router, 'add', '/' . $deprecatedModule . '/{path:.*}', 'Interfaces\\Web\\Controller', 'deprecated_module', 'gone');
