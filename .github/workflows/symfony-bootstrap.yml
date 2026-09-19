@@ -180,6 +180,20 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/documents_wave10.sql
 
+      - name: Apply Service Wave 11 migration
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "CREATE TABLE IF NOT EXISTS tn_migrations (
+              id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+              migration VARCHAR(160) NOT NULL,
+              applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (id),
+              UNIQUE KEY uq_tn_migrations_migration (migration)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < app/migrations/20260919_000064_service_wave11_cutover.sql
+
       - name: Verify Doctrine MySQL persistence boundary
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -1194,6 +1208,237 @@ jobs:
           test "$document_audit" = "8"
 
           echo "Documents Wave 10 HTTP → CQRS → Platform runtime → Storage/MySQL → Events/Audit passed."
+
+      - name: Verify Service Wave 11 business cutover
+        run: |
+          php tests/architecture/service_wave11_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_request_create' /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_ticket_create' /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_ticket_assign' /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_ticket_sla' /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_ticket_escalate' /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_ticket_resolve' /tmp/wave11-routes.txt
+          grep -q 'cos_api_v1_service_ticket_close' /tmp/wave11-routes.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+          request_payload='{"subject":"Wave 11 customer issue","summary":"Customer needs service coordination","requester_ref":"person:101"}'
+
+          status=$(curl --silent --show-error --output /tmp/wave11-request.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-request' \
+            -H 'X-Idempotency-Key: wave11-request-001' \
+            -H 'Content-Type: application/json' \
+            --data "$request_payload" \
+            http://127.0.0.1:8081/api/v1/service/requests)
+          echo "Wave 11 Request HTTP $status"; cat /tmp/wave11-request.json; echo
+          test "$status" = "201"
+          service_request_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave11-request.json"),true); echo (string)($j["data"]["request_id"]??"");')
+          service_case_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave11-request.json"),true); echo (string)($j["data"]["case_id"]??"");')
+          test -n "$service_request_id"
+          test -n "$service_case_id"
+
+          status=$(curl --silent --show-error --output /tmp/wave11-request-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-request-001' \
+            -H 'Content-Type: application/json' \
+            --data "$request_payload" \
+            http://127.0.0.1:8081/api/v1/service/requests)
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave11-request-replay.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-request-conflict.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-request-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"subject":"DIFFERENT","summary":"different"}' \
+            http://127.0.0.1:8081/api/v1/service/requests)
+          test "$status" = "409"
+
+          status=$(curl --silent --show-error --output /tmp/wave11-missing-key.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'Content-Type: application/json' \
+            --data '{"subject":"Missing key"}' \
+            http://127.0.0.1:8081/api/v1/service/requests)
+          test "$status" = "422"
+
+          status=$(curl --silent --show-error --output /tmp/wave11-realtor-denied.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-realtor-denied' \
+            -H 'Content-Type: application/json' \
+            --data '{"subject":"Denied"}' \
+            http://127.0.0.1:8081/api/v1/service/requests)
+          test "$status" = "403"
+
+          ticket_payload='{"subject":"Restore customer service","priority":"high","reference":"SRV-WAVE11-001"}'
+          status=$(curl --silent --show-error --output /tmp/wave11-ticket.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-ticket' \
+            -H 'X-Idempotency-Key: wave11-ticket-001' \
+            -H 'Content-Type: application/json' \
+            --data "$ticket_payload" \
+            "http://127.0.0.1:8081/api/v1/service/requests/$service_request_id/tickets")
+          echo "Wave 11 Ticket HTTP $status"; cat /tmp/wave11-ticket.json; echo
+          test "$status" = "201"
+          service_ticket_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave11-ticket.json"),true); echo (string)($j["data"]["ticket_id"]??"");')
+          test -n "$service_ticket_id"
+          grep -q '"status":"open"' /tmp/wave11-ticket.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-close-too-early.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-close-001' \
+            -H 'Content-Type: application/json' \
+            --data '{}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/close")
+          test "$status" = "409"
+          grep -q 'must be resolved before close' /tmp/wave11-close-too-early.json
+
+          assign_payload='{"assignee_id":"user:1001"}'
+          status=$(curl --silent --show-error --output /tmp/wave11-assign.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-assign' \
+            -H 'X-Idempotency-Key: wave11-assign-001' \
+            -H 'Content-Type: application/json' \
+            --data "$assign_payload" \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/assignments")
+          echo "Wave 11 Assign HTTP $status"; cat /tmp/wave11-assign.json; echo
+          test "$status" = "200"
+          grep -q '"status":"assigned"' /tmp/wave11-assign.json
+          grep -q '"assignee_id":"user:1001"' /tmp/wave11-assign.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-assign-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-assign-001' \
+            -H 'Content-Type: application/json' \
+            --data "$assign_payload" \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/assignments")
+          test "$status" = "200"
+          grep -q '"replayed":true' /tmp/wave11-assign-replay.json
+
+          sla_payload='{"name":"Priority Support","response_minutes":30,"resolution_minutes":120}'
+          status=$(curl --silent --show-error --output /tmp/wave11-sla.json --write-out '%{http_code}' \
+            --request PUT \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-sla' \
+            -H 'X-Idempotency-Key: wave11-sla-001' \
+            -H 'Content-Type: application/json' \
+            --data "$sla_payload" \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/sla")
+          echo "Wave 11 SLA HTTP $status"; cat /tmp/wave11-sla.json; echo
+          test "$status" = "200"
+          grep -q '"sla_name":"Priority Support"' /tmp/wave11-sla.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-escalate.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-escalate' \
+            -H 'X-Idempotency-Key: wave11-escalate-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"reason":"SLA risk"}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/escalations")
+          echo "Wave 11 Escalate HTTP $status"; cat /tmp/wave11-escalate.json; echo
+          test "$status" = "200"
+          grep -q '"status":"escalated"' /tmp/wave11-escalate.json
+          grep -q '"escalation_level":1' /tmp/wave11-escalate.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-resolve.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-resolve' \
+            -H 'X-Idempotency-Key: wave11-resolve-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"summary":"Customer service restored"}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/resolution")
+          echo "Wave 11 Resolve HTTP $status"; cat /tmp/wave11-resolve.json; echo
+          test "$status" = "200"
+          grep -q '"status":"resolved"' /tmp/wave11-resolve.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-assign-after-resolve.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-assign-after-resolve' \
+            -H 'Content-Type: application/json' \
+            --data '{"assignee_id":"user:1002"}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/assignments")
+          test "$status" = "409"
+
+          status=$(curl --silent --show-error --output /tmp/wave11-close.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave11-close' \
+            -H 'X-Idempotency-Key: wave11-close-001' \
+            -H 'Content-Type: application/json' \
+            --data '{}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/close")
+          echo "Wave 11 Close HTTP $status"; cat /tmp/wave11-close.json; echo
+          test "$status" = "200"
+          grep -q '"status":"closed"' /tmp/wave11-close.json
+          grep -q '"request_status":"closed"' /tmp/wave11-close.json
+          grep -q '"case_status":"closed"' /tmp/wave11-close.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-request-view.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            "http://127.0.0.1:8081/api/v1/service/requests/$service_request_id")
+          test "$status" = "200"
+          WAVE11_REQUEST="$service_request_id" WAVE11_CASE="$service_case_id" php -r '
+            $j=json_decode(file_get_contents("/tmp/wave11-request-view.json"),true,512,JSON_THROW_ON_ERROR);
+            $d=$j["data"]??[];
+            if (($d["request_id"]??null)!==getenv("WAVE11_REQUEST")) exit(61);
+            if (($d["case_id"]??null)!==getenv("WAVE11_CASE")) exit(62);
+            if (($d["status"]??null)!=="closed") exit(63);
+            if (($d["case_status"]??null)!=="closed") exit(64);
+            if (count($d["tickets"]??[])!==1) exit(65);
+          '
+
+          status=$(curl --silent --show-error --output /tmp/wave11-cross-tenant.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-other-manager0003' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id")
+          test "$status" = "404"
+
+          counts=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT CONCAT(
+              (SELECT COUNT(*) FROM tn_service_cases WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_requests WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_tickets WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_assignments WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_slas WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_escalations WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_resolutions WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM tn_service_operation_receipts WHERE organization_id='default')
+            );" | tr -d '[:space:]')
+          test "$counts" = "1|1|1|1|1|1|1|7"
+
+          service_events=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(DISTINCT type) FROM cos_events WHERE organization_id='default' AND type IN (
+              'service.request.created','service.ticket.created','service.ticket.assigned','service.sla.set',
+              'service.ticket.escalated','service.ticket.resolved','service.ticket.closed'
+            );" | tr -d '[:space:]')
+          test "$service_events" = "7"
+
+          service_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND category='service.mutation';" | tr -d '[:space:]')
+          test "$service_audit" = "7"
+
+          migration_count=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_migrations WHERE migration='20260919_000064_service_wave11_cutover';" | tr -d '[:space:]')
+          test "$migration_count" = "1"
+
+          echo "Service Wave 11 HTTP → CQRS → Domain → MySQL → Events/Audit runtime passed."
 
       - name: Verify Sales Wave 3 deterministic automation cutover
         run: |
