@@ -8,7 +8,7 @@ final class PdoConnection
 {
     private ?PDO $connection = null;
 
-    public function __construct(private object|PDO $config)
+    public function __construct(private object $config)
     {
         if ($config instanceof PDO) {
             $config->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
