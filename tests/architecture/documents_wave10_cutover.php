@@ -45,7 +45,7 @@ foreach(['PDO','Symfony\\','Infrastructure\\','Domains\\'] as $forbidden){
 $repository=$read('app/Infrastructure/Platform/Persistence/MySql/Documents/MysqlDocumentsRepository.php');
 foreach([
     'organization_id=:organization_id','FOR UPDATE','INSERT IGNORE INTO cos_document_relations',
-    'INSERT IGNORE INTO cos_document_signatures',"status='signed'","status='archived'",
+    'INSERT IGNORE INTO cos_document_signatures',"status=\\'signed\\'","status=\\'archived\\'",
 ] as $needle){
     $assert(str_contains($repository,$needle),'Documents persistence hardening missing: '.$needle);
 }
