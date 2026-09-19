@@ -1406,10 +1406,6 @@ services:
 
 
   # Final Telegram worker retirement — outbound notifications run without Phalcon DI.
-  Infrastructure\Platform\Persistence\Pdo\PdoConnection:
-    arguments:
-      $config: '@legacy_cos.pdo'
-
   Infrastructure\Integration\Telegram\TelegramAutomationService:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
