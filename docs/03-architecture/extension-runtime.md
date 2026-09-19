@@ -71,9 +71,10 @@ Kernel зберігає тільки generic extension identity:
 `api.routes`:
 
 ```text
-diagnosticRouteContributor
 propertyRouteContributor
 ```
+
+Diagnostic HTTP/SSR routes, like Sales, are canonical in Symfony router and no longer use the Phalcon `api.routes` contribution.
 
 `event.consumers`:
 
