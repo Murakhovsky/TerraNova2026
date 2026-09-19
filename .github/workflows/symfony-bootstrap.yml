@@ -64,6 +64,9 @@ jobs:
       SPATIAL_JWT_TTL: "28800"
       SPATIAL_BLENDER_BINARY: ""
       SPATIAL_GLTF_TRANSFORM_BINARY: ""
+      APP_URL: "http://127.0.0.1:8080"
+      TELEGRAM_BOT_TOKEN: ""
+      TELEGRAM_BOT_NAME: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -297,6 +300,8 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:kernel:version'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:architecture:smoke'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:diagnostic:sales-methodology:import-v02'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:telegram:process'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:telegram:health'"
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:architecture:smoke
 
       - name: Verify Sales strangler slice
