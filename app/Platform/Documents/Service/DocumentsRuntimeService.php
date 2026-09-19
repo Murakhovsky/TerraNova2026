@@ -247,6 +247,9 @@ final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
                 $documentTitle=$title!==''?$this->clip($title,220):$this->clip((string)$template['name'],220);
                 $mimeType=$this->nonEmpty((string)$template['mime_type'],'template mime type',120);
                 $body=$this->render((string)$template['body'],$variables);
+                if(strlen($body)>self::MAX_CONTENT_BYTES){
+                    throw new InvalidArgumentException('Generated Document content exceeds the 10 MiB limit.');
+                }
                 $filename=$requestedFilename!==''?$this->filename($requestedFilename):$this->filename(
                     $this->render((string)($template['filename_pattern']?:($template['name'].'.txt')),$variables)
                 );
@@ -353,6 +356,12 @@ final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
             }
             $existing=$this->documents->findSignature($organizationId,$signatureId)
                 ?? throw new InvalidArgumentException('Signature request was not found.');
+            $documentId=(string)($existing['document_id']??'');
+            $document=$this->documents->view($organizationId,$documentId)
+                ?? throw new InvalidArgumentException('Document was not found.');
+            if((string)($document['status']??'')==='archived'){
+                throw new InvalidArgumentException('Archived Document cannot be signed.');
+            }
             if((string)($existing['status']??'')==='signed'){
                 if((string)($existing['signed_by']??'')!==$signedBy
                     ||(string)($existing['signature_reference']??'')!==$signatureReference){
@@ -365,7 +374,6 @@ final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
             }
             $signature=$this->documents->findSignature($organizationId,$signatureId)
                 ?? throw new InvalidArgumentException('Signed Signature could not be read back.');
-            $documentId=(string)$signature['document_id'];
             $this->publish(DocumentsEventType::SIGNED,$organizationId,$documentId,[
                 'signature_id'=>$signatureId,'signer_id'=>$signature['signer_id']??null,'signed_by'=>$signedBy,
             ],$actorId,$correlationId);
