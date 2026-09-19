@@ -1398,6 +1398,9 @@ services:
 
   Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper: ~
 
+  Kernel\Visualization\Graph\GraphPayloadMapperInterface:
+    alias: Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper
+
   App\Command\ImportSalesMethodologyV02Command:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
