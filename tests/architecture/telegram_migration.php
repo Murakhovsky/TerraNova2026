@@ -19,9 +19,28 @@ foreach ([
     'app/Infrastructure/Framework/PhalconEventService.php',
     'app/Infrastructure/Security/TelegramAccessPolicy.php',
     'bin/telegram-webhook.php',
+    'bin/telegram-worker.php',
+    'bin/telegram-health.php',
 ] as $path) {
     $assert(!file_exists($root . '/' . $path), 'Retired Telegram/Phalcon runtime restored: ' . $path);
 }
+
+$outboxCommand = (string) file_get_contents($root . '/symfony/src/Command/TelegramOutboxCommand.php');
+$healthCommand = (string) file_get_contents($root . '/symfony/src/Command/TelegramHealthCommand.php');
+foreach ([
+    "name: 'cos:telegram:process'",
+    'TelegramAutomationProcessor',
+    'TELEGRAM_BOT_TOKEN',
+] as $needle) {
+    $assert(str_contains($outboxCommand, $needle), 'Canonical Telegram outbox command is missing: ' . $needle);
+}
+$assert(str_contains($healthCommand, "name: 'cos:telegram:health'"), 'Canonical Telegram health command is missing.');
+$assert(!str_contains($outboxCommand, 'Phalcon\\'), 'Canonical Telegram outbox command depends on Phalcon.');
+$assert(!str_contains($healthCommand, 'Phalcon\\'), 'Canonical Telegram health command depends on Phalcon.');
+
+$compose = (string) file_get_contents($root . '/docker-compose.symfony.yml');
+$assert(str_contains($compose, "telegram-worker:\n"), 'Canonical Symfony Telegram worker service is missing.');
+$assert(str_contains($compose, 'cos:telegram:process --schedule --limit=50'), 'Telegram worker must process reminders and outbox through Symfony.');
 
 $webhook = (string) file_get_contents($root . '/public/tgAdmin_webhook.php');
 $assert(str_contains($webhook, 'http_response_code(410)'), 'Stale public Telegram webhook tombstone must remain HTTP 410.');
@@ -49,4 +68,4 @@ $routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/CoreWe
 $assert(!str_contains($routes, 'telegramConnect'), 'Cabinet still exposes retired Telegram connect route.');
 $assert(!str_contains($routes, 'telegramDisconnect'), 'Cabinet still exposes retired Telegram disconnect route.');
 
-echo "Telegram architecture passed: Phalcon inbound bot retired, outbound notification channel retained.\n";
+echo "Telegram architecture passed: inbound Phalcon bot and standalone workers retired; outbound channel is canonical on Symfony.\n";

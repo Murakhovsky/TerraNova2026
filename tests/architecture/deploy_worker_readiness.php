@@ -26,11 +26,11 @@ foreach ([
 }
 
 foreach ([
-    'for service in worker kernel-worker spatial-worker integration-worker scheduler; do',
+    'for service in worker kernel-worker spatial-worker integration-worker telegram-worker scheduler; do',
     'Symfony $service container is missing.',
     '{{.State.Running}}',
     '{{.RestartCount}}',
-    'Messenger, Kernel, Spatial, integration workers and Symfony Scheduler are healthy.',
+    'Messenger, Kernel, Spatial, integration, Telegram workers and Symfony Scheduler are healthy.',
 ] as $needle) {
     if (!str_contains($symfonyDeploy, $needle)) {
         throw new RuntimeException('Canonical Kernel worker deployment readiness contract is missing: ' . $needle);
@@ -50,6 +50,12 @@ if (is_file($root . '/bin/integration-worker.php')) {
 
 if (is_file($root . '/bin/apply-migration.php')) {
     throw new RuntimeException('Retired runtime entrypoint restored: bin/apply-migration.php');
+}
+if (is_file($root . '/bin/telegram-worker.php')) {
+    throw new RuntimeException('Retired runtime entrypoint restored: bin/telegram-worker.php');
+}
+if (is_file($root . '/bin/telegram-health.php')) {
+    throw new RuntimeException('Retired runtime entrypoint restored: bin/telegram-health.php');
 }
 
 if (!str_contains($workflow, 'bash deploy/dev.sh')) {
