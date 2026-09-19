@@ -220,7 +220,7 @@ jobs:
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "cd $REMOTE_PATH && bash deploy/configure-company-os-http.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+            "cd $REMOTE_PATH && bash deploy/configure-company-os-http.sh $REMOTE_DOMAIN 127.0.0.1:8080 127.0.0.1:8081"
 
       - name: Deploy containers and database migrations
         run: |
@@ -237,7 +237,7 @@ jobs:
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+            "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080 127.0.0.1:8081"
 
       - name: External HTTPS application health check
         run: |
