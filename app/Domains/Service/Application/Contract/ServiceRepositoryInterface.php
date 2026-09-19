@@ -11,6 +11,9 @@ interface ServiceRepositoryInterface
     /** @return array<string,mixed>|null */
     public function viewRequest(string $organizationId, string $requestId): ?array;
 
+    /** @return array<string,mixed> */
+    public function lockRequest(string $organizationId, string $requestId): array;
+
     /** @param array<string,mixed> $ticket */
     public function createTicket(array $ticket): void;
 
