@@ -61,7 +61,7 @@ with a different body returns HTTP 409.
 Manual editor changes create `content.changed` events in `tn_integration_outbox`. Run every minute:
 
 ```bash
-php bin/integration-worker.php --schedule-content --limit=50
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=50
 ```
 
 The worker retries delivery up to five times. n8n should use the `id` field from the envelope as
