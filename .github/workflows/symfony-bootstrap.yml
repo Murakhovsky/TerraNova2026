@@ -1327,6 +1327,28 @@ jobs:
           test "$status" = "200"
           grep -q '"replayed":true' /tmp/wave11-assign-replay.json
 
+          status=$(curl --silent --show-error --output /tmp/wave11-sla-invalid-type.json --write-out '%{http_code}' \
+            --request PUT \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-sla-invalid-type' \
+            -H 'Content-Type: application/json' \
+            --data '{"name":"Broken SLA","response_minutes":"invalid","resolution_minutes":120}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/sla")
+          test "$status" = "422"
+          grep -q 'response_minutes must be an integer' /tmp/wave11-sla-invalid-type.json
+
+          status=$(curl --silent --show-error --output /tmp/wave11-sla-fractional.json --write-out '%{http_code}' \
+            --request PUT \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave11-sla-fractional' \
+            -H 'Content-Type: application/json' \
+            --data '{"name":"Fractional SLA","response_minutes":30.5,"resolution_minutes":120}' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id/sla")
+          test "$status" = "422"
+          grep -q 'response_minutes must be an integer' /tmp/wave11-sla-fractional.json
+
           sla_payload='{"name":"Priority Support","response_minutes":30,"resolution_minutes":120}'
           status=$(curl --silent --show-error --output /tmp/wave11-sla.json --write-out '%{http_code}' \
             --request PUT \
