@@ -1369,3 +1369,36 @@ services:
   Domains\Sales\Application\Service\SalesHistoricalIntelligenceHealthService:
     arguments:
       $readModel: '@Domains\Sales\Application\Contract\SalesHistoricalIntelligenceHealthReadModelInterface'
+
+
+  # Final standalone-script retirement — Visualization and methodology operations.
+  App\Infrastructure\Visualization\ArchitectureGraphProviderFactory:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+      $runtimeModules: '@Kernel\Module\DomainModuleRegistry'
+
+  runtime.architecture_graph_provider:
+    class: Kernel\Visualization\Graph\GraphProviderInterface
+    factory: ['@App\Infrastructure\Visualization\ArchitectureGraphProviderFactory', 'create']
+
+  Kernel\Visualization\Graph\GraphProviderInterface:
+    alias: runtime.architecture_graph_provider
+
+  Infrastructure\Visualization\Architecture\ArchitectureProjectionRegistry:
+    factory: ['Infrastructure\Visualization\Architecture\ArchitectureProjectionRegistry', 'defaults']
+
+  Kernel\Visualization\Graph\GraphProjectionRegistryInterface:
+    alias: Infrastructure\Visualization\Architecture\ArchitectureProjectionRegistry
+
+  Infrastructure\Visualization\Architecture\ArchitectureGraphHealthAnalyzer: ~
+
+  Kernel\Visualization\Graph\GraphHealthAnalyzerInterface:
+    alias: Infrastructure\Visualization\Architecture\ArchitectureGraphHealthAnalyzer
+
+  Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper: ~
+
+  App\Command\ImportSalesMethodologyV02Command:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $studio: '@Domains\Diagnostic\Application\Service\MethodologyStudioService'
+      $rootDir: '%kernel.project_dir%/..'
