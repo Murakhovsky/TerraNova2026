@@ -5,6 +5,14 @@ on:
     branches: [main, migration/symfony]
     paths:
       - 'app/Platform/Documents/**'
+      - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
+      - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
+      - 'symfony/src/Application/Documents/**'
+      - 'symfony/src/Http/Api/V1/Controller/DocumentsController.php'
+      - 'symfony/config/services.yaml'
+      - 'symfony/config/routes.yaml'
+      - 'tests/architecture/documents_wave10_cutover.php'
       - 'tests/unit/platform_documents.php'
       - 'tests/architecture/platform_documents_boundaries.php'
       - 'docs/03-architecture/documents-capability.md'
@@ -13,6 +21,14 @@ on:
     branches: [main, migration/symfony]
     paths:
       - 'app/Platform/Documents/**'
+      - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
+      - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
+      - 'symfony/src/Application/Documents/**'
+      - 'symfony/src/Http/Api/V1/Controller/DocumentsController.php'
+      - 'symfony/config/services.yaml'
+      - 'symfony/config/routes.yaml'
+      - 'tests/architecture/documents_wave10_cutover.php'
       - 'tests/unit/platform_documents.php'
       - 'tests/architecture/platform_documents_boundaries.php'
       - 'docs/03-architecture/documents-capability.md'
@@ -30,5 +46,10 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: php tests/architecture/platform_documents_boundaries.php
+      - run: php tests/architecture/documents_wave10_cutover.php
       - run: php tests/unit/platform_documents.php
-      - run: find app/Platform/Documents -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Documents PHP lint
+        run: |
+          find app/Platform/Documents app/Infrastructure/Platform/Persistence/MySql/Documents symfony/src/Application/Documents -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l symfony/src/Http/Api/V1/Controller/DocumentsController.php
+          php -l app/Infrastructure/Platform/Persistence/TableOwnership.php

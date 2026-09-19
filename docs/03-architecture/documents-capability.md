@@ -2,7 +2,7 @@
 title: Platform Documents
 description: Архітектурна межа спільної document capability COS.
 status: active
-updated: 2026-09-18
+updated: 2026-09-19
 kind: architecture
 contract: architecture-v1
 ---
@@ -24,3 +24,55 @@ Documents не містить предметних правил договору
 - зовнішній e-signature provider є Infrastructure adapter;
 - Domain не залежить від SDK конкретного storage/signature сервісу;
 - Knowledge/RAG document projection не підміняє business-document source of truth.
+
+
+## Середовище виконання Wave 10
+
+Documents тепер має виконуваний Platform runtime, не перетворюючись на Domain:
+
+```text
+Symfony API / business Domain
+        ↓
+explicit Command / Query
+        ↓
+DocumentsRuntimeService
+        ↓
+DocumentsRepositoryInterface + FileStorageInterface
+        ↓
+MySQL metadata + Platform storage
+        ↓
+Event + Audit
+```
+
+Канонічні write-сценарії: Upload Document, Attach Document до business reference, Create Version, Generate From Template, Request Signature, Sign та Archive.
+
+`DocumentAttachmentPort` є стабільною межею для Sales, Property, HR, Finance та інших bounded contexts. Domain передає tenant, actor/correlation, `documentId` і власний business reference. Він не знає про `cos_document_*`, storage key або Symfony.
+
+## Інваріанти середовища виконання
+
+- усі записи tenant-scoped через `organization_id`;
+- consequential writes вимагають idempotency key;
+- один key + інший payload є conflict;
+- binary/content зберігається через `FileStorageInterface`, а не в бізнесових таблицях;
+- metadata, Version, Relation та Signature зберігаються окремо;
+- archive є terminal state для нових Version, Relation та Signature completion;
+- Version number серіалізується lock-ом документа;
+- DB mutation, Event і Audit відбуваються в одній transaction boundary;
+- якщо storage write відбувся, а DB transaction впала, runtime видаляє orphan file;
+- filename sanitization та 10 MiB limit застосовуються на Platform boundary;
+- template generation приймає лише scalar variables;
+- e-signature provider reference є evidence, а не provider SDK у Platform layer.
+
+## Постійний стан
+
+```text
+cos_documents
+cos_document_files
+cos_document_versions
+cos_document_relations
+cos_document_templates
+cos_document_signatures
+cos_document_operation_receipts
+```
+
+Ці таблиці належать `Platform`, а не окремому Documents Domain.

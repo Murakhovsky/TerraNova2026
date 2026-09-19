@@ -22,7 +22,7 @@
 | `Content` | залишити | керований контент, revision, scheduling, publication та SEO lifecycle |
 | `Identity` | залишити | account, organization membership, role, authentication та access lifecycle |
 | `Spatial` | залишити | scene, version, asset, capture, hotspot, processing та publication lifecycle |
-| `Documents` | Platform capability, не Domain | generic document/file/template/version/signature/relation/permission model |
+| `Documents` | Platform capability, не Domain | активний generic runtime для document/file/template/version/signature/relation/permission; бізнесові правила документа лишаються у відповідних Domains |
 | `Analytics` | не Domain | технічна telemetry/read projection у Platform/Infrastructure |
 | `Notification` | не Domain | delivery capability у Platform, провайдери в Infrastructure |
 
