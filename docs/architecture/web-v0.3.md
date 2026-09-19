@@ -59,7 +59,7 @@ Admin-only business configuration projection. Generic rules, agents, policies, a
 
 ## Workspace shell ownership
 
-Sales views no longer render `shared/manager_header` themselves. `SalesController` declares:
+Sales views no longer render `shared/manager_header` themselves. `App\Web\Sales\SalesPageController` declares the page model consumed by the framework-neutral PHTML renderer:
 
 - `workspaceSection = sales`
 - `workspaceActive = <screen>`
@@ -121,12 +121,36 @@ CI now verifies:
 2. The canonical Sales navigation exists for managers.
 3. Sales Admin is exposed only in admin navigation.
 4. `/sales/deals` exists.
-5. SalesController opts into the shared shell and feature bundle.
-6. Sales PHTML views do not render their own Workspace header.
+5. Symfony `SalesPageController` owns `/sales/*` HTML and opts into the shared shell and feature bundle.
+6. Sales PHTML views remain framework-neutral and do not resolve the service container.
 7. Sales feature source remains under `frontend/features/sales`.
+8. Phalcon `SalesController` and migrated `/sales/*` routes cannot be restored.
 
 ## Known next steps
 
 WEB V0.3 intentionally does not add another command layer for lead editing, task management or deal mutation beyond stage change. Those capabilities should be added only when canonical Sales application commands exist for them.
 
 The next interface stage should build Company Home as an aggregation surface over stable Domain read contracts, with Sales V0.3 serving as the reference implementation.
+
+
+## Runtime ownership after Symfony cutover
+
+The original WEB V0.3 PHTML and Vite assets are retained, but the Phalcon presentation runtime is not.
+
+Canonical flow:
+
+```text
+Host Nginx /sales/*
+  ↓
+Symfony Security legacy-session bridge
+  ↓
+App\Web\Sales\SalesPageController
+  ↓
+Sales Application/read-model services
+  ↓
+App\Web\Phtml\PhtmlRenderer
+  ↓
+existing PHTML + Vite assets
+```
+
+This avoids a pointless template rewrite while removing the framework dependency. Templates no longer use Phalcon DI/service locators.
