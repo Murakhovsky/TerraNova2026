@@ -5,6 +5,7 @@ namespace Infrastructure\Visualization\Cytoscape;
 
 use Kernel\Visualization\Graph\Edge;
 use Kernel\Visualization\Graph\Graph;
+use Kernel\Visualization\Graph\GraphPayloadMapperInterface;
 use Kernel\Visualization\Graph\Group;
 use Kernel\Visualization\Graph\Node;
 
