@@ -1084,3 +1084,46 @@ cos_spatial_event:
   path: /api/spatial/events
   controller: App\Http\Api\Spatial\SpatialController::event
   methods: [POST]
+
+
+# Final Web retirement — Sales SSR
+cos_web_sales_root:
+  path: /sales
+  controller: App\Web\Sales\SalesPageController::today
+  methods: [GET]
+
+cos_web_sales_dashboard:
+  path: /sales/dashboard
+  controller: App\Web\Sales\SalesPageController::dashboard
+  methods: [GET]
+
+cos_web_sales_today:
+  path: /sales/today
+  controller: App\Web\Sales\SalesPageController::today
+  methods: [GET]
+
+cos_web_sales_pipeline:
+  path: /sales/pipeline
+  controller: App\Web\Sales\SalesPageController::pipeline
+  methods: [GET]
+
+cos_web_sales_leads:
+  path: /sales/leads
+  controller: App\Web\Sales\SalesPageController::leads
+  methods: [GET]
+
+cos_web_sales_deals:
+  path: /sales/deals
+  controller: App\Web\Sales\SalesPageController::deals
+  methods: [GET]
+
+cos_web_sales_deal:
+  path: /sales/deals/{id}
+  controller: App\Web\Sales\SalesPageController::deal
+  methods: [GET]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_sales_director:
+  path: /sales/director
+  controller: App\Web\Sales\SalesPageController::director
+  methods: [GET]
