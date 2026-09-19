@@ -38,6 +38,11 @@ final class TelegramOutboxCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = trim($this->token);
+        if ($token !== '' && preg_match('/^[0-9]+:[A-Za-z0-9_-]+$/', $token) !== 1) {
+            $output->writeln('<error>TELEGRAM_BOT_TOKEN has an invalid format.</error>');
+            return Command::INVALID;
+        }
+
         if ($token === '') {
             $output->writeln(json_encode([
                 'disabled' => true,
@@ -82,7 +87,7 @@ final class TelegramOutboxCommand extends Command
                     $data['reply_markup'] = ['inline_keyboard' => $rows];
                 }
 
-                $curl = curl_init('https://api.telegram.org/bot' . rawurlencode($token) . '/sendMessage');
+                $curl = curl_init('https://api.telegram.org/bot' . $token . '/sendMessage');
                 curl_setopt_array($curl, [
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
