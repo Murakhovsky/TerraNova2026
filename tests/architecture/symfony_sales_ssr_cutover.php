@@ -9,7 +9,22 @@ $assert = static function(bool $condition, string $message): void {
     }
 };
 
-$assert(!file_exists($root . '/app/Interfaces/Web/Controller/SalesController.php'), 'Retired Phalcon SalesController restored.');
+foreach ([
+    'app/Interfaces/Web/Controller/SalesController.php',
+    'app/Interfaces/Web/Controller/SalesAdminController.php',
+    'app/Interfaces/Web/Controller/SalesAdminTeamController.php',
+    'app/Interfaces/Web/Controller/SalesAdminAgentController.php',
+    'app/Interfaces/Web/Controller/SalesAdminPolicyController.php',
+    'app/Interfaces/Web/Controller/SalesAdminHealthController.php',
+    'app/Interfaces/Web/Controller/SalesAdminIntegrationController.php',
+    'app/Interfaces/Web/Routing/SalesRoutes.php',
+    'app/Interfaces/Web/Routing/SalesTeamRoutes.php',
+    'app/Interfaces/Web/Routing/SalesIntegrationRoutes.php',
+    'app/Interfaces/Web/Routing/SalesAdministrationRoutes.php',
+    'app/Interfaces/Web/Routing/SalesModuleRouteContributor.php',
+] as $path) {
+    $assert(!file_exists($root . '/' . $path), 'Retired Phalcon Sales SSR artifact restored: ' . $path);
+}
 
 foreach ([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
@@ -18,6 +33,7 @@ foreach ([
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
     'symfony/src/Web/Sales/SalesPageController.php',
+    'symfony/src/Web/Sales/SalesAdminPageController.php',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, 'Phalcon\\'), 'Canonical Symfony Web layer depends on Phalcon: ' . $path);
@@ -48,6 +64,16 @@ foreach ([
     'cos_web_sales_deal:',
     'cos_web_sales_director:',
     'cos_web_sales_admin:',
+    'cos_web_sales_admin_pipelines_page:',
+    'cos_web_sales_admin_pipeline_page:',
+    'cos_web_sales_admin_rules_page:',
+    'cos_web_sales_admin_rule_page:',
+    'cos_web_sales_admin_agents_page:',
+    'cos_web_sales_admin_agent_page:',
+    'cos_web_sales_admin_actions_page:',
+    'cos_web_sales_admin_teams_page:',
+    'cos_web_sales_admin_integrations_page:',
+    'cos_web_sales_admin_health_page:',
 ] as $needle) {
     $assert(str_contains($routes, $needle), 'Canonical Symfony Sales page route is missing: ' . $needle);
 }
@@ -56,8 +82,8 @@ $legacyFrontendRoutes = $read('app/Interfaces/Web/Routing/FrontendRoutes.php');
 foreach (['/sales/dashboard', '/sales/pipeline', '/sales/today', '/sales/leads', '/sales/deals', '/sales/director', '/sales/admin'] as $path) {
     $assert(!str_contains($legacyFrontendRoutes, "'" . $path . "'"), 'Migrated Sales page route restored in Phalcon: ' . $path);
 }
-$legacySalesRoutes = $read('app/Interfaces/Web/Routing/SalesRoutes.php');
-$assert(!str_contains($legacySalesRoutes, "addGet('/sales'"), 'Migrated /sales root route restored in Phalcon.');
+$salesManifest = $read('app/Domains/Sales/module.php');
+$assert(!str_contains($salesManifest, "'salesRouteContributor'"), 'Sales manifest restored its retired Phalcon route contribution.');
 
 $phpImage = $read('docker/symfony/php/Dockerfile');
 $nginxImage = $read('docker/symfony/nginx/Dockerfile');
