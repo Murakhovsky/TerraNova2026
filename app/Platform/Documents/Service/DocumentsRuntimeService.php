@@ -129,9 +129,9 @@ final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
                     ?? throw new InvalidArgumentException('Document attachment receipt exists but relation was not found.'))
                     + ['replayed'=>true];
             }
-            $document=$this->documents->view($organizationId,$documentId)
-                ?? throw new InvalidArgumentException('Document was not found.');
-            if(($document['status']??null)==='archived')throw new InvalidArgumentException('Archived Document cannot be attached.');
+            if($this->documents->lockDocumentStatus($organizationId,$documentId)==='archived'){
+                throw new InvalidArgumentException('Archived Document cannot be attached.');
+            }
 
             if(!$this->documents->attach($organizationId,$relationId,$documentId,$relatedType,$relatedId,$actorId)){
                 throw new InvalidArgumentException('Document relation already exists.');
@@ -311,9 +311,9 @@ final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
                     ?? throw new InvalidArgumentException('Signature request receipt exists but Signature was not found.'))
                     + ['replayed'=>true];
             }
-            $document=$this->documents->view($organizationId,$documentId)
-                ?? throw new InvalidArgumentException('Document was not found.');
-            if(($document['status']??null)==='archived')throw new InvalidArgumentException('Archived Document cannot request signatures.');
+            if($this->documents->lockDocumentStatus($organizationId,$documentId)==='archived'){
+                throw new InvalidArgumentException('Archived Document cannot request signatures.');
+            }
             if(!$this->documents->createSignatureRequest($organizationId,$signatureId,$documentId,$signerId,$actorId)){
                 throw new InvalidArgumentException('Document signature request already exists.');
             }
@@ -357,9 +357,7 @@ final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
             $existing=$this->documents->findSignature($organizationId,$signatureId)
                 ?? throw new InvalidArgumentException('Signature request was not found.');
             $documentId=(string)($existing['document_id']??'');
-            $document=$this->documents->view($organizationId,$documentId)
-                ?? throw new InvalidArgumentException('Document was not found.');
-            if((string)($document['status']??'')==='archived'){
+            if($this->documents->lockDocumentStatus($organizationId,$documentId)==='archived'){
                 throw new InvalidArgumentException('Archived Document cannot be signed.');
             }
             if((string)($existing['status']??'')==='signed'){
