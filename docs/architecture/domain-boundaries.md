@@ -14,7 +14,7 @@
 | `Diagnostic` | залишити | methodology packs, sessions, evidence, findings, recommendations і traceability |
 | `Property` | залишити | canonical real-estate asset registry, identity, inventory, listing/publication, catalog та presentation |
 | `RealEstate` | додати як окремий Domain | brokerage case, mandate, showing, offer та інший брокерський lifecycle поверх Property references |
-| `Service` | V1 skeleton | service case, request, ticket, SLA, assignment, resolution |
+| `Service` | залишити, активний runtime Domain | service case, request, ticket, SLA, assignment, escalation, resolution та close lifecycle |
 | `Finance` | V1 skeleton | account, transaction, invoice, payment, budget, expense, revenue |
 | `Procurement` | V1 skeleton | supplier, purchase request, quote, order, delivery |
 | `HR` | V1 skeleton | employee, position, candidate, recruitment, onboarding, performance |
