@@ -22,7 +22,7 @@ generated: true
 | `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 18 |
 | `real_estate` | `0.2.0` | — | 6 |
 | `sales` | `0.8.6` | `salesModuleConfigurationProvisioner` | 10 |
-| `service` | `0.1.0` | — | 0 |
+| `service` | `0.2.0` | — | 7 |
 
 ## `construction`
 
@@ -76,4 +76,4 @@ generated: true
 
 - manifest: `app/Domains/Service/module.php`;
 - configuration provisioners: —;
-- capabilities: —.
+- capabilities: `service.request`, `service.ticket`, `service.assignment`, `service.sla`, `service.escalation`, `service.resolution`, `service.api.v1`.
