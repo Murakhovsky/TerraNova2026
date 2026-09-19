@@ -10,6 +10,7 @@ $assert = static function (bool $condition, string $message): void {
 foreach ([
     'bin/spatial-worker.php',
     'bin/integration-worker.php',
+    'bin/telegram-worker.php',
     'bin/apply-migration.php',
     'app/Interfaces/Cli/Task/WorkerTask.php',
     'app/Interfaces/Cli/Task/MigrationTask.php',
@@ -55,6 +56,7 @@ foreach ([
     ['symfony/src/Command/LegacySchemaStatusCommand.php', "name: 'cos:legacy-schema:status'"],
     ['symfony/src/Command/SpatialProcessingCommand.php', "name: 'cos:spatial:process'"],
     ['symfony/src/Command/IntegrationOutboxCommand.php', "name: 'cos:integration:n8n:process'"],
+    ['symfony/src/Command/TelegramNotificationsProcessCommand.php', "name: 'cos:telegram:notifications:process'"],
 ] as [$path, $needle]) {
     $source = $read($path);
     $assert(str_contains($source, $needle), 'Canonical Symfony command missing: ' . $needle);
