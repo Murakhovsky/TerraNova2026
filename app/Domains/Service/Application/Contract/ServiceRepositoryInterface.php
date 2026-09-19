@@ -25,6 +25,7 @@ interface ServiceRepositoryInterface
         string $ticketId,
         string $assignmentId,
         string $assigneeId,
+        string $newStatus,
         int $actorId,
     ): void;
 
