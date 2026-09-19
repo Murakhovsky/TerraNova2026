@@ -47,7 +47,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return true;
         }
 
-        return str_starts_with($path, '/api/v1');
+        return str_starts_with($path, '/api/v1') || str_starts_with($path, '/sales');
     }
 
     public function authenticate(Request $request): Passport
@@ -72,6 +72,10 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
+        if (str_starts_with($request->getPathInfo(), '/sales')) {
+            return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
+        }
+
         return str_starts_with($request->getPathInfo(), '/api/spatial/')
             ? self::spatialUnauthorized()
             : self::forbidden();
@@ -79,6 +83,10 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
+        if (str_starts_with($request->getPathInfo(), '/sales')) {
+            return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
+        }
+
         return str_starts_with($request->getPathInfo(), '/api/spatial/')
             ? self::spatialUnauthorized()
             : self::forbidden();
