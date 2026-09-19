@@ -55,6 +55,47 @@ server {
         try_files \$uri =404;
     }
 
+    # Visualization and Diagnostic SSR are canonical on Symfony.
+    location = /cos/architecture {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /cos/architecture/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location = /admin/diagnostics/methodology-studio {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /diagnostics/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
     # Sales SSR and immutable frontend assets are canonical on Symfony.
     location = /sales {
         proxy_pass http://$SYMFONY_UPSTREAM;
@@ -150,4 +191,4 @@ if ! grep -Fq "location ^~ /.well-known/acme-challenge/" <<< "$NGINX_CONFIG_DUMP
   exit 53
 fi
 
-echo "HTTP bootstrap route loaded: legacy/SSR -> $UPSTREAM; /api/v1/* and /api/spatial/* -> $SYMFONY_UPSTREAM."
+echo "HTTP bootstrap route loaded: remaining legacy SSR -> $UPSTREAM; canonical APIs/Sales/Visualization/Diagnostic -> $SYMFONY_UPSTREAM."
