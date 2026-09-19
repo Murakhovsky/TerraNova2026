@@ -4,13 +4,11 @@ declare(strict_types=1);
 namespace Infrastructure\Platform\Persistence\Pdo;
 
 use PDO;
-use Phalcon\Config\ConfigInterface;
-
 final class PdoConnection
 {
     private ?PDO $connection = null;
 
-    public function __construct(private ConfigInterface|PDO $config)
+    public function __construct(private object|PDO $config)
     {
         if ($config instanceof PDO) {
             $config->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
