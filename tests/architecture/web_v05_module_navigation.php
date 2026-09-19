@@ -77,7 +77,7 @@ foreach (["getShared('frontendNavigationService')", 'navigationService->workspac
 }
 
 $symfonyNavigation = (string) file_get_contents($root . '/symfony/src/Web/Navigation/NavigationBuilder.php');
-foreach (['ActiveModuleResolver', 'modules->snapshot', "snapshot($organizationId)", "'key' => 'sales'", "'key' => 'properties'", "'key' => 'diagnostics'"] as $needle) {
+foreach (['ActiveModuleResolver', 'modules->snapshot', 'snapshot($organizationId)', "'key' => 'sales'", "'key' => 'properties'", "'key' => 'diagnostics'"] as $needle) {
     if (!str_contains($symfonyNavigation, $needle)) {
         throw new RuntimeException('Symfony navigation builder is missing module-aware behavior: ' . $needle);
     }
