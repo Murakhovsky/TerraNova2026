@@ -57,4 +57,14 @@ $assert(str_contains($phpImage, 'COPY public/build/'), 'Symfony PHP image does n
 $assert(str_contains($nginxImage, 'COPY public/build/'), 'Symfony nginx image does not contain browser assets.');
 $assert(str_contains($nginx, 'location ^~ /build/'), 'Symfony nginx does not serve immutable Vite assets.');
 
+foreach ([
+    'deploy/configure-company-os-http.sh',
+    'deploy/configure-dev-tls.sh',
+] as $path) {
+    $proxy = $read($path);
+    $assert(str_contains($proxy, 'location = /sales {'), 'Host proxy does not route /sales to Symfony: ' . $path);
+    $assert(str_contains($proxy, 'location ^~ /sales/ {'), 'Host proxy does not route /sales/* to Symfony: ' . $path);
+    $assert(str_contains($proxy, 'location ^~ /build/ {'), 'Host proxy does not route Vite assets to Symfony: ' . $path);
+}
+
 echo "Symfony Sales SSR cutover boundary OK\n";
