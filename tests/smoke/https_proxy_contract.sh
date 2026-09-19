@@ -52,6 +52,17 @@ if grep -Eiq '<link[^>]+rel=["'"']canonical["'"'][^>]+href=["'"']http://' "$BODY
   exit 64
 fi
 
+SYMFONY_HEALTH_BODY="$TMP_DIR/symfony-health.json"
+curl --fail --silent --show-error \
+  "$HTTPS_URL/api/v1/health" \
+  --output "$SYMFONY_HEALTH_BODY"
+
+if ! grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$SYMFONY_HEALTH_BODY"; then
+  echo "Public /api/v1/health is not served by the healthy Symfony runtime." >&2
+  cat "$SYMFONY_HEALTH_BODY" >&2 || true
+  exit 69
+fi
+
 curl --fail --silent --show-error \
   --dump-header "$LOGIN_HEADERS" \
   "$HTTPS_URL/auth/login" \
