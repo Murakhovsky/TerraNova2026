@@ -52,14 +52,19 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
 
     public function transitionCase(BrokerageProcess $case, int $actorId, string $expectedStatus): bool
     {
-        $params=$this->caseParams($case,$actorId);
-        $params['expected_status']=$expectedStatus;
-
         return $this->execCount(
             'UPDATE tn_real_estate_cases SET
                 inventory_id=:inventory_id,subject=:subject,status=:status,updated_by=:updated_by,updated_at=NOW()
              WHERE organization_id=:organization_id AND case_id=:case_id AND status=:expected_status LIMIT 1',
-            $params,
+            [
+                'organization_id'=>$case->organizationId->value(),
+                'case_id'=>$case->id,
+                'inventory_id'=>$case->inventoryId,
+                'subject'=>$case->subject,
+                'status'=>$case->status,
+                'updated_by'=>$actorId,
+                'expected_status'=>$expectedStatus,
+            ],
         ) === 1;
     }
 
