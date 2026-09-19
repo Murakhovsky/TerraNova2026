@@ -11,7 +11,7 @@ use Kernel\Process\ProcessStep;
 use Kernel\Process\RuntimeMapping;
 
 $registry = new JsonProcessRegistry($root . '/resources/processes');
-if (count($registry->all()) !== 5) throw new RuntimeException('Canonical Process Registry must expose five current processes.');
+if (count($registry->all()) !== 6) throw new RuntimeException('Canonical Process Registry must expose six current processes.');
 
 $property = $registry->get('property.submission-to-publication');
 if (!$property instanceof ProcessDefinition || $property->schemaVersion !== 4 || count($property->steps) !== 6) {
@@ -52,6 +52,14 @@ if (!$brokerage instanceof ProcessDefinition || $brokerage->schemaVersion !== 5 
 }
 if (count($brokerage->steps) !== 7 || $brokerage->steps[0]->domain !== 'sales') {
     throw new RuntimeException('RealEstate brokerage process lost cross-domain topology.');
+}
+
+$service = $registry->get('service.request-to-close');
+if (!$service instanceof ProcessDefinition || $service->schemaVersion !== 4 || $service->domain !== 'service' || count($service->steps) !== 7) {
+    throw new RuntimeException('Service Request → Close process was not hydrated.');
+}
+if ($service->steps[0]->capability !== 'service.request' || $service->steps[6]->capability !== 'service.ticket') {
+    throw new RuntimeException('Service process capability bridge was not preserved.');
 }
 
 if (!$registry->has('diagnostic.session-to-recommendation') || $registry->has('missing.process')) {
