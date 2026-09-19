@@ -1031,7 +1031,7 @@ services:
       $actions: '@Kernel\Action\Service\ActionService'
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
       $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
-      $queue: null
+      $queue: '@Kernel\Queue\Contract\JobQueueInterface'
       $authority: '@Kernel\Approval\Contract\ApprovalAuthorityInterface'
 
 
