@@ -41,6 +41,44 @@ $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach(['App\\Controller\\CoreHealthController','App\\Controller\\OperationsReadController','App\\Controller\\SecurityContextController'] as $needle){
     if(str_contains($services,$needle)) throw new RuntimeException('Retired migration controller remains in Symfony DI: '.$needle);
 }
+if(!str_contains($services,"$queue: '@Kernel\\Queue\\Contract\\JobQueueInterface'")){
+    throw new RuntimeException('ApprovalService must enqueue approved actions through the canonical JobQueue.');
+}
+
+$security=(string)file_get_contents($root.'/symfony/config/packages/security.yaml');
+$healthRule="- { path: '^/api/v1/health
+
+foreach(['methodology-studio-v054.js','methodology-studio-v055.js'] as $asset){
+    $source=(string)file_get_contents($root.'/frontend/features/diagnostics/'.$asset);
+    if(str_contains($source,'/api/admin/diagnostics')) throw new RuntimeException('Frontend still calls retired Methodology API: '.$asset);
+    if(!str_contains($source,'/api/v1/admin/diagnostics')) throw new RuntimeException('Frontend lacks canonical Methodology API: '.$asset);
+}
+
+$devDeploy=(string)file_get_contents($root.'/deploy/dev.sh');
+$httpProxy=(string)file_get_contents($root.'/deploy/configure-company-os-http.sh');
+$tlsProxy=(string)file_get_contents($root.'/deploy/configure-dev-tls.sh');
+if(!str_contains($devDeploy,'bash deploy/symfony-dev.sh')) throw new RuntimeException('Canonical Symfony runtime is not part of DEV deployment.');
+foreach([$httpProxy,$tlsProxy] as $proxy){
+    if(!str_contains($proxy,'location ^~ /api/v1/')||!str_contains($proxy,'127.0.0.1:8081')){
+        throw new RuntimeException('Host proxy does not cut /api/v1/* over to Symfony.');
+    }
+}
+
+echo "Runtime cleanup slice 3 irreversible boundary OK\n";
+, roles: PUBLIC_ACCESS }";
+$methodologyRule="- { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }";
+$managerRule="- { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }";
+foreach([$healthRule,$methodologyRule,$managerRule] as $rule){
+    if(!str_contains($security,$rule)) throw new RuntimeException('Runtime cleanup security rule missing: '.$rule);
+}
+if(strpos($security,$healthRule)>strpos($security,$managerRule)||strpos($security,$methodologyRule)>strpos($security,$managerRule)){
+    throw new RuntimeException('Specific health/methodology access rules must precede the /api/v1 manager catch-all.');
+}
+
+$authenticator=(string)file_get_contents($root.'/symfony/src/Security/LegacySessionAuthenticator.php');
+if(!str_contains($authenticator,"$path === '/api/v1/health'")){
+    throw new RuntimeException('Public health probe is still intercepted by the legacy-session authenticator.');
+}
 
 foreach(['methodology-studio-v054.js','methodology-studio-v055.js'] as $asset){
     $source=(string)file_get_contents($root.'/frontend/features/diagnostics/'.$asset);
