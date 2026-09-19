@@ -70,6 +70,18 @@ LEGACY_MYSQL_CONTAINER="${COS_LEGACY_MYSQL_CONTAINER:-cos-mysql-1}"
 LEGACY_PHP_CONTAINER="${COS_LEGACY_PHP_CONTAINER:-cos-php-1}"
 LEGACY_SESSION_VOLUME="${COS_LEGACY_SESSION_VOLUME:-cos_php_sessions}"
 
+# Reuse the Spatial JWT secret from the still-running legacy PHP container so
+# existing native/client bearer tokens survive the transport cutover.
+LEGACY_SPATIAL_JWT_SECRET=""
+if "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
+  LEGACY_SPATIAL_JWT_SECRET="$("${DOCKER[@]}" exec "$LEGACY_PHP_CONTAINER" sh -c 'printf "%s" "${SPATIAL_JWT_SECRET:-}"' 2>/dev/null || true)"
+fi
+if [[ -n "$LEGACY_SPATIAL_JWT_SECRET" ]]; then
+  upsert_value SPATIAL_JWT_SECRET "$LEGACY_SPATIAL_JWT_SECRET"
+elif [[ -z "$(read_value SPATIAL_JWT_SECRET)" ]]; then
+  ensure_secret SPATIAL_JWT_SECRET 32
+fi
+
 if ! "${DOCKER[@]}" network inspect "$LEGACY_NETWORK" >/dev/null 2>&1; then
   echo "Legacy COS Docker network is unavailable: $LEGACY_NETWORK" >&2
   exit 45
