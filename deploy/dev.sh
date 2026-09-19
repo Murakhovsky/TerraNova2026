@@ -197,5 +197,19 @@ if [[ "$APP_HEALTHY" != "1" ]]; then
 fi
 
 echo "Local application health check passed: /cos"
+
+# Canonical business/control-plane APIs no longer belong to the Phalcon host.
+# Deploy the parallel Symfony runtime before the host reverse proxy is refreshed.
+echo "Deploying canonical Symfony API runtime on 127.0.0.1:8081..."
+bash deploy/symfony-dev.sh
+
+if ! curl --fail --silent --show-error --retry 2 --retry-delay 1 \
+    http://127.0.0.1:8081/api/v1/health > /tmp/cos-symfony-api-health.json; then
+  echo "Canonical Symfony API health check failed on 127.0.0.1:8081." >&2
+  cat /tmp/cos-symfony-api-health.json >&2 2>/dev/null || true
+  exit 31
+fi
+echo "Canonical Symfony API runtime is healthy: /api/v1/health"
+
 "${COMPOSE[@]}" ps
 printf 'DEV deployment completed successfully.\n'
