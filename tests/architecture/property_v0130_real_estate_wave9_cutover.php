@@ -37,7 +37,7 @@ foreach(['RealEstateEventType::values()','brokerage_case_id','event_type'] as $n
 }
 
 $workflow=$read('app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php');
-foreach(['SalesOpportunityReferenceInterface','PropertyBrokerageReferencePort','PropertyInventoryCommandInterface','RealEstateMutationReceiptInterface','AuditRepositoryInterface','receipts->claim','createCase(','createOffer(','createShowing(','events->publish','appendAudit'] as $needle){
+foreach(['SalesOpportunityReferenceInterface','PropertyBrokerageReferencePort','PropertyInventoryCommandInterface','RealEstateMutationReceiptInterface','AuditRepositoryInterface','receipts->claim','createCase(','createOffer(','createShowing(','transitionCase(','expectedStatus',"setTimezone(new DateTimeZone('UTC'))",'storedNotes!==$notes','events->publish','appendAudit'] as $needle){
     $assert(str_contains($workflow,$needle),'RealEstate workflow missing boundary/runtime behavior: '.$needle);
 }
 $assert(!preg_match('/\btn_(?:property|sales|crm)_/i',$workflow),'RealEstate application service must not read another domain tables directly.');
@@ -46,6 +46,9 @@ $assert(!str_contains($workflow,'PDO'),'RealEstate application service must not 
 $realEstateRepository=$read('app/Domains/RealEstate/Infrastructure/Persistence/MySql/MysqlRealEstateRepository.php');
 foreach(['INSERT IGNORE INTO tn_real_estate_cases','INSERT IGNORE INTO tn_real_estate_offers','INSERT IGNORE INTO tn_real_estate_showings'] as $needle){
     $assert(str_contains($realEstateRepository,$needle),'RealEstate idempotent insert missing: '.$needle);
+}
+foreach(['transitionCase(','status=:expected_status',"setTimezone(new DateTimeZone('UTC'))"] as $needle){
+    $assert(str_contains($realEstateRepository,$needle),'RealEstate persistence hardening missing: '.$needle);
 }
 $assert(substr_count($realEstateRepository,'organization_id')>=12,'RealEstate persistence must be tenant-scoped.');
 
