@@ -87,7 +87,7 @@ fi
 for runtime_key in APP_URL TELEGRAM_BOT_TOKEN TELEGRAM_BOT_NAME; do
   runtime_value="${!runtime_key:-}"
   if [[ -z "$runtime_value" ]] && "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
-    runtime_value="$("${DOCKER[@]}" exec "$LEGACY_PHP_CONTAINER" sh -c "printf '%s' \"${$runtime_key:-}\"" 2>/dev/null || true)"
+    runtime_value="$("${DOCKER[@]}" exec "$LEGACY_PHP_CONTAINER" printenv "$runtime_key" 2>/dev/null || true)"
   fi
   if [[ -n "$runtime_value" ]]; then
     upsert_value "$runtime_key" "$runtime_value"
