@@ -11,6 +11,18 @@ contract: domain-v1
 
 Service `0.2.0` є активним runtime-domain COS для сервісних операцій.
 
+## Runtime
+
+```text
+id: service
+version: 0.2.0
+dependencies: —
+runtime: serviceDomainModule
+persistence: tn_service_*
+transport: Symfony /api/v1/service
+events: service.*
+```
+
 ## Канонічний життєвий цикл
 
 ```text
