@@ -9,6 +9,8 @@ $assert = static function(bool $condition, string $message): void {
     }
 };
 
+$assert(!file_exists($root . '/app/Interfaces/Web/Controller/SalesController.php'), 'Retired Phalcon SalesController restored.');
+
 foreach ([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
     'symfony/src/Web/Phtml/UrlHelper.php',
@@ -45,9 +47,17 @@ foreach ([
     'cos_web_sales_deals:',
     'cos_web_sales_deal:',
     'cos_web_sales_director:',
+    'cos_web_sales_admin:',
 ] as $needle) {
     $assert(str_contains($routes, $needle), 'Canonical Symfony Sales page route is missing: ' . $needle);
 }
+
+$legacyFrontendRoutes = $read('app/Interfaces/Web/Routing/FrontendRoutes.php');
+foreach (['/sales/dashboard', '/sales/pipeline', '/sales/today', '/sales/leads', '/sales/deals', '/sales/director', '/sales/admin'] as $path) {
+    $assert(!str_contains($legacyFrontendRoutes, "'" . $path . "'"), 'Migrated Sales page route restored in Phalcon: ' . $path);
+}
+$legacySalesRoutes = $read('app/Interfaces/Web/Routing/SalesRoutes.php');
+$assert(!str_contains($legacySalesRoutes, "addGet('/sales'"), 'Migrated /sales root route restored in Phalcon.');
 
 $phpImage = $read('docker/symfony/php/Dockerfile');
 $nginxImage = $read('docker/symfony/nginx/Dockerfile');
