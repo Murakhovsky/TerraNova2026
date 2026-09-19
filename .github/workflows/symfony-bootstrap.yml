@@ -18,6 +18,7 @@ on:
       - 'app/Interfaces/Web/View/**'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
+      - 'tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -40,6 +41,7 @@ on:
       - 'app/Interfaces/Web/View/**'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
+      - 'tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -284,6 +286,7 @@ jobs:
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
+          php tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php
           php tests/architecture/kernel_v082_module_control.php
           php tests/architecture/kernel_v088_effective_module_context.php
           php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
@@ -309,6 +312,43 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:telegram:process'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:telegram:health'"
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:architecture:smoke
+
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/symfony-visualization-diagnostic-routes.txt
+          grep -q 'cos_web_architecture' /tmp/symfony-visualization-diagnostic-routes.txt
+          grep -q 'cos_web_architecture_health' /tmp/symfony-visualization-diagnostic-routes.txt
+          grep -q 'cos_web_diagnostic_methodology_studio' /tmp/symfony-visualization-diagnostic-routes.txt
+          grep -q 'cos_web_diagnostic_report' /tmp/symfony-visualization-diagnostic-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/cos-architecture.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/cos/architecture)
+          test "$status" = "200"
+          grep -q 'Architecture Explorer' /tmp/cos-architecture.html
+          grep -q 'data-architecture-explorer' /tmp/cos-architecture.html
+
+          status=$(curl --silent --show-error --output /tmp/cos-architecture-health.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/cos/architecture/health)
+          test "$status" = "200"
+          grep -q '"ok":true' /tmp/cos-architecture-health.json
+
+          status=$(curl --silent --show-error --output /tmp/methodology-studio.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/admin/diagnostics/methodology-studio)
+          test "$status" = "200"
+          grep -q 'Methodology Studio' /tmp/methodology-studio.html
+          grep -q 'data-studio' /tmp/methodology-studio.html
+
+          status=$(curl --silent --show-error --output /tmp/missing-diagnostic-report.txt --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            http://127.0.0.1:8081/diagnostics/missing-sess-001/report)
+          test "$status" = "404"
+          grep -q 'Diagnostic report was not found' /tmp/missing-diagnostic-report.txt
+
+          architecture_asset=$(docker compose -f docker-compose.symfony.yml exec -T php php -r '$m=json_decode(file_get_contents("public/build/.vite/manifest.json"),true,512,JSON_THROW_ON_ERROR); echo $m["frontend/entrypoints/cos-architecture-explorer.js"]["file"] ?? "";' | tr -d '\r')
+          test -n "$architecture_asset"
+          curl --fail --show-error --silent "http://127.0.0.1:8081/build/$architecture_asset" > /dev/null
+          echo "Symfony Visualization/Diagnostic SSR runtime passed."
 
       - name: Verify Sales strangler slice
         run: |
