@@ -31,4 +31,14 @@ foreach(['methodology-studio-v054.js','methodology-studio-v055.js'] as $asset){
     if(!str_contains($source,'/api/v1/admin/diagnostics')) throw new RuntimeException('Frontend lacks canonical Methodology API: '.$asset);
 }
 
+$devDeploy=(string)file_get_contents($root.'/deploy/dev.sh');
+$httpProxy=(string)file_get_contents($root.'/deploy/configure-company-os-http.sh');
+$tlsProxy=(string)file_get_contents($root.'/deploy/configure-dev-tls.sh');
+if(!str_contains($devDeploy,'bash deploy/symfony-dev.sh')) throw new RuntimeException('Canonical Symfony runtime is not part of DEV deployment.');
+foreach([$httpProxy,$tlsProxy] as $proxy){
+    if(!str_contains($proxy,'location ^~ /api/v1/')||!str_contains($proxy,'127.0.0.1:8081')){
+        throw new RuntimeException('Host proxy does not cut /api/v1/* over to Symfony.');
+    }
+}
+
 echo "Runtime cleanup slice 3 irreversible boundary OK\n";
