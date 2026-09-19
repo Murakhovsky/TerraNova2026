@@ -28,8 +28,13 @@ final readonly class RequestQueryAdapter
         return $value;
     }
 
-    public function uri(): string
+    public function getURI(): string
     {
         return $this->request->getRequestUri();
+    }
+
+    public function uri(): string
+    {
+        return $this->getURI();
     }
 }
