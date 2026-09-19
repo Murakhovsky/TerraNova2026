@@ -26,7 +26,7 @@ Documents не містить предметних правил договору
 - Knowledge/RAG document projection не підміняє business-document source of truth.
 
 
-## Wave 10 runtime
+## Середовище виконання Wave 10
 
 Documents тепер має виконуваний Platform runtime, не перетворюючись на Domain:
 
@@ -48,7 +48,7 @@ Event + Audit
 
 `DocumentAttachmentPort` є стабільною межею для Sales, Property, HR, Finance та інших bounded contexts. Domain передає tenant, actor/correlation, `documentId` і власний business reference. Він не знає про `cos_document_*`, storage key або Symfony.
 
-## Runtime invariants
+## Інваріанти середовища виконання
 
 - усі записи tenant-scoped через `organization_id`;
 - consequential writes вимагають idempotency key;
@@ -63,7 +63,7 @@ Event + Audit
 - template generation приймає лише scalar variables;
 - e-signature provider reference є evidence, а не provider SDK у Platform layer.
 
-## Persistence
+## Постійний стан
 
 ```text
 cos_documents
