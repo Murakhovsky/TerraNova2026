@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Controller\OperationsReadController;
+use App\Http\Api\V1\Controller\OperationsReadController;
 use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Operations\Contract\OperationsReadModelInterface;
 use Kernel\Operations\Service\OperationsSectionReader;
@@ -104,7 +104,7 @@ expectContract(payload($actions) === [
     'data' => [['id' => str_repeat('a', 32), 'status' => 'QUEUED']],
 ], 'actions payload parity');
 expectContract($readModel->lastOrganizationId === 'tenant-a', 'organization must come from authenticated tenant context');
-expectContract($readModel->lastLimit === 100, 'legacy controller limit parity');
+expectContract($readModel->lastLimit === 100, 'canonical controller limit contract');
 
 expectContract((payload($controller->approvals())['data'][0]['status'] ?? null) === 'PENDING', 'approvals mapping');
 expectContract((payload($controller->agents())['data'][0]['agent_name'] ?? null) === 'sales', 'agents must map to agent_runs');
@@ -126,6 +126,6 @@ expectContract($unauthorized->actions()->getStatusCode() === 403, 'missing tenan
 $readModel->fail = true;
 $failed = $controller->events();
 expectContract($failed->getStatusCode() === 500, 'read-model failure status');
-expectContract(payload($failed) === ['ok' => false, 'error' => 'COS runtime query failed.'], 'read-model failure payload parity');
+expectContract(payload($failed) === ['ok' => false, 'error' => 'Operations query failed.'], 'read-model failure payload parity');
 
 echo "Operations read API resolves organization exclusively from authenticated TenantContext.\n";

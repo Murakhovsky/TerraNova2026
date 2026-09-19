@@ -55,13 +55,21 @@ $assert(str_contains($projection, 'tn_property_compatibility_projection_state'),
 $assert(str_contains($projection, 'LocationReferenceInterface'), 'Compatibility projection must cross the Reference boundary through its port.');
 $assert(!preg_match('/(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+tn_locations/i', $projection), 'Property compatibility projection must not write Reference-owned tn_locations directly.');
 
-$routes = $read('app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php');
-foreach (['/api/v1/property-registry/assets', '/inventory/{inventoryId:', '/listings/{listingId:'] as $route) {
-    $assert(str_contains($routes, $route), 'Canonical Property API route missing: ' . $route);
+$routes = $read('symfony/config/routes.yaml');
+foreach (['/api/v1/properties', '/api/v1/properties/{id}/inventory', '/api/v1/property-inventory/{id}/status', '/api/v1/property-inventory/{id}/reservations'] as $route) {
+    $assert(str_contains($routes, $route), 'Canonical Symfony Property API route missing: ' . $route);
 }
-$controller = $read('app/Interfaces/Api/Controller/PropertyCanonicalController.php');
-$assert(str_contains($controller, "getShared('propertyCanonicalRuntime')"), 'Canonical Property API must resolve canonical runtime.');
-$assert(str_contains($controller, 'validMutation()'), 'Canonical Property API mutations must enforce CSRF.');
+$controller = $read('symfony/src/Http/Api/V1/Controller/PropertyController.php');
+foreach (['CommandBusInterface', 'QueryBusInterface', 'LegacySessionCsrfValidator', 'ActiveModuleResolver'] as $boundary) {
+    $assert(str_contains($controller, $boundary), 'Canonical Symfony Property API boundary missing: ' . $boundary);
+}
+foreach ([
+    'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php',
+    'app/Interfaces/Api/Controller/PropertyRuntimeController.php',
+    'app/Interfaces/Api/Controller/PropertyCanonicalController.php',
+] as $retired) {
+    $assert(!is_file($root . '/' . $retired), 'Retired Property runtime transport restored: ' . $retired);
+}
 
 $spatial = $read('app/Bootstrap/SpatialModule.php');
 $assert(str_contains($spatial, 'CanonicalPropertyTourPublisher'), 'Spatial tour publishing must use canonical Property runtime.');

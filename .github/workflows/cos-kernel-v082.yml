@@ -31,6 +31,5 @@ jobs:
           php -l app/Kernel/Module/KernelVersion.php
           php -l app/Kernel/Module/ModuleControlService.php
           php -l app/Bootstrap/KernelServices.php
-          php -l app/Interfaces/Api/Controller/PlatformModuleController.php
-          php -l app/Interfaces/Web/Routing/PlatformRoutes.php
+          php -l symfony/src/Http/Api/V1/Controller/PlatformModuleController.php
           php -l app/Interfaces/Web/Module.php

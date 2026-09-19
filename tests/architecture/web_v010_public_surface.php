@@ -68,7 +68,7 @@ $contains($routes, "'controller' => 'public_property'", 'Public Property routes 
 $contains($routes, "'namespace' => 'Interfaces\\\\Web\\\\Controller'", 'Public Property routes must stay in the Web delivery layer.');
 
 $contributor = $read('app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php');
-$contains($contributor, 'PropertyRuntimeRoutes::register($router)', 'Property module must preserve runtime routes.');
+$notContains($contributor, 'PropertyRuntimeRoutes', 'Retired Property runtime transport must stay deleted.');
 $contains($contributor, 'PublicPropertyRoutes::register($router)', 'Property module must register its Public projection routes.');
 
 $home = $read('app/Interfaces/Web/View/index/public.phtml');

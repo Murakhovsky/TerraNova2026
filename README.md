@@ -15,25 +15,31 @@ Business transaction
   -> Result Event + Audit + Metric
 ```
 
-The Kernel contains reusable mechanisms only. `Domains/Sales` supplies Sales vocabulary and use cases through composition; it does not inherit from the Kernel. Phalcon MVC is retained at the HTTP delivery edge under `Interfaces`, while legacy `modules` are migrated incrementally.
+The Kernel contains reusable mechanisms only. `Domains/Sales` supplies Sales vocabulary and use cases through composition; it does not inherit from the Kernel. Symfony is the canonical runtime for business and control-plane APIs. Phalcon is retained only for the remaining server-rendered/compatibility surfaces while those are retired slice by slice.
 
 The supported runtime baseline is PHP 8.2 or newer with Phalcon 5.9 or newer. The production image currently uses PHP 8.3 and Phalcon 5.19; the same codebase and Composer lock also work with the prepared native PHP 8.2 runtime.
 
 ## Production start
 
 1. Copy `.env.docker.example` to `.env.docker` and replace every placeholder/secret.
-2. Start the stack:
+2. Start the compatibility/SSR stack:
 
 ```bash
 docker compose --env-file .env.docker up -d --build
 ```
 
-The `migrate` one-shot service applies SQL migrations under a MySQL advisory lock before `php` and `worker` start. The worker continuously processes the event outbox and job queue. Redis is intentionally not required: MySQL is the durable source of truth.
+3. Start the canonical Symfony API runtime after the compatibility stack exists:
+
+```bash
+bash deploy/symfony-dev.sh
+```
+
+The compatibility stack remains responsible for the shrinking SSR surface and legacy worker. Canonical business/control-plane HTTP under `/api/v1/*` is served by Symfony on the parallel runtime, including Messenger/Scheduler backed by Redis. Host Nginx routes `/api/v1/*` to Symfony and leaves the remaining web surface on the compatibility host. Database schema changes remain deployment-owned; the Symfony application account has DML privileges only.
 
 Useful endpoints and commands:
 
 ```text
-GET  /api/health
+GET  /api/v1/health
 GET  /cos/control-center
 POST /api/integrations/{organization}/crm/{provider}/webhook
 

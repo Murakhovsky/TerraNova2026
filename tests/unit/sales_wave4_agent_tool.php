@@ -5,22 +5,22 @@ $root = dirname(__DIR__, 2);
 $autoload = $root . '/vendor/autoload.php';
 if (is_file($autoload)) {
     require $autoload;
-} else {
-    spl_autoload_register(static function (string $class) use ($root): void {
-        foreach ([
-            'App\\' => '/symfony/src/',
-            'Kernel\\' => '/app/Kernel/',
-            'Platform\\' => '/app/Platform/',
-            'Domains\\' => '/app/Domains/',
-            'Infrastructure\\' => '/app/Infrastructure/',
-        ] as $prefix => $directory) {
-            if (!str_starts_with($class, $prefix)) continue;
-            $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-            if (is_file($file)) require $file;
-            return;
-        }
-    });
 }
+
+spl_autoload_register(static function (string $class) use ($root): void {
+    foreach ([
+        'App\\' => '/symfony/src/',
+        'Kernel\\' => '/app/Kernel/',
+        'Platform\\' => '/app/Platform/',
+        'Domains\\' => '/app/Domains/',
+        'Infrastructure\\' => '/app/Infrastructure/',
+    ] as $prefix => $directory) {
+        if (!str_starts_with($class, $prefix)) continue;
+        $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($file)) require $file;
+        return;
+    }
+});
 
 use App\Infrastructure\AI\EnvironmentSalesAgentLlmClient;
 use Domains\Sales\Automation\Agent\SalesIntelligenceAgent;

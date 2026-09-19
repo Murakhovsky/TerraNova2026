@@ -92,6 +92,7 @@ if [[ ! "$LEGACY_DB_NAME" =~ ^[A-Za-z0-9_]+$ ]]; then
 fi
 upsert_value SYMFONY_LEGACY_DB_NAME "$LEGACY_DB_NAME"
 upsert_value SYMFONY_LEGACY_DB_HOST "$LEGACY_MYSQL_CONTAINER"
+upsert_value SYMFONY_LEGACY_DB_USER "cos_symfony_app"
 
 LEGACY_ORGANIZATION_ID="default"
 if "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
@@ -109,20 +110,22 @@ echo "Symfony migration tenant is fixed to legacy COS organization: $LEGACY_ORGA
 
 LEGACY_DB_PASSWORD="$(read_value SYMFONY_LEGACY_DB_PASSWORD)"
 if [[ ! "$LEGACY_DB_PASSWORD" =~ ^[a-f0-9]{48}$ ]]; then
-  echo "Symfony legacy read-only password has an unexpected format." >&2
+  echo "Symfony legacy application password has an unexpected format." >&2
   exit 48
 fi
 
+# Symfony owns canonical business write paths, while schema ownership remains
+# with deployment migrations. Grant DML only; no DDL/admin privileges.
 printf -v LEGACY_GRANTS \
-  "CREATE USER IF NOT EXISTS 'cos_symfony_ro'@'%%' IDENTIFIED BY '%s'; ALTER USER 'cos_symfony_ro'@'%%' IDENTIFIED BY '%s'; GRANT SELECT ON \`%s\`.* TO 'cos_symfony_ro'@'%%'; FLUSH PRIVILEGES;" \
+  "CREATE USER IF NOT EXISTS 'cos_symfony_app'@'%%' IDENTIFIED BY '%s'; ALTER USER 'cos_symfony_app'@'%%' IDENTIFIED BY '%s'; GRANT SELECT, INSERT, UPDATE, DELETE ON \`%s\`.* TO 'cos_symfony_app'@'%%'; FLUSH PRIVILEGES;" \
   "$LEGACY_DB_PASSWORD" "$LEGACY_DB_PASSWORD" "$LEGACY_DB_NAME"
 
 if ! printf '%s\n' "$LEGACY_GRANTS" | "${DOCKER[@]}" exec -i "$LEGACY_MYSQL_CONTAINER" sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'; then
-  echo "Could not provision the Symfony read-only account in legacy COS MySQL." >&2
+  echo "Could not provision the Symfony application account in legacy COS MySQL." >&2
   exit 49
 fi
 
-echo "Legacy COS read-only database account is ready."
+echo "Legacy COS Symfony application account is ready with DML-only privileges."
 
 COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE" -f docker-compose.symfony.yml)
 
@@ -162,9 +165,9 @@ fi
 
 CORE_HEALTHY=0
 for attempt in $(seq 1 20); do
-  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /tmp/core-health.json http://127.0.0.1/migration/core-health 2>/dev/null; then
+  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /tmp/core-health.json http://127.0.0.1/health/dependencies 2>/dev/null; then
     CORE_HEALTHY=1
-    echo "Shared COS read-model check passed on attempt $attempt."
+    echo "COS dependency health check passed on attempt $attempt."
     "${DOCKER[@]}" exec cos-symfony-nginx-1 cat /tmp/core-health.json
     echo
     break
@@ -179,9 +182,9 @@ if [[ "$CORE_HEALTHY" != "1" ]]; then
   exit 50
 fi
 
-PROTECTED_STATUS="$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out '%{http_code}' http://127.0.0.1:8081/migration/api/cos/events)"
+PROTECTED_STATUS="$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out '%{http_code}' http://127.0.0.1:8081/api/v1/operations/events)"
 if [[ "$PROTECTED_STATUS" != "403" ]] || [[ "$(cat /tmp/cos-symfony-protected.json)" != '{"ok":false,"error":"Manager authorization required."}' ]]; then
-  echo "Symfony Security did not protect the Operations migration API as expected." >&2
+  echo "Symfony Security did not protect the Operations API as expected." >&2
   cat /tmp/cos-symfony-protected.json >&2 || true
   echo >&2
   "${COMPOSE[@]}" ps -a >&2 || true
@@ -189,7 +192,7 @@ if [[ "$PROTECTED_STATUS" != "403" ]] || [[ "$(cat /tmp/cos-symfony-protected.js
   exit 51
 fi
 
-echo "Operations migration API is protected by the legacy-session Symfony Security bridge."
+echo "Operations API is protected by the legacy-session Symfony Security bridge."
 
 "${COMPOSE[@]}" exec -T worker rm -f var/runtime/scheduler-heartbeat.json || true
 PROBE_TOKEN="deploy-async-probe"
@@ -232,5 +235,5 @@ echo "Doctrine migrations, Redis Messenger worker and Symfony Scheduler are heal
 
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
-echo "Shared core read-model probe is available at http://127.0.0.1:8081/migration/core-health"
-echo "Protected Operations migration API is available at http://127.0.0.1:8081/migration/api/cos/events"
+echo "Dependency health probe is available at http://127.0.0.1:8081/health/dependencies"
+echo "Protected Operations API is available at http://127.0.0.1:8081/api/v1/operations/events"

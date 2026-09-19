@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 DOMAIN="${1:-company-os.shop}"
 UPSTREAM="${2:-127.0.0.1:8080}"
+SYMFONY_UPSTREAM="${3:-127.0.0.1:8081}"
 SITE_AVAILABLE="/etc/nginx/sites-available/$DOMAIN"
 SITE_ENABLED="/etc/nginx/sites-enabled/$DOMAIN"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
@@ -54,6 +55,20 @@ server {
         try_files \$uri =404;
     }
 
+    # Canonical COS business/control-plane APIs are served by Symfony.
+    location ^~ /api/v1/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port 80;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+
     location / {
         proxy_pass http://$UPSTREAM;
         proxy_http_version 1.1;
@@ -88,4 +103,4 @@ if ! grep -Fq "location ^~ /.well-known/acme-challenge/" <<< "$NGINX_CONFIG_DUMP
   exit 53
 fi
 
-echo "HTTP bootstrap route loaded for $DOMAIN and *.$DOMAIN -> $UPSTREAM with ACME challenge support."
+echo "HTTP bootstrap route loaded: legacy/SSR -> $UPSTREAM; /api/v1/* -> $SYMFONY_UPSTREAM."

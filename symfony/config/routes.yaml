@@ -8,56 +8,74 @@ cos_symfony_health:
   controller: App\Controller\HealthController::health
   methods: [GET]
 
-cos_symfony_core_health:
-  path: /migration/core-health
-  controller: App\Controller\CoreHealthController
-  methods: [GET]
-
-cos_symfony_migration_auth_context:
-  path: /migration/api/cos/auth-context
-  controller: App\Controller\SecurityContextController
-  methods: [GET]
-
-cos_symfony_migration_actions:
-  path: /migration/api/cos/actions
-  controller: App\Controller\OperationsReadController::actions
-  methods: [GET]
-
-cos_symfony_migration_action:
-  path: /migration/api/cos/actions/{id}
-  controller: App\Controller\OperationsReadController::action
-  methods: [GET]
-  requirements:
-    id: '[a-f0-9]{32}'
-
-cos_symfony_migration_approvals:
-  path: /migration/api/cos/approvals
-  controller: App\Controller\OperationsReadController::approvals
-  methods: [GET]
-
-cos_symfony_migration_agents:
-  path: /migration/api/cos/agents
-  controller: App\Controller\OperationsReadController::agents
-  methods: [GET]
-
-cos_symfony_migration_rules:
-  path: /migration/api/cos/rules
-  controller: App\Controller\OperationsReadController::rules
-  methods: [GET]
-
-cos_symfony_migration_events:
-  path: /migration/api/cos/events
-  controller: App\Controller\OperationsReadController::events
-  methods: [GET]
-
-cos_symfony_migration_audit:
-  path: /migration/api/cos/audit
-  controller: App\Controller\OperationsReadController::audit
-  methods: [GET]
-
 cos_api_v1_status:
   path: /api/v1/status
   controller: App\Http\Api\V1\Controller\ApiStatusController
+  methods: [GET]
+
+cos_dependency_health:
+  path: /health/dependencies
+  controller: App\Controller\DependencyHealthController
+  methods: [GET]
+
+cos_api_v1_operations_actions:
+  path: /api/v1/operations/actions
+  controller: App\Http\Api\V1\Controller\OperationsReadController::actions
+  methods: [GET]
+
+cos_api_v1_operations_action:
+  path: /api/v1/operations/actions/{id}
+  controller: App\Http\Api\V1\Controller\OperationsReadController::action
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_action_execute:
+  path: /api/v1/operations/actions/{id}/execute
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::execute
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_action_dismiss:
+  path: /api/v1/operations/actions/{id}/dismiss
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::dismiss
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_approvals:
+  path: /api/v1/operations/approvals
+  controller: App\Http\Api\V1\Controller\OperationsReadController::approvals
+  methods: [GET]
+
+cos_api_v1_operations_approval_approve:
+  path: /api/v1/operations/approvals/{id}/approve
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::approve
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_approval_reject:
+  path: /api/v1/operations/approvals/{id}/reject
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::reject
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_agents:
+  path: /api/v1/operations/agents
+  controller: App\Http\Api\V1\Controller\OperationsReadController::agents
+  methods: [GET]
+
+cos_api_v1_operations_rules:
+  path: /api/v1/operations/rules
+  controller: App\Http\Api\V1\Controller\OperationsReadController::rules
+  methods: [GET]
+
+cos_api_v1_operations_events:
+  path: /api/v1/operations/events
+  controller: App\Http\Api\V1\Controller\OperationsReadController::events
+  methods: [GET]
+
+cos_api_v1_operations_audit:
+  path: /api/v1/operations/audit
+  controller: App\Http\Api\V1\Controller\OperationsReadController::audit
   methods: [GET]
 
 cos_api_v1_sales_client_case_stats:
@@ -799,3 +817,211 @@ cos_api_v1_service_ticket_close:
   controller: App\Http\Api\V1\Controller\ServiceController::close
   methods: [POST]
   requirements: { id: '[A-Za-z0-9_-]+' }
+
+# Runtime cleanup slice 3 — canonical operational health
+cos_api_v1_health:
+  path: /api/v1/health
+  controller: App\Controller\HealthController::operations
+  methods: [GET]
+
+# Runtime cleanup slice 3 — Platform module control plane
+cos_api_v1_platform_modules:
+  path: /api/v1/platform/modules
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::index
+  methods: [GET]
+
+cos_api_v1_platform_modules_readiness:
+  path: /api/v1/platform/modules/readiness
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::readiness
+  methods: [GET]
+
+cos_api_v1_platform_module_install:
+  path: /api/v1/platform/modules/{id}/install
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::install
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_]*' }
+
+cos_api_v1_platform_module_upgrade:
+  path: /api/v1/platform/modules/{id}/upgrade
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::upgrade
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_]*' }
+
+cos_api_v1_platform_module_enable:
+  path: /api/v1/platform/modules/{id}/enable
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::enable
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_]*' }
+
+cos_api_v1_platform_module_disable:
+  path: /api/v1/platform/modules/{id}/disable
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::disable
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_]*' }
+
+cos_api_v1_platform_module_uninstall:
+  path: /api/v1/platform/modules/{id}/uninstall
+  controller: App\Http\Api\V1\Controller\PlatformModuleController::uninstall
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_]*' }
+
+# Runtime cleanup slice 3 — Diagnostic Methodology Studio / Workbench
+cos_api_v1_diagnostic_methodology_packs:
+  path: /api/v1/admin/diagnostics/packs
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::packs
+  methods: [GET, POST]
+
+cos_api_v1_diagnostic_methodology_history:
+  path: /api/v1/admin/diagnostics/history
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::history
+  methods: [GET]
+
+cos_api_v1_diagnostic_methodology_runs:
+  path: /api/v1/admin/diagnostics/runs
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::runs
+  methods: [GET]
+
+cos_api_v1_diagnostic_methodology_permissions:
+  path: /api/v1/admin/diagnostics/permissions
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::permissions
+  methods: [GET]
+
+cos_api_v1_diagnostic_methodology_permission_matrix:
+  path: /api/v1/admin/diagnostics/permissions/matrix
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::permissionMatrix
+  methods: [GET]
+
+cos_api_v1_diagnostic_methodology_permission_override:
+  path: /api/v1/admin/diagnostics/permissions/override
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::permissionOverride
+  methods: [POST]
+
+cos_api_v1_diagnostic_methodology_run:
+  path: /api/v1/admin/diagnostics/runs/{session}/details
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::run
+  methods: [GET]
+  requirements: { session: '[A-Za-z0-9_.:-]+' }
+
+cos_api_v1_diagnostic_methodology_pack:
+  path: /api/v1/admin/diagnostics/packs/{id}
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::pack
+  methods: [GET]
+  requirements: { id: '[a-z0-9-]+' }
+
+cos_api_v1_diagnostic_methodology_versions:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::versions
+  methods: [GET]
+  requirements: { id: '[a-z0-9-]+' }
+
+cos_api_v1_diagnostic_methodology_entity:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/entities/{type}
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::entity
+  methods: [POST]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+    type: '[a-z_]+'
+
+cos_api_v1_diagnostic_methodology_entities:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/entities
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::entities
+  methods: [GET]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+
+cos_api_v1_diagnostic_methodology_entity_delete:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/entities/{type}/{entity}/delete
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::deleteEntity
+  methods: [POST]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+    type: '[a-z_]+'
+    entity: '[a-z0-9_.-]+'
+
+cos_api_v1_diagnostic_methodology_scenarios:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/scenarios
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::scenarios
+  methods: [GET, POST]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+
+cos_api_v1_diagnostic_methodology_workbench_scenarios:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/workbench/scenarios
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::workbenchScenarios
+  methods: [GET]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+
+cos_api_v1_diagnostic_methodology_workbench_scenario_delete:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/workbench/scenarios/{scenario}/delete
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::deleteScenario
+  methods: [POST]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+    scenario: '[a-z0-9_.-]+'
+
+cos_api_v1_diagnostic_methodology_workbench_scenario_clone:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/workbench/scenarios/{scenario}/clone
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::cloneScenario
+  methods: [POST]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+    scenario: '[a-z0-9_.-]+'
+
+cos_api_v1_diagnostic_methodology_workbench_scenario_run:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/workbench/scenarios/{scenario}/run
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::runScenario
+  methods: [POST]
+  requirements:
+    id: '[a-z0-9-]+'
+    version: '[0-9.]+'
+    scenario: '[a-z0-9_.-]+'
+
+cos_api_v1_diagnostic_methodology_validate:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/validate
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::validate
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+cos_api_v1_diagnostic_methodology_simulate:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/simulate
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::simulate
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+cos_api_v1_diagnostic_methodology_clone:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/clone
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::clone
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+cos_api_v1_diagnostic_methodology_publish:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/publish
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::publish
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+cos_api_v1_diagnostic_methodology_regression:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/regression
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::regression
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+cos_api_v1_diagnostic_methodology_archive:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/archive
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::archive
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+cos_api_v1_diagnostic_methodology_activate:
+  path: /api/v1/admin/diagnostics/packs/{id}/versions/{version}/activate
+  controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::activate
+  methods: [POST]
+  requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }

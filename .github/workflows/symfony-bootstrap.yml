@@ -62,6 +62,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install root architecture-test autoload
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
       - name: Prepare isolated legacy resource contracts
         run: |
           docker network create cos_backend
@@ -157,6 +160,30 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave3.sql
 
+      - name: Seed Runtime cleanup Diagnostic permission fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          CREATE TABLE IF NOT EXISTS diagnostic_role_permissions (
+            role VARCHAR(80) NOT NULL,
+            permission VARCHAR(80) NOT NULL,
+            PRIMARY KEY (role, permission)
+          );
+
+          CREATE TABLE IF NOT EXISTS diagnostic_user_permissions (
+            organization_id VARCHAR(190) NOT NULL,
+            user_id BIGINT UNSIGNED NOT NULL,
+            permission VARCHAR(80) NOT NULL,
+            allowed TINYINT(1) NOT NULL,
+            PRIMARY KEY (organization_id, user_id, permission)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+          INSERT IGNORE INTO diagnostic_role_permissions(role, permission) VALUES
+            ('realtor', 'diagnostic.methodology.view'),
+            ('manager', 'diagnostic.methodology.view'),
+            ('manager', 'diagnostic.methodology.edit');
+          SQL
+
       - name: Seed Sales Wave 4 Agent Tool fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -238,6 +265,12 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_request_mapper.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/http_correlation_contract.php
           php tests/architecture/symfony_runtime_hardening.php
+          php tests/architecture/runtime_cleanup_third_slice.php
+          php tests/architecture/kernel_v082_module_control.php
+          php tests/architecture/kernel_v088_effective_module_context.php
+          php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
+          php tests/smoke/diagnostic_v053.php
+          php tests/smoke/diagnostic_v055.php
 
       - name: Verify Sales strangler slice
         run: |
@@ -1777,23 +1810,34 @@ jobs:
 
       - name: Verify Symfony health endpoint
         run: |
+          health_ok=0
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8081/health > /tmp/cos-symfony-health.json; then
-              cat /tmp/cos-symfony-health.json
-              exit 0
+              health_ok=1
+              break
             fi
             sleep 2
           done
-          docker compose -f docker-compose.symfony.yml ps -a
-          docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 nginx php worker scheduler mysql redis
-          exit 1
+          if [ "$health_ok" != "1" ]; then
+            docker compose -f docker-compose.symfony.yml ps -a
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 nginx php worker scheduler mysql redis
+            exit 1
+          fi
+          cat /tmp/cos-symfony-health.json
+
+          status=$(curl --silent --show-error --output /tmp/cos-api-v1-health.json --write-out '%{http_code}' \
+            http://127.0.0.1:8081/api/v1/health)
+          echo "Public API health HTTP $status"
+          cat /tmp/cos-api-v1-health.json
+          echo
+          test "$status" = "200"
 
       - name: Verify legacy-session security and tenant-context bridge
         run: |
           forbidden='{"ok":false,"error":"Manager authorization required."}'
 
           status=$(curl --silent --show-error --output /tmp/no-session.json --write-out '%{http_code}' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/no-session.json)" = "$forbidden"
 
@@ -1806,16 +1850,9 @@ jobs:
 
           status=$(curl --silent --show-error --output /tmp/manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "200"
-          grep -q '"organization_id":"default"' /tmp/manager.json
-          grep -q '"organization_role":"manager"' /tmp/manager.json
-          grep -q '"cos.tenant.access"' /tmp/manager.json
-          grep -q '"cos.tenant.manage"' /tmp/manager.json
-          if grep -q '"cos.tenant.admin"' /tmp/manager.json; then
-            echo 'manager unexpectedly received tenant admin permission'
-            exit 1
-          fi
+          grep -q '"ok":true' /tmp/manager.json
 
           status=$(curl --silent --show-error --output /tmp/api-v1-manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
@@ -1826,13 +1863,22 @@ jobs:
 
           status=$(curl --silent --show-error --output /tmp/realtor.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-realtor-session0002' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/realtor.json)" = "$forbidden"
 
+          status=$(curl --silent --show-error --output /tmp/realtor-methodology.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            http://127.0.0.1:8081/api/v1/admin/diagnostics/permissions)
+          echo "Realtor Methodology permissions HTTP $status"
+          cat /tmp/realtor-methodology.json
+          echo
+          test "$status" = "200"
+          grep -q '"view":true' /tmp/realtor-methodology.json
+
           status=$(curl --silent --show-error --output /tmp/other-manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-other-manager0003' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/other-manager.json)" = "$forbidden"
 
@@ -1841,7 +1887,7 @@ jobs:
       - name: Verify operations routes are protected
         run: |
           status=$(curl --silent --show-error --output /tmp/cos-operations-response.json --write-out '%{http_code}' \
-            http://127.0.0.1:8081/migration/api/cos/events)
+            http://127.0.0.1:8081/api/v1/operations/events)
           echo "HTTP $status"
           cat /tmp/cos-operations-response.json
           echo
@@ -1919,9 +1965,9 @@ jobs:
             set -e
             curl --fail --show-error --silent http://127.0.0.1:8081/health
             echo
-            curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health
+            curl --fail --show-error --silent http://127.0.0.1:8081/health/dependencies
             echo
-            status=$(curl --silent --show-error --dump-header /tmp/cos-symfony-protected.headers --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" -H "X-Correlation-ID: aws-symfony-smoke" http://127.0.0.1:8081/migration/api/cos/events)
+            status=$(curl --silent --show-error --dump-header /tmp/cos-symfony-protected.headers --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" -H "X-Correlation-ID: aws-symfony-smoke" http://127.0.0.1:8081/api/v1/operations/events)
             test "$status" = "403"
             grep -qi "^X-Correlation-ID: aws-symfony-smoke" /tmp/cos-symfony-protected.headers
             test "$(cat /tmp/cos-symfony-protected.json)" = "{\"ok\":false,\"error\":\"Manager authorization required.\"}"

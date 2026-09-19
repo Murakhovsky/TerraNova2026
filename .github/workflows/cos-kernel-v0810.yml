@@ -44,7 +44,6 @@ jobs:
           php -l app/Kernel/Module/KernelVersion.php
           php -l app/Kernel/Module/ModuleReadinessDiagnostic.php
           php -l app/Bootstrap/ModuleServices.php
-          php -l app/Interfaces/Api/Controller/PlatformModuleController.php
-          php -l app/Interfaces/Web/Routing/PlatformRoutes.php
+          php -l symfony/src/Http/Api/V1/Controller/PlatformModuleController.php
           php -l tests/unit/module_readiness_diagnostic.php
           php -l tests/architecture/kernel_v0810_module_readiness_diagnostics.php
