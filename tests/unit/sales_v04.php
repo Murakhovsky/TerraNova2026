@@ -30,7 +30,7 @@ $repo = file_get_contents($root . '/app/Domains/Sales/Infrastructure/Persistence
 $inbound = file_get_contents($root . '/app/Domains/Sales/Application/Service/SalesInboundService.php') ?: '';
 $commands = file_get_contents($root . '/app/Domains/Sales/Application/Service/ClientCaseCommandService.php') ?: '';
 $readModel = file_get_contents($root . '/app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlClientCaseReadModel.php') ?: '';
-$routes = file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php') ?: '';
+$routes = file_get_contents($root . '/symfony/config/routes.yaml') ?: '';
 
 $assert(!str_contains($repo, "'stage' => strtolower((string) \$initial['code'])"), 'New deals must not persist lowercase legacy stage mirrors.');
 $assert(str_contains($repo, "'stage' => strtoupper((string) \$initial['code'])"), 'New deals must mirror the canonical configured stage code.');
@@ -41,7 +41,7 @@ $assert(!str_contains($commands, "\$status = \$this->allowed((string) (\$input['
 $assert(str_contains($commands, '$simpleChanges = [];'), 'QuickUpdate must build events only from persisted simple changes.');
 $assert(!str_contains($readModel, 'use Domains\\Sales\\Model\\PipelineStage;'), 'Legacy ClientCase read model must not depend on hardcoded PipelineStage values.');
 $assert(str_contains($readModel, 'sales_pipeline_stages'), 'ClientCase read model must resolve configured stages.');
-foreach (['/sales/leads', '/sales/deals/{id:[0-9]+}', '/sales/director', '/sales/admin'] as $route) {
+foreach (['path: /sales/leads', 'path: /sales/deals/{id}', 'path: /sales/director', 'path: /sales/admin'] as $route) {
     $assert(str_contains($routes, $route), 'Missing Sales V0.4 route: ' . $route);
 }
 $assert(is_file($root . '/symfony/src/Command/SalesMonitorCommand.php'), 'Sales monitoring Symfony Console entrypoint is required.');
