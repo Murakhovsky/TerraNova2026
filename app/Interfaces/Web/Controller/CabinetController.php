@@ -20,57 +20,17 @@ class CabinetController extends ControllerBase
         $this->view->submissions = [];
         $this->view->inboundRequests = [];
         $this->view->pageStatus = null;
-        $this->view->telegramBinding = null;
-        $this->view->telegramStatus = (string) $this->request->getQuery('telegram_status', 'string', '');
 
         try {
             $data = $this->authService()->cabinetData($user);
             $this->view->myProperties = (array) ($data['my_properties'] ?? []);
             $this->view->submissions = (array) ($data['submissions'] ?? []);
             $this->view->inboundRequests = (array) ($data['inbound_requests'] ?? []);
-            $this->view->telegramBinding = $this->telegramAutomationService()->bindingForUser((int) $user['id']);
         } catch (Throwable $e) {
             $this->logFrontendError('cabinet-page', $e);
             $this->response->setStatusCode(503, 'Service Unavailable');
             $this->view->pageStatus = 'Дані кабінету тимчасово недоступні. Спробуйте оновити сторінку трохи пізніше.';
         }
-    }
-
-    public function telegramConnectAction(): void
-    {
-        $user = $this->requireUser();
-        if (!$user || !$this->request->isPost()) {
-            $this->response->redirect('cabinet');
-            return;
-        }
-
-        try {
-            $link = $this->telegramAutomationService()->createUserLink((int) $user['id']);
-            $username = ltrim((string) $this->di->getShared('config')->telegram->bot_username, '@');
-            if ($username === '') {
-                throw new \RuntimeException('Telegram bot username is not configured.');
-            }
-
-            $this->response->redirect(
-                'https://t.me/' . rawurlencode($username) . '?start=' . rawurlencode((string) $link['token']),
-                true
-            );
-        } catch (Throwable $e) {
-            $this->logFrontendError('telegram-connect', $e);
-            $this->response->redirect('cabinet?telegram_status=connect_error');
-        }
-    }
-
-    public function telegramDisconnectAction(): void
-    {
-        $user = $this->requireUser();
-        if (!$user || !$this->request->isPost()) {
-            $this->response->redirect('cabinet');
-            return;
-        }
-
-        $this->telegramAutomationService()->disconnectUser((int) $user['id']);
-        $this->response->redirect('cabinet?telegram_status=disconnected');
     }
 
     public function submissionAction(?string $id = null): void
