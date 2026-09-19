@@ -39,7 +39,7 @@ GET /api/v1/health
 Після налаштування потрібних розширень PHP та MySQL:
 
 ```bash
-php app/bootstrap_cli.php migration up
+php bin/migrate.php up
 php -S 127.0.0.1:8080 -t public public/router.php
 ```
 
