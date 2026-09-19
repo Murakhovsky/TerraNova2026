@@ -133,12 +133,21 @@ final readonly class MysqlPropertyReferencePort implements PropertyReferencePort
             LEFT JOIN tn_property_inventory_items inventory ON inventory.organization_id=a.organization_id AND inventory.asset_id=a.asset_id
             LEFT JOIN tn_property_listings listing ON listing.organization_id=inventory.organization_id AND listing.inventory_id=inventory.inventory_id
             WHERE a.organization_id=:organization_id
-              AND (a.asset_id LIKE :query OR a.type_code LIKE :query OR listing.title LIKE :query OR listing.slug LIKE :query
-                   OR location.name LIKE :query OR address.formatted_address LIKE :query)
+              AND (a.asset_id LIKE :query_asset
+                   OR a.type_code LIKE :query_type
+                   OR listing.title LIKE :query_title
+                   OR listing.slug LIKE :query_slug
+                   OR location.name LIKE :query_location
+                   OR address.formatted_address LIKE :query_address)
             ORDER BY legacy_property_id DESC,a.asset_id
             LIMIT ' . $limit, [
                 'organization_id' => $organizationId,
-                'query' => '%' . $query . '%',
+                'query_asset' => '%' . $query . '%',
+                'query_type' => '%' . $query . '%',
+                'query_title' => '%' . $query . '%',
+                'query_slug' => '%' . $query . '%',
+                'query_location' => '%' . $query . '%',
+                'query_address' => '%' . $query . '%',
             ]);
     }
 
