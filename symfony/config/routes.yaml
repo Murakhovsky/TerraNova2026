@@ -744,3 +744,58 @@ cos_api_v1_document_archive:
   controller: App\Http\Api\V1\Controller\DocumentsController::archive
   methods: [POST]
   requirements: { id: '[A-Za-z0-9_-]+' }
+
+
+# Wave 11 — Service business cutover
+cos_api_v1_service_request_create:
+  path: /api/v1/service/requests
+  controller: App\Http\Api\V1\Controller\ServiceController::createRequest
+  methods: [POST]
+
+cos_api_v1_service_request:
+  path: /api/v1/service/requests/{id}
+  controller: App\Http\Api\V1\Controller\ServiceController::request
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket_create:
+  path: /api/v1/service/requests/{id}/tickets
+  controller: App\Http\Api\V1\Controller\ServiceController::createTicket
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket:
+  path: /api/v1/service/tickets/{id}
+  controller: App\Http\Api\V1\Controller\ServiceController::ticket
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket_assign:
+  path: /api/v1/service/tickets/{id}/assignments
+  controller: App\Http\Api\V1\Controller\ServiceController::assign
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket_sla:
+  path: /api/v1/service/tickets/{id}/sla
+  controller: App\Http\Api\V1\Controller\ServiceController::setSla
+  methods: [PUT]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket_escalate:
+  path: /api/v1/service/tickets/{id}/escalations
+  controller: App\Http\Api\V1\Controller\ServiceController::escalate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket_resolve:
+  path: /api/v1/service/tickets/{id}/resolution
+  controller: App\Http\Api\V1\Controller\ServiceController::resolve
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_service_ticket_close:
+  path: /api/v1/service/tickets/{id}/close
+  controller: App\Http\Api\V1\Controller\ServiceController::close
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
