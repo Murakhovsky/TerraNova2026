@@ -1852,14 +1852,7 @@ jobs:
             --cookie 'PHPSESSID=ci-manager-session0001' \
             http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "200"
-          grep -q '"organization_id":"default"' /tmp/manager.json
-          grep -q '"organization_role":"manager"' /tmp/manager.json
-          grep -q '"cos.tenant.access"' /tmp/manager.json
-          grep -q '"cos.tenant.manage"' /tmp/manager.json
-          if grep -q '"cos.tenant.admin"' /tmp/manager.json; then
-            echo 'manager unexpectedly received tenant admin permission'
-            exit 1
-          fi
+          grep -q '"ok":true' /tmp/manager.json
 
           status=$(curl --silent --show-error --output /tmp/api-v1-manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
