@@ -140,7 +140,7 @@ foreach (['getDI()', "getShared('frontendNavigationService')", 'navigationServic
     if (str_contains($managerHeader, $legacy)) throw new RuntimeException('Shared Web shell must remain container-free after Symfony SSR cutover: ' . $legacy);
 }
 $navigationBuilder = (string) file_get_contents($root . '/symfony/src/Web/Navigation/NavigationBuilder.php');
-foreach (['ActiveModuleResolver', "snapshot($organizationId)", "'key' => 'sales'", "'key' => 'properties'", "'key' => 'diagnostics'"] as $needle) {
+foreach (['ActiveModuleResolver', 'snapshot($organizationId)', "'key' => 'sales'", "'key' => 'properties'", "'key' => 'diagnostics'"] as $needle) {
     if (!str_contains($navigationBuilder, $needle)) throw new RuntimeException('Symfony navigation builder is missing module-aware workspace behavior: ' . $needle);
 }
 
