@@ -9,6 +9,8 @@ $servicesWeb = (string) file_get_contents($root . '/app/config/services_web.php'
 $httpBootstrap = (string) file_get_contents($root . '/deploy/configure-company-os-http.sh');
 $tls = (string) file_get_contents($root . '/deploy/configure-dev-tls.sh');
 $devDeploy = (string) file_get_contents($root . '/deploy/dev.sh');
+$symfonyDeploy = (string) file_get_contents($root . '/deploy/symfony-dev.sh');
+$symfonyCompose = (string) file_get_contents($root . '/docker-compose.symfony.yml');
 $bootstrapWeb = (string) file_get_contents($root . '/app/bootstrap_web.php');
 $trustedProxy = (string) file_get_contents($root . '/app/config/trusted_proxy.php');
 $workflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
@@ -114,8 +116,37 @@ if (($proxiedHttps['HTTPS'] ?? null) !== 'on'
     throw new RuntimeException('Trusted HTTPS proxy metadata is not normalized for the PHP runtime.');
 }
 
+foreach ([$httpBootstrap, $tls] as $proxyConfig) {
+    foreach ([
+        'SYMFONY_UPSTREAM="${3:-127.0.0.1:8081}"',
+        'location ^~ /api/v1/',
+        'proxy_pass http://$SYMFONY_UPSTREAM;',
+    ] as $needle) {
+        if (!str_contains($proxyConfig, $needle)) {
+            throw new RuntimeException('Canonical Symfony API reverse-proxy contract is missing: ' . $needle);
+        }
+    }
+}
+
+if (!str_contains($devDeploy, 'bash deploy/symfony-dev.sh')
+    || !str_contains($devDeploy, 'http://127.0.0.1:8081/api/v1/health')) {
+    throw new RuntimeException('DEV deployment does not boot and verify the canonical Symfony API runtime.');
+}
+
+foreach ([
+    'SYMFONY_LEGACY_DB_USER "cos_symfony_app"',
+    'GRANT SELECT, INSERT, UPDATE, DELETE ON',
+    "'cos_symfony_app'@'%%'",
+] as $needle) {
+    if (!str_contains($symfonyDeploy, $needle)) {
+        throw new RuntimeException('Symfony legacy database DML account contract is missing: ' . $needle);
+    }
+}
+if (!str_contains($symfonyCompose, 'SYMFONY_LEGACY_DB_USER:-cos_symfony_app')) {
+    throw new RuntimeException('Symfony compose does not default to the DML application account.');
+}
+
 if (!str_contains($workflow, 'bash tests/smoke/https_proxy_contract.sh')) {
     throw new RuntimeException('AWS dev deployment must execute the live HTTPS proxy smoke test.');
 }
-
 echo "HTTPS proxy deployment contract passed.\n";
