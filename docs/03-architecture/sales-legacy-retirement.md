@@ -44,7 +44,7 @@ canonical ports / MySQL adapters
 
 MySQL adapters у `app/Domains/Sales/Infrastructure` не видаляються лише через те, що вони MySQL. Вони залишаються канонічною Infrastructure реалізацією доти, доки Application ports реально їх використовують.
 
-## CRM ingress
+## Вхідні CRM-повідомлення
 
 Канонічний webhook:
 
