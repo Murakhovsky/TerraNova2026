@@ -12,7 +12,7 @@ $required = [
     'app/Kernel/Module/Contract/BootstrapPolicyProvidingModuleInterface.php',
     'app/Infrastructure/Visualization/Architecture/ArchitectureGraphProvider.php',
     'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionDefinition.php',
-    'app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php',
+    'symfony/src/Web/Visualization/ArchitecturePageController.php',
     'tests/unit/visualization_architecture_graph.php',
     'tests/unit/visualization_architecture_projections.php',
     'docs/03-architecture/visualization-v0.4.1.md',
@@ -28,13 +28,9 @@ foreach (['TYPE_RULE', 'TYPE_POLICY', 'REL_TRIGGERS', 'REL_PRODUCES', 'REL_GOVER
 
 $provider = $read('app/Infrastructure/Visualization/Architecture/ArchitectureGraphProvider.php');
 foreach ([
-    'BootstrapRuleProvidingModuleInterface',
-    'BootstrapPolicyProvidingModuleInterface',
-    'appendBootstrapRules',
-    'appendBootstrapPolicies',
-    "'bootstrap_default'",
-    "'manifest.kernel_constraint'",
-    "'runtime_contract'",
+    'BootstrapRuleProvidingModuleInterface', 'BootstrapPolicyProvidingModuleInterface',
+    'appendBootstrapRules', 'appendBootstrapPolicies', "'bootstrap_default'",
+    "'manifest.kernel_constraint'", "'runtime_contract'",
 ] as $marker) {
     $assert(str_contains($provider, $marker), 'Architecture provider hardening marker missing: ' . $marker);
 }
@@ -51,14 +47,15 @@ foreach (["layout: 'hierarchical'", "layout: 'flow'", "'radial'", 'TYPE_RULE', '
     $assert(str_contains($registry, $marker), 'Projection hardening marker missing: ' . $marker);
 }
 
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
-foreach (['function graphAction', "getQuery('focus'", "getQuery('depth'", 'new GraphView(', "\$payload['view'] = ["] as $marker) {
+$controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
+foreach (['public function graph(', "query->get('focus'", "query->get('depth'", 'new GraphView(', "$payload['view'] = ["] as $marker) {
     $assert(str_contains($controller, $marker), 'Server-side Architecture Graph projection marker missing: ' . $marker);
 }
-$assert(!str_contains($controller, 'Infrastructure\\'), 'Web Architecture controller must remain free of Infrastructure compile-time dependencies.');
+$assert(!str_contains($controller, 'Infrastructure\\Visualization'), 'Symfony Architecture controller must remain free of Infrastructure compile-time dependencies.');
 
-$routes = $read('app/Interfaces/Web/Routing/VisualizationRoutes.php');
-$assert(str_contains($routes, "'/cos/architecture/graph'"), 'Server-side Architecture Graph endpoint route missing.');
+$routes = $read('symfony/config/routes.yaml');
+$assert(str_contains($routes, 'cos_web_architecture_graph:'), 'Server-side Architecture Graph endpoint route missing.');
+$assert(str_contains($routes, 'path: /cos/architecture/graph'), 'Canonical graph endpoint path missing.');
 
 $client = $read('frontend/features/cos/architecture-explorer.js');
 foreach (['fetchDomainProjection', 'data-architecture-node-count', 'renderTypeFilters', 'layoutOptions', "hint === 'hierarchical'", "hint === 'flow'", "hint === 'radial'"] as $marker) {
@@ -71,4 +68,4 @@ foreach (['data-architecture-endpoint', 'data-architecture-view-label', 'data-ar
     $assert(str_contains($view, $marker), 'Explorer active-view UI marker missing: ' . $marker);
 }
 
-echo "Visualization V0.4.1 hardening architecture passed.\n";
+echo "Visualization V0.4.1 Symfony hardening architecture passed.\n";
