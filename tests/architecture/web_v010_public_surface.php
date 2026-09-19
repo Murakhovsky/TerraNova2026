@@ -62,7 +62,7 @@ $routeContract = [
 ];
 foreach ($routeContract as $pattern => $action) {
     $contains($routes, "'" . $pattern . "'", 'Canonical Public Property route is missing.');
-    $contains($routes, "$target('" . $action . "')", 'Canonical Public Property action mapping is missing.');
+    $contains($routes, "\$target('" . $action . "')", 'Canonical Public Property action mapping is missing.');
 }
 $contains($routes, "'controller' => 'public_property'", 'Public Property routes must target the dedicated delivery controller.');
 $contains($routes, "'namespace' => 'Interfaces\\\\Web\\\\Controller'", 'Public Property routes must stay in the Web delivery layer.');
@@ -89,7 +89,10 @@ foreach (['% 68', '% 58', '$index * 29', '$index * 23'] as $needle) {
 
 $header = $read('app/Interfaces/Web/View/shared/public_header.phtml');
 $footer = $read('app/Interfaces/Web/View/shared/public_footer.phtml');
-$contains($header, 'FrontendNavigation::public()', 'Public header must use canonical navigation.');
+$contains($header, '$publicNavigation', 'Public header must consume canonical navigation through its view model.');
+$notContains($header, 'FrontendNavigation::public()', 'Public header must not construct navigation inside the template.');
+$notContains($header, 'getDI()', 'Public header must remain container-free.');
+$notContains($header, 'di(', 'Public header must remain service-locator free.');
 $contains($header, 'data-interface-surface="public"', 'Public header must expose the surface marker.');
 foreach (['property/catalog', 'services', 'partners', 'terra-nova', 'cos/en'] as $needle) {
     $contains($footer, $needle, 'Public footer is missing a canonical destination.');
