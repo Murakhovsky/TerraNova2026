@@ -1420,3 +1420,62 @@ services:
   App\Command\TelegramHealthCommand:
     arguments:
       $token: '%env(TELEGRAM_BOT_TOKEN)%'
+
+
+  # Final Web retirement — PHTML renderer and Sales SSR.
+  App\Web\Phtml\ViteAssetManifest:
+    arguments:
+      $manifestPath: '%kernel.project_dir%/public/build/.vite/manifest.json'
+      $publicPrefix: '/build/'
+
+  App\Web\Phtml\PhtmlRenderer:
+    arguments:
+      $viewRoot: '%kernel.project_dir%/../app/Interfaces/Web/View'
+      $manifest: '@App\Web\Phtml\ViteAssetManifest'
+
+  App\Web\Navigation\NavigationBuilder:
+    arguments:
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalMetricsReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalMetricsReadModel
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesOperationalPerformanceReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesOperationalPerformanceReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesOperationalPerformanceReadModel
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesForecastRiskReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesForecastRiskReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesForecastRiskReadModel
+
+  Domains\Sales\Application\Service\SalesHistoricalMetricsService:
+    arguments:
+      $readModel: '@Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface'
+
+  Domains\Sales\Application\Service\SalesOperationalPerformanceService:
+    arguments:
+      $readModel: '@Domains\Sales\Application\Contract\SalesOperationalPerformanceReadModelInterface'
+
+  Domains\Sales\Application\Service\SalesForecastRiskService:
+    arguments:
+      $readModel: '@Domains\Sales\Application\Contract\SalesForecastRiskReadModelInterface'
+
+  Domains\Sales\Application\Service\SalesDirectorCockpitService:
+    arguments:
+      $historical: '@Domains\Sales\Application\Service\SalesHistoricalMetricsService'
+      $operations: '@Domains\Sales\Application\Service\SalesOperationalPerformanceService'
+      $forecast: '@Domains\Sales\Application\Service\SalesForecastRiskService'
+
+  App\Web\Sales\SalesPageController:
+    public: true
+    tags: ['controller.service_arguments']
