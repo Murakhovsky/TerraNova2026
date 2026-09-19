@@ -39,7 +39,7 @@ foreach ([
 foreach ([
     'curl_init(',
     'api.telegram.org/bot',
-    "'sendMessage'",
+    '/sendMessage',
     "'inline_keyboard'",
 ] as $needle) {
     $assert(str_contains($sender, $needle), 'Telegram Bot API sender is missing: ' . $needle);
