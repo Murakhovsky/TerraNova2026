@@ -165,7 +165,7 @@ foreach ($scenarios['scenarios'] ?? [] as $scenario) {
     }
 }
 
-$importer = (string) file_get_contents($root . '/bin/import-sales-methodology-v02.php');
+$importer = (string) file_get_contents($root . '/symfony/src/Command/ImportSalesMethodologyV02Command.php');
 v055(
     str_contains($importer, 'regression-scenarios.json')
     && str_contains($importer, 'unset($facts[(string) $factId])'),

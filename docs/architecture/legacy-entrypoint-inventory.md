@@ -50,3 +50,17 @@ The following HTTP/control-plane surfaces have completed cutover and must not re
 Only front controllers, generated immutable browser assets, curated static assets, and configured runtime upload mounts may be reachable under `public`. Developer tools, secrets, environment configuration, business services and source assets are forbidden.
 
 `public/uploads/**` is ignored for all new runtime data. Historical media already tracked by Git is retained to avoid destructive removal during the architecture migration; deployment must mount/persist this path and a separately approved data migration may untrack the historical files after backup verification.
+
+
+## Retired standalone Phalcon-DI scripts
+
+The following operator/runtime helpers no longer bootstrap a Phalcon DI container:
+
+| Retired script | Canonical owner |
+|---|---|
+| `bin/sales-monitoring.php` | Symfony Scheduler + `cos:sales:automation:scan` |
+| `bin/architecture-graph-smoke.php` | Symfony `cos:architecture:smoke` |
+| `bin/import-sales-methodology-v02.php` | Symfony `cos:diagnostic:sales-methodology:import-v02` |
+| `deploy/sales-monitoring.cron.example` | removed; Scheduler owns the five-minute automation cadence |
+
+Framework-neutral build/health utilities remain valid when they do not compose application runtime through Phalcon.

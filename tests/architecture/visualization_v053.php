@@ -17,7 +17,7 @@ $assert = static function (bool $condition, string $message): void {
 
 $controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
-$smoke = $read('bin/architecture-graph-smoke.php');
+$smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 $deploy = $read('deploy/dev.sh');
 $visualizationServices = $read('app/Bootstrap/VisualizationServices.php');
 
@@ -38,10 +38,10 @@ $assert(str_contains($controller, "'diagnostic' => \$diagnostic"), 'Graph JSON e
 $assert(str_contains($view, 'data-architecture-backend-diagnostic'), 'Architecture view must render backend diagnostic details for managers.');
 
 foreach ([
-    "getShared('cosArchitectureGraphProvider')",
-    "getShared('cosArchitectureProjectionRegistry')",
-    "getShared('cosCytoscapeGraphMapper')",
-    'registry->project(',
+    'GraphProviderInterface',
+    'GraphProjectionRegistryInterface',
+    'CytoscapeGraphMapper',
+    'projections->project(',
     'mapper->map(',
     'Architecture Graph runtime smoke passed',
     'Architecture Graph runtime smoke failed',
@@ -63,7 +63,7 @@ $assert(
 );
 
 $assert(
-    str_contains($deploy, 'php /var/www/html/bin/architecture-graph-smoke.php'),
+    str_contains($deploy, 'php bin/console cos:architecture:smoke'),
     'AWS deploy must execute the Architecture Graph smoke inside the deployed PHP container.',
 );
 $assert(

@@ -20,7 +20,9 @@ on:
       - 'app/Bootstrap/KernelServices.php'
       - 'app/Bootstrap/VisualizationServices.php'
       - 'app/config/services_kernel.php'
-      - 'bin/architecture-graph-smoke.php'
+      - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
+      - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
+      - 'symfony/config/services.yaml'
       - 'deploy/dev.sh'
       - 'frontend/entrypoints/cos-architecture-explorer.js'
       - 'frontend/features/cos/architecture-explorer.*'
@@ -60,7 +62,9 @@ on:
       - 'app/Bootstrap/KernelServices.php'
       - 'app/Bootstrap/VisualizationServices.php'
       - 'app/config/services_kernel.php'
-      - 'bin/architecture-graph-smoke.php'
+      - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
+      - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
+      - 'symfony/config/services.yaml'
       - 'deploy/dev.sh'
       - 'frontend/entrypoints/cos-architecture-explorer.js'
       - 'frontend/features/cos/architecture-explorer.*'
@@ -138,7 +142,8 @@ jobs:
           php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
           php -l app/Interfaces/Web/Module.php
-          php -l bin/architecture-graph-smoke.php
+          php -l symfony/src/Command/ArchitectureGraphSmokeCommand.php
+          php -l symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php
           php -l docs/.vitepress/generate-runtime-evidence.php
           php -l tests/architecture/visualization_v02.php
           php -l tests/architecture/visualization_v03.php

@@ -21,7 +21,7 @@ $services = $read('app/Bootstrap/VisualizationServices.php');
 $controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
 $routes = $read('app/Interfaces/Web/Routing/VisualizationRoutes.php');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
-$smoke = $read('bin/architecture-graph-smoke.php');
+$smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 
 $assert(str_contains($contract, 'interface GraphHealthAnalyzerInterface'), 'Graph health Kernel contract is missing.');
 $assert(str_contains($contract, 'public function analyze(Graph $graph): array;'), 'Graph health contract must remain graph-only and renderer-neutral.');
@@ -45,10 +45,10 @@ $assert(str_contains($view, 'Architecture graph health'), 'Architecture Explorer
 $assert(str_contains($view, "cos/architecture/health"), 'Architecture Explorer must link to the JSON health surface.');
 
 foreach ([
-    "getShared('cosArchitectureGraphHealthAnalyzer')",
-    "'resolve_health_analyzer'",
-    "'analyze_canonical_graph'",
     'GraphHealthAnalyzerInterface',
+    "'analyze_canonical_graph'",
+    'health->analyze(',
+    "name: 'cos:architecture:smoke'",
 ] as $marker) {
     $assert(str_contains($smoke, $marker), 'Runtime smoke must validate graph health integration: ' . $marker);
 }
