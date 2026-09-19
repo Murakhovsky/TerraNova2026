@@ -1127,3 +1127,8 @@ cos_web_sales_director:
   path: /sales/director
   controller: App\Web\Sales\SalesPageController::director
   methods: [GET]
+
+cos_web_sales_admin:
+  path: /sales/admin
+  controller: App\Web\Sales\SalesPageController::admin
+  methods: [GET]
