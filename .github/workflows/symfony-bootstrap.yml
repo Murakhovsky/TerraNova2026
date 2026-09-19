@@ -1783,16 +1783,27 @@ jobs:
 
       - name: Verify Symfony health endpoint
         run: |
+          health_ok=0
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8081/health > /tmp/cos-symfony-health.json; then
-              cat /tmp/cos-symfony-health.json
-              exit 0
+              health_ok=1
+              break
             fi
             sleep 2
           done
-          docker compose -f docker-compose.symfony.yml ps -a
-          docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 nginx php worker scheduler mysql redis
-          exit 1
+          if [ "$health_ok" != "1" ]; then
+            docker compose -f docker-compose.symfony.yml ps -a
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 nginx php worker scheduler mysql redis
+            exit 1
+          fi
+          cat /tmp/cos-symfony-health.json
+
+          status=$(curl --silent --show-error --output /tmp/cos-api-v1-health.json --write-out '%{http_code}' \
+            http://127.0.0.1:8081/api/v1/health)
+          echo "Public API health HTTP $status"
+          cat /tmp/cos-api-v1-health.json
+          echo
+          test "$status" = "200"
 
       - name: Verify legacy-session security and tenant-context bridge
         run: |
@@ -1835,6 +1846,15 @@ jobs:
             http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/realtor.json)" = "$forbidden"
+
+          status=$(curl --silent --show-error --output /tmp/realtor-methodology.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            http://127.0.0.1:8081/api/v1/admin/diagnostics/permissions)
+          echo "Realtor Methodology permissions HTTP $status"
+          cat /tmp/realtor-methodology.json
+          echo
+          test "$status" = "200"
+          grep -q '"view":true' /tmp/realtor-methodology.json
 
           status=$(curl --silent --show-error --output /tmp/other-manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-other-manager0003' \
