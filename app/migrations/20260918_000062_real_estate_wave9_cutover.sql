@@ -61,5 +61,17 @@ CREATE TABLE IF NOT EXISTS tn_real_estate_showings (
     KEY ix_real_estate_showing_case (organization_id, case_id, scheduled_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Existing tenants that explicitly installed the RealEstate 0.1 skeleton must
+-- become current only after the Wave 9 schema above exists. Do not alter
+-- UNINSTALLED tenants or unknown versions.
+UPDATE cos_module_installations
+SET installed_version='0.2.0',
+    schema_version='0.2.0',
+    updated_at=CURRENT_TIMESTAMP
+WHERE module_id='real_estate'
+  AND status='INSTALLED'
+  AND installed_version='0.1.0'
+  AND schema_version='0.1.0';
+
 INSERT IGNORE INTO tn_migrations (migration)
 VALUES ('20260918_000062_real_estate_wave9_cutover');
