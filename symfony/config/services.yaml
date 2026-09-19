@@ -1375,7 +1375,8 @@ services:
   App\Infrastructure\Visualization\ArchitectureGraphProviderFactory:
     arguments:
       $catalog: '@Kernel\Module\ModuleCatalog'
-      $runtimeModules: '@Kernel\Module\DomainModuleRegistry'
+      $runtimeModules: !service_locator
+        registry: '@Kernel\Module\DomainModuleRegistry'
 
   runtime.architecture_graph_provider:
     class: Infrastructure\Visualization\Architecture\FallbackArchitectureGraphProvider
