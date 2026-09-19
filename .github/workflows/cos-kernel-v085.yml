@@ -34,9 +34,9 @@ jobs:
         run: |
           php -l app/Kernel/Module/KernelVersion.php
           php -l app/Interfaces/Web/Routing/ModuleRouteContributorInterface.php
-          php -l app/Interfaces/Web/Routing/SalesModuleRouteContributor.php
+          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           php -l app/Interfaces/Web/Module.php
           php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/Domains/Sales/module.php
+          php -l app/Domains/Property/module.php
           php -l tests/architecture/kernel_v084_module_configuration_contributions.php
           php -l tests/architecture/kernel_v085_module_route_contributions.php
