@@ -169,6 +169,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/property_real_estate_wave9.sql
 
+      - name: Seed Documents Wave 10 fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/documents_wave10.sql
+
       - name: Verify Doctrine MySQL persistence boundary
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -953,6 +958,237 @@ jobs:
           test "$wave9_audit" = "6"
 
           echo "Property / RealEstate Wave 9 HTTP → Command/Query → Domain → MySQL → Events/Audit runtime passed."
+
+      - name: Verify Documents Wave 10 business cutover
+        run: |
+          php tests/architecture/platform_documents_boundaries.php
+          php tests/architecture/documents_wave10_cutover.php
+          php tests/unit/platform_documents.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave10-routes.txt
+          grep -q 'cos_api_v1_document_upload' /tmp/wave10-routes.txt
+          grep -q 'cos_api_v1_document_version_create' /tmp/wave10-routes.txt
+          grep -q 'cos_api_v1_document_template_generate' /tmp/wave10-routes.txt
+          grep -q 'cos_api_v1_document_signature_sign' /tmp/wave10-routes.txt
+          grep -q 'cos_api_v1_document_archive' /tmp/wave10-routes.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+          upload_payload='{"title":"Wave 10 Agreement","filename":"agreement.txt","mime_type":"text/plain","content":"version one"}'
+
+          status=$(curl --silent --show-error --output /tmp/wave10-upload.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-upload' \
+            -H 'X-Idempotency-Key: wave10-upload-001' \
+            -H 'Content-Type: application/json' \
+            --data "$upload_payload" \
+            http://127.0.0.1:8081/api/v1/documents)
+          echo "Wave 10 Upload HTTP $status"; cat /tmp/wave10-upload.json; echo
+          test "$status" = "201"
+          document_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-upload.json"),true); echo (string)($j["data"]["document_id"]??"");')
+          storage_key_v1=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-upload.json"),true); echo (string)($j["data"]["current_storage_key"]??"");')
+          test -n "$document_id"
+          test -n "$storage_key_v1"
+          docker compose -f docker-compose.symfony.yml exec -T php test -f "var/storage/$storage_key_v1"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-upload-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-upload-replay' \
+            -H 'X-Idempotency-Key: wave10-upload-001' \
+            -H 'Content-Type: application/json' \
+            --data "$upload_payload" \
+            http://127.0.0.1:8081/api/v1/documents)
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave10-upload-replay.json
+
+          status=$(curl --silent --show-error --output /tmp/wave10-upload-conflict.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-upload-conflict' \
+            -H 'X-Idempotency-Key: wave10-upload-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"title":"Wave 10 Agreement","filename":"agreement.txt","mime_type":"text/plain","content":"DIFFERENT"}' \
+            http://127.0.0.1:8081/api/v1/documents)
+          test "$status" = "409"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-missing-key.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'Content-Type: application/json' \
+            --data '{"title":"Missing key","filename":"missing.txt","mime_type":"text/plain","content":"x"}' \
+            http://127.0.0.1:8081/api/v1/documents)
+          test "$status" = "422"
+          grep -q '"error":"idempotency_key_required"' /tmp/wave10-missing-key.json
+
+          status=$(curl --silent --show-error --output /tmp/wave10-realtor-denied.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave10-realtor-denied' \
+            -H 'Content-Type: application/json' \
+            --data '{"title":"Denied","filename":"denied.txt","mime_type":"text/plain","content":"x"}' \
+            http://127.0.0.1:8081/api/v1/documents)
+          test "$status" = "403"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-attach.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-attach' \
+            -H 'X-Idempotency-Key: wave10-attach-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"related_type":"sales.opportunity","related_id":"101"}' \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id/attachments")
+          echo "Wave 10 Attach HTTP $status"; cat /tmp/wave10-attach.json; echo
+          test "$status" = "201"
+          grep -q '"related_type":"sales.opportunity"' /tmp/wave10-attach.json
+
+          version_payload='{"filename":"agreement-v2.txt","mime_type":"text/plain","content":"version two"}'
+          status=$(curl --silent --show-error --output /tmp/wave10-version.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-version' \
+            -H 'X-Idempotency-Key: wave10-version-001' \
+            -H 'Content-Type: application/json' \
+            --data "$version_payload" \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id/versions")
+          echo "Wave 10 Version HTTP $status"; cat /tmp/wave10-version.json; echo
+          test "$status" = "201"
+          WAVE10_DOC="$document_id" php -r '
+            $j=json_decode(file_get_contents("/tmp/wave10-version.json"),true,512,JSON_THROW_ON_ERROR);
+            if (($j["data"]["document_id"]??null)!==getenv("WAVE10_DOC")) exit(41);
+            if ((int)($j["data"]["current_version_number"]??0)!==2) exit(42);
+          '
+          storage_key_v2=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-version.json"),true); echo (string)($j["data"]["current_storage_key"]??"");')
+          test -n "$storage_key_v2"
+          docker compose -f docker-compose.symfony.yml exec -T php test -f "var/storage/$storage_key_v2"
+
+          generate_payload='{"title":"Generated Contract","variables":{"client":"Alice"}}'
+          status=$(curl --silent --show-error --output /tmp/wave10-generated.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-generate' \
+            -H 'X-Idempotency-Key: wave10-generate-001' \
+            -H 'Content-Type: application/json' \
+            --data "$generate_payload" \
+            http://127.0.0.1:8081/api/v1/document-templates/TPL-WAVE10-CONTRACT/documents)
+          echo "Wave 10 Generate HTTP $status"; cat /tmp/wave10-generated.json; echo
+          test "$status" = "201"
+          generated_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-generated.json"),true); echo (string)($j["data"]["document_id"]??"");')
+          generated_storage=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-generated.json"),true); echo (string)($j["data"]["current_storage_key"]??"");')
+          test -n "$generated_id"
+          test -n "$generated_storage"
+          docker compose -f docker-compose.symfony.yml exec -T php test -f "var/storage/$generated_storage"
+          generated_body=$(docker compose -f docker-compose.symfony.yml exec -T php cat "var/storage/$generated_storage")
+          test "$generated_body" = "Contract for Alice"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-signature-request.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-signature-request' \
+            -H 'X-Idempotency-Key: wave10-signature-request-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"signer_id":"person:1"}' \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id/signature-requests")
+          echo "Wave 10 Signature request HTTP $status"; cat /tmp/wave10-signature-request.json; echo
+          test "$status" = "201"
+          signature_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-signature-request.json"),true); echo (string)($j["data"]["signature_id"]??"");')
+          test -n "$signature_id"
+
+          sign_payload='{"signed_by":"person:1","signature_reference":"fixture-signature-1"}'
+          status=$(curl --silent --show-error --output /tmp/wave10-sign.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-sign' \
+            -H 'X-Idempotency-Key: wave10-sign-001' \
+            -H 'Content-Type: application/json' \
+            --data "$sign_payload" \
+            "http://127.0.0.1:8081/api/v1/document-signatures/$signature_id/sign")
+          echo "Wave 10 Sign HTTP $status"; cat /tmp/wave10-sign.json; echo
+          test "$status" = "200"
+          grep -q '"status":"signed"' /tmp/wave10-sign.json
+
+          status=$(curl --silent --show-error --output /tmp/wave10-signature-request-2.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-signature-request-2' \
+            -H 'X-Idempotency-Key: wave10-signature-request-002' \
+            -H 'Content-Type: application/json' \
+            --data '{"signer_id":"person:2"}' \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id/signature-requests")
+          test "$status" = "201"
+          signature_id_2=$(php -r '$j=json_decode(file_get_contents("/tmp/wave10-signature-request-2.json"),true); echo (string)($j["data"]["signature_id"]??"");')
+          test -n "$signature_id_2"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-archive.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave10-archive' \
+            -H 'X-Idempotency-Key: wave10-archive-001' \
+            -H 'Content-Type: application/json' \
+            --data '{}' \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id/archive")
+          echo "Wave 10 Archive HTTP $status"; cat /tmp/wave10-archive.json; echo
+          test "$status" = "200"
+          grep -q '"status":"archived"' /tmp/wave10-archive.json
+
+          status=$(curl --silent --show-error --output /tmp/wave10-version-after-archive.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave10-version-after-archive' \
+            -H 'Content-Type: application/json' \
+            --data '{"filename":"late.txt","mime_type":"text/plain","content":"late"}' \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id/versions")
+          test "$status" = "409"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-sign-after-archive.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Idempotency-Key: wave10-sign-after-archive' \
+            -H 'Content-Type: application/json' \
+            --data '{"signed_by":"person:2","signature_reference":"fixture-signature-2"}' \
+            "http://127.0.0.1:8081/api/v1/document-signatures/$signature_id_2/sign")
+          test "$status" = "409"
+
+          status=$(curl --silent --show-error --output /tmp/wave10-document.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            "http://127.0.0.1:8081/api/v1/documents/$document_id")
+          test "$status" = "200"
+          php -r '
+            $j=json_decode(file_get_contents("/tmp/wave10-document.json"),true,512,JSON_THROW_ON_ERROR);
+            $d=$j["data"]??[];
+            if (($d["status"]??null)!=="archived") exit(51);
+            if (count($d["versions"]??[])!==2) exit(52);
+            if (count($d["relations"]??[])!==1) exit(53);
+            if (count($d["signatures"]??[])!==2) exit(54);
+          '
+
+          counts=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT CONCAT(
+              (SELECT COUNT(*) FROM cos_documents WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM cos_document_files WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM cos_document_versions WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM cos_document_relations WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM cos_document_signatures WHERE organization_id='default'),'|',
+              (SELECT COUNT(*) FROM cos_document_operation_receipts WHERE organization_id='default')
+            );" | tr -d '[:space:]')
+          test "$counts" = "2|3|3|1|2|8"
+
+          document_events=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(DISTINCT type) FROM cos_events WHERE organization_id='default' AND type IN (
+              'documents.document.uploaded','documents.document.attached','documents.version.created',
+              'documents.document.generated','documents.signature.requested','documents.signature.signed',
+              'documents.document.archived'
+            );" | tr -d '[:space:]')
+          test "$document_events" = "7"
+
+          document_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND category='documents.mutation';" | tr -d '[:space:]')
+          test "$document_audit" = "8"
+
+          echo "Documents Wave 10 HTTP → CQRS → Platform runtime → Storage/MySQL → Events/Audit passed."
 
       - name: Verify Sales Wave 3 deterministic automation cutover
         run: |
