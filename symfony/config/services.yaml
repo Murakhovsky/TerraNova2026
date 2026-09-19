@@ -1294,3 +1294,31 @@ services:
       $queue: '@Kernel\Queue\Service\QueueWorker'
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+
+  # Final runtime retirement — Content/N8n worker on Symfony.
+  Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Content\Application\Contract\ContentIntegrationOutboxInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox
+
+  Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $integrationOutbox: '@Domains\Content\Application\Contract\ContentIntegrationOutboxInterface'
+
+  Domains\Content\Application\Contract\ContentRepositoryInterface:
+    alias: Domains\Content\Infrastructure\Persistence\MySql\MysqlContentRepository
+
+  Domains\Content\Application\Service\ContentService:
+    arguments:
+      $content: '@Domains\Content\Application\Contract\ContentRepositoryInterface'
+
+  App\Command\IntegrationOutboxCommand:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $content: '@Domains\Content\Application\Service\ContentService'
+      $url: '%env(N8N_OUTBOUND_URL)%'
+      $secret: '%env(N8N_OUTBOUND_SECRET)%'
