@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper;
 use Kernel\Visualization\Graph\GraphHealthAnalyzerInterface;
+use Kernel\Visualization\Graph\GraphPayloadMapperInterface;
 use Kernel\Visualization\Graph\GraphProjectionRegistryInterface;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 use Kernel\Visualization\Graph\GraphView;
@@ -20,7 +20,7 @@ final class ArchitectureGraphSmokeCommand extends Command
     public function __construct(
         private readonly GraphProviderInterface $provider,
         private readonly GraphProjectionRegistryInterface $projections,
-        private readonly CytoscapeGraphMapper $mapper,
+        private readonly GraphPayloadMapperInterface $mapper,
         private readonly GraphHealthAnalyzerInterface $health,
     ) {
         parent::__construct();
