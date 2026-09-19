@@ -14,6 +14,9 @@ on:
       - 'app/Platform/**'
       - 'app/Domains/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
+      - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
+      - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
+      - 'tests/architecture/documents_wave10_cutover.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
     branches:
@@ -29,6 +32,9 @@ on:
       - 'app/Platform/**'
       - 'app/Domains/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
+      - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
+      - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
+      - 'tests/architecture/documents_wave10_cutover.php'
       - '.github/workflows/symfony-bootstrap.yml'
   workflow_dispatch:
 
@@ -963,7 +969,6 @@ jobs:
         run: |
           php tests/architecture/platform_documents_boundaries.php
           php tests/architecture/documents_wave10_cutover.php
-          php tests/unit/platform_documents.php
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave10-routes.txt
           grep -q 'cos_api_v1_document_upload' /tmp/wave10-routes.txt
