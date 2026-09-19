@@ -111,8 +111,7 @@ final readonly class ServiceWorkflowService implements ServiceApplicationBoundar
                     ?? throw new InvalidArgumentException('Service ticket receipt exists but Ticket was not found.'))
                     + ['replayed'=>true];
             }
-            $request=$this->service->viewRequest($organizationId,$requestId)
-                ?? throw new InvalidArgumentException('Service request was not found.');
+            $request=$this->service->lockRequest($organizationId,$requestId);
             if((string)($request['status']??'')==='closed'){
                 throw new InvalidArgumentException('Closed Service request cannot create Tickets.');
             }
