@@ -1,10 +1,14 @@
 <?php
 
-use Interfaces\Web\Navigation\FrontendNavigation;
-
 $active = (string) ($active ?? '');
 $actions = $actions ?? [];
-$navItems = FrontendNavigation::public();
+$navItems = is_array($publicNavigation ?? null) ? $publicNavigation : [
+    ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість'],
+    ['key' => 'services', 'path' => 'services', 'label' => 'Послуги'],
+    ['key' => 'partners', 'path' => 'partners', 'label' => 'Партнерам'],
+    ['key' => 'about', 'path' => 'terra-nova', 'label' => 'Terra Nova'],
+    ['key' => 'cos', 'path' => 'cos/en', 'label' => 'COS'],
+];
 $href = function (string $path): string {
     if ($path === '' || $path === '/') {
         return $this->url->get();
