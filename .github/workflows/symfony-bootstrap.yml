@@ -271,6 +271,7 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/http_correlation_contract.php
           php tests/architecture/symfony_runtime_hardening.php
           php tests/architecture/runtime_cleanup_third_slice.php
+          php tests/architecture/spatial_symfony_cutover.php
           php tests/architecture/kernel_v082_module_control.php
           php tests/architecture/kernel_v088_effective_module_context.php
           php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
