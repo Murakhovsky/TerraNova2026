@@ -2,7 +2,7 @@
 title: Поточний стан COS
 description: Фактичний продуктовий та архітектурний обсяг поточного main.
 status: active
-updated: 2026-09-18
+updated: 2026-09-19
 kind: product
 ---
 
@@ -78,6 +78,12 @@ Asset / Inventory / Listing / Publication
 ## Каркасні домени V1
 
 Finance, Procurement, Service, HR і Construction залишаються installable skeleton Domains із канонічними моделями та Application contracts, але без повного runtime. Real Estate з Wave 9 уже активний runtime Domain: він оркеструє brokerage lifecycle поверх Sales opportunity та канонічного Property, не дублює Property registry і має власний executable Process Registry definition. Process-coverage exemption для Real Estate видалено.
+
+## Platform Documents
+
+Documents з Wave 10 є активною Platform capability. Вона надає tenant-safe runtime для Upload, Attach, Version, template generation, signature lifecycle та Archive, із Symfony CQRS/API, Platform storage, MySQL metadata, idempotency, Event і Audit.
+
+Documents навмисно не є installable Domain: Sales, Property, HR, Finance та інші бізнес-домени використовують `DocumentAttachmentPort` і не володіють document persistence.
 
 ## Допоміжні предметні області
 
