@@ -136,8 +136,12 @@ if (str_contains($webServices, "setShared('webModuleNavigationContributors'")) {
 }
 
 $managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
-foreach (["getShared('frontendNavigationService')", 'navigationService->workspace', 'navigationService->portal'] as $needle) {
-    if (!str_contains($managerHeader, $needle)) throw new RuntimeException('Shared Web shell is missing WEB V0.5 module-aware navigation: ' . $needle);
+foreach (['getDI()', "getShared('frontendNavigationService')", 'navigationService->workspace', 'navigationService->portal'] as $legacy) {
+    if (str_contains($managerHeader, $legacy)) throw new RuntimeException('Shared Web shell must remain container-free after Symfony SSR cutover: ' . $legacy);
+}
+$navigationBuilder = (string) file_get_contents($root . '/symfony/src/Web/Navigation/NavigationBuilder.php');
+foreach (['ActiveModuleResolver', "snapshot($organizationId)", "'key' => 'sales'", "'key' => 'properties'", "'key' => 'diagnostics'"] as $needle) {
+    if (!str_contains($navigationBuilder, $needle)) throw new RuntimeException('Symfony navigation builder is missing module-aware workspace behavior: ' . $needle);
 }
 
 $cosController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/CosController.php');
@@ -145,12 +149,14 @@ if (!str_contains($cosController, "workspaceSection = 'cos'") || !str_contains($
 $diagnosticController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/MethodologyStudioController.php');
 if (!str_contains($diagnosticController, "['diagnostics-methodology-studio']")) throw new RuntimeException('Methodology Studio must load through a Vite feature entrypoint.');
 
-$salesController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/SalesController.php');
-foreach (["workspaceSection = 'sales'", "['sales-workspace']", 'function dealsAction', "workspaceActive = \$active"] as $needle) {
-    if (!str_contains($salesController, $needle)) throw new RuntimeException('SalesController is missing WEB V0.3 workspace contract: ' . $needle);
+$salesController = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
+foreach (["'workspaceSection' => 'sales'", "['sales-workspace']", 'public function deals(', "workspaceActive' => \$active"] as $needle) {
+    if (!str_contains($salesController, $needle)) throw new RuntimeException('Symfony Sales page owner is missing WEB workspace contract: ' . $needle);
 }
-$routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
-if (!str_contains($routes, "'/sales/deals'")) throw new RuntimeException('WEB V0.3 requires the canonical /sales/deals route.');
+$routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
+if (!str_contains($routes, 'cos_web_sales_deals:')) throw new RuntimeException('Symfony must own the canonical /sales/deals route.');
+$legacyRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
+if (str_contains($legacyRoutes, "'/sales/deals'")) throw new RuntimeException('Phalcon must not retain the migrated /sales/deals route.');
 
 foreach (glob($root . '/app/Interfaces/Web/View/sales/*.phtml') ?: [] as $salesView) {
     $source = (string) file_get_contents($salesView);
