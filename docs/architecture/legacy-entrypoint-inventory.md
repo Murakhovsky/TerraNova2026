@@ -36,6 +36,7 @@ The following HTTP/control-plane surfaces have completed cutover and must not re
 
 `Interfaces\\Api\\Controller\\SpatialController` is retired. `/api/spatial/*` upload/token/job delivery is owned by Symfony; only temporary SSR Spatial/Web compatibility remains on Phalcon.
 Sales SSR is also retired from Phalcon: `/sales/*` is rendered by Symfony `App\\Web\\Sales` controllers using the framework-neutral PHTML renderer; legacy Sales Web controllers/routes must not return.
+Visualization/Diagnostic SSR is retired from Phalcon: `/cos/architecture*`, `/admin/diagnostics/methodology-studio`, and `/diagnostics/{session}/report` are owned by Symfony `App\\Web\\Visualization` / `App\\Web\\Diagnostic`; legacy controllers/routes/contributors must not return.
 
 ## Registered web module owners
 
