@@ -26,6 +26,10 @@ final class TableOwnership
             'tn_client_case_request_matches', 'tn_buyer_activities', 'tn_buyer_matches',
             'tn_buyer_requests', 'tn_buyers', 'request_requests', 'request_shows', 'request_join_realty',
         ],
+        'RealEstate' => [
+            'tn_real_estate_cases', 'tn_real_estate_offers', 'tn_real_estate_showings',
+            'tn_real_estate_operation_receipts',
+        ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],
         'Spatial' => [

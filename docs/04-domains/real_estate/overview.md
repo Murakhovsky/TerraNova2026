@@ -1,6 +1,6 @@
 ---
 title: Огляд домену Real Estate
-description: Межа V1 домену Real Estate для брокерського lifecycle поверх канонічного Property registry.
+description: Runtime V0.2 для брокерського lifecycle поверх канонічного Property registry.
 status: active
 updated: 2026-09-18
 kind: domain
@@ -9,30 +9,48 @@ contract: domain-v1
 
 # Огляд домену Real Estate
 
-Real Estate `0.1.0` є orchestration Domain для брокерських процесів. Він не створює другого реєстру нерухомості й не переписує існуючі catalog, objects, presentations або property data.
+Real Estate `0.2.0` є orchestration Domain для брокерських процесів. Він не створює другого реєстру нерухомості і не дублює Property inventory.
 
-## Призначення
+## Канонічний сценарій Wave 9
 
 ```text
-Property reference → Mandate / BrokerageCase → Showing → Offer
+Sales Opportunity
+      ↓
+Property Match
+      ↓
+Offer
+      ↓
+Viewing
+      ↓
+Reservation
 ```
 
-Real Estate оперує ідентифікаторами канонічних Property assets. Початковий словник: `BrokerageCase`, `Mandate`, `Showing`, `Offer`.
+`Property` залишається source of truth для asset registry, identity, inventory, listing/publication, catalog та presentation. `Sales` залишається source of truth для opportunity. RealEstate володіє тільки брокерським зв’язком і переходами між ними.
 
-## Поточний стан
+## Runtime
 
 ```text
 id: real_estate
-version: 0.1.0
-dependency: property
-runtime: disabled
-persistence: none
-routes: none
-process model: explicitly deferred
+version: 0.2.0
+dependencies: property, sales
+runtime: realEstateDomainModule
+persistence: tn_real_estate_cases / offers / showings
+transport: Symfony /api/v1
+events: real_estate.*
 ```
-
-Існуючий UI і Property runtime залишаються без переписування; бізнес-логіка переноситься сюди лише вертикальними slice-ами, коли її ownership справді є брокерським.
 
 ## Межі
 
-`Property` залишається source of truth для asset registry, identity, inventory, listing/publication, catalog і property presentation. `RealEstate` володіє лише брокерським lifecycle та не пише напряму в Property tables.
+RealEstate читає Property тільки через `PropertyReferencePort`, а reservation виконує через `PropertyInventoryCommandInterface`. Sales opportunity перевіряється через `SalesOpportunityReferenceInterface`.
+
+Прямі SQL-доступи RealEstate Application layer до Property або Sales таблиць заборонені. Reservation залишається транзакційною операцією Property Domain з блокуванням Inventory row для захисту від конкурентного подвійного бронювання.
+
+## API
+
+```text
+POST /api/v1/sales/opportunities/{id}/property-matches
+GET  /api/v1/real-estate/cases/{id}
+POST /api/v1/real-estate/cases/{id}/offers
+POST /api/v1/real-estate/cases/{id}/viewings
+POST /api/v1/real-estate/cases/{id}/reservation
+```

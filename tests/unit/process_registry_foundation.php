@@ -11,7 +11,7 @@ use Kernel\Process\ProcessStep;
 use Kernel\Process\RuntimeMapping;
 
 $registry = new JsonProcessRegistry($root . '/resources/processes');
-if (count($registry->all()) !== 4) throw new RuntimeException('Canonical Process Registry must expose four current processes.');
+if (count($registry->all()) !== 5) throw new RuntimeException('Canonical Process Registry must expose five current processes.');
 
 $property = $registry->get('property.submission-to-publication');
 if (!$property instanceof ProcessDefinition || $property->schemaVersion !== 4 || count($property->steps) !== 6) {
@@ -44,6 +44,14 @@ $contractMappings = array_values(array_filter(
 ));
 if (count($contractMappings) !== 1 || $contractMappings[0]->ref !== 'Domains\\Property\\Contract\\PropertyReferencePort') {
     throw new RuntimeException('Cross-domain Property step lost PropertyReferencePort mapping.');
+}
+
+$brokerage = $registry->get('real_estate.opportunity-to-reservation');
+if (!$brokerage instanceof ProcessDefinition || $brokerage->schemaVersion !== 5 || $brokerage->domain !== 'real_estate') {
+    throw new RuntimeException('RealEstate brokerage process was not hydrated.');
+}
+if (count($brokerage->steps) !== 7 || $brokerage->steps[0]->domain !== 'sales') {
+    throw new RuntimeException('RealEstate brokerage process lost cross-domain topology.');
 }
 
 if (!$registry->has('diagnostic.session-to-recommendation') || $registry->has('missing.process')) {

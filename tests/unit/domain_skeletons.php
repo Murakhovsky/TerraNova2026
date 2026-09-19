@@ -47,7 +47,7 @@ expectDomainSkeleton($employee->positionId === 'position-1' && $recruitment->can
 expectDomainSkeleton($project->name === 'West site' && $object->projectId === 'project-1', 'Construction vocabulary must autoload.');
 expectDomainSkeleton($brokerageCase->propertyId === 'property-1' && $mandate->partyId === 'party-1', 'RealEstate vocabulary must reference Property without owning it.');
 
-foreach (['Service', 'Finance', 'Procurement', 'HR', 'Construction', 'RealEstate'] as $name) {
+foreach (['Service', 'Finance', 'Procurement', 'HR', 'Construction'] as $name) {
     $definition = require dirname(__DIR__, 2) . '/app/Domains/' . $name . '/module.php';
     $module = ModuleDefinition::fromArray($definition);
     expectDomainSkeleton($module->contributions->runtimeModuleService === null, $name . ' must remain skeleton-only without runtime service.');
@@ -56,5 +56,12 @@ foreach (['Service', 'Finance', 'Procurement', 'HR', 'Construction', 'RealEstate
 }
 $realEstateDefinition = ModuleDefinition::fromArray(require dirname(__DIR__, 2) . '/app/Domains/RealEstate/module.php');
 expectDomainSkeleton(in_array('property', $realEstateDefinition->manifest->dependencies, true), 'RealEstate must declare its Property dependency.');
+expectDomainSkeleton(in_array('sales', $realEstateDefinition->manifest->dependencies, true), 'RealEstate must declare its Sales dependency.');
+expectDomainSkeleton($realEstateDefinition->contributions->runtimeModuleService === 'realEstateDomainModule', 'RealEstate V0.2 must expose its runtime module.');
+expectDomainSkeleton(
+    in_array('app/migrations/20260918_000062_real_estate_wave9_cutover.sql', $realEstateDefinition->contributions->migrationFiles, true),
+    'RealEstate V0.2 must declare its brokerage persistence migration.',
+);
+expectDomainSkeleton($realEstateDefinition->manifest->enabledByDefault === true, 'RealEstate V0.2 business cutover must be enabled by default.');
 
 echo "V1 Domain skeleton contracts passed.\n";

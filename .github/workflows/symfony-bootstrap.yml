@@ -164,6 +164,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave7.sql
 
+      - name: Seed Property / RealEstate Wave 9 fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/property_real_estate_wave9.sql
+
       - name: Verify Doctrine MySQL persistence boundary
         run: |
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -733,6 +738,222 @@ jobs:
 
           echo "Sales Wave 7 frontend cutover runtime passed."
 
+      - name: Verify Property / RealEstate Wave 9 business cutover
+        run: |
+          php tests/architecture/property_v0130_real_estate_wave9_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave9-routes.txt
+          grep -q 'cos_api_v1_property_create' /tmp/wave9-routes.txt
+          grep -q 'cos_api_v1_property_inventory_create' /tmp/wave9-routes.txt
+          grep -q 'cos_api_v1_real_estate_match' /tmp/wave9-routes.txt
+          grep -q 'cos_api_v1_real_estate_reservation' /tmp/wave9-routes.txt
+
+          csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+          property_payload='{"type_code":"apartment","country_code":"UA","region":"Lvivska","city":"Lviv","address":"1 Wave 9 Street","area_total":64.5,"area_living":41.0,"rooms":2,"floor":2,"floors":3,"built_year":2026,"lifecycle":"completed"}'
+          status=$(curl --silent --show-error --output /tmp/wave9-property-create.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-property-create' \
+            -H 'X-Idempotency-Key: wave9-property-create-001' \
+            -H 'Content-Type: application/json' \
+            --data "$property_payload" \
+            http://127.0.0.1:8081/api/v1/properties)
+          echo "Wave 9 Property create HTTP $status"; cat /tmp/wave9-property-create.json; echo
+          test "$status" = "201"
+          asset_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave9-property-create.json"),true); echo (string)($j["data"]["asset"]["asset_id"]??"");')
+          test -n "$asset_id"
+
+          status=$(curl --silent --show-error --output /tmp/wave9-property-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-property-create-replay' \
+            -H 'X-Idempotency-Key: wave9-property-create-001' \
+            -H 'Content-Type: application/json' \
+            --data "$property_payload" \
+            http://127.0.0.1:8081/api/v1/properties)
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave9-property-replay.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-property-missing-key.json --write-out '%{http_code}' \
+            --request PATCH \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'Content-Type: application/json' \
+            --data '{"rooms":3}' \
+            "http://127.0.0.1:8081/api/v1/properties/$asset_id")
+          test "$status" = "422"
+          grep -q '"error":"idempotency_key_required"' /tmp/wave9-property-missing-key.json
+
+          inventory_payload='{"transaction_type":"sale","status":"available","price_amount":125000,"price_currency":"USD","price_period":"total"}'
+          status=$(curl --silent --show-error --output /tmp/wave9-inventory-create.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-inventory-create' \
+            -H 'X-Idempotency-Key: wave9-inventory-create-001' \
+            -H 'Content-Type: application/json' \
+            --data "$inventory_payload" \
+            "http://127.0.0.1:8081/api/v1/properties/$asset_id/inventory")
+          echo "Wave 9 Inventory create HTTP $status"; cat /tmp/wave9-inventory-create.json; echo
+          test "$status" = "201"
+          inventory_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave9-inventory-create.json"),true); echo (string)($j["data"]["inventory_id"]??"");')
+          test -n "$inventory_id"
+
+          status=$(curl --silent --show-error --output /tmp/wave9-property-view.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            "http://127.0.0.1:8081/api/v1/properties/$asset_id")
+          echo "Wave 9 Property view HTTP $status"; cat /tmp/wave9-property-view.json; echo
+          test "$status" = "200"
+          WAVE9_ASSET_ID="$asset_id" WAVE9_INVENTORY_ID="$inventory_id" php -r '
+            $j=json_decode(file_get_contents("/tmp/wave9-property-view.json"),true,512,JSON_THROW_ON_ERROR);
+            if (($j["data"]["property"]["asset_id"]??null)!==getenv("WAVE9_ASSET_ID")) exit(21);
+            if (($j["data"]["inventory"]["inventory_id"]??null)!==getenv("WAVE9_INVENTORY_ID")) exit(22);
+          '
+
+          status=$(curl --silent --show-error --output /tmp/wave9-property-search.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            "http://127.0.0.1:8081/api/v1/properties?q=$asset_id")
+          echo "Wave 9 Property search HTTP $status"; cat /tmp/wave9-property-search.json; echo
+          test "$status" = "200"
+          WAVE9_ASSET_ID="$asset_id" php -r '
+            $j=json_decode(file_get_contents("/tmp/wave9-property-search.json"),true,512,JSON_THROW_ON_ERROR);
+            foreach (($j["data"]["items"]??[]) as $item) {
+                if (($item["property"]["asset_id"]??null)===getenv("WAVE9_ASSET_ID")) exit(0);
+            }
+            exit(23);
+          '
+
+          match_payload=$(printf '{"property_id":"%s","inventory_id":"%s","subject":"Wave 9 brokerage match"}' "$asset_id" "$inventory_id")
+          status=$(curl --silent --show-error --output /tmp/wave9-match.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-property-match' \
+            -H 'X-Idempotency-Key: wave9-match-001' \
+            -H 'Content-Type: application/json' \
+            --data "$match_payload" \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101/property-matches)
+          echo "Wave 9 Match HTTP $status"; cat /tmp/wave9-match.json; echo
+          test "$status" = "201"
+          case_id=$(php -r '$j=json_decode(file_get_contents("/tmp/wave9-match.json"),true); echo (string)($j["data"]["case_id"]??"");')
+          test -n "$case_id"
+
+          status=$(curl --silent --show-error --output /tmp/wave9-match-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-property-match-replay' \
+            -H 'X-Idempotency-Key: wave9-match-001' \
+            -H 'Content-Type: application/json' \
+            --data "$match_payload" \
+            http://127.0.0.1:8081/api/v1/sales/opportunities/101/property-matches)
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave9-match-replay.json
+
+          offer_payload='{"party_id":"person:1","amount_minor":12500000,"currency":"USD"}'
+          status=$(curl --silent --show-error --output /tmp/wave9-offer.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-offer' \
+            -H 'X-Idempotency-Key: wave9-offer-001' \
+            -H 'Content-Type: application/json' \
+            --data "$offer_payload" \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/offers")
+          echo "Wave 9 Offer HTTP $status"; cat /tmp/wave9-offer.json; echo
+          test "$status" = "201"
+          grep -q '"status":"offered"' /tmp/wave9-offer.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-offer-conflict.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-offer-conflict' \
+            -H 'X-Idempotency-Key: wave9-offer-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"party_id":"person:1","amount_minor":12600000,"currency":"USD"}' \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/offers")
+          test "$status" = "409"
+
+          viewing_payload='{"client_id":"person:1","scheduled_at":"2026-09-20T12:00:00+03:00","notes":"Wave 9 CI viewing"}'
+          status=$(curl --silent --show-error --output /tmp/wave9-viewing.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-viewing' \
+            -H 'X-Idempotency-Key: wave9-viewing-001' \
+            -H 'Content-Type: application/json' \
+            --data "$viewing_payload" \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/viewings")
+          echo "Wave 9 Viewing HTTP $status"; cat /tmp/wave9-viewing.json; echo
+          test "$status" = "201"
+          grep -q '"status":"viewing"' /tmp/wave9-viewing.json
+          grep -q '"scheduled_at":"2026-09-20 09:00:00"' /tmp/wave9-viewing.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-viewing-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-viewing-replay' \
+            -H 'X-Idempotency-Key: wave9-viewing-001' \
+            -H 'Content-Type: application/json' \
+            --data "$viewing_payload" \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/viewings")
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave9-viewing-replay.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-viewing-conflict.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-viewing-conflict' \
+            -H 'X-Idempotency-Key: wave9-viewing-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"client_id":"person:1","scheduled_at":"2026-09-20T12:00:00+03:00","notes":"DIFFERENT NOTES"}' \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/viewings")
+          test "$status" = "409"
+          grep -q 'different Viewing payload' /tmp/wave9-viewing-conflict.json
+
+          reservation_payload='{"reason":"wave9-ci"}'
+          status=$(curl --silent --show-error --output /tmp/wave9-reservation.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-reservation' \
+            -H 'X-Idempotency-Key: wave9-reservation-001' \
+            -H 'Content-Type: application/json' \
+            --data "$reservation_payload" \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/reservation")
+          echo "Wave 9 Reservation HTTP $status"; cat /tmp/wave9-reservation.json; echo
+          test "$status" = "201"
+          grep -q '"status":"reserved"' /tmp/wave9-reservation.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-reservation-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-reservation-replay' \
+            -H 'X-Idempotency-Key: wave9-reservation-001' \
+            -H 'Content-Type: application/json' \
+            --data "$reservation_payload" \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/reservation")
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave9-reservation-replay.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-case.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id")
+          test "$status" = "200"
+          grep -q '"status":"reserved"' /tmp/wave9-case.json
+
+          real_estate_counts=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT CONCAT((SELECT COUNT(*) FROM tn_real_estate_cases WHERE organization_id='default'),'|',(SELECT COUNT(*) FROM tn_real_estate_offers WHERE organization_id='default'),'|',(SELECT COUNT(*) FROM tn_real_estate_showings WHERE organization_id='default'),'|',(SELECT COUNT(*) FROM tn_property_inventory_reservations WHERE organization_id='default'),'|',(SELECT COUNT(*) FROM tn_real_estate_operation_receipts WHERE organization_id='default'));" | tr -d '[:space:]')
+          test "$real_estate_counts" = "1|1|1|1|4"
+
+          property_receipts=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_external_references WHERE organization_id='default' AND provider='cos_api' AND entity_type IN ('property.create','property.create_inventory');" | tr -d '[:space:]')
+          test "$property_receipts" = "2"
+
+          wave9_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND correlation_id IN ('wave9-property-create','wave9-inventory-create','wave9-property-match','wave9-offer','wave9-viewing','wave9-reservation');" | tr -d '[:space:]')
+          test "$wave9_audit" = "6"
+
+          echo "Property / RealEstate Wave 9 HTTP → Command/Query → Domain → MySQL → Events/Audit runtime passed."
+
       - name: Verify Sales Wave 3 deterministic automation cutover
         run: |
           php tests/architecture/symfony_sales_automation_wave3_boundary.php
@@ -834,7 +1055,7 @@ jobs:
             docker compose -f docker-compose.symfony.yml exec -T php php bin/console messenger:failed:show --max=20 -vv || true
             docker compose -f docker-compose.symfony.yml exec -T mysql \
               mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
-              "SELECT o.event_id,o.status,o.attempts,o.last_error,e.type,e.aggregate_type,e.aggregate_id,e.correlation_id FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id ORDER BY o.id;" || true
+              "SELECT o.event_id,o.status,o.attempts,o.available_at,NOW(6) AS db_now,o.last_error,e.type,e.aggregate_type,e.aggregate_id,e.correlation_id FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id ORDER BY o.id;" || true
             exit 1
           fi
 
@@ -891,7 +1112,12 @@ jobs:
           non_sales_status=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT status FROM cos_event_outbox WHERE event_id='wave3-property-event';" | tr -d '[:space:]')
-          test "$non_sales_status" = "PENDING"
+          test "$non_sales_status" = "PUBLISHED"
+
+          non_sales_actions=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_actions WHERE organization_id='default' AND target_type='property' AND target_id='999';" | tr -d '[:space:]')
+          test "$non_sales_actions" = "0"
 
           actions_before=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
@@ -914,7 +1140,7 @@ jobs:
           non_sales_status_after=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT status FROM cos_event_outbox WHERE event_id='wave3-property-event';" | tr -d '[:space:]')
-          test "$non_sales_status_after" = "PENDING"
+          test "$non_sales_status_after" = "PUBLISHED"
 
           echo "Sales Wave 3 deterministic Scheduler/Messenger automation runtime passed."
 

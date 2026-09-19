@@ -34,6 +34,8 @@ final readonly class RunSalesAutomationCommandHandler implements CommandHandlerI
         $result['outbox_published'] = $this->outbox->drain(
             $drainLimit,
             'sales-automation:' . ($command->runId ?? 'run'),
+            idleRetries: 10,
+            idleDelayMicroseconds: 100_000,
         );
 
         return $result;

@@ -617,3 +617,81 @@ cos_api_v1_sales_admin_team_revisions:
   controller: App\Http\Api\V1\Controller\SalesAdminFrontendController::teamRevisions
   methods: [GET]
   requirements: { id: '[A-Za-z0-9_.:-]{1,191}' }
+
+
+# Wave 9 — Property / RealEstate business cutover
+cos_api_v1_properties:
+  path: /api/v1/properties
+  controller: App\Http\Api\V1\Controller\PropertyController::search
+  methods: [GET]
+
+cos_api_v1_property_create:
+  path: /api/v1/properties
+  controller: App\Http\Api\V1\Controller\PropertyController::create
+  methods: [POST]
+
+cos_api_v1_property:
+  path: /api/v1/properties/{id}
+  controller: App\Http\Api\V1\Controller\PropertyController::view
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_property_update:
+  path: /api/v1/properties/{id}
+  controller: App\Http\Api\V1\Controller\PropertyController::update
+  methods: [PATCH]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_property_presentation:
+  path: /api/v1/properties/{id}/presentation
+  controller: App\Http\Api\V1\Controller\PropertyController::presentation
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_property_inventory_create:
+  path: /api/v1/properties/{id}/inventory
+  controller: App\Http\Api\V1\Controller\PropertyController::createInventory
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_property_inventory_status:
+  path: /api/v1/property-inventory/{id}/status
+  controller: App\Http\Api\V1\Controller\PropertyController::changeInventoryStatus
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_property_inventory_reserve:
+  path: /api/v1/property-inventory/{id}/reservations
+  controller: App\Http\Api\V1\Controller\PropertyController::reserveInventory
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_real_estate_match:
+  path: /api/v1/sales/opportunities/{id}/property-matches
+  controller: App\Http\Api\V1\Controller\RealEstateController::match
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_api_v1_real_estate_case:
+  path: /api/v1/real-estate/cases/{id}
+  controller: App\Http\Api\V1\Controller\RealEstateController::view
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_real_estate_offer:
+  path: /api/v1/real-estate/cases/{id}/offers
+  controller: App\Http\Api\V1\Controller\RealEstateController::offer
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_real_estate_viewing:
+  path: /api/v1/real-estate/cases/{id}/viewings
+  controller: App\Http\Api\V1\Controller\RealEstateController::viewing
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_real_estate_reservation:
+  path: /api/v1/real-estate/cases/{id}/reservation
+  controller: App\Http\Api\V1\Controller\RealEstateController::reserve
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }

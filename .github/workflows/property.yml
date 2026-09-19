@@ -4,8 +4,10 @@ on:
     branches: [main]
     paths:
       - 'app/Domains/Property/**'
+      - 'app/Domains/RealEstate/**'
       - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
+      - 'app/Bootstrap/RealEstateServices.php'
       - 'app/Bootstrap/PropertyIdentityServices.php'
       - 'app/Bootstrap/PropertyAnalyticsServices.php'
       - 'app/Bootstrap/PropertyIntelligenceServices.php'
@@ -14,13 +16,24 @@ on:
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
+      - 'app/migrations/*real_estate*.sql'
       - 'docs/04-domains/property/**'
+      - 'docs/04-domains/real_estate/**'
+      - 'symfony/src/Application/Property/**'
+      - 'symfony/src/Application/RealEstate/**'
+      - 'symfony/src/Http/Api/V1/Controller/PropertyController.php'
+      - 'symfony/src/Http/Api/V1/Controller/RealEstateController.php'
+      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyPropertyLocationReferenceAdapter.php'
+      - 'symfony/src/Infrastructure/Persistence/Property/**'
+      - 'symfony/config/routes.yaml'
+      - 'symfony/config/services.yaml'
       - 'tests/architecture/property_*.php'
       - 'tests/unit/property_*.php'
       - 'tests/smoke/property_*.php'
@@ -29,8 +42,10 @@ on:
     branches: [main]
     paths:
       - 'app/Domains/Property/**'
+      - 'app/Domains/RealEstate/**'
       - 'app/Domains/Sales/**'
       - 'app/Bootstrap/PropertyServices.php'
+      - 'app/Bootstrap/RealEstateServices.php'
       - 'app/Bootstrap/PropertyIdentityServices.php'
       - 'app/Bootstrap/PropertyAnalyticsServices.php'
       - 'app/Bootstrap/PropertyIntelligenceServices.php'
@@ -39,13 +54,24 @@ on:
       - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
       - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
       - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
+      - 'app/migrations/*real_estate*.sql'
       - 'docs/04-domains/property/**'
+      - 'docs/04-domains/real_estate/**'
+      - 'symfony/src/Application/Property/**'
+      - 'symfony/src/Application/RealEstate/**'
+      - 'symfony/src/Http/Api/V1/Controller/PropertyController.php'
+      - 'symfony/src/Http/Api/V1/Controller/RealEstateController.php'
+      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyPropertyLocationReferenceAdapter.php'
+      - 'symfony/src/Infrastructure/Persistence/Property/**'
+      - 'symfony/config/routes.yaml'
+      - 'symfony/config/services.yaml'
       - 'tests/architecture/property_*.php'
       - 'tests/unit/property_*.php'
       - 'tests/smoke/property_*.php'
@@ -77,6 +103,7 @@ jobs:
           php tests/architecture/property_v0100_external_network.php
           php tests/architecture/property_v0110_hardening.php
           php tests/architecture/property_v0120_runtime_cutover.php
+          php tests/architecture/property_v0130_real_estate_wave9_cutover.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
@@ -114,6 +141,9 @@ jobs:
       - name: Property V0.12 canonical runtime cutover
         run: php tests/unit/property_v0120_runtime_cutover.php
 
+      - name: Property / RealEstate Wave 9 cutover
+        run: php tests/unit/property_v0130_real_estate_wave9.php
+
       - name: Property compatibility smoke
         run: |
           php tests/smoke/property_submission.php
@@ -122,6 +152,14 @@ jobs:
       - name: Property PHP lint
         run: |
           find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app/Domains/RealEstate -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/RealEstateServices.php
+          find symfony/src/Application/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find symfony/src/Application/RealEstate -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l symfony/src/Http/Api/V1/Controller/PropertyController.php
+          php -l symfony/src/Http/Api/V1/Controller/RealEstateController.php
+          php -l symfony/src/Infrastructure/Persistence/Legacy/LegacyPropertyLocationReferenceAdapter.php
+          find symfony/src/Infrastructure/Persistence/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Domains/Sales/Application/Contract/SalesDemandReadModelInterface.php
           php -l app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesDemandReadModel.php
           php -l app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php
@@ -130,6 +168,7 @@ jobs:
           php -l app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAgentContextBuilder.php
           php -l app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php
           php -l app/Infrastructure/Platform/Analytics/PropertyIntelligenceCoordinator.php
+          php -l app/Infrastructure/Platform/Persistence/TableOwnership.php
           php -l app/Bootstrap/PropertyServices.php
           php -l app/Bootstrap/PropertyIdentityServices.php
           php -l app/Bootstrap/PropertyAnalyticsServices.php
