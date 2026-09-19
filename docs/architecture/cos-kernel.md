@@ -186,7 +186,7 @@ MVC remains valid inside a Web interface:
 HTTP -> Controller -> Application/Kernel service -> ViewModel -> View
 ```
 
-Controllers must not contain policies, SQL, domain transitions, or external integration selection. All endpoints live under `Interfaces/Web`, `Interfaces/Api`, `Interfaces/Telegram`, `Interfaces/Cli`, and similar entrypoint-oriented namespaces; `app/modules` has been removed.
+Controllers must not contain policies, SQL, domain transitions, or external integration selection. HTTP/Telegram endpoints live under entrypoint-oriented interface namespaces, while operational CLI delivery is owned by Symfony Console; `app/modules` has been removed.
 
 Business areas must not be modeled as Phalcon modules. `Sales`, `Finance`, and `Inventory` are Domains because the same logic can be called from Web, API, CLI, Telegram, a queue worker, or an external CRM webhook.
 
