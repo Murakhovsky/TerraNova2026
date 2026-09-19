@@ -47,7 +47,11 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return true;
         }
 
-        return str_starts_with($path, '/api/v1') || str_starts_with($path, '/sales');
+        return str_starts_with($path, '/api/v1')
+            || str_starts_with($path, '/sales')
+            || str_starts_with($path, '/cos/architecture')
+            || $path === '/admin/diagnostics/methodology-studio'
+            || str_starts_with($path, '/diagnostics/');
     }
 
     public function authenticate(Request $request): Passport
@@ -72,7 +76,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if (self::isHtmlPage($request->getPathInfo())) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
@@ -83,13 +87,21 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if (self::isHtmlPage($request->getPathInfo())) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
         return str_starts_with($request->getPathInfo(), '/api/spatial/')
             ? self::spatialUnauthorized()
             : self::forbidden();
+    }
+
+    private static function isHtmlPage(string $path): bool
+    {
+        return str_starts_with($path, '/sales')
+            || str_starts_with($path, '/cos/architecture')
+            || $path === '/admin/diagnostics/methodology-studio'
+            || str_starts_with($path, '/diagnostics/');
     }
 
     private static function spatialUnauthorized(): JsonResponse
