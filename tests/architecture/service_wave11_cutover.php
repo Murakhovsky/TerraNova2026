@@ -53,7 +53,7 @@ foreach([
     'ServiceApplicationBoundary','ServiceRepositoryInterface','ServiceMutationReceiptInterface',
     'TransactionManagerInterface','EventBus','AuditRepositoryInterface','receipts->claim','transactions->transactional',
     'lockRequest(','lockTicket(','ServiceTicketLifecycle::assignmentStatus','ServiceTicketLifecycle::assertMutable',
-    'ServiceTicketLifecycle::assertResolvable','ServiceTicketLifecycle::assertClosable',
+    'ServiceTicketLifecycle::assertResolvable','ServiceTicketLifecycle::assertClosable','integerInput(','is_int(',
     'ServiceEventType::REQUEST_CREATED','ServiceEventType::TICKET_CREATED','ServiceEventType::TICKET_ASSIGNED',
     'ServiceEventType::SLA_SET','ServiceEventType::TICKET_ESCALATED','ServiceEventType::TICKET_RESOLVED',
     'ServiceEventType::TICKET_CLOSED','idempotency_key_hash',
