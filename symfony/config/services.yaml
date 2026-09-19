@@ -239,6 +239,32 @@ services:
     arguments:
       $ruleContextProvider: '@Domains\RealEstate\Rule\RealEstateRuleContextProvider'
 
+  # Wave 11 — Service business cutover
+  Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Service\Application\Contract\ServiceRepositoryInterface:
+    alias: Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceRepository
+
+  Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceMutationReceipt:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Service\Application\Contract\ServiceMutationReceiptInterface:
+    alias: Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceMutationReceipt
+
+  Domains\Service\Application\Service\ServiceWorkflowService: ~
+
+  Domains\Service\Application\Contract\ServiceApplicationBoundary:
+    alias: Domains\Service\Application\Service\ServiceWorkflowService
+
+  Domains\Service\Rule\ServiceRuleContextProvider: ~
+
+  Domains\Service\Bootstrap\ServiceDomainModule:
+    arguments:
+      $ruleContextProvider: '@Domains\Service\Rule\ServiceRuleContextProvider'
+
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
       $connection: '@legacy_cos.pdo'
@@ -662,6 +688,7 @@ services:
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
+        - '@Domains\Service\Bootstrap\ServiceDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
