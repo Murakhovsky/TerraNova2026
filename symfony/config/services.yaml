@@ -796,12 +796,12 @@ services:
       $events: '@Kernel\Event\EventBus'
       $eventStore: '@Kernel\Event\Contract\EventStoreInterface'
 
-  App\Infrastructure\Automation\SalesEventOutbox:
+  Infrastructure\Platform\Persistence\MySql\Event\MysqlEventOutbox:
     arguments:
       $connection: '@legacy_cos.pdo'
 
   Kernel\Event\Contract\EventOutboxInterface:
-    alias: App\Infrastructure\Automation\SalesEventOutbox
+    alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventOutbox
 
   Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository:
     arguments:
