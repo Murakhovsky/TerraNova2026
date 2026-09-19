@@ -34,7 +34,7 @@ foreach([
     'DocumentsEventType::UPLOADED','DocumentsEventType::ATTACHED','DocumentsEventType::VERSION_CREATED',
     'DocumentsEventType::GENERATED','DocumentsEventType::SIGNATURE_REQUESTED',
     'DocumentsEventType::SIGNED','DocumentsEventType::ARCHIVED',
-    'idempotency_key_hash','MAX_CONTENT_BYTES','Archived Document cannot be signed',
+    'idempotency_key_hash','MAX_CONTENT_BYTES','Archived Document cannot be signed','lockDocumentStatus',
 ] as $needle){
     $assert(str_contains($service,$needle),'Documents runtime missing: '.$needle);
 }
@@ -44,7 +44,7 @@ foreach(['PDO','Symfony\\','Infrastructure\\','Domains\\'] as $forbidden){
 
 $repository=$read('app/Infrastructure/Platform/Persistence/MySql/Documents/MysqlDocumentsRepository.php');
 foreach([
-    'organization_id=:organization_id','FOR UPDATE','INSERT IGNORE INTO cos_document_relations',
+    'organization_id=:organization_id','FOR UPDATE','public function lockDocumentStatus','INSERT IGNORE INTO cos_document_relations',
     'INSERT IGNORE INTO cos_document_signatures',"status=\\'signed\\'","status=\\'archived\\'",
 ] as $needle){
     $assert(str_contains($repository,$needle),'Documents persistence hardening missing: '.$needle);
