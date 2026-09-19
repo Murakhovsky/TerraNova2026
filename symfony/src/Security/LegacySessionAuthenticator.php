@@ -72,12 +72,24 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        return self::forbidden();
+        return str_starts_with($request->getPathInfo(), '/api/spatial/')
+            ? self::spatialUnauthorized()
+            : self::forbidden();
     }
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        return self::forbidden();
+        return str_starts_with($request->getPathInfo(), '/api/spatial/')
+            ? self::spatialUnauthorized()
+            : self::forbidden();
+    }
+
+    private static function spatialUnauthorized(): JsonResponse
+    {
+        return new JsonResponse([
+            'ok' => false,
+            'message' => 'Unauthorized.',
+        ], Response::HTTP_UNAUTHORIZED);
     }
 
     private static function forbidden(): JsonResponse
