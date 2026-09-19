@@ -157,6 +157,30 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/sales_wave3.sql
 
+      - name: Seed Runtime cleanup Diagnostic permission fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          CREATE TABLE IF NOT EXISTS diagnostic_role_permissions (
+            role VARCHAR(80) NOT NULL,
+            permission VARCHAR(80) NOT NULL,
+            PRIMARY KEY (role, permission)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+          CREATE TABLE IF NOT EXISTS diagnostic_user_permissions (
+            organization_id VARCHAR(190) NOT NULL,
+            user_id BIGINT UNSIGNED NOT NULL,
+            permission VARCHAR(80) NOT NULL,
+            allowed TINYINT(1) NOT NULL,
+            PRIMARY KEY (organization_id, user_id, permission)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+          INSERT IGNORE INTO diagnostic_role_permissions(role, permission) VALUES
+            ('realtor', 'diagnostic.methodology.view'),
+            ('manager', 'diagnostic.methodology.view'),
+            ('manager', 'diagnostic.methodology.edit');
+          SQL
+
       - name: Seed Sales Wave 4 Agent Tool fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
