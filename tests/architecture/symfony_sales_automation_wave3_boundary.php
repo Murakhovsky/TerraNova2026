@@ -31,6 +31,8 @@ foreach ([
     '$this->automation->run(',
     '$this->outbox->drain(',
     '$limit * 4',
+    'idleRetries: 10',
+    'idleDelayMicroseconds: 100_000',
 ] as $needle) {
     if (!str_contains($runHandler, $needle)) {
         throw new RuntimeException('Wave 3 causal scan-to-outbox contract missing: ' . $needle);
