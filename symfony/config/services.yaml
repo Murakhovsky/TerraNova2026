@@ -1252,3 +1252,45 @@ services:
   App\Http\Api\Spatial\SpatialController:
     public: true
     tags: ['controller.service_arguments']
+
+
+  # Final runtime retirement — canonical Kernel worker on Symfony.
+  Domains\Sales\Automation\Job\CrmInboxJobHandler:
+    arguments:
+      $processor: '@Domains\Sales\Application\UseCase\ProcessCrmInbox'
+
+  runtime.sales_crm_job_handler:
+    class: Kernel\Queue\Handler\ModuleAwareJobHandler
+    arguments:
+      $moduleId: 'sales'
+      $inner: '@Domains\Sales\Automation\Job\CrmInboxJobHandler'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Kernel\Queue\Handler\AgentRunJobHandler:
+    arguments:
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $policies: '@Kernel\Policy\Service\ActionPolicyService'
+      $queue: '@Kernel\Queue\Contract\JobQueueInterface'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Kernel\Queue\Service\JobHandlerRegistry:
+    arguments:
+      $handlers:
+        - '@Kernel\Queue\Handler\ActionExecutionJobHandler'
+        - '@Kernel\Queue\Handler\AgentRunJobHandler'
+        - '@runtime.sales_crm_job_handler'
+
+  Kernel\Queue\Service\QueueWorker:
+    arguments:
+      $queue: '@Kernel\Queue\Contract\JobQueueInterface'
+      $handlers: '@Kernel\Queue\Service\JobHandlerRegistry'
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+  Kernel\Operations\Service\WorkerSupervisor:
+    arguments:
+      $outbox: '@Kernel\Event\Service\OutboxPublisher'
+      $queue: '@Kernel\Queue\Service\QueueWorker'
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
