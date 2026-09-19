@@ -40,7 +40,7 @@ $attachmentPort=new ReflectionClass(DocumentAttachmentPort::class);
 expectDocuments($attachmentPort->hasMethod('attachExistingDocument'),'Documents cross-domain attachment port must expose attachExistingDocument.');
 
 $repository=new ReflectionClass(DocumentsRepositoryInterface::class);
-foreach(['createDocument','createVersion','attach','findTemplate','createSignatureRequest','findSignature','sign','archive','view','nextVersionNumber'] as $method){
+foreach(['createDocument','createVersion','attach','findTemplate','createSignatureRequest','findSignature','sign','archive','view','lockDocumentStatus','nextVersionNumber'] as $method){
     expectDocuments($repository->hasMethod($method),'Documents repository contract missing '.$method.'.');
 }
 
