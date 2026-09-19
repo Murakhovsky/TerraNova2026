@@ -7,7 +7,7 @@ $read = static fn (string $path): string => (string) file_get_contents($root . '
 $scheduler = $read('symfony/src/Scheduler/CosScheduleProvider.php');
 $messenger = $read('symfony/config/packages/messenger.yaml');
 $services = $read('symfony/config/services.yaml');
-$outbox = $read('symfony/src/Infrastructure/Automation/SalesEventOutbox.php');
+$outbox = $read('app/Infrastructure/Platform/Persistence/MySql/Event/MysqlEventOutbox.php');
 $sink = $read('symfony/src/Infrastructure/Automation/SymfonySalesActionProposalSink.php');
 $runner = $read('app/Domains/Sales/Application/Service/SalesAutomationRunner.php');
 $monitoring = $read('app/Domains/Sales/Application/Service/SalesMonitoringService.php');
@@ -69,13 +69,15 @@ foreach ([
 }
 
 foreach ([
-    "e.type LIKE 'sales.%'",
-    "status IN ('PENDING','FAILED')",
+    "status IN ('PENDING', 'FAILED')",
     'FOR UPDATE SKIP LOCKED',
 ] as $needle) {
     if (!str_contains($outbox, $needle)) {
-        throw new RuntimeException('Wave 3 Sales-only Outbox boundary missing: ' . $needle);
+        throw new RuntimeException('Canonical durable Outbox boundary missing: ' . $needle);
     }
+}
+if (str_contains($outbox, "e.type LIKE 'sales.%'")) {
+    throw new RuntimeException('Wave 9 regression: Symfony durable Outbox must not exclude non-Sales domain events.');
 }
 
 foreach ([
@@ -126,7 +128,7 @@ foreach ([
     'Kernel\\Policy\\Service\\ActionPolicyService:',
     'Kernel\\Action\\Service\\ActionService:',
     'Domains\\Sales\\Automation\\Event\\SalesHistoricalEventConsumer:',
-    'App\\Infrastructure\\Automation\\SalesEventOutbox:',
+    'Infrastructure\\Platform\\Persistence\\MySql\\Event\\MysqlEventOutbox:',
 ] as $needle) {
     if (!str_contains($services, $needle)) {
         throw new RuntimeException('Wave 3 Symfony composition missing canonical COS runtime: ' . $needle);
