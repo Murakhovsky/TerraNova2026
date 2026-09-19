@@ -79,7 +79,7 @@ Asset / Inventory / Listing / Publication
 
 Finance, Procurement, Service, HR і Construction залишаються installable skeleton Domains із канонічними моделями та Application contracts, але без повного runtime. Real Estate з Wave 9 уже активний runtime Domain: він оркеструє brokerage lifecycle поверх Sales opportunity та канонічного Property, не дублює Property registry і має власний executable Process Registry definition. Process-coverage exemption для Real Estate видалено.
 
-## Platform Documents
+## Платформні документи
 
 Documents з Wave 10 є активною Platform capability. Вона надає tenant-safe runtime для Upload, Attach, Version, template generation, signature lifecycle та Archive, із Symfony CQRS/API, Platform storage, MySQL metadata, idempotency, Event і Audit.
 
