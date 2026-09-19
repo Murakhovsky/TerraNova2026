@@ -26,11 +26,11 @@ foreach ([
 }
 
 foreach ([
-    'for service in worker kernel-worker scheduler; do',
+    'for service in worker kernel-worker spatial-worker integration-worker scheduler; do',
     'Symfony $service container is missing.',
     '{{.State.Running}}',
     '{{.RestartCount}}',
-    'Kernel worker and Symfony Scheduler are healthy.',
+    'Messenger, Kernel, Spatial, integration workers and Symfony Scheduler are healthy.',
 ] as $needle) {
     if (!str_contains($symfonyDeploy, $needle)) {
         throw new RuntimeException('Canonical Kernel worker deployment readiness contract is missing: ' . $needle);
@@ -40,6 +40,18 @@ foreach ([
 if (!str_contains($legacyDeploy, 'bash deploy/symfony-dev.sh')) {
     throw new RuntimeException('Compatibility deployment must deploy the canonical Symfony runtime.');
 }
+if (is_file($root . '/bin/spatial-worker.php')) {
+    throw new RuntimeException('Retired runtime entrypoint restored: bin/spatial-worker.php');
+}
+
+if (is_file($root . '/bin/integration-worker.php')) {
+    throw new RuntimeException('Retired runtime entrypoint restored: bin/integration-worker.php');
+}
+
+if (is_file($root . '/bin/apply-migration.php')) {
+    throw new RuntimeException('Retired runtime entrypoint restored: bin/apply-migration.php');
+}
+
 if (!str_contains($workflow, 'bash deploy/dev.sh')) {
     throw new RuntimeException('AWS dev deployment must execute the guarded deploy/dev.sh script.');
 }
