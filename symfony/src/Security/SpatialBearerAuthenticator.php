@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -51,6 +52,6 @@ final class SpatialBearerAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        return JsonAccessDeniedHandler::forbiddenResponse('Spatial authorization required.');
+        return new JsonResponse(['ok' => false, 'error' => 'Spatial authorization required.'], Response::HTTP_UNAUTHORIZED);
     }
 }
