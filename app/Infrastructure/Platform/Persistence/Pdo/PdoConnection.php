@@ -10,8 +10,13 @@ final class PdoConnection
 {
     private ?PDO $connection = null;
 
-    public function __construct(private ConfigInterface $config)
+    public function __construct(private ConfigInterface|PDO $config)
     {
+        if ($config instanceof PDO) {
+            $config->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $config->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            $this->connection = $config;
+        }
     }
 
     public function connection(): PDO
