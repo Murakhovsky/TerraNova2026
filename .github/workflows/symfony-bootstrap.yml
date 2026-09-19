@@ -15,6 +15,9 @@ on:
       - 'app/Domains/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
+      - 'app/Interfaces/Web/View/**'
+      - 'public/build/**'
+      - 'tests/architecture/symfony_sales_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -34,6 +37,9 @@ on:
       - 'app/Domains/**'
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
+      - 'app/Interfaces/Web/View/**'
+      - 'public/build/**'
+      - 'tests/architecture/symfony_sales_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -829,6 +835,18 @@ jobs:
           test "$status" = "403"
 
           echo "Sales Wave 7 frontend cutover runtime passed."
+
+          php tests/architecture/symfony_sales_ssr_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/symfony-web-routes.txt
+          grep -q 'cos_web_sales_dashboard' /tmp/symfony-web-routes.txt
+          status=$(curl --silent --show-error --output /tmp/sales-dashboard.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/sales/dashboard)
+          test "$status" = "200"
+          grep -q 'Продажі під контролем COS' /tmp/sales-dashboard.html
+          asset=$(php -r '$m=json_decode(file_get_contents("public/build/.vite/manifest.json"),true,512,JSON_THROW_ON_ERROR); echo $m["frontend/entrypoints/sales-workspace.js"]["file"];')
+          curl --fail --show-error --silent "http://127.0.0.1:8081/build/$asset" > /dev/null
+          echo "Symfony Sales SSR page and Vite asset smoke passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |
