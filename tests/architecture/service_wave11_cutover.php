@@ -36,7 +36,7 @@ foreach([
 
 $repository=$read('app/Domains/Service/Infrastructure/Persistence/MySql/MysqlServiceRepository.php');
 foreach([
-    'organization_id=:organization_id','FOR UPDATE','tn_service_assignments','tn_service_slas',
+    'organization_id=:organization_id','FOR UPDATE','public function lockRequest','public function lockTicket','tn_service_assignments','tn_service_slas',
     'tn_service_escalations','tn_service_resolutions',"status=\\'closed\\'","status=\\'resolved\\'",
 ] as $needle){
     $assert(str_contains($repository,$needle),'Service repository hardening missing: '.$needle);
@@ -52,7 +52,7 @@ $workflow=$read('app/Domains/Service/Application/Service/ServiceWorkflowService.
 foreach([
     'ServiceApplicationBoundary','ServiceRepositoryInterface','ServiceMutationReceiptInterface',
     'TransactionManagerInterface','EventBus','AuditRepositoryInterface','receipts->claim','transactions->transactional',
-    'lockTicket(','ServiceTicketLifecycle::assignmentStatus','ServiceTicketLifecycle::assertMutable',
+    'lockRequest(','lockTicket(','ServiceTicketLifecycle::assignmentStatus','ServiceTicketLifecycle::assertMutable',
     'ServiceTicketLifecycle::assertResolvable','ServiceTicketLifecycle::assertClosable',
     'ServiceEventType::REQUEST_CREATED','ServiceEventType::TICKET_CREATED','ServiceEventType::TICKET_ASSIGNED',
     'ServiceEventType::SLA_SET','ServiceEventType::TICKET_ESCALATED','ServiceEventType::TICKET_RESOLVED',
