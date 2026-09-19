@@ -4,7 +4,7 @@ Audit date: 2026-08-23.
 
 ## Purpose
 
-`app/modules/spatial` is the shared spatial domain for the web site, manager cabinet and future iOS/Android applications. It owns scenes, captures, versions, assets, property relations, hotspots, processing jobs and viewer analytics. Public and manager HTML adapters remain in the frontend module; API and domain logic do not depend on frontend controllers.
+`app/Domains/Spatial` is the shared Spatial domain for the web site, manager workspace and future iOS/Android applications. It owns scenes, captures, versions, assets, property relations, hotspots, processing jobs and viewer analytics. `/api/spatial/*` is delivered by Symfony; temporary public/manager HTML adapters still live in the legacy frontend runtime until final Phalcon retirement.
 
 ## Supported presentation profiles
 
