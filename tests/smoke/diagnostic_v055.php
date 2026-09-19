@@ -103,9 +103,12 @@ foreach ([
 ] as $method) {
     v055(str_contains($controller, 'function ' . $method), 'Workbench controller is missing ' . $method . '.');
 }
+$methodologyApplication = (string) file_get_contents($root . '/symfony/src/Application/Diagnostic/Methodology/DiagnosticMethodologyApplicationService.php');
 v055(
-    str_contains($controller, 'DiagnosticMethodologyAccess::EDIT') && str_contains($controller, 'diagnosticRun($o,$session)'),
-    'Detailed Diagnostic Run access is not protected by edit capability.',
+    str_contains($methodologyApplication, 'public function diagnosticRun(')
+    && str_contains($methodologyApplication, 'DiagnosticMethodologyAccess::EDIT')
+    && str_contains($methodologyApplication, '$this->workbench->diagnosticRun('),
+    'Detailed Diagnostic Run access is not protected by edit capability in the Application layer.',
 );
 
 $repositorySource = (string) file_get_contents($root . '/app/Domains/Diagnostic/Infrastructure/Persistence/MySql/MysqlMethodologyWorkbenchRepository.php');
