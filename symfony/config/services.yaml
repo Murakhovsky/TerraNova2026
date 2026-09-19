@@ -1378,7 +1378,7 @@ services:
       $runtimeModules: '@Kernel\Module\DomainModuleRegistry'
 
   runtime.architecture_graph_provider:
-    class: Kernel\Visualization\Graph\GraphProviderInterface
+    class: Infrastructure\Visualization\Architecture\FallbackArchitectureGraphProvider
     factory: ['@App\Infrastructure\Visualization\ArchitectureGraphProviderFactory', 'create']
 
   Kernel\Visualization\Graph\GraphProviderInterface:
