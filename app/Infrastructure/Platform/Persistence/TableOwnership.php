@@ -30,6 +30,11 @@ final class TableOwnership
             'tn_real_estate_cases', 'tn_real_estate_offers', 'tn_real_estate_showings',
             'tn_real_estate_operation_receipts',
         ],
+        'Service' => [
+            'tn_service_cases', 'tn_service_requests', 'tn_service_tickets', 'tn_service_assignments',
+            'tn_service_slas', 'tn_service_escalations', 'tn_service_resolutions',
+            'tn_service_operation_receipts',
+        ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],
         'Spatial' => [
