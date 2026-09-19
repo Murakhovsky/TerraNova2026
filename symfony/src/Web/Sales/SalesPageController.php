@@ -133,6 +133,29 @@ final readonly class SalesPageController
             });
     }
 
+    public function admin(Request $request): Response
+    {
+        $tenant = $this->tenants->current();
+        if ($tenant === null) {
+            return new RedirectResponse('/auth/login');
+        }
+        if (!$tenant->isAdmin()) {
+            return new Response('Forbidden', 403);
+        }
+
+        try {
+            return $this->render($request, $tenant, 'Sales Administration', 'sales-admin', 'sales/admin', [
+                'workspace' => [
+                    'pipelines' => $this->workspace->pipelines($tenant->organizationId()->value()),
+                    'metrics' => $this->workspace->metrics($tenant->organizationId()->value(), 30),
+                ],
+            ]);
+        } catch (Throwable $error) {
+            error_log(sprintf('sales.admin.page.read_failed %s', $error->getMessage()));
+            return $this->failure($request, $tenant, 503, 'Сервіс тимчасово недоступний', 'Sales Admin тимчасово недоступний.');
+        }
+    }
+
     /** @param callable(TenantContext):array<string,mixed> $reader */
     private function managerPage(Request $request, string $title, string $active, string $view, callable $reader): Response
     {
