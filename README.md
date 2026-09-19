@@ -48,13 +48,12 @@ docker compose -f docker-compose.symfony.yml exec php php bin/console cos:legacy
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=25
 
-# Temporary manual compatibility CLI, pending the next retirement slice:
-php app/bootstrap_cli.php config validate default
-php app/bootstrap_cli.php config provision default cos-bootstrap
-php app/bootstrap_cli.php outbox run
-php app/bootstrap_cli.php outbox replay default <event-id>
-php app/bootstrap_cli.php queue replayDead default <job-id>
-php app/bootstrap_cli.php agent purgeInputs
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:validate --organization=default
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:provision --organization=default --actor=cos-bootstrap
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:outbox:run
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:outbox:replay --organization=default --event-id=<event-id>
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:queue:replay-dead --organization=default --job-id=<job-id>
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:agent:purge-inputs
 ```
 
 For a native development server without Docker, configure the extensions used by the project, apply migrations with `php bin/migrate.php up`, and run `php -S 127.0.0.1:8080 -t public public/router.php`. MySQL remains the only required durable service.
