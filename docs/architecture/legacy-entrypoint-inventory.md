@@ -12,12 +12,13 @@ Inventory date: 2026-09-19. This file is the migration ledger for externally rea
 | `app/bootstrap_web.php` | Web | Platform | keep | composition root for public web/API |
 | `app/bootstrap_tg.php` | Telegram | Platform | keep | canonical Telegram composition with `Interfaces\\Telegram\\Module` |
 | `app/bootstrap_games.php` | Games | Games | removed | Games runtime removed 2026-08-28 |
-| `app/bootstrap_cli.php` | CLI/worker | Platform | keep | target bootstrap for `Interfaces/Cli` |
+| `app/bootstrap_cli.php` | manual compatibility CLI | Platform | temporary | no longer used by production worker/migrations; remaining admin commands migrate separately |
 | `bin/telegram-webhook.php` | Telegram | Operations | keep | explicit webhook runner |
-| `bin/telegram-worker.php` | Telegram | Operations | keep | supervised worker |
-| `bin/integration-worker.php` | integrations | Operations | keep | durable integration processing |
-| `bin/spatial-worker.php` | Spatial | Spatial | keep | migrate implementation behind Spatial application port |
-| `bin/apply-migration.php` | deployment | Platform | keep | migration runner wrapper |
+| `bin/telegram-worker.php` | Telegram | Operations | keep | supervised worker; next runtime-retirement slice |
+| `bin/migrate.php` | deployment | Platform | keep | framework-neutral schema migration bootstrap for compatibility stack |
+| `bin/integration-worker.php` | integrations | Operations | removed | Symfony `cos:integration:n8n:process` + `integration-worker` service |
+| `bin/spatial-worker.php` | Spatial | Spatial | removed | Symfony `cos:spatial:process` + `spatial-worker` service |
+| `bin/apply-migration.php` | deployment | Platform | removed | `bin/migrate.php` / Symfony `cos:legacy-schema:migrate` |
 
 ## Retired Phalcon API transports
 
