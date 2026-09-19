@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\RealEstate\Application\Service;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Domains\Property\Application\Contract\PropertyInventoryCommandInterface;
 use Domains\Property\Contract\PropertyBrokerageReferencePort;
 use Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface;
@@ -123,6 +124,7 @@ final readonly class RealEstateWorkflowService
         }
 
         $offer=new Offer($offerId,$case->organizationId,$case->propertyId,$partyId,new Money($amountMinor,$currency));
+        $expectedStatus=$case->status;
         $next=$case->transitionTo(BrokerageProcess::OFFERED);
         $metadata=$this->metadata($actorId,$correlationId);
         $fingerprint=$this->fingerprint([
@@ -132,10 +134,12 @@ final readonly class RealEstateWorkflowService
             'currency'=>$currency,
         ]);
 
-        $created=$this->transactions->transactional(function()use($caseId,$offer,$next,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
+        $created=$this->transactions->transactional(function()use($caseId,$offer,$next,$expectedStatus,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
             if(!$this->receipts->claim($next->organizationId->value(),'offer',$idempotencyKey,$fingerprint))return false;
             if(!$this->repository->createOffer($caseId,$offer,$actorId))return false;
-            $this->repository->saveCase($next,$actorId);
+            if(!$this->repository->transitionCase($next,$actorId,$expectedStatus)){
+                throw new InvalidArgumentException('RealEstate transition is not allowed because the brokerage case changed concurrently.');
+            }
             $this->events->publish(RealEstateDomainEvents::create(
                 RealEstateEventType::OFFER_CREATED,
                 $next->organizationId->value(),
@@ -169,16 +173,17 @@ final readonly class RealEstateWorkflowService
         if($clientId===''||$raw==='')throw new InvalidArgumentException('client_id and scheduled_at are required.');
 
         $showingId='SHW-'.$this->stableId($organizationId.':viewing:'.$idempotencyKey);
-        $scheduledAt=new DateTimeImmutable($raw);
+        $scheduledAt=(new DateTimeImmutable($raw))->setTimezone(new DateTimeZone('UTC'));
         $notes=trim((string)($input['notes']??''))?:null;
 
         $existing=$this->repository->findShowing($organizationId,$showingId);
         if($existing!==null){
-            $this->assertShowingReplay($existing,$caseId,$clientId,$scheduledAt);
+            $this->assertShowingReplay($existing,$caseId,$clientId,$scheduledAt,$notes);
             return $this->view($organizationId,$caseId)+['replayed'=>true];
         }
 
         $showing=new Showing($showingId,$case->organizationId,$case->propertyId,$clientId);
+        $expectedStatus=$case->status;
         $next=$case->transitionTo(BrokerageProcess::VIEWING);
         $metadata=$this->metadata($actorId,$correlationId);
         $fingerprint=$this->fingerprint([
@@ -188,10 +193,12 @@ final readonly class RealEstateWorkflowService
             'notes'=>$notes,
         ]);
 
-        $created=$this->transactions->transactional(function()use($caseId,$showing,$scheduledAt,$notes,$next,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
+        $created=$this->transactions->transactional(function()use($caseId,$showing,$scheduledAt,$notes,$next,$expectedStatus,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
             if(!$this->receipts->claim($next->organizationId->value(),'viewing',$idempotencyKey,$fingerprint))return false;
             if(!$this->repository->createShowing($caseId,$showing,$scheduledAt,$notes,$actorId))return false;
-            $this->repository->saveCase($next,$actorId);
+            if(!$this->repository->transitionCase($next,$actorId,$expectedStatus)){
+                throw new InvalidArgumentException('RealEstate transition is not allowed because the brokerage case changed concurrently.');
+            }
             $this->events->publish(RealEstateDomainEvents::create(
                 RealEstateEventType::VIEWING_SCHEDULED,
                 $next->organizationId->value(),
@@ -210,7 +217,7 @@ final readonly class RealEstateWorkflowService
         if(!$created){
             $existing=$this->repository->findShowing($organizationId,$showingId);
             if($existing===null)throw new InvalidArgumentException('Viewing idempotency race could not be resolved.');
-            $this->assertShowingReplay($existing,$caseId,$clientId,$scheduledAt);
+            $this->assertShowingReplay($existing,$caseId,$clientId,$scheduledAt,$notes);
         }
         return $this->view($organizationId,$caseId)+($created?[]:['replayed'=>true]);
     }
@@ -229,9 +236,14 @@ final readonly class RealEstateWorkflowService
             'expires_at'=>$input['expires_at']??null,
             'reason'=>$input['reason']??'brokerage_reservation',
         ]);
-        $result=$this->transactions->transactional(function()use($case,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey,$fingerprint):?array{
+        $expectedStatus=$case->status;
+        $result=$this->transactions->transactional(function()use($case,$expectedStatus,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey,$fingerprint):?array{
             if(!$this->receipts->claim($case->organizationId->value(),'reservation',$idempotencyKey,$fingerprint))return null;
             if($case->status===BrokerageProcess::RESERVED)return null;
+            $next=$case->transitionTo(BrokerageProcess::RESERVED);
+            if(!$this->repository->transitionCase($next,$actorId,$expectedStatus)){
+                throw new InvalidArgumentException('RealEstate transition is not allowed because the brokerage case changed concurrently.');
+            }
             $reservation=$this->inventory->reserve(
                 $case->organizationId->value(),
                 $case->inventoryId,
@@ -244,8 +256,6 @@ final readonly class RealEstateWorkflowService
                 (string)$actorId,
                 $correlationId,
             );
-            $next=$case->transitionTo(BrokerageProcess::RESERVED);
-            $this->repository->saveCase($next,$actorId);
             $this->events->publish(RealEstateDomainEvents::create(
                 RealEstateEventType::PROPERTY_RESERVED,
                 $next->organizationId->value(),
@@ -291,12 +301,19 @@ final readonly class RealEstateWorkflowService
     }
 
     /** @param array<string,mixed> $existing */
-    private function assertShowingReplay(array $existing,string $caseId,string $clientId,DateTimeImmutable $scheduledAt):void
-    {
-        $stored=new DateTimeImmutable((string)($existing['scheduled_at']??''));
+    private function assertShowingReplay(
+        array $existing,
+        string $caseId,
+        string $clientId,
+        DateTimeImmutable $scheduledAt,
+        ?string $notes,
+    ):void {
+        $stored=new DateTimeImmutable((string)($existing['scheduled_at']??''),new DateTimeZone('UTC'));
+        $storedNotes=trim((string)($existing['notes']??''))?:null;
         if((string)($existing['case_id']??'')!==$caseId
             ||(string)($existing['client_id']??'')!==$clientId
-            ||$stored->getTimestamp()!==$scheduledAt->getTimestamp()){
+            ||$stored->getTimestamp()!==$scheduledAt->getTimestamp()
+            ||$storedNotes!==$notes){
             throw new InvalidArgumentException('Idempotency key was reused with a different Viewing payload.');
         }
     }
