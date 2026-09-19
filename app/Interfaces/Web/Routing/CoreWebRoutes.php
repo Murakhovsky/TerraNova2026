@@ -29,8 +29,6 @@ final class CoreWebRoutes
         // Portal.
         $router->add('/cabinet', $web('cabinet', 'index'));
         $router->add('/cabinet/submission/{id:[0-9]+}', $web('cabinet', 'submission') + ['id' => 1]);
-        $router->addPost('/cabinet/telegramConnect', $web('cabinet', 'telegramConnect'));
-        $router->addPost('/cabinet/telegramDisconnect', $web('cabinet', 'telegramDisconnect'));
 
         // Workspace core / Administration.
         $router->add('/admin', $web('admin', 'index'));
