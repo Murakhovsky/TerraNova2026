@@ -130,6 +130,33 @@ services:
   Platform\Storage\Contract\FileStorageInterface:
     alias: Infrastructure\Storage\LocalFileStorage
 
+  # Wave 10 — Platform Documents runtime
+  Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentsRepository:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Platform\Documents\Contract\DocumentsRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentsRepository
+
+  Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentMutationReceipt:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Platform\Documents\Contract\DocumentMutationReceiptInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentMutationReceipt
+
+  Platform\Documents\Service\DocumentsRuntimeService:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $receipts: '@Platform\Documents\Contract\DocumentMutationReceiptInterface'
+      $storage: '@Platform\Storage\Contract\FileStorageInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $events: '@Kernel\Event\EventBus'
+      $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
+
+  Platform\Documents\Contract\DocumentAttachmentPort:
+    alias: Platform\Documents\Service\DocumentsRuntimeService
+
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort:
     arguments:
       $connection: '@legacy_cos.pdo'
