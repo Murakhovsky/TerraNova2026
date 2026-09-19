@@ -31,11 +31,22 @@ A future interactive Telegram bot must be implemented as a new canonical transpo
 
 ## Outbound worker
 
-The current outbound notification worker processes `tn_notification_outbox`, resolves existing Telegram bindings and sends queued messages.
+The canonical outbound worker is Symfony Console:
 
-Until the worker is moved to Symfony in the next retirement slice, its business-independent components remain:
+```bash
+docker compose -f docker-compose.symfony.yml exec -T php \
+  php bin/console cos:telegram:notifications:process --schedule --limit=50
+```
 
-- `Infrastructure\Integration\Telegram\TelegramAutomationService`
-- `Infrastructure\Integration\Telegram\TelegramAutomationProcessor`
+Run the digest explicitly on the desired morning cadence:
+
+```bash
+docker compose -f docker-compose.symfony.yml exec -T php \
+  php bin/console cos:telegram:notifications:process --digest --limit=50
+```
+
+The command uses the existing `tn_notification_outbox`, `TelegramAutomationService` and `TelegramAutomationProcessor`, but delivery is now a framework-neutral Telegram Bot API cURL adapter. It does not boot Phalcon and does not require the retired Longman command runtime.
+
+`--schedule` preserves the old due-reminder enqueue behavior, `--digest` preserves daily management digest enqueueing, and `--limit` controls the claimed outbox batch.
 
 Retries use an exponential delay and stop after five attempts. Events without a connected recipient are marked `skipped`; they do not block application requests.

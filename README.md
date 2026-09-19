@@ -47,6 +47,7 @@ php bin/migrate.php status
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:legacy-schema:status
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=25
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:telegram:notifications:process --schedule --limit=50
 
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:validate --organization=default
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:provision --organization=default --actor=cos-bootstrap

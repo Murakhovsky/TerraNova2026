@@ -49,6 +49,7 @@ jobs:
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
+          php tests/architecture/telegram_worker_retirement.php
 
       - name: Diagnostic checks
         run: |

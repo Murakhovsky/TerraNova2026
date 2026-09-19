@@ -14,7 +14,7 @@ Inventory date: 2026-09-19. This file is the migration ledger for externally rea
 | `app/bootstrap_games.php` | Games | Games | removed | Games runtime removed 2026-08-28 |
 | `app/bootstrap_cli.php` | CLI | Platform | removed | Symfony Console owns operational/admin commands |
 | `bin/telegram-webhook.php` | Telegram | Operations | removed | inbound bot/webhook retired |
-| `bin/telegram-worker.php` | Telegram | Operations | keep | supervised worker; next runtime-retirement slice |
+| `bin/telegram-worker.php` | Telegram | Operations | removed | Symfony `cos:telegram:notifications:process` owns outbound delivery |
 | `bin/migrate.php` | deployment | Platform | keep | framework-neutral schema migration bootstrap for compatibility stack |
 | `bin/integration-worker.php` | integrations | Operations | removed | Symfony `cos:integration:n8n:process` + `integration-worker` service |
 | `bin/spatial-worker.php` | Spatial | Spatial | removed | Symfony `cos:spatial:process` + `spatial-worker` service |

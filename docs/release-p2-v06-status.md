@@ -43,8 +43,7 @@ Local application checks pass:
 Production delivery is not healthy yet. Telegram reported one pending update and
 `SSL routines::certificate verify failed` for `https://terra.ai-da.store/tgAdmin_webhook.php` at
 2026-08-23 13:31:52 UTC. The host also did not resolve from the local environment. Verify the
-public A/AAAA record and install a complete certificate chain trusted by Telegram before calling
-`bin/telegram-webhook.php` again.
+public A/AAAA record and install a complete certificate chain trusted by Telegram This historical inbound-webhook issue is superseded by retirement of the legacy inbound bot; `public/tgAdmin_webhook.php` now remains only as HTTP 410.
 
 ## What remains for a usable v0.6 release
 
@@ -54,7 +53,7 @@ listing view and analytics. The release should not be called production-complete
 items are closed:
 
 1. Deploy all migrations through `20260823_000017_spatial_core.sql` to staging and production with a tested backup/rollback procedure.
-2. Fix production DNS/TLS for Telegram, register the webhook, enable worker schedules and verify a real `/start`, task notification and manager digest.
+2. Configure outbound Telegram credentials, schedule the canonical Symfony notification worker and verify a real queued notification plus manager digest. The legacy inbound `/start` flow is retired.
 3. Configure the actual n8n production webhook and secrets, test both directions and add alerting for failed outbox deliveries.
 4. Run role-based acceptance testing for admin, manager and public user across object creation, media, moderation, lead-to-case and content workflows.
 5. Add application-wide CSRF protection and rate limits for public forms/login; review session cookie and reverse-proxy HTTPS settings.
@@ -73,7 +72,7 @@ investment cabinets, payments and tokenization. They should not block the operat
 php tests/integration/telegram_automation.php
 php tests/integration/content_n8n.php
 php tests/integration/content_http.php
-php bin/telegram-worker.php --limit=5
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:telegram:notifications:process --limit=5
 php bin/telegram-health.php
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=5
 php tests/integration/spatial_module.php
