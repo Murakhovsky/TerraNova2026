@@ -50,7 +50,7 @@ Manifest capabilities не задекларовані.
 
 - runtime service модуля: `diagnosticDomainModule`;
 - обробники jobs: —;
-- внески API routes: `diagnosticRouteContributor`;
+- внески API routes: —;
 - постачальники конфігурації: —;
 - міграції: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`.
 
