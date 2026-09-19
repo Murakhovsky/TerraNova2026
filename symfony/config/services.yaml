@@ -1403,3 +1403,25 @@ services:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
       $studio: '@Domains\Diagnostic\Application\Service\MethodologyStudioService'
       $rootDir: '%kernel.project_dir%/..'
+
+
+  # Final Telegram worker retirement — outbound notifications run without Phalcon DI.
+  Infrastructure\Platform\Persistence\Pdo\PdoConnection:
+    arguments:
+      $config: '@legacy_cos.pdo'
+
+  Infrastructure\Integration\Telegram\TelegramAutomationService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  App\Infrastructure\Telegram\TelegramNotificationSender:
+    arguments:
+      $token: '%env(TELEGRAM_BOT_TOKEN)%'
+      $botName: '%env(TELEGRAM_BOT_NAME)%'
+      $publicUrl: '%env(APP_URL)%'
+
+  App\Infrastructure\Telegram\TelegramNotificationWorker:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $automation: '@Infrastructure\Integration\Telegram\TelegramAutomationService'
+      $sender: '@App\Infrastructure\Telegram\TelegramNotificationSender'
