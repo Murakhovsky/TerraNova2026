@@ -1403,3 +1403,20 @@ services:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
       $studio: '@Domains\Diagnostic\Application\Service\MethodologyStudioService'
       $rootDir: '%kernel.project_dir%/..'
+
+
+  # Final Telegram runtime retirement — outbound channel on Symfony.
+  Infrastructure\Integration\Telegram\TelegramAutomationService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  App\Command\TelegramOutboxCommand:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $automation: '@Infrastructure\Integration\Telegram\TelegramAutomationService'
+      $token: '%env(TELEGRAM_BOT_TOKEN)%'
+      $publicUrl: '%env(APP_URL)%'
+
+  App\Command\TelegramHealthCommand:
+    arguments:
+      $token: '%env(TELEGRAM_BOT_TOKEN)%'

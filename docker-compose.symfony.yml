@@ -30,6 +30,9 @@ x-symfony-environment: &symfony-environment
   SPATIAL_GLTF_TRANSFORM_BINARY: ${SPATIAL_GLTF_TRANSFORM_BINARY:-}
   N8N_OUTBOUND_URL: ${N8N_OUTBOUND_URL:-}
   N8N_OUTBOUND_SECRET: ${N8N_OUTBOUND_SECRET:-}
+  APP_URL: ${APP_URL:-http://127.0.0.1:8080}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME:-}
 
 services:
   nginx:
@@ -131,6 +134,21 @@ services:
     environment:
       <<: *symfony-environment
       MESSENGER_CONSUMER_NAME: integration-worker-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend, legacy_backend]
+
+  telegram-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["sh", "-c", "while true; do php bin/console cos:telegram:process --schedule --limit=50; sleep 60; done"]
+    environment:
+      <<: *symfony-environment
+      MESSENGER_CONSUMER_NAME: telegram-worker-1
     depends_on:
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
