@@ -28,6 +28,8 @@ x-symfony-environment: &symfony-environment
   SPATIAL_JWT_TTL: ${SPATIAL_JWT_TTL:-28800}
   SPATIAL_BLENDER_BINARY: ${SPATIAL_BLENDER_BINARY:-}
   SPATIAL_GLTF_TRANSFORM_BINARY: ${SPATIAL_GLTF_TRANSFORM_BINARY:-}
+  N8N_OUTBOUND_URL: ${N8N_OUTBOUND_URL:-}
+  N8N_OUTBOUND_SECRET: ${N8N_OUTBOUND_SECRET:-}
 
 services:
   nginx:
@@ -86,6 +88,53 @@ services:
     healthcheck: { disable: true }
     volumes:
       - spatial_uploads:/var/www/html/public/uploads/spatial
+    networks: [backend, legacy_backend]
+
+  kernel-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["php", "bin/console", "cos:kernel:worker", "--runtime-seconds=3600", "--idle-milliseconds=250"]
+    environment:
+      <<: *symfony-environment
+      MESSENGER_CONSUMER_NAME: kernel-worker-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend, legacy_backend]
+
+  spatial-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["sh", "-c", "while true; do php bin/console cos:spatial:process --limit=10; sleep 10; done"]
+    environment:
+      <<: *symfony-environment
+      MESSENGER_CONSUMER_NAME: spatial-worker-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    volumes:
+      - spatial_uploads:/var/www/html/public/uploads/spatial
+    networks: [backend, legacy_backend]
+
+  integration-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["sh", "-c", "while true; do php bin/console cos:integration:n8n:process --schedule-content --limit=25; sleep 60; done"]
+    environment:
+      <<: *symfony-environment
+      MESSENGER_CONSUMER_NAME: integration-worker-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
     networks: [backend, legacy_backend]
 
   scheduler:

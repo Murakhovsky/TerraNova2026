@@ -46,6 +46,7 @@ jobs:
           php tests/architecture/deploy_worker_readiness.php
           php tests/architecture/deploy_https_proxy.php
           php tests/architecture/cli_worker_tenant_isolation.php
+          php tests/architecture/runtime_retirement_background_slice.php
 
       - name: Diagnostic checks
         run: |

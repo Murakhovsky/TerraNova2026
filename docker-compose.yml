@@ -52,45 +52,12 @@ services:
       - frontend
       - backend
 
-  worker:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    restart: unless-stopped
-    command: ["php", "app/bootstrap_cli.php", "worker", "run"]
-    environment:
-      APP_ENV: ${APP_ENV:-production}
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: ${MYSQL_DATABASE}
-      DB_USERNAME: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      COS_ORGANIZATION_ID: ${COS_ORGANIZATION_ID:-default}
-      LLM_ENDPOINT: ${LLM_ENDPOINT:-}
-      LLM_TOKEN: ${LLM_TOKEN:-}
-      LLM_MODEL: ${LLM_MODEL:-}
-      LLM_PROVIDER: ${LLM_PROVIDER:-http}
-      AGENT_INPUT_RETENTION_DAYS: ${AGENT_INPUT_RETENTION_DAYS:-30}
-      CRM_WEBHOOK_SECRET_DEFAULT_AIDA: ${CRM_WEBHOOK_SECRET_DEFAULT_AIDA:-}
-    depends_on:
-      mysql:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    # The base image healthcheck validates php-fpm. This service is a long-lived
-    # CLI worker, so inheriting that probe marks a healthy worker as unhealthy.
-    healthcheck:
-      disable: true
-    stop_grace_period: 30s
-    networks:
-      - backend
-
   migrate:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
     restart: "no"
-    command: ["php", "app/bootstrap_cli.php", "migration", "up"]
+    command: ["php", "bin/migrate.php", "up"]
     environment:
       APP_ENV: ${APP_ENV:-production}
       DB_HOST: mysql

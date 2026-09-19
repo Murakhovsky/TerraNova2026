@@ -34,7 +34,7 @@ docker compose --env-file .env.docker up -d --build
 bash deploy/symfony-dev.sh
 ```
 
-The compatibility stack remains responsible for the shrinking SSR surface and legacy worker. Canonical business/control-plane HTTP under `/api/v1/*` is served by Symfony on the parallel runtime, including Messenger/Scheduler backed by Redis. Host Nginx routes `/api/v1/*` to Symfony and leaves the remaining web surface on the compatibility host. Database schema changes remain deployment-owned; the Symfony application account has DML privileges only.
+The compatibility stack remains responsible only for the shrinking SSR surface and the framework-neutral schema bootstrap. Canonical business/control-plane HTTP under `/api/v1/*`, Kernel queue/outbox processing, Spatial processing, n8n outbox processing, Messenger and Scheduler run on Symfony. Host Nginx routes canonical APIs to Symfony and leaves only the remaining web surface on the compatibility host. Database schema changes remain deployment-owned; the Symfony application account has DML privileges only.
 
 Useful endpoints and commands:
 
@@ -43,17 +43,21 @@ GET  /api/v1/health
 GET  /cos/control-center
 POST /api/integrations/{organization}/crm/{provider}/webhook
 
-php app/bootstrap_cli.php migration status
+php bin/migrate.php status
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:legacy-schema:status
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=25
+
+# Temporary manual compatibility CLI, pending the next retirement slice:
 php app/bootstrap_cli.php config validate default
 php app/bootstrap_cli.php config provision default cos-bootstrap
 php app/bootstrap_cli.php outbox run
 php app/bootstrap_cli.php outbox replay default <event-id>
 php app/bootstrap_cli.php queue replayDead default <job-id>
 php app/bootstrap_cli.php agent purgeInputs
-php app/bootstrap_cli.php worker run
 ```
 
-For a native development server without Docker, configure the extensions used by the project, apply migrations with `php app/bootstrap_cli.php migration up`, and run `php -S 127.0.0.1:8080 -t public public/router.php`. MySQL remains the only required durable service.
+For a native development server without Docker, configure the extensions used by the project, apply migrations with `php bin/migrate.php up`, and run `php -S 127.0.0.1:8080 -t public public/router.php`. MySQL remains the only required durable service.
 
 CRM webhooks require `X-CRM-Event-Id` and `X-CRM-Signature: sha256=<HMAC>`. Store the secret in the environment variable referenced by `cos_integrations.credentials_reference` (`env:VARIABLE_NAME`) or in a fallback such as `CRM_WEBHOOK_SECRET_DEFAULT_AIDA`. Providers send canonical external event names (`deal.updated`, `deal.stage_changed`, `lead.updated`, `lead.changed`); the inbound adapter maps them to Domain-owned Sales events instead of trusting callers to name internal events.
 

@@ -58,12 +58,6 @@ migration_structured_log() {
   structured_log "$migrate_id" "migration"
 }
 
-worker_structured_log() {
-  local worker_id
-  worker_id="$("${COMPOSE[@]}" ps -aq worker 2>/dev/null || true)"
-  structured_log "$worker_id" "worker"
-}
-
 echo "Using server environment: $ENV_FILE"
 "${COMPOSE[@]}" config --quiet
 
@@ -122,27 +116,6 @@ if [[ "$PHP_HEALTH" != "healthy" && "$PHP_HEALTH" != "running" ]]; then
   exit 27
 fi
 
-# The worker is part of the runtime, not an optional decorative container. A
-# restart loop means background events/jobs are not being processed even when
-# HTTP remains healthy, so deployment must fail and expose diagnostics.
-WORKER_ID="$("${COMPOSE[@]}" ps -aq worker)"
-if [[ -z "$WORKER_ID" ]]; then
-  echo "Worker container was not created." >&2
-  "${COMPOSE[@]}" ps -a >&2 || true
-  exit 29
-fi
-
-WORKER_STATUS="$("${DOCKER[@]}" inspect -f '{{.State.Status}}' "$WORKER_ID")"
-WORKER_RESTARTS="$("${DOCKER[@]}" inspect -f '{{.RestartCount}}' "$WORKER_ID")"
-if [[ "$WORKER_STATUS" != "running" || "$WORKER_RESTARTS" != "0" ]]; then
-  echo "Worker container is not ready; state=$WORKER_STATUS restart_count=$WORKER_RESTARTS." >&2
-  "${COMPOSE[@]}" logs --no-color --tail=250 worker >&2 || true
-  worker_structured_log
-  "${COMPOSE[@]}" ps -a >&2 || true
-  exit 29
-fi
-
-echo "Worker container is ready: running with restart_count=0"
 
 # Visualization is an operational observability surface. Exercise the same DI,
 # graph provider, projection registry and Cytoscape mapper inside the deployed PHP

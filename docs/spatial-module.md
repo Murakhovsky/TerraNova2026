@@ -24,7 +24,7 @@ The module does not perform LiDAR scanning or photogrammetry reconstruction insi
 1. Open `/spatial/manage` and create a scene, optionally preselected from the property editor.
 2. Choose the scene and viewer types and register the capture source/device.
 3. Drag source, web, AR, panorama, poster or splat assets into the scene.
-4. Run `bin/spatial-worker.php`; ready assets move the scene to review.
+4. Run the Symfony `cos:spatial:process` worker; ready assets move the scene to review.
 5. Add hotspots and check the public preview.
 6. Publish. The related property automatically receives its Spatial URL and renders the scene in its public card.
 
@@ -53,10 +53,10 @@ The token endpoint uses existing Terra Nova user credentials and only issues Spa
 ## Installation
 
 ```bash
-php bin/apply-migration.php 20260823_000017_spatial_core.sql
+php bin/migrate.php up
 npm install
 npm run build:spatial
-php bin/spatial-worker.php --limit=10
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
 php tests/integration/spatial_module.php
 node tests/browser/spatial_viewer.mjs http://127.0.0.1:8001/spatial/scene/{slug}
 ```
