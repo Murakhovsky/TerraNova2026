@@ -22,12 +22,17 @@ final class TelegramHealthCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $token = trim($this->token);
+        if ($token !== '' && preg_match('/^[0-9]+:[A-Za-z0-9_-]+$/', $token) !== 1) {
+            $output->writeln('<error>TELEGRAM_BOT_TOKEN has an invalid format.</error>');
+            return Command::INVALID;
+        }
+
         if ($token === '') {
             $output->writeln('<error>TELEGRAM_BOT_TOKEN is not configured.</error>');
             return Command::INVALID;
         }
 
-        $curl = curl_init('https://api.telegram.org/bot' . rawurlencode($token) . '/getWebhookInfo');
+        $curl = curl_init('https://api.telegram.org/bot' . $token . '/getWebhookInfo');
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 10,
