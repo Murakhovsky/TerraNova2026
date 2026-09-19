@@ -16,6 +16,7 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
+      - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
@@ -34,6 +35,7 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
+      - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
       - '.github/workflows/symfony-bootstrap.yml'
   workflow_dispatch:
