@@ -24,11 +24,6 @@ foreach ($modules as $moduleId => $module) {
 }
 
 $routeCatalogues = [
-    'diagnostic' => [
-        'service' => 'diagnosticRouteContributor',
-        'contributor' => 'app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php',
-        'sources' => ['app/Interfaces/Web/Routing/DiagnosticRoutes.php'],
-    ],
     'property' => [
         'service' => 'propertyRouteContributor',
         'contributor' => 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php',
