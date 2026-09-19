@@ -26,7 +26,8 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
     {
         $path = $request->getPathInfo();
 
-        if (preg_match('#^/api/v1/integrations/crm/[1-9][0-9]*/webhook$#', $path) === 1) {
+        if ($path === '/api/v1/health'
+            || preg_match('#^/api/v1/integrations/crm/[1-9][0-9]*/webhook$#', $path) === 1) {
             return false;
         }
 
