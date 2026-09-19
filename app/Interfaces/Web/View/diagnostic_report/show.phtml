@@ -10,7 +10,6 @@ $scalar = static function (mixed $value) use ($e): string {
     return $e(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 };
 ?>
-<?php $this->partial('shared/manager_header', ['active' => 'diagnostics']); ?>
 <main class="tn-page tn-workspace-page tn-workspace-page--wide tn-diagnostic-report">
     <?php $this->partial('components/ui/page_header', [
         'eyebrow' => 'Diagnostic report',
