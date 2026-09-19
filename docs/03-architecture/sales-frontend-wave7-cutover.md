@@ -11,7 +11,7 @@ contract: architecture-v1
 
 Wave 7 робить Symfony єдиним API boundary для інтерактивного Sales UI.
 
-На цьому етапі Phalcon ще може рендерити server-side HTML сторінок `/sales/*`, але JavaScript, форми та live controls більше не повинні звертатися до legacy `/api/sales/*`.
+Wave 7 спочатку залишав Phalcon як HTML shell, але фінальний Web retirement завершив цей перехід: `/sales/*` тепер рендериться Symfony через framework-neutral PHTML renderer.
 
 Це навмисний strangler-крок перед Wave 8, де legacy Sales API та зайві controller routes можна буде прибирати без ризику зламати живий UI.
 
@@ -121,7 +121,7 @@ CI рекурсивно перевіряє Sales JavaScript та Sales views.
 
 Після Wave 7 ще можуть існувати:
 
-- Phalcon page controllers;
+- legacy Phalcon page controllers видалені після остаточного SSR cutover;
 - legacy Sales API controllers;
 - legacy routing declarations;
 - compatibility services, потрібні server-rendered сторінкам.
@@ -150,3 +150,5 @@ Wave 7 завершений, коли:
 8. Symfony container та router проходять validation;
 9. frontend JS проходить syntax checks;
 10. Wave 7 architecture guard і runtime E2E проходять у CI.
+
+Фінальний стан: `SalesPageController` і `SalesAdminPageController` у Symfony володіють усіма Sales SSR routes; старі PHTML views перевикористані без Phalcon DI/service locator.
