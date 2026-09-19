@@ -25,7 +25,6 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
-| `diagnostic` | `diagnosticRouteContributor` |
 | `property` | `propertyRouteContributor` |
 
 ## `event.consumers`
