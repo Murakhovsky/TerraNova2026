@@ -25,7 +25,7 @@ $assert(($realEstate['contributions']['runtime_module_service']??null)==='realEs
 $migration='app/migrations/20260918_000062_real_estate_wave9_cutover.sql';
 $assert(in_array($migration,$realEstate['contributions']['migration_files']??[],true),'RealEstate Wave 9 migration is not declared.');
 $migrationSql=$read($migration);
-foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings','tn_real_estate_operation_receipts','organization_id','uq_real_estate_match'] as $needle){
+foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings','tn_real_estate_operation_receipts','organization_id','uq_real_estate_match',"module_id='real_estate'","installed_version='0.2.0'","schema_version='0.2.0'","status='INSTALLED'"] as $needle){
     $assert(str_contains($migrationSql,$needle),'RealEstate migration missing: '.$needle);
 }
 
