@@ -51,8 +51,13 @@ $assert(substr_count($realEstateRepository,'organization_id')>=12,'RealEstate pe
 
 $runtime=$read('app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php');
 $canonicalRepository=$read('app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyCanonicalRuntimeRepository.php');
+$propertyReferencePort=$read('app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyReferencePort.php');
 $assert(str_contains($runtime,'reserveInventory')&&str_contains($runtime,'transactions->transactional'),'Property reservation must remain transactional.');
 $assert(str_contains($canonicalRepository,'FOR UPDATE'),'Property reservation path must serialize inventory mutation with a row lock.');
+foreach([':query_asset',':query_type',':query_title',':query_slug',':query_location',':query_address'] as $placeholder){
+    $assert(str_contains($propertyReferencePort,$placeholder),'Property search must use distinct native PDO placeholders: '.$placeholder);
+}
+$assert(substr_count($propertyReferencePort,'LIKE :query ')===0,'Property search must not reuse a named PDO placeholder across multiple LIKE clauses.');
 
 $symfonyServices=$read('symfony/config/services.yaml');
 foreach([
