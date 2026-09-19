@@ -15,13 +15,26 @@ $required = [
     '/admin/content',
     '/admin/content/edit',
     '/cos/control-center',
-    '/sales/dashboard',
-    '/sales/pipeline',
-    '/sales/today',
 ];
 foreach ($required as $pattern) {
     if (!str_contains($frontendRoutes, "'" . $pattern . "'")) {
         throw new RuntimeException('Missing frontend route declaration: ' . $pattern);
+    }
+}
+
+foreach (['/sales/dashboard', '/sales/pipeline', '/sales/today', '/sales/leads', '/sales/deals', '/sales/director', '/sales/admin'] as $migrated) {
+    if (str_contains($frontendRoutes, "'" . $migrated . "'")) {
+        throw new RuntimeException('Symfony-owned Sales page route leaked back into Phalcon FrontendRoutes: ' . $migrated);
+    }
+}
+
+$symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
+foreach ([
+    'cos_web_sales_root:', 'cos_web_sales_dashboard:', 'cos_web_sales_today:', 'cos_web_sales_pipeline:',
+    'cos_web_sales_leads:', 'cos_web_sales_deals:', 'cos_web_sales_deal:', 'cos_web_sales_director:', 'cos_web_sales_admin:',
+] as $route) {
+    if (!str_contains($symfonyRoutes, $route)) {
+        throw new RuntimeException('Canonical Symfony Sales page route is missing: ' . $route);
     }
 }
 
