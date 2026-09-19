@@ -162,9 +162,9 @@ fi
 
 CORE_HEALTHY=0
 for attempt in $(seq 1 20); do
-  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /tmp/core-health.json http://127.0.0.1/migration/core-health 2>/dev/null; then
+  if "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /tmp/core-health.json http://127.0.0.1/health/dependencies 2>/dev/null; then
     CORE_HEALTHY=1
-    echo "Shared COS read-model check passed on attempt $attempt."
+    echo "COS dependency health check passed on attempt $attempt."
     "${DOCKER[@]}" exec cos-symfony-nginx-1 cat /tmp/core-health.json
     echo
     break
@@ -179,9 +179,9 @@ if [[ "$CORE_HEALTHY" != "1" ]]; then
   exit 50
 fi
 
-PROTECTED_STATUS="$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out '%{http_code}' http://127.0.0.1:8081/migration/api/cos/events)"
+PROTECTED_STATUS="$(curl --silent --show-error --output /tmp/cos-symfony-protected.json --write-out '%{http_code}' http://127.0.0.1:8081/api/v1/operations/events)"
 if [[ "$PROTECTED_STATUS" != "403" ]] || [[ "$(cat /tmp/cos-symfony-protected.json)" != '{"ok":false,"error":"Manager authorization required."}' ]]; then
-  echo "Symfony Security did not protect the Operations migration API as expected." >&2
+  echo "Symfony Security did not protect the Operations API as expected." >&2
   cat /tmp/cos-symfony-protected.json >&2 || true
   echo >&2
   "${COMPOSE[@]}" ps -a >&2 || true
@@ -189,7 +189,7 @@ if [[ "$PROTECTED_STATUS" != "403" ]] || [[ "$(cat /tmp/cos-symfony-protected.js
   exit 51
 fi
 
-echo "Operations migration API is protected by the legacy-session Symfony Security bridge."
+echo "Operations API is protected by the legacy-session Symfony Security bridge."
 
 "${COMPOSE[@]}" exec -T worker rm -f var/runtime/scheduler-heartbeat.json || true
 PROBE_TOKEN="deploy-async-probe"
@@ -232,5 +232,5 @@ echo "Doctrine migrations, Redis Messenger worker and Symfony Scheduler are heal
 
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
-echo "Shared core read-model probe is available at http://127.0.0.1:8081/migration/core-health"
-echo "Protected Operations migration API is available at http://127.0.0.1:8081/migration/api/cos/events"
+echo "Dependency health probe is available at http://127.0.0.1:8081/health/dependencies"
+echo "Protected Operations API is available at http://127.0.0.1:8081/api/v1/operations/events"

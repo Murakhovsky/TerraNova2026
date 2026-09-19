@@ -8,56 +8,74 @@ cos_symfony_health:
   controller: App\Controller\HealthController::health
   methods: [GET]
 
-cos_symfony_core_health:
-  path: /migration/core-health
-  controller: App\Controller\CoreHealthController
-  methods: [GET]
-
-cos_symfony_migration_auth_context:
-  path: /migration/api/cos/auth-context
-  controller: App\Controller\SecurityContextController
-  methods: [GET]
-
-cos_symfony_migration_actions:
-  path: /migration/api/cos/actions
-  controller: App\Controller\OperationsReadController::actions
-  methods: [GET]
-
-cos_symfony_migration_action:
-  path: /migration/api/cos/actions/{id}
-  controller: App\Controller\OperationsReadController::action
-  methods: [GET]
-  requirements:
-    id: '[a-f0-9]{32}'
-
-cos_symfony_migration_approvals:
-  path: /migration/api/cos/approvals
-  controller: App\Controller\OperationsReadController::approvals
-  methods: [GET]
-
-cos_symfony_migration_agents:
-  path: /migration/api/cos/agents
-  controller: App\Controller\OperationsReadController::agents
-  methods: [GET]
-
-cos_symfony_migration_rules:
-  path: /migration/api/cos/rules
-  controller: App\Controller\OperationsReadController::rules
-  methods: [GET]
-
-cos_symfony_migration_events:
-  path: /migration/api/cos/events
-  controller: App\Controller\OperationsReadController::events
-  methods: [GET]
-
-cos_symfony_migration_audit:
-  path: /migration/api/cos/audit
-  controller: App\Controller\OperationsReadController::audit
-  methods: [GET]
-
 cos_api_v1_status:
   path: /api/v1/status
   controller: App\Http\Api\V1\Controller\ApiStatusController
+  methods: [GET]
+
+cos_dependency_health:
+  path: /health/dependencies
+  controller: App\Controller\DependencyHealthController
+  methods: [GET]
+
+cos_api_v1_operations_actions:
+  path: /api/v1/operations/actions
+  controller: App\Http\Api\V1\Controller\OperationsReadController::actions
+  methods: [GET]
+
+cos_api_v1_operations_action:
+  path: /api/v1/operations/actions/{id}
+  controller: App\Http\Api\V1\Controller\OperationsReadController::action
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_action_execute:
+  path: /api/v1/operations/actions/{id}/execute
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::execute
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_action_dismiss:
+  path: /api/v1/operations/actions/{id}/dismiss
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::dismiss
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_approvals:
+  path: /api/v1/operations/approvals
+  controller: App\Http\Api\V1\Controller\OperationsReadController::approvals
+  methods: [GET]
+
+cos_api_v1_operations_approval_approve:
+  path: /api/v1/operations/approvals/{id}/approve
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::approve
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_approval_reject:
+  path: /api/v1/operations/approvals/{id}/reject
+  controller: App\Http\Api\V1\Controller\OperationsWriteController::reject
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_api_v1_operations_agents:
+  path: /api/v1/operations/agents
+  controller: App\Http\Api\V1\Controller\OperationsReadController::agents
+  methods: [GET]
+
+cos_api_v1_operations_rules:
+  path: /api/v1/operations/rules
+  controller: App\Http\Api\V1\Controller\OperationsReadController::rules
+  methods: [GET]
+
+cos_api_v1_operations_events:
+  path: /api/v1/operations/events
+  controller: App\Http\Api\V1\Controller\OperationsReadController::events
+  methods: [GET]
+
+cos_api_v1_operations_audit:
+  path: /api/v1/operations/audit
+  controller: App\Http\Api\V1\Controller\OperationsReadController::audit
   methods: [GET]
 
 cos_api_v1_sales_client_case_stats:

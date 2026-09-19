@@ -61,8 +61,6 @@ final class FrontendRoutes
         self::add($router, 'add', '/cos/{lang:[a-z]{2}}/domains/{slug:[a-z0-9-]+}', 'Interfaces\\Web\\Controller', 'company_os', 'domain');
         self::add($router, 'add', '/cos/control-center', 'Interfaces\\Web\\Controller', 'cos', 'index');
 
-        self::add($router, 'addPost', '/api/approvals/{id:[a-f0-9]{32}}/approve', 'Interfaces\\Api\\Controller', 'approval', 'approve');
-        self::add($router, 'addPost', '/api/approvals/{id:[a-f0-9]{32}}/reject', 'Interfaces\\Api\\Controller', 'approval', 'reject');
         self::add($router, 'addGet', '/api/health', 'Interfaces\\Api\\Controller', 'health', 'index');
         self::add($router, 'addGet', '/api/admin/diagnostics/packs', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'packs');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'packs');
@@ -90,16 +88,6 @@ final class FrontendRoutes
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/regression', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'regression');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/archive', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'archive');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/activate', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'activate');
-        self::add($router, 'addGet', '/api/cos/actions', 'Interfaces\\Api\\Controller', 'cos_runtime', 'actions');
-        self::add($router, 'addGet', '/api/cos/actions/{id:[a-f0-9]{32}}', 'Interfaces\\Api\\Controller', 'cos_runtime', 'action');
-        self::add($router, 'addPost', '/api/cos/actions/{id:[a-f0-9]{32}}/execute', 'Interfaces\\Api\\Controller', 'cos_runtime', 'execute');
-        self::add($router, 'addGet', '/api/cos/approvals', 'Interfaces\\Api\\Controller', 'cos_runtime', 'approvals');
-        self::add($router, 'addPost', '/api/cos/approvals/{id:[a-f0-9]{32}}/approve', 'Interfaces\\Api\\Controller', 'cos_runtime', 'approve');
-        self::add($router, 'addPost', '/api/cos/approvals/{id:[a-f0-9]{32}}/reject', 'Interfaces\\Api\\Controller', 'cos_runtime', 'reject');
-        self::add($router, 'addGet', '/api/cos/agents', 'Interfaces\\Api\\Controller', 'cos_runtime', 'agents');
-        self::add($router, 'addGet', '/api/cos/rules', 'Interfaces\\Api\\Controller', 'cos_runtime', 'rules');
-        self::add($router, 'addGet', '/api/cos/events', 'Interfaces\\Api\\Controller', 'cos_runtime', 'events');
-        self::add($router, 'addGet', '/api/cos/audit', 'Interfaces\\Api\\Controller', 'cos_runtime', 'audit');
 
         foreach (['economy', 'games', 'users'] as $deprecatedModule) {
             self::add($router, 'add', '/' . $deprecatedModule, 'Interfaces\\Web\\Controller', 'deprecated_module', 'gone');

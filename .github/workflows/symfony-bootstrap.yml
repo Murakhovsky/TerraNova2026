@@ -1793,7 +1793,7 @@ jobs:
           forbidden='{"ok":false,"error":"Manager authorization required."}'
 
           status=$(curl --silent --show-error --output /tmp/no-session.json --write-out '%{http_code}' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/no-session.json)" = "$forbidden"
 
@@ -1806,7 +1806,7 @@ jobs:
 
           status=$(curl --silent --show-error --output /tmp/manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "200"
           grep -q '"organization_id":"default"' /tmp/manager.json
           grep -q '"organization_role":"manager"' /tmp/manager.json
@@ -1826,13 +1826,13 @@ jobs:
 
           status=$(curl --silent --show-error --output /tmp/realtor.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-realtor-session0002' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/realtor.json)" = "$forbidden"
 
           status=$(curl --silent --show-error --output /tmp/other-manager.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-other-manager0003' \
-            http://127.0.0.1:8081/migration/api/cos/auth-context)
+            http://127.0.0.1:8081/api/v1/operations/events)
           test "$status" = "403"
           test "$(cat /tmp/other-manager.json)" = "$forbidden"
 
@@ -1841,7 +1841,7 @@ jobs:
       - name: Verify operations routes are protected
         run: |
           status=$(curl --silent --show-error --output /tmp/cos-operations-response.json --write-out '%{http_code}' \
-            http://127.0.0.1:8081/migration/api/cos/events)
+            http://127.0.0.1:8081/api/v1/operations/events)
           echo "HTTP $status"
           cat /tmp/cos-operations-response.json
           echo
@@ -1919,9 +1919,9 @@ jobs:
             set -e
             curl --fail --show-error --silent http://127.0.0.1:8081/health
             echo
-            curl --fail --show-error --silent http://127.0.0.1:8081/migration/core-health
+            curl --fail --show-error --silent http://127.0.0.1:8081/health/dependencies
             echo
-            status=$(curl --silent --show-error --dump-header /tmp/cos-symfony-protected.headers --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" -H "X-Correlation-ID: aws-symfony-smoke" http://127.0.0.1:8081/migration/api/cos/events)
+            status=$(curl --silent --show-error --dump-header /tmp/cos-symfony-protected.headers --output /tmp/cos-symfony-protected.json --write-out "%{http_code}" -H "X-Correlation-ID: aws-symfony-smoke" http://127.0.0.1:8081/api/v1/operations/events)
             test "$status" = "403"
             grep -qi "^X-Correlation-ID: aws-symfony-smoke" /tmp/cos-symfony-protected.headers
             test "$(cat /tmp/cos-symfony-protected.json)" = "{\"ok\":false,\"error\":\"Manager authorization required.\"}"

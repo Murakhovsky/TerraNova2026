@@ -5,7 +5,7 @@ security:
 
   firewalls:
     cos_api:
-      pattern: '^/(?:migration/api/cos|api/v1)(?:/|$)'
+      pattern: '^/api/v1(?:/|$)'
       stateless: true
       provider: legacy_users
       custom_authenticators:
@@ -16,4 +16,3 @@ security:
   access_control:
     - { path: '^/api/v1/integrations/crm/[1-9][0-9]*/webhook$', roles: PUBLIC_ACCESS }
     - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
-    - { path: '^/migration/api/cos(?:/|$)', roles: ROLE_MANAGER }

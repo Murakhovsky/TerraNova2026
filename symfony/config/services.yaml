@@ -21,10 +21,6 @@ services:
     resource: '../src/Controller/'
     tags: ['controller.service_arguments']
 
-  App\Controller\OperationsReadController:
-    public: true
-    tags: ['controller.service_arguments']
-
   App\Http\Api\V1\Controller\:
     resource: '../src/Http/Api/V1/Controller/'
     public: true

@@ -30,8 +30,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return false;
         }
 
-        return str_starts_with($path, '/migration/api/cos')
-            || str_starts_with($path, '/api/v1');
+        return str_starts_with($path, '/api/v1');
     }
 
     public function authenticate(Request $request): Passport
