@@ -89,21 +89,3 @@ $di->set('flash', function () {
 
 
 
-$di->setShared('translator', function(){
-    // Дістанемо мову з сесії / GET-параметра / cookie / піддомену
-    $lang = 'ua';
-    $file = APP_PATH . "/Interfaces/Telegram/Language/{$lang}.php";
-    if (!file_exists($file)) {
-        $file = APP_PATH . "/messages/uk.php";
-    }
-    $interpolator = new InterpolatorFactory();
-
-    return new NativeArray(
-        $interpolator,
-        ['content' => require $file]
-    );
-});
-
-// приклад використання
-//$t = $di->getShared('translator');
-//var_dump($t->_("TG_GAMES"));

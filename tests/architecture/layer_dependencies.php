@@ -54,9 +54,6 @@ foreach (['Web', 'Api', 'Cli', 'Shared'] as $interfaceArea) {
     }
 }
 
-// Longman commands are framework adapters and may call the canonical Telegram persistence/integration adapters.
-assertNoDependencies($root . '/app/Interfaces/Telegram', ['Modules', 'Common', 'Infrastructure\\Legacy']);
-
 $clientCaseFacade = (string) file_get_contents($root . '/app/Interfaces/Web/Service/ClientCaseService.php');
 foreach (['PdoConnection', 'PDO', '->prepare(', '->transactional(', 'EventBus', 'ClientCaseCreated::', 'ClientCaseChanged::', 'DealStageChanged::', 'LeadChanged::'] as $forbidden) {
     if (str_contains($clientCaseFacade, $forbidden)) {

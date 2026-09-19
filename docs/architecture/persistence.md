@@ -4,7 +4,7 @@ Audit date: 2026-08-28.
 
 ## Decision
 
-The project uses PDO as the database driver. Phalcon ActiveRecord is a quarantined compatibility adapter for the remaining legacy Telegram flow; it is not the application persistence API.
+The project uses PDO as the database driver. Phalcon ActiveRecord has been retired from application persistence.
 
 Every bounded context is a vertical slice:
 
@@ -41,23 +41,23 @@ Cross-domain writes always call an explicit port implemented by the owner. Curre
 
 PDO was selected over Phalcon ActiveRecord for new persistence because dependencies, SQL, tenant predicates, transaction boundaries and locks remain explicit. This does not prohibit Phalcon as the HTTP framework.
 
-## Phalcon ActiveRecord quarantine
+## Phalcon ActiveRecord retirement
 
-Remaining AR mappings are located only under:
+The final Telegram-only ActiveRecord quarantine was deleted during runtime retirement.
 
-- `Domains/Identity/Infrastructure/Persistence/Phalcon/Telegram`
-- `Domains/Property/Infrastructure/Persistence/Phalcon/Telegram`
-- `Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram`
-- `Infrastructure/Integration/Telegram/ActiveRecord` for shared abstract bases
+The following trees must not return:
 
-Duplicate mappings of `estate_objects_disabled` were consolidated into `ObjectsDisabled`. New ActiveRecord models are forbidden. Existing Telegram command callers are the final compatibility surface and are migrated behind command/query gateways incrementally.
+- `Domains/*/Infrastructure/Persistence/Phalcon/Telegram`
+- `Infrastructure/Integration/Telegram/ActiveRecord`
+
+Historical Telegram command models were not canonical Domain persistence. Any future Telegram transport must call existing Application ports and PDO-backed adapters rather than restore ActiveRecord mappings.
 
 ## Enforcement
 
 - Domain Application/Model code cannot import Infrastructure, Interfaces, Phalcon or PDO.
 - MySQL adapters cannot import delivery code or concrete integration services.
 - Domain MySQL write ownership is checked automatically.
-- ActiveRecord cannot exist outside the explicit Telegram quarantine.
+- Phalcon ActiveRecord must not be restored anywhere in application persistence.
 - Old `Infrastructure/Persistence/MySql`, `Infrastructure/Database`, `Infrastructure/ReadModel` and `Infrastructure/Operations` roots cannot be restored.
 - Composition is performed only under `Bootstrap`, CLI entry points and tests.
 

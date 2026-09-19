@@ -24,8 +24,6 @@ $coreRequired = [
     '/auth/logout',
     '/cabinet',
     '/cabinet/submission/{id:[0-9]+}',
-    '/cabinet/telegramConnect',
-    '/cabinet/telegramDisconnect',
     '/admin',
     '/admin/users',
     '/admin/analytics',
@@ -64,8 +62,6 @@ foreach (['/:controller', '/:controller/:action', '/:controller/:action/:params'
 }
 
 foreach ([
-    '/cabinet/telegramConnect',
-    '/cabinet/telegramDisconnect',
     '/admin/createUser',
     '/admin/updateUser/{id:[0-9]+}',
 ] as $mutationPattern) {

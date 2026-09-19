@@ -2,76 +2,51 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-require $root . '/vendor/autoload.php';
-
-if (is_dir($root . '/app/modules')) {
-    throw new RuntimeException('Telegram migration is incomplete: app/modules still exists.');
-}
-
-$configSource = (string) file_get_contents($root . '/app/config/config.php');
-if (str_contains($configSource, '/modules/')) {
-    throw new RuntimeException('Telegram command configuration still points to app/modules.');
-}
-
-// Telegram source is retained for possible reactivation, but it must remain outside
-// the active shared Web/CLI runtime while the legacy runtime is disabled.
-$sharedServices = (string) file_get_contents($root . '/app/config/services.php');
-foreach (['telegramAutomationService', 'telegramAccessPolicy', 'TelegramAutomationService', 'TelegramAccessPolicy'] as $telegramDependency) {
-    if (str_contains($sharedServices, $telegramDependency)) {
-        throw new RuntimeException('Shared DI still depends on legacy Telegram: ' . $telegramDependency);
+$assert = static function (bool $condition, string $message): void {
+    if (!$condition) {
+        throw new RuntimeException($message);
     }
-}
+};
 
-$telegramServices = (string) file_get_contents($root . '/app/config/services_tg.php');
-foreach (['telegramAutomationService', 'telegramAccessPolicy'] as $telegramService) {
-    if (!str_contains($telegramServices, $telegramService)) {
-        throw new RuntimeException('Telegram-only DI lost retained legacy service: ' . $telegramService);
-    }
+foreach ([
+    'app/bootstrap_tg.php',
+    'app/config/services_tg.php',
+    'app/Interfaces/Telegram',
+    'app/Infrastructure/Integration/Telegram/ActiveRecord',
+    'app/Domains/Identity/Infrastructure/Persistence/Phalcon/Telegram',
+    'app/Domains/Property/Infrastructure/Persistence/Phalcon/Telegram',
+    'app/Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram',
+    'app/Infrastructure/Framework/PhalconEventService.php',
+    'app/Infrastructure/Security/TelegramAccessPolicy.php',
+    'bin/telegram-webhook.php',
+] as $path) {
+    $assert(!file_exists($root . '/' . $path), 'Retired Telegram/Phalcon runtime restored: ' . $path);
 }
 
 $webhook = (string) file_get_contents($root . '/public/tgAdmin_webhook.php');
-if (!str_contains($webhook, 'http_response_code(410)') || str_contains($webhook, 'bootstrap_tg.php')) {
-    throw new RuntimeException('Legacy Telegram public webhook is not safely disabled.');
+$assert(str_contains($webhook, 'http_response_code(410)'), 'Stale public Telegram webhook tombstone must remain HTTP 410.');
+$assert(!str_contains($webhook, 'bootstrap_tg.php'), 'Telegram tombstone must never boot a framework runtime.');
+
+$automation = (string) file_get_contents($root . '/app/Infrastructure/Integration/Telegram/TelegramAutomationService.php');
+$processor = (string) file_get_contents($root . '/app/Infrastructure/Integration/Telegram/TelegramAutomationProcessor.php');
+foreach ([$automation, $processor] as $source) {
+    $assert(!str_contains($source, 'Phalcon\\'), 'Outbound Telegram automation must remain framework-neutral.');
 }
 
-$legacyBootstrap = $root . '/app/bootstrap_tg.php';
-if (!is_file($legacyBootstrap)) {
-    throw new RuntimeException('Retained Telegram bootstrap disappeared; reactivation path was lost.');
+$config = (string) file_get_contents($root . '/app/config/config.php');
+$assert(str_contains($config, 'TELEGRAM_BOT_TOKEN'), 'Outbound Telegram token configuration is missing.');
+$assert(str_contains($config, 'TELEGRAM_BOT_NAME'), 'Outbound Telegram bot-name configuration is missing.');
+foreach (['TELEGRAM_WEBHOOK_URL', 'TELEGRAM_WEBHOOK_SECRET', "Interfaces/Telegram/Command"] as $legacy) {
+    $assert(!str_contains($config, $legacy), 'Retired inbound Telegram configuration restored: ' . $legacy);
 }
 
-$roots = [
-    $root . '/app/Interfaces/Telegram',
-    $root . '/app/Infrastructure/Integration/Telegram',
-    $root . '/app/Domains/Identity/Infrastructure/Persistence/Phalcon/Telegram',
-    $root . '/app/Domains/Property/Infrastructure/Persistence/Phalcon/Telegram',
-    $root . '/app/Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram',
-];
-
-$phpFiles = 0;
-foreach ($roots as $directory) {
-    if (!is_dir($directory)) {
-        continue;
-    }
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
-    foreach ($iterator as $file) {
-        if (!$file->isFile() || $file->getExtension() !== 'php') {
-            continue;
-        }
-        $phpFiles++;
-        $source = (string) file_get_contents($file->getPathname());
-        foreach (['TelegramModels\\', 'Modules\\TgAdmin', 'OpenAIPlugin\\', 'Parser\\Advert\\'] as $forbiddenNamespace) {
-            if (str_contains($source, $forbiddenNamespace)) {
-                throw new RuntimeException(
-                    'Retained Telegram source still references removed legacy namespace '
-                    . $forbiddenNamespace . ': ' . $file->getPathname()
-                );
-            }
-        }
-    }
+$sharedServices = (string) file_get_contents($root . '/app/config/services.php');
+foreach (['Phalcon\\\\Db\\\\Adapter', 'modelsMetadata', 'PhalconEventService'] as $legacy) {
+    $assert(!str_contains($sharedServices, $legacy), 'Retired Phalcon persistence/event service restored: ' . $legacy);
 }
 
-if ($phpFiles === 0) {
-    throw new RuntimeException('Telegram legacy source was unexpectedly removed entirely.');
-}
+$routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/CoreWebRoutes.php');
+$assert(!str_contains($routes, 'telegramConnect'), 'Cabinet still exposes retired Telegram connect route.');
+$assert(!str_contains($routes, 'telegramDisconnect'), 'Cabinet still exposes retired Telegram disconnect route.');
 
-echo "Telegram architecture passed: legacy source retained, shared runtime isolated, public webhook disabled.\n";
+echo "Telegram architecture passed: Phalcon inbound bot retired, outbound notification channel retained.\n";

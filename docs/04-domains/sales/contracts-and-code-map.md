@@ -46,13 +46,11 @@ Infrastructure adapters
 app/Bootstrap/SalesServices.php
 ```
 
-Web, API, CLI, Telegram і робітники повинні отримувати ті самі варіанти використання, а не створювати окрему бізнес-логіку для кожного інтерфейсу.
+Web, API, Console і робітники повинні отримувати ті самі варіанти використання, а не створювати окрему бізнес-логіку для кожного інтерфейсу.
 
-## Межа сумісності зі старою моделлю
+## Статус старої моделі
 
-`Infrastructure/Persistence/Phalcon/Telegram` залишається ізольованим адаптером сумісності для історичних записів `request_*`.
-
-Нові бізнес-правила, відображення інтерфейсу або нова поведінка Telegram туди не додаються. Цей шар існує для контрольованого переходу, а не для нескінченного продовження старої архітектури під новими назвами.
+Telegram-specific `Infrastructure/Persistence/Phalcon/Telegram` видалено. Sales persistence використовує Application contracts та PDO/MySQL adapters; відновлення ActiveRecord compatibility layer заборонене architecture gates.
 
 ## Міждоменні контракти
 

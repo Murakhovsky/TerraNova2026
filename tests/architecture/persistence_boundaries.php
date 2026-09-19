@@ -17,13 +17,10 @@ foreach ($iterator as $file) {
     $source = (string) file_get_contents($file->getPathname());
     $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
 
-    $isDomainActiveRecord = preg_match('~^app/Domains/[^/]+/Infrastructure/Persistence/Phalcon/~', $relative) === 1;
-    $isSharedActiveRecordBase = str_starts_with($relative, 'app/Infrastructure/Integration/Telegram/ActiveRecord/');
-    if ((str_contains($source, 'use Phalcon\\Mvc\\Model;') || str_contains($source, 'extends Model'))
-        && !$isDomainActiveRecord
-        && !$isSharedActiveRecordBase
+    if (preg_match('/^use\\s+Phalcon\\\\Mvc\\\\Model(?:\\s+as\\s+\\w+)?\\s*;/m', $source)
+        || preg_match('/extends\\s+\\\\?Phalcon\\\\Mvc\\\\Model\\b/', $source)
     ) {
-        throw new RuntimeException('Phalcon ActiveRecord escaped its persistence adapter boundary: ' . $relative);
+        throw new RuntimeException('Phalcon ActiveRecord is retired and must not be restored: ' . $relative);
     }
 }
 
@@ -61,4 +58,4 @@ foreach ([
     }
 }
 
-echo "Persistence boundaries passed: MySQL uses domain ports and ActiveRecord is quarantined.\n";
+echo "Persistence boundaries passed: MySQL uses domain ports and Phalcon ActiveRecord is retired.\n";

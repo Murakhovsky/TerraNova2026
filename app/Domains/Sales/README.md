@@ -15,9 +15,9 @@ Sales owns:
 
 Sales does not own Property listings, authentication/memberships, Telegram delivery, files/media, generic queues, LLM transport or operational telemetry. Those capabilities are accessed through ports or Kernel services.
 
-### Legacy compatibility boundary
+### Persistence compatibility status
 
-`Infrastructure/Persistence/Phalcon/Telegram` contains old ActiveRecord models for the `request_*` tables. They are temporarily kept so the existing Telegram interface can read historical Sales records. This directory is a quarantined compatibility adapter: new business rules, use cases, rendering or Telegram behavior must not be added there. New delivery code belongs in `Interfaces/Telegram`; new Sales persistence implements a contract from `Application/Contract`.
+The Telegram-specific Phalcon ActiveRecord compatibility layer has been retired. Sales persistence must use canonical Application contracts and PDO/MySQL adapters.
 
 ## Standard layout
 
@@ -43,7 +43,7 @@ Sales/
     `-- SalesDomainModule.php
 ```
 
-The common composition root is `app/Bootstrap/SalesServices.php`. Sales services must not be registered inside a Web module: Web, API, CLI, Telegram and workers must resolve the same use cases.
+The common composition root is `app/Bootstrap/SalesServices.php`. Sales services must not be registered inside a Web module: Web, API, Console and workers must resolve the same use cases.
 
 ## Canonical vocabulary
 
@@ -71,7 +71,7 @@ validate tenant and input
 -> commit business state + Event + Outbox atomically
 ```
 
-Controllers, Telegram commands and workers call use cases. They do not reproduce Sales transitions or execute Sales SQL. Automation Action handlers also contain no SQL; they invoke a port and let Kernel record the result.
+Controllers and workers call use cases. They do not reproduce Sales transitions or execute Sales SQL. Automation Action handlers also contain no SQL; they invoke a port and let Kernel record the result.
 
 ## Adding a Sales capability
 

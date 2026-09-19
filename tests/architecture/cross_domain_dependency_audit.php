@@ -40,23 +40,7 @@ if ($declared === []) {
     throw new RuntimeException('No canonical cross-domain contracts are declared.');
 }
 
-$legacyAllowlist = [
-    'app/Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram/Request/Shows.php' => [
-        'Domains\\Property\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Estate\\Objects',
-        'Domains\\Identity\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Person\\AppUsers',
-    ],
-    'app/Domains/Sales/Infrastructure/Persistence/Phalcon/Telegram/Request/Requests.php' => [
-        'Domains\\Identity\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Preference\\ListItems',
-        'Domains\\Identity\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Preference\\Lists',
-    ],
-    'app/Domains/Property/Infrastructure/Persistence/Phalcon/Telegram/Estate/Objects.php' => [
-        'Domains\\Identity\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Preference\\ListItems',
-    ],
-    'app/Domains/Property/Infrastructure/Persistence/Phalcon/Telegram/ReObjects.php' => [
-        'Domains\\Identity\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Person\\AppUsers',
-        'Domains\\Identity\\Infrastructure\\Persistence\\Phalcon\\Telegram\\Preference\\Lists',
-    ],
-];
+$legacyAllowlist = [];
 
 $contractEvidence = [];
 $legacyEvidence = [];

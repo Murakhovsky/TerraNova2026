@@ -24,7 +24,6 @@ return new \Phalcon\Config\Config([
 
     'application' => [
         'appDir'         => APP_PATH . '/',
-        'modelsDir'      => APP_PATH . '/Infrastructure/Persistence/Phalcon/',
         'migrationsDir'  => APP_PATH . '/migrations/',
         'cacheDir'       => BASE_PATH . '/cache/',
         'baseUri'        => '/',
@@ -64,77 +63,9 @@ return new \Phalcon\Config\Config([
     ],
 
     'telegram' => array(
-        // Add you bot's API key and name
         'api_key'      => getenv('TELEGRAM_BOT_TOKEN') ?: '',
         'bot_username' => getenv('TELEGRAM_BOT_NAME') ?: '',
-
-        // [Manager Only] Secret key required to access the webhook
-        'secret'       => getenv('TELEGRAM_WEBHOOK_SECRET') ?: '',
-
-        'webhook'      => array(
-            'url' => (string) ($_ENV['TELEGRAM_WEBHOOK_URL'] ?? getenv('TELEGRAM_WEBHOOK_URL') ?: 'https://terra.ai-da.store/tgAdmin_webhook.php'),
-        ),
-
-        // All command related configs go here
-        'commands'     => array(
-            'paths'   => array(
-                APP_PATH . '/Interfaces/Telegram/Command/SystemCommands',
-                APP_PATH . '/Interfaces/Telegram/Command/UserCommands',
-            ),
-            // Here you can set any command-specific parameters
-            'configs' => array(
-                // - Google geocode/timezone API key for /date command (see DateCommand.php)
-                // 'date'    => ['google_api_key' => 'your_google_api_key_here'],
-                // - OpenWeatherMap.org API key for /weather command (see WeatherCommand.php)
-                'weather' => ['owm_api_key' => getenv('OPENWEATHER_API_KEY') ?: ''],
-                // - Payment Provider Token for /payment command (see Payments/PaymentCommand.php)
-                // 'payment' => ['payment_provider_token' => 'your_payment_provider_token_here'],
-            )
-        ),
-        'database' => [
-            'adapter'  => 'Mysql',
-            'host'     => getenv('DB_TG_HOST') ?: 'mysql',
-            'port'     => (int) (getenv('DB_TG_PORT') ?: (getenv('DB_PORT') ?: 3306)),
-            'username' => getenv('DB_TG_USERNAME') ?: (getenv('DB_USERNAME') ?: 'cos'),
-            'password' => getenv('DB_TG_PASSWORD') ?: (getenv('DB_PASSWORD') ?: ''),
-            'dbname'   => getenv('DB_TG_DATABASE') ?: (getenv('DB_DATABASE') ?: 'cos'),
-            'charset'  => 'utf8mb4',
-        ],
-        // Define all IDs of admin users
-        'admins'       => array(
-            1380300520, //EBBot
-            522625209, //Юрій
-            594711080, //EB
-            774997209  //Наталя
-        ),
-
-        // Define all IDs of our chats
-        'ebChat' => array(
-            -1001199609115, // Channel EstateBook Оренда
-            -1001422724538, // Channel EstateBook Продаж
-            -1001284854614, // Channel EstateBook NEWS
-            -1001155920854, // Channel EstateBook CLUB
-        ),
-
-        // Logging (Debug, Error and Raw Updates)
-        'logging'  => array(
-            'debug'  => __DIR__ . '/php-telegram-bot-debug.log',
-            'error'  => __DIR__ . '/php-telegram-bot-error.log',
-            'update' => __DIR__ . '/php-telegram-bot-update.log',
-        ),
-
-        // Set custom Upload and Download paths
-        'paths'        => array(
-            'download' => BASE_PATH . '/TelegramFiles/Download',
-            'upload'   => BASE_PATH . '/TelegramFiles/Upload',
-        ),
-
-        // Requests Limiter (tries to prevent reaching Telegram API limits)
-        'limiter'      => array(
-            'enabled' => true,
-        ),
     ),
-
 
 
 

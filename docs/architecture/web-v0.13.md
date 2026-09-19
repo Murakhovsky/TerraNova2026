@@ -33,8 +33,6 @@ The cutover explicitly preserves the currently supported non-domain entry points
 
 /cabinet
 /cabinet/submission/{id}
-/cabinet/telegramConnect
-/cabinet/telegramDisconnect
 
 /admin
 /admin/users
@@ -43,7 +41,7 @@ The cutover explicitly preserves the currently supported non-domain entry points
 /admin/updateUser/{id}
 ```
 
-Homepage, login/register and submission routes retain the HTTP methods required by their existing forms. Mutation-only actions such as Telegram binding and user administration are declared as POST routes.
+Homepage, login/register and submission routes retain the HTTP methods required by their existing forms. Telegram binding routes were later retired together with the disabled inbound bot runtime; user administration mutations remain explicit POST routes.
 
 ## Spatial compatibility closure
 
@@ -91,7 +89,7 @@ The smoke verifies:
 - `/` and `/auth/login` are reachable;
 - unauthenticated `/cabinet`, `/admin` and `/spatial/manage` explicitly resolve and redirect to login;
 - implicit aliases `/cabinet/index` and `/admin/index` return `404`;
-- GET requests cannot reach POST-only `/cabinet/telegramConnect` or `/spatial/save`;
+- retired `/cabinet/telegramConnect` resolves to `404`, while GET cannot reach POST-only `/spatial/save`;
 - an arbitrary Web path returns the canonical rendered `404`;
 - an arbitrary `/api/*` path returns the canonical JSON `404` with `error=not_found`.
 
