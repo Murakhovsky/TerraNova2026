@@ -273,6 +273,7 @@ jobs:
           php tests/architecture/runtime_cleanup_third_slice.php
           php tests/architecture/spatial_symfony_cutover.php
           php tests/architecture/runtime_retirement_background_slice.php
+          php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/kernel_v082_module_control.php
           php tests/architecture/kernel_v088_effective_module_context.php
           php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
@@ -282,6 +283,17 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:legacy-schema:migrate'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:spatial:process'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:integration:n8n:process'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:config:validate'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:config:provision'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:outbox:run'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:outbox:replay'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:queue:run'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:queue:replay-dead'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:agent:purge-inputs'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:sales:monitor'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:sales:history:rebuild'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:sales:history:health'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:kernel:version'"
 
       - name: Verify Sales strangler slice
         run: |

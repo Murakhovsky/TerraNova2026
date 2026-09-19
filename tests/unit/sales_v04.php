@@ -44,7 +44,9 @@ $assert(str_contains($readModel, 'sales_pipeline_stages'), 'ClientCase read mode
 foreach (['/sales/leads', '/sales/deals/{id:[0-9]+}', '/sales/director', '/sales/admin'] as $route) {
     $assert(str_contains($routes, $route), 'Missing Sales V0.4 route: ' . $route);
 }
-$assert(is_file($root . '/app/Interfaces/Cli/Task/SalesTask.php'), 'Sales monitoring CLI entrypoint is required.');
+$assert(is_file($root . '/symfony/src/Command/SalesMonitorCommand.php'), 'Sales monitoring Symfony Console entrypoint is required.');
+$monitorCommand = (string) file_get_contents($root . '/symfony/src/Command/SalesMonitorCommand.php');
+$assert(str_contains($monitorCommand, "name: 'cos:sales:monitor'"), 'Canonical Sales monitor command name is missing.');
 
 if ($failures !== []) {
     fwrite(STDERR, "Sales V0.4 checks failed:\n- " . implode("\n- ", $failures) . "\n");

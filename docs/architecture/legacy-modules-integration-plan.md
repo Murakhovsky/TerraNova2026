@@ -2,7 +2,7 @@
 
 Дата інвентаризації: 2026-08-26.
 
-Статус виконання станом на 2026-08-29: план завершено для `app/modules`. Каталог `app/modules` і PSR-4 mapping `Modules\\` видалені. Frontend controllers/views перенесені до `Interfaces/Web`, Spatial delivery — до `Interfaces/Api`, CLI tasks — до `Interfaces/Cli`, а Telegram-команди, webhook і rendering — до `Interfaces/Telegram`. Games і його окремі entrypoints видалені. Browser source збирається з кореневого `frontend` через Vite multi-entry manifest.
+Статус виконання станом на 2026-08-29: план завершено для `app/modules`. Каталог `app/modules` і PSR-4 mapping `Modules\\` видалені. Frontend controllers/views перенесені до `Interfaces/Web`, Spatial delivery — до `Interfaces/Api`, CLI tasks — спершу до `Interfaces/Cli`, а потім остаточно до Symfony Console, а Telegram-команди, webhook і rendering — до `Interfaces/Telegram`. Games і його окремі entrypoints видалені. Browser source збирається з кореневого `frontend` через Vite multi-entry manifest.
 
 `app/common` та `app/Infrastructure/Legacy` також фізично видалені після досягнення нульових production callers. Persistence завершено як окремий зріз: MySQL adapters і read models зведені під `Infrastructure/Persistence/MySql`, а ActiveRecord обмежено активними Telegram/Identity mappings. Детальна карта: `legacy-service-migration-ledger.md` і `persistence.md`.
 
@@ -33,7 +33,7 @@
 | `modules/Games` | 25 | delivery + game code + окремий Vue app | окремий Game Domain/Interface або ізольований продукт |
 | `modules/Users` | 22 | users/company services та дублікати моделей | Identity/Organization Domain + adapters |
 | `modules/spatial` | 13 | spatial delivery, processing і persistence | Spatial Domain/Application + Infrastructure + Web/API |
-| `modules/cli` | 9 | CLI delivery | `Interfaces/Cli` |
+| `modules/cli` | 9 | CLI delivery | retired; Symfony Console is canonical |
 | `modules/economy` | 7 | рання бізнес-зона | уточнити bounded context; потім окремий Domain |
 | `common/models` | 19 | Phalcon ActiveRecord | Infrastructure persistence/read models, не Domain model |
 | `common/services` | 6 | DB, auth, media, Telegram, events | розділити на порти, adapters та interface-specific services |
@@ -108,7 +108,7 @@ public/
 | `modules/TgAdmin` | спершу delivery-команди, потім моделі; не копіювати дублікати Users models | P2 |
 | `modules/Users` | сформувати Identity/Organization context після карти таблиць і сценаріїв | P2 |
 | `modules/spatial` | зберегти UI route, винести processing/persistence за портами | P1 |
-| `modules/cli` | механічно перенести tasks у `Interfaces/Cli`, bootstrap лишити сумісним | P2 |
+| `modules/cli` | завершено: Phalcon CLI/bootstrap видалені, operational commands у Symfony Console | P2 |
 | `modules/Games`, `economy` | окреме рішення keep/extract/archive після перевірки runtime-використання | P3 |
 | `public/webtools.php`, `webtools.config.php`, `games.php`, `tgAdmin_webhook.php` | перевірити зовнішні виклики; замінити route/controller або CLI; прибрати після deprecation window | P0 |
 | `public/js`, `public/css` | перенести source у `frontend`; у `public/build` лишити build output | P1 |
@@ -169,7 +169,7 @@ public/
 
 - TgAdmin commands зробити Telegram Interface adapters, а їх бізнес-операції направити до Sales/Property/Identity use cases.
 - Усунути дублікати моделей між `TgAdmin` і `Users`; canonical persistence mapping має бути один.
-- CLI tasks перенести в `Interfaces/Cli` без зміни команд оператора.
+- CLI delivery завершено міграцією з тимчасового `Interfaces/Cli` до Symfony Console.
 - Для Games і Economy ухвалити ADR: інтегрувати як Domain, винести в окремий deployable або архівувати.
 
 Результат: 23 Telegram-команди реєструються з `Interfaces/Telegram/Command`; моделі й rendering мають канонічні namespace; CLI перенесено; Games видалено. Economy видалено як неактивну й не підкріплену схемою БД функцію. `app/modules` відсутній.

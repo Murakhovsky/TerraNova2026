@@ -51,11 +51,11 @@ $assert($broken['status'] === 'DEGRADED', 'Projection integrity failures must de
 $assert($broken['integrity_failures'] === 3, 'Integrity failures must remain explicit and countable.');
 $assert($broken['rebuild_recommended'] === true, 'Broken projections must recommend rebuild.');
 
-$task = file_get_contents($root . '/app/Interfaces/Cli/Task/SalesTask.php');
+$task = file_get_contents($root . '/symfony/src/Command/SalesRebuildHistoryCommand.php');
 $migration = file_get_contents($root . '/app/migrations/20260913_000047_sales_v086_hardening.sql');
 $runbook = file_get_contents($root . '/docs/sales/EPIC4_RUNBOOK.md');
 $module = require $root . '/app/Domains/Sales/module.php';
-$assert(is_string($task) && str_contains($task, 'rebuildHistoryAction'), 'Tenant history rebuild CLI is required.');
+$assert(is_string($task) && str_contains($task, "name: 'cos:sales:history:rebuild'"), 'Tenant history rebuild Symfony command is required.');
 $assert(is_string($task) && str_contains($task, 'historyHealthAction'), 'History health CLI is required.');
 $assert(is_string($migration) && str_contains($migration, 'idx_sales_director_open_v086'), 'Director current-snapshot index is required.');
 $assert(is_string($migration) && str_contains($migration, 'idx_sales_stage_current_v086'), 'Stage current-history index is required.');

@@ -22,7 +22,7 @@ MySQL repositories, query projections and generic Kernel persistence are consoli
 
 - All former `modules/frontend/controllers` classes now live in `Interfaces/Web/Controller`; `FrontendRoutes` targets only the canonical namespace.
 - Spatial HTTP delivery now lives in Symfony `App\\Http\\Api\\Spatial\\SpatialController`; `Bootstrap\\SpatialModule` remains only as temporary SSR composition until final Phalcon retirement.
-- `Interfaces/Cli/Task` owns the CLI tasks and dispatcher namespace.
+- Symfony Console owns operational/admin CLI commands; the Phalcon `Interfaces/Cli` surface is retired.
 - No `Modules/*` class is registered or autoloadable.
 
 ## Browser assets
