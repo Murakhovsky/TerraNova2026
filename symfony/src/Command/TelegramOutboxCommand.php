@@ -37,22 +37,21 @@ final class TelegramOutboxCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $scheduled = $input->getOption('schedule') ? $this->automation->scheduleDueReminders() : 0;
-        $digests = $input->getOption('digest') ? $this->automation->queueDailyDigest() : 0;
-
-        if (trim($this->token) === '') {
+        $token = trim($this->token);
+        if ($token === '') {
             $output->writeln(json_encode([
                 'disabled' => true,
-                'scheduled' => $scheduled,
-                'digests' => $digests,
+                'scheduled' => 0,
+                'digests' => 0,
                 'message' => 'TELEGRAM_BOT_TOKEN is not configured.',
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 
             return Command::SUCCESS;
         }
 
+        $scheduled = $input->getOption('schedule') ? $this->automation->scheduleDueReminders() : 0;
+        $digests = $input->getOption('digest') ? $this->automation->queueDailyDigest() : 0;
         $baseUrl = rtrim(trim($this->publicUrl), '/');
-        $token = trim($this->token);
         $processor = new TelegramAutomationProcessor(
             $this->database,
             static function (int $chatId, array $payload) use ($baseUrl, $token): bool|string {
