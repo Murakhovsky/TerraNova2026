@@ -11,7 +11,7 @@ Audit date: 2026-08-23.
 - n8n inbound: signed HMAC webhook, five-minute clock window, mandatory idempotency key, payload size limit and upsert/publish/archive events.
 - n8n outbound: transactional outbox for manual content changes, atomic claiming, five retries and delivery history.
 - Content safety: HTML allowlist, safe link/image protocols, strict JSON schema object and escaped manager output.
-- Operational commands: `bin/integration-worker.php` and `bin/telegram-health.php`.
+- Operational commands: Symfony `cos:integration:n8n:process` and `bin/telegram-health.php`.
 - Spatial domain: versioned 3D scenes, captures, assets, property relations, hotspots, processing queue, JWT API, manager workspace and public Three.js/Spark viewer.
 
 ## P2 matrix
@@ -75,8 +75,8 @@ php tests/integration/content_n8n.php
 php tests/integration/content_http.php
 php bin/telegram-worker.php --limit=5
 php bin/telegram-health.php
-php bin/integration-worker.php --schedule-content --limit=5
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=5
 php tests/integration/spatial_module.php
-php bin/spatial-worker.php --limit=10
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
 npm run build:spatial
 ```
