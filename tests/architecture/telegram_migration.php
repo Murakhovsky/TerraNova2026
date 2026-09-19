@@ -40,6 +40,11 @@ foreach (['TELEGRAM_WEBHOOK_URL', 'TELEGRAM_WEBHOOK_SECRET', "Interfaces/Telegra
     $assert(!str_contains($config, $legacy), 'Retired inbound Telegram configuration restored: ' . $legacy);
 }
 
+$sharedServices = (string) file_get_contents($root . '/app/config/services.php');
+foreach (['Phalcon\\\\Db\\\\Adapter', 'modelsMetadata', 'PhalconEventService'] as $legacy) {
+    $assert(!str_contains($sharedServices, $legacy), 'Retired Phalcon persistence/event service restored: ' . $legacy);
+}
+
 $routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/CoreWebRoutes.php');
 $assert(!str_contains($routes, 'telegramConnect'), 'Cabinet still exposes retired Telegram connect route.');
 $assert(!str_contains($routes, 'telegramDisconnect'), 'Cabinet still exposes retired Telegram disconnect route.');
