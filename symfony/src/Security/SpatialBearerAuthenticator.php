@@ -52,6 +52,6 @@ final class SpatialBearerAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        return new JsonResponse(['ok' => false, 'error' => 'Spatial authorization required.'], Response::HTTP_UNAUTHORIZED);
+        return new JsonResponse(['ok' => false, 'message' => 'Unauthorized.'], Response::HTTP_UNAUTHORIZED);
     }
 }
