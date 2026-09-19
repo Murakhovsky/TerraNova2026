@@ -59,6 +59,11 @@ jobs:
       LLM_MODEL: "wave4-ci"
       LLM_PROVIDER: "fixture"
       WAVE6_CRM_WEBHOOK_SECRET: "wave6-ci-webhook-secret"
+      SPATIAL_MAX_UPLOAD_BYTES: "209715200"
+      SPATIAL_JWT_SECRET: "ci-spatial-jwt-secret-0123456789abcdef"
+      SPATIAL_JWT_TTL: "28800"
+      SPATIAL_BLENDER_BINARY: ""
+      SPATIAL_GLTF_TRANSFORM_BINARY: ""
     steps:
       - uses: actions/checkout@v4
 
