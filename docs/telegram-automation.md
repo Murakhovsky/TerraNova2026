@@ -1,7 +1,8 @@
 # Telegram automation
 
-Telegram is a delivery channel for Terra Nova events. Business modules write notifications to
-`tn_notification_outbox`; the worker sends them asynchronously through Longman.
+Telegram is retained as an **outbound notification channel** for COS events.
+
+Business capabilities write notifications to `tn_notification_outbox`. The framework-neutral automation service and worker deliver those messages asynchronously through Telegram.
 
 ## Environment
 
@@ -11,53 +12,30 @@ Required variables:
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_NAME=...
 APP_URL=https://example.com
-TELEGRAM_WEBHOOK_URL=https://example.com/tgAdmin_webhook.php
-TELEGRAM_WEBHOOK_SECRET=long-random-value
 ```
 
 Do not store bot tokens in PHP configuration or in the repository.
 
-## Webhook
+## Inbound bot status
 
-Configure Telegram to send updates to the stable public `POST /tgAdmin_webhook.php` endpoint. The
-thin public entrypoint routes the request to the canonical Telegram controller. Pass the same
-`TELEGRAM_WEBHOOK_SECRET` as Telegram's `secret_token`. The webhook
-uses the existing Longman command loader. A user connects an account from `/cabinet`; `/start`
-consumes the one-time token and creates a binding to `tn_users`.
+The legacy Longman/Phalcon inbound bot runtime is retired.
 
-Register or refresh the webhook after deployment:
+- `app/bootstrap_tg.php` and `Interfaces/Telegram` no longer exist.
+- legacy command handling and Phalcon ActiveRecord mappings are removed.
+- `bin/telegram-webhook.php` is removed.
+- `public/tgAdmin_webhook.php` remains only as an HTTP 410 tombstone so stale external webhook configuration cannot boot old code.
 
-```bash
-php bin/telegram-webhook.php
-```
+A future interactive Telegram bot must be implemented as a new canonical transport, not by restoring the retired Phalcon runtime.
 
-Check the live Telegram configuration and delivery errors without printing the token:
+`bin/telegram-health.php` may still be used to inspect Telegram-side configuration while stale webhook settings are being removed.
 
-```bash
-php bin/telegram-health.php
-```
+## Outbound worker
 
-`pending_update_count` should normally return to zero and `last_error_message` must be empty. An
-SSL verification error here is a production DNS/certificate-chain problem, not a worker retry.
+The current outbound notification worker processes `tn_notification_outbox`, resolves existing Telegram bindings and sends queued messages.
 
-Available commands:
+Until the worker is moved to Symfony in the next retirement slice, its business-independent components remain:
 
-- `/start` connects the bot or shows the current binding.
-- `/tasks` shows a manager/admin operational snapshot.
+- `Infrastructure\Integration\Telegram\TelegramAutomationService`
+- `Infrastructure\Integration\Telegram\TelegramAutomationProcessor`
 
-## Worker
-
-Run every minute:
-
-```bash
-php bin/telegram-worker.php --schedule --limit=50
-```
-
-Run once each morning for the team digest:
-
-```bash
-php bin/telegram-worker.php --digest --limit=50
-```
-
-Retries use an exponential delay and stop after five attempts. Events without a connected
-recipient are marked `skipped`; they do not block application requests.
+Retries use an exponential delay and stop after five attempts. Events without a connected recipient are marked `skipped`; they do not block application requests.
