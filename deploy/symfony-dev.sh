@@ -92,6 +92,7 @@ if [[ ! "$LEGACY_DB_NAME" =~ ^[A-Za-z0-9_]+$ ]]; then
 fi
 upsert_value SYMFONY_LEGACY_DB_NAME "$LEGACY_DB_NAME"
 upsert_value SYMFONY_LEGACY_DB_HOST "$LEGACY_MYSQL_CONTAINER"
+upsert_value SYMFONY_LEGACY_DB_USER "cos_symfony_app"
 
 LEGACY_ORGANIZATION_ID="default"
 if "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
@@ -109,20 +110,22 @@ echo "Symfony migration tenant is fixed to legacy COS organization: $LEGACY_ORGA
 
 LEGACY_DB_PASSWORD="$(read_value SYMFONY_LEGACY_DB_PASSWORD)"
 if [[ ! "$LEGACY_DB_PASSWORD" =~ ^[a-f0-9]{48}$ ]]; then
-  echo "Symfony legacy read-only password has an unexpected format." >&2
+  echo "Symfony legacy application password has an unexpected format." >&2
   exit 48
 fi
 
+# Symfony owns canonical business write paths, while schema ownership remains
+# with deployment migrations. Grant DML only; no DDL/admin privileges.
 printf -v LEGACY_GRANTS \
-  "CREATE USER IF NOT EXISTS 'cos_symfony_ro'@'%%' IDENTIFIED BY '%s'; ALTER USER 'cos_symfony_ro'@'%%' IDENTIFIED BY '%s'; GRANT SELECT ON \`%s\`.* TO 'cos_symfony_ro'@'%%'; FLUSH PRIVILEGES;" \
+  "CREATE USER IF NOT EXISTS 'cos_symfony_app'@'%%' IDENTIFIED BY '%s'; ALTER USER 'cos_symfony_app'@'%%' IDENTIFIED BY '%s'; GRANT SELECT, INSERT, UPDATE, DELETE ON \`%s\`.* TO 'cos_symfony_app'@'%%'; FLUSH PRIVILEGES;" \
   "$LEGACY_DB_PASSWORD" "$LEGACY_DB_PASSWORD" "$LEGACY_DB_NAME"
 
 if ! printf '%s\n' "$LEGACY_GRANTS" | "${DOCKER[@]}" exec -i "$LEGACY_MYSQL_CONTAINER" sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'; then
-  echo "Could not provision the Symfony read-only account in legacy COS MySQL." >&2
+  echo "Could not provision the Symfony application account in legacy COS MySQL." >&2
   exit 49
 fi
 
-echo "Legacy COS read-only database account is ready."
+echo "Legacy COS Symfony application account is ready with DML-only privileges."
 
 COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE" -f docker-compose.symfony.yml)
 
