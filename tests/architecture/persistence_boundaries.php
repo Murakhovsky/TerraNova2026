@@ -17,7 +17,9 @@ foreach ($iterator as $file) {
     $source = (string) file_get_contents($file->getPathname());
     $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
 
-    if (str_contains($source, 'use Phalcon\\Mvc\\Model;') || str_contains($source, 'extends Model')) {
+    if (preg_match('/^use\\s+Phalcon\\\\Mvc\\\\Model(?:\\s+as\\s+\\w+)?\\s*;/m', $source)
+        || preg_match('/extends\\s+\\\\?Phalcon\\\\Mvc\\\\Model\\b/', $source)
+    ) {
         throw new RuntimeException('Phalcon ActiveRecord is retired and must not be restored: ' . $relative);
     }
 }
