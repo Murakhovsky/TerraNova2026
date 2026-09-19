@@ -7,8 +7,6 @@ $myProperties = (array) ($myProperties ?? []);
 $submissions = (array) ($submissions ?? []);
 $inboundRequests = (array) ($inboundRequests ?? []);
 $pageStatus = $pageStatus ?? null;
-$telegramBinding = $telegramBinding ?? null;
-$telegramStatus = (string) ($telegramStatus ?? '');
 
 $submissionStatusLabels = [
     'draft' => 'Чернетка',
@@ -86,11 +84,6 @@ $money = static function ($amount, $currency = 'USD'): string {
     </section>
   <?php endif; ?>
 
-  <?php if ($telegramStatus === 'disconnected'): ?>
-    <div class="tn-form-status is-visible" role="status">Telegram відключено від акаунта.</div>
-  <?php elseif ($telegramStatus === 'connect_error'): ?>
-    <div class="tn-form-status is-visible" role="alert">Не вдалося створити посилання. Перевірте налаштування бота.</div>
-  <?php endif; ?>
 
   <section class="tn-portal-actions" aria-label="Швидкі дії">
     <a class="tn-portal-action" href="<?php echo $this->url->get('property/catalog'); ?>">
@@ -219,28 +212,6 @@ $money = static function ($amount, $currency = 'USD'): string {
   </section>
 
   <div class="tn-portal-two-column">
-    <section class="tn-portal-section" id="notifications" aria-labelledby="notifications-title">
-      <div class="tn-portal-section__head">
-        <div>
-          <p class="tn-kicker">Сповіщення</p>
-          <h2 id="notifications-title">Telegram</h2>
-        </div>
-      </div>
-      <?php if ($telegramBinding): ?>
-        <p>
-          Підключено<?php if (!empty($telegramBinding['username'])): ?> як @<?php echo $h($telegramBinding['username']); ?><?php endif; ?>.
-          Системні сповіщення надходитимуть у цей чат.
-        </p>
-      <?php else: ?>
-        <p>Підключіть Telegram, щоб отримувати статуси заявок і важливі сповіщення без ручного оновлення кабінету.</p>
-      <?php endif; ?>
-      <form method="post" action="<?php echo $this->url->get($telegramBinding ? 'cabinet/telegramDisconnect' : 'cabinet/telegramConnect'); ?>">
-        <button class="tn-btn <?php echo $telegramBinding ? 'tn-btn--ghost' : 'tn-btn--accent'; ?>" type="submit">
-          <?php echo $telegramBinding ? 'Відключити Telegram' : 'Підключити Telegram'; ?>
-        </button>
-      </form>
-    </section>
-
     <section class="tn-portal-section" id="profile" aria-labelledby="profile-title">
       <div class="tn-portal-section__head">
         <div>
