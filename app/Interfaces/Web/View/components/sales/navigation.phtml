@@ -9,15 +9,11 @@ $items = [
     ['key' => 'deals', 'href' => 'sales/deals', 'label' => 'Deals'],
     ['key' => 'director', 'href' => 'sales/director', 'label' => 'Director'],
 ];
-try {
-    $user = $this->getDI()->getShared('authService')->currentUser();
-    if ($user !== null && $this->getDI()->getShared('authService')->isAdmin($user)) {
-        $items[] = ['key' => 'sales-admin', 'href' => 'sales/admin', 'label' => 'Sales Admin'];
-        $items[] = ['key' => 'sales-rules', 'href' => 'sales/admin/rules', 'label' => 'Rules'];
-        $items[] = ['key' => 'sales-agents', 'href' => 'sales/admin/agents', 'label' => 'Agents'];
-        $items[] = ['key' => 'sales-actions', 'href' => 'sales/admin/actions', 'label' => 'Actions'];
-    }
-} catch (Throwable) {
+if ((bool) ($isAdmin ?? false)) {
+    $items[] = ['key' => 'sales-admin', 'href' => 'sales/admin', 'label' => 'Sales Admin'];
+    $items[] = ['key' => 'sales-rules', 'href' => 'sales/admin/rules', 'label' => 'Rules'];
+    $items[] = ['key' => 'sales-agents', 'href' => 'sales/admin/agents', 'label' => 'Agents'];
+    $items[] = ['key' => 'sales-actions', 'href' => 'sales/admin/actions', 'label' => 'Actions'];
 }
 $this->partial('components/ui/tabs', ['items' => $items, 'active' => $active, 'label' => 'Sales workspace']);
 ?>

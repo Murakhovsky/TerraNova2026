@@ -1,26 +1,14 @@
 <?php
 
-use Interfaces\Web\Navigation\ModuleAwareNavigationService;
-
 $active = (string) ($active ?? 'cabinet');
 $brandSuffix = (string) ($brandSuffix ?? 'PORTAL');
 $role = (string) ($role ?? ($portalRole ?? 'buyer'));
 $currentUser = $user ?? null;
 
-if (!$currentUser) {
-    try {
-        $currentUser = $this->getDI()->getShared('authService')->currentUser();
-    } catch (Throwable $e) {
-        $currentUser = null;
-    }
-}
-
-$navigationService = $this->getDI()->getShared('frontendNavigationService');
-if (!$navigationService instanceof ModuleAwareNavigationService) {
-    throw new RuntimeException('Invalid module-aware frontend navigation service.');
-}
-
-$navigation = $navigationService->portal($role);
+$currentUser = is_array($currentUser ?? $user ?? null) ? ($currentUser ?? $user) : null;
+$navigation = is_array($portalNavigation ?? null)
+    ? $portalNavigation
+    : ['primary' => [], 'utility' => []];
 $href = function (string $path): string {
     $fragment = '';
     $fragmentPosition = strpos($path, '#');

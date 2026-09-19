@@ -156,7 +156,7 @@ Manifest capabilities не задекларовані.
 
 - runtime service модуля: `salesDomainModule`;
 - обробники jobs: `salesCrmInboxJobHandler`;
-- внески API routes: `salesRouteContributor`;
+- внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
 - міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`.
 

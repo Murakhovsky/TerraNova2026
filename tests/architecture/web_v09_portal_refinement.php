@@ -41,7 +41,9 @@ $requireContains($indexView, 'id="requests"', 'Portal overview must expose the R
 $requireContains($indexView, 'id="profile"', 'Portal overview must expose the supported read-only Profile section.');
 
 $requireContains($portalHeader, 'data-interface-surface="portal"', 'Dedicated Portal shell must identify its surface.');
-$requireContains($portalHeader, 'frontendNavigationService', 'Portal shell must consume centralized module-aware navigation.');
+$requireContains($portalHeader, '$portalNavigation', 'Portal shell must consume centralized navigation through its view model.');
+$requireNotContains($portalHeader, 'frontendNavigationService', 'Portal PHTML must not resolve navigation services directly.');
+$requireNotContains($portalHeader, 'getDI()', 'Portal PHTML must remain container-free.');
 $requireContains($portalHeader, 'data-portal-menu-button', 'Portal shell must expose a mobile navigation control.');
 
 $requireContains($frontendNavigation, "'path' => 'cabinet#requests'", 'Core Portal navigation must link to requests supported by cabinet data.');

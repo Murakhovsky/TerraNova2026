@@ -36,7 +36,7 @@ jobs:
         run: |
           php -l app/Kernel/Module/KernelVersion.php
           php -l app/Interfaces/Web/Routing/ModuleRouteAccessGuard.php
-          php -l app/Interfaces/Web/Routing/SalesModuleRouteContributor.php
+          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l tests/unit/module_route_access.php
           php -l tests/architecture/kernel_v086_module_route_access.php

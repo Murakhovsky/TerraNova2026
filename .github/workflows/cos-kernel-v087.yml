@@ -39,7 +39,7 @@ jobs:
           php -l app/Interfaces/Web/Routing/ModuleRouteAccessGuard.php
           php -l app/Interfaces/Web/Routing/ModuleRouteRegistrar.php
           php -l app/Interfaces/Web/Routing/ModuleRouteContributorInterface.php
-          php -l app/Interfaces/Web/Routing/SalesModuleRouteContributor.php
+          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           php -l app/Interfaces/Web/Module.php
           php -l app/Bootstrap/WebApplicationServices.php
           php -l tests/architecture/kernel_v086_module_route_access.php

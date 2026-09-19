@@ -65,13 +65,22 @@ if (preg_match('/\bcos_organization_module\b/', $moduleStateRepository) === 1) {
 }
 
 $managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
-foreach (["getShared('frontendNavigationService')", 'navigationService->workspace', 'navigationService->portal'] as $needle) {
+foreach (['$workspaceNavigation', '$portalNavigation', '$workspaceActiveSection'] as $needle) {
     if (!str_contains($managerHeader, $needle)) {
-        throw new RuntimeException('Shared Web shell does not consume module-aware navigation: ' . $needle);
+        throw new RuntimeException('Shared Web shell is missing navigation view-model input: ' . $needle);
     }
 }
-if (str_contains($managerHeader, 'FrontendNavigation::workspace(') || str_contains($managerHeader, 'FrontendNavigation::portal(')) {
-    throw new RuntimeException('Shared Web shell still bypasses module-aware navigation composition.');
+foreach (["getShared('frontendNavigationService')", 'navigationService->workspace', 'navigationService->portal', 'getDI()', 'FrontendNavigation::workspace(', 'FrontendNavigation::portal('] as $legacy) {
+    if (str_contains($managerHeader, $legacy)) {
+        throw new RuntimeException('Shared Web shell must remain container-free after Symfony SSR cutover: ' . $legacy);
+    }
+}
+
+$symfonyNavigation = (string) file_get_contents($root . '/symfony/src/Web/Navigation/NavigationBuilder.php');
+foreach (['ActiveModuleResolver', 'modules->snapshot', 'snapshot($organizationId)', "'key' => 'sales'", "'key' => 'properties'", "'key' => 'diagnostics'"] as $needle) {
+    if (!str_contains($symfonyNavigation, $needle)) {
+        throw new RuntimeException('Symfony navigation builder is missing module-aware behavior: ' . $needle);
+    }
 }
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');

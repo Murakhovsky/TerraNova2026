@@ -17,15 +17,13 @@ foreach (['ModuleRouteAccessGuard', 'ModuleRouteContributorInterface', 'spl_obje
     }
 }
 
-$sales = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/SalesModuleRouteContributor.php');
-foreach (['SalesRoutes::register', 'SalesTeamRoutes::register', 'SalesIntegrationRoutes::register', 'SalesAdministrationRoutes::register'] as $needle) {
-    if (!str_contains($sales, $needle)) {
-        throw new RuntimeException('Sales route contributor lost route family: ' . $needle);
-    }
+$property = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php');
+if (!str_contains($property, 'PublicPropertyRoutes::register')) {
+    throw new RuntimeException('Property route contributor lost route family.');
 }
 foreach (['ModuleRouteAccessGuard', 'beforeMatch', 'allows(', 'spl_object_id'] as $forbidden) {
-    if (str_contains($sales, $forbidden)) {
-        throw new RuntimeException('Sales route contributor still owns generic activation behavior: ' . $forbidden);
+    if (str_contains($property, $forbidden)) {
+        throw new RuntimeException('Property route contributor still owns generic activation behavior: ' . $forbidden);
     }
 }
 
@@ -37,15 +35,22 @@ foreach (["getShared('moduleRouteRegistrar')", 'ModuleRouteRegistrar', '$routeRe
 }
 
 $services = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
-foreach (["setShared('moduleRouteRegistrar'", 'new ModuleRouteRegistrar(', "setShared('salesRouteContributor'", 'new SalesModuleRouteContributor()'] as $needle) {
+foreach (["setShared('moduleRouteRegistrar'", 'new ModuleRouteRegistrar(', "setShared('propertyRouteContributor'", 'new PropertyModuleRouteContributor()'] as $needle) {
     if (!str_contains($services, $needle)) {
         throw new RuntimeException('Web composition is missing generic route registrar wiring: ' . $needle);
     }
 }
+if (str_contains($services, "setShared('salesRouteContributor'")) {
+    throw new RuntimeException('Sales must not return to the legacy module route runtime.');
+}
 
-$manifest = (string) file_get_contents($root . '/app/Domains/Sales/module.php');
-if (!str_contains($manifest, "'salesRouteContributor'")) {
-    throw new RuntimeException('Sales manifest no longer declares its route contributor.');
+$propertyManifest = (string) file_get_contents($root . '/app/Domains/Property/module.php');
+if (!str_contains($propertyManifest, "'propertyRouteContributor'")) {
+    throw new RuntimeException('Property manifest no longer declares its route contributor.');
+}
+$salesManifest = (string) file_get_contents($root . '/app/Domains/Sales/module.php');
+if (str_contains($salesManifest, "'salesRouteContributor'")) {
+    throw new RuntimeException('Sales manifest restored its retired Phalcon route contributor.');
 }
 
 $moduleServices = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');

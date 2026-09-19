@@ -6,6 +6,9 @@ on:
     paths:
       - 'app/bootstrap_web.php'
       - 'app/Interfaces/Web/**'
+      - 'symfony/config/services.yaml'
+      - 'symfony/config/routes.yaml'
+      - 'symfony/src/Web/**'
       - 'frontend/**'
       - 'tests/architecture/web_v012_production_closure.php'
       - 'tests/architecture/web_v011_design_system.php'
@@ -54,12 +57,13 @@ jobs:
           php -l app/Interfaces/Web/Controller/ControllerBase.php
           php -l app/Interfaces/Web/Controller/WebController.php
           php -l app/Interfaces/Web/Controller/ApiController.php
-          php -l app/Interfaces/Web/Controller/SalesAdminController.php
-          php -l app/Interfaces/Web/Controller/SalesAdminTeamController.php
-          php -l app/Interfaces/Web/Controller/SalesAdminPolicyController.php
-          php -l app/Interfaces/Web/Controller/SalesAdminHealthController.php
-          php -l app/Interfaces/Web/Controller/SalesAdminAgentController.php
-          php -l app/Interfaces/Web/Controller/SalesAdminIntegrationController.php
+          php -l symfony/src/Web/Phtml/PhtmlRenderer.php
+          php -l symfony/src/Web/Phtml/UrlHelper.php
+          php -l symfony/src/Web/Phtml/RequestQueryAdapter.php
+          php -l symfony/src/Web/Phtml/ViteAssetManifest.php
+          php -l symfony/src/Web/Navigation/NavigationBuilder.php
+          php -l symfony/src/Web/Sales/SalesPageController.php
+          php -l symfony/src/Web/Sales/SalesAdminPageController.php
           php -l app/Interfaces/Web/View/error/failure.phtml
       - name: Browser module syntax
         run: |

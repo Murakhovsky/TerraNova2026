@@ -1,6 +1,6 @@
 ---
 title: Видалення legacy Sales API
-description: "Фінальний retirement legacy Sales transport після Wave 7: Phalcon /api/sales/* та compatibility CRM webhook видалені, Symfony /api/v1/sales/* є єдиним інтерактивним API boundary."
+description: "Фінальний retirement legacy Sales transport і SSR: Symfony володіє /api/v1/sales/* та всіма /sales/* HTML surfaces; Phalcon Sales transport видалений."
 status: active
 updated: 2026-09-19
 kind: architecture
@@ -22,7 +22,7 @@ contract: architecture-v1
 
 ## Залишено навмисно
 
-Phalcon ще рендерить HTML сторінок `/sales/*`. Це не означає повернення business ownership у legacy runtime.
+Phalcon більше не рендерить `/sales/*`. Canonical HTML owner — Symfony PHTML renderer поверх тих самих Application/read-model contracts.
 
 Канонічний інтерактивний шлях:
 
@@ -59,7 +59,7 @@ POST /api/v1/integrations/crm/{id}/webhook
 `tests/architecture/sales_legacy_api_retirement.php` забороняє:
 
 - відновлення legacy Sales API controllers;
-- повернення `/api/sales/*` у Phalcon routing;
+- повернення `/api/sales/*` або `/sales/*` у Phalcon routing;
 - повернення старих CRM webhook routes;
 - повернення legacy API dependency у Sales frontend.
 
@@ -70,3 +70,5 @@ POST /api/v1/integrations/crm/{id}/webhook
 Після transport retirement можна окремо видаляти тільки ті compatibility services, CLI entrypoints і adapters, для яких caller audit показує нуль production consumers.
 
 Це не є дозволом масово видаляти Sales MySQL repositories: persistence adapter є legacy лише тоді, коли його замінив канонічний runtime і він більше не стоїть за активним Application port.
+
+`app/Interfaces/Web/Controller/SalesController.php` та legacy Sales Web route contributors видалені; architecture gates забороняють їх відновлення.

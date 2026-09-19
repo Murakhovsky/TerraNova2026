@@ -48,8 +48,14 @@ $must(str_contains($admin, "[],\n            \$effective->defaultExecutionMode")
 $must(str_contains($admin, "0,\n            false,"), 'Read-only test must enforce maxActions=0 and disable configuration re-resolution.');
 $must(str_contains($admin, "'action_execution' => 'DISABLED'"), 'Read-only test must explicitly report action execution disabled.');
 
-$routes = $read('app/Interfaces/Web/Routing/SalesRoutes.php');
-foreach (['/sales/admin/agents', '/api/sales/admin/agents', '/test', '/revisions'] as $needle) {
+$routes = $read('symfony/config/routes.yaml');
+foreach ([
+    'cos_web_sales_admin_agents_page:',
+    'cos_web_sales_admin_agent_page:',
+    '/api/v1/sales/admin/agents',
+    '/test',
+    '/revisions',
+] as $needle) {
     $must(str_contains($routes, $needle), 'Sales Agent Administration route missing: ' . $needle);
 }
 

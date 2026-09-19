@@ -73,7 +73,6 @@ Kernel зберігає тільки generic extension identity:
 ```text
 diagnosticRouteContributor
 propertyRouteContributor
-salesRouteContributor
 ```
 
 `event.consumers`:
@@ -97,6 +96,8 @@ diagnosticNavigationContributor
 propertyNavigationContributor
 salesNavigationContributor
 ```
+
+Sales HTTP/SSR routes після фінального cutover належать Symfony router напряму й тому більше не є Phalcon `api.routes` extension contribution.
 
 Точний inventory не потрібно дублювати вручну поза generated reference; тут важлива архітектурна семантика.
 

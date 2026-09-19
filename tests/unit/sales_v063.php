@@ -9,7 +9,7 @@ $contract = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceOperatio
 $projection = $read('app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php');
 $base = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceReadModelInterface.php');
 $services = $read('app/Bootstrap/SalesServices.php');
-$web = $read('app/Interfaces/Web/Controller/SalesController.php');
+$web = $read('symfony/src/Web/Sales/SalesPageController.php');
 $today = $read('app/Interfaces/Web/View/sales/today.phtml');
 $leads = $read('app/Interfaces/Web/View/sales/leads.phtml');
 $pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
@@ -26,8 +26,8 @@ foreach (['communications(', 'approvals(', 'directorAnalytics('] as $marker) {
 foreach (['attention_reason', 'days_in_stage', 'weighted_value', 'avg_days_in_stage', 'needs_approval', 'historical_stage_transitions'] as $marker) {
     $assert(str_contains($projection, $marker), 'Projection missing: ' . $marker);
 }
-foreach (["'communications' => \$q->communications", "'approvals' => \$q->approvals", 'directorAnalytics', 'salesWorkspaceOperationalReadModel'] as $marker) {
-    $assert(str_contains(str_replace(' ', '', $web), str_replace(' ', '', $marker)), 'Web composition missing: ' . $marker);
+foreach (['workspace->communications(', 'workspace->approvals(', 'SalesDirectorCockpitService', 'SalesWorkspaceOperationalReadModelInterface'] as $marker) {
+    $assert(str_contains($web, $marker), 'Symfony Web composition missing: ' . $marker);
 }
 $assert(str_contains($services, 'MysqlSalesWorkspaceOperationalReadModel'), 'Composition root must own the concrete operational read model.');
 $assert(!str_contains($web, 'new MysqlSalesWorkspaceOperationalReadModel'), 'Web controller must not construct Infrastructure projections directly.');
@@ -57,7 +57,7 @@ foreach ([
     'app/Domains/Sales/Application/Contract/SalesWorkspaceOperationalReadModelInterface.php',
     'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php',
     'app/Bootstrap/SalesServices.php',
-    'app/Interfaces/Web/Controller/SalesController.php',
+    'symfony/src/Web/Sales/SalesPageController.php',
 ] as $file) {
     $output = [];
     $code = 0;

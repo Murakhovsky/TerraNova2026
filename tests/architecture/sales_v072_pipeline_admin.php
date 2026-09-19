@@ -22,7 +22,7 @@ if (str_contains($dealRepository, 'INSERT INTO sales_deal_stage_history')) {
     throw new RuntimeException('Sales V0.7.2 compatibility gate must not restore direct history writes retired by Sales V0.8.3.');
 }
 $mustContain('app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesPipelineAdministration.php', ['CONFIGURATION_CONFLICT','Pipeline code is immutable','Stage code is immutable','Stage has active deals','assertPipelineValid','cos_configuration_revisions',"'TRANSITION'","'LOST_REASON'"], 'administration');
-$mustContain('app/Interfaces/Web/Routing/SalesRoutes.php', ['/sales/admin/pipelines'], 'server-rendered routes');
+$mustContain('symfony/config/routes.yaml', ['cos_web_sales_admin_pipelines_page:', 'cos_web_sales_admin_pipeline_page:'], 'server-rendered Symfony routes');
 $mustContain('symfony/config/routes.yaml', [
     '/api/v1/sales/admin/pipelines',
     '/stages/reorder',
