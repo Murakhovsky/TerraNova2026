@@ -883,6 +883,29 @@ jobs:
           echo "Wave 9 Viewing HTTP $status"; cat /tmp/wave9-viewing.json; echo
           test "$status" = "201"
           grep -q '"status":"viewing"' /tmp/wave9-viewing.json
+          grep -q '"scheduled_at":"2026-09-20 09:00:00"' /tmp/wave9-viewing.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-viewing-replay.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-viewing-replay' \
+            -H 'X-Idempotency-Key: wave9-viewing-001' \
+            -H 'Content-Type: application/json' \
+            --data "$viewing_payload" \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/viewings")
+          test "$status" = "201"
+          grep -q '"replayed":true' /tmp/wave9-viewing-replay.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-viewing-conflict.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            -H "X-CSRF-Token: $csrf" \
+            -H 'X-Correlation-ID: wave9-viewing-conflict' \
+            -H 'X-Idempotency-Key: wave9-viewing-001' \
+            -H 'Content-Type: application/json' \
+            --data '{"client_id":"person:1","scheduled_at":"2026-09-20T12:00:00+03:00","notes":"DIFFERENT NOTES"}' \
+            "http://127.0.0.1:8081/api/v1/real-estate/cases/$case_id/viewings")
+          test "$status" = "409"
+          grep -q 'different Viewing payload' /tmp/wave9-viewing-conflict.json
 
           reservation_payload='{"reason":"wave9-ci"}'
           status=$(curl --silent --show-error --output /tmp/wave9-reservation.json --write-out '%{http_code}' \
