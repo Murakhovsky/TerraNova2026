@@ -177,8 +177,8 @@ final readonly class ServiceWorkflowService implements ServiceApplicationBoundar
     ): array {
         $ticketId=$this->bounded(trim($ticketId),'ticketId',80);
         $name=$this->required($input,'name',160);
-        $responseMinutes=(int)($input['response_minutes']??-1);
-        $resolutionMinutes=(int)($input['resolution_minutes']??-1);
+        $responseMinutes=$this->integerInput($input,'response_minutes');
+        $resolutionMinutes=$this->integerInput($input,'resolution_minutes');
         if($responseMinutes<0||$resolutionMinutes<$responseMinutes){
             throw new InvalidArgumentException('Invalid Service SLA durations.');
         }
@@ -379,6 +379,15 @@ final readonly class ServiceWorkflowService implements ServiceApplicationBoundar
             $correlationId,
             $this->now(),
         ));
+    }
+
+    /** @param array<string,mixed> $input */
+    private function integerInput(array $input,string $key): int
+    {
+        if(!array_key_exists($key,$input)||!is_int($input[$key])){
+            throw new InvalidArgumentException($key.' must be an integer.');
+        }
+        return $input[$key];
     }
 
     /** @param array<string,mixed> $input */
