@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\RealEstate\Infrastructure\Persistence\MySql;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface;
 use Domains\RealEstate\Domain\BrokerageProcess;
 use Domains\RealEstate\Domain\Offer;
@@ -49,15 +50,17 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
         ) === 1;
     }
 
-    public function saveCase(BrokerageProcess $case, int $actorId): void
+    public function transitionCase(BrokerageProcess $case, int $actorId, string $expectedStatus): bool
     {
         $params=$this->caseParams($case,$actorId);
-        $this->exec(
+        $params['expected_status']=$expectedStatus;
+
+        return $this->execCount(
             'UPDATE tn_real_estate_cases SET
                 inventory_id=:inventory_id,subject=:subject,status=:status,updated_by=:updated_by,updated_at=NOW()
-             WHERE organization_id=:organization_id AND case_id=:case_id LIMIT 1',
+             WHERE organization_id=:organization_id AND case_id=:case_id AND status=:expected_status LIMIT 1',
             $params,
-        );
+        ) === 1;
     }
 
     public function findOffer(string $organizationId, string $offerId): ?array
@@ -111,7 +114,7 @@ final readonly class MysqlRealEstateRepository implements RealEstateRepositoryIn
                 'case_id'=>$caseId,
                 'property_asset_id'=>$showing->propertyId,
                 'client_id'=>$showing->clientId,
-                'scheduled_at'=>$scheduledAt->format('Y-m-d H:i:s'),
+                'scheduled_at'=>$scheduledAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
                 'notes'=>$notes,
                 'created_by'=>$actorId,
             ],
