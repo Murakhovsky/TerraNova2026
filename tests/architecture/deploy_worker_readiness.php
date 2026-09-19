@@ -48,6 +48,10 @@ if (is_file($root . '/bin/integration-worker.php')) {
     throw new RuntimeException('Retired runtime entrypoint restored: bin/integration-worker.php');
 }
 
+if (is_file($root . '/bin/telegram-worker.php')) {
+    throw new RuntimeException('Retired runtime entrypoint restored: bin/telegram-worker.php');
+}
+
 if (is_file($root . '/bin/apply-migration.php')) {
     throw new RuntimeException('Retired runtime entrypoint restored: bin/apply-migration.php');
 }
