@@ -98,6 +98,47 @@ server {
         proxy_set_header X-Forwarded-Host \$host;
     }
 
+    # COS Architecture Explorer and Diagnostic Web surfaces are canonical on Symfony.
+    location = /cos/architecture {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /cos/architecture/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /diagnostics/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location = /admin/diagnostics/methodology-studio {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
     location ^~ /build/ {
         proxy_pass http://$SYMFONY_UPSTREAM;
         proxy_http_version 1.1;
@@ -190,6 +231,47 @@ server {
     }
 
     location ^~ /sales/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    # COS Architecture Explorer and Diagnostic Web surfaces are canonical on Symfony.
+    location = /cos/architecture {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /cos/architecture/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /diagnostics/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location = /admin/diagnostics/methodology-studio {
         proxy_pass http://$SYMFONY_UPSTREAM;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
