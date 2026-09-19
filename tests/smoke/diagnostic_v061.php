@@ -14,7 +14,7 @@ $manifest = require $root . '/app/Domains/Diagnostic/module.php';
 $assert(($manifest['version'] ?? null) === '0.6.1', 'Diagnostic module version must be 0.6.1.');
 $assert(($manifest['schema_version'] ?? null) === '0.6.0', 'Diagnostic schema version must remain 0.6.0.');
 $assert(($manifest['contributions']['runtime_module_service'] ?? null) === 'diagnosticDomainModule', 'Diagnostic runtime module is not declared.');
-$assert(in_array('diagnosticRouteContributor', $manifest['contributions']['api_route_contributor_services'] ?? [], true), 'Diagnostic routes are not module-owned.');
+$assert(($manifest['contributions']['api_route_contributor_services'] ?? null) === [], 'Retired Phalcon Diagnostic route contribution was restored.');
 $assert(in_array('diagnosticActionOutcomeHandler', $manifest['contributions']['extension_services']['event.consumers'] ?? [], true), 'Diagnostic action outcome consumer is not declared.');
 $assert(in_array('app/migrations/20260914_000049_diagnostic_runtime_v060.sql', $manifest['contributions']['migration_files'] ?? [], true), 'Diagnostic V0.6.0 runtime migration is not declared.');
 
@@ -22,10 +22,15 @@ $module = new DiagnosticDomainModule([]);
 $assert($module->name() === 'diagnostic', 'Diagnostic runtime module id mismatch.');
 $assert($module->actionTypes() === ['IMPLEMENT_DIAGNOSTIC_RECOMMENDATION'], 'Diagnostic action ownership mismatch.');
 
-$legacyRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/DiagnosticRoutes.php');
-$assert(str_contains($legacyRoutes, '/diagnostics/{session:'), 'Server-rendered Diagnostic report route is missing.');
-$assert(!str_contains($legacyRoutes, '/api/diagnostics'), 'Retired Phalcon Diagnostic API route was restored.');
-$assert(!is_file($root . '/app/Interfaces/Api/Controller/DiagnosticRuntimeController.php'), 'Retired DiagnosticRuntimeController was restored.');
+foreach ([
+    'app/Interfaces/Web/Routing/DiagnosticRoutes.php',
+    'app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php',
+    'app/Interfaces/Web/Controller/DiagnosticReportController.php',
+    'app/Interfaces/Web/Controller/MethodologyStudioController.php',
+    'app/Interfaces/Api/Controller/DiagnosticRuntimeController.php',
+] as $retired) {
+    $assert(!file_exists($root . '/' . $retired), 'Retired Diagnostic transport restored: ' . $retired);
+}
 
 $symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 foreach ([
@@ -38,34 +43,31 @@ foreach ([
     '/api/v1/diagnostics/{id}/assessment',
     '/api/v1/diagnostics/{id}/findings',
     '/api/v1/diagnostics/{id}/recommendations',
+    'cos_web_diagnostic_methodology_studio:',
+    'path: /admin/diagnostics/methodology-studio',
+    'cos_web_diagnostic_report:',
+    'path: /diagnostics/{session}/report',
 ] as $marker) {
     $assert(str_contains($symfonyRoutes, $marker), 'Canonical Symfony Diagnostic route missing: ' . $marker);
 }
 
-$services = (string) file_get_contents($root . '/app/Bootstrap/DiagnosticServices.php');
+$services = (string) file_get_contents($root . '/symfony/config/services.yaml');
 foreach ([
-    "setShared('diagnosticRuntimeRepository'",
-    "setShared('diagnosticAiGateway'",
-    "setShared('diagnosticFactExtractor'",
-    "setShared('diagnosticHypothesisGenerator'",
-    "setShared('diagnosticAcceptRecommendation'",
-    "setShared('diagnosticRuntimeService'",
-    "setShared('diagnosticRecommendationActionHandler'",
-    "setShared('diagnosticActionOutcomeHandler'",
-    "setShared('diagnosticDomainModule'",
-    "getShared('cosLlmClient')",
-    "getShared('cosActionService')",
+    'Domains\\Diagnostic\\Application\\Service\\DiagnosticRuntimeService:',
+    'Domains\\Diagnostic\\Application\\Service\\DiagnosticMethodologyAccess:',
+    'App\\Web\\Diagnostic\\DiagnosticPageController:',
 ] as $marker) {
-    $assert(str_contains($services, $marker), 'Diagnostic composition marker missing: ' . $marker);
+    $assert(str_contains($services, $marker), 'Canonical Symfony Diagnostic composition marker missing: ' . $marker);
 }
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
-$assert(str_contains($webServices, 'DiagnosticModuleRouteContributor'), 'Diagnostic route contributor class is not registered in Web composition.');
-$assert(str_contains($webServices, "setShared('diagnosticRouteContributor'"), 'Diagnostic route contributor service is missing.');
+$assert(!str_contains($webServices, 'DiagnosticModuleRouteContributor'), 'Phalcon Web composition still references the retired Diagnostic route contributor.');
+$assert(!str_contains($webServices, "setShared('diagnosticRouteContributor'"), 'Retired Diagnostic route contributor service was restored.');
 
-$reportController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/DiagnosticReportController.php');
+$reportController = (string) file_get_contents($root . '/symfony/src/Web/Diagnostic/DiagnosticPageController.php');
 $reportView = (string) file_get_contents($root . '/app/Interfaces/Web/View/diagnostic_report/show.phtml');
-$assert(str_contains($reportController, "getShared('diagnosticRuntimeService')"), 'HTML report is not backed by runtime report persistence.');
+$assert(str_contains($reportController, '$this->runtime->report('), 'HTML report is not backed by canonical Diagnostic runtime persistence.');
+$assert(str_contains($reportController, 'DiagnosticMethodologyAccess::VIEW'), 'Methodology Studio lost fine-grained Diagnostic access control.');
 $assert(str_contains($reportView, 'overallHealth') && str_contains($reportView, 'recommendations'), 'HTML report misses core diagnostic sections.');
 $assert(str_contains($reportView, 'htmlspecialchars'), 'HTML report does not escape output.');
 
@@ -80,4 +82,4 @@ $assert(str_contains($workflow, "github.ref == 'refs/heads/main'"), 'Diagnostic 
 $assert(!str_contains($workflow, "refs/heads/COS"), 'Diagnostic deployment still references the historical COS branch.');
 $assert(str_contains($workflow, 'diagnostic_v061.php'), 'Diagnostic V0.6.1 smoke is absent from CI.');
 
-echo "Diagnostic V0.6.1 delivery contract: OK\n";
+echo "Diagnostic V0.6.1 Symfony delivery contract: OK\n";
