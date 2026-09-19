@@ -82,6 +82,18 @@ elif [[ -z "$(read_value SPATIAL_JWT_SECRET)" ]]; then
   ensure_secret SPATIAL_JWT_SECRET 32
 fi
 
+# Telegram/runtime environment handoff. Persist values once so the Symfony
+# runtime no longer depends on the legacy PHP container after retirement.
+for runtime_key in APP_URL TELEGRAM_BOT_TOKEN TELEGRAM_BOT_NAME; do
+  runtime_value="${!runtime_key:-}"
+  if [[ -z "$runtime_value" ]] && "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
+    runtime_value="$("${DOCKER[@]}" exec "$LEGACY_PHP_CONTAINER" sh -c "printf '%s' \"${$runtime_key:-}\"" 2>/dev/null || true)"
+  fi
+  if [[ -n "$runtime_value" ]]; then
+    upsert_value "$runtime_key" "$runtime_value"
+  fi
+done
+
 if ! "${DOCKER[@]}" network inspect "$LEGACY_NETWORK" >/dev/null 2>&1; then
   echo "Legacy COS Docker network is unavailable: $LEGACY_NETWORK" >&2
   exit 45
@@ -171,7 +183,7 @@ done
 if ! "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/health 2>/dev/null; then
   echo "Symfony runtime failed its health check." >&2
   "${COMPOSE[@]}" ps -a >&2 || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php worker kernel-worker spatial-worker integration-worker scheduler mysql redis >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php worker kernel-worker spatial-worker integration-worker telegram-worker scheduler mysql redis >&2 || true
   exit 44
 fi
 
@@ -223,7 +235,7 @@ if [[ "$ASYNC_HEALTHY" != "1" ]]; then
   exit 55
 fi
 
-for service in worker kernel-worker spatial-worker integration-worker scheduler; do
+for service in worker kernel-worker spatial-worker integration-worker telegram-worker scheduler; do
   container_id=$("${COMPOSE[@]}" ps -q "$service")
   if [[ -z "$container_id" ]]; then
     echo "Symfony $service container is missing." >&2
@@ -243,7 +255,7 @@ for service in worker kernel-worker spatial-worker integration-worker scheduler;
   fi
 done
 
-echo "Doctrine migrations, Messenger, Kernel, Spatial, integration workers and Symfony Scheduler are healthy."
+echo "Doctrine migrations, Messenger, Kernel, Spatial, integration, Telegram workers and Symfony Scheduler are healthy."
 
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
