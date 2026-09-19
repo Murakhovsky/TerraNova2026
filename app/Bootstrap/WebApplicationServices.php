@@ -18,7 +18,6 @@ use Interfaces\Web\Routing\DiagnosticModuleRouteContributor;
 use Interfaces\Web\Routing\ModuleRouteAccessGuard;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\PropertyModuleRouteContributor;
-use Interfaces\Web\Routing\SalesModuleRouteContributor;
 use Interfaces\Web\Service\ClientCaseService;
 use Interfaces\Web\Service\CompanyHomeService;
 use Domains\Content\Application\Service\ContentService;
@@ -53,7 +52,6 @@ final class WebApplicationServices
         $di->setShared('moduleRouteRegistrar', fn() => new ModuleRouteRegistrar(
             $di->getShared('moduleRouteAccessGuard'),
         ));
-        $di->setShared('salesRouteContributor', fn() => new SalesModuleRouteContributor());
         $di->setShared('diagnosticRouteContributor', fn() => new DiagnosticModuleRouteContributor());
         $di->setShared('propertyRouteContributor', fn() => new PropertyModuleRouteContributor());
 
