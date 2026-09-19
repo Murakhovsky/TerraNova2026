@@ -695,3 +695,52 @@ cos_api_v1_real_estate_reservation:
   controller: App\Http\Api\V1\Controller\RealEstateController::reserve
   methods: [POST]
   requirements: { id: '[A-Za-z0-9_-]+' }
+
+
+# Wave 10 — Platform Documents business cutover
+cos_api_v1_document_upload:
+  path: /api/v1/documents
+  controller: App\Http\Api\V1\Controller\DocumentsController::upload
+  methods: [POST]
+
+cos_api_v1_document:
+  path: /api/v1/documents/{id}
+  controller: App\Http\Api\V1\Controller\DocumentsController::view
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_document_attach:
+  path: /api/v1/documents/{id}/attachments
+  controller: App\Http\Api\V1\Controller\DocumentsController::attach
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_document_version_create:
+  path: /api/v1/documents/{id}/versions
+  controller: App\Http\Api\V1\Controller\DocumentsController::createVersion
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_document_template_generate:
+  path: /api/v1/document-templates/{id}/documents
+  controller: App\Http\Api\V1\Controller\DocumentsController::generate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_document_signature_request:
+  path: /api/v1/documents/{id}/signature-requests
+  controller: App\Http\Api\V1\Controller\DocumentsController::requestSignature
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_document_signature_sign:
+  path: /api/v1/document-signatures/{id}/sign
+  controller: App\Http\Api\V1\Controller\DocumentsController::sign
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
+
+cos_api_v1_document_archive:
+  path: /api/v1/documents/{id}/archive
+  controller: App\Http\Api\V1\Controller\DocumentsController::archive
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]+' }
