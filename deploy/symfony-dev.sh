@@ -171,7 +171,7 @@ done
 if ! "${DOCKER[@]}" exec cos-symfony-nginx-1 wget -q -T 5 -O /dev/null http://127.0.0.1/health 2>/dev/null; then
   echo "Symfony runtime failed its health check." >&2
   "${COMPOSE[@]}" ps -a >&2 || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php worker kernel-worker scheduler mysql redis >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php worker kernel-worker spatial-worker integration-worker scheduler mysql redis >&2 || true
   exit 44
 fi
 
@@ -223,7 +223,7 @@ if [[ "$ASYNC_HEALTHY" != "1" ]]; then
   exit 55
 fi
 
-for service in worker kernel-worker scheduler; do
+for service in worker kernel-worker spatial-worker integration-worker scheduler; do
   container_id=$("${COMPOSE[@]}" ps -q "$service")
   if [[ -z "$container_id" ]]; then
     echo "Symfony $service container is missing." >&2
@@ -243,7 +243,7 @@ for service in worker kernel-worker scheduler; do
   fi
 done
 
-echo "Doctrine migrations, Redis Messenger worker, Kernel worker and Symfony Scheduler are healthy."
+echo "Doctrine migrations, Messenger, Kernel, Spatial, integration workers and Symfony Scheduler are healthy."
 
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
