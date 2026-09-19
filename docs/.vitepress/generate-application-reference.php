@@ -39,7 +39,6 @@ $routeCatalogues = [
         'contributor' => 'app/Interfaces/Web/Routing/SalesModuleRouteContributor.php',
         'sources' => [
             'app/Interfaces/Web/Routing/SalesAdministrationRoutes.php',
-            'app/Interfaces/Web/Routing/SalesDirectorRoutes.php',
             'app/Interfaces/Web/Routing/SalesIntegrationRoutes.php',
             'app/Interfaces/Web/Routing/SalesRoutes.php',
             'app/Interfaces/Web/Routing/SalesTeamRoutes.php',

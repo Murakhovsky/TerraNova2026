@@ -21,7 +21,7 @@ generated: true
 | `procurement` | — | 0 |
 | `property` | `propertyRouteContributor` | 1 |
 | `real_estate` | — | 0 |
-| `sales` | `salesRouteContributor` | 5 |
+| `sales` | `salesRouteContributor` | 4 |
 | `service` | — | 0 |
 
 ## `diagnostic`
@@ -38,7 +38,6 @@ generated: true
 
 - contributor: `app/Interfaces/Web/Routing/SalesModuleRouteContributor.php`;
 - джерело маршрутів: `app/Interfaces/Web/Routing/SalesAdministrationRoutes.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/SalesDirectorRoutes.php`;
 - джерело маршрутів: `app/Interfaces/Web/Routing/SalesIntegrationRoutes.php`;
 - джерело маршрутів: `app/Interfaces/Web/Routing/SalesRoutes.php`;
 - джерело маршрутів: `app/Interfaces/Web/Routing/SalesTeamRoutes.php`;

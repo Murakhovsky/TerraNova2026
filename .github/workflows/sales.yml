@@ -25,14 +25,13 @@ jobs:
           php tests/architecture/domain_module_contract.php
           php tests/architecture/sales_v071_configuration.php
           php tests/architecture/sales_v072_pipeline_admin.php
-          php tests/architecture/sales_v073_rule_editor.php
           php tests/architecture/sales_v074_agent_admin.php
           php tests/architecture/sales_v075_policy_admin.php
           php tests/architecture/sales_v076_users_teams_authority.php
-          php tests/architecture/sales_v077_integrations_administration.php
-          php tests/architecture/sales_crm_ingress_regression.php
           php tests/architecture/table_ownership.php
-          php tests/architecture/sales_v078_admin_closure.php
+          php tests/architecture/symfony_sales_integrations_wave6_boundary.php
+          php tests/architecture/symfony_sales_frontend_wave7_boundary.php
+          php tests/architecture/sales_legacy_api_retirement.php
 
       - name: Sales behavioral contracts
         run: |

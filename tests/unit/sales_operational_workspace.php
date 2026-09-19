@@ -13,13 +13,13 @@ $today = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/toda
 $deal = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/deal.phtml');
 $js = (string) file_get_contents($root . '/frontend/features/sales/workspace.js');
 $css = (string) file_get_contents($root . '/frontend/features/sales/workspace.css');
-$routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
+$routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 
 foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-deal-card', 'draggable="true"'] as $marker) {
     $assert(str_contains($pipeline, $marker), 'Pipeline workspace is missing operational marker: ' . $marker);
 }
 $assert(str_contains($pipeline, 'data-csrf='), 'Pipeline workspace must expose CSRF for canonical stage mutations.');
-$assert(str_contains($routes, "'/api/sales/deals/{id:[0-9]+}/stage'"), 'Canonical Sales stage endpoint is missing.');
+$assert(str_contains($routes, '/api/v1/sales/opportunities/{id}/stage'), 'Canonical Symfony Sales stage endpoint is missing.');
 foreach (['initSalesPipeline', 'postStageChange', 'is-drop-target', '/stage'] as $marker) {
     $assert(str_contains($js, $marker), 'Sales workspace JS is missing Pipeline interaction: ' . $marker);
 }

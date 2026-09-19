@@ -90,17 +90,6 @@ final class FrontendRoutes
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/regression', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'regression');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/archive', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'archive');
         self::add($router, 'addPost', '/api/admin/diagnostics/packs/{id:[a-z0-9-]+}/versions/{version:[0-9.]+}/activate', 'Interfaces\\Api\\Controller', 'diagnostic_methodology', 'activate');
-        self::add($router, 'addGet', '/api/sales/dashboard', 'Interfaces\\Api\\Controller', 'sales', 'dashboard');
-        self::add($router, 'addGet', '/api/sales/leads', 'Interfaces\\Api\\Controller', 'sales', 'leads');
-        self::add($router, 'addGet', '/api/sales/deals', 'Interfaces\\Api\\Controller', 'sales', 'deals');
-        self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}', 'Interfaces\\Api\\Controller', 'sales', 'deal');
-        self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}/timeline', 'Interfaces\\Api\\Controller', 'sales', 'timeline');
-        self::add($router, 'addGet', '/api/sales/deals/{id:[0-9]+}/intelligence', 'Interfaces\\Api\\Controller', 'sales', 'intelligence');
-        self::add($router, 'addPost', '/api/sales/deals/{id:[0-9]+}/stage', 'Interfaces\\Api\\Controller', 'sales', 'stage');
-        self::add($router, 'addGet', '/api/sales/pipelines', 'Interfaces\\Api\\Controller', 'sales', 'pipelines');
-        self::add($router, 'addGet', '/api/sales/today', 'Interfaces\\Api\\Controller', 'sales', 'today');
-        self::add($router, 'addGet', '/api/sales/metrics', 'Interfaces\\Api\\Controller', 'sales', 'metrics');
-        self::add($router, 'addPost', '/api/sales/actions/{id:[a-f0-9]{32}}/outcomes', 'Interfaces\\Api\\Controller', 'sales', 'recordOutcome');
         self::add($router, 'addGet', '/api/cos/actions', 'Interfaces\\Api\\Controller', 'cos_runtime', 'actions');
         self::add($router, 'addGet', '/api/cos/actions/{id:[a-f0-9]{32}}', 'Interfaces\\Api\\Controller', 'cos_runtime', 'action');
         self::add($router, 'addPost', '/api/cos/actions/{id:[a-f0-9]{32}}/execute', 'Interfaces\\Api\\Controller', 'cos_runtime', 'execute');
@@ -111,7 +100,6 @@ final class FrontendRoutes
         self::add($router, 'addGet', '/api/cos/rules', 'Interfaces\\Api\\Controller', 'cos_runtime', 'rules');
         self::add($router, 'addGet', '/api/cos/events', 'Interfaces\\Api\\Controller', 'cos_runtime', 'events');
         self::add($router, 'addGet', '/api/cos/audit', 'Interfaces\\Api\\Controller', 'cos_runtime', 'audit');
-        self::add($router, 'addPost', '/api/integrations/{organization:[a-zA-Z0-9_-]+}/crm/{provider:[a-zA-Z0-9_-]+}/webhook', 'Interfaces\\Api\\Controller', 'crm_webhook', 'receive');
 
         foreach (['economy', 'games', 'users'] as $deprecatedModule) {
             self::add($router, 'add', '/' . $deprecatedModule, 'Interfaces\\Web\\Controller', 'deprecated_module', 'gone');
