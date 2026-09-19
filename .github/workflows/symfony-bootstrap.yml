@@ -62,6 +62,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install root architecture-test autoload
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
       - name: Prepare isolated legacy resource contracts
         run: |
           docker network create cos_backend
