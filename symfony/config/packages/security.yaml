@@ -5,16 +5,21 @@ security:
 
   firewalls:
     cos_api:
-      pattern: '^/api/v1(?:/|$)'
+      pattern: '^/(?:api/v1|api/spatial)(?:/|$)'
       stateless: true
       provider: legacy_users
       custom_authenticators:
         - App\Security\LegacySessionAuthenticator
+        - App\Security\SpatialBearerAuthenticator
       entry_point: App\Security\LegacySessionAuthenticator
       access_denied_handler: App\Security\JsonAccessDeniedHandler
 
   access_control:
     - { path: '^/api/v1/health$', roles: PUBLIC_ACCESS }
     - { path: '^/api/v1/integrations/crm/[1-9][0-9]*/webhook$', roles: PUBLIC_ACCESS }
+    - { path: '^/api/spatial/auth/token$', roles: PUBLIC_ACCESS }
+    - { path: '^/api/spatial/scenes/[A-Za-z0-9-]+$', roles: PUBLIC_ACCESS, methods: [GET] }
+    - { path: '^/api/spatial/events$', roles: PUBLIC_ACCESS, methods: [POST] }
     - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }

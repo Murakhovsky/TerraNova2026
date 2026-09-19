@@ -17,7 +17,7 @@ Routing stays layered instead of being collapsed into one giant route table:
 - `SpatialWebRoutes` explicitly preserves the Spatial Web journeys that previously depended on default controller/action routing;
 - platform and visualization routes keep their existing route owners;
 - Sales, Property and Diagnostic routes remain owned by their module route contributors;
-- `Bootstrap\SpatialModule` continues to own Spatial API routes.
+- Spatial API routes are owned by Symfony; `Bootstrap\SpatialModule` remains only for the temporary SSR workspace composition.
 
 WEB V0.13 does not move business routing into a new Domain and does not make `CoreWebRoutes` an owner of domain capabilities.
 

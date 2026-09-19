@@ -31,6 +31,22 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return false;
         }
 
+        if (str_starts_with($path, '/api/spatial/')) {
+            if ($path === '/api/spatial/auth/token'
+                || preg_match('/^Bearer\\s+\\S+$/i', trim((string) $request->headers->get('Authorization', ''))) === 1) {
+                return false;
+            }
+
+            $publicScene = $request->isMethod('GET')
+                && preg_match('#^/api/spatial/scenes/[A-Za-z0-9-]+$#', $path) === 1;
+            $publicEvent = $request->isMethod('POST') && $path === '/api/spatial/events';
+            if ($publicScene || $publicEvent) {
+                return false;
+            }
+
+            return true;
+        }
+
         return str_starts_with($path, '/api/v1');
     }
 
@@ -56,12 +72,24 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        return self::forbidden();
+        return str_starts_with($request->getPathInfo(), '/api/spatial/')
+            ? self::spatialUnauthorized()
+            : self::forbidden();
     }
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        return self::forbidden();
+        return str_starts_with($request->getPathInfo(), '/api/spatial/')
+            ? self::spatialUnauthorized()
+            : self::forbidden();
+    }
+
+    private static function spatialUnauthorized(): JsonResponse
+    {
+        return new JsonResponse([
+            'ok' => false,
+            'message' => 'Unauthorized.',
+        ], Response::HTTP_UNAUTHORIZED);
     }
 
     private static function forbidden(): JsonResponse

@@ -1025,3 +1025,62 @@ cos_api_v1_diagnostic_methodology_activate:
   controller: App\Http\Api\V1\Controller\DiagnosticMethodologyController::activate
   methods: [POST]
   requirements: { id: '[a-z0-9-]+', version: '[0-9.]+' }
+
+
+# Spatial cutover — preserve the existing /api/spatial contract on Symfony.
+cos_spatial_auth_token:
+  path: /api/spatial/auth/token
+  controller: App\Http\Api\Spatial\SpatialController::token
+  methods: [POST]
+
+cos_spatial_scene:
+  path: /api/spatial/scenes/{publicId}
+  controller: App\Http\Api\Spatial\SpatialController::scene
+  methods: [GET]
+  requirements: { publicId: '[A-Za-z0-9-]+' }
+
+cos_spatial_scene_save:
+  path: /api/spatial/scenes
+  controller: App\Http\Api\Spatial\SpatialController::saveScene
+  methods: [POST]
+
+cos_spatial_asset_upload:
+  path: /api/spatial/scenes/{id}/assets
+  controller: App\Http\Api\Spatial\SpatialController::uploadAsset
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_spatial_external_asset:
+  path: /api/spatial/scenes/{id}/external-assets
+  controller: App\Http\Api\Spatial\SpatialController::externalAsset
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_spatial_capture:
+  path: /api/spatial/scenes/{id}/captures
+  controller: App\Http\Api\Spatial\SpatialController::capture
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_spatial_hotspot:
+  path: /api/spatial/scenes/{id}/hotspots
+  controller: App\Http\Api\Spatial\SpatialController::saveHotspot
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_spatial_publish:
+  path: /api/spatial/scenes/{id}/publish
+  controller: App\Http\Api\Spatial\SpatialController::publish
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_spatial_job:
+  path: /api/spatial/jobs/{publicId}
+  controller: App\Http\Api\Spatial\SpatialController::job
+  methods: [GET]
+  requirements: { publicId: '[A-Za-z0-9-]+' }
+
+cos_spatial_event:
+  path: /api/spatial/events
+  controller: App\Http\Api\Spatial\SpatialController::event
+  methods: [POST]

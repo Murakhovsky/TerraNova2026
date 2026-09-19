@@ -32,14 +32,14 @@ The following HTTP/control-plane surfaces have completed cutover and must not re
 | legacy Property runtime/canonical HTTP controllers | Symfony `/api/v1/properties*` and inventory APIs | removed |
 | legacy COS Operations/migration APIs | Symfony `/api/v1/operations/*` and canonical health/runtime endpoints | removed |
 
-`SpatialController` is intentionally **not** listed as retired. It still owns live upload/token/job delivery and requires a separate cutover before deletion.
+`Interfaces\\Api\\Controller\\SpatialController` is retired. `/api/spatial/*` upload/token/job delivery is owned by Symfony; only temporary SSR Spatial/Web compatibility remains on Phalcon.
 
 ## Registered web module owners
 
 | Module | Current registration | Target |
 |---|---|---|
 | `frontend` | `Interfaces\Web\Module` | SSR/public web shell only; business/control-plane APIs are moving to Symfony |
-| `spatial` | `Bootstrap\SpatialModule` | canonical Spatial contracts/infrastructure with `Interfaces\Api\Controller\SpatialController` |
+| `spatial` | `Bootstrap\SpatialModule` | temporary SSR composition only; `/api/spatial/*` is canonical on Symfony |
 | `users` | not registered in main web | Identity contracts and canonical Phalcon adapters |
 | `games` | removed | `/games` remains an explicit HTTP 410 boundary |
 | `economy` | removed | `/economy` remains an explicit HTTP 410 boundary |

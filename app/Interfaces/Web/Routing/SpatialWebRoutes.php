@@ -6,11 +6,10 @@ namespace Interfaces\Web\Routing;
 use Phalcon\Mvc\RouterInterface;
 
 /**
- * Explicit Web routes for the legacy Spatial workspace controller.
+ * Explicit Web routes for the temporary legacy Spatial workspace controller.
  *
- * Spatial API routes remain owned by Bootstrap\SpatialModule. These routes
- * replace the implicit controller/action URLs that previously depended on
- * Phalcon's default router patterns.
+ * Spatial API routes are canonical on Symfony. These routes preserve only the
+ * remaining SSR workspace journeys until the final Phalcon Web retirement.
  */
 final class SpatialWebRoutes
 {

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Bootstrap;
 
-use Infrastructure\Security\SpatialAccessService;
 use Infrastructure\Media\SpatialAssetService;
 use Infrastructure\Spatial\SpatialProcessingService;
 use Domains\Spatial\Application\Service\SpatialSceneService;
@@ -21,33 +20,8 @@ class SpatialModule implements ModuleDefinitionInterface
 
     public function registerServices(DiInterface $di): void
     {
-        $router = $di->getShared('router');
-        $route = static fn(string $method, string $path, string $action) => $router->{'add' . $method}($path, [
-            'namespace' => 'Interfaces\Api\Controller',
-            'module' => 'spatial',
-            'controller' => 'spatial',
-            'action' => $action,
-        ]);
-
-        $route('Post', '/api/spatial/auth/token', 'token');
-        $route('Get', '/api/spatial/scenes/{publicId:[A-Za-z0-9-]+}', 'scene');
-        $route('Post', '/api/spatial/scenes', 'saveScene');
-        $route('Post', '/api/spatial/scenes/{id:[0-9]+}/assets', 'uploadAsset');
-        $route('Post', '/api/spatial/scenes/{id:[0-9]+}/external-assets', 'externalAsset');
-        $route('Post', '/api/spatial/scenes/{id:[0-9]+}/captures', 'capture');
-        $route('Post', '/api/spatial/scenes/{id:[0-9]+}/hotspots', 'saveHotspot');
-        $route('Post', '/api/spatial/scenes/{id:[0-9]+}/publish', 'publish');
-        $route('Get', '/api/spatial/jobs/{publicId:[A-Za-z0-9-]+}', 'job');
-        $route('Post', '/api/spatial/events', 'event');
-
-        $di->setShared('spatialAccessService', function () {
-            return new SpatialAccessService(
-                $this->getShared('databaseService'),
-                $this->getShared('authService'),
-                (string) $this->getShared('config')->spatial->jwt_secret,
-                (int) $this->getShared('config')->spatial->jwt_ttl
-            );
-        });
+        // Spatial HTTP API ownership moved to Symfony. This module remains
+        // temporarily only as composition for legacy SSR Spatial/Web consumers.
         $di->setShared('spatialAssetService', function () {
             return new SpatialAssetService(
                 $this->getShared('databaseService'),

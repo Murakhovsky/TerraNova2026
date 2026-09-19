@@ -1193,3 +1193,62 @@ services:
       $studio: '@Domains\Diagnostic\Application\Service\MethodologyStudioService'
       $studioRepository: '@Domains\Diagnostic\Application\Contract\MethodologyStudioRepositoryInterface'
       $workbenchRepository: '@Domains\Diagnostic\Application\Contract\MethodologyWorkbenchRepositoryInterface'
+
+
+  # Spatial Symfony cutover — canonical HTTP transport on the shared Spatial domain.
+  Infrastructure\Platform\Persistence\Pdo\PdoConnection:
+    arguments:
+      $config: '@legacy_cos.pdo'
+
+  Infrastructure\Media\SpatialAssetService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $maxUploadBytes: '%env(int:SPATIAL_MAX_UPLOAD_BYTES)%'
+
+  Domains\Property\Infrastructure\Spatial\CanonicalPropertyTourPublisher:
+    arguments:
+      $runtime: '@Domains\Property\Application\Service\PropertyCanonicalRuntimeService'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $assets: '@Infrastructure\Media\SpatialAssetService'
+      $propertyTours: '@Domains\Property\Infrastructure\Spatial\CanonicalPropertyTourPublisher'
+
+  Domains\Spatial\Application\Contract\SpatialSceneRepositoryInterface:
+    alias: Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository
+
+  Domains\Spatial\Application\Service\SpatialSceneService: ~
+
+  Domains\Spatial\Application\Contract\SpatialSceneInterface:
+    alias: Domains\Spatial\Application\Service\SpatialSceneService
+
+  Infrastructure\Spatial\SpatialProcessingService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $blenderBinary: '%env(SPATIAL_BLENDER_BINARY)%'
+      $gltfTransformBinary: '%env(SPATIAL_GLTF_TRANSFORM_BINARY)%'
+
+  Domains\Spatial\Application\Contract\SpatialProcessingInterface:
+    alias: Infrastructure\Spatial\SpatialProcessingService
+
+  App\Security\SpatialJwtCodec:
+    arguments:
+      $secret: '%env(SPATIAL_JWT_SECRET)%'
+
+  App\Infrastructure\Spatial\SpatialTokenIssuer:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $tokens: '@App\Security\SpatialJwtCodec'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+      $ttl: '%env(int:SPATIAL_JWT_TTL)%'
+
+  App\Security\SpatialBearerAuthenticator:
+    arguments:
+      $tokens: '@App\Security\SpatialJwtCodec'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Http\Api\Spatial\SpatialController:
+    public: true
+    tags: ['controller.service_arguments']

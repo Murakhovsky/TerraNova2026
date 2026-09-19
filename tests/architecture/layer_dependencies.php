@@ -6,6 +6,10 @@ $root = dirname(__DIR__, 2);
 /** @return list<string> */
 function phpFiles(string $directory): array
 {
+    if (!is_dir($directory)) {
+        return [];
+    }
+
     $files = [];
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
     foreach ($iterator as $file) {
