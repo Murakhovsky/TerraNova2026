@@ -77,6 +77,7 @@ jobs:
           php -l tests/smoke/diagnostic_v061.php
           find symfony/src/Application/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l symfony/src/Http/Api/V1/Controller/DiagnosticController.php
+          php -l symfony/src/Http/Api/V1/Controller/DiagnosticMethodologyController.php
 
       - name: Sales architecture and runtime checks
         run: |
@@ -142,9 +143,7 @@ jobs:
           php -l app/Bootstrap/PropertyIntelligenceServices.php
           php -l app/Bootstrap/PropertyNetworkServices.php
           php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
-          php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
 
       - name: Telegram isolation check
         run: php tests/architecture/telegram_migration.php

@@ -1,6 +1,6 @@
 # Legacy entrypoint inventory
 
-Inventory date: 2026-08-26. This file is the migration ledger for externally reachable entrypoints. An entry may be removed only after its callers and replacement are verified.
+Inventory date: 2026-09-19. This file is the migration ledger for externally reachable entrypoints. An entry may be removed only after its callers and replacement are verified.
 
 | Entrypoint | Runtime | Owner | Decision | Replacement / condition |
 |---|---|---|---|---|
@@ -19,11 +19,26 @@ Inventory date: 2026-08-26. This file is the migration ledger for externally rea
 | `bin/spatial-worker.php` | Spatial | Spatial | keep | migrate implementation behind Spatial application port |
 | `bin/apply-migration.php` | deployment | Platform | keep | migration runner wrapper |
 
+## Retired Phalcon API transports
+
+The following HTTP/control-plane surfaces have completed cutover and must not return to the Phalcon router:
+
+| Retired transport | Canonical replacement | Status |
+|---|---|---|
+| `/api/health` + `Interfaces\\Api\\Controller\\HealthController` | Symfony `GET /api/v1/health` | removed |
+| `/api/platform/modules*` + `PlatformModuleController`/`PlatformRoutes` | Symfony `/api/v1/platform/modules*` | removed |
+| `/api/admin/diagnostics/*` + legacy Methodology/Workbench controllers | Symfony `/api/v1/admin/diagnostics/*` | removed |
+| legacy Diagnostic runtime HTTP controller | Symfony `/api/v1/diagnostics/*` | removed |
+| legacy Property runtime/canonical HTTP controllers | Symfony `/api/v1/properties*` and inventory APIs | removed |
+| legacy COS Operations/migration APIs | Symfony `/api/v1/operations/*` and canonical health/runtime endpoints | removed |
+
+`SpatialController` is intentionally **not** listed as retired. It still owns live upload/token/job delivery and requires a separate cutover before deletion.
+
 ## Registered web module owners
 
 | Module | Current registration | Target |
 |---|---|---|
-| `frontend` | `Interfaces\Web\Module` | canonical web controllers/routes/views |
+| `frontend` | `Interfaces\Web\Module` | SSR/public web shell only; business/control-plane APIs are moving to Symfony |
 | `spatial` | `Bootstrap\SpatialModule` | canonical Spatial contracts/infrastructure with `Interfaces\Api\Controller\SpatialController` |
 | `users` | not registered in main web | Identity contracts and canonical Phalcon adapters |
 | `games` | removed | `/games` remains an explicit HTTP 410 boundary |

@@ -32,7 +32,7 @@ $routeCatalogues = [
     'property' => [
         'service' => 'propertyRouteContributor',
         'contributor' => 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php',
-        'sources' => ['app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'],
+        'sources' => ['app/Interfaces/Web/Routing/PublicPropertyRoutes.php', 'symfony/config/routes.yaml'],
     ],
     'sales' => [
         'service' => 'salesRouteContributor',

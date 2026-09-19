@@ -87,7 +87,7 @@ foreach ([
     '/workbench/scenarios',
     '/permissions/matrix',
     '/permissions/override',
-    '/runs/{session:',
+    '/runs/{session}/details',
 ] as $needle) {
     v055(str_contains($routes, $needle), 'V0.5.5 route is missing: ' . $needle);
 }

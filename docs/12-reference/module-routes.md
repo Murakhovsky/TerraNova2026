@@ -19,7 +19,7 @@ generated: true
 | `finance` | — | 0 |
 | `hr` | — | 0 |
 | `procurement` | — | 0 |
-| `property` | `propertyRouteContributor` | 1 |
+| `property` | `propertyRouteContributor` | 2 |
 | `real_estate` | — | 0 |
 | `sales` | `salesRouteContributor` | 4 |
 | `service` | — | 0 |
@@ -32,7 +32,8 @@ generated: true
 ## `property`
 
 - contributor: `app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php`;
+- джерело маршрутів: `app/Interfaces/Web/Routing/PublicPropertyRoutes.php`;
+- джерело маршрутів: `symfony/config/routes.yaml`;
 
 ## `sales`
 
