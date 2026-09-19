@@ -17,8 +17,8 @@ generated: true
 ## Підсумок
 
 - **Installable Domains:** 9
-- **Покрито канонічним процесом:** 4
-- **Явних exemptions:** 5
+- **Покрито канонічним процесом:** 5
+- **Явних exemptions:** 4
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
@@ -31,7 +31,7 @@ generated: true
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `0.2.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 | `sales` · Sales | `0.8.6` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
-| `service` · Service | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `service` · Service | `0.2.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 
 ## Канонічне ownership процесів
 
@@ -74,8 +74,7 @@ generated: true
 
 ### Service (`service`)
 
-- **Exempt:** V1 skeleton only; executable Service process models are intentionally deferred until Service runtime implementation.
-- **Owner:** COS Architecture
+- `service.request-to-close`
 
 ## Контракт покриття
 
@@ -93,7 +92,6 @@ generated: true
 | `finance` | COS Architecture | V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
-| `service` | COS Architecture | V1 skeleton only; executable Service process models are intentionally deferred until Service runtime implementation. |
 
 ## Авторитетність і обмеження
 
