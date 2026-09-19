@@ -11,7 +11,7 @@ Audit date: 2026-08-23.
 - n8n inbound: signed HMAC webhook, five-minute clock window, mandatory idempotency key, payload size limit and upsert/publish/archive events.
 - n8n outbound: transactional outbox for manual content changes, atomic claiming, five retries and delivery history.
 - Content safety: HTML allowlist, safe link/image protocols, strict JSON schema object and escaped manager output.
-- Operational commands: Symfony `cos:integration:n8n:process` and `bin/telegram-health.php`.
+- Operational commands: Symfony `cos:integration:n8n:process`, `cos:telegram:process` and `cos:telegram:health`.
 - Spatial domain: versioned 3D scenes, captures, assets, property relations, hotspots, processing queue, JWT API, manager workspace and public Three.js/Spark viewer.
 
 ## P2 matrix
@@ -43,8 +43,7 @@ Local application checks pass:
 Production delivery is not healthy yet. Telegram reported one pending update and
 `SSL routines::certificate verify failed` for `https://terra.ai-da.store/tgAdmin_webhook.php` at
 2026-08-23 13:31:52 UTC. The host also did not resolve from the local environment. Verify the
-public A/AAAA record and install a complete certificate chain trusted by Telegram before calling
-`bin/telegram-webhook.php` again.
+public A/AAAA record and install a complete certificate chain trusted by Telegram before any future inbound Telegram transport is enabled. The legacy webhook runtime has since been retired.
 
 ## What remains for a usable v0.6 release
 
@@ -73,8 +72,8 @@ investment cabinets, payments and tokenization. They should not block the operat
 php tests/integration/telegram_automation.php
 php tests/integration/content_n8n.php
 php tests/integration/content_http.php
-php bin/telegram-worker.php --limit=5
-php bin/telegram-health.php
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:telegram:process --limit=5
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:telegram:health
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=5
 php tests/integration/spatial_module.php
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
