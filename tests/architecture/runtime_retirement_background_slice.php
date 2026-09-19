@@ -11,6 +11,8 @@ foreach ([
     'bin/spatial-worker.php',
     'bin/integration-worker.php',
     'bin/apply-migration.php',
+    'app/Interfaces/Cli/Task/WorkerTask.php',
+    'app/Interfaces/Cli/Task/MigrationTask.php',
 ] as $path) {
     $assert(!is_file($root . '/' . $path), 'Retired background runtime entrypoint restored: ' . $path);
 }
