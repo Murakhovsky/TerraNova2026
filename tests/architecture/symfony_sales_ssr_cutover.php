@@ -53,6 +53,13 @@ foreach ([
     $assert(!str_contains($source, 'di('), 'PHTML template still uses the legacy DI helper: ' . $path);
 }
 
+$security = $read('symfony/config/packages/security.yaml');
+$authenticator = $read('symfony/src/Security/LegacySessionAuthenticator.php');
+$assert(str_contains($security, "|sales)(?:/|$)'"), 'Symfony firewall does not own Sales SSR paths.');
+$assert(str_contains($security, "path: '^/sales(?:/|$)'"), 'Symfony Sales SSR access-control rule is missing.');
+$assert(str_contains($authenticator, "str_starts_with($path, '/sales')"), 'Legacy session authenticator does not support Sales SSR.');
+$assert(str_contains($authenticator, "RedirectResponse('/auth/login')"), 'Unauthenticated Sales SSR must redirect to login.');
+
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'cos_web_sales_root:',
