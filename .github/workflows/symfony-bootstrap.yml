@@ -85,19 +85,19 @@ jobs:
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
           CREATE TABLE tn_users (
             id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
-            organization_id VARCHAR(40) NOT NULL,
+            organization_id VARCHAR(190) NOT NULL,
             email VARCHAR(255) NOT NULL,
             full_name VARCHAR(255) NOT NULL,
             status VARCHAR(32) NOT NULL
           );
           CREATE TABLE cos_organization_memberships (
-            organization_id VARCHAR(40) NOT NULL,
+            organization_id VARCHAR(190) NOT NULL,
             user_id BIGINT UNSIGNED NOT NULL,
-            role VARCHAR(80) NOT NULL,
+            role VARCHAR(64) NOT NULL,
             status VARCHAR(32) NOT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (organization_id, user_id)
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+          );
           INSERT INTO tn_users (id, organization_id, email, full_name, status) VALUES
             (1001, 'default', 'manager@example.test', 'CI Manager', 'active'),
             (1002, 'default', 'realtor@example.test', 'CI Realtor', 'active'),
@@ -168,7 +168,7 @@ jobs:
             role VARCHAR(80) NOT NULL,
             permission VARCHAR(80) NOT NULL,
             PRIMARY KEY (role, permission)
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+          );
 
           CREATE TABLE IF NOT EXISTS diagnostic_user_permissions (
             organization_id VARCHAR(190) NOT NULL,
