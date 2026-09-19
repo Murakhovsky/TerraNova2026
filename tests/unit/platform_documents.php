@@ -11,6 +11,10 @@ use Platform\Documents\Model\Relation;
 use Platform\Documents\Model\Signature;
 use Platform\Documents\Model\Template;
 use Platform\Documents\Model\Version;
+use Platform\Documents\Contract\DocumentAttachmentPort;
+use Platform\Documents\Contract\DocumentMutationReceiptInterface;
+use Platform\Documents\Contract\DocumentsRepositoryInterface;
+use Platform\Documents\Event\DocumentsEventType;
 
 function expectDocuments(bool $condition, string $message): void
 {
@@ -32,4 +36,18 @@ expectDocuments($template->name === 'Sales contract' && $version->documentId ===
 expectDocuments($signature->signerId === 'user-1', 'Signature vocabulary must autoload.');
 expectDocuments($relation->relatedType === 'sales.opportunity' && $permission->level === 'read', 'Relation and permission vocabulary must stay generic.');
 
-echo "Platform Documents vocabulary contracts passed.\n";
+$attachmentPort=new ReflectionClass(DocumentAttachmentPort::class);
+expectDocuments($attachmentPort->hasMethod('attachExistingDocument'),'Documents cross-domain attachment port must expose attachExistingDocument.');
+
+$repository=new ReflectionClass(DocumentsRepositoryInterface::class);
+foreach(['createDocument','createVersion','attach','findTemplate','createSignatureRequest','findSignature','sign','archive','view','nextVersionNumber'] as $method){
+    expectDocuments($repository->hasMethod($method),'Documents repository contract missing '.$method.'.');
+}
+
+$receipt=new ReflectionClass(DocumentMutationReceiptInterface::class);
+expectDocuments($receipt->hasMethod('claim'),'Documents mutation receipt must expose atomic claim.');
+
+expectDocuments(count(DocumentsEventType::values())===7,'Documents Wave 10 must expose seven lifecycle event types.');
+expectDocuments(in_array(DocumentsEventType::SIGNED,DocumentsEventType::values(),true),'Documents signed event must be canonical.');
+
+echo "Platform Documents vocabulary/runtime contracts passed.\n";
