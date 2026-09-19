@@ -228,8 +228,8 @@ final readonly class SalesPageController
     {
         $users = $this->teams->users($tenant->organizationId()->value());
         return array_values(array_filter($users, static fn(array $user): bool =>
-            ($user['status'] ?? '') === 'active'
-            && in_array((string) ($user['organization_role'] ?? $user['role'] ?? ''), ['manager', 'admin'], true)
+            strtolower((string) ($user['status'] ?? '')) === 'active'
+            && in_array(strtolower((string) ($user['organization_role'] ?? $user['role'] ?? '')), ['manager', 'admin'], true)
         ));
     }
 
