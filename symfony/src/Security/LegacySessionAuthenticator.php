@@ -40,8 +40,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             $publicScene = $request->isMethod('GET')
                 && preg_match('#^/api/spatial/scenes/[A-Za-z0-9-]+$#', $path) === 1;
             $publicEvent = $request->isMethod('POST') && $path === '/api/spatial/events';
-            if (($publicScene || $publicEvent)
-                && (string) $request->cookies->get($this->sessions->cookieName(), '') === '') {
+            if ($publicScene || $publicEvent) {
                 return false;
             }
 
