@@ -1390,6 +1390,7 @@ jobs:
           status=$(curl --silent --show-error --output /tmp/wave11-request-view.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-manager-session0001' \
             "http://127.0.0.1:8081/api/v1/service/requests/$service_request_id")
+          echo "Wave 11 Request view HTTP $status"; cat /tmp/wave11-request-view.json; echo
           test "$status" = "200"
           WAVE11_REQUEST="$service_request_id" WAVE11_CASE="$service_case_id" php -r '
             $j=json_decode(file_get_contents("/tmp/wave11-request-view.json"),true,512,JSON_THROW_ON_ERROR);
@@ -1404,6 +1405,7 @@ jobs:
           status=$(curl --silent --show-error --output /tmp/wave11-cross-tenant.json --write-out '%{http_code}' \
             --cookie 'PHPSESSID=ci-other-manager0003' \
             "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id")
+          echo "Wave 11 Cross-tenant HTTP $status"; cat /tmp/wave11-cross-tenant.json; echo
           test "$status" = "404"
 
           counts=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -1418,6 +1420,7 @@ jobs:
               (SELECT COUNT(*) FROM tn_service_resolutions WHERE organization_id='default'),'|',
               (SELECT COUNT(*) FROM tn_service_operation_receipts WHERE organization_id='default')
             );" | tr -d '[:space:]')
+          echo "Wave 11 persistence counts: $counts"
           test "$counts" = "1|1|1|1|1|1|1|7"
 
           service_events=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -1426,11 +1429,13 @@ jobs:
               'service.request.created','service.ticket.created','service.ticket.assigned','service.sla.set',
               'service.ticket.escalated','service.ticket.resolved','service.ticket.closed'
             );" | tr -d '[:space:]')
+          echo "Wave 11 distinct service events: $service_events"
           test "$service_events" = "7"
 
           service_audit=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT COUNT(*) FROM cos_audit_log WHERE organization_id='default' AND category='service.mutation';" | tr -d '[:space:]')
+          echo "Wave 11 audit rows: $service_audit"
           test "$service_audit" = "7"
 
           migration_count=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
