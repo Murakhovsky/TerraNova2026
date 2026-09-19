@@ -58,12 +58,6 @@ migration_structured_log() {
   structured_log "$migrate_id" "migration"
 }
 
-worker_structured_log() {
-  local worker_id
-  worker_id="$("${COMPOSE[@]}" ps -aq worker 2>/dev/null || true)"
-  structured_log "$worker_id" "worker"
-}
-
 echo "Using server environment: $ENV_FILE"
 "${COMPOSE[@]}" config --quiet
 
