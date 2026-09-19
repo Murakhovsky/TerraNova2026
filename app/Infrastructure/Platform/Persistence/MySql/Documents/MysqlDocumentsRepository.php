@@ -222,7 +222,7 @@ final readonly class MysqlDocumentsRepository implements DocumentsRepositoryInte
         return max(1,(int)$statement->fetchColumn());
     }
 
-    private function assertDocumentLocked(string $organizationId,string $documentId): void
+    public function lockDocumentStatus(string $organizationId,string $documentId): string
     {
         $statement=$this->connection->prepare(
             'SELECT status FROM cos_documents
@@ -232,7 +232,14 @@ final readonly class MysqlDocumentsRepository implements DocumentsRepositoryInte
         $statement->execute(['organization_id'=>$organizationId,'document_id'=>$documentId]);
         $status=$statement->fetchColumn();
         if($status===false)throw new \InvalidArgumentException('Document was not found.');
-        if((string)$status==='archived')throw new \InvalidArgumentException('Archived Document cannot be modified.');
+        return (string)$status;
+    }
+
+    private function assertDocumentLocked(string $organizationId,string $documentId): void
+    {
+        if($this->lockDocumentStatus($organizationId,$documentId)==='archived'){
+            throw new \InvalidArgumentException('Archived Document cannot be modified.');
+        }
     }
 
     private function insertFile(array $file): void
