@@ -50,5 +50,7 @@ interface DocumentsRepositoryInterface
     /** @return array<string,mixed>|null */
     public function view(string $organizationId, string $documentId): ?array;
 
+    public function lockDocumentStatus(string $organizationId, string $documentId): string;
+
     public function nextVersionNumber(string $organizationId, string $documentId): int;
 }
