@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 10 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 24 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 31 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -63,6 +63,13 @@ generated: true
 | `sales` | `sales.deal.assign` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.director.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.workspace.use` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
+| `service` | `service.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
+| `service` | `service.assignment` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
+| `service` | `service.escalation` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
+| `service` | `service.request` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
+| `service` | `service.resolution` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
+| `service` | `service.sla` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
+| `service` | `service.ticket` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
 
 ## Реєстр runtime-каталогів
 
