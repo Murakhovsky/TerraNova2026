@@ -275,6 +275,7 @@ jobs:
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
+          php tests/architecture/telegram_worker_retirement.php
           php tests/architecture/kernel_v082_module_control.php
           php tests/architecture/kernel_v088_effective_module_context.php
           php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
@@ -297,6 +298,7 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:kernel:version'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:architecture:smoke'"
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:diagnostic:sales-methodology:import-v02'"
+          docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:telegram:notifications:process'"
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:architecture:smoke
 
       - name: Verify Sales strangler slice
