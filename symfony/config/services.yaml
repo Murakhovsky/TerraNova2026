@@ -1322,3 +1322,50 @@ services:
       $content: '@Domains\Content\Application\Service\ContentService'
       $url: '%env(N8N_OUTBOUND_URL)%'
       $secret: '%env(N8N_OUTBOUND_SECRET)%'
+
+
+  # Final CLI retirement — canonical admin composition.
+  Kernel\Event\Service\OutboxReplayService:
+    arguments:
+      $outbox: '@Kernel\Event\Contract\EventOutboxInterface'
+      $consumptions: '@Kernel\Event\Contract\EventConsumptionRepositoryInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRetention:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Kernel\Agent\Contract\AgentRetentionInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRetention
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesHistoricalEventStream:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesHistoricalEventStreamInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesHistoricalEventStream
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalIntelligenceHealthReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Domains\Sales\Application\Contract\SalesHistoricalIntelligenceHealthReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalIntelligenceHealthReadModel
+
+  Domains\Sales\Application\Service\SalesDealStageHistoryRebuilder:
+    arguments:
+      $events: '@Domains\Sales\Application\Contract\SalesHistoricalEventStreamInterface'
+      $projector: '@Domains\Sales\Application\Service\SalesDealStageHistoryProjector'
+      $history: '@Domains\Sales\Application\Contract\SalesDealStageHistoryStoreInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Application\Service\SalesDealOwnerHistoryRebuilder:
+    arguments:
+      $events: '@Domains\Sales\Application\Contract\SalesHistoricalEventStreamInterface'
+      $projector: '@Domains\Sales\Application\Service\SalesDealOwnerHistoryProjector'
+      $history: '@Domains\Sales\Application\Contract\SalesDealOwnerHistoryStoreInterface'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
+  Domains\Sales\Application\Service\SalesHistoricalIntelligenceHealthService:
+    arguments:
+      $readModel: '@Domains\Sales\Application\Contract\SalesHistoricalIntelligenceHealthReadModelInterface'
