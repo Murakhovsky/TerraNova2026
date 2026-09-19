@@ -110,6 +110,20 @@ final readonly class NavigationBuilder
         ];
     }
 
+    /** @return array{surface:string,primary:list<array<string,mixed>>,utility:list<array<string,mixed>>} */
+    public function portal(TenantContext $tenant): array
+    {
+        return [
+            'surface' => 'portal',
+            'primary' => [
+                ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Огляд'],
+                ['key' => 'requests', 'path' => 'cabinet#requests', 'label' => 'Звернення'],
+                ['key' => 'profile', 'path' => 'cabinet#profile', 'label' => 'Профіль'],
+            ],
+            'utility' => [],
+        ];
+    }
+
     public function activeSection(string $active): string
     {
         return match ($active) {
