@@ -24,7 +24,6 @@ return new \Phalcon\Config\Config([
 
     'application' => [
         'appDir'         => APP_PATH . '/',
-        'modelsDir'      => APP_PATH . '/Infrastructure/Persistence/Phalcon/',
         'migrationsDir'  => APP_PATH . '/migrations/',
         'cacheDir'       => BASE_PATH . '/cache/',
         'baseUri'        => '/',
