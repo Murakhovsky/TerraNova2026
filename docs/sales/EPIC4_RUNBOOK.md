@@ -13,7 +13,7 @@ Release target: Sales V0.8.6. This runbook covers the historical stage/owner pro
 ## Health check
 
 ```bash
-php app/bootstrap_cli.php sales historyHealth <organization_id>
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:sales:history:health --organization=<organization_id>
 ```
 
 `HEALTHY` means current Deal state has one matching open stage projection and, where assigned, one matching open owner projection. `ESTIMATED` rows can still exist in a healthy projection; they indicate limited historical precision, not corruption.
@@ -23,7 +23,7 @@ php app/bootstrap_cli.php sales historyHealth <organization_id>
 ## Rebuild
 
 ```bash
-php app/bootstrap_cli.php sales rebuildHistory <organization_id>
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:sales:history:rebuild --organization=<organization_id>
 ```
 
 The command clears and deterministically rebuilds stage and owner projections from canonical tenant events, then adds only explicit `ESTIMATED` current-state seeds where canonical history is unavailable. It finishes by running the health check.
