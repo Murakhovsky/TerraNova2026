@@ -75,9 +75,11 @@ foreach([
     'RealEstateWorkflowService',
     'Domains\\Property\\Bootstrap\\PropertyDomainModule',
     'Domains\\RealEstate\\Bootstrap\\RealEstateDomainModule',
+    'Infrastructure\\Platform\\Persistence\\MySql\\Event\\MysqlEventOutbox',
 ] as $needle){
     $assert(str_contains($symfonyServices,$needle),'Symfony Wave 9 DI missing: '.$needle);
 }
+$assert(!str_contains($symfonyServices,'App\\Infrastructure\\Automation\\SalesEventOutbox'),'Wave 9 must retire the Sales-only Symfony Outbox strangler.');
 $ownership=$read('app/Infrastructure/Platform/Persistence/TableOwnership.php');
 foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings','tn_real_estate_operation_receipts'] as $table){
     $assert(str_contains($ownership,"'".$table."'"),'RealEstate table ownership missing: '.$table);
