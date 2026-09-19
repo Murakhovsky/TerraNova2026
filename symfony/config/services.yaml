@@ -1479,3 +1479,17 @@ services:
   App\Web\Sales\SalesPageController:
     public: true
     tags: ['controller.service_arguments']
+
+  Domains\Sales\Application\Service\SalesAdministrationHealthClassifier: ~
+
+  Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $healthClassifier: '@Domains\Sales\Application\Service\SalesAdministrationHealthClassifier'
+
+  Domains\Sales\Application\Contract\SalesAdministrationReadModelInterface:
+    alias: Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel
+
+  App\Web\Sales\SalesAdminPageController:
+    public: true
+    tags: ['controller.service_arguments']
