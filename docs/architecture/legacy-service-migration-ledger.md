@@ -20,8 +20,9 @@ MySQL repositories, query projections and generic Kernel persistence are consoli
 
 ## Delivery boundaries
 
-- All former `modules/frontend/controllers` classes now live in `Interfaces/Web/Controller`; `FrontendRoutes` targets only the canonical namespace.
+- Former frontend business controllers are being retired from Phalcon surface-by-surface. Sales, Visualization and Diagnostic SSR are canonical in Symfony; remaining `Interfaces/Web` controllers cover only not-yet-cut public/portal/property/Spatial compatibility surfaces.
 - Spatial HTTP delivery now lives in Symfony `App\\Http\\Api\\Spatial\\SpatialController`; `Bootstrap\\SpatialModule` remains only as temporary SSR composition until final Phalcon retirement.
+- Visualization and Diagnostic HTML delivery now lives in Symfony `App\\Web`; their legacy Phalcon controllers/routes are removed.
 - Symfony Console owns operational/admin CLI commands; the Phalcon `Interfaces/Cli` surface is retired.
 - No `Modules/*` class is registered or autoloadable.
 
