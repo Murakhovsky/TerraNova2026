@@ -1055,7 +1055,7 @@ jobs:
             docker compose -f docker-compose.symfony.yml exec -T php php bin/console messenger:failed:show --max=20 -vv || true
             docker compose -f docker-compose.symfony.yml exec -T mysql \
               mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
-              "SELECT o.event_id,o.status,o.attempts,o.last_error,e.type,e.aggregate_type,e.aggregate_id,e.correlation_id FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id ORDER BY o.id;" || true
+              "SELECT o.event_id,o.status,o.attempts,o.available_at,NOW(6) AS db_now,o.last_error,e.type,e.aggregate_type,e.aggregate_id,e.correlation_id FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id ORDER BY o.id;" || true
             exit 1
           fi
 
@@ -1112,7 +1112,12 @@ jobs:
           non_sales_status=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT status FROM cos_event_outbox WHERE event_id='wave3-property-event';" | tr -d '[:space:]')
-          test "$non_sales_status" = "PENDING"
+          test "$non_sales_status" = "PUBLISHED"
+
+          non_sales_actions=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM cos_actions WHERE organization_id='default' AND target_type='property' AND target_id='999';" | tr -d '[:space:]')
+          test "$non_sales_actions" = "0"
 
           actions_before=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
@@ -1135,7 +1140,7 @@ jobs:
           non_sales_status_after=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
             "SELECT status FROM cos_event_outbox WHERE event_id='wave3-property-event';" | tr -d '[:space:]')
-          test "$non_sales_status_after" = "PENDING"
+          test "$non_sales_status_after" = "PUBLISHED"
 
           echo "Sales Wave 3 deterministic Scheduler/Messenger automation runtime passed."
 
