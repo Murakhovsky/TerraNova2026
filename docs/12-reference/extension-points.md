@@ -14,7 +14,7 @@ generated: true
 
 | Точка розширення | Тип | Внески |
 | --- | --- | ---: |
-| `api.routes` | built-in | 3 |
+| `api.routes` | built-in | 2 |
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
 | `web.navigation` | module-defined | 3 |
@@ -27,7 +27,6 @@ generated: true
 | --- | --- |
 | `diagnostic` | `diagnosticRouteContributor` |
 | `property` | `propertyRouteContributor` |
-| `sales` | `salesRouteContributor` |
 
 ## `event.consumers`
 
