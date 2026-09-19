@@ -28,7 +28,7 @@ generated: true
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
-| `service` | Service | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Service/module.php` |
+| `service` | Service | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
 
 ## Construction (`construction`)
 
@@ -175,17 +175,23 @@ Manifest capabilities не задекларовані.
 
 ## Service (`service`)
 
-**Опис із manifest:** Service operations boundary for cases, requests, tickets, SLA, assignment and resolution.
+**Опис із manifest:** Executable service operations runtime for Request → Ticket → Assignment/SLA → Escalation → Resolution → Close.
 
-- runtime service модуля: —;
+- runtime service модуля: `serviceDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: —.
+- міграції: `app/migrations/20260919_000064_service_wave11_cutover.sql`.
 
 ### Задекларовані capabilities
 
-Manifest capabilities не задекларовані.
+- `service.api.v1`;
+- `service.assignment`;
+- `service.escalation`;
+- `service.request`;
+- `service.resolution`;
+- `service.sla`;
+- `service.ticket`;
 
 ## Межі довідника
 

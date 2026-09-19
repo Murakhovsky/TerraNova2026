@@ -20,7 +20,7 @@ kind: product
 | Property | `0.12.0` | встановлюваний модуль із канонічними записами Asset/Inventory/Listing, сумісним представленням, аналітикою, інтелектом і зовнішньою взаємодією |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
-| Service | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
+| Service | `0.2.0` | активний runtime Request → Ticket → Assignment/SLA → Escalation → Resolution → Close; Symfony API, persistence, events, audit та idempotency |
 | Construction | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Hr | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Real_estate | `0.2.0` | активний brokerage runtime поверх Property: Opportunity → Property Match → Offer → Viewing → Reservation; Symfony API, persistence, events, audit та idempotency |
@@ -77,7 +77,11 @@ Asset / Inventory / Listing / Publication
 
 ## Каркасні домени V1
 
-Finance, Procurement, Service, HR і Construction залишаються installable skeleton Domains із канонічними моделями та Application contracts, але без повного runtime. Real Estate з Wave 9 уже активний runtime Domain: він оркеструє brokerage lifecycle поверх Sales opportunity та канонічного Property, не дублює Property registry і має власний executable Process Registry definition. Process-coverage exemption для Real Estate видалено.
+Finance, Procurement, HR і Construction залишаються installable skeleton Domains із канонічними моделями та Application contracts, але без повного runtime. Real Estate з Wave 9 та Service з Wave 11 уже мають активні runtime Domains і власні executable Process Registry definitions. Process-coverage exemptions для них видалено.
+
+## Service: сервісні операції
+
+Service `0.2.0` володіє життєвим циклом `Request → Ticket → Assignment/SLA → Escalation → Resolution → Close`. Assignment, SLA, Escalation і Resolution зберігаються як історичні записи; concurrent Ticket mutations серіалізуються row lock-ом; Request і ServiceCase закриваються автоматично після закриття останніх Tickets.
 
 ## Платформні документи
 

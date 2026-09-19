@@ -1,0 +1,70 @@
+name: Service Domain Checks
+
+on:
+  push:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Domains/Service/**'
+      - 'app/Bootstrap/ServiceServices.php'
+      - 'app/config/services_kernel.php'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
+      - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
+      - 'symfony/src/Application/Service/**'
+      - 'symfony/src/Http/Api/V1/Controller/ServiceController.php'
+      - 'symfony/config/services.yaml'
+      - 'symfony/config/routes.yaml'
+      - 'resources/processes/service-request-to-close.json'
+      - 'tests/architecture/service_wave11_cutover.php'
+      - 'tests/architecture/process_v01.php'
+      - 'tests/unit/service_wave11_runtime.php'
+      - 'tests/unit/domain_skeletons.php'
+      - 'docs/02-workflows/service-request-to-close.md'
+      - 'docs/04-domains/service/**'
+      - 'docs/.vitepress/process-coverage-exemptions.json'
+      - '.github/workflows/service.yml'
+  pull_request:
+    branches: [main, migration/symfony]
+    paths:
+      - 'app/Domains/Service/**'
+      - 'app/Bootstrap/ServiceServices.php'
+      - 'app/config/services_kernel.php'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
+      - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
+      - 'symfony/src/Application/Service/**'
+      - 'symfony/src/Http/Api/V1/Controller/ServiceController.php'
+      - 'symfony/config/services.yaml'
+      - 'symfony/config/routes.yaml'
+      - 'resources/processes/service-request-to-close.json'
+      - 'tests/architecture/service_wave11_cutover.php'
+      - 'tests/architecture/process_v01.php'
+      - 'tests/unit/service_wave11_runtime.php'
+      - 'tests/unit/domain_skeletons.php'
+      - 'docs/02-workflows/service-request-to-close.md'
+      - 'docs/04-domains/service/**'
+      - 'docs/.vitepress/process-coverage-exemptions.json'
+      - '.github/workflows/service.yml'
+  workflow_dispatch:
+
+jobs:
+  service-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Service architecture
+        run: |
+          php tests/architecture/service_wave11_cutover.php
+          php tests/architecture/process_v01.php
+      - name: Service runtime contracts
+        run: |
+          php tests/unit/service_wave11_runtime.php
+          php tests/unit/domain_skeletons.php
+      - name: Service PHP lint
+        run: |
+          find app/Domains/Service symfony/src/Application/Service -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l app/Bootstrap/ServiceServices.php
+          php -l symfony/src/Http/Api/V1/Controller/ServiceController.php

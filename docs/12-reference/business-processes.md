@@ -23,6 +23,7 @@ generated: true
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
 | Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 1/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
+| Service Request → Ticket Close | `service` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/service-request-to-close.md) |
 
 ## Модель перевірки та можливостей
 
@@ -40,6 +41,7 @@ generated: true
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
 | Sales Request → Property Match | 5/5 | 1/5 | 4/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
+| Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
 
 ## Diagnostic Session → Recommendation
 
@@ -190,6 +192,38 @@ generated: true
 | Resolve canonical Property presentation | Property read boundary | `property` | `property.reference` | `operation` | так | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php` · `getPropertyPresentation(` [source] |
 | Record Property Match in Sales | Sales application | `sales` | gap: `missing-domain-capability` | `state` | так | source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `upsertPropertyMatch(` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `PropertyMatchStatus::Interested` [source] |
 | Record Sales activity and publish case/lead events | Sales application | `sales` | gap: `missing-domain-capability` | `outcome` | ні | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `Обʼєкт додано у підбір` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `ClientCaseCreated::create` [source] |
+
+## Service Request → Ticket Close
+
+- **Process ID:** `service.request-to-close`
+- **Schema:** `v4`
+- **Domain:** `service`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 7/7 кроків
+- **Cross-domain кроки:** 0/7
+- **Derived verification:** `source-verified`
+- **Тригер:** A service request requires tracked ownership, SLA control and resolution
+- **Workflow:** [Service Request → Ticket Close](../02-workflows/service-request-to-close.md)
+
+**Результати**
+
+- Service request and case are traceable
+- Ticket ownership and SLA history are preserved
+- Escalations are explicit and ordered
+- Resolution is recorded before close
+- Request and case close automatically when their tickets are complete
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Create Service Request | service manager | `service` | `service.request` | `state` | так | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function createRequest(` [source] |
+| Create Service Ticket | service manager | `service` | `service.ticket` | `state` | так | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function createTicket(` [source] |
+| Assign Ticket | service manager | `service` | `service.assignment` | `state` | так | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function assignTicket(` [source] |
+| Set SLA | service manager | `service` | `service.sla` | `state` | так | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function setSla(` [source] |
+| Escalate Ticket | service manager | `service` | `service.escalation` | `operation` | ні | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function escalate(` [source] |
+| Resolve Ticket | service assignee | `service` | `service.resolution` | `outcome` | так | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function resolve(` [source] |
+| Close Ticket | service manager | `service` | `service.ticket` | `outcome` | так | source `app/Domains/Service/Application/Service/ServiceWorkflowService.php` · `function close(` [source] |
 
 ## Авторитетність і обмеження
 
