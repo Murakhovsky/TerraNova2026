@@ -8,7 +8,6 @@ use Infrastructure\Visualization\Architecture\CrossDomainArchitectureGraphProvid
 use Infrastructure\Visualization\Architecture\FallbackArchitectureGraphProvider;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Module\ModuleCatalog;
-use Kernel\Visualization\Graph\GraphProviderInterface;
 
 final readonly class ArchitectureGraphProviderFactory
 {
@@ -18,7 +17,7 @@ final readonly class ArchitectureGraphProviderFactory
     ) {
     }
 
-    public function create(): GraphProviderInterface
+    public function create(): FallbackArchitectureGraphProvider
     {
         $staticBase = new ArchitectureGraphProvider($this->catalog, new DomainModuleRegistry([]));
         $staticGraph = new FallbackArchitectureGraphProvider(
