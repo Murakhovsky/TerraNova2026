@@ -1426,9 +1426,31 @@ jobs:
             if (count($d["tickets"]??[])!==1) exit(65);
           '
 
+          # Prove tenant isolation with a resource owned by another organization while
+          # keeping authentication on the known-good default tenant session. Authentication
+          # of an independent tenant is a separate security-fixture concern and must not
+          # masquerade as a Service repository isolation test.
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          INSERT INTO tn_service_cases
+            (organization_id,case_id,subject,status,created_by,updated_by)
+          VALUES
+            ('other-org','SCASE-WAVE11-OTHER','Other tenant service case','open',1003,1003);
+
+          INSERT INTO tn_service_requests
+            (organization_id,request_id,case_id,summary,requester_ref,status,created_by,updated_by)
+          VALUES
+            ('other-org','SREQ-WAVE11-OTHER','SCASE-WAVE11-OTHER','Other tenant request','person:other','open',1003,1003);
+
+          INSERT INTO tn_service_tickets
+            (organization_id,ticket_id,request_id,reference,subject,priority,status,created_by,updated_by)
+          VALUES
+            ('other-org','STKT-WAVE11-OTHER','SREQ-WAVE11-OTHER','SRV-WAVE11-OTHER-001','Other tenant ticket','normal','open',1003,1003);
+          SQL
+
           status=$(curl --silent --show-error --output /tmp/wave11-cross-tenant.json --write-out '%{http_code}' \
-            --cookie 'PHPSESSID=ci-other-manager0003' \
-            "http://127.0.0.1:8081/api/v1/service/tickets/$service_ticket_id")
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            "http://127.0.0.1:8081/api/v1/service/tickets/STKT-WAVE11-OTHER")
           echo "Wave 11 Cross-tenant HTTP $status"; cat /tmp/wave11-cross-tenant.json; echo
           test "$status" = "404"
 
