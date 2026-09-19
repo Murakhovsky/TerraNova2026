@@ -71,20 +71,26 @@ if (!str_contains($webServices, "setShared('propertyRouteContributor'")) {
     throw new RuntimeException('Property route contributor is not registered in Web composition.');
 }
 
-$routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php');
-foreach (['/api/v1/property-registry', '/api/v1/property-registry/health'] as $route) {
-    if (!str_contains($routes, $route)) {
-        throw new RuntimeException('Property canonical runtime route is missing: ' . $route);
+$contributorSource = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php');
+if (!str_contains($contributorSource, 'PublicPropertyRoutes::register($router)')) {
+    throw new RuntimeException('Property Web contributor must preserve public HTML routes.');
+}
+if (str_contains($contributorSource, 'PropertyRuntimeRoutes')) {
+    throw new RuntimeException('Retired PropertyRuntimeRoutes was restored.');
+}
+foreach ([
+    'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php',
+    'app/Interfaces/Api/Controller/PropertyRuntimeController.php',
+    'app/Interfaces/Api/Controller/PropertyCanonicalController.php',
+] as $retired) {
+    if (is_file($root . '/' . $retired)) {
+        throw new RuntimeException('Retired Property HTTP runtime artifact was restored: ' . $retired);
     }
 }
-if (str_contains($routes, "addGet('/api/v1/properties")) {
-    throw new RuntimeException('Canonical Property runtime must not collapse into the legacy public catalog API.');
-}
-
-$controller = (string) file_get_contents($root . '/app/Interfaces/Api/Controller/PropertyRuntimeController.php');
-foreach (['cosModuleReadinessDiagnostic', 'cosModuleCapabilityRegistry'] as $service) {
-    if (!str_contains($controller, $service)) {
-        throw new RuntimeException('Property runtime controller is missing Kernel service: ' . $service);
+$symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
+foreach (['/api/v1/properties', '/api/v1/property-inventory/{id}/status', '/api/v1/property-inventory/{id}/reservations'] as $route) {
+    if (!str_contains($symfonyRoutes, $route)) {
+        throw new RuntimeException('Canonical Symfony Property route is missing: ' . $route);
     }
 }
 

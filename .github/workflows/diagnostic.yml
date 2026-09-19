@@ -70,7 +70,6 @@ jobs:
           find app/Domains/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Bootstrap/DiagnosticServices.php
           php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/Interfaces/Api/Controller/DiagnosticRuntimeController.php
           php -l app/Interfaces/Web/Controller/DiagnosticReportController.php
           php -l app/Interfaces/Web/Routing/DiagnosticRoutes.php
           php -l app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php

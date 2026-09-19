@@ -18,10 +18,7 @@ on:
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
-      - 'app/Interfaces/Api/Controller/PropertyRuntimeController.php'
-      - 'app/Interfaces/Api/Controller/PropertyCanonicalController.php'
       - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
-      - 'app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php'
       - 'app/migrations/*property*.sql'
       - 'app/migrations/*real_estate*.sql'
       - 'docs/04-domains/property/**'
@@ -178,9 +175,6 @@ jobs:
           php -l app/Bootstrap/WebApplicationServices.php
           php -l app/Bootstrap/SpatialModule.php
           php -l app/config/services_kernel.php
-          php -l app/Interfaces/Api/Controller/PropertyRuntimeController.php
-          php -l app/Interfaces/Api/Controller/PropertyCanonicalController.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
-          php -l app/Interfaces/Web/Routing/PropertyRuntimeRoutes.php
           find tests/architecture -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l
           find tests/unit -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l

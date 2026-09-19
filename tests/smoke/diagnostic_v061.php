@@ -22,27 +22,25 @@ $module = new DiagnosticDomainModule([]);
 $assert($module->name() === 'diagnostic', 'Diagnostic runtime module id mismatch.');
 $assert($module->actionTypes() === ['IMPLEMENT_DIAGNOSTIC_RECOMMENDATION'], 'Diagnostic action ownership mismatch.');
 
-$routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/DiagnosticRoutes.php');
-foreach ([
-    '/api/diagnostics',
-    '/answers',
-    '/complete',
-    '/report',
-    '/recommendations/',
-    '/accept',
-    '/re-diagnostic',
-    '/compare/',
-    '/diagnostics/{session:',
-] as $marker) {
-    $assert(str_contains($routes, $marker), 'Diagnostic runtime route missing: ' . $marker);
-}
+$legacyRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/DiagnosticRoutes.php');
+$assert(str_contains($legacyRoutes, '/diagnostics/{session:'), 'Server-rendered Diagnostic report route is missing.');
+$assert(!str_contains($legacyRoutes, '/api/diagnostics'), 'Retired Phalcon Diagnostic API route was restored.');
+$assert(!is_file($root . '/app/Interfaces/Api/Controller/DiagnosticRuntimeController.php'), 'Retired DiagnosticRuntimeController was restored.');
 
-$api = (string) file_get_contents($root . '/app/Interfaces/Api/Controller/DiagnosticRuntimeController.php');
-foreach (['startAction', 'resumeAction', 'nextAction', 'answerAction', 'completeAction', 'reportAction', 'acceptAction', 'reDiagnosticAction', 'compareAction'] as $action) {
-    $assert(str_contains($api, 'function ' . $action), 'Diagnostic runtime API action missing: ' . $action);
+$symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
+foreach ([
+    '/api/v1/diagnostics',
+    '/api/v1/diagnostics/{id}/interview/next',
+    '/api/v1/diagnostics/{id}/interview/answers',
+    '/api/v1/diagnostics/{id}/evidence',
+    '/api/v1/diagnostics/{id}/complete',
+    '/api/v1/diagnostics/{id}/report',
+    '/api/v1/diagnostics/{id}/assessment',
+    '/api/v1/diagnostics/{id}/findings',
+    '/api/v1/diagnostics/{id}/recommendations',
+] as $marker) {
+    $assert(str_contains($symfonyRoutes, $marker), 'Canonical Symfony Diagnostic route missing: ' . $marker);
 }
-$assert(str_contains($api, "getShared('diagnosticRuntimeService')"), 'Diagnostic API is not wired to the runtime service.');
-$assert(str_contains($api, 'validMutation()'), 'Diagnostic mutation endpoints are missing CSRF protection.');
 
 $services = (string) file_get_contents($root . '/app/Bootstrap/DiagnosticServices.php');
 foreach ([
