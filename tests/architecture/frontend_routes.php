@@ -7,14 +7,9 @@ require $root . '/vendor/autoload.php';
 $frontendRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
 
 $required = [
-    '/api/health',
     '/api/v1/properties',
     '/api/v1/properties/featured',
     '/api/v1/properties/{slug:[a-z0-9-]+}',
-    '/api/cos/actions',
-    '/api/cos/approvals',
-    '/api/cos/rules',
-    '/api/cos/audit',
     '/property',
     '/client-case',
     '/admin/content',
@@ -30,7 +25,7 @@ foreach ($required as $pattern) {
     }
 }
 
-foreach (['/api/sales/', '/api/integrations/{organization:', "'crm_webhook'"] as $retired) {
+foreach (['/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
     if (str_contains($frontendRoutes, $retired)) {
         throw new RuntimeException('Retired legacy API route restored in FrontendRoutes: ' . $retired);
     }

@@ -36,6 +36,7 @@ jobs:
           php tests/architecture/frontend_assets.php
           php tests/architecture/frontend_interface.php
           php tests/architecture/frontend_routes.php
+          php tests/architecture/runtime_cleanup_third_slice.php
           php tests/architecture/web_v05_module_navigation.php
           php tests/unit/web_v05_module_navigation.php
           php tests/architecture/web_v013_explicit_routing.php

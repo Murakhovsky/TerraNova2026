@@ -15,7 +15,7 @@ Business transaction
   -> Result Event + Audit + Metric
 ```
 
-The Kernel contains reusable mechanisms only. `Domains/Sales` supplies Sales vocabulary and use cases through composition; it does not inherit from the Kernel. Phalcon MVC is retained at the HTTP delivery edge under `Interfaces`, while legacy `modules` are migrated incrementally.
+The Kernel contains reusable mechanisms only. `Domains/Sales` supplies Sales vocabulary and use cases through composition; it does not inherit from the Kernel. Symfony is the canonical runtime for business and control-plane APIs. Phalcon is retained only for the remaining server-rendered/compatibility surfaces while those are retired slice by slice.
 
 The supported runtime baseline is PHP 8.2 or newer with Phalcon 5.9 or newer. The production image currently uses PHP 8.3 and Phalcon 5.19; the same codebase and Composer lock also work with the prepared native PHP 8.2 runtime.
 
@@ -33,7 +33,7 @@ The `migrate` one-shot service applies SQL migrations under a MySQL advisory loc
 Useful endpoints and commands:
 
 ```text
-GET  /api/health
+GET  /api/v1/health
 GET  /cos/control-center
 POST /api/integrations/{organization}/crm/{provider}/webhook
 

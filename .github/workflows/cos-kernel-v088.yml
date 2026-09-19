@@ -40,6 +40,6 @@ jobs:
           php -l app/Kernel/Module/KernelVersion.php
           php -l app/Kernel/Module/EffectiveModuleContext.php
           php -l app/Bootstrap/ModuleServices.php
-          php -l app/Interfaces/Api/Controller/PlatformModuleController.php
+          php -l symfony/src/Http/Api/V1/Controller/PlatformModuleController.php
           php -l tests/unit/module_effective_context.php
           php -l tests/architecture/kernel_v088_effective_module_context.php

@@ -82,7 +82,7 @@ $workbench->setPermission('org-universal', 7, [
 ]);
 v055(($workbenchRepository->updates[0]['mode'] ?? '') === 'deny', 'Capability override was not delegated to the workbench repository.');
 
-$routes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
+$routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 foreach ([
     '/workbench/scenarios',
     '/permissions/matrix',
@@ -92,19 +92,19 @@ foreach ([
     v055(str_contains($routes, $needle), 'V0.5.5 route is missing: ' . $needle);
 }
 
-$controller = (string) file_get_contents($root . '/app/Interfaces/Api/Controller/DiagnosticMethodologyWorkbenchController.php');
+$controller = (string) file_get_contents($root . '/symfony/src/Http/Api/V1/Controller/DiagnosticMethodologyController.php');
 foreach ([
-    'deleteScenarioAction',
-    'cloneScenarioAction',
-    'runScenarioAction',
-    'permissionMatrixAction',
-    'permissionOverrideAction',
-    'runAction',
+    'deleteScenario',
+    'cloneScenario',
+    'runScenario',
+    'permissionMatrix',
+    'permissionOverride',
+    'run',
 ] as $method) {
     v055(str_contains($controller, 'function ' . $method), 'Workbench controller is missing ' . $method . '.');
 }
 v055(
-    str_contains($controller, "], 'admin');") && str_contains($controller, 'diagnosticRun($org, $sessionId)'),
+    str_contains($controller, 'DiagnosticMethodologyAccess::EDIT') && str_contains($controller, 'diagnosticRun($o,$session)'),
     'Detailed Diagnostic Run access is not protected by edit capability.',
 );
 
@@ -170,8 +170,8 @@ v055(
 );
 v055(str_contains($importer, "'-missing'"), 'Sales v0.2 recommendations are not linked to missing-evidence findings.');
 
-$composition = (string) file_get_contents($root . '/app/Bootstrap/DiagnosticServices.php');
-v055(str_contains($composition, 'diagnosticMethodologyWorkbench'), 'Methodology Workbench is not wired through the Diagnostic composition root.');
+$composition = (string) file_get_contents($root . '/symfony/config/services.yaml');
+v055(str_contains($composition, 'Domains\\Diagnostic\\Application\\Service\\MethodologyWorkbenchService'), 'Methodology Workbench is not wired through the Symfony composition root.');
 
 $entrypoint = (string) file_get_contents($root . '/frontend/entrypoints/diagnostics-methodology-studio.js');
 v055(str_contains($entrypoint, 'methodology-studio-v055.js'), 'V0.5.5 frontend is not wired into the Methodology Studio entrypoint.');

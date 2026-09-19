@@ -50,7 +50,7 @@ paths:
               schema: { $ref: '#/components/schemas/SuccessEnvelope' }
         '404': { $ref: '#/components/responses/NotFound' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
-  /api/health:
+  /api/v1/health:
     get:
       operationId: health
       responses:

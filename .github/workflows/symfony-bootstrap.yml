@@ -238,6 +238,12 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_request_mapper.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/http_correlation_contract.php
           php tests/architecture/symfony_runtime_hardening.php
+          php tests/architecture/runtime_cleanup_third_slice.php
+          php tests/architecture/kernel_v082_module_control.php
+          php tests/architecture/kernel_v088_effective_module_context.php
+          php tests/architecture/kernel_v0810_module_readiness_diagnostics.php
+          php tests/smoke/diagnostic_v053.php
+          php tests/smoke/diagnostic_v055.php
 
       - name: Verify Sales strangler slice
         run: |
