@@ -69,6 +69,25 @@ server {
         proxy_send_timeout 120s;
     }
 
+    # Spatial API and assets are served by Symfony after cutover.
+    location ^~ /api/spatial/ {
+        client_max_body_size 220m;
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    location ^~ /uploads/spatial/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
     location / {
         proxy_pass http://$UPSTREAM;
         proxy_http_version 1.1;
@@ -103,4 +122,4 @@ if ! grep -Fq "location ^~ /.well-known/acme-challenge/" <<< "$NGINX_CONFIG_DUMP
   exit 53
 fi
 
-echo "HTTP bootstrap route loaded: legacy/SSR -> $UPSTREAM; /api/v1/* -> $SYMFONY_UPSTREAM."
+echo "HTTP bootstrap route loaded: legacy/SSR -> $UPSTREAM; /api/v1/* and /api/spatial/* -> $SYMFONY_UPSTREAM."
