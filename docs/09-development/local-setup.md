@@ -14,13 +14,19 @@ kind: how-to
 
 1. Скопіюйте `.env.docker.example` у `.env.docker`.
 2. Замініть шаблонні значення та секрети на локальні.
-3. Запустіть набір сервісів:
+3. Запустіть compatibility/SSR stack:
 
 ```bash
 docker compose --env-file .env.docker up -d --build
 ```
 
-Одноразовий сервіс `migrate` застосовує SQL-міграції до запуску сервісів застосунку та робітника.
+4. Після створення legacy network/session volume запустіть канонічний Symfony runtime:
+
+```bash
+bash deploy/symfony-dev.sh
+```
+
+Legacy `migrate` застосовує SQL-міграції. Symfony обслуговує канонічний `/api/v1/*`, а Phalcon тимчасово залишається для SSR/compatibility поверхонь. Symfony Messenger/Scheduler використовують Redis; схема БД залишається під контролем deployment migrations, тоді як Symfony app-user має лише DML-доступ до legacy schema.
 
 Перевірка середовища виконання:
 
