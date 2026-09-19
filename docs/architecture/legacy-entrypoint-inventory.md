@@ -12,7 +12,7 @@ Inventory date: 2026-09-19. This file is the migration ledger for externally rea
 | `app/bootstrap_web.php` | Web | Platform | keep | composition root for public web/API |
 | `app/bootstrap_tg.php` | Telegram | Platform | keep | canonical Telegram composition with `Interfaces\\Telegram\\Module` |
 | `app/bootstrap_games.php` | Games | Games | removed | Games runtime removed 2026-08-28 |
-| `app/bootstrap_cli.php` | manual compatibility CLI | Platform | temporary | no longer used by production worker/migrations; remaining admin commands migrate separately |
+| `app/bootstrap_cli.php` | CLI | Platform | removed | Symfony Console owns operational/admin commands |
 | `bin/telegram-webhook.php` | Telegram | Operations | keep | explicit webhook runner |
 | `bin/telegram-worker.php` | Telegram | Operations | keep | supervised worker; next runtime-retirement slice |
 | `bin/migrate.php` | deployment | Platform | keep | framework-neutral schema migration bootstrap for compatibility stack |
