@@ -8,12 +8,14 @@ use Infrastructure\Visualization\Architecture\CrossDomainArchitectureGraphProvid
 use Infrastructure\Visualization\Architecture\FallbackArchitectureGraphProvider;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Module\ModuleCatalog;
+use Psr\Container\ContainerInterface;
+use Throwable;
 
 final readonly class ArchitectureGraphProviderFactory
 {
     public function __construct(
         private ModuleCatalog $catalog,
-        private DomainModuleRegistry $runtimeModules,
+        private ContainerInterface $runtimeModules,
     ) {
     }
 
@@ -25,9 +27,24 @@ final readonly class ArchitectureGraphProviderFactory
             $staticBase,
         );
 
-        $runtimeBase = new ArchitectureGraphProvider($this->catalog, $this->runtimeModules);
-        $runtimeGraph = new CrossDomainArchitectureGraphProvider($runtimeBase, $this->catalog);
+        try {
+            $runtimeModules = $this->runtimeModules->get('registry');
+            if (!$runtimeModules instanceof DomainModuleRegistry) {
+                throw new \RuntimeException('Architecture runtime module registry is invalid.');
+            }
 
-        return new FallbackArchitectureGraphProvider($runtimeGraph, $staticGraph);
+            $runtimeBase = new ArchitectureGraphProvider($this->catalog, $runtimeModules);
+            $runtimeGraph = new CrossDomainArchitectureGraphProvider($runtimeBase, $this->catalog);
+
+            return new FallbackArchitectureGraphProvider($runtimeGraph, $staticGraph);
+        } catch (Throwable $exception) {
+            error_log(sprintf(
+                '[COS Visualization] Runtime module registry unavailable for Architecture Graph: %s: %s',
+                $exception::class,
+                $exception->getMessage(),
+            ));
+
+            return $staticGraph;
+        }
     }
 }
