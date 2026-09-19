@@ -6,7 +6,7 @@ $contracts = [
     'app/Kernel/Policy/Service/PolicyContextBuilder.php' => 'policyContextProviderFor',
     'app/Kernel/Policy/Service/ActionPolicyService.php' => 'PolicyDecision::Denied, PolicyDecision::HumanOnly => $this->actions->reject',
     'app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlSalesPolicyAdministration.php' => '$this->engine->evaluate',
-    'app/Interfaces/Web/Routing/SalesRoutes.php' => '/sales/admin/actions',
+    'symfony/config/routes.yaml' => 'cos_web_sales_admin_actions_page:',
     'app/Interfaces/Web/View/sales_admin/actions.phtml' => 'Test Policy',
     'app/Interfaces/Web/View/sales/admin.phtml' => 'Actions & Policies',
 ];
