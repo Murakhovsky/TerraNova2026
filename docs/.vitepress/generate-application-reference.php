@@ -34,16 +34,6 @@ $routeCatalogues = [
         'contributor' => 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php',
         'sources' => ['app/Interfaces/Web/Routing/PublicPropertyRoutes.php', 'symfony/config/routes.yaml'],
     ],
-    'sales' => [
-        'service' => 'salesRouteContributor',
-        'contributor' => 'app/Interfaces/Web/Routing/SalesModuleRouteContributor.php',
-        'sources' => [
-            'app/Interfaces/Web/Routing/SalesAdministrationRoutes.php',
-            'app/Interfaces/Web/Routing/SalesIntegrationRoutes.php',
-            'app/Interfaces/Web/Routing/SalesRoutes.php',
-            'app/Interfaces/Web/Routing/SalesTeamRoutes.php',
-        ],
-    ],
 ];
 
 foreach ($modules as $moduleId => $module) {
