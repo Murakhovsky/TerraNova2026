@@ -6,7 +6,6 @@ use Phalcon\Mvc\View;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Media\ImageOptimizerService;
 use Infrastructure\Media\MediaStorageService;
-use Infrastructure\Framework\PhalconEventService;
 use Infrastructure\Identity\SessionAuthService;
 use Interfaces\Web\Tenant\SessionOrganizationContext;
 use Interfaces\Web\Security\CsrfTokenManager;
@@ -73,10 +72,6 @@ $di->setShared('view', function() {
     $view = new View();
     $view->disable();
     return $view;
-});
-
-$di->setShared('eventService', function () {
-    return new PhalconEventService();
 });
 
 if (!function_exists('di')) {
