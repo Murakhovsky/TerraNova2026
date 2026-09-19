@@ -54,6 +54,19 @@ final readonly class MysqlServiceRepository implements ServiceRepositoryInterfac
         return $request;
     }
 
+    public function lockRequest(string $organizationId, string $requestId): array
+    {
+        $row=$this->one(
+            'SELECT organization_id,request_id,case_id,status
+             FROM tn_service_requests
+             WHERE organization_id=:organization_id AND request_id=:request_id
+             LIMIT 1 FOR UPDATE',
+            ['organization_id'=>$organizationId,'request_id'=>$requestId],
+        );
+        if($row===null)throw new InvalidArgumentException('Service request was not found.');
+        return $row;
+    }
+
     public function createTicket(array $ticket): void
     {
         $this->execute(
@@ -269,18 +282,16 @@ final readonly class MysqlServiceRepository implements ServiceRepositoryInterfac
 
     public function closeCaseIfComplete(string $organizationId, string $ticketId, int $actorId): void
     {
-        $row=$this->one(
-            'SELECT r.request_id,r.case_id
-             FROM tn_service_tickets t
-             INNER JOIN tn_service_requests r
-               ON r.organization_id=t.organization_id AND r.request_id=t.request_id
-             WHERE t.organization_id=:organization_id AND t.ticket_id=:ticket_id LIMIT 1',
+        $ticket=$this->one(
+            'SELECT request_id FROM tn_service_tickets
+             WHERE organization_id=:organization_id AND ticket_id=:ticket_id LIMIT 1',
             ['organization_id'=>$organizationId,'ticket_id'=>$ticketId],
         );
-        if($row===null)return;
+        if($ticket===null)return;
 
-        $requestId=(string)$row['request_id'];
-        $caseId=(string)$row['case_id'];
+        $requestId=(string)$ticket['request_id'];
+        $request=$this->lockRequest($organizationId,$requestId);
+        $caseId=(string)$request['case_id'];
 
         $openTickets=(int)$this->scalar(
             'SELECT COUNT(*) FROM tn_service_tickets
