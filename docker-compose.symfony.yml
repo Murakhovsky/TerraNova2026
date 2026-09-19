@@ -88,6 +88,21 @@ services:
       - spatial_uploads:/var/www/html/public/uploads/spatial
     networks: [backend, legacy_backend]
 
+  kernel-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["php", "bin/console", "cos:kernel:worker", "--runtime-seconds=3600", "--idle-milliseconds=250"]
+    environment:
+      <<: *symfony-environment
+      MESSENGER_CONSUMER_NAME: kernel-worker-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend, legacy_backend]
+
   scheduler:
     image: cos-symfony-php:local
     restart: unless-stopped
