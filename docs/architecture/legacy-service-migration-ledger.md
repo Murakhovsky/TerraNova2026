@@ -10,13 +10,13 @@ Audit date: 2026-08-28.
 |---|---|---|
 | `modules/frontend/services` | `Domains/*/Application`, `Interfaces/Web/Service`, `Interfaces/Web/Page`, `Infrastructure/Persistence/MySql`, `Infrastructure/Persistence/MySql/ReadModel`, `Infrastructure/Integration/N8n` | legacy files removed |
 | `modules/spatial/services` | `Domains/Spatial/Application/Contract`, `Infrastructure/Persistence/MySql/Spatial`, `Infrastructure/Media`, `Infrastructure/Security`, `Infrastructure/Spatial` | legacy files removed |
-| `modules/TgAdmin` | `Interfaces/Telegram`, `Infrastructure/Integration/Telegram`, `Infrastructure/Persistence/Phalcon` | 23 commands discoverable; legacy module removed |
+| `modules/TgAdmin` | outbound `Infrastructure/Integration/Telegram` notification channel | inbound Longman/Phalcon runtime and command tree removed |
 | `modules/Users` | `Domains/Identity`, `Infrastructure/Identity`, `Infrastructure/Persistence/Phalcon/Identity` | legacy module removed |
 | `modules/economy/services` | — | removed: no supported runtime flow or database schema |
 | `modules/Games` | — | removed by product decision |
 | `common/services` | `Infrastructure/Persistence/MySql/Database/Connection`, `Infrastructure/Media`, `Infrastructure/Integration/Telegram`, `Infrastructure/Identity`, `Infrastructure/Framework` | legacy files removed |
 
-MySQL repositories, query projections and generic Kernel persistence are consolidated under `Infrastructure/Persistence/MySql`. ActiveRecord is restricted to the 28 Telegram/Identity mappings still used by Longman commands. See `persistence.md` for the responsibility map and enforced boundaries.
+MySQL repositories, query projections and generic Kernel persistence are consolidated under PDO/MySQL adapters. The final Telegram/Identity Phalcon ActiveRecord quarantine has been removed. See `persistence.md` for the responsibility map and enforced boundaries.
 
 ## Delivery boundaries
 
@@ -34,6 +34,6 @@ All former `public/js` and `public/css` source files live in `frontend`. Vite bu
 - `tests/architecture/layer_dependencies.php` protects canonical layer direction.
 - `tests/architecture/persistence_boundaries.php` protects Domain-owned persistence ports and the ActiveRecord quarantine.
 - `tests/architecture/legacy_service_facades.php` protects the legacy service boundary.
-- `tests/architecture/telegram_migration.php` loads the migrated Telegram surface and verifies command discovery.
+- `tests/architecture/telegram_migration.php` prevents restoration of the retired Phalcon inbound bot while preserving framework-neutral outbound automation.
 - `tests/architecture/frontend_assets.php` verifies every browser entrypoint and generated manifest file.
 - Integration coverage exercises ClientCase, Content/N8n, Spatial, Telegram automation, MySQL and HTTP composition.
