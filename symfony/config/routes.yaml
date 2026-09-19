@@ -1130,5 +1130,58 @@ cos_web_sales_director:
 
 cos_web_sales_admin:
   path: /sales/admin
-  controller: App\Web\Sales\SalesPageController::admin
+  controller: App\Web\Sales\SalesAdminPageController::index
+  methods: [GET]
+
+cos_web_sales_admin_pipelines_page:
+  path: /sales/admin/pipelines
+  controller: App\Web\Sales\SalesAdminPageController::pipelines
+  methods: [GET]
+
+cos_web_sales_admin_pipeline_page:
+  path: /sales/admin/pipelines/{id}
+  controller: App\Web\Sales\SalesAdminPageController::pipeline
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,64}' }
+
+cos_web_sales_admin_rules_page:
+  path: /sales/admin/rules
+  controller: App\Web\Sales\SalesAdminPageController::rules
+  methods: [GET]
+
+cos_web_sales_admin_rule_page:
+  path: /sales/admin/rules/{id}
+  controller: App\Web\Sales\SalesAdminPageController::rule
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
+
+cos_web_sales_admin_agents_page:
+  path: /sales/admin/agents
+  controller: App\Web\Sales\SalesAdminPageController::agents
+  methods: [GET]
+
+cos_web_sales_admin_agent_page:
+  path: /sales/admin/agents/{name}
+  controller: App\Web\Sales\SalesAdminPageController::agent
+  methods: [GET]
+  requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
+
+cos_web_sales_admin_actions_page:
+  path: /sales/admin/actions
+  controller: App\Web\Sales\SalesAdminPageController::actions
+  methods: [GET]
+
+cos_web_sales_admin_teams_page:
+  path: /sales/admin/teams
+  controller: App\Web\Sales\SalesAdminPageController::teams
+  methods: [GET]
+
+cos_web_sales_admin_integrations_page:
+  path: /sales/admin/integrations
+  controller: App\Web\Sales\SalesAdminPageController::integrations
+  methods: [GET]
+
+cos_web_sales_admin_health_page:
+  path: /sales/admin/health
+  controller: App\Web\Sales\SalesAdminPageController::health
   methods: [GET]
