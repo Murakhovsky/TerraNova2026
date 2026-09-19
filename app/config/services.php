@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
 use Phalcon\Mvc\View;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Infrastructure\Media\ImageOptimizerService;
@@ -13,26 +12,6 @@ use Interfaces\Web\Assets\ViteAssetManifest;
 
 $di->setShared('config', function () {
     return include APP_PATH . "/config/config.php";
-});
-
-$di->setShared('db', function () {
-    $config = $this->getConfig();
-
-    $class = 'Phalcon\Db\Adapter\Pdo\\' . $config->database->adapter;
-    $params = [
-        'host'     => $config->database->host,
-        'port'     => $config->database->port,
-        'username' => $config->database->username,
-        'password' => $config->database->password,
-        'dbname'   => $config->database->dbname,
-        'charset'  => $config->database->charset
-    ];
-
-    if ($config->database->adapter == 'Postgresql') {
-        unset($params['charset']);
-    }
-
-    return new $class($params);
 });
 
 $di->setShared('databaseService', function () {
@@ -64,9 +43,6 @@ $di->setShared('viteAssetManifest', fn () => new ViteAssetManifest(
     BASE_PATH . '/public/build/.vite/manifest.json',
 ));
 
-$di->setShared('modelsMetadata', function () {
-    return new MetaDataAdapter();
-});
 
 $di->setShared('view', function() {
     $view = new View();
