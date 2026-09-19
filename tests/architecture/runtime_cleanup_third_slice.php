@@ -41,7 +41,7 @@ $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach(['App\\Controller\\CoreHealthController','App\\Controller\\OperationsReadController','App\\Controller\\SecurityContextController'] as $needle){
     if(str_contains($services,$needle)) throw new RuntimeException('Retired migration controller remains in Symfony DI: '.$needle);
 }
-if(!str_contains($services,"$queue: '@Kernel\\Queue\\Contract\\JobQueueInterface'")){
+if(!str_contains($services,"\$queue: '@Kernel\\Queue\\Contract\\JobQueueInterface'")){
     throw new RuntimeException('ApprovalService must enqueue approved actions through the canonical JobQueue.');
 }
 
@@ -76,7 +76,7 @@ if(strpos($security,$healthRule)>strpos($security,$managerRule)||strpos($securit
 }
 
 $authenticator=(string)file_get_contents($root.'/symfony/src/Security/LegacySessionAuthenticator.php');
-if(!str_contains($authenticator,"$path === '/api/v1/health'")){
+if(!str_contains($authenticator,"\$path === '/api/v1/health'")){
     throw new RuntimeException('Public health probe is still intercepted by the legacy-session authenticator.');
 }
 
