@@ -12,6 +12,7 @@ require APP_PATH . '/Bootstrap/PropertyAnalyticsServices.php';
 require APP_PATH . '/Bootstrap/PropertyIntelligenceServices.php';
 require APP_PATH . '/Bootstrap/PropertyNetworkServices.php';
 require APP_PATH . '/Bootstrap/RealEstateServices.php';
+require APP_PATH . '/Bootstrap/ServiceServices.php';
 require APP_PATH . '/Bootstrap/ModuleServices.php';
 require APP_PATH . '/Bootstrap/SalesAgentServices.php';
 require APP_PATH . '/Bootstrap/KernelServices.php';
