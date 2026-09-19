@@ -11,6 +11,8 @@ foreach ([
     'bin/spatial-worker.php',
     'bin/integration-worker.php',
     'bin/apply-migration.php',
+    'bin/telegram-worker.php',
+    'bin/telegram-health.php',
     'app/Interfaces/Cli/Task/WorkerTask.php',
     'app/Interfaces/Cli/Task/MigrationTask.php',
 ] as $path) {
@@ -31,9 +33,11 @@ foreach ([
     "kernel-worker:\n",
     "spatial-worker:\n",
     "integration-worker:\n",
+    "telegram-worker:\n",
     'cos:kernel:worker',
     'cos:spatial:process',
     'cos:integration:n8n:process',
+    'cos:telegram:process',
 ] as $needle) {
     $assert(str_contains($symfonyCompose, $needle), 'Canonical background runtime compose contract missing: ' . $needle);
 }
@@ -55,6 +59,8 @@ foreach ([
     ['symfony/src/Command/LegacySchemaStatusCommand.php', "name: 'cos:legacy-schema:status'"],
     ['symfony/src/Command/SpatialProcessingCommand.php', "name: 'cos:spatial:process'"],
     ['symfony/src/Command/IntegrationOutboxCommand.php', "name: 'cos:integration:n8n:process'"],
+    ['symfony/src/Command/TelegramOutboxCommand.php', "name: 'cos:telegram:process'"],
+    ['symfony/src/Command/TelegramHealthCommand.php', "name: 'cos:telegram:health'"],
 ] as [$path, $needle]) {
     $source = $read($path);
     $assert(str_contains($source, $needle), 'Canonical Symfony command missing: ' . $needle);
@@ -63,7 +69,7 @@ foreach ([
 
 $deploy = $read('deploy/symfony-dev.sh');
 $assert(
-    str_contains($deploy, 'for service in worker kernel-worker spatial-worker integration-worker scheduler; do'),
+    str_contains($deploy, 'for service in worker kernel-worker spatial-worker integration-worker telegram-worker scheduler; do'),
     'Symfony deploy must verify every canonical background runtime service.'
 );
 
