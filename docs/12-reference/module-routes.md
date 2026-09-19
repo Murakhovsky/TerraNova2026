@@ -21,7 +21,7 @@ generated: true
 | `procurement` | — | 0 |
 | `property` | `propertyRouteContributor` | 2 |
 | `real_estate` | — | 0 |
-| `sales` | `salesRouteContributor` | 4 |
+| `sales` | — | 0 |
 | `service` | — | 0 |
 
 ## `diagnostic`
@@ -34,11 +34,3 @@ generated: true
 - contributor: `app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php`;
 - джерело маршрутів: `app/Interfaces/Web/Routing/PublicPropertyRoutes.php`;
 - джерело маршрутів: `symfony/config/routes.yaml`;
-
-## `sales`
-
-- contributor: `app/Interfaces/Web/Routing/SalesModuleRouteContributor.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/SalesAdministrationRoutes.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/SalesIntegrationRoutes.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/SalesRoutes.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/SalesTeamRoutes.php`;
