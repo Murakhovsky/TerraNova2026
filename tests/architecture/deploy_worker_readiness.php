@@ -2,40 +2,46 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-$deploy = (string) file_get_contents($root . '/deploy/dev.sh');
-$compose = (string) file_get_contents($root . '/docker-compose.yml');
+$legacyDeploy = (string) file_get_contents($root . '/deploy/dev.sh');
+$symfonyDeploy = (string) file_get_contents($root . '/deploy/symfony-dev.sh');
+$legacyCompose = (string) file_get_contents($root . '/docker-compose.yml');
+$symfonyCompose = (string) file_get_contents($root . '/docker-compose.symfony.yml');
 $workflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
 
+if (str_contains($legacyCompose, "\n  worker:\n")) {
+    throw new RuntimeException('Retired legacy worker service returned to docker-compose.yml.');
+}
+if (str_contains($legacyCompose, 'app/bootstrap_cli.php", "worker", "run')) {
+    throw new RuntimeException('Retired Phalcon worker command returned to docker-compose.yml.');
+}
+
 foreach ([
-    'WORKER_ID=',
-    "{{.State.Status}}",
-    "{{.RestartCount}}",
-    'Worker container is not ready',
-    'logs --no-color --tail=250 worker',
-    'worker_structured_log',
-    'exit 29',
-    'Worker container is ready: running with restart_count=0',
+    "kernel-worker:\n",
+    'cos:kernel:worker',
+    'restart: unless-stopped',
 ] as $needle) {
-    if (!str_contains($deploy, $needle)) {
-        throw new RuntimeException('Worker deployment readiness contract is missing: ' . $needle);
+    if (!str_contains($symfonyCompose, $needle)) {
+        throw new RuntimeException('Canonical Kernel worker compose contract is missing: ' . $needle);
     }
 }
 
-if (!str_contains($compose, 'command: ["php", "app/bootstrap_cli.php", "worker", "run"]')) {
-    throw new RuntimeException('Worker compose command must remain explicit.');
-}
-if (!str_contains($compose, "worker:\n") || !str_contains($compose, 'restart: unless-stopped')) {
-    throw new RuntimeException('Worker compose service/restart policy is missing.');
+foreach ([
+    'for service in worker kernel-worker scheduler; do',
+    'Symfony $service container is missing.',
+    '{{.State.Running}}',
+    '{{.RestartCount}}',
+    'Kernel worker and Symfony Scheduler are healthy.',
+] as $needle) {
+    if (!str_contains($symfonyDeploy, $needle)) {
+        throw new RuntimeException('Canonical Kernel worker deployment readiness contract is missing: ' . $needle);
+    }
 }
 
+if (!str_contains($legacyDeploy, 'bash deploy/symfony-dev.sh')) {
+    throw new RuntimeException('Compatibility deployment must deploy the canonical Symfony runtime.');
+}
 if (!str_contains($workflow, 'bash deploy/dev.sh')) {
     throw new RuntimeException('AWS dev deployment must execute the guarded deploy/dev.sh script.');
-}
-
-$successPosition = strpos($deploy, 'DEV deployment completed successfully.');
-$workerReadyPosition = strpos($deploy, 'Worker container is ready: running with restart_count=0');
-if ($successPosition === false || $workerReadyPosition === false || $workerReadyPosition > $successPosition) {
-    throw new RuntimeException('Deployment success must only be emitted after worker readiness is verified.');
 }
 
 echo "Deployment worker readiness contract passed.\n";
