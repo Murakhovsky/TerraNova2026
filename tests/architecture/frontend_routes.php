@@ -11,18 +11,10 @@ $required = [
     '/api/v1/properties',
     '/api/v1/properties/featured',
     '/api/v1/properties/{slug:[a-z0-9-]+}',
-    '/api/sales/dashboard',
-    '/api/sales/leads',
-    '/api/sales/deals',
-    '/api/sales/deals/{id:[0-9]+}/timeline',
-    '/api/sales/deals/{id:[0-9]+}/intelligence',
-    '/api/sales/deals/{id:[0-9]+}/stage',
-    '/api/sales/actions/{id:[a-f0-9]{32}}/outcomes',
     '/api/cos/actions',
     '/api/cos/approvals',
     '/api/cos/rules',
     '/api/cos/audit',
-    '/api/integrations/{organization:[a-zA-Z0-9_-]+}/crm/{provider:[a-zA-Z0-9_-]+}/webhook',
     '/property',
     '/client-case',
     '/admin/content',
@@ -35,6 +27,12 @@ $required = [
 foreach ($required as $pattern) {
     if (!str_contains($frontendRoutes, "'" . $pattern . "'")) {
         throw new RuntimeException('Missing frontend route declaration: ' . $pattern);
+    }
+}
+
+foreach (['/api/sales/', '/api/integrations/{organization:', "'crm_webhook'"] as $retired) {
+    if (str_contains($frontendRoutes, $retired)) {
+        throw new RuntimeException('Retired legacy API route restored in FrontendRoutes: ' . $retired);
     }
 }
 
