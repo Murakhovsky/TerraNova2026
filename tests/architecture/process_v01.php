@@ -37,7 +37,7 @@ $assert(str_contains($read('app/config/services_kernel.php'), "'/Bootstrap/Proce
 $assert(str_contains($read('app/Kernel/Module/KernelVersion.php'), "VERSION = '0.11.9'"), 'KernelVersion must expose additive Process contract revision.');
 
 $definitions = glob($root . '/resources/processes/*.json') ?: [];
-$assert(count($definitions) === 5, 'Canonical Process Registry source must contain five current definitions.');
+$assert(count($definitions) === 6, 'Canonical Process Registry source must contain six current definitions.');
 $schemas = [];
 foreach ($definitions as $path) {
     $definition = json_decode((string)file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
@@ -79,6 +79,15 @@ foreach ($crossDomains as $step) {
     ));
     $assert(count($contracts) >= 1, 'Each RealEstate cross-domain process step requires a contract mapping.');
 }
+
+$service = json_decode((string)file_get_contents($root . '/resources/processes/service-request-to-close.json'), true, flags: JSON_THROW_ON_ERROR);
+$assert(($service['schema_version'] ?? null) === 4, 'Service Request → Close must use schema v4.');
+$assert(($service['domain'] ?? null) === 'service', 'Service process must be owned by service.');
+$serviceCapabilities = array_values(array_filter(
+    array_map(static fn (array $step): mixed => $step['capability'] ?? null, $service['steps'] ?? []),
+    static fn (mixed $capability): bool => is_string($capability) && $capability !== '',
+));
+$assert(count($serviceCapabilities) === count($service['steps'] ?? []), 'Every Service process step must map to a Service capability.');
 
 $consumers = [
     'docs/.vitepress/check-processes.mjs',
