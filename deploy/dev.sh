@@ -180,9 +180,9 @@ echo "Canonical Symfony dependency readiness is healthy: /health/dependencies"
 
 # Visualization is an operational observability surface. Exercise the canonical
 # Symfony composition so a blank Architecture Explorer fails deployment.
-if ! docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:architecture:smoke; then
+if ! "${DOCKER[@]}" exec cos-symfony-php-1 php bin/console cos:architecture:smoke; then
   echo "Architecture Graph runtime smoke failed inside the canonical Symfony runtime." >&2
-  docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 php >&2 || true
+  "${DOCKER[@]}" logs --tail=250 cos-symfony-php-1 >&2 || true
   exit 30
 fi
 
