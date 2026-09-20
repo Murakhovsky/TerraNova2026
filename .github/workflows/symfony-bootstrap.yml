@@ -347,6 +347,7 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_controller_boundary.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/api_v1_request_mapper.php
           docker compose -f docker-compose.symfony.yml exec -T php php tests/http_correlation_contract.php
+          docker compose -f docker-compose.symfony.yml exec -T php php tests/dependency_health_contract.php
           php tests/architecture/symfony_runtime_hardening.php
           php tests/architecture/runtime_cleanup_third_slice.php
           php tests/architecture/spatial_symfony_cutover.php
