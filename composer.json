@@ -10,7 +10,7 @@
       "Domains\\": "app/Domains/",
       "Infrastructure\\": "app/Infrastructure/",
       "Interfaces\\": "app/Interfaces/",
-      "Bootstrap\\": "app/Bootstrap/"
+      "App\\": "symfony/src/"
     },
     "exclude-from-classmap": [
       "/app/Interfaces/Telegram/Command/UserCommands/SearchAdvertsCommand.php"
