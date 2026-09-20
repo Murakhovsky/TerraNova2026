@@ -31,7 +31,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return false;
         }
 
-        if ($request->isMethod('GET')
+        if (in_array($request->getMethod(), ['GET', 'HEAD'], true)
             && preg_match('#^/spatial/scene/[A-Za-z0-9_-]+$#', $path) === 1) {
             return false;
         }
@@ -42,7 +42,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
                 return false;
             }
 
-            $publicScene = $request->isMethod('GET')
+            $publicScene = in_array($request->getMethod(), ['GET', 'HEAD'], true)
                 && preg_match('#^/api/spatial/scenes/[A-Za-z0-9-]+$#', $path) === 1;
             $publicEvent = $request->isMethod('POST') && $path === '/api/spatial/events';
             if ($publicScene || $publicEvent) {
