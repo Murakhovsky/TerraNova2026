@@ -29,6 +29,7 @@ on:
       - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
+      - 'tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php'
       - 'tests/architecture/cross_domain_dependency_audit.php'
       - 'resources/processes/**'
       - 'docs/.vitepress/process-registry.mjs'
@@ -71,6 +72,7 @@ on:
       - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
+      - 'tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php'
       - 'tests/architecture/cross_domain_dependency_audit.php'
       - 'resources/processes/**'
       - 'docs/.vitepress/process-registry.mjs'
@@ -112,6 +114,7 @@ jobs:
           php tests/architecture/visualization_v053.php
           php tests/architecture/visualization_v055.php
           php tests/architecture/cross_domain_dependency_audit.php
+          php tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php
       - name: Visualization graph invariants
         run: |
           php tests/unit/visualization_graph_foundation.php
@@ -130,7 +133,7 @@ jobs:
         run: npm run build
       - name: PHP syntax
         run: |
-          find app/Kernel/Visualization app/Infrastructure/Visualization app/Interfaces/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app/Kernel/Visualization app/Infrastructure/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Kernel/Module/CrossDomainContract.php
           php -l app/Kernel/Module/ModuleContributions.php
           php -l app/Kernel/Module/Contract/BootstrapRuleProvidingModuleInterface.php
