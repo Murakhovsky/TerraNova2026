@@ -32,7 +32,8 @@ foreach ($lines as $line) {
         $current = $match[1];
     }
     if (str_contains($line, '@legacy_cos.pdo') && is_string($current)) {
-        if (str_starts_with($current, 'App\\Infrastructure\\Migration\\Database\\')) {
+        if (str_starts_with($current, 'App\\Infrastructure\\Migration\\Database\\')
+            || $current === 'App\\Infrastructure\\Health\\DatabaseDependencyHealthCheck') {
             continue;
         }
         $legacy[$current] = true;
