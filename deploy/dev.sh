@@ -157,6 +157,9 @@ if [[ "$APP_HEALTHY" != "1" ]]; then
   echo "Local application health check failed: http://127.0.0.1/cos" >&2
   "${COMPOSE[@]}" ps -a >&2 || true
   "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
+  structured_log "$PHP_ID" "application"
+  echo "Local /cos response body:" >&2
+  "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O - http://127.0.0.1/cos >&2 2>/dev/null || true
   exit 28
 fi
 
