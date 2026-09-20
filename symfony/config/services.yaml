@@ -46,13 +46,16 @@ services:
       $user: '%env(LEGACY_DB_USER)%'
       $password: '%env(LEGACY_DB_PASSWORD)%'
 
-  Domains\Property\Infrastructure\ReadModel\MySql\CatalogService:
+  Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
-      $analytics: null
 
-  Domains\Property\Application\Contract\PropertyCatalogInterface:
-    alias: Domains\Property\Infrastructure\ReadModel\MySql\CatalogService
+  Domains\Property\Application\Contract\PublicPropertyReadRepositoryInterface:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository
+
+  App\Application\Property\Service\PublicPropertyReadService:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter:
     arguments:
