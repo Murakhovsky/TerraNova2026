@@ -32,6 +32,18 @@ if (str_contains($compose, 'legacy_php_sessions:/var/www/html/legacy-sessions:ro
 if (!str_contains($compose, 'legacy_php_sessions:/var/www/html/legacy-sessions')) {
     throw new RuntimeException('Transitional shared session volume is missing before Cabinet cutover.');
 }
+foreach (['session-init:', 'chmod 1777 /sessions', 'service_completed_successfully'] as $needle) {
+    if (!str_contains($compose, $needle)) {
+        throw new RuntimeException('Writable transition session contract missing: ' . $needle);
+    }
+}
+$services = (string) file_get_contents($root . '/symfony/config/services.yaml');
+if (str_contains($services, "App\\Application\\Identity\\Service\\AccountAuthenticationService:\n    arguments:\n      \$connection: '@legacy_cos.pdo'")) {
+    throw new RuntimeException('Auth cutover introduced a forbidden direct legacy_cos.pdo dependency.');
+}
+if (!str_contains($services, "\$database: '@Infrastructure\\Platform\\Persistence\\Pdo\\PdoConnection'")) {
+    throw new RuntimeException('Auth service is not bound through the existing PDO compatibility boundary.');
+}
 
 foreach ([$http, $tls] as $proxy) {
     if (!str_contains($proxy, 'location ^~ /auth/ {')
