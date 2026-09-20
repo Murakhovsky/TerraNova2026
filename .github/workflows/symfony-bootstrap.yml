@@ -281,6 +281,7 @@ jobs:
           php tests/architecture/symfony_runtime_hardening.php
           php tests/architecture/runtime_cleanup_third_slice.php
           php tests/architecture/spatial_symfony_cutover.php
+          php tests/architecture/symfony_workspace_ssr_cutover.php
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
