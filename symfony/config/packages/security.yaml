@@ -5,7 +5,7 @@ security:
 
   firewalls:
     cos_api:
-      pattern: '^/(?:api/v1|api/spatial|sales)(?:/|$)'
+      pattern: '^/(?:api/v1|api/spatial|sales|cos/architecture|diagnostics|admin/diagnostics/methodology-studio|spatial)(?:/|$)'
       stateless: true
       provider: legacy_users
       custom_authenticators:
@@ -19,7 +19,32 @@ security:
     - { path: '^/api/v1/integrations/crm/[1-9][0-9]*/webhook$', roles: PUBLIC_ACCESS }
     - { path: '^/api/spatial/auth/token$', roles: PUBLIC_ACCESS }
     - { path: '^/api/spatial/scenes/[A-Za-z0-9-]+$', roles: PUBLIC_ACCESS, methods: [GET] }
-    - { path: '^/api/spatial/events$', roles: PUBLIC_ACCESS, methods: [POST] }
+    - { path: '^/api/spatial/events    - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/cos/architecture(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/admin/diagnostics/methodology-studio    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
+, roles: PUBLIC_ACCESS, methods: [POST] }
+    - { path: '^/spatial/scene/[A-Za-z0-9_-]+    - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
+, roles: PUBLIC_ACCESS, methods: [GET] }
+    - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
+, roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
+, roles: PUBLIC_ACCESS, methods: [POST] }
+    - { path: '^/spatial/scene/[A-Za-z0-9_-]+    - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
+, roles: PUBLIC_ACCESS, methods: [GET] }
     - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
