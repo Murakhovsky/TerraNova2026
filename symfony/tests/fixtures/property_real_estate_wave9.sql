@@ -354,6 +354,16 @@ INSERT INTO tn_properties(
     9102,'default','MOD-9102','wave9-moderation-property','Wave 9 Moderation Property','sale',9001,'moderation','own',9001,9101,9101,
     99000,'USD','total',55.0,2,1,1,1,3,2026,'2 Private Street',
     49.8400000,24.0300000,'Moderation fixture.','Must never be visible through public reads.','private',0,0,NULL
+),
+(
+    9103,'default','PRI-9103','wave9-private-published-property','Wave 9 Private Published Property','sale',9001,'published','own',9001,9101,9101,
+    110000,'USD','total',58.0,2,1,1,1,3,2026,'3 Private Street',
+    49.8401000,24.0301000,'Private published fixture.','Published but not public visibility.','private',0,0,NOW()
+),
+(
+    9201,'other-org','ORG-9201','wave9-other-org-property','Wave 9 Other Org Property','sale',9001,'published','own',9001,NULL,9101,
+    130000,'USD','total',70.0,3,2,1,2,4,2026,'4 Other Org Street',
+    49.8402000,24.0302000,'Other organization fixture.','Public in another organization only.','public',1,0,NOW()
 );
 
 INSERT INTO tn_property_images(organization_id,property_id,image_url,alt_text,sort_order,is_cover)
