@@ -14,10 +14,10 @@ Routing stays layered instead of being collapsed into one giant route table:
 
 - `FrontendRoutes` keeps established public/application routes;
 - `CoreWebRoutes` owns application-level root, authentication, Portal and core Administration routes;
-- `SpatialWebRoutes` explicitly preserves the Spatial Web journeys that previously depended on default controller/action routing;
-- platform and visualization routes keep their existing route owners;
-- Sales, Property and Diagnostic routes remain owned by their module route contributors;
-- Spatial API routes are owned by Symfony; `Bootstrap\SpatialModule` remains only for the temporary SSR workspace composition.
+- Spatial Web journeys have since moved from the V0.13 compatibility route table to canonical Symfony routes;
+- Architecture Explorer and Diagnostic SSR have also moved to Symfony;
+- the remaining Phalcon router owns only the shrinking Public/Portal/Property/Core compatibility surface;
+- `Bootstrap\SpatialModule` remains temporarily only because legacy Property presentation still resolves Spatial scene data.
 
 WEB V0.13 does not move business routing into a new Domain and does not make `CoreWebRoutes` an owner of domain capabilities.
 
@@ -45,7 +45,7 @@ Homepage, login/register and submission routes retain the HTTP methods required 
 
 ## Spatial compatibility closure
 
-The audit found that the Spatial Web workspace still relied on Phalcon default routes. V0.13 makes those journeys explicit before disabling defaults:
+V0.13 originally made Spatial journeys explicit before disabling Phalcon defaults. They are now canonical Symfony routes:
 
 ```text
 GET  /spatial/manage
@@ -60,7 +60,7 @@ POST /spatial/publish/{id}
 GET  /spatial/scene/{slug}
 ```
 
-This is a compatibility migration only. Spatial service/domain ownership is unchanged.
+Spatial Domain ownership is unchanged. Only HTTP/SSR delivery moved from Phalcon to Symfony.
 
 ## Canonical not-found behavior
 
@@ -87,21 +87,21 @@ The shared router enables `removeExtraSlashes(true)` so trailing/duplicate slash
 The smoke verifies:
 
 - `/` and `/auth/login` are reachable;
-- unauthenticated `/cabinet`, `/admin` and `/spatial/manage` explicitly resolve and redirect to login;
+- unauthenticated `/cabinet` and `/admin` remain legacy explicit routes, while `/spatial/manage` is now Symfony-owned and redirects to login;
 - implicit aliases `/cabinet/index` and `/admin/index` return `404`;
-- retired `/cabinet/telegramConnect` resolves to `404`, while GET cannot reach POST-only `/spatial/save`;
+- retired `/cabinet/telegramConnect` resolves to `404`, while GET cannot execute the Symfony POST-only `/spatial/save` route;
 - an arbitrary Web path returns the canonical rendered `404`;
 - an arbitrary `/api/*` path returns the canonical JSON `404` with `error=not_found`.
 
-This separates concerns deliberately: architecture CI checks declaration contracts without requiring the Phalcon extension, while deployment smoke proves real router behavior on the production-like runtime.
+This separates concerns deliberately: architecture CI checks both the shrinking Phalcon core declarations and Symfony-owned migrated routes, while deployment smoke proves real proxy/router behavior on the production-like runtime.
 
 ## Regression gate
 
 `tests/architecture/web_v013_explicit_routing.php` verifies:
 
 1. production router construction uses `Router(false)`;
-2. core and Spatial compatibility routes are declared explicitly;
-3. mutation routes retain POST restrictions;
+2. core compatibility routes remain explicit and Spatial routes are canonical in Symfony;
+3. mutation routes retain POST restrictions across the cutover;
 4. global `/:controller/:action` default patterns do not exist;
 5. canonical entry points resolve to their intended controllers/actions;
 6. default-style aliases and unknown URLs resolve to the canonical error controller;
