@@ -311,6 +311,29 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T php sh -c "php bin/console list --raw | grep -q '^cos:telegram:health'"
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:architecture:smoke
 
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/workspace-ssr-routes.txt
+          for route in cos_web_architecture cos_web_architecture_graph cos_web_architecture_health cos_web_diagnostic_report cos_web_diagnostic_methodology_studio cos_web_spatial_manage cos_web_spatial_scene; do
+            grep -q "$route" /tmp/workspace-ssr-routes.txt
+          done
+
+          status=$(curl --silent --show-error --output /tmp/architecture.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/cos/architecture)
+          test "$status" = "200"
+          grep -q 'Architecture Explorer' /tmp/architecture.html
+
+          status=$(curl --silent --show-error --output /tmp/methodology-studio.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/admin/diagnostics/methodology-studio)
+          test "$status" = "200"
+          grep -q 'Methodology Studio' /tmp/methodology-studio.html
+
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8081/spatial/manage)
+          test "$status" = "302"
+
+          echo "Symfony workspace SSR smoke passed."
+
       - name: Verify Sales strangler slice
         run: |
           php tests/architecture/symfony_sales_strangler_boundary.php
