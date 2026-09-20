@@ -3,6 +3,25 @@ cos_symfony_home:
   controller: App\Controller\HealthController::index
   methods: [GET]
 
+cos_web_blog_index:
+  path: /blog
+  controller: App\Web\Content\PublicContentPageController::blog
+  methods: [GET, HEAD]
+
+cos_web_blog_article:
+  path: /blog/{slug}
+  controller: App\Web\Content\PublicContentPageController::article
+  methods: [GET, HEAD]
+  requirements:
+    slug: '[a-z0-9-]+'
+
+cos_web_guide:
+  path: /guide/{slug}
+  controller: App\Web\Content\PublicContentPageController::guide
+  methods: [GET, HEAD]
+  requirements:
+    slug: '[a-z0-9-]+'
+
 cos_web_sitemap:
   path: /sitemap.xml
   controller: App\Web\Seo\SitemapController
