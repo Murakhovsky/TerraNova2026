@@ -5,10 +5,11 @@ namespace Infrastructure\Visualization\Cytoscape;
 
 use Kernel\Visualization\Graph\Edge;
 use Kernel\Visualization\Graph\Graph;
+use Kernel\Visualization\Graph\GraphMapperInterface;
 use Kernel\Visualization\Graph\Group;
 use Kernel\Visualization\Graph\Node;
 
-final readonly class CytoscapeGraphMapper
+final readonly class CytoscapeGraphMapper implements GraphMapperInterface
 {
     /**
      * @return array{
