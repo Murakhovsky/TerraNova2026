@@ -1,6 +1,6 @@
 {
   "name": "estatebook/cos-symfony",
-  "description": "Canonical Symfony LTS server-first runtime and Experience Platform for COS",
+  "description": "Canonical Symfony 7.4 server-first runtime and Experience Platform for COS",
   "type": "project",
   "license": "proprietary",
   "require": {
