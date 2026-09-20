@@ -364,7 +364,7 @@ $breadcrumbJson = [
         </div>
       <?php endif; ?>
 
-      <div class="tn-property-grid tn-property-grid--catalog" data-catalog-grid data-api-url="<?php echo $this->url->get('api/v1/properties'); ?>">
+      <div class="tn-property-grid tn-property-grid--catalog" data-catalog-grid data-api-url="<?php echo $this->url->get('api/v1/public/properties'); ?>">
         <?php foreach ($properties as $property): ?>
           <article class="tn-property-card" itemscope itemtype="https://schema.org/Product">
             <a class="tn-property-card__image" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" itemprop="url">
