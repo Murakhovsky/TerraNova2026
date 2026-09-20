@@ -55,6 +55,9 @@ if ! curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies
   exit 31
 fi
 
-"${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke
+if ! "${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke; then
+  echo "Architecture Graph runtime smoke failed." >&2
+  exit 30
+fi
 "${COMPOSE[@]}" ps
 printf 'COS Symfony deployment completed successfully.\n'

@@ -32,7 +32,7 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
 USER www-data
 
 RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=default \
-    DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=cos DB_USERNAME=cos DB_PASSWORD=build-only-password \
+    DATABASE_URL="mysql://cos:build-only-password@127.0.0.1:3306/cos?serverVersion=8.4.0&charset=utf8mb4" \
     REDIS_URL="redis://127.0.0.1:6379" \
     MESSENGER_TRANSPORT_DSN="redis://127.0.0.1:6379/cos_async" \
     MESSENGER_FAILED_TRANSPORT_DSN="redis://127.0.0.1:6379/cos_failed" \

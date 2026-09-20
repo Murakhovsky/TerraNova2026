@@ -71,7 +71,7 @@ foreach([
 $controller=$read('symfony/src/Http/Api/V1/Controller/DocumentsController.php');
 foreach([
     'CommandBusInterface','QueryBusInterface','TenantContextProviderInterface','TenantPermissions::ACCESS',
-    'TenantPermissions::MANAGE','LegacySessionCsrfValidator','X-Idempotency-Key',
+    'TenantPermissions::MANAGE','SessionCsrfValidator','X-Idempotency-Key',
     'UploadDocumentCommand','AttachDocumentCommand','CreateDocumentVersionCommand',
     'GenerateDocumentFromTemplateCommand','RequestDocumentSignatureCommand',
     'SignDocumentCommand','ArchiveDocumentCommand',

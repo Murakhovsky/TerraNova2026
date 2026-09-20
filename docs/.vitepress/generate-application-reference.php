@@ -25,9 +25,9 @@ foreach ($modules as $moduleId => $module) {
 
 $routeCatalogues = [
     'property' => [
-        'service' => 'propertyRouteContributor',
-        'contributor' => 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php',
-        'sources' => ['app/Interfaces/Web/Routing/PublicPropertyRoutes.php', 'symfony/config/routes.yaml'],
+        'service' => null,
+        'contributor' => null,
+        'sources' => ['symfony/config/routes.yaml'],
     ],
 ];
 
@@ -35,11 +35,21 @@ foreach ($modules as $moduleId => $module) {
     $services = array_values(array_filter(($module['contributions']['api_route_contributor_services'] ?? []), 'is_string'));
     $catalogue = $routeCatalogues[$moduleId] ?? null;
     if ($services === [] && $catalogue === null) continue;
-    if (count($services) !== 1 || !is_array($catalogue) || $services[0] !== $catalogue['service']) {
+    if (!is_array($catalogue)) {
+        fwrite(STDERR, "Route catalogue is missing for module: {$moduleId}\n");
+        exit(1);
+    }
+    $expectedService = $catalogue['service'] ?? null;
+    if (($expectedService === null && $services !== [])
+        || ($expectedService !== null && $services !== [$expectedService])) {
         fwrite(STDERR, "Route catalogue does not match manifest contributor for module: {$moduleId}\n");
         exit(1);
     }
-    foreach (array_merge([$catalogue['contributor']], $catalogue['sources']) as $source) {
+    $routeSources = $catalogue['sources'];
+    if (is_string($catalogue['contributor'] ?? null) && $catalogue['contributor'] !== '') {
+        array_unshift($routeSources, $catalogue['contributor']);
+    }
+    foreach ($routeSources as $source) {
         if (!is_file($repoRoot . '/' . $source)) {
             fwrite(STDERR, "Route source not found for module {$moduleId}: {$source}\n");
             exit(1);
@@ -91,7 +101,8 @@ function renderRoutes(array $modules, array $catalogues): string {
     foreach ($catalogues as $id => $catalogue) {
         if (!isset($modules[$id])) continue;
         $lines[] = ''; $lines[] = "## `{$id}`"; $lines[] = '';
-        $lines[] = "- contributor: `{$catalogue['contributor']}`;";
+        $contributor = $catalogue['contributor'] ?? null;
+        $lines[] = $contributor ? "- contributor: `{$contributor}`;" : "- ownership: Symfony route configuration;";
         foreach ($catalogue['sources'] as $source) $lines[] = "- джерело маршрутів: `{$source}`;";
     }
     $lines[] = '';
