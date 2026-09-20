@@ -21,7 +21,7 @@ MySQL repositories, query projections and generic Kernel persistence are consoli
 ## Delivery boundaries
 
 - All former `modules/frontend/controllers` classes now live in `Interfaces/Web/Controller`; `FrontendRoutes` targets only the canonical namespace.
-- Spatial API delivery lives in Symfony `App\\Http\\Api\\Spatial\\SpatialController`, and Spatial Web delivery lives in `App\\Web\\Spatial\\SpatialPageController`. `Bootstrap\\SpatialModule` remains only as temporary composition for legacy Property SSR until that surface is retired.
+- Spatial API delivery lives in Symfony `App\\Http\\Api\\Spatial\\SpatialController`, and Spatial Web delivery lives in `App\\Web\\Spatial\\SpatialPageController`. The Phalcon `Bootstrap\\SpatialModule` is retired; remaining Property SSR receives only the framework-neutral Spatial scene compatibility services from `WebApplicationServices` until Property Web itself is cut over.
 - Symfony Console owns operational/admin CLI commands; the Phalcon `Interfaces/Cli` surface is retired.
 - No `Modules/*` class is registered or autoloadable.
 
