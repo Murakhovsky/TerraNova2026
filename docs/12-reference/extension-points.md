@@ -14,18 +14,15 @@ generated: true
 
 | Точка розширення | Тип | Внески |
 | --- | --- | ---: |
-| `api.routes` | built-in | 1 |
+| `api.routes` | built-in | 0 |
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
-| `web.navigation` | module-defined | 3 |
 
 ## `api.routes`
 
 Тип: **built-in**.
 
-| Модуль | Service |
-| --- | --- |
-| `property` | `propertyRouteContributor` |
+Поточних module contributions немає.
 
 ## `event.consumers`
 
@@ -44,16 +41,6 @@ generated: true
 | --- | --- |
 | `property` | `propertyModuleConfigurationProvisioner` |
 | `sales` | `salesModuleConfigurationProvisioner` |
-
-## `web.navigation`
-
-Тип: **module-defined**.
-
-| Модуль | Service |
-| --- | --- |
-| `diagnostic` | `diagnosticNavigationContributor` |
-| `property` | `propertyNavigationContributor` |
-| `sales` | `salesNavigationContributor` |
 
 ## Семантика реєстрації
 

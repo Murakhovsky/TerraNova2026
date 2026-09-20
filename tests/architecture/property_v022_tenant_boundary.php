@@ -83,18 +83,29 @@ foreach ([
     }
 }
 
-$webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
+$services = (string) file_get_contents($root . '/symfony/config/services.yaml');
 foreach ([
-    "new MysqlPropertySubmissionRepository(\n            \$di->getShared('databaseService'), \$di->getShared('organizationContext')->id(),",
-    'new MysqlPropertyModerationRepository(',
-    'new MysqlPropertyManagementRepository(',
+    'Domains\\Property\\Infrastructure\\Persistence\\MySql\\MysqlPropertyCanonicalRuntimeRepository:',
+    'Domains\\Property\\Infrastructure\\Persistence\\MySql\\MysqlPropertyProjection:',
+    'Domains\\Property\\Infrastructure\\ReadModel\\MySql\\MysqlPublicPropertyReadRepository:',
+    "@cos.database.pdo",
 ] as $needle) {
-    if (!str_contains($webServices, $needle)) {
-        $fail('Property composition root lost tenant-scoped persistence wiring.');
+    if (!str_contains($services, $needle)) {
+        $fail('Canonical Property Symfony composition lost tenant-safe persistence wiring: ' . $needle);
     }
 }
-if (substr_count($webServices, "getShared('organizationContext')->id()") < 3) {
-    $fail('All mutable Property persistence adapters must receive organization scope.');
+foreach ([
+    'MysqlPropertySubmissionRepository:',
+    'MysqlPropertyModerationRepository:',
+    'MysqlPropertyManagementRepository:',
+    'LegacyProperty',
+] as $retiredService) {
+    if (str_contains($services, $retiredService)) {
+        $fail('Retired Property persistence service is active in Symfony composition: ' . $retiredService);
+    }
+}
+if (is_file($root . '/app/Bootstrap/WebApplicationServices.php')) {
+    $fail('Retired Web Property composition returned.');
 }
 
 echo "Property V0.2.2 tenant boundary architecture: OK\n";
