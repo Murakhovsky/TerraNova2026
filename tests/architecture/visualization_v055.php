@@ -34,7 +34,7 @@ $assert(str_contains($services, 'Kernel\\Visualization\\Graph\\GraphHealthAnalyz
 
 $assert(str_contains($controller, 'GraphHealthAnalyzerInterface'), 'Web controller must depend on the Kernel health contract.');
 $assert(str_contains($controller, 'public function health('), 'Manager health JSON endpoint is missing.');
-$assert(str_contains($controller, "'health' => \$health"), 'Health endpoint must return the health payload.');
+$assert(str_contains($controller, "'health' => \$this->health->analyze(\$graph)"), 'Health endpoint must return the health payload.');
 $assert(!str_contains($controller, 'Infrastructure\\Visualization'), 'Web controller must remain infrastructure-neutral.');
 
 $assert(str_contains($routes, 'cos_web_architecture_health:'), 'Architecture health Symfony route is missing.');
