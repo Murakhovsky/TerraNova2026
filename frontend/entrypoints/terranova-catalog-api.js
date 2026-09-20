@@ -8,7 +8,7 @@ import { requestJson } from '../api/client.js';
   }
 
   const fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80';
-  const apiUrl = grid.dataset.apiUrl || '/api/v1/properties';
+  const apiUrl = grid.dataset.apiUrl || '/api/v1/public/properties';
   const countNodes = document.querySelectorAll('[data-catalog-count]');
   const titleNode = document.querySelector('[data-catalog-results-title]');
   const emptyNode = document.querySelector('[data-catalog-empty]');

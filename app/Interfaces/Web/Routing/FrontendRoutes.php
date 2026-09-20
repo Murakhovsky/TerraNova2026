@@ -30,11 +30,7 @@ final class FrontendRoutes
             $router->add('/' . $slug, self::target('Interfaces\\Web\\Controller', 'page', 'show') + ['slug' => $slug]);
         }
 
-        $router->add('/api/property/:action/:params', self::target('Interfaces\\Web\\Controller', 'api', 1) + ['params' => 2]);
-        self::add($router, 'add', '/api/property/:action', 'Interfaces\\Web\\Controller', 'api', 1);
-        $router->addGet('/api/v1/properties/{slug:[a-z0-9-]+}', self::target('Interfaces\\Web\\Controller', 'api', 'show') + ['params' => 1]);
-        self::add($router, 'addGet', '/api/v1/properties/featured', 'Interfaces\\Web\\Controller', 'api', 'featured');
-        self::add($router, 'addGet', '/api/v1/properties', 'Interfaces\\Web\\Controller', 'api', 'catalog');
+        self::add($router, 'add', '/api/property/favourites', 'Interfaces\\Web\\Controller', 'api', 'favourites');
         self::add($router, 'add', '/submit-property', 'Interfaces\\Web\\Controller', 'property', 'submit');
         self::add($router, 'add', '/property/create', 'Interfaces\\Web\\Controller', 'property', 'submit');
         $router->add('/property/:action/:params', self::target('Interfaces\\Web\\Controller', 'property', 1) + ['params' => 2]);

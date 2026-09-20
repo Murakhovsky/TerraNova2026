@@ -18,6 +18,24 @@ cos_dependency_health:
   controller: App\Controller\DependencyHealthController
   methods: [GET]
 
+# Public Property read path — browser/catalog compatible and session-free.
+cos_api_v1_public_properties:
+  path: /api/v1/public/properties
+  controller: App\Http\Api\V1\Controller\PublicPropertyController::catalog
+  methods: [GET, HEAD]
+
+cos_api_v1_public_properties_featured:
+  path: /api/v1/public/properties/featured
+  controller: App\Http\Api\V1\Controller\PublicPropertyController::featured
+  methods: [GET, HEAD]
+
+cos_api_v1_public_property:
+  path: /api/v1/public/properties/{slug}
+  controller: App\Http\Api\V1\Controller\PublicPropertyController::show
+  methods: [GET, HEAD]
+  requirements:
+    slug: '[a-z0-9-]+'
+
 cos_api_v1_operations_actions:
   path: /api/v1/operations/actions
   controller: App\Http\Api\V1\Controller\OperationsReadController::actions

@@ -46,6 +46,17 @@ services:
       $user: '%env(LEGACY_DB_USER)%'
       $password: '%env(LEGACY_DB_PASSWORD)%'
 
+  Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Property\Application\Contract\PublicPropertyReadRepositoryInterface:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository
+
+  App\Application\Property\Service\PublicPropertyReadService:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter:
     arguments:
       $connection: '@legacy_cos.pdo'

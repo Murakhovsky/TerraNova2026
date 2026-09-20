@@ -32,6 +32,11 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
         }
 
         if (in_array($request->getMethod(), ['GET', 'HEAD'], true)
+            && preg_match('#^/api/v1/public/properties(?:/|$)#', $path) === 1) {
+            return false;
+        }
+
+        if (in_array($request->getMethod(), ['GET', 'HEAD'], true)
             && preg_match('#^/spatial/scene/[A-Za-z0-9_-]+$#', $path) === 1) {
             return false;
         }

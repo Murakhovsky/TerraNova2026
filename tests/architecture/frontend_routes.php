@@ -7,9 +7,7 @@ require $root . '/vendor/autoload.php';
 $frontendRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/FrontendRoutes.php');
 
 $required = [
-    '/api/v1/properties',
-    '/api/v1/properties/featured',
-    '/api/v1/properties/{slug:[a-z0-9-]+}',
+    '/api/property/favourites',
     '/property',
     '/client-case',
     '/admin/content',
@@ -32,13 +30,14 @@ $symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml
 foreach ([
     'cos_web_sales_root:', 'cos_web_sales_dashboard:', 'cos_web_sales_today:', 'cos_web_sales_pipeline:',
     'cos_web_sales_leads:', 'cos_web_sales_deals:', 'cos_web_sales_deal:', 'cos_web_sales_director:', 'cos_web_sales_admin:',
+    'cos_api_v1_public_properties:', 'cos_api_v1_public_properties_featured:', 'cos_api_v1_public_property:',
 ] as $route) {
     if (!str_contains($symfonyRoutes, $route)) {
         throw new RuntimeException('Canonical Symfony Sales page route is missing: ' . $route);
     }
 }
 
-foreach (['/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
+foreach (['/api/v1/properties', '/api/property/:action', '/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
     if (str_contains($frontendRoutes, $retired)) {
         throw new RuntimeException('Retired legacy API route restored in FrontendRoutes: ' . $retired);
     }
@@ -56,14 +55,6 @@ foreach (["foreach (['economy', 'games', 'users'] as \$deprecatedModule)", "'/' 
     if (!str_contains($frontendRoutes, $needle)) {
         throw new RuntimeException('Deprecated module route contract is missing: ' . $needle);
     }
-}
-
-// Phalcon evaluates newer routes before older generic matches in this registration model.
-// Keep the concrete featured endpoint registered after the dynamic property slug route.
-$slugPosition = strpos($frontendRoutes, "'/api/v1/properties/{slug:[a-z0-9-]+}'");
-$featuredPosition = strpos($frontendRoutes, "'/api/v1/properties/featured'");
-if ($slugPosition === false || $featuredPosition === false || $featuredPosition < $slugPosition) {
-    throw new RuntimeException('Static featured endpoint registration must remain after the property slug route.');
 }
 
 // Detect duplicate completed literal method+path declarations without loading Phalcon.
