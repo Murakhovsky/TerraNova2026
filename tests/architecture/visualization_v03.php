@@ -11,8 +11,7 @@ $assert = static function (bool $condition, string $message): void {
 
 $required = [
     'app/Infrastructure/Visualization/Cytoscape/CytoscapeGraphMapper.php',
-    'app/Interfaces/Web/Routing/VisualizationRoutes.php',
-    'app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php',
+    'symfony/src/Web/Visualization/ArchitectureExplorerController.php',
     'app/Interfaces/Web/View/visualization/architecture.phtml',
     'frontend/entrypoints/cos-architecture-explorer.js',
     'frontend/features/cos/architecture-explorer.js',
@@ -34,18 +33,16 @@ $mapper = $read('app/Infrastructure/Visualization/Cytoscape/CytoscapeGraphMapper
 $assert(str_contains($mapper, 'namespace Infrastructure\\Visualization\\Cytoscape'), 'Cytoscape mapper must live in Infrastructure.');
 $assert(str_contains($mapper, 'public function map(Graph $graph): array'), 'Cytoscape mapper must consume the canonical Graph.');
 
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
+$controller = $read('symfony/src/Web/Visualization/ArchitectureExplorerController.php');
 $assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not compile against Infrastructure implementations.');
-$assert(str_contains($controller, "getShared('cosArchitectureGraphProvider')"), 'Explorer must consume the canonical architecture graph provider.');
-$assert(str_contains($controller, "getShared('cosCytoscapeGraphMapper')"), 'Explorer must resolve the Cytoscape adapter from composition.');
+$assert(str_contains($controller, 'GraphProviderInterface'), 'Explorer must consume the canonical architecture graph provider contract.');
+$assert(str_contains($controller, 'private object $mapper'), 'Explorer must receive the renderer adapter from composition.');
 
-$routes = $read('app/Interfaces/Web/Routing/VisualizationRoutes.php');
-$assert(str_contains($routes, "'/cos/architecture'"), 'Architecture Explorer route missing.');
-$module = $read('app/Interfaces/Web/Module.php');
-$assert(!str_contains($module, 'Infrastructure\\'), 'Web Module must remain free of Infrastructure dependencies.');
-$assert(str_contains($module, 'VisualizationRoutes::register($router)'), 'Visualization routes are not registered.');
-$bootstrap = $read('app/Bootstrap/KernelServices.php');
-$assert(str_contains($bootstrap, "setShared('cosCytoscapeGraphMapper'"), 'Cytoscape mapper composition must live in Bootstrap.');
+$routes = $read('symfony/config/routes.yaml');
+$assert(str_contains($routes, 'cos_web_architecture:'), 'Architecture Explorer Symfony route missing.');
+$services = $read('symfony/config/services.yaml');
+$assert(str_contains($services, "App\\Web\\Visualization\\ArchitectureExplorerController:"), 'Architecture Explorer Symfony composition is missing.');
+$assert(str_contains($services, "$mapper: '@Infrastructure\\Visualization\\Cytoscape\\CytoscapeGraphMapper'"), 'Cytoscape mapper must be composed at the Symfony boundary.');
 
 $vite = $read('vite.config.js');
 $assert(str_contains($vite, "'cos-architecture-explorer'"), 'Architecture Explorer Vite entry missing.');
