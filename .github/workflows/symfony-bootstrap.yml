@@ -213,7 +213,18 @@ jobs:
           status=$(curl --silent --show-error --dump-header /tmp/auth-login.headers             --cookie-jar /tmp/auth.cookies --output /tmp/auth-login-post.html --write-out '%{http_code}'             --request POST             --data-urlencode 'email=manager@example.test'             --data-urlencode 'password=password'             http://127.0.0.1:8081/auth/login)
           echo "Auth login POST HTTP $status"
           cat /tmp/auth-login.headers
-          test "$status" = "302"
+          if [ "$status" != "302" ]; then
+            echo "Auth login POST response body:"
+            cat /tmp/auth-login-post.html || true
+            echo
+            echo "Auth fixture state:"
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+              "SELECT u.id,u.email,u.status,u.role,LENGTH(u.password_hash),m.organization_id,m.role,m.status FROM tn_users u LEFT JOIN cos_organization_memberships m ON m.user_id=u.id WHERE u.email='manager@example.test';" || true
+            docker compose -f docker-compose.symfony.yml exec -T php php -r \
+              'var_export(password_verify("password", "\$2y\$10\$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.")); echo PHP_EOL;' || true
+            exit 1
+          fi
           grep -qi '^location: /cabinet' /tmp/auth-login.headers
           grep -q 'PHPSESSID' /tmp/auth.cookies
 
