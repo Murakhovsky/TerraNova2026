@@ -21,10 +21,19 @@ foreach ([
     $assert(!file_exists($root . '/' . $retiredWeb), 'Retired Phalcon Spatial Web artifact was restored: ' . $retiredWeb);
 }
 
-$legacyModule = $read('app/Bootstrap/SpatialModule.php');
-$assert(!str_contains($legacyModule, '/api/spatial/'), 'Bootstrap\\SpatialModule still owns Spatial API routes.');
-$assert(!str_contains($legacyModule, 'Interfaces\\Api\\Controller'), 'Bootstrap\\SpatialModule still targets the legacy API namespace.');
-$assert(!str_contains($legacyModule, 'SpatialAccessService'), 'Legacy Phalcon Spatial auth composition is still active.');
+$assert(
+    !is_file($root . '/app/Bootstrap/SpatialModule.php'),
+    'Retired Phalcon Spatial module was restored.',
+);
+$webComposition = $read('app/Bootstrap/WebApplicationServices.php');
+foreach ([
+    'spatialAssetService',
+    'spatialSceneRepository',
+    'spatialSceneService',
+    'CanonicalPropertyTourPublisher',
+] as $needle) {
+    $assert(str_contains($webComposition, $needle), 'Property SSR Spatial compatibility composition missing: ' . $needle);
+}
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
