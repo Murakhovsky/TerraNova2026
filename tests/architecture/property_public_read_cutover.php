@@ -32,6 +32,16 @@ foreach (['PropertyCatalogInterface', 'catalogProperties', 'featuredProperties',
     $assert(str_contains($application, $needle), 'Public Property application read contract missing: ' . $needle);
 }
 
+$catalogReadModel = $read('app/Domains/Property/Infrastructure/ReadModel/MySql/CatalogService.php');
+$assert(
+    !str_contains($catalogReadModel, 'GROUP BY p.id'),
+    'Public Property related/grouped reads must remain compatible with strict MySQL grouping.',
+);
+$assert(
+    str_contains($catalogReadModel, 'ORDER BY image.is_cover DESC, image.sort_order, image.id'),
+    'Public Property cover selection must use deterministic scalar image lookup.',
+);
+
 $services = $read('symfony/config/services.yaml');
 foreach ([
     'Infrastructure\\Platform\\Persistence\\Pdo\\PdoConnection:',
