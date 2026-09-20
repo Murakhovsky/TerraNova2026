@@ -6,7 +6,7 @@ info:
 servers:
   - url: /
 paths:
-  /api/v1/properties:
+  /api/v1/public/properties:
     get:
       operationId: listProperties
       parameters:
@@ -22,7 +22,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PropertyCollectionResponse' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
-  /api/v1/properties/featured:
+  /api/v1/public/properties/featured:
     get:
       operationId: listFeaturedProperties
       parameters:
@@ -34,7 +34,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PropertyCollectionResponse' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
-  /api/v1/properties/{slug}:
+  /api/v1/public/properties/{slug}:
     get:
       operationId: getProperty
       parameters:
