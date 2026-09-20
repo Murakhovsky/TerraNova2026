@@ -5,186 +5,56 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker is not installed on the dev server." >&2
+  echo "Docker is not installed on the server." >&2
   exit 20
 fi
 
-# Prefer direct Docker access. On standard Ubuntu/AWS setups the deploy user may
-# have passwordless sudo but not be a member of the docker group yet.
 if docker info >/dev/null 2>&1; then
   DOCKER=(docker)
 elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
   DOCKER=(sudo -n docker)
-  echo "Docker socket is not directly accessible; using passwordless sudo."
 else
-  echo "Deploy user cannot access Docker. Add the user to the docker group or allow passwordless sudo for Docker." >&2
+  echo "Deploy user cannot access Docker." >&2
   exit 21
 fi
 
-if ! "${DOCKER[@]}" compose version >/dev/null 2>&1; then
-  echo "Docker Compose v2 is not available on the dev server." >&2
-  exit 22
-fi
-
 if [[ -f .env ]]; then
-  ENV_FILE=".env"
-  COMPOSE=("${DOCKER[@]}" compose)
+  COMPOSE=("${DOCKER[@]}" compose --env-file .env)
 elif [[ -f .env.docker ]]; then
-  ENV_FILE=".env.docker"
   COMPOSE=("${DOCKER[@]}" compose --env-file .env.docker)
 else
-  echo "Neither .env nor .env.docker exists in $PROJECT_DIR." >&2
-  echo "Create the server environment file before deploying." >&2
+  echo "Neither .env nor .env.docker exists." >&2
   exit 23
 fi
 
-structured_log() {
-  local container_id="$1"
-  local label="$2"
-  local tmp_log
-  [[ -n "$container_id" ]] || return 0
-
-  tmp_log="$(mktemp)"
-  if "${DOCKER[@]}" cp "$container_id:/var/www/html/tmp/logs/cos.jsonl" "$tmp_log" >/dev/null 2>&1; then
-    echo "Structured $label log:" >&2
-    tail -n 100 "$tmp_log" >&2 || true
-  fi
-  rm -f "$tmp_log"
-}
-
-migration_structured_log() {
-  local migrate_id
-  migrate_id="$("${COMPOSE[@]}" ps -aq migrate 2>/dev/null || true)"
-  structured_log "$migrate_id" "migration"
-}
-
-echo "Using server environment: $ENV_FILE"
 "${COMPOSE[@]}" config --quiet
+"${COMPOSE[@]}" build --pull php nginx
+"${COMPOSE[@]}" up -d mysql redis
 
-# Build application images from the just-synced COS revision. The MySQL volume
-# is persistent and is never replaced by this deployment.
-"${COMPOSE[@]}" build --pull php migrate
-
-# The compatibility compose graph requires `migrate` to finish successfully before php starts.
-# Background workers are canonical Symfony services. Capture compose failures so diagnostics are not
-# swallowed by `set -e`.
-if ! "${COMPOSE[@]}" up -d --remove-orphans; then
-  echo "docker compose up failed. Container state:" >&2
-  "${COMPOSE[@]}" ps -a >&2 || true
-  echo "Migration/MySQL logs:" >&2
-  "${COMPOSE[@]}" logs --no-color --tail=250 migrate mysql >&2 || true
-  migration_structured_log
-  exit 24
-fi
-
-MIGRATE_ID="$("${COMPOSE[@]}" ps -aq migrate)"
-if [[ -n "$MIGRATE_ID" ]]; then
-  MIGRATE_STATUS="$("${DOCKER[@]}" inspect -f '{{.State.Status}}' "$MIGRATE_ID")"
-  MIGRATE_EXIT_CODE="$("${DOCKER[@]}" inspect -f '{{.State.ExitCode}}' "$MIGRATE_ID")"
-  if [[ "$MIGRATE_STATUS" == "exited" && "$MIGRATE_EXIT_CODE" != "0" ]]; then
-    echo "Database migration failed with exit code $MIGRATE_EXIT_CODE." >&2
-    "${COMPOSE[@]}" logs --no-color --tail=250 migrate mysql >&2 || true
-    migration_structured_log
-    exit 24
-  fi
-fi
-
-PHP_ID="$("${COMPOSE[@]}" ps -q php)"
-if [[ -z "$PHP_ID" ]]; then
-  echo "PHP container was not created." >&2
-  "${COMPOSE[@]}" ps -a >&2 || true
-  exit 25
-fi
-
-for _ in $(seq 1 20); do
-  PHP_HEALTH="$("${DOCKER[@]}" inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$PHP_ID")"
-  if [[ "$PHP_HEALTH" == "healthy" || "$PHP_HEALTH" == "running" ]]; then
-    break
-  fi
-  if [[ "$PHP_HEALTH" == "unhealthy" || "$PHP_HEALTH" == "exited" || "$PHP_HEALTH" == "dead" ]]; then
-    echo "PHP container entered state: $PHP_HEALTH" >&2
-    "${COMPOSE[@]}" logs --no-color --tail=250 php >&2 || true
-    exit 26
-  fi
-  sleep 3
-done
-
-PHP_HEALTH="$("${DOCKER[@]}" inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$PHP_ID")"
-if [[ "$PHP_HEALTH" != "healthy" && "$PHP_HEALTH" != "running" ]]; then
-  echo "PHP container did not become ready; state: $PHP_HEALTH" >&2
-  "${COMPOSE[@]}" logs --no-color --tail=250 php >&2 || true
-  exit 27
-fi
-
-
-# docker compose does not recreate nginx when only a bind-mounted config file
-# changes. Validate and reload it explicitly so the running process consumes the
-# just-synced proxy contract instead of serving yesterday's configuration with
-# today's files mounted underneath it.
-NGINX_ID="$("${COMPOSE[@]}" ps -q nginx)"
-if [[ -z "$NGINX_ID" ]]; then
-  echo "Nginx container was not created." >&2
-  "${COMPOSE[@]}" ps -a >&2 || true
-  exit 28
-fi
-
-if ! "${DOCKER[@]}" exec "$NGINX_ID" nginx -t; then
-  echo "Nginx container rejected the synced configuration." >&2
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx >&2 || true
-  exit 28
-fi
-
-if ! "${DOCKER[@]}" exec "$NGINX_ID" nginx -s reload; then
-  echo "Nginx container could not reload the synced configuration." >&2
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx >&2 || true
-  exit 28
-fi
-
-echo "Nginx container configuration validated and reloaded."
-
-# This is the blocking application check. Run it inside the server so a public
-# CDN/WAF/TLS issue cannot make a healthy deployment look broken.
-APP_HEALTHY=0
-for _ in $(seq 1 15); do
-  if "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O /dev/null http://127.0.0.1/cos; then
-    APP_HEALTHY=1
+for attempt in $(seq 1 30); do
+  if "${COMPOSE[@]}" exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent' >/dev/null 2>&1; then
     break
   fi
   sleep 2
 done
 
-if [[ "$APP_HEALTHY" != "1" ]]; then
-  echo "Local application health check failed: http://127.0.0.1/cos" >&2
-  "${COMPOSE[@]}" ps -a >&2 || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
-  structured_log "$PHP_ID" "application"
-  echo "Local /cos response body:" >&2
-  "${DOCKER[@]}" exec "$NGINX_ID" wget -q -T 5 -O - http://127.0.0.1/cos >&2 2>/dev/null || true
-  exit 28
-fi
+"${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+"${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:schema:migrate
+"${COMPOSE[@]}" up -d --remove-orphans
 
-echo "Local application health check passed: /cos"
+for attempt in $(seq 1 30); do
+  if curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
+    break
+  fi
+  sleep 2
+done
 
-# Canonical business/control-plane APIs no longer belong to the Phalcon host.
-# Deploy the parallel Symfony runtime before the host reverse proxy is refreshed.
-echo "Deploying canonical Symfony API runtime on 127.0.0.1:8081..."
-bash deploy/symfony-dev.sh
-
-if ! curl --fail --silent --show-error --retry 2 --retry-delay 1 \
-    http://127.0.0.1:8081/health/dependencies > /tmp/cos-symfony-api-health.json; then
-  echo "Canonical Symfony dependency readiness check failed on 127.0.0.1:8081." >&2
-  cat /tmp/cos-symfony-api-health.json >&2 2>/dev/null || true
+if ! curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
+  cat /tmp/cos-health.json >&2 2>/dev/null || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mysql redis >&2 || true
   exit 31
 fi
-echo "Canonical Symfony dependency readiness is healthy: /health/dependencies"
 
-# Visualization is an operational observability surface. Exercise the canonical
-# Symfony composition so a blank Architecture Explorer fails deployment.
-if ! "${DOCKER[@]}" exec cos-symfony-php-1 php bin/console cos:architecture:smoke; then
-  echo "Architecture Graph runtime smoke failed inside the canonical Symfony runtime." >&2
-  "${DOCKER[@]}" logs --tail=250 cos-symfony-php-1 >&2 || true
-  exit 30
-fi
-
+"${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke
 "${COMPOSE[@]}" ps
-printf 'DEV deployment completed successfully.\n'
+printf 'COS Symfony deployment completed successfully.\n'

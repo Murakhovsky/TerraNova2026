@@ -32,7 +32,7 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
 USER www-data
 
 RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=default \
-    DATABASE_URL="mysql://cos:build-only-password@127.0.0.1:3306/cos_symfony?serverVersion=8.4.0&charset=utf8mb4" \
+    DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=cos DB_USERNAME=cos DB_PASSWORD=build-only-password \
     REDIS_URL="redis://127.0.0.1:6379" \
     MESSENGER_TRANSPORT_DSN="redis://127.0.0.1:6379/cos_async" \
     MESSENGER_FAILED_TRANSPORT_DSN="redis://127.0.0.1:6379/cos_failed" \
@@ -42,10 +42,7 @@ RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=de
     LLM_ENDPOINT="" \
     LLM_TOKEN="" \
     LLM_MODEL="wave4-build" \
-    LLM_PROVIDER="fixture" \
-    LEGACY_DB_HOST=127.0.0.1 LEGACY_DB_PORT=3306 LEGACY_DB_NAME=cos \
-    LEGACY_DB_USER=cos_symfony_ro LEGACY_DB_PASSWORD=build-only-password \
-    SPATIAL_MAX_UPLOAD_BYTES=209715200 SPATIAL_JWT_SECRET=build-only-spatial-secret SPATIAL_JWT_TTL=28800 \
+    LLM_PROVIDER="fixture" \    SPATIAL_MAX_UPLOAD_BYTES=209715200 SPATIAL_JWT_SECRET=build-only-spatial-secret SPATIAL_JWT_TTL=28800 \
     SPATIAL_BLENDER_BINARY="" SPATIAL_GLTF_TRANSFORM_BINARY="" \
     APP_URL="http://127.0.0.1:8080" TELEGRAM_BOT_TOKEN="" TELEGRAM_BOT_NAME="" \
     php bin/console cache:warmup

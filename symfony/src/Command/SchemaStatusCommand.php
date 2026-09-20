@@ -10,10 +10,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
-    name: 'cos:legacy-schema:migrate',
-    description: 'Apply canonical COS SQL migrations to the shared legacy business schema.',
+    name: 'cos:schema:status',
+    description: 'Report applied canonical COS SQL migrations in the COS business schema.',
 )]
-final class LegacySchemaMigrateCommand extends Command
+final class SchemaStatusCommand extends Command
 {
     public function __construct(private readonly MigrationRunnerInterface $migrations)
     {
@@ -23,7 +23,7 @@ final class LegacySchemaMigrateCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode(
-            $this->migrations->migrate(),
+            $this->migrations->status(),
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
         ));
 
