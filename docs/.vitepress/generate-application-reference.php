@@ -25,9 +25,9 @@ foreach ($modules as $moduleId => $module) {
 
 $routeCatalogues = [
     'diagnostic' => [
-        'service' => 'diagnosticRouteContributor',
-        'contributor' => 'app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php',
-        'sources' => ['app/Interfaces/Web/Routing/DiagnosticRoutes.php'],
+        'service' => 'Symfony route collection',
+        'contributor' => 'symfony/src/Web/Diagnostic/DiagnosticPageController.php',
+        'sources' => ['symfony/config/routes.yaml'],
     ],
     'property' => [
         'service' => 'propertyRouteContributor',
