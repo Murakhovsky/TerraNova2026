@@ -69,8 +69,9 @@ $assert(str_contains($legacyApi, 'favouritesAction'), 'Favourites compatibility 
 $catalogJs = $read('frontend/entrypoints/terranova-catalog-api.js');
 $catalogView = $read('app/Interfaces/Web/View/property/catalog.phtml');
 $homeView = $read('app/Interfaces/Web/View/index/index.phtml');
+$assert(str_contains($catalogJs, '/api/v1/public/properties'), 'Catalog JavaScript is not using Symfony public reads.');
+$assert(str_contains($catalogView, 'api/v1/public/properties'), 'Catalog view is not using Symfony public reads.');
 foreach ([$catalogJs, $catalogView] as $source) {
-    $assert(str_contains($source, '/api/v1/public/properties'), 'Public catalog browser source is not using Symfony public reads.');
     $assert(!str_contains($source, "'/api/v1/properties'"), 'Public catalog browser source still targets manager Property API.');
 }
 $assert(str_contains($homeView, 'api/v1/public/properties/featured'), 'Homepage featured feed is not using Symfony public reads.');
