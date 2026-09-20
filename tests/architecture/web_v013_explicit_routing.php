@@ -4,19 +4,18 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
-$services = (string) file_get_contents($root . '/app/config/services_web.php');
+$read = static fn(string $path): string => (string) file_get_contents($root . '/' . $path);
+$assert = static function(bool $condition, string $message): void {
+    if (!$condition) throw new RuntimeException($message);
+};
+
+$services = $read('app/config/services_web.php');
 foreach (['new Router(false)', 'removeExtraSlashes(true)'] as $needle) {
-    if (!str_contains($services, $needle)) {
-        throw new RuntimeException('WEB V0.13 router configuration is missing: ' . $needle);
-    }
+    $assert(str_contains($services, $needle), 'WEB V0.13 router configuration is missing: ' . $needle);
 }
-if (preg_match('/new\s+Router\s*\(\s*\)/', $services) === 1) {
-    throw new RuntimeException('Phalcon default routes must stay disabled.');
-}
+$assert(preg_match('/new\s+Router\s*\(\s*\)/', $services) !== 1, 'Phalcon default routes must stay disabled.');
 
-$coreRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/CoreWebRoutes.php');
-$spatialRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/SpatialWebRoutes.php');
-
+$coreRoutes = $read('app/Interfaces/Web/Routing/CoreWebRoutes.php');
 $coreRequired = [
     '/',
     '/auth/login',
@@ -31,56 +30,21 @@ $coreRequired = [
     '/admin/updateUser/{id:[0-9]+}',
 ];
 foreach ($coreRequired as $pattern) {
-    if (!str_contains($coreRoutes, "'" . $pattern . "'")) {
-        throw new RuntimeException('WEB V0.13 core explicit route is missing: ' . $pattern);
-    }
-}
-
-$spatialRequired = [
-    '/spatial/manage',
-    '/spatial/edit',
-    '/spatial/edit/{id:[0-9]+}',
-    '/spatial/save',
-    '/spatial/save/{id:[0-9]+}',
-    '/spatial/upload/{id:[0-9]+}',
-    '/spatial/external/{id:[0-9]+}',
-    '/spatial/capture/{id:[0-9]+}',
-    '/spatial/hotspot/{id:[0-9]+}',
-    '/spatial/publish/{id:[0-9]+}',
-    '/spatial/scene/{slug:[A-Za-z0-9_-]+}',
-];
-foreach ($spatialRequired as $pattern) {
-    if (!str_contains($spatialRoutes, "'" . $pattern . "'")) {
-        throw new RuntimeException('WEB V0.13 Spatial explicit route is missing: ' . $pattern);
-    }
-}
-
-foreach (['/:controller', '/:controller/:action', '/:controller/:action/:params'] as $defaultPattern) {
-    if (str_contains($coreRoutes, $defaultPattern) || str_contains($spatialRoutes, $defaultPattern)) {
-        throw new RuntimeException('Global Phalcon default-style route leaked into V0.13 declarations: ' . $defaultPattern);
-    }
+    $assert(str_contains($coreRoutes, "'" . $pattern . "'"), 'WEB V0.13 core explicit route is missing: ' . $pattern);
 }
 
 foreach ([
     '/admin/createUser',
     '/admin/updateUser/{id:[0-9]+}',
 ] as $mutationPattern) {
-    if (!str_contains($coreRoutes, "addPost('" . $mutationPattern . "'")) {
-        throw new RuntimeException('Core mutation route must stay POST-only: ' . $mutationPattern);
-    }
+    $assert(
+        str_contains($coreRoutes, "addPost('" . $mutationPattern . "'"),
+        'Core mutation route must stay POST-only: ' . $mutationPattern,
+    );
 }
-foreach ([
-    '/spatial/save',
-    '/spatial/save/{id:[0-9]+}',
-    '/spatial/upload/{id:[0-9]+}',
-    '/spatial/external/{id:[0-9]+}',
-    '/spatial/capture/{id:[0-9]+}',
-    '/spatial/hotspot/{id:[0-9]+}',
-    '/spatial/publish/{id:[0-9]+}',
-] as $mutationPattern) {
-    if (!str_contains($spatialRoutes, "addPost('" . $mutationPattern . "'")) {
-        throw new RuntimeException('Spatial mutation route must stay POST-only: ' . $mutationPattern);
-    }
+
+foreach (['/:controller', '/:controller/:action', '/:controller/:action/:params'] as $defaultPattern) {
+    $assert(!str_contains($coreRoutes, $defaultPattern), 'Global Phalcon default-style route leaked into V0.13 declarations: ' . $defaultPattern);
 }
 
 foreach ([
@@ -92,42 +56,57 @@ foreach ([
     "\$router->add('/admin/users', \$web('admin', 'users'))",
     "\$router->add('/admin/analytics', \$web('admin', 'analytics'))",
 ] as $mapping) {
-    if (!str_contains($coreRoutes, $mapping)) {
-        throw new RuntimeException('Core route target mapping is missing: ' . $mapping);
-    }
-}
-foreach ([
-    "addGet('/spatial/manage', self::target('manage'))",
-    "addGet('/spatial/edit/{id:[0-9]+}', self::target('edit')",
-    "addGet('/spatial/scene/{slug:[A-Za-z0-9_-]+}', self::target('scene')",
-] as $mapping) {
-    if (!str_contains($spatialRoutes, $mapping)) {
-        throw new RuntimeException('Spatial route target mapping is missing: ' . $mapping);
-    }
+    $assert(str_contains($coreRoutes, $mapping), 'Core route target mapping is missing: ' . $mapping);
 }
 
 foreach (['/cabinet/index', '/admin/index'] as $forbiddenAlias) {
-    if (str_contains($coreRoutes, "'" . $forbiddenAlias . "'") || str_contains($spatialRoutes, "'" . $forbiddenAlias . "'")) {
-        throw new RuntimeException('Implicit-style alias must not become explicit again: ' . $forbiddenAlias);
-    }
+    $assert(!str_contains($coreRoutes, "'" . $forbiddenAlias . "'"), 'Implicit-style alias must not become explicit again: ' . $forbiddenAlias);
 }
-if (!str_contains($coreRoutes, "\$router->notFound(\$web('error', 'notFound'))")) {
-    throw new RuntimeException('Canonical application-wide not-found target is missing.');
-}
+$assert(str_contains($coreRoutes, "\$router->notFound(\$web('error', 'notFound'))"), 'Canonical legacy application-wide not-found target is missing.');
 
-$module = (string) file_get_contents($root . '/app/Interfaces/Web/Module.php');
-foreach (['SpatialWebRoutes::register($router)', 'CoreWebRoutes::register($router)'] as $needle) {
-    if (!str_contains($module, $needle)) {
-        throw new RuntimeException('Web module is missing explicit route registration: ' . $needle);
-    }
-}
+$module = $read('app/Interfaces/Web/Module.php');
+$assert(str_contains($module, 'CoreWebRoutes::register($router)'), 'Web module is missing core explicit route registration.');
+$assert(!str_contains($module, 'SpatialWebRoutes::register($router)'), 'Retired Phalcon Spatial route ownership was restored.');
+$assert(!is_file($root . '/app/Interfaces/Web/Routing/SpatialWebRoutes.php'), 'Retired SpatialWebRoutes.php was restored.');
+
 $moduleRoutesPosition = strpos($module, '$routeRegistrar->register');
 $coreRoutesPosition = strpos($module, 'CoreWebRoutes::register($router)');
-if ($moduleRoutesPosition === false || $coreRoutesPosition === false || $coreRoutesPosition < $moduleRoutesPosition) {
-    throw new RuntimeException('Core not-found registration must happen after module route contributors.');
+$assert(
+    $moduleRoutesPosition !== false && $coreRoutesPosition !== false && $coreRoutesPosition > $moduleRoutesPosition,
+    'Core not-found registration must happen after remaining legacy module route contributors.',
+);
+
+$symfonyRoutes = $read('symfony/config/routes.yaml');
+foreach ([
+    'cos_web_spatial_manage:',
+    'cos_web_spatial_edit_new:',
+    'cos_web_spatial_edit:',
+    'cos_web_spatial_save_new:',
+    'cos_web_spatial_save:',
+    'cos_web_spatial_upload:',
+    'cos_web_spatial_external:',
+    'cos_web_spatial_capture:',
+    'cos_web_spatial_hotspot:',
+    'cos_web_spatial_publish:',
+    'cos_web_spatial_scene:',
+] as $route) {
+    $assert(str_contains($symfonyRoutes, $route), 'Canonical Symfony Spatial Web route is missing: ' . $route);
+}
+foreach ([
+    'cos_web_spatial_save_new:',
+    'cos_web_spatial_save:',
+    'cos_web_spatial_upload:',
+    'cos_web_spatial_external:',
+    'cos_web_spatial_capture:',
+    'cos_web_spatial_hotspot:',
+    'cos_web_spatial_publish:',
+] as $route) {
+    $offset = strpos($symfonyRoutes, $route);
+    $slice = $offset === false ? '' : substr($symfonyRoutes, $offset, 260);
+    $assert(str_contains($slice, 'methods: [POST]'), 'Symfony Spatial mutation route must stay POST-only: ' . $route);
 }
 
-$errorController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/ErrorController.php');
+$errorController = $read('app/Interfaces/Web/Controller/ErrorController.php');
 foreach ([
     "renderFrontendFailure(404",
     "'not_found'",
@@ -138,31 +117,22 @@ foreach ([
     'public function notFoundAction(): ?ResponseInterface',
     'return $this->json([',
 ] as $needle) {
-    if (!str_contains($errorController, $needle)) {
-        throw new RuntimeException('Canonical 404 controller is missing behavior: ' . $needle);
-    }
+    $assert(str_contains($errorController, $needle), 'Canonical legacy 404 controller is missing behavior: ' . $needle);
 }
 
 $liveSmokePath = $root . '/tests/smoke/web_v013_live_routes.sh';
-if (!is_file($liveSmokePath)) {
-    throw new RuntimeException('WEB V0.13 live routing smoke script is missing.');
-}
+$assert(is_file($liveSmokePath), 'WEB V0.13 live routing smoke script is missing.');
 $liveSmoke = (string) file_get_contents($liveSmokePath);
 foreach (['/cabinet/index', '/admin/index', '/cabinet/telegramConnect', '/spatial/save', '/api/this-route-does-not-exist-v013', 'application/json'] as $needle) {
-    if (!str_contains($liveSmoke, $needle)) {
-        throw new RuntimeException('WEB V0.13 live routing smoke is missing assertion: ' . $needle);
-    }
-}
-$runtimeWorkflow = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
-if (!str_contains($runtimeWorkflow, 'bash tests/smoke/web_v013_live_routes.sh')) {
-    throw new RuntimeException('AWS dev deploy must execute the WEB V0.13 live routing smoke.');
+    $assert(str_contains($liveSmoke, $needle), 'WEB V0.13 live routing smoke is missing assertion: ' . $needle);
 }
 
-$documentation = (string) file_get_contents($root . '/docs/architecture/web-v0.13.md');
-foreach (['Router(false)', 'CoreWebRoutes', 'SpatialWebRoutes', 'application-wide 404', 'module route contributors', 'live routing smoke'] as $needle) {
-    if (!str_contains($documentation, $needle)) {
-        throw new RuntimeException('WEB V0.13 documentation is missing contract: ' . $needle);
-    }
+$runtimeWorkflow = $read('.github/workflows/diagnostic.yml');
+$assert(str_contains($runtimeWorkflow, 'bash tests/smoke/web_v013_live_routes.sh'), 'AWS dev deploy must execute the WEB V0.13 live routing smoke.');
+
+$documentation = $read('docs/architecture/web-v0.13.md');
+foreach (['Router(false)', 'CoreWebRoutes', 'Symfony', 'application-wide 404', 'module route contributors', 'live routing smoke'] as $needle) {
+    $assert(str_contains($documentation, $needle), 'WEB V0.13 documentation is missing contract: ' . $needle);
 }
 
-echo "WEB V0.13 explicit routing and 404 declaration contract passed.\n";
+echo "WEB V0.13 explicit routing passed: core legacy routes remain explicit and Spatial Web ownership is canonical on Symfony.\n";
