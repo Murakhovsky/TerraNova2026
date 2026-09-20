@@ -14,7 +14,7 @@ use Domains\Property\Application\Contract\PropertyManagementInterface;
 use Domains\Property\Application\Contract\PropertyModerationInterface;
 use Domains\Property\Application\Contract\PropertyPresentationInterface;
 use Domains\Property\Application\Contract\PropertySubmissionInterface;
-use Interfaces\Web\Page\PublicPageService;
+use Domains\Content\Application\Service\PublicPageCatalog;
 use Domains\Spatial\Application\Contract\SpatialSceneInterface;
 use Phalcon\Mvc\Controller;
 use Throwable;
@@ -33,7 +33,7 @@ class ControllerBase extends Controller
         return $this->di->getShared('frontendAnalyticsService');
     }
 
-    protected function publicPageService(): PublicPageService
+    protected function publicPageService(): PublicPageCatalog
     {
         return $this->di->getShared('frontendPublicPageService');
     }

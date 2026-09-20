@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Interfaces\Web;
 
 use Bootstrap\WebApplicationServices;
-use Interfaces\Web\Page\PublicPageService;
+use Domains\Content\Application\Service\PublicPageCatalog;
 use Interfaces\Web\Routing\CoreWebRoutes;
 use Interfaces\Web\Routing\FrontendRoutes;
 use Interfaces\Web\Routing\ModuleRouteContributorInterface;
@@ -28,7 +28,7 @@ class Module implements ModuleDefinitionInterface
         WebApplicationServices::register($di);
 
         $router = $di->getShared('router');
-        FrontendRoutes::register($router, array_keys((new PublicPageService())->pages()));
+        FrontendRoutes::register($router, array_keys((new PublicPageCatalog())->pages()));
 
         $routeRegistrar = $di->getShared('moduleRouteRegistrar');
         if (!$routeRegistrar instanceof ModuleRouteRegistrar) {

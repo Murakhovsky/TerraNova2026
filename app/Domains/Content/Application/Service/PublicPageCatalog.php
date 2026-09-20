@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Interfaces\Web\Page;
+namespace Domains\Content\Application\Service;
 
-class PublicPageService
+final class PublicPageCatalog
 {
     public function pages(): array
     {

@@ -14,7 +14,6 @@ final class FrontendRoutes
         $router->setDefaultController('index');
         $router->setDefaultAction('index');
 
-        self::add($router, 'add', '/sitemap.xml', 'Interfaces\\Web\\Controller', 'seo', 'sitemap');
         self::add($router, 'add', '/analytics/track', 'Interfaces\\Web\\Controller', 'analytics', 'track');
         self::add($router, 'addPost', '/webhooks/n8n/content', 'Interfaces\\Web\\Controller', 'n8n_webhook', 'content');
         self::add($router, 'add', '/blog', 'Interfaces\\Web\\Controller', 'blog', 'index');

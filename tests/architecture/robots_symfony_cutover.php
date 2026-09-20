@@ -33,9 +33,10 @@ foreach ([
 $legacyRoutes = $read('app/Interfaces/Web/Routing/FrontendRoutes.php');
 $assert(!str_contains($legacyRoutes, "'/robots.txt'"), 'Phalcon still owns /robots.txt.');
 
-$legacySeo = $read('app/Interfaces/Web/Controller/SeoController.php');
-$assert(!str_contains($legacySeo, 'robotsAction'), 'Retired Phalcon robots action was restored.');
-$assert(str_contains($legacySeo, 'sitemapAction'), 'Sitemap must remain on Phalcon until its separate cutover.');
+$assert(
+    !is_file($root . '/app/Interfaces/Web/Controller/SeoController.php'),
+    'Retired Phalcon SEO controller was restored.',
+);
 
 foreach (['deploy/configure-company-os-http.sh', 'deploy/configure-dev-tls.sh'] as $path) {
     $proxy = $read($path);

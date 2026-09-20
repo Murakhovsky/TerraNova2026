@@ -293,6 +293,63 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
         );
     }
 
+    public function sitemapTypes(string $organizationId): array
+    {
+        return $this->database->fetchAll('
+            SELECT t.code
+            FROM tn_property_types t
+            INNER JOIN tn_properties p ON p.type_id = t.id
+            WHERE t.is_active = 1
+              AND p.organization_id = :organization_id
+              AND p.visibility = "public"
+              AND p.status IN ("published", "active")
+            GROUP BY t.id, t.code, t.sort_order
+            ORDER BY t.sort_order, t.code
+        ', ['organization_id' => $organizationId]);
+    }
+
+    public function sitemapLocations(string $organizationId): array
+    {
+        return $this->database->fetchAll('
+            SELECT l.slug
+            FROM tn_locations l
+            INNER JOIN tn_properties p ON p.location_id = l.id
+            WHERE l.is_active = 1
+              AND p.organization_id = :organization_id
+              AND p.visibility = "public"
+              AND p.status IN ("published", "active")
+            GROUP BY l.id, l.slug, l.sort_order
+            ORDER BY l.sort_order, l.slug
+        ', ['organization_id' => $organizationId]);
+    }
+
+    public function sitemapLandingPairs(string $organizationId): array
+    {
+        return $this->database->fetchAll('
+            SELECT l.slug AS location_slug, t.code AS type_code
+            FROM tn_properties p
+            INNER JOIN tn_locations l ON l.id = p.location_id
+            INNER JOIN tn_property_types t ON t.id = p.type_id
+            WHERE p.organization_id = :organization_id
+              AND p.visibility = "public"
+              AND p.status IN ("published", "active")
+            GROUP BY l.slug, t.code
+            ORDER BY COUNT(*) DESC, l.slug, t.code
+        ', ['organization_id' => $organizationId]);
+    }
+
+    public function sitemapProperties(string $organizationId): array
+    {
+        return $this->database->fetchAll('
+            SELECT slug, updated_at
+            FROM tn_properties
+            WHERE organization_id = :organization_id
+              AND visibility = "public"
+              AND status IN ("published", "active")
+            ORDER BY updated_at DESC, id DESC
+        ', ['organization_id' => $organizationId]);
+    }
+
     /** @return array{where:list<string>,params:array<string,mixed>} */
     private function conditions(string $organizationId, array $filters): array
     {

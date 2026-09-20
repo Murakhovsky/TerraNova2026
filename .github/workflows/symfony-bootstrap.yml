@@ -271,6 +271,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/property_real_estate_wave9.sql
 
+      - name: Seed SEO Web cutover fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/seo_web_cutover.sql
+
       - name: Seed Documents Wave 10 fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -922,6 +927,26 @@ jobs:
           grep -q '^User-agent: \*$' /tmp/robots.txt
           grep -q '^Disallow: /admin$' /tmp/robots.txt
           grep -q '^Sitemap: https://seo.example.test/sitemap.xml$' /tmp/robots.txt
+
+          grep -q 'cos_web_sitemap' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_sitemap"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          php tests/architecture/sitemap_symfony_cutover.php
+
+          status=$(curl --silent --show-error --output /tmp/sitemap.xml --write-out '%{http_code}' \
+            -H 'Host: seo.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            http://127.0.0.1:8081/sitemap.xml)
+          echo "sitemap.xml HTTP $status"; cat /tmp/sitemap.xml; echo
+          if [ "$status" != "200" ]; then
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=160 php nginx
+            exit 1
+          fi
+          grep -q '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' /tmp/sitemap.xml
+          grep -q 'https://seo.example.test/property/show/wave9-public-property' /tmp/sitemap.xml
+          ! grep -q 'wave9-moderation-property' /tmp/sitemap.xml
+          grep -q 'https://seo.example.test/blog/seo-ci-public-post' /tmp/sitemap.xml
+          grep -q 'https://seo.example.test/guide/seo-ci-public-guide' /tmp/sitemap.xml
+          ! grep -q 'seo-ci-draft-post' /tmp/sitemap.xml
+          ! grep -q 'seo-ci-noindex-post' /tmp/sitemap.xml
 
           status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
           echo "Architecture unauth HTTP $status"
