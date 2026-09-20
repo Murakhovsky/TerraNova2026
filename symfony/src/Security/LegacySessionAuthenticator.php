@@ -31,6 +31,11 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return false;
         }
 
+        if ($request->isMethod('GET')
+            && preg_match('#^/spatial/scene/[A-Za-z0-9_-]+$#', $path) === 1) {
+            return false;
+        }
+
         if (str_starts_with($path, '/api/spatial/')) {
             if ($path === '/api/spatial/auth/token'
                 || preg_match('/^Bearer\\s+\\S+$/i', trim((string) $request->headers->get('Authorization', ''))) === 1) {
@@ -97,7 +102,8 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
         return str_starts_with($path, '/sales')
             || str_starts_with($path, '/cos/architecture')
             || str_starts_with($path, '/admin/diagnostics')
-            || str_starts_with($path, '/diagnostics/');
+            || str_starts_with($path, '/diagnostics/')
+            || str_starts_with($path, '/spatial');
     }
 
     private static function spatialUnauthorized(): JsonResponse
