@@ -31,13 +31,14 @@ foreach ([
     'cos_web_sales_root:', 'cos_web_sales_dashboard:', 'cos_web_sales_today:', 'cos_web_sales_pipeline:',
     'cos_web_sales_leads:', 'cos_web_sales_deals:', 'cos_web_sales_deal:', 'cos_web_sales_director:', 'cos_web_sales_admin:',
     'cos_api_v1_public_properties:', 'cos_api_v1_public_properties_featured:', 'cos_api_v1_public_property:',
+    'cos_web_robots:',
 ] as $route) {
     if (!str_contains($symfonyRoutes, $route)) {
         throw new RuntimeException('Canonical Symfony Sales page route is missing: ' . $route);
     }
 }
 
-foreach (['/api/v1/properties', '/api/property/:action', '/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
+foreach (['/robots.txt', '/api/v1/properties', '/api/property/:action', '/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
     if (str_contains($frontendRoutes, $retired)) {
         throw new RuntimeException('Retired legacy API route restored in FrontendRoutes: ' . $retired);
     }

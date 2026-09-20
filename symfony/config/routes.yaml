@@ -3,6 +3,11 @@ cos_symfony_home:
   controller: App\Controller\HealthController::index
   methods: [GET]
 
+cos_web_robots:
+  path: /robots.txt
+  controller: App\Web\Seo\RobotsController
+  methods: [GET, HEAD]
+
 cos_symfony_health:
   path: /health
   controller: App\Controller\HealthController::health

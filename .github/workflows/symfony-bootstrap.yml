@@ -910,6 +910,18 @@ jobs:
           grep -q 'cos_web_diagnostic_report' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_diagnostic_report"; cat /tmp/migrated-web-routes.txt; exit 1; }
           grep -q 'cos_web_spatial_manage' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_spatial_manage"; cat /tmp/migrated-web-routes.txt; exit 1; }
           grep -q 'cos_web_spatial_scene' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_spatial_scene"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_robots' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_robots"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          php tests/architecture/robots_symfony_cutover.php
+
+          status=$(curl --silent --show-error --output /tmp/robots.txt --write-out '%{http_code}' \
+            -H 'Host: seo.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            http://127.0.0.1:8081/robots.txt)
+          echo "robots.txt HTTP $status"; cat /tmp/robots.txt; echo
+          test "$status" = "200"
+          grep -q '^User-agent: \*$' /tmp/robots.txt
+          grep -q '^Disallow: /admin$' /tmp/robots.txt
+          grep -q '^Sitemap: https://seo.example.test/sitemap.xml$' /tmp/robots.txt
 
           status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
           echo "Architecture unauth HTTP $status"
