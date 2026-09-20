@@ -955,6 +955,15 @@ jobs:
           grep -q 'cos_api_v1_property_inventory_create' /tmp/wave9-routes.txt
           grep -q 'cos_api_v1_real_estate_match' /tmp/wave9-routes.txt
           grep -q 'cos_api_v1_real_estate_reservation' /tmp/wave9-routes.txt
+          grep -q 'cos_api_v1_public_properties' /tmp/wave9-routes.txt
+          grep -q 'cos_api_v1_public_properties_featured' /tmp/wave9-routes.txt
+          php tests/architecture/property_public_read_cutover.php
+
+          status=$(curl --silent --show-error --output /tmp/wave9-public-properties.json --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/api/v1/public/properties?per_page=12')
+          echo "Wave 9 public Property catalog HTTP $status"; cat /tmp/wave9-public-properties.json; echo
+          test "$status" = "200"
+          grep -q '"properties"' /tmp/wave9-public-properties.json
 
           csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
 
