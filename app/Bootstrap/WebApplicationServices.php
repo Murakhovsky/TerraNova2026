@@ -14,7 +14,6 @@ use Interfaces\Web\Navigation\DiagnosticNavigationContributor;
 use Interfaces\Web\Navigation\ModuleAwareNavigationService;
 use Interfaces\Web\Navigation\PropertyNavigationContributor;
 use Interfaces\Web\Navigation\SalesNavigationContributor;
-use Interfaces\Web\Routing\DiagnosticModuleRouteContributor;
 use Interfaces\Web\Routing\ModuleRouteAccessGuard;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\PropertyModuleRouteContributor;
@@ -52,7 +51,6 @@ final class WebApplicationServices
         $di->setShared('moduleRouteRegistrar', fn() => new ModuleRouteRegistrar(
             $di->getShared('moduleRouteAccessGuard'),
         ));
-        $di->setShared('diagnosticRouteContributor', fn() => new DiagnosticModuleRouteContributor());
         $di->setShared('propertyRouteContributor', fn() => new PropertyModuleRouteContributor());
 
         $di->setShared('salesNavigationContributor', fn() => new SalesNavigationContributor());
