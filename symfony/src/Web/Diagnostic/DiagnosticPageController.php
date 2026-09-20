@@ -8,6 +8,7 @@ use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess;
 use Domains\Diagnostic\Application\Service\DiagnosticRuntimeService;
+use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -24,6 +25,7 @@ final readonly class DiagnosticPageController
         private NavigationBuilder $navigation,
         private DiagnosticMethodologyAccess $methodologyAccess,
         private DiagnosticRuntimeService $runtime,
+        private ActiveModuleResolver $modules,
     ) {
     }
 
@@ -32,6 +34,9 @@ final readonly class DiagnosticPageController
         $tenant = $this->authenticated();
         if ($tenant instanceof Response) {
             return $tenant;
+        }
+        if (!$this->diagnosticEnabled($tenant)) {
+            return new Response('Not Found', 404);
         }
 
         if (!$this->methodologyAccess->allows(
@@ -56,6 +61,9 @@ final readonly class DiagnosticPageController
         if ($tenant instanceof Response) {
             return $tenant;
         }
+        if (!$this->diagnosticEnabled($tenant)) {
+            return new Response('Not Found', 404);
+        }
 
         try {
             $envelope = $this->runtime->report($tenant->organizationId()->value(), $session);
@@ -75,6 +83,11 @@ final readonly class DiagnosticPageController
     private function authenticated(): TenantContext|Response
     {
         return $this->tenants->current() ?? new RedirectResponse('/auth/login');
+    }
+
+    private function diagnosticEnabled(TenantContext $tenant): bool
+    {
+        return $this->modules->isEnabled($tenant->organizationId()->value(), 'diagnostic');
     }
 
     /** @param array<string,mixed> $extra */
