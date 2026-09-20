@@ -33,7 +33,7 @@ existing MySQL repositories
 
 Міграція йде transactional table clusters, а не за назвами framework-класів:
 
-1. module/runtime та незалежні Platform stores;
+1. module/runtime та незалежні Platform stores — Wave 0 module runtime завершено; Wave 1 operational metrics/resilience/LLM governance переведено на canonical MySQL;
 2. Identity/Tenant і configuration/integration credentials;
 3. Diagnostic;
 4. Documents, Service, RealEstate;
@@ -46,3 +46,22 @@ existing MySQL repositories
 ## Критерій завершення
 
 Cutover завершений лише коли `legacy_cos.pdo` зникає з service graph, deploy більше не створює legacy DML user, Symfony containers не потребують legacy database network, усі canonical tables створюються Doctrine migrations, а legacy MySQL можна зупинити без деградації HTTP, workers, scheduler, integrations чи agent runtime.
+
+
+## Хвиля 1 — операційні сховища Platform
+
+Другий cutover cluster переносить незалежні operational stores:
+
+- `cos_external_circuits`;
+- `cos_operational_metrics`;
+- `cos_llm_budgets`;
+- `cos_llm_usage`;
+- `cos_llm_budget_reservations`.
+
+Runtime owners після cutover використовують `cos.database.pdo`:
+
+- `MysqlCircuitBreakerStore`;
+- `MysqlMetricsRecorder`;
+- `MysqlLlmGovernanceRepository`.
+
+LLM budgets, usage, active reservations і circuit state переходять разом, тому connection-local `GET_LOCK` та LLM budget transactions не розриваються між двома фізичними MySQL. Cutover journal id: `platform-operations-v1`.

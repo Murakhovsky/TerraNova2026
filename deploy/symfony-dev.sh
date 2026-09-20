@@ -171,6 +171,7 @@ fi
 
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:database:cutover:module-runtime
+"${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:database:cutover:platform-operations
 "${COMPOSE[@]}" up -d --remove-orphans
 
 for attempt in $(seq 1 30); do
@@ -260,7 +261,7 @@ for service in worker kernel-worker spatial-worker integration-worker telegram-w
   fi
 done
 
-echo "Doctrine migrations, Messenger, Kernel, Spatial, integration, Telegram workers and Symfony Scheduler are healthy."
+echo "Doctrine migrations, database cutover Waves 0-1, Messenger, Kernel, Spatial, integration, Telegram workers and Symfony Scheduler are healthy."
 
 "${COMPOSE[@]}" ps
 echo "Parallel Symfony runtime is available at http://127.0.0.1:8081/health"
