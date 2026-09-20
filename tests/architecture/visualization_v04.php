@@ -12,7 +12,7 @@ $required = [
     'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionDefinition.php',
     'app/Infrastructure/Visualization/Architecture/ArchitectureGraphProjection.php',
     'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionRegistry.php',
-    'app/Bootstrap/VisualizationServices.php',
+    'symfony/config/services.yaml',
     'tests/unit/visualization_architecture_projections.php',
 ];
 foreach ($required as $path) {
@@ -35,10 +35,9 @@ $assert(str_contains($controller, 'private GraphProjectionRegistryInterface $reg
 $assert(str_contains($controller, "'views' => \$views"), 'Explorer must publish projected view payloads.');
 $assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not depend on Infrastructure.');
 
-$bootstrap = $read('app/Bootstrap/VisualizationServices.php');
-$assert(str_contains($bootstrap, "setShared(\n    'cosArchitectureProjectionRegistry'"), 'Projection registry composition missing.');
-$config = $read('app/config/services_kernel.php');
-$assert(str_contains($config, "Bootstrap/VisualizationServices.php"), 'Visualization composition root is not loaded.');
+$bootstrap = $read('symfony/config/services.yaml');
+$assert(str_contains($bootstrap, 'Infrastructure\\Visualization\\Architecture\\ArchitectureProjectionRegistry:'), 'Projection registry Symfony composition missing.');
+$assert(str_contains($bootstrap, 'Kernel\\Visualization\\Graph\\GraphProjectionRegistryInterface:'), 'Projection registry Kernel alias missing.');
 
 $client = $read('frontend/features/cos/architecture-explorer.js');
 $assert(!str_contains($client, 'SYSTEM_TYPES'), 'System projection semantics leaked back into browser code.');
