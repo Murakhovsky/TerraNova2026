@@ -15,21 +15,19 @@ $assert = static function (bool $condition, string $message): void {
     }
 };
 
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
+$controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 $deploy = $read('deploy/dev.sh');
 $visualizationServices = $read('app/Bootstrap/VisualizationServices.php');
 
 foreach ([
-    "'resolve_provider'",
-    "'resolve_projection_registry'",
-    "'resolve_mapper'",
     "'build_canonical_graph'",
+    "'analyze_canonical_graph'",
+    "'describe_projections'",
     "'map_canonical_graph'",
     "'project_' . \$name",
     'failureDiagnostic(',
-    'reportFailure(',
 ] as $marker) {
     $assert(str_contains($controller, $marker), 'Architecture Explorer diagnostic stage is missing: ' . $marker);
 }
