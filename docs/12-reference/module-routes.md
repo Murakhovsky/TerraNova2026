@@ -26,8 +26,9 @@ generated: true
 
 ## `diagnostic`
 
-- contributor: `app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/DiagnosticRoutes.php`;
+- Phalcon Web route contributor: retired;
+- canonical API + SSR route source: `symfony/config/routes.yaml`;
+- HTML owners: `App\Web\Diagnostic\DiagnosticPageController`.
 
 ## `property`
 
