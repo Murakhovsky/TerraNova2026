@@ -34,7 +34,7 @@ The following HTTP/control-plane surfaces have completed cutover and must not re
 | legacy Property runtime/canonical HTTP controllers | Symfony `/api/v1/properties*` and inventory APIs | removed |
 | legacy COS Operations/migration APIs | Symfony `/api/v1/operations/*` and canonical health/runtime endpoints | removed |
 
-`Interfaces\\Api\\Controller\\SpatialController` and the legacy Spatial Web controller/routes are retired. `/api/spatial/*` and `/spatial/*` are owned by Symfony; only legacy Property SSR still consumes the temporary `Bootstrap\\SpatialModule` composition.
+`Interfaces\\Api\\Controller\\SpatialController`, the legacy Spatial Web controller/routes, and `Bootstrap\\SpatialModule` are retired. `/api/spatial/*` and `/spatial/*` are owned by Symfony; legacy Property SSR receives only a temporary framework-neutral `spatialSceneService` compatibility composition.
 Sales SSR is also retired from Phalcon: `/sales/*` is rendered by Symfony `App\\Web\\Sales` controllers using the framework-neutral PHTML renderer; legacy Sales Web controllers/routes must not return.
 
 ## Registered web module owners
@@ -42,7 +42,7 @@ Sales SSR is also retired from Phalcon: `/sales/*` is rendered by Symfony `App\\
 | Module | Current registration | Target |
 |---|---|---|
 | `frontend` | `Interfaces\Web\Module` | SSR/public web shell only; business/control-plane APIs are moving to Symfony |
-| `spatial` | `Bootstrap\SpatialModule` | temporary SSR composition only; `/api/spatial/*` is canonical on Symfony |
+| `spatial` | not registered in Phalcon Web | API, workspace/editor and public viewer are canonical on Symfony; Property SSR temporarily consumes framework-neutral scene services only |
 | `users` | not registered in main web | Identity contracts and canonical Phalcon adapters |
 | `games` | removed | `/games` remains an explicit HTTP 410 boundary |
 | `economy` | removed | `/economy` remains an explicit HTTP 410 boundary |
