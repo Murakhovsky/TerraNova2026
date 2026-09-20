@@ -149,6 +149,16 @@ server {
         proxy_set_header X-Forwarded-Host \$host;
     }
 
+    # Auth Web is Symfony-owned. Session storage remains shared only until
+    # Cabinet and the remaining compatibility Web surfaces are retired.
+    location ^~ /auth/ {
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_pass http://$SYMFONY_UPSTREAM;
+    }
+
     # Sales SSR and immutable frontend assets are canonical on Symfony.
     location = /sales {
         proxy_pass http://$SYMFONY_UPSTREAM;

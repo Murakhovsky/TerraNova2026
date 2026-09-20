@@ -22,9 +22,6 @@ final class CoreWebRoutes
         $router->add('/', $web('index', 'index'));
 
         // Authentication boundary. Login/register intentionally accept GET + POST.
-        $router->add('/auth/login', $web('auth', 'login'));
-        $router->add('/auth/register', $web('auth', 'register'));
-        $router->add('/auth/logout', $web('auth', 'logout'));
 
         // Portal.
         $router->add('/cabinet', $web('cabinet', 'index'));

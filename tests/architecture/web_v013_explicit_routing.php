@@ -20,9 +20,6 @@ $spatialController = (string) file_get_contents($root . '/symfony/src/Web/Spatia
 
 $coreRequired = [
     '/',
-    '/auth/login',
-    '/auth/register',
-    '/auth/logout',
     '/cabinet',
     '/cabinet/submission/{id:[0-9]+}',
     '/admin',
@@ -34,6 +31,28 @@ $coreRequired = [
 foreach ($coreRequired as $pattern) {
     if (!str_contains($coreRoutes, "'" . $pattern . "'")) {
         throw new RuntimeException('WEB V0.13 core explicit route is missing: ' . $pattern);
+    }
+}
+
+$authRequired = [
+    'cos_web_auth_login:',
+    'path: /auth/login',
+    'cos_web_auth_register:',
+    'path: /auth/register',
+    'cos_web_auth_logout:',
+    'path: /auth/logout',
+    'AuthPageController::login',
+    'AuthPageController::register',
+    'AuthPageController::logout',
+];
+foreach ($authRequired as $pattern) {
+    if (!str_contains($symfonyRoutes, $pattern)) {
+        throw new RuntimeException('Symfony Auth route ownership is missing: ' . $pattern);
+    }
+}
+foreach (['/auth/login', '/auth/register', '/auth/logout'] as $retiredAuthRoute) {
+    if (str_contains($coreRoutes, "'" . $retiredAuthRoute . "'")) {
+        throw new RuntimeException('Retired Phalcon Auth route restored: ' . $retiredAuthRoute);
     }
 }
 
@@ -87,7 +106,6 @@ foreach ([
 
 foreach ([
     "\$router->add('/', \$web('index', 'index'))",
-    "\$router->add('/auth/login', \$web('auth', 'login'))",
     "\$router->add('/cabinet', \$web('cabinet', 'index'))",
     "\$router->add('/cabinet/submission/{id:[0-9]+}', \$web('cabinet', 'submission')",
     "\$router->add('/admin', \$web('admin', 'index'))",
