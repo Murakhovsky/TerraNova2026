@@ -1338,6 +1338,10 @@ services:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
+  App\Web\Content\PublicContentPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Command\IntegrationOutboxCommand:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'

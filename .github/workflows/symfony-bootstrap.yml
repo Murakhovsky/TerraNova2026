@@ -948,6 +948,44 @@ jobs:
           ! grep -q 'seo-ci-draft-post' /tmp/sitemap.xml
           ! grep -q 'seo-ci-noindex-post' /tmp/sitemap.xml
 
+          grep -q 'cos_web_blog_index' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_blog_article' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_guide' /tmp/migrated-web-routes.txt
+          php tests/architecture/blog_guide_symfony_cutover.php
+
+          status=$(curl --silent --show-error --output /tmp/blog-index.html --write-out '%{http_code}' \
+            -H 'Host: content.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            'http://127.0.0.1:8081/blog')
+          echo "Blog index HTTP $status"
+          test "$status" = "200"
+          grep -q 'CI Public Post' /tmp/blog-index.html
+          ! grep -q 'CI Draft Post' /tmp/blog-index.html
+          grep -q 'https://content.example.test/blog' /tmp/blog-index.html
+
+          status=$(curl --silent --show-error --output /tmp/blog-article.html --write-out '%{http_code}' \
+            -H 'Host: content.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            'http://127.0.0.1:8081/blog/seo-ci-public-post')
+          echo "Blog article HTTP $status"
+          test "$status" = "200"
+          grep -q 'CI_PUBLIC_BLOG_BODY' /tmp/blog-article.html
+          grep -q 'https://content.example.test/blog/seo-ci-public-post' /tmp/blog-article.html
+
+          status=$(curl --silent --show-error --output /tmp/blog-draft.html --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/blog/seo-ci-draft-post')
+          test "$status" = "404"
+          ! grep -q 'CI_DRAFT_BLOG_BODY' /tmp/blog-draft.html
+
+          status=$(curl --silent --show-error --output /tmp/guide.html --write-out '%{http_code}' \
+            -H 'Host: content.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            'http://127.0.0.1:8081/guide/seo-ci-public-guide')
+          echo "Guide HTTP $status"
+          test "$status" = "200"
+          grep -q 'CI_PUBLIC_GUIDE_BODY' /tmp/guide.html
+          grep -q 'https://content.example.test/guide/seo-ci-public-guide' /tmp/guide.html
+
           status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
           echo "Architecture unauth HTTP $status"
           test "$status" = "302"

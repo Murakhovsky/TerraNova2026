@@ -12,9 +12,11 @@ on:
       - 'symfony/config/services.yaml'
       - 'symfony/src/Web/Spatial/**'
       - 'symfony/src/Web/Seo/**'
+      - 'symfony/src/Web/Content/**'
       - 'tests/architecture/frontend_routes.php'
       - 'tests/architecture/robots_symfony_cutover.php'
       - 'tests/architecture/sitemap_symfony_cutover.php'
+      - 'tests/architecture/blog_guide_symfony_cutover.php'
       - 'tests/architecture/web_v013_explicit_routing.php'
       - 'docs/architecture/web-v0.13.md'
       - '.github/workflows/web-v013.yml'
@@ -29,9 +31,11 @@ on:
       - 'symfony/config/services.yaml'
       - 'symfony/src/Web/Spatial/**'
       - 'symfony/src/Web/Seo/**'
+      - 'symfony/src/Web/Content/**'
       - 'tests/architecture/frontend_routes.php'
       - 'tests/architecture/robots_symfony_cutover.php'
       - 'tests/architecture/sitemap_symfony_cutover.php'
+      - 'tests/architecture/blog_guide_symfony_cutover.php'
       - 'tests/architecture/web_v013_explicit_routing.php'
       - 'docs/architecture/web-v0.13.md'
       - '.github/workflows/web-v013.yml'
@@ -54,12 +58,15 @@ jobs:
           php -l symfony/src/Web/Spatial/SpatialPageController.php
           php -l symfony/src/Web/Seo/RobotsController.php
           php -l symfony/src/Web/Seo/SitemapController.php
+          php -l symfony/src/Web/Content/PublicContentPageController.php
           php -l tests/architecture/robots_symfony_cutover.php
           php -l tests/architecture/sitemap_symfony_cutover.php
+          php -l tests/architecture/blog_guide_symfony_cutover.php
           php -l tests/architecture/web_v013_explicit_routing.php
       - name: Routing regression gates
         run: |
           php tests/architecture/frontend_routes.php
           php tests/architecture/robots_symfony_cutover.php
           php tests/architecture/sitemap_symfony_cutover.php
+          php tests/architecture/blog_guide_symfony_cutover.php
           php tests/architecture/web_v013_explicit_routing.php
