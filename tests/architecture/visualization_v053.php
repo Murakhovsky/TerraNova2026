@@ -15,7 +15,7 @@ $assert = static function (bool $condition, string $message): void {
     }
 };
 
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
+$controller = $read('symfony/src/Web/Visualization/ArchitectureExplorerController.php');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 $deploy = $read('deploy/dev.sh');
@@ -34,7 +34,7 @@ foreach ([
     $assert(str_contains($controller, $marker), 'Architecture Explorer diagnostic stage is missing: ' . $marker);
 }
 
-$assert(str_contains($controller, "'diagnostic' => \$diagnostic"), 'Graph JSON endpoint must expose manager-only diagnostic payload.');
+$assert(str_contains($controller, "'diagnostic'=>\$diagnostic"), 'Graph JSON endpoint must expose manager-only diagnostic payload.');
 $assert(str_contains($view, 'data-architecture-backend-diagnostic'), 'Architecture view must render backend diagnostic details for managers.');
 
 foreach ([
