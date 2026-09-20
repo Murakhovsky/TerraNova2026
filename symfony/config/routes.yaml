@@ -1185,3 +1185,26 @@ cos_web_sales_admin_health_page:
   path: /sales/admin/health
   controller: App\Web\Sales\SalesAdminPageController::health
   methods: [GET]
+
+
+# Final Web retirement — Visualization and Diagnostic SSR
+cos_web_architecture:
+  path: /cos/architecture
+  controller: App\Web\Visualization\ArchitectureExplorerController::index
+  methods: [GET]
+
+cos_web_architecture_graph:
+  path: /cos/architecture/graph
+  controller: App\Web\Visualization\ArchitectureExplorerController::graph
+  methods: [GET]
+
+cos_web_architecture_health:
+  path: /cos/architecture/health
+  controller: App\Web\Visualization\ArchitectureExplorerController::health
+  methods: [GET]
+
+cos_web_diagnostic_report:
+  path: /diagnostics/{session}/report
+  controller: App\Web\Diagnostic\DiagnosticReportController::show
+  methods: [GET]
+  requirements: { session: '[A-Za-z0-9_.:-]{8,64}' }
