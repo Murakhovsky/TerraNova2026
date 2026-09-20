@@ -3,6 +3,16 @@ cos_symfony_home:
   controller: App\Controller\HealthController::index
   methods: [GET]
 
+cos_web_public_analytics:
+  path: /analytics/track
+  controller: App\Web\PublicEdge\PublicEdgeController::analytics
+  methods: [POST]
+
+cos_web_n8n_content_webhook:
+  path: /webhooks/n8n/content
+  controller: App\Web\PublicEdge\PublicEdgeController::contentWebhook
+  methods: [POST]
+
 cos_web_blog_index:
   path: /blog
   controller: App\Web\Content\PublicContentPageController::blog

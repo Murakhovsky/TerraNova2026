@@ -1,3 +1,6 @@
+parameters:
+  env(N8N_WEBHOOK_SECRET): ''
+
 services:
   _defaults:
     autowire: true
@@ -1329,6 +1332,27 @@ services:
 
   Domains\Content\Application\Contract\ContentServiceInterface:
     alias: Domains\Content\Application\Service\ContentService
+
+  Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface:
+    alias: Infrastructure\Platform\Analytics\MysqlPropertyFunnelAnalytics
+
+  Infrastructure\Integration\N8n\N8nWebhookService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $content: '@Domains\Content\Application\Contract\ContentServiceInterface'
+      $secret: '%env(N8N_WEBHOOK_SECRET)%'
+      $maxClockSkew: 300
+
+  Domains\Content\Application\Contract\InboundContentWebhookInterface:
+    alias: Infrastructure\Integration\N8n\N8nWebhookService
+
+  App\Web\PublicEdge\PublicEdgeController:
+    public: true
+    tags: ['controller.service_arguments']
 
   Domains\Content\Application\Service\PublicPageCatalog: ~
 

@@ -14,8 +14,6 @@ final class FrontendRoutes
         $router->setDefaultController('index');
         $router->setDefaultAction('index');
 
-        self::add($router, 'add', '/analytics/track', 'Interfaces\\Web\\Controller', 'analytics', 'track');
-        self::add($router, 'addPost', '/webhooks/n8n/content', 'Interfaces\\Web\\Controller', 'n8n_webhook', 'content');
         self::add($router, 'add', '/admin/content', 'Interfaces\\Web\\Controller', 'content', 'manage');
         self::add($router, 'add', '/admin/content/edit', 'Interfaces\\Web\\Controller', 'content', 'edit');
         $router->add('/admin/content/:action/:params', self::target('Interfaces\\Web\\Controller', 'content', 1) + ['params' => 2]);

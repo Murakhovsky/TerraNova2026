@@ -73,6 +73,7 @@ jobs:
       LLM_MODEL: "wave4-ci"
       LLM_PROVIDER: "fixture"
       WAVE6_CRM_WEBHOOK_SECRET: "wave6-ci-webhook-secret"
+      N8N_WEBHOOK_SECRET: "ci-n8n-webhook-secret"
       SPATIAL_MAX_UPLOAD_BYTES: "209715200"
       SPATIAL_JWT_SECRET: "ci-spatial-jwt-secret-0123456789abcdef"
       SPATIAL_JWT_TTL: "28800"
@@ -275,6 +276,11 @@ jobs:
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/seo_web_cutover.sql
+
+      - name: Seed public edge fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/public_edge_cutover.sql
 
       - name: Seed Documents Wave 10 fixtures
         run: |
@@ -985,6 +991,51 @@ jobs:
           test "$status" = "200"
           grep -q 'CI_PUBLIC_GUIDE_BODY' /tmp/guide.html
           grep -q 'https://content.example.test/guide/seo-ci-public-guide' /tmp/guide.html
+
+          grep -q 'cos_web_public_analytics' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_n8n_content_webhook' /tmp/migrated-web-routes.txt
+          php tests/architecture/public_edge_symfony_cutover.php
+
+          status=$(curl --silent --show-error --output /tmp/analytics.json --write-out '%{http_code}' \
+            --request POST \
+            -H 'Host: edge.example.test' \
+            -H 'Origin: https://edge.example.test' \
+            -F 'event_type=phone_click' \
+            -F 'source_page=/property/show/wave9-public-property' \
+            -F 'target=tel:+380000000000' \
+            http://127.0.0.1:8081/analytics/track)
+          echo "Public analytics HTTP $status"; cat /tmp/analytics.json; echo
+          test "$status" = "202"
+          grep -q '"ok":true' /tmp/analytics.json
+
+          status=$(curl --silent --show-error --output /tmp/analytics-cross-origin.json --write-out '%{http_code}' \
+            --request POST \
+            -H 'Host: edge.example.test' \
+            -H 'Origin: https://evil.example.test' \
+            -F 'event_type=phone_click' \
+            http://127.0.0.1:8081/analytics/track)
+          test "$status" = "400"
+          grep -q 'invalid_origin' /tmp/analytics-cross-origin.json
+
+          analytics_count=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT COUNT(*) FROM tn_analytics_events WHERE event_type='phone_click';" | tr -d '[:space:]')
+          test "$analytics_count" = "1"
+
+          timestamp=$(date +%s)
+          body='{"event":"unsupported","data":{}}'
+          signature=$(php -r 'echo hash_hmac("sha256", $argv[1].".".$argv[2], $argv[3]);' "$timestamp" "$body" "$N8N_WEBHOOK_SECRET")
+          status=$(curl --silent --show-error --output /tmp/n8n-webhook.json --write-out '%{http_code}' \
+            --request POST \
+            -H 'Content-Type: application/json' \
+            -H "X-TN-Timestamp: $timestamp" \
+            -H "X-TN-Signature: sha256=$signature" \
+            -H 'X-TN-Idempotency-Key: ci-public-edge-unsupported' \
+            --data "$body" \
+            http://127.0.0.1:8081/webhooks/n8n/content)
+          echo "n8n inbound HTTP $status"; cat /tmp/n8n-webhook.json; echo
+          test "$status" = "422"
+          grep -q 'Unsupported event type' /tmp/n8n-webhook.json
 
           status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
           echo "Architecture unauth HTTP $status"

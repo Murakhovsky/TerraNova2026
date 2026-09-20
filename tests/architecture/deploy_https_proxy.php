@@ -125,6 +125,8 @@ foreach ([$httpBootstrap, $tls] as $proxyConfig) {
         'location = /blog {',
         'location ^~ /blog/ {',
         'location ^~ /guide/ {',
+        'location = /analytics/track {',
+        'location = /webhooks/n8n/content {',
         'proxy_pass http://$SYMFONY_UPSTREAM;',
     ] as $needle) {
         if (!str_contains($proxyConfig, $needle)) {
