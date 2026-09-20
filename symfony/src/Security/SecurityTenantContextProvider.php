@@ -19,7 +19,7 @@ final readonly class SecurityTenantContextProvider implements TenantContextProvi
     public function current(): ?TenantContext
     {
         $user = $this->security->getUser();
-        if (!$user instanceof LegacySecurityUser) {
+        if (!$user instanceof CosSecurityUser) {
             return null;
         }
 

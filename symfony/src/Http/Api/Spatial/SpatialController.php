@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Api\Spatial;
 
 use App\Infrastructure\Spatial\SpatialTokenIssuer;
-use App\Security\LegacySecurityUser;
+use App\Security\CosSecurityUser;
 use Domains\Spatial\Application\Contract\SpatialProcessingInterface;
 use Domains\Spatial\Application\Contract\SpatialSceneInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -164,7 +164,7 @@ final readonly class SpatialController
     private function actor(): ?array
     {
         $user = $this->tokenStorage->getToken()?->getUser();
-        if (!$user instanceof LegacySecurityUser) {
+        if (!$user instanceof CosSecurityUser) {
             return null;
         }
 

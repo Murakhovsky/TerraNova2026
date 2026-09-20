@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Web\Diagnostic;
 
-use App\Security\LegacySessionReader;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess;
@@ -21,7 +20,6 @@ final readonly class DiagnosticPageController
     public function __construct(
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionReader $sessions,
         private NavigationBuilder $navigation,
         private DiagnosticMethodologyAccess $methodologyAccess,
         private DiagnosticRuntimeService $runtime,
@@ -113,8 +111,8 @@ final readonly class DiagnosticPageController
     }
 
     private function csrf(Request $request): string
-    {
-        $sessionId = (string) $request->cookies->get($this->sessions->cookieName(), '');
-        return $this->sessions->csrfToken($sessionId) ?? '';
+    {        return $request->hasSession()
+            ? (string) $request->getSession()->get('cos_csrf_token', '')
+            : '';
     }
 }

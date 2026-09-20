@@ -3,8 +3,7 @@ declare(strict_types=1);
 
 namespace App\Web\Content;
 
-use App\Security\LegacySessionCsrfValidator;
-use App\Security\LegacySessionReader;
+use App\Security\SessionCsrfValidator;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Content\Application\Contract\ContentServiceInterface;
@@ -20,8 +19,7 @@ final readonly class ContentAdminPageController
     public function __construct(
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionReader $sessions,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
         private NavigationBuilder $navigation,
         private ContentServiceInterface $content,
     ) {
@@ -145,7 +143,6 @@ final readonly class ContentAdminPageController
         int $status = Response::HTTP_OK,
     ): Response {
         $role = $tenant->role()->value();
-        $sessionId = (string) $request->cookies->get($this->sessions->cookieName(), '');
         $variables = array_replace([
             'metaRobots' => 'noindex,nofollow',
             'interfaceSurface' => 'workspace',
@@ -153,7 +150,7 @@ final readonly class ContentAdminPageController
             'workspaceActive' => 'content',
             'workspaceActiveSection' => $this->navigation->activeSection('content'),
             'pageAssetEntries' => [],
-            'csrfToken' => $this->sessions->csrfToken($sessionId) ?? '',
+            'csrfToken' => $request->hasSession() ? (string) $request->getSession()->get('cos_csrf_token', '') : '',
             'currentUser' => ['id' => (int) $tenant->userId()->value(), 'role' => $role],
             'role' => $role,
             'isTeam' => true,

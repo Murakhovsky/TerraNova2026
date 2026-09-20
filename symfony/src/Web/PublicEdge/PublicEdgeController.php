@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Web\PublicEdge;
 
-use App\Security\LegacySessionReader;
 use Domains\Content\Application\Contract\InboundContentWebhookInterface;
 use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,7 +14,6 @@ final readonly class PublicEdgeController
     public function __construct(
         private PropertyFunnelAnalyticsInterface $analytics,
         private InboundContentWebhookInterface $contentWebhook,
-        private LegacySessionReader $sessions,
     ) {
     }
 
@@ -62,12 +60,11 @@ final readonly class PublicEdgeController
     /** @return array{id:int}|null */
     private function sessionUser(Request $request): ?array
     {
-        $sessionId = trim((string) $request->cookies->get($this->sessions->cookieName(), ''));
-        if ($sessionId === '') {
+        if (!$request->hasSession()) {
             return null;
         }
 
-        $session = $this->sessions->read($sessionId);
-        return $session !== null ? ['id' => (int) $session['user_id']] : null;
+        $userId = (int) $request->getSession()->get('tn_auth_user_id', 0);
+        return $userId > 0 ? ['id' => $userId] : null;
     }
 }
