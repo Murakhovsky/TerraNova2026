@@ -20,22 +20,24 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Http/Api/V1/Controller/PublicPropertyController.php');
-foreach ([
-    'CatalogService',
-    'catalogProperties',
-    'featuredProperties',
-    'propertyBySlug',
-    "['published', 'active']",
-] as $needle) {
+foreach (['PublicPropertyReadService', 'properties->catalog', 'properties->featured', 'properties->show'] as $needle) {
     $assert(str_contains($controller, $needle), 'Public Property controller contract missing: ' . $needle);
 }
-$assert(!str_contains($controller, 'TenantContextProviderInterface'), 'Public Property reads must not require tenant authentication.');
+foreach (['TenantContextProviderInterface', 'Domains\\', 'Infrastructure\\', 'CatalogService'] as $forbidden) {
+    $assert(!str_contains($controller, $forbidden), 'Public Property controller bypasses the application boundary: ' . $forbidden);
+}
+
+$application = $read('symfony/src/Application/Property/Service/PublicPropertyReadService.php');
+foreach (['PropertyCatalogInterface', 'catalogProperties', 'featuredProperties', 'propertyBySlug', "['published', 'active']"] as $needle) {
+    $assert(str_contains($application, $needle), 'Public Property application read contract missing: ' . $needle);
+}
 
 $services = $read('symfony/config/services.yaml');
 foreach ([
     'Infrastructure\\Platform\\Persistence\\Pdo\\PdoConnection:',
     "      \$config: '@legacy_cos.pdo'",
     'Domains\\Property\\Infrastructure\\ReadModel\\MySql\\CatalogService:',
+    'Domains\\Property\\Application\\Contract\\PropertyCatalogInterface:',
 ] as $needle) {
     $assert(str_contains($services, $needle), 'Public Property read-model wiring missing: ' . $needle);
 }
