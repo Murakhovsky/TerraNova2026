@@ -72,7 +72,7 @@ jobs:
         run: docker compose build php nginx
 
       - name: Start dependencies
-        run: docker compose up -d mysql redis
+        run: docker compose up -d --wait mysql redis
 
       - name: Apply COS schema
         run: docker compose run --rm --no-deps php php bin/console cos:schema:migrate

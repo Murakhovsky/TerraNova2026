@@ -13,7 +13,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 HTTP_HEADERS="$TMP_DIR/http-headers.txt"
 HTTPS_HEADERS="$TMP_DIR/https-headers.txt"
-LOGIN_HEADERS="$TMP_DIR/login-headers.txt"
+AUTH_HEADERS="$TMP_DIR/auth-headers.txt"
 BODY="$TMP_DIR/body.html"
 
 HTTP_STATUS="$(curl --silent --show-error \
@@ -63,16 +63,31 @@ if ! grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$SYMFONY_HEALTH_BODY"; th
   exit 69
 fi
 
-curl --fail --silent --show-error \
-  --dump-header "$LOGIN_HEADERS" \
-  "$HTTPS_URL/auth/login" \
-  --output /dev/null
+AUTH_STATUS="$(curl --silent --show-error \
+  --output /dev/null \
+  --dump-header "$AUTH_HEADERS" \
+  --max-redirs 0 \
+  --write-out '%{http_code}' \
+  "$HTTPS_URL/sales")"
 
-SESSION_COOKIE="$(grep -i '^set-cookie:' "$LOGIN_HEADERS" | grep -i 'PHPSESSID=' | head -n 1 || true)"
-if [[ -z "$SESSION_COOKIE" ]]; then
-  echo "HTTPS login response did not issue the expected PHP session cookie." >&2
-  cat "$LOGIN_HEADERS" >&2
+if [[ "$AUTH_STATUS" != "302" && "$AUTH_STATUS" != "303" ]]; then
+  echo "Expected unauthenticated /sales to redirect to native login, got status $AUTH_STATUS." >&2
+  cat "$AUTH_HEADERS" >&2
   exit 65
+fi
+
+AUTH_LOCATION="$(awk 'BEGIN { IGNORECASE=1 } /^Location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' "$AUTH_HEADERS")"
+if [[ "$AUTH_LOCATION" != "/auth/login" && "$AUTH_LOCATION" != "$HTTPS_URL/auth/login" ]]; then
+  echo "Unexpected authentication redirect: ${AUTH_LOCATION:-<missing>}." >&2
+  cat "$AUTH_HEADERS" >&2
+  exit 70
+fi
+
+SESSION_COOKIE="$(grep -i '^set-cookie:' "$AUTH_HEADERS" | grep -i 'COSSESSID=' | head -n 1 || true)"
+if [[ -z "$SESSION_COOKIE" ]]; then
+  echo "Native Symfony authentication did not issue COSSESSID." >&2
+  cat "$AUTH_HEADERS" >&2
+  exit 71
 fi
 
 if ! grep -Eiq ';[[:space:]]*Secure([;[:space:]]|$)' <<< "$SESSION_COOKIE"; then
@@ -87,10 +102,10 @@ if ! grep -Eiq ';[[:space:]]*HttpOnly([;[:space:]]|$)' <<< "$SESSION_COOKIE"; th
   exit 67
 fi
 
-if ! grep -Eiq ';[[:space:]]*(Expires|Max-Age)=' <<< "$SESSION_COOKIE"; then
-  echo "HTTPS session cookie is browser-session-only and will be lost when the browser/computer closes." >&2
+if ! grep -Eiq ';[[:space:]]*SameSite=Lax([;[:space:]]|$)' <<< "$SESSION_COOKIE"; then
+  echo "HTTPS COSSESSID cookie is missing SameSite=Lax." >&2
   echo "$SESSION_COOKIE" >&2
   exit 68
 fi
 
-echo "HTTPS reverse-proxy contract passed for $DOMAIN."
+echo "HTTPS reverse-proxy and native Symfony session contract passed for $DOMAIN."
