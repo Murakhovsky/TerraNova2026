@@ -4,7 +4,7 @@ Audit date: 2026-08-23.
 
 ## Purpose
 
-`app/Domains/Spatial` is the shared Spatial domain for the web site, manager workspace and future iOS/Android applications. It owns scenes, captures, versions, assets, property relations, hotspots, processing jobs and viewer analytics. `/api/spatial/*` is delivered by Symfony; temporary public/manager HTML adapters still live in the legacy frontend runtime until final Phalcon retirement.
+`app/Domains/Spatial` is the shared Spatial domain for the web site, manager workspace and future iOS/Android applications. It owns scenes, captures, versions, assets, property relations, hotspots, processing jobs and viewer analytics. Both `/api/spatial/*` and `/spatial/*` are delivered by Symfony. Legacy Property SSR temporarily consumes Spatial services through `Bootstrap\\SpatialModule` until the Property Web cutover.
 
 ## Supported presentation profiles
 
