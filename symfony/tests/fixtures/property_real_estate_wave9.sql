@@ -243,6 +243,33 @@ CREATE TABLE tn_property_compatibility_projection_state (
     UNIQUE KEY uq_wave9_projection_legacy(organization_id,legacy_property_id)
 );
 
+CREATE TABLE tn_agents (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'default',
+    public_name VARCHAR(160) NOT NULL,
+    role VARCHAR(80) NOT NULL DEFAULT 'consultant',
+    phone VARCHAR(40) NULL,
+    email VARCHAR(160) NULL,
+    telegram VARCHAR(80) NULL,
+    avatar_url VARCHAR(500) NULL,
+    bio TEXT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE tn_property_groups (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'default',
+    title VARCHAR(220) NOT NULL,
+    slug VARCHAR(180) NOT NULL,
+    group_type VARCHAR(32) NOT NULL DEFAULT 'address',
+    location_id INT UNSIGNED NOT NULL,
+    address VARCHAR(255) NULL,
+    description TEXT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'active',
+    sort_order INT UNSIGNED NOT NULL DEFAULT 100,
+    UNIQUE KEY uq_wave9_property_group_slug (organization_id,slug)
+);
+
 CREATE TABLE tn_properties (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     organization_id VARCHAR(64) NOT NULL,
@@ -254,6 +281,7 @@ CREATE TABLE tn_properties (
     status VARCHAR(24) NOT NULL DEFAULT 'draft',
     source_type VARCHAR(24) NOT NULL DEFAULT 'own',
     location_id INT UNSIGNED NOT NULL,
+    property_group_id BIGINT UNSIGNED NULL,
     agent_id INT UNSIGNED NULL,
     price_amount DECIMAL(18,2) NULL,
     price_currency CHAR(3) NOT NULL DEFAULT 'USD',
@@ -262,6 +290,8 @@ CREATE TABLE tn_properties (
     area_living DECIMAL(12,3) NULL,
     land_area DECIMAL(14,3) NULL,
     rooms DECIMAL(5,2) NULL,
+    bedrooms SMALLINT UNSIGNED NULL,
+    bathrooms SMALLINT UNSIGNED NULL,
     floor SMALLINT UNSIGNED NULL,
     floors SMALLINT UNSIGNED NULL,
     built_year SMALLINT UNSIGNED NULL,
@@ -284,6 +314,54 @@ CREATE TABLE tn_properties (
     UNIQUE KEY uq_wave9_legacy_public(organization_id,public_id),
     UNIQUE KEY uq_wave9_legacy_slug(organization_id,slug)
 );
+
+
+CREATE TABLE tn_property_images (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'default',
+    property_id BIGINT UNSIGNED NOT NULL,
+    image_url VARCHAR(700) NOT NULL,
+    alt_text VARCHAR(220) NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 100,
+    is_cover TINYINT(1) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE tn_property_features (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'default',
+    property_id BIGINT UNSIGNED NOT NULL,
+    feature_key VARCHAR(80) NOT NULL,
+    feature_value VARCHAR(255) NOT NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 100
+);
+
+INSERT INTO tn_agents(id,organization_id,public_name,role,email)
+VALUES(9101,'default','Wave 9 Public Agent','consultant','public-agent@example.test');
+
+INSERT INTO tn_property_groups(id,organization_id,title,slug,group_type,location_id,address,description,status)
+VALUES(9101,'default','Wave 9 Public Group','wave9-public-group','project',9001,'1 Public Street','Public-read fixture group.','active');
+
+INSERT INTO tn_properties(
+    id,organization_id,public_id,slug,title,deal_type,type_id,status,source_type,location_id,property_group_id,agent_id,
+    price_amount,price_currency,price_period,area_total,rooms,bedrooms,bathrooms,floor,floors,built_year,address,
+    latitude,longitude,short_description,description,visibility,is_featured,has_3d_tour,published_at
+) VALUES
+(
+    9101,'default','PUB-9101','wave9-public-property','Wave 9 Public Property','sale',9001,'published','own',9001,9101,9101,
+    125000,'USD','total',64.5,2,1,1,2,3,2026,'1 Public Street',
+    49.8396830,24.0297170,'Published public fixture.','Visible public Property fixture.','public',1,0,NOW()
+),
+(
+    9102,'default','MOD-9102','wave9-moderation-property','Wave 9 Moderation Property','sale',9001,'moderation','own',9001,9101,9101,
+    99000,'USD','total',55.0,2,1,1,1,3,2026,'2 Private Street',
+    49.8400000,24.0300000,'Moderation fixture.','Must never be visible through public reads.','private',0,0,NULL
+);
+
+INSERT INTO tn_property_images(organization_id,property_id,image_url,alt_text,sort_order,is_cover)
+VALUES('default',9101,'/img/wave9-public-property.jpg','Wave 9 Public Property',10,1);
+
+INSERT INTO tn_property_features(organization_id,property_id,feature_key,feature_value,sort_order)
+VALUES('default',9101,'fixture','public-read',10);
 
 CREATE TABLE tn_real_estate_cases (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
