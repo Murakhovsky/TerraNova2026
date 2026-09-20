@@ -185,6 +185,11 @@ jobs:
                AND s.status = 'published' AND s.published_at IS NOT NULL AND s.published_at <= NOW()
              LIMIT 1;"
 
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "INSERT INTO tn_spatial_scenes (public_id, slug, title, status, published_at)
+             VALUES ('SPS-CI-PUBLIC', 'ci-public-scene', 'CI Public Scene', 'published', NOW());"
+
       - name: Seed Sales Wave 1 read fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -908,6 +913,14 @@ jobs:
           status=$(curl --head --silent --show-error --output /tmp/spatial-public-missing-head.txt --write-out '%{http_code}' http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
           echo "Spatial public missing HEAD HTTP $status"
           test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-public.html --write-out '%{http_code}' \
+            -H 'Host: spatial.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            http://127.0.0.1:8081/spatial/scene/ci-public-scene)
+          echo "Spatial public HTTPS metadata HTTP $status"
+          test "$status" = "200"
+          grep -q 'https://spatial.example.test/spatial/scene/ci-public-scene' /tmp/spatial-public.html
 
           echo "Symfony migrated Web surfaces route/security smoke passed."
 
