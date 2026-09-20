@@ -43,6 +43,10 @@ foreach ([
     }
 }
 
+if (!str_contains($legacyDeploy, 'structured_log "$PHP_ID" "application"')) {
+    throw new RuntimeException('Compatibility deploy must expose structured application logs when /cos health fails.');
+}
+
 if (!str_contains($legacyDeploy, 'bash deploy/symfony-dev.sh')) {
     throw new RuntimeException('Compatibility deployment must deploy the canonical Symfony runtime.');
 }
