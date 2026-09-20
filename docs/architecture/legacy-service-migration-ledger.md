@@ -21,7 +21,7 @@ MySQL repositories, query projections and generic Kernel persistence are consoli
 ## Delivery boundaries
 
 - All former `modules/frontend/controllers` classes now live in `Interfaces/Web/Controller`; `FrontendRoutes` targets only the canonical namespace.
-- Spatial HTTP delivery now lives in Symfony `App\\Http\\Api\\Spatial\\SpatialController`; `Bootstrap\\SpatialModule` remains only as temporary SSR composition until final Phalcon retirement.
+- Spatial API delivery lives in Symfony `App\\Http\\Api\\Spatial\\SpatialController`, and Spatial Web/public viewer delivery lives in `App\\Web\\Spatial\\SpatialPageController`; `Bootstrap\\SpatialModule` is removed.
 - Symfony Console owns operational/admin CLI commands; the Phalcon `Interfaces/Cli` surface is retired.
 - No `Modules/*` class is registered or autoloadable.
 
@@ -37,3 +37,7 @@ All former `public/js` and `public/css` source files live in `frontend`. Vite bu
 - `tests/architecture/telegram_migration.php` prevents restoration of the retired Phalcon inbound bot while preserving framework-neutral outbound automation.
 - `tests/architecture/frontend_assets.php` verifies every browser entrypoint and generated manifest file.
 - Integration coverage exercises ClientCase, Content/N8n, Spatial, Telegram automation, MySQL and HTTP composition.
+
+
+- Architecture Explorer HTML/JSON delivery is now Symfony-owned through `App\Web\Visualization\ArchitectureExplorerController`.
+- Diagnostic report and Methodology Studio HTML delivery are now Symfony-owned through `App\Web\Diagnostic\DiagnosticPageController`.
