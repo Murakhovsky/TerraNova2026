@@ -17,7 +17,7 @@ $assert = static function (bool $condition, string $message): void {
 
 $contract = $read('app/Kernel/Visualization/Graph/GraphHealthAnalyzerInterface.php');
 $implementation = $read('app/Infrastructure/Visualization/Architecture/ArchitectureGraphHealthAnalyzer.php');
-$services = $read('app/Bootstrap/VisualizationServices.php');
+$services = $read('symfony/config/services.yaml');
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
 $routes = $read('symfony/config/routes.yaml');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
@@ -30,8 +30,8 @@ foreach (['empty_graph', 'self_loop', 'duplicate_semantic_edge', 'isolated_node'
     $assert(str_contains($implementation, "'{$code}'"), 'Health analyzer is missing issue code: ' . $code);
 }
 
-$assert(str_contains($services, "'cosArchitectureGraphHealthAnalyzer'"), 'Visualization composition root must register graph health analyzer.');
-$assert(str_contains($services, 'new ArchitectureGraphHealthAnalyzer()'), 'Graph health analyzer implementation must be composed in Bootstrap.');
+$assert(str_contains($services, 'Infrastructure\\Visualization\\Architecture\\ArchitectureGraphHealthAnalyzer:'), 'Symfony composition must register graph health analyzer.');
+$assert(str_contains($services, 'Kernel\\Visualization\\Graph\\GraphHealthAnalyzerInterface:'), 'Graph health analyzer Kernel alias is missing.');
 
 $assert(str_contains($controller, 'GraphHealthAnalyzerInterface'), 'Web controller must depend on the Kernel health contract.');
 $assert(str_contains($controller, 'public function health('), 'Manager health JSON endpoint is missing.');
