@@ -14,7 +14,7 @@ use App\Application\Diagnostic\Query\GetDiagnosticNextQuestionQuery;
 use App\Application\Diagnostic\Query\GetDiagnosticRecommendationsQuery;
 use App\Application\Diagnostic\Query\GetDiagnosticReportQuery;
 use App\Application\Diagnostic\Query\GetDiagnosticSessionQuery;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
@@ -30,7 +30,7 @@ use Throwable;
 
 final readonly class DiagnosticController
 {
-    public function __construct(private CommandBusInterface $commands,private QueryBusInterface $queries,private TenantContextProviderInterface $tenants,private LegacySessionCsrfValidator $csrf,private ActiveModuleResolver $modules){}
+    public function __construct(private CommandBusInterface $commands,private QueryBusInterface $queries,private TenantContextProviderInterface $tenants,private SessionCsrfValidator $csrf,private ActiveModuleResolver $modules){}
 
     public function create(Request $request):JsonResponse
     {

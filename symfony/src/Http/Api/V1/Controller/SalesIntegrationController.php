@@ -6,7 +6,7 @@ namespace App\Http\Api\V1\Controller;
 use App\Application\Integration\Command\ManageSalesIntegrationCommand;
 use App\Application\Integration\Command\ReceiveCrmWebhookCommand;
 use App\Application\Integration\Query\SalesIntegrationQuery;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DomainException;
 use InvalidArgumentException;
 use Kernel\Application\Bus\CommandBusInterface;
@@ -27,7 +27,7 @@ final readonly class SalesIntegrationController
         private CommandBusInterface $commands,
         private QueryBusInterface $queries,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
     ) {
     }

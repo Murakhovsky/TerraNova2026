@@ -10,7 +10,7 @@ use App\Application\Property\Command\ReserveInventoryCommand;
 use App\Application\Property\Command\UpdatePropertyCommand;
 use App\Application\Property\Query\GetPropertyQuery;
 use App\Application\Property\Query\SearchPropertiesQuery;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
@@ -30,7 +30,7 @@ final readonly class PropertyController
         private QueryBusInterface $queries,
         private CommandBusInterface $commands,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
     ) {}
 

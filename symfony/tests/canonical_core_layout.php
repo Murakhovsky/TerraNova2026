@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter;
+use App\Infrastructure\Persistence\Legacy\MysqlIdentityRepository;
 use App\Infrastructure\Messenger\SymfonyCommandBus;
 use App\Infrastructure\Messenger\SymfonyEventBus;
 use App\Infrastructure\Messenger\SymfonyQueryBus;
-use App\Security\LegacySessionAuthenticator;
+use App\Security\SessionAuthenticator;
 use App\Security\SecurityTenantContextProvider;
 use Domains\Sales\Domain\Lead\LeadId;
 use Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel;
@@ -76,8 +76,8 @@ foreach ($canonicalClasses as $class => $expectedPrefix) {
 }
 
 foreach ([
-    LegacySessionAuthenticator::class,
-    LegacyIdentityRepositoryAdapter::class,
+    SessionAuthenticator::class,
+    MysqlIdentityRepository::class,
     SecurityTenantContextProvider::class,
     SymfonyCommandBus::class,
     SymfonyQueryBus::class,
@@ -91,7 +91,7 @@ foreach ([
 }
 
 expectCanonical(
-    is_subclass_of(LegacyIdentityRepositoryAdapter::class, IdentityResolverInterface::class),
+    is_subclass_of(MysqlIdentityRepository::class, IdentityResolverInterface::class),
     'Legacy identity repository adapter must implement the Kernel Identity resolver contract.',
 );
 expectCanonical(

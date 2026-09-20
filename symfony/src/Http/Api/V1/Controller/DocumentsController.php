@@ -11,7 +11,7 @@ use App\Application\Documents\Command\RequestDocumentSignatureCommand;
 use App\Application\Documents\Command\SignDocumentCommand;
 use App\Application\Documents\Command\UploadDocumentCommand;
 use App\Application\Documents\Query\GetDocumentQuery;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
@@ -30,7 +30,7 @@ final readonly class DocumentsController
         private QueryBusInterface $queries,
         private CommandBusInterface $commands,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
     ) {}
 
     public function view(string $id):JsonResponse
