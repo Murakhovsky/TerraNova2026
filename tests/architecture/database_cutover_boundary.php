@@ -24,11 +24,11 @@ foreach ([
     }
 }
 
-$lines = preg_split('/\R/', $services) ?: [];
+$lines = preg_split('/\\R/', $services) ?: [];
 $current = null;
 $legacy = [];
 foreach ($lines as $line) {
-    if (preg_match('/^  ([A-Za-z0-9_\\.\-]+):\s*$/', $line, $match) === 1) {
+    if (preg_match('/^  ([A-Za-z0-9_\\\\.\\-]+):\\s*$/', $line, $match) === 1) {
         $current = $match[1];
     }
     if (str_contains($line, '@legacy_cos.pdo') && is_string($current)) {
@@ -44,5 +44,9 @@ if ($unknown !== []) {
 if (count($legacy) > count($allowlist)) {
     throw new RuntimeException('Legacy DB dependency count increased.');
 }
+if (isset($legacy['App\\Infrastructure\\Module\\PdoModuleStateRepository'])
+    || isset($legacy['App\\Infrastructure\\Module\\PdoModuleLifecycleRepository'])) {
+    throw new RuntimeException('Module runtime repositories regressed to legacy DB.');
+}
 
-echo sprintf("Database cutover boundary passed: %d legacy dependencies remain.\n", count($legacy));
+echo sprintf("Database cutover boundary passed: %d legacy dependencies remain.\\n", count($legacy));
