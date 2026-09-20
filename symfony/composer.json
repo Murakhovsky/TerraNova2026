@@ -1,6 +1,6 @@
 {
   "name": "estatebook/cos-symfony",
-  "description": "Canonical Symfony LTS runtime for COS Core migration",
+  "description": "Canonical Symfony LTS runtime and Experience Platform for COS",
   "type": "project",
   "license": "proprietary",
   "require": {
