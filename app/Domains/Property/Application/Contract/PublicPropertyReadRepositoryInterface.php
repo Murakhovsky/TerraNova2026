@@ -28,6 +28,18 @@ interface PublicPropertyReadRepositoryInterface
     /** @return list<array<string,mixed>> */
     public function related(string $organizationId, array $property, int $limit): array;
 
+    /** @return list<array{code:string}> */
+    public function sitemapTypes(string $organizationId): array;
+
+    /** @return list<array{slug:string}> */
+    public function sitemapLocations(string $organizationId): array;
+
+    /** @return list<array{location_slug:string,type_code:string}> */
+    public function sitemapLandingPairs(string $organizationId): array;
+
+    /** @return list<array{slug:string,updated_at:mixed}> */
+    public function sitemapProperties(string $organizationId): array;
+
     /** @return list<array<string,mixed>> */
     public function grouped(string $organizationId, array $property, int $limit): array;
 }

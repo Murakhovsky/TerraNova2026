@@ -1327,6 +1327,17 @@ services:
     arguments:
       $content: '@Domains\Content\Application\Contract\ContentRepositoryInterface'
 
+  Domains\Content\Application\Contract\ContentServiceInterface:
+    alias: Domains\Content\Application\Service\ContentService
+
+  Domains\Content\Application\Service\PublicPageCatalog: ~
+
+  App\Web\Seo\SitemapController:
+    public: true
+    tags: ['controller.service_arguments']
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Command\IntegrationOutboxCommand:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'

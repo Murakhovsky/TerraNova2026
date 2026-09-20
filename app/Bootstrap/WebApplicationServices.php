@@ -41,7 +41,7 @@ use Domains\Property\Application\UseCase\PropertySubmissionService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
 use Infrastructure\Platform\Persistence\MySql\MysqlLocationReference;
 use Infrastructure\Platform\Persistence\MySql\MysqlContentIntegrationOutbox;
-use Interfaces\Web\Page\PublicPageService;
+use Domains\Content\Application\Service\PublicPageCatalog;
 use Phalcon\Di\DiInterface;
 
 final class WebApplicationServices
@@ -74,7 +74,7 @@ final class WebApplicationServices
             $di->getShared('identityOrganizationMembershipSynchronizer'),
         ));
         $di->setShared('frontendAnalyticsService', fn() => new MysqlPropertyFunnelAnalytics($di->getShared('databaseService')));
-        $di->setShared('frontendPublicPageService', fn() => new PublicPageService());
+        $di->setShared('frontendPublicPageService', fn() => new PublicPageCatalog());
         $di->setShared('contentRepository', fn() => new MysqlContentRepository(
             $di->getShared('databaseService'), new MysqlContentIntegrationOutbox($di->getShared('databaseService')),
         ));

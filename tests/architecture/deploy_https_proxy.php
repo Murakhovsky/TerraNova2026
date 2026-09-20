@@ -121,6 +121,7 @@ foreach ([$httpBootstrap, $tls] as $proxyConfig) {
         'SYMFONY_UPSTREAM="${3:-127.0.0.1:8081}"',
         'location ^~ /api/v1/',
         'location = /robots.txt {',
+        'location = /sitemap.xml {',
         'proxy_pass http://$SYMFONY_UPSTREAM;',
     ] as $needle) {
         if (!str_contains($proxyConfig, $needle)) {

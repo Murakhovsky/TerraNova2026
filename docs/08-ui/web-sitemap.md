@@ -117,7 +117,7 @@ Public є єдиною поверхнею, призначеною для ано�
 
 ### Terra Nova
 
-`PublicPageService` визначає десять статичних сторінок:
+`PublicPageCatalog` визначає десять статичних сторінок:
 
 ```text
 /terra-nova  /agency     /it       /art
@@ -287,13 +287,13 @@ internal AJAX/data endpoints
 
 `/sitemap.xml` не є цією продуктовою картою.
 
-`SeoController::sitemapAction()` зараз включає:
+`App\Web\Seo\SitemapController` у Symfony зараз включає:
 
 - `/`;
 - `/property/catalog`;
 - `/property/submit`;
 - `/blog`;
-- усі сторінки `PublicPageService`;
+- усі сторінки `PublicPageCatalog`;
 - Property type та location pages;
 - location + type SEO landing pairs;
 - опубліковані Property details;
@@ -308,7 +308,7 @@ internal AJAX/data endpoints
 /cos/{lang}/domains/{slug}
 ```
 
-ще не генеруються `SeoController::sitemapAction()`. Це SEO-прогалина, а не проблема Workspace routing.
+ще не генеруються Symfony `SitemapController`. Це SEO-прогалина, а не проблема Workspace routing.
 
 ## 8. Індексація
 
@@ -340,16 +340,17 @@ Route належить поверхні за призначенням, а не �
 
 ## 10. Джерела перевірки
 
-Стан на `2026-09-16` звірено з:
+Стан на `2026-09-20` звірено з:
 
 ```text
 app/Interfaces/Web/Routing/CoreWebRoutes.php
 app/Interfaces/Web/Routing/FrontendRoutes.php
 app/Interfaces/Web/Navigation/FrontendNavigation.php
 app/Interfaces/Web/Navigation/*NavigationContributor.php
-app/Interfaces/Web/Page/PublicPageService.php
+app/Domains/Content/Application/Service/PublicPageCatalog.php
 app/Interfaces/Web/Controller/CompanyOsController.php
-app/Interfaces/Web/Controller/SeoController.php
+symfony/src/Web/Seo/RobotsController.php
+symfony/src/Web/Seo/SitemapController.php
 docs/12-reference/module-routes.md
 ```
 
