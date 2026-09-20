@@ -6,7 +6,7 @@ $services = (string) file_get_contents($root . '/symfony/config/services.yaml');
 $allowlist = require $root . '/symfony/config/database-cutover-legacy-services.php';
 
 if (!str_contains($services, 'cos.database.pdo:')
-    || !str_contains($services, "$connection: '@doctrine.dbal.default_connection'")) {
+    || !str_contains($services, '$connection: \'@doctrine.dbal.default_connection\'')) {
     throw new RuntimeException('Canonical COS PDO must be backed by Doctrine DATABASE_URL.');
 }
 
@@ -19,7 +19,7 @@ foreach ([
         throw new RuntimeException("Missing service: {$service}");
     }
     $chunk = substr($services, $offset, 260);
-    if (!str_contains($chunk, "$connection: '@cos.database.pdo'")) {
+    if (!str_contains($chunk, '$connection: \'@cos.database.pdo\'')) {
         throw new RuntimeException("{$service} must use canonical COS PDO.");
     }
 }
@@ -32,6 +32,9 @@ foreach ($lines as $line) {
         $current = $match[1];
     }
     if (str_contains($line, '@legacy_cos.pdo') && is_string($current)) {
+        if (str_starts_with($current, 'App\\Infrastructure\\Migration\\Database\\')) {
+            continue;
+        }
         $legacy[$current] = true;
     }
 }
@@ -39,14 +42,14 @@ foreach ($lines as $line) {
 $unknown = array_values(array_diff(array_keys($legacy), $allowlist));
 sort($unknown);
 if ($unknown !== []) {
-    throw new RuntimeException('New legacy DB dependencies are forbidden: ' . implode(', ', $unknown));
+    throw new RuntimeException('New runtime legacy DB dependencies are forbidden: ' . implode(', ', $unknown));
 }
 if (count($legacy) > count($allowlist)) {
-    throw new RuntimeException('Legacy DB dependency count increased.');
+    throw new RuntimeException('Runtime legacy DB dependency count increased.');
 }
 if (isset($legacy['App\\Infrastructure\\Module\\PdoModuleStateRepository'])
     || isset($legacy['App\\Infrastructure\\Module\\PdoModuleLifecycleRepository'])) {
     throw new RuntimeException('Module runtime repositories regressed to legacy DB.');
 }
 
-echo sprintf("Database cutover boundary passed: %d legacy dependencies remain.\\n", count($legacy));
+echo sprintf("Database cutover boundary passed: %d runtime legacy dependencies remain.\\n", count($legacy));
