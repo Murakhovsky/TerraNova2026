@@ -1398,6 +1398,9 @@ services:
 
   Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper: ~
 
+  Kernel\Visualization\Graph\GraphMapperInterface:
+    alias: Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper
+
   App\Command\ImportSalesMethodologyV02Command:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
@@ -1491,5 +1494,21 @@ services:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel
 
   App\Web\Sales\SalesAdminPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+
+  # Final Web retirement — Visualization / Diagnostic SSR.
+  App\Web\Visualization\ArchitecturePageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Diagnostic\DiagnosticPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+
+  # Final Web retirement — Spatial SSR/workspace.
+  App\Web\Spatial\SpatialPageController:
     public: true
     tags: ['controller.service_arguments']

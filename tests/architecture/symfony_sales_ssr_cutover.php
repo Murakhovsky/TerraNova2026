@@ -55,7 +55,12 @@ foreach ([
 
 $security = $read('symfony/config/packages/security.yaml');
 $authenticator = $read('symfony/src/Security/LegacySessionAuthenticator.php');
-$assert(str_contains($security, "|sales)(?:/|$)'"), 'Symfony firewall does not own Sales SSR paths.');
+$assert(
+    str_contains($security, "pattern: '^/(?:")
+    && str_contains($security, '|sales|')
+    && str_contains($security, ")(?:/|$)'"),
+    'Symfony firewall does not own Sales SSR paths.',
+);
 $assert(str_contains($security, "path: '^/sales(?:/|$)'"), 'Symfony Sales SSR access-control rule is missing.');
 $assert(str_contains($authenticator, "str_starts_with(\$path, '/sales')"), 'Legacy session authenticator does not support Sales SSR.');
 $assert(str_contains($authenticator, "RedirectResponse('/auth/login')"), 'Unauthenticated Sales SSR must redirect to login.');

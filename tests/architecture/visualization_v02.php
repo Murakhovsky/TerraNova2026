@@ -4,7 +4,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 $kernelRoot = $root . '/app/Kernel/Visualization';
 $provider = $root . '/app/Infrastructure/Visualization/Architecture/ArchitectureGraphProvider.php';
-$bootstrap = $root . '/app/Bootstrap/KernelServices.php';
+$bootstrap = $root . '/symfony/config/services.yaml';
 
 if (!is_dir($kernelRoot) || !is_file($provider)) {
     throw new RuntimeException('Visualization V0.2 structure is incomplete.');
@@ -36,8 +36,14 @@ foreach (['Cytoscape', 'Mermaid', 'Bpmn'] as $forbidden) {
 }
 
 $bootstrapSource = file_get_contents($bootstrap) ?: '';
-if (!str_contains($bootstrapSource, 'cosArchitectureGraphProvider')) {
-    throw new RuntimeException('Architecture graph provider is not registered in Kernel services.');
+foreach ([
+    'runtime.architecture_graph_provider:',
+    'Kernel\\Visualization\\Graph\\GraphProviderInterface:',
+    'ArchitectureGraphProviderFactory',
+] as $marker) {
+    if (!str_contains($bootstrapSource, $marker)) {
+        throw new RuntimeException('Architecture graph provider is not registered in Symfony composition: ' . $marker);
+    }
 }
 
 echo "Visualization V0.2 architecture boundary passed.\n";

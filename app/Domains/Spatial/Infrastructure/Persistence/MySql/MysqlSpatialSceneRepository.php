@@ -179,10 +179,10 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
             SELECT s.*, pm.public_url AS poster_url
             FROM tn_spatial_scenes s
             LEFT JOIN tn_media_assets pm ON pm.id = s.poster_media_id
-            WHERE (s.public_id = :reference OR s.slug = :reference)
+            WHERE (s.public_id = :public_id OR s.slug = :slug)
               AND s.status = "published" AND s.published_at IS NOT NULL AND s.published_at <= NOW()
             LIMIT 1
-        ', ['reference' => $reference]);
+        ', ['public_id' => $reference, 'slug' => $reference]);
         return $scene ? $this->details($scene, true) : null;
     }
 

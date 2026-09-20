@@ -16,6 +16,10 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
       - 'app/Interfaces/Web/View/**'
+      - 'frontend/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
@@ -38,6 +42,10 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
       - 'app/Interfaces/Web/View/**'
+      - 'frontend/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
@@ -75,6 +83,18 @@ jobs:
       TELEGRAM_BOT_NAME: ""
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build frontend runtime assets
+        run: |
+          npm ci
+          npm run build
+          test -f public/build/.vite/manifest.json
+          grep -q '"frontend/entrypoints/public-surface.js"' public/build/.vite/manifest.json
+          grep -q '"frontend/spatial/spatial-viewer.js"' public/build/.vite/manifest.json
 
       - name: Install root architecture-test autoload
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
@@ -158,6 +178,39 @@ jobs:
             printf "%s" "tn_auth_user_id|i:1003;cos_organization_id|s:9:\"other-org\";cos_csrf_token|s:64:\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\";" > /sessions/sess_ci-other-manager0003
             chmod 644 /sessions/sess_*
           '
+
+      - name: Seed Spatial Web fixture contract
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          CREATE TABLE IF NOT EXISTS tn_media_assets (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            original_name VARCHAR(255) NULL,
+            mime_type VARCHAR(190) NULL,
+            public_url VARCHAR(2048) NULL
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+          SQL
+
+          # Exercise the real Spatial schema contract. The migration ledger insert is
+          # intentionally omitted because this isolated stack does not own tn_migrations.
+          sed '/^INSERT IGNORE INTO tn_migrations/,$d' app/migrations/20260823_000017_spatial_core.sql | \
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony
+
+          # Preflight the exact public-scene join used by MysqlSpatialSceneRepository.
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT s.id, pm.public_url
+             FROM tn_spatial_scenes s
+             LEFT JOIN tn_media_assets pm ON pm.id = s.poster_media_id
+             WHERE (s.public_id = 'ci-missing-scene' OR s.slug = 'ci-missing-scene')
+               AND s.status = 'published' AND s.published_at IS NOT NULL AND s.published_at <= NOW()
+             LIMIT 1;"
+
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "INSERT INTO tn_spatial_scenes (public_id, slug, title, status, published_at)
+             VALUES ('SPS-CI-PUBLIC', 'ci-public-scene', 'CI Public Scene', 'published', NOW());"
 
       - name: Seed Sales Wave 1 read fixtures
         run: |
@@ -281,6 +334,7 @@ jobs:
           php tests/architecture/symfony_runtime_hardening.php
           php tests/architecture/runtime_cleanup_third_slice.php
           php tests/architecture/spatial_symfony_cutover.php
+          php tests/architecture/symfony_web_surfaces_cutover.php
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
@@ -847,6 +901,50 @@ jobs:
           asset=$(php -r '$m=json_decode(file_get_contents("public/build/.vite/manifest.json"),true,512,JSON_THROW_ON_ERROR); echo $m["frontend/entrypoints/sales-workspace.js"]["file"];')
           curl --fail --show-error --silent "http://127.0.0.1:8081/build/$asset" > /dev/null
           echo "Symfony Sales SSR page and Vite asset smoke passed."
+
+          php tests/architecture/symfony_web_surfaces_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_architecture' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_architecture"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_diagnostic_methodology' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_diagnostic_methodology"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_diagnostic_report' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_diagnostic_report"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_spatial_manage' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_spatial_manage"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_spatial_scene' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_spatial_scene"; cat /tmp/migrated-web-routes.txt; exit 1; }
+
+          status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
+          echo "Architecture unauth HTTP $status"
+          test "$status" = "302"
+          grep -qi '/auth/login' <(curl --silent --show-error --head http://127.0.0.1:8081/cos/architecture)
+
+          status=$(curl --silent --show-error --output /tmp/methodology-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/admin/diagnostics/methodology-studio)
+          echo "Methodology unauth HTTP $status"
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/diagnostic-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/diagnostics/ci-session01/report)
+          echo "Diagnostic unauth HTTP $status"
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-manage-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/spatial/manage)
+          echo "Spatial manage unauth HTTP $status"
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-public-missing.html --write-out '%{http_code}' http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
+          echo "Spatial public missing HTTP $status"; cat /tmp/spatial-public-missing.html; echo
+          test "$status" = "404"
+
+          status=$(curl --head --silent --show-error --output /tmp/spatial-public-missing-head.txt --write-out '%{http_code}' http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
+          echo "Spatial public missing HEAD HTTP $status"
+          test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-public.html --write-out '%{http_code}' \
+            -H 'Host: spatial.example.test' \
+            -H 'X-Forwarded-Proto: https' \
+            http://127.0.0.1:8081/spatial/scene/ci-public-scene)
+          echo "Spatial public HTTPS metadata HTTP $status"
+          test "$status" = "200"
+          grep -q 'https://spatial.example.test/spatial/scene/ci-public-scene' /tmp/spatial-public.html
+
+          echo "Symfony migrated Web surfaces route/security smoke passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |
@@ -1970,6 +2068,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build deployable frontend assets
+        run: |
+          npm ci
+          npm run build
+          test -f public/build/.vite/manifest.json
+          grep -q '"frontend/entrypoints/public-surface.js"' public/build/.vite/manifest.json
+          grep -q '"frontend/spatial/spatial-viewer.js"' public/build/.vite/manifest.json
 
       - name: Validate deployment configuration
         run: |
@@ -2001,6 +2111,8 @@ jobs:
             ./app/Platform/ \
             ./app/Domains/ \
             ./app/Infrastructure/ \
+            ./app/Interfaces/Web/View/ \
+            ./public/build/ \
             "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
       - name: Deploy parallel Symfony runtime

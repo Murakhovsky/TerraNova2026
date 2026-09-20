@@ -14,7 +14,6 @@ use Interfaces\Web\Navigation\DiagnosticNavigationContributor;
 use Interfaces\Web\Navigation\ModuleAwareNavigationService;
 use Interfaces\Web\Navigation\PropertyNavigationContributor;
 use Interfaces\Web\Navigation\SalesNavigationContributor;
-use Interfaces\Web\Routing\DiagnosticModuleRouteContributor;
 use Interfaces\Web\Routing\ModuleRouteAccessGuard;
 use Interfaces\Web\Routing\ModuleRouteRegistrar;
 use Interfaces\Web\Routing\PropertyModuleRouteContributor;
@@ -34,6 +33,10 @@ use Domains\Property\Infrastructure\Persistence\MySql\Management\LegacyPropertyM
 use Domains\Property\Application\UseCase\PropertyModerationService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
 use Domains\Property\Infrastructure\Presentation\PropertyPresentationService;
+use Infrastructure\Media\SpatialAssetService;
+use Domains\Spatial\Application\Service\SpatialSceneService;
+use Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository;
+use Domains\Property\Infrastructure\Spatial\CanonicalPropertyTourPublisher;
 use Domains\Property\Application\UseCase\PropertySubmissionService;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
 use Infrastructure\Platform\Persistence\MySql\MysqlLocationReference;
@@ -52,7 +55,6 @@ final class WebApplicationServices
         $di->setShared('moduleRouteRegistrar', fn() => new ModuleRouteRegistrar(
             $di->getShared('moduleRouteAccessGuard'),
         ));
-        $di->setShared('diagnosticRouteContributor', fn() => new DiagnosticModuleRouteContributor());
         $di->setShared('propertyRouteContributor', fn() => new PropertyModuleRouteContributor());
 
         $di->setShared('salesNavigationContributor', fn() => new SalesNavigationContributor());
@@ -90,6 +92,24 @@ final class WebApplicationServices
             $di->getShared('salesClientCaseReadModel'), $di->getShared('salesClientCaseService'), $di->getShared('salesInboundService'),
         ));
         $di->setShared('frontendInboundRequestService', fn() => new InboundRequestService($di->getShared('salesReceivePublicLead')));
+
+        // Temporary compatibility composition for remaining Phalcon Property SSR.
+        // Spatial HTTP/API/Web delivery and background processing are Symfony-owned.
+        $di->setShared('spatialAssetService', fn() => new SpatialAssetService(
+            $di->getShared('databaseService'),
+            (int) $di->getShared('config')->spatial->max_upload_bytes,
+        ));
+        $di->setShared('spatialSceneRepository', fn() => new MysqlSpatialSceneRepository(
+            $di->getShared('databaseService'),
+            $di->getShared('spatialAssetService'),
+            new CanonicalPropertyTourPublisher(
+                $di->getShared('propertyCanonicalRuntime'),
+                $di->getShared('organizationContext')->id(),
+            ),
+        ));
+        $di->setShared('spatialSceneService', fn() => new SpatialSceneService(
+            $di->getShared('spatialSceneRepository'),
+        ));
 
         $di->setShared('propertySubmissionRepository', fn() => new MysqlPropertySubmissionRepository(
             $di->getShared('databaseService'), $di->getShared('organizationContext')->id(),

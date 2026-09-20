@@ -49,6 +49,7 @@ jobs:
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
+          php tests/architecture/symfony_web_surfaces_cutover.php
 
       - name: Diagnostic checks
         run: |
@@ -74,13 +75,11 @@ jobs:
           find app/Domains/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Bootstrap/DiagnosticServices.php
           php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/Interfaces/Web/Controller/DiagnosticReportController.php
-          php -l app/Interfaces/Web/Routing/DiagnosticRoutes.php
-          php -l app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php
           php -l tests/smoke/diagnostic_v061.php
           find symfony/src/Application/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l symfony/src/Http/Api/V1/Controller/DiagnosticController.php
           php -l symfony/src/Http/Api/V1/Controller/DiagnosticMethodologyController.php
+          php -l symfony/src/Web/Diagnostic/DiagnosticPageController.php
 
       - name: Sales architecture and runtime checks
         run: |

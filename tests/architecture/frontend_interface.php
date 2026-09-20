@@ -146,8 +146,9 @@ foreach (['ActiveModuleResolver', 'snapshot($organizationId)', "'key' => 'sales'
 
 $cosController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/CosController.php');
 if (!str_contains($cosController, "workspaceSection = 'cos'") || !str_contains($cosController, "['cos-control-center']")) throw new RuntimeException('COS Control Center must opt into the Workspace shell and its feature bundle.');
-$diagnosticController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/MethodologyStudioController.php');
+$diagnosticController = (string) file_get_contents($root . '/symfony/src/Web/Diagnostic/DiagnosticPageController.php');
 if (!str_contains($diagnosticController, "['diagnostics-methodology-studio']")) throw new RuntimeException('Methodology Studio must load through a Vite feature entrypoint.');
+if (str_contains($diagnosticController, 'Phalcon\\')) throw new RuntimeException('Canonical Diagnostic Web delivery must remain Phalcon-free.');
 
 $salesController = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
 foreach (["'workspaceSection' => 'sales'", "['sales-workspace']", 'public function deals(', "workspaceActive' => \$active"] as $needle) {

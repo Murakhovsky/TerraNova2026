@@ -83,6 +83,59 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
+    # Visualization and Diagnostic SSR are canonical on Symfony.
+    location = /cos/architecture {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /cos/architecture/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /admin/diagnostics/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /diagnostics/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+    # Spatial Web workspace and public viewer are canonical on Symfony.
+    location ^~ /spatial/ {
+        client_max_body_size 220m;
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
     # Canonical COS business/control-plane APIs are served by Symfony.
     location ^~ /api/v1/ {
         proxy_pass http://$SYMFONY_UPSTREAM;
@@ -150,4 +203,4 @@ if ! grep -Fq "location ^~ /.well-known/acme-challenge/" <<< "$NGINX_CONFIG_DUMP
   exit 53
 fi
 
-echo "HTTP bootstrap route loaded: legacy/SSR -> $UPSTREAM; /api/v1/* and /api/spatial/* -> $SYMFONY_UPSTREAM."
+echo "HTTP bootstrap route loaded: compatibility Web -> $UPSTREAM; canonical APIs, Sales, Visualization and Diagnostics -> $SYMFONY_UPSTREAM."

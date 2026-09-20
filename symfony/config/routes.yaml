@@ -1185,3 +1185,96 @@ cos_web_sales_admin_health_page:
   path: /sales/admin/health
   controller: App\Web\Sales\SalesAdminPageController::health
   methods: [GET]
+
+
+# Final Web retirement — Visualization / Diagnostic SSR.
+cos_web_architecture:
+  path: /cos/architecture
+  controller: App\Web\Visualization\ArchitecturePageController::index
+  methods: [GET]
+
+cos_web_architecture_graph:
+  path: /cos/architecture/graph
+  controller: App\Web\Visualization\ArchitecturePageController::graph
+  methods: [GET]
+
+cos_web_architecture_health:
+  path: /cos/architecture/health
+  controller: App\Web\Visualization\ArchitecturePageController::health
+  methods: [GET]
+
+cos_web_diagnostic_methodology:
+  path: /admin/diagnostics/methodology-studio
+  controller: App\Web\Diagnostic\DiagnosticPageController::methodology
+  methods: [GET]
+
+cos_web_diagnostic_report:
+  path: /diagnostics/{session}/report
+  controller: App\Web\Diagnostic\DiagnosticPageController::report
+  methods: [GET]
+  requirements: { session: '[A-Za-z0-9_.:-]{8,64}' }
+
+
+# Final Web retirement — Spatial SSR/workspace.
+cos_web_spatial_manage:
+  path: /spatial/manage
+  controller: App\Web\Spatial\SpatialPageController::manage
+  methods: [GET]
+
+cos_web_spatial_edit_new:
+  path: /spatial/edit
+  controller: App\Web\Spatial\SpatialPageController::edit
+  methods: [GET]
+
+cos_web_spatial_edit:
+  path: /spatial/edit/{id}
+  controller: App\Web\Spatial\SpatialPageController::edit
+  methods: [GET]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_save_new:
+  path: /spatial/save
+  controller: App\Web\Spatial\SpatialPageController::save
+  methods: [POST]
+
+cos_web_spatial_save:
+  path: /spatial/save/{id}
+  controller: App\Web\Spatial\SpatialPageController::save
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_upload:
+  path: /spatial/upload/{id}
+  controller: App\Web\Spatial\SpatialPageController::upload
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_external:
+  path: /spatial/external/{id}
+  controller: App\Web\Spatial\SpatialPageController::external
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_capture:
+  path: /spatial/capture/{id}
+  controller: App\Web\Spatial\SpatialPageController::capture
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_hotspot:
+  path: /spatial/hotspot/{id}
+  controller: App\Web\Spatial\SpatialPageController::hotspot
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_publish:
+  path: /spatial/publish/{id}
+  controller: App\Web\Spatial\SpatialPageController::publish
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
+cos_web_spatial_scene:
+  path: /spatial/scene/{slug}
+  controller: App\Web\Spatial\SpatialPageController::scene
+  methods: [GET]
+  requirements: { slug: '[A-Za-z0-9_-]+' }

@@ -31,13 +31,18 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return false;
         }
 
+        if (in_array($request->getMethod(), ['GET', 'HEAD'], true)
+            && preg_match('#^/spatial/scene/[A-Za-z0-9_-]+$#', $path) === 1) {
+            return false;
+        }
+
         if (str_starts_with($path, '/api/spatial/')) {
             if ($path === '/api/spatial/auth/token'
                 || preg_match('/^Bearer\\s+\\S+$/i', trim((string) $request->headers->get('Authorization', ''))) === 1) {
                 return false;
             }
 
-            $publicScene = $request->isMethod('GET')
+            $publicScene = in_array($request->getMethod(), ['GET', 'HEAD'], true)
                 && preg_match('#^/api/spatial/scenes/[A-Za-z0-9-]+$#', $path) === 1;
             $publicEvent = $request->isMethod('POST') && $path === '/api/spatial/events';
             if ($publicScene || $publicEvent) {
@@ -47,7 +52,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return true;
         }
 
-        return str_starts_with($path, '/api/v1') || str_starts_with($path, '/sales');
+        return str_starts_with($path, '/api/v1') || self::isWebPath($path);
     }
 
     public function authenticate(Request $request): Passport
@@ -72,7 +77,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if (self::isWebPath($request->getPathInfo())) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
@@ -83,13 +88,22 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if (self::isWebPath($request->getPathInfo())) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
         return str_starts_with($request->getPathInfo(), '/api/spatial/')
             ? self::spatialUnauthorized()
             : self::forbidden();
+    }
+
+    private static function isWebPath(string $path): bool
+    {
+        return str_starts_with($path, '/sales')
+            || str_starts_with($path, '/cos/architecture')
+            || str_starts_with($path, '/admin/diagnostics')
+            || str_starts_with($path, '/diagnostics/')
+            || str_starts_with($path, '/spatial');
     }
 
     private static function spatialUnauthorized(): JsonResponse

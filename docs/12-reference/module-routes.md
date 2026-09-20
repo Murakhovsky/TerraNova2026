@@ -15,7 +15,7 @@ generated: true
 | Модуль | Contributor | Файлів джерел маршрутів |
 | --- | --- | ---: |
 | `construction` | — | 0 |
-| `diagnostic` | `diagnosticRouteContributor` | 1 |
+| `diagnostic` | — | 0 |
 | `finance` | — | 0 |
 | `hr` | — | 0 |
 | `procurement` | — | 0 |
@@ -23,11 +23,6 @@ generated: true
 | `real_estate` | — | 0 |
 | `sales` | — | 0 |
 | `service` | — | 0 |
-
-## `diagnostic`
-
-- contributor: `app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/DiagnosticRoutes.php`;
 
 ## `property`
 

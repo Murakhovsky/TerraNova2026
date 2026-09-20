@@ -45,9 +45,9 @@ $assert(str_contains($registry, "'contracts', 'Contracts'"), 'Dedicated Contract
 $assert(str_contains($registry, 'REL_REQUIRES_CONTRACT'), 'Contracts projection must expose consumer edges.');
 $assert(str_contains($registry, 'REL_PROVIDES_CONTRACT'), 'Contracts projection must expose provider edges.');
 
-$bootstrap = $read('app/Bootstrap/VisualizationServices.php');
-$assert(str_contains($bootstrap, "'cosArchitectureGraphProvider'"), 'Canonical graph service must remain stable.');
+$bootstrap = $read('symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php');
 $assert(str_contains($bootstrap, 'CrossDomainArchitectureGraphProvider'), 'Canonical graph service must be contract-aware.');
+$assert(str_contains($bootstrap, 'FallbackArchitectureGraphProvider'), 'Canonical graph service must preserve the structural fallback.');
 
 $workflow = $read('.github/workflows/visualization.yml');
 $assert(str_contains($workflow, 'cross_domain_dependency_audit.php'), 'Cross-domain dependency audit is not enforced by Visualization CI.');
