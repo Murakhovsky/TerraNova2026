@@ -15,17 +15,16 @@ $assert = static function (bool $condition, string $message): void {
     }
 };
 
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
+$controller = $read('symfony/src/Web/Visualization/ArchitectureExplorerController.php');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 $deploy = $read('deploy/dev.sh');
-$visualizationServices = $read('app/Bootstrap/VisualizationServices.php');
+$visualizationServices = $read('symfony/config/services.yaml');
 
 foreach ([
-    "'resolve_provider'",
-    "'resolve_projection_registry'",
-    "'resolve_mapper'",
     "'build_canonical_graph'",
+    "'analyze_canonical_graph'",
+    "'describe_projections'",
     "'map_canonical_graph'",
     "'project_' . \$name",
     'failureDiagnostic(',
@@ -50,17 +49,14 @@ foreach ([
 }
 
 $assert(
-    str_contains($visualizationServices, "'cosArchitectureProjectionRegistry'"),
-    'Visualization composition root must register the projection registry.',
+    str_contains($visualizationServices, 'Kernel\\Visualization\\Graph\\GraphProjectionRegistryInterface:'),
+    'Symfony Visualization composition must register the projection registry contract.',
 );
 $assert(
-    !str_contains($visualizationServices, 'static fn (): ArchitectureProjectionRegistry'),
-    'Phalcon DI service factories must remain bindable; projection registry factory cannot be static.',
+    str_contains($visualizationServices, "factory: ['Infrastructure\\Visualization\\Architecture\\ArchitectureProjectionRegistry', 'defaults']"),
+    'Projection registry must resolve through the canonical Symfony factory.',
 );
-$assert(
-    str_contains($visualizationServices, 'fn (): ArchitectureProjectionRegistry => ArchitectureProjectionRegistry::defaults()'),
-    'Projection registry must resolve through a bindable DI factory.',
-);
+$assert(!str_contains($controller, 'Phalcon\\'), 'Symfony Explorer must not depend on Phalcon.');
 
 $assert(
     str_contains($deploy, 'php bin/console cos:architecture:smoke'),
