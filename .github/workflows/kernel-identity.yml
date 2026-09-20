@@ -7,9 +7,9 @@ on:
       - migration/symfony
     paths:
       - 'app/Kernel/Identity/**'
-      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyIdentityRepositoryAdapter.php'
-      - 'symfony/src/Security/LegacyIdentityLoader.php'
-      - 'symfony/src/Security/LegacySecurityUser.php'
+      - 'symfony/src/Infrastructure/Persistence/MySql/MysqlIdentityRepository.php'
+      - 'symfony/src/Security/CosIdentityLoader.php'
+      - 'symfony/src/Security/CosSecurityUser.php'
       - 'symfony/config/services.yaml'
       - 'tests/unit/kernel_identity_foundation.php'
       - 'tests/architecture/kernel_identity_boundaries.php'
@@ -20,9 +20,9 @@ on:
       - migration/symfony
     paths:
       - 'app/Kernel/Identity/**'
-      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyIdentityRepositoryAdapter.php'
-      - 'symfony/src/Security/LegacyIdentityLoader.php'
-      - 'symfony/src/Security/LegacySecurityUser.php'
+      - 'symfony/src/Infrastructure/Persistence/MySql/MysqlIdentityRepository.php'
+      - 'symfony/src/Security/CosIdentityLoader.php'
+      - 'symfony/src/Security/CosSecurityUser.php'
       - 'symfony/config/services.yaml'
       - 'tests/unit/kernel_identity_foundation.php'
       - 'tests/architecture/kernel_identity_boundaries.php'

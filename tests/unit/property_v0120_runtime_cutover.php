@@ -65,9 +65,9 @@ $registered = PropertyDomainEvents::assetRegistered($before, $metadata);
 $assert(($registered->payload['kind'] ?? null) === 'unit', 'Asset registration event must expose canonical asset kind.');
 $assert(!array_key_exists('price_amount', $registered->payload), 'Physical Property event must not leak Inventory price.');
 
-$projectionContract = new ReflectionClass(Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface::class);
+$projectionContract = new ReflectionClass(Domains\Property\Application\Contract\PropertyProjectionInterface::class);
 foreach (['sync', 'syncOperationalMetadata', 'recordActivity'] as $method) {
-    $assert($projectionContract->hasMethod($method), 'Compatibility projection contract missing method: ' . $method);
+    $assert($projectionContract->hasMethod($method), 'Property projection contract missing method: ' . $method);
 }
 
 echo "Property V0.12 canonical runtime regression: OK\n";

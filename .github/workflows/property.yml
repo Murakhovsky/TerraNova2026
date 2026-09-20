@@ -6,18 +6,8 @@ on:
       - 'app/Domains/Property/**'
       - 'app/Domains/RealEstate/**'
       - 'app/Domains/Sales/**'
-      - 'app/Bootstrap/PropertyServices.php'
-      - 'app/Bootstrap/RealEstateServices.php'
-      - 'app/Bootstrap/PropertyIdentityServices.php'
-      - 'app/Bootstrap/PropertyAnalyticsServices.php'
-      - 'app/Bootstrap/PropertyIntelligenceServices.php'
-      - 'app/Bootstrap/PropertyNetworkServices.php'
-      - 'app/Bootstrap/SalesServices.php'
-      - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
-      - 'app/config/services_kernel.php'
-      - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/migrations/*property*.sql'
       - 'app/migrations/*real_estate*.sql'
       - 'docs/04-domains/property/**'
@@ -26,7 +16,7 @@ on:
       - 'symfony/src/Application/RealEstate/**'
       - 'symfony/src/Http/Api/V1/Controller/PropertyController.php'
       - 'symfony/src/Http/Api/V1/Controller/RealEstateController.php'
-      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyPropertyLocationReferenceAdapter.php'
+      - 'symfony/src/Infrastructure/Persistence/MySql/MysqlPropertyLocationReference.php'
       - 'symfony/src/Infrastructure/Persistence/Property/**'
       - 'symfony/config/routes.yaml'
       - 'symfony/config/services.yaml'
@@ -40,18 +30,8 @@ on:
       - 'app/Domains/Property/**'
       - 'app/Domains/RealEstate/**'
       - 'app/Domains/Sales/**'
-      - 'app/Bootstrap/PropertyServices.php'
-      - 'app/Bootstrap/RealEstateServices.php'
-      - 'app/Bootstrap/PropertyIdentityServices.php'
-      - 'app/Bootstrap/PropertyAnalyticsServices.php'
-      - 'app/Bootstrap/PropertyIntelligenceServices.php'
-      - 'app/Bootstrap/PropertyNetworkServices.php'
-      - 'app/Bootstrap/SalesServices.php'
-      - 'app/Bootstrap/WebApplicationServices.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
-      - 'app/config/services_kernel.php'
-      - 'app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php'
       - 'app/migrations/*property*.sql'
       - 'app/migrations/*real_estate*.sql'
       - 'docs/04-domains/property/**'
@@ -60,7 +40,7 @@ on:
       - 'symfony/src/Application/RealEstate/**'
       - 'symfony/src/Http/Api/V1/Controller/PropertyController.php'
       - 'symfony/src/Http/Api/V1/Controller/RealEstateController.php'
-      - 'symfony/src/Infrastructure/Persistence/Legacy/LegacyPropertyLocationReferenceAdapter.php'
+      - 'symfony/src/Infrastructure/Persistence/MySql/MysqlPropertyLocationReference.php'
       - 'symfony/src/Infrastructure/Persistence/Property/**'
       - 'symfony/config/routes.yaml'
       - 'symfony/config/services.yaml'
@@ -137,7 +117,7 @@ jobs:
       - name: Property / RealEstate Wave 9 cutover
         run: php tests/unit/property_v0130_real_estate_wave9.php
 
-      - name: Property compatibility smoke
+      - name: Property workflow smoke
         run: |
           php tests/smoke/property_submission.php
           php tests/smoke/property_workflow.php
@@ -146,12 +126,11 @@ jobs:
         run: |
           find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           find app/Domains/RealEstate -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l app/Bootstrap/RealEstateServices.php
           find symfony/src/Application/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           find symfony/src/Application/RealEstate -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l symfony/src/Http/Api/V1/Controller/PropertyController.php
           php -l symfony/src/Http/Api/V1/Controller/RealEstateController.php
-          php -l symfony/src/Infrastructure/Persistence/Legacy/LegacyPropertyLocationReferenceAdapter.php
+          php -l symfony/src/Infrastructure/Persistence/MySql/MysqlPropertyLocationReference.php
           find symfony/src/Infrastructure/Persistence/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Domains/Sales/Application/Contract/SalesDemandReadModelInterface.php
           php -l app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesDemandReadModel.php
@@ -162,14 +141,5 @@ jobs:
           php -l app/Infrastructure/Platform/Analytics/PropertyMarketAnalyticsService.php
           php -l app/Infrastructure/Platform/Analytics/PropertyIntelligenceCoordinator.php
           php -l app/Infrastructure/Platform/Persistence/TableOwnership.php
-          php -l app/Bootstrap/PropertyServices.php
-          php -l app/Bootstrap/PropertyIdentityServices.php
-          php -l app/Bootstrap/PropertyAnalyticsServices.php
-          php -l app/Bootstrap/PropertyIntelligenceServices.php
-          php -l app/Bootstrap/PropertyNetworkServices.php
-          php -l app/Bootstrap/SalesServices.php
-          php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/config/services_kernel.php
-          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           find tests/architecture -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l
           find tests/unit -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l
