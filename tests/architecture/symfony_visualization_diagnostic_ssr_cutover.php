@@ -13,6 +13,7 @@ foreach ([
     'app/Interfaces/Web/Controller/DiagnosticReportController.php',
     'app/Interfaces/Web/Routing/DiagnosticRoutes.php',
     'app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php',
+    'app/Bootstrap/VisualizationServices.php',
 ] as $path) {
     $assert(!file_exists($root . '/' . $path), 'Retired Phalcon SSR delivery restored: ' . $path);
 }
@@ -71,6 +72,13 @@ foreach ([
 $authenticator = $read('symfony/src/Security/LegacySessionAuthenticator.php');
 $assert(str_contains($authenticator, "str_starts_with($path, '/cos/architecture')"), 'Architecture routes are not authenticated through the shared session bridge.');
 $assert(str_contains($authenticator, "str_starts_with($path, '/diagnostics/')"), 'Diagnostic report is not authenticated through the shared session bridge.');
+
+$kernelServices = $read('app/Bootstrap/KernelServices.php');
+foreach (['cosArchitectureGraphProvider', 'cosCytoscapeGraphMapper'] as $legacy) {
+    $assert(!str_contains($kernelServices, $legacy), 'Retired Phalcon Visualization composition restored: ' . $legacy);
+}
+$kernelConfig = $read('app/config/services_kernel.php');
+$assert(!str_contains($kernelConfig, 'VisualizationServices.php'), 'Retired VisualizationServices bootstrap is still loaded.');
 
 $module = $read('app/Interfaces/Web/Module.php');
 $assert(!str_contains($module, 'VisualizationRoutes'), 'Legacy Web module still owns Visualization routes.');
