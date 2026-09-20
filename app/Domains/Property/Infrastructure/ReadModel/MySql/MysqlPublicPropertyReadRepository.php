@@ -227,8 +227,8 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
               AND p.id <> :id
               AND (p.type_id = :type_id OR p.location_id = :location_id OR p.deal_type = :deal_type)
             ORDER BY
-                (p.type_id = :type_id) DESC,
-                (p.location_id = :location_id) DESC,
+                (p.type_id = :order_type_id) DESC,
+                (p.location_id = :order_location_id) DESC,
                 p.is_featured DESC,
                 p.published_at DESC,
                 p.id DESC
@@ -239,6 +239,8 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                 'type_id' => (int) $property['type_id'],
                 'location_id' => (int) $property['location_id'],
                 'deal_type' => (string) $property['deal_type'],
+                'order_type_id' => (int) $property['type_id'],
+                'order_location_id' => (int) $property['location_id'],
             ],
         );
     }
