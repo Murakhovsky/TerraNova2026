@@ -19,6 +19,7 @@ COPY app/Kernel/ /var/www/html/app/Kernel/
 COPY app/Platform/ /var/www/html/app/Platform/
 COPY app/Domains/ /var/www/html/app/Domains/
 COPY app/Infrastructure/ /var/www/html/app/Infrastructure/
+COPY app/migrations/ /var/www/html/app/migrations/
 COPY app/Interfaces/Web/View/ /var/www/html/app/Interfaces/Web/View/
 COPY public/build/ /var/www/html/symfony/public/build/
 COPY bin/spatial-convert.py /var/www/html/bin/spatial-convert.py
@@ -26,7 +27,7 @@ COPY bin/spatial-convert.py /var/www/html/bin/spatial-convert.py
 RUN printf 'upload_max_filesize=210M\npost_max_size=220M\nmax_file_uploads=20\n' > /usr/local/etc/php/conf.d/spatial-upload.ini
 
 RUN composer dump-autoload --no-dev --classmap-authoritative \
-    && mkdir -p var/cache var/log var/storage \
+    && mkdir -p var/cache var/log var/storage var/sessions/prod \
     && chown -R www-data:www-data var
 
 USER www-data
