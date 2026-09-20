@@ -58,7 +58,7 @@ foreach(['GraphProviderInterface','GraphProjectionRegistryInterface','GraphHealt
 $assert(!str_contains($visualization,'Infrastructure\\Visualization'),'Visualization Web controller bypasses Kernel contracts.');
 
 $diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
-foreach(['DiagnosticRuntimeService','DiagnosticMethodologyAccess::VIEW','diagnostics-methodology-studio'] as $needle){
+foreach(['DiagnosticRuntimeService','DiagnosticMethodologyAccess::VIEW','diagnostics-methodology-studio','ActiveModuleResolver','modules->isEnabled','diagnosticEnabled'] as $needle){
     $assert(str_contains($diagnostic,$needle),'Diagnostic Web contract missing: '.$needle);
 }
 
