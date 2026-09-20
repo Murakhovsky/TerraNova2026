@@ -22,7 +22,7 @@ jobs:
           php-version: '8.3'
           tools: composer:v2
       - name: Resolve canonical Symfony runtime dependencies
-        run: composer update --working-dir=symfony --with-all-dependencies --no-interaction --prefer-dist --no-progress
+        run: composer update --working-dir=symfony --with-all-dependencies --no-interaction --prefer-dist --no-progress --no-scripts
       - name: Commit generated lockfile
         run: |
           git config user.name "github-actions[bot]"
