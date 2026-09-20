@@ -18,6 +18,7 @@ on:
       - 'app/Interfaces/Web/View/**'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
+      - 'tests/architecture/symfony_viz_diagnostic_spatial_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -40,6 +41,7 @@ on:
       - 'app/Interfaces/Web/View/**'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
+      - 'tests/architecture/symfony_viz_diagnostic_spatial_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -858,6 +860,50 @@ jobs:
           asset=$(php -r '$m=json_decode(file_get_contents("public/build/.vite/manifest.json"),true,512,JSON_THROW_ON_ERROR); echo $m["frontend/entrypoints/sales-workspace.js"]["file"];')
           curl --fail --show-error --silent "http://127.0.0.1:8081/build/$asset" > /dev/null
           echo "Symfony Sales SSR page and Vite asset smoke passed."
+
+      - name: Verify Visualization Diagnostic Spatial SSR cutover
+        run: |
+          php tests/architecture/symfony_viz_diagnostic_spatial_ssr_cutover.php
+          php tests/architecture/spatial_symfony_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/remaining-ssr-routes.txt
+          grep -q 'cos_web_architecture' /tmp/remaining-ssr-routes.txt
+          grep -q 'cos_web_diagnostic_methodology_studio' /tmp/remaining-ssr-routes.txt
+          grep -q 'cos_web_spatial_manage' /tmp/remaining-ssr-routes.txt
+          grep -q 'cos_web_spatial_scene' /tmp/remaining-ssr-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/architecture.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/cos/architecture)
+          echo "Architecture Explorer SSR HTTP $status"
+          test "$status" = "200"
+          grep -q 'Architecture Explorer' /tmp/architecture.html
+
+          status=$(curl --silent --show-error --output /tmp/methodology-studio.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/admin/diagnostics/methodology-studio)
+          echo "Methodology Studio SSR HTTP $status"
+          test "$status" = "200"
+          grep -q 'Methodology Studio' /tmp/methodology-studio.html
+
+          status=$(curl --silent --show-error --output /tmp/spatial-manage.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/spatial/manage)
+          echo "Spatial manager SSR HTTP $status"
+          test "$status" = "200"
+          grep -q '3D-сцени' /tmp/spatial-manage.html
+
+          status=$(curl --silent --show-error --output /tmp/spatial-public-missing.html --write-out '%{http_code}' \
+            http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
+          echo "Public Spatial missing scene HTTP $status"
+          test "$status" = "404"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-login.html --dump-header /tmp/spatial-login.headers --write-out '%{http_code}' \
+            http://127.0.0.1:8081/spatial/manage)
+          case "$status" in 301|302|303|307|308) ;; *) echo "Expected Spatial login redirect, got $status"; exit 1;; esac
+          grep -qi '^location: /auth/login' /tmp/spatial-login.headers
+
+          echo "Visualization Diagnostic Spatial SSR runtime passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |
