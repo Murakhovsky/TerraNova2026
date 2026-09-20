@@ -66,7 +66,7 @@ Wave 12 резервує platform-level точки:
 
 Їх збирає існуючий `ModuleExtensionRegistry`; Shell не hardcode-ить Domain integration.
 
-## UI decision matrix
+## Матриця вибору UI runtime
 
 ```text
 Static/read UI                → Twig SSR
