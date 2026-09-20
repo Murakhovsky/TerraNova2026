@@ -10,10 +10,15 @@ $assert=static function(bool $condition,string $message):void{
 $legacyController=$root.'/app/Interfaces/Api/Controller/SpatialController.php';
 $assert(!is_file($legacyController),'Retired Phalcon Spatial API controller was restored.');
 
-$legacyModule=$read('app/Bootstrap/SpatialModule.php');
-$assert(!str_contains($legacyModule,'/api/spatial/'),'Bootstrap\\SpatialModule still owns Spatial API routes.');
-$assert(!str_contains($legacyModule,'Interfaces\\Api\\Controller'),'Bootstrap\\SpatialModule still targets the legacy API namespace.');
-$assert(!str_contains($legacyModule,'SpatialAccessService'),'Legacy Phalcon Spatial auth composition is still active.');
+$assert(!is_file($root.'/app/Bootstrap/SpatialModule.php'),'Retired Bootstrap\\SpatialModule was restored.');
+$assert(!is_file($root.'/app/Interfaces/Web/Controller/SpatialController.php'),'Retired Phalcon Spatial Web controller was restored.');
+$assert(!is_file($root.'/app/Interfaces/Web/Routing/SpatialWebRoutes.php'),'Retired Phalcon Spatial Web routes were restored.');
+
+$webController=$read('symfony/src/Web/Spatial/SpatialPageController.php');
+foreach(['SpatialSceneInterface','public function manage(','public function edit(','public function save(','public function upload(','public function scene('] as $needle){
+    $assert(str_contains($webController,$needle),'Canonical Symfony Spatial Web controller missing: '.$needle);
+}
+$assert(!str_contains($webController,'Phalcon\\'),'Canonical Symfony Spatial Web controller depends on Phalcon.');
 
 $routes=$read('symfony/config/routes.yaml');
 foreach([
@@ -69,7 +74,7 @@ foreach([
 
 foreach(['deploy/configure-company-os-http.sh','deploy/configure-dev-tls.sh'] as $path){
     $proxy=$read($path);
-    foreach(['location ^~ /api/spatial/','location ^~ /uploads/spatial/','SYMFONY_UPSTREAM'] as $needle){
+    foreach(['location ^~ /api/spatial/','location ^~ /uploads/spatial/','location ^~ /spatial/','SYMFONY_UPSTREAM'] as $needle){
         $assert(str_contains($proxy,$needle),'Spatial ingress cutover missing in '.$path.': '.$needle);
     }
 }
