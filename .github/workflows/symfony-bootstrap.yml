@@ -964,6 +964,35 @@ jobs:
           echo "Wave 9 public Property catalog HTTP $status"; cat /tmp/wave9-public-properties.json; echo
           test "$status" = "200"
           grep -q '"properties"' /tmp/wave9-public-properties.json
+          grep -q 'PUB-9101' /tmp/wave9-public-properties.json
+          ! grep -q 'MOD-9102' /tmp/wave9-public-properties.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-public-status-bypass.json --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/api/v1/public/properties?status=moderation&per_page=12')
+          echo "Wave 9 public status-isolation HTTP $status"; cat /tmp/wave9-public-status-bypass.json; echo
+          test "$status" = "200"
+          grep -q 'PUB-9101' /tmp/wave9-public-status-bypass.json
+          ! grep -q 'MOD-9102' /tmp/wave9-public-status-bypass.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-public-featured.json --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/api/v1/public/properties/featured?limit=4')
+          echo "Wave 9 public featured HTTP $status"; cat /tmp/wave9-public-featured.json; echo
+          test "$status" = "200"
+          grep -q 'PUB-9101' /tmp/wave9-public-featured.json
+          ! grep -q 'MOD-9102' /tmp/wave9-public-featured.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-public-show.json --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/api/v1/public/properties/wave9-public-property')
+          echo "Wave 9 public Property show HTTP $status"; cat /tmp/wave9-public-show.json; echo
+          test "$status" = "200"
+          grep -q 'PUB-9101' /tmp/wave9-public-show.json
+          grep -q 'public-read' /tmp/wave9-public-show.json
+
+          status=$(curl --silent --show-error --output /tmp/wave9-private-show.json --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/api/v1/public/properties/wave9-moderation-property')
+          echo "Wave 9 private Property show HTTP $status"; cat /tmp/wave9-private-show.json; echo
+          test "$status" = "404"
+          ! grep -q 'MOD-9102' /tmp/wave9-private-show.json
 
           csrf='0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
 
