@@ -20,8 +20,9 @@ class SpatialModule implements ModuleDefinitionInterface
 
     public function registerServices(DiInterface $di): void
     {
-        // Spatial HTTP API ownership moved to Symfony. This module remains
-        // temporarily only as composition for legacy SSR Spatial/Web consumers.
+        // Spatial API and Spatial Web ownership are canonical on Symfony.
+        // This module remains temporarily only because legacy Property SSR
+        // still consumes Spatial scene/tour services during its own cutover.
         $di->setShared('spatialAssetService', function () {
             return new SpatialAssetService(
                 $this->getShared('databaseService'),
