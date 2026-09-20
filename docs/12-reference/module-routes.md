@@ -24,7 +24,6 @@ generated: true
 | `sales` | — | 0 |
 | `service` | — | 0 |
 
-
 ## `property`
 
 - contributor: `app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php`;
