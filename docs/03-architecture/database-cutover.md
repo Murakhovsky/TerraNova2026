@@ -48,7 +48,7 @@ existing MySQL repositories
 Cutover завершений лише коли `legacy_cos.pdo` зникає з service graph, deploy більше не створює legacy DML user, Symfony containers не потребують legacy database network, усі canonical tables створюються Doctrine migrations, а legacy MySQL можна зупинити без деградації HTTP, workers, scheduler, integrations чи agent runtime.
 
 
-## Wave 1 — Platform operations
+## Хвиля 1 — операційні сховища Platform
 
 Другий cutover cluster переносить незалежні operational stores:
 
