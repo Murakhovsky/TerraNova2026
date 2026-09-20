@@ -1,0 +1,88 @@
+<?php
+declare(strict_types=1);
+
+$root = dirname(__DIR__, 2);
+
+$requiredFiles = [
+    'symfony/composer.json',
+    'symfony/composer.lock',
+    'symfony/config/bundles.php',
+    'symfony/config/packages/framework.yaml',
+    'symfony/config/packages/twig.yaml',
+    'symfony/config/packages/twig_component.yaml',
+    'symfony/config/routes/ux_live_component.yaml',
+    'symfony/importmap.php',
+    'symfony/assets/app.js',
+    'symfony/assets/stimulus_bootstrap.js',
+    'symfony/assets/controllers.json',
+    'symfony/templates/base.html.twig',
+    'symfony/src/Command/ExperiencePlatformSmokeCommand.php',
+];
+
+foreach ($requiredFiles as $relative) {
+    if (!is_file($root . '/' . $relative)) {
+        throw new RuntimeException('Wave 12.1 runtime artifact is missing: ' . $relative);
+    }
+}
+
+$composer = json_decode((string) file_get_contents($root . '/symfony/composer.json'), true, flags: JSON_THROW_ON_ERROR);
+$requiredPackages = [
+    'symfony/asset',
+    'symfony/asset-mapper',
+    'symfony/stimulus-bundle',
+    'symfony/twig-bundle',
+    'symfony/ux-live-component',
+    'symfony/ux-turbo',
+    'symfony/ux-twig-component',
+    'twig/twig',
+];
+
+foreach ($requiredPackages as $package) {
+    if (!isset($composer['require'][$package])) {
+        throw new RuntimeException('Wave 12.1 Composer dependency is missing: ' . $package);
+    }
+}
+
+$bundles = (string) file_get_contents($root . '/symfony/config/bundles.php');
+foreach ([
+    'TwigBundle::class',
+    'StimulusBundle::class',
+    'TwigComponentBundle::class',
+    'LiveComponentBundle::class',
+    'TurboBundle::class',
+] as $bundle) {
+    if (!str_contains($bundles, $bundle)) {
+        throw new RuntimeException('Wave 12.1 bundle is not registered: ' . $bundle);
+    }
+}
+
+$framework = (string) file_get_contents($root . '/symfony/config/packages/framework.yaml');
+if (!str_contains($framework, 'asset_mapper:') || !str_contains($framework, '- assets/')) {
+    throw new RuntimeException('AssetMapper path is not configured.');
+}
+
+$controllers = json_decode(
+    (string) file_get_contents($root . '/symfony/assets/controllers.json'),
+    true,
+    flags: JSON_THROW_ON_ERROR,
+);
+
+if (($controllers['controllers']['@symfony/ux-live-component']['live']['enabled'] ?? false) !== true) {
+    throw new RuntimeException('Live Component Stimulus controller is not enabled.');
+}
+
+if (($controllers['controllers']['@symfony/ux-turbo']['turbo-core']['enabled'] ?? false) !== true) {
+    throw new RuntimeException('Turbo core controller is not enabled.');
+}
+
+$routes = (string) file_get_contents($root . '/symfony/config/routes/ux_live_component.yaml');
+if (!str_contains($routes, '@LiveComponentBundle/config/routes.php')) {
+    throw new RuntimeException('Live Component route resource is not registered.');
+}
+
+$base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
+if (!str_contains($base, "importmap('app')") || !str_contains($base, "asset('styles/app.css')")) {
+    throw new RuntimeException('Canonical Twig base layout is not AssetMapper-enabled.');
+}
+
+echo "Wave 12.1 Symfony Experience runtime foundation passed.\n";
