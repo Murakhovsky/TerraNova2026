@@ -870,11 +870,11 @@ jobs:
           php tests/architecture/symfony_web_surfaces_cutover.php
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
           docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/migrated-web-routes.txt
-          grep -q 'cos_web_architecture' /tmp/migrated-web-routes.txt
-          grep -q 'cos_web_diagnostic_methodology' /tmp/migrated-web-routes.txt
-          grep -q 'cos_web_diagnostic_report' /tmp/migrated-web-routes.txt
-          grep -q 'cos_web_spatial_manage' /tmp/migrated-web-routes.txt
-          grep -q 'cos_web_spatial_scene' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_architecture' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_architecture"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_diagnostic_methodology' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_diagnostic_methodology"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_diagnostic_report' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_diagnostic_report"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_spatial_manage' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_spatial_manage"; cat /tmp/migrated-web-routes.txt; exit 1; }
+          grep -q 'cos_web_spatial_scene' /tmp/migrated-web-routes.txt || { echo "Missing Symfony Web route: cos_web_spatial_scene"; cat /tmp/migrated-web-routes.txt; exit 1; }
 
           status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
           echo "Architecture unauth HTTP $status"
