@@ -1,29 +1,33 @@
 <?php
 declare(strict_types=1);
 
-$root=dirname(__DIR__,2);
-$read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path);
-$assert=static function(bool $condition,string $message):void{
-    if(!$condition) throw new RuntimeException($message);
+$root = dirname(__DIR__, 2);
+$read = static fn(string $path): string => (string) file_get_contents($root . '/' . $path);
+$assert = static function (bool $condition, string $message): void {
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
 };
 
-$legacyController=$root.'/app/Interfaces/Api/Controller/SpatialController.php';
-$assert(!is_file($legacyController),'Retired Phalcon Spatial API controller was restored.');
+$assert(
+    !is_file($root . '/app/Interfaces/Api/Controller/SpatialController.php'),
+    'Retired Phalcon Spatial API controller was restored.',
+);
 
-foreach([
+foreach ([
     'app/Interfaces/Web/Controller/SpatialController.php',
     'app/Interfaces/Web/Routing/SpatialWebRoutes.php',
-] as $retiredWeb){
-    $assert(!file_exists($root.'/'.$retiredWeb),'Retired Phalcon Spatial Web artifact was restored: '.$retiredWeb);
+] as $retiredWeb) {
+    $assert(!file_exists($root . '/' . $retiredWeb), 'Retired Phalcon Spatial Web artifact was restored: ' . $retiredWeb);
 }
 
-$legacyModule=$read('app/Bootstrap/SpatialModule.php');
-$assert(!str_contains($legacyModule,'/api/spatial/'),'Bootstrap\\SpatialModule still owns Spatial API routes.');
-$assert(!str_contains($legacyModule,'Interfaces\\Api\\Controller'),'Bootstrap\\SpatialModule still targets the legacy API namespace.');
-$assert(!str_contains($legacyModule,'SpatialAccessService'),'Legacy Phalcon Spatial auth composition is still active.');
+$legacyModule = $read('app/Bootstrap/SpatialModule.php');
+$assert(!str_contains($legacyModule, '/api/spatial/'), 'Bootstrap\\SpatialModule still owns Spatial API routes.');
+$assert(!str_contains($legacyModule, 'Interfaces\\Api\\Controller'), 'Bootstrap\\SpatialModule still targets the legacy API namespace.');
+$assert(!str_contains($legacyModule, 'SpatialAccessService'), 'Legacy Phalcon Spatial auth composition is still active.');
 
-$routes=$read('symfony/config/routes.yaml');
-foreach([
+$routes = $read('symfony/config/routes.yaml');
+foreach ([
     '/api/spatial/auth/token',
     '/api/spatial/scenes/{publicId}',
     '/api/spatial/scenes',
@@ -40,12 +44,12 @@ foreach([
     'cos_web_spatial_upload:',
     'cos_web_spatial_scene:',
     'App\\Web\\Spatial\\SpatialPageController',
-] as $needle){
-    $assert(str_contains($routes,$needle),'Canonical Symfony Spatial route missing: '.$needle);
+] as $needle) {
+    $assert(str_contains($routes, $needle), 'Canonical Symfony Spatial route missing: ' . $needle);
 }
 
-$services=$read('symfony/config/services.yaml');
-foreach([
+$services = $read('symfony/config/services.yaml');
+foreach ([
     'Infrastructure\\Platform\\Persistence\\Pdo\\PdoConnection',
     'Infrastructure\\Media\\SpatialAssetService',
     'Domains\\Spatial\\Infrastructure\\Persistence\\MySql\\MysqlSpatialSceneRepository',
@@ -54,79 +58,43 @@ foreach([
     'Domains\\Property\\Infrastructure\\Spatial\\CanonicalPropertyTourPublisher',
     'App\\Infrastructure\\Spatial\\SpatialTokenIssuer',
     'App\\Security\\SpatialBearerAuthenticator',
-    '^/spatial/scene/[A-Za-z0-9_-]+
-    $assert(str_contains($services,$needle),'Symfony Spatial composition missing: '.$needle);
+    'App\\Web\\Spatial\\SpatialPageController',
+] as $needle) {
+    $assert(str_contains($services, $needle), 'Symfony Spatial composition missing: ' . $needle);
 }
 
-$security=$read('symfony/config/packages/security.yaml');
-foreach([
+$security = $read('symfony/config/packages/security.yaml');
+foreach ([
     '^/api/spatial/auth/token$',
     '^/api/spatial/scenes/[A-Za-z0-9-]+$',
     '^/api/spatial/events$',
+    '^/spatial/scene/[A-Za-z0-9_-]+$',
+    '^/spatial(?:/|$)',
     '^/api/spatial(?:/|$)',
     'App\\Security\\SpatialBearerAuthenticator',
-] as $needle){
-    $assert(str_contains($security,$needle),'Symfony Spatial security boundary missing: '.$needle);
+] as $needle) {
+    $assert(str_contains($security, $needle), 'Symfony Spatial security boundary missing: ' . $needle);
 }
 
-$compose=$read('docker-compose.symfony.yml');
-foreach([
+$compose = $read('docker-compose.symfony.yml');
+foreach ([
     'SPATIAL_JWT_SECRET',
     'SPATIAL_MAX_UPLOAD_BYTES',
     'spatial_uploads:/var/www/html/public/uploads/spatial',
     'spatial_uploads:/var/www/html/symfony/public/uploads/spatial:ro',
-] as $needle){
-    $assert(str_contains($compose,$needle),'Spatial runtime/volume contract missing: '.$needle);
+] as $needle) {
+    $assert(str_contains($compose, $needle), 'Spatial runtime/volume contract missing: ' . $needle);
 }
 
-foreach(['deploy/configure-company-os-http.sh','deploy/configure-dev-tls.sh'] as $path){
-    $proxy=$read($path);
-    foreach(['location ^~ /api/spatial/','location ^~ /uploads/spatial/','location ^~ /spatial/','SYMFONY_UPSTREAM'] as $needle){
-        $assert(str_contains($proxy,$needle),'Spatial ingress cutover missing in '.$path.': '.$needle);
+foreach (['deploy/configure-company-os-http.sh', 'deploy/configure-dev-tls.sh'] as $path) {
+    $proxy = $read($path);
+    foreach (['location ^~ /api/spatial/', 'location ^~ /uploads/spatial/', 'location ^~ /spatial/', 'SYMFONY_UPSTREAM'] as $needle) {
+        $assert(str_contains($proxy, $needle), 'Spatial ingress cutover missing in ' . $path . ': ' . $needle);
     }
 }
 
-$pdoBridge=$read('app/Infrastructure/Platform/Persistence/Pdo/PdoConnection.php');
-$assert(!str_contains($pdoBridge,'Phalcon\\'),'Canonical PDO bridge must not depend on Phalcon types.');
-$assert(str_contains($pdoBridge,'instanceof PDO'),'Canonical PDO bridge does not accept Symfony PDO.');
+$pdoBridge = $read('app/Infrastructure/Platform/Persistence/Pdo/PdoConnection.php');
+$assert(!str_contains($pdoBridge, 'Phalcon\\'), 'Canonical PDO bridge must not depend on Phalcon types.');
+$assert(str_contains($pdoBridge, 'instanceof PDO'), 'Canonical PDO bridge does not accept Symfony PDO.');
 
 echo "Spatial Symfony API + Web cutover architecture boundary OK\n";
-,
-    '^/spatial(?:/|$)',
-] as $needle){
-    $assert(str_contains($services,$needle),'Symfony Spatial composition missing: '.$needle);
-}
-
-$security=$read('symfony/config/packages/security.yaml');
-foreach([
-    '^/api/spatial/auth/token$',
-    '^/api/spatial/scenes/[A-Za-z0-9-]+$',
-    '^/api/spatial/events$',
-    '^/api/spatial(?:/|$)',
-    'App\\Security\\SpatialBearerAuthenticator',
-] as $needle){
-    $assert(str_contains($security,$needle),'Symfony Spatial security boundary missing: '.$needle);
-}
-
-$compose=$read('docker-compose.symfony.yml');
-foreach([
-    'SPATIAL_JWT_SECRET',
-    'SPATIAL_MAX_UPLOAD_BYTES',
-    'spatial_uploads:/var/www/html/public/uploads/spatial',
-    'spatial_uploads:/var/www/html/symfony/public/uploads/spatial:ro',
-] as $needle){
-    $assert(str_contains($compose,$needle),'Spatial runtime/volume contract missing: '.$needle);
-}
-
-foreach(['deploy/configure-company-os-http.sh','deploy/configure-dev-tls.sh'] as $path){
-    $proxy=$read($path);
-    foreach(['location ^~ /api/spatial/','location ^~ /uploads/spatial/','SYMFONY_UPSTREAM'] as $needle){
-        $assert(str_contains($proxy,$needle),'Spatial ingress cutover missing in '.$path.': '.$needle);
-    }
-}
-
-$pdoBridge=$read('app/Infrastructure/Platform/Persistence/Pdo/PdoConnection.php');
-$assert(!str_contains($pdoBridge,'Phalcon\\'),'Canonical PDO bridge must not depend on Phalcon types.');
-$assert(str_contains($pdoBridge,'instanceof PDO'),'Canonical PDO bridge does not accept Symfony PDO.');
-
-echo "Spatial Symfony cutover architecture boundary OK\n";
