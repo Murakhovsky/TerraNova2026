@@ -43,7 +43,7 @@ foreach ([
 $diagnostic = $read('symfony/src/Web/Diagnostic/DiagnosticReportController.php');
 foreach ([
     'DiagnosticRuntimeService',
-    "render($request, 'diagnostic_report/show'",
+    "render(\$request, 'diagnostic_report/show'",
     'portalNavigation',
 ] as $needle) {
     $assert(str_contains($diagnostic, $needle), 'Symfony Diagnostic report is missing: ' . $needle);
