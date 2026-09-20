@@ -1,3 +1,18 @@
+cos_web_auth_login:
+  path: /auth/login
+  controller: App\Web\Auth\AuthPageController::login
+  methods: [GET, POST]
+
+cos_web_auth_register:
+  path: /auth/register
+  controller: App\Web\Auth\AuthPageController::register
+  methods: [GET, POST]
+
+cos_web_auth_logout:
+  path: /auth/logout
+  controller: App\Web\Auth\AuthPageController::logout
+  methods: [GET, POST]
+
 cos_symfony_home:
   path: /
   controller: App\Controller\HealthController::index

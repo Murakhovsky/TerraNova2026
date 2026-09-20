@@ -1,17 +1,17 @@
 security:
   providers:
-    legacy_users:
-      id: App\Security\LegacyIdentityLoader
+    cos_users:
+      id: App\Security\CosIdentityLoader
 
   firewalls:
     cos_api:
       pattern: '^/(?:api/v1|api/spatial|sales|cos/architecture|admin/(?:diagnostics|content)|diagnostics|spatial)(?:/|$)'
       stateless: true
-      provider: legacy_users
+      provider: cos_users
       custom_authenticators:
-        - App\Security\LegacySessionAuthenticator
+        - App\Security\SessionAuthenticator
         - App\Security\SpatialBearerAuthenticator
-      entry_point: App\Security\LegacySessionAuthenticator
+      entry_point: App\Security\SessionAuthenticator
       access_denied_handler: App\Security\JsonAccessDeniedHandler
 
   access_control:
