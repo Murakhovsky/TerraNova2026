@@ -79,6 +79,11 @@ foreach([
     $assert(str_contains($security,$needle),'Symfony Web security boundary missing: '.$needle);
 }
 
+$innerProxy=$read('docker/symfony/nginx/default.conf');
+foreach(['map $http_x_forwarded_proto $cos_fastcgi_https','fastcgi_param HTTPS $cos_fastcgi_https','fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto'] as $needle){
+    $assert(str_contains($innerProxy,$needle),'Symfony nginx does not preserve forwarded HTTPS: '.$needle);
+}
+
 $authenticator=$read('symfony/src/Security/LegacySessionAuthenticator.php');
 $assert(str_contains($authenticator,"str_starts_with(\$path, '/spatial')"),'Protected Spatial Web paths are not bridged through session auth.');
 $assert(str_contains($authenticator,"preg_match('#^/spatial/scene/"),'Public Spatial scene exclusion is missing.');
