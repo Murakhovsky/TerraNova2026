@@ -201,7 +201,11 @@ for attempt in $(seq 1 20); do
 done
 
 if [[ "$CORE_HEALTHY" != "1" ]]; then
-  echo "Symfony could not execute the shared COS OperationsReadModel against the legacy database." >&2
+  echo "Symfony database dependency health check failed." >&2
+  if [[ -s /tmp/core-health.json ]]; then
+    cat /tmp/core-health.json >&2 || true
+    echo >&2
+  fi
   "${COMPOSE[@]}" ps -a >&2 || true
   "${COMPOSE[@]}" logs --no-color --tail=250 nginx php >&2 || true
   exit 50
