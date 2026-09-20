@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 
-use Infrastructure\Visualization\Architecture\ArchitectureGraphProvider;
-use Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper;
 use Kernel\Action\Service\ActionExecutor;
 use Kernel\Action\Service\ActionHandlerRegistry;
 use Kernel\Action\Service\ActionService;
@@ -37,11 +35,6 @@ use Kernel\Rule\Service\RoutedRuleContextProvider;
 use Kernel\Rule\Service\RuleEngineEventHandler;
 
 $di->setShared('cosDomainRegistry', fn (): DomainModuleRegistry => new DomainModuleRegistry($this->getShared('cosInstalledDomainModules')));
-$di->setShared('cosArchitectureGraphProvider', fn (): ArchitectureGraphProvider => new ArchitectureGraphProvider(
-    $this->getShared('cosModuleCatalog'),
-    $this->getShared('cosDomainRegistry'),
-));
-$di->setShared('cosCytoscapeGraphMapper', fn (): CytoscapeGraphMapper => new CytoscapeGraphMapper());
 $di->setShared('cosConfigurationValidator', fn (): ConfigurationValidator => new ConfigurationValidator($this->getShared('cosDomainRegistry')));
 $di->setShared('cosConfigurationProvisioner', fn (): ConfigurationProvisioner => new ConfigurationProvisioner(
     $this->getShared('cosDomainRegistry'),
