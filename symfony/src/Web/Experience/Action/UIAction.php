@@ -25,12 +25,16 @@ final readonly class UIAction
         public int $priority = 100,
         public array $placements = ['workspace'],
     ) {
-        if (!preg_match('/^[a-z][a-z0-9._-]*$/', $this->id)) {
+        if (!preg_match('/^[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+$/', $this->id)) {
             throw new InvalidArgumentException('UIAction id must be a stable namespaced identifier.');
         }
 
         if (trim($this->label) === '') {
             throw new InvalidArgumentException('UIAction label must not be empty.');
+        }
+
+        if ($this->intent === UIActionIntent::Execute && ($this->command === null || trim($this->command) === '')) {
+            throw new InvalidArgumentException('Executable UIAction requires an Application Command identifier.');
         }
 
         if ($this->dangerLevel < 0 || $this->dangerLevel > 3) {
