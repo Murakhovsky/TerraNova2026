@@ -1,8 +1,8 @@
 name: Wave 12 Composer Lock
 
 on:
-  push:
-    branches: [feat/web-experience-runtime]
+  pull_request:
+    branches: [main]
     paths:
       - 'symfony/composer.json'
 
@@ -11,11 +11,12 @@ permissions:
 
 jobs:
   lock:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/web-experience-runtime
+          ref: ${{ github.head_ref }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -32,4 +33,4 @@ jobs:
             exit 0
           fi
           git commit -m "Wave 12.1: lock Symfony UX runtime dependencies"
-          git push origin HEAD:feat/web-experience-runtime
+          git push origin HEAD:${{ github.head_ref }}
