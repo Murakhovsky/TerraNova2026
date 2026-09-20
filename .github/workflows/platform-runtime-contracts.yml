@@ -58,13 +58,6 @@ jobs:
       MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_async
       MESSENGER_FAILED_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_failed
       MESSENGER_CONSUMER_NAME: ci
-      LEGACY_SESSION_SAVE_PATH: /tmp
-      LEGACY_SESSION_COOKIE_NAME: PHPSESSID
-      LEGACY_DB_HOST: 127.0.0.1
-      LEGACY_DB_PORT: 3306
-      LEGACY_DB_NAME: cos
-      LEGACY_DB_USER: cos
-      LEGACY_DB_PASSWORD: ci-only-password
       COS_ORGANIZATION_ID: default
     steps:
       - uses: actions/checkout@v4

@@ -38,8 +38,8 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 
-"${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:schema:migrate
+"${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 "${COMPOSE[@]}" up -d --remove-orphans
 
 for attempt in $(seq 1 30); do
