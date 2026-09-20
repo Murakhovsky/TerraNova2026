@@ -198,7 +198,16 @@ jobs:
 
           status=$(curl --silent --show-error --output /tmp/auth-login.html --write-out '%{http_code}'             http://127.0.0.1:8081/auth/login)
           echo "Auth login GET HTTP $status"
-          test "$status" = "200"
+          if [ "$status" != "200" ]; then
+            echo "Auth login response body:"
+            cat /tmp/auth-login.html || true
+            echo
+            echo "Symfony PHP/nginx logs:"
+            docker compose -f docker-compose.symfony.yml logs --no-color --tail=250 php nginx || true
+            echo "Symfony application log:"
+            docker compose -f docker-compose.symfony.yml exec -T php sh -lc 'tail -n 250 var/log/prod.log 2>/dev/null || true' || true
+            exit 1
+          fi
           grep -q 'Вхід у кабінет' /tmp/auth-login.html
 
           status=$(curl --silent --show-error --dump-header /tmp/auth-login.headers             --cookie-jar /tmp/auth.cookies --output /tmp/auth-login-post.html --write-out '%{http_code}'             --request POST             --data-urlencode 'email=manager@example.test'             --data-urlencode 'password=password'             http://127.0.0.1:8081/auth/login)
