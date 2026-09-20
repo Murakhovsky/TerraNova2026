@@ -34,7 +34,7 @@ The following HTTP/control-plane surfaces have completed cutover and must not re
 | legacy Property runtime/canonical HTTP controllers | Symfony `/api/v1/properties*` and inventory APIs | removed |
 | legacy COS Operations/migration APIs | Symfony `/api/v1/operations/*` and canonical health/runtime endpoints | removed |
 
-`Interfaces\\Api\\Controller\\SpatialController` is retired. `/api/spatial/*` upload/token/job delivery is owned by Symfony; only temporary SSR Spatial/Web compatibility remains on Phalcon.
+`Interfaces\\Api\\Controller\\SpatialController` is retired. `/api/spatial/*` and `/spatial/*` delivery are owned by Symfony; the temporary Spatial SSR compatibility module has also been removed.
 Sales SSR is also retired from Phalcon: `/sales/*` is rendered by Symfony `App\\Web\\Sales` controllers using the framework-neutral PHTML renderer; legacy Sales Web controllers/routes must not return.
 
 ## Registered web module owners
@@ -42,7 +42,7 @@ Sales SSR is also retired from Phalcon: `/sales/*` is rendered by Symfony `App\\
 | Module | Current registration | Target |
 |---|---|---|
 | `frontend` | `Interfaces\Web\Module` | SSR/public web shell only; business/control-plane APIs are moving to Symfony |
-| `spatial` | `Bootstrap\SpatialModule` | temporary SSR composition only; `/api/spatial/*` is canonical on Symfony |
+| `spatial` | removed | API, workspace SSR and public viewer are canonical on Symfony |
 | `users` | not registered in main web | Identity contracts and canonical Phalcon adapters |
 | `games` | removed | `/games` remains an explicit HTTP 410 boundary |
 | `economy` | removed | `/economy` remains an explicit HTTP 410 boundary |
@@ -66,3 +66,15 @@ The following operator/runtime helpers no longer bootstrap a Phalcon DI containe
 | `deploy/sales-monitoring.cron.example` | removed; Scheduler owns the five-minute automation cadence |
 
 Framework-neutral build/health utilities remain valid when they do not compose application runtime through Phalcon.
+
+
+## Workspace SSR retirement
+
+The following Web journeys no longer depend on the Phalcon router/controller runtime:
+
+- `/sales/*` — Symfony Sales page controllers;
+- `/cos/architecture*` — Symfony Architecture Explorer;
+- `/admin/diagnostics/methodology-studio` and `/diagnostics/{session}/report` — Symfony Diagnostic page controller;
+- `/spatial/*` — Symfony Spatial workspace/public viewer.
+
+Their PHTML templates are temporarily reused through the framework-neutral Symfony PHTML renderer. Reusing presentation files does not imply Phalcon runtime ownership.
