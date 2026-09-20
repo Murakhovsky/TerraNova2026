@@ -181,6 +181,27 @@ server {
         proxy_pass http://$SYMFONY_UPSTREAM;
     }
 
+    # Portal Cabinet is canonical on Symfony.
+    location = /cabinet {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /cabinet/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
     # Sales SSR and immutable frontend assets are canonical on Symfony.
     location = /sales {
         proxy_pass http://$SYMFONY_UPSTREAM;
@@ -437,6 +458,27 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_pass http://$SYMFONY_UPSTREAM;
+    }
+
+    # Portal Cabinet is canonical on Symfony.
+    location = /cabinet {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /cabinet/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
     }
 
     # Sales SSR and immutable frontend assets are canonical on Symfony.

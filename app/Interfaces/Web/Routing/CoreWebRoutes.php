@@ -23,10 +23,6 @@ final class CoreWebRoutes
 
         // Authentication boundary. Login/register intentionally accept GET + POST.
 
-        // Portal.
-        $router->add('/cabinet', $web('cabinet', 'index'));
-        $router->add('/cabinet/submission/{id:[0-9]+}', $web('cabinet', 'submission') + ['id' => 1]);
-
         // Workspace core / Administration.
         $router->add('/admin', $web('admin', 'index'));
         $router->add('/admin/users', $web('admin', 'users'));

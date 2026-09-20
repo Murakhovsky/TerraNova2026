@@ -20,8 +20,6 @@ $spatialController = (string) file_get_contents($root . '/symfony/src/Web/Spatia
 
 $coreRequired = [
     '/',
-    '/cabinet',
-    '/cabinet/submission/{id:[0-9]+}',
     '/admin',
     '/admin/users',
     '/admin/analytics',
@@ -31,6 +29,25 @@ $coreRequired = [
 foreach ($coreRequired as $pattern) {
     if (!str_contains($coreRoutes, "'" . $pattern . "'")) {
         throw new RuntimeException('WEB V0.13 core explicit route is missing: ' . $pattern);
+    }
+}
+
+$cabinetRequired = [
+    'cos_web_cabinet:',
+    'path: /cabinet',
+    'CabinetPageController::index',
+    'cos_web_cabinet_submission:',
+    'path: /cabinet/submission/{id}',
+    'CabinetPageController::submission',
+];
+foreach ($cabinetRequired as $pattern) {
+    if (!str_contains($symfonyRoutes, $pattern)) {
+        throw new RuntimeException('Symfony Cabinet route ownership is missing: ' . $pattern);
+    }
+}
+foreach (['/cabinet', '/cabinet/submission/'] as $retiredCabinetRoute) {
+    if (str_contains($coreRoutes, "'" . $retiredCabinetRoute)) {
+        throw new RuntimeException('Retired Phalcon Cabinet route restored: ' . $retiredCabinetRoute);
     }
 }
 
@@ -106,8 +123,6 @@ foreach ([
 
 foreach ([
     "\$router->add('/', \$web('index', 'index'))",
-    "\$router->add('/cabinet', \$web('cabinet', 'index'))",
-    "\$router->add('/cabinet/submission/{id:[0-9]+}', \$web('cabinet', 'submission')",
     "\$router->add('/admin', \$web('admin', 'index'))",
     "\$router->add('/admin/users', \$web('admin', 'users'))",
     "\$router->add('/admin/analytics', \$web('admin', 'analytics'))",
