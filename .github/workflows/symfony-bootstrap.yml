@@ -969,6 +969,12 @@ jobs:
           ! grep -q 'PRI-9103' /tmp/wave9-public-properties.json
           ! grep -q 'ORG-9201' /tmp/wave9-public-properties.json
 
+          status=$(curl --silent --show-error --output /tmp/wave9-public-trailing-slash.txt --write-out '%{http_code}' \
+            'http://127.0.0.1:8081/api/v1/public/properties/')
+          echo "Wave 9 public trailing-slash HTTP $status"; cat /tmp/wave9-public-trailing-slash.txt; echo
+          test "$status" != "401"
+          test "$status" != "403"
+
           status=$(curl --silent --show-error --output /tmp/wave9-public-status-bypass.json --write-out '%{http_code}' \
             'http://127.0.0.1:8081/api/v1/public/properties?status=moderation&per_page=12')
           echo "Wave 9 public status-isolation HTTP $status"; cat /tmp/wave9-public-status-bypass.json; echo
