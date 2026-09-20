@@ -11,6 +11,12 @@ framework:
     enable_attributes: true
   php_errors:
     log: true
+  session:
+    handler_id: null
+    save_path: '%env(LEGACY_SESSION_SAVE_PATH)%'
+    cookie_secure: auto
+    cookie_httponly: true
+    cookie_samesite: lax
   cache:
     app: cache.adapter.filesystem
     prefix_seed: cos/symfony

@@ -65,7 +65,7 @@ services:
       <<: *symfony-environment
       MESSENGER_CONSUMER_NAME: http
     volumes:
-      - legacy_php_sessions:/var/www/html/legacy-sessions:ro
+      - legacy_php_sessions:/var/www/html/legacy-sessions
       - spatial_uploads:/var/www/html/public/uploads/spatial
     depends_on:
       mysql: { condition: service_healthy }

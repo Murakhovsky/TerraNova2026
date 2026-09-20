@@ -29,6 +29,11 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Application\Identity\Service\AccountAuthenticationService:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Security\LegacySessionReader:
     arguments:
       $savePath: '%env(LEGACY_SESSION_SAVE_PATH)%'
