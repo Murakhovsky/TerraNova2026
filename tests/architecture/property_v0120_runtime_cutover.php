@@ -71,8 +71,9 @@ foreach ([
     $assert(!is_file($root . '/' . $retired), 'Retired Property runtime transport restored: ' . $retired);
 }
 
-$spatial = $read('app/Bootstrap/SpatialModule.php');
-$assert(str_contains($spatial, 'CanonicalPropertyTourPublisher'), 'Spatial tour publishing must use canonical Property runtime.');
-$assert(!str_contains($spatial, 'new MysqlPropertyTourPublisher'), 'Spatial production DI must not write Property tour state directly to tn_properties.');
+$spatial = $read('symfony/config/services.yaml');
+$assert(str_contains($spatial, 'Domains\\Property\\Infrastructure\\Spatial\\CanonicalPropertyTourPublisher'), 'Spatial tour publishing must use canonical Property runtime.');
+$assert(!str_contains($spatial, 'MysqlPropertyTourPublisher'), 'Spatial production DI must not restore direct Property tour writes to tn_properties.');
+$assert(!is_file($root . '/app/Bootstrap/SpatialModule.php'), 'Retired Phalcon Spatial module was restored.');
 
 echo "Property V0.12 canonical runtime architecture: OK\n";
