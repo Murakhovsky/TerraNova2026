@@ -215,7 +215,12 @@ class CatalogService implements PropertyCatalogInterface
                 p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
                 t.name_uk AS type_name,
                 l.city, l.region,
-                COALESCE(cover.image_url, first_image.image_url) AS cover_url,
+                (
+                    SELECT image.image_url FROM tn_property_images image
+                    WHERE image.property_id = p.id
+                    ORDER BY image.is_cover DESC, image.sort_order, image.id
+                    LIMIT 1
+                ) AS cover_url,
                 (
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
@@ -223,17 +228,9 @@ class CatalogService implements PropertyCatalogInterface
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
-            LEFT JOIN tn_property_images first_image ON first_image.id = (
-                SELECT i.id FROM tn_property_images i
-                WHERE i.property_id = p.id
-                ORDER BY i.sort_order, i.id
-                LIMIT 1
-            )
             WHERE p.status IN ("published", "active")
               AND p.property_group_id = :group_id
               AND p.id <> :id
-            GROUP BY p.id
             ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
             LIMIT ' . $limit,
             [
@@ -275,7 +272,12 @@ class CatalogService implements PropertyCatalogInterface
                 p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
                 t.name_uk AS type_name,
                 l.city, l.region,
-                COALESCE(cover.image_url, first_image.image_url) AS cover_url,
+                (
+                    SELECT image.image_url FROM tn_property_images image
+                    WHERE image.property_id = p.id
+                    ORDER BY image.is_cover DESC, image.sort_order, image.id
+                    LIMIT 1
+                ) AS cover_url,
                 (
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
@@ -283,16 +285,8 @@ class CatalogService implements PropertyCatalogInterface
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
-            LEFT JOIN tn_property_images first_image ON first_image.id = (
-                SELECT i.id FROM tn_property_images i
-                WHERE i.property_id = p.id
-                ORDER BY i.sort_order, i.id
-                LIMIT 1
-            )
             WHERE p.status IN ("published", "active")
               AND p.property_group_id = :group_id
-            GROUP BY p.id
             ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
             LIMIT ' . $limit,
             ['group_id' => $groupId]
@@ -330,7 +324,12 @@ class CatalogService implements PropertyCatalogInterface
                 p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
                 t.name_uk AS type_name,
                 l.city, l.region,
-                COALESCE(cover.image_url, first_image.image_url) AS cover_url,
+                (
+                    SELECT image.image_url FROM tn_property_images image
+                    WHERE image.property_id = p.id
+                    ORDER BY image.is_cover DESC, image.sort_order, image.id
+                    LIMIT 1
+                ) AS cover_url,
                 (
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
@@ -338,17 +337,9 @@ class CatalogService implements PropertyCatalogInterface
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
-            LEFT JOIN tn_property_images first_image ON first_image.id = (
-                SELECT i.id FROM tn_property_images i
-                WHERE i.property_id = p.id
-                ORDER BY i.sort_order, i.id
-                LIMIT 1
-            )
             WHERE p.status IN ("published", "active")
               AND p.id <> :id
               AND (p.type_id = :type_id OR p.location_id = :location_id OR p.deal_type = :deal_type)
-            GROUP BY p.id
             ORDER BY
                 (p.type_id = :type_id) DESC,
                 (p.location_id = :location_id) DESC,
@@ -375,7 +366,12 @@ class CatalogService implements PropertyCatalogInterface
                 p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
                 t.name_uk AS type_name,
                 l.city, l.region,
-                COALESCE(cover.image_url, first_image.image_url) AS cover_url,
+                (
+                    SELECT image.image_url FROM tn_property_images image
+                    WHERE image.property_id = p.id
+                    ORDER BY image.is_cover DESC, image.sort_order, image.id
+                    LIMIT 1
+                ) AS cover_url,
                 (
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
@@ -383,15 +379,7 @@ class CatalogService implements PropertyCatalogInterface
             FROM tn_properties p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
-            LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1
-            LEFT JOIN tn_property_images first_image ON first_image.id = (
-                SELECT i.id FROM tn_property_images i
-                WHERE i.property_id = p.id
-                ORDER BY i.sort_order, i.id
-                LIMIT 1
-            )
             WHERE p.status IN ("published", "active") AND p.id <> :id
-            GROUP BY p.id
             ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
             LIMIT ' . $limit,
             ['id' => (int) $property['id']]
