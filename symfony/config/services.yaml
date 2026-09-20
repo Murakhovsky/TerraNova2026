@@ -1497,6 +1497,8 @@ services:
 
   # Final Web retirement — Visualization and Diagnostic SSR.
   App\Web\Visualization\ArchitectureExplorerController:
+    arguments:
+      $mapper: '@Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper'
     public: true
     tags: ['controller.service_arguments']
 
