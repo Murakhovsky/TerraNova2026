@@ -5,11 +5,11 @@ namespace App\Web\Visualization;
 
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
-use Infrastructure\Visualization\Cytoscape\CytoscapeGraphMapper;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Visualization\Graph\Graph;
 use Kernel\Visualization\Graph\GraphHealthAnalyzerInterface;
+use Kernel\Visualization\Graph\GraphMapperInterface;
 use Kernel\Visualization\Graph\GraphProjectionRegistryInterface;
 use Kernel\Visualization\Graph\GraphProviderInterface;
 use Kernel\Visualization\Graph\GraphView;
@@ -27,7 +27,7 @@ final readonly class ArchitectureExplorerController
         private NavigationBuilder $navigation,
         private GraphProviderInterface $provider,
         private GraphProjectionRegistryInterface $projections,
-        private CytoscapeGraphMapper $mapper,
+        private GraphMapperInterface $mapper,
         private GraphHealthAnalyzerInterface $health,
     ) {}
 
