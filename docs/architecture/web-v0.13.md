@@ -14,10 +14,10 @@ Routing stays layered instead of being collapsed into one giant route table:
 
 - `FrontendRoutes` keeps established public/application routes;
 - `CoreWebRoutes` owns application-level root, authentication, Portal and core Administration routes;
-- `SpatialWebRoutes` explicitly preserves the Spatial Web journeys that previously depended on default controller/action routing;
-- platform and visualization routes keep their existing route owners;
-- Sales, Property and Diagnostic routes remain owned by their module route contributors;
-- Spatial API routes are owned by Symfony; `Bootstrap\SpatialModule` remains only for the temporary SSR workspace composition.
+- `CoreWebRoutes` still owns the remaining Phalcon compatibility shell;
+- Sales, Visualization, Diagnostic and Spatial Web surfaces have since moved to Symfony explicit routes;
+- Property and the remaining Public/Portal routes stay on the compatibility Web runtime until their dedicated cutover;
+- Spatial API and Spatial Web workspace/viewer are both owned by Symfony. `Bootstrap\SpatialModule` remains only as a temporary service composition dependency for legacy Property SSR.
 
 WEB V0.13 does not move business routing into a new Domain and does not make `CoreWebRoutes` an owner of domain capabilities.
 
@@ -43,9 +43,9 @@ The cutover explicitly preserves the currently supported non-domain entry points
 
 Homepage, login/register and submission routes retain the HTTP methods required by their existing forms. Telegram binding routes were later retired together with the disabled inbound bot runtime; user administration mutations remain explicit POST routes.
 
-## Spatial compatibility closure
+## Symfony Spatial compatibility closure
 
-The audit found that the Spatial Web workspace still relied on Phalcon default routes. V0.13 makes those journeys explicit before disabling defaults:
+The original V0.13 audit made Spatial journeys explicit before disabling Phalcon defaults. Final runtime retirement later preserved the same URL/method contract while moving ownership to Symfony:
 
 ```text
 GET  /spatial/manage
@@ -60,7 +60,7 @@ POST /spatial/publish/{id}
 GET  /spatial/scene/{slug}
 ```
 
-This is a compatibility migration only. Spatial service/domain ownership is unchanged.
+This remains a compatibility-preserving transport migration. Spatial service/domain ownership is unchanged; only Web delivery moved from Phalcon to Symfony.
 
 ## Canonical not-found behavior
 
@@ -82,7 +82,7 @@ The shared router enables `removeExtraSlashes(true)` so trailing/duplicate slash
 
 ## Live routing smoke
 
-`tests/smoke/web_v013_live_routes.sh` runs on the deployed AWS dev application after the external HTTPS health check. It validates the routing semantics against the real Phalcon runtime rather than emulating the extension inside architecture CI.
+`tests/smoke/web_v013_live_routes.sh` runs on the deployed AWS dev application after the external HTTPS health check. It validates routing semantics against the deployed mixed runtime: remaining compatibility routes on Phalcon and migrated Spatial/Sales/Visualization/Diagnostic surfaces on Symfony.
 
 The smoke verifies:
 
@@ -93,14 +93,14 @@ The smoke verifies:
 - an arbitrary Web path returns the canonical rendered `404`;
 - an arbitrary `/api/*` path returns the canonical JSON `404` with `error=not_found`.
 
-This separates concerns deliberately: architecture CI checks declaration contracts without requiring the Phalcon extension, while deployment smoke proves real router behavior on the production-like runtime.
+This separates concerns deliberately: architecture CI checks declaration contracts without requiring the Phalcon extension, while deployment smoke proves real host-level routing behavior across the shrinking compatibility runtime and Symfony.
 
 ## Regression gate
 
 `tests/architecture/web_v013_explicit_routing.php` verifies:
 
 1. production router construction uses `Router(false)`;
-2. core and Spatial compatibility routes are declared explicitly;
+2. core compatibility routes stay explicit and the preserved Spatial contract is explicit on Symfony;
 3. mutation routes retain POST restrictions;
 4. global `/:controller/:action` default patterns do not exist;
 5. canonical entry points resolve to their intended controllers/actions;
