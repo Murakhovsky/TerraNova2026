@@ -83,3 +83,4 @@ jobs:
           php tests/architecture/web_v010_public_surface.php
           php tests/architecture/web_v09_portal_refinement.php
           php tests/architecture/frontend_assets.php
+          php tests/smoke/framework_neutral_view_assets.php

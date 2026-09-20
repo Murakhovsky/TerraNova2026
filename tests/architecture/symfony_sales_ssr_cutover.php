@@ -40,8 +40,9 @@ foreach ([
 }
 
 $layout = $read('app/Interfaces/Web/View/index.phtml');
-$assert(str_contains($layout, '$this->assets($assetEntries)'), 'Global PHTML layout is not bound to the framework-neutral asset helper.');
+$assert(str_contains($layout, 'ViteAssetResolver::resolve($assetEntries)'), 'Global PHTML layout is not bound to the framework-neutral asset resolver.');
 $assert(!str_contains($layout, "di('viteAssetManifest')"), 'Global PHTML layout still reads the legacy DI container.');
+$assert(!str_contains($layout, '$this->assets('), 'Global PHTML layout still depends on renderer-specific asset methods.');
 
 foreach ([
     'app/Interfaces/Web/View/shared/manager_header.phtml',
