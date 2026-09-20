@@ -3,60 +3,104 @@ declare(strict_types=1);
 
 namespace App\Application\Property\Service;
 
-use Domains\Property\Application\Contract\PropertyCatalogInterface;
+use Domains\Property\Application\Contract\PublicPropertyReadRepositoryInterface;
 
 final readonly class PublicPropertyReadService
 {
-    public function __construct(private PropertyCatalogInterface $catalog)
-    {
+    public function __construct(
+        private PublicPropertyReadRepositoryInterface $properties,
+        private string $organizationId,
+    ) {
     }
 
     /** @param array<string,mixed> $query @return array<string,mixed> */
     public function catalog(array $query): array
     {
-        // Public callers may never widen the visibility predicate to moderation,
-        // reserved, sold or any other non-public status supported by the shared
-        // back-office filter vocabulary.
-        unset($query['status']);
-        $filters = $this->catalog->filtersFromQuery($query);
-        $filters['status'] = '';
-        $total = $this->catalog->catalogCount($filters);
-        $pagination = $this->catalog->catalogPagination($filters, $total);
+        $filters = $this->filtersFromQuery($query);
+        $total = $this->properties->count($this->organizationId, $filters);
+        $pagination = $this->pagination($filters, $total);
         $filters['page'] = $pagination['page'];
         $filters['per_page'] = $pagination['per_page'];
 
         return [
             'filters' => $filters,
-            'properties' => array_map([$this, 'propertyCardPayload'], $this->catalog->catalogProperties($filters)),
+            'properties' => array_map(
+                [$this, 'propertyCardPayload'],
+                $this->properties->search($this->organizationId, $filters),
+            ),
             'pagination' => $pagination,
-            'stats' => $this->catalog->catalogStats($filters),
+            'stats' => $this->properties->stats($this->organizationId, $filters),
         ];
     }
 
     /** @return array{properties:list<array<string,mixed>>} */
     public function featured(int $limit): array
     {
-        $limit = max(1, min($limit, 12));
-
         return [
-            'properties' => array_map([$this, 'propertyCardPayload'], $this->catalog->featuredProperties($limit)),
+            'properties' => array_map(
+                [$this, 'propertyCardPayload'],
+                $this->properties->featured($this->organizationId, max(1, min($limit, 12))),
+            ),
         ];
     }
 
     /** @return array<string,mixed>|null */
     public function show(string $slug): ?array
     {
-        $property = $this->catalog->propertyBySlug($slug);
-        if ($property === null || !in_array((string) ($property['status'] ?? ''), ['published', 'active'], true)) {
+        $property = $this->properties->findBySlug($this->organizationId, $slug);
+        if ($property === null) {
             return null;
         }
 
         return [
             'property' => $this->propertyDetailPayload($property),
-            'images' => $this->catalog->propertyImages((int) $property['id']),
-            'features' => $this->catalog->propertyFeatures((int) $property['id']),
-            'related' => array_map([$this, 'propertyCardPayload'], $this->catalog->relatedProperties($property)),
-            'grouped' => array_map([$this, 'propertyCardPayload'], $this->catalog->groupedProperties($property)),
+            'images' => $this->properties->images($this->organizationId, (int) $property['id']),
+            'features' => $this->properties->features($this->organizationId, (int) $property['id']),
+            'related' => array_map(
+                [$this, 'propertyCardPayload'],
+                $this->properties->related($this->organizationId, $property, 3),
+            ),
+            'grouped' => array_map(
+                [$this, 'propertyCardPayload'],
+                $this->properties->grouped($this->organizationId, $property, 8),
+            ),
+        ];
+    }
+
+    /** @param array<string,mixed> $query @return array<string,mixed> */
+    private function filtersFromQuery(array $query): array
+    {
+        return [
+            'q' => trim((string) ($query['q'] ?? '')),
+            'deal_type' => $this->allowed((string) ($query['deal_type'] ?? ''), ['sale', 'rent', 'investment']),
+            'type' => trim((string) ($query['type'] ?? '')),
+            'location' => trim((string) ($query['location'] ?? '')),
+            'price_min' => $this->positiveNumber($query['price_min'] ?? null),
+            'price_max' => $this->positiveNumber($query['price_max'] ?? null),
+            'area_min' => $this->positiveNumber($query['area_min'] ?? null),
+            'rooms_min' => $this->positiveNumber($query['rooms_min'] ?? null),
+            'sort' => $this->allowed((string) ($query['sort'] ?? ''), ['newest', 'price_asc', 'price_desc', 'area_desc']),
+            'page' => $this->positiveInt($query['page'] ?? null) ?? 1,
+            'per_page' => $this->allowedInt($query['per_page'] ?? null, [12, 24, 60], 60),
+        ];
+    }
+
+    /** @return array{page:int,per_page:int,total:int,total_pages:int,has_previous:bool,has_next:bool,previous_page:int,next_page:int} */
+    private function pagination(array $filters, int $total): array
+    {
+        $perPage = $this->allowedInt($filters['per_page'] ?? null, [12, 24, 60], 60);
+        $totalPages = max(1, (int) ceil(max(0, $total) / $perPage));
+        $currentPage = min(max(1, (int) ($filters['page'] ?? 1)), $totalPages);
+
+        return [
+            'page' => $currentPage,
+            'per_page' => $perPage,
+            'total' => max(0, $total),
+            'total_pages' => $totalPages,
+            'has_previous' => $currentPage > 1,
+            'has_next' => $currentPage < $totalPages,
+            'previous_page' => max(1, $currentPage - 1),
+            'next_page' => min($totalPages, $currentPage + 1),
         ];
     }
 
@@ -119,6 +163,27 @@ final readonly class PublicPropertyReadService
             'agent_telegram' => (string) ($property['agent_telegram'] ?? ''),
             'agent_avatar' => (string) ($property['agent_avatar'] ?? ''),
         ];
+    }
+
+    private function allowed(string $value, array $allowed): string
+    {
+        return in_array($value, $allowed, true) ? $value : '';
+    }
+
+    private function positiveNumber(mixed $value): ?float
+    {
+        return is_numeric($value) && (float) $value > 0 ? (float) $value : null;
+    }
+
+    private function positiveInt(mixed $value): ?int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    private function allowedInt(mixed $value, array $allowed, int $default): int
+    {
+        $value = is_numeric($value) ? (int) $value : $default;
+        return in_array($value, $allowed, true) ? $value : $default;
     }
 
     private function dealLabel(string $dealType): string
