@@ -1493,3 +1493,13 @@ services:
   App\Web\Sales\SalesAdminPageController:
     public: true
     tags: ['controller.service_arguments']
+
+
+  # Final Web retirement — Visualization and Diagnostic SSR.
+  App\Web\Visualization\ArchitectureExplorerController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Diagnostic\DiagnosticReportController:
+    public: true
+    tags: ['controller.service_arguments']
