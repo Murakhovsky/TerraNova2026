@@ -39,9 +39,11 @@ jobs:
           php -l app/Interfaces/Web/Module.php
           php -l app/Interfaces/Web/Controller/ErrorController.php
           php -l app/Interfaces/Web/Routing/CoreWebRoutes.php
-          php -l app/Interfaces/Web/Routing/SpatialWebRoutes.php
+          php -l symfony/src/Web/Spatial/SpatialPageController.php
+          php -l tests/architecture/symfony_workspace_ssr_cutover.php
           php -l tests/architecture/web_v013_explicit_routing.php
       - name: Routing regression gates
         run: |
           php tests/architecture/frontend_routes.php
           php tests/architecture/web_v013_explicit_routing.php
+          php tests/architecture/symfony_workspace_ssr_cutover.php
