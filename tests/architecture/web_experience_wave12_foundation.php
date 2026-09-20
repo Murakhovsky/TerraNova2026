@@ -80,6 +80,27 @@ try {
 } catch (InvalidArgumentException) {
 }
 
+try {
+    new App\\Web\\Experience\\Action\\UIAction(
+        id: 'delete',
+        label: 'Delete lead',
+        intent: App\\Web\\Experience\\Action\\UIActionIntent::Delete,
+        confirmation: 'Confirm lead deletion.',
+    );
+    throw new RuntimeException('Unqualified UIAction id was accepted.');
+} catch (InvalidArgumentException) {
+}
+
+try {
+    new App\\Web\\Experience\\Action\\UIAction(
+        id: 'sales.lead.assign',
+        label: 'Assign lead',
+        intent: App\\Web\\Experience\\Action\\UIActionIntent::Execute,
+    );
+    throw new RuntimeException('Executable UIAction without command was accepted.');
+} catch (InvalidArgumentException) {
+}
+
 $experienceRoot = $root . '/symfony/src/Web/Experience';
 $iterator = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($experienceRoot, FilesystemIterator::SKIP_DOTS),
