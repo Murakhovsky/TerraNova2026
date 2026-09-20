@@ -15,8 +15,20 @@ cos_web_auth_logout:
 
 cos_symfony_home:
   path: /
-  controller: App\Controller\HealthController::index
-  methods: [GET]
+  controller: App\Controller\HomePageController
+  methods: [GET, HEAD]
+
+cos_web_cabinet:
+  path: /cabinet
+  controller: App\Controller\CabinetPageController::index
+  methods: [GET, HEAD]
+
+cos_web_cabinet_submission_retired:
+  path: /cabinet/submission/{id}
+  controller: App\Controller\CabinetPageController::retiredSubmission
+  methods: [GET, HEAD, POST]
+  requirements:
+    id: '[1-9][0-9]*'
 
 cos_web_public_analytics:
   path: /analytics/track
