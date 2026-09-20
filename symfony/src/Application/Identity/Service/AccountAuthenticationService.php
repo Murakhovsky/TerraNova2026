@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Application\Identity\Service;
 
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use PDO;
 use Throwable;
 
@@ -12,7 +13,7 @@ final readonly class AccountAuthenticationService
     private const PUBLIC_ROLES = ['buyer', 'seller', 'investor', 'realtor', 'developer', 'partner'];
 
     public function __construct(
-        private PDO $connection,
+        private PdoConnection $database,
         private string $organizationId,
     ) {
     }
@@ -68,8 +69,8 @@ final readonly class AccountAuthenticationService
         }
 
         try {
-            $this->connection->beginTransaction();
-            $statement = $this->connection->prepare(
+            $this->database->connection()->beginTransaction();
+            $statement = $this->database->connection()->prepare(
                 'INSERT INTO tn_users (organization_id,email,password_hash,full_name,phone,role,status) '
                 . 'VALUES (:organization_id,:email,:password_hash,:full_name,:phone,:role,\'active\')'
             );
@@ -81,9 +82,9 @@ final readonly class AccountAuthenticationService
                 'phone' => $phone !== '' ? mb_substr($phone, 0, 50) : null,
                 'role' => $role,
             ]);
-            $id = (int) $this->connection->lastInsertId();
+            $id = (int) $this->database->connection()->lastInsertId();
 
-            $membership = $this->connection->prepare(
+            $membership = $this->database->connection()->prepare(
                 'INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) '
                 . 'VALUES (:organization_id,:user_id,:role,\'ACTIVE\')'
             );
@@ -92,10 +93,10 @@ final readonly class AccountAuthenticationService
                 'user_id' => $id,
                 'role' => $role,
             ]);
-            $this->connection->commit();
+            $this->database->connection()->commit();
         } catch (Throwable $error) {
-            if ($this->connection->inTransaction()) {
-                $this->connection->rollBack();
+            if ($this->database->connection()->inTransaction()) {
+                $this->database->connection()->rollBack()
             }
 
             return ['ok' => false, 'message' => 'Реєстрацію не вдалося завершити. Спробуйте ще раз.'];
@@ -113,7 +114,7 @@ final readonly class AccountAuthenticationService
     /** @return array<string,mixed>|null */
     private function findByEmail(string $email): ?array
     {
-        $statement = $this->connection->prepare(
+        $statement = $this->database->connection()->prepare(
             'SELECT u.id,u.organization_id,u.email,u.password_hash,u.full_name,u.phone,u.role,u.status,m.role AS organization_role '
             . 'FROM tn_users u INNER JOIN cos_organization_memberships m ON m.user_id=u.id '
             . 'AND m.organization_id=:organization_id AND m.status=\'ACTIVE\' '
@@ -128,7 +129,7 @@ final readonly class AccountAuthenticationService
     /** @return array<string,mixed>|null */
     private function findById(int $id): ?array
     {
-        $statement = $this->connection->prepare(
+        $statement = $this->database->connection()->prepare(
             'SELECT u.id,u.organization_id,u.email,u.password_hash,u.full_name,u.phone,u.role,u.status,m.role AS organization_role '
             . 'FROM tn_users u INNER JOIN cos_organization_memberships m ON m.user_id=u.id '
             . 'AND m.organization_id=:organization_id AND m.status=\'ACTIVE\' '
@@ -142,7 +143,7 @@ final readonly class AccountAuthenticationService
 
     private function touchLogin(int $id): void
     {
-        $statement = $this->connection->prepare('UPDATE tn_users SET last_login_at=NOW(6) WHERE id=:id LIMIT 1');
+        $statement = $this->database->connection()->prepare('UPDATE tn_users SET last_login_at=NOW(6) WHERE id=:id LIMIT 1');
         $statement->execute(['id' => $id]);
     }
 

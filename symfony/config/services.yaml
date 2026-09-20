@@ -31,7 +31,7 @@ services:
 
   App\Application\Identity\Service\AccountAuthenticationService:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   App\Security\LegacySessionReader:
