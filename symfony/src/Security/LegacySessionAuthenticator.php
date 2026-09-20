@@ -47,7 +47,16 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return true;
         }
 
-        return str_starts_with($path, '/api/v1') || str_starts_with($path, '/sales');
+        if ($request->isMethod('GET') && preg_match('#^/spatial/scene/[A-Za-z0-9_-]+$#', $path) === 1) {
+            return false;
+        }
+
+        return str_starts_with($path, '/api/v1')
+            || str_starts_with($path, '/sales')
+            || str_starts_with($path, '/cos/architecture')
+            || str_starts_with($path, '/admin/diagnostics')
+            || str_starts_with($path, '/diagnostics')
+            || str_starts_with($path, '/spatial');
     }
 
     public function authenticate(Request $request): Passport
@@ -72,7 +81,11 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if ((str_starts_with($request->getPathInfo(), '/sales')
+            || str_starts_with($request->getPathInfo(), '/cos/architecture')
+            || str_starts_with($request->getPathInfo(), '/admin/diagnostics')
+            || str_starts_with($request->getPathInfo(), '/diagnostics')
+            || str_starts_with($request->getPathInfo(), '/spatial'))) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
@@ -83,7 +96,11 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if ((str_starts_with($request->getPathInfo(), '/sales')
+            || str_starts_with($request->getPathInfo(), '/cos/architecture')
+            || str_starts_with($request->getPathInfo(), '/admin/diagnostics')
+            || str_starts_with($request->getPathInfo(), '/diagnostics')
+            || str_starts_with($request->getPathInfo(), '/spatial'))) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
