@@ -51,6 +51,9 @@ services:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
       $analytics: null
 
+  Domains\Property\Application\Contract\PropertyCatalogInterface:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\CatalogService
+
   App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter:
     arguments:
       $connection: '@legacy_cos.pdo'
