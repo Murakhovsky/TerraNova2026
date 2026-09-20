@@ -55,6 +55,11 @@ services:
     arguments:
       $connection: '@doctrine.dbal.default_connection'
 
+  App\Infrastructure\Migration\Database\ModuleRuntimeDatabaseCutover:
+    arguments:
+      $legacy: '@legacy_cos.pdo'
+      $canonical: '@cos.database.pdo'
+
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
