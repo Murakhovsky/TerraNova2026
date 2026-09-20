@@ -165,6 +165,8 @@ jobs:
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
           CREATE TABLE IF NOT EXISTS tn_media_assets (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            original_name VARCHAR(255) NULL,
+            mime_type VARCHAR(190) NULL,
             public_url VARCHAR(2048) NULL
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
           SQL
