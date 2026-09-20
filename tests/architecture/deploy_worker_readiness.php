@@ -50,6 +50,12 @@ if (!str_contains($legacyDeploy, 'structured_log "$PHP_ID" "application"')) {
 if (!str_contains($legacyDeploy, 'bash deploy/symfony-dev.sh')) {
     throw new RuntimeException('Compatibility deployment must deploy the canonical Symfony runtime.');
 }
+if (!str_contains($legacyDeploy, '"${DOCKER[@]}" exec cos-symfony-php-1 php bin/console cos:architecture:smoke')) {
+    throw new RuntimeException('Compatibility deploy must execute Architecture smoke through the resolved Docker command.');
+}
+if (str_contains($legacyDeploy, 'docker compose -f docker-compose.symfony.yml exec -T php php bin/console cos:architecture:smoke')) {
+    throw new RuntimeException('Compatibility deploy must not bypass Docker permissions/env handling for Architecture smoke.');
+}
 if (!str_contains($legacyDeploy, 'http://127.0.0.1:8081/health/dependencies')) {
     throw new RuntimeException('Compatibility deploy must use Symfony dependency readiness after runtime deployment.');
 }
