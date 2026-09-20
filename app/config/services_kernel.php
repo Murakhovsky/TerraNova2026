@@ -17,7 +17,6 @@ require APP_PATH . '/Bootstrap/ModuleServices.php';
 require APP_PATH . '/Bootstrap/SalesAgentServices.php';
 require APP_PATH . '/Bootstrap/KernelServices.php';
 require APP_PATH . '/Bootstrap/ProcessServices.php';
-require APP_PATH . '/Bootstrap/VisualizationServices.php';
 require APP_PATH . '/Bootstrap/SalesAuthorityServices.php';
 require APP_PATH . '/Bootstrap/SalesRuleServices.php';
 require APP_PATH . '/Bootstrap/SalesPolicyServices.php';
