@@ -9,7 +9,10 @@ if (!is_file($routesPath)) {
 $routes = (string) file_get_contents($routesPath);
 
 foreach ([
-    'cos_web_sales_root:',
+    'cos_symfony_home:',
+    'cos_web_cabinet:',
+    'cos_web_cabinet_submission_retired:',
+    'cos_web_sales_root:'
     'cos_web_sales_dashboard:',
     'cos_web_sales_today:',
     'cos_web_sales_pipeline:',
