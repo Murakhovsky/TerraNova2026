@@ -168,6 +168,62 @@ if ! "${COMPOSE[@]}" exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p
   echo "Symfony MySQL did not become ready for Doctrine migrations." >&2
   exit 54
 fi
+# Database cutover bridge: expose canonical MySQL to the still-running compatibility
+# runtime under a collision-safe alias. The shared legacy network already owns the
+# hostname "mysql", so canonical MySQL must never reuse that alias.
+CANONICAL_MYSQL_CONTAINER="$("${COMPOSE[@]}" ps -q mysql)"
+CANONICAL_COMPAT_HOST="cos-symfony-canonical-mysql"
+CANONICAL_COMPAT_USER="cos_compat_app"
+
+if [[ -z "$CANONICAL_MYSQL_CONTAINER" ]]; then
+  echo "Canonical Symfony MySQL container is unavailable." >&2
+  exit 55
+fi
+
+CANONICAL_MYSQL_NAME="$("${DOCKER[@]}" inspect -f '{{.Name}}' "$CANONICAL_MYSQL_CONTAINER" | sed 's#^/##')"
+if ! "${DOCKER[@]}" network inspect "$LEGACY_NETWORK" --format '{{range .Containers}}{{println .Name}}{{end}}' | grep -Fxq "$CANONICAL_MYSQL_NAME"; then
+  "${DOCKER[@]}" network connect --alias "$CANONICAL_COMPAT_HOST" "$LEGACY_NETWORK" "$CANONICAL_MYSQL_CONTAINER"
+  echo "Canonical MySQL joined $LEGACY_NETWORK as $CANONICAL_COMPAT_HOST."
+fi
+
+LEGACY_APP_DB_PASSWORD="$("${DOCKER[@]}" exec "$LEGACY_MYSQL_CONTAINER" printenv MYSQL_PASSWORD | tr -d '\r\n')"
+if [[ -z "$LEGACY_APP_DB_PASSWORD" ]]; then
+  echo "Legacy application DB password is unavailable for canonical bridge derivation." >&2
+  exit 56
+fi
+
+CANONICAL_COMPAT_PASSWORD="$(printf '%s' "cos-canonical-compat|$LEGACY_APP_DB_PASSWORD" | sha256sum | awk '{print $1}')"
+if [[ ! "$CANONICAL_COMPAT_PASSWORD" =~ ^[a-f0-9]{64}$ ]]; then
+  echo "Canonical compatibility password derivation failed." >&2
+  exit 57
+fi
+
+printf -v CANONICAL_COMPAT_GRANTS \
+  "CREATE USER IF NOT EXISTS 'cos_compat_app'@'%%' IDENTIFIED BY '%s'; ALTER USER 'cos_compat_app'@'%%' IDENTIFIED BY '%s'; GRANT SELECT, INSERT, UPDATE, DELETE ON \`cos_symfony\`.* TO 'cos_compat_app'@'%%'; FLUSH PRIVILEGES;" \
+  "$CANONICAL_COMPAT_PASSWORD" "$CANONICAL_COMPAT_PASSWORD"
+
+if ! printf '%s\n' "$CANONICAL_COMPAT_GRANTS" | "${COMPOSE[@]}" exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'; then
+  echo "Could not provision compatibility access to canonical COS MySQL." >&2
+  exit 58
+fi
+
+if "${DOCKER[@]}" inspect "$LEGACY_PHP_CONTAINER" >/dev/null 2>&1; then
+  if ! "${DOCKER[@]}" exec "$LEGACY_PHP_CONTAINER" php -r '
+    $config = require "/var/www/html/app/config/config.php";
+    $db = $config->canonicalDatabase;
+    $pdo = new PDO(
+        sprintf("mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4", (string) $db->host, (int) $db->port, (string) $db->dbname),
+        (string) $db->username,
+        (string) $db->password,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+    exit((int) $pdo->query("SELECT 1")->fetchColumn() === 1 ? 0 : 1);
+  '; then
+    echo "Legacy compatibility runtime cannot reach canonical COS MySQL." >&2
+    exit 59
+  fi
+  echo "Legacy compatibility runtime can reach canonical COS MySQL through the cutover bridge."
+fi
 
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:database:cutover:module-runtime

@@ -4,6 +4,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 $config = (string) file_get_contents($root . '/app/config/config.php');
 $services = (string) file_get_contents($root . '/app/config/services.php');
+$deploy = (string) file_get_contents($root . '/deploy/symfony-dev.sh');
 
 foreach ([
     "'canonicalDatabase' => [",
@@ -30,4 +31,23 @@ foreach ($bootstrapFiles as $file) {
     }
 }
 
-echo "Canonical compatibility DB composition contract passed.\n";
+foreach ([
+    'CANONICAL_COMPAT_HOST="cos-symfony-canonical-mysql"',
+    'CANONICAL_COMPAT_USER="cos_compat_app"',
+    'network connect --alias "$CANONICAL_COMPAT_HOST"',
+    'cos-canonical-compat|$LEGACY_APP_DB_PASSWORD',
+    'GRANT SELECT, INSERT, UPDATE, DELETE ON',
+    'Legacy compatibility runtime can reach canonical COS MySQL through the cutover bridge.',
+] as $needle) {
+    if (!str_contains($deploy, $needle)) {
+        throw new RuntimeException('Canonical DB bridge deploy contract is missing: ' . $needle);
+    }
+}
+
+foreach (['GRANT ALL', 'GRANT CREATE', 'GRANT DROP', 'GRANT ALTER'] as $forbidden) {
+    if (str_contains($deploy, $forbidden)) {
+        throw new RuntimeException('Canonical compatibility account gained schema/admin privileges: ' . $forbidden);
+    }
+}
+
+echo "Canonical compatibility DB bridge contract passed.\n";
