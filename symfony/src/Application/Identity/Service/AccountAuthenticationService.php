@@ -96,7 +96,7 @@ final readonly class AccountAuthenticationService
             $this->database->connection()->commit();
         } catch (Throwable $error) {
             if ($this->database->connection()->inTransaction()) {
-                $this->database->connection()->rollBack()
+                $this->database->connection()->rollBack();
             }
 
             return ['ok' => false, 'message' => 'Реєстрацію не вдалося завершити. Спробуйте ще раз.'];
