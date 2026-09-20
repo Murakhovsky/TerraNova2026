@@ -63,6 +63,7 @@ jobs:
           php tests/smoke/diagnostic_v054.php
           php tests/smoke/diagnostic_v055.php
           php tests/smoke/diagnostic_v061.php
+          php tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php
           php tests/architecture/symfony_sales_diagnostics_wave5_boundary.php
           php tests/unit/sales_diagnostics_wave5_contract.php
           php tests/unit/sales_diagnostics_wave5_action_assignment.php
