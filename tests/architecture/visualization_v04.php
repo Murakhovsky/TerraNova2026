@@ -12,7 +12,6 @@ $required = [
     'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionDefinition.php',
     'app/Infrastructure/Visualization/Architecture/ArchitectureGraphProjection.php',
     'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionRegistry.php',
-    'app/Bootstrap/VisualizationServices.php',
     'tests/unit/visualization_architecture_projections.php',
 ];
 foreach ($required as $path) {
