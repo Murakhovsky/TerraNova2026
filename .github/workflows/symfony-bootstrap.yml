@@ -80,7 +80,7 @@ jobs:
       - name: Validate canonical schema
         run: |
           for table in tn_users tn_content_items tn_spatial_processing_jobs cos_organization_memberships; do
-            docker compose exec -T mysql sh -c 'mysql -N -h127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SHOW TABLES LIKE '\'''"$table"'\'';"' | grep -qx "$table"
+            docker compose exec -T mysql mysql -N -h127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SHOW TABLES LIKE '$table';" | grep -qx "$table"
           done
 
       - name: Apply Doctrine migrations
