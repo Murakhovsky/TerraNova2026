@@ -164,18 +164,26 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
           CREATE TABLE IF NOT EXISTS tn_media_assets (
-            id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
-            public_url VARCHAR(2048) NULL
-          );
-          CREATE TABLE IF NOT EXISTS tn_spatial_scenes (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            public_id VARCHAR(190) NOT NULL,
-            slug VARCHAR(190) NOT NULL,
-            status VARCHAR(32) NOT NULL,
-            published_at DATETIME NULL,
-            poster_media_id BIGINT UNSIGNED NULL
-          );
+            public_url VARCHAR(2048) NULL
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
           SQL
+
+          # Exercise the real Spatial schema contract. The migration ledger insert is
+          # intentionally omitted because this isolated stack does not own tn_migrations.
+          sed '/^INSERT IGNORE INTO tn_migrations/,$d' app/migrations/20260823_000017_spatial_core.sql | \
+            docker compose -f docker-compose.symfony.yml exec -T mysql \
+              mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony
+
+          # Preflight the exact public-scene join used by MysqlSpatialSceneRepository.
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e \
+            "SELECT s.id, pm.public_url
+             FROM tn_spatial_scenes s
+             LEFT JOIN tn_media_assets pm ON pm.id = s.poster_media_id
+             WHERE (s.public_id = 'ci-missing-scene' OR s.slug = 'ci-missing-scene')
+               AND s.status = 'published' AND s.published_at IS NOT NULL AND s.published_at <= NOW()
+             LIMIT 1;"
 
       - name: Seed Sales Wave 1 read fixtures
         run: |
