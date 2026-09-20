@@ -14,7 +14,12 @@ final readonly class PublicPropertyReadService
     /** @param array<string,mixed> $query @return array<string,mixed> */
     public function catalog(array $query): array
     {
+        // Public callers may never widen the visibility predicate to moderation,
+        // reserved, sold or any other non-public status supported by the shared
+        // back-office filter vocabulary.
+        unset($query['status']);
         $filters = $this->catalog->filtersFromQuery($query);
+        $filters['status'] = '';
         $total = $this->catalog->catalogCount($filters);
         $pagination = $this->catalog->catalogPagination($filters, $total);
         $filters['page'] = $pagination['page'];
