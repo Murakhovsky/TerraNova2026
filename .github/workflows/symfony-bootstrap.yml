@@ -314,6 +314,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/property_real_estate_wave9.sql
 
+      - name: Seed Cabinet Web cutover fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/cabinet_web_cutover.sql
+
       - name: Seed SEO Web cutover fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -347,6 +352,40 @@ jobs:
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < app/migrations/20260919_000064_service_wave11_cutover.sql
+
+      - name: Verify Symfony Cabinet Web cutover
+        run: |
+          php tests/architecture/symfony_cabinet_web_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php -l src/Application/Identity/Service/CabinetPortalService.php
+          docker compose -f docker-compose.symfony.yml exec -T php php -l src/Web/Cabinet/CabinetPageController.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/cabinet-routes.txt
+          grep -q 'cos_web_cabinet' /tmp/cabinet-routes.txt
+          grep -q 'cos_web_cabinet_submission' /tmp/cabinet-routes.txt
+
+          status=$(curl --silent --show-error --dump-header /tmp/cabinet-anon.headers             --output /tmp/cabinet-anon.html --write-out '%{http_code}'             http://127.0.0.1:8081/cabinet)
+          echo "Anonymous Cabinet HTTP $status"
+          test "$status" = "302"
+          grep -qi '^location: /auth/login' /tmp/cabinet-anon.headers
+
+          status=$(curl --silent --show-error --output /tmp/cabinet.html --write-out '%{http_code}'             --cookie 'PHPSESSID=ci-manager-session0001'             http://127.0.0.1:8081/cabinet)
+          echo "Authenticated Cabinet HTTP $status"
+          test "$status" = "200"
+          grep -q 'CI Manager' /tmp/cabinet.html
+          grep -q 'Wave 9 Public Property' /tmp/cabinet.html
+          grep -q 'Wave 9 Owner Submission' /tmp/cabinet.html
+
+          status=$(curl --silent --show-error --output /tmp/cabinet-submission.html --write-out '%{http_code}'             --cookie 'PHPSESSID=ci-manager-session0001'             http://127.0.0.1:8081/cabinet/submission/9301)
+          echo "Cabinet submission HTTP $status"
+          test "$status" = "200"
+          grep -q 'Wave 9 Owner Submission' /tmp/cabinet-submission.html
+          grep -q 'CAB-9301' /tmp/cabinet-submission.html
+
+          status=$(curl --silent --show-error --output /tmp/cabinet-cross-user.html --write-out '%{http_code}'             --cookie 'PHPSESSID=ci-realtor-session0002'             http://127.0.0.1:8081/cabinet/submission/9301)
+          echo "Cabinet cross-user submission HTTP $status"
+          test "$status" = "404"
+
+          echo "Symfony Cabinet Web cutover runtime passed."
 
       - name: Verify Doctrine MySQL persistence boundary
         run: |
