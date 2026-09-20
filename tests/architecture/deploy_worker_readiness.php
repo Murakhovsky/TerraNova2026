@@ -14,6 +14,12 @@ if (str_contains($legacyCompose, "\n  worker:\n")) {
 if (str_contains($legacyCompose, 'app/bootstrap_cli.php", "worker", "run')) {
     throw new RuntimeException('Retired Phalcon worker command returned to docker-compose.yml.');
 }
+if (str_contains($legacyDeploy, 'build --pull php worker migrate')) {
+    throw new RuntimeException('Compatibility deploy still tries to build the retired legacy worker service.');
+}
+if (!str_contains($legacyDeploy, 'build --pull php migrate')) {
+    throw new RuntimeException('Compatibility deploy must build only the remaining PHP and migration images.');
+}
 
 foreach ([
     "kernel-worker:\n",
