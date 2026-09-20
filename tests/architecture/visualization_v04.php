@@ -29,9 +29,9 @@ foreach (['system', 'runtime', 'domain', 'dependencies', 'events', 'actions', 'a
 }
 $assert(str_contains($registry, 'implements GraphProjectionRegistryInterface'), 'Architecture projection registry must implement the Kernel contract.');
 
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
+$controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
 $assert(str_contains($controller, 'GraphProjectionRegistryInterface'), 'Explorer must depend on the Kernel projection registry contract.');
-$assert(str_contains($controller, "getShared('cosArchitectureProjectionRegistry')"), 'Explorer projection registry DI lookup missing.');
+$assert(str_contains($controller, 'private GraphProjectionRegistryInterface $registry'), 'Explorer projection registry constructor dependency is missing.');
 $assert(str_contains($controller, "'views' => \$views"), 'Explorer must publish projected view payloads.');
 $assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not depend on Infrastructure.');
 
