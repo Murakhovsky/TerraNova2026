@@ -14,9 +14,6 @@ final class FrontendRoutes
         $router->setDefaultController('index');
         $router->setDefaultAction('index');
 
-        self::add($router, 'add', '/admin/content', 'Interfaces\\Web\\Controller', 'content', 'manage');
-        self::add($router, 'add', '/admin/content/edit', 'Interfaces\\Web\\Controller', 'content', 'edit');
-        $router->add('/admin/content/:action/:params', self::target('Interfaces\\Web\\Controller', 'content', 1) + ['params' => 2]);
         self::add($router, 'add', '/nerukhomist/{location:[a-z0-9-]+}/{type:[a-z0-9-]+}', 'Interfaces\\Web\\Controller', 'property', 'landing');
 
         foreach ($publicPageSlugs as $slug) {

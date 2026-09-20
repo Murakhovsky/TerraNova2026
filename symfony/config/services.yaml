@@ -1366,6 +1366,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Content\ContentAdminPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Command\IntegrationOutboxCommand:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'

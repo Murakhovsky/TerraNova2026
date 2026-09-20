@@ -107,6 +107,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
         return str_starts_with($path, '/sales')
             || str_starts_with($path, '/cos/architecture')
             || str_starts_with($path, '/admin/diagnostics')
+            || str_starts_with($path, '/admin/content')
             || str_starts_with($path, '/diagnostics/')
             || str_starts_with($path, '/spatial');
     }

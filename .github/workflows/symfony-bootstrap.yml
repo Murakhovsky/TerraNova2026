@@ -282,6 +282,11 @@ jobs:
           docker compose -f docker-compose.symfony.yml exec -T mysql \
             mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/public_edge_cutover.sql
 
+      - name: Seed Wave 14 Content/Admin fixtures
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony < symfony/tests/fixtures/content_admin_wave14.sql
+
       - name: Seed Documents Wave 10 fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
@@ -1071,6 +1076,68 @@ jobs:
           grep -q 'https://spatial.example.test/spatial/scene/ci-public-scene' /tmp/spatial-public.html
 
           echo "Symfony migrated Web surfaces route/security smoke passed."
+
+      - name: Verify Wave 14 Content/Admin Symfony cutover
+        run: |
+          php tests/architecture/content_admin_symfony_cutover.php
+          php -l symfony/src/Web/Content/ContentAdminPageController.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/wave14-content-routes.txt
+          grep -q 'cos_web_content_admin' /tmp/wave14-content-routes.txt
+          grep -q 'cos_web_content_admin_save' /tmp/wave14-content-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/w14-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/admin/content)
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/w14-realtor.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-realtor-session0002' http://127.0.0.1:8081/admin/content)
+          test "$status" = "403"
+
+          status=$(curl --silent --show-error --output /tmp/w14-list.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' 'http://127.0.0.1:8081/admin/content?status=draft')
+          test "$status" = "200"
+          grep -q 'CI Draft Post' /tmp/w14-list.html
+
+          status=$(curl --silent --show-error --output /tmp/w14-edit.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' http://127.0.0.1:8081/admin/content/edit/9203)
+          test "$status" = "200"
+          grep -q 'CI Draft Post' /tmp/w14-edit.html
+          csrf=$(sed -n 's/.*name="csrf_token" value="\([^"]*\)".*/\1/p' /tmp/w14-edit.html | head -n1)
+          test -n "$csrf"
+
+          status=$(curl --silent --show-error --output /tmp/w14-bad-csrf.txt --write-out '%{http_code}' \
+            --request POST --cookie 'PHPSESSID=ci-manager-session0001' \
+            --data-urlencode 'csrf_token=invalid' \
+            --data-urlencode 'title=SHOULD NOT SAVE' \
+            --data-urlencode 'body_html=<p>invalid csrf</p>' \
+            http://127.0.0.1:8081/admin/content/save/9203)
+          test "$status" = "400"
+
+          status=$(curl --silent --show-error --output /tmp/w14-save.txt --write-out '%{http_code}' \
+            --request POST --cookie 'PHPSESSID=ci-manager-session0001' \
+            --data-urlencode "csrf_token=$csrf" \
+            --data-urlencode 'id=9203' \
+            --data-urlencode 'content_type=blog_post' \
+            --data-urlencode 'status=draft' \
+            --data-urlencode 'title=CI Wave14 Draft Updated' \
+            --data-urlencode 'body_html=<p>CI_WAVE14_UPDATED_BODY</p>' \
+            --data-urlencode 'robots=index,follow' \
+            http://127.0.0.1:8081/admin/content/save/9203)
+          test "$status" = "303"
+
+          saved=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e "SELECT title FROM tn_content_items WHERE id=9203;" | tr -d '\r')
+          test "$saved" = "CI Wave14 Draft Updated"
+
+          revisions=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e "SELECT COUNT(*) FROM tn_content_revisions WHERE content_item_id=9203;" | tr -d '[:space:]')
+          test "$revisions" = "1"
+
+          outbox=$(docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e "SELECT COUNT(*) FROM tn_integration_outbox WHERE integration='n8n' AND entity_type='content' AND entity_id=9203 AND status='pending';" | tr -d '[:space:]')
+          test "$outbox" = "1"
+
+          echo "Wave 14 Content/Admin SSR + auth + CSRF + revision/outbox write path passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |

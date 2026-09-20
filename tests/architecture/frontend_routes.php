@@ -10,8 +10,6 @@ $required = [
     '/api/property/favourites',
     '/property',
     '/client-case',
-    '/admin/content',
-    '/admin/content/edit',
     '/cos/control-center',
 ];
 foreach ($required as $pattern) {
@@ -40,7 +38,7 @@ foreach ([
     }
 }
 
-foreach (['/robots.txt', '/sitemap.xml', '/blog', '/guide/', '/analytics/track', '/webhooks/n8n/content', '/api/v1/properties', '/api/property/:action', '/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
+foreach (['/robots.txt', '/sitemap.xml', '/blog', '/guide/', '/analytics/track', '/webhooks/n8n/content', '/admin/content', '/api/v1/properties', '/api/property/:action', '/api/sales/', '/api/integrations/{organization:', "'crm_webhook'", '/api/health', '/api/admin/diagnostics', '/api/cos/actions', '/api/cos/approvals', '/api/cos/rules', '/api/cos/audit'] as $retired) {
     if (str_contains($frontendRoutes, $retired)) {
         throw new RuntimeException('Retired legacy API route restored in FrontendRoutes: ' . $retired);
     }

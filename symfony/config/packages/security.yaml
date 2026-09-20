@@ -5,7 +5,7 @@ security:
 
   firewalls:
     cos_api:
-      pattern: '^/(?:api/v1|api/spatial|sales|cos/architecture|admin/diagnostics|diagnostics|spatial)(?:/|$)'
+      pattern: '^/(?:api/v1|api/spatial|sales|cos/architecture|admin/(?:diagnostics|content)|diagnostics|spatial)(?:/|$)'
       stateless: true
       provider: legacy_users
       custom_authenticators:
@@ -25,6 +25,7 @@ security:
     - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/cos/architecture(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/admin/content(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/spatial/scene/[A-Za-z0-9_-]+$', roles: PUBLIC_ACCESS, methods: [GET, HEAD] }
     - { path: '^/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
