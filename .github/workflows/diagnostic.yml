@@ -35,6 +35,7 @@ jobs:
           php tests/architecture/frontend_interface.php
           php tests/architecture/frontend_routes.php
           php tests/architecture/web_v012_production_closure.php
+          php tests/architecture/web_experience_wave12_foundation.php
 
       - name: Zero legacy production gate
         run: php tests/architecture/zero_legacy_runtime.php
