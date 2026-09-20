@@ -19,6 +19,7 @@ COPY app/Kernel/ /var/www/html/app/Kernel/
 COPY app/Platform/ /var/www/html/app/Platform/
 COPY app/Domains/ /var/www/html/app/Domains/
 COPY app/Infrastructure/ /var/www/html/app/Infrastructure/
+COPY app/Interfaces/Web/Assets/ /var/www/html/app/Interfaces/Web/Assets/
 COPY app/Interfaces/Web/View/ /var/www/html/app/Interfaces/Web/View/
 COPY public/build/ /var/www/html/symfony/public/build/
 COPY bin/spatial-convert.py /var/www/html/bin/spatial-convert.py
