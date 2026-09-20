@@ -19,7 +19,7 @@ $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.ph
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 $deploy = $read('deploy/dev.sh');
-$visualizationServices = $read('app/Bootstrap/VisualizationServices.php');
+$visualizationServices = $read('symfony/config/services.yaml');
 
 foreach ([
     "'build_canonical_graph'",
@@ -48,16 +48,12 @@ foreach ([
 }
 
 $assert(
-    str_contains($visualizationServices, "'cosArchitectureProjectionRegistry'"),
-    'Visualization composition root must register the projection registry.',
+    str_contains($visualizationServices, 'Infrastructure\\Visualization\\Architecture\\ArchitectureProjectionRegistry:'),
+    'Symfony Visualization composition must register the projection registry.',
 );
 $assert(
-    !str_contains($visualizationServices, 'static fn (): ArchitectureProjectionRegistry'),
-    'Phalcon DI service factories must remain bindable; projection registry factory cannot be static.',
-);
-$assert(
-    str_contains($visualizationServices, 'fn (): ArchitectureProjectionRegistry => ArchitectureProjectionRegistry::defaults()'),
-    'Projection registry must resolve through a bindable DI factory.',
+    str_contains($visualizationServices, "factory: ['Infrastructure\\Visualization\\Architecture\\ArchitectureProjectionRegistry', 'defaults']"),
+    'Projection registry must resolve through its canonical defaults factory.',
 );
 
 $assert(
