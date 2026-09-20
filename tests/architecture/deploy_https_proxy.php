@@ -138,8 +138,8 @@ foreach ([$httpBootstrap, $tls] as $proxyConfig) {
 }
 
 if (!str_contains($devDeploy, 'bash deploy/symfony-dev.sh')
-    || !str_contains($devDeploy, 'http://127.0.0.1:8081/api/v1/health')) {
-    throw new RuntimeException('DEV deployment does not boot and verify the canonical Symfony API runtime.');
+    || !str_contains($devDeploy, 'http://127.0.0.1:8081/health/dependencies')) {
+    throw new RuntimeException('DEV deployment does not boot and verify canonical Symfony dependency readiness.');
 }
 
 foreach ([
