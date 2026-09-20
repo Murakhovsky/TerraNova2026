@@ -16,6 +16,10 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
       - 'app/Interfaces/Web/View/**'
+      - 'frontend/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
@@ -38,6 +42,10 @@ on:
       - 'app/Infrastructure/Platform/ReadModel/MySql/MysqlOperationsReadModel.php'
       - 'app/Infrastructure/Platform/Persistence/MySql/Documents/**'
       - 'app/Interfaces/Web/View/**'
+      - 'frontend/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
@@ -75,6 +83,18 @@ jobs:
       TELEGRAM_BOT_NAME: ""
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build frontend runtime assets
+        run: |
+          npm ci
+          npm run build
+          test -f public/build/.vite/manifest.json
+          grep -q '"frontend/entrypoints/public-surface.js"' public/build/.vite/manifest.json
+          grep -q '"frontend/spatial/spatial-viewer.js"' public/build/.vite/manifest.json
 
       - name: Install root architecture-test autoload
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
@@ -2048,6 +2068,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build deployable frontend assets
+        run: |
+          npm ci
+          npm run build
+          test -f public/build/.vite/manifest.json
+          grep -q '"frontend/entrypoints/public-surface.js"' public/build/.vite/manifest.json
+          grep -q '"frontend/spatial/spatial-viewer.js"' public/build/.vite/manifest.json
 
       - name: Validate deployment configuration
         run: |
@@ -2079,6 +2111,8 @@ jobs:
             ./app/Platform/ \
             ./app/Domains/ \
             ./app/Infrastructure/ \
+            ./app/Interfaces/Web/View/ \
+            ./public/build/ \
             "$DEV_USER@$DEV_HOST:$DEV_PATH/"
 
       - name: Deploy parallel Symfony runtime
