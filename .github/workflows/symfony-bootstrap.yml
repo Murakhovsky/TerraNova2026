@@ -122,8 +122,13 @@ jobs:
             id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
             organization_id VARCHAR(190) NOT NULL,
             email VARCHAR(255) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL DEFAULT '',
             full_name VARCHAR(255) NOT NULL,
-            status VARCHAR(32) NOT NULL
+            phone VARCHAR(50) NULL,
+            role VARCHAR(64) NOT NULL DEFAULT 'buyer',
+            status VARCHAR(32) NOT NULL,
+            last_login_at DATETIME(6) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
           );
           CREATE TABLE cos_organization_memberships (
             organization_id VARCHAR(190) NOT NULL,
@@ -133,10 +138,10 @@ jobs:
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (organization_id, user_id)
           );
-          INSERT INTO tn_users (id, organization_id, email, full_name, status) VALUES
-            (1001, 'default', 'manager@example.test', 'CI Manager', 'active'),
-            (1002, 'default', 'realtor@example.test', 'CI Realtor', 'active'),
-            (1003, 'other-org', 'other@example.test', 'Other Manager', 'active');
+          INSERT INTO tn_users (id, organization_id, email, password_hash, full_name, role, status) VALUES
+            (1001, 'default', 'manager@example.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'CI Manager', 'manager', 'active'),
+            (1002, 'default', 'realtor@example.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'CI Realtor', 'realtor', 'active'),
+            (1003, 'other-org', 'other@example.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'Other Manager', 'manager', 'active');
           INSERT INTO cos_organization_memberships (organization_id, user_id, role, status) VALUES
             ('default', 1001, 'manager', 'ACTIVE'),
             ('default', 1002, 'realtor', 'ACTIVE'),
@@ -179,6 +184,43 @@ jobs:
             printf "%s" "tn_auth_user_id|i:1003;cos_organization_id|s:9:\"other-org\";cos_csrf_token|s:64:\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\";" > /sessions/sess_ci-other-manager0003
             chmod 644 /sessions/sess_*
           '
+
+      - name: Verify Symfony Auth Web cutover
+        run: |
+          php tests/architecture/symfony_auth_web_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php -l src/Application/Identity/Service/AccountAuthenticationService.php
+          docker compose -f docker-compose.symfony.yml exec -T php php -l src/Web/Auth/AuthPageController.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/auth-routes.txt
+          grep -q 'cos_web_auth_login' /tmp/auth-routes.txt
+          grep -q 'cos_web_auth_register' /tmp/auth-routes.txt
+          grep -q 'cos_web_auth_logout' /tmp/auth-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/auth-login.html --write-out '%{http_code}'             http://127.0.0.1:8081/auth/login)
+          echo "Auth login GET HTTP $status"
+          test "$status" = "200"
+          grep -q 'Вхід у кабінет' /tmp/auth-login.html
+
+          status=$(curl --silent --show-error --dump-header /tmp/auth-login.headers             --cookie-jar /tmp/auth.cookies --output /tmp/auth-login-post.html --write-out '%{http_code}'             --request POST             --data-urlencode 'email=manager@example.test'             --data-urlencode 'password=password'             http://127.0.0.1:8081/auth/login)
+          echo "Auth login POST HTTP $status"
+          cat /tmp/auth-login.headers
+          test "$status" = "302"
+          grep -qi '^location: /cabinet' /tmp/auth-login.headers
+          grep -q 'PHPSESSID' /tmp/auth.cookies
+
+          status=$(curl --silent --show-error --output /tmp/auth-protected.json --write-out '%{http_code}'             --cookie /tmp/auth.cookies             http://127.0.0.1:8081/api/v1/status)
+          echo "Auth protected API HTTP $status"; cat /tmp/auth-protected.json; echo
+          test "$status" = "200"
+          grep -q '"status"' /tmp/auth-protected.json
+
+          status=$(curl --silent --show-error --dump-header /tmp/auth-register.headers             --cookie-jar /tmp/auth-register.cookies --output /tmp/auth-register.html --write-out '%{http_code}'             --request POST             --data-urlencode 'full_name=CI Buyer'             --data-urlencode 'email=ci-buyer@example.test'             --data-urlencode 'phone=+380000000000'             --data-urlencode 'role=buyer'             --data-urlencode 'password=ci-buyer-password'             --data-urlencode 'password_repeat=ci-buyer-password'             http://127.0.0.1:8081/auth/register)
+          echo "Auth register POST HTTP $status"
+          test "$status" = "302"
+          grep -qi '^location: /cabinet' /tmp/auth-register.headers
+          count=$(docker compose -f docker-compose.symfony.yml exec -T mysql             mysql -N -B -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony -e             "SELECT COUNT(*) FROM tn_users u INNER JOIN cos_organization_memberships m ON m.user_id=u.id AND m.organization_id='default' AND m.status='ACTIVE' WHERE u.email='ci-buyer@example.test' AND u.status='active';" | tr -d '[:space:]')
+          test "$count" = "1"
+
+          echo "Symfony Auth Web cutover runtime passed."
 
       - name: Seed Spatial Web fixture contract
         run: |
