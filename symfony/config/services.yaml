@@ -60,6 +60,11 @@ services:
       $legacy: '@legacy_cos.pdo'
       $canonical: '@cos.database.pdo'
 
+  App\Infrastructure\Migration\Database\PlatformOperationsDatabaseCutover:
+    arguments:
+      $legacy: '@legacy_cos.pdo'
+      $canonical: '@cos.database.pdo'
+
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
@@ -363,18 +368,18 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Operations\Contract\MetricsRecorderInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder
 
   Infrastructure\Llm\MysqlLlmGovernanceRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Infrastructure\Platform\Persistence\MySql\Resilience\MysqlCircuitBreakerStore:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Resilience\ExternalCallExecutor:
     arguments:

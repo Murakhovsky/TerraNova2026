@@ -52,5 +52,14 @@ if (isset($legacy['App\\Infrastructure\\Module\\PdoModuleStateRepository'])
     || isset($legacy['App\\Infrastructure\\Module\\PdoModuleLifecycleRepository'])) {
     throw new RuntimeException('Module runtime repositories regressed to legacy DB.');
 }
+foreach ([
+    'Infrastructure\\Llm\\MysqlLlmGovernanceRepository',
+    'Infrastructure\\Platform\\Persistence\\MySql\\Operations\\MysqlMetricsRecorder',
+    'Infrastructure\\Platform\\Persistence\\MySql\\Resilience\\MysqlCircuitBreakerStore',
+] as $wave1Service) {
+    if (isset($legacy[$wave1Service])) {
+        throw new RuntimeException('Wave 1 Platform operational repositories regressed to legacy DB: ' . $wave1Service);
+    }
+}
 
 echo sprintf("Database cutover boundary passed: %d runtime legacy dependencies remain.\\n", count($legacy));
