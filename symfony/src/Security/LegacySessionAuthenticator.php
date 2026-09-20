@@ -47,7 +47,16 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
             return true;
         }
 
-        return str_starts_with($path, '/api/v1') || str_starts_with($path, '/sales');
+        if (str_starts_with($path, '/spatial/scene/')) {
+            return false;
+        }
+
+        return str_starts_with($path, '/api/v1')
+            || str_starts_with($path, '/sales')
+            || str_starts_with($path, '/cos/architecture')
+            || str_starts_with($path, '/diagnostics/')
+            || $path === '/admin/diagnostics/methodology-studio'
+            || str_starts_with($path, '/spatial/');
     }
 
     public function authenticate(Request $request): Passport
@@ -72,7 +81,7 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if (self::isHtmlSurface($request->getPathInfo())) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
@@ -83,13 +92,22 @@ final class LegacySessionAuthenticator extends AbstractAuthenticator implements 
 
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        if (str_starts_with($request->getPathInfo(), '/sales')) {
+        if (self::isHtmlSurface($request->getPathInfo())) {
             return new \Symfony\Component\HttpFoundation\RedirectResponse('/auth/login');
         }
 
         return str_starts_with($request->getPathInfo(), '/api/spatial/')
             ? self::spatialUnauthorized()
             : self::forbidden();
+    }
+
+    private static function isHtmlSurface(string $path): bool
+    {
+        return str_starts_with($path, '/sales')
+            || str_starts_with($path, '/cos/architecture')
+            || str_starts_with($path, '/diagnostics/')
+            || $path === '/admin/diagnostics/methodology-studio'
+            || (str_starts_with($path, '/spatial/') && !str_starts_with($path, '/spatial/scene/'));
     }
 
     private static function spatialUnauthorized(): JsonResponse
