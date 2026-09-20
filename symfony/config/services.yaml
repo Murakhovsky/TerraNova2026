@@ -191,18 +191,18 @@ services:
   Domains\Property\Application\Contract\LocationReferenceInterface:
     alias: App\Infrastructure\Persistence\MySql\MysqlPropertyLocationReference
 
-  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCompatibilityProjection:
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyProjection:
     arguments:
       $connection: '@cos.database.pdo'
       $locations: '@Domains\Property\Application\Contract\LocationReferenceInterface'
 
-  Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface:
-    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCompatibilityProjection
+  Domains\Property\Application\Contract\PropertyProjectionInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyProjection
 
   Domains\Property\Application\Service\PropertyCanonicalRuntimeService:
     arguments:
       $repository: '@Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface'
-      $compatibility: '@Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface'
+      $projection: '@Domains\Property\Application\Contract\PropertyProjectionInterface'
       $events: '@Kernel\Event\EventBus'
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
 

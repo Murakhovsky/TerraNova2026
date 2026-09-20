@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace Domains\Property\Infrastructure\Persistence\MySql;
 
 use Domains\Property\Application\Contract\LocationReferenceInterface;
-use Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface;
+use Domains\Property\Application\Contract\PropertyProjectionInterface;
 use PDO;
 use RuntimeException;
 
-final readonly class MysqlPropertyCompatibilityProjection implements PropertyCompatibilityProjectionInterface
+final readonly class MysqlPropertyProjection implements PropertyProjectionInterface
 {
     public function __construct(
         private PDO $connection,
