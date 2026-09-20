@@ -2,7 +2,7 @@
 title: Архітектурні рішення
 description: ADR для рішень, що визначають довгострокову архітектуру COS.
 status: active
-updated: 2026-09-16
+updated: 2026-09-21
 kind: index
 ---
 
@@ -18,6 +18,7 @@ kind: index
 | [ADR-0006](ADR-0006-deployed-modules-vs-tenant-activation.md) | Deployed module discovery відокремлена від tenant activation і readiness |
 | [ADR-0007](ADR-0007-documentation-content-and-renderer.md) | `/docs` content відокремлений від static renderer; generated reference має власний sync contract |
 | [ADR-0008](ADR-0008-main-is-canonical-branch.md) | `main` є єдиною canonical code/docs/CI branch |
+| [ADR-0009](ADR-0009-web-experience-platform.md) | Symfony Web & Experience Platform є канонічним UI runtime COS |
 
 ## Ієрархія джерел істини
 
