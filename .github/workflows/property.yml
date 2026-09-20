@@ -14,7 +14,6 @@ on:
       - 'app/Bootstrap/PropertyNetworkServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
-      - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
@@ -49,7 +48,6 @@ on:
       - 'app/Bootstrap/PropertyNetworkServices.php'
       - 'app/Bootstrap/SalesServices.php'
       - 'app/Bootstrap/WebApplicationServices.php'
-      - 'app/Bootstrap/SpatialModule.php'
       - 'app/Infrastructure/Platform/Analytics/Property*.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/config/services_kernel.php'
@@ -170,7 +168,6 @@ jobs:
           php -l app/Bootstrap/PropertyNetworkServices.php
           php -l app/Bootstrap/SalesServices.php
           php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/Bootstrap/SpatialModule.php
           php -l app/config/services_kernel.php
           php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
           find tests/architecture -maxdepth 1 -name 'property_*.php' -print0 | xargs -0 -n1 php -l
