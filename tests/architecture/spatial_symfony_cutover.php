@@ -9,6 +9,8 @@ $assert=static function(bool $condition,string $message):void{
 
 $legacyController=$root.'/app/Interfaces/Api/Controller/SpatialController.php';
 $assert(!is_file($legacyController),'Retired Phalcon Spatial API controller was restored.');
+$assert(!is_file($root.'/app/Interfaces/Web/Controller/SpatialController.php'),'Retired Phalcon Spatial Web controller was restored.');
+$assert(!is_file($root.'/app/Interfaces/Web/Routing/SpatialWebRoutes.php'),'Retired Phalcon Spatial Web routes were restored.');
 
 $legacyModule=$read('app/Bootstrap/SpatialModule.php');
 $assert(!str_contains($legacyModule,'/api/spatial/'),'Bootstrap\\SpatialModule still owns Spatial API routes.');
@@ -28,6 +30,12 @@ foreach([
     '/api/spatial/jobs/{publicId}',
     '/api/spatial/events',
     'App\\Http\\Api\\Spatial\\SpatialController',
+    'cos_web_spatial_manage:',
+    'cos_web_spatial_edit:',
+    'cos_web_spatial_upload:',
+    'cos_web_spatial_publish:',
+    'cos_web_spatial_scene:',
+    'App\\Web\\Spatial\\SpatialPageController',
 ] as $needle){
     $assert(str_contains($routes,$needle),'Canonical Symfony Spatial route missing: '.$needle);
 }
@@ -69,7 +77,7 @@ foreach([
 
 foreach(['deploy/configure-company-os-http.sh','deploy/configure-dev-tls.sh'] as $path){
     $proxy=$read($path);
-    foreach(['location ^~ /api/spatial/','location ^~ /uploads/spatial/','SYMFONY_UPSTREAM'] as $needle){
+    foreach(['location ^~ /api/spatial/','location ^~ /spatial/','location ^~ /uploads/spatial/','SYMFONY_UPSTREAM'] as $needle){
         $assert(str_contains($proxy,$needle),'Spatial ingress cutover missing in '.$path.': '.$needle);
     }
 }
@@ -78,4 +86,8 @@ $pdoBridge=$read('app/Infrastructure/Platform/Persistence/Pdo/PdoConnection.php'
 $assert(!str_contains($pdoBridge,'Phalcon\\'),'Canonical PDO bridge must not depend on Phalcon types.');
 $assert(str_contains($pdoBridge,'instanceof PDO'),'Canonical PDO bridge does not accept Symfony PDO.');
 
-echo "Spatial Symfony cutover architecture boundary OK\n";
+$web=$read('symfony/src/Web/Spatial/SpatialPageController.php');
+$assert(str_contains($web,'SpatialSceneInterface'),'Symfony Spatial Web must consume the canonical Spatial scene contract.');
+$assert(!str_contains($web,'Phalcon\\'),'Symfony Spatial Web must not depend on Phalcon.');
+
+echo "Spatial Symfony API + SSR cutover architecture boundary OK\n";
