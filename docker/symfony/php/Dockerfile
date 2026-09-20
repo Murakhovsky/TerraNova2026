@@ -52,7 +52,7 @@ RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=de
     APP_URL="http://127.0.0.1:8081" \
     TELEGRAM_BOT_TOKEN="" \
     TELEGRAM_BOT_NAME="" \
-    php bin/console cache:warmup
+    sh -c 'php bin/console cache:warmup && php bin/console asset-map:compile'
 
 EXPOSE 9000
 
