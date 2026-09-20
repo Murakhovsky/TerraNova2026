@@ -46,10 +46,6 @@ services:
       $user: '%env(LEGACY_DB_USER)%'
       $password: '%env(LEGACY_DB_PASSWORD)%'
 
-  Infrastructure\Platform\Persistence\Pdo\PdoConnection:
-    arguments:
-      $config: '@legacy_cos.pdo'
-
   Domains\Property\Infrastructure\ReadModel\MySql\CatalogService:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
