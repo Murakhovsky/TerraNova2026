@@ -3,19 +3,20 @@ declare(strict_types=1);
 
 namespace App\Application\Identity\Service;
 
+use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Kernel\Tenant\Model\TenantContext;
 use PDO;
 
 final readonly class CabinetPortalService
 {
-    public function __construct(private PDO $connection)
+    public function __construct(private PdoConnection $database)
     {
     }
 
     /** @return array<string,mixed>|null */
     public function user(TenantContext $tenant): ?array
     {
-        $statement = $this->connection->prepare(<<<'SQL'
+        $statement = $this->database->connection()->prepare(<<<'SQL'
 SELECT
     u.id,
     u.organization_id,
@@ -114,7 +115,7 @@ SQL, ['organization_id' => $organizationId, 'email' => mb_strtolower($email)]),
     /** @param array<string,mixed> $params @return list<array<string,mixed>> */
     private function all(string $sql, array $params): array
     {
-        $statement = $this->connection->prepare($sql);
+        $statement = $this->database->connection()->prepare($sql);
         $statement->execute($params);
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 

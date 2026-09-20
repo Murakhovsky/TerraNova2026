@@ -42,14 +42,7 @@ services:
       dockerfile: docker/symfony/nginx/Dockerfile
     restart: unless-stopped
     depends_on:
-      session-init:
-    image: alpine:3.21
-    restart: "no"
-    command: ["sh", "-c", "chmod 1777 /sessions && find /sessions -maxdepth 1 -type f -name 'sess_*' -exec chmod 666 {} + || true"]
-    volumes:
-      - legacy_php_sessions:/sessions
-
-  php:
+      php:
         condition: service_healthy
     ports:
       - "127.0.0.1:8081:80"
@@ -61,6 +54,13 @@ services:
     volumes:
       - spatial_uploads:/var/www/html/symfony/public/uploads/spatial:ro
     networks: [frontend]
+
+  session-init:
+    image: alpine:3.21
+    restart: "no"
+    command: ["sh", "-c", "chmod 1777 /sessions && find /sessions -maxdepth 1 -type f -name 'sess_*' -exec chmod 666 {} + || true"]
+    volumes:
+      - legacy_php_sessions:/sessions
 
   php:
     image: cos-symfony-php:local

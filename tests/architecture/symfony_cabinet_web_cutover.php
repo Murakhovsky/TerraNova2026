@@ -29,6 +29,13 @@ if (!str_contains($authenticator, "str_starts_with($path, '/cabinet')")) {
     throw new RuntimeException('Transition authenticator does not recognize Cabinet Web requests.');
 }
 
+if (str_contains($services, "App\\Application\\Identity\\Service\\CabinetPortalService:\n    arguments:\n      \$connection: '@legacy_cos.pdo'")) {
+    throw new RuntimeException('CabinetPortalService must not add a direct legacy DB dependency.');
+}
+if (!str_contains($services, "App\\Application\\Identity\\Service\\CabinetPortalService:\n    arguments:\n      \$database: '@Infrastructure\\Platform\\Persistence\\Pdo\\PdoConnection'")) {
+    throw new RuntimeException('CabinetPortalService must reuse the frozen PDO compatibility boundary.');
+}
+
 foreach ([
     'CabinetPortalService:',
     'PropertySubmissionInterface:',

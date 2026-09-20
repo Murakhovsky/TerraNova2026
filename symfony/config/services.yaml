@@ -1230,7 +1230,7 @@ services:
   # application service while persistence remains on the pre-cutover MySQL schema.
   App\Application\Identity\Service\CabinetPortalService:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
 
   Infrastructure\Media\MediaStorageService:
     arguments:
