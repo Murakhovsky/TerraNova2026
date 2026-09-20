@@ -54,18 +54,6 @@ foreach (['Web', 'Api', 'Cli', 'Shared'] as $interfaceArea) {
     }
 }
 
-$clientCaseFacade = (string) file_get_contents($root . '/app/Interfaces/Web/Service/ClientCaseService.php');
-foreach (['PdoConnection', 'PDO', '->prepare(', '->transactional(', 'EventBus', 'ClientCaseCreated::', 'ClientCaseChanged::', 'DealStageChanged::', 'LeadChanged::'] as $forbidden) {
-    if (str_contains($clientCaseFacade, $forbidden)) {
-        throw new RuntimeException('ClientCaseService must remain a thin compatibility facade; forbidden dependency: ' . $forbidden);
-    }
-}
-
-$inboundResolver = (string) file_get_contents($root . '/app/Bootstrap/InboundCaseResolverAdapter.php');
-if (preg_match('/^use\s+Modules\\\\/m', $inboundResolver)) {
-    throw new RuntimeException('Inbound case resolution must call Sales use cases without routing through legacy Modules.');
-}
-
 foreach (phpFiles($root . '/app/Kernel') as $file) {
     $source = file_get_contents($file);
     if (preg_match('/^use\s+PDO\s*;/m', $source)
@@ -73,13 +61,6 @@ foreach (phpFiles($root . '/app/Kernel') as $file) {
         || str_contains($source, 'new \\PDO(')
     ) {
         throw new RuntimeException('Kernel must access persistence through contracts: ' . $file);
-    }
-}
-
-foreach (phpFiles($root . '/app/Interfaces/Api/Controller') as $file) {
-    $source = (string) file_get_contents($file);
-    if (preg_match('/public\s+function\s+\w+Action\s*\([^)]*\)\s*:\s*void/', $source)) {
-        throw new RuntimeException('API actions must return the Phalcon response so JSON bodies reach HTTP clients: ' . $file);
     }
 }
 

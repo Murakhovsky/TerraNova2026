@@ -65,7 +65,7 @@ $assert(str_contains($view, 'data-architecture-stage'), 'Architecture graph stag
 $assert(str_contains($view, 'data-architecture-default-view='), 'Architecture shell must expose the server-selected default projection independently from JSON hydration.');
 $assert(str_contains($view, 'JSON_INVALID_UTF8_SUBSTITUTE'), 'Architecture payload serialization must survive malformed UTF-8 metadata.');
 
-$navigation = $read('app/Interfaces/Web/Navigation/FrontendNavigation.php');
-$assert(str_contains($navigation, "'path' => 'cos/architecture'"), 'Architecture Explorer must be discoverable from COS navigation.');
+$navigation = $read('symfony/src/Web/Navigation/NavigationBuilder.php');
+$assert(str_contains($navigation, "'path' => 'cos/architecture'"), 'Architecture Explorer must be discoverable from canonical Symfony navigation.');
 
 echo "Visualization V0.3/V0.5.1 architecture boundary passed.\n";

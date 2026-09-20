@@ -14,7 +14,6 @@ $required = [
     'app/Kernel/Process/RuntimeMapping.php',
     'app/Kernel/Process/ProcessRegistryInterface.php',
     'app/Infrastructure/Process/JsonProcessRegistry.php',
-    'app/Bootstrap/ProcessServices.php',
     'docs/.vitepress/process-registry.mjs',
 ];
 foreach ($required as $path) $assert(is_file($root . '/' . $path), 'Process V0.1 required file missing: ' . $path);
@@ -30,10 +29,11 @@ $assert(str_contains($kernel, 'CROSS_DOMAIN_SCHEMA = 5'), 'Kernel Process model 
 $assert(str_contains($kernel, 'capabilityGap'), 'Kernel Process model must preserve explicit capability debt.');
 $assert(str_contains($kernel, "mapping->type === 'contract'"), 'Kernel Process v5 cross-domain steps must require a structural contract mapping.');
 
-$bootstrap = $read('app/Bootstrap/ProcessServices.php');
-$assert(str_contains($bootstrap, "'cosProcessRegistry'"), 'Process Registry runtime service is not registered.');
-$assert(str_contains($bootstrap, "BASE_PATH . '/resources/processes'"), 'Runtime Process Registry must use neutral canonical source.');
-$assert(str_contains($read('app/config/services_kernel.php'), "'/Bootstrap/ProcessServices.php'"), 'ProcessServices is not wired into composition root.');
+$composition = $read('symfony/config/services.yaml');
+$assert(str_contains($composition, 'Infrastructure\\Process\\JsonProcessRegistry:'), 'Process Registry runtime service is not registered in Symfony.');
+$assert(str_contains($composition, "%kernel.project_dir%/../resources/processes"), 'Runtime Process Registry must use neutral canonical source.');
+$assert(str_contains($composition, 'Kernel\\Process\\ProcessRegistryInterface:'), 'Process Registry contract alias is missing.');
+$assert(!is_file($root.'/app/Bootstrap/ProcessServices.php'), 'Retired Process bootstrap must remain deleted.');
 $assert(str_contains($read('app/Kernel/Module/KernelVersion.php'), "VERSION = '0.11.9'"), 'KernelVersion must expose additive Process contract revision.');
 
 $definitions = glob($root . '/resources/processes/*.json') ?: [];

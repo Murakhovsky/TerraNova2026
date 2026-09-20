@@ -690,6 +690,13 @@ services:
       $states: '@Kernel\Module\Contract\ModuleStateRepositoryInterface'
       $installations: '@Kernel\Module\Contract\ModuleLifecycleRepositoryInterface'
 
+  Infrastructure\Process\JsonProcessRegistry:
+    arguments:
+      $directory: '%kernel.project_dir%/../resources/processes'
+
+  Kernel\Process\ProcessRegistryInterface:
+    alias: Infrastructure\Process\JsonProcessRegistry
+
   Kernel\Module\DomainModuleRegistry:
     arguments:
       $modules:

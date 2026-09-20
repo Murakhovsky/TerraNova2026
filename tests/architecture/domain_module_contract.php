@@ -126,28 +126,25 @@ new ModuleCatalog([
     ),
 ]);
 
-$bootstrap = (string) file_get_contents($root . '/app/Bootstrap/ModuleServices.php');
+$composition = (string) file_get_contents($root . '/symfony/config/services.yaml');
 foreach ([
-    '/Domains/Sales/module.php',
-    '/Domains/Diagnostic/module.php',
-    '/Domains/Property/module.php',
-    "'salesDomainModule'",
-    "'salesCrmInboxJobHandler'",
-] as $manualCoupling) {
-    if (str_contains($bootstrap, $manualCoupling)) {
-        throw new RuntimeException('Central module bootstrap still contains domain-specific coupling: ' . $manualCoupling);
+    'App\\Infrastructure\\Module\\ModuleCatalogFactory:',
+    'Kernel\\Module\\ModuleCatalog:',
+    'Kernel\\Module\\ModuleLifecycleManager:',
+    'Kernel\\Module\\ModuleCapabilityRegistry:',
+    'Kernel\\Module\\DomainModuleRegistry:',
+    'Kernel\\Module\\ModuleTenantProvisioner:',
+] as $requiredKernelBoundary) {
+    if (!str_contains($composition, $requiredKernelBoundary)) {
+        throw new RuntimeException('Symfony module platform boundary is missing: ' . $requiredKernelBoundary);
     }
 }
-
 foreach ([
-    'ModuleDiscovery',
-    'cosModuleLifecycleManager',
-    'cosModuleCapabilityRegistry',
-    'cosModuleApiRouteContributors',
-    'cosModuleConfigurationProvisioners',
-] as $requiredKernelBoundary) {
-    if (!str_contains($bootstrap, $requiredKernelBoundary)) {
-        throw new RuntimeException('Module platform boundary is missing: ' . $requiredKernelBoundary);
+    'app/Bootstrap/ModuleServices.php',
+    'app/config/services_kernel.php',
+] as $retiredComposition) {
+    if (is_file($root . '/' . $retiredComposition)) {
+        throw new RuntimeException('Retired module composition returned: ' . $retiredComposition);
     }
 }
 
