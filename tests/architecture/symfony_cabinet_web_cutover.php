@@ -36,6 +36,10 @@ if (!str_contains($services, "App\\Application\\Identity\\Service\\CabinetPortal
     throw new RuntimeException('CabinetPortalService must reuse the frozen PDO compatibility boundary.');
 }
 
+if (!str_contains($services, "App\\Web\\Cabinet\\CabinetPageController:\n    public: true\n    tags: ['controller.service_arguments']")) {
+    throw new RuntimeException('CabinetPageController must be a public controller service.');
+}
+
 foreach ([
     'CabinetPortalService:',
     'PropertySubmissionInterface:',
