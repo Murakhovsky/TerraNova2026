@@ -16,6 +16,19 @@ cos_web_auth_logout:
   controller: App\Web\Auth\AuthPageController::logout
   methods: [GET, POST]
 
+# Cabinet Web cutover — Symfony owns the authenticated portal.
+cos_web_cabinet:
+  path: /cabinet
+  controller: App\Web\Cabinet\CabinetPageController::index
+  methods: [GET, HEAD]
+
+cos_web_cabinet_submission:
+  path: /cabinet/submission/{id}
+  controller: App\Web\Cabinet\CabinetPageController::submission
+  methods: [GET, POST]
+  requirements:
+    id: '[1-9][0-9]*'
+
 cos_symfony_home:
   path: /
   controller: App\Controller\HealthController::index

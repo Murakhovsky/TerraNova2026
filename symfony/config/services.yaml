@@ -1225,6 +1225,39 @@ services:
       $workbenchRepository: '@Domains\Diagnostic\Application\Contract\MethodologyWorkbenchRepositoryInterface'
 
 
+
+  # Cabinet Web cutover — reuse the existing framework-neutral Property submission
+  # application service while persistence remains on the pre-cutover MySQL schema.
+  App\Application\Identity\Service\CabinetPortalService:
+    arguments:
+      $connection: '@legacy_cos.pdo'
+
+  Infrastructure\Media\MediaStorageService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $imageOptimizer: null
+
+  Domains\Property\Application\Contract\PropertySubmissionMediaInterface:
+    alias: Infrastructure\Media\MediaStorageService
+
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository
+
+  Domains\Property\Application\UseCase\PropertySubmissionService:
+    arguments:
+      $submissions: '@Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface'
+      $mediaStorage: '@Domains\Property\Application\Contract\PropertySubmissionMediaInterface'
+      $notifications: null
+      $analytics: null
+
+  Domains\Property\Application\Contract\PropertySubmissionInterface:
+    alias: Domains\Property\Application\UseCase\PropertySubmissionService
+
   # Spatial Symfony cutover — canonical HTTP transport on the shared Spatial domain.
   Infrastructure\Platform\Persistence\Pdo\PdoConnection:
     arguments:
