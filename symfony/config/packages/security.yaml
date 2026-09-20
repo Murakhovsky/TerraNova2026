@@ -25,9 +25,7 @@ security:
     - { path: '^/cos/architecture(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
-    - { path: '^/spatial/scene/[A-Za-z0-9_-]+    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
-    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
-, roles: PUBLIC_ACCESS, methods: [GET] }
+    - { path: '^/spatial/scene/[A-Za-z0-9_-]+$', roles: PUBLIC_ACCESS, methods: [GET] }
     - { path: '^/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
