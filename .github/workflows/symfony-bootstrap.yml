@@ -159,6 +159,24 @@ jobs:
             chmod 644 /sessions/sess_*
           '
 
+      - name: Seed Spatial Web fixture contract
+        run: |
+          docker compose -f docker-compose.symfony.yml exec -T mysql \
+            mysql -ucos -p"$SYMFONY_DB_PASSWORD" cos_symfony <<'SQL'
+          CREATE TABLE IF NOT EXISTS tn_media_assets (
+            id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+            public_url VARCHAR(2048) NULL
+          );
+          CREATE TABLE IF NOT EXISTS tn_spatial_scenes (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            public_id VARCHAR(190) NOT NULL,
+            slug VARCHAR(190) NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            published_at DATETIME NULL,
+            poster_media_id BIGINT UNSIGNED NULL
+          );
+          SQL
+
       - name: Seed Sales Wave 1 read fixtures
         run: |
           docker compose -f docker-compose.symfony.yml exec -T mysql \
