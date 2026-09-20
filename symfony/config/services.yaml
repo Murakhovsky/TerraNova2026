@@ -1493,3 +1493,19 @@ services:
   App\Web\Sales\SalesAdminPageController:
     public: true
     tags: ['controller.service_arguments']
+
+
+  # Web retirement — Visualization, Diagnostic and Spatial SSR.
+  App\Web\WorkspacePageContext: ~
+
+  App\Web\Visualization\ArchitectureExplorerController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Diagnostic\DiagnosticPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Spatial\SpatialPageController:
+    public: true
+    tags: ['controller.service_arguments']
