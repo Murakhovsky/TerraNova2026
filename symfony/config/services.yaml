@@ -1506,3 +1506,9 @@ services:
   App\Web\Diagnostic\DiagnosticPageController:
     public: true
     tags: ['controller.service_arguments']
+
+
+  # Final Web retirement — Spatial SSR/workspace.
+  App\Web\Spatial\SpatialPageController:
+    public: true
+    tags: ['controller.service_arguments']
