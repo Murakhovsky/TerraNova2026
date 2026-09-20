@@ -43,7 +43,6 @@ final class FrontendRoutes
         $router->add('/client-case/:action/:params', self::target('Interfaces\\Web\\Controller', 'client_case', 1) + ['params' => 2]);
         self::add($router, 'add', '/client-case/:action', 'Interfaces\\Web\\Controller', 'client_case', 1);
         self::add($router, 'add', '/client-case', 'Interfaces\\Web\\Controller', 'client_case', 'index');
-        self::add($router, 'addGet', '/admin/diagnostics/methodology-studio', 'Interfaces\\Web\\Controller', 'methodology_studio', 'index');
 
         self::add($router, 'addPost', '/cos/action/{id:[a-f0-9]{32}}/execute', 'Interfaces\\Web\\Controller', 'cos', 'execute');
         self::add($router, 'addPost', '/cos/approval/{id:[a-f0-9]{32}}/approve', 'Interfaces\\Web\\Controller', 'cos', 'approve');
