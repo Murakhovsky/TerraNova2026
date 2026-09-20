@@ -281,6 +281,7 @@ jobs:
           php tests/architecture/symfony_runtime_hardening.php
           php tests/architecture/runtime_cleanup_third_slice.php
           php tests/architecture/spatial_symfony_cutover.php
+          php tests/architecture/symfony_web_surfaces_cutover.php
           php tests/architecture/runtime_retirement_background_slice.php
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
@@ -847,6 +848,33 @@ jobs:
           asset=$(php -r '$m=json_decode(file_get_contents("public/build/.vite/manifest.json"),true,512,JSON_THROW_ON_ERROR); echo $m["frontend/entrypoints/sales-workspace.js"]["file"];')
           curl --fail --show-error --silent "http://127.0.0.1:8081/build/$asset" > /dev/null
           echo "Symfony Sales SSR page and Vite asset smoke passed."
+
+          php tests/architecture/symfony_web_surfaces_cutover.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_architecture' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_diagnostic_methodology' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_diagnostic_report' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_spatial_manage' /tmp/migrated-web-routes.txt
+          grep -q 'cos_web_spatial_scene' /tmp/migrated-web-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
+          test "$status" = "302"
+          grep -qi '/auth/login' <(curl --silent --show-error --head http://127.0.0.1:8081/cos/architecture)
+
+          status=$(curl --silent --show-error --output /tmp/methodology-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/admin/diagnostics/methodology-studio)
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/diagnostic-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/diagnostics/ci-session01/report)
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-manage-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/spatial/manage)
+          test "$status" = "302"
+
+          status=$(curl --silent --show-error --output /tmp/spatial-public-missing.html --write-out '%{http_code}' http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
+          test "$status" = "404"
+
+          echo "Symfony migrated Web surfaces route/security smoke passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |
