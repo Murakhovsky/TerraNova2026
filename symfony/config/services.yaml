@@ -29,41 +29,24 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
-  App\Security\LegacySessionReader:
+  App\Application\Identity\Service\AccountAuthenticationService:
     arguments:
-      $savePath: '%env(LEGACY_SESSION_SAVE_PATH)%'
-      $cookieName: '%env(LEGACY_SESSION_COOKIE_NAME)%'
-
-  App\Security\LegacyIdentityLoader:
-    arguments:
-      $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
-  legacy_cos.pdo:
-    class: PDO
-    factory: ['@App\Infrastructure\LegacyConnectionFactory', 'create']
+  App\Web\Auth\AuthPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Security\CosIdentityLoader:
     arguments:
-      $host: '%env(LEGACY_DB_HOST)%'
-      $port: '%env(int:LEGACY_DB_PORT)%'
-      $database: '%env(LEGACY_DB_NAME)%'
-      $user: '%env(LEGACY_DB_USER)%'
-      $password: '%env(LEGACY_DB_PASSWORD)%'
+      $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
 
   cos.database.pdo:
     class: PDO
     factory: ['@App\Infrastructure\Persistence\CanonicalPdoFactory', 'create']
     arguments:
       $connection: '@doctrine.dbal.default_connection'
-
-  App\Infrastructure\Migration\Database\ModuleRuntimeDatabaseCutover:
-    arguments:
-      $legacy: '@legacy_cos.pdo'
-      $canonical: '@cos.database.pdo'
-
-  App\Infrastructure\Migration\Database\PlatformOperationsDatabaseCutover:
-    arguments:
-      $legacy: '@legacy_cos.pdo'
-      $canonical: '@cos.database.pdo'
 
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
@@ -76,12 +59,12 @@ services:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
-  App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter:
+  App\Infrastructure\Persistence\MySql\MysqlIdentityRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Identity\Contract\IdentityResolverInterface:
-    alias: App\Infrastructure\Persistence\Legacy\LegacyIdentityRepositoryAdapter
+    alias: App\Infrastructure\Persistence\MySql\MysqlIdentityRepository
 
   Kernel\Tenant\Contract\TenantPermissionResolverInterface:
     alias: App\Security\RoleTenantPermissionResolver
@@ -122,7 +105,7 @@ services:
 
   Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Operations\Contract\OperationsReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel
@@ -159,14 +142,14 @@ services:
   # Wave 10 — Platform Documents runtime
   Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentsRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Platform\Documents\Contract\DocumentsRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentsRepository
 
   Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentMutationReceipt:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Platform\Documents\Contract\DocumentMutationReceiptInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentMutationReceipt
@@ -185,7 +168,7 @@ services:
 
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Property\Contract\PropertyReferencePort:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort
@@ -196,21 +179,21 @@ services:
   # Wave 9 — Property / RealEstate business cutover
   Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRuntimeRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface:
     alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRuntimeRepository
 
-  App\Infrastructure\Persistence\Legacy\LegacyPropertyLocationReferenceAdapter:
+  App\Infrastructure\Persistence\MySql\MysqlPropertyLocationReference:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Property\Application\Contract\LocationReferenceInterface:
-    alias: App\Infrastructure\Persistence\Legacy\LegacyPropertyLocationReferenceAdapter
+    alias: App\Infrastructure\Persistence\MySql\MysqlPropertyLocationReference
 
   Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCompatibilityProjection:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $locations: '@Domains\Property\Application\Contract\LocationReferenceInterface'
 
   Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface:
@@ -230,21 +213,21 @@ services:
 
   App\Infrastructure\Persistence\Property\PdoPropertyMutationReceipt:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Property\Application\Contract\PropertyMutationReceiptInterface:
     alias: App\Infrastructure\Persistence\Property\PdoPropertyMutationReceipt
 
   Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\RealEstate\Application\Contract\RealEstateRepositoryInterface:
     alias: Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateRepository
 
   Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateMutationReceipt:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\RealEstate\Application\Contract\RealEstateMutationReceiptInterface:
     alias: Domains\RealEstate\Infrastructure\Persistence\MySql\MysqlRealEstateMutationReceipt
@@ -268,14 +251,14 @@ services:
   # Wave 11 — Service business cutover
   Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Service\Application\Contract\ServiceRepositoryInterface:
     alias: Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceRepository
 
   Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceMutationReceipt:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Service\Application\Contract\ServiceMutationReceiptInterface:
     alias: Domains\Service\Infrastructure\Persistence\MySql\MysqlServiceMutationReceipt
@@ -293,28 +276,28 @@ services:
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\ClientCaseReadModelFactoryInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAssignmentAuthority:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesAssignmentAuthorityInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAssignmentAuthority
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $assignmentAuthority: '@Domains\Sales\Application\Contract\SalesAssignmentAuthorityInterface'
 
   Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface:
@@ -322,14 +305,14 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Transaction\Contract\TransactionManagerInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager
 
   Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Event\Contract\EventStoreInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore
@@ -341,14 +324,14 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAttentionRepository
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesOutcomeRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOutcomeRepository
@@ -435,7 +418,7 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRunRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $retentionDays: 30
 
   Kernel\Agent\Contract\AgentRunRepositoryInterface:
@@ -443,21 +426,21 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Agent\MysqlDecisionRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Agent\Contract\DecisionRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Agent\MysqlDecisionRepository
 
   Infrastructure\Platform\Persistence\MySql\Configuration\MysqlAgentConfigurationProvider:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Agent\Contract\AgentConfigurationProviderInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlAgentConfigurationProvider
 
   Infrastructure\Platform\Persistence\MySql\Audit\MysqlAgentTraceRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Platform\Audit\Contract\AgentTraceRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Audit\MysqlAgentTraceRepository
@@ -550,7 +533,7 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\LeadFollowupRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository
@@ -563,14 +546,14 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\MysqlExternalReferenceStore:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface:
     alias: Infrastructure\Platform\Persistence\MySql\MysqlExternalReferenceStore
 
   Infrastructure\Integration\Crm\Aida\AidaCrmAdapter:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $references: '@Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface'
 
   Infrastructure\Integration\Crm\CrmRegistry:
@@ -580,7 +563,7 @@ services:
 
   Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\OrganizationCrmResolverInterface:
     alias: Infrastructure\Integration\Crm\MysqlOrganizationCrmResolver
@@ -598,7 +581,7 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlFollowupRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $references: '@Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface'
 
   Domains\Sales\Application\Contract\FollowupRepositoryInterface:
@@ -606,36 +589,36 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\DealRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\PipelineRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesOperationRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesRuleContextProvider:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPolicyContextProvider:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAgentContextBuilder:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $properties: '@Domains\Property\Contract\PropertyReferencePort'
 
   Domains\Sales\Application\UseCase\ScheduleDealFollowup:
@@ -736,56 +719,56 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Rule\Contract\RuleRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleRepository
 
   Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleEvaluationRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Rule\Contract\RuleEvaluationRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Rule\MysqlRuleEvaluationRepository
 
   Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Policy\Contract\PolicyRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository
 
   Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Policy\Contract\PolicyEvaluationRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository
 
   Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Action\Contract\ActionRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository
 
   Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Approval\Contract\ApprovalRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository
 
   Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Audit\Contract\AuditRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository
 
   Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Queue\Contract\JobQueueInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue
@@ -847,14 +830,14 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealStageHistoryStore:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesDealStageHistoryStoreInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealStageHistoryStore
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealOwnerHistoryStore:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesDealOwnerHistoryStoreInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesDealOwnerHistoryStore
@@ -878,14 +861,14 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Event\MysqlEventOutbox:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Event\Contract\EventOutboxInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventOutbox
 
   Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Event\Contract\EventConsumptionRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Event\MysqlEventConsumptionRepository
@@ -921,27 +904,27 @@ services:
 
   # Wave 5: Sales Diagnostics cutover. Existing Diagnostic domain remains authoritative.
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository:
-    arguments: ['@legacy_cos.pdo']
+    arguments: ['@cos.database.pdo']
   Domains\Diagnostic\Application\Contract\DiagnosticPackRepositoryInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository
 
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository:
-    arguments: ['@legacy_cos.pdo']
+    arguments: ['@cos.database.pdo']
   Domains\Diagnostic\Application\Contract\DiagnosticSessionRepositoryInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository
 
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticRuntimeRepository:
-    arguments: ['@legacy_cos.pdo']
+    arguments: ['@cos.database.pdo']
   Domains\Diagnostic\Application\Contract\DiagnosticRuntimeRepositoryInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticRuntimeRepository
 
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticAssessmentProjection:
-    arguments: ['@legacy_cos.pdo']
+    arguments: ['@cos.database.pdo']
   Domains\Diagnostic\Application\Contract\DiagnosticAssessmentProjectionInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticAssessmentProjection
 
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyStudioRepository:
-    arguments: ['@legacy_cos.pdo']
+    arguments: ['@cos.database.pdo']
   Domains\Diagnostic\Application\Contract\MethodologyStudioRepositoryInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyStudioRepository
 
@@ -972,14 +955,14 @@ services:
   # Sales Wave 6 — Communications / Integrations cutover
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository
 
   Infrastructure\Integration\Crm\MysqlCrmInboxRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\CrmInboxRepositoryInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
@@ -989,7 +972,7 @@ services:
 
   Infrastructure\Integration\Crm\MysqlCrmIngressResolver:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\CrmIngressResolverInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmIngressResolver
@@ -997,14 +980,14 @@ services:
 
   App\Infrastructure\Integration\MysqlCrmWebhookCredentialResolver:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   App\Application\Integration\Contract\CrmWebhookCredentialResolverInterface:
     alias: App\Infrastructure\Integration\MysqlCrmWebhookCredentialResolver
 
   Infrastructure\Integration\Crm\MysqlCrmInboundApplier:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\CrmInboundApplierInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmInboundApplier
@@ -1020,7 +1003,7 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesIntegrationAdministration:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $healthProbe: '@Domains\Sales\Application\Contract\SalesIntegrationHealthProbeInterface'
       $definitions: '@Domains\Sales\Automation\Integration\SalesIntegrationDefinitionCatalog'
 
@@ -1042,7 +1025,7 @@ services:
   # Sales Wave 7 — Frontend cutover read/write facade
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceOperationalReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $base: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
 
   Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface:
@@ -1050,7 +1033,7 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Approval\Contract\ApprovalAuthorityInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority
@@ -1068,21 +1051,21 @@ services:
   # Sales Wave 7 — Frontend admin cutover
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesAccessControlInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineAdministration:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesPipelineAdministrationInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineAdministration
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineGovernance:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesPipelineGovernanceInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesPipelineGovernance
@@ -1091,7 +1074,7 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesRuleAdministration:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $definitions: '@Domains\Sales\Automation\Rule\SalesRuleDefinitionCatalog'
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $conditions: '@Kernel\Rule\Service\ConditionEvaluator'
@@ -1105,7 +1088,7 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesPolicyAdministration:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $definitions: '@Domains\Sales\Automation\Policy\SalesPolicyDefinitionCatalog'
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
@@ -1117,7 +1100,7 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Configuration\MysqlSalesAgentAdministration:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $configurations: '@Infrastructure\Platform\Persistence\MySql\Configuration\MysqlAgentConfigurationProvider'
       $runtime: '@Kernel\Agent\Service\AgentRuntime'
 
@@ -1126,7 +1109,7 @@ services:
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesTeamAdministrationInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration
@@ -1134,7 +1117,7 @@ services:
   # Runtime cleanup slice 3 — canonical module-control composition
   Infrastructure\Platform\Persistence\MySql\Configuration\MysqlConfigurationStore:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Configuration\Contract\ConfigurationStoreInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Configuration\MysqlConfigurationStore
@@ -1161,7 +1144,7 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Migration\MigrationRunner:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $directory: '%kernel.project_dir%/../app/migrations'
       $splitter: '@Infrastructure\Platform\Persistence\MySql\Migration\SqlStatementSplitter'
 
@@ -1209,11 +1192,11 @@ services:
   # Runtime cleanup slice 3 — Methodology Studio / Workbench composition
   Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess:
     arguments:
-      $database: '@legacy_cos.pdo'
+      $database: '@cos.database.pdo'
 
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyWorkbenchRepository:
     arguments:
-      $database: '@legacy_cos.pdo'
+      $database: '@cos.database.pdo'
 
   Domains\Diagnostic\Application\Contract\MethodologyWorkbenchRepositoryInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlMethodologyWorkbenchRepository
@@ -1228,7 +1211,7 @@ services:
   # Spatial Symfony cutover — canonical HTTP transport on the shared Spatial domain.
   Infrastructure\Platform\Persistence\Pdo\PdoConnection:
     arguments:
-      $config: '@legacy_cos.pdo'
+      $config: '@cos.database.pdo'
 
   Infrastructure\Media\SpatialAssetService:
     arguments:
@@ -1269,7 +1252,7 @@ services:
 
   App\Infrastructure\Spatial\SpatialTokenIssuer:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $tokens: '@App\Security\SpatialJwtCodec'
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
       $ttl: '%env(int:SPATIAL_JWT_TTL)%'
@@ -1403,21 +1386,21 @@ services:
 
   Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRetention:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Agent\Contract\AgentRetentionInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Agent\MysqlAgentRetention
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesHistoricalEventStream:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesHistoricalEventStreamInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesHistoricalEventStream
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalIntelligenceHealthReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesHistoricalIntelligenceHealthReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalIntelligenceHealthReadModel
@@ -1512,21 +1495,21 @@ services:
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalMetricsReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesHistoricalMetricsReadModel
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesOperationalPerformanceReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesOperationalPerformanceReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesOperationalPerformanceReadModel
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesForecastRiskReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesForecastRiskReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesForecastRiskReadModel
@@ -1557,7 +1540,7 @@ services:
 
   Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
       $healthClassifier: '@Domains\Sales\Application\Service\SalesAdministrationHealthClassifier'
 
   Domains\Sales\Application\Contract\SalesAdministrationReadModelInterface:
@@ -1586,7 +1569,6 @@ services:
   App\Infrastructure\Health\DatabaseDependencyHealthCheck:
     arguments:
       $canonical: '@doctrine.dbal.default_connection'
-      $legacy: '@legacy_cos.pdo'
 
   App\Application\System\Contract\DependencyHealthCheckInterface:
     alias: App\Infrastructure\Health\DatabaseDependencyHealthCheck
