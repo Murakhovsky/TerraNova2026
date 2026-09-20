@@ -153,9 +153,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
             LEFT JOIN tn_property_groups g
               ON g.organization_id = p.organization_id
              AND g.id = p.property_group_id
-            LEFT JOIN tn_agents a
-              ON a.organization_id = p.organization_id
-             AND a.id = p.agent_id
+            LEFT JOIN tn_agents a ON a.id = p.agent_id
             WHERE p.organization_id = :organization_id
               AND p.visibility = "public"
               AND p.status IN ("published", "active")
