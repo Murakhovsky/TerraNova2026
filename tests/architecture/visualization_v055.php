@@ -18,8 +18,8 @@ $assert = static function (bool $condition, string $message): void {
 $contract = $read('app/Kernel/Visualization/Graph/GraphHealthAnalyzerInterface.php');
 $implementation = $read('app/Infrastructure/Visualization/Architecture/ArchitectureGraphHealthAnalyzer.php');
 $services = $read('app/Bootstrap/VisualizationServices.php');
-$controller = $read('app/Interfaces/Web/Visualization/Controller/ArchitectureExplorerController.php');
-$routes = $read('app/Interfaces/Web/Routing/VisualizationRoutes.php');
+$controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
+$routes = $read('symfony/config/routes.yaml');
 $view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 
@@ -34,13 +34,13 @@ $assert(str_contains($services, "'cosArchitectureGraphHealthAnalyzer'"), 'Visual
 $assert(str_contains($services, 'new ArchitectureGraphHealthAnalyzer()'), 'Graph health analyzer implementation must be composed in Bootstrap.');
 
 $assert(str_contains($controller, 'GraphHealthAnalyzerInterface'), 'Web controller must depend on the Kernel health contract.');
-$assert(str_contains($controller, 'function healthAction'), 'Manager health JSON endpoint is missing.');
-$assert(str_contains($controller, "getShared('cosArchitectureGraphHealthAnalyzer')"), 'Controller must resolve graph health analyzer from DI.');
-$assert(str_contains($controller, "'health' => \$health"), 'Health endpoint must return the health payload.');
+$assert(str_contains($controller, 'public function health('), 'Manager health JSON endpoint is missing.');
+$assert(str_contains($controller, 'GraphHealthAnalyzerInterface'), 'Controller must depend on the Kernel health analyzer contract.');
+$assert(str_contains($controller, "'health' => \$this->health->analyze"), 'Health endpoint must return the health payload.');
 $assert(!str_contains($controller, 'Infrastructure\\Visualization'), 'Web controller must not compile against Infrastructure health implementation.');
 
-$assert(str_contains($routes, "'/cos/architecture/health'"), 'Architecture health route is missing.');
-$assert(str_contains($routes, "'action' => 'health'"), 'Architecture health route must target healthAction.');
+$assert(str_contains($routes, 'cos_web_architecture_health:'), 'Architecture health route is missing.');
+$assert(str_contains($routes, 'ArchitecturePageController::health'), 'Architecture health route must target Symfony health action.');
 $assert(str_contains($view, 'Architecture graph health'), 'Architecture Explorer must render graph health state.');
 $assert(str_contains($view, "cos/architecture/health"), 'Architecture Explorer must link to the JSON health surface.');
 
