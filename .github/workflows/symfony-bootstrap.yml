@@ -18,6 +18,9 @@ on:
       - 'app/Interfaces/Web/View/**'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
+      - 'tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php'
+      - 'deploy/configure-company-os-http.sh'
+      - 'deploy/configure-dev-tls.sh'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -40,6 +43,9 @@ on:
       - 'app/Interfaces/Web/View/**'
       - 'public/build/**'
       - 'tests/architecture/symfony_sales_ssr_cutover.php'
+      - 'tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php'
+      - 'deploy/configure-company-os-http.sh'
+      - 'deploy/configure-dev-tls.sh'
       - 'app/migrations/20260919_000063_documents_wave10_cutover.sql'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'tests/architecture/documents_wave10_cutover.php'
@@ -847,6 +853,46 @@ jobs:
           asset=$(php -r '$m=json_decode(file_get_contents("public/build/.vite/manifest.json"),true,512,JSON_THROW_ON_ERROR); echo $m["frontend/entrypoints/sales-workspace.js"]["file"];')
           curl --fail --show-error --silent "http://127.0.0.1:8081/build/$asset" > /dev/null
           echo "Symfony Sales SSR page and Vite asset smoke passed."
+
+      - name: Verify Visualization / Diagnostic SSR cutover
+        run: |
+          php tests/architecture/symfony_visualization_diagnostic_ssr_cutover.php
+          php -l symfony/src/Web/Visualization/ArchitectureExplorerController.php
+          php -l symfony/src/Web/Diagnostic/DiagnosticReportController.php
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console lint:container
+          docker compose -f docker-compose.symfony.yml exec -T php php bin/console debug:router > /tmp/ssr-routes.txt
+          grep -q 'cos_web_architecture' /tmp/ssr-routes.txt
+          grep -q 'cos_web_architecture_graph' /tmp/ssr-routes.txt
+          grep -q 'cos_web_architecture_health' /tmp/ssr-routes.txt
+          grep -q 'cos_web_diagnostic_report' /tmp/ssr-routes.txt
+
+          status=$(curl --silent --show-error --output /tmp/architecture.html --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/cos/architecture)
+          echo "Architecture SSR HTTP $status"
+          test "$status" = "200"
+          grep -q 'Architecture Explorer' /tmp/architecture.html
+
+          status=$(curl --silent --show-error --output /tmp/architecture-health.json --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/cos/architecture/health)
+          echo "Architecture health HTTP $status"; cat /tmp/architecture-health.json; echo
+          test "$status" = "200"
+          grep -q '"ok":true' /tmp/architecture-health.json
+
+          status=$(curl --silent --show-error --output /tmp/architecture-anon.txt --dump-header /tmp/architecture-anon.headers --write-out '%{http_code}' \
+            http://127.0.0.1:8081/cos/architecture)
+          test "$status" = "302"
+          grep -qi '^location: /auth/login' /tmp/architecture-anon.headers
+
+          status=$(curl --silent --show-error --output /tmp/diagnostic-missing.txt --write-out '%{http_code}' \
+            --cookie 'PHPSESSID=ci-manager-session0001' \
+            http://127.0.0.1:8081/diagnostics/missing-session/report)
+          echo "Diagnostic report missing-session HTTP $status"; cat /tmp/diagnostic-missing.txt; echo
+          test "$status" = "404"
+          grep -q 'Diagnostic report was not found.' /tmp/diagnostic-missing.txt
+
+          echo "Visualization / Diagnostic Symfony SSR cutover runtime passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
         run: |
