@@ -14,9 +14,7 @@ return [
     'contributions' => [
         'runtime_module_service' => 'diagnosticDomainModule',
         'job_handler_services' => [],
-        'api_route_contributor_services' => [
-            'diagnosticRouteContributor',
-        ],
+        'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
         'extension_services' => [
             'event.consumers' => [
