@@ -245,7 +245,6 @@ CREATE TABLE tn_property_compatibility_projection_state (
 
 CREATE TABLE tn_agents (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    organization_id VARCHAR(64) NOT NULL DEFAULT 'default',
     public_name VARCHAR(160) NOT NULL,
     role VARCHAR(80) NOT NULL DEFAULT 'consultant',
     phone VARCHAR(40) NULL,
@@ -335,8 +334,8 @@ CREATE TABLE tn_property_features (
     sort_order INT UNSIGNED NOT NULL DEFAULT 100
 );
 
-INSERT INTO tn_agents(id,organization_id,public_name,role,email)
-VALUES(9101,'default','Wave 9 Public Agent','consultant','public-agent@example.test');
+INSERT INTO tn_agents(id,public_name,role,email)
+VALUES(9101,'Wave 9 Public Agent','consultant','public-agent@example.test');
 
 INSERT INTO tn_property_groups(id,organization_id,title,slug,group_type,location_id,address,description,status)
 VALUES(9101,'default','Wave 9 Public Group','wave9-public-group','project',9001,'1 Public Street','Public-read fixture group.','active');
