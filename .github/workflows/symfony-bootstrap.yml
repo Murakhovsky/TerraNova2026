@@ -10,6 +10,9 @@ on:
       - 'docker/symfony/**'
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
+      - 'app/config/config.php'
+      - 'app/config/services.php'
+      - 'tests/architecture/canonical_database_compatibility_bridge.php'
       - 'app/Kernel/**'
       - 'app/Platform/**'
       - 'app/Domains/**'
@@ -36,6 +39,9 @@ on:
       - 'docker/symfony/**'
       - 'docker-compose.symfony.yml'
       - 'deploy/symfony-dev.sh'
+      - 'app/config/config.php'
+      - 'app/config/services.php'
+      - 'tests/architecture/canonical_database_compatibility_bridge.php'
       - 'app/Kernel/**'
       - 'app/Platform/**'
       - 'app/Domains/**'
@@ -2386,7 +2392,9 @@ jobs:
         working-directory: symfony
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Verify frozen legacy dependency boundary
-        run: php tests/architecture/database_cutover_boundary.php
+        run: |
+          php tests/architecture/database_cutover_boundary.php
+          php tests/architecture/canonical_database_compatibility_bridge.php
       - name: Create canonical schema
         working-directory: symfony
         run: php bin/console doctrine:migrations:migrate --no-interaction

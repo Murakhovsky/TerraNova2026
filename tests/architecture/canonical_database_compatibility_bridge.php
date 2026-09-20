@@ -10,7 +10,7 @@ foreach ([
     "'canonicalDatabase' => [",
     'cos-symfony-canonical-mysql',
     'cos_compat_app',
-    "hash('sha256', 'cos-canonical-compat|' . $legacyDatabasePassword)",
+    'hash(\'sha256\', \'cos-canonical-compat|\' . $legacyDatabasePassword)',
 ] as $needle) {
     if (!str_contains($config, $needle)) {
         throw new RuntimeException('Canonical compatibility DB configuration is missing: ' . $needle);

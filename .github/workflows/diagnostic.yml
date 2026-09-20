@@ -50,6 +50,7 @@ jobs:
           php tests/architecture/phalcon_cli_retirement.php
           php tests/architecture/phalcon_script_retirement.php
           php tests/architecture/symfony_web_surfaces_cutover.php
+          php tests/architecture/canonical_database_compatibility_bridge.php
 
       - name: Diagnostic checks
         run: |
