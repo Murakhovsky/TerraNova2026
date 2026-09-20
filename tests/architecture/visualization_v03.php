@@ -42,7 +42,7 @@ $routes = $read('symfony/config/routes.yaml');
 $assert(str_contains($routes, 'cos_web_architecture:'), 'Architecture Explorer Symfony route missing.');
 $services = $read('symfony/config/services.yaml');
 $assert(str_contains($services, "App\\Web\\Visualization\\ArchitectureExplorerController:"), 'Architecture Explorer Symfony composition is missing.');
-$assert(str_contains($services, "$mapper: '@Infrastructure\\Visualization\\Cytoscape\\CytoscapeGraphMapper'"), 'Cytoscape mapper must be composed at the Symfony boundary.');
+$assert(str_contains($services, "\$mapper: '@Infrastructure\\Visualization\\Cytoscape\\CytoscapeGraphMapper'"), 'Cytoscape mapper must be composed at the Symfony boundary.');
 
 $vite = $read('vite.config.js');
 $assert(str_contains($vite, "'cos-architecture-explorer'"), 'Architecture Explorer Vite entry missing.');
