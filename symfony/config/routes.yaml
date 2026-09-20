@@ -13,6 +13,31 @@ cos_web_n8n_content_webhook:
   controller: App\Web\PublicEdge\PublicEdgeController::contentWebhook
   methods: [POST]
 
+# Wave 14 — Manager Content/Admin SSR and write cutover.
+cos_web_content_admin:
+  path: /admin/content
+  controller: App\Web\Content\ContentAdminPageController::manage
+  methods: [GET, HEAD]
+
+cos_web_content_admin_edit_new:
+  path: /admin/content/edit
+  controller: App\Web\Content\ContentAdminPageController::edit
+  methods: [GET, HEAD]
+
+cos_web_content_admin_edit:
+  path: /admin/content/edit/{id}
+  controller: App\Web\Content\ContentAdminPageController::edit
+  methods: [GET, HEAD]
+  requirements:
+    id: '[1-9][0-9]*'
+
+cos_web_content_admin_save:
+  path: /admin/content/save/{id}
+  controller: App\Web\Content\ContentAdminPageController::save
+  methods: [POST]
+  requirements:
+    id: '[0-9]+'
+
 cos_web_blog_index:
   path: /blog
   controller: App\Web\Content\PublicContentPageController::blog

@@ -23,6 +23,7 @@ $publicPath = ($item['content_type'] ?? 'blog_post') === 'seo_landing' ? 'guide/
   <?php if ($actionStatus): ?><div class="tn-form-status is-visible" role="status"><?php echo $h($actionStatus); ?></div><?php endif; ?>
 
   <form class="tn-content-editor" method="post" action="<?php echo $this->url->get('admin/content/save/' . (int) ($item['id'] ?? 0)); ?>">
+    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
     <input type="hidden" name="id" value="<?php echo (int) ($item['id'] ?? 0); ?>">
     <section class="tn-admin-card">
       <div class="tn-admin-card__head"><div><p class="tn-kicker">Матеріал</p><h2>Зміст</h2></div><button class="tn-btn tn-btn--accent" type="submit">Зберегти</button></div>

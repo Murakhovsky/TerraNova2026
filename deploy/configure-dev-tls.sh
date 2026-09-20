@@ -119,6 +119,27 @@ server {
         proxy_set_header X-Forwarded-Host \$host;
     }
 
+    # Manager Content/Admin SSR and mutations are canonical on Symfony.
+    location = /admin/content {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /admin/content/ {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
     # Public Blog / Guide SSR is canonical on Symfony.
     location = /blog {
         proxy_pass http://$SYMFONY_UPSTREAM;
@@ -337,6 +358,27 @@ server {
     }
 
     location = /webhooks/n8n/content {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    # Manager Content/Admin SSR and mutations are canonical on Symfony.
+    location = /admin/content {
+        proxy_pass http://$SYMFONY_UPSTREAM;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+
+    location ^~ /admin/content/ {
         proxy_pass http://$SYMFONY_UPSTREAM;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
