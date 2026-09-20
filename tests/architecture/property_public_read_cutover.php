@@ -28,7 +28,7 @@ foreach (['TenantContextProviderInterface', 'Domains\\', 'Infrastructure\\', 'Ca
 }
 
 $application = $read('symfony/src/Application/Property/Service/PublicPropertyReadService.php');
-foreach (['PropertyCatalogInterface', 'catalogProperties', 'featuredProperties', 'propertyBySlug', "['published', 'active']"] as $needle) {
+foreach (['PropertyCatalogInterface', 'catalogProperties', 'featuredProperties', 'propertyBySlug', "['published', 'active']", "unset(\$query['status'])", "\$filters['status'] = ''"] as $needle) {
     $assert(str_contains($application, $needle), 'Public Property application read contract missing: ' . $needle);
 }
 
