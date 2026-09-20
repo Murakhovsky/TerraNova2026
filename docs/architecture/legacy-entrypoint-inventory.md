@@ -34,7 +34,7 @@ The following HTTP/control-plane surfaces have completed cutover and must not re
 | legacy Property runtime/canonical HTTP controllers | Symfony `/api/v1/properties*` and inventory APIs | removed |
 | legacy COS Operations/migration APIs | Symfony `/api/v1/operations/*` and canonical health/runtime endpoints | removed |
 
-`Interfaces\\Api\\Controller\\SpatialController` is retired. `/api/spatial/*` upload/token/job delivery is owned by Symfony; only temporary SSR Spatial/Web compatibility remains on Phalcon.
+`Interfaces\\Api\\Controller\\SpatialController` and the legacy Spatial Web controller/routes are retired. `/api/spatial/*` and `/spatial/*` are owned by Symfony; only legacy Property SSR still consumes the temporary `Bootstrap\\SpatialModule` composition.
 Sales SSR is also retired from Phalcon: `/sales/*` is rendered by Symfony `App\\Web\\Sales` controllers using the framework-neutral PHTML renderer; legacy Sales Web controllers/routes must not return.
 
 ## Registered web module owners
@@ -66,3 +66,15 @@ The following operator/runtime helpers no longer bootstrap a Phalcon DI containe
 | `deploy/sales-monitoring.cron.example` | removed; Scheduler owns the five-minute automation cadence |
 
 Framework-neutral build/health utilities remain valid when they do not compose application runtime through Phalcon.
+
+
+## Symfony Web surface cutover
+
+Visualization / Diagnostic Web delivery and the Spatial workspace/viewer are canonical on Symfony:
+
+- `/cos/architecture*`
+- `/admin/diagnostics/methodology-studio`
+- `/diagnostics/{session}/report`
+- `/spatial/*`
+
+Their Phalcon controllers and route registries are deleted. Existing PHTML templates are reused through the framework-neutral Symfony PHTML renderer; template location does not imply Phalcon runtime ownership.
