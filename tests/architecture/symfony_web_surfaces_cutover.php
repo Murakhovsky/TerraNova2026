@@ -68,6 +68,7 @@ foreach(['SpatialSceneInterface','public function manage(','public function uplo
 }
 
 $security=$read('symfony/config/packages/security.yaml');
+$assert(substr_count($security, 'methods: [GET, HEAD]') >= 2, 'Public Spatial GET routes must keep HEAD session-free.');
 foreach([
     'cos/architecture',
     'admin/diagnostics',
