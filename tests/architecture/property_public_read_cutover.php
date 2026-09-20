@@ -28,17 +28,30 @@ foreach (['TenantContextProviderInterface', 'Domains\\', 'Infrastructure\\', 'Ca
 }
 
 $application = $read('symfony/src/Application/Property/Service/PublicPropertyReadService.php');
-foreach (['PropertyCatalogInterface', 'catalogProperties', 'featuredProperties', 'propertyBySlug', "['published', 'active']", "unset(\$query['status'])", "\$filters['status'] = ''"] as $needle) {
+foreach (['PublicPropertyReadRepositoryInterface', 'organizationId', 'properties->search', 'properties->featured', 'properties->findBySlug'] as $needle) {
     $assert(str_contains($application, $needle), 'Public Property application read contract missing: ' . $needle);
 }
+foreach (['PropertyCatalogInterface', 'CatalogService'] as $forbidden) {
+    $assert(!str_contains($application, $forbidden), 'Public Property application service leaked back to legacy catalog: ' . $forbidden);
+}
 
-$catalogReadModel = $read('app/Domains/Property/Infrastructure/ReadModel/MySql/CatalogService.php');
+$publicReadModel = $read('app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPublicPropertyReadRepository.php');
+foreach ([
+    'p.organization_id = :organization_id',
+    'p.visibility = "public"',
+    'p.status IN ("published", "active")',
+    'image.organization_id = p.organization_id',
+] as $needle) {
+    $assert(str_contains($publicReadModel, $needle), 'Public Property read isolation missing: ' . $needle);
+}
+$assert(substr_count($publicReadModel, 'p.organization_id = :organization_id') >= 5, 'Every public Property query family must remain tenant-scoped.');
+$assert(substr_count($publicReadModel, 'p.visibility = "public"') >= 5, 'Every public Property query family must remain visibility-scoped.');
 $assert(
-    !str_contains($catalogReadModel, 'GROUP BY p.id'),
+    !str_contains($publicReadModel, 'GROUP BY p.id'),
     'Public Property related/grouped reads must remain compatible with strict MySQL grouping.',
 );
 $assert(
-    str_contains($catalogReadModel, 'ORDER BY image.is_cover DESC, image.sort_order, image.id'),
+    str_contains($publicReadModel, 'ORDER BY image.is_cover DESC, image.sort_order, image.id'),
     'Public Property cover selection must use deterministic scalar image lookup.',
 );
 
@@ -46,8 +59,10 @@ $services = $read('symfony/config/services.yaml');
 foreach ([
     'Infrastructure\\Platform\\Persistence\\Pdo\\PdoConnection:',
     "      \$config: '@legacy_cos.pdo'",
-    'Domains\\Property\\Infrastructure\\ReadModel\\MySql\\CatalogService:',
-    'Domains\\Property\\Application\\Contract\\PropertyCatalogInterface:',
+    'Domains\\Property\\Infrastructure\\ReadModel\\MySql\\MysqlPublicPropertyReadRepository:',
+    'Domains\\Property\\Application\\Contract\\PublicPropertyReadRepositoryInterface:',
+    'App\\Application\\Property\\Service\\PublicPropertyReadService:',
+    "\$organizationId: '%env(COS_ORGANIZATION_ID)%'",
 ] as $needle) {
     $assert(str_contains($services, $needle), 'Public Property read-model wiring missing: ' . $needle);
 }
