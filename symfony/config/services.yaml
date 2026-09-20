@@ -49,6 +49,17 @@ services:
       $user: '%env(LEGACY_DB_USER)%'
       $password: '%env(LEGACY_DB_PASSWORD)%'
 
+  cos.database.pdo:
+    class: PDO
+    factory: ['@App\Infrastructure\Persistence\CanonicalPdoFactory', 'create']
+    arguments:
+      $connection: '@doctrine.dbal.default_connection'
+
+  App\Infrastructure\Migration\Database\ModuleRuntimeDatabaseCutover:
+    arguments:
+      $legacy: '@legacy_cos.pdo'
+      $canonical: '@cos.database.pdo'
+
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
@@ -673,14 +684,14 @@ services:
 
   App\Infrastructure\Module\PdoModuleStateRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Module\Contract\ModuleStateRepositoryInterface:
     alias: App\Infrastructure\Module\PdoModuleStateRepository
 
   App\Infrastructure\Module\PdoModuleLifecycleRepository:
     arguments:
-      $connection: '@legacy_cos.pdo'
+      $connection: '@cos.database.pdo'
 
   Kernel\Module\Contract\ModuleLifecycleRepositoryInterface:
     alias: App\Infrastructure\Module\PdoModuleLifecycleRepository
