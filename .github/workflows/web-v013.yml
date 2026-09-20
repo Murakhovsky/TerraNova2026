@@ -8,6 +8,8 @@ on:
       - 'app/Interfaces/Web/Module.php'
       - 'app/Interfaces/Web/Controller/ErrorController.php'
       - 'app/Interfaces/Web/Routing/**'
+      - 'symfony/config/routes.yaml'
+      - 'symfony/src/Web/Spatial/**'
       - 'tests/architecture/frontend_routes.php'
       - 'tests/architecture/web_v013_explicit_routing.php'
       - 'docs/architecture/web-v0.13.md'
@@ -39,7 +41,7 @@ jobs:
           php -l app/Interfaces/Web/Module.php
           php -l app/Interfaces/Web/Controller/ErrorController.php
           php -l app/Interfaces/Web/Routing/CoreWebRoutes.php
-          php -l app/Interfaces/Web/Routing/SpatialWebRoutes.php
+          php -l symfony/src/Web/Spatial/SpatialPageController.php
           php -l tests/architecture/web_v013_explicit_routing.php
       - name: Routing regression gates
         run: |
