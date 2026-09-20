@@ -877,19 +877,24 @@ jobs:
           grep -q 'cos_web_spatial_scene' /tmp/migrated-web-routes.txt
 
           status=$(curl --silent --show-error --output /tmp/architecture-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/cos/architecture)
+          echo "Architecture unauth HTTP $status"
           test "$status" = "302"
           grep -qi '/auth/login' <(curl --silent --show-error --head http://127.0.0.1:8081/cos/architecture)
 
           status=$(curl --silent --show-error --output /tmp/methodology-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/admin/diagnostics/methodology-studio)
+          echo "Methodology unauth HTTP $status"
           test "$status" = "302"
 
           status=$(curl --silent --show-error --output /tmp/diagnostic-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/diagnostics/ci-session01/report)
+          echo "Diagnostic unauth HTTP $status"
           test "$status" = "302"
 
           status=$(curl --silent --show-error --output /tmp/spatial-manage-unauth.html --write-out '%{http_code}' http://127.0.0.1:8081/spatial/manage)
+          echo "Spatial manage unauth HTTP $status"
           test "$status" = "302"
 
           status=$(curl --silent --show-error --output /tmp/spatial-public-missing.html --write-out '%{http_code}' http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
+          echo "Spatial public missing HTTP $status"; cat /tmp/spatial-public-missing.html; echo
           test "$status" = "404"
 
           echo "Symfony migrated Web surfaces route/security smoke passed."
