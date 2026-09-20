@@ -897,6 +897,10 @@ jobs:
           echo "Spatial public missing HTTP $status"; cat /tmp/spatial-public-missing.html; echo
           test "$status" = "404"
 
+          status=$(curl --head --silent --show-error --output /tmp/spatial-public-missing-head.txt --write-out '%{http_code}' http://127.0.0.1:8081/spatial/scene/ci-missing-scene)
+          echo "Spatial public missing HEAD HTTP $status"
+          test "$status" = "404"
+
           echo "Symfony migrated Web surfaces route/security smoke passed."
 
       - name: Verify Property / RealEstate Wave 9 business cutover
