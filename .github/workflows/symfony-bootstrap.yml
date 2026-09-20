@@ -2305,7 +2305,7 @@ jobs:
           docker volume rm cos_php_sessions || true
 
   database-cutover-wave0:
-    name: Database cutover Wave 0
+    name: Database cutover Waves 0-1
     runs-on: ubuntu-latest
     services:
       canonical_mysql:
@@ -2393,6 +2393,9 @@ jobs:
       - name: Execute dual-MySQL module runtime cutover
         working-directory: symfony
         run: php tests/database_cutover_wave0.php
+      - name: Execute dual-MySQL Platform operations cutover
+        working-directory: symfony
+        run: php tests/database_cutover_wave1.php
   deploy-dev:
     name: Deploy parallel Symfony stack to AWS dev
     needs: [validate, database-cutover-wave0]
