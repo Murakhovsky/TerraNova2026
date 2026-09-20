@@ -15,9 +15,6 @@ on:
       - 'symfony/src/Web/Visualization/**'
       - 'app/Interfaces/Web/View/visualization/**'
       - 'symfony/config/routes.yaml'
-      - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
-      - 'app/Interfaces/Web/Module.php'
-      - 'app/Bootstrap/KernelServices.php'
       - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
       - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
       - 'symfony/config/services.yaml'
@@ -55,9 +52,6 @@ on:
       - 'symfony/src/Web/Visualization/**'
       - 'app/Interfaces/Web/View/visualization/**'
       - 'symfony/config/routes.yaml'
-      - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
-      - 'app/Interfaces/Web/Module.php'
-      - 'app/Bootstrap/KernelServices.php'
       - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
       - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
       - 'symfony/config/services.yaml'
@@ -134,7 +128,6 @@ jobs:
           php -l app/Domains/Sales/Bootstrap/SalesDomainModule.php
           php -l app/Domains/Sales/module.php
           php -l app/Domains/Property/module.php
-          php -l app/Interfaces/Web/Module.php
           php -l symfony/src/Command/ArchitectureGraphSmokeCommand.php
           php -l symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php
           php -l docs/.vitepress/generate-runtime-evidence.php

@@ -5,7 +5,7 @@ namespace Domains\Property\Application\Service;
 
 use DateTimeImmutable;
 use Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface;
-use Domains\Property\Application\Contract\PropertyCompatibilityProjectionInterface;
+use Domains\Property\Application\Contract\PropertyProjectionInterface;
 use Domains\Property\Automation\Event\InventoryDomainEvents;
 use Domains\Property\Automation\Event\ListingDomainEvents;
 use Domains\Property\Automation\Event\PropertyDomainEvents;
@@ -31,7 +31,7 @@ final readonly class PropertyCanonicalRuntimeService
 {
     public function __construct(
         private PropertyCanonicalRuntimeRepositoryInterface $repository,
-        private PropertyCompatibilityProjectionInterface $compatibility,
+        private PropertyProjectionInterface $projection,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
     ) {}

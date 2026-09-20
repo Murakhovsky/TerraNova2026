@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Http\Api\V1\Controller;
 
 use App\Application\Integration\Command\SendSalesCommunicationCommand;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
@@ -18,7 +18,7 @@ final readonly class SalesCommunicationController
     public function __construct(
         private CommandBusInterface $commands,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
     ) {
     }

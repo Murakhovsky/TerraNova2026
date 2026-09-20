@@ -75,7 +75,7 @@ foreach([
 $controller=$read('symfony/src/Http/Api/V1/Controller/ServiceController.php');
 foreach([
     'CommandBusInterface','QueryBusInterface','ActiveModuleResolver','TenantPermissions::ACCESS',
-    'TenantPermissions::MANAGE','LegacySessionCsrfValidator','X-Idempotency-Key',
+    'TenantPermissions::MANAGE','SessionCsrfValidator','X-Idempotency-Key',
     "'service'","CreateServiceRequestCommand","CreateServiceTicketCommand","AssignServiceTicketCommand",
     "SetServiceSlaCommand","EscalateServiceTicketCommand","ResolveServiceTicketCommand","CloseServiceTicketCommand",
 ] as $needle){
@@ -101,7 +101,8 @@ foreach([
 ] as $needle){
     $assert(str_contains($services,$needle),'Wave 11 Symfony DI missing: '.$needle);
 }
-$assert(str_contains($read('app/config/services_kernel.php'),'/Bootstrap/ServiceServices.php'),'Service composition root is not wired.');
+$assert(str_contains($services,'Domains\\Service\\Bootstrap\\ServiceDomainModule:'),'Service Domain module is not wired in Symfony composition.');
+$assert(!is_file($root.'/app/Bootstrap/ServiceServices.php'),'Retired Service bootstrap must remain deleted.');
 
 $process=$read('resources/processes/service-request-to-close.json');
 foreach([

@@ -12,9 +12,8 @@ on:
       - 'app/Kernel/Execution/**'
       - 'app/Infrastructure/Process/**'
       - 'app/Infrastructure/Visualization/Architecture/**'
-      - 'app/Bootstrap/ProcessServices.php'
       - 'app/migrations/**'
-      - 'app/Interfaces/Web/Routing/**'
+      - 'symfony/config/routes.yaml'
       - 'deploy/configure-company-os-http.sh'
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
@@ -31,9 +30,8 @@ on:
       - 'app/Kernel/Execution/**'
       - 'app/Infrastructure/Process/**'
       - 'app/Infrastructure/Visualization/Architecture/**'
-      - 'app/Bootstrap/ProcessServices.php'
       - 'app/migrations/**'
-      - 'app/Interfaces/Web/Routing/**'
+      - 'symfony/config/routes.yaml'
       - 'deploy/configure-company-os-http.sh'
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
@@ -180,7 +178,7 @@ jobs:
             "install -m 755 /tmp/cos-configure-dev-tls.sh $REMOTE_PATH/deploy/configure-dev-tls.sh && \
              rm -f /tmp/cos-configure-dev-tls.sh && \
              cd $REMOTE_PATH && \
-             COS_PUBLIC_STATIC_ROOT='$COS_PUBLIC_STATIC_ROOT' bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080"
+             COS_PUBLIC_STATIC_ROOT='$COS_PUBLIC_STATIC_ROOT' bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8081"
 
       - name: Origin documentation diagnostic
         run: |

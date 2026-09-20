@@ -80,13 +80,11 @@ foreach([
     $assert(str_contains($symfonyServices,$needle),'Symfony Wave 9 DI missing: '.$needle);
 }
 $assert(!str_contains($symfonyServices,'App\\Infrastructure\\Automation\\SalesEventOutbox'),'Wave 9 must retire the Sales-only Symfony Outbox strangler.');
+$assert(!is_file($root.'/app/Bootstrap/RealEstateServices.php'),'Retired RealEstate bootstrap must remain deleted.');
 $ownership=$read('app/Infrastructure/Platform/Persistence/TableOwnership.php');
 foreach(['tn_real_estate_cases','tn_real_estate_offers','tn_real_estate_showings','tn_real_estate_operation_receipts'] as $table){
     $assert(str_contains($ownership,"'".$table."'"),'RealEstate table ownership missing: '.$table);
 }
-
-$kernel=$read('app/config/services_kernel.php');
-$assert(str_contains($kernel,'RealEstateServices.php'),'Common composition root must load RealEstate runtime.');
 
 $routes=$read('symfony/config/routes.yaml');
 foreach([
@@ -135,7 +133,7 @@ $realEstateController=$read('symfony/src/Http/Api/V1/Controller/RealEstateContro
 foreach([$propertyController,$realEstateController] as $controller){
     $assert(str_contains($controller,'CommandBusInterface'),'Wave 9 write controller must dispatch commands.');
     $assert(str_contains($controller,'QueryBusInterface'),'Wave 9 controller must use query bus for reads.');
-    $assert(str_contains($controller,'LegacySessionCsrfValidator'),'Wave 9 browser writes must enforce CSRF.');
+    $assert(str_contains($controller,'SessionCsrfValidator'),'Wave 9 browser writes must enforce CSRF.');
     $assert(str_contains($controller,'X-Idempotency-Key'),'Wave 9 consequential writes must expose idempotency boundary.');
     $assert(str_contains($controller,'TenantContextProviderInterface'),'Wave 9 API must derive tenant from authenticated context.');
     $assert(str_contains($controller,'ActiveModuleResolver'),'Wave 9 API must enforce module activation.');

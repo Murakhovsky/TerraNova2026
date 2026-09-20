@@ -12,7 +12,7 @@ use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use RuntimeException;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Throwable;
@@ -24,7 +24,7 @@ final readonly class PlatformModuleController
         private ModuleReadinessDiagnostic $readinessDiagnostic,
         private ModuleControlService $control,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
     ) {}
 
     public function index(): JsonResponse

@@ -19,7 +19,14 @@ $v06 = file_get_contents($root . '/app/migrations/20260914_000054_property_v060_
 $assert(str_contains($v06,'CREATE TABLE IF NOT EXISTS tn_property_listing_publication_history'),'V0.7 requires Listing publication history.');
 $assert(str_contains($migration,'event_id VARCHAR(80) NULL'),'History projections must be able to correlate with canonical Kernel events.');
 
-$services = file_get_contents($root . '/app/Bootstrap/PropertyServices.php') ?: '';
-$assert(str_contains($services,"'propertyReferencePort'"),'PropertyReferencePort must be available from the composition root.');
+$services = file_get_contents($root . '/symfony/config/services.yaml') ?: '';
+foreach ([
+    'Domains\\Property\\Infrastructure\\ReadModel\\MySql\\MysqlPropertyReferencePort:',
+    'Domains\\Property\\Contract\\PropertyReferencePort:',
+    'alias: Domains\\Property\\Infrastructure\\ReadModel\\MySql\\MysqlPropertyReferencePort',
+] as $needle) {
+    $assert(str_contains($services,$needle),'PropertyReferencePort must be available from canonical Symfony composition: '.$needle);
+}
+$assert(!is_file($root.'/app/Bootstrap/PropertyServices.php'),'Retired Property bootstrap must remain deleted.');
 
 echo "Property V0.7 history/contracts schema: OK\n";

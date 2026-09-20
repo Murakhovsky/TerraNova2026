@@ -30,7 +30,10 @@ $mustContain('symfony/config/routes.yaml', [
     '/lost-reasons',
     '/api/v1/sales/opportunities/{id}/stage',
 ], 'canonical Symfony routes');
-$mustContain('app/Bootstrap/SalesServices.php', ['MysqlSalesPipelineAdministration',"'salesPipelineAdministration'"], 'DI');
+$mustContain('symfony/config/services.yaml', [
+    'Domains\\Sales\\Infrastructure\\Persistence\\MySql\\MysqlSalesPipelineAdministration:',
+    'Domains\\Sales\\Application\\Contract\\SalesPipelineAdministrationInterface:'
+], 'Symfony DI');
 
 require_once $root . '/app/Domains/Sales/Model/PipelineStageDefinition.php';
 require_once $root . '/app/Domains/Sales/Model/PipelineDefinition.php';

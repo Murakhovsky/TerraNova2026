@@ -10,7 +10,7 @@ use App\Application\Sales\Command\CreateSalesLeadCommand;
 use App\Application\Sales\Command\ScheduleSalesNextActionCommand;
 use App\Application\Sales\Command\SalesMutationResult;
 use App\Application\Sales\Command\UpdateSalesLeadCommand;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DateTimeImmutable;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Observability\CorrelationId;
@@ -24,7 +24,7 @@ final readonly class SalesWriteController
     public function __construct(
         private CommandBusInterface $commands,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
     ) {
     }
 

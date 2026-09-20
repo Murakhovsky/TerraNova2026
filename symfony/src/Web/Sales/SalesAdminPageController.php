@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Web\Sales;
 
-use App\Security\LegacySessionReader;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Sales\Application\Contract\SalesAccessControlInterface;
@@ -28,7 +27,6 @@ final readonly class SalesAdminPageController
     public function __construct(
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionReader $sessions,
         private NavigationBuilder $navigation,
         private SalesWorkspaceOperationalReadModelInterface $workspace,
         private SalesPipelineAdministrationInterface $pipelines,
@@ -309,8 +307,8 @@ final readonly class SalesAdminPageController
     }
 
     private function csrf(Request $request): string
-    {
-        $sessionId = (string) $request->cookies->get($this->sessions->cookieName(), '');
-        return $this->sessions->csrfToken($sessionId) ?? '';
+    {        return $request->hasSession()
+            ? (string) $request->getSession()->get('cos_csrf_token', '')
+            : '';
     }
 }

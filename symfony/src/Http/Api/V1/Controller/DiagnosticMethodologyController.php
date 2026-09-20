@@ -5,7 +5,7 @@ namespace App\Http\Api\V1\Controller;
 
 use App\Application\Diagnostic\Methodology\DiagnosticMethodologyApplicationService;
 use App\Application\Diagnostic\Methodology\DiagnosticMethodologyPermissionDenied;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -18,7 +18,7 @@ final readonly class DiagnosticMethodologyController
     public function __construct(
         private DiagnosticMethodologyApplicationService $methodology,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
     ) {}
 

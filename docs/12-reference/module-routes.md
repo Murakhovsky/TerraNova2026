@@ -19,13 +19,12 @@ generated: true
 | `finance` | — | 0 |
 | `hr` | — | 0 |
 | `procurement` | — | 0 |
-| `property` | `propertyRouteContributor` | 2 |
+| `property` | — | 1 |
 | `real_estate` | — | 0 |
 | `sales` | — | 0 |
 | `service` | — | 0 |
 
 ## `property`
 
-- contributor: `app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php`;
-- джерело маршрутів: `app/Interfaces/Web/Routing/PublicPropertyRoutes.php`;
+- ownership: Symfony route configuration;
 - джерело маршрутів: `symfony/config/routes.yaml`;

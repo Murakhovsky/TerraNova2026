@@ -45,13 +45,6 @@ jobs:
     env:
       APP_ENV: test
       APP_SECRET: ci-only-secret
-      LEGACY_SESSION_SAVE_PATH: /tmp
-      LEGACY_SESSION_COOKIE_NAME: PHPSESSID
-      LEGACY_DB_HOST: 127.0.0.1
-      LEGACY_DB_PORT: 3306
-      LEGACY_DB_NAME: cos
-      LEGACY_DB_USER: cos
-      LEGACY_DB_PASSWORD: ci-only-password
       COS_ORGANIZATION_ID: default
       DATABASE_URL: "mysql://cos:ci-only-password@127.0.0.1:3306/cos_symfony?serverVersion=8.4.0&charset=utf8mb4"
       REDIS_URL: redis://127.0.0.1:6379

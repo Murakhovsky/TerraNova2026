@@ -5,7 +5,7 @@ namespace App\Http\Api\V1\Controller;
 
 use App\Application\Sales\Command\SalesFrontendMutationCommand;
 use App\Application\Sales\Query\SalesFrontendQuery;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
@@ -25,7 +25,7 @@ final readonly class SalesFrontendController
         private CommandBusInterface $commands,
         private QueryBusInterface $queries,
         private TenantContextProviderInterface $tenants,
-        private LegacySessionCsrfValidator $csrf,
+        private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
     ) {
     }

@@ -5,8 +5,6 @@ on:
     branches: [main, migration/symfony]
     paths:
       - 'app/Domains/Service/**'
-      - 'app/Bootstrap/ServiceServices.php'
-      - 'app/config/services_kernel.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'symfony/src/Application/Service/**'
@@ -26,8 +24,6 @@ on:
     branches: [main, migration/symfony]
     paths:
       - 'app/Domains/Service/**'
-      - 'app/Bootstrap/ServiceServices.php'
-      - 'app/config/services_kernel.php'
       - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
       - 'app/migrations/20260919_000064_service_wave11_cutover.sql'
       - 'symfony/src/Application/Service/**'
@@ -66,5 +62,4 @@ jobs:
       - name: Service PHP lint
         run: |
           find app/Domains/Service symfony/src/Application/Service -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l app/Bootstrap/ServiceServices.php
           php -l symfony/src/Http/Api/V1/Controller/ServiceController.php

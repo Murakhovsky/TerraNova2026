@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace App\Http\Api\V1\Controller;
 use App\Application\Operations\Command\OperationsMutationCommand;
-use App\Security\LegacySessionCsrfValidator;
+use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Observability\CorrelationId;
@@ -14,7 +14,7 @@ use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Throwable;
 final readonly class OperationsWriteController
 {
- public function __construct(private CommandBusInterface $commands,private TenantContextProviderInterface $tenants,private LegacySessionCsrfValidator $csrf){}
+ public function __construct(private CommandBusInterface $commands,private TenantContextProviderInterface $tenants,private SessionCsrfValidator $csrf){}
  public function execute(Request $r,string $id):JsonResponse{return $this->mutate($r,OperationsMutationCommand::EXECUTE_ACTION,$id,[],202);}
  public function dismiss(Request $r,string $id):JsonResponse{return $this->mutate($r,OperationsMutationCommand::DISMISS_ACTION,$id,[]);}
  public function approve(Request $r,string $id):JsonResponse{return $this->mutate($r,OperationsMutationCommand::APPROVE,$id,$this->input($r));}

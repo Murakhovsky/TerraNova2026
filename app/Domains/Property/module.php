@@ -7,16 +7,16 @@ return [
     'version' => '0.12.0',
     'schema_version' => '0.12.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Canonical registry for Property with tenant-safe Asset, Inventory and Listing runtime, Symfony business read/write cutover, history, intelligence, network interoperability and one-way legacy compatibility projection.',
+    'description' => 'Canonical registry for Property with tenant-safe Asset, Inventory and Listing runtime, Symfony business read/write cutover, history, intelligence, network interoperability and canonical public projection.',
     'icon' => 'building',
     'dependencies' => [],
     'enabled_by_default' => true,
     'contributions' => [
         'runtime_module_service' => 'propertyDomainModule',
         'job_handler_services' => [],
-        'api_route_contributor_services' => ['propertyRouteContributor'],
+        'api_route_contributor_services' => [],
         'configuration_provisioner_services' => ['propertyModuleConfigurationProvisioner'],
-        'extension_services' => ['web.navigation' => ['propertyNavigationContributor']],
+        'extension_services' => [],
         'cross_domain_contracts' => [
             [
                 'contract' => 'Domains\\Property\\Application\\Contract\\PresentationSalesInterface',
