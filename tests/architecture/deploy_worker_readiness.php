@@ -50,6 +50,12 @@ if (!str_contains($legacyDeploy, 'structured_log "$PHP_ID" "application"')) {
 if (!str_contains($legacyDeploy, 'bash deploy/symfony-dev.sh')) {
     throw new RuntimeException('Compatibility deployment must deploy the canonical Symfony runtime.');
 }
+if (!str_contains($legacyDeploy, 'http://127.0.0.1:8081/health/dependencies')) {
+    throw new RuntimeException('Compatibility deploy must use Symfony dependency readiness after runtime deployment.');
+}
+if (str_contains($legacyDeploy, 'http://127.0.0.1:8081/api/v1/health')) {
+    throw new RuntimeException('Deploy must not block on operational health; DEAD historical work is not a readiness failure.');
+}
 if (is_file($root . '/bin/spatial-worker.php')) {
     throw new RuntimeException('Retired runtime entrypoint restored: bin/spatial-worker.php');
 }

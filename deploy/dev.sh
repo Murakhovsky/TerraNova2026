@@ -171,12 +171,12 @@ echo "Deploying canonical Symfony API runtime on 127.0.0.1:8081..."
 bash deploy/symfony-dev.sh
 
 if ! curl --fail --silent --show-error --retry 2 --retry-delay 1 \
-    http://127.0.0.1:8081/api/v1/health > /tmp/cos-symfony-api-health.json; then
-  echo "Canonical Symfony API health check failed on 127.0.0.1:8081." >&2
+    http://127.0.0.1:8081/health/dependencies > /tmp/cos-symfony-api-health.json; then
+  echo "Canonical Symfony dependency readiness check failed on 127.0.0.1:8081." >&2
   cat /tmp/cos-symfony-api-health.json >&2 2>/dev/null || true
   exit 31
 fi
-echo "Canonical Symfony API runtime is healthy: /api/v1/health"
+echo "Canonical Symfony dependency readiness is healthy: /health/dependencies"
 
 # Visualization is an operational observability surface. Exercise the canonical
 # Symfony composition so a blank Architecture Explorer fails deployment.
