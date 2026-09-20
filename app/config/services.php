@@ -18,6 +18,10 @@ $di->setShared('databaseService', function () {
     return new PdoConnection($this->getConfig()->database);
 });
 
+$di->setShared('canonicalDatabaseService', function () {
+    return new PdoConnection($this->getConfig()->canonicalDatabase);
+});
+
 $di->setShared('mediaStorageService', function () {
     return new MediaStorageService($this->getShared('databaseService'), $this->getShared('imageOptimizerService'));
 });

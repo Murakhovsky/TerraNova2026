@@ -9,6 +9,9 @@ $httpHost = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 defined('DOMAIN_NAME') || define('DOMAIN_NAME', $scheme . '://' . $httpHost);
 
+$legacyDatabasePassword = (string) ($_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '');
+$canonicalCompatibilityPassword = (string) ($_ENV['CANONICAL_DB_PASSWORD'] ?? getenv('CANONICAL_DB_PASSWORD') ?: hash('sha256', 'cos-canonical-compat|' . $legacyDatabasePassword));
+
 return new \Phalcon\Config\Config([
     'version' => '1.0',
 
@@ -22,6 +25,16 @@ return new \Phalcon\Config\Config([
         'charset'  => 'utf8mb4',
     ],
 
+    // Transitional bridge for explicitly cut-over compatibility services.
+    'canonicalDatabase' => [
+        'adapter'  => 'Mysql',
+        'host'     => (string) ($_ENV['CANONICAL_DB_HOST'] ?? getenv('CANONICAL_DB_HOST') ?: 'cos-symfony-canonical-mysql'),
+        'port'     => (int) ($_ENV['CANONICAL_DB_PORT'] ?? getenv('CANONICAL_DB_PORT') ?: 3306),
+        'username' => (string) ($_ENV['CANONICAL_DB_USERNAME'] ?? getenv('CANONICAL_DB_USERNAME') ?: 'cos_compat_app'),
+        'password' => $canonicalCompatibilityPassword,
+        'dbname'   => (string) ($_ENV['CANONICAL_DB_DATABASE'] ?? getenv('CANONICAL_DB_DATABASE') ?: 'cos_symfony'),
+        'charset'  => 'utf8mb4',
+    ],
     'application' => [
         'appDir'         => APP_PATH . '/',
         'migrationsDir'  => APP_PATH . '/migrations/',
