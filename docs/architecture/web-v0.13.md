@@ -14,10 +14,10 @@ Routing stays layered instead of being collapsed into one giant route table:
 
 - `FrontendRoutes` keeps established public/application routes;
 - `CoreWebRoutes` owns application-level root, authentication, Portal and core Administration routes;
-- `SpatialWebRoutes` explicitly preserves the Spatial Web journeys that previously depended on default controller/action routing;
-- platform and visualization routes keep their existing route owners;
-- Sales, Property and Diagnostic routes remain owned by their module route contributors;
-- Spatial API routes are owned by Symfony; `Bootstrap\SpatialModule` remains only for the temporary SSR workspace composition.
+- `SpatialWebRoutes` originally made the Spatial Web journeys explicit before the framework cutover; it is now retired and those routes are owned by Symfony;
+- Architecture Explorer and Diagnostic HTML delivery are now owned by Symfony alongside their canonical APIs;
+- Property and the remaining public/portal surfaces stay on the shrinking compatibility Web shell;
+- `Bootstrap\SpatialModule` is retired: both Spatial API and Spatial SSR delivery are canonical on Symfony.
 
 WEB V0.13 does not move business routing into a new Domain and does not make `CoreWebRoutes` an owner of domain capabilities.
 
@@ -82,7 +82,7 @@ The shared router enables `removeExtraSlashes(true)` so trailing/duplicate slash
 
 ## Live routing smoke
 
-`tests/smoke/web_v013_live_routes.sh` runs on the deployed AWS dev application after the external HTTPS health check. It validates the routing semantics against the real Phalcon runtime rather than emulating the extension inside architecture CI.
+`tests/smoke/web_v013_live_routes.sh` runs on the deployed AWS dev application after the external HTTPS health check. It validates the mixed-runtime routing semantics during retirement: remaining compatibility routes plus Symfony-owned Spatial journeys.
 
 The smoke verifies:
 
@@ -93,14 +93,14 @@ The smoke verifies:
 - an arbitrary Web path returns the canonical rendered `404`;
 - an arbitrary `/api/*` path returns the canonical JSON `404` with `error=not_found`.
 
-This separates concerns deliberately: architecture CI checks declaration contracts without requiring the Phalcon extension, while deployment smoke proves real router behavior on the production-like runtime.
+This separates concerns deliberately: architecture CI checks declaration contracts, while deployment smoke proves host-level routing behavior across the remaining compatibility shell and Symfony-owned surfaces.
 
 ## Regression gate
 
 `tests/architecture/web_v013_explicit_routing.php` verifies:
 
 1. production router construction uses `Router(false)`;
-2. core and Spatial compatibility routes are declared explicitly;
+2. core compatibility routes remain explicit and Spatial routes are canonical in Symfony;
 3. mutation routes retain POST restrictions;
 4. global `/:controller/:action` default patterns do not exist;
 5. canonical entry points resolve to their intended controllers/actions;
