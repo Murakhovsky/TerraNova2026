@@ -74,8 +74,8 @@ $assert(
 );
 $authenticator = $read('symfony/src/Security/LegacySessionAuthenticator.php');
 $assert(
-    str_contains($authenticator, 'api/v1/public/properties'),
-    'Legacy session authenticator still captures public Property reads.',
+    str_contains($authenticator, '#^/api/v1/public/properties(?:/|$)#'),
+    'Legacy session authenticator must bypass the full public Property prefix.',
 );
 
 $legacyRoutes = $read('app/Interfaces/Web/Routing/FrontendRoutes.php');
