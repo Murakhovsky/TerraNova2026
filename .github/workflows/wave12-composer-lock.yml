@@ -13,30 +13,6 @@ jobs:
   lock:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    env:
-      APP_ENV: test
-      APP_DEBUG: '0'
-      APP_SECRET: wave12-lock-only-secret
-      COS_ORGANIZATION_ID: default
-      DATABASE_URL: mysql://cos:wave12@127.0.0.1:3306/cos?serverVersion=8.4.0&charset=utf8mb4
-      REDIS_URL: redis://127.0.0.1:6379
-      MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_async
-      MESSENGER_FAILED_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_failed
-      MESSENGER_CONSUMER_NAME: wave12-lock
-      COS_SALES_AUTOMATION_SCHEDULER_ENABLED: '0'
-      COS_AGENT_LLM_MODE: fixture
-      LLM_ENDPOINT: ''
-      LLM_TOKEN: ''
-      LLM_MODEL: wave12-lock
-      LLM_PROVIDER: fixture
-      SPATIAL_MAX_UPLOAD_BYTES: '209715200'
-      SPATIAL_JWT_SECRET: wave12-lock-spatial-secret
-      SPATIAL_JWT_TTL: '28800'
-      SPATIAL_BLENDER_BINARY: ''
-      SPATIAL_GLTF_TRANSFORM_BINARY: ''
-      APP_URL: http://127.0.0.1:8081
-      TELEGRAM_BOT_TOKEN: ''
-      TELEGRAM_BOT_NAME: ''
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +22,7 @@ jobs:
           php-version: '8.3'
           tools: composer:v2
       - name: Resolve canonical Symfony runtime dependencies
-        run: composer update --working-dir=symfony --with-all-dependencies --no-interaction --prefer-dist --no-progress --no-scripts
+        run: composer update --working-dir=symfony --with-all-dependencies --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
       - name: Commit generated lockfile
         run: |
           git config user.name "github-actions[bot]"
