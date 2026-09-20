@@ -128,7 +128,8 @@ jobs:
         run: npm run build
       - name: PHP syntax
         run: |
-          find app/Kernel/Visualization app/Infrastructure/Visualization app/Interfaces/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app/Kernel/Visualization app/Infrastructure/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          find symfony/src/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Kernel/Module/CrossDomainContract.php
           php -l app/Kernel/Module/ModuleContributions.php
           php -l app/Kernel/Module/Contract/BootstrapRuleProvidingModuleInterface.php
@@ -136,9 +137,7 @@ jobs:
           php -l app/Domains/Sales/Bootstrap/SalesDomainModule.php
           php -l app/Domains/Sales/module.php
           php -l app/Domains/Property/module.php
-          php -l app/Bootstrap/VisualizationServices.php
-          php -l app/Interfaces/Web/Routing/VisualizationRoutes.php
-          php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
+          php -l symfony/src/Web/Navigation/NavigationBuilder.php
           php -l app/Interfaces/Web/Module.php
           php -l symfony/src/Command/ArchitectureGraphSmokeCommand.php
           php -l symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php
