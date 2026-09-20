@@ -93,7 +93,7 @@ expect_status '/cabinet/index' 404
 expect_status '/admin/index' 404
 expect_status '/this-route-does-not-exist-v013' 404
 expect_status '/cabinet/telegramConnect' 404
-expect_status '/spatial/save' 404
+expect_status '/spatial/save' 404 405
 
 expect_json_404 '/api/this-route-does-not-exist-v013'
 
