@@ -110,6 +110,36 @@ final readonly class NavigationBuilder
         ];
     }
 
+    /** @return array{surface:string,primary:list<array<string,mixed>>,utility:list<array<string,mixed>>} */
+    public function portal(TenantContext $tenant): array
+    {
+        $role = $tenant->role()->value();
+        $organizationId = $tenant->organizationId()->value();
+        $snapshot = $this->modules->snapshot($organizationId);
+
+        $primary = [
+            ['key' => 'cabinet', 'path' => 'cabinet', 'label' => 'Огляд', 'order' => 10],
+            ['key' => 'requests', 'path' => 'cabinet#requests', 'label' => 'Звернення', 'order' => 60],
+            ['key' => 'profile', 'path' => 'cabinet#profile', 'label' => 'Профіль', 'order' => 90],
+        ];
+
+        if ($snapshot->isEnabled('property')) {
+            $primary[] = ['key' => 'catalog', 'path' => 'property/catalog', 'label' => 'Нерухомість', 'order' => 20];
+            $primary[] = ['key' => 'favour', 'path' => 'property/favour', 'label' => 'Вибрані', 'order' => 30];
+            $primary[] = ['key' => 'properties', 'path' => 'cabinet#properties', 'label' => 'Мої обʼєкти', 'order' => 40];
+
+            if (in_array($role, ['seller', 'realtor', 'developer', 'partner', 'manager', 'admin'], true)) {
+                $primary[] = ['key' => 'submit', 'path' => 'property/submit', 'label' => 'Подати обʼєкт', 'order' => 50];
+            }
+        }
+
+        return [
+            'surface' => 'portal',
+            'primary' => $this->normalize($primary),
+            'utility' => [],
+        ];
+    }
+
     public function activeSection(string $active): string
     {
         return match ($active) {
