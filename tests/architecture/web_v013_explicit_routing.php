@@ -15,7 +15,8 @@ if (preg_match('/new\s+Router\s*\(\s*\)/', $services) === 1) {
 }
 
 $coreRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/CoreWebRoutes.php');
-$spatialRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/SpatialWebRoutes.php');
+$symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
+$spatialController = (string) file_get_contents($root . '/symfony/src/Web/Spatial/SpatialPageController.php');
 
 $coreRequired = [
     '/',
@@ -37,26 +38,26 @@ foreach ($coreRequired as $pattern) {
 }
 
 $spatialRequired = [
-    '/spatial/manage',
-    '/spatial/edit',
-    '/spatial/edit/{id:[0-9]+}',
-    '/spatial/save',
-    '/spatial/save/{id:[0-9]+}',
-    '/spatial/upload/{id:[0-9]+}',
-    '/spatial/external/{id:[0-9]+}',
-    '/spatial/capture/{id:[0-9]+}',
-    '/spatial/hotspot/{id:[0-9]+}',
-    '/spatial/publish/{id:[0-9]+}',
-    '/spatial/scene/{slug:[A-Za-z0-9_-]+}',
+    'path: /spatial/manage',
+    'path: /spatial/edit',
+    'path: /spatial/edit/{id}',
+    'path: /spatial/save',
+    'path: /spatial/save/{id}',
+    'path: /spatial/upload/{id}',
+    'path: /spatial/external/{id}',
+    'path: /spatial/capture/{id}',
+    'path: /spatial/hotspot/{id}',
+    'path: /spatial/publish/{id}',
+    'path: /spatial/scene/{slug}',
 ];
 foreach ($spatialRequired as $pattern) {
-    if (!str_contains($spatialRoutes, "'" . $pattern . "'")) {
-        throw new RuntimeException('WEB V0.13 Spatial explicit route is missing: ' . $pattern);
+    if (!str_contains($symfonyRoutes, $pattern)) {
+        throw new RuntimeException('WEB V0.13 Spatial Symfony route is missing: ' . $pattern);
     }
 }
 
 foreach (['/:controller', '/:controller/:action', '/:controller/:action/:params'] as $defaultPattern) {
-    if (str_contains($coreRoutes, $defaultPattern) || str_contains($spatialRoutes, $defaultPattern)) {
+    if (str_contains($coreRoutes, $defaultPattern)) {
         throw new RuntimeException('Global Phalcon default-style route leaked into V0.13 declarations: ' . $defaultPattern);
     }
 }
@@ -70,16 +71,17 @@ foreach ([
     }
 }
 foreach ([
-    '/spatial/save',
-    '/spatial/save/{id:[0-9]+}',
-    '/spatial/upload/{id:[0-9]+}',
-    '/spatial/external/{id:[0-9]+}',
-    '/spatial/capture/{id:[0-9]+}',
-    '/spatial/hotspot/{id:[0-9]+}',
-    '/spatial/publish/{id:[0-9]+}',
-] as $mutationPattern) {
-    if (!str_contains($spatialRoutes, "addPost('" . $mutationPattern . "'")) {
-        throw new RuntimeException('Spatial mutation route must stay POST-only: ' . $mutationPattern);
+    'cos_web_spatial_save_new:',
+    'cos_web_spatial_save:',
+    'cos_web_spatial_upload:',
+    'cos_web_spatial_external:',
+    'cos_web_spatial_capture:',
+    'cos_web_spatial_hotspot:',
+    'cos_web_spatial_publish:',
+] as $routeName) {
+    $position = strpos($symfonyRoutes, $routeName);
+    if ($position === false || !str_contains(substr($symfonyRoutes, $position, 240), 'methods: [POST]')) {
+        throw new RuntimeException('Spatial mutation route must stay POST-only: ' . $routeName);
     }
 }
 
@@ -97,17 +99,17 @@ foreach ([
     }
 }
 foreach ([
-    "addGet('/spatial/manage', self::target('manage'))",
-    "addGet('/spatial/edit/{id:[0-9]+}', self::target('edit')",
-    "addGet('/spatial/scene/{slug:[A-Za-z0-9_-]+}', self::target('scene')",
+    'SpatialPageController::manage',
+    'SpatialPageController::edit',
+    'SpatialPageController::scene',
 ] as $mapping) {
-    if (!str_contains($spatialRoutes, $mapping)) {
-        throw new RuntimeException('Spatial route target mapping is missing: ' . $mapping);
+    if (!str_contains($symfonyRoutes, $mapping)) {
+        throw new RuntimeException('Spatial Symfony route target mapping is missing: ' . $mapping);
     }
 }
 
 foreach (['/cabinet/index', '/admin/index'] as $forbiddenAlias) {
-    if (str_contains($coreRoutes, "'" . $forbiddenAlias . "'") || str_contains($spatialRoutes, "'" . $forbiddenAlias . "'")) {
+    if (str_contains($coreRoutes, "'" . $forbiddenAlias . "'")) {
         throw new RuntimeException('Implicit-style alias must not become explicit again: ' . $forbiddenAlias);
     }
 }
@@ -116,9 +118,19 @@ if (!str_contains($coreRoutes, "\$router->notFound(\$web('error', 'notFound'))")
 }
 
 $module = (string) file_get_contents($root . '/app/Interfaces/Web/Module.php');
-foreach (['SpatialWebRoutes::register($router)', 'CoreWebRoutes::register($router)'] as $needle) {
-    if (!str_contains($module, $needle)) {
-        throw new RuntimeException('Web module is missing explicit route registration: ' . $needle);
+if (!str_contains($module, 'CoreWebRoutes::register($router)')) {
+    throw new RuntimeException('Web module is missing explicit Core route registration.');
+}
+if (str_contains($module, 'SpatialWebRoutes')) {
+    throw new RuntimeException('Retired Spatial Phalcon route ownership was restored.');
+}
+if (file_exists($root . '/app/Interfaces/Web/Routing/SpatialWebRoutes.php')
+    || file_exists($root . '/app/Interfaces/Web/Controller/SpatialController.php')) {
+    throw new RuntimeException('Retired Spatial Phalcon Web delivery was restored.');
+}
+foreach (['SpatialSceneInterface', 'public function manage(', 'public function scene('] as $needle) {
+    if (!str_contains($spatialController, $needle)) {
+        throw new RuntimeException('Canonical Symfony Spatial page controller is missing: ' . $needle);
     }
 }
 $moduleRoutesPosition = strpos($module, '$routeRegistrar->register');
@@ -159,7 +171,7 @@ if (!str_contains($runtimeWorkflow, 'bash tests/smoke/web_v013_live_routes.sh'))
 }
 
 $documentation = (string) file_get_contents($root . '/docs/architecture/web-v0.13.md');
-foreach (['Router(false)', 'CoreWebRoutes', 'SpatialWebRoutes', 'application-wide 404', 'module route contributors', 'live routing smoke'] as $needle) {
+foreach (['Router(false)', 'CoreWebRoutes', 'Symfony Spatial', 'application-wide 404', 'module route contributors', 'live routing smoke'] as $needle) {
     if (!str_contains($documentation, $needle)) {
         throw new RuntimeException('WEB V0.13 documentation is missing contract: ' . $needle);
     }
