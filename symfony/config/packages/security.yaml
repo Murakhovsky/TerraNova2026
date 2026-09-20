@@ -23,8 +23,6 @@ security:
     - { path: '^/api/v1/admin/diagnostics(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/sales(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/cos/architecture(?:/|$)', roles: ROLE_MANAGER }
-    - { path: '^/diagnostics/[A-Za-z0-9_.:-]{8,64}/report    - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
-    - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
-, roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/diagnostics/[A-Za-z0-9_.:-]{8,64}/report$', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/spatial(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/v1(?:/|$)', roles: ROLE_MANAGER }
