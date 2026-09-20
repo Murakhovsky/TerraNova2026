@@ -34,6 +34,10 @@ services:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
+  App\Web\Auth\AuthPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Security\LegacySessionReader:
     arguments:
       $savePath: '%env(LEGACY_SESSION_SAVE_PATH)%'

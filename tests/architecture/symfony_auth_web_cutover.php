@@ -20,6 +20,11 @@ foreach ([
     }
 }
 
+$services = (string) file_get_contents($root . '/symfony/config/services.yaml');
+if (!str_contains($services, "App\\Web\\Auth\\AuthPageController:\n    public: true\n    tags: ['controller.service_arguments']")) {
+    throw new RuntimeException('AuthPageController must be a public controller service.');
+}
+
 foreach (["session:", "save_path: '%env(LEGACY_SESSION_SAVE_PATH)%'"] as $needle) {
     if (!str_contains($framework, $needle)) {
         throw new RuntimeException('Transitional Symfony session contract missing: ' . $needle);
@@ -37,7 +42,6 @@ foreach (['session-init:', 'chmod 1777 /sessions', 'service_completed_successful
         throw new RuntimeException('Writable transition session contract missing: ' . $needle);
     }
 }
-$services = (string) file_get_contents($root . '/symfony/config/services.yaml');
 if (str_contains($services, "App\\Application\\Identity\\Service\\AccountAuthenticationService:\n    arguments:\n      \$connection: '@legacy_cos.pdo'")) {
     throw new RuntimeException('Auth cutover introduced a forbidden direct legacy_cos.pdo dependency.');
 }
