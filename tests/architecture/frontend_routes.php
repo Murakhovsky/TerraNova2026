@@ -47,7 +47,7 @@ foreach ([
 
 foreach ([
     '/api/property/favourites',
-    '/client-case',
+    'path: /client-case',
     '/cos/control-center',
     '/api/property/:action',
     '/api/sales/',

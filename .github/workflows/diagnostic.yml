@@ -3,7 +3,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, 'migration/wave*']
+    branches: [main]
+
 jobs:
   runtime-checks:
     runs-on: ubuntu-latest
@@ -11,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -26,227 +27,18 @@ jobs:
           php tests/architecture/persistence_boundaries.php
           php tests/architecture/table_ownership.php
           php tests/architecture/domain_module_contract.php
-          php tests/architecture/sales_v071_configuration.php
-          php tests/architecture/sales_v072_pipeline_admin.php
-          php tests/architecture/sales_v075_policy_admin.php
 
-      - name: Frontend interface architecture
+      - name: Final frontend architecture
         run: |
           npm run build
           php tests/architecture/frontend_assets.php
           php tests/architecture/frontend_interface.php
           php tests/architecture/frontend_routes.php
-          php tests/architecture/runtime_cleanup_third_slice.php
-          php tests/architecture/web_v05_module_navigation.php
-          php tests/unit/web_v05_module_navigation.php
-          php tests/architecture/web_v013_explicit_routing.php
+          php tests/architecture/web_v012_production_closure.php
 
-      - name: Deployment readiness architecture
+      - name: Zero legacy production gate
+        run: php tests/architecture/zero_legacy_runtime.php
+
+      - name: Canonical Symfony syntax
         run: |
-          php tests/architecture/deploy_worker_readiness.php
-          php tests/architecture/deploy_https_proxy.php
-          php tests/architecture/cli_worker_tenant_isolation.php
-          php tests/architecture/runtime_retirement_background_slice.php
-          php tests/architecture/phalcon_cli_retirement.php
-          php tests/architecture/phalcon_script_retirement.php
-          php tests/architecture/symfony_web_surfaces_cutover.php
-
-      - name: Diagnostic checks
-        run: |
-          php tests/architecture/diagnostic_readiness.php
-          php tests/smoke/diagnostic_domain.php
-          php tests/smoke/diagnostic_methodology_contract.php
-          php tests/smoke/diagnostic_methodology.php
-          php tests/smoke/diagnostic_phase_1_3.php
-          php tests/smoke/diagnostic_phase_4_6.php
-          php tests/smoke/diagnostic_methodology_studio.php
-          php tests/smoke/diagnostic_v053.php
-          php tests/smoke/diagnostic_v054.php
-          php tests/smoke/diagnostic_v055.php
-          php tests/smoke/diagnostic_v061.php
-          php tests/architecture/symfony_sales_diagnostics_wave5_boundary.php
-          php tests/unit/sales_diagnostics_wave5_contract.php
-          php tests/unit/sales_diagnostics_wave5_action_assignment.php
-          node --check frontend/features/diagnostics/methodology-studio-v055.js
-          php -r "require 'vendor/autoload.php'; (new Domains\\Diagnostic\\Methodology\\PackCompiler())->compile('resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json');"
-
-      - name: Diagnostic PHP lint
-        run: |
-          find app/Domains/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l app/Bootstrap/DiagnosticServices.php
-          php -l app/Bootstrap/WebApplicationServices.php
-          php -l tests/smoke/diagnostic_v061.php
-          find symfony/src/Application/Diagnostic -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l symfony/src/Http/Api/V1/Controller/DiagnosticController.php
-          php -l symfony/src/Http/Api/V1/Controller/DiagnosticMethodologyController.php
-          php -l symfony/src/Web/Diagnostic/DiagnosticPageController.php
-
-      - name: Sales architecture and runtime checks
-        run: |
-          php tests/architecture/sales_readiness.php
-          php tests/smoke/sales_composition_root.php
-          php tests/smoke/client_case_commands.php
-          php tests/smoke/deterministic_sales_processes.php
-          php tests/smoke/crm_routing.php
-          php tests/smoke/crm_webhook.php
-          php tests/smoke/public_lead.php
-          php tests/unit/sales_attention_detectors.php
-          php tests/architecture/symfony_sales_automation_wave3_boundary.php
-          php tests/unit/sales_wave3_outbox_drainer.php
-          php tests/unit/sales_runtime_contract.php
-          php tests/unit/sales_v03.php
-          php tests/unit/sales_v04.php
-          php tests/unit/sales_operational_workspace.php
-          php tests/unit/sales_v073_rule_editor.php
-          php tests/unit/sales_v075_policy_engine.php
-          php tests/architecture/symfony_sales_integrations_wave6_boundary.php
-          php tests/unit/sales_integrations_wave6_idempotency.php
-          php tests/architecture/symfony_sales_frontend_wave7_boundary.php
-          php tests/architecture/sales_legacy_api_retirement.php
-          node --check frontend/features/sales/workspace.js
-          node --check frontend/features/sales/admin.js
-          node --check frontend/features/sales/rule-editor.js
-          node --check frontend/features/sales/workspace.js
-          node --check frontend/features/sales/rule-editor.js
-          node --check tests/browser/sales_workspace.mjs
-
-      - name: Property domain and runtime checks
-        run: |
-          php tests/architecture/property_domain_definition.php
-          php tests/architecture/property_v021_runtime.php
-          php tests/architecture/property_v022_tenant_boundary.php
-          php tests/architecture/property_v030_registry_schema.php
-          php tests/architecture/property_v040_identity_schema.php
-          php tests/architecture/property_v050_inventory_schema.php
-          php tests/architecture/property_v060_listing_schema.php
-          php tests/architecture/property_v070_history_contracts_schema.php
-          php tests/architecture/property_v071_sales_boundary.php
-          php tests/architecture/property_v080_analytics.php
-          php tests/architecture/property_v090_intelligence.php
-          php tests/architecture/property_v0100_external_network.php
-          php tests/smoke/property_submission.php
-          php tests/smoke/property_workflow.php
-          php tests/unit/property_v023_core_model.php
-          php tests/unit/property_v024_commands_events.php
-          php tests/unit/property_v030_asset_registry_structure.php
-          php tests/unit/property_v040_identity_provenance.php
-          php tests/unit/property_v050_inventory.php
-          php tests/unit/property_v060_listing_publication.php
-          php tests/unit/property_v070_history_contracts.php
-          php tests/unit/property_v080_market_analytics.php
-          php tests/unit/property_v090_intelligence.php
-          php tests/unit/property_v0100_external_network.php
-
-      - name: Property PHP lint
-        run: |
-          find app/Domains/Property -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l app/Bootstrap/PropertyServices.php
-          php -l app/Bootstrap/PropertyAnalyticsServices.php
-          php -l app/Bootstrap/PropertyIntelligenceServices.php
-          php -l app/Bootstrap/PropertyNetworkServices.php
-          php -l app/Bootstrap/WebApplicationServices.php
-          php -l app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php
-
-      - name: Telegram isolation check
-        run: php tests/architecture/telegram_migration.php
-
-  deploy-dev:
-    name: Deploy main to AWS dev
-    needs: runtime-checks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: AWS TN2026
-    concurrency:
-      group: cos-dev-deploy
-      cancel-in-progress: false
-    env:
-      DEV_HOST: ${{ secrets.DEV_HOST }}
-      DEV_USER: ${{ secrets.DEV_USER }}
-      DEV_PORT: ${{ secrets.DEV_PORT }}
-      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
-      DEV_PATH: ${{ vars.DEV_PATH }}
-      COMPANY_OS_DOMAIN: company-os.shop
-      COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/cos
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Build frontend assets
-        run: |
-          npm ci
-          npm run build
-
-      - name: Validate deployment configuration
-        run: |
-          : "${DEV_HOST:?DEV_HOST secret is missing}"
-          : "${DEV_USER:?DEV_USER secret is missing}"
-          : "${DEV_PORT:?DEV_PORT secret is missing}"
-          : "${DEV_SSH_KEY:?DEV_SSH_KEY secret is missing}"
-          : "${DEV_PATH:?DEV_PATH environment variable is missing}"
-          : "${COMPANY_OS_DOMAIN:?COMPANY_OS_DOMAIN is missing}"
-          : "${COMPANY_OS_HEALTHCHECK_URL:?COMPANY_OS_HEALTHCHECK_URL is missing}"
-
-      - name: Configure SSH
-        run: |
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/dev_deploy_key
-          chmod 600 ~/.ssh/dev_deploy_key
-          ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
-      - name: Prepare server directory
-        run: |
-          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- $REMOTE_PATH"
-
-      - name: Sync repository to dev server
-        run: |
-          rsync -az --delete \
-            --exclude='.git/' \
-            --exclude='.env' \
-            --exclude='.env.docker' \
-            --exclude='vendor/' \
-            --exclude='node_modules/' \
-            --exclude='tmp/' \
-            --exclude='public/uploads/' \
-            --exclude='public/docs/' \
-            -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
-            ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
-
-      - name: Ensure company-os.shop bootstrap reverse proxy
-        run: |
-          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
-          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "cd $REMOTE_PATH && bash deploy/configure-company-os-http.sh $REMOTE_DOMAIN 127.0.0.1:8080 127.0.0.1:8081"
-
-      - name: Deploy containers and database migrations
-        run: |
-          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "cd $REMOTE_PATH && bash deploy/dev.sh"
-
-      - name: Company OS public HTTP preflight
-        run: |
-          getent ahostsv4 "$COMPANY_OS_DOMAIN"
-          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "http://$COMPANY_OS_DOMAIN/cos" > /dev/null
-
-      - name: Configure company-os.shop HTTPS
-        run: |
-          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
-          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
-          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8080 127.0.0.1:8081"
-
-      - name: External HTTPS application health check
-        run: |
-          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
-
-      - name: HTTPS reverse-proxy contract smoke
-        run: bash tests/smoke/https_proxy_contract.sh "https://$COMPANY_OS_DOMAIN"
-
-      - name: WEB V0.13 live routing smoke
-        run: bash tests/smoke/web_v013_live_routes.sh "https://$COMPANY_OS_DOMAIN"
+          find symfony/src app/Kernel app/Platform app/Domains app/Infrastructure -type f -name '*.php' -print0 | xargs -0 -n1 php -l

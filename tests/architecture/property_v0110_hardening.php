@@ -23,11 +23,17 @@ foreach (['PropertyManagementReadRepositoryInterface', 'PropertyGroupManagementR
     $assert(str_contains($composed, $needle), 'Management decomposition missing port: ' . $needle);
 }
 
-$web = $read('app/Bootstrap/WebApplicationServices.php');
-$assert(str_contains($web, 'ComposedPropertyManagementRepository'), 'Web composition must use the decomposed Property management repository.');
-$assert(str_contains($web, "getShared('propertyIdentityWorkflow')"), 'Moderation must be wired to the canonical identity workflow.');
-$kernel = $read('app/config/services_kernel.php');
-$assert(str_contains($kernel, 'PropertyIdentityServices.php'), 'Property identity services must be loaded by the composition root.');
+$services = $read('symfony/config/services.yaml');
+foreach ([
+    'Domains\\Property\\Infrastructure\\Persistence\\MySql\\MysqlPropertyIdentityWorkflowRepository:',
+    'Domains\\Property\\Application\\Contract\\PropertyIdentityWorkflowRepositoryInterface:',
+    'Domains\\Property\\Application\\Service\\PropertyIdentityWorkflowService:',
+] as $needle) {
+    $assert(str_contains($services, $needle), 'Canonical Property identity workflow wiring missing: ' . $needle);
+}
+foreach (['app/Bootstrap/WebApplicationServices.php','app/Bootstrap/PropertyIdentityServices.php'] as $retired) {
+    $assert(!is_file($root . '/' . $retired), 'Retired Property composition returned: ' . $retired);
+}
 
 $reference = $read('app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyReferencePort.php');
 $assert(!str_contains($reference, 'tn_properties'), 'Canonical PropertyReferencePort must not fall back to tn_properties.');

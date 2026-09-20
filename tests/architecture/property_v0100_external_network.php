@@ -63,7 +63,7 @@ $assert(version_compare((string) ($module['schema_version'] ?? '0.0.0'), '0.10.0
 $assert(in_array('property.network', $module['contributions']['capabilities'] ?? [], true), 'Property V0.10 network capability missing.');
 $assert(in_array('app/migrations/20260914_000057_property_v0100_external_network.sql', $module['contributions']['migration_files'] ?? [], true), 'Property V0.10 migration missing from manifest.');
 
-$composition = $read('app/config/services_kernel.php');
-$assert(str_contains($composition, 'PropertyNetworkServices.php'), 'Property Network composition root is not loaded.');
+$assert(!is_file($root . '/app/Bootstrap/PropertyNetworkServices.php'), 'Retired Property Network bootstrap must remain deleted.');
+$assert(is_file($root . '/app/Domains/Property/Application/Service/PropertyNetworkSyncService.php'), 'Property Network runtime service must remain in the canonical Domain.');
 
 echo "Property V0.10 external network architecture: OK\n";

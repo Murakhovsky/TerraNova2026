@@ -240,6 +240,15 @@ services:
     alias: Domains\RealEstate\Infrastructure\Sales\SalesOpportunityReferenceAdapter
 
   Domains\RealEstate\Application\Service\RealEstateWorkflowService: ~
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyIdentityWorkflowRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Property\Application\Contract\PropertyIdentityWorkflowRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyIdentityWorkflowRepository
+
+  Domains\Property\Application\Service\PropertyIdentityWorkflowService: ~
+
   Domains\Property\Bootstrap\PropertyDomainModule: ~
 
   Domains\RealEstate\Rule\RealEstateRuleContextProvider: ~
