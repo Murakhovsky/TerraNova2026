@@ -6,9 +6,8 @@ on:
     paths:
       - 'app/Kernel/Process/**'
       - 'app/Infrastructure/Process/**'
-      - 'app/Bootstrap/ProcessServices.php'
       - 'app/Kernel/Module/KernelVersion.php'
-      - 'app/config/services_kernel.php'
+      - 'symfony/config/services.yaml'
       - 'resources/processes/**'
       - 'docs/.vitepress/process-registry.mjs'
       - 'docs/.vitepress/check-processes.mjs'
@@ -41,9 +40,8 @@ on:
     paths:
       - 'app/Kernel/Process/**'
       - 'app/Infrastructure/Process/**'
-      - 'app/Bootstrap/ProcessServices.php'
       - 'app/Kernel/Module/KernelVersion.php'
-      - 'app/config/services_kernel.php'
+      - 'symfony/config/services.yaml'
       - 'resources/processes/**'
       - 'docs/.vitepress/process-registry.mjs'
       - 'docs/.vitepress/check-processes.mjs'
@@ -112,6 +110,5 @@ jobs:
       - name: PHP syntax
         run: |
           find app/Kernel/Process app/Infrastructure/Process -name '*.php' -print0 | xargs -0 -n1 php -l
-          php -l app/Bootstrap/ProcessServices.php
           php -l tests/unit/process_registry_foundation.php
           php -l tests/architecture/process_v01.php
