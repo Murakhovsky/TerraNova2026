@@ -14,7 +14,7 @@ $manifest = require $root . '/app/Domains/Diagnostic/module.php';
 $assert(($manifest['version'] ?? null) === '0.6.1', 'Diagnostic module version must be 0.6.1.');
 $assert(($manifest['schema_version'] ?? null) === '0.6.0', 'Diagnostic schema version must remain 0.6.0.');
 $assert(($manifest['contributions']['runtime_module_service'] ?? null) === 'diagnosticDomainModule', 'Diagnostic runtime module is not declared.');
-$assert(in_array('diagnosticRouteContributor', $manifest['contributions']['api_route_contributor_services'] ?? [], true), 'Diagnostic routes are not module-owned.');
+$assert(($manifest['contributions']['api_route_contributor_services'] ?? []) === [], 'Diagnostic must not contribute legacy Phalcon Web routes after Symfony SSR cutover.');
 $assert(in_array('diagnosticActionOutcomeHandler', $manifest['contributions']['extension_services']['event.consumers'] ?? [], true), 'Diagnostic action outcome consumer is not declared.');
 $assert(in_array('app/migrations/20260914_000049_diagnostic_runtime_v060.sql', $manifest['contributions']['migration_files'] ?? [], true), 'Diagnostic V0.6.0 runtime migration is not declared.');
 
@@ -22,9 +22,9 @@ $module = new DiagnosticDomainModule([]);
 $assert($module->name() === 'diagnostic', 'Diagnostic runtime module id mismatch.');
 $assert($module->actionTypes() === ['IMPLEMENT_DIAGNOSTIC_RECOMMENDATION'], 'Diagnostic action ownership mismatch.');
 
-$legacyRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/DiagnosticRoutes.php');
-$assert(str_contains($legacyRoutes, '/diagnostics/{session:'), 'Server-rendered Diagnostic report route is missing.');
-$assert(!str_contains($legacyRoutes, '/api/diagnostics'), 'Retired Phalcon Diagnostic API route was restored.');
+$assert(!is_file($root . '/app/Interfaces/Web/Routing/DiagnosticRoutes.php'), 'Retired Phalcon DiagnosticRoutes restored.');
+$assert(!is_file($root . '/app/Interfaces/Web/Routing/DiagnosticModuleRouteContributor.php'), 'Retired Diagnostic route contributor restored.');
+$assert(!is_file($root . '/app/Interfaces/Web/Controller/DiagnosticReportController.php'), 'Retired Phalcon DiagnosticReportController restored.');
 $assert(!is_file($root . '/app/Interfaces/Api/Controller/DiagnosticRuntimeController.php'), 'Retired DiagnosticRuntimeController was restored.');
 
 $symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
@@ -38,6 +38,8 @@ foreach ([
     '/api/v1/diagnostics/{id}/assessment',
     '/api/v1/diagnostics/{id}/findings',
     '/api/v1/diagnostics/{id}/recommendations',
+    'cos_web_diagnostic_report:',
+    'path: /diagnostics/{session}/report',
 ] as $marker) {
     $assert(str_contains($symfonyRoutes, $marker), 'Canonical Symfony Diagnostic route missing: ' . $marker);
 }
@@ -60,12 +62,11 @@ foreach ([
 }
 
 $webServices = (string) file_get_contents($root . '/app/Bootstrap/WebApplicationServices.php');
-$assert(str_contains($webServices, 'DiagnosticModuleRouteContributor'), 'Diagnostic route contributor class is not registered in Web composition.');
-$assert(str_contains($webServices, "setShared('diagnosticRouteContributor'"), 'Diagnostic route contributor service is missing.');
+$assert(!str_contains($webServices, 'DiagnosticModuleRouteContributor'), 'Retired Diagnostic route contributor leaked into Web composition.');
 
-$reportController = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/DiagnosticReportController.php');
+$reportController = (string) file_get_contents($root . '/symfony/src/Web/Diagnostic/DiagnosticReportController.php');
 $reportView = (string) file_get_contents($root . '/app/Interfaces/Web/View/diagnostic_report/show.phtml');
-$assert(str_contains($reportController, "getShared('diagnosticRuntimeService')"), 'HTML report is not backed by runtime report persistence.');
+$assert(str_contains($reportController, 'DiagnosticRuntimeService'), 'HTML report is not backed by runtime report persistence.');
 $assert(str_contains($reportView, 'overallHealth') && str_contains($reportView, 'recommendations'), 'HTML report misses core diagnostic sections.');
 $assert(str_contains($reportView, 'htmlspecialchars'), 'HTML report does not escape output.');
 
