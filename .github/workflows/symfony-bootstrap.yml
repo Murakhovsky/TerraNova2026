@@ -139,9 +139,9 @@ jobs:
             PRIMARY KEY (organization_id, user_id)
           );
           INSERT INTO tn_users (id, organization_id, email, password_hash, full_name, role, status) VALUES
-            (1001, 'default', 'manager@example.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'CI Manager', 'manager', 'active'),
-            (1002, 'default', 'realtor@example.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'CI Realtor', 'realtor', 'active'),
-            (1003, 'other-org', 'other@example.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'Other Manager', 'manager', 'active');
+            (1001, 'default', 'manager@example.test', '$2y$12$blsVB3fj07BQIc3NOxp7meFk8pLLDKEid2mmriRI6An/yRh4RCLXS', 'CI Manager', 'manager', 'active'),
+            (1002, 'default', 'realtor@example.test', '$2y$12$blsVB3fj07BQIc3NOxp7meFk8pLLDKEid2mmriRI6An/yRh4RCLXS', 'CI Realtor', 'realtor', 'active'),
+            (1003, 'other-org', 'other@example.test', '$2y$12$blsVB3fj07BQIc3NOxp7meFk8pLLDKEid2mmriRI6An/yRh4RCLXS', 'Other Manager', 'manager', 'active');
           INSERT INTO cos_organization_memberships (organization_id, user_id, role, status) VALUES
             ('default', 1001, 'manager', 'ACTIVE'),
             ('default', 1002, 'realtor', 'ACTIVE'),
