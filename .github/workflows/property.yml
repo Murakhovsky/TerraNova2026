@@ -96,6 +96,7 @@ jobs:
           php tests/architecture/property_v0110_hardening.php
           php tests/architecture/property_v0120_runtime_cutover.php
           php tests/architecture/property_v0130_real_estate_wave9_cutover.php
+          php tests/architecture/property_public_read_cutover.php
 
       - name: Property core model
         run: php tests/unit/property_v023_core_model.php
