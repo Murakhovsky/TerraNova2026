@@ -63,10 +63,10 @@ echo "Using server environment: $ENV_FILE"
 
 # Build application images from the just-synced COS revision. The MySQL volume
 # is persistent and is never replaced by this deployment.
-"${COMPOSE[@]}" build --pull php worker migrate
+"${COMPOSE[@]}" build --pull php migrate
 
-# The compose graph requires `migrate` to finish successfully before php/worker
-# start. Capture compose failures explicitly so migration diagnostics are not
+# The compatibility compose graph requires `migrate` to finish successfully before php starts.
+# Background workers are canonical Symfony services. Capture compose failures so diagnostics are not
 # swallowed by `set -e`.
 if ! "${COMPOSE[@]}" up -d --remove-orphans; then
   echo "docker compose up failed. Container state:" >&2

@@ -1577,3 +1577,11 @@ services:
   App\Web\Spatial\SpatialPageController:
     public: true
     tags: ['controller.service_arguments']
+
+  App\Infrastructure\Health\DatabaseDependencyHealthCheck:
+    arguments:
+      $canonical: '@doctrine.dbal.default_connection'
+      $legacy: '@legacy_cos.pdo'
+
+  App\Application\System\Contract\DependencyHealthCheckInterface:
+    alias: App\Infrastructure\Health\DatabaseDependencyHealthCheck
