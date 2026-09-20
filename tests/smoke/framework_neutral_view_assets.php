@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-use Interfaces\Web\Assets\ViewAssetResolver;
+use Infrastructure\Web\Assets\ViteAssetResolver;
 
-$assets = ViewAssetResolver::resolve(['public-surface']);
+$assets = ViteAssetResolver::resolve(['public-surface']);
 if (($assets['scripts'] ?? []) === []) {
     throw new RuntimeException('Framework-neutral view asset resolver returned no scripts.');
 }

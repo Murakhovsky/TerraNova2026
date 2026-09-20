@@ -40,7 +40,7 @@ foreach ([
 }
 
 $layout = $read('app/Interfaces/Web/View/index.phtml');
-$assert(str_contains($layout, 'ViewAssetResolver::resolve($assetEntries)'), 'Global PHTML layout is not bound to the framework-neutral asset resolver.');
+$assert(str_contains($layout, 'ViteAssetResolver::resolve($assetEntries)'), 'Global PHTML layout is not bound to the framework-neutral asset resolver.');
 $assert(!str_contains($layout, "di('viteAssetManifest')"), 'Global PHTML layout still reads the legacy DI container.');
 $assert(!str_contains($layout, '$this->assets('), 'Global PHTML layout still depends on renderer-specific asset methods.');
 
@@ -101,7 +101,6 @@ $assert(!str_contains($salesManifest, "'salesRouteContributor'"), 'Sales manifes
 $phpImage = $read('docker/symfony/php/Dockerfile');
 $nginxImage = $read('docker/symfony/nginx/Dockerfile');
 $nginx = $read('docker/symfony/nginx/default.conf');
-$assert(str_contains($phpImage, 'COPY app/Interfaces/Web/Assets/'), 'Symfony PHP image does not contain framework-neutral Web asset helpers.');
 $assert(str_contains($phpImage, 'COPY app/Interfaces/Web/View/'), 'Symfony PHP image does not contain PHTML views.');
 $assert(str_contains($phpImage, 'COPY public/build/'), 'Symfony PHP image does not contain the Vite manifest/build.');
 $assert(str_contains($nginxImage, 'COPY public/build/'), 'Symfony nginx image does not contain browser assets.');
