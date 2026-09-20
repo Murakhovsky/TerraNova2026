@@ -61,28 +61,6 @@ class SeoController extends ControllerBase
         return $this->response;
     }
 
-    public function robotsAction(): \Phalcon\Http\ResponseInterface
-    {
-        $this->view->disable();
-        $this->response->setContentType('text/plain', 'UTF-8');
-        $this->response->setContent(implode("\n", [
-            'User-agent: *',
-            'Allow: /',
-            'Disallow: /admin',
-            'Disallow: /auth',
-            'Disallow: /cabinet',
-            'Disallow: /client-case',
-            'Disallow: /property/manage',
-            'Disallow: /property/listing',
-            'Disallow: /property/edit',
-            'Disallow: /property/submissions',
-            'Sitemap: ' . $this->seoAbsoluteUrl('sitemap.xml'),
-            '',
-        ]));
-
-        return $this->response;
-    }
-
     private function seoAbsoluteUrl(string $path): string
     {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
