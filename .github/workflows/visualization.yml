@@ -18,8 +18,6 @@ on:
       - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
       - 'app/Interfaces/Web/Module.php'
       - 'app/Bootstrap/KernelServices.php'
-      - 'app/Bootstrap/VisualizationServices.php'
-      - 'app/config/services_kernel.php'
       - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
       - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
       - 'symfony/config/services.yaml'
@@ -61,8 +59,6 @@ on:
       - 'app/Interfaces/Web/Navigation/FrontendNavigation.php'
       - 'app/Interfaces/Web/Module.php'
       - 'app/Bootstrap/KernelServices.php'
-      - 'app/Bootstrap/VisualizationServices.php'
-      - 'app/config/services_kernel.php'
       - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
       - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
       - 'symfony/config/services.yaml'
@@ -141,7 +137,6 @@ jobs:
           php -l app/Domains/Sales/Bootstrap/SalesDomainModule.php
           php -l app/Domains/Sales/module.php
           php -l app/Domains/Property/module.php
-          php -l app/Bootstrap/VisualizationServices.php
           php -l symfony/src/Web/Visualization/ArchitectureExplorerController.php
           php -l app/Interfaces/Web/Navigation/FrontendNavigation.php
           php -l app/Interfaces/Web/Module.php
