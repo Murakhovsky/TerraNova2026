@@ -97,10 +97,11 @@ foreach (['Modules\\Economy\\Module', 'Modules\\Games\\Module', 'Modules\\Users\
         throw new RuntimeException('Quarantined module is registered in the main web application: ' . $quarantinedModule);
     }
 }
-foreach (['Interfaces\\Web\\Module', 'Bootstrap\\SpatialModule'] as $canonicalModule) {
-    if (!str_contains($normalizedBootstrap, $canonicalModule)) {
-        throw new RuntimeException('Canonical web module is not registered: ' . $canonicalModule);
-    }
+if (!str_contains($normalizedBootstrap, 'Interfaces\\Web\\Module')) {
+    throw new RuntimeException('Canonical frontend web module is not registered.');
+}
+if (str_contains($normalizedBootstrap, 'Bootstrap\\SpatialModule')) {
+    throw new RuntimeException('Retired Phalcon Spatial module is still registered.');
 }
 
 if (str_contains($frontendRoutes, 'Modules\\Frontend\\Controllers')) {

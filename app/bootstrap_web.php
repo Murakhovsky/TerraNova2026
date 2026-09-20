@@ -29,10 +29,6 @@ try {
             'path'      => APP_PATH . '/Interfaces/Web/Module.php',
             'default'   => true,
         ],
-        'spatial' => [
-            'className' => 'Bootstrap\\SpatialModule',
-            'path'      => APP_PATH . '/Bootstrap/SpatialModule.php',
-        ],
     ]);
 
     require APP_PATH . '/config/routes.php';
