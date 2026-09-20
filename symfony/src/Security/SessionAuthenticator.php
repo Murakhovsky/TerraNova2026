@@ -60,7 +60,8 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
 
     private static function isWebPath(string $path): bool
     {
-        return str_starts_with($path,'/sales')
+        return str_starts_with($path,'/cabinet')
+            || str_starts_with($path,'/sales')
             || str_starts_with($path,'/cos/architecture')
             || str_starts_with($path,'/admin/diagnostics')
             || str_starts_with($path,'/admin/content')
