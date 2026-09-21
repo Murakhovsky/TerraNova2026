@@ -75,6 +75,11 @@ if (($controllers['controllers']['@symfony/ux-turbo']['turbo-core']['enabled'] ?
     throw new RuntimeException('Turbo core controller is not enabled.');
 }
 
+$twigComponentConfig = (string) file_get_contents($root . '/symfony/config/packages/twig_component.yaml');
+if (!str_contains($twigComponentConfig, "'App\\Web\\Experience\\Component\\':")) {
+    throw new RuntimeException('Experience Twig Component namespace mapping is invalid.');
+}
+
 $routes = (string) file_get_contents($root . '/symfony/config/routes/ux_live_component.yaml');
 if (!str_contains($routes, '@LiveComponentBundle/config/routes.php')) {
     throw new RuntimeException('Live Component route resource is not registered.');
