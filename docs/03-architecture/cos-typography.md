@@ -1,51 +1,51 @@
 ---
-title: COS Typography Contract
-description: PHASE 3 visual typography lab and canonical type semantics for COS Experience Platform.
+title: Контракт типографіки COS
+description: Канонічна типографіка COS, лабораторія кандидатів шрифтів і правила відображення числових та фінансових даних.
 status: active
 updated: 2026-09-21
 kind: architecture
 ---
 
-# COS Typography Contract — PHASE 3
+# Контракт типографіки COS — PHASE 3
 
-## Purpose
+## Призначення
 
-Typography is part of the COS operational language, not page decoration.
+Типографіка є частиною операційної мови COS, а не декоративним оформленням сторінки.
 
-PHASE 3 fixes the semantic type contract before the canonical component visual pass:
+PHASE 3 фіксує semantic type contract до канонічного візуального проходу компонентів:
 
-- dense UI must stay readable at 12–16 px;
-- Ukrainian and Latin copy use the same hierarchy;
-- financial/data surfaces use aligned numerals;
-- type scale is semantic and shared by every Domain;
-- font experiments remain reversible and do not change frontend architecture.
+- щільний UI має залишатися читабельним у діапазоні 12–16 px;
+- український і латинський текст використовують одну ієрархію;
+- фінансові та data surfaces використовують вирівняні цифри;
+- шкала типографіки є семантичною та спільною для всіх Domains;
+- експерименти зі шрифтами залишаються оборотними й не змінюють frontend architecture.
 
-## Candidate lab
+## Лабораторія кандидатів
 
-`/dev/ui` compares the same content in three candidate stacks:
+`/dev/ui` порівнює однаковий контент у трьох candidate stacks:
 
 1. Geist;
 2. Inter;
 3. IBM Plex Sans.
 
-The comparison always includes:
+Порівняння завжди містить:
 
 - `123,450 €`;
 - `Company Operating System`;
 - `Потенційний клієнт`;
 - `Продаж житлового комплексу`;
 - `Pipeline Forecast`;
-- normal operational body copy.
+- звичайний operational body copy.
 
-The lab does not silently download third-party fonts. If a candidate family is not installed/bundled, the declared fallback stack is used. A brand font is adopted only with an explicit asset/licensing decision.
+Лабораторія не завантажує сторонні шрифти приховано. Якщо candidate family не встановлена або не bundled, використовується оголошений fallback stack. Brand font приймається лише окремим рішенням щодо asset і ліцензування.
 
 ## Production baseline
 
-Until the brand-face decision is frozen, the production baseline remains Inter with system fallbacks.
+Поки рішення щодо brand font не заморожене, production baseline залишається Inter із системними fallback.
 
-This avoids changing every production surface merely to run a visual experiment.
+Це не дозволяє візуальному експерименту випадково змінити всі production surfaces.
 
-Candidate stacks are expressed only through semantic variables:
+Candidate stacks виражаються лише через semantic variables:
 
 ```text
 --cos-font-candidate-geist
@@ -53,11 +53,11 @@ Candidate stacks are expressed only through semantic variables:
 --cos-font-candidate-plex
 ```
 
-No Domain may hardcode its own font family.
+Жоден Domain не може hardcode власний font family.
 
-## Semantic type roles
+## Семантичні ролі типографіки
 
-Canonical roles:
+Канонічні ролі:
 
 ```text
 Display
@@ -69,17 +69,17 @@ Label
 Numeric / Money
 ```
 
-They map to the existing COS type scale and shared line-height/weight tokens.
+Вони мапляться на чинну COS type scale та спільні line-height/weight tokens.
 
-## Financial/data typography
+## Фінансова та числова типографіка
 
-Aligned values use:
+Вирівняні значення використовують:
 
 ```css
 font-variant-numeric: tabular-nums lining-nums;
 ```
 
-Canonical semantic hooks:
+Канонічні semantic hooks:
 
 ```text
 .cos-numeric
@@ -88,28 +88,28 @@ Canonical semantic hooks:
 .cos-data-grid__numeric
 ```
 
-This is required for money, KPI, delta, forecast, variance and other vertically compared data.
+Це правило застосовується до money, KPI, delta, forecast, variance та інших даних, що порівнюються вертикально.
 
-## Domain rule
+## Правило для Domains
 
-Domains provide content and business semantics.
+Domains надають content і business semantics.
 
-Domains do not define:
+Domains не визначають:
 
 - font families;
-- independent type scales;
-- random heading sizes;
-- local financial number styling.
+- незалежні type scales;
+- випадкові розміри headings;
+- локальне оформлення financial numbers.
 
-## Completion criteria
+## Критерії завершення PHASE 3
 
-PHASE 3 is complete when:
+PHASE 3 завершена, коли:
 
-- the three candidates are visible side by side in `/dev/ui`;
-- the exact reference strings are present;
-- a canonical semantic type scale exists;
-- tabular numeric behavior is executable CSS, not only documentation;
-- production remains stable while candidates are evaluated;
-- CI prevents deletion of the typography contract.
+- три кандидати видно поруч у `/dev/ui`;
+- присутні точні reference strings;
+- існує канонічна semantic type scale;
+- tabular numeric behavior реалізована у CSS, а не лише описана в документації;
+- production залишається стабільним під час оцінювання кандидатів;
+- CI не дозволяє видалити або обійти typography contract.
 
-The final brand-font selection can happen after visual review without changing the Web foundation.
+Фінальний вибір brand font можна зробити після візуального огляду без зміни Web foundation.
