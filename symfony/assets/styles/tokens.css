@@ -89,6 +89,13 @@ html[data-cos-theme="system"] {
   --cos-radius-lg: 0.625rem;
   --cos-radius-pill: 999px;
 
+  /* PHASE 4 canonical geometry roles. */
+  --cos-border-width: 1px;
+  --cos-radius-control-sm: var(--cos-radius-xs);
+  --cos-radius-control: var(--cos-radius-sm);
+  --cos-radius-panel: var(--cos-radius-md);
+  --cos-radius-overlay: var(--cos-radius-lg);
+
   --cos-font-xs: 0.75rem;
   --cos-font-sm: 0.8125rem;
   --cos-font-md: 0.875rem;
