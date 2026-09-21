@@ -1,0 +1,197 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="cos-shell" data-controller="workspace-shell">
+    <aside
+        class="cos-shell__sidebar"
+        id="cos-workspace-navigation"
+        aria-label="Company Workspace navigation"
+        data-workspace-shell-target="sidebar"
+    >
+        <div class="cos-shell__brand">
+            <span class="cos-shell__brand-mark" aria-hidden="true">COS</span>
+            <span class="cos-shell__brand-copy">
+                <strong>Company OS</strong>
+                <small>{{ shell.tenantLabel }}</small>
+            </span>
+        </div>
+
+        <nav class="cos-shell__nav" aria-label="Primary navigation">
+            {% for item in shell.primaryNavigation %}
+                <div class="cos-shell__nav-group">
+                    <a
+                        class="cos-shell__nav-item{% if item.active %} is-active{% endif %}"
+                        href="{{ item.path }}"
+                        {% if item.active %}aria-current="page"{% endif %}
+                    >
+                        <span class="cos-shell__nav-glyph" aria-hidden="true">{{ item.glyph }}</span>
+                        <span>{{ item.label }}</span>
+                    </a>
+
+                    {% if item.children is not empty %}
+                        <div class="cos-shell__subnav">
+                            {% for child in item.children %}
+                                <a
+                                    class="{% if child.active %}is-active{% endif %}"
+                                    href="{{ child.path }}"
+                                    {% if child.active %}aria-current="page"{% endif %}
+                                >{{ child.label }}</a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </nav>
+
+        {% if shell.utilityNavigation is not empty %}
+            <nav class="cos-shell__nav cos-shell__nav--utility" aria-label="Utility navigation">
+                {% for item in shell.utilityNavigation %}
+                    <a
+                        class="cos-shell__nav-item{% if item.active %} is-active{% endif %}"
+                        href="{{ item.path }}"
+                    >
+                        <span class="cos-shell__nav-glyph" aria-hidden="true">{{ item.glyph }}</span>
+                        <span>{{ item.label }}</span>
+                    </a>
+                {% endfor %}
+            </nav>
+        {% endif %}
+    </aside>
+
+    <div class="cos-shell__main">
+        <header class="cos-shell__topbar">
+            <div class="cos-shell__context">
+                <button
+                    class="cos-shell__menu"
+                    type="button"
+                    aria-controls="cos-workspace-navigation"
+                    aria-expanded="false"
+                    aria-label="Open navigation"
+                    data-workspace-shell-target="menuButton"
+                    data-action="click->workspace-shell#toggleSidebar"
+                >☰</button>
+
+                <div class="cos-shell__title-block">
+                    {% if shell.breadcrumbs is not empty %}
+                        <nav class="cos-shell__breadcrumbs" aria-label="Breadcrumb">
+                            {% for breadcrumb in shell.breadcrumbs %}
+                                {% if not loop.first %}<span aria-hidden="true">/</span>{% endif %}
+                                {% if breadcrumb.path %}
+                                    <a href="{{ breadcrumb.path }}">{{ breadcrumb.label }}</a>
+                                {% else %}
+                                    <span>{{ breadcrumb.label }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </nav>
+                    {% endif %}
+                    <h1 class="cos-shell__title">{{ shell.title }}</h1>
+                </div>
+            </div>
+
+            <div class="cos-shell__actions">
+                <button
+                    class="cos-shell__search-trigger"
+                    type="button"
+                    aria-haspopup="dialog"
+                    data-action="click->workspace-shell#openPalette"
+                >
+                    <span>Search workspace</span>
+                    <kbd>⌘K</kbd>
+                </button>
+
+                {% if shell.aiAvailable %}
+                    <button class="cos-shell__icon-button" type="button" aria-label="Open AI assistant">AI</button>
+                {% endif %}
+
+                <span
+                    class="cos-shell__connection"
+                    data-state="{{ shell.connectionState.value }}"
+                    title="Realtime connection state"
+                ><span>{{ shell.connectionState.value|capitalize }}</span></span>
+
+                <button class="cos-shell__icon-button" type="button" aria-label="Notifications">
+                    NT
+                    {% if shell.notificationCount > 0 %}
+                        <span class="cos-shell__counter">{{ shell.notificationCount > 99 ? '99+' : shell.notificationCount }}</span>
+                    {% endif %}
+                </button>
+
+                <button class="cos-shell__icon-button" type="button" aria-label="Activity Center">
+                    <span class="cos-shell__activity-label">AC</span>
+                    {% if shell.activityCount > 0 %}
+                        <span class="cos-shell__counter">{{ shell.activityCount > 99 ? '99+' : shell.activityCount }}</span>
+                    {% endif %}
+                </button>
+
+                <a class="cos-shell__profile" href="/cabinet">
+                    <span class="cos-shell__profile-mark" aria-hidden="true">{{ shell.userInitials }}</span>
+                    <span class="cos-shell__profile-copy">
+                        <strong>{{ shell.userLabel }}</strong>
+                        <small>{{ shell.tenantLabel }}</small>
+                    </span>
+                </a>
+            </div>
+        </header>
+
+        <main class="cos-shell__content">
+            {% block workspace_content %}{% endblock %}
+        </main>
+    </div>
+
+    <nav class="cos-shell__mobile-nav" aria-label="Mobile Workspace navigation">
+        {% for item in shell.primaryNavigation|slice(0, 4) %}
+            <a
+                class="{% if item.active %}is-active{% endif %}"
+                href="{{ item.path }}"
+                {% if item.active %}aria-current="page"{% endif %}
+            >{{ item.label }}</a>
+        {% endfor %}
+        <button
+            type="button"
+            aria-controls="cos-workspace-navigation"
+            data-action="click->workspace-shell#openSidebar"
+        >More</button>
+    </nav>
+
+    <div class="cos-command" hidden data-workspace-shell-target="palette">
+        <button
+            class="cos-command__backdrop"
+            type="button"
+            tabindex="-1"
+            aria-label="Close command palette"
+            data-action="click->workspace-shell#closePalette"
+        ></button>
+
+        <section class="cos-command__panel" role="dialog" aria-modal="true" aria-label="Global command palette">
+            <div class="cos-command__search">
+                <input
+                    class="cos-command__input"
+                    type="search"
+                    placeholder="Search entities and commands…"
+                    autocomplete="off"
+                    data-workspace-shell-target="paletteInput"
+                    data-action="input->workspace-shell#filterPalette"
+                >
+                <button class="cos-button cos-button--sm" type="button" data-action="click->workspace-shell#closePalette">Esc</button>
+            </div>
+
+            <div class="cos-command__list">
+                {% for command in shell.commands %}
+                    <a
+                        class="cos-command__item"
+                        href="{{ command.path }}"
+                        data-workspace-shell-target="commandItem"
+                        data-command-label="{{ command.label }}"
+                        data-command-kind="{{ command.kind }}"
+                    >
+                        <span>{{ command.label }}</span>
+                        <small>{{ command.hint ?? command.kind }}</small>
+                    </a>
+                {% endfor %}
+
+                <p class="cos-command__empty" hidden data-workspace-shell-target="empty">No matching command.</p>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
