@@ -63,9 +63,13 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
         return str_starts_with($path,'/cabinet')
             || str_starts_with($path,'/workspace')
             || str_starts_with($path,'/sales')
+            || str_starts_with($path,'/client-case')
             || str_starts_with($path,'/cos/architecture')
-            || str_starts_with($path,'/admin/diagnostics')
-            || str_starts_with($path,'/admin/content')
+            || str_starts_with($path,'/cos/control-center')
+            || str_starts_with($path,'/cos/action')
+            || str_starts_with($path,'/cos/approval')
+            || str_starts_with($path,'/admin')
+            || preg_match('#^/property/(?:manage|listing|submissions|submission|presentationShare)(?:/|$)#',$path)===1
             || str_starts_with($path,'/diagnostics/')
             || str_starts_with($path,'/spatial')
             || str_starts_with($path,'/dev');
