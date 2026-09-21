@@ -82,6 +82,31 @@ while IFS= read -r container_id; do
   "${DOCKER[@]}" rm -f "$container_id"
 done < <("${DOCKER[@]}" ps --filter "publish=$COS_HTTP_PORT" --format '{{.ID}}')
 
+# Keep the public HTTP socket alive across application deployments.
+# Nginx uses Docker DNS with dynamic upstream resolution, so PHP/Mercure can
+# be replaced behind it without dropping 127.0.0.1:8081.
+NGINX_ID="$("${COMPOSE[@]}" ps -q nginx 2>/dev/null || true)"
+NGINX_HOT_RELOAD=0
+if [[ -n "$NGINX_ID" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Running}}' "$NGINX_ID" 2>/dev/null || true)" == "true" ]]; then
+  echo "Hot-reloading canonical nginx without dropping 127.0.0.1:$COS_HTTP_PORT."
+  "${DOCKER[@]}" exec "$NGINX_ID" cp /etc/nginx/conf.d/default.conf /tmp/default.conf.deploy-backup
+  "${DOCKER[@]}" cp docker/symfony/nginx/default.conf "$NGINX_ID":/etc/nginx/conf.d/default.conf
+
+  if ! "${DOCKER[@]}" exec "$NGINX_ID" nginx -t; then
+    "${DOCKER[@]}" exec "$NGINX_ID" cp /tmp/default.conf.deploy-backup /etc/nginx/conf.d/default.conf || true
+    echo "Canonical nginx hot-reload configuration validation failed." >&2
+    exit 33
+  fi
+
+  if [[ -d public/build ]]; then
+    "${DOCKER[@]}" exec "$NGINX_ID" mkdir -p /var/www/html/symfony/public/build
+    "${DOCKER[@]}" cp public/build/. "$NGINX_ID":/var/www/html/symfony/public/build/
+  fi
+
+  "${DOCKER[@]}" exec "$NGINX_ID" nginx -s reload
+  NGINX_HOT_RELOAD=1
+fi
+
 "${COMPOSE[@]}" up -d mysql redis mercure
 
 for attempt in $(seq 1 30); do
@@ -108,7 +133,50 @@ fi
 
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:schema:migrate
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
-"${COMPOSE[@]}" up -d --remove-orphans
+
+mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)for attempt in $(seq 1 30); do
+  if curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
+    break
+  fi
+  sleep 2
+done
+
+if ! curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
+  cat /tmp/cos-health.json >&2 2>/dev/null || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mercure mysql redis >&2 || true
+  exit 31
+fi
+
+if ! "${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke; then
+  echo "Architecture Graph runtime smoke failed." >&2
+  exit 30
+fi
+"${COMPOSE[@]}" ps
+printf 'COS Symfony deployment completed successfully.\n'
+)
+if (( ${#RUNTIME_SERVICES[@]} > 0 )); then
+  "${COMPOSE[@]}" up -d --no-deps --remove-orphans "${RUNTIME_SERVICES[@]}"
+fi
+
+for attempt in $(seq 1 30); do
+  php_id="$("${COMPOSE[@]}" ps -q php)"
+  if [[ -n "$php_id" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$php_id" 2>/dev/null || true)" == "healthy" ]]; then
+    break
+  fi
+  sleep 2
+done
+
+php_id="$("${COMPOSE[@]}" ps -q php)"
+if [[ -z "$php_id" ]] || [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$php_id" 2>/dev/null || true)" != "healthy" ]]; then
+  echo "Symfony PHP failed readiness during rolling deployment." >&2
+  "${COMPOSE[@]}" logs --no-color --tail=200 php >&2 || true
+  exit 34
+fi
+
+if [[ "$NGINX_HOT_RELOAD" -ne 1 ]]; then
+  echo "No running canonical nginx found; starting a fresh HTTP runtime."
+  "${COMPOSE[@]}" up -d --no-deps nginx
+fi
 
 for attempt in $(seq 1 30); do
   if curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
