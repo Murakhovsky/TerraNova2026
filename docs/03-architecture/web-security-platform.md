@@ -12,7 +12,7 @@ Wave 12.19 закриває security baseline Symfony Experience Platform.
 
 Ця хвиля не створює окрему систему авторизації. Вона перевіряє та фіксує єдиний security path через Symfony Security, TenantContext, Application permissions і серверні mutation boundaries.
 
-## CSRF
+## Захист від міжсайтової підробки запитів
 
 Session-backed mutations використовують `SessionCsrfValidator`.
 
@@ -43,7 +43,7 @@ Application / Domain policy
 
 Tenant id із browser payload не є authority.
 
-## Sessions
+## Сесії
 
 Canonical cookie:
 
@@ -75,7 +75,7 @@ HTML policy забороняє object embedding і framing COS, обмежує b
 
 `style-src 'unsafe-inline'` залишається тимчасовим compatibility allowance для поточного server-rendered UI. Послаблювати `script-src` до `unsafe-inline` заборонено.
 
-## Rate limits
+## Обмеження частоти
 
 Login використовує DB-backed `LoginRateLimiter`.
 
@@ -97,7 +97,7 @@ Rate-limit identity хешується перед persistence.
 
 Успішний login очищає bucket.
 
-## Uploads
+## Завантаження файлів
 
 Наявний upload pipeline перевіряє:
 
@@ -114,7 +114,7 @@ Business Documents зберігаються поза Web public root у `var/sto
 
 Malware/AV scanning не симулюється. Якщо з’явиться production requirement для зовнішніх документів, scanner інтегрується як окремий quarantine adapter перед publication.
 
-## Downloads
+## Видача файлів
 
 Private file content не має віддаватися прямим public path.
 
@@ -127,7 +127,7 @@ Private file content не має віддаватися прямим public path
 
 Authorization і tenant ownership перевіряються до виклику factory у Application/Web boundary.
 
-## Idempotency
+## Ідемпотентність
 
 Wave 12.19 не створює другу idempotency subsystem.
 
@@ -137,7 +137,7 @@ Atomic `claim()` лишається authority для duplicate mutation protecti
 
 HTTP transport повинен передавати стабільний idempotency key туди, де command contract цього вимагає.
 
-## Locking
+## Блокування
 
 Idempotency і locking вирішують різні задачі.
 
