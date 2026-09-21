@@ -21,6 +21,7 @@ return [
                 'diagnosticActionOutcomeHandler',
             ],
             'web.navigation' => ['diagnosticNavigationContributor'],
+            'web.search' => ['diagnosticNavigationContributor'],
             'web.commands' => ['diagnosticNavigationContributor'],
             'web.workspace' => ['diagnosticNavigationContributor'],
         ],
