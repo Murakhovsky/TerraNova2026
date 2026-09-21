@@ -65,7 +65,7 @@ final readonly class SalesReferenceController
         return $this->render('experience/sales/reference_leads.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Lead List', [
                 new ShellBreadcrumb('Workspace', '/admin'),
-                new ShellBreadcrumb('Sales', '/sales/reference/dashboard'),
+                new ShellBreadcrumb('Sales', '/sales/dashboard'),
                 new ShellBreadcrumb('Leads'),
             ]),
             'items' => is_array($data['items'] ?? null) ? $data['items'] : [],
@@ -100,8 +100,8 @@ final readonly class SalesReferenceController
         return $this->render('experience/sales/reference_lead_workspace.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Lead Workspace', [
                 new ShellBreadcrumb('Workspace', '/admin'),
-                new ShellBreadcrumb('Sales', '/sales/reference/dashboard'),
-                new ShellBreadcrumb('Leads', '/sales/reference/leads'),
+                new ShellBreadcrumb('Sales', '/sales/dashboard'),
+                new ShellBreadcrumb('Leads', '/sales/leads'),
                 new ShellBreadcrumb((string) ($lead['name'] ?? ('Lead #' . $leadId))),
             ]),
             'workspace' => $workspace,
