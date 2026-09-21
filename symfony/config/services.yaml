@@ -214,6 +214,19 @@ services:
   Platform\Storage\Contract\FileStorageInterface:
     alias: Infrastructure\Storage\LocalFileStorage
 
+  Infrastructure\Platform\Persistence\MySql\FeatureFlag\MysqlFeatureFlagRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\FeatureFlag\Contract\FeatureFlagRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\FeatureFlag\MysqlFeatureFlagRepository
+
+  Platform\FeatureFlag\Service\FeatureFlagResolver: ~
+
+  App\Web\Experience\Feature\WebFeatureFlags:
+    arguments:
+      $defaultOrganizationId: '%env(COS_ORGANIZATION_ID)%'
+
   # Wave 10 — Platform Documents runtime
   Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentsRepository:
     arguments:
