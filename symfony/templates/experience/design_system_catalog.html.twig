@@ -27,6 +27,8 @@
 
     {% include 'experience/_style_lab_switcher.html.twig' with {'style': 'origin-a'} only %}
 
+    {% include 'experience/_ui_catalog_playground.html.twig' with {'uiCatalog': uiCatalog|default({})} only %}
+
     <section class="cos-ui-catalog__section" aria-labelledby="style-lab-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="style-lab-heading">PHASE 2 Style Lab</h2>

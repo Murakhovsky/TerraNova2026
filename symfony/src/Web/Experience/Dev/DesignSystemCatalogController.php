@@ -17,6 +17,7 @@ final readonly class DesignSystemCatalogController
         private Environment $twig,
         private FormFactoryInterface $forms,
         private DataGridCatalogDemo $dataGrid,
+        private UiCatalogRegistry $uiCatalog,
     ) {
     }
 
@@ -32,6 +33,11 @@ final readonly class DesignSystemCatalogController
                     'Email: Enter a valid email address.',
                 ],
                 'dataGridDemo' => $this->dataGrid->build($request),
+                'uiCatalog' => [
+                    'groups' => $this->uiCatalog->grouped(),
+                    'categories' => $this->uiCatalog->categories(),
+                    'stats' => $this->uiCatalog->stats(),
+                ],
             ]),
             Response::HTTP_OK,
             [
