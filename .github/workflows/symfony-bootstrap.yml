@@ -34,6 +34,8 @@ on:
       - 'tests/architecture/web_experience_wave12_search.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_style_lab.php'
+      - 'tests/architecture/web_experience_geometry.php'
+      - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
       - 'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md'
@@ -71,6 +73,8 @@ on:
       - 'tests/architecture/web_experience_wave12_search.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_style_lab.php'
+      - 'tests/architecture/web_experience_geometry.php'
+      - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
       - 'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md'
@@ -182,6 +186,10 @@ jobs:
 
       - name: PHASE 2 Style Lab gate
         run: php tests/architecture/web_experience_style_lab.php
+
+      - name: PHASE 4 Geometry contract gate
+        run: php tests/architecture/web_experience_geometry.php
+
 
 
 
