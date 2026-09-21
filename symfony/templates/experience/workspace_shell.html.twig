@@ -6,6 +6,7 @@
     data-controller="workspace-shell"
     data-workspace-shell-search-url-value="{{ path('cos_web_global_search') }}"
     data-workspace-shell-activity-url-value="{{ path('cos_web_activity_center') }}"
+    data-workspace-shell-ai-url-value="{{ path('cos_web_ai_panel') }}"
     data-action="cos:realtime-update->workspace-shell#refreshActivityCenter"
 >
     <aside
@@ -106,7 +107,15 @@
                 </button>
 
                 {% if shell.aiAvailable %}
-                    <button class="cos-shell__icon-button" type="button" aria-label="Open AI assistant">AI</button>
+                    <button
+                        class="cos-shell__icon-button"
+                        type="button"
+                        aria-label="Open AI assistant"
+                        aria-controls="cos-ai-panel"
+                        aria-expanded="false"
+                        data-workspace-shell-target="aiButton"
+                        data-action="click->workspace-shell#openAI"
+                    >AI</button>
                 {% endif %}
 
                 <span
@@ -181,6 +190,25 @@
     </nav>
 
     <div id="cos-async-operation-signal" hidden aria-hidden="true"></div>
+
+    <div class="cos-ai-panel" id="cos-ai-panel" hidden data-workspace-shell-target="aiPanel">
+        <button
+            class="cos-ai-panel__backdrop"
+            type="button"
+            tabindex="-1"
+            aria-label="Close AI assistant"
+            data-action="click->workspace-shell#closeAI"
+        ></button>
+        <aside class="cos-ai-panel__panel" role="dialog" aria-modal="true" aria-label="COS AI">
+            <turbo-frame
+                id="cos-ai-panel-frame"
+                data-workspace-shell-target="aiFrame"
+                data-action="turbo:frame-load->workspace-shell#aiLoaded"
+            >
+                <div class="cos-ai-panel__loading" aria-live="polite">Loading COS AI…</div>
+            </turbo-frame>
+        </aside>
+    </div>
 
     <div
         class="cos-activity-center"

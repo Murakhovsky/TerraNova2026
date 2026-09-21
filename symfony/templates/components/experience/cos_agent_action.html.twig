@@ -1,0 +1,66 @@
+<article class="cos-agent-action" data-stage="{{ action.stage }}">
+    <header class="cos-agent-action__header">
+        <div>
+            <span class="cos-agent-action__stage">{{ action.stage }}</span>
+            <strong>{{ action.action.type }}</strong>
+        </div>
+        <small>{{ action.action.status.value }}</small>
+    </header>
+
+    {% if action.action.targetType and action.action.targetId %}
+        <code class="cos-agent-action__entity">{{ action.action.targetType }}:{{ action.action.targetId }}</code>
+    {% endif %}
+
+    {% if action.action.parameters is not empty %}
+        <details class="cos-agent-action__parameters">
+            <summary>Parameters</summary>
+            <pre>{{ action.action.parameters|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+        </details>
+    {% endif %}
+
+    {% if action.uiActions is not empty %}
+        <div class="cos-agent-action__controls">
+            {% for uiAction in action.uiActions %}
+                {% set confirmation = uiAction.confirmationContract() %}
+                {% set entityKey = action.action.targetType and action.action.targetId
+                    ? action.action.targetType ~ ':' ~ action.action.targetId
+                    : '' %}
+
+                <div
+                    data-controller="ai-action"
+                    data-ai-action-action-id-value="{{ uiAction.id }}"
+                    data-ai-action-resource-id-value="{{ uiAction.resourceId ?: '' }}"
+                    data-ai-action-entity-key-value="{{ entityKey }}"
+                    data-action="cos:confirm->ai-action#confirmed"
+                >
+                    {% if not uiAction.enabled %}
+                        <button class="cos-button cos-button--ghost" type="button" disabled title="{{ uiAction.disabledReason }}">
+                            {{ uiAction.label }}
+                        </button>
+                    {% elseif confirmation %}
+                        <twig:CosConfirm
+                            id="ai-confirm-{{ uiAction.id|replace({'.':'-','_':'-'}) }}"
+                            title="Confirm Agent action"
+                            message="{{ confirmation.message }}"
+                            triggerLabel="{{ uiAction.label }}"
+                            confirmLabel="{{ confirmation.confirmLabel }}"
+                            cancelLabel="{{ confirmation.cancelLabel }}"
+                            tone="{{ uiAction.dangerLevel >= 2 ? 'danger' : (uiAction.dangerLevel == 1 ? 'warning' : 'primary') }}"
+                            :stepUp="confirmation.stepUp"
+                        />
+                    {% else %}
+                        <button
+                            class="cos-button cos-button--primary"
+                            type="button"
+                            data-action="click->ai-action#invoke"
+                        >{{ uiAction.label }}</button>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="cos-agent-action__note">
+            Lifecycle state is visible, but no currently permitted AI-proposal action is available.
+        </p>
+    {% endif %}
+</article>

@@ -1,0 +1,75 @@
+<turbo-frame id="cos-ai-panel-frame">
+    <div class="cos-ai-panel__body">
+        <header class="cos-ai-panel__header">
+            <div>
+                <p class="cos-ai-panel__eyebrow">COS AI</p>
+                <h2>Agent UI</h2>
+            </div>
+            <button
+                class="cos-shell__icon-button"
+                type="button"
+                aria-label="Close AI panel"
+                data-action="click->workspace-shell#closeAI"
+            >×</button>
+        </header>
+
+        {% if uiContext %}
+            <section class="cos-ai-context-card">
+                <div class="cos-ai-context-card__head">
+                    <div>
+                        <small>Headless UIContext</small>
+                        <strong>{{ uiContext.workspace }}</strong>
+                    </div>
+                    {% if uiContext.entity %}<code>{{ uiContext.entity.key() }}</code>{% endif %}
+                </div>
+
+                <dl class="cos-ai-context-card__facts">
+                    <div>
+                        <dt>Available actions</dt>
+                        <dd>{{ uiContext.availableActions|length }}</dd>
+                    </div>
+                    <div>
+                        <dt>Selected entities</dt>
+                        <dd>{{ uiContext.selectedEntities|length }}</dd>
+                    </div>
+                    <div>
+                        <dt>Capabilities</dt>
+                        <dd>{{ uiContext.capabilities|join(', ') }}</dd>
+                    </div>
+                </dl>
+
+                {% if uiContext.availableActions is not empty %}
+                    <ul class="cos-ai-context-card__actions">
+                        {% for action in uiContext.availableActions %}
+                            <li>
+                                <code>{{ action.id }}</code>
+                                <span>{{ action.enabled ? 'available' : 'unavailable' }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </section>
+        {% elseif contextError %}
+            <div class="cos-agent-warning" role="status">{{ contextError }}</div>
+        {% else %}
+            <p class="cos-ai-panel__hint">
+                No Workspace context is active. Showing recent organization Agent runs.
+            </p>
+        {% endif %}
+
+        <section class="cos-ai-panel__runs">
+            <div class="cos-ai-panel__section-head">
+                <h3>Agent runs</h3>
+                {% if entity %}<small>Filtered by {{ entity.key() }}</small>{% endif %}
+            </div>
+
+            {% for run in runs %}
+                <twig:CosAgentRun :run="run" />
+            {% else %}
+                <div class="cos-ai-panel__empty">
+                    No Agent runs are available for this context.
+                </div>
+            {% endfor %}
+        </section>
+    </div>
+</turbo-frame>

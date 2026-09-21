@@ -28,6 +28,11 @@ cos_web_activity_center:
   controller: App\Web\Experience\Async\ActivityCenterController
   methods: [GET, HEAD]
 
+cos_web_ai_panel:
+  path: /workspace/ai
+  controller: App\Web\Experience\AI\AIPanelController
+  methods: [GET, HEAD]
+
 cos_web_async_operation_retry:
   path: /workspace/activity-center/retry/{id}
   controller: App\Web\Experience\Async\RetryAsyncOperationController

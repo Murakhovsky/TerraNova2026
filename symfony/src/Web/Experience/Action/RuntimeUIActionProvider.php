@@ -89,7 +89,7 @@ final readonly class RuntimeUIActionProvider
             || strtoupper((string) $action->approvalStatus) !== 'PENDING'
         ) {
             return [new UIAction(
-                id: 'runtime.action.' . $action->id,
+                id: 'runtime.action.a' . $action->id,
                 label: 'Awaiting approval · ' . $this->label($action->type),
                 intent: UIActionIntent::View,
                 icon: 'clock',
