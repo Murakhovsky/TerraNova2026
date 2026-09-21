@@ -15,6 +15,10 @@ if (\App\Web\Experience\Appearance\AppearanceTheme::Dark->value !== 'dark') {
     throw new RuntimeException('Canonical dark theme contract drifted.');
 }
 
+if (\App\Web\Experience\Appearance\AppearanceTheme::Origin->value !== 'origin') {
+    throw new RuntimeException('Canonical Origin theme contract drifted.');
+}
+
 if (\App\Web\Experience\Appearance\AppearanceDensity::Comfortable->value !== 'comfortable') {
     throw new RuntimeException('Canonical comfortable density contract drifted.');
 }
@@ -46,7 +50,9 @@ foreach ([
 }
 
 foreach ([
+    'html[data-cos-theme="light"]',
     'html[data-cos-theme="dark"]',
+    'html[data-cos-theme="origin"]',
     'html[data-cos-density="compact"]',
     'html[data-cos-density="comfortable"]',
 ] as $selector) {
@@ -76,7 +82,7 @@ foreach ($iterator as $file) {
 
 $base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
 foreach ([
-    'data-cos-theme="light"',
+    'data-cos-theme="origin"',
     'data-cos-density="comfortable"',
     '{% block meta %}',
 ] as $marker) {
