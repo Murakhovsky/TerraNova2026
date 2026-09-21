@@ -13,6 +13,7 @@ function expectWave1224(bool $condition, string $message): void
 $subscriber = file_get_contents($root . '/symfony/src/Infrastructure/Observability/HttpExecutionContextSubscriber.php');
 $controller = file_get_contents($root . '/symfony/src/Web/Observability/WebTelemetryController.php');
 $routes = file_get_contents($root . '/symfony/config/routes.yaml');
+$services = file_get_contents($root . '/symfony/config/services.yaml');
 $rateLimit = file_get_contents($root . '/symfony/src/Security/RequestRateLimitSubscriber.php');
 $publicRuntime = file_get_contents($root . '/frontend/core/telemetry.js');
 $symfonyRuntime = file_get_contents($root . '/symfony/assets/web_telemetry.js');
@@ -24,6 +25,8 @@ expectWave1224(str_contains($subscriber, 'cos.web.http.duration_ms'), 'HTTP dura
 expectWave1224(str_contains($subscriber, 'cos.web.http.errors'), 'HTTP error metric is missing.');
 expectWave1224(str_contains($controller, 'cos.web.telemetry.events'), 'Browser telemetry must use canonical metrics.');
 expectWave1224(str_contains($routes, 'path: /telemetry/web'), 'Browser telemetry route is missing.');
+expectWave1224(str_contains($services, 'App\\Web\\Observability\\WebTelemetryController:'), 'Browser telemetry controller service wiring is missing.');
+expectWave1224(str_contains($services, "tags: ['controller.service_arguments']"), 'Browser telemetry controller must be exposed as a Symfony controller service.');
 expectWave1224(str_contains($rateLimit, "['web.telemetry', 180, 60]"), 'Browser telemetry must be rate limited.');
 expectWave1224(str_contains($publicRuntime, "addEventListener('error'"), 'Public runtime must capture browser errors.');
 expectWave1224(str_contains($publicRuntime, "addEventListener('unhandledrejection'"), 'Public runtime must capture unhandled rejections.');
