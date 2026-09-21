@@ -1,0 +1,162 @@
+{% set catalogGroups = uiCatalog.groups|default({}) %}
+{% set catalogCategories = uiCatalog.categories|default([]) %}
+{% set catalogStats = uiCatalog.stats|default({'components': 0, 'categories': 0}) %}
+
+<section
+    class="cos-ui-catalog__section cos-ui-playground"
+    id="component-playground"
+    aria-labelledby="component-playground-heading"
+    data-controller="ui-catalog"
+>
+    <div class="cos-ui-catalog__section-head">
+        <div>
+            <p class="cos-ui-catalog__kicker">Wave 12.22</p>
+            <h2 id="component-playground-heading">Internal component playground</h2>
+            <p>
+                Canonical inventory: {{ catalogStats.components }} components across {{ catalogStats.categories }} categories.
+                New Cos* components must be registered here.
+            </p>
+        </div>
+        <div class="cos-ui-playground__stats" aria-label="Catalog statistics">
+            <span><strong data-ui-catalog-target="count">{{ catalogStats.components }}</strong> visible</span>
+            <span>{{ catalogStats.stable|default(0) }} stable</span>
+        </div>
+    </div>
+
+    <div class="cos-ui-playground__toolbar" role="search" aria-label="Filter UI components">
+        <label class="cos-ui-playground__search">
+            <span>Search components</span>
+            <input
+                class="cos-input"
+                type="search"
+                placeholder="Button, agent, loading…"
+                autocomplete="off"
+                data-ui-catalog-target="query"
+                data-action="input->ui-catalog#filter"
+            >
+        </label>
+        <label class="cos-ui-playground__category">
+            <span>Category</span>
+            <select
+                class="cos-select"
+                data-ui-catalog-target="category"
+                data-action="change->ui-catalog#filter"
+            >
+                <option value="all">All categories</option>
+                {% for category in catalogCategories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="cos-button cos-button--ghost" type="button" data-action="ui-catalog#clear">Clear</button>
+    </div>
+
+    <div class="cos-ui-playground__groups">
+        {% for category, entries in catalogGroups %}
+            <section
+                class="cos-ui-playground__group"
+                aria-labelledby="catalog-group-{{ category|lower }}"
+                data-ui-catalog-target="group"
+            >
+                <div class="cos-ui-playground__group-head">
+                    <h3 id="catalog-group-{{ category|lower }}">{{ category }}</h3>
+                    <span>{{ entries|length }}</span>
+                </div>
+                <div class="cos-ui-playground__inventory">
+                    {% for entry in entries %}
+                        <article
+                            class="cos-ui-playground__entry"
+                            data-ui-catalog-target="entry"
+                            data-catalog-category="{{ entry.category }}"
+                            data-catalog-search="{{ entry.search }}"
+                        >
+                            <div class="cos-ui-playground__entry-head">
+                                <code>{{ entry.name }}</code>
+                                <span class="cos-ui-playground__maturity cos-ui-playground__maturity--{{ entry.maturity }}">{{ entry.maturity }}</span>
+                            </div>
+                            <p>{{ entry.description }}</p>
+                            <div class="cos-ui-playground__states" aria-label="Supported reference states">
+                                {% for state in entry.states %}
+                                    <span>{{ state }}</span>
+                                {% endfor %}
+                            </div>
+                            <a class="cos-ui-playground__reference" href="{{ entry.reference }}">Open reference</a>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+
+    <div class="cos-empty-state" data-ui-catalog-target="empty" hidden>
+        <strong>No components match this filter</strong>
+        <p>Change search text or category.</p>
+    </div>
+</section>
+
+<section class="cos-ui-catalog__section" id="catalog-foundation-primitives" aria-labelledby="catalog-foundation-heading">
+    <div class="cos-ui-catalog__section-head">
+        <h2 id="catalog-foundation-heading">Foundation specimens</h2>
+        <p>Small primitives rendered in canonical theme and density contexts.</p>
+    </div>
+    <div class="cos-ui-catalog__surface">
+        <div class="cos-ui-catalog__row">
+            <twig:CosIcon name="client" />
+            <twig:CosIcon name="sales" />
+            <twig:CosAvatar initials="YM" name="Yurii Murakhovskyi" size="sm" />
+            <twig:CosAvatar initials="COS" name="COS" />
+            <twig:CosAvatar initials="AI" name="Agent" size="lg" />
+        </div>
+        <twig:CosDivider />
+    </div>
+</section>
+
+<section class="cos-ui-catalog__section" id="catalog-feedback-primitives" aria-labelledby="catalog-feedback-heading">
+    <div class="cos-ui-catalog__section-head">
+        <h2 id="catalog-feedback-heading">Feedback specimens</h2>
+        <p>Loading, progress and semantic feedback states must be visible before a product page needs them.</p>
+    </div>
+    <div class="cos-ui-catalog__grid">
+        <twig:CosAlert title="Information" copy="A neutral operational notice." tone="info" />
+        <twig:CosAlert title="Completed" copy="The operation completed successfully." tone="positive" />
+        <twig:CosAlert title="Attention" copy="Human review is required." tone="warning" />
+        <twig:CosAlert title="Blocked" copy="The operation cannot continue." tone="danger" />
+        <section class="cos-card">
+            <twig:CosProgress :value="64" :max="100" label="Processing" />
+        </section>
+        <section class="cos-card">
+            <div class="cos-ui-catalog__row">
+                <twig:CosSpinner label="Loading data" />
+                <twig:CosSkeleton />
+                <twig:CosSkeleton shape="circle" />
+                <twig:CosSkeleton shape="block" />
+            </div>
+        </section>
+    </div>
+</section>
+
+<section class="cos-ui-catalog__section" id="catalog-form-primitives" aria-labelledby="catalog-form-primitives-heading">
+    <div class="cos-ui-catalog__section-head">
+        <h2 id="catalog-form-primitives-heading">Form control specimens</h2>
+        <p>Native form semantics remain visible across checked, disabled and multiline states.</p>
+    </div>
+    <div class="cos-ui-catalog__surface">
+        <div class="cos-form__grid">
+            <twig:CosTextarea name="catalog_notes" label="Notes" value="Reference content" help="Multiline field" />
+            <div class="cos-ui-catalog__row">
+                <twig:CosCheckbox name="catalog_check" label="Unchecked" />
+                <twig:CosCheckbox name="catalog_checked" label="Checked" checked />
+                <twig:CosCheckbox name="catalog_disabled" label="Disabled" disabled />
+            </div>
+            <div class="cos-ui-catalog__row">
+                <twig:CosRadio name="catalog_radio" label="Option A" value="a" checked />
+                <twig:CosRadio name="catalog_radio" label="Option B" value="b" />
+            </div>
+            <div class="cos-ui-catalog__row">
+                <twig:CosSwitch name="catalog_switch" label="Off" />
+                <twig:CosSwitch name="catalog_switch_on" label="On" checked />
+                <twig:CosSwitch name="catalog_switch_disabled" label="Disabled" disabled />
+            </div>
+        </div>
+    </div>
+</section>
