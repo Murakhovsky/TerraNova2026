@@ -37,6 +37,20 @@ Production Twig surfaces:
 - `symfony/templates/experience/sales/leads.html.twig`;
 - `symfony/templates/experience/sales/lead_workspace.html.twig`.
 
+## Збереження операційної поведінки
+
+Cutover не перетворює Lead Inbox на read-only surface.
+
+Канонічний Twig/Stimulus шар зберігає:
+
+- зміну Lead status через `PATCH /api/v1/sales/leads/{id}`;
+- призначення owner через той самий canonical update endpoint;
+- Lead → Opportunity через `POST /api/v1/sales/leads/{id}/opportunity`;
+- створення follow-up через `POST /api/v1/sales/leads/{id}/followups`;
+- CSRF та idempotency headers.
+
+Список доступних owner читається через `SalesAdminQuery('team.users')` у QueryBus, а не через пряму залежність Web controller на Sales admin service.
+
 ## Що не змінюється
 
 Wave 12.26 не мігрує решту Sales UI автоматично.
