@@ -1495,6 +1495,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Observability\WebTelemetryController:
+    public: true
+    tags: ['controller.service_arguments']
+
   Domains\Content\Application\Service\PublicPageCatalog: ~
 
   App\Web\Seo\SitemapController:
