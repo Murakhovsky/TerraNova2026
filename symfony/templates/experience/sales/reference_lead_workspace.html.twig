@@ -2,7 +2,7 @@
 {% block title %}Lead Workspace | COS{% endblock %}
 {% block workspace_content %}
 <twig:CosWorkspace :workspace="workspace">
-    <section class="cos-business-surface" data-sales-reference="lead-workspace">
+    <section class="cos-primitive-stack" data-sales-reference="lead-workspace">
         <twig:CosEntityHeader
             eyebrow="Lead Workspace"
             title="{{ lead.name ?? 'Lead #' ~ lead.id }}"
@@ -17,7 +17,7 @@
             ]"
         />
 
-        <div class="cos-business-grid">
+        <div class="cos-primitive-stack">
             <section class="cos-card">
                 <p class="cos-card__eyebrow">Contact</p>
                 <h2>Контактні дані</h2>
