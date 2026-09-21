@@ -397,6 +397,20 @@ services:
   Domains\Growth\Application\Contract\GrowthApplicationBoundary:
     alias: Domains\Growth\Application\Service\GrowthWorkflowService
 
+  Domains\Growth\Domain\IcpMatcher: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthIntelligenceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthIntelligenceRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthIntelligenceRepository
+
+  Domains\Growth\Application\Service\GrowthIntelligenceService: ~
+
+  Domains\Growth\Application\Contract\GrowthIntelligenceBoundary:
+    alias: Domains\Growth\Application\Service\GrowthIntelligenceService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

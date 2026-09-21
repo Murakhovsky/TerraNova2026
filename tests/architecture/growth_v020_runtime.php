@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.2.0','Growth V0.2 manifest version must be 0.2.0.');
-$assert(($manifest['schema_version']??null)==='0.2.0','Growth V0.2 schema version must be 0.2.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.2.0','>='),'Growth manifest must remain V0.2+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.2.0','>='),'Growth schema must remain V0.2+.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.2 must remain disabled by default before delivery cutover.');
 $assert(($manifest['contributions']['runtime_module_service']??null)==='growthDomainModule','Growth runtime module contribution is missing.');
 $migration='app/migrations/20260921_000067_growth_v020_runtime.sql';

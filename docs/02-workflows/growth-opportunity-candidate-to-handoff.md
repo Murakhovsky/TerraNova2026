@@ -160,6 +160,28 @@ Unknowns / counter evidence
 Qualification decision
 ```
 
+## Account Intelligence перед Opportunity
+
+V0.3 додає upstream intelligence layer:
+
+```text
+ICP revision
+   ↓
+GrowthAccount
+   ↓
+AccountSnapshot (immutable evidence)
+   ↓
+ICP Match
+   ↓
+Account Brief
+   ↓
+Signal / OpportunityCandidate
+```
+
+Кожний ICP Match фіксує конкретні `profile_id + profile_revision + model_version + evidence`. Активація нової revision архівує попередню active revision того самого ICP. Це дозволяє відтворити історичне рішення замість перерахунку минулого поточними правилами.
+
+Account enrichment зберігається append-only snapshots. Нові дані не перезаписують попередні факти заднім числом.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -179,9 +201,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.2
+## Статус V0.3
 
-`process_state: to-be` поки навмисний. V0.2 уже реалізує Domain model, lifecycle, tenant-scoped persistence, idempotent application mutations, Events та Audit. External signal collectors, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.3 поверх lifecycle runtime додає versioned ICP, Growth Account identity, immutable AccountSnapshot, evidence-backed ICP Match і Account Brief. Contacts/Buying Committee, external signal collectors, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 

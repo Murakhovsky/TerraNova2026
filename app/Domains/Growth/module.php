@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.2.0',
-    'schema_version' => '0.2.0',
+    'version' => '0.3.0',
+    'schema_version' => '0.3.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
     'icon' => 'radar',
@@ -17,8 +17,16 @@ return [
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
         'extension_services' => [],
-        'migration_files' => ['app/migrations/20260921_000067_growth_v020_runtime.sql'],
+        'migration_files' => [
+            'app/migrations/20260921_000067_growth_v020_runtime.sql',
+            'app/migrations/20260921_000068_growth_v030_account_intelligence.sql',
+        ],
         'capabilities' => [
+            'growth.icp.manage',
+            'growth.account.discover',
+            'growth.account.enrich',
+            'growth.account.score',
+            'growth.account.brief',
             'growth.signal.detect',
             'growth.candidate.research',
             'growth.candidate.score',

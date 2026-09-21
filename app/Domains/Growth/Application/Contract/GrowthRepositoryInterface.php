@@ -21,4 +21,10 @@ interface GrowthRepositoryInterface
 
     /** @return array<string,mixed>|null */
     public function viewCandidate(string $organizationId, string $candidateId): ?array;
+
+    /** @return list<array<string,mixed>> */
+    public function listSignalsBySubject(string $organizationId, string $subjectType, string $subjectId, int $limit = 20): array;
+
+    /** @return list<array<string,mixed>> */
+    public function listCandidatesBySubject(string $organizationId, string $subjectType, string $subjectId, int $limit = 20): array;
 }

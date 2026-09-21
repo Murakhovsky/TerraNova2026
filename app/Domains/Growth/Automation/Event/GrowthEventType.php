@@ -5,6 +5,13 @@ namespace Domains\Growth\Automation\Event;
 
 final class GrowthEventType
 {
+    public const ICP_DRAFTED = 'growth.icp.drafted';
+    public const ICP_REVISED = 'growth.icp.revised';
+    public const ICP_ACTIVATED = 'growth.icp.activated';
+    public const ACCOUNT_DISCOVERED = 'growth.account.discovered';
+    public const ACCOUNT_SNAPSHOT_CAPTURED = 'growth.account.snapshot_captured';
+    public const ACCOUNT_ICP_SCORED = 'growth.account.icp_scored';
+
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
     public const CANDIDATE_RESEARCHED = 'growth.candidate.researched';
@@ -18,6 +25,12 @@ final class GrowthEventType
     public static function values(): array
     {
         return [
+            self::ICP_DRAFTED,
+            self::ICP_REVISED,
+            self::ICP_ACTIVATED,
+            self::ACCOUNT_DISCOVERED,
+            self::ACCOUNT_SNAPSHOT_CAPTURED,
+            self::ACCOUNT_ICP_SCORED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

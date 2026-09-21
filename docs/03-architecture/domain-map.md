@@ -47,7 +47,7 @@ Bootstrap: корінь композиції
 повністю інтегрований домен середовища виконання
 ```
 
-Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.2.0` має installable contract і власний persistence/application runtime, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
+Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.3.0` має installable contract, persistence/application runtime та ICP/Account Intelligence, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
 
 Identity, Content і Spatial фізично відокремлені як обмежені області відповідальності (bounded areas), але не зобов’язані мати той самий контракт встановлюваного модуля.
 
@@ -59,7 +59,7 @@ Identity, Content і Spatial фізично відокремлені як обм
 
 ## Growth: пошук бізнес-можливостей
 
-Growth `0.2.0` володіє раннім lifecycle бізнес-можливості до моменту explicit handoff:
+Growth `0.3.0` володіє ICP, Account Intelligence та раннім lifecycle бізнес-можливості до моменту explicit handoff:
 
 ```text
 Signal

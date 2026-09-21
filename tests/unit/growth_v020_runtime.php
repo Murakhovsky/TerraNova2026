@@ -39,8 +39,18 @@ $candidate=OpportunityCandidate::restore(
 $candidate->prepareHandoff('Potential implementation','sales_diagnostic','research buying committee');
 expectGrowthV020($candidate->status()===OpportunityCandidateStatus::ReadyForHandoff,'Restored Growth candidate could not continue lifecycle.');
 
-expectGrowthV020(count(GrowthEventType::values())===8,'Growth V0.2 must expose eight canonical events.');
-expectGrowthV020(count(array_unique(GrowthEventType::values()))===8,'Growth event types must be unique.');
+$v020Events=[
+    GrowthEventType::SIGNAL_DETECTED,
+    GrowthEventType::CANDIDATE_DETECTED,
+    GrowthEventType::CANDIDATE_RESEARCHED,
+    GrowthEventType::CANDIDATE_SCORED,
+    GrowthEventType::CANDIDATE_QUALIFIED,
+    GrowthEventType::CANDIDATE_MONITORING_STARTED,
+    GrowthEventType::CANDIDATE_DISQUALIFIED,
+    GrowthEventType::HANDOFF_PREPARED,
+];
+expectGrowthV020(count(array_unique(GrowthEventType::values()))===count(GrowthEventType::values()),'Growth event types must remain unique.');
+foreach($v020Events as $type)expectGrowthV020(in_array($type,GrowthEventType::values(),true),'Growth V0.2 event contract was removed: '.$type);
 $module=new GrowthDomainModule();
 expectGrowthV020($module->name()==='growth','Growth runtime module name mismatch.');
 foreach(GrowthEventType::values() as $type){

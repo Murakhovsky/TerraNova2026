@@ -126,6 +126,50 @@ final readonly class MysqlGrowthRepository implements GrowthRepositoryInterface
         return $row;
     }
 
+    /** @return list<array<string,mixed>> */
+    public function listSignalsBySubject(string $organizationId,string $subjectType,string $subjectId,int $limit=20): array
+    {
+        $limit=max(1,min(100,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT organization_id,signal_id,subject_type,subject_id,signal_type,facts_json,source_reference,
+                    confidence,occurred_at,detected_at,created_by,created_at
+             FROM tn_growth_signals
+             WHERE organization_id=:organization_id AND subject_type=:subject_type AND subject_id=:subject_id
+             ORDER BY detected_at DESC,signal_id DESC LIMIT '.$limit
+        );
+        $statement->execute([
+            'organization_id'=>$organizationId,'subject_type'=>$subjectType,'subject_id'=>$subjectId,
+        ]);
+        $rows=$statement->fetchAll(PDO::FETCH_ASSOC)?:[];
+        foreach($rows as &$row){
+            $row['facts']=$this->decodeObject((string)$row['facts_json']);
+            unset($row['facts_json']);
+            $row['confidence']=(float)$row['confidence'];
+        }
+        unset($row);
+        return $rows;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function listCandidatesBySubject(string $organizationId,string $subjectType,string $subjectId,int $limit=20): array
+    {
+        $limit=max(1,min(100,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT candidate_id FROM tn_growth_candidates
+             WHERE organization_id=:organization_id AND subject_type=:subject_type AND subject_id=:subject_id
+             ORDER BY updated_at DESC,candidate_id DESC LIMIT '.$limit
+        );
+        $statement->execute([
+            'organization_id'=>$organizationId,'subject_type'=>$subjectType,'subject_id'=>$subjectId,
+        ]);
+        $result=[];
+        foreach($statement->fetchAll(PDO::FETCH_COLUMN)?:[] as $candidateId){
+            $row=$this->viewCandidate($organizationId,(string)$candidateId);
+            if($row!==null)$result[]=$row;
+        }
+        return $result;
+    }
+
     /** @return array<string,mixed> */
     private function candidateParams(OpportunityCandidate $candidate,int $actorId,bool $includeCreated): array
     {

@@ -99,8 +99,21 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.2 runtime
+## V0.3 ICP + Account Intelligence
 
-V0.2 adds tenant-scoped MySQL persistence, operation receipts, row-locked lifecycle mutations, Domain Events, Audit and a canonical `GrowthApplicationBoundary` while keeping the module disabled by default.
+V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
-Still intentionally absent: external signal collectors, outbound campaigns, AI agents, cross-domain handoff acceptance, public API and Growth UI. Agents may assist the Domain; they are not allowed to become the Domain logic.
+The intelligence chain is:
+
+```text
+ICP
+→ GrowthAccount
+→ immutable AccountSnapshot
+→ deterministic ICP Match
+→ Account Brief
+→ OpportunityCandidate
+```
+
+Enrichment history is append-only at the snapshot level. A newer provider response does not silently rewrite what COS believed at an earlier decision point. ICP revisions are immutable business definitions; activating a new revision archives the previous active revision while historical matches keep their original `profile_revision` and scoring `model_version`.
+
+Still intentionally absent: contacts/buying committee, external signal collectors, outbound campaigns, AI agents, cross-domain handoff acceptance, public API and Growth UI.
