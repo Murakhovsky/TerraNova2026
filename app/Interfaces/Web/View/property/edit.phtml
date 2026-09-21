@@ -136,41 +136,40 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
 
 <main class="tn-page">
   <?php if (!$property): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h1>Об’єкт не знайдено</h1>
-      <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться в каталог.'); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">До каталогу</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'empty',
+        'title' => 'Об’єкт не знайдено',
+        'message' => $pageStatus ?: 'Перевірте посилання або поверніться в каталог.',
+        'action' => ['label' => 'До каталогу', 'href' => 'property/catalog'],
+    ]); ?>
   <?php else: ?>
-    <section class="tn-page-hero tn-page-hero--catalog">
-      <div>
-        <p class="tn-kicker">Редактор об’єкта</p>
-        <h1><?php echo $h($property['title']); ?></h1>
-        <p><?php echo $h($property['public_id']); ?> / <?php echo $h($property['type_name']); ?> / <?php echo $h($property['city']); ?></p>
-      </div>
-      <div class="tn-page-hero__meta">
-        <strong><?php echo $h($property['status']); ?></strong>
-        <span><?php echo count($images); ?> фото</span>
-        <div class="tn-page-hero__actions">
-          <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>" target="_blank" rel="noopener">Публічна картка</a>
-          <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" target="_blank" rel="noopener">Презентація об’єкта</a>
-          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>" target="_blank" rel="noopener">PDF клієнту</a>
-          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug'] . '?variant=partner'); ?>" target="_blank" rel="noopener">PDF партнеру</a>
-          <?php if ($groupPresentationUrl): ?>
-            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/presentation/' . $property['group_slug']); ?>" target="_blank" rel="noopener">Презентація групи</a>
-          <?php endif; ?>
-          <button class="tn-btn tn-btn--ghost" type="button" data-copy-value="<?php echo $h($publicPropertyUrl); ?>">Скопіювати посилання</button>
-        </div>
-      </div>
-    </section>
+    <?php
+      $headerActions = [
+          ['label' => 'Публічна картка', 'href' => 'property/show/' . (string) $property['slug'], 'variant' => 'primary', 'attributes' => ['target' => '_blank', 'rel' => 'noopener']],
+          ['label' => 'Презентація', 'href' => 'property/presentation/' . (string) $property['slug'], 'variant' => 'default', 'attributes' => ['target' => '_blank', 'rel' => 'noopener']],
+          ['label' => 'PDF клієнту', 'href' => 'property/pdf/' . (string) $property['slug'], 'variant' => 'ghost', 'attributes' => ['target' => '_blank', 'rel' => 'noopener']],
+          ['label' => 'PDF партнеру', 'href' => 'property/pdf/' . (string) $property['slug'] . '?variant=partner', 'variant' => 'ghost', 'attributes' => ['target' => '_blank', 'rel' => 'noopener']],
+      ];
+      if ($groupPresentationUrl) {
+          $headerActions[] = ['label' => 'Презентація групи', 'href' => 'property/presentation/' . (string) $property['group_slug'], 'variant' => 'ghost', 'attributes' => ['target' => '_blank', 'rel' => 'noopener']];
+      }
+      $headerActions[] = ['label' => 'Скопіювати посилання', 'variant' => 'ghost', 'attributes' => ['data-copy-value' => $publicPropertyUrl]];
+      $this->partial('components/ui/page_header', [
+          'eyebrow' => 'Property · Editor',
+          'title' => $property['title'] ?? 'Об’єкт',
+          'description' => trim((string) ($property['public_id'] ?? '') . ' · ' . (string) ($property['type_name'] ?? '') . ' · ' . (string) ($property['city'] ?? ''), ' ·'),
+          'meta' => ['value' => $property['status'] ?? 'draft', 'label' => count($images) . ' фото'],
+          'actions' => $headerActions,
+      ]);
+    ?>
 
     <section class="tn-admin-workspace">
       <?php if ($actionStatus): ?>
         <div class="tn-form-status is-visible" role="status"><?php echo $h($actionStatus); ?></div>
       <?php endif; ?>
 
-      <article class="tn-admin-card tn-manager-next" id="tn-edit-share">
-        <div class="tn-admin-card__head">
+      <article class="tn-ui-panel tn-manager-next" id="tn-edit-share">
+        <div class="tn-ui-panel__head">
           <div>
             <p class="tn-kicker">Що робити зараз</p>
             <h2><?php echo !empty($readiness['ready']) && empty($stageCheck['issues']) ? 'Картка під контролем' : 'Наступні кроки менеджера'; ?></h2>
@@ -237,8 +236,8 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
       </article>
 
       <?php if ($readiness): ?>
-        <article class="tn-admin-card tn-manager-hint <?php echo !empty($readiness['ready']) ? 'is-ok' : 'is-warning'; ?>">
-          <div class="tn-admin-card__head">
+        <article class="tn-ui-panel tn-manager-hint <?php echo !empty($readiness['ready']) ? 'is-ok' : 'is-warning'; ?>">
+          <div class="tn-ui-panel__head">
             <div>
               <p class="tn-kicker">Готовність</p>
               <h2><?php echo !empty($readiness['ready']) ? 'Можна публікувати' : 'Що доробити'; ?></h2>
@@ -258,8 +257,8 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
       <?php endif; ?>
 
       <?php if ($stageCheck): ?>
-        <article class="tn-admin-card tn-manager-hint <?php echo empty($stageCheck['issues']) ? 'is-ok' : 'is-warning'; ?>">
-          <div class="tn-admin-card__head">
+        <article class="tn-ui-panel tn-manager-hint <?php echo empty($stageCheck['issues']) ? 'is-ok' : 'is-warning'; ?>">
+          <div class="tn-ui-panel__head">
             <div>
               <p class="tn-kicker">Операційний етап</p>
               <h2><?php echo $h($stageCheck['label'] ?? 'Етап роботи'); ?></h2>
@@ -280,8 +279,8 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
       <?php endif; ?>
 
       <form class="tn-property-edit-form" action="<?php echo $this->url->get('property/update/' . $property['id']); ?>" method="post">
-        <article class="tn-admin-card" id="tn-edit-main">
-          <div class="tn-admin-card__head">
+        <article class="tn-ui-panel" id="tn-edit-main">
+          <div class="tn-ui-panel__head">
             <div>
               <p class="tn-kicker">Основні дані</p>
               <h2>Картка нерухомості</h2>
@@ -373,7 +372,7 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
           </div>
         </article>
 
-        <article class="tn-admin-card" id="tn-edit-params">
+        <article class="tn-ui-panel" id="tn-edit-params">
           <p class="tn-kicker">Ціна та параметри</p>
           <h2>Характеристики</h2>
           <div class="tn-form-grid">
@@ -452,7 +451,7 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
           </div>
         </article>
 
-        <article class="tn-admin-card" id="tn-edit-public">
+        <article class="tn-ui-panel" id="tn-edit-public">
           <p class="tn-kicker">Опис та SEO</p>
           <h2>Публічне представлення</h2>
           <div class="tn-form-grid">
@@ -509,7 +508,7 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
           </div>
         </article>
 
-        <article class="tn-admin-card" id="tn-edit-service">
+        <article class="tn-ui-panel" id="tn-edit-service">
           <p class="tn-kicker">Службова частина</p>
           <h2>Паспорт об’єкта</h2>
           <div class="tn-form-grid">
@@ -587,8 +586,8 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
         </article>
       </form>
 
-      <article class="tn-admin-card">
-        <div class="tn-admin-card__head">
+      <article class="tn-ui-panel">
+        <div class="tn-ui-panel__head">
           <div>
             <p class="tn-kicker">Попит</p>
             <h2>Заявки та кейси по об’єкту</h2>
@@ -632,8 +631,8 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
         <?php endif; ?>
       </article>
 
-      <article class="tn-admin-card">
-        <div class="tn-admin-card__head">
+      <article class="tn-ui-panel">
+        <div class="tn-ui-panel__head">
           <div>
             <p class="tn-kicker">Журнал</p>
             <h2>Останні події об’єкта</h2>
@@ -673,13 +672,13 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
       <form class="tn-media-manager" action="<?php echo $this->url->get('property/media/' . $property['id']); ?>" method="post" enctype="multipart/form-data" data-media-form>
         <input type="hidden" name="property_title" value="<?php echo $h($property['title']); ?>">
 
-        <article class="tn-admin-card" id="tn-edit-media">
-          <div class="tn-admin-card__head">
+        <article class="tn-ui-panel" id="tn-edit-media">
+          <div class="tn-ui-panel__head">
             <div>
               <p class="tn-kicker">Поточна галерея</p>
               <h2>Фото об’єкта</h2>
               <?php if ($images): ?>
-                <p class="tn-admin-card__note">Перетягніть фото, щоб змінити порядок. Позначте головне фото для обкладинки картки.</p>
+                <p class="tn-ui-panel__note">Перетягніть фото, щоб змінити порядок. Позначте головне фото для обкладинки картки.</p>
               <?php endif; ?>
             </div>
             <?php if ($images): ?>
@@ -721,7 +720,7 @@ $canQuickPublish = $property && $hasNextAction && !empty($readiness['ready']) &&
           <?php endif; ?>
         </article>
 
-        <article class="tn-admin-card">
+        <article class="tn-ui-panel">
           <p class="tn-kicker">Нові медіа</p>
           <h2>Додати фото</h2>
           <div class="tn-form-grid tn-dropzone-grid">
