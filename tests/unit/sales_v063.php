@@ -11,7 +11,8 @@ $base = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceReadModelInt
 $services = $read('app/Bootstrap/SalesServices.php');
 $web = $read('symfony/src/Web/Sales/SalesPageController.php');
 $today = $read('app/Interfaces/Web/View/sales/today.phtml');
-$leads = $read('app/Interfaces/Web/View/sales/leads.phtml');
+$leads = $read('symfony/templates/experience/sales/leads.html.twig');
+$leadController = $read('symfony/assets/controllers/sales_lead_controller.js');
 $pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
 $deal = $read('app/Interfaces/Web/View/sales/deal.phtml');
 $deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
@@ -34,8 +35,11 @@ $assert(!str_contains($web, 'new MysqlSalesWorkspaceOperationalReadModel'), 'Web
 foreach (['Needs My Approval', 'data-sales-today-root', 'data-sales-activity-complete', 'data-sales-activity-reschedule', 'My Work', 'Team'] as $marker) {
     $assert(str_contains($today, $marker), 'Today missing: ' . $marker);
 }
-foreach (['data-sales-lead-inbox', 'tn-sales-lead-drawer', 'data-sales-lead-status', 'data-sales-lead-owner', 'data-sales-lead-deal', 'data-sales-lead-followup'] as $marker) {
-    $assert(str_contains($leads, $marker), 'Lead Inbox missing: ' . $marker);
+foreach (['data-lead-id', 'data-sales-lead-status', 'data-sales-lead-owner', 'data-sales-lead-deal', 'data-sales-lead-followup', 'sales-lead#status', 'sales-lead#owner', 'sales-lead#convert', 'sales-lead#followup'] as $marker) {
+    $assert(str_contains($leads, $marker), 'Canonical Lead Inbox missing operational contract: ' . $marker);
+}
+foreach (['/api/v1/sales/leads/', 'PATCH', '/opportunity', '/followups', 'X-CSRF-Token', 'X-Idempotency-Key'] as $marker) {
+    $assert(str_contains($leadController, $marker), 'Canonical Lead Stimulus controller missing mutation contract: ' . $marker);
 }
 foreach (['weighted_value', 'avg_days_in_stage', 'days_in_stage', 'attention_reason', 'name="owner_id"', 'name="priority"', 'name="source"'] as $marker) {
     $assert(str_contains($pipeline, $marker), 'Pipeline missing: ' . $marker);
