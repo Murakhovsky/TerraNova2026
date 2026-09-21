@@ -28,6 +28,7 @@ return [
             'web.search' => ['salesNavigationContributor'],
             'web.commands' => ['salesNavigationContributor'],
             'web.workspace' => ['salesNavigationContributor'],
+            'web.actions' => ['salesNavigationContributor'],
         ],
         'cross_domain_contracts' => [
             [

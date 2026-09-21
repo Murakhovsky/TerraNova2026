@@ -17,6 +17,7 @@ generated: true
 | `api.routes` | built-in | 0 |
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
+| `web.actions` | module-defined | 1 |
 | `web.commands` | module-defined | 3 |
 | `web.navigation` | module-defined | 3 |
 | `web.search` | module-defined | 3 |
@@ -45,6 +46,14 @@ generated: true
 | --- | --- |
 | `property` | `propertyModuleConfigurationProvisioner` |
 | `sales` | `salesModuleConfigurationProvisioner` |
+
+## `web.actions`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
+| `sales` | `salesNavigationContributor` |
 
 ## `web.commands`
 

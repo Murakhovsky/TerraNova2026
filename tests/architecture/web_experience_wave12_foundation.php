@@ -7,6 +7,9 @@ $files = [
     'app/Kernel/Module/ModuleExtensionPoint.php',
     'symfony/src/Web/Experience/Model/EntityRef.php',
     'symfony/src/Web/Experience/Action/UIActionIntent.php',
+    'symfony/src/Web/Experience/Action/UIActionConfirmation.php',
+    'symfony/src/Web/Experience/Action/UIActionDangerLevel.php',
+    'symfony/src/Web/Experience/Action/UIActionPlacement.php',
     'symfony/src/Web/Experience/Action/UIAction.php',
     'docs/11-decisions/ADR-0009-web-experience-platform.md',
 ];
@@ -20,6 +23,9 @@ foreach ($files as $relative) {
 require_once $root . '/app/Kernel/Module/ModuleExtensionPoint.php';
 require_once $root . '/symfony/src/Web/Experience/Model/EntityRef.php';
 require_once $root . '/symfony/src/Web/Experience/Action/UIActionIntent.php';
+require_once $root . '/symfony/src/Web/Experience/Action/UIActionPlacement.php';
+require_once $root . '/symfony/src/Web/Experience/Action/UIActionDangerLevel.php';
+require_once $root . '/symfony/src/Web/Experience/Action/UIActionConfirmation.php';
 require_once $root . '/symfony/src/Web/Experience/Action/UIAction.php';
 
 $expectedExtensionPoints = [
@@ -98,6 +104,29 @@ try {
         intent: App\Web\Experience\Action\UIActionIntent::Execute,
     );
     throw new RuntimeException('Executable UIAction without command was accepted.');
+} catch (InvalidArgumentException) {
+}
+
+try {
+    new App\Web\Experience\Action\UIAction(
+        id: 'core.operation.critical',
+        label: 'Critical operation',
+        intent: App\Web\Experience\Action\UIActionIntent::Danger,
+        confirmation: App\Web\Experience\Action\UIActionConfirmation::simple('Confirm critical operation.'),
+        dangerLevel: App\Web\Experience\Action\UIActionDangerLevel::Critical->value,
+    );
+    throw new RuntimeException('Critical UIAction without step-up confirmation was accepted.');
+} catch (InvalidArgumentException) {
+}
+
+try {
+    new App\Web\Experience\Action\UIAction(
+        id: 'core.operation.preview',
+        label: 'Preview',
+        intent: App\Web\Experience\Action\UIActionIntent::View,
+        placements: ['unknown.surface'],
+    );
+    throw new RuntimeException('Unknown UIAction placement was accepted.');
 } catch (InvalidArgumentException) {
 }
 

@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Extension\Provider;
 
+use App\Web\Experience\Action\UIAction;
+use App\Web\Experience\Action\UIActionConfirmation;
+use App\Web\Experience\Action\UIActionDangerLevel;
+use App\Web\Experience\Action\UIActionIntent;
+use App\Web\Experience\Action\UIActionPlacement;
+use App\Web\Experience\Extension\Contract\ActionProviderInterface;
 use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
 use App\Web\Experience\Extension\Contract\SearchProviderInterface;
@@ -12,10 +18,11 @@ use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 
-final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
+final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, ActionProviderInterface
 {
     public function __construct(private readonly SearchResultMatcher $matcher)
     {
@@ -81,6 +88,92 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
         }
 
         return $commands;
+    }
+
+
+    public function actions(WebExtensionContext $context, ?EntityRef $entity = null): array
+    {
+        if ($entity === null) {
+            return [];
+        }
+
+        if (in_array($entity->type, ['deal', 'sales.deal'], true)) {
+            return [
+                new UIAction(
+                    id: 'sales.deal.change_stage',
+                    label: 'Change stage',
+                    intent: UIActionIntent::Execute,
+                    icon: 'arrows-exchange',
+                    permission: 'sales.workspace.use',
+                    confirmation: UIActionConfirmation::simple(
+                        'Apply the selected stage transition to this deal?',
+                        'Change stage',
+                    ),
+                    command: 'sales.change_stage',
+                    dangerLevel: UIActionDangerLevel::Caution->value,
+                    priority: 10,
+                    placements: [
+                        UIActionPlacement::WORKSPACE_PRIMARY,
+                        UIActionPlacement::CONTEXT_MENU,
+                        UIActionPlacement::MOBILE_PRIMARY,
+                        UIActionPlacement::AI_PROPOSAL,
+                    ],
+                ),
+                new UIAction(
+                    id: 'sales.deal.assign_owner',
+                    label: 'Assign owner',
+                    intent: UIActionIntent::Execute,
+                    icon: 'user-check',
+                    permission: 'sales.deal.assign',
+                    command: 'sales.assign_owner',
+                    priority: 20,
+                    placements: [
+                        UIActionPlacement::WORKSPACE_SECONDARY,
+                        UIActionPlacement::CONTEXT_MENU,
+                        UIActionPlacement::MOBILE_MENU,
+                        UIActionPlacement::AI_PROPOSAL,
+                    ],
+                ),
+                new UIAction(
+                    id: 'sales.deal.request_document',
+                    label: 'Request document',
+                    intent: UIActionIntent::Execute,
+                    icon: 'file-plus',
+                    permission: 'sales.workspace.use',
+                    command: 'sales.request_document',
+                    async: true,
+                    priority: 30,
+                    placements: [
+                        UIActionPlacement::WORKSPACE_SECONDARY,
+                        UIActionPlacement::CONTEXT_MENU,
+                        UIActionPlacement::MOBILE_MENU,
+                        UIActionPlacement::AI_PROPOSAL,
+                    ],
+                ),
+            ];
+        }
+
+        if (in_array($entity->type, ['lead', 'sales.lead'], true)) {
+            return [
+                new UIAction(
+                    id: 'sales.lead.create_followup',
+                    label: 'Create follow-up',
+                    intent: UIActionIntent::Execute,
+                    icon: 'calendar-plus',
+                    permission: 'sales.workspace.use',
+                    command: 'sales.create_lead_followup_task',
+                    priority: 10,
+                    placements: [
+                        UIActionPlacement::WORKSPACE_PRIMARY,
+                        UIActionPlacement::CONTEXT_MENU,
+                        UIActionPlacement::MOBILE_PRIMARY,
+                        UIActionPlacement::AI_PROPOSAL,
+                    ],
+                ),
+            ];
+        }
+
+        return [];
     }
 
     public function workspaces(WebExtensionContext $context): array
