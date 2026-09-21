@@ -1,0 +1,13 @@
+<div class="cos-money-metric">
+    <span class="cos-money-metric__label">{{ label }}</span>
+    <strong class="cos-money-metric__value cos-money">{{ value }}</strong>
+    <div class="cos-money-metric__meta">
+        {% if delta %}<span class="cos-money-metric__delta cos-numeric">{{ delta }}</span>{% endif %}
+        {% if target %}<span>Target <strong class="cos-numeric">{{ target }}</strong></span>{% endif %}
+    </div>
+    {% if progress is not null %}
+        <div class="cos-money-metric__progress" aria-label="{{ progress }} percent of target">
+            <span style="--cos-business-progress: {{ progress }}%"></span>
+        </div>
+    {% endif %}
+</div>
