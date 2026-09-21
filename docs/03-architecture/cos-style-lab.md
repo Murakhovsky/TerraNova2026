@@ -1,12 +1,12 @@
 ---
-title: Style Lab COS — PHASE 2
+title: Лабораторія стилю COS — PHASE 2
 description: Експериментальна лабораторія візуальних кандидатів Light, Dark, Origin A/B/C і Glass для вибору фірмової мови COS без зміни канонічної Web foundation.
 status: active
 updated: 2026-09-21
 kind: architecture
 ---
 
-# Style Lab COS — PHASE 2
+# Лабораторія стилю COS — PHASE 2
 
 ## Мета
 
@@ -35,7 +35,7 @@ Style Lab не визначає фінальну production theme. Його за
 
 Він показує, чи нові кандидати дають реальну додану цінність, а не просто інший відтінок графіту.
 
-### Origin A — Graphite Precision
+### Origin A — точний графітовий стиль
 
 Найсуворіший кандидат Calm Technical:
 
@@ -48,7 +48,7 @@ Style Lab не визначає фінальну production theme. Його за
 
 Гіпотеза: найкраща довготривала основа для operational enterprise UI.
 
-### Origin B — Executive Warmth
+### Origin B — теплий executive-стиль
 
 Той самий structural характер, але з дуже стриманим теплим ambient layer:
 
@@ -60,7 +60,7 @@ Style Lab не визначає фінальну production theme. Його за
 
 Гіпотеза: преміальніший і людяніший вигляд без переходу в luxury UI.
 
-### Origin C — Future Mineral
+### Origin C — холодний мінеральний стиль
 
 Холодніший і футуристичніший кандидат:
 
@@ -72,7 +72,7 @@ Style Lab не визначає фінальну production theme. Його за
 
 Гіпотеза: сильніше відчуття "операційної системи нової епохи".
 
-### Glass — Executive Glass
+### Glass — преміальний скляний стиль
 
 Свідомо максимальний glassmorphism candidate:
 
