@@ -1,0 +1,57 @@
+/*
+ * COS canonical geometry bridge.
+ *
+ * Bootstrap is the mechanics layer. COS owns visual geometry.
+ * This file is loaded after tokens.css and after Bootstrap itself.
+ */
+
+:root {
+  --bs-border-width: var(--cos-border-width);
+
+  --bs-border-radius: var(--cos-radius-control);
+  --bs-border-radius-sm: var(--cos-radius-xs);
+  --bs-border-radius-lg: var(--cos-radius-panel);
+  --bs-border-radius-xl: var(--cos-radius-overlay);
+  --bs-border-radius-xxl: var(--cos-radius-overlay);
+  --bs-border-radius-2xl: var(--cos-radius-overlay);
+  --bs-border-radius-pill: var(--cos-radius-pill);
+}
+
+.btn {
+  --bs-btn-border-radius: var(--cos-radius-control);
+}
+
+.card {
+  --bs-card-border-radius: var(--cos-radius-panel);
+  --bs-card-inner-border-radius: calc(var(--cos-radius-panel) - var(--cos-border-width));
+}
+
+.dropdown-menu {
+  --bs-dropdown-border-radius: var(--cos-radius-panel);
+  --bs-dropdown-inner-border-radius: calc(var(--cos-radius-panel) - var(--cos-border-width));
+}
+
+.modal {
+  --bs-modal-border-radius: var(--cos-radius-overlay);
+  --bs-modal-inner-border-radius: calc(var(--cos-radius-overlay) - var(--cos-border-width));
+}
+
+.alert {
+  --bs-alert-border-radius: var(--cos-radius-panel);
+}
+
+.toast {
+  --bs-toast-border-radius: var(--cos-radius-panel);
+}
+
+.popover {
+  --bs-popover-border-radius: var(--cos-radius-panel);
+}
+
+.tooltip {
+  --bs-tooltip-border-radius: var(--cos-radius-control);
+}
+
+.nav-pills {
+  --bs-nav-pills-border-radius: var(--cos-radius-control);
+}
