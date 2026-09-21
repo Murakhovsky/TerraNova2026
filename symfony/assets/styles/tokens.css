@@ -13,6 +13,7 @@ html[data-cos-theme="light"] {
   --cos-color-text-soft: #343940;
   --cos-color-text-muted: #68707b;
   --cos-color-text-inverse: #f7f8fa;
+  --cos-color-on-primary: #ffffff;
   --cos-color-border: #dfe3e8;
   --cos-color-border-strong: #c8ced6;
 
@@ -82,6 +83,7 @@ html[data-cos-theme="dark"] {
   --cos-color-text-soft: #d7dbe0;
   --cos-color-text-muted: #9ca4ae;
   --cos-color-text-inverse: #15171b;
+  --cos-color-on-primary: #10131a;
   --cos-color-border: #2e343d;
   --cos-color-border-strong: #414955;
 
