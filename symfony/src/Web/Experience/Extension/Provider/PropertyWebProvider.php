@@ -6,14 +6,21 @@ namespace App\Web\Experience\Extension\Provider;
 
 use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
+use App\Web\Experience\Extension\Contract\SearchProviderInterface;
 use App\Web\Experience\Extension\Contract\WorkspaceProviderInterface;
 use App\Web\Experience\Extension\Model\NavigationContribution;
+use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 
-final class PropertyWebProvider implements NavigationProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
+final class PropertyWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
 {
+    public function __construct(private readonly SearchResultMatcher $matcher)
+    {
+    }
+
     public function serviceId(): string
     {
         return 'propertyNavigationContributor';
@@ -30,6 +37,18 @@ final class PropertyWebProvider implements NavigationProviderInterface, CommandP
             new NavigationContribution('spatial', '3D / Spatial', '/spatial/manage', priority: 50, parentKey: 'properties'),
             new NavigationContribution('catalog', 'Public Catalog', '/property/catalog', priority: 60, parentKey: 'properties'),
         ];
+    }
+
+    public function search(WebExtensionContext $context, string $query, int $limit = 10): array
+    {
+        return $this->matcher->match([
+            new SearchResult('property.search.inventory', 'Property Inventory', '/property/manage', 'workspace', 'Properties'),
+            new SearchResult('property.search.listing', 'Property Listing', '/property/listing', 'workspace', 'Listings'),
+            new SearchResult('property.search.locations', 'Property Locations', '/property/map', 'workspace', 'Map'),
+            new SearchResult('property.search.moderation', 'Property Moderation', '/property/submissions', 'workspace', 'Submissions'),
+            new SearchResult('property.search.spatial', 'Spatial Workspace', '/spatial/manage', 'workspace', '3D / Spatial'),
+            new SearchResult('property.search.catalog', 'Public Property Catalog', '/property/catalog', 'workspace', 'Catalog'),
+        ], $query, $limit);
     }
 
     public function commands(WebExtensionContext $context): array

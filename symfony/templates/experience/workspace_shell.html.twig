@@ -1,7 +1,11 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-<div class="cos-shell" data-controller="workspace-shell">
+<div
+    class="cos-shell"
+    data-controller="workspace-shell"
+    data-workspace-shell-search-url-value="{{ path('cos_web_global_search') }}"
+>
     <aside
         class="cos-shell__sidebar"
         id="cos-workspace-navigation"
@@ -167,30 +171,43 @@
                 <input
                     class="cos-command__input"
                     type="search"
-                    placeholder="Search entities and commands…"
+                    placeholder="Search workspace…"
                     autocomplete="off"
+                    spellcheck="false"
+                    aria-controls="cos-global-search-results"
                     data-workspace-shell-target="paletteInput"
-                    data-action="input->workspace-shell#filterPalette"
+                    data-action="input->workspace-shell#searchPalette"
                 >
                 <button class="cos-button cos-button--sm" type="button" data-action="click->workspace-shell#closePalette">Esc</button>
             </div>
 
-            <div class="cos-command__list">
-                {% for command in shell.commands %}
-                    <a
-                        class="cos-command__item"
-                        href="{{ command.path }}"
-                        data-workspace-shell-target="commandItem"
-                        data-command-label="{{ command.label }}"
-                        data-command-kind="{{ command.kind }}"
-                    >
-                        <span>{{ command.label }}</span>
-                        <small>{{ command.hint ?? command.kind }}</small>
-                    </a>
-                {% endfor %}
-
-                <p class="cos-command__empty" hidden data-workspace-shell-target="empty">No matching command.</p>
-            </div>
+            <turbo-frame
+                id="cos-global-search-results"
+                data-workspace-shell-target="searchFrame"
+                data-action="turbo:frame-load->workspace-shell#searchLoaded"
+            >
+                <div class="cos-command__list" role="listbox" aria-label="Global commands">
+                    <p class="cos-command__group">Commands</p>
+                    {% for command in shell.commands %}
+                        <a
+                            class="cos-command__item"
+                            href="{{ command.path }}"
+                            target="_top"
+                            role="option"
+                            aria-selected="false"
+                            data-workspace-shell-target="resultItem"
+                        >
+                            <span>
+                                <strong>{{ command.label }}</strong>
+                                {% if command.hint %}<small>{{ command.hint }}</small>{% endif %}
+                            </span>
+                            <small>{{ command.kind }}</small>
+                        </a>
+                    {% else %}
+                        <p class="cos-command__empty">No commands available.</p>
+                    {% endfor %}
+                </div>
+            </turbo-frame>
         </section>
     </div>
 </div>

@@ -6,17 +6,27 @@ export default class extends Controller {
         'menuButton',
         'palette',
         'paletteInput',
-        'commandItem',
-        'empty',
+        'searchFrame',
+        'resultItem',
     ];
+
+    static values = {
+        searchUrl: String,
+    };
 
     connect() {
         this.boundKeydown = this.onKeydown.bind(this);
+        this.searchTimer = null;
+        this.activeResultIndex = -1;
         document.addEventListener('keydown', this.boundKeydown);
     }
 
     disconnect() {
         document.removeEventListener('keydown', this.boundKeydown);
+
+        if (this.searchTimer !== null) {
+            window.clearTimeout(this.searchTimer);
+        }
     }
 
     toggleSidebar() {
@@ -44,10 +54,8 @@ export default class extends Controller {
         this.paletteTarget.hidden = false;
         document.body.dataset.cosCommandOpen = 'true';
         this.paletteInputTarget.value = '';
-        this.commandItemTargets.forEach((item) => {
-            item.hidden = false;
-        });
-        this.emptyTarget.hidden = true;
+        this.activeResultIndex = -1;
+        this.loadSearch('');
 
         window.requestAnimationFrame(() => this.paletteInputTarget.focus());
     }
@@ -55,32 +63,90 @@ export default class extends Controller {
     closePalette() {
         this.paletteTarget.hidden = true;
         delete document.body.dataset.cosCommandOpen;
+        this.activeResultIndex = -1;
+        this.clearResultSelection();
     }
 
-    filterPalette() {
-        const query = this.paletteInputTarget.value.trim().toLocaleLowerCase();
-        let visible = 0;
+    searchPalette() {
+        if (this.searchTimer !== null) {
+            window.clearTimeout(this.searchTimer);
+        }
 
-        this.commandItemTargets.forEach((item) => {
-            const haystack = [
-                item.dataset.commandLabel || '',
-                item.dataset.commandKind || '',
-            ].join(' ').toLocaleLowerCase();
+        const query = this.paletteInputTarget.value.trim();
+        this.searchTimer = window.setTimeout(() => {
+            this.loadSearch(query);
+        }, 160);
+    }
 
-            const match = query === '' || haystack.includes(query);
-            item.hidden = !match;
+    loadSearch(query) {
+        if (!this.hasSearchFrameTarget || !this.hasSearchUrlValue) {
+            return;
+        }
 
-            if (match) {
-                visible += 1;
+        const url = new URL(this.searchUrlValue, window.location.origin);
+        if (query !== '') {
+            url.searchParams.set('q', query);
+        }
+
+        this.searchFrameTarget.setAttribute('aria-busy', 'true');
+        this.searchFrameTarget.setAttribute('src', url.toString());
+    }
+
+    searchLoaded() {
+        if (this.hasSearchFrameTarget) {
+            this.searchFrameTarget.setAttribute('aria-busy', 'false');
+        }
+
+        this.activeResultIndex = -1;
+        this.clearResultSelection();
+    }
+
+    moveSelection(delta) {
+        const items = this.resultItemTargets;
+        if (items.length === 0) {
+            return;
+        }
+
+        this.activeResultIndex += delta;
+        if (this.activeResultIndex < 0) {
+            this.activeResultIndex = items.length - 1;
+        }
+        if (this.activeResultIndex >= items.length) {
+            this.activeResultIndex = 0;
+        }
+
+        items.forEach((item, index) => {
+            const active = index === this.activeResultIndex;
+            item.classList.toggle('is-selected', active);
+            item.setAttribute('aria-selected', String(active));
+
+            if (active) {
+                item.scrollIntoView({ block: 'nearest' });
             }
         });
+    }
 
-        this.emptyTarget.hidden = visible !== 0;
+    activateSelection() {
+        const item = this.resultItemTargets[this.activeResultIndex];
+        if (!item) {
+            return false;
+        }
+
+        item.click();
+        return true;
+    }
+
+    clearResultSelection() {
+        this.resultItemTargets.forEach((item) => {
+            item.classList.remove('is-selected');
+            item.setAttribute('aria-selected', 'false');
+        });
     }
 
     onKeydown(event) {
         const tagName = document.activeElement?.tagName;
         const editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName);
+        const paletteOpen = !this.paletteTarget.hidden;
 
         if (
             (event.key === '/' && !editing && !event.metaKey && !event.ctrlKey && !event.altKey)
@@ -91,8 +157,26 @@ export default class extends Controller {
             return;
         }
 
+        if (paletteOpen && event.key === 'ArrowDown') {
+            event.preventDefault();
+            this.moveSelection(1);
+            return;
+        }
+
+        if (paletteOpen && event.key === 'ArrowUp') {
+            event.preventDefault();
+            this.moveSelection(-1);
+            return;
+        }
+
+        if (paletteOpen && event.key === 'Enter' && this.activeResultIndex >= 0) {
+            event.preventDefault();
+            this.activateSelection();
+            return;
+        }
+
         if (event.key === 'Escape') {
-            if (!this.paletteTarget.hidden) {
+            if (paletteOpen) {
                 this.closePalette();
             }
 

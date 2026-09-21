@@ -19,6 +19,7 @@ generated: true
 | `tenant.configuration` | built-in | 2 |
 | `web.commands` | module-defined | 3 |
 | `web.navigation` | module-defined | 3 |
+| `web.search` | module-defined | 3 |
 | `web.workspace` | module-defined | 3 |
 
 ## `api.routes`
@@ -56,6 +57,16 @@ generated: true
 | `sales` | `salesNavigationContributor` |
 
 ## `web.navigation`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
+| `diagnostic` | `diagnosticNavigationContributor` |
+| `property` | `propertyNavigationContributor` |
+| `sales` | `salesNavigationContributor` |
+
+## `web.search`
 
 Тип: **module-defined**.
 

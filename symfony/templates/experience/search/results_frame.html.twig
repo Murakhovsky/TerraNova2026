@@ -1,0 +1,35 @@
+<turbo-frame
+    id="cos-global-search-results"
+    data-workspace-shell-target="searchFrame"
+    data-action="turbo:frame-load->workspace-shell#searchLoaded"
+>
+    <div class="cos-command__list" role="listbox" aria-label="Global search results">
+        <p class="cos-command__group">
+            {{ results.query is empty ? 'Commands' : 'Search results' }}
+        </p>
+
+        {% for item in results.items %}
+            <a
+                class="cos-command__item"
+                href="{{ item.path }}"
+                target="_top"
+                role="option"
+                aria-selected="false"
+                data-workspace-shell-target="resultItem"
+                data-search-kind="{{ item.kind }}"
+            >
+                <span>
+                    <strong>{{ item.label }}</strong>
+                    {% if item.subtitle %}
+                        <small>{{ item.subtitle }}</small>
+                    {% endif %}
+                </span>
+                <small>{{ item.kind }}</small>
+            </a>
+        {% else %}
+            <p class="cos-command__empty">
+                {{ results.query is empty ? 'No commands available.' : 'No matching result.' }}
+            </p>
+        {% endfor %}
+    </div>
+</turbo-frame>

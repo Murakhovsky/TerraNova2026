@@ -65,7 +65,7 @@ $providerExpectations = [
 foreach ($providerExpectations as $domain => $expectation) {
     $manifest = (string) file_get_contents($root . '/app/Domains/' . $domain . '/module.php');
 
-    foreach (['web.navigation', 'web.commands', 'web.workspace'] as $extensionPoint) {
+    foreach (['web.navigation', 'web.search', 'web.commands', 'web.workspace'] as $extensionPoint) {
         if (!str_contains($manifest, "'" . $extensionPoint . "' => ['" . $expectation['service'] . "']")) {
             throw new RuntimeException(sprintf(
                 '%s manifest does not own %s through %s.',
@@ -85,6 +85,7 @@ foreach ($providerExpectations as $domain => $expectation) {
 
     foreach ([
         'NavigationProviderInterface',
+        'SearchProviderInterface',
         'CommandProviderInterface',
         'WorkspaceProviderInterface',
         "return '" . $expectation['service'] . "';",

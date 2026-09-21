@@ -41,6 +41,7 @@ final class WebExtensionsSmokeCommand extends Command
 
         foreach ([
             'navigation' => $providers->navigation(),
+            'search' => $providers->search(),
             'commands' => $providers->commands(),
             'workspaces' => $providers->workspaces(),
         ] as $surface => $resolved) {
@@ -65,7 +66,6 @@ final class WebExtensionsSmokeCommand extends Command
         }
 
         foreach ([
-            'search' => $providers->search(),
             'workspace extensions' => $providers->workspaceExtensions(),
             'dashboard widgets' => $providers->dashboardWidgets(),
             'entity links' => $providers->entityLinks(),

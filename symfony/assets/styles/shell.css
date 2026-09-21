@@ -414,8 +414,39 @@
 }
 
 .cos-command__item:hover,
-.cos-command__item:focus-visible {
+.cos-command__item:focus-visible,
+.cos-command__item.is-selected {
   background: var(--cos-color-surface-subtle);
+}
+
+.cos-command__item.is-selected {
+  outline: 2px solid var(--cos-focus-ring);
+  outline-offset: -2px;
+}
+
+.cos-command__group {
+  margin: 0;
+  padding: var(--cos-space-2) var(--cos-space-3) var(--cos-space-1);
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cos-command__item span {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.cos-command__item strong {
+  color: var(--cos-color-text);
+  font-size: var(--cos-font-sm);
+  font-weight: 690;
+}
+
+turbo-frame[aria-busy="true"] .cos-command__list {
+  opacity: 0.6;
 }
 
 .cos-command__item span {

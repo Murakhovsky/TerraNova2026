@@ -94,7 +94,8 @@ foreach ([
     'toggleSidebar',
     'openPalette',
     'closePalette',
-    'filterPalette',
+    'searchPalette',
+    'loadSearch',
     'Cmd/Ctrl+K',
 ] as $contract) {
     if ($contract === 'Cmd/Ctrl+K') {

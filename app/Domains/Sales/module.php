@@ -25,6 +25,7 @@ return [
                 'salesHistoricalEventConsumer',
             ],
             'web.navigation' => ['salesNavigationContributor'],
+            'web.search' => ['salesNavigationContributor'],
             'web.commands' => ['salesNavigationContributor'],
             'web.workspace' => ['salesNavigationContributor'],
         ],
