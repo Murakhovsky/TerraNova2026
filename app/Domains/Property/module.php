@@ -17,9 +17,9 @@ return [
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => ['propertyModuleConfigurationProvisioner'],
         'extension_services' => [
-            'web.navigation' => ['propertyWebProvider'],
-            'web.commands' => ['propertyWebProvider'],
-            'web.workspace' => ['propertyWebProvider'],
+            'web.navigation' => ['propertyNavigationContributor'],
+            'web.commands' => ['propertyNavigationContributor'],
+            'web.workspace' => ['propertyNavigationContributor'],
         ],
         'cross_domain_contracts' => [
             [
