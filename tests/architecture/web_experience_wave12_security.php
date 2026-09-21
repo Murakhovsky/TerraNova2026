@@ -80,10 +80,26 @@ foreach ([
     'Referrer-Policy',
     'Permissions-Policy',
     'X-Frame-Options',
+    'CSP_NONCE_ATTRIBUTE',
+    "'nonce-{$nonce}'",
+    "script-src 'self'",
+    'data:',
 ] as $marker) {
     if (!str_contains($headers, $marker)) {
         throw new RuntimeException('Security response header is missing: ' . $marker);
     }
+}
+
+$base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
+foreach ([
+    "importmap('app', {'nonce': app.request.attributes.get('cos_csp_nonce')})",
+] as $marker) {
+    if (!str_contains($base, $marker)) {
+        throw new RuntimeException('AssetMapper CSP nonce integration is missing: ' . $marker);
+    }
+}
+if (str_contains($headers, "script-src 'self' 'unsafe-inline'")) {
+    throw new RuntimeException('CSP must not allow unsafe-inline scripts.');
 }
 
 $media = (string) file_get_contents($root . '/app/Infrastructure/Media/MediaStorageService.php');
