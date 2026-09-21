@@ -5,17 +5,109 @@ $subsystems = is_array($health['subsystems'] ?? null) ? $health['subsystems'] : 
 $issues = is_array($health['issues'] ?? null) ? $health['issues'] : [];
 $runtime = is_array($health['runtime'] ?? null) ? $health['runtime'] : [];
 $e = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$status = (string) ($health['status'] ?? 'UNKNOWN');
+$status = strtoupper((string) ($health['status'] ?? 'UNKNOWN'));
+$statusTone = $status === 'HEALTHY' ? 'positive' : ($status === 'ERROR' || $status === 'FAILED' ? 'danger' : 'warning');
+$runtimeSections = [
+    'failed_actions' => 'Failed actions',
+    'problem_jobs' => 'Problem jobs',
+    'pending_approvals' => 'Pending approvals',
+    'agent_failures' => 'Agent failures',
+    'crm_failures' => 'CRM inbox failures',
+];
 ?>
-<section class="sales-admin-page">
-<header class="sales-admin-header"><div><p class="eyebrow">Sales Administration · V0.7.8</p><h1>Health & Audit</h1><p>Read-only operational control center over canonical Kernel and Platform runtime data.</p></div><nav class="sales-admin-nav"><a href="/sales/admin/pipelines">Pipelines</a><a href="/sales/admin/rules">Rules</a><a href="/sales/admin/agents">Agents</a><a href="/sales/admin/actions">Actions & Policies</a><a href="/sales/admin/teams">Teams</a><a href="/sales/admin/integrations">Integrations</a><strong>Health & Audit</strong></nav></header>
-<?php if (!empty($pageStatus)): ?><div class="sales-admin-alert"><?= $e($pageStatus) ?></div><?php endif; ?>
-<div class="sales-admin-grid"><article class="sales-admin-card"><p class="eyebrow">Overall status</p><h2><?= $e($status) ?></h2><p>Generated <?= $e($health['generated_at'] ?? '') ?></p></article><?php foreach ($subsystems as $name=>$subsystemStatus): ?><article class="sales-admin-card"><p class="eyebrow"><?= $e(ucfirst((string)$name)) ?></p><h2><?= $e($subsystemStatus) ?></h2></article><?php endforeach; ?></div>
-<?php if (!empty($issues['critical']) || !empty($issues['warnings'])): ?><section class="sales-admin-card"><h2>Issues</h2><?php foreach (($issues['critical'] ?? []) as $issue): ?><p class="sales-admin-alert"><strong>ERROR</strong> · <?= $e($issue['message'] ?? '') ?> · <?= $e($issue['count'] ?? 0) ?></p><?php endforeach; ?><?php foreach (($issues['warnings'] ?? []) as $issue): ?><p><strong>DEGRADED</strong> · <?= $e($issue['message'] ?? '') ?> · <?= $e($issue['count'] ?? 0) ?></p><?php endforeach; ?></section><?php endif; ?>
-<section class="sales-admin-card"><h2>Runtime summary</h2><div class="sales-admin-grid"><?php foreach ($summary as $key=>$value): ?><div><small><?= $e(str_replace('_',' ',(string)$key)) ?></small><br><strong><?= $e($value) ?></strong></div><?php endforeach; ?></div></section>
-<section class="sales-admin-card"><h2>Integrations</h2><div class="sales-admin-user-list"><?php foreach (($health['integrations'] ?? []) as $integration): ?><article class="sales-admin-user"><header><strong><?= $e($integration['name'] ?? $integration['integration_key'] ?? '') ?></strong><span><?= $e($integration['status'] ?? '') ?> · <?= $e($integration['health_status'] ?? 'UNKNOWN') ?></span></header><p><code><?= $e($integration['integration_key'] ?? '') ?></code> · <?= $e($integration['provider'] ?? '') ?></p><p>Checked <?= $e($integration['last_health_check_at'] ?? 'never') ?> · last success <?= $e($integration['last_success_at'] ?? 'never') ?></p><?php if (!empty($integration['last_error'])): ?><p class="sales-admin-alert"><?= $e($integration['last_error']) ?></p><?php endif; ?></article><?php endforeach; ?><?php if (empty($health['integrations'])): ?><p>No integrations configured.</p><?php endif; ?></div></section>
-<?php $runtimeSections=['failed_actions'=>'Failed actions','problem_jobs'=>'Problem jobs','pending_approvals'=>'Pending approvals','agent_failures'=>'Agent failures','crm_failures'=>'CRM inbox failures']; ?>
-<?php foreach ($runtimeSections as $key=>$label): ?><section class="sales-admin-card"><h2><?= $e($label) ?></h2><div class="sales-admin-user-list"><?php foreach (($runtime[$key] ?? []) as $row): ?><article class="sales-admin-user"><header><strong><?= $e($row['type'] ?? $row['action_type'] ?? $row['agent_name'] ?? $row['event_type'] ?? $row['id'] ?? '') ?></strong><span><?= $e($row['status'] ?? '') ?></span></header><p><?php if (isset($row['target_type']) || isset($row['target_id'])): ?>target <?= $e($row['target_type'] ?? '') ?>:<?= $e($row['target_id'] ?? '') ?> · <?php endif; ?><?php if (isset($row['provider'])): ?>provider <?= $e($row['provider']) ?> · <?php endif; ?>correlation <?= $e($row['correlation_id'] ?? '') ?></p><?php foreach (['last_error','error','reason'] as $errorField): ?><?php if (!empty($row[$errorField])): ?><p class="sales-admin-alert"><?= $e($row[$errorField]) ?></p><?php endif; ?><?php endforeach; ?></article><?php endforeach; ?><?php if (empty($runtime[$key])): ?><p>No current items.</p><?php endif; ?></div></section><?php endforeach; ?>
-<div class="sales-admin-grid"><section class="sales-admin-card"><h2>Audit timeline</h2><?php foreach (($health['audit'] ?? []) as $row): ?><p><strong><?= $e($row['category'] ?? '') ?></strong> · <?= $e($row['action'] ?? '') ?><br><?= $e($row['actor_type'] ?? '') ?>:<?= $e($row['actor_id'] ?? '') ?> → <?= $e($row['subject_type'] ?? '') ?>:<?= $e($row['subject_id'] ?? '') ?><br><small><?= $e($row['created_at'] ?? '') ?> · <?= $e($row['correlation_id'] ?? '') ?></small><?php if (!empty($row['reason'])): ?><br><?= $e($row['reason']) ?><?php endif; ?></p><?php endforeach; ?><?php if (empty($health['audit'])): ?><p>No audit records.</p><?php endif; ?></section><section class="sales-admin-card"><h2>Configuration revisions</h2><?php foreach (($health['configuration_revisions'] ?? []) as $row): ?><p><strong><?= $e($row['configuration_type'] ?? '') ?></strong> · <?= $e($row['action'] ?? '') ?> · v<?= $e($row['entity_version'] ?? '') ?><br><code><?= $e($row['entity_id'] ?? '') ?></code><br><small><?= $e($row['actor_type'] ?? '') ?>:<?= $e($row['actor_id'] ?? '') ?> · <?= $e($row['created_at'] ?? '') ?></small></p><?php endforeach; ?><?php if (empty($health['configuration_revisions'])): ?><p>No Sales configuration revisions.</p><?php endif; ?></section></div>
-<section class="sales-admin-card"><h2>Operational metrics</h2><?php foreach (($health['metrics'] ?? []) as $metric): ?><p><code><?= $e($metric['metric'] ?? '') ?></code> · <strong><?= $e($metric['value'] ?? '') ?></strong> · <?= $e($metric['recorded_at'] ?? '') ?></p><?php endforeach; ?><?php if (empty($health['metrics'])): ?><p>No operational metrics recorded.</p><?php endif; ?></section>
-</section>
+<main class="tn-page tn-workspace-page tn-sales-workspace">
+  <?php $this->partial('components/sales/navigation', ['active' => 'sales-admin']); ?>
+  <?php $this->partial('components/ui/page_header', [
+      'eyebrow' => 'Sales · Administration · Health',
+      'title' => 'Health & Audit',
+      'description' => 'Read-only operational control center over canonical Kernel and Platform runtime data.',
+      'actions' => [
+          ['label' => 'Integrations', 'href' => 'sales/admin/integrations', 'variant' => 'ghost'],
+          ['label' => 'Sales Admin', 'href' => 'sales/admin', 'variant' => 'ghost'],
+      ],
+      'meta' => ['value' => $status, 'label' => 'overall status'],
+  ]); ?>
+  <?php if (!empty($pageStatus)): ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Sales health unavailable', 'message' => $pageStatus]); ?>
+  <?php endif; ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section">
+    <?php $this->partial('components/ui/kpi_card', ['label' => 'Overall status', 'value' => $status, 'tone' => $statusTone, 'hint' => $health['generated_at'] ?? '']); ?>
+    <?php foreach ($subsystems as $name => $subsystemStatus): ?>
+      <?php $sub = strtoupper((string) $subsystemStatus); ?>
+      <?php $this->partial('components/ui/kpi_card', [
+          'label' => ucfirst((string) $name),
+          'value' => $sub,
+          'tone' => $sub === 'HEALTHY' ? 'positive' : ($sub === 'ERROR' || $sub === 'FAILED' ? 'danger' : 'warning'),
+      ]); ?>
+    <?php endforeach; ?>
+  </section>
+
+  <?php if (!empty($issues['critical']) || !empty($issues['warnings'])): ?>
+    <section class="tn-ui-panel tn-workspace-section">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Attention</p><h2>Issues</h2></div></div>
+      <?php foreach (($issues['critical'] ?? []) as $issue): ?><p><?php $this->partial('components/ui/status_badge', ['label' => 'ERROR', 'tone' => 'danger']); ?> <?php echo $e($issue['message'] ?? ''); ?> · <?php echo $e($issue['count'] ?? 0); ?></p><?php endforeach; ?>
+      <?php foreach (($issues['warnings'] ?? []) as $issue): ?><p><?php $this->partial('components/ui/status_badge', ['label' => 'DEGRADED', 'tone' => 'warning']); ?> <?php echo $e($issue['message'] ?? ''); ?> · <?php echo $e($issue['count'] ?? 0); ?></p><?php endforeach; ?>
+    </section>
+  <?php endif; ?>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Runtime</p><h2>Summary</h2></div></div>
+    <dl class="tn-sales-summary-grid">
+      <?php foreach ($summary as $key => $value): ?><div><dt><?php echo $e(str_replace('_', ' ', (string) $key)); ?></dt><dd><?php echo $e($value); ?></dd></div><?php endforeach; ?>
+    </dl>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Providers</p><h2>Integrations</h2></div><span><?php echo count((array) ($health['integrations'] ?? [])); ?></span></div>
+    <div class="tn-sales-rule-list">
+      <?php foreach (($health['integrations'] ?? []) as $integration): ?>
+        <article class="tn-sales-rule-card">
+          <div><strong><?php echo $e($integration['name'] ?? $integration['integration_key'] ?? ''); ?></strong><small><?php echo $e($integration['integration_key'] ?? ''); ?> · <?php echo $e($integration['provider'] ?? ''); ?></small></div>
+          <div><?php $this->partial('components/ui/status_badge', [
+              'label' => ($integration['status'] ?? '') . ' · ' . ($integration['health_status'] ?? 'UNKNOWN'),
+              'tone' => ($integration['health_status'] ?? '') === 'HEALTHY' ? 'positive' : (($integration['health_status'] ?? '') === 'ERROR' ? 'danger' : 'warning'),
+          ]); ?><small>Checked <?php echo $e($integration['last_health_check_at'] ?? 'never'); ?> · last success <?php echo $e($integration['last_success_at'] ?? 'never'); ?></small></div>
+          <?php if (!empty($integration['last_error'])): ?><p class="tn-sales-note"><?php echo $e($integration['last_error']); ?></p><?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+      <?php if (empty($health['integrations'])): ?><p class="tn-sales-empty">No integrations configured.</p><?php endif; ?>
+    </div>
+  </section>
+
+  <?php foreach ($runtimeSections as $key => $label): ?>
+    <section class="tn-ui-panel tn-workspace-section">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Operational queue</p><h2><?php echo $e($label); ?></h2></div><span><?php echo count((array) ($runtime[$key] ?? [])); ?></span></div>
+      <div class="tn-sales-rule-list">
+        <?php foreach (($runtime[$key] ?? []) as $row): ?>
+          <article class="tn-sales-rule-card">
+            <div><strong><?php echo $e($row['type'] ?? $row['action_type'] ?? $row['agent_name'] ?? $row['event_type'] ?? $row['id'] ?? ''); ?></strong><small>correlation <?php echo $e($row['correlation_id'] ?? ''); ?></small></div>
+            <div><?php if (!empty($row['status'])) $this->partial('components/ui/status_badge', ['label' => $row['status'], 'tone' => in_array(strtoupper((string) $row['status']), ['FAILED','ERROR'], true) ? 'danger' : 'warning']); ?><small><?php if (isset($row['target_type']) || isset($row['target_id'])): ?>target <?php echo $e($row['target_type'] ?? ''); ?>:<?php echo $e($row['target_id'] ?? ''); ?><?php endif; ?><?php if (isset($row['provider'])): ?> · provider <?php echo $e($row['provider']); ?><?php endif; ?></small></div>
+            <?php foreach (['last_error', 'error', 'reason'] as $errorField): ?><?php if (!empty($row[$errorField])): ?><p class="tn-sales-note"><?php echo $e($row[$errorField]); ?></p><?php endif; ?><?php endforeach; ?>
+          </article>
+        <?php endforeach; ?>
+        <?php if (empty($runtime[$key])): ?><p class="tn-sales-empty">No current items.</p><?php endif; ?>
+      </div>
+    </section>
+  <?php endforeach; ?>
+
+  <div class="tn-ui-split tn-workspace-section">
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Audit</p><h2>Audit timeline</h2></div></div>
+      <?php foreach (($health['audit'] ?? []) as $row): ?><p><strong><?php echo $e($row['category'] ?? ''); ?></strong> · <?php echo $e($row['action'] ?? ''); ?><br><?php echo $e($row['actor_type'] ?? ''); ?>:<?php echo $e($row['actor_id'] ?? ''); ?> → <?php echo $e($row['subject_type'] ?? ''); ?>:<?php echo $e($row['subject_id'] ?? ''); ?><br><small><?php echo $e($row['created_at'] ?? ''); ?> · <?php echo $e($row['correlation_id'] ?? ''); ?></small><?php if (!empty($row['reason'])): ?><br><?php echo $e($row['reason']); ?><?php endif; ?></p><?php endforeach; ?>
+      <?php if (empty($health['audit'])): ?><p class="tn-sales-empty">No audit records.</p><?php endif; ?>
+    </section>
+
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Configuration</p><h2>Revisions</h2></div></div>
+      <?php foreach (($health['configuration_revisions'] ?? []) as $row): ?><p><strong><?php echo $e($row['configuration_type'] ?? ''); ?></strong> · <?php echo $e($row['action'] ?? ''); ?> · v<?php echo $e($row['entity_version'] ?? ''); ?><br><code><?php echo $e($row['entity_id'] ?? ''); ?></code><br><small><?php echo $e($row['actor_type'] ?? ''); ?>:<?php echo $e($row['actor_id'] ?? ''); ?> · <?php echo $e($row['created_at'] ?? ''); ?></small></p><?php endforeach; ?>
+      <?php if (empty($health['configuration_revisions'])): ?><p class="tn-sales-empty">No Sales configuration revisions.</p><?php endif; ?>
+    </section>
+  </div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Observability</p><h2>Operational metrics</h2></div></div>
+    <?php foreach (($health['metrics'] ?? []) as $metric): ?><p><code><?php echo $e($metric['metric'] ?? ''); ?></code> · <strong><?php echo $e($metric['value'] ?? ''); ?></strong> · <?php echo $e($metric['recorded_at'] ?? ''); ?></p><?php endforeach; ?>
+    <?php if (empty($health['metrics'])): ?><p class="tn-sales-empty">No operational metrics recorded.</p><?php endif; ?>
+  </section>
+</main>
