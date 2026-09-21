@@ -15,4 +15,5 @@ final class CosRealtimeSubscription
 {
     public RealtimeTopic $topic;
     public string $transport = 'default';
+    public string $signalTarget = '';
 }

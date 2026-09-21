@@ -23,6 +23,18 @@ cos_web_realtime_platform_publish:
   controller: App\Web\Experience\Dev\RealtimePlatformPublishController
   methods: [POST]
 
+cos_web_activity_center:
+  path: /workspace/activity-center
+  controller: App\Web\Experience\Async\ActivityCenterController
+  methods: [GET, HEAD]
+
+cos_web_async_operation_retry:
+  path: /workspace/activity-center/retry/{id}
+  controller: App\Web\Experience\Async\RetryAsyncOperationController
+  methods: [POST]
+  requirements:
+    id: '[a-f0-9]{32}'
+
 cos_web_design_system_catalog:
   path: /dev/ui
   controller: App\Web\Experience\Dev\DesignSystemCatalogController

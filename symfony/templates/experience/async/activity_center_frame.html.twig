@@ -1,0 +1,136 @@
+<turbo-frame id="cos-activity-center-frame">
+    <twig:CosRealtimeSubscription :topic="topic" signalTarget="cos-async-operation-signal" />
+
+    <div
+        class="cos-activity-center__body"
+        data-activity-center-meta
+        data-activity-count="{{ activity|length }}"
+        data-notification-count="{{ notifications|length }}"
+    >
+        <header class="cos-activity-center__header">
+            <div>
+                <p class="cos-activity-center__eyebrow">Async Operations</p>
+                <h2>{{ tab == 'notifications' ? 'Notifications' : 'Activity Center' }}</h2>
+            </div>
+            <button
+                class="cos-shell__icon-button"
+                type="button"
+                aria-label="Close Activity Center"
+                data-action="click->workspace-shell#closeActivityCenter"
+            >×</button>
+        </header>
+
+        <nav class="cos-activity-center__tabs" aria-label="Activity Center views">
+            <a
+                href="{{ path('cos_web_activity_center', {tab: 'activity'}) }}"
+                class="{% if tab == 'activity' %}is-active{% endif %}"
+                {% if tab == 'activity' %}aria-current="page"{% endif %}
+            >Activity <span>{{ activity|length }}</span></a>
+            <a
+                href="{{ path('cos_web_activity_center', {tab: 'notifications'}) }}"
+                class="{% if tab == 'notifications' %}is-active{% endif %}"
+                {% if tab == 'notifications' %}aria-current="page"{% endif %}
+            >Notifications <span>{{ notifications|length }}</span></a>
+        </nav>
+
+        {% if retried %}
+            <div class="cos-alert cos-alert--success" role="status">
+                Operation returned to the canonical queue.
+            </div>
+        {% endif %}
+
+        {% if selected %}
+            <section class="cos-activity-center__detail" aria-label="Selected async operation">
+                <div class="cos-activity-center__detail-head">
+                    <div>
+                        <small>{{ selected.type }}</small>
+                        <strong>{{ selected.status.value|capitalize }}</strong>
+                    </div>
+                    <span class="cos-activity-center__status" data-status="{{ selected.status.value }}">
+                        {{ selected.status.value }}
+                    </span>
+                </div>
+
+                {% if selected.progress is not null %}
+                    <twig:CosProgress
+                        :value="selected.progress"
+                        label="{{ selected.progress }}% complete"
+                    />
+                {% else %}
+                    <p class="cos-activity-center__muted">Progress is indeterminate for this operation type.</p>
+                {% endif %}
+
+                <dl class="cos-activity-center__facts">
+                    <div><dt>Operation</dt><dd><code>{{ selected.id }}</code></dd></div>
+                    <div><dt>Attempts</dt><dd>{{ selected.attempts }} / {{ selected.maxAttempts }}</dd></div>
+                    <div><dt>Correlation</dt><dd><code>{{ selected.correlationId }}</code></dd></div>
+                    {% if selected.workerId %}<div><dt>Worker</dt><dd>{{ selected.workerId }}</dd></div>{% endif %}
+                    {% if selected.entityType and selected.entityId %}
+                        <div><dt>Entity</dt><dd>{{ selected.entityType }}:{{ selected.entityId }}</dd></div>
+                    {% endif %}
+                    <div><dt>Updated</dt><dd>{{ selected.updatedAt|date('Y-m-d H:i:s') }}</dd></div>
+                </dl>
+
+                {% if selected.error %}
+                    <pre class="cos-activity-center__error">{{ selected.error }}</pre>
+                {% endif %}
+
+                {% if selected.canRetry %}
+                    <form
+                        method="post"
+                        action="{{ path('cos_web_async_operation_retry', {id: selected.id}) }}"
+                        data-turbo-frame="cos-activity-center-frame"
+                    >
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <button class="cos-button cos-button--primary" type="submit">Retry operation</button>
+                    </form>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        {% if tab == 'notifications' %}
+            <div class="cos-activity-center__list" role="list">
+                {% for item in notifications %}
+                    <a
+                        class="cos-activity-center__item"
+                        href="{{ item.path ?? path('cos_web_activity_center', {tab: 'notifications'}) }}"
+                        role="listitem"
+                    >
+                        <span class="cos-activity-center__severity" data-severity="{{ item.severity }}"></span>
+                        <span>
+                            <strong>{{ item.title }}</strong>
+                            {% if item.body %}<small>{{ item.body }}</small>{% endif %}
+                        </span>
+                        {% if item.occurredAt %}<time datetime="{{ item.occurredAt|date('c') }}">{{ item.occurredAt|date('H:i') }}</time>{% endif %}
+                    </a>
+                {% else %}
+                    <div class="cos-activity-center__empty">No operation notifications.</div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="cos-activity-center__list" role="list">
+                {% for item in activity %}
+                    <a
+                        class="cos-activity-center__item{% if selected and item.id ends with selected.id %} is-selected{% endif %}"
+                        href="{{ item.path ?? path('cos_web_activity_center') }}"
+                        role="listitem"
+                    >
+                        <span class="cos-activity-center__status-dot" data-status="{{ item.status }}"></span>
+                        <span>
+                            <strong>{{ item.label }}</strong>
+                            {% if item.detail %}<small>{{ item.detail }}</small>{% endif %}
+                            {% if item.progress is not null %}
+                                <span class="cos-activity-center__mini-progress" aria-label="{{ item.progress }}% complete">
+                                    <span style="width:{{ item.progress }}%"></span>
+                                </span>
+                            {% endif %}
+                        </span>
+                        {% if item.occurredAt %}<time datetime="{{ item.occurredAt|date('c') }}">{{ item.occurredAt|date('H:i') }}</time>{% endif %}
+                    </a>
+                {% else %}
+                    <div class="cos-activity-center__empty">No async operations yet.</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</turbo-frame>

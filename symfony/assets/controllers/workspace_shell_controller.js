@@ -8,10 +8,17 @@ export default class extends Controller {
         'paletteInput',
         'searchFrame',
         'resultItem',
+        'activityPanel',
+        'activityFrame',
+        'activityButton',
+        'notificationButton',
+        'activityCounter',
+        'notificationCounter',
     ];
 
     static values = {
         searchUrl: String,
+        activityUrl: String,
     };
 
     connect() {
@@ -48,6 +55,92 @@ export default class extends Controller {
         if (this.hasMenuButtonTarget) {
             this.menuButtonTarget.setAttribute('aria-expanded', String(open));
         }
+    }
+
+
+    openActivityCenter() {
+        this.openActivitySurface('activity');
+    }
+
+    openNotifications() {
+        this.openActivitySurface('notifications');
+    }
+
+    openActivitySurface(tab) {
+        if (!this.hasActivityPanelTarget || !this.hasActivityFrameTarget || !this.hasActivityUrlValue) {
+            return;
+        }
+
+        const url = new URL(this.activityUrlValue, window.location.origin);
+        url.searchParams.set('tab', tab);
+
+        this.activityPanelTarget.hidden = false;
+        document.body.dataset.cosActivityCenterOpen = 'true';
+        this.activityFrameTarget.setAttribute('src', url.toString());
+
+        if (this.hasActivityButtonTarget) {
+            this.activityButtonTarget.setAttribute('aria-expanded', String(tab === 'activity'));
+        }
+        if (this.hasNotificationButtonTarget) {
+            this.notificationButtonTarget.setAttribute('aria-expanded', String(tab === 'notifications'));
+        }
+    }
+
+    closeActivityCenter() {
+        if (!this.hasActivityPanelTarget) {
+            return;
+        }
+
+        this.activityPanelTarget.hidden = true;
+        delete document.body.dataset.cosActivityCenterOpen;
+
+        if (this.hasActivityButtonTarget) {
+            this.activityButtonTarget.setAttribute('aria-expanded', 'false');
+        }
+        if (this.hasNotificationButtonTarget) {
+            this.notificationButtonTarget.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    activityCenterLoaded() {
+        if (!this.hasActivityFrameTarget) {
+            return;
+        }
+
+        const meta = this.activityFrameTarget.querySelector('[data-activity-center-meta]');
+        if (!meta) {
+            return;
+        }
+
+        this.updateCounter(
+            this.hasActivityCounterTarget ? this.activityCounterTarget : null,
+            Number.parseInt(meta.dataset.activityCount || '0', 10),
+        );
+        this.updateCounter(
+            this.hasNotificationCounterTarget ? this.notificationCounterTarget : null,
+            Number.parseInt(meta.dataset.notificationCount || '0', 10),
+        );
+    }
+
+    refreshActivityCenter() {
+        if (!this.hasActivityFrameTarget) {
+            return;
+        }
+
+        const src = this.activityFrameTarget.getAttribute('src');
+        if (src) {
+            this.activityFrameTarget.setAttribute('src', src);
+        }
+    }
+
+    updateCounter(target, count) {
+        if (!target) {
+            return;
+        }
+
+        const normalized = Number.isFinite(count) && count > 0 ? count : 0;
+        target.hidden = normalized === 0;
+        target.textContent = normalized > 99 ? '99+' : String(normalized);
     }
 
     openPalette() {
@@ -178,6 +271,10 @@ export default class extends Controller {
         if (event.key === 'Escape') {
             if (paletteOpen) {
                 this.closePalette();
+            }
+
+            if (this.hasActivityPanelTarget && !this.activityPanelTarget.hidden) {
+                this.closeActivityCenter();
             }
 
             if (this.sidebarTarget.classList.contains('is-mobile-open')) {

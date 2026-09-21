@@ -2,6 +2,7 @@
     class="cos-realtime-subscription"
     data-controller="realtime-connection"
     data-realtime-connection-topic-value="{{ topic.value }}"
+    data-realtime-connection-signal-target-value="{{ signalTarget }}"
     data-action="
         online@window->realtime-connection#online
         offline@window->realtime-connection#offline

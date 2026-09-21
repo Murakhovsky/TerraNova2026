@@ -5,6 +5,8 @@
     class="cos-shell"
     data-controller="workspace-shell"
     data-workspace-shell-search-url-value="{{ path('cos_web_global_search') }}"
+    data-workspace-shell-activity-url-value="{{ path('cos_web_activity_center') }}"
+    data-action="cos:realtime-update->workspace-shell#refreshActivityCenter"
 >
     <aside
         class="cos-shell__sidebar"
@@ -114,18 +116,38 @@
                     title="Realtime connection state"
                 ><span data-cos-realtime-state-label>{{ shell.connectionState.value|capitalize }}</span></span>
 
-                <button class="cos-shell__icon-button" type="button" aria-label="Notifications">
+                <button
+                    class="cos-shell__icon-button"
+                    type="button"
+                    aria-label="Notifications"
+                    aria-controls="cos-activity-center-panel"
+                    aria-expanded="false"
+                    data-workspace-shell-target="notificationButton"
+                    data-action="click->workspace-shell#openNotifications"
+                >
                     NT
-                    {% if shell.notificationCount > 0 %}
-                        <span class="cos-shell__counter">{{ shell.notificationCount > 99 ? '99+' : shell.notificationCount }}</span>
-                    {% endif %}
+                    <span
+                        class="cos-shell__counter"
+                        data-workspace-shell-target="notificationCounter"
+                        {% if shell.notificationCount <= 0 %}hidden{% endif %}
+                    >{{ shell.notificationCount > 99 ? '99+' : shell.notificationCount }}</span>
                 </button>
 
-                <button class="cos-shell__icon-button" type="button" aria-label="Activity Center">
+                <button
+                    class="cos-shell__icon-button"
+                    type="button"
+                    aria-label="Activity Center"
+                    aria-controls="cos-activity-center-panel"
+                    aria-expanded="false"
+                    data-workspace-shell-target="activityButton"
+                    data-action="click->workspace-shell#openActivityCenter"
+                >
                     <span class="cos-shell__activity-label">AC</span>
-                    {% if shell.activityCount > 0 %}
-                        <span class="cos-shell__counter">{{ shell.activityCount > 99 ? '99+' : shell.activityCount }}</span>
-                    {% endif %}
+                    <span
+                        class="cos-shell__counter"
+                        data-workspace-shell-target="activityCounter"
+                        {% if shell.activityCount <= 0 %}hidden{% endif %}
+                    >{{ shell.activityCount > 99 ? '99+' : shell.activityCount }}</span>
                 </button>
 
                 <a class="cos-shell__profile" href="/cabinet">
@@ -157,6 +179,34 @@
             data-action="click->workspace-shell#openSidebar"
         >More</button>
     </nav>
+
+    <div id="cos-async-operation-signal" hidden aria-hidden="true"></div>
+
+    <div
+        class="cos-activity-center"
+        id="cos-activity-center-panel"
+        hidden
+        data-workspace-shell-target="activityPanel"
+    >
+        <button
+            class="cos-activity-center__backdrop"
+            type="button"
+            tabindex="-1"
+            aria-label="Close Activity Center"
+            data-action="click->workspace-shell#closeActivityCenter"
+        ></button>
+
+        <aside class="cos-activity-center__panel" role="dialog" aria-modal="true" aria-label="Activity Center">
+            <turbo-frame
+                id="cos-activity-center-frame"
+                src="{{ path('cos_web_activity_center', {tab: 'activity'}) }}"
+                data-workspace-shell-target="activityFrame"
+                data-action="turbo:frame-load->workspace-shell#activityCenterLoaded"
+            >
+                <div class="cos-activity-center__loading" aria-live="polite">Loading activity…</div>
+            </turbo-frame>
+        </aside>
+    </div>
 
     <div class="cos-command" hidden data-workspace-shell-target="palette">
         <button

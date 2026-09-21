@@ -1,0 +1,9 @@
+<turbo-stream action="update" target="cos-async-operation-signal">
+    <template>
+        <span
+            data-operation-id="{{ operation.id }}"
+            data-operation-status="{{ operation.status.value }}"
+            data-operation-updated-at="{{ operation.updatedAt|date('c') }}"
+        ></span>
+    </template>
+</turbo-stream>

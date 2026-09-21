@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Extension\Model;
 
+use DateTimeImmutable;
+
 final readonly class NotificationItem
 {
     public function __construct(
@@ -12,6 +14,8 @@ final readonly class NotificationItem
         public ?string $body = null,
         public string $severity = 'info',
         public ?string $path = null,
+        public ?DateTimeImmutable $occurredAt = null,
+        public ?string $resourceId = null,
     ) {
     }
 }
