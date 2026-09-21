@@ -19,13 +19,46 @@ else
 fi
 
 if [[ -f .env ]]; then
-  COMPOSE=("${DOCKER[@]}" compose --env-file .env)
+  ENV_FILE=".env"
 elif [[ -f .env.docker ]]; then
-  COMPOSE=("${DOCKER[@]}" compose --env-file .env.docker)
+  ENV_FILE=".env.docker"
 else
   echo "Neither .env nor .env.docker exists." >&2
   exit 23
 fi
+
+COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE")
+
+generate_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+    return
+  fi
+  head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'
+}
+
+ensure_secret() {
+  local key="$1"
+  local current
+  current="$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1)"
+  if [[ -n "$current" ]]; then
+    return
+  fi
+
+  local value
+  value="$(generate_secret)"
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    sed -i "s/^${key}=.*$/${key}=${value}/" "$ENV_FILE"
+  else
+    printf '\n%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+  chmod 600 "$ENV_FILE" 2>/dev/null || true
+  echo "Initialized missing runtime secret: $key"
+}
+
+ensure_secret SYMFONY_APP_SECRET
+ensure_secret SPATIAL_JWT_SECRET
+ensure_secret MERCURE_JWT_SECRET
 
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" build --pull php nginx
@@ -49,7 +82,7 @@ while IFS= read -r container_id; do
   "${DOCKER[@]}" rm -f "$container_id"
 done < <("${DOCKER[@]}" ps --filter "publish=$COS_HTTP_PORT" --format '{{.ID}}')
 
-"${COMPOSE[@]}" up -d mysql redis
+"${COMPOSE[@]}" up -d mysql redis mercure
 
 for attempt in $(seq 1 30); do
   if "${COMPOSE[@]}" exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent' >/dev/null 2>&1; then
@@ -57,6 +90,21 @@ for attempt in $(seq 1 30); do
   fi
   sleep 2
 done
+
+for attempt in $(seq 1 30); do
+  mercure_id="$("${COMPOSE[@]}" ps -q mercure)"
+  if [[ -n "$mercure_id" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$mercure_id" 2>/dev/null || true)" == "healthy" ]]; then
+    break
+  fi
+  sleep 2
+done
+
+mercure_id="$("${COMPOSE[@]}" ps -q mercure)"
+if [[ -z "$mercure_id" ]] || [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$mercure_id" 2>/dev/null || true)" != "healthy" ]]; then
+  echo "Mercure failed readiness before canonical HTTP startup." >&2
+  "${COMPOSE[@]}" logs --no-color --tail=200 mercure >&2 || true
+  exit 32
+fi
 
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:schema:migrate
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -71,7 +119,7 @@ done
 
 if ! curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
   cat /tmp/cos-health.json >&2 2>/dev/null || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mysql redis >&2 || true
+  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mercure mysql redis >&2 || true
   exit 31
 fi
 
