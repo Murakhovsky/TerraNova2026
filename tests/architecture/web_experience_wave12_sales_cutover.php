@@ -16,6 +16,7 @@ $legacy = file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.
 $services = file_get_contents($root . '/symfony/config/services.yaml');
 $leadRuntime = file_get_contents($root . '/symfony/assets/controllers/sales_lead_controller.js');
 $leadList = file_get_contents($root . '/symfony/templates/experience/sales/leads.html.twig');
+$salesBrowser = file_get_contents($root . '/tests/browser/sales_workspace.mjs');
 
 foreach ([
     "cos_web_sales_dashboard:\n  path: /sales/dashboard\n  controller: App\\Web\\Sales\\SalesWorkspaceController::dashboard",
@@ -81,5 +82,13 @@ foreach ([
 
 expectSalesCutover(str_contains($production, 'SalesAdminQuery'), 'Production Sales controller must source owner choices through QueryBus.');
 expectSalesCutover(str_contains($production, "'team.users'"), 'Production Sales owner projection must use the canonical Sales admin query operation.');
+
+foreach ([
+    '.cos-shell[data-controller="workspace-shell"]',
+    '[data-sales-surface="lead-list"]',
+    'Qualified Lead must persist after reload',
+] as $marker) {
+    expectSalesCutover(str_contains($salesBrowser, $marker), 'Sales browser E2E is not aligned with canonical Lead cutover: ' . $marker);
+}
 
 echo "Wave 12.26 Sales Cutover architecture gate passed.\n";
