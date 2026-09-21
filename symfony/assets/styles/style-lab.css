@@ -1,0 +1,324 @@
+/*
+ * PHASE 2 Style Lab
+ *
+ * Dev/reference-only candidate layer. It deliberately overrides semantic tokens
+ * without changing production theme contracts. No Domain may depend on these
+ * selectors.
+ */
+
+.cos-style-lab {
+  position: sticky;
+  top: var(--cos-space-2);
+  z-index: calc(var(--cos-z-header) + 1);
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto auto;
+  gap: var(--cos-space-3);
+  align-items: center;
+  width: min(100%, 92rem);
+  margin: 0 auto var(--cos-space-4);
+  padding: var(--cos-space-2);
+  color: var(--cos-color-text);
+  background: color-mix(in srgb, var(--cos-color-surface) 92%, transparent);
+  border: 1px solid var(--cos-color-border);
+  border-radius: var(--cos-radius-lg);
+  box-shadow: var(--cos-shadow-raised);
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+}
+
+.cos-style-lab__identity {
+  display: grid;
+  min-width: 0;
+  padding-inline: var(--cos-space-2);
+}
+
+.cos-style-lab__identity strong {
+  font-size: var(--cos-font-sm);
+  letter-spacing: -0.01em;
+}
+
+.cos-style-lab__identity small {
+  overflow: hidden;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cos-style-lab__styles,
+.cos-style-lab__density {
+  display: flex;
+  gap: var(--cos-space-1);
+  align-items: center;
+  padding: var(--cos-space-1);
+  background: var(--cos-color-surface-subtle);
+  border: 1px solid var(--cos-color-border);
+  border-radius: var(--cos-radius-md);
+}
+
+.cos-style-lab__button,
+.cos-style-lab__density-button {
+  min-height: var(--cos-control-height-sm);
+  padding: 0 var(--cos-space-3);
+  color: var(--cos-color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--cos-radius-sm);
+  font: inherit;
+  font-size: var(--cos-font-xs);
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.cos-style-lab__button:hover,
+.cos-style-lab__density-button:hover {
+  color: var(--cos-color-text);
+  background: var(--cos-color-surface);
+}
+
+.cos-style-lab__button.is-active,
+.cos-style-lab__density-button.is-active {
+  color: var(--cos-color-text);
+  background: var(--cos-color-surface);
+  border-color: var(--cos-color-primary-border);
+  box-shadow: 0 0 0 2px var(--cos-focus-ring);
+}
+
+/* Origin A — Graphite Precision. The strictest Calm Technical candidate. */
+html[data-cos-style-lab="origin-a"] {
+  color-scheme: light;
+
+  --cos-color-canvas: var(--cos-foundation-neutral-50);
+  --cos-color-surface: var(--cos-foundation-white);
+  --cos-color-surface-subtle: var(--cos-foundation-neutral-100);
+  --cos-color-surface-raised: var(--cos-foundation-neutral-25);
+  --cos-color-text: var(--cos-foundation-neutral-950);
+  --cos-color-text-soft: var(--cos-foundation-neutral-800);
+  --cos-color-text-muted: var(--cos-foundation-neutral-500);
+  --cos-color-border: var(--cos-foundation-neutral-200);
+  --cos-color-border-strong: var(--cos-foundation-neutral-300);
+  --cos-color-shell: var(--cos-foundation-graphite-950);
+  --cos-color-shell-text: var(--cos-foundation-neutral-25);
+  --cos-color-shell-muted: rgba(243, 245, 247, 0.62);
+  --cos-color-shell-border: rgba(255, 255, 255, 0.08);
+  --cos-color-shell-hover: rgba(255, 255, 255, 0.06);
+  --cos-color-shell-active: rgba(83, 103, 255, 0.18);
+  --cos-color-primary: var(--cos-foundation-cobalt-500);
+  --cos-color-primary-hover: var(--cos-foundation-cobalt-600);
+  --cos-color-primary-strong: var(--cos-foundation-cobalt-700);
+  --cos-color-primary-soft: color-mix(in srgb, var(--cos-foundation-cobalt-500) 10%, var(--cos-foundation-white));
+  --cos-color-primary-border: color-mix(in srgb, var(--cos-foundation-cobalt-500) 26%, var(--cos-foundation-white));
+  --cos-style-lab-canvas-image: none;
+}
+
+/* Origin B — Executive Warmth. Graphite precision with restrained amber atmosphere. */
+html[data-cos-style-lab="origin-b"] {
+  color-scheme: light;
+
+  --cos-color-canvas: color-mix(in srgb, var(--cos-foundation-neutral-50) 94%, var(--cos-foundation-warning-500));
+  --cos-color-surface: color-mix(in srgb, var(--cos-foundation-white) 97%, var(--cos-foundation-warning-500));
+  --cos-color-surface-subtle: color-mix(in srgb, var(--cos-foundation-neutral-100) 92%, var(--cos-foundation-warning-500));
+  --cos-color-surface-raised: color-mix(in srgb, var(--cos-foundation-neutral-25) 96%, var(--cos-foundation-warning-500));
+  --cos-color-text: var(--cos-foundation-neutral-950);
+  --cos-color-text-soft: var(--cos-foundation-neutral-800);
+  --cos-color-text-muted: var(--cos-foundation-neutral-500);
+  --cos-color-border: color-mix(in srgb, var(--cos-foundation-neutral-200) 88%, var(--cos-foundation-warning-500));
+  --cos-color-border-strong: color-mix(in srgb, var(--cos-foundation-neutral-300) 88%, var(--cos-foundation-warning-500));
+  --cos-color-shell: color-mix(in srgb, var(--cos-foundation-graphite-950) 96%, var(--cos-foundation-warning-700));
+  --cos-color-shell-text: var(--cos-foundation-neutral-25);
+  --cos-color-primary: var(--cos-foundation-cobalt-600);
+  --cos-color-primary-hover: var(--cos-foundation-cobalt-700);
+  --cos-color-primary-strong: var(--cos-foundation-cobalt-700);
+  --cos-color-primary-soft: color-mix(in srgb, var(--cos-foundation-cobalt-500) 9%, var(--cos-color-surface));
+  --cos-color-primary-border: color-mix(in srgb, var(--cos-foundation-cobalt-500) 24%, var(--cos-color-surface));
+  --cos-style-lab-canvas-image:
+    radial-gradient(circle at 86% 4%, rgba(225, 170, 80, 0.16), transparent 28%),
+    radial-gradient(circle at 8% 92%, rgba(83, 103, 255, 0.06), transparent 24%);
+}
+
+/* Origin C — Future Mineral. Cooler, slightly more synthetic and spatial. */
+html[data-cos-style-lab="origin-c"] {
+  color-scheme: light;
+
+  --cos-color-canvas: color-mix(in srgb, var(--cos-foundation-neutral-50) 93%, var(--cos-foundation-cobalt-400));
+  --cos-color-surface: color-mix(in srgb, var(--cos-foundation-white) 97%, var(--cos-foundation-cobalt-400));
+  --cos-color-surface-subtle: color-mix(in srgb, var(--cos-foundation-neutral-100) 91%, var(--cos-foundation-cobalt-400));
+  --cos-color-surface-raised: color-mix(in srgb, var(--cos-foundation-neutral-25) 95%, var(--cos-foundation-cobalt-400));
+  --cos-color-text: color-mix(in srgb, var(--cos-foundation-neutral-950) 96%, var(--cos-foundation-cobalt-700));
+  --cos-color-text-soft: var(--cos-foundation-neutral-800);
+  --cos-color-text-muted: var(--cos-foundation-neutral-500);
+  --cos-color-border: color-mix(in srgb, var(--cos-foundation-neutral-200) 82%, var(--cos-foundation-cobalt-400));
+  --cos-color-border-strong: color-mix(in srgb, var(--cos-foundation-neutral-300) 78%, var(--cos-foundation-cobalt-400));
+  --cos-color-shell: color-mix(in srgb, var(--cos-foundation-graphite-950) 91%, var(--cos-foundation-cobalt-700));
+  --cos-color-shell-text: var(--cos-foundation-neutral-25);
+  --cos-color-primary: var(--cos-foundation-cobalt-500);
+  --cos-color-primary-hover: var(--cos-foundation-cobalt-600);
+  --cos-color-primary-strong: var(--cos-foundation-cobalt-700);
+  --cos-color-primary-soft: color-mix(in srgb, var(--cos-foundation-cobalt-400) 13%, var(--cos-color-surface));
+  --cos-color-primary-border: color-mix(in srgb, var(--cos-foundation-cobalt-400) 30%, var(--cos-color-surface));
+  --cos-style-lab-canvas-image:
+    radial-gradient(circle at 78% 0%, rgba(83, 103, 255, 0.13), transparent 30%),
+    radial-gradient(circle at 0% 64%, rgba(116, 181, 227, 0.09), transparent 28%);
+}
+
+/* Glass — Executive Glass. Maximum glassmorphism candidate, still data-readable. */
+html[data-cos-style-lab="glass"] {
+  color-scheme: dark;
+
+  --cos-color-canvas: rgba(11, 12, 15, 1);
+  --cos-color-surface: rgba(37, 38, 43, 0.58);
+  --cos-color-surface-subtle: rgba(255, 255, 255, 0.065);
+  --cos-color-surface-raised: rgba(52, 53, 59, 0.7);
+  --cos-color-text: rgba(248, 249, 251, 0.98);
+  --cos-color-text-soft: rgba(229, 232, 237, 0.9);
+  --cos-color-text-muted: rgba(196, 201, 210, 0.72);
+  --cos-color-text-inverse: rgba(17, 18, 22, 0.96);
+  --cos-color-on-primary: rgba(255, 255, 255, 1);
+  --cos-color-border: rgba(255, 255, 255, 0.14);
+  --cos-color-border-strong: rgba(255, 255, 255, 0.22);
+  --cos-color-shell: rgba(17, 18, 22, 0.58);
+  --cos-color-shell-text: rgba(248, 249, 251, 0.98);
+  --cos-color-shell-muted: rgba(232, 235, 241, 0.62);
+  --cos-color-shell-border: rgba(255, 255, 255, 0.13);
+  --cos-color-shell-hover: rgba(255, 255, 255, 0.08);
+  --cos-color-shell-active: rgba(125, 140, 255, 0.22);
+  --cos-color-primary: var(--cos-foundation-cobalt-400);
+  --cos-color-primary-hover: color-mix(in srgb, var(--cos-foundation-cobalt-400) 86%, var(--cos-foundation-white));
+  --cos-color-primary-strong: color-mix(in srgb, var(--cos-foundation-cobalt-400) 74%, var(--cos-foundation-white));
+  --cos-color-primary-soft: rgba(83, 103, 255, 0.16);
+  --cos-color-primary-border: rgba(125, 140, 255, 0.38);
+  --cos-color-positive: var(--cos-foundation-positive-500);
+  --cos-color-positive-soft: rgba(104, 189, 146, 0.14);
+  --cos-color-warning: var(--cos-foundation-warning-500);
+  --cos-color-warning-soft: rgba(225, 170, 80, 0.14);
+  --cos-color-danger: var(--cos-foundation-danger-500);
+  --cos-color-danger-soft: rgba(239, 125, 135, 0.14);
+  --cos-color-info: var(--cos-foundation-info-500);
+  --cos-color-info-soft: rgba(116, 181, 227, 0.14);
+  --cos-focus-ring: rgba(125, 140, 255, 0.4);
+  --cos-overlay: rgba(4, 5, 7, 0.72);
+  --cos-shadow-ui: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --cos-shadow-raised: 0 8px 28px rgba(0, 0, 0, 0.2);
+  --cos-shadow-overlay: 0 28px 90px rgba(0, 0, 0, 0.46);
+  --cos-radius-sm: 0.625rem;
+  --cos-radius-md: 0.875rem;
+  --cos-radius-lg: 1.125rem;
+  --cos-style-lab-canvas-image:
+    radial-gradient(circle at 76% 12%, rgba(255, 159, 67, 0.24), transparent 28%),
+    radial-gradient(circle at 18% 18%, rgba(83, 103, 255, 0.18), transparent 30%),
+    radial-gradient(circle at 48% 100%, rgba(225, 170, 80, 0.14), transparent 34%);
+  --cos-style-lab-blur: 24px;
+  --cos-style-lab-saturate: 138%;
+}
+
+html[data-cos-style-lab] body,
+html[data-cos-style-lab] .cos-shell {
+  background-color: var(--cos-color-canvas);
+  background-image: var(--cos-style-lab-canvas-image, none);
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+html[data-cos-style-lab="origin-b"] .cos-shell__topbar,
+html[data-cos-style-lab="origin-c"] .cos-shell__topbar {
+  background: color-mix(in srgb, var(--cos-color-surface) 92%, transparent);
+}
+
+html[data-cos-style-lab="glass"] .cos-shell {
+  background: transparent;
+}
+
+html[data-cos-style-lab="glass"] .cos-shell__main {
+  background: transparent;
+}
+
+html[data-cos-style-lab="glass"] :is(
+  .cos-style-lab,
+  .cos-shell__sidebar,
+  .cos-shell__topbar,
+  .cos-shell__mobile-nav,
+  .cos-card,
+  .cos-ui-catalog__surface,
+  .cos-ui-swatch,
+  .cos-workspace__header,
+  .cos-workspace__local-nav,
+  .cos-workspace__tabs,
+  .cos-workspace__documents,
+  .cos-workspace__footer,
+  .cos-workspace-panel,
+  .cos-workspace__mobile-actions,
+  .cos-data-grid,
+  .cos-data-grid__toolbar,
+  .cos-data-grid__table-wrap,
+  .cos-data-grid__card,
+  .cos-dialog__panel,
+  .cos-drawer__panel,
+  .cos-dropdown__menu,
+  .cos-popover,
+  .cos-toast,
+  .cos-command__panel,
+  .cos-activity-center__panel,
+  .cos-ai-panel__panel,
+  .cos-agent-run,
+  .cos-ai-context-card,
+  .cos-agent-result,
+  .cos-agent-metric,
+  .cos-agent-evidence,
+  .cos-agent-recommendation,
+  .cos-agent-warning,
+  .cos-agent-action
+) {
+  background: var(--cos-color-surface);
+  border-color: var(--cos-color-border);
+  box-shadow: var(--cos-shadow-raised);
+  backdrop-filter: blur(var(--cos-style-lab-blur)) saturate(var(--cos-style-lab-saturate));
+  -webkit-backdrop-filter: blur(var(--cos-style-lab-blur)) saturate(var(--cos-style-lab-saturate));
+}
+
+html[data-cos-style-lab="glass"] :is(
+  .cos-input,
+  .cos-select,
+  .cos-textarea,
+  .cos-shell__search-trigger,
+  .cos-shell__icon-button,
+  .cos-button,
+  .cos-data-grid__search input,
+  .cos-data-grid__filter select
+) {
+  background: color-mix(in srgb, var(--cos-color-surface-raised) 82%, transparent);
+}
+
+html[data-cos-style-lab="glass"] .cos-shell__sidebar {
+  border-right-color: var(--cos-color-shell-border);
+}
+
+html[data-cos-style-lab="glass"] .cos-shell__brand,
+html[data-cos-style-lab="glass"] .cos-shell__nav--utility {
+  border-color: var(--cos-color-shell-border);
+}
+
+html[data-cos-style-lab="glass"] .cos-ui-catalog__title,
+html[data-cos-style-lab="glass"] .cos-workspace__heading h1,
+html[data-cos-style-lab="glass"] .cos-metric__value {
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 980px) {
+  .cos-style-lab {
+    grid-template-columns: 1fr;
+    position: relative;
+    top: auto;
+  }
+
+  .cos-style-lab__styles,
+  .cos-style-lab__density {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cos-style-lab__button,
+  .cos-style-lab__density-button {
+    transition: none;
+  }
+}
