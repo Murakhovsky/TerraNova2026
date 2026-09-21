@@ -20,6 +20,7 @@ on:
       - 'tests/architecture/web_experience_wave12_shell.php'
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
+      - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_search.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
@@ -41,6 +42,7 @@ on:
       - 'tests/architecture/web_experience_wave12_shell.php'
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
+      - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_search.php'
       - '.github/workflows/symfony-bootstrap.yml'
 
@@ -149,6 +151,9 @@ jobs:
 
       - name: Unified UIAction runtime smoke
         run: docker compose exec -T php php bin/console cos:web:actions:smoke
+
+      - name: Interaction Components runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:interactions:smoke
 
       - name: Global Search runtime smoke
         run: docker compose exec -T php php bin/console cos:web:search:smoke

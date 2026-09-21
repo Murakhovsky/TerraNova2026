@@ -1,0 +1,55 @@
+<div class="cos-confirm-host">
+    {% if triggerLabel %}
+        <button
+            class="cos-button {{ tone == 'danger' ? 'cos-button--danger' : '' }}"
+            type="button"
+            data-controller="dialog-trigger"
+            data-dialog-trigger-dialog-id-value="{{ id }}"
+            data-action="click->dialog-trigger#open"
+            aria-haspopup="dialog"
+        >{{ triggerLabel }}</button>
+    {% endif %}
+
+    <dialog
+        id="{{ id }}"
+        class="cos-dialog cos-dialog--modal cos-dialog--sm {{ this.toneClass() }}"
+        aria-labelledby="{{ id }}-title"
+        aria-describedby="{{ id }}-message"
+        data-controller="dialog confirm"
+        data-dialog-dismissible-value="true"
+        data-confirm-step-up-value="{{ stepUp ? 'true' : 'false' }}"
+        data-action="cancel->dialog#cancel click->dialog#backdrop"
+    >
+        <div class="cos-dialog__panel" data-dialog-target="panel">
+            <header class="cos-dialog__header">
+                <h2 id="{{ id }}-title" class="cos-dialog__title">{{ title }}</h2>
+            </header>
+            <div class="cos-dialog__body">
+                <p id="{{ id }}-message" class="cos-confirm__message">{{ message }}</p>
+                {% if stepUp %}
+                    <label class="cos-field">
+                        <span class="cos-field__label">Type CONFIRM to continue</span>
+                        <input
+                            class="cos-input"
+                            type="text"
+                            autocomplete="off"
+                            data-confirm-target="stepUpInput"
+                            data-action="input->confirm#validate"
+                        >
+                    </label>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </div>
+            <footer class="cos-dialog__footer">
+                <button class="cos-button cos-button--ghost" type="button" data-action="click->dialog#close">{{ cancelLabel }}</button>
+                <button
+                    class="cos-button {{ tone == 'danger' ? 'cos-button--danger' : 'cos-button--primary' }}"
+                    type="button"
+                    data-confirm-target="confirmButton"
+                    data-action="click->confirm#confirm"
+                    {% if stepUp %}disabled{% endif %}
+                >{{ confirmLabel }}</button>
+            </footer>
+        </div>
+    </dialog>
+</div>

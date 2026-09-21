@@ -1,4 +1,27 @@
-<section class="cos-popover" role="dialog" aria-label="{{ title }}">
-    <h3 class="cos-popover__title">{{ title }}</h3>
-    <p class="cos-popover__copy">{{ copy }}</p>
-</section>
+<span
+    class="{{ this.cssClass() }}"
+    data-controller="popover"
+    data-action="keydown.esc@window->popover#escape click@window->popover#outside"
+>
+    <button
+        class="cos-button cos-button--sm cos-popover__trigger"
+        type="button"
+        aria-expanded="false"
+        aria-controls="{{ id }}"
+        data-popover-target="trigger"
+        data-action="click->popover#toggle"
+    >{{ triggerLabel }}</button>
+    <section
+        id="{{ id }}"
+        class="cos-popover"
+        role="dialog"
+        aria-label="{{ title ?: triggerLabel }}"
+        tabindex="-1"
+        hidden
+        data-popover-target="panel"
+    >
+        {% if title %}<h3 class="cos-popover__title">{{ title }}</h3>{% endif %}
+        {% if copy %}<p class="cos-popover__copy">{{ copy }}</p>{% endif %}
+        {% block content %}{% endblock %}
+    </section>
+</span>
