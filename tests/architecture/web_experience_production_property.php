@@ -152,6 +152,37 @@ foreach ([
     $contains($pageHeader, $marker, 'Canonical PageHeader must preserve generic meta value attributes.');
 }
 
+$show = $read('app/Interfaces/Web/View/property/show.phtml');
+foreach ([
+    "partial('components/ui/state'",
+    "partial('components/ui/action_bar'",
+    'data-analytics-event',
+    'data-request-intent',
+    'data-save-property',
+    'data-toggle-text',
+    'data-property-gallery',
+    'data-gallery-thumb',
+] as $marker) {
+    $contains($show, $marker, 'Property Show must use canonical State/ActionBar without losing detail interactions.');
+}
+$notContains($show, '<div class="tn-hero-actions">', 'Property Show must not restore the legacy hero action cluster.');
+
+$presentation = $read('app/Interfaces/Web/View/property/presentation.phtml');
+foreach ([
+    "partial('components/ui/state'",
+    "partial('components/ui/action_bar'",
+    "partial('components/ui/page_header'",
+    'data-request-intent',
+    'data-analytics-event',
+    'data-copy-value',
+    'property/pdf/',
+    'property/show/',
+] as $marker) {
+    $contains($presentation, $marker, 'Property Presentation must use canonical actions/states while preserving presentation behavior.');
+}
+$notContains($presentation, '<div class="tn-hero-actions">', 'Property Presentation must not restore the legacy hero action cluster.');
+$notContains($presentation, 'tn-page-hero tn-page-hero--catalog', 'Property group presentation must not restore the legacy simple hero.');
+
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
     '($value[\'kind\'] ?? \'\') === \'actions\'',
@@ -177,6 +208,9 @@ foreach ([
     '### Каталог (`Catalog`)',
     '### Карта (`Map`)',
     '### Вибране (`Favourites`)',
+    '## Хвиля 5',
+    '### Публічна картка (`Property Show`)',
+    '### Презентація (`Presentation`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {

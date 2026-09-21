@@ -106,6 +106,29 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 
 PageHeader отримав generic `metaValueAttributes`, щоб live DOM counters можна було переносити на canonical shell без втрати JavaScript behavior.
 
+## Хвиля 5
+
+### Публічна картка (`Property Show`)
+
+`property/show.phtml`
+
+- missing/unavailable state переведено на canonical State;
+- rich Product hero зберігається спеціалізованим, бо містить schema.org Product/Offer, price, summary facts і media;
+- hero actions переведено на canonical ActionBar;
+- analytics, request intent, phone/Telegram, favourite та gallery data contracts збережені.
+
+### Презентація (`Presentation`)
+
+`property/presentation.phtml`
+
+- missing presentation state використовує canonical State;
+- rich property-presentation hero залишається спеціалізованим, але action cluster переходить на canonical ActionBar;
+- request intent, analytics, PDF, full-card і copy-link contracts збережені;
+- simple group-presentation hero переведено на canonical PageHeader;
+- empty group presentation state переведено на canonical State.
+
+Ця хвиля фіксує важливий принцип: canonical UI не означає примусово замінювати rich domain-specific hero на generic PageHeader, якщо specialized surface несе schema, media або складну business information architecture.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -127,5 +150,6 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 - Group Workspace використовує canonical PageHeader + State + Panel + DataTable;
 - Property Add/Edit використовують canonical PageHeader + State + Panel shell без зміни mutation contracts;
 - Catalog, Map і Favourites використовують canonical PageHeader/State із збереженням live JS counters;
+- Property Show/Presentation використовують canonical State + ActionBar, а simple group presentation — PageHeader;
 - editable grids явно зафіксовані як наступний migration boundary;
 - architecture gate виконується у CI.

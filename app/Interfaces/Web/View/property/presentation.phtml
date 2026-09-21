@@ -46,11 +46,12 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
 
 <main class="tn-page tn-presentation-page">
   <?php if (!$property && !$group): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h1>Презентацію не знайдено</h1>
-      <p><?php echo $h($pageStatus ?: 'Можливо, посилання змінилося або об’єкт ще не опублікований.'); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">До каталогу</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => $pageStatus ? 'error' : 'empty',
+        'title' => 'Презентацію не знайдено',
+        'message' => $pageStatus ?: 'Можливо, посилання змінилося або об’єкт ще не опублікований.',
+        'action' => ['label' => 'До каталогу', 'href' => 'property/catalog'],
+    ]); ?>
   <?php elseif ($property): ?>
     <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
       <a href="<?php echo $this->url->get(); ?>">Головна</a>
@@ -71,12 +72,16 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
         <h1><?php echo $h($property['title']); ?></h1>
         <p><?php echo $h($property['short_description'] ?: $property['description']); ?></p>
         <strong class="tn-presentation-price"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
-        <div class="tn-hero-actions">
-          <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="presentation" data-analytics-event="presentation_request">Отримати цю презентацію</a>
-          <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">Завантажити PDF</a>
-          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Повна картка</a>
-          <button type="button" data-copy-value="<?php echo $h($presentationUrl); ?>">Скопіювати посилання</button>
-        </div>
+        <?php $this->partial('components/ui/action_bar', [
+            'align' => 'start',
+            'ariaLabel' => 'Дії презентації',
+            'actions' => [
+                ['label' => 'Отримати цю презентацію', 'href' => '#request', 'variant' => 'primary', 'attributes' => ['data-request-intent' => 'presentation', 'data-analytics-event' => 'presentation_request']],
+                ['label' => 'Завантажити PDF', 'href' => 'property/pdf/' . (string) $property['slug'], 'variant' => 'default'],
+                ['label' => 'Повна картка', 'href' => 'property/show/' . (string) $property['slug'], 'variant' => 'ghost'],
+                ['label' => 'Скопіювати посилання', 'variant' => 'ghost', 'attributes' => ['data-copy-value' => $presentationUrl]],
+            ],
+        ]); ?>
       </div>
     </section>
 
@@ -176,24 +181,23 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
       <span><?php echo $h($group['title']); ?></span>
     </nav>
 
-    <section class="tn-page-hero tn-page-hero--catalog">
-      <div>
-        <p class="tn-kicker">Презентація об’єктів</p>
-        <h1><?php echo $h($group['title']); ?></h1>
-        <p><?php echo $h(trim(($group['city'] ?? '') . ', ' . ($group['region'] ?? ''), ', ')); ?><?php if (!empty($group['address'])): ?> / <?php echo $h($group['address']); ?><?php endif; ?></p>
-      </div>
-      <div class="tn-page-hero__meta">
-        <strong><?php echo count($properties); ?></strong>
-        <span>доступних об’єктів</span>
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/pdf/' . $group['slug']); ?>">Завантажити PDF</a>
-      </div>
-    </section>
+    <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => 'Property · Group Presentation',
+        'title' => $group['title'] ?? 'Презентація об’єктів',
+        'description' => trim((string) ($group['city'] ?? '') . ', ' . (string) ($group['region'] ?? ''), ', ')
+            . (!empty($group['address']) ? ' / ' . (string) $group['address'] : ''),
+        'meta' => ['value' => count($properties), 'label' => 'доступних об’єктів'],
+        'actions' => [
+            ['label' => 'Завантажити PDF', 'href' => 'property/pdf/' . (string) $group['slug'], 'variant' => 'primary'],
+        ],
+    ]); ?>
 
     <?php if (!$properties): ?>
-      <section class="tn-empty-state">
-        <h2>Опублікованих об’єктів у презентації поки немає</h2>
-        <p>Менеджер може додати об’єкти до групи й опублікувати їх після перевірки картки.</p>
-      </section>
+      <?php $this->partial('components/ui/state', [
+          'kind' => 'empty',
+          'title' => 'Опублікованих об’єктів у презентації поки немає',
+          'message' => 'Менеджер може додати об’єкти до групи й опублікувати їх після перевірки картки.',
+      ]); ?>
     <?php else: ?>
       <section class="tn-related-section">
         <div class="tn-section__head">
