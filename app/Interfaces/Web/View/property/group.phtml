@@ -44,30 +44,77 @@ $propertyStatusLabels = [
 $publicPresentationUrl = $group ? $absoluteUrl('property/presentation/' . (string) $group['slug']) : '';
 $groupPdfUrl = $group ? $absoluteUrl('property/pdf/' . (string) $group['slug']) : '';
 $groupImage = trim((string) ($group['image_url'] ?? ''));
+$propertyRows = [];
+foreach ($properties as $property) {
+    $status = (string) ($property['status'] ?? 'draft');
+    $statusTone = match ($status) {
+        'published' => 'positive',
+        'reserved', 'moderation' => 'warning',
+        'sold', 'archived' => 'neutral',
+        default => 'neutral',
+    };
+    $presentationUrl = $absoluteUrl('property/show/' . (string) ($property['slug'] ?? ''));
+    $actions = [[
+        'label' => 'Редагувати',
+        'href' => 'property/edit/' . (int) ($property['id'] ?? 0),
+        'variant' => 'ghost',
+    ]];
+    if ($status === 'published') {
+        $actions[] = [
+            'label' => 'Перегляд',
+            'href' => 'property/show/' . (string) ($property['slug'] ?? ''),
+            'variant' => 'primary',
+        ];
+    }
+    $propertyRows[] = [
+        '_href' => 'property/edit/' . (int) ($property['id'] ?? 0),
+        'property' => [
+            'primary' => (string) ($property['title'] ?? ''),
+            'secondary' => trim((string) ($property['public_id'] ?? '') . ' · ' . (string) ($property['type_name'] ?? '') . ' · ' . (string) ($property['city'] ?? ''), ' ·'),
+        ],
+        'status' => [
+            'label' => $propertyStatusLabels[$status] ?? $status,
+            'tone' => $statusTone,
+        ],
+        'price' => [
+            'primary' => $money($property['price_amount'] ?? null, $property['price_currency'] ?? 'USD', $property['price_period'] ?? 'total'),
+            'secondary' => !empty($property['area_total']) ? ((float) $property['area_total']) . ' м²' : 'площа не вказана',
+        ],
+        'media' => [
+            'primary' => (int) ($property['image_count'] ?? 0) . ' фото',
+            'secondary' => !empty($property['is_ready_to_publish']) ? 'готовий' : 'не готовий: ' . (int) ($property['readiness_missing_count'] ?? 0),
+        ],
+        'presentation' => $status === 'published'
+            ? ['primary' => 'Публічна картка', 'secondary' => $presentationUrl]
+            : ['primary' => 'Не опубліковано', 'secondary' => 'Публічна презентація після публікації'],
+        'actions' => [
+            'kind' => 'actions',
+            'ariaLabel' => 'Дії з об’єктом ' . (string) ($property['public_id'] ?? ''),
+            'items' => $actions,
+        ],
+    ];
+}
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'objects']); ?>
 
 <main class="tn-page">
   <?php if (!$group): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h1>Групу не знайдено</h1>
-        <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться до списку об’єктів.'); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage'); ?>">До об’єктів</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+      'kind' => 'empty',
+      'title' => 'Групу не знайдено',
+      'message' => $pageStatus ?: 'Перевірте посилання або поверніться до списку об’єктів.',
+      'action' => ['label' => 'До об’єктів', 'href' => 'property/manage'],
+  ]); ?>
   <?php else: ?>
-    <section class="tn-page-hero tn-page-hero--catalog">
-      <div>
-        <p class="tn-kicker">Локація</p>
-        <h1><?php echo $h($group['title']); ?></h1>
-        <p><?php echo $h(trim(($group['city'] ?? '') . ', ' . ($group['region'] ?? ''), ', ')); ?><?php if (!empty($group['address'])): ?> / <?php echo $h($group['address']); ?><?php endif; ?></p>
-      </div>
-      <div class="tn-page-hero__meta">
-        <strong><?php echo (int) ($group['property_count'] ?? count($properties)); ?></strong>
-        <span>об’єктів у локації</span>
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/add'); ?>">Додати об’єкт</a>
-      </div>
-    </section>
+    <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => 'Property · Location',
+        'title' => $group['title'] ?? 'Локація',
+        'description' => trim((string) ($group['city'] ?? '') . ', ' . (string) ($group['region'] ?? ''), ', ')
+            . (!empty($group['address']) ? ' / ' . (string) $group['address'] : ''),
+        'actions' => [['label' => 'Додати об’єкт', 'href' => 'property/add', 'variant' => 'primary']],
+        'meta' => ['value' => (int) ($group['property_count'] ?? count($properties)), 'label' => 'об’єктів у локації'],
+    ]); ?>
 
     <section class="tn-admin-workspace">
       <?php if ($actionStatus): ?>
@@ -193,67 +240,25 @@ $groupImage = trim((string) ($group['image_url'] ?? ''));
         </article>
       </div>
 
-      <article class="tn-admin-card">
-        <div class="tn-admin-card__head">
-          <div>
-            <p class="tn-kicker">Презентація клієнту</p>
-            <h2>Об’єкти цієї локації</h2>
-          </div>
-        </div>
-        <?php if (!$properties): ?>
-          <p>У цій локації ще немає об’єктів.</p>
-        <?php else: ?>
-          <div class="tn-listing-table-wrap">
-            <table class="tn-listing-table tn-manage-table">
-              <thead>
-                <tr>
-                  <th>Об’єкт</th>
-                  <th>Статус</th>
-                  <th>Ціна</th>
-                  <th>Медіа</th>
-                  <th>Посилання</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($properties as $property): ?>
-                  <?php $presentationUrl = $absoluteUrl('property/show/' . (string) $property['slug']); ?>
-                  <tr>
-                    <td>
-                      <strong><?php echo $h($property['public_id']); ?></strong>
-                      <a class="tn-listing-title" href="<?php echo $this->url->get('property/edit/' . (int) $property['id']); ?>"><?php echo $h($property['title']); ?></a>
-                      <span><?php echo $h($property['type_name']); ?> / <?php echo $h($property['city']); ?></span>
-                    </td>
-                    <td><span class="tn-status-pill"><?php echo $h($propertyStatusLabels[$property['status']] ?? $property['status']); ?></span></td>
-                    <td>
-                      <?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?>
-                      <span><?php echo $property['area_total'] ? $h((float) $property['area_total']) . ' м²' : 'площа не вказана'; ?></span>
-                    </td>
-                    <td>
-                      <strong><?php echo (int) ($property['image_count'] ?? 0); ?></strong>
-                      <span><?php echo !empty($property['is_ready_to_publish']) ? 'готовий' : 'не готовий: ' . (int) ($property['readiness_missing_count'] ?? 0); ?></span>
-                    </td>
-                    <td>
-                      <?php if (($property['status'] ?? '') === 'published'): ?>
-                        <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Публічна картка</a>
-                        <input type="url" readonly value="<?php echo $h($presentationUrl); ?>" aria-label="Посилання на презентацію">
-                      <?php else: ?>
-                        <span>Публічна презентація після публікації</span>
-                      <?php endif; ?>
-                    </td>
-                    <td class="tn-listing-actions">
-                      <a href="<?php echo $this->url->get('property/edit/' . (int) $property['id']); ?>">Редагувати</a>
-                      <?php if (($property['status'] ?? '') === 'published'): ?>
-                        <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Перегляд</a>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php endif; ?>
-      </article>
+      <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Презентація клієнту',
+        'title' => 'Об’єкти цієї локації',
+        'description' => count($properties) . ' об’єктів',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'property', 'label' => 'Об’єкт'],
+                ['key' => 'status', 'label' => 'Статус'],
+                ['key' => 'price', 'label' => 'Ціна'],
+                ['key' => 'media', 'label' => 'Медіа'],
+                ['key' => 'presentation', 'label' => 'Посилання'],
+                ['key' => 'actions', 'label' => 'Дії'],
+            ],
+            'rows' => $propertyRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'У цій локації ще немає об’єктів.',
+        ],
+    ]); ?>
     </section>
   <?php endif; ?>
 </main>
