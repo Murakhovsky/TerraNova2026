@@ -17,7 +17,8 @@ foreach ([
     'cos_web_workspace_analytics:',
     'cos_web_client_cases:',
     'cos_web_client_case_inbox:',
-    'cos_web_property_catalog:',
+    'cos_web_property_root:',
+    'cos_web_property_catalog:'
     'cos_web_property_map:',
     'cos_web_property_manage:',
     'cos_web_property_listing:',
@@ -121,6 +122,22 @@ if ($missing !== []) {
 $legacyModulesDir = $root . '/app/modules';
 if (is_dir($legacyModulesDir)) {
     throw new RuntimeException('Legacy app/modules directory must not be restored.');
+}
+
+foreach ([
+    '/property/catalog',
+    '/property/map',
+    '/property/show/{slug}',
+    '/property/presentation/{slug}',
+    '/property/submit',
+    '/property/manage',
+    '/property/listing',
+    '/property/submissions',
+    '/property/submission/{id}',
+] as $requiredPagePath) {
+    if (!isset($routePaths[$requiredPagePath])) {
+        throw new RuntimeException('Recovered Property page route is missing: ' . $requiredPagePath);
+    }
 }
 
 echo "Frontend route declaration and navigation integrity contract passed on Symfony-only routing.\n";
