@@ -700,13 +700,13 @@ services:
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $providers: !tagged_iterator cos.web.extension.provider
 
-  salesWebProvider:
+  salesNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\SalesWebProvider
 
-  propertyWebProvider:
+  propertyNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\PropertyWebProvider
 
-  diagnosticWebProvider:
+  diagnosticNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\DiagnosticWebProvider
 
   App\Infrastructure\Module\PdoModuleStateRepository:
