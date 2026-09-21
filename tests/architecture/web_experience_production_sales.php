@@ -74,6 +74,49 @@ foreach ([
 }
 $notContains($deal, "partial('components/ui/page_header'", 'Deal workspace must not regress from EntityHeader to PageHeader.');
 
+
+$deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
+foreach ([
+    "partial('components/ui/filter_bar'",
+    "partial('components/ui/data_table'",
+    "'responsive' => 'cards'",
+] as $marker) {
+    $contains($deals, $marker, 'Sales Deals list must use canonical FilterBar and DataTable contracts.');
+}
+$notContains($deals, '<form class="tn-ui-filter-bar', 'Sales Deals must not restore a local filter form.');
+$notContains($deals, 'class="tn-ui-table"', 'Sales Deals must not restore a local raw table.');
+
+$today = $read('app/Interfaces/Web/View/sales/today.phtml');
+foreach ([
+    "partial('components/ui/panel'",
+    "'bodyPartial' => 'components/sales/today_section'",
+    'data-sales-today-root',
+    'data-sales-today-status',
+] as $marker) {
+    $contains($today, $marker, 'Sales Today must use canonical Panel composition without losing behavior.');
+}
+$todaySection = $read('app/Interfaces/Web/View/components/sales/today_section.phtml');
+foreach ([
+    'data-sales-approval',
+    'data-sales-activity-complete',
+    'data-sales-activity-reschedule',
+] as $marker) {
+    $contains($todaySection, $marker, 'Sales Today section must preserve operational interaction contracts.');
+}
+$notContains($today, '<section class="tn-ui-panel', 'Sales Today must not restore locally assembled panels.');
+
+$director = $read('app/Interfaces/Web/View/sales/director.phtml');
+foreach ([
+    "partial('components/ui/filter_bar'",
+    "partial('components/ui/panel'",
+    "'bodyPartial' => 'components/ui/data_table'",
+    "partial('components/ui/kpi_card'",
+] as $marker) {
+    $contains($director, $marker, 'Sales Director must use canonical filter, panel, table and KPI contracts.');
+}
+$notContains($director, '<form method="get" class="tn-ui-toolbar">', 'Sales Director must not restore a local toolbar.');
+$notContains($director, 'class="tn-ui-table"', 'Sales Director must not restore raw local tables.');
+
 $filterBar = $read('app/Interfaces/Web/View/components/ui/filter_bar.phtml');
 foreach ([
     "'number'",
@@ -92,6 +135,10 @@ foreach ([
     'Вхідні ліди (`Lead Inbox`)',
     'Воронка продажів (`Sales Pipeline`)',
     'Робочий простір угоди (`Deal Workspace`)',
+    'Хвиля 2',
+    'Список угод (`Deals`)',
+    'Операційний inbox (`Today`)',
+    'Робочий простір директора (`Director Workspace`)',
     'Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 9 documentation is incomplete.');
