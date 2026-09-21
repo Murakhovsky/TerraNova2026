@@ -3,7 +3,7 @@
 {% block workspace_content %}
 {% set kpis = sales.kpis ?? {} %}
 {% set today = sales.today ?? {} %}
-<section class="cos-business-surface" data-sales-reference="dashboard">
+<section class="cos-primitive-stack" data-sales-reference="dashboard">
     <twig:CosEntityHeader
         eyebrow="Sales reference vertical"
         title="Sales Dashboard"
@@ -13,14 +13,14 @@
         statusTone="positive"
     />
 
-    <section class="cos-business-metrics" aria-label="Sales metrics">
+    <section class="cos-primitive-stack" aria-label="Sales metrics">
         <twig:CosTrendMetric label="Активні угоди" value="{{ kpis.active_deals ?? 0 }}" period="current" />
         <twig:CosMoneyMetric label="Pipeline value" value="{{ (kpis.pipeline_value ?? 0)|number_format(0, '.', ' ') ~ ' USD' }}" />
         <twig:CosMoneyMetric label="Expected revenue" value="{{ (kpis.expected_revenue ?? 0)|number_format(0, '.', ' ') ~ ' USD' }}" />
         <twig:CosTrendMetric label="У ризику" value="{{ kpis.deals_at_risk ?? 0 }}" direction="down" />
     </section>
 
-    <div class="cos-business-grid">
+    <div class="cos-primitive-stack">
         <section class="cos-card">
             <div class="cos-card__header">
                 <div><p class="cos-card__eyebrow">Risk</p><h2>At-risk deals</h2></div>
@@ -47,7 +47,7 @@
                 <div><p class="cos-card__eyebrow">Today</p><h2>Наступні дії</h2></div>
                 <a class="cos-button cos-button--ghost cos-button--sm" href="/sales/today">Відкрити Today</a>
             </div>
-            <div class="cos-next-actions">
+            <div class="cos-primitive-stack">
                 {% for item in (today.overdue ?? [])|merge(today.must_do ?? [])|slice(0, 8) %}
                     <twig:CosNextAction
                         title="{{ item.customer ?? item.title ?? 'Follow-up' }}"
