@@ -21,6 +21,8 @@ framework:
     cookie_secure: auto
     cookie_httponly: true
     cookie_samesite: lax
+    cookie_lifetime: 0
+    gc_maxlifetime: 28800
   cache:
     app: cache.adapter.filesystem
     prefix_seed: cos/symfony
