@@ -86,10 +86,10 @@ if (!str_contains($security, "path: '^/dev(?:/|$)'") || !str_contains($security,
 
 $docs = (string) file_get_contents($root . '/docs/03-architecture/cos-stress-screens.md');
 foreach ([
-    'Executive / Company Home',
-    'Dense Operational DataGrid',
-    'Entity Workspace',
-    'COS Control / AI / Operations',
+    'Керівний екран (`Company Home`)',
+    'Щільний операційний `DataGrid`',
+    'Робочий простір сутності',
+    'Контроль COS, AI та операцій',
     'Критерії завершення',
 ] as $marker) {
     if (!str_contains($docs, $marker)) {
