@@ -16,7 +16,7 @@ final class DiagnosticWebProvider implements NavigationProviderInterface, Comman
 {
     public function serviceId(): string
     {
-        return 'diagnosticWebProvider';
+        return 'diagnosticNavigationContributor';
     }
 
     public function navigation(WebExtensionContext $context): array
