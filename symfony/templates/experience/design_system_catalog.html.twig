@@ -159,6 +159,47 @@
         </div>
     </section>
 
+    <section class="cos-ui-catalog__section" aria-labelledby="typography-lab-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="typography-lab-heading">PHASE 3 Typography Lab</h2>
+            <p>Same business content, same scale, three candidate families. Font availability is intentionally not hidden by the lab.</p>
+        </div>
+
+        <div class="cos-typography-lab" aria-label="Typography candidate comparison">
+            {% for candidate in [
+                {'id': 'geist', 'label': 'Geist', 'note': 'Primary brand candidate'},
+                {'id': 'inter', 'label': 'Inter', 'note': 'Current production baseline'},
+                {'id': 'plex', 'label': 'IBM Plex Sans', 'note': 'Enterprise comparison'}
+            ] %}
+                <article class="cos-card cos-type-candidate cos-type-candidate--{{ candidate.id }}">
+                    <div class="cos-type-candidate__meta">
+                        <span class="cos-badge">{{ candidate.label }}</span>
+                        <span>{{ candidate.note }}</span>
+                    </div>
+                    <p class="cos-type-sample cos-type-sample--metric cos-numeric">123,450 €</p>
+                    <p class="cos-type-sample cos-type-sample--title">Company Operating System</p>
+                    <p class="cos-type-sample">Потенційний клієнт</p>
+                    <p class="cos-type-sample">Продаж житлового комплексу</p>
+                    <p class="cos-type-sample">Pipeline Forecast</p>
+                    <p class="cos-type-sample cos-type-sample--copy">
+                        Operational body copy must remain readable at dense UI sizes, not only in oversized headings.
+                    </p>
+                </article>
+            {% endfor %}
+        </div>
+
+        <div class="cos-card cos-typography-contract">
+            <p class="cos-card__eyebrow">Numeric contract</p>
+            <div class="cos-typography-contract__row cos-numeric">
+                <strong>€1,284,450</strong>
+                <span>+12.4%</span>
+                <span>Forecast €1,400,000</span>
+                <span>91%</span>
+            </div>
+            <p class="cos-card__copy">Financial and aligned data surfaces use tabular lining numerals through a semantic utility, not ad-hoc component CSS.</p>
+        </div>
+    </section>
+
     <section class="cos-ui-catalog__section" aria-labelledby="buttons-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="buttons-heading">Buttons</h2>
