@@ -73,7 +73,16 @@ try {
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-      page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
+      page.on('response', (response) => {
+        if (response.status() >= 400 && response.url().startsWith(baseUrl)) {
+          errors.push(`http ${response.status()}: ${response.url()}`);
+        }
+      });
+      page.on('console', (message) => {
+        if (message.type() === 'error' && !message.text().startsWith('Failed to load resource:')) {
+          errors.push(`console: ${message.text()}`);
+        }
+      });
       const response = await page.goto(absolute(target.path), { waitUntil: 'networkidle' });
       if (!response || response.status() >= 400) throw new Error(`${profile.name}/${target.name}: HTTP ${response?.status() ?? 'no response'}`);
       const a11y = await accessibilityIssues(page);
