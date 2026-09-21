@@ -413,6 +413,9 @@ jobs:
       - name: Wave 12.26 Sales cutover architecture gate
         run: php tests/architecture/web_experience_wave12_sales_cutover.php
 
+      - name: Wave 12.26 Sales browser contract syntax
+        run: node --check tests/browser/sales_workspace.mjs
+
       - name: Web Security response headers smoke
         run: |
           curl --fail --silent --head http://127.0.0.1:8081/ | grep -qi '^content-security-policy:'
