@@ -7,6 +7,7 @@ namespace App\Web\Experience\Dev;
 use App\Web\Experience\Form\Reference\FormsCatalogInput;
 use App\Web\Experience\Form\Reference\FormsCatalogType;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
 
@@ -15,10 +16,11 @@ final readonly class DesignSystemCatalogController
     public function __construct(
         private Environment $twig,
         private FormFactoryInterface $forms,
+        private DataGridCatalogDemo $dataGrid,
     ) {
     }
 
-    public function __invoke(): Response
+    public function __invoke(Request $request): Response
     {
         $form = $this->forms->create(FormsCatalogType::class, new FormsCatalogInput());
 
@@ -29,6 +31,7 @@ final readonly class DesignSystemCatalogController
                     'Name: Enter a name.',
                     'Email: Enter a valid email address.',
                 ],
+                'dataGridDemo' => $this->dataGrid->build($request),
             ]),
             Response::HTTP_OK,
             [

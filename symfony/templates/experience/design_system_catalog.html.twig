@@ -208,6 +208,32 @@
         </section>
     </section>
 
+    <section class="cos-ui-catalog__section" aria-labelledby="data-platform-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="data-platform-heading">Data Platform / DataGrid</h2>
+            <p>Server-owned search, filters, sorting, pagination and export with short-lived browser selection state.</p>
+        </div>
+
+        {% if dataGridDemo is defined %}
+            <twig:CosDataGrid
+                id="catalog-data-grid"
+                label="Accounts"
+                baseUrl="/dev/ui"
+                exportUrl="/dev/ui/data-export"
+                rowIdKey="id"
+                :query="dataGridDemo.query"
+                :page="dataGridDemo.page"
+                :columns="dataGridDemo.columns"
+                :filters="dataGridDemo.filters"
+                :savedViews="dataGridDemo.savedViews"
+                :rowActions="dataGridDemo.rowActions"
+                :bulkActions="dataGridDemo.bulkActions"
+                :state="dataGridDemo.state"
+                selectable
+            />
+        {% endif %}
+    </section>
+
     <section class="cos-ui-catalog__section" aria-labelledby="empty-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="empty-heading">System states</h2>

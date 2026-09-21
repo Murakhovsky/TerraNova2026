@@ -1,0 +1,267 @@
+<section
+    id="{{ id }}"
+    class="cos-data-grid"
+    aria-label="{{ label }}"
+    data-controller="data-grid"
+    data-selection-count="0"
+>
+    <form class="cos-data-grid__toolbar" method="get" action="{{ baseUrl }}">
+        <label class="cos-data-grid__search">
+            <span class="cos-field__label">Search</span>
+            <input
+                class="cos-input"
+                type="search"
+                name="q"
+                value="{{ query.search }}"
+                autocomplete="off"
+                placeholder="Search this view"
+            >
+        </label>
+
+        <div class="cos-data-grid__filters">
+            {% for filter in filters %}
+                <label class="cos-data-grid__filter">
+                    <span class="cos-data-grid__filter-label">{{ filter.label }}</span>
+                    <select class="cos-select" name="filter[{{ filter.key }}]">
+                        {% for optionValue, optionLabel in filter.options %}
+                            <option value="{{ optionValue }}" {% if filter.value == optionValue %}selected{% endif %}>{{ optionLabel }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            {% endfor %}
+        </div>
+
+        {% if query.sort %}
+            <input type="hidden" name="sort" value="{{ query.sort }}">
+            <input type="hidden" name="dir" value="{{ query.direction }}">
+        {% endif %}
+        {% if query.perPage != 25 %}
+            <input type="hidden" name="per_page" value="{{ query.perPage }}">
+        {% endif %}
+        {% if query.view %}
+            <input type="hidden" name="view" value="{{ query.view }}">
+        {% endif %}
+        {% for column in query.visibleColumns %}
+            <input type="hidden" name="columns[]" value="{{ column }}">
+        {% endfor %}
+
+        <button class="cos-button cos-button--primary" type="submit">Apply</button>
+
+        {% if this.exportLink() %}
+            <a class="cos-button cos-button--ghost" href="{{ this.exportLink() }}">Export CSV</a>
+        {% endif %}
+
+        <details class="cos-data-grid__columns">
+            <summary class="cos-button cos-button--ghost">Columns</summary>
+            <div class="cos-data-grid__columns-panel">
+                <p class="cos-card__eyebrow">Visible columns</p>
+                {% for column in columns %}
+                    <label class="cos-choice">
+                        <input
+                            form="{{ id }}-columns-form"
+                            type="checkbox"
+                            name="columns[]"
+                            value="{{ column.key }}"
+                            {% if this.isColumnVisible(column) %}checked{% endif %}
+                        >
+                        <span>{{ column.label }}</span>
+                    </label>
+                {% endfor %}
+                <button class="cos-button cos-button--sm" form="{{ id }}-columns-form" type="submit">Apply columns</button>
+            </div>
+        </details>
+    </form>
+
+    <form id="{{ id }}-columns-form" method="get" action="{{ baseUrl }}" hidden>
+        {% if query.search %}<input type="hidden" name="q" value="{{ query.search }}">{% endif %}
+        {% if query.sort %}
+            <input type="hidden" name="sort" value="{{ query.sort }}">
+            <input type="hidden" name="dir" value="{{ query.direction }}">
+        {% endif %}
+        {% if query.perPage != 25 %}<input type="hidden" name="per_page" value="{{ query.perPage }}">{% endif %}
+        {% if query.view %}<input type="hidden" name="view" value="{{ query.view }}">{% endif %}
+        {% for key, value in query.filters %}
+            <input type="hidden" name="filter[{{ key }}]" value="{{ value }}">
+        {% endfor %}
+    </form>
+
+    {% if savedViews is not empty %}
+        <nav class="cos-data-grid__saved-views" aria-label="Saved views">
+            {% for view in savedViews %}
+                <a
+                    class="cos-data-grid__view"
+                    href="{{ this.savedViewUrl(view) }}"
+                    {% if query.view == view.id %}aria-current="page"{% endif %}
+                >{{ view.label }}</a>
+            {% endfor %}
+        </nav>
+    {% endif %}
+
+    {% if selectable and bulkActions is not empty %}
+        <div class="cos-data-grid__bulk" data-data-grid-target="bulkBar" hidden>
+            <strong><span data-data-grid-target="selectedCount">0</span> selected</strong>
+            {% for action in bulkActions %}
+                <button
+                    class="cos-button cos-button--sm {{ action.dangerLevel > 0 ? 'cos-button--danger' : '' }}"
+                    type="button"
+                    data-action="click->data-grid#bulkAction"
+                    data-action-id="{{ action.id }}"
+                    {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
+                >{{ action.label }}</button>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if state.value == 'loading' %}
+        <div class="cos-data-grid__state" aria-live="polite">
+            <span class="cos-spinner" aria-hidden="true"></span>
+            <span>Loading {{ label|lower }}…</span>
+        </div>
+    {% elseif state.value == 'error' %}
+        <div class="cos-data-grid__state" role="alert">
+            <strong>Data could not be loaded.</strong>
+            <span>{{ errorMessage ?: 'Try the operation again.' }}</span>
+        </div>
+    {% elseif this.isEmpty() %}
+        <twig:CosEmptyState
+            title="No records match this view"
+            copy="Change search, filters or saved view."
+        />
+    {% else %}
+        <div class="cos-data-grid__table-wrap">
+            <table class="cos-data-grid__table">
+                <thead>
+                    <tr>
+                        {% if selectable %}
+                            <th class="cos-data-grid__select" scope="col">
+                                <input
+                                    type="checkbox"
+                                    aria-label="Select all visible rows"
+                                    data-data-grid-target="selectAll"
+                                    data-action="change->data-grid#toggleAll"
+                                >
+                            </th>
+                        {% endif %}
+                        {% for column in this.visibleColumns() %}
+                            <th
+                                scope="col"
+                                class="cos-data-grid__cell--{{ column.align }}"
+                                aria-sort="{{ query.sort == column.key ? (query.direction == 'asc' ? 'ascending' : 'descending') : 'none' }}"
+                            >
+                                {% if column.sortable %}
+                                    <a class="cos-data-grid__sort" href="{{ this.sortUrl(column) }}">
+                                        {{ column.label }}
+                                        {% if query.sort == column.key %}
+                                            <span aria-hidden="true">{{ query.direction == 'asc' ? '↑' : '↓' }}</span>
+                                        {% endif %}
+                                    </a>
+                                {% else %}
+                                    {{ column.label }}
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                        {% if rowActions is not empty %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page.rows %}
+                        {% set rowId = this.rowId(row) %}
+                        <tr>
+                            {% if selectable %}
+                                <td class="cos-data-grid__select">
+                                    <input
+                                        type="checkbox"
+                                        value="{{ rowId }}"
+                                        aria-label="Select {{ rowId }}"
+                                        data-data-grid-target="rowCheckbox"
+                                        data-action="change->data-grid#selectionChanged"
+                                    >
+                                </td>
+                            {% endif %}
+                            {% for column in this.visibleColumns() %}
+                                <td class="cos-data-grid__cell--{{ column.align }}">{{ this.value(row, column.key) }}</td>
+                            {% endfor %}
+                            {% if rowActions is not empty %}
+                                <td>
+                                    <div class="cos-data-grid__actions">
+                                        {% for action in rowActions %}
+                                            <button
+                                                class="cos-button cos-button--sm cos-button--ghost {{ action.dangerLevel > 0 ? 'cos-button--danger' : '' }}"
+                                                type="button"
+                                                data-action="click->data-grid#rowAction"
+                                                data-action-id="{{ action.id }}"
+                                                data-row-id="{{ rowId }}"
+                                                {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
+                                            >{{ action.label }}</button>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="cos-data-grid__mobile">
+            {% for row in page.rows %}
+                {% set rowId = this.rowId(row) %}
+                <article class="cos-data-grid__card">
+                    <header class="cos-data-grid__card-head">
+                        {% if selectable %}
+                            <label class="cos-choice">
+                                <input
+                                    type="checkbox"
+                                    value="{{ rowId }}"
+                                    data-data-grid-target="rowCheckbox"
+                                    data-action="change->data-grid#selectionChanged"
+                                >
+                                <span>Select</span>
+                            </label>
+                        {% endif %}
+                        <strong>{{ rowId }}</strong>
+                    </header>
+                    <dl class="cos-data-grid__card-fields">
+                        {% for column in this.mobileColumns() %}
+                            <div class="cos-data-grid__card-field">
+                                <dt>{{ column.label }}</dt>
+                                <dd>{{ this.value(row, column.key) }}</dd>
+                            </div>
+                        {% endfor %}
+                    </dl>
+                    {% if rowActions is not empty %}
+                        <footer class="cos-data-grid__actions">
+                            {% for action in rowActions %}
+                                <button
+                                    class="cos-button cos-button--sm cos-button--ghost"
+                                    type="button"
+                                    data-action="click->data-grid#rowAction"
+                                    data-action-id="{{ action.id }}"
+                                    data-row-id="{{ rowId }}"
+                                    {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
+                                >{{ action.label }}</button>
+                            {% endfor %}
+                        </footer>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+
+        <nav class="cos-data-grid__pagination" aria-label="{{ label }} pagination">
+            <span>Showing {{ page.from() }}–{{ page.to() }} of {{ page.total }}</span>
+            <div class="cos-data-grid__pages">
+                {% if page.page > 1 %}
+                    <a class="cos-button cos-button--sm" href="{{ this.url({'page': page.page - 1}) }}">Previous</a>
+                {% else %}
+                    <span class="cos-button cos-button--sm" aria-disabled="true">Previous</span>
+                {% endif %}
+                <span>Page {{ page.page }} / {{ page.pageCount() }}</span>
+                {% if page.page < page.pageCount() %}
+                    <a class="cos-button cos-button--sm" href="{{ this.url({'page': page.page + 1}) }}">Next</a>
+                {% else %}
+                    <span class="cos-button cos-button--sm" aria-disabled="true">Next</span>
+                {% endif %}
+            </div>
+        </nav>
+    {% endif %}
+</section>
