@@ -1,9 +1,15 @@
 <button
     class="{{ this.cssClass() }}"
     type="{{ type }}"
-    aria-label="{{ label }}"
-    title="{{ label }}"
-    {% if disabled %}disabled aria-disabled="true"{% endif %}
+    aria-label="{{ loading ? loadingLabel : label }}"
+    title="{{ loading ? loadingLabel : label }}"
+    {% if disabled or loading %}disabled aria-disabled="true"{% endif %}
+    {% if loading %}aria-busy="true"{% endif %}
+    {% if pressed is not null %}aria-pressed="{{ pressed ? 'true' : 'false' }}"{% endif %}
 >
-    <twig:CosIcon name="{{ icon }}" />
+    {% if loading %}
+        <span class="cos-control-spinner" aria-hidden="true"></span>
+    {% else %}
+        <twig:CosIcon name="{{ icon }}" />
+    {% endif %}
 </button>
