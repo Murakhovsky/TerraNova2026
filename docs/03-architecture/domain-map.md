@@ -2,7 +2,7 @@
 title: Карта доменів COS
 description: Карта встановлюваних доменів, допоміжних областей, ядра та меж інтерфейсів і інфраструктури.
 status: active
-updated: 2026-09-16
+updated: 2026-09-21
 kind: architecture
 ---
 
@@ -13,7 +13,7 @@ kind: architecture
 ## Карта системи
 
 ```text
-                         Kernel 0.11.8
+                         Kernel 0.11.9
        події / правила / агенти / дії / політики / черги / аудит
                                   │
                     контракти середовища виконання
@@ -47,7 +47,7 @@ Bootstrap: корінь композиції
 повністю інтегрований домен середовища виконання
 ```
 
-Sales, Diagnostic і Property мають `module.php` та входять до згенерованого довідника модулів.
+Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.1.0` тепер також має installable contract, але лишається вимкненим за замовчуванням, доки persistence та delivery surfaces не пройдуть окремий cutover.
 
 Identity, Content і Spatial фізично відокремлені як обмежені області відповідальності (bounded areas), але не зобов’язані мати той самий контракт встановлюваного модуля.
 
@@ -56,6 +56,25 @@ Identity, Content і Spatial фізично відокремлені як обм
 Ядро (Kernel) володіє **механізмами**, а не бізнес-семантикою. Воно може знати про подію (Event), правило (Rule), агента (Agent), дію (Action), політику (Policy), погодження (Approval), чергу (Queue), аудит (Audit), організаційний контекст (Tenant), модуль (Module), мовну модель (LLM) та спостережуваність (Observability).
 
 Ядро не повинно знати, що таке кваліфіковане звернення, діагностична знахідка або модерація об’єкта нерухомості.
+
+## Growth: пошук бізнес-можливостей
+
+Growth `0.1.0` володіє раннім lifecycle бізнес-можливості до моменту explicit handoff:
+
+```text
+Signal
+→ OpportunityCandidate
+→ Research / Rationale
+→ Explainable Score
+→ Qualification
+→ OpportunityHandoff
+```
+
+Канонічний інваріант: **Growth не створює Lead або Deal**. Він знаходить, досліджує, оцінює, пріоритизує та маршрутизує можливість. Sales або інший target Domain створює власний execution aggregate тільки після прийнятого handoff.
+
+`Signal` зберігає observable facts. `OpportunityRationale` зберігає interpretation, WHY IT MATTERS, problem hypothesis, WHY NOW, evidence, counter-evidence, assumptions та unknowns. Це не дозволяє AI-припущенню непомітно перетворитися на «факт».
+
+Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, scoring semantics, lifecycle, handoff DTO та runtime module identity вже визначені; persistence, collectors, cross-domain acceptance, agents, API та UI ще не оголошуються реалізованими.
 
 ## Sales: продажі
 
