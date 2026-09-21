@@ -1,4 +1,5 @@
 import './stimulus_bootstrap.js';
+import './pwa_runtime.js';
 import '@hotwired/turbo';
 import 'bootstrap';
 
