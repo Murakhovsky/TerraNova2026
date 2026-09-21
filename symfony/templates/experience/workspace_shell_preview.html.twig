@@ -25,10 +25,10 @@
                 copy="Use / or Cmd/Ctrl+K. Wave 12.5 replaces transitional navigation commands with provider-backed Search and Command registries."
             />
             <section class="cos-card">
-                <twig:CosMetric label="Notifications" value="{{ shell.notificationCount }}" hint="Shell-level counter" />
+                <twig:CosMetric label="Notifications" :value="shell.notificationCount ~ ''" hint="Shell-level counter" />
             </section>
             <section class="cos-card">
-                <twig:CosMetric label="Activities" value="{{ shell.activityCount }}" hint="Async operations and work queue entry" />
+                <twig:CosMetric label="Activities" :value="shell.activityCount ~ ''" hint="Async operations and work queue entry" />
             </section>
         </div>
 
