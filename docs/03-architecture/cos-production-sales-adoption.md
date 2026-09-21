@@ -27,7 +27,7 @@ PHASE 9 переносить канонічну visual language з `/dev/ui`, `/
 
 Змінюється лише presentation composition.
 
-## Compatibility bridge
+## Сумісний перехідний шар
 
 Production Sales поки рендериться через Symfony-owned PHTML compatibility surface та Vite bundle. Тому PHASE 9 не намагається вставляти Twig Components у PHTML.
 
@@ -44,7 +44,7 @@ Sales read model
 
 ## Хвиля 1
 
-### Sales Dashboard
+### Панель продажів (`Sales Dashboard`)
 
 `sales/dashboard.phtml`
 
@@ -54,7 +54,7 @@ Sales read model
 - status отримує semantic tone;
 - mobile table використовує record-card contract.
 
-### Lead Inbox
+### Вхідні ліди (`Lead Inbox`)
 
 `sales/leads.phtml`
 
@@ -64,7 +64,7 @@ Sales read model
 - workflow buttons та JS data attributes не змінюються;
 - lead detail drawer behavior не переписується в цій хвилі.
 
-### Sales Pipeline
+### Воронка продажів (`Sales Pipeline`)
 
 `sales/pipeline.phtml`
 
@@ -73,7 +73,7 @@ Sales read model
 - Kanban і drag/drop залишаються Sales-specific pattern;
 - Deal cards не перетворюються механічно на generic EntityCard, бо мають pipeline interaction semantics.
 
-### Deal Workspace
+### Робочий простір угоди (`Deal Workspace`)
 
 `sales/deal.phtml`
 
