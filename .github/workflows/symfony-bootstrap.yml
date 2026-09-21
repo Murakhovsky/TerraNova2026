@@ -21,6 +21,7 @@ on:
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
+      - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_search.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
@@ -43,6 +44,7 @@ on:
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
+      - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_search.php'
       - '.github/workflows/symfony-bootstrap.yml'
 
@@ -154,6 +156,9 @@ jobs:
 
       - name: Interaction Components runtime smoke
         run: docker compose exec -T php php bin/console cos:web:interactions:smoke
+
+      - name: Forms Platform runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:forms:smoke
 
       - name: Global Search runtime smoke
         run: docker compose exec -T php php bin/console cos:web:search:smoke

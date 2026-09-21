@@ -1,0 +1,167 @@
+.cos-form {
+  display: grid;
+  gap: var(--cos-space-5);
+  min-width: 0;
+}
+
+.cos-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cos-space-4);
+}
+
+.cos-form__section {
+  display: grid;
+  gap: var(--cos-space-4);
+  padding: var(--cos-density-panel-padding);
+  background: var(--cos-color-surface);
+  border: 1px solid var(--cos-color-border);
+  border-radius: var(--cos-radius-md);
+}
+
+.cos-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cos-space-3);
+  padding-top: var(--cos-space-3);
+  border-top: 1px solid var(--cos-color-border);
+}
+
+.cos-field__help,
+.cos-form .form-text {
+  margin: 0;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+}
+
+.cos-field__errors,
+.cos-validation-summary__list {
+  margin: 0;
+  padding-left: var(--cos-space-5);
+  color: var(--cos-color-danger);
+  font-size: var(--cos-font-sm);
+}
+
+.cos-field__errors {
+  list-style: none;
+  padding-left: 0;
+}
+
+.cos-field--invalid :is(.cos-input, .cos-select, .cos-textarea),
+.cos-form :is(.form-control, .form-select).is-invalid,
+.cos-form :is(.form-control, .form-select)[aria-invalid="true"] {
+  border-color: var(--cos-color-danger);
+}
+
+.cos-validation-summary {
+  display: grid;
+  gap: var(--cos-space-2);
+  padding: var(--cos-space-3) var(--cos-space-4);
+  color: var(--cos-color-text);
+  background: var(--cos-color-danger-soft);
+  border: 1px solid color-mix(in srgb, var(--cos-color-danger) 32%, var(--cos-color-border));
+  border-radius: var(--cos-radius-sm);
+}
+
+.cos-validation-summary__title {
+  font-size: var(--cos-font-sm);
+}
+
+.cos-form .mb-3 {
+  display: grid;
+  gap: var(--cos-space-2);
+  margin: 0 !important;
+}
+
+.cos-form .form-label {
+  margin: 0;
+  color: var(--cos-color-text-soft);
+  font-size: var(--cos-font-sm);
+  font-weight: 650;
+}
+
+.cos-form :is(.form-control, .form-select) {
+  width: 100%;
+  min-height: var(--cos-control-height);
+  color: var(--cos-color-text);
+  background-color: var(--cos-color-surface);
+  border-color: var(--cos-color-border);
+  border-radius: var(--cos-radius-sm);
+  font: inherit;
+  font-size: var(--cos-font-md);
+}
+
+.cos-form textarea.form-control {
+  min-height: 7rem;
+}
+
+.cos-form :is(.form-control, .form-select):focus {
+  color: var(--cos-color-text);
+  background-color: var(--cos-color-surface);
+  border-color: var(--cos-color-primary);
+  box-shadow: 0 0 0 3px var(--cos-focus-ring);
+}
+
+.cos-form .invalid-feedback {
+  display: block;
+  margin: 0;
+  color: var(--cos-color-danger);
+  font-size: var(--cos-font-sm);
+}
+
+.cos-form .ts-wrapper {
+  min-width: 0;
+}
+
+.cos-form .ts-control {
+  min-height: var(--cos-control-height);
+  color: var(--cos-color-text);
+  background: var(--cos-color-surface);
+  border-color: var(--cos-color-border);
+  border-radius: var(--cos-radius-sm);
+}
+
+.cos-form .ts-dropdown {
+  color: var(--cos-color-text);
+  background: var(--cos-color-surface-raised);
+  border-color: var(--cos-color-border);
+  box-shadow: var(--cos-shadow-overlay);
+}
+
+.cos-form .dropzone-container {
+  color: var(--cos-color-text);
+  background: var(--cos-color-surface-subtle);
+  border-color: var(--cos-color-border-strong);
+  border-radius: var(--cos-radius-md);
+}
+
+.cos-form[data-form-dirty="true"] .cos-form__actions {
+  border-top-color: var(--cos-color-warning);
+}
+
+@media (max-width: 760px) {
+  .cos-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cos-form__actions {
+    position: sticky;
+    z-index: var(--cos-z-sticky);
+    bottom: 0;
+    margin-inline: calc(var(--cos-space-4) * -1);
+    padding: var(--cos-space-3) var(--cos-space-4) max(var(--cos-space-3), env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--cos-color-surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .cos-form__actions .cos-button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cos-form * {
+    scroll-behavior: auto;
+  }
+}

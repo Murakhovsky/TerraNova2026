@@ -146,21 +146,66 @@
         </div>
     </section>
 
-    <section class="cos-ui-catalog__section" aria-labelledby="forms-heading">
+    <section class="cos-ui-catalog__section" aria-labelledby="forms-platform-heading">
         <div class="cos-ui-catalog__section-head">
-            <h2 id="forms-heading">Form primitives</h2>
-            <p>Symfony Forms will map to these semantics through the Bootstrap 5 theme.</p>
+            <h2 id="forms-platform-heading">Form primitives / Forms Platform</h2>
+            <p>Typed input DTOs, Symfony validation and small browser-only controllers.</p>
         </div>
-        <div class="cos-ui-catalog__grid">
-            <label class="cos-field">
-                <span class="cos-field__label">Search</span>
-                <input class="cos-input" type="search" placeholder="Search entities and commands">
-            </label>
-            <label class="cos-field">
-                <span class="cos-field__label">Owner</span>
-                <input class="cos-input" type="text" value="Demo owner">
-            </label>
-        </div>
+
+        {% set validationErrors = formValidationExample|default([]) %}
+        <twig:CosValidationSummary
+            id="catalog-validation-summary"
+            title="Example validation summary"
+            :errors="validationErrors"
+        />
+
+        {% if formsDemo is defined %}
+            <section class="cos-card">
+                {{ form_start(formsDemo, {
+                    attr: {
+                        class: 'cos-form',
+                        'data-controller': 'form-state form-validation conditional-fields',
+                        'data-action': 'input->form-state#change change->form-state#change submit->form-state#submit',
+                        'data-form-state-draft-mode-value': 'manual'
+                    }
+                }) }}
+                    <div class="cos-form__grid">
+                        {{ form_row(formsDemo.name) }}
+                        {{ form_row(formsDemo.email) }}
+                        {{ form_row(formsDemo.priority) }}
+                        {{ form_row(formsDemo.notes) }}
+                        {{ form_row(formsDemo.attachment) }}
+                    </div>
+                    <div class="cos-form__actions">
+                        <button class="cos-button cos-button--ghost" type="button" data-action="click->form-state#requestDraft">Save draft</button>
+                        <button class="cos-button cos-button--primary" type="button">Preview submit</button>
+                    </div>
+                {{ form_end(formsDemo) }}
+            </section>
+        {% endif %}
+
+        <section class="cos-card">
+            <p class="cos-card__eyebrow">Modal form</p>
+            <twig:CosModal id="catalog-form-modal" title="Edit details" triggerLabel="Open form">
+                <form
+                    class="cos-form"
+                    data-controller="form-state form-validation"
+                    data-action="input->form-state#change change->form-state#change submit->form-state#submit"
+                >
+                    <p>Modal form content remains server-rendered.</p>
+                    <twig:CosInput
+                        name="modal_title"
+                        label="Title"
+                        autocomplete="off"
+                        help="Modal and Drawer forms use the same field semantics."
+                        required
+                    />
+                    <div class="cos-form__actions">
+                        <button class="cos-button cos-button--primary" type="button">Save</button>
+                    </div>
+                </form>
+            </twig:CosModal>
+        </section>
     </section>
 
     <section class="cos-ui-catalog__section" aria-labelledby="empty-heading">
@@ -173,6 +218,7 @@
             copy="Change filters, switch saved view or create the first record through a governed action."
         />
     </section>
+
     {% set interactionTabs = [
         {'key': 'overview', 'label': 'Overview'},
         {'key': 'activity', 'label': 'Activity'},
