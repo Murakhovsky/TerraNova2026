@@ -25,7 +25,13 @@ $href = static function ($view, string $path): string {
             $rowHref = trim((string) ($row['_href'] ?? ''));
           ?>
             <td data-label="<?php echo $h($label); ?>">
-              <?php if (is_array($value) && isset($value['label'])): ?>
+              <?php if (is_array($value) && ($value['kind'] ?? '') === 'actions'): ?>
+                <?php $this->partial('components/ui/action_bar', [
+                    'actions' => is_array($value['items'] ?? null) ? $value['items'] : [],
+                    'align' => $value['align'] ?? 'start',
+                    'ariaLabel' => $value['ariaLabel'] ?? ($label . ' actions'),
+                ]); ?>
+              <?php elseif (is_array($value) && isset($value['label'])): ?>
                 <?php if (($value['kind'] ?? 'status') === 'stage'): ?>
                   <?php $this->partial('components/ui/stage', ['label' => $value['label'], 'tone' => $value['tone'] ?? 'neutral']); ?>
                 <?php else: ?>
