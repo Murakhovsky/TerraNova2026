@@ -11,6 +11,6 @@ declare(strict_types=1);
 return [
     'app' => [
         'path' => 'app.js',
-        'preload' => true,
+        'entrypoint' => true,
     ],
 ];
