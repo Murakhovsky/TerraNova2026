@@ -76,6 +76,36 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - 19 legacy admin-card shells переведено на canonical panel shell;
 - quick actions, presentation/share, copy actions, PDF links, anchors та всі editor forms збережені.
 
+## Хвиля 4
+
+### Каталог (`Catalog`)
+
+`property/catalog.phtml`
+
+- legacy catalog hero замінено на canonical PageHeader;
+- quick links перенесено у canonical ActionBar через PageHeader actions;
+- live result count зберігає `data-catalog-count` через generic `metaValueAttributes`;
+- основні catalog forms, filters, result grid, pagination і AJAX contracts не змінені.
+
+### Карта (`Map`)
+
+`property/map.phtml`
+
+- legacy hero замінено на canonical PageHeader;
+- unavailable/empty states переведено на canonical State;
+- geo pins, coordinate projection та catalog navigation не змінені.
+
+### Вибране (`Favourites`)
+
+`property/favour.phtml`
+
+- legacy hero замінено на canonical PageHeader;
+- unavailable/empty states переведено на canonical State;
+- live favourite count зберігає `data-favourite-count`;
+- `data-favourite-list`, `data-favourite-item` та `data-save-property` contracts не змінені.
+
+PageHeader отримав generic `metaValueAttributes`, щоб live DOM counters можна було переносити на canonical shell без втрати JavaScript behavior.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -96,5 +126,6 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - query parameters і manager mutation contracts збережені;
 - Group Workspace використовує canonical PageHeader + State + Panel + DataTable;
 - Property Add/Edit використовують canonical PageHeader + State + Panel shell без зміни mutation contracts;
+- Catalog, Map і Favourites використовують canonical PageHeader/State із збереженням live JS counters;
 - editable grids явно зафіксовані як наступний migration boundary;
 - architecture gate виконується у CI.

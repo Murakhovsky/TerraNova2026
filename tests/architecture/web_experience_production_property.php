@@ -108,6 +108,50 @@ foreach ([
     $contains($actionBar, $marker, 'Canonical ActionBar must preserve generic attributes on link actions.');
 }
 
+$catalog = $read('app/Interfaces/Web/View/property/catalog.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "'data-catalog-count' => ''",
+    'data-catalog-form',
+    'data-catalog-stat',
+    'data-catalog-results-title',
+] as $marker) {
+    $contains($catalog, $marker, 'Property Catalog must use the canonical header without losing live catalog behavior.');
+}
+$notContains($catalog, 'tn-page-hero tn-page-hero--catalog', 'Property Catalog must not restore the legacy hero.');
+
+$map = $read('app/Interfaces/Web/View/property/map.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-map-canvas',
+    'tn-map-pin',
+] as $marker) {
+    $contains($map, $marker, 'Property Map must use canonical shell/state while preserving map behavior.');
+}
+$notContains($map, 'tn-page-hero tn-page-hero--catalog', 'Property Map must not restore the legacy hero.');
+
+$favour = $read('app/Interfaces/Web/View/property/favour.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    "'data-favourite-count' => ''",
+    'data-favourite-list',
+    'data-favourite-item',
+    'data-save-property',
+] as $marker) {
+    $contains($favour, $marker, 'Property Favourites must use canonical shell/state without losing saved-property behavior.');
+}
+$notContains($favour, 'tn-page-hero tn-page-hero--catalog', 'Property Favourites must not restore the legacy hero.');
+
+$pageHeader = $read('app/Interfaces/Web/View/components/ui/page_header.phtml');
+foreach ([
+    '$metaValueAttributes',
+    'foreach ($metaValueAttributes as $name => $value)',
+] as $marker) {
+    $contains($pageHeader, $marker, 'Canonical PageHeader must preserve generic meta value attributes.');
+}
+
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
     '($value[\'kind\'] ?? \'\') === \'actions\'',
@@ -129,6 +173,10 @@ foreach ([
     '## Хвиля 3',
     '### Створення об’єкта (`Property Add`)',
     '### Редактор об’єкта (`Property Edit`)',
+    '## Хвиля 4',
+    '### Каталог (`Catalog`)',
+    '### Карта (`Map`)',
+    '### Вибране (`Favourites`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
