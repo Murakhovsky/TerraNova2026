@@ -134,6 +134,9 @@ return [
         'version' => '2.6.2',
         'type' => 'css',
     ],
+    '@symfony/ux-translator' => [
+        'path' => './vendor/symfony/ux-translator/assets/dist/translator_controller.js',
+    ],
     'intl-messageformat' => [
         'version' => '10.7.18',
     ],
