@@ -80,6 +80,44 @@ if (is_file($root . '/bin/telegram-health.php')) {
     throw new RuntimeException('Retired runtime entrypoint restored: bin/telegram-health.php');
 }
 
+foreach ([
+    'resolver 127.0.0.11 valid=5s ipv6=off',
+    'server php:9000 resolve',
+    'server mercure:80 resolve',
+    'fastcgi_pass cos_php_backend',
+    'proxy_pass http://cos_mercure_backend',
+] as $needle) {
+    if (!str_contains((string) file_get_contents($root . '/docker/symfony/nginx/default.conf'), $needle)) {
+        throw new RuntimeException('Canonical nginx rolling upstream contract is missing: ' . $needle);
+    }
+}
+
+foreach ([
+    'Hot-reloading canonical nginx without dropping 127.0.0.1',
+    'config --services',
+    "grep -Ev '^(mysql|redis|mercure|nginx)if (!str_contains($workflow, 'COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/health/dependencies')) {
+    throw new RuntimeException('AWS dev external health check must use dependency readiness, not operational health.');
+}
+if (!str_contains($workflow, '"http://$COMPANY_OS_DOMAIN/health/dependencies"')) {
+    throw new RuntimeException('AWS dev HTTP preflight must use dependency readiness.');
+}
+if (str_contains($workflow, 'company-os.shop/api/v1/health')) {
+    throw new RuntimeException('AWS dev deployment must not block on operational /api/v1/health.');
+}
+
+echo "Deployment worker readiness contract passed.\n";
+",
+    'up -d --no-deps --remove-orphans',
+    'Symfony PHP failed readiness during rolling deployment.',
+] as $needle) {
+    if (!str_contains($legacyDeploy, $needle)) {
+        throw new RuntimeException('Zero-downtime Web deployment contract is missing: ' . $needle);
+    }
+}
+if (str_contains($legacyDeploy, '"${COMPOSE[@]}" up -d --remove-orphans\n')) {
+    throw new RuntimeException('Deploy must not recreate canonical nginx on every application release.');
+}
+
 if (!str_contains($workflow, 'bash deploy/dev.sh')) {
     throw new RuntimeException('AWS dev deployment must execute the guarded deploy/dev.sh script.');
 }
