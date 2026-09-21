@@ -55,6 +55,27 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - edit/view actions використовують canonical ActionBar через DataTable action-cell contract;
 - edit, PDF/share і client-presentation форми залишені функціонально без змін.
 
+## Хвиля 3
+
+### Створення об’єкта (`Property Add`)
+
+`property/add.phtml`
+
+- unavailable state переведено на canonical State;
+- page hero замінено на canonical PageHeader;
+- legacy `tn-admin-card` / `tn-admin-card__head` shell замінено на canonical panel classes;
+- create form, multipart upload, field names та POST route не змінені.
+
+### Редактор об’єкта (`Property Edit`)
+
+`property/edit.phtml`
+
+- missing-object state використовує canonical State;
+- editor hero замінено на canonical PageHeader + ActionBar;
+- ActionBar отримав generic attributes contract для link actions, тому `target`, `rel` та інші link attributes не губляться;
+- 19 legacy admin-card shells переведено на canonical panel shell;
+- quick actions, presentation/share, copy actions, PDF links, anchors та всі editor forms збережені.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -74,5 +95,6 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - Sales Inventory використовує shared FilterBar;
 - query parameters і manager mutation contracts збережені;
 - Group Workspace використовує canonical PageHeader + State + Panel + DataTable;
+- Property Add/Edit використовують canonical PageHeader + State + Panel shell без зміни mutation contracts;
 - editable grids явно зафіксовані як наступний migration boundary;
 - architecture gate виконується у CI.
