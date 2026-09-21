@@ -1,0 +1,234 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}COS Visual Stress Screens{% endblock %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block body %}
+<main class="cos-stress">
+    <header class="cos-stress__intro">
+        <div>
+            <p class="cos-ui-catalog__kicker">COS Experience Platform · PHASE 8</p>
+            <h1>Canonical Stress Screens</h1>
+            <p>
+                Four high-density surfaces test the visual system under executive, operational,
+                entity and control-plane pressure without introducing Domain-specific design systems.
+            </p>
+        </div>
+        <twig:CosStatus label="Reference only" tone="info" />
+    </header>
+
+    {% set companySummary = [
+        {'label': 'Revenue', 'value': '€1.28M', 'hint': '+12.4% vs plan'},
+        {'label': 'Pipeline', 'value': '€4.82M', 'hint': '68% weighted'},
+        {'label': 'Cash runway', 'value': '9.4 mo', 'hint': 'target > 8'},
+        {'label': 'Attention', 'value': '17', 'hint': '4 require decision'}
+    ] %}
+
+    <section class="cos-stress__screen" data-stress-screen="company-home" aria-labelledby="stress-company-home">
+        <header class="cos-stress__screen-head">
+            <div>
+                <p class="cos-card__eyebrow">01 · Executive</p>
+                <h2 id="stress-company-home">Company Home</h2>
+                <p>Scan speed, financial readability and attention hierarchy at executive density.</p>
+            </div>
+            <twig:CosActionBar label="Company Home actions">
+                <twig:CosButton label="Open operating review" variant="primary" />
+                <twig:CosButton label="Export" variant="ghost" />
+            </twig:CosActionBar>
+        </header>
+
+        <twig:CosEntitySummary label="Executive summary" :items="companySummary" />
+
+        <div class="cos-stress__executive-grid">
+            <article class="cos-card cos-stress__priority-card">
+                <p class="cos-card__eyebrow">Decision queue</p>
+                <h3 class="cos-card__title">4 decisions need management attention</h3>
+                <div class="cos-primitive-stack">
+                    <twig:CosNextAction title="Approve supplier contract" copy="Construction · €84k commitment" due="Today · 14:00" tone="warning" />
+                    <twig:CosNextAction title="Review forecast risk" copy="Sales · Q4 confidence dropped 8 pp" due="Today" tone="danger" />
+                    <twig:CosNextAction title="Confirm launch date" copy="Property · Riverside Residence" due="Tomorrow" tone="info" />
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Commercial performance</p>
+                <div class="cos-stress__metric-stack">
+                    <twig:CosMoneyMetric label="Booked revenue" value="€1.28M" delta="+€142k · +12.4%" target="€1.4M" :progress="91" />
+                    <twig:CosTrendMetric label="Conversion" value="18.7%" delta="+2.1 pp" direction="up" period="30 days" />
+                    <twig:CosTrendMetric label="Cycle time" value="17.4 d" delta="-3.2 d" direction="up" period="quarter" />
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Operating pulse</p>
+                <div class="cos-stress__health-list">
+                    <div><span>Sales</span><twig:CosStatus label="Healthy" tone="positive" /></div>
+                    <div><span>Delivery</span><twig:CosStatus label="Attention" tone="warning" /></div>
+                    <div><span>Finance</span><twig:CosStatus label="Healthy" tone="positive" /></div>
+                    <div><span>Integrations</span><twig:CosStatus label="Degraded" tone="danger" /></div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="cos-stress__screen" data-stress-screen="data-grid" aria-labelledby="stress-data-grid">
+        <header class="cos-stress__screen-head">
+            <div>
+                <p class="cos-card__eyebrow">02 · Operations</p>
+                <h2 id="stress-data-grid">Dense Operational DataGrid</h2>
+                <p>Search, filters, sorting, columns, selection and mobile fallback under realistic information density.</p>
+            </div>
+        </header>
+
+        <twig:CosDataGrid
+            id="stress-data-grid-table"
+            label="Operational accounts"
+            baseUrl="/dev/stress"
+            exportUrl="/dev/ui/data-export"
+            rowIdKey="id"
+            :query="dataGridDemo.query"
+            :page="dataGridDemo.page"
+            :columns="dataGridDemo.columns"
+            :filters="dataGridDemo.filters"
+            :savedViews="dataGridDemo.savedViews"
+            :rowActions="dataGridDemo.rowActions"
+            :bulkActions="dataGridDemo.bulkActions"
+            :state="dataGridDemo.state"
+            selectable
+        />
+    </section>
+
+    {% set entityMeta = [
+        {'label': 'Account', 'value': 'Northstar Development'},
+        {'label': 'Owner', 'value': 'Anna Kovalenko'},
+        {'label': 'Created', 'value': '12 Sep 2026'},
+        {'label': 'Source', 'value': 'Partner referral'}
+    ] %}
+    {% set entitySummary = [
+        {'label': 'Value', 'value': '€482,000', 'hint': 'enterprise'},
+        {'label': 'Probability', 'value': '68%', 'hint': '+7 pp'},
+        {'label': 'Days open', 'value': '17', 'hint': 'target < 21'},
+        {'label': 'Activity', 'value': 'Today', 'hint': '3 events'}
+    ] %}
+    {% set entityRelations = [
+        {'type': 'Client', 'label': 'Northstar Development', 'meta': 'Enterprise account'},
+        {'type': 'Property', 'label': 'Riverside Residence', 'meta': '48 units'},
+        {'type': 'Document', 'label': 'Commercial proposal v4', 'meta': 'Signed'}
+    ] %}
+    {% set entityTimeline = [
+        {'time': '09:20', 'title': 'Discovery completed', 'copy': 'Budget, timeline and constraints confirmed.', 'tone': 'positive'},
+        {'time': '11:45', 'title': 'Proposal revised', 'copy': 'Scope updated after technical review.', 'tone': 'info'},
+        {'time': '16:30', 'title': 'Decision call', 'copy': 'Final owner confirmation required.', 'tone': 'warning'}
+    ] %}
+
+    <section class="cos-stress__screen" data-stress-screen="entity-workspace" aria-labelledby="stress-entity-workspace">
+        <header class="cos-stress__screen-head cos-stress__screen-head--compact">
+            <div>
+                <p class="cos-card__eyebrow">03 · Entity</p>
+                <h2 id="stress-entity-workspace">Entity Workspace</h2>
+                <p>Identity, state, next action, relations and history in one operational composition.</p>
+            </div>
+        </header>
+
+        <twig:CosEntityHeader
+            eyebrow="Sales / Opportunity"
+            identity="OPP-2026-0184"
+            title="Riverside Residence — enterprise rollout"
+            subtitle="Canonical workspace density without dashboard-card inflation."
+            statusLabel="Healthy"
+            statusTone="positive"
+            :meta="entityMeta"
+        >
+            <twig:CosActionBar label="Opportunity actions">
+                <twig:CosButton label="Advance stage" variant="primary" />
+                <twig:CosButton label="Add note" />
+                <twig:CosButton label="Close" variant="ghost" />
+            </twig:CosActionBar>
+        </twig:CosEntityHeader>
+
+        <twig:CosEntitySummary label="Opportunity summary" :items="entitySummary" />
+
+        <div class="cos-stress__entity-grid">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Workflow</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosStage label="Lead" state="complete" />
+                    <twig:CosStage label="Qualified" state="complete" />
+                    <twig:CosStage label="Proposal" state="current" />
+                    <twig:CosStage label="Decision" state="upcoming" />
+                    <twig:CosStage label="Closed" state="upcoming" />
+                </div>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Responsibility</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosOwner name="Anna Kovalenko" role="Opportunity owner" initials="AK" />
+                    <twig:CosNextAction title="Decision call" copy="Confirm commercial terms" due="Today · 16:30" tone="warning" />
+                </div>
+            </article>
+            <article class="cos-card">
+                <twig:CosRelations title="Relations" :items="entityRelations" />
+            </article>
+            <article class="cos-card cos-stress__entity-history">
+                <p class="cos-card__eyebrow">Timeline</p>
+                <twig:CosTimeline label="Opportunity timeline" :items="entityTimeline" />
+            </article>
+        </div>
+    </section>
+
+    {% set controlActivity = [
+        {'actor': 'Sales Agent', 'action': 'completed recommendation', 'detail': 'Follow-up in 2 hours', 'time': '10:16', 'source': 'agent'},
+        {'actor': 'System', 'action': 'published domain event', 'detail': 'sales.opportunity.updated', 'time': '10:16', 'source': 'system'},
+        {'actor': 'CRM', 'action': 'sync accepted', 'detail': 'Correlation 7f2a…c91', 'time': '10:17', 'source': 'integration'},
+        {'actor': 'Anna K.', 'action': 'approved action', 'detail': 'Advance to proposal', 'time': '10:18', 'source': 'human'}
+    ] %}
+
+    <section class="cos-stress__screen" data-stress-screen="control-ai" aria-labelledby="stress-control-ai">
+        <header class="cos-stress__screen-head">
+            <div>
+                <p class="cos-card__eyebrow">04 · Control plane</p>
+                <h2 id="stress-control-ai">COS Control / AI / Operations</h2>
+                <p>System state, governed automation and provenance stay readable without turning the screen into a terminal.</p>
+            </div>
+            <twig:CosStatus label="3 systems degraded" tone="warning" />
+        </header>
+
+        <div class="cos-stress__control-grid">
+            <article class="cos-card cos-stress__control-span">
+                <twig:CosAlert
+                    title="Integration latency above budget"
+                    copy="CRM synchronization p95 reached 4.8 s. Business operations remain available."
+                    tone="warning"
+                />
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Runtime</p>
+                <div class="cos-stress__health-list">
+                    <div><span>HTTP</span><twig:CosStatus label="Healthy" tone="positive" /></div>
+                    <div><span>Queue</span><twig:CosStatus label="Healthy" tone="positive" /></div>
+                    <div><span>Mercure</span><twig:CosStatus label="Degraded" tone="warning" /></div>
+                    <div><span>CRM sync</span><twig:CosStatus label="Degraded" tone="warning" /></div>
+                    <div><span>Agent provider</span><twig:CosStatus label="Degraded" tone="warning" /></div>
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Agent governance</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosNextAction title="Review proposed stage change" copy="Sales Agent · confidence 87%" due="Awaiting approval" tone="info" />
+                    <twig:CosNextAction title="Investigate retry spike" copy="Operations Agent · 14 retries" due="Now" tone="warning" />
+                </div>
+            </article>
+
+            <article class="cos-card cos-stress__control-span">
+                <p class="cos-card__eyebrow">Cross-system activity</p>
+                <twig:CosActivityFeed label="COS control activity" :items="controlActivity" />
+            </article>
+        </div>
+    </section>
+</main>
+{% endblock %}
