@@ -114,7 +114,7 @@ Runtime risk проєктується в канонічний `UIActionDangerLev
 
 Dangerous UIAction завжди має explicit confirmation contract.
 
-## Resource identity
+## Ідентичність runtime-ресурсу
 
 Wave 12.11 додає `UIAction.resourceId`.
 
@@ -167,7 +167,7 @@ runtime-generated Actions
 
 Runtime actions не створюють нового `web.*` extension point, бо їх owner — Kernel runtime, а не Domain module contribution.
 
-## Permission
+## Дозволи
 
 Runtime operational actions використовують `cos.tenant.manage` як presentation permission baseline.
 
