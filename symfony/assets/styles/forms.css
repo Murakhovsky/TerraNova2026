@@ -124,9 +124,9 @@
 
 .cos-form .ts-dropdown {
   color: var(--cos-color-text);
-  background: var(--cos-color-surface-raised);
-  border-color: var(--cos-color-border);
-  box-shadow: var(--cos-shadow-overlay);
+  background: var(--cos-surface-floating-bg);
+  border-color: var(--cos-surface-border);
+  box-shadow: var(--cos-surface-floating-shadow);
 }
 
 .cos-form .dropzone-container {

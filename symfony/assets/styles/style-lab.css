@@ -265,11 +265,35 @@ html[data-cos-style-lab="glass"] :is(
   .cos-agent-warning,
   .cos-agent-action
 ) {
-  background: var(--cos-color-surface);
-  border-color: var(--cos-color-border);
-  box-shadow: var(--cos-shadow-raised);
+  background: var(--cos-surface-default-bg);
+  border-color: var(--cos-surface-border);
+  box-shadow: var(--cos-surface-default-shadow);
   backdrop-filter: blur(var(--cos-style-lab-blur)) saturate(var(--cos-style-lab-saturate));
   -webkit-backdrop-filter: blur(var(--cos-style-lab-blur)) saturate(var(--cos-style-lab-saturate));
+}
+
+html[data-cos-style-lab="glass"] :is(
+  .cos-style-lab,
+  .cos-dropdown__menu,
+  .cos-popover,
+  .cos-toast,
+  .cos-data-grid__columns-panel,
+  .cos-workspace__action-menu-panel,
+  .cos-form .ts-dropdown
+) {
+  background: var(--cos-surface-floating-bg);
+  box-shadow: var(--cos-surface-floating-shadow);
+}
+
+html[data-cos-style-lab="glass"] :is(
+  .cos-dialog__panel,
+  .cos-drawer__panel,
+  .cos-command__panel,
+  .cos-activity-center__panel,
+  .cos-ai-panel__panel
+) {
+  background: var(--cos-surface-overlay-bg);
+  box-shadow: var(--cos-surface-overlay-shadow);
 }
 
 html[data-cos-style-lab="glass"] :is(

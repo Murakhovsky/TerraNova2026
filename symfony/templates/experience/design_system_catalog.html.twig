@@ -111,6 +111,29 @@
         </div>
     </section>
 
+    <section class="cos-ui-catalog__section" aria-labelledby="surfaces-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="surfaces-heading">Surface hierarchy</h2>
+            <p>Canvas → Default → Subtle → Raised → Floating → Overlay. Shadow begins only when the UI truly floats.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            {% for className, label in {
+                'cos-surface--canvas': 'Canvas',
+                'cos-surface--default': 'Default',
+                'cos-surface--subtle': 'Subtle',
+                'cos-surface--raised': 'Raised',
+                'cos-surface--floating': 'Floating',
+                'cos-surface--overlay': 'Overlay'
+            } %}
+                <article class="cos-surface {{ className }}" style="padding:var(--cos-space-4);border-radius:var(--cos-radius-panel)">
+                    <p class="cos-card__eyebrow">{{ label }}</p>
+                    <strong>{{ className }}</strong>
+                    <p class="cos-card__copy">Semantic depth, not decorative card stacking.</p>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
     <section class="cos-ui-catalog__section" aria-labelledby="type-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="type-heading">Typography and rhythm</h2>

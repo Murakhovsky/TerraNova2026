@@ -76,10 +76,10 @@
   display: grid;
   min-width: 13rem;
   padding: var(--cos-space-2);
-  background: var(--cos-color-surface-raised);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-floating-bg);
+  border: 1px solid var(--cos-surface-border);
   border-radius: var(--cos-radius-md);
-  box-shadow: var(--cos-shadow-overlay);
+  box-shadow: var(--cos-surface-floating-shadow);
 }
 
 .cos-workspace__menu-action {

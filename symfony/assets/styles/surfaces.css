@@ -1,0 +1,107 @@
+/*
+ * COS canonical surface hierarchy.
+ *
+ * Surfaces communicate structural depth. Persistent business UI should be readable
+ * through contrast + border + spacing before shadow is introduced.
+ */
+
+:root {
+  --bs-body-bg: var(--cos-surface-canvas-bg);
+  --bs-body-color: var(--cos-color-text);
+
+  --bs-card-bg: var(--cos-surface-default-bg);
+  --bs-card-border-color: var(--cos-surface-border);
+
+  --bs-dropdown-bg: var(--cos-surface-floating-bg);
+  --bs-dropdown-border-color: var(--cos-surface-border);
+
+  --bs-modal-bg: var(--cos-surface-overlay-bg);
+  --bs-modal-border-color: var(--cos-surface-border);
+
+  --bs-offcanvas-bg: var(--cos-surface-overlay-bg);
+  --bs-offcanvas-border-color: var(--cos-surface-border);
+
+  --bs-toast-bg: var(--cos-surface-floating-bg);
+  --bs-toast-border-color: var(--cos-surface-border);
+
+  --bs-popover-bg: var(--cos-surface-floating-bg);
+  --bs-popover-border-color: var(--cos-surface-border);
+}
+
+.cos-surface {
+  min-width: 0;
+  color: var(--cos-color-text);
+  border: var(--cos-border-width) solid var(--cos-surface-border);
+}
+
+.cos-surface--canvas {
+  background: var(--cos-surface-canvas-bg);
+  border-color: transparent;
+  box-shadow: var(--cos-surface-canvas-shadow);
+}
+
+.cos-surface--default {
+  background: var(--cos-surface-default-bg);
+  box-shadow: var(--cos-surface-default-shadow);
+}
+
+.cos-surface--subtle {
+  background: var(--cos-surface-subtle-bg);
+  box-shadow: var(--cos-surface-subtle-shadow);
+}
+
+.cos-surface--raised {
+  background: var(--cos-surface-raised-bg);
+  box-shadow: var(--cos-surface-raised-shadow);
+}
+
+.cos-surface--floating {
+  background: var(--cos-surface-floating-bg);
+  box-shadow: var(--cos-surface-floating-shadow);
+}
+
+.cos-surface--overlay {
+  background: var(--cos-surface-overlay-bg);
+  box-shadow: var(--cos-surface-overlay-shadow);
+}
+
+.card {
+  --bs-card-bg: var(--cos-surface-default-bg);
+  --bs-card-border-color: var(--cos-surface-border);
+
+  box-shadow: var(--cos-surface-default-shadow);
+}
+
+.dropdown-menu {
+  --bs-dropdown-bg: var(--cos-surface-floating-bg);
+  --bs-dropdown-border-color: var(--cos-surface-border);
+  --bs-dropdown-box-shadow: var(--cos-surface-floating-shadow);
+
+  box-shadow: var(--cos-surface-floating-shadow);
+}
+
+.modal-content {
+  background: var(--cos-surface-overlay-bg);
+  border-color: var(--cos-surface-border);
+  box-shadow: var(--cos-surface-overlay-shadow);
+}
+
+.offcanvas {
+  background: var(--cos-surface-overlay-bg);
+  border-color: var(--cos-surface-border);
+  box-shadow: var(--cos-surface-overlay-shadow);
+}
+
+.toast {
+  --bs-toast-bg: var(--cos-surface-floating-bg);
+  --bs-toast-border-color: var(--cos-surface-border);
+
+  box-shadow: var(--cos-surface-floating-shadow);
+}
+
+.popover {
+  --bs-popover-bg: var(--cos-surface-floating-bg);
+  --bs-popover-border-color: var(--cos-surface-border);
+
+  box-shadow: var(--cos-surface-floating-shadow);
+}

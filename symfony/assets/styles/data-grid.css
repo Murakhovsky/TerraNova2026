@@ -216,10 +216,10 @@
   width: min(18rem, calc(100vw - 2rem));
   margin-top: var(--cos-space-2);
   padding: var(--cos-space-3);
-  background: var(--cos-color-surface-raised);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-floating-bg);
+  border: 1px solid var(--cos-surface-border);
   border-radius: var(--cos-radius-md);
-  box-shadow: var(--cos-shadow-overlay);
+  box-shadow: var(--cos-surface-floating-shadow);
 }
 
 @media (max-width: 760px) {

@@ -36,6 +36,8 @@ on:
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_style_lab.php'
       - 'tests/architecture/web_experience_geometry.php'
+      - 'tests/architecture/web_experience_surfaces.php'
+      - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -76,6 +78,8 @@ on:
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_style_lab.php'
       - 'tests/architecture/web_experience_geometry.php'
+      - 'tests/architecture/web_experience_surfaces.php'
+      - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -191,6 +195,10 @@ jobs:
 
       - name: PHASE 4 Geometry contract gate
         run: php tests/architecture/web_experience_geometry.php
+
+      - name: PHASE 5 Surface hierarchy gate
+        run: php tests/architecture/web_experience_surfaces.php
+
 
 
 
