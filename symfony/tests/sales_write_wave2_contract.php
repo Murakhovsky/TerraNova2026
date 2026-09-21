@@ -31,6 +31,31 @@ function wave2(bool $condition, string $message): void
 $service = new class implements SalesWriteServiceInterface {
     public array $calls = [];
 
+    public function receivePublicLead(array $input, string $sourcePage): ClientCaseCommandResult
+    {
+        return ClientCaseCommandResult::success('accepted', ['lead_id' => 401]);
+    }
+
+    public function createOpportunity(array $input, int $actorId): ClientCaseCommandResult
+    {
+        return ClientCaseCommandResult::success('created', ['case_id' => 402]);
+    }
+
+    public function updateOpportunity(int $opportunityId, array $input, int $actorId): ClientCaseCommandResult
+    {
+        return ClientCaseCommandResult::success('updated', ['case_id' => $opportunityId]);
+    }
+
+    public function attachInboundRequest(int $opportunityId, int $leadId, int $actorId): ClientCaseCommandResult
+    {
+        return ClientCaseCommandResult::success('attached', ['case_id' => $opportunityId]);
+    }
+
+    public function updateOpportunityPropertyMatch(int $matchId, array $input, int $actorId): ClientCaseCommandResult
+    {
+        return ClientCaseCommandResult::success('updated', ['case_id' => 402]);
+    }
+
     public function createLead(array $input, int $actorId, string $correlationId, string $idempotencyKey): ClientCaseCommandResult
     {
         $this->calls[] = ['create', $input, $actorId, $correlationId, $idempotencyKey];
