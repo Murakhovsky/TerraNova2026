@@ -51,6 +51,7 @@ jobs:
           php tests/architecture/web_experience_wave12_native.php
           php tests/architecture/web_experience_wave12_security.php
           php tests/architecture/web_experience_wave12_feature_flags.php
+          php tests/architecture/web_experience_wave12_audit_history.php
           php tests/architecture/web_experience_wave12_interactions.php
           php tests/architecture/web_experience_wave12_forms.php
           php tests/architecture/web_experience_wave12_data.php
