@@ -1,12 +1,12 @@
 ---
-title: Unified UIAction Platform
+title: Платформа Unified UIAction
 description: Канонічна модель бізнес-дій для Workspace, DataGrid, context menu, mobile, AI та notification surfaces.
 status: active
 updated: 2026-09-21
 kind: architecture
 ---
 
-# Unified UIAction Platform
+# Платформа Unified UIAction
 
 Wave 12.6 вводить один presentation contract для дій, які можуть бути показані на різних COS surfaces.
 
@@ -46,7 +46,7 @@ UIAction
 
 `id` має бути стабільним namespaced identifier. `command` посилається на існуючий Application/Kernel action identifier, але Web platform не виконує його напряму.
 
-## Placements
+## Розміщення
 
 Канонічні placements: `workspace`, `workspace.primary`, `workspace.secondary`, `datagrid.row`, `datagrid.bulk`, `context_menu`, `command_palette`, `mobile.primary`, `mobile.menu`, `ai_proposal`, `notification`.
 
@@ -60,7 +60,7 @@ Dangerous action завжди вимагає confirmation contract. Critical act
 
 Це presentation guard. Authorization, idempotency, audit та execution policy залишаються backend responsibility.
 
-## Permissions
+## Дозволи
 
 `UIAction.permission` не є окремою ACL-системою.
 
@@ -86,7 +86,7 @@ Backend authorization залишається авторитетним незал
 
 `UIActionResolver` перевіряє tenant organization, role consistency, placement та permissions. Він не виконує command, не обходить Kernel Policy і не робить persistence access.
 
-## Execution boundary
+## Межа виконання
 
 ```text
 UIAction
@@ -106,7 +106,7 @@ Audit / events
 
 Wave 12.6 закриває presentation action model. Workflow-generated actions будуть окремо підключені у Wave 12.11.
 
-## Reference implementation
+## Еталонна реалізація
 
 Перший reference provider: Sales.
 
