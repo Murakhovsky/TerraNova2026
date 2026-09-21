@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Web\Experience\Extension;
 
 use App\Web\Experience\Extension\Model\NavigationContribution;
+use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
 use App\Web\Experience\Shell\ShellCommandItem;
@@ -46,6 +47,26 @@ final readonly class WebExtensionContextCatalog
         }
 
         return $items;
+    }
+
+    /** @return list<SearchResult> */
+    public function search(string $query, int $limit = 20): array
+    {
+        $items = [];
+        $limit = max(1, min(50, $limit));
+
+        foreach ($this->providers->search() as $provider) {
+            array_push($items, ...$provider->search($this->context, $query, $limit));
+        }
+
+        usort(
+            $items,
+            static fn (SearchResult $left, SearchResult $right): int
+                => [-$left->score, $left->kind, $left->label, $left->id]
+                <=> [-$right->score, $right->kind, $right->label, $right->id],
+        );
+
+        return array_slice($items, 0, $limit);
     }
 
     /** @return list<WorkspaceDefinition> */
