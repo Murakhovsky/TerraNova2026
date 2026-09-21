@@ -1,16 +1,18 @@
 {
   "name": "estatebook/cos-symfony",
-  "description": "Canonical Symfony LTS runtime for COS Core migration",
+  "description": "Canonical Symfony 7.4 server-first runtime for COS Experience Platform",
   "type": "project",
   "license": "proprietary",
   "require": {
-    "php": ">=8.3",
-    "ext-ctype": "*",
-    "ext-iconv": "*",
-    "ext-pdo": "*",
     "doctrine/doctrine-bundle": "^2.19",
     "doctrine/doctrine-migrations-bundle": "^3.7",
     "doctrine/orm": "^3.7",
+    "ext-ctype": "*",
+    "ext-iconv": "*",
+    "ext-pdo": "*",
+    "php": ">=8.3",
+    "symfony/asset": "7.4.*",
+    "symfony/asset-mapper": "7.4.*",
     "symfony/console": "7.4.*",
     "symfony/dotenv": "7.4.*",
     "symfony/flex": "^2.6",
@@ -21,9 +23,15 @@
     "symfony/scheduler": "7.4.*",
     "symfony/security-bundle": "7.4.*",
     "symfony/serializer": "7.4.*",
+    "symfony/stimulus-bundle": "^2.36.0",
+    "symfony/twig-bundle": "7.4.*",
+    "symfony/ux-live-component": "^2.36.0",
+    "symfony/ux-turbo": "^2.36.0",
+    "symfony/ux-twig-component": "^2.36.0",
     "symfony/validator": "7.4.*",
     "symfony/workflow": "7.4.*",
-    "symfony/yaml": "7.4.*"
+    "symfony/yaml": "7.4.*",
+    "twig/twig": "^3.0"
   },
   "autoload": {
     "psr-4": {

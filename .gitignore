@@ -11,3 +11,7 @@ tmp/
 /docs/.vitepress/dist/
 
 .idea/
+
+# Symfony AssetMapper generated artifacts
+/symfony/assets/vendor/
+/symfony/public/assets/
