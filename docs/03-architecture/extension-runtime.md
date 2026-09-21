@@ -2,7 +2,7 @@
 title: Середовище розширень
 description: Як COS модулі підключають API, UI, event consumers та інші extension surfaces без hardcoded Domain assembly.
 status: active
-updated: 2026-09-16
+updated: 2026-09-21
 kind: architecture
 ---
 
@@ -55,51 +55,59 @@ Kernel зберігає тільки generic extension identity:
 
 ## Поточні extension points
 
-Поточний generated registry містить:
+Kernel визначає стабільні ідентифікатори extension points, але не знає їхніх Web-контрактів.
 
-| Extension point | Тип | Призначення |
+| Extension point | Споживач | Призначення |
 | --- | --- | --- |
-| `api.routes` | built-in | module-owned API/Web route contributors |
-| `tenant.configuration` | built-in | module configuration provisioning |
-| `event.consumers` | module-defined | runtime consumers domain events/outcomes |
-| `web.navigation` | module-defined | module-owned navigation contributions |
+| `api.routes` | runtime/router | module-owned route contributions |
+| `tenant.configuration` | tenant runtime | module configuration provisioning |
+| `event.consumers` | event runtime | module event/outcome consumers |
+| `web.navigation` | Web Experience | навігаційні contributions |
+| `web.search` | Web Experience | глобальний пошук |
+| `web.commands` | Web Experience | command palette |
+| `web.workspace` | Web Experience | Workspace definitions |
+| `web.workspace.extensions` | Web Experience | slot extensions існуючих Workspace |
+| `web.dashboard_widgets` | Web Experience | dashboard widgets |
+| `web.entity_links` | Web Experience | canonical entity links |
+| `web.notifications` | Web Experience | notification projections |
+| `web.activity` | Web Experience | Activity Center projections |
+| `web.actions` | Web Experience | unified UI actions |
 
-Актуальний список і contributors генерується в [Module Extension Points](../12-reference/extension-points.md).
+Актуальний inventory deployed contributions генерується в [Module Extension Points](../12-reference/extension-points.md).
 
-## Поточні contributors
+## Web provider runtime
 
-`api.routes`:
+Конкретні Web-контракти належать Symfony Web layer:
 
 ```text
-diagnosticRouteContributor
-propertyRouteContributor
+ModuleExtensionRegistry
+        ↓ generic service ids
+WebExtensionProviderRegistry
+        ↓ one OrganizationModuleSnapshot
+WebExtensionProviderSet
+        ↓ concrete contract validation
+Navigation / Search / Commands / Workspace / ...
 ```
 
-`event.consumers`:
+Один `WebExtensionContext` створює один provider set і один effective module snapshot. Navigation, Commands та інші surfaces у межах однієї композиції не повинні повторно й незалежно визначати module activation.
+
+Перші module-owned providers:
 
 ```text
-diagnosticActionOutcomeHandler
-salesHistoricalEventConsumer
-```
-
-`tenant.configuration`:
-
-```text
-propertyModuleConfigurationProvisioner
-salesModuleConfigurationProvisioner
-```
-
-`web.navigation`:
-
-```text
-diagnosticNavigationContributor
-propertyNavigationContributor
 salesNavigationContributor
+propertyNavigationContributor
+diagnosticNavigationContributor
 ```
 
-Sales HTTP/SSR routes після фінального cutover належать Symfony router напряму й тому більше не є Phalcon `api.routes` extension contribution.
+Кожен із них може реалізувати кілька Web-контрактів. Service id у manifest лишається стабільною identity contribution, а consumer перевіряє потрібний interface для конкретного extension point.
 
-Точний inventory не потрібно дублювати вручну поза generated reference; тут важлива архітектурна семантика.
+Поточні реальні contributions використовують:
+
+- `web.navigation`;
+- `web.commands`;
+- `web.workspace`.
+
+Інші canonical Web points уже мають contracts і можуть отримувати contributions без зміни Kernel semantics.
 
 ## ModuleExtensionRegistry
 
@@ -191,11 +199,13 @@ cross_domain_contracts   = який Domain contract requires/provides інший
 app/Kernel/Module/ModuleContributions.php
 app/Kernel/Module/ModuleExtensionContribution.php
 app/Kernel/Module/ModuleExtensionRegistry.php
-app/Kernel/Module/CrossDomainContract.php
-app/Bootstrap/ModuleServices.php
-app/Bootstrap/WebApplicationServices.php
-app/Interfaces/Web/Navigation/ModuleAwareNavigationService.php
+app/Kernel/Module/ModuleExtensionPoint.php
 app/Domains/*/module.php
+symfony/src/Web/Experience/Extension/Contract/*
+symfony/src/Web/Experience/Extension/WebExtensionProviderRegistry.php
+symfony/src/Web/Experience/Extension/WebExtensionProviderSet.php
+symfony/src/Web/Experience/Extension/WebExtensionContextCatalog.php
+symfony/src/Web/Experience/Extension/Provider/*
 ```
 
 ## Поточна версія
