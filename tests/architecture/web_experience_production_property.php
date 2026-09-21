@@ -203,6 +203,36 @@ foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card'] as $legacyMarke
     $notContains($submission, $legacyMarker, 'Property Submission detail must not restore the legacy shell.');
 }
 
+$seo = $read('app/Interfaces/Web/View/property/seo.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'itemscope itemtype="https://schema.org/Product"',
+    'data-save-property',
+    'property/catalog?deal_type=sale',
+] as $marker) {
+    $contains($seo, $marker, 'Property SEO landing must use canonical shell without losing structured catalog behavior.');
+}
+$notContains($seo, 'tn-page-hero tn-page-hero--catalog', 'Property SEO landing must not restore the legacy hero.');
+
+$submit = $read('app/Interfaces/Web/View/property/submit.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'action="<?php echo $this->url->get(\'property/submit\'); ?>"',
+    'enctype="multipart/form-data"',
+    'name="website"',
+    'name="owner_name"',
+    'name="owner_phone"',
+    'name="property_type"',
+    'name="description"',
+    'name="main_photo"',
+    'name="gallery_photos[]"',
+] as $marker) {
+    $contains($submit, $marker, 'Property Submit must use canonical shell without losing public submission contracts.');
+}
+$notContains($submit, 'tn-page-hero tn-page-hero--submit', 'Property Submit must not restore the legacy hero.');
+
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
     '($value[\'kind\'] ?? \'\') === \'actions\'',
@@ -233,6 +263,9 @@ foreach ([
     '### Презентація (`Presentation`)',
     '## Хвиля 6',
     '### Деталі заявки (`Submission Detail`)',
+    '## Хвиля 7',
+    '### SEO-добірка (`SEO Landing`)',
+    '### Публічна подача (`Property Submit`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
