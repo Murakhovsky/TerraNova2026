@@ -32,8 +32,11 @@ class SpatialAssetService implements SpatialAssetStorageInterface
 
     private const ASSET_TYPES = ['source', 'model_web', 'model_ar', 'texture', 'point_cloud', 'gaussian_splat', 'panorama', 'floorplan', 'poster', 'video', 'other'];
 
-    public function __construct(private PdoConnection $database, private int $maxUploadBytes = 209715200)
-    {
+    public function __construct(
+        private PdoConnection $database,
+        private UploadQuarantineService $quarantine,
+        private int $maxUploadBytes = 209715200,
+    ) {
     }
 
     public function store(array $scene, array $file, array $input, array $user): array
@@ -42,12 +45,11 @@ class SpatialAssetService implements SpatialAssetStorageInterface
         if ($error !== UPLOAD_ERR_OK) {
             throw new RuntimeException($this->uploadError($error));
         }
-        $size = (int) ($file['size'] ?? 0);
-        $tmp = (string) ($file['tmp_name'] ?? '');
-        if ($size <= 0 || $size > $this->maxUploadBytes || $tmp === '' || !is_file($tmp)) {
-            throw new RuntimeException('3D-файл відсутній або перевищує дозволений розмір.');
-        }
-        $originalName = $this->baseName((string) ($file['name'] ?? 'asset'));
+
+        $quarantined = $this->quarantine->quarantine($file, $this->maxUploadBytes);
+        $size = $quarantined->sizeBytes;
+        $tmp = $quarantined->path;
+        $originalName = $this->baseName($quarantined->originalName);
         $extension = mb_strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
         if (!isset(self::FORMATS[$extension])) {
             throw new RuntimeException('Формат .' . ($extension ?: '?') . ' не підтримується Spatial pipeline.');
@@ -69,15 +71,12 @@ class SpatialAssetService implements SpatialAssetStorageInterface
         }
         $relativePath = $directory . '/' . $publicId . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
         $absolutePath = BASE_PATH . '/public/' . $relativePath;
-        $stored = is_uploaded_file($tmp) ? move_uploaded_file($tmp, $absolutePath) : copy($tmp, $absolutePath);
-        if (!$stored) {
-            throw new RuntimeException('Не вдалося записати Spatial asset на диск.');
-        }
+        $mime = $this->verifiedMime($quarantined->mimeType, (string) $spec['mime'], $extension);
+        $quarantined->releaseTo($absolutePath);
 
         $pdo = $this->database->connection();
         $pdo->beginTransaction();
         try {
-            $mime = $this->detectMime($absolutePath, (string) $spec['mime']);
             $kind = in_array($assetType, ['poster', 'panorama', 'texture'], true) ? 'image'
                 : ($assetType === 'video' ? 'video' : ($assetType === 'floorplan' ? 'document' : 'model'));
             $mediaId = $this->insertMedia($publicId, $kind, $originalName, $mime, $extension, $relativePath, $absolutePath);
@@ -239,11 +238,24 @@ class SpatialAssetService implements SpatialAssetStorageInterface
         }
     }
 
-    private function detectMime(string $path, string $fallback): string
+    private function verifiedMime(string $detected, string $fallback, string $extension): string
     {
-        $info = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
-        $mime = $info ? (string) finfo_file($info, $path) : '';
-        return $mime !== '' && $mime !== 'application/octet-stream' ? $mime : $fallback;
+        $strict = [
+            'jpg' => ['image/jpeg'],
+            'jpeg' => ['image/jpeg'],
+            'png' => ['image/png'],
+            'webp' => ['image/webp'],
+            'pdf' => ['application/pdf'],
+            'mp4' => ['video/mp4'],
+        ];
+
+        if (isset($strict[$extension]) && !in_array($detected, $strict[$extension], true)) {
+            throw new RuntimeException('MIME type does not match the uploaded Spatial file extension.');
+        }
+
+        return $detected !== '' && $detected !== 'application/octet-stream'
+            ? $detected
+            : $fallback;
     }
 
     private function uploadError(int $error): string
