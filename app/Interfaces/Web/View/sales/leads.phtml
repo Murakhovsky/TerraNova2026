@@ -9,6 +9,19 @@ $source = trim((string) $this->request->getQuery('source', 'string', ''));
 $ownerId = (int) $this->request->getQuery('owner_id', 'int', 0);
 $unassigned = (int) $this->request->getQuery('unassigned', 'int', 0) === 1;
 $tabs = [['All',''], ['New','new'], ['Contacted','contacted'], ['Qualified','qualified'], ['Disqualified','disqualified']];
+$ownerOptions = ['' => 'Усі'];
+foreach ($owners as $owner) {
+    $ownerOptions[(string) (int) $owner['id']] = (string) ($owner['full_name'] ?? $owner['email'] ?? ('#' . $owner['id']));
+}
+$leadFilterFields = [
+    ['name' => 'q', 'type' => 'search', 'label' => 'Пошук', 'value' => $q, 'grow' => true],
+    ['name' => 'source', 'type' => 'text', 'label' => 'Source', 'value' => $source],
+    ['name' => 'owner_id', 'type' => 'select', 'label' => 'Owner', 'value' => $ownerId > 0 ? (string) $ownerId : '', 'options' => $ownerOptions],
+];
+$leadFilterHidden = [
+    'status' => $status,
+    'unassigned' => $unassigned ? '1' : '',
+];
 ?>
 <main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace data-sales-lead-inbox data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
   <?php $this->partial('components/sales/navigation', ['active' => 'leads']); ?>
@@ -17,19 +30,29 @@ $tabs = [['All',''], ['New','new'], ['Contacted','contacted'], ['Qualified','qua
     <?php foreach ($tabs as [$label, $value]): ?><a class="<?php echo !$unassigned && $status === $value ? 'is-active' : ''; ?>" href="<?php echo $this->url->get('sales/leads' . ($value !== '' ? '?status=' . $value : '')); ?>"><?php echo $h($label); ?></a><?php endforeach; ?>
     <a class="<?php echo $unassigned ? 'is-active' : ''; ?>" href="<?php echo $this->url->get('sales/leads?unassigned=1'); ?>">Unassigned</a>
   </nav>
-  <form class="tn-ui-filter-bar tn-workspace-section" method="get" action="<?php echo $this->url->get('sales/leads'); ?>">
-    <label class="tn-ui-field tn-sales-filter-grow"><span>Пошук</span><input class="tn-ui-input" type="search" name="q" value="<?php echo $h($q); ?>"></label>
-    <label class="tn-ui-field"><span>Source</span><input class="tn-ui-input" name="source" value="<?php echo $h($source); ?>"></label>
-    <label class="tn-ui-field"><span>Owner</span><select class="tn-ui-select" name="owner_id"><option value="">Усі</option><?php foreach ($owners as $owner): ?><option value="<?php echo (int) $owner['id']; ?>" <?php echo $ownerId === (int) $owner['id'] ? 'selected' : ''; ?>><?php echo $h($owner['full_name'] ?? $owner['email'] ?? ('#' . $owner['id'])); ?></option><?php endforeach; ?></select></label>
-    <?php if ($status !== ''): ?><input type="hidden" name="status" value="<?php echo $h($status); ?>"><?php endif; ?>
-    <?php if ($unassigned): ?><input type="hidden" name="unassigned" value="1"><?php endif; ?>
-    <button class="tn-ui-button tn-ui-button--primary">Filter</button>
-  </form>
+  <div class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar', [
+      'action' => 'sales/leads',
+      'method' => 'GET',
+      'fields' => $leadFilterFields,
+      'hidden' => $leadFilterHidden,
+      'actions' => [['label' => 'Filter', 'type' => 'submit', 'variant' => 'primary']],
+    ]); ?>
+  </div>
 
   <?php if ($leads): ?><section class="tn-sales-lead-list tn-workspace-section">
     <?php foreach ($leads as $lead): $drawerId = 'lead-drawer-' . (int) $lead['id']; ?>
       <article class="tn-ui-panel tn-sales-lead-card" data-lead-id="<?php echo (int) $lead['id']; ?>">
-        <header><div><strong><?php echo $h($lead['name'] ?? '—'); ?></strong><small><?php echo $h(($lead['source'] ?: 'Direct') . ' · ' . ($lead['created_at'] ?? '')); ?></small></div><span><?php echo $h(strtoupper((string) ($lead['status'] ?? 'new'))); ?></span></header>
+        <header><div><strong><?php echo $h($lead['name'] ?? '—'); ?></strong><small><?php echo $h(($lead['source'] ?: 'Direct') . ' · ' . ($lead['created_at'] ?? '')); ?></small></div><?php
+          $leadStatus = strtolower((string) ($lead['status'] ?? 'new'));
+          $leadTone = match ($leadStatus) {
+              'qualified' => 'positive',
+              'disqualified' => 'danger',
+              'contacted' => 'info',
+              default => 'neutral',
+          };
+          $this->partial('components/ui/status_badge', ['label' => strtoupper($leadStatus), 'tone' => $leadTone]);
+        ?></header>
         <div class="tn-sales-lead-summary"><span><?php echo $h($lead['phone'] ?: '—'); ?></span><span><?php echo $h($lead['email'] ?: '—'); ?></span><span><?php echo $h($lead['attention_reason'] ?: ''); ?></span></div>
         <div class="tn-sales-quick-actions">
           <?php if (($lead['status'] ?? '') === 'new'): ?><button type="button" class="tn-ui-button tn-ui-button--ghost tn-ui-button--sm" data-sales-lead-status data-status="contacted">Contacted</button><?php endif; ?>
