@@ -68,4 +68,28 @@ final readonly class OpportunityHandoff
             recommendedAction: (string) $candidate->recommendedAction(),
         );
     }
+
+    /** @return array<string,mixed> */
+    public function toArray(): array
+    {
+        return [
+            'candidate_id'=>$this->candidateId,
+            'organization_id'=>$this->organizationId,
+            'opportunity_type'=>$this->opportunityType,
+            'growth_mode'=>$this->growthMode,
+            'subject_type'=>$this->subjectType,
+            'subject_id'=>$this->subjectId,
+            'target_domain'=>$this->targetDomain,
+            'signal_ids'=>$this->signalIds,
+            'why_it_matters'=>$this->whyItMatters,
+            'problem_hypothesis'=>$this->problemHypothesis,
+            'why_now'=>$this->whyNow,
+            'evidence_ids'=>$this->evidenceIds,
+            'unknowns'=>$this->unknowns,
+            'scores'=>$this->scores,
+            'expected_value'=>$this->expectedValue,
+            'recommended_play'=>$this->recommendedPlay,
+            'recommended_action'=>$this->recommendedAction,
+        ];
+    }
 }

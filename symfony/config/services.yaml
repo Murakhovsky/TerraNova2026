@@ -378,6 +378,25 @@ services:
     arguments:
       $ruleContextProvider: '@Domains\Service\Rule\ServiceRuleContextProvider'
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthRepository
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMutationReceipt:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthMutationReceiptInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMutationReceipt
+
+  Domains\Growth\Application\Service\GrowthWorkflowService: ~
+
+  Domains\Growth\Application\Contract\GrowthApplicationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthWorkflowService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

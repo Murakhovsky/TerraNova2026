@@ -99,8 +99,8 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.1 scope
+## V0.2 runtime
 
-V0.1 deliberately establishes the Domain model, lifecycle, scoring semantics, handoff contract and Process Registry coverage before persistence, outbound campaigns, AI agents or Growth UI are introduced.
+V0.2 adds tenant-scoped MySQL persistence, operation receipts, row-locked lifecycle mutations, Domain Events, Audit and a canonical `GrowthApplicationBoundary` while keeping the module disabled by default.
 
-That ordering is intentional. Agents may assist the Domain; they are not allowed to become the Domain logic.
+Still intentionally absent: external signal collectors, outbound campaigns, AI agents, cross-domain handoff acceptance, public API and Growth UI. Agents may assist the Domain; they are not allowed to become the Domain logic.

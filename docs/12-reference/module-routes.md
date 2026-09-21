@@ -17,6 +17,7 @@ generated: true
 | `construction` | — | 0 |
 | `diagnostic` | — | 0 |
 | `finance` | — | 0 |
+| `growth` | — | 0 |
 | `hr` | — | 0 |
 | `procurement` | — | 0 |
 | `property` | — | 1 |

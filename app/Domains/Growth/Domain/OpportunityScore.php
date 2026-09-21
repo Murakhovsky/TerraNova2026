@@ -37,4 +37,20 @@ final readonly class OpportunityScore
             'confidence' => $this->confidence,
         ];
     }
+
+    /** @param array<string,mixed> $value */
+    public static function fromArray(array $value): self
+    {
+        foreach(['fit','need','timing','access','value'] as $key){
+            if(!is_array($value[$key]??null))throw new InvalidArgumentException('Growth OpportunityScore dimension is missing: '.$key);
+        }
+        return new self(
+            ScoreDimension::fromArray($value['fit']),
+            ScoreDimension::fromArray($value['need']),
+            ScoreDimension::fromArray($value['timing']),
+            ScoreDimension::fromArray($value['access']),
+            ScoreDimension::fromArray($value['value']),
+            (float)($value['confidence']??0.0),
+        );
+    }
 }

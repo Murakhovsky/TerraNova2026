@@ -45,4 +45,19 @@ final readonly class ScoreDimension
             'model_version' => $this->modelVersion,
         ];
     }
+
+    /** @param array<string,mixed> $value */
+    public static function fromArray(array $value): self
+    {
+        $score=$value['score']??null;
+        if(!is_int($score))throw new InvalidArgumentException('Growth score dimension score must be an integer.');
+        $evidence=$value['evidence_ids']??null;
+        if(!is_array($evidence)||!array_is_list($evidence))throw new InvalidArgumentException('Growth score dimension evidence must be a list.');
+        return new self(
+            $score,
+            (string)($value['reason']??''),
+            array_values(array_map('strval',$evidence)),
+            (string)($value['model_version']??''),
+        );
+    }
 }

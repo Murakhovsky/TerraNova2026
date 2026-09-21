@@ -179,9 +179,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.1
+## Статус V0.2
 
-`process_state: to-be` навмисний. Domain model, lifecycle, Process Registry і runtime identity реалізовані першими; persistence, external signal collectors, AI agents, cross-domain acceptance, API та UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.2 уже реалізує Domain model, lifecycle, tenant-scoped persistence, idempotent application mutations, Events та Audit. External signal collectors, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -194,6 +194,11 @@ app/Domains/Growth/Domain/ScoreDimension.php
 app/Domains/Growth/Domain/OpportunityScore.php
 app/Domains/Growth/Application/DTO/OpportunityHandoff.php
 app/Domains/Growth/Application/UseCase/PrepareOpportunityHandoff.php
+app/Domains/Growth/Application/Service/GrowthWorkflowService.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthRepository.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMutationReceipt.php
+app/Domains/Growth/Automation/Event/GrowthEventType.php
 app/Domains/Growth/Bootstrap/GrowthDomainModule.php
+app/migrations/20260921_000067_growth_v020_runtime.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

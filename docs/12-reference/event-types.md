@@ -16,6 +16,7 @@ generated: true
 
 | Модуль | Типів подій |
 | --- | ---: |
+| `growth` | 8 |
 | `property` | 17 |
 | `sales` | 16 |
 
@@ -23,6 +24,14 @@ generated: true
 
 | Модуль | Тип події | Символ | Джерело | Runtime-власник |
 | --- | --- | --- | --- | --- |
+| `growth` | `growth.candidate.detected` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.candidate.disqualified` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.candidate.monitoring_started` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.candidate.qualified` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.candidate.researched` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.candidate.scored` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.handoff.prepared` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.signal.detected` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `property` | `property.asset.lifecycle_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.asset.location_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.asset.registered` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |

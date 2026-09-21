@@ -19,6 +19,13 @@ $catalogues = [
         'source' => 'app/Domains/Sales/Automation/Event/SalesEventType.php',
         'owner_source' => 'app/Domains/Sales/Bootstrap/SalesDomainModule.php',
     ],
+    [
+        'module' => 'growth',
+        'class' => \Domains\Growth\Automation\Event\GrowthEventType::class,
+        'method' => 'values',
+        'source' => 'app/Domains/Growth/Automation/Event/GrowthEventType.php',
+        'owner_source' => 'app/Domains/Growth/Bootstrap/GrowthDomainModule.php',
+    ],
 ];
 
 $rows = [];

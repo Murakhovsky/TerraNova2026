@@ -74,6 +74,51 @@ final class OpportunityCandidate
         );
     }
 
+    public static function restore(
+        string $id,
+        OrganizationId $organizationId,
+        OpportunityType $type,
+        GrowthMode $mode,
+        string $subjectType,
+        string $subjectId,
+        string $targetDomain,
+        array $signalIds,
+        OpportunityCandidateStatus $status,
+        ?OpportunityRationale $rationale = null,
+        ?OpportunityScore $score = null,
+        ?string $qualificationReason = null,
+        ?string $expectedValue = null,
+        ?string $recommendedPlay = null,
+        ?string $recommendedAction = null,
+    ): self {
+        $candidate=new self($id,$organizationId,$type,$mode,$subjectType,$subjectId,$targetDomain,$signalIds);
+        $candidate->status=$status;
+        $candidate->rationale=$rationale;
+        $candidate->score=$score;
+        $candidate->qualificationReason=$qualificationReason;
+        $candidate->expectedValue=$expectedValue;
+        $candidate->recommendedPlay=$recommendedPlay;
+        $candidate->recommendedAction=$recommendedAction;
+
+        if(in_array($status,[
+            OpportunityCandidateStatus::Scored,
+            OpportunityCandidateStatus::Qualified,
+            OpportunityCandidateStatus::ReadyForHandoff,
+            OpportunityCandidateStatus::HandedOff,
+            OpportunityCandidateStatus::RejectedByTargetDomain,
+        ],true)&&($rationale===null||$score===null)){
+            throw new DomainException('Persisted Growth candidate state requires rationale and score.');
+        }
+        if(in_array($status,[
+            OpportunityCandidateStatus::ReadyForHandoff,
+            OpportunityCandidateStatus::HandedOff,
+            OpportunityCandidateStatus::RejectedByTargetDomain,
+        ],true)&&($expectedValue===null||$recommendedPlay===null||$recommendedAction===null)){
+            throw new DomainException('Persisted Growth handoff state requires value, play and action.');
+        }
+        return $candidate;
+    }
+
     public function status(): OpportunityCandidateStatus
     {
         return $this->status;

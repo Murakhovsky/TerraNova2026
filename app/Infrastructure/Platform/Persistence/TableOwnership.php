@@ -35,6 +35,10 @@ final class TableOwnership
             'tn_service_slas', 'tn_service_escalations', 'tn_service_resolutions',
             'tn_service_operation_receipts',
         ],
+        'Growth' => [
+            'tn_growth_signals', 'tn_growth_candidates', 'tn_growth_candidate_signals',
+            'tn_growth_operation_receipts',
+        ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],
         'Spatial' => [
