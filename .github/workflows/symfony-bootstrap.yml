@@ -56,11 +56,13 @@ on:
       - 'tests/architecture/web_experience_primitives.php'
       - 'tests/architecture/web_experience_business_ux.php'
       - 'tests/architecture/web_experience_stress_screens.php'
+      - 'tests/architecture/web_experience_production_sales.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-business-ux.md'
       - 'docs/03-architecture/cos-stress-screens.md'
+      - 'docs/03-architecture/cos-production-sales-adoption.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -116,11 +118,13 @@ on:
       - 'tests/architecture/web_experience_primitives.php'
       - 'tests/architecture/web_experience_business_ux.php'
       - 'tests/architecture/web_experience_stress_screens.php'
+      - 'tests/architecture/web_experience_production_sales.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-business-ux.md'
       - 'docs/03-architecture/cos-stress-screens.md'
+      - 'docs/03-architecture/cos-production-sales-adoption.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -256,6 +260,9 @@ jobs:
 
       - name: PHASE 8 Stress screens runtime smoke
         run: docker compose exec -T php php bin/console cos:web:visual-stress:smoke
+
+      - name: PHASE 9 Sales production adoption gate
+        run: php tests/architecture/web_experience_production_sales.php
 
 
 

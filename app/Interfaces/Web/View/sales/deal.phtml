@@ -49,6 +49,20 @@ if (is_numeric($confidence)) {
 } elseif ($confidence !== null && $confidence !== '') $confidenceLabel = (string) $confidence;
 $stages = [];
 if ($deal) foreach ($pipelines as $p) if ((string) ($p['id'] ?? '') === (string) ($deal['pipeline_id'] ?? '')) { $stages = $p['stages'] ?? []; break; }
+$dealRisk = strtolower((string) ($deal['risk_level'] ?? ''));
+$dealStatusTone = match ($dealRisk) {
+    'high', 'critical' => 'danger',
+    'medium', 'attention' => 'warning',
+    'low', 'healthy' => 'positive',
+    default => 'neutral',
+};
+$dealStatusLabel = $dealRisk !== '' ? strtoupper($dealRisk) : 'ACTIVE';
+$dealMeta = $deal ? [
+    ['label' => 'Pipeline', 'value' => (string) ($deal['pipeline_name'] ?? '—')],
+    ['label' => 'Stage', 'value' => (string) ($deal['stage_name'] ?? $deal['stage_code'] ?? '—')],
+    ['label' => 'Owner', 'value' => (string) ($deal['owner_name'] ?: 'Unassigned')],
+    ['label' => 'Value', 'value' => $money($deal['value'] ?? 0, $deal['currency'] ?? 'USD')],
+] : [];
 ?>
 <main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
   <?php $this->partial('components/sales/navigation', ['active' => 'deals']); ?>
@@ -56,11 +70,17 @@ if ($deal) foreach ($pipelines as $p) if ((string) ($p['id'] ?? '') === (string)
     <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'Угоду не знайдено', 'message' => 'Угода не існує або недоступна в поточній організації.']); ?>
   <?php else: ?>
   <section data-sales-deal-workspace data-deal-id="<?php echo (int) $deal['id']; ?>" data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
-    <?php $this->partial('components/ui/page_header', [
-        'eyebrow' => 'Deal workspace · ' . ($deal['public_id'] ?? ''),
+    <?php $this->partial('components/ui/entity_header', [
+        'eyebrow' => 'Sales · Deal workspace',
+        'identity' => (string) ($deal['public_id'] ?? ('#' . (int) $deal['id']),
         'title' => $deal['customer'] ?? $deal['title'] ?? 'Deal',
-        'description' => ($deal['pipeline_name'] ?? 'Pipeline') . ' · ' . ($deal['stage_name'] ?? $deal['stage_code'] ?? ''),
-        'actions' => [['label' => 'Pipeline', 'href' => 'sales/pipeline?pipeline_id=' . urlencode((string) ($deal['pipeline_id'] ?? '')), 'variant' => 'ghost'], ['label' => 'All deals', 'href' => 'sales/deals', 'variant' => 'primary']],
+        'subtitle' => (string) ($deal['title'] ?? ''),
+        'status' => ['label' => $dealStatusLabel, 'tone' => $dealStatusTone],
+        'meta' => $dealMeta,
+        'actions' => [
+            ['label' => 'Pipeline', 'href' => 'sales/pipeline?pipeline_id=' . urlencode((string) ($deal['pipeline_id'] ?? '')), 'variant' => 'ghost'],
+            ['label' => 'All deals', 'href' => 'sales/deals', 'variant' => 'primary'],
+        ],
     ]); ?>
     <nav class="tn-ui-tabs tn-sales-anchor-tabs"><a href="#overview" class="is-active">Overview</a><a href="#work">Work</a><a href="#communications">Communications</a><a href="#intelligence">Intelligence</a><a href="#timeline">Timeline</a></nav>
 

@@ -3,6 +3,7 @@ $method = strtoupper((string) ($method ?? 'GET'));
 $action = trim((string) ($action ?? ''));
 $fields = is_array($fields ?? null) ? $fields : [];
 $actions = is_array($actions ?? null) ? $actions : [];
+$hidden = is_array($hidden ?? null) ? $hidden : [];
 $h = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $actionUrl = $action === '' ? '' : $this->url->get($action);
 ?>
@@ -11,7 +12,7 @@ $actionUrl = $action === '' ? '' : $this->url->get($action);
     <?php foreach ($fields as $field): if (!is_array($field)) continue;
       $name = trim((string) ($field['name'] ?? ''));
       if ($name === '') continue;
-      $type = in_array(($field['type'] ?? 'text'), ['text', 'search', 'date', 'select'], true) ? $field['type'] : 'text';
+      $type = in_array(($field['type'] ?? 'text'), ['text', 'search', 'date', 'number', 'select'], true) ? $field['type'] : 'text';
       $label = trim((string) ($field['label'] ?? ''));
       $value = (string) ($field['value'] ?? '');
       $grow = !empty($field['grow']);
@@ -25,10 +26,13 @@ $actionUrl = $action === '' ? '' : $this->url->get($action);
             <?php endforeach; ?>
           </select>
         <?php else: ?>
-          <input class="tn-ui-input" type="<?php echo $h($type); ?>" name="<?php echo $h($name); ?>" value="<?php echo $h($value); ?>"<?php if (!empty($field['placeholder'])): ?> placeholder="<?php echo $h($field['placeholder']); ?>"<?php endif; ?>>
+          <input class="tn-ui-input" type="<?php echo $h($type); ?>" name="<?php echo $h($name); ?>" value="<?php echo $h($value); ?>"<?php if (!empty($field['placeholder'])): ?> placeholder="<?php echo $h($field['placeholder']); ?>"<?php endif; ?><?php if ($type === 'number' && isset($field['min'])): ?> min="<?php echo $h($field['min']); ?>"<?php endif; ?><?php if ($type === 'number' && isset($field['max'])): ?> max="<?php echo $h($field['max']); ?>"<?php endif; ?><?php if ($type === 'number' && isset($field['step'])): ?> step="<?php echo $h($field['step']); ?>"<?php endif; ?>>
         <?php endif; ?>
       </label>
     <?php endforeach; ?>
   </div>
+  <?php foreach ($hidden as $hiddenName => $hiddenValue): ?>
+    <?php if ($hiddenValue !== null && $hiddenValue !== ''): ?><input type="hidden" name="<?php echo $h($hiddenName); ?>" value="<?php echo $h($hiddenValue); ?>"><?php endif; ?>
+  <?php endforeach; ?>
   <?php if ($actions): ?><div class="tn-ui-filter-bar__actions"><?php $this->partial('components/ui/action_bar', ['actions' => $actions, 'align' => 'end', 'ariaLabel' => 'Filter actions']); ?></div><?php endif; ?>
 </form>

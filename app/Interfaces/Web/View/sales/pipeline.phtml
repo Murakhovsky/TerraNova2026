@@ -26,6 +26,24 @@ $source = trim((string) $this->request->getQuery('source', 'string', ''));
 $q = trim((string) $this->request->getQuery('q', 'string', ''));
 $valueMin = trim((string) $this->request->getQuery('value_min', 'string', ''));
 $valueMax = trim((string) $this->request->getQuery('value_max', 'string', ''));
+$pipelineOptions = [];
+foreach ($pipelines as $p) {
+    $pipelineOptions[(string) ($p['id'] ?? '')] = (string) ($p['name'] ?? $p['code'] ?? 'Pipeline');
+}
+$ownerOptions = ['' => 'All'];
+foreach ($owners as $o) {
+    $ownerOptions[(string) (int) $o['id']] = (string) ($o['full_name'] ?? $o['email'] ?? ('#' . $o['id']));
+}
+$pipelineFilterFields = [
+    ['name' => 'pipeline_id', 'type' => 'select', 'label' => 'Pipeline', 'value' => (string) ($pipeline['id'] ?? ''), 'options' => $pipelineOptions],
+    ['name' => 'owner_id', 'type' => 'select', 'label' => 'Owner', 'value' => $ownerId > 0 ? (string) $ownerId : '', 'options' => $ownerOptions],
+    ['name' => 'risk', 'type' => 'select', 'label' => 'Risk', 'value' => $risk, 'options' => ['' => 'All', 'high' => 'High']],
+    ['name' => 'priority', 'type' => 'select', 'label' => 'Priority', 'value' => $priority, 'options' => ['' => 'All', 'low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent']],
+    ['name' => 'value_min', 'type' => 'number', 'label' => 'Value min', 'value' => $valueMin, 'min' => 0, 'step' => 100],
+    ['name' => 'value_max', 'type' => 'number', 'label' => 'Value max', 'value' => $valueMax, 'min' => 0, 'step' => 100],
+    ['name' => 'source', 'type' => 'text', 'label' => 'Source', 'value' => $source],
+    ['name' => 'q', 'type' => 'search', 'label' => 'Search', 'value' => $q, 'grow' => true],
+];
 ?>
 <main class="tn-page tn-workspace-page tn-workspace-page--wide tn-sales-workspace" data-sales-workspace data-sales-pipeline-root data-csrf="<?php echo $h($csrfToken ?? ''); ?>">
   <?php $this->partial('components/sales/navigation', ['active' => 'pipeline']); ?>
@@ -36,21 +54,13 @@ $valueMax = trim((string) $this->request->getQuery('value_max', 'string', ''));
       'actions' => [['label' => 'Deals', 'href' => 'sales/deals', 'variant' => 'ghost'], ['label' => 'Today', 'href' => 'sales/today', 'variant' => 'primary']],
   ]); ?>
 
-  <form class="tn-ui-filter-bar tn-workspace-section" method="get">
-    <label class="tn-ui-field"><span>Pipeline</span><select class="tn-ui-select" name="pipeline_id">
-      <?php foreach ($pipelines as $p): ?><option value="<?php echo $h($p['id'] ?? ''); ?>" <?php echo (string) ($pipeline['id'] ?? '') === (string) ($p['id'] ?? '') ? 'selected' : ''; ?>><?php echo $h($p['name'] ?? $p['code'] ?? 'Pipeline'); ?></option><?php endforeach; ?>
-    </select></label>
-    <label class="tn-ui-field"><span>Owner</span><select class="tn-ui-select" name="owner_id"><option value="">All</option>
-      <?php foreach ($owners as $o): ?><option value="<?php echo (int) $o['id']; ?>" <?php echo $ownerId === (int) $o['id'] ? 'selected' : ''; ?>><?php echo $h($o['full_name'] ?? $o['email'] ?? ('#' . $o['id'])); ?></option><?php endforeach; ?>
-    </select></label>
-    <label class="tn-ui-field"><span>Risk</span><select class="tn-ui-select" name="risk"><option value="">All</option><option value="high" <?php echo $risk === 'high' ? 'selected' : ''; ?>>High</option></select></label>
-    <label class="tn-ui-field"><span>Priority</span><select class="tn-ui-select" name="priority"><option value="">All</option><?php foreach (['low','normal','high','urgent'] as $v): ?><option value="<?php echo $v; ?>" <?php echo $priority === $v ? 'selected' : ''; ?>><?php echo ucfirst($v); ?></option><?php endforeach; ?></select></label>
-    <label class="tn-ui-field"><span>Value min</span><input class="tn-ui-input" type="number" min="0" step="100" name="value_min" value="<?php echo $h($valueMin); ?>"></label>
-    <label class="tn-ui-field"><span>Value max</span><input class="tn-ui-input" type="number" min="0" step="100" name="value_max" value="<?php echo $h($valueMax); ?>"></label>
-    <label class="tn-ui-field"><span>Source</span><input class="tn-ui-input" name="source" value="<?php echo $h($source); ?>"></label>
-    <label class="tn-ui-field tn-sales-filter-grow"><span>Search</span><input class="tn-ui-input" name="q" value="<?php echo $h($q); ?>"></label>
-    <button class="tn-ui-button tn-ui-button--primary">Apply</button>
-  </form>
+  <div class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar', [
+      'method' => 'GET',
+      'fields' => $pipelineFilterFields,
+      'actions' => [['label' => 'Apply', 'type' => 'submit', 'variant' => 'primary']],
+    ]); ?>
+  </div>
 
   <div class="tn-sales-pipeline-status" data-sales-pipeline-status></div>
   <?php if (!empty($pipeline['stages'])): ?>
