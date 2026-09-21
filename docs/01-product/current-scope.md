@@ -2,7 +2,7 @@
 title: Поточний стан COS
 description: Фактичний продуктовий та архітектурний обсяг поточного main.
 status: active
-updated: 2026-09-19
+updated: 2026-09-21
 kind: product
 ---
 
@@ -16,6 +16,7 @@ kind: product
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
 | Sales | `0.8.6` | повний модуль середовища виконання та еталонний домен |
+| Growth | `0.1.0` | installable Opportunity Intelligence foundation; disabled by default; canonical Signal → OpportunityCandidate → Handoff process має стан `to-be` |
 | Diagnostic | `0.6.1` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Property | `0.12.0` | встановлюваний модуль із канонічними записами Asset/Inventory/Listing, сумісним представленням, аналітикою, інтелектом і зовнішньою взаємодією |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
@@ -26,6 +27,12 @@ kind: product
 | Real_estate | `0.2.0` | активний brokerage runtime поверх Property: Opportunity → Property Match → Offer → Viewing → Reservation; Symfony API, persistence, events, audit та idempotency |
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
+
+## Growth: Opportunity Intelligence
+
+Growth `0.1.0` додає окремий bounded context для **FIND VALUE**. Реалізований foundation визначає `Signal`, `OpportunityCandidate`, `OpportunityRationale`, explainable Fit/Need/Timing/Access/Value scoring, lifecycle qualification та `OpportunityHandoff`.
+
+Growth свідомо не володіє Sales Deal, Pipeline, Contract, Invoice або delivery state. Модуль вимкнений за замовчуванням, а процес `growth.opportunity-candidate-to-handoff` позначений `to-be`: persistence, external signal collection, AI agents, cross-domain acceptance та production UI належать наступним хвилям.
 
 ## Sales: продажі та попит
 
