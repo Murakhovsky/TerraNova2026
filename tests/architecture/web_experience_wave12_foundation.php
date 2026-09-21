@@ -107,6 +107,29 @@ try {
 } catch (InvalidArgumentException) {
 }
 
+try {
+    new App\Web\Experience\Action\UIAction(
+        id: 'core.operation.critical',
+        label: 'Critical operation',
+        intent: App\Web\Experience\Action\UIActionIntent::Danger,
+        confirmation: App\Web\Experience\Action\UIActionConfirmation::simple('Confirm critical operation.'),
+        dangerLevel: App\Web\Experience\Action\UIActionDangerLevel::Critical->value,
+    );
+    throw new RuntimeException('Critical UIAction without step-up confirmation was accepted.');
+} catch (InvalidArgumentException) {
+}
+
+try {
+    new App\Web\Experience\Action\UIAction(
+        id: 'core.operation.preview',
+        label: 'Preview',
+        intent: App\Web\Experience\Action\UIActionIntent::View,
+        placements: ['unknown.surface'],
+    );
+    throw new RuntimeException('Unknown UIAction placement was accepted.');
+} catch (InvalidArgumentException) {
+}
+
 $experienceRoot = $root . '/symfony/src/Web/Experience';
 $iterator = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($experienceRoot, FilesystemIterator::SKIP_DOTS),
