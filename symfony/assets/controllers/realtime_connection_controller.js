@@ -3,6 +3,7 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static values = {
         topic: String,
+        signalTarget: String,
     };
 
     connect() {
@@ -25,18 +26,28 @@ export default class extends Controller {
         this.apply('offline');
     }
 
-    stream() {
+    stream(event) {
         if (!navigator.onLine) {
             return;
         }
 
+        if (
+            this.hasSignalTargetValue
+            && this.signalTargetValue !== ''
+            && event.target?.getAttribute('target') !== this.signalTargetValue
+        ) {
+            return;
+        }
+
         this.apply('live');
-        this.element.dispatchEvent(new CustomEvent('cos:realtime-update', {
-            bubbles: true,
-            detail: {
-                topic: this.hasTopicValue ? this.topicValue : '',
-            },
-        }));
+        window.requestAnimationFrame(() => {
+            this.element.dispatchEvent(new CustomEvent('cos:realtime-update', {
+                bubbles: true,
+                detail: {
+                    topic: this.hasTopicValue ? this.topicValue : '',
+                },
+            }));
+        });
     }
 
     apply(state) {

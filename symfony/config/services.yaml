@@ -68,6 +68,14 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Experience\Async\ActivityCenterController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Experience\Async\RetryAsyncOperationController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Experience\Search\GlobalSearchController:
     public: true
     tags: ['controller.service_arguments']
@@ -154,6 +162,13 @@ services:
 
   Kernel\Action\Contract\RuntimeActionReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlRuntimeActionReadModel
+
+  Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Kernel\Queue\Contract\AsyncOperationReadModelInterface:
+    alias: Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel
 
   Kernel\Operations\Service\OperationsSectionReader:
     arguments:
@@ -960,6 +975,7 @@ services:
         kernel.rule-engine.v1: '@Kernel\Rule\Service\RuleEngineEventHandler'
         sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
         diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
+        platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:

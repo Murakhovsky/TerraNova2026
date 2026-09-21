@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Web\Experience\Extension;
 
 use App\Web\Experience\Action\UIAction;
+use App\Web\Experience\Async\AsyncOperationWebProvider;
+use App\Web\Experience\Extension\Model\ActivityItem;
 use App\Web\Experience\Extension\Model\NavigationContribution;
+use App\Web\Experience\Extension\Model\NotificationItem;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
@@ -19,6 +22,7 @@ final readonly class WebExtensionContextCatalog
     public function __construct(
         public WebExtensionContext $context,
         private WebExtensionProviderSet $providers,
+        private AsyncOperationWebProvider $asyncOperations,
     ) {
     }
 
@@ -143,6 +147,65 @@ final readonly class WebExtensionContextCatalog
         );
 
         return $items;
+    }
+
+
+    /** @return list<ActivityItem> */
+    public function activity(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+        $items = $this->asyncOperations->activities($this->context, $limit);
+
+        foreach ($this->providers->activity() as $provider) {
+            array_push($items, ...$provider->activities($this->context, $limit));
+        }
+
+        $items = $this->uniqueById($items);
+        usort(
+            $items,
+            static fn (ActivityItem $left, ActivityItem $right): int
+                => [-(float) ($left->occurredAt?->format('U.u') ?? 0), $left->id]
+                <=> [-(float) ($right->occurredAt?->format('U.u') ?? 0), $right->id],
+        );
+
+        return array_slice($items, 0, $limit);
+    }
+
+    /** @return list<NotificationItem> */
+    public function notifications(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+        $items = $this->asyncOperations->notifications($this->context, $limit);
+
+        foreach ($this->providers->notifications() as $provider) {
+            array_push($items, ...$provider->notifications($this->context, $limit));
+        }
+
+        $items = $this->uniqueById($items);
+        usort(
+            $items,
+            static fn (NotificationItem $left, NotificationItem $right): int
+                => [-(float) ($left->occurredAt?->format('U.u') ?? 0), $left->id]
+                <=> [-(float) ($right->occurredAt?->format('U.u') ?? 0), $right->id],
+        );
+
+        return array_slice($items, 0, $limit);
+    }
+
+    /** @template T of object @param list<T> $items @return list<T> */
+    private function uniqueById(array $items): array
+    {
+        $unique = [];
+
+        foreach ($items as $item) {
+            if (!property_exists($item, 'id')) {
+                continue;
+            }
+
+            $unique[(string) $item->id] = $item;
+        }
+
+        return array_values($unique);
     }
 
     public function providers(): WebExtensionProviderSet
