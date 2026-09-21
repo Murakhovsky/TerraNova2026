@@ -69,6 +69,23 @@ html[data-cos-theme="system"] {
   --cos-color-info: #326f9e;
   --cos-color-info-soft: #edf6fc;
 
+  /* PHASE 5 semantic surface hierarchy. */
+  --cos-surface-canvas-bg: var(--cos-color-canvas);
+  --cos-surface-default-bg: var(--cos-color-surface);
+  --cos-surface-subtle-bg: var(--cos-color-surface-subtle);
+  --cos-surface-raised-bg: var(--cos-color-surface-raised);
+  --cos-surface-floating-bg: var(--cos-color-surface-raised);
+  --cos-surface-overlay-bg: var(--cos-color-surface);
+  --cos-surface-border: var(--cos-color-border);
+  --cos-surface-border-strong: var(--cos-color-border-strong);
+  --cos-surface-backdrop: var(--cos-overlay);
+  --cos-surface-canvas-shadow: none;
+  --cos-surface-default-shadow: none;
+  --cos-surface-subtle-shadow: none;
+  --cos-surface-raised-shadow: none;
+  --cos-surface-floating-shadow: var(--cos-shadow-raised);
+  --cos-surface-overlay-shadow: var(--cos-shadow-overlay);
+
   --cos-focus-ring: rgba(83, 103, 255, 0.28);
   --cos-overlay: rgba(12, 15, 20, 0.52);
 
