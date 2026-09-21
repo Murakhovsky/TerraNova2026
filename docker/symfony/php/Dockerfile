@@ -27,8 +27,8 @@ COPY bin/spatial-convert.py /var/www/html/bin/spatial-convert.py
 RUN printf 'upload_max_filesize=210M\npost_max_size=220M\nmax_file_uploads=20\n' > /usr/local/etc/php/conf.d/spatial-upload.ini
 
 RUN composer dump-autoload --no-dev --classmap-authoritative \
-    && mkdir -p var/cache var/log var/storage var/sessions/prod public/assets \
-    && chown -R www-data:www-data var public/assets
+    && mkdir -p var/cache var/log var/storage var/sessions/prod public/assets assets/vendor \
+    && chown -R www-data:www-data var public/assets assets
 
 USER www-data
 
