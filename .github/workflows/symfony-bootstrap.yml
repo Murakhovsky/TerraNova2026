@@ -29,6 +29,9 @@ on:
       - 'tests/architecture/web_experience_wave12_data.php'
       - 'tests/architecture/web_experience_wave12_workspace.php'
       - 'tests/architecture/web_experience_wave12_search.php'
+      - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'docs/03-architecture/cos-visual-constitution.md'
+      - 'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
     branches: [main]
@@ -58,6 +61,9 @@ on:
       - 'tests/architecture/web_experience_wave12_data.php'
       - 'tests/architecture/web_experience_wave12_workspace.php'
       - 'tests/architecture/web_experience_wave12_search.php'
+      - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'docs/03-architecture/cos-visual-constitution.md'
+      - 'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md'
       - '.github/workflows/symfony-bootstrap.yml'
 
 permissions:
@@ -160,6 +166,10 @@ jobs:
 
       - name: Design System runtime smoke
         run: docker compose exec -T php php bin/console cos:web:design-system:smoke
+
+      - name: Visual foundation freeze gate
+        run: php tests/architecture/web_experience_visual_foundation.php
+
 
       - name: Workspace Shell runtime smoke
         run: docker compose exec -T php php bin/console cos:web:shell:smoke

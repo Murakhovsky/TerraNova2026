@@ -32,6 +32,32 @@
         </div>
     </header>
 
+    <section class="cos-ui-catalog__section" aria-labelledby="constitution-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="constitution-heading">COS Visual Constitution</h2>
+            <p>Control + Money + Movement. Calm Technical is the canonical product character.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            {% for principle, copy in {
+                'Calm': 'Decoration yields to business information.',
+                'Precise': 'Grid, alignment, borders and type hierarchy create structure.',
+                'Dense': 'Professional information density without visual noise.',
+                'Financial': 'Money, KPI, target, forecast and variance are first-class data.',
+                'Operational': 'Primary and next actions are discoverable immediately.',
+                'Premium': 'Quality comes from precision, not gold, glow or oversized cards.',
+                'Neutral': 'Neutral surfaces dominate; color is a signal.',
+                'Alive': 'Realtime, activity, progress and AI make the system feel current.',
+                'Accessible': 'Keyboard, contrast, reduced motion and semantic states are defaults.',
+                'One product': 'Domains share one visual grammar and one Workspace shell.'
+            } %}
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">{{ principle }}</p>
+                    <p class="cos-card__copy">{{ copy }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
     <section class="cos-ui-catalog__section" aria-labelledby="tokens-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="tokens-heading">Semantic color tokens</h2>

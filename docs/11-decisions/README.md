@@ -19,6 +19,7 @@ kind: index
 | [ADR-0007](ADR-0007-documentation-content-and-renderer.md) | `/docs` content відокремлений від static renderer; generated reference має власний sync contract |
 | [ADR-0008](ADR-0008-main-is-canonical-branch.md) | `main` є єдиною canonical code/docs/CI branch |
 | [ADR-0009](ADR-0009-web-experience-platform.md) | Symfony Web & Experience Platform є канонічним UI runtime COS |
+| [ADR-0010](ADR-0010-web-ui-foundation-freeze.md) | Web/UI foundation заморожена; visual system розвивається поверх semantic tokens і canonical components |
 
 ## Ієрархія джерел істини
 
