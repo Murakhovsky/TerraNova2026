@@ -74,6 +74,14 @@ final readonly class WorkspaceCompositionResolver
                 $resolvedActions,
                 static fn ($action): bool => $action->supportsPlacement(UIActionPlacement::WORKSPACE_SECONDARY),
             )),
+            mobilePrimaryActions: array_values(array_filter(
+                $resolvedActions,
+                static fn ($action): bool => $action->supportsPlacement(UIActionPlacement::MOBILE_PRIMARY),
+            )),
+            mobileMenuActions: array_values(array_filter(
+                $resolvedActions,
+                static fn ($action): bool => $action->supportsPlacement(UIActionPlacement::MOBILE_MENU),
+            )),
         );
     }
 }
