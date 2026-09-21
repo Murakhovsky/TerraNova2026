@@ -81,7 +81,7 @@ foreach ([
     'Permissions-Policy',
     'X-Frame-Options',
     'CSP_NONCE_ATTRIBUTE',
-    "'nonce-{$nonce}'",
+    '\'nonce-{$nonce}\'',
     "script-src 'self'",
     'data:',
 ] as $marker) {
