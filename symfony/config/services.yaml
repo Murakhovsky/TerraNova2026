@@ -895,6 +895,13 @@ services:
   Kernel\Audit\Contract\AuditRepositoryInterface:
     alias: Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository
 
+  Infrastructure\Platform\Persistence\MySql\Audit\MysqlActivityHistoryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Platform\Audit\Contract\ActivityHistoryRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Audit\MysqlActivityHistoryRepository
+
   Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue:
     arguments:
       $connection: '@cos.database.pdo'
