@@ -9,11 +9,13 @@ use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use Domains\Sales\Application\Contract\SalesWriteServiceInterface;
 use Domains\Sales\Application\Service\ClientCaseCommandService;
 use Domains\Sales\Application\Service\SalesInboundService;
+use Domains\Sales\Application\Service\SalesInboundCaseResolverAdapter;
 use Domains\Sales\Application\Service\SalesWriteService;
 use Domains\Sales\Application\UseCase\AssignDealOwner;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
 use Domains\Sales\Application\UseCase\CompleteSalesCall;
 use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
+use Domains\Sales\Application\UseCase\ReceivePublicLead;
 use Domains\Sales\Domain\Policy\StageTransitionPolicy;
 use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModel;
@@ -75,13 +77,16 @@ final readonly class MysqlSalesWriteServiceFactory implements SalesWriteServiceF
             $events,
             $transactions,
         );
+        $leads = new MysqlInboundLeadRepository($this->connection);
+        $publicLeads = new ReceivePublicLead($leads,new SalesInboundCaseResolverAdapter($inbound),$events,$transactions,$organizationId);
 
         return new SalesWriteService(
             $organizationId,
-            new MysqlInboundLeadRepository($this->connection),
+            $leads,
             $commands,
             $inbound,
             $cases,
+            $publicLeads,
             $stages,
             $followups,
             new MysqlSalesMutationReceiptRepository($this->connection),

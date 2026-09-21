@@ -11,6 +11,20 @@ use Domains\Sales\Application\DTO\OperationResult;
 interface SalesWriteServiceInterface
 {
     /** @param array<string,mixed> $input */
+    public function receivePublicLead(array $input, string $sourcePage): ClientCaseCommandResult;
+
+    /** @param array<string,mixed> $input */
+    public function createOpportunity(array $input, int $actorId): ClientCaseCommandResult;
+
+    /** @param array<string,mixed> $input */
+    public function updateOpportunity(int $opportunityId, array $input, int $actorId): ClientCaseCommandResult;
+
+    public function attachInboundRequest(int $opportunityId, int $leadId, int $actorId): ClientCaseCommandResult;
+
+    /** @param array<string,mixed> $input */
+    public function updateOpportunityPropertyMatch(int $matchId, array $input, int $actorId): ClientCaseCommandResult;
+
+    /** @param array<string,mixed> $input */
     public function createLead(array $input, int $actorId, string $correlationId, string $idempotencyKey): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */
