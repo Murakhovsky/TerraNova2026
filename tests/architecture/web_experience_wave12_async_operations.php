@@ -222,7 +222,7 @@ foreach ([
 $services = (string) file_get_contents($root . '/symfony/config/services.yaml');
 foreach ([
     'Kernel\\Queue\\Contract\\AsyncOperationReadModelInterface:',
-    'Kernel\\Queue\\Contract\\JobLifecycleObserverInterface:',
+    "platform.async-operations-realtime.v1: '@App\\Web\\Experience\\Async\\AsyncOperationRealtimeEventConsumer'",
 ] as $marker) {
     if (!str_contains($services, $marker)) {
         throw new RuntimeException('Async operations DI wiring is missing: ' . $marker);
