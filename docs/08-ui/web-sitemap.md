@@ -373,3 +373,4 @@ Surface
 ```text
 Business → Workflow → Domain → Capability → Runtime → Service → Code
 ```
+> Routing recovery rule: retained server-rendered surfaces must not expose links or forms to undeclared Symfony routes.
