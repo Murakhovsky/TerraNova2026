@@ -36,12 +36,12 @@ if (preg_match('/#[0-9a-fA-F]{3,8}\b/', $styleLab) === 1) {
 
 $switcher = (string) file_get_contents($root . '/symfony/templates/experience/_style_lab_switcher.html.twig');
 foreach ([
-    "data-style="light"",
-    "data-style="dark"",
-    "data-style="origin-a"",
-    "data-style="origin-b"",
-    "data-style="origin-c"",
-    "data-style="glass"",
+    'data-style="light"',
+    'data-style="dark"',
+    'data-style="origin-a"',
+    'data-style="origin-b"',
+    'data-style="origin-c"',
+    'data-style="glass"',
     'data-action="click->appearance#setStyle"',
     'data-appearance-target="styleButton"',
 ] as $marker) {
