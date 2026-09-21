@@ -1,0 +1,8 @@
+<label class="cos-field">
+    <span class="cos-field__label">{{ label }}</span>
+    <select class="cos-select" name="{{ name }}" {% if disabled %}disabled{% endif %}>
+        {% for value, optionLabel in options %}
+            <option value="{{ value }}" {% if selected == value %}selected{% endif %}>{{ optionLabel }}</option>
+        {% endfor %}
+    </select>
+</label>

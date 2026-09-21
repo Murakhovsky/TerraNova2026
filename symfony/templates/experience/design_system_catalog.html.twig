@@ -1,0 +1,177 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}COS Design System{% endblock %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block body %}
+<main
+    class="cos-ui-catalog"
+    data-controller="appearance"
+    data-appearance-theme-value="light"
+    data-appearance-density-value="comfortable"
+>
+    <header class="cos-ui-catalog__header">
+        <div>
+            <p class="cos-ui-catalog__kicker">COS Experience Platform</p>
+            <h1 class="cos-ui-catalog__title">Design System</h1>
+            <p class="cos-ui-catalog__lede">
+                Canonical semantic tokens, densities and server-first Twig primitives.
+                This page is the visual contract for product UI, not a collection of screenshots.
+            </p>
+        </div>
+
+        <div class="cos-ui-catalog__controls" aria-label="Appearance controls">
+            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="light">Light</button>
+            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="dark">Dark</button>
+            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="system">System</button>
+            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setDensity" data-density="comfortable">Comfortable</button>
+            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setDensity" data-density="compact">Compact</button>
+        </div>
+    </header>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="tokens-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="tokens-heading">Semantic color tokens</h2>
+            <p>No business component may depend on raw brand hex values.</p>
+        </div>
+        <div class="cos-ui-catalog__swatches">
+            {% for label, token in {
+                'Canvas': '--cos-color-canvas',
+                'Surface': '--cos-color-surface',
+                'Raised': '--cos-color-surface-raised',
+                'Text': '--cos-color-text',
+                'Muted': '--cos-color-text-muted',
+                'Primary': '--cos-color-primary',
+                'Positive': '--cos-color-positive',
+                'Warning': '--cos-color-warning',
+                'Danger': '--cos-color-danger',
+                'Info': '--cos-color-info'
+            } %}
+                <article class="cos-ui-swatch" style="--swatch: var({{ token }})">
+                    <div class="cos-ui-swatch__sample" aria-hidden="true"></div>
+                    <div class="cos-ui-swatch__meta">
+                        <strong>{{ label }}</strong>
+                        <code>{{ token }}</code>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="type-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="type-heading">Typography and rhythm</h2>
+            <p>Dense enterprise UI without collapsing into spreadsheet archaeology.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Display</p>
+                <h2 style="margin:0;font-size:var(--cos-font-3xl);letter-spacing:-.04em">Company Operating System</h2>
+                <p class="cos-card__copy">Primary interface copy uses the same semantic type scale across workspaces.</p>
+            </section>
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Rhythm</p>
+                <div style="display:grid;gap:var(--cos-space-2)">
+                    {% for step in [1, 2, 3, 4, 6, 8] %}
+                        <div style="display:flex;align-items:center;gap:var(--cos-space-3)">
+                            <code style="width:5rem">space-{{ step }}</code>
+                            <span style="display:block;height:.5rem;width:var(--cos-space-{{ step }});background:var(--cos-color-primary);border-radius:var(--cos-radius-pill)"></span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="buttons-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="buttons-heading">Buttons</h2>
+            <p>Presentation only. Business actions remain UIAction + Policy + Command.</p>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <div class="cos-ui-catalog__row">
+                <twig:CosButton label="Primary action" variant="primary" />
+                <twig:CosButton label="Secondary" />
+                <twig:CosButton label="Ghost" variant="ghost" />
+                <twig:CosButton label="Danger" variant="danger" />
+                <twig:CosButton label="Small" size="sm" />
+                <twig:CosButton label="Large" size="lg" />
+                <twig:CosButton label="Disabled" disabled />
+            </div>
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="status-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="status-heading">Status language</h2>
+            <p>Brand color and semantic state colors remain separate.</p>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <div class="cos-ui-catalog__row">
+                <twig:CosBadge label="Neutral" />
+                <twig:CosBadge label="Positive" tone="positive" />
+                <twig:CosBadge label="Warning" tone="warning" />
+                <twig:CosBadge label="Danger" tone="danger" />
+                <twig:CosBadge label="Info" tone="info" />
+            </div>
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="cards-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="cards-heading">Cards and metrics</h2>
+            <p>Density changes geometry through tokens, not per-page overrides.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            <twig:CosCard
+                eyebrow="Workspace"
+                title="Operational surface"
+                copy="A calm technical card using semantic surface, border and typography tokens."
+            />
+            <twig:CosCard
+                eyebrow="Elevation"
+                title="Raised surface"
+                copy="Elevation is reserved for hierarchy, not decoration."
+                raised
+            />
+            <section class="cos-card">
+                <twig:CosMetric label="Pipeline value" value="$482k" hint="+12.4% versus previous period" />
+            </section>
+            <section class="cos-card">
+                <twig:CosMetric label="Attention items" value="17" hint="4 require human decision" />
+            </section>
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="forms-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="forms-heading">Form primitives</h2>
+            <p>Symfony Forms will map to these semantics through the Bootstrap 5 theme.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            <label class="cos-field">
+                <span class="cos-field__label">Search</span>
+                <input class="cos-input" type="search" placeholder="Search entities and commands">
+            </label>
+            <label class="cos-field">
+                <span class="cos-field__label">Owner</span>
+                <input class="cos-input" type="text" value="Demo owner">
+            </label>
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="empty-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="empty-heading">System states</h2>
+            <p>Empty, loading, error and offline patterns must be explicit product states.</p>
+        </div>
+        <twig:CosEmptyState
+            title="No records match this view"
+            copy="Change filters, switch saved view or create the first record through a governed action."
+        />
+    </section>
+</main>
+{% endblock %}

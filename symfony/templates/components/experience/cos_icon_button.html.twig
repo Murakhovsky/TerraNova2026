@@ -1,0 +1,9 @@
+<button
+    class="{{ this.cssClass() }}"
+    type="{{ type }}"
+    aria-label="{{ label }}"
+    title="{{ label }}"
+    {% if disabled %}disabled aria-disabled="true"{% endif %}
+>
+    <twig:CosIcon name="{{ icon }}" />
+</button>

@@ -1,0 +1,9 @@
+{% if href and not disabled %}
+    <a class="{{ this.cssClass() }}" href="{{ href }}">{{ label }}</a>
+{% else %}
+    <button
+        class="{{ this.cssClass() }}"
+        type="{{ type }}"
+        {% if disabled %}disabled aria-disabled="true"{% endif %}
+    >{{ label }}</button>
+{% endif %}

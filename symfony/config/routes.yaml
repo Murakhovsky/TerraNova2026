@@ -1,3 +1,8 @@
+cos_web_design_system_catalog:
+  path: /dev/ui
+  controller: App\Web\Experience\Dev\DesignSystemCatalogController
+  methods: [GET, HEAD]
+
 cos_web_auth_login:
   path: /auth/login
   controller: App\Web\Auth\AuthPageController::login

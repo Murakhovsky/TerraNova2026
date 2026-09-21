@@ -6,6 +6,20 @@ ux_icons:
     stroke: currentColor
     fill: none
     'aria-hidden': 'true'
+  aliases:
+    client: 'tabler:user'
+    sales: 'tabler:chart-line'
+    finance: 'tabler:wallet'
+    document: 'tabler:file-text'
+    agent: 'tabler:robot'
+    settings: 'tabler:settings'
+    search: 'tabler:search'
+    notification: 'tabler:bell'
+    activity: 'tabler:activity'
+    menu: 'tabler:menu-2'
+    close: 'tabler:x'
+    expand: 'tabler:chevron-down'
+    ai: 'tabler:sparkles'
   iconify:
     enabled: false
   ignore_not_found: false

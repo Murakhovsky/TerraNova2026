@@ -1,0 +1,9 @@
+{% set iconAttributes = {
+    class: 'cos-icon',
+    width: size,
+    height: size
+} %}
+{% if label %}
+    {% set iconAttributes = iconAttributes|merge({'aria-hidden': false, 'aria-label': label, role: 'img'}) %}
+{% endif %}
+{{ ux_icon(name, iconAttributes) }}

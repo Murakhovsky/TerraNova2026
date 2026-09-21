@@ -16,6 +16,7 @@ on:
       - 'tests/architecture/zero_legacy_runtime.php'
       - 'tests/architecture/web_experience_wave12_runtime.php'
       - 'tests/architecture/web_experience_wave12_toolkit.php'
+      - 'tests/architecture/web_experience_wave12_design_system.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
     branches: [main]
@@ -32,6 +33,7 @@ on:
       - 'tests/architecture/zero_legacy_runtime.php'
       - 'tests/architecture/web_experience_wave12_runtime.php'
       - 'tests/architecture/web_experience_wave12_toolkit.php'
+      - 'tests/architecture/web_experience_wave12_design_system.php'
       - '.github/workflows/symfony-bootstrap.yml'
 
 permissions:
@@ -102,6 +104,7 @@ jobs:
           grep -q 'cos_web_auth_logout' /tmp/routes.txt
           grep -q 'cos_symfony_home' /tmp/routes.txt
           grep -q 'cos_web_cabinet' /tmp/routes.txt
+          grep -q 'cos_web_design_system_catalog' /tmp/routes.txt
 
       - name: Runtime health
         run: |
@@ -125,12 +128,17 @@ jobs:
       - name: UI Toolkit runtime smoke
         run: docker compose exec -T php php bin/console cos:web:toolkit:smoke
 
+      - name: Design System runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:design-system:smoke
+
       - name: Native web cutover smoke
         run: |
           curl --fail --silent http://127.0.0.1:8081/ | grep -q 'Company Operating System'
           curl --fail --silent http://127.0.0.1:8081/auth/login | grep -q 'Вхід'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/cabinet)" = "302"
           curl --silent --head http://127.0.0.1:8081/cabinet | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/ui)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/ui | grep -qi '^location: /auth/login'
 
       - name: Logs on failure
         if: failure()
