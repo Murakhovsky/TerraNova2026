@@ -50,12 +50,12 @@ foreach ([
     'Origin',
     'Light',
     'Dark',
-    'Financial visual language',
-    'Entity visual language',
-    'AI visual language',
-    'Accessibility',
-    'Responsive philosophy',
-    'Definition of Done PHASE 1',
+    'Візуальна мова фінансів',
+    'Візуальна мова бізнес-сутностей',
+    'Візуальна мова AI',
+    'Доступність',
+    'Принципи адаптивності',
+    'Критерії завершення PHASE 1',
 ] as $marker) {
     if (!str_contains($constitution, $marker)) {
         throw new RuntimeException('COS Visual Constitution is incomplete: ' . $marker);
