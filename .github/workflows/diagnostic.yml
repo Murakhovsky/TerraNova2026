@@ -55,6 +55,7 @@ jobs:
           php tests/architecture/web_experience_wave12_ui_catalog.php
           php tests/architecture/web_experience_wave12_testing.php
           php tests/architecture/web_experience_wave12_performance_observability.php
+          php tests/architecture/web_experience_wave12_sales_reference.php
           php tests/component/web_experience_components.php
           php -l symfony/tests/Panther/WebExperiencePantherTest.php
           php tests/architecture/web_experience_wave12_interactions.php
