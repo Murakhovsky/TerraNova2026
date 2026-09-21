@@ -94,6 +94,14 @@ final class SecurityPlatformSmokeCommand extends Command
             $event = new ResponseEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST, $response);
             $this->headers->onResponse($event);
 
+            $nonce = trim((string) $request->attributes->get(SecurityHeadersSubscriber::CSP_NONCE_ATTRIBUTE, ''));
+            $csp = (string) $response->headers->get('Content-Security-Policy');
+            if ($nonce === '' || !str_contains($csp, "'nonce-" . $nonce . "'")) {
+                $output->writeln('<error>Request-scoped CSP nonce is missing or not bound to the response.</error>');
+
+                return Command::FAILURE;
+            }
+
             foreach ([
                 'Content-Security-Policy' => "object-src 'none'",
                 'X-Frame-Options' => 'DENY',
