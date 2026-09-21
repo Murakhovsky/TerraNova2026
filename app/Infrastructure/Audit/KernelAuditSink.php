@@ -17,7 +17,7 @@ final readonly class KernelAuditSink implements AuditSinkInterface
     public function append(ActivityRecord $record): void
     {
         $actorType = match (strtolower($record->actor->type)) {
-            'user' => 'USER',
+            'user', 'human' => 'USER',
             'agent' => 'AGENT',
             'worker' => 'WORKER',
             'integration' => 'INTEGRATION',
@@ -46,7 +46,11 @@ final readonly class KernelAuditSink implements AuditSinkInterface
                     'workflow' => $record->workflow,
                 ],
                 'result' => $record->output,
-                'metadata' => $record->metadata + ['platform_activity' => true],
+                'metadata' => array_merge($record->metadata, [
+                    'platform_activity' => true,
+                    'source' => $record->source->value,
+                    'actor_kind' => $record->actor->kind()->value,
+                ]),
             ],
             correlationId: $record->correlationId,
             createdAt: $record->timestamp,
