@@ -83,7 +83,7 @@ organization:user
 organization:organization
 ```
 
-## Детермінований rollout
+## Детерміноване розгортання
 
 Allocation не використовує random.
 
@@ -105,7 +105,7 @@ bucket < rollout_percentage * 100
 
 Зміна salt є свідомим reshuffle і повинна розглядатися як configuration change.
 
-## Overrides
+## Перевизначення
 
 Пріоритет:
 
@@ -133,7 +133,7 @@ User override має вищий пріоритет за organization override.
 - emergency disable для конкретної organization;
 - тимчасовий support workaround.
 
-## Безпечний default
+## Безпечна поведінка за замовчуванням
 
 Невідомий flag завжди:
 
@@ -144,7 +144,7 @@ reason = unknown_flag
 
 Немає implicit “true”, environment guessing або frontend default.
 
-## Persistence
+## Зберігання
 
 Platform володіє:
 
