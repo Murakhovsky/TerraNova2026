@@ -14,6 +14,7 @@ use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\DTO\OperationResult;
 use Domains\Sales\Application\DTO\ScheduleFollowupCommand;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
+use Domains\Sales\Application\UseCase\ReceivePublicLead;
 use Domains\Sales\Application\UseCase\ScheduleDealFollowup;
 use Domains\Sales\Automation\Event\LeadCreated;
 use Domains\Sales\Model\LeadStatus;
@@ -33,6 +34,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         private ClientCaseCommandRepositoryInterface $commands,
         private SalesInboundService $inbound,
         private ClientCaseCommandService $cases,
+        private ReceivePublicLead $publicLeads,
         private ChangeDealStage $stages,
         private ScheduleDealFollowup $followups,
         private SalesMutationReceiptRepositoryInterface $receipts,
@@ -40,6 +42,18 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         private TransactionManagerInterface $transactions,
     ) {
     }
+
+    public function receivePublicLead(array $input,string $sourcePage): ClientCaseCommandResult
+    {
+        $result=$this->publicLeads->execute($input,$sourcePage);
+        return $result->ok
+            ? ClientCaseCommandResult::success($result->code,['lead_id'=>$result->leadId])
+            : ClientCaseCommandResult::failure($result->code);
+    }
+    public function createOpportunity(array $input,int $actorId): ClientCaseCommandResult { return $this->cases->create($input,['id'=>$actorId]); }
+    public function updateOpportunity(int $opportunityId,array $input,int $actorId): ClientCaseCommandResult { return $this->cases->update($opportunityId,$input,['id'=>$actorId]); }
+    public function attachInboundRequest(int $opportunityId,int $leadId,int $actorId): ClientCaseCommandResult { return $this->inbound->attachRequest($opportunityId,$leadId,['id'=>$actorId]); }
+    public function updateOpportunityPropertyMatch(int $matchId,array $input,int $actorId): ClientCaseCommandResult { return $this->cases->updatePropertyMatch($matchId,$input,['id'=>$actorId]); }
 
     public function createLead(array $input, int $actorId, string $correlationId, string $idempotencyKey): ClientCaseCommandResult
     {

@@ -1247,6 +1247,58 @@ cos_web_client_case_inbox:
   controller: App\Web\Sales\ClientCasePageController::inbox
   methods: [GET, HEAD]
 
+cos_web_client_case_show:
+  path: /client-case/show/{id}
+  controller: App\Web\Sales\ClientCasePageController::show
+  methods: [GET, HEAD]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_client_case_create:
+  path: /client-case/create
+  controller: App\Web\Sales\ClientCasePageController::create
+  methods: [POST]
+
+cos_web_client_case_update:
+  path: /client-case/update/{id}
+  controller: App\Web\Sales\ClientCasePageController::update
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_client_case_quick_update:
+  path: /client-case/quickUpdate/{id}
+  controller: App\Web\Sales\ClientCasePageController::quickUpdate
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_client_case_activity:
+  path: /client-case/activity/{id}
+  controller: App\Web\Sales\ClientCasePageController::activity
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_client_case_inbound_update:
+  path: /client-case/updateInboundRequest/{id}
+  controller: App\Web\Sales\ClientCasePageController::updateInboundRequest
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_client_case_from_inbound:
+  path: /client-case/createFromInboundRequest/{id}
+  controller: App\Web\Sales\ClientCasePageController::createFromInboundRequest
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_client_case_link_inbound:
+  path: /client-case/linkInboundRequest
+  controller: App\Web\Sales\ClientCasePageController::linkInboundRequest
+  methods: [POST]
+
+cos_web_client_case_property_match_update:
+  path: /client-case/updatePropertyMatch/{id}
+  controller: App\Web\Sales\ClientCasePageController::updatePropertyMatch
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
 cos_web_property_root:
   path: /property
   controller: App\Web\Property\PropertyPageController::catalog
@@ -1255,7 +1307,7 @@ cos_web_property_root:
 cos_web_property_catalog:
   path: /property/catalog
   controller: App\Web\Property\PropertyPageController::catalog
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
 
 cos_web_property_map:
   path: /property/map
@@ -1265,13 +1317,13 @@ cos_web_property_map:
 cos_web_property_show:
   path: /property/show/{slug}
   controller: App\Web\Property\PropertyPageController::show
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
 cos_web_property_presentation:
   path: /property/presentation/{slug}
   controller: App\Web\Property\PropertyPageController::presentation
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
 cos_web_property_pdf:
@@ -1336,10 +1388,33 @@ cos_web_property_submission:
   methods: [GET, HEAD]
   requirements: { id: '[1-9][0-9]*' }
 
+cos_web_property_presentation_share:
+  path: /property/presentationShare
+  controller: App\Web\Property\PropertyPageController::presentationShare
+  methods: [POST]
+
 cos_web_cos_control_center:
   path: /cos/control-center
   controller: App\Web\Operations\ControlCenterPageController::index
   methods: [GET, HEAD]
+
+cos_web_cos_action_execute:
+  path: /cos/action/{id}/execute
+  controller: App\Web\Operations\ControlCenterPageController::execute
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_web_cos_approval_approve:
+  path: /cos/approval/{id}/approve
+  controller: App\Web\Operations\ControlCenterPageController::approve
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_web_cos_approval_reject:
+  path: /cos/approval/{id}/reject
+  controller: App\Web\Operations\ControlCenterPageController::reject
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
 
 
 # Final Web retirement — Sales SSR

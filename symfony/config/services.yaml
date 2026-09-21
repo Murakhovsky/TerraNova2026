@@ -1540,8 +1540,17 @@ services:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
 
+  Domains\Identity\Infrastructure\Persistence\MySql\OrganizationMembershipSynchronizer:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Identity\Infrastructure\ReadModel\MySql\MembershipSynchronizedAdminDashboardService:
+    arguments:
+      $identityDatabase: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $membershipSynchronizer: '@Domains\Identity\Infrastructure\Persistence\MySql\OrganizationMembershipSynchronizer'
+
   Domains\Identity\Application\Contract\AdministrationServiceInterface:
-    alias: Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService
+    alias: Domains\Identity\Infrastructure\ReadModel\MySql\MembershipSynchronizedAdminDashboardService
 
   Domains\Property\Infrastructure\ReadModel\MySql\CatalogService:
     arguments:
@@ -1568,6 +1577,8 @@ services:
 
   App\Web\Property\PropertyPageController:
     public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
     tags: ['controller.service_arguments']
 
   App\Web\Operations\ControlCenterPageController:

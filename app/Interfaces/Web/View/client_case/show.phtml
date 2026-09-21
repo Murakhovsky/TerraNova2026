@@ -107,18 +107,18 @@ $money = function ($amount, $currency): string {
               <div class="tn-cos-inline-actions">
                 <?php if ($aiAction['status'] === 'QUEUED'): ?>
                   <form action="<?php echo $this->url->get('cos/action/' . $aiAction['id'] . '/execute'); ?>" method="post">
-                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
                     <button class="tn-btn tn-btn--dark" type="submit">Execute</button>
                   </form>
                 <?php elseif ($aiAction['status'] === 'PENDING_APPROVAL' && $aiAction['approval_status'] === 'PENDING'): ?>
                   <form action="<?php echo $this->url->get('cos/approval/' . $aiAction['approval_id'] . '/approve'); ?>" method="post">
-                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
                     <button class="tn-btn tn-btn--dark" type="submit">Approve</button>
                   </form>
                   <form action="<?php echo $this->url->get('cos/approval/' . $aiAction['approval_id'] . '/reject'); ?>" method="post">
-                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
                     <button class="tn-btn tn-btn--ghost" type="submit">Reject</button>
                   </form>
@@ -138,6 +138,7 @@ $money = function ($amount, $currency): string {
           <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case'); ?>">До списку</a>
         </div>
         <form class="tn-crm-form" action="<?php echo $this->url->get('client-case/update/' . $case['id']); ?>" method="post">
+                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
           <label><span>Людина</span><input name="full_name" type="text" maxlength="160" required value="<?php echo $h($case['full_name']); ?>"></label>
           <label><span>Телефон</span><input name="phone" type="tel" maxlength="50" value="<?php echo $h($case['phone']); ?>"></label>
           <label><span>Email</span><input name="email" type="email" maxlength="160" value="<?php echo $h($case['email']); ?>"></label>
@@ -180,6 +181,7 @@ $money = function ($amount, $currency): string {
       <article class="tn-admin-panel">
         <h2>Нова дія</h2>
         <form class="tn-crm-form" action="<?php echo $this->url->get('client-case/activity/' . $case['id']); ?>" method="post">
+                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
           <label><span>Тип</span><select name="activity_type"><option value="note">Нотатка</option><option value="call">Дзвінок</option><option value="message">Повідомлення</option><option value="meeting">Зустріч</option><option value="viewing">Показ</option><option value="offer">Офер</option><option value="task">Задача</option></select></label>
           <label><span>Назва</span><input name="title" type="text" maxlength="180" required></label>
           <label><span>Коли</span><input name="due_at" type="datetime-local"></label>
@@ -248,6 +250,7 @@ $money = function ($amount, $currency): string {
                   <span><?php echo $h($match['city']); ?> · <?php echo $h($money($match['price_amount'], $match['price_currency'])); ?> · <?php echo $h($matchStatusLabels[$match['match_status']] ?? $match['match_status']); ?><?php if ($match['score'] !== null): ?> · <?php echo (int) $match['score']; ?>%<?php endif; ?></span>
                 </a>
                 <form class="tn-match-form" action="<?php echo $this->url->get('client-case/updatePropertyMatch/' . $match['id']); ?>" method="post">
+                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                   <select name="match_status" aria-label="Статус підбору">
                     <?php foreach ($matchStatusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($match['match_status'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?>
                   </select>
