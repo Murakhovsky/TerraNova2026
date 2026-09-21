@@ -87,7 +87,7 @@ EntityHeader лишається identity surface, а не декоративно
 
 Control surface не повинен перетворюватися на terminal UI. Технічна інформація підпорядковується hierarchy, semantic status та action governance.
 
-## Shared rules
+## Спільні правила
 
 Stress screens повинні:
 
@@ -101,7 +101,7 @@ Stress screens повинні:
 - бути `noindex, nofollow`;
 - не кешуватися публічно.
 
-## Testing contract
+## Контракт тестування
 
 PHASE 8 має:
 
