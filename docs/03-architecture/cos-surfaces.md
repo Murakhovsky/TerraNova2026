@@ -36,7 +36,7 @@ Overlay Surface
 
 Це не шість різних декоративних стилів. Це шість семантичних рівнів.
 
-## Canvas
+## Рівень Canvas
 
 Canvas є базовим фоном Workspace.
 
@@ -52,7 +52,7 @@ Canvas:
 - не має shadow;
 - не є card.
 
-## Default Surface
+## Базова поверхня
 
 Default Surface є основною робочою поверхнею.
 
@@ -70,7 +70,7 @@ Default Surface:
 - має structural border, де потрібна межа;
 - не має elevation shadow за замовчуванням.
 
-## Subtle Surface
+## Приглушена поверхня
 
 Subtle Surface використовується для внутрішньої ієрархії.
 
@@ -84,7 +84,7 @@ Subtle Surface використовується для внутрішньої і
 
 Subtle не означає "ще одна card".
 
-## Raised Surface
+## Піднята поверхня
 
 Raised Surface виділяє поверхню контрастом, але все ще лишається частиною layout.
 
@@ -99,7 +99,7 @@ Raised Surface не отримує великий floating shadow.
 
 Різниця повинна бути видима навіть якщо shadows вимкнені.
 
-## Floating Surface
+## Плаваюча поверхня
 
 Floating Surface справді знаходиться над основним layout.
 
@@ -114,7 +114,7 @@ Floating Surface справді знаходиться над основним l
 
 Floating може використовувати restrained shadow.
 
-## Overlay Surface
+## Накладна поверхня
 
 Overlay Surface належить до верхнього interaction layer.
 
@@ -162,9 +162,9 @@ Shadows:
 
 Persistent layout surfaces мають `none` shadow за замовчуванням.
 
-## Mapping компонентів
+## Відповідність компонентів
 
-### Persistent layout
+### Постійні layout-поверхні
 
 ```text
 Workspace header       → Default / Raised by contrast
@@ -177,7 +177,7 @@ Metric group           → Default / Subtle
 AI result card         → Default / Subtle
 ```
 
-### Floating
+### Плаваючі елементи
 
 ```text
 Dropdown               → Floating
@@ -188,7 +188,7 @@ Workspace action menu  → Floating
 Toast                  → Floating
 ```
 
-### Overlay
+### Накладні елементи
 
 ```text
 Modal                  → Overlay
@@ -199,7 +199,7 @@ AI Panel               → Overlay
 Critical confirmation  → Overlay
 ```
 
-## Cards
+## Картки
 
 Card не є surface level.
 
@@ -216,7 +216,7 @@ Card
     └ Card
 ```
 
-## Bootstrap
+## Інтеграція з Bootstrap
 
 Bootstrap залишається mechanics layer.
 
@@ -231,7 +231,7 @@ COS surface bridge централізовано задає surface semantics д�
 
 Bootstrap component не може самостійно визначити elevation COS.
 
-## Themes
+## Теми оформлення
 
 Light, Dark, Origin та Glass можуть мати різний material character:
 
@@ -248,7 +248,7 @@ Dropdown залишається Floating і в Light, і в Glass.
 
 Modal залишається Overlay і в Origin, і в Dark.
 
-## Glass
+## Режим Glass
 
 Glass може робити Surface/Floating/Overlay напівпрозорими.
 
@@ -264,7 +264,7 @@ Glass може робити Surface/Floating/Overlay напівпрозорим�
 
 > glass for structure, opacity for information.
 
-## Правило shadow
+## Правило тіней
 
 Shadow дозволено за замовчуванням для:
 
@@ -280,7 +280,7 @@ Shadow не використовується для:
 
 Виняток потребує конкретного interaction/use-case, а не аргументу "так красивіше".
 
-## Правила Domain UI
+## Правила для Domain UI
 
 Domain не створює власну elevation scale.
 
