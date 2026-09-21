@@ -126,6 +126,11 @@ if (!str_contains($security, "path: '^/dev(?:/|$)'") || !str_contains($security,
     throw new RuntimeException('Design System catalog must remain manager-only.');
 }
 
+$authenticator = (string) file_get_contents($root . '/symfony/src/Security/SessionAuthenticator.php');
+if (!str_contains($authenticator, "str_starts_with(\$path,'/dev')")) {
+    throw new RuntimeException('Protected /dev routes must be handled by the session authenticator.');
+}
+
 $catalog = (string) file_get_contents($root . '/symfony/templates/experience/design_system_catalog.html.twig');
 foreach ([
     'Semantic color tokens',
