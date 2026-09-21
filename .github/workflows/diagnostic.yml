@@ -48,6 +48,7 @@ jobs:
           php tests/architecture/web_experience_wave12_ai_ui.php
           php tests/architecture/web_experience_wave12_mobile.php
           php tests/architecture/web_experience_wave12_pwa.php
+          php tests/architecture/web_experience_wave12_native.php
           php tests/architecture/web_experience_wave12_interactions.php
           php tests/architecture/web_experience_wave12_forms.php
           php tests/architecture/web_experience_wave12_data.php
