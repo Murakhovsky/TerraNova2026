@@ -19,6 +19,10 @@ $requiredFiles = [
     'symfony/src/Command/ExperiencePlatformSmokeCommand.php',
 ];
 
+if (!is_dir($root . '/symfony/assets/controllers')) {
+    throw new RuntimeException('Canonical Stimulus controllers directory is missing.');
+}
+
 foreach ($requiredFiles as $relative) {
     if (!is_file($root . '/' . $relative)) {
         throw new RuntimeException('Wave 12.1 runtime artifact is missing: ' . $relative);
