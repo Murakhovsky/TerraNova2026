@@ -66,7 +66,7 @@ foreach ([
     "partial('components/ui/entity_header'",
     "'identity' =>",
     "'status' =>",
-    "'meta' => $dealMeta",
+    "'meta' => \$dealMeta",
     'data-sales-deal-workspace',
     'data-sales-stage-form',
 ] as $marker) {
@@ -139,7 +139,7 @@ foreach ($adminLegacySurfaces as $surface => $source) {
     }
 }
 foreach ([
-    "partial('components/ui/data_table'",
+    "'bodyPartial' => 'components/ui/data_table'",
     'data-sales-team-admin',
     'data-membership-form',
     'data-capabilities-form',
