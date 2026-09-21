@@ -49,9 +49,11 @@ on:
       - 'tests/architecture/web_experience_surfaces.php'
       - 'tests/architecture/web_experience_typography.php'
       - 'tests/architecture/web_experience_primitives.php'
+      - 'tests/architecture/web_experience_business_ux.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
+      - 'docs/03-architecture/cos-business-ux.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -105,9 +107,11 @@ on:
       - 'tests/architecture/web_experience_surfaces.php'
       - 'tests/architecture/web_experience_typography.php'
       - 'tests/architecture/web_experience_primitives.php'
+      - 'tests/architecture/web_experience_business_ux.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
+      - 'docs/03-architecture/cos-business-ux.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -233,6 +237,9 @@ jobs:
 
       - name: PHASE 6 Canonical primitives gate
         run: php tests/architecture/web_experience_primitives.php
+
+      - name: PHASE 7 Entity business UX gate
+        run: php tests/architecture/web_experience_business_ux.php
 
 
 

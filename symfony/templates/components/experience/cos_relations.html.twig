@@ -1,0 +1,16 @@
+<section class="cos-relations">
+    <h3 class="cos-relations__title">{{ title }}</h3>
+    <ul class="cos-relations__list">
+        {% for item in items %}
+            <li>
+                {% if item.href ?? false %}<a class="cos-relation" href="{{ item.href }}">{% else %}<div class="cos-relation">{% endif %}
+                    <span class="cos-relation__type">{{ item.type }}</span>
+                    <strong>{{ item.label }}</strong>
+                    {% if item.meta ?? false %}<small>{{ item.meta }}</small>{% endif %}
+                {% if item.href ?? false %}</a>{% else %}</div>{% endif %}
+            </li>
+        {% else %}
+            <li class="cos-relations__empty">No relations</li>
+        {% endfor %}
+    </ul>
+</section>

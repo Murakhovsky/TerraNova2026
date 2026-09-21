@@ -1,0 +1,8 @@
+<div class="{{ this.directionClass() }}">
+    <span class="cos-trend-metric__label">{{ label }}</span>
+    <strong class="cos-trend-metric__value cos-numeric">{{ value }}</strong>
+    <div class="cos-trend-metric__meta">
+        {% if delta %}<span class="cos-trend-metric__delta cos-numeric">{{ delta }}</span>{% endif %}
+        {% if period %}<span>{{ period }}</span>{% endif %}
+    </div>
+</div>

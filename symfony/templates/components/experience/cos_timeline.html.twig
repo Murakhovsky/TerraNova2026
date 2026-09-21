@@ -1,0 +1,12 @@
+<ol class="cos-timeline" aria-label="{{ label }}">
+    {% for item in items %}
+        <li class="cos-timeline__item">
+            <span class="cos-timeline__marker cos-timeline__marker--{{ item.tone|default('neutral') }}" aria-hidden="true"></span>
+            <time class="cos-timeline__time cos-numeric">{{ item.time }}</time>
+            <div class="cos-timeline__content">
+                <strong>{{ item.title }}</strong>
+                {% if item.copy ?? false %}<p>{{ item.copy }}</p>{% endif %}
+            </div>
+        </li>
+    {% endfor %}
+</ol>

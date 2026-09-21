@@ -324,6 +324,158 @@
         </div>
     </section>
 
+    {% set phase7Summary = [
+        {'label': 'Pipeline value', 'value': '€482,000', 'hint': '+12.4%'},
+        {'label': 'Probability', 'value': '68%', 'hint': 'weighted'},
+        {'label': 'Days open', 'value': '17', 'hint': 'target < 21'},
+        {'label': 'Next action', 'value': 'Today', 'hint': '16:30'}
+    ] %}
+    {% set phase7Meta = [
+        {'label': 'Account', 'value': 'Northstar Development'},
+        {'label': 'Created', 'value': '12 Sep 2026'},
+        {'label': 'Source', 'value': 'Partner referral'}
+    ] %}
+    {% set phase7Relations = [
+        {'type': 'Client', 'label': 'Northstar Development', 'meta': 'Account'},
+        {'type': 'Property', 'label': 'Riverside Residence', 'meta': '€1.8M inventory'},
+        {'type': 'Document', 'label': 'Commercial proposal v4', 'meta': 'Signed'}
+    ] %}
+    {% set phase7Timeline = [
+        {'time': '09:20', 'title': 'Discovery completed', 'copy': 'Budget and delivery constraints confirmed.', 'tone': 'positive'},
+        {'time': '11:45', 'title': 'Proposal updated', 'copy': 'Scope changed after technical review.', 'tone': 'info'},
+        {'time': '16:30', 'title': 'Decision call', 'copy': 'Owner confirmation required.', 'tone': 'warning'}
+    ] %}
+    {% set phase7Activity = [
+        {'actor': 'Anna K.', 'action': 'changed stage', 'detail': 'Qualified → Proposal', 'time': '10:14', 'source': 'human'},
+        {'actor': 'Sales Agent', 'action': 'prepared recommendation', 'detail': 'Follow-up in 2 hours', 'time': '10:16', 'source': 'agent'},
+        {'actor': 'System', 'action': 'synced CRM', 'detail': 'HubSpot event accepted', 'time': '10:17', 'source': 'integration'}
+    ] %}
+
+    <section class="cos-ui-catalog__section" aria-labelledby="phase7-business-heading">
+        <div class="cos-ui-catalog__section-head">
+            <div>
+                <h2 id="phase7-business-heading">PHASE 7 Entity + Business UX</h2>
+                <p>Entity identity, workflow position, ownership, money, relations and next action share one cross-Domain language.</p>
+            </div>
+        </div>
+
+        <twig:CosEntityHeader
+            eyebrow="Sales / Opportunity"
+            identity="OPP-2026-0184"
+            title="Riverside Residence — enterprise rollout"
+            subtitle="A canonical entity workspace header: identity first, actions governed separately."
+            statusLabel="Healthy"
+            statusTone="positive"
+            :meta="phase7Meta"
+        >
+            <twig:CosActionBar label="Opportunity actions">
+                <twig:CosButton label="Advance stage" variant="primary" />
+                <twig:CosButton label="Add note" />
+                <twig:CosButton label="Close" variant="ghost" />
+            </twig:CosActionBar>
+        </twig:CosEntityHeader>
+
+        <twig:CosEntitySummary label="Opportunity summary" :items="phase7Summary" />
+
+        <div class="cos-ui-catalog__grid">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Workflow</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosStage label="Lead" state="complete" />
+                    <twig:CosStage label="Qualified" state="complete" />
+                    <twig:CosStage label="Proposal" state="current" />
+                    <twig:CosStage label="Decision" state="upcoming" />
+                    <twig:CosStage label="Closed" state="upcoming" />
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Owner + next action</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosOwner name="Anna Kovalenko" role="Opportunity owner" initials="AK" />
+                    <twig:CosNextAction
+                        title="Decision call"
+                        copy="Confirm final scope and commercial terms"
+                        due="Today · 16:30"
+                        tone="warning"
+                    />
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Financial language</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosMoneyMetric
+                        label="Revenue"
+                        value="€1.28M"
+                        delta="+€142k · +12.4%"
+                        target="€1.4M"
+                        :progress="91"
+                    />
+                    <twig:CosTrendMetric
+                        label="Win probability"
+                        value="68%"
+                        delta="+7.2 pp"
+                        direction="up"
+                        period="30 days"
+                    />
+                </div>
+            </article>
+        </div>
+
+        <div class="cos-ui-catalog__grid">
+            <article class="cos-card">
+                <twig:CosRelations title="Relations" :items="phase7Relations" />
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Timeline</p>
+                <twig:CosTimeline label="Opportunity timeline" :items="phase7Timeline" />
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Activity feed</p>
+                <twig:CosActivityFeed label="Opportunity activity" :items="phase7Activity" />
+            </article>
+        </div>
+
+        <div class="cos-ui-catalog__grid">
+            <twig:CosEntityCard
+                eyebrow="Property"
+                title="Riverside Residence"
+                subtitle="Lviv · 48 active units"
+                statusLabel="Published"
+                statusTone="positive"
+                :meta="[
+                    {'label': 'Inventory', 'value': '€1.8M'},
+                    {'label': 'Demand', 'value': '32 matches'}
+                ]"
+            />
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Dense list item</p>
+                <div>
+                    <twig:CosEntityListItem title="Northstar Development" subtitle="Client · Enterprise" meta="€482k pipeline" statusLabel="Active" statusTone="positive" />
+                    <twig:CosEntityListItem title="Riverside Residence" subtitle="Property · Development" meta="48 units" statusLabel="Published" statusTone="info" />
+                </div>
+            </article>
+        </div>
+
+        <twig:CosFilterBar label="Entity filters">
+            <twig:CosInput name="phase7_search" label="Search" placeholder="Search entities" />
+            <twig:CosSelect
+                name="phase7_status"
+                label="Status"
+                :options="{'all': 'All', 'active': 'Active', 'attention': 'Attention'}"
+                selected="all"
+            />
+            <twig:CosButton label="Apply" variant="primary" type="submit" />
+        </twig:CosFilterBar>
+
+        <twig:CosBulkActionBar :count="3" label="selected">
+            <twig:CosButton label="Assign owner" size="sm" />
+            <twig:CosButton label="Change stage" size="sm" />
+            <twig:CosButton label="Archive" size="sm" variant="ghost" />
+        </twig:CosBulkActionBar>
+    </section>
+
     <section class="cos-ui-catalog__section" aria-labelledby="cards-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="cards-heading">Cards and metrics</h2>

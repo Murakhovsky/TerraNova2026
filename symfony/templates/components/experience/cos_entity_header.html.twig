@@ -1,0 +1,23 @@
+<header class="cos-entity-header">
+    <div class="cos-entity-header__main">
+        {% if eyebrow %}<p class="cos-entity-header__eyebrow">{{ eyebrow }}</p>{% endif %}
+        <div class="cos-entity-header__identity-row">
+            <div>
+                {% if identity %}<p class="cos-entity-header__identity">{{ identity }}</p>{% endif %}
+                <h1 class="cos-entity-header__title">{{ title }}</h1>
+                {% if subtitle %}<p class="cos-entity-header__subtitle">{{ subtitle }}</p>{% endif %}
+            </div>
+            {% if statusLabel %}<twig:CosStatus label="{{ statusLabel }}" tone="{{ statusTone }}" />{% endif %}
+        </div>
+        {% if meta is not empty %}
+            <dl class="cos-entity-header__meta">
+                {% for item in meta %}
+                    <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                {% endfor %}
+            </dl>
+        {% endif %}
+    </div>
+    <div class="cos-entity-header__actions">
+        {% block content %}{% endblock %}
+    </div>
+</header>

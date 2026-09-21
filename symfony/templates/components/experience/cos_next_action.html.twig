@@ -1,0 +1,9 @@
+{% set tag = href ? 'a' : 'div' %}
+<{{ tag }} class="cos-next-action" {% if href %}href="{{ href }}"{% endif %}>
+    <span class="cos-next-action__signal cos-next-action__signal--{{ tone }}" aria-hidden="true"></span>
+    <span class="cos-next-action__copy">
+        <strong>{{ title }}</strong>
+        {% if copy %}<small>{{ copy }}</small>{% endif %}
+    </span>
+    {% if due %}<time class="cos-next-action__due cos-numeric">{{ due }}</time>{% endif %}
+</{{ tag }}>

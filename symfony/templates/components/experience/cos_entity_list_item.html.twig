@@ -1,0 +1,9 @@
+{% set tag = href ? 'a' : 'div' %}
+<{{ tag }} class="cos-entity-list-item" {% if href %}href="{{ href }}"{% endif %}>
+    <div class="cos-entity-list-item__body">
+        <strong>{{ title }}</strong>
+        {% if subtitle %}<span>{{ subtitle }}</span>{% endif %}
+    </div>
+    {% if meta %}<span class="cos-entity-list-item__meta cos-numeric">{{ meta }}</span>{% endif %}
+    {% if statusLabel %}<twig:CosStatus label="{{ statusLabel }}" tone="{{ statusTone }}" />{% endif %}
+</{{ tag }}>

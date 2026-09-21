@@ -44,7 +44,23 @@ final class UiCatalogRegistry
 
             $this->entry('CosCard', 'Data', 'Persistent structured surface using semantic hierarchy.', ['default', 'raised'], '#cards-heading'),
             $this->entry('CosMetric', 'Data', 'KPI/value presentation.', ['default', 'trend'], '#cards-heading'),
+            $this->entry('CosMoneyMetric', 'Business', 'Financial metric with delta, target and progress semantics.', ['default', 'delta', 'target'], '#phase7-business-heading'),
+            $this->entry('CosTrendMetric', 'Business', 'Metric with explicit up/down/neutral movement semantics.', ['up', 'down', 'neutral'], '#phase7-business-heading'),
             $this->entry('CosDataGrid', 'Data', 'Server-owned dense data exploration platform.', ['search', 'filter', 'sort', 'pagination', 'bulk', 'mobile'], '#data-platform-heading'),
+
+            $this->entry('CosEntityHeader', 'Business', 'Identity, semantic status, metadata and actions for a business entity.', ['default', 'mobile'], '#phase7-business-heading'),
+            $this->entry('CosEntitySummary', 'Business', 'Dense key-value summary for an entity workspace.', ['default', 'mobile'], '#phase7-business-heading'),
+            $this->entry('CosEntityCard', 'Business', 'Reusable entity preview surface with status and metadata.', ['default', 'linked'], '#phase7-business-heading'),
+            $this->entry('CosEntityListItem', 'Business', 'Dense row-like entity representation for operational lists.', ['default', 'linked'], '#phase7-business-heading'),
+            $this->entry('CosActionBar', 'Business', 'Canonical primary/secondary/danger action composition.', ['start', 'between', 'end', 'sticky'], '#phase7-business-heading'),
+            $this->entry('CosBulkActionBar', 'Business', 'Selection-aware bulk action surface.', ['default'], '#phase7-business-heading'),
+            $this->entry('CosFilterBar', 'Business', 'Composable server-first search and filter surface.', ['default', 'mobile'], '#phase7-business-heading'),
+            $this->entry('CosStage', 'Business', 'Workflow position distinct from semantic outcome status.', ['complete', 'current', 'upcoming', 'blocked'], '#phase7-business-heading'),
+            $this->entry('CosOwner', 'Business', 'Compact owner identity presentation.', ['default'], '#phase7-business-heading'),
+            $this->entry('CosNextAction', 'Business', 'Operational next-step surface with due state.', ['neutral', 'positive', 'warning', 'danger', 'info'], '#phase7-business-heading'),
+            $this->entry('CosRelations', 'Business', 'Typed entity relationship list.', ['default', 'empty'], '#phase7-business-heading'),
+            $this->entry('CosTimeline', 'Business', 'Chronological business event sequence.', ['default'], '#phase7-business-heading'),
+            $this->entry('CosActivityFeed', 'Business', 'Actor/action activity stream with source context.', ['default'], '#phase7-business-heading'),
 
             $this->entry('CosWorkspace', 'Workspace', 'Canonical entity/workflow workspace composition.', ['desktop', 'mobile'], '/dev/workspace'),
             $this->entry('CosWorkspaceHeader', 'Workspace', 'Workspace identity, state and action header.', ['default', 'dense'], '/dev/workspace'),
