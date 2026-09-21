@@ -156,4 +156,4 @@ if (!str_contains($coreCommands, "'core.home'") || !str_contains($coreCommands, 
     throw new RuntimeException('Canonical core command catalog is incomplete.');
 }
 
-echo "Wave 12.6 Global Search and Command Palette passed.\n";
+echo "Wave 12.15 Global Search and Command Palette passed.\n";
