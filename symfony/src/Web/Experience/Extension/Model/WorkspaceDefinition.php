@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Web\Experience\Extension\Model;
+
+final readonly class WorkspaceDefinition
+{
+    public function __construct(
+        public string $id,
+        public string $label,
+        public string $path,
+        public ?string $entityType = null,
+        public int $priority = 100,
+    ) {
+    }
+}

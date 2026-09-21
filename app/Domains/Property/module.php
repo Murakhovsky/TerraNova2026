@@ -16,7 +16,11 @@ return [
         'job_handler_services' => [],
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => ['propertyModuleConfigurationProvisioner'],
-        'extension_services' => [],
+        'extension_services' => [
+            'web.navigation' => ['propertyNavigationContributor'],
+            'web.commands' => ['propertyNavigationContributor'],
+            'web.workspace' => ['propertyNavigationContributor'],
+        ],
         'cross_domain_contracts' => [
             [
                 'contract' => 'Domains\\Property\\Application\\Contract\\PresentationSalesInterface',

@@ -16,6 +16,9 @@ services:
     Kernel\Application\Event\EventHandlerInterface:
       tags:
         - { name: 'messenger.message_handler', bus: 'event.bus' }
+    App\Web\Experience\Extension\Contract\WebExtensionProviderInterface:
+      tags:
+        - { name: 'cos.web.extension.provider' }
 
   App\:
     resource: '../src/'
@@ -686,6 +689,25 @@ services:
 
   Kernel\Module\ModuleCatalog:
     factory: ['@App\Infrastructure\Module\ModuleCatalogFactory', 'create']
+
+  Kernel\Module\ModuleExtensionRegistry:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+
+  App\Web\Experience\Extension\WebExtensionProviderRegistry:
+    arguments:
+      $extensions: '@Kernel\Module\ModuleExtensionRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $providers: !tagged_iterator cos.web.extension.provider
+
+  salesNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\SalesWebProvider
+
+  propertyNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\PropertyWebProvider
+
+  diagnosticNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\DiagnosticWebProvider
 
   App\Infrastructure\Module\PdoModuleStateRepository:
     arguments:

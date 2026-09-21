@@ -20,6 +20,9 @@ return [
             'event.consumers' => [
                 'diagnosticActionOutcomeHandler',
             ],
+            'web.navigation' => ['diagnosticNavigationContributor'],
+            'web.commands' => ['diagnosticNavigationContributor'],
+            'web.workspace' => ['diagnosticNavigationContributor'],
         ],
         'migration_files' => [
             'app/migrations/20260914_000049_diagnostic_runtime_v060.sql',

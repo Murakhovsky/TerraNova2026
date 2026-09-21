@@ -17,6 +17,9 @@ generated: true
 | `api.routes` | built-in | 0 |
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
+| `web.commands` | module-defined | 3 |
+| `web.navigation` | module-defined | 3 |
+| `web.workspace` | module-defined | 3 |
 
 ## `api.routes`
 
@@ -41,6 +44,36 @@ generated: true
 | --- | --- |
 | `property` | `propertyModuleConfigurationProvisioner` |
 | `sales` | `salesModuleConfigurationProvisioner` |
+
+## `web.commands`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
+| `diagnostic` | `diagnosticNavigationContributor` |
+| `property` | `propertyNavigationContributor` |
+| `sales` | `salesNavigationContributor` |
+
+## `web.navigation`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
+| `diagnostic` | `diagnosticNavigationContributor` |
+| `property` | `propertyNavigationContributor` |
+| `sales` | `salesNavigationContributor` |
+
+## `web.workspace`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
+| `diagnostic` | `diagnosticNavigationContributor` |
+| `property` | `propertyNavigationContributor` |
+| `sales` | `salesNavigationContributor` |
 
 ## Семантика реєстрації
 
