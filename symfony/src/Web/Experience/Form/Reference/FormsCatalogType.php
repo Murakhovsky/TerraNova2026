@@ -21,6 +21,7 @@ final class FormsCatalogType extends AbstractType
         $builder
             ->add('name', TextType::class, [
                 'label' => 'Name',
+                'empty_data' => '',
                 'help' => 'Presentation DTO field. The Domain is not bound to this form.',
                 'attr' => [
                     'autocomplete' => 'name',
@@ -30,6 +31,7 @@ final class FormsCatalogType extends AbstractType
             ])
             ->add('email', EmailType::class, [
                 'label' => 'Email',
+                'empty_data' => '',
                 'help' => 'Browser hints improve input, Symfony Validator remains authoritative.',
                 'attr' => [
                     'autocomplete' => 'email',
@@ -52,6 +54,7 @@ final class FormsCatalogType extends AbstractType
             ])
             ->add('notes', TextareaType::class, [
                 'label' => 'Escalation notes',
+                'empty_data' => '',
                 'required' => false,
                 'help' => 'Shown for high and urgent priority in this catalog example.',
                 'attr' => [
