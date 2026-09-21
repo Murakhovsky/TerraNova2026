@@ -73,7 +73,7 @@ final class RuntimeUIActionSmokeCommand extends Command
 
         $projected = null;
         foreach ($this->registry->actions($context, $entity) as $candidate) {
-            if ($candidate->id === 'runtime.action.' . $action->id) {
+            if ($candidate->id === 'runtime.action.a' . $action->id) {
                 $projected = $candidate;
                 break;
             }
