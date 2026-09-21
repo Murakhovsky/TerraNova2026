@@ -16,7 +16,9 @@ security:
 
   access_control:
     - { path: '^/api/v1/health$', roles: PUBLIC_ACCESS }
-    - { path: '^/api/v1/public/properties/favourites    - { path: '^/api/v1/integrations/crm/[1-9][0-9]*/webhook$', roles: PUBLIC_ACCESS }
+    - { path: '^/api/v1/public/properties/favourites$', roles: PUBLIC_ACCESS, methods: [GET, HEAD, POST] }
+    - { path: '^/api/v1/public/properties(?:/|$)', roles: PUBLIC_ACCESS, methods: [GET, HEAD] }
+    - { path: '^/api/v1/integrations/crm/[1-9][0-9]*/webhook$', roles: PUBLIC_ACCESS }
     - { path: '^/api/spatial/auth/token$', roles: PUBLIC_ACCESS }
     - { path: '^/api/spatial/scenes/[A-Za-z0-9-]+$', roles: PUBLIC_ACCESS, methods: [GET, HEAD] }
     - { path: '^/api/spatial/events$', roles: PUBLIC_ACCESS, methods: [POST] }
