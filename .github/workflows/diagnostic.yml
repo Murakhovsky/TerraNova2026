@@ -54,6 +54,7 @@ jobs:
           php tests/architecture/web_experience_wave12_workspace.php
           php tests/architecture/web_experience_wave12_search.php
           php tests/architecture/web_experience_visual_foundation.php
+          php tests/architecture/web_experience_style_lab.php
 
       - name: Zero legacy production gate
         run: php tests/architecture/zero_legacy_runtime.php
