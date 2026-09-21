@@ -200,9 +200,6 @@ html[data-cos-style-lab="glass"] {
   --cos-shadow-ui: 0 1px 2px rgba(0, 0, 0, 0.22);
   --cos-shadow-raised: 0 8px 28px rgba(0, 0, 0, 0.2);
   --cos-shadow-overlay: 0 28px 90px rgba(0, 0, 0, 0.46);
-  --cos-radius-sm: 0.625rem;
-  --cos-radius-md: 0.875rem;
-  --cos-radius-lg: 1.125rem;
   --cos-style-lab-canvas-image:
     radial-gradient(circle at 76% 12%, rgba(255, 159, 67, 0.24), transparent 28%),
     radial-gradient(circle at 18% 18%, rgba(83, 103, 255, 0.18), transparent 30%),
