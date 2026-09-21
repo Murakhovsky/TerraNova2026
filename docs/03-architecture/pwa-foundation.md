@@ -1,12 +1,12 @@
 ---
-title: PWA Foundation
+title: PWA-основа
 description: Канонічна installable online-first PWA основа COS без глобального offline business state.
 status: active
 updated: 2026-09-21
 kind: architecture
 ---
 
-# PWA Foundation
+# PWA-основа
 
 Wave 12.17 робить Symfony Experience Platform installable PWA surface, але не перетворює COS на offline-first ERP.
 
@@ -26,7 +26,7 @@ Service Worker
 
 Business data, tenant state, Commands, approvals, documents та authenticated HTML не кешуються service worker'ом.
 
-## Manifest
+## Маніфест застосунку
 
 Canonical manifest:
 
@@ -43,7 +43,7 @@ Canonical manifest:
 - COS application icons;
 - theme/background colors.
 
-## Service Worker
+## Сервісний працівник
 
 Canonical worker:
 
@@ -73,13 +73,13 @@ network
 - Background Sync без окремої OfflineCapability;
 - обходити authorization/tenant context.
 
-## Offline fallback
+## Офлайн-сторінка
 
 `/offline.html` є статичною infrastructure page.
 
 Вона прямо повідомляє, що COS online-first, і не імітує stale workspace або cached business data.
 
-## Update strategy
+## Стратегія оновлення
 
 Service worker не викликає `skipWaiting()` автоматично.
 
@@ -101,7 +101,7 @@ Runtime надсилає worker message `SKIP_WAITING` і перезаванта
 
 Це не дозволяє новій asset/runtime версії мовчки підмінити активний Workspace посеред операції.
 
-## Static delivery
+## Статична доставка
 
 Nginx має окремі contracts для:
 
