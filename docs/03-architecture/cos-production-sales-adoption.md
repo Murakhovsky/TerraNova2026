@@ -115,6 +115,42 @@ Sales read model
 - KPI залишаються canonical KPI cards;
 - currency isolation, attribution policy і explainability semantics не змінені.
 
+
+## Хвиля 3
+
+Хвиля 3 прибирає останній окремий legacy visual shell усередині Sales Administration. Мова йде не про business behavior, а про presentation duplication: `sales-admin-page`, `sales-admin-header` і `sales-admin-card`.
+
+### Команди та повноваження (`Teams & Authority`)
+
+`sales_admin/teams.phtml`
+
+- legacy admin header замінено на canonical Sales navigation + PageHeader;
+- create-team і authority model розміщені у canonical panels;
+- teams table переведено на canonical DataTable;
+- user membership/capability forms отримують canonical fields/buttons;
+- `data-create-team`, `data-membership-form`, `data-capabilities-form` збережені.
+
+### Інтеграції (`Integrations`)
+
+`sales_admin/integrations.phtml`
+
+- legacy admin shell замінено на canonical workspace shell;
+- provider configuration та runtime boundary використовують canonical panels;
+- integration lifecycle/health використовує semantic Status;
+- create/update/test/route forms зберігають існуючі JS data contracts;
+- secret values як і раніше не потрапляють у Sales configuration.
+
+### Стан та аудит (`Health & Audit`)
+
+`sales_admin/health.phtml`
+
+- overall/subsystem health подано через canonical KPI cards;
+- issue та runtime states використовують semantic Status;
+- runtime queues, audit, configuration revisions та metrics переведено у canonical panel hierarchy;
+- read-only semantics не змінено.
+
+PHASE 9 gate тепер прямо забороняє повернення legacy `sales-admin-page`, `sales-admin-header` та `sales-admin-card` у цих трьох production views.
+
 ## Розширення FilterBar
 
 Compatibility FilterBar отримує:
@@ -148,6 +184,7 @@ Canonical layer стандартизує повторювану anatomy. Domain 
 - Deals використовує canonical FilterBar + DataTable;
 - Today використовує canonical Panel composition;
 - Director використовує canonical FilterBar + Panel + DataTable;
+- Teams, Integrations і Health більше не використовують окремий legacy Sales Admin visual shell;
 - query names та mutation data attributes збережені;
 - не повертаються локальні дублікати table/filter/entity-header patterns;
 - PHTML syntax зелений;
