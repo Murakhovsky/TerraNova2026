@@ -1540,6 +1540,13 @@ textarea:focus {
   padding: 0 clamp(16px, 5vw, 72px) 72px;
 }
 
+.tn-catalog-results,
+.tn-property-grid--catalog,
+.tn-property-grid--catalog > *,
+.tn-property-grid--catalog .tn-property-card__body {
+  min-width: 0;
+}
+
 .tn-filter-panel,
 .tn-agent-card,
 .tn-empty-state {
@@ -3194,6 +3201,9 @@ textarea:focus {
 
 .tn-deal-switch input {
   position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
