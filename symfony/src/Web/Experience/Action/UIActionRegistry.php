@@ -11,8 +11,10 @@ use LogicException;
 
 final readonly class UIActionRegistry
 {
-    public function __construct(private WebExtensionCatalog $extensions)
-    {
+    public function __construct(
+        private WebExtensionCatalog $extensions,
+        private RuntimeUIActionProvider $runtimeActions,
+    ) {
     }
 
     /** @return list<UIAction> */
@@ -20,7 +22,12 @@ final readonly class UIActionRegistry
     {
         $byId = [];
 
-        foreach ($this->extensions->forContext($context)->actions($entity) as $action) {
+        $sources = [
+            ...$this->extensions->forContext($context)->actions($entity),
+            ...$this->runtimeActions->actions($context, $entity),
+        ];
+
+        foreach ($sources as $action) {
             if (isset($byId[$action->id])) {
                 throw new LogicException(sprintf(
                     'Duplicate UIAction id "%s" was contributed for organization %s.',
