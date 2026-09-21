@@ -21,16 +21,16 @@ HTTP_STATUS="$(curl --silent --show-error \
   --dump-header "$HTTP_HEADERS" \
   --max-redirs 0 \
   --write-out '%{http_code}' \
-  "$HTTP_URL/cos")"
+  "$HTTP_URL/")"
 
 if [[ "$HTTP_STATUS" != "301" && "$HTTP_STATUS" != "308" ]]; then
-  echo "Expected HTTP /cos to redirect permanently to HTTPS, got status $HTTP_STATUS." >&2
+  echo "Expected HTTP / to redirect permanently to HTTPS, got status $HTTP_STATUS." >&2
   cat "$HTTP_HEADERS" >&2
   exit 61
 fi
 
 HTTP_LOCATION="$(awk 'BEGIN { IGNORECASE=1 } /^Location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' "$HTTP_HEADERS")"
-if [[ "$HTTP_LOCATION" != "$HTTPS_URL/cos" && "$HTTP_LOCATION" != "$HTTPS_URL/cos/" ]]; then
+if [[ "$HTTP_LOCATION" != "$HTTPS_URL" && "$HTTP_LOCATION" != "$HTTPS_URL/" ]]; then
   echo "Unexpected HTTP redirect location: ${HTTP_LOCATION:-<missing>}" >&2
   cat "$HTTP_HEADERS" >&2
   exit 62
@@ -38,7 +38,7 @@ fi
 
 curl --fail --silent --show-error \
   --dump-header "$HTTPS_HEADERS" \
-  "$HTTPS_URL/cos" \
+  "$HTTPS_URL/" \
   --output "$BODY"
 
 if grep -Fq "http://$DOMAIN" "$BODY"; then
@@ -52,15 +52,37 @@ if grep -Eiq '<link[^>]+rel=["'"']canonical["'"'][^>]+href=["'"']http://' "$BODY
   exit 64
 fi
 
-SYMFONY_HEALTH_BODY="$TMP_DIR/symfony-health.json"
+DEPENDENCY_HEALTH_BODY="$TMP_DIR/symfony-health.json"
 curl --fail --silent --show-error \
-  "$HTTPS_URL/api/v1/health" \
-  --output "$SYMFONY_HEALTH_BODY"
+  "$HTTPS_URL/health/dependencies" \
+  --output "$DEPENDENCY_HEALTH_BODY"
 
-if ! grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$SYMFONY_HEALTH_BODY"; then
-  echo "Public /api/v1/health is not served by the healthy Symfony runtime." >&2
-  cat "$SYMFONY_HEALTH_BODY" >&2 || true
+if ! grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$DEPENDENCY_HEALTH_BODY"; then
+  echo "Public /health/dependencies is not served by the healthy Symfony runtime." >&2
+  cat "$DEPENDENCY_HEALTH_BODY" >&2 || true
   exit 69
+fi
+
+
+COS_HEADERS="$TMP_DIR/cos-headers.txt"
+COS_STATUS="$(curl --silent --show-error \
+  --output /dev/null \
+  --dump-header "$COS_HEADERS" \
+  --max-redirs 0 \
+  --write-out '%{http_code}' \
+  "$HTTPS_URL/cos/control-center")"
+
+if [[ "$COS_STATUS" != "302" && "$COS_STATUS" != "303" ]]; then
+  echo "Expected unauthenticated /cos/control-center to resolve and redirect to native login, got status $COS_STATUS." >&2
+  cat "$COS_HEADERS" >&2
+  exit 72
+fi
+
+COS_LOCATION="$(awk 'BEGIN { IGNORECASE=1 } /^Location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' "$COS_HEADERS")"
+if [[ "$COS_LOCATION" != "/auth/login" && "$COS_LOCATION" != "$HTTPS_URL/auth/login" ]]; then
+  echo "Unexpected COS Control Center authentication redirect: ${COS_LOCATION:-<missing>}." >&2
+  cat "$COS_HEADERS" >&2
+  exit 73
 fi
 
 AUTH_STATUS="$(curl --silent --show-error \
