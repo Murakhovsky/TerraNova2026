@@ -1,0 +1,139 @@
+{
+  "schema_version": 4,
+  "id": "growth.opportunity-candidate-to-handoff",
+  "title": "Signal → Qualified Opportunity Handoff",
+  "domain": "growth",
+  "state": "to-be",
+  "workflow": "02-workflows/growth-opportunity-candidate-to-handoff.md",
+  "trigger": "An observable market or business signal may represent actionable value for the organization",
+  "outcomes": [
+    "Observed facts remain separate from interpretation",
+    "Opportunity rationale and uncertainty are explicit",
+    "Fit, need, timing, access and value are scored with evidence",
+    "Non-actionable candidates can be monitored or disqualified",
+    "Qualified candidates become explicit handoff packages without creating a Sales deal inside Growth"
+  ],
+  "actors": [
+    "growth operator",
+    "Growth automation",
+    "target Domain owner"
+  ],
+  "steps": [
+    {
+      "id": "detect",
+      "label": "Detect opportunity candidate",
+      "kind": "state",
+      "owner": "Growth automation",
+      "domain": "growth",
+      "capability": "growth.signal.detect",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/OpportunityCandidate.php",
+          "symbol": "public static function detect("
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "label": "Research candidate and build rationale",
+      "kind": "operation",
+      "owner": "growth operator",
+      "domain": "growth",
+      "capability": "growth.candidate.research",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/OpportunityCandidate.php",
+          "symbol": "public function markResearched("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/OpportunityRationale.php"
+        }
+      ]
+    },
+    {
+      "id": "score",
+      "label": "Score evidence-backed dimensions",
+      "kind": "operation",
+      "owner": "Growth automation",
+      "domain": "growth",
+      "capability": "growth.candidate.score",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/OpportunityCandidate.php",
+          "symbol": "public function applyScore("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/ScoreDimension.php"
+        }
+      ]
+    },
+    {
+      "id": "qualify",
+      "label": "Qualify or monitor candidate",
+      "kind": "decision",
+      "owner": "growth operator",
+      "domain": "growth",
+      "capability": "growth.candidate.qualify",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/OpportunityCandidate.php",
+          "symbol": "public function qualify("
+        }
+      ]
+    },
+    {
+      "id": "monitor",
+      "label": "Monitor until timing changes",
+      "kind": "state",
+      "owner": "Growth automation",
+      "domain": "growth",
+      "capability": "growth.candidate.monitor",
+      "critical": false,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Domain/OpportunityCandidate.php",
+          "symbol": "public function monitor("
+        }
+      ]
+    },
+    {
+      "id": "handoff",
+      "label": "Prepare opportunity handoff",
+      "kind": "outcome",
+      "owner": "growth operator",
+      "domain": "growth",
+      "capability": "growth.handoff.prepare",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "use_case",
+          "ref": "PrepareOpportunityHandoff"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Growth/Application/DTO/OpportunityHandoff.php",
+          "symbol": "public static function fromCandidate("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "detect", "to": "research" },
+    { "from": "research", "to": "score" },
+    { "from": "score", "to": "qualify" },
+    { "from": "qualify", "to": "handoff", "label": "qualified" },
+    { "from": "qualify", "to": "monitor", "label": "not now" },
+    { "from": "monitor", "to": "research", "label": "new signal / timing change" }
+  ]
+}
