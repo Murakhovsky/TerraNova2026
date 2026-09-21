@@ -24,11 +24,14 @@ use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 use App\Web\Experience\Workspace\WorkspaceSlot;
+use App\Application\Experience\Search\Contract\SalesEntitySearchInterface;
 
 final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, WorkspaceExtensionProviderInterface, ActionProviderInterface
 {
-    public function __construct(private readonly SearchResultMatcher $matcher)
-    {
+    public function __construct(
+        private readonly SearchResultMatcher $matcher,
+        private readonly SalesEntitySearchInterface $entitySearch,
+    ) {
     }
 
     public function serviceId(): string
@@ -66,7 +69,8 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
 
     public function search(WebExtensionContext $context, string $query, int $limit = 10): array
     {
-        return $this->matcher->match([
+        $limit = max(1, min(50, $limit));
+        $navigation = $this->matcher->match([
             new SearchResult('sales.search.overview', 'Sales Overview', '/sales/dashboard', 'workspace', 'Sales dashboard'),
             new SearchResult('sales.search.today', 'Sales Today', '/sales/today', 'workspace', 'Today queue'),
             new SearchResult('sales.search.pipeline', 'Sales Pipeline', '/sales/pipeline', 'workspace', 'Pipeline'),
@@ -75,6 +79,26 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
             new SearchResult('sales.search.clients', 'Client Inbox', '/client-case/inbox', 'workspace', 'Clients'),
             new SearchResult('sales.search.director', 'Sales Director', '/sales/director', 'workspace', 'Sales analytics'),
         ], $query, $limit);
+
+        $query = trim($query);
+        if ($query === '') {
+            return $navigation;
+        }
+
+        $entities = array_map(
+            static fn ($hit): SearchResult => new SearchResult(
+                id: $hit->id,
+                label: $hit->label,
+                path: $hit->path,
+                kind: 'entity',
+                subtitle: $hit->subtitle,
+                entity: new EntityRef($hit->entityType, $hit->entityId),
+                score: $hit->score,
+            ),
+            $this->entitySearch->search($context->organizationId, $query, $limit),
+        );
+
+        return array_slice([...$entities, ...$navigation], 0, $limit);
     }
 
     public function commands(WebExtensionContext $context): array

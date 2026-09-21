@@ -12,13 +12,17 @@ use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
+use App\Application\Experience\Search\Contract\PropertyEntitySearchInterface;
 
 final class PropertyWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
 {
-    public function __construct(private readonly SearchResultMatcher $matcher)
-    {
+    public function __construct(
+        private readonly SearchResultMatcher $matcher,
+        private readonly PropertyEntitySearchInterface $entitySearch,
+    ) {
     }
 
     public function serviceId(): string
@@ -41,7 +45,8 @@ final class PropertyWebProvider implements NavigationProviderInterface, SearchPr
 
     public function search(WebExtensionContext $context, string $query, int $limit = 10): array
     {
-        return $this->matcher->match([
+        $limit = max(1, min(50, $limit));
+        $navigation = $this->matcher->match([
             new SearchResult('property.search.inventory', 'Property Inventory', '/property/manage', 'workspace', 'Properties'),
             new SearchResult('property.search.listing', 'Property Listing', '/property/listing', 'workspace', 'Listings'),
             new SearchResult('property.search.locations', 'Property Locations', '/property/map', 'workspace', 'Map'),
@@ -49,6 +54,26 @@ final class PropertyWebProvider implements NavigationProviderInterface, SearchPr
             new SearchResult('property.search.spatial', 'Spatial Workspace', '/spatial/manage', 'workspace', '3D / Spatial'),
             new SearchResult('property.search.catalog', 'Public Property Catalog', '/property/catalog', 'workspace', 'Catalog'),
         ], $query, $limit);
+
+        $query = trim($query);
+        if ($query === '') {
+            return $navigation;
+        }
+
+        $entities = array_map(
+            static fn ($hit): SearchResult => new SearchResult(
+                id: $hit->id,
+                label: $hit->label,
+                path: $hit->path,
+                kind: 'entity',
+                subtitle: $hit->subtitle,
+                entity: new EntityRef($hit->entityType, $hit->entityId),
+                score: $hit->score,
+            ),
+            $this->entitySearch->search($context->organizationId, $query, $limit),
+        );
+
+        return array_slice([...$entities, ...$navigation], 0, $limit);
     }
 
     public function commands(WebExtensionContext $context): array
