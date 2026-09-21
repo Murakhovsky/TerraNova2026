@@ -24,7 +24,7 @@
         </div>
 
         <div class="cos-ui-catalog__controls" aria-label="Appearance controls">
-            <twig:CosButton label="Light" size="sm" variant="secondary" />
+            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="light">Light</button>
             <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="dark">Dark</button>
             <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setDensity" data-density="comfortable">Comfortable</button>
             <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setDensity" data-density="compact">Compact</button>
@@ -57,6 +57,31 @@
                     </div>
                 </article>
             {% endfor %}
+        </div>
+    </section>
+
+    <section class="cos-ui-catalog__section" aria-labelledby="type-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="type-heading">Typography and rhythm</h2>
+            <p>Dense enterprise UI without collapsing into spreadsheet archaeology.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Display</p>
+                <h2 style="margin:0;font-size:var(--cos-font-3xl);letter-spacing:-.04em">Company Operating System</h2>
+                <p class="cos-card__copy">Primary interface copy uses the same semantic type scale across workspaces.</p>
+            </section>
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Rhythm</p>
+                <div style="display:grid;gap:var(--cos-space-2)">
+                    {% for step in [1, 2, 3, 4, 6, 8] %}
+                        <div style="display:flex;align-items:center;gap:var(--cos-space-3)">
+                            <code style="width:5rem">space-{{ step }}</code>
+                            <span style="display:block;height:.5rem;width:var(--cos-space-{{ step }});background:var(--cos-color-primary);border-radius:var(--cos-radius-pill)"></span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
         </div>
     </section>
 
@@ -132,7 +157,7 @@
             </label>
             <label class="cos-field">
                 <span class="cos-field__label">Owner</span>
-                <input class="cos-input" type="text" value="Yurii Murakhovskyi">
+                <input class="cos-input" type="text" value="Demo owner">
             </label>
         </div>
     </section>
