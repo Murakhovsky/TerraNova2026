@@ -1,0 +1,12 @@
+<label class="cos-field">
+    <span class="cos-field__label">{{ label }}</span>
+    <input
+        class="cos-input"
+        name="{{ name }}"
+        type="{{ type }}"
+        value="{{ value }}"
+        {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if required %}required aria-required="true"{% endif %}
+    >
+</label>
