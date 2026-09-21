@@ -8,6 +8,7 @@ $requiredFiles = [
     'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md',
     'docs/03-architecture/cos-visual-constitution.md',
     'symfony/assets/styles/tokens.css',
+    'symfony/assets/styles/typography.css',
     'symfony/assets/styles/primitives.css',
     'symfony/assets/styles/interactions.css',
     'symfony/assets/styles/forms.css',
@@ -124,6 +125,7 @@ foreach ([
 $appCss = (string) file_get_contents($root . '/symfony/assets/styles/app.css');
 foreach ([
     "@import './tokens.css';",
+    "@import './typography.css';",
     "@import './primitives.css';",
     "@import './interactions.css';",
     "@import './forms.css';",
