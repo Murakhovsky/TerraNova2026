@@ -39,6 +39,7 @@ jobs:
           php tests/architecture/web_experience_wave12_runtime.php
           php tests/architecture/web_experience_wave12_toolkit.php
           php tests/architecture/web_experience_wave12_design_system.php
+          php tests/architecture/web_experience_wave12_shell.php
 
       - name: Zero legacy production gate
         run: php tests/architecture/zero_legacy_runtime.php
