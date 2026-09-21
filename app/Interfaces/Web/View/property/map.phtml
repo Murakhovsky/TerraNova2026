@@ -45,29 +45,21 @@ $position = static function (array $property) use ($geoProperties, $maxLat, $min
     <a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a><span>/</span><span>Карта</span>
   </nav>
 
-  <section class="tn-page-hero tn-page-hero--catalog">
-    <div>
-      <p class="tn-kicker">Карта</p>
-      <h1>Об’єкти за географічними координатами</h1>
-      <p>Позиції на схемі розраховані з фактичних latitude/longitude у публічних картках об’єктів.</p>
-    </div>
-    <div class="tn-page-hero__meta">
-      <strong><?php echo count($geoProperties); ?></strong>
-      <span>об’єктів із координатами</span>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Property · Map',
+    'title' => 'Об’єкти за географічними координатами',
+    'description' => 'Позиції на схемі розраховані з фактичних latitude/longitude у публічних картках об’єктів.',
+    'meta' => ['value' => count($geoProperties), 'label' => 'об’єктів із координатами'],
+    'actions' => [['label' => 'До каталогу', 'href' => 'property/catalog', 'variant' => 'ghost']],
+  ]); ?>
 
   <section class="tn-map-workspace">
     <?php $this->partial('shared/catalog_viewbar', ['active' => 'map']); ?>
 
     <?php if ($catalogStatus): ?>
-      <div class="tn-empty-state" role="status"><h2>Карта тимчасово недоступна</h2><p><?php echo $h($catalogStatus); ?></p></div>
+      <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Карта тимчасово недоступна', 'message' => $catalogStatus]); ?>
     <?php elseif (!$geoProperties): ?>
-      <div class="tn-empty-state">
-        <h2>Немає опублікованих об’єктів із координатами</h2>
-        <p>Каталог продовжує працювати. Карта покаже об’єкти, щойно для їхніх карток будуть задані географічні координати.</p>
-        <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">До каталогу</a>
-      </div>
+      <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'Немає опублікованих об’єктів із координатами', 'message' => 'Каталог продовжує працювати. Карта покаже об’єкти, щойно для їхніх карток будуть задані географічні координати.', 'action' => ['label' => 'До каталогу', 'href' => 'property/catalog']]); ?>
     <?php else: ?>
       <div class="tn-map-canvas tn-map-canvas--geo" aria-label="Географічна схема об’єктів Terra Nova">
         <div class="tn-map-canvas__axis" aria-hidden="true"></div>
