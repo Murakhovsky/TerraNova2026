@@ -104,10 +104,39 @@ diagnosticNavigationContributor
 Поточні реальні contributions використовують:
 
 - `web.navigation`;
+- `web.search`;
 - `web.commands`;
 - `web.workspace`.
 
 Інші canonical Web points уже мають contracts і можуть отримувати contributions без зміни Kernel semantics.
+
+## Глобальний пошук і палітра команд
+
+`web.search` і `web.commands` використовують один `WebExtensionContext` та один effective module snapshot.
+
+Канонічний flow:
+
+```text
+Workspace Shell
+    ↓ Turbo Frame GET
+/workspace/search?q=...
+    ↓
+GlobalSearchService
+    ↓
+WebExtensionContextCatalog
+    ├─ core commands
+    ├─ module command providers
+    └─ module search providers
+    ↓
+rank + deduplicate
+    ↓
+server-rendered search frame
+```
+
+Web endpoint не викликає власний REST API. Provider може надалі використовувати Application/Query read models для entity search, але Web controller не повинен напряму звертатися до Domain persistence.
+
+Command palette використовує GET state, keyboard navigation і Turbo Frame replacement. Browser controller відповідає лише за відкриття, debounce, selection та навігацію; ranking, tenant/module filtering і result composition залишаються на сервері.
+
 
 ## ModuleExtensionRegistry
 
