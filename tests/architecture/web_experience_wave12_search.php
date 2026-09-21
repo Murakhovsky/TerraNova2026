@@ -104,7 +104,7 @@ if (!str_contains($security, '|workspace|')
 }
 
 $authenticator = (string) file_get_contents($root . '/symfony/src/Security/SessionAuthenticator.php');
-if (!str_contains($authenticator, "str_starts_with($path,'/workspace')")) {
+if (!str_contains($authenticator, "str_starts_with(\$path,'/workspace')")) {
     throw new RuntimeException('Workspace search must use the canonical Web authentication entry point.');
 }
 
