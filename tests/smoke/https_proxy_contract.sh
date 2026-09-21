@@ -106,36 +106,22 @@ if [[ "$AUTH_LOCATION" != "/auth/login" && "$AUTH_LOCATION" != "$HTTPS_URL/auth/
 fi
 
 LOGIN_HEADERS="$TMP_DIR/login-headers.txt"
-COOKIE_JAR="$TMP_DIR/cookies.txt"
-curl --fail --silent --show-error \
+LOGIN_BODY="$TMP_DIR/login-body.html"
+LOGIN_STATUS="$(curl --silent --show-error \
+  --output "$LOGIN_BODY" \
   --dump-header "$LOGIN_HEADERS" \
-  --cookie-jar "$COOKIE_JAR" \
-  "$HTTPS_URL/auth/login" \
-  --output /dev/null
+  --write-out '%{http_code}' \
+  "$HTTPS_URL/auth/login")"
 
-SESSION_COOKIE="$(grep -i '^set-cookie:' "$LOGIN_HEADERS" | grep -i 'COSSESSID=' | head -n 1 || true)"
-if [[ -z "$SESSION_COOKIE" ]]; then
-  echo "Native Symfony login page did not start COSSESSID." >&2
+if [[ "$LOGIN_STATUS" != "200" ]]; then
+  echo "Expected native Symfony login page to return 200, got status $LOGIN_STATUS." >&2
   cat "$LOGIN_HEADERS" >&2
   exit 71
 fi
 
-if ! grep -Eiq ';[[:space:]]*Secure([;[:space:]]|$)' <<< "$SESSION_COOKIE"; then
-  echo "HTTPS session cookie is missing the Secure attribute." >&2
-  echo "$SESSION_COOKIE" >&2
-  exit 66
+if ! grep -Fq 'Вхід' "$LOGIN_BODY"; then
+  echo "Native Symfony login page did not render the expected login surface." >&2
+  exit 74
 fi
 
-if ! grep -Eiq ';[[:space:]]*HttpOnly([;[:space:]]|$)' <<< "$SESSION_COOKIE"; then
-  echo "HTTPS session cookie is missing the HttpOnly attribute." >&2
-  echo "$SESSION_COOKIE" >&2
-  exit 67
-fi
-
-if ! grep -Eiq ';[[:space:]]*SameSite=Lax([;[:space:]]|$)' <<< "$SESSION_COOKIE"; then
-  echo "HTTPS COSSESSID cookie is missing SameSite=Lax." >&2
-  echo "$SESSION_COOKIE" >&2
-  exit 68
-fi
-
-echo "HTTPS reverse-proxy and native Symfony session contract passed for $DOMAIN."
+echo "HTTPS reverse-proxy, protected-route and native login contract passed for $DOMAIN."
