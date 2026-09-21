@@ -49,7 +49,7 @@ server-rendered results
 - Sales leads;
 - Property assets/listings.
 
-## Ownership
+## Володіння
 
 Shared `GlobalSearchService` не імпортує Sales, Property або інший Domain.
 
@@ -70,7 +70,7 @@ Shared layer володіє:
 - limit;
 - rendering contract.
 
-## Sales entity search
+## Пошук сутностей Sales
 
 `SalesWebProvider` використовує `SalesWorkspaceReadModelInterface`.
 
@@ -88,7 +88,7 @@ EntityRef(sales.deal / sales.lead)
 
 Web provider не містить SQL.
 
-## Property entity search
+## Пошук сутностей Property
 
 `PropertyWebProvider` використовує `PropertyReferencePort`.
 
@@ -102,7 +102,7 @@ EntityRef(property.asset, asset_id)
 
 Unpublished asset лишається доступним через Property Workspace, а не через вигаданий public URL.
 
-## Command palette
+## Палітра команд
 
 Command palette використовує той самий `CoreCommandCatalog` та module `web.commands`, що й Shell.
 
