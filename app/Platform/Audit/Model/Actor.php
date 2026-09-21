@@ -14,6 +14,18 @@ final readonly class Actor
         }
     }
 
-    /** @return array{type:string,id:string} */
-    public function toArray(): array { return ['type' => $this->type, 'id' => $this->id]; }
+    public function kind(): ActorKind
+    {
+        return match (strtolower(trim($this->type))) {
+            'user', 'human' => ActorKind::HUMAN,
+            'agent' => ActorKind::AGENT,
+            default => ActorKind::SYSTEM,
+        };
+    }
+
+    /** @return array{type:string,id:string,kind:string} */
+    public function toArray(): array
+    {
+        return ['type' => $this->type, 'id' => $this->id, 'kind' => $this->kind()->value];
+    }
 }
