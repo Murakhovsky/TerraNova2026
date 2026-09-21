@@ -88,6 +88,10 @@ services:
     arguments:
       $checkers: !tagged_iterator cos.web.action.permission_checker
 
+  App\Security\SecurityRateLimiter:
+    arguments:
+      $cache: '@cache.app'
+
   App\Security\CosIdentityLoader:
     arguments:
       $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
@@ -1326,9 +1330,14 @@ services:
     arguments:
       $config: '@cos.database.pdo'
 
+  Infrastructure\Media\UploadQuarantineService:
+    arguments:
+      $rootDirectory: '%kernel.project_dir%/var/quarantine/uploads'
+
   Infrastructure\Media\SpatialAssetService:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $quarantine: '@Infrastructure\Media\UploadQuarantineService'
       $maxUploadBytes: '%env(int:SPATIAL_MAX_UPLOAD_BYTES)%'
 
   Domains\Property\Infrastructure\Spatial\CanonicalPropertyTourPublisher:
