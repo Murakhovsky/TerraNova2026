@@ -124,6 +124,42 @@ if (!preg_match('/nginx:\s.*?depends_on:\s.*?php:\s*condition:\s*service_healthy
     throw new RuntimeException('Nginx must wait for healthy Mercure before startup.');
 }
 
+foreach ([
+    'Hot-reloading canonical nginx without dropping 127.0.0.1',
+    "config --services | grep -Ev '^(mysql|redis|mercure|nginx)$nginx = (string) file_get_contents($root . '/docker/symfony/nginx/default.conf');
+foreach (['location = /.well-known/mercure', 'proxy_pass http://cos_mercure_backend', 'proxy_buffering off', 'X-Accel-Buffering'] as $marker) {
+    if (!str_contains($nginx, $marker)) {
+        throw new RuntimeException('Mercure same-origin SSE proxy is missing: ' . $marker);
+    }
+}
+
+$routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
+foreach (['cos_web_realtime_platform_preview:', 'path: /dev/realtime', 'cos_web_realtime_platform_publish:'] as $marker) {
+    if (!str_contains($routes, $marker)) {
+        throw new RuntimeException('Realtime reference route is missing: ' . $marker);
+    }
+}
+
+$smoke = (string) file_get_contents($root . '/symfony/src/Command/RealtimePlatformSmokeCommand.php');
+if (!str_contains($smoke, "name: 'cos:web:realtime:smoke'")) {
+    throw new RuntimeException('Realtime Platform runtime smoke is missing.');
+}
+
+echo "Wave 12.12 Realtime Platform passed.\n";
+",
+    'up -d --no-deps --remove-orphans',
+    'Symfony PHP failed readiness during rolling deployment.',
+    'COS Symfony rolling deployment completed successfully.',
+] as $deployMarker) {
+    if (!str_contains($deploy, $deployMarker)) {
+        throw new RuntimeException('Rolling Web deployment contract is missing: ' . $deployMarker);
+    }
+}
+
+if (str_contains($deploy, '"${COMPOSE[@]}" up -d --remove-orphans')) {
+    throw new RuntimeException('Canonical deploy must not recreate nginx during routine application releases.');
+}
+
 $nginx = (string) file_get_contents($root . '/docker/symfony/nginx/default.conf');
 foreach (['location = /.well-known/mercure', 'proxy_pass http://cos_mercure_backend', 'proxy_buffering off', 'X-Accel-Buffering'] as $marker) {
     if (!str_contains($nginx, $marker)) {
