@@ -41,7 +41,13 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         $params = ['organization_id' => $organizationId];
         if (($filters['status'] ?? '') !== '') { $where[] = 'l.status = :status'; $params['status'] = (string) $filters['status']; }
         if (($filters['source'] ?? '') !== '') { $where[] = 'l.source_page = :source'; $params['source'] = (string) $filters['source']; }
-        if (($filters['q'] ?? '') !== '') { $where[] = '(l.full_name LIKE :q OR l.email LIKE :q OR l.phone LIKE :q)'; $params['q'] = '%' . trim((string) $filters['q']) . '%'; }
+        if (($filters['q'] ?? '') !== '') {
+            $query = '%' . trim((string) $filters['q']) . '%';
+            $where[] = '(l.full_name LIKE :q_name OR l.email LIKE :q_email OR l.phone LIKE :q_phone)';
+            $params['q_name'] = $query;
+            $params['q_email'] = $query;
+            $params['q_phone'] = $query;
+        }
         $owner = (int) ($filters['owner_id'] ?? 0);
         if ($owner > 0) { $where[] = 'l.assigned_user_id = :owner_id'; $params['owner_id'] = $owner; }
         $limit = $this->limit($filters['limit'] ?? 100);
@@ -96,7 +102,13 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         if (($filters['status'] ?? '') !== '') { $where[] = 'c.status = :status'; $params['status'] = (string) $filters['status']; }
         if (($filters['stage_id'] ?? '') !== '') { $where[] = 'c.stage_id = :stage_id'; $params['stage_id'] = (string) $filters['stage_id']; }
         if (($filters['pipeline_id'] ?? '') !== '') { $where[] = 'c.pipeline_id = :pipeline_id'; $params['pipeline_id'] = (string) $filters['pipeline_id']; }
-        if (($filters['q'] ?? '') !== '') { $where[] = '(c.title LIKE :q OR c.public_id LIKE :q OR p.full_name LIKE :q)'; $params['q'] = '%' . trim((string) $filters['q']) . '%'; }
+        if (($filters['q'] ?? '') !== '') {
+            $query = '%' . trim((string) $filters['q']) . '%';
+            $where[] = '(c.title LIKE :q_title OR c.public_id LIKE :q_public_id OR p.full_name LIKE :q_customer)';
+            $params['q_title'] = $query;
+            $params['q_public_id'] = $query;
+            $params['q_customer'] = $query;
+        }
         $owner = (int) ($filters['owner_id'] ?? 0);
         if ($owner > 0) { $where[] = 'c.assigned_user_id = :owner_id'; $params['owner_id'] = $owner; }
         if (($filters['risk'] ?? '') === 'high') $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
