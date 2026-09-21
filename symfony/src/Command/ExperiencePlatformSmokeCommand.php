@@ -31,6 +31,8 @@ final class ExperiencePlatformSmokeCommand extends Command
             'data-wave12-experience-smoke',
             'data-experience-runtime="twig-component"',
             'twig-component',
+            '@hotwired/stimulus',
+            '@hotwired/turbo',
         ] as $marker) {
             if (!str_contains($html, $marker)) {
                 $output->writeln(sprintf('<error>Missing Experience runtime marker: %s</error>', $marker));
