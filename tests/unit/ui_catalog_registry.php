@@ -19,7 +19,7 @@ assert(in_array('CosWorkspace', $names, true));
 assert(in_array('CosAgentRun', $names, true));
 
 $categories = $registry->categories();
-foreach (['Foundation', 'Actions', 'Feedback', 'Forms', 'Interaction', 'Data', 'Workspace', 'Realtime', 'AI'] as $category) {
+foreach (['Foundation', 'Actions', 'Feedback', 'Forms', 'Interaction', 'Data', 'Business', 'Workspace', 'Realtime', 'AI'] as $category) {
     assert(in_array($category, $categories, true));
 }
 
