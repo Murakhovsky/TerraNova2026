@@ -1,0 +1,136 @@
+/* PHASE 3 canonical typography contract. */
+
+.cos-type-display,
+.cos-type-title,
+.cos-type-heading,
+.cos-type-body,
+.cos-type-meta,
+.cos-type-label {
+  font-family: var(--cos-font-sans);
+}
+
+.cos-type-display {
+  font-size: var(--cos-font-3xl);
+  font-weight: var(--cos-font-weight-strong);
+  line-height: var(--cos-line-height-tight);
+  letter-spacing: var(--cos-letter-spacing-tight);
+}
+
+.cos-type-title {
+  font-size: var(--cos-font-2xl);
+  font-weight: var(--cos-font-weight-strong);
+  line-height: var(--cos-line-height-tight);
+  letter-spacing: var(--cos-letter-spacing-tight);
+}
+
+.cos-type-heading {
+  font-size: var(--cos-font-lg);
+  font-weight: var(--cos-font-weight-strong);
+  line-height: var(--cos-line-height-ui);
+}
+
+.cos-type-body {
+  font-size: var(--cos-font-md);
+  font-weight: var(--cos-font-weight-regular);
+  line-height: var(--cos-line-height-copy);
+}
+
+.cos-type-meta,
+.cos-type-label {
+  font-size: var(--cos-font-sm);
+  line-height: var(--cos-line-height-ui);
+}
+
+.cos-type-label {
+  font-weight: var(--cos-font-weight-medium);
+}
+
+.cos-numeric,
+.cos-money,
+.cos-metric__value,
+.cos-data-grid__numeric {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: var(--cos-letter-spacing-data);
+}
+
+.cos-money {
+  font-weight: var(--cos-font-weight-strong);
+}
+
+.cos-typography-lab {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--cos-density-gap);
+}
+
+.cos-type-candidate--geist {
+  font-family: var(--cos-font-candidate-geist);
+}
+
+.cos-type-candidate--inter {
+  font-family: var(--cos-font-candidate-inter);
+}
+
+.cos-type-candidate--plex {
+  font-family: var(--cos-font-candidate-plex);
+}
+
+.cos-type-candidate__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cos-space-3);
+  margin-bottom: var(--cos-space-4);
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+}
+
+.cos-type-sample {
+  margin: 0 0 var(--cos-space-2);
+  font: inherit;
+  font-size: var(--cos-font-md);
+  line-height: var(--cos-line-height-ui);
+}
+
+.cos-type-sample--metric {
+  margin-bottom: var(--cos-space-4);
+  font-size: var(--cos-font-2xl);
+  font-weight: var(--cos-font-weight-strong);
+  line-height: var(--cos-line-height-tight);
+  letter-spacing: var(--cos-letter-spacing-data);
+}
+
+.cos-type-sample--title {
+  font-size: var(--cos-font-xl);
+  font-weight: var(--cos-font-weight-strong);
+  line-height: var(--cos-line-height-tight);
+  letter-spacing: var(--cos-letter-spacing-tight);
+}
+
+.cos-type-sample--copy {
+  margin-top: var(--cos-space-4);
+  color: var(--cos-color-text-muted);
+  line-height: var(--cos-line-height-copy);
+}
+
+.cos-typography-contract {
+  margin-top: var(--cos-density-gap);
+}
+
+.cos-typography-contract__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cos-space-4);
+  align-items: baseline;
+}
+
+.cos-typography-contract__row strong {
+  font-size: var(--cos-font-xl);
+}
+
+@media (max-width: 1050px) {
+  .cos-typography-lab {
+    grid-template-columns: 1fr;
+  }
+}
