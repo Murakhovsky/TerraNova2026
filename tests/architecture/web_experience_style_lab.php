@@ -95,7 +95,7 @@ foreach ([
     'Origin A',
     'Origin B',
     'Origin C',
-    'Executive Glass',
+    'преміальний скляний стиль',
     'glass for structure, opacity for information',
     'Критерії завершення PHASE 2',
 ] as $marker) {
