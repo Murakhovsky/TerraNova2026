@@ -84,4 +84,14 @@ if (!str_contains($workflow, 'bash deploy/dev.sh')) {
     throw new RuntimeException('AWS dev deployment must execute the guarded deploy/dev.sh script.');
 }
 
+if (!str_contains($workflow, 'COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/health/dependencies')) {
+    throw new RuntimeException('AWS dev external health check must use dependency readiness, not operational health.');
+}
+if (!str_contains($workflow, '"http://$COMPANY_OS_DOMAIN/health/dependencies"')) {
+    throw new RuntimeException('AWS dev HTTP preflight must use dependency readiness.');
+}
+if (str_contains($workflow, 'company-os.shop/api/v1/health')) {
+    throw new RuntimeException('AWS dev deployment must not block on operational /api/v1/health.');
+}
+
 echo "Deployment worker readiness contract passed.\n";
