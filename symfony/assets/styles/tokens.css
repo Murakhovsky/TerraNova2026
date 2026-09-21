@@ -1,9 +1,40 @@
 :root,
-html[data-cos-theme="light"] {
+html[data-cos-theme="light"],
+html[data-cos-theme="system"] {
   color-scheme: light;
 
   --cos-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --cos-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Foundation palette. Semantic tokens below are the only colors components consume. */
+  --cos-foundation-white: #ffffff;
+  --cos-foundation-neutral-25: #fafbfc;
+  --cos-foundation-neutral-50: #f5f6f8;
+  --cos-foundation-neutral-100: #f0f2f5;
+  --cos-foundation-neutral-200: #dfe3e8;
+  --cos-foundation-neutral-300: #c8ced6;
+  --cos-foundation-neutral-400: #9299a3;
+  --cos-foundation-neutral-500: #68707b;
+  --cos-foundation-neutral-800: #343940;
+  --cos-foundation-neutral-950: #17191c;
+  --cos-foundation-graphite-950: #111317;
+  --cos-foundation-graphite-900: #181b20;
+  --cos-foundation-graphite-850: #20242a;
+  --cos-foundation-graphite-800: #242930;
+  --cos-foundation-graphite-700: #2e343d;
+  --cos-foundation-graphite-600: #414955;
+  --cos-foundation-cobalt-400: #7d8cff;
+  --cos-foundation-cobalt-500: #5367ff;
+  --cos-foundation-cobalt-600: #4052e8;
+  --cos-foundation-cobalt-700: #3144d8;
+  --cos-foundation-positive-500: #68bd92;
+  --cos-foundation-positive-700: #267451;
+  --cos-foundation-warning-500: #e1aa50;
+  --cos-foundation-warning-700: #9b6818;
+  --cos-foundation-danger-500: #ef7d87;
+  --cos-foundation-danger-700: #b13b46;
+  --cos-foundation-info-500: #74b5e3;
+  --cos-foundation-info-700: #326f9e;
 
   --cos-color-canvas: #f5f6f8;
   --cos-color-surface: #ffffff;
@@ -65,6 +96,25 @@ html[data-cos-theme="light"] {
   --cos-shadow-raised: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.04);
   --cos-shadow-overlay: 0 18px 50px rgba(16, 24, 40, 0.2);
 
+  --cos-breakpoint-compact-mobile: 390px;
+  --cos-breakpoint-mobile: 650px;
+  --cos-breakpoint-tablet: 1050px;
+  --cos-breakpoint-desktop: 1280px;
+  --cos-breakpoint-wide: 1440px;
+
+  --cos-z-base: 0;
+  --cos-z-sticky: 20;
+  --cos-z-header: 30;
+  --cos-z-navigation: 40;
+  --cos-z-dropdown: 60;
+  --cos-z-overlay: 100;
+  --cos-z-toast: 120;
+
+  --cos-motion-fast: 120ms;
+  --cos-motion-normal: 180ms;
+  --cos-motion-slow: 260ms;
+  --cos-ease-standard: cubic-bezier(.2, .8, .2, 1);
+
   --cos-control-height-sm: 2rem;
   --cos-control-height: 2.375rem;
   --cos-control-height-lg: 2.75rem;
@@ -124,4 +174,43 @@ html[data-cos-density="comfortable"] {
   --cos-control-height-lg: 2.75rem;
   --cos-density-gap: 1rem;
   --cos-density-panel-padding: 1.25rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-cos-theme="system"] {
+    color-scheme: dark;
+
+    --cos-color-canvas: #111317;
+    --cos-color-surface: #181b20;
+    --cos-color-surface-subtle: #20242a;
+    --cos-color-surface-raised: #242930;
+    --cos-color-text: #f3f5f7;
+    --cos-color-text-soft: #d7dbe0;
+    --cos-color-text-muted: #9ca4ae;
+    --cos-color-text-inverse: #15171b;
+    --cos-color-on-primary: #10131a;
+    --cos-color-border: #2e343d;
+    --cos-color-border-strong: #414955;
+
+    --cos-color-primary: #7d8cff;
+    --cos-color-primary-hover: #919dff;
+    --cos-color-primary-strong: #aeb6ff;
+    --cos-color-primary-soft: #262c57;
+    --cos-color-primary-border: #3a4585;
+
+    --cos-color-positive: #68bd92;
+    --cos-color-positive-soft: #183628;
+    --cos-color-warning: #e1aa50;
+    --cos-color-warning-soft: #3e2f16;
+    --cos-color-danger: #ef7d87;
+    --cos-color-danger-soft: #431e24;
+    --cos-color-info: #74b5e3;
+    --cos-color-info-soft: #183349;
+
+    --cos-focus-ring: rgba(125, 140, 255, 0.34);
+    --cos-overlay: rgba(0, 0, 0, 0.72);
+    --cos-shadow-ui: 0 1px 2px rgba(0, 0, 0, 0.18);
+    --cos-shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.16);
+    --cos-shadow-overlay: 0 22px 60px rgba(0, 0, 0, 0.46);
+  }
 }
