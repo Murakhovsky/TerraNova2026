@@ -129,6 +129,18 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 
 Ця хвиля фіксує важливий принцип: canonical UI не означає примусово замінювати rich domain-specific hero на generic PageHeader, якщо specialized surface несе schema, media або складну business information architecture.
 
+## Хвиля 6
+
+### Деталі заявки (`Submission Detail`)
+
+`property/submission.phtml`
+
+- missing/unavailable state переведено на canonical State;
+- legacy submission hero замінено на canonical PageHeader;
+- main/detail sidebar `tn-admin-card` shells переведено на canonical panel shell;
+- media review, contact information та published-property deep link збережені;
+- moderation POST contract не змінено: review, needs_changes, approve, publish, reject і spam лишаються окремими `moderation_action`.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -151,5 +163,6 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 - Property Add/Edit використовують canonical PageHeader + State + Panel shell без зміни mutation contracts;
 - Catalog, Map і Favourites використовують canonical PageHeader/State із збереженням live JS counters;
 - Property Show/Presentation використовують canonical State + ActionBar, а simple group presentation — PageHeader;
+- Submission Detail використовує canonical State + PageHeader + Panel без зміни moderation actions;
 - editable grids явно зафіксовані як наступний migration boundary;
 - architecture gate виконується у CI.

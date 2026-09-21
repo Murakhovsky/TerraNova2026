@@ -30,26 +30,26 @@ $statusLabels = [
 
 <main class="tn-page">
   <?php if ($pageStatus || !$submission): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h1>Заявку не знайдено</h1>
-      <p><?php echo $h($pageStatus ?: 'Можливо, її видалено або URL некоректний.'); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/submissions'); ?>">До списку заявок</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => $pageStatus ? 'error' : 'empty',
+        'title' => 'Заявку не знайдено',
+        'message' => $pageStatus ?: 'Можливо, її видалено або URL некоректний.',
+        'action' => ['label' => 'До списку заявок', 'href' => 'property/submissions'],
+    ]); ?>
   <?php else: ?>
-    <section class="tn-page-hero tn-page-hero--catalog">
-      <div>
-        <p class="tn-kicker"><?php echo $h($submission['submission_ref']); ?></p>
-        <h1><?php echo $h($submission['title']); ?></h1>
-        <p><?php echo $h($submission['city']); ?><?php if ($submission['address']): ?> / <?php echo $h($submission['address']); ?><?php endif; ?></p>
-      </div>
-      <div class="tn-page-hero__meta">
-        <strong><?php echo $h($statusLabels[$submission['status']] ?? $submission['status']); ?></strong>
-        <span><?php echo $h($submission['created_at']); ?></span>
-      </div>
-    </section>
+    <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => $submission['submission_ref'] ?? 'Property Submission',
+        'title' => $submission['title'] ?? 'Заявка',
+        'description' => trim((string) ($submission['city'] ?? '') . (!empty($submission['address']) ? ' / ' . (string) $submission['address'] : '')),
+        'meta' => [
+            'value' => $statusLabels[$submission['status']] ?? $submission['status'],
+            'label' => $submission['created_at'] ?? '',
+        ],
+        'actions' => [['label' => 'До списку заявок', 'href' => 'property/submissions', 'variant' => 'ghost']],
+    ]); ?>
 
     <section class="tn-admin-detail">
-      <article class="tn-admin-card">
+      <article class="tn-ui-panel">
         <?php if ($statusMessage): ?><p class="tn-form-status is-visible"><?php echo $h($statusMessage); ?></p><?php endif; ?>
 
         <div class="tn-detail-grid">
@@ -95,7 +95,7 @@ $statusLabels = [
         <?php endif; ?>
       </article>
 
-      <aside class="tn-admin-card tn-admin-card--side">
+      <aside class="tn-ui-panel tn-ui-panel--side">
         <h2>Контакт</h2>
         <p><strong><?php echo $h($submission['owner_name']); ?></strong></p>
         <p><?php echo $h($submission['owner_phone'] ?: 'Телефон не вказано'); ?></p>

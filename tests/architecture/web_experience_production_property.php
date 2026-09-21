@@ -183,6 +183,26 @@ foreach ([
 $notContains($presentation, '<div class="tn-hero-actions">', 'Property Presentation must not restore the legacy hero action cluster.');
 $notContains($presentation, 'tn-page-hero tn-page-hero--catalog', 'Property group presentation must not restore the legacy simple hero.');
 
+$submission = $read('app/Interfaces/Web/View/property/submission.phtml');
+foreach ([
+    "partial('components/ui/state'",
+    "partial('components/ui/page_header'",
+    'tn-ui-panel',
+    'property/moderate/',
+    'name="moderation_action"',
+    'value="review"',
+    'value="needs_changes"',
+    'value="approve"',
+    'value="publish"',
+    'value="reject"',
+    'value="spam"',
+] as $marker) {
+    $contains($submission, $marker, 'Property Submission detail must use canonical shell without losing moderation behavior.');
+}
+foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card'] as $legacyMarker) {
+    $notContains($submission, $legacyMarker, 'Property Submission detail must not restore the legacy shell.');
+}
+
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
     '($value[\'kind\'] ?? \'\') === \'actions\'',
@@ -211,6 +231,8 @@ foreach ([
     '## Хвиля 5',
     '### Публічна картка (`Property Show`)',
     '### Презентація (`Presentation`)',
+    '## Хвиля 6',
+    '### Деталі заявки (`Submission Detail`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
