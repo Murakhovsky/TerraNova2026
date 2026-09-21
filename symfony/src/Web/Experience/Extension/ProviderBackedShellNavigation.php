@@ -24,6 +24,8 @@ final readonly class ProviderBackedShellNavigation
      */
     public function compose(WebExtensionContext $context): array
     {
+        $extensions = $this->extensions->forContext($context);
+
         $contributions = [
             new NavigationContribution('home', 'Overview', '/admin', 'HM', 10),
             new NavigationContribution('cos', 'COS', '/cos/control-center', 'OS', 50),
@@ -44,7 +46,7 @@ final readonly class ProviderBackedShellNavigation
             );
         }
 
-        array_push($contributions, ...$this->extensions->navigation($context));
+        array_push($contributions, ...$extensions->navigation());
 
         $primary = $this->buildTree($contributions, $context);
         $utility = [
@@ -62,7 +64,7 @@ final readonly class ProviderBackedShellNavigation
             new ShellCommandItem('core.cos', 'Open COS Control Center', '/cos/control-center', 'navigation', 'Core'),
             new ShellCommandItem('core.analytics', 'Open Analytics', '/admin/analytics', 'navigation', 'Core'),
             new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'navigation', 'Core'),
-            ...$this->extensions->commands($context),
+            ...$extensions->commands(),
         ];
 
         return [
