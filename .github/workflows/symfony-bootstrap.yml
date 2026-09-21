@@ -28,6 +28,7 @@ on:
       - 'tests/architecture/web_experience_wave12_pwa.php'
       - 'tests/architecture/web_experience_wave12_native.php'
       - 'tests/architecture/web_experience_wave12_security.php'
+      - 'tests/architecture/web_experience_wave12_feature_flags.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -70,6 +71,7 @@ on:
       - 'tests/architecture/web_experience_wave12_pwa.php'
       - 'tests/architecture/web_experience_wave12_native.php'
       - 'tests/architecture/web_experience_wave12_security.php'
+      - 'tests/architecture/web_experience_wave12_feature_flags.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -137,7 +139,7 @@ jobs:
 
       - name: Validate canonical schema
         run: |
-          for table in tn_users tn_content_items tn_spatial_processing_jobs cos_organization_memberships; do
+          for table in tn_users tn_content_items tn_spatial_processing_jobs cos_organization_memberships cos_feature_flags cos_feature_flag_overrides; do
             docker compose exec -T mysql mysql -N -h127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SHOW TABLES LIKE '$table';" | grep -qx "$table"
           done
 
@@ -256,6 +258,12 @@ jobs:
 
       - name: Web Security runtime smoke
         run: docker compose exec -T php php bin/console cos:web:security:smoke
+
+      - name: Feature Flags architecture gate
+        run: php tests/architecture/web_experience_wave12_feature_flags.php
+
+      - name: Feature Flags runtime smoke
+        run: docker compose exec -T php php bin/console cos:platform:feature-flags:smoke
 
       - name: Web Security response headers smoke
         run: |
