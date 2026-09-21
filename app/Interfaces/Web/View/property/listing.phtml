@@ -39,6 +39,15 @@ $visibilityLabels = ['public' => 'публічно', 'team' => 'команда',
 $priorityLabels = ['low' => 'низький', 'normal' => 'звичайний', 'high' => 'високий', 'urgent' => 'терміново'];
 $commissionLabels = ['none' => 'немає', 'percent' => '%', 'fixed' => 'фікс.', 'included' => 'в ціні'];
 $sourceLabels = ['own' => 'свій', 'partner' => 'партнер', 'realtor' => 'рієлтор', 'owner' => 'власник', 'developer' => 'девелопер'];
+$typeOptions = ['0' => 'Усі'];
+foreach ($types as $type) $typeOptions[(string) ($type['id'] ?? 0)] = (string) ($type['name_uk'] ?? '');
+$locationOptions = ['0' => 'Усі'];
+foreach ($locations as $location) $locationOptions[(string) ($location['id'] ?? 0)] = (string) ($location['city'] ?? '');
+$groupOptions = ['0' => 'Усі'];
+foreach ($propertyGroups as $group) $groupOptions[(string) ($group['id'] ?? 0)] = trim((string) ($group['city'] ?? '') . ' / ' . (string) ($group['title'] ?? ''), ' /');
+$agentOptions = ['0' => 'Усі'];
+foreach ($agents as $agent) $agentOptions[(string) ($agent['id'] ?? 0)] = (string) ($agent['public_name'] ?? '');
+$sortOptions = ['updated' => 'Оновлені', 'newest' => 'Нові', 'price_desc' => 'Ціна вниз', 'price_asc' => 'Ціна вгору', 'next_action' => 'Наступна дія'];
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'listing', 'brandSuffix' => 'LISTING']); ?>
@@ -73,23 +82,25 @@ $sourceLabels = ['own' => 'свій', 'partner' => 'партнер', 'realtor' =
     <a href="<?php echo $this->url->get('property/listing?visibility=partners'); ?>"><span>Партнери</span><strong><?php echo (int) ($stats['visibility']['partners'] ?? 0); ?></strong><small>доступні ролям</small></a>
   </section>
 
-  <section class="tn-admin-panel">
-    <form class="tn-crm-filters" action="<?php echo $this->url->get('property/listing'); ?>" method="get">
-      <label><span>Пошук</span><input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Назва, ID, адреса, місто"></label>
-      <label><span>Статус</span><select name="status"><option value="">Усі</option><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['status'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Операція</span><select name="deal_type"><option value="">Усі</option><?php foreach ($dealLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['deal_type'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Тип</span><select name="type_id"><option value="0">Усі</option><?php foreach ($types as $type): ?><option value="<?php echo (int) $type['id']; ?>" <?php echo $selected($filters['type_id'] ?? 0, $type['id']); ?>><?php echo $h($type['name_uk']); ?></option><?php endforeach; ?></select></label>
-      <label><span>Локація</span><select name="location_id"><option value="0">Усі</option><?php foreach ($locations as $location): ?><option value="<?php echo (int) $location['id']; ?>" <?php echo $selected($filters['location_id'] ?? 0, $location['id']); ?>><?php echo $h($location['city']); ?></option><?php endforeach; ?></select></label>
-      <label><span>Адреса/група</span><select name="property_group_id"><option value="0">Усі</option><?php foreach ($propertyGroups as $group): ?><option value="<?php echo (int) $group['id']; ?>" <?php echo $selected($filters['property_group_id'] ?? 0, $group['id']); ?>><?php echo $h($group['city'] . ' / ' . $group['title']); ?></option><?php endforeach; ?></select></label>
-      <label><span>Відповідальний</span><select name="agent_id"><option value="0">Усі</option><?php foreach ($agents as $agent): ?><option value="<?php echo (int) $agent['id']; ?>" <?php echo $selected($filters['agent_id'] ?? 0, $agent['id']); ?>><?php echo $h($agent['public_name']); ?></option><?php endforeach; ?></select></label>
-      <label><span>Видимість</span><select name="visibility"><option value="">Усі</option><?php foreach ($visibilityLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['visibility'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Пріоритет</span><select name="sale_priority"><option value="">Усі</option><?php foreach ($priorityLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['sale_priority'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Сортування</span><select name="sort"><option value="updated" <?php echo $selected($filters['sort'] ?? '', 'updated'); ?>>Оновлені</option><option value="newest" <?php echo $selected($filters['sort'] ?? '', 'newest'); ?>>Нові</option><option value="price_desc" <?php echo $selected($filters['sort'] ?? '', 'price_desc'); ?>>Ціна вниз</option><option value="price_asc" <?php echo $selected($filters['sort'] ?? '', 'price_asc'); ?>>Ціна вгору</option><option value="next_action" <?php echo $selected($filters['sort'] ?? '', 'next_action'); ?>>Наступна дія</option></select></label>
-      <div class="tn-form-actions">
-        <button class="tn-btn tn-btn--dark" type="submit">Показати</button>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/listing'); ?>">Скинути</a>
-      </div>
-    </form>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar', [
+        'fields' => [
+            ['name' => 'q', 'type' => 'search', 'label' => 'Пошук', 'value' => $filters['q'] ?? '', 'placeholder' => 'Назва, ID, адреса, місто', 'grow' => true],
+            ['name' => 'status', 'type' => 'select', 'label' => 'Статус', 'value' => $filters['status'] ?? '', 'options' => ['' => 'Усі'] + $statusLabels],
+            ['name' => 'deal_type', 'type' => 'select', 'label' => 'Операція', 'value' => $filters['deal_type'] ?? '', 'options' => ['' => 'Усі'] + $dealLabels],
+            ['name' => 'type_id', 'type' => 'select', 'label' => 'Тип', 'value' => (string) ($filters['type_id'] ?? 0), 'options' => $typeOptions],
+            ['name' => 'location_id', 'type' => 'select', 'label' => 'Локація', 'value' => (string) ($filters['location_id'] ?? 0), 'options' => $locationOptions],
+            ['name' => 'property_group_id', 'type' => 'select', 'label' => 'Адреса/група', 'value' => (string) ($filters['property_group_id'] ?? 0), 'options' => $groupOptions],
+            ['name' => 'agent_id', 'type' => 'select', 'label' => 'Відповідальний', 'value' => (string) ($filters['agent_id'] ?? 0), 'options' => $agentOptions],
+            ['name' => 'visibility', 'type' => 'select', 'label' => 'Видимість', 'value' => $filters['visibility'] ?? '', 'options' => ['' => 'Усі'] + $visibilityLabels],
+            ['name' => 'sale_priority', 'type' => 'select', 'label' => 'Пріоритет', 'value' => $filters['sale_priority'] ?? '', 'options' => ['' => 'Усі'] + $priorityLabels],
+            ['name' => 'sort', 'type' => 'select', 'label' => 'Сортування', 'value' => $filters['sort'] ?? 'updated', 'options' => $sortOptions],
+        ],
+        'actions' => [
+            ['label' => 'Показати', 'type' => 'submit', 'variant' => 'primary'],
+            ['label' => 'Скинути', 'href' => 'property/listing', 'variant' => 'ghost'],
+        ],
+    ]); ?>
   </section>
 
   <section class="tn-admin-panel">
