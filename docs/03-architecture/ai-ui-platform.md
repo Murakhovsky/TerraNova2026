@@ -91,7 +91,7 @@ Permission + Policy / Approval lifecycle
 
 Browser лише диспатчить `cos:workspace-action`. Він не виконує command через fetch.
 
-## Headless UIContext
+## Контекст UI без прив’язки до renderer
 
 `UIContext` описує поточну UI-поверхню для AI без HTML:
 
@@ -108,7 +108,7 @@ Available actions походять з `UIActionResolver` з placement `ai_propos
 
 Цей contract може використовувати Web, майбутній Native shell або Agent orchestration без залежності від Twig.
 
-## Shell surface
+## Поверхня Shell
 
 Shell має одну глобальну AI panel.
 
