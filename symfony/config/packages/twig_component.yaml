@@ -1,4 +1,4 @@
 twig_component:
   anonymous_template_directory: 'components/'
   defaults:
-    App\\Web\\Experience\\Component\\: 'components/experience/'
+    'App\Web\Experience\Component\': 'components/experience/'
