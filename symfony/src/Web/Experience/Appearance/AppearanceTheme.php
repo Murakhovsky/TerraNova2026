@@ -8,4 +8,5 @@ enum AppearanceTheme: string
 {
     case Light = 'light';
     case Dark = 'dark';
+    case System = 'system';
 }
