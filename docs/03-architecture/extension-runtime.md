@@ -75,7 +75,7 @@ Kernel визначає стабільні ідентифікатори extensio
 
 Актуальний inventory deployed contributions генерується в [Module Extension Points](../12-reference/extension-points.md).
 
-## Web provider runtime
+## Середовище Web-провайдерів
 
 Конкретні Web-контракти належать Symfony Web layer:
 
