@@ -42,6 +42,7 @@ foreach ([
     'cos_web_sales_admin:',
     'cos_api_v1_public_properties:',
     'cos_api_v1_public_properties_featured:',
+    'cos_api_v1_public_property_favourites:',
     'cos_api_v1_public_property:',
     'cos_web_robots:',
     'cos_web_sitemap:',

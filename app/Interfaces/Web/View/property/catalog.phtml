@@ -160,7 +160,7 @@ $breadcrumbJson = [
       <p>Фільтр за містом, бюджетом і типом. Відкрийте картку, збережіть варіант або залиште запит.</p>
       <div class="tn-hero-search">
         <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get" data-catalog-form>
-          <input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Пошук за містом, назвою, ID або адресою">
+          <input name="q" type="search" aria-label="Пошук у каталозі" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Пошук за містом, назвою, ID або адресою">
           <button class="tn-btn tn-btn--dark" type="submit">Знайти</button>
         </form>
       </div>
@@ -212,7 +212,7 @@ $breadcrumbJson = [
         <?php endforeach; ?>
       </div>
       <div class="tn-catalog-command__grid">
-        <input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Місто, район, ID, адреса або назва">
+        <input name="q" type="search" aria-label="Пошук об’єктів" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Місто, район, ID, адреса або назва">
         <select name="type" aria-label="Тип нерухомості">
           <option value="">Будь-який тип</option>
           <?php foreach ($types as $type): ?>

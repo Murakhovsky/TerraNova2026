@@ -172,6 +172,11 @@ cos_api_v1_public_properties_featured:
   controller: App\Http\Api\V1\Controller\PublicPropertyController::featured
   methods: [GET, HEAD]
 
+cos_api_v1_public_property_favourites:
+  path: /api/v1/public/properties/favourites
+  controller: App\Http\Api\V1\Controller\PublicPropertyController::favourites
+  methods: [GET, HEAD, POST]
+
 cos_api_v1_public_property:
   path: /api/v1/public/properties/{slug}
   controller: App\Http\Api\V1\Controller\PublicPropertyController::show

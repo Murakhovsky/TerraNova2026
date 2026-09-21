@@ -19,16 +19,16 @@ const campaignFromLocation = () => {
 };
 
 const fetchFavourites = async (options = {}) => {
-  const response = await fetch('/api/property/favourites', {
+  const response = await fetch('/api/v1/public/properties/favourites', {
     credentials: 'same-origin',
     headers: { Accept: 'application/json', ...(options.headers || {}) },
     ...options,
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.ok || !Array.isArray(payload.items)) {
+  if (!response.ok || !payload?.ok || !Array.isArray(payload?.data?.items)) {
     throw new Error('Favourites state is unavailable.');
   }
-  return payload;
+  return payload.data;
 };
 
 export const initPublicInteractions = () => {
