@@ -97,7 +97,7 @@ $statusLabels = [
     <div class="tn-section-heading">
       <div><p class="tn-kicker">Новий доступ</p><h2>Створити користувача</h2></div>
     </div>
-    <form class="tn-crm-form" action="<?php echo $this->url->get('admin/createUser'); ?>" method="post">
+    <form class="tn-crm-form" action="<?php echo $this->url->get('admin/createUser'); ?>" method="post">\n      <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
       <label><span>Імʼя</span><input name="full_name" type="text" maxlength="160" required></label>
       <label><span>Email</span><input name="email" type="email" maxlength="160" required></label>
       <label><span>Телефон</span><input name="phone" type="tel" maxlength="50"></label>
@@ -126,7 +126,7 @@ $statusLabels = [
             <?php foreach ($users as $user): ?>
               <tr>
                 <td>
-                  <form id="user-form-<?php echo (int) $user['id']; ?>" action="<?php echo $this->url->get('admin/updateUser/' . (int) $user['id']); ?>" method="post"></form>
+                  <form id="user-form-<?php echo (int) $user['id']; ?>" action="<?php echo $this->url->get('admin/updateUser/' . (int) $user['id']); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>"></form>
                   <input form="user-form-<?php echo (int) $user['id']; ?>" name="full_name" type="text" maxlength="160" value="<?php echo $h($user['full_name']); ?>" aria-label="Імʼя">
                   <span><?php echo $h($user['email']); ?><?php if ($user['phone']): ?> / <?php echo $h($user['phone']); ?><?php endif; ?></span>
                   <input form="user-form-<?php echo (int) $user['id']; ?>" name="phone" type="tel" maxlength="50" value="<?php echo $h($user['phone']); ?>" aria-label="Телефон">
