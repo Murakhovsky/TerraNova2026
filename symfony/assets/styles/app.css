@@ -1,6 +1,7 @@
 @import './tokens.css';
 @import './primitives.css';
 @import './catalog.css';
+@import './shell.css';
 
 :root {
   font-family: var(--cos-font-sans);
