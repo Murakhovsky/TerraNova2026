@@ -4,6 +4,24 @@ $workspace = $workspace ?? [];
 $kpis = $workspace['kpis'] ?? [];
 $today = $workspace['today'] ?? [];
 $money = static fn($v) => number_format((float) $v, 0, '.', ' ') . ' USD';
+$newLeadRows = [];
+foreach ($workspace['new_leads'] ?? [] as $lead) {
+    $status = strtolower((string) ($lead['status'] ?? ''));
+    $statusTone = match ($status) {
+        'qualified' => 'positive',
+        'disqualified' => 'danger',
+        'contacted' => 'info',
+        default => 'neutral',
+    };
+    $newLeadRows[] = [
+        'lead' => ['primary' => $lead['name'] ?? 'Lead', 'secondary' => $lead['email'] ?? $lead['phone'] ?? ''],
+        'source' => $lead['source'] ?: '—',
+        'status' => ['label' => strtoupper($status !== '' ? $status : 'new'), 'tone' => $statusTone],
+        'owner' => $lead['owner_name'] ?: 'Unassigned',
+        'next' => $lead['next_action_at'] ?: '—',
+        '_href' => !empty($lead['deal_id']) ? 'sales/deals/' . (int) $lead['deal_id'] : '',
+    ];
+}
 ?>
 <main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
   <?php $this->partial('components/sales/navigation', ['active' => 'sales']); ?>
@@ -61,9 +79,17 @@ $money = static fn($v) => number_format((float) $v, 0, '.', ' ') . ' USD';
 
   <section class="tn-ui-panel tn-workspace-section">
     <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Fresh demand</p><h2>New Leads</h2></div><a href="<?php echo $this->url->get('sales/leads'); ?>">Вхідні заявки</a></div>
-    <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Lead</th><th>Source</th><th>Status</th><th>Owner</th><th>Next action</th></tr></thead><tbody>
-      <?php foreach ($workspace['new_leads'] ?? [] as $lead): ?><tr><td><strong><?php echo $h($lead['name']); ?></strong></td><td><?php echo $h($lead['source'] ?: '—'); ?></td><td><?php echo $h($lead['status']); ?></td><td><?php echo $h($lead['owner_name'] ?: 'Unassigned'); ?></td><td><?php echo $h($lead['next_action_at'] ?: '—'); ?></td></tr><?php endforeach; ?>
-      <?php if (empty($workspace['new_leads'])): ?><tr><td colspan="5">Нових лідів немає.</td></tr><?php endif; ?>
-    </tbody></table></div>
+    <?php $this->partial('components/ui/data_table', [
+      'columns' => [
+        ['key' => 'lead', 'label' => 'Lead'],
+        ['key' => 'source', 'label' => 'Source'],
+        ['key' => 'status', 'label' => 'Status'],
+        ['key' => 'owner', 'label' => 'Owner'],
+        ['key' => 'next', 'label' => 'Next action'],
+      ],
+      'rows' => $newLeadRows,
+      'responsive' => 'cards',
+      'emptyMessage' => 'Нових лідів немає.',
+    ]); ?>
   </section>
 </main>
