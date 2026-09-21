@@ -16,7 +16,7 @@ final class PropertyWebProvider implements NavigationProviderInterface, CommandP
 {
     public function serviceId(): string
     {
-        return 'propertyWebProvider';
+        return 'propertyNavigationContributor';
     }
 
     public function navigation(WebExtensionContext $context): array
