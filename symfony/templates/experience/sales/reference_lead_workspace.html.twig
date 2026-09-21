@@ -1,0 +1,50 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Lead Workspace | COS{% endblock %}
+{% block workspace_content %}
+<twig:CosWorkspace :workspace="workspace">
+    <section class="cos-business-surface" data-sales-reference="lead-workspace">
+        <twig:CosEntityHeader
+            eyebrow="Lead Workspace"
+            title="{{ lead.name ?? 'Lead #' ~ lead.id }}"
+            subtitle="{{ lead.message ?? 'Sales lead' }}"
+            identity="Lead #{{ lead.id }}"
+            statusLabel="{{ lead.status ?? 'new' }}"
+            statusTone="{{ (lead.status ?? '') == 'qualified' ? 'positive' : ((lead.status ?? '') == 'disqualified' ? 'danger' : 'neutral') }}"
+            :meta="[
+                {label: 'Source', value: lead.source ?? 'Direct'},
+                {label: 'Owner', value: lead.owner_name ?? 'Unassigned'},
+                {label: 'Created', value: lead.created_at ?? '—'}
+            ]"
+        />
+
+        <div class="cos-business-grid">
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Contact</p>
+                <h2>Контактні дані</h2>
+                <dl class="cos-entity-summary">
+                    <div><dt>Phone</dt><dd>{{ lead.phone ?? '—' }}</dd></div>
+                    <div><dt>Email</dt><dd>{{ lead.email ?? '—' }}</dd></div>
+                    <div><dt>Source</dt><dd>{{ lead.source ?? 'Direct' }}</dd></div>
+                </dl>
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Next step</p>
+                <h2>Наступна дія</h2>
+                <twig:CosNextAction
+                    title="{{ lead.attention_reason ?? 'Create follow-up' }}"
+                    copy="{{ lead.manager_note ?? 'Зафіксуйте наступний контакт для цього ліда.' }}"
+                    due="{{ lead.next_action_at ?? 'Не заплановано' }}"
+                    tone="{{ lead.attention_reason ? 'warning' : 'neutral' }}"
+                />
+            </section>
+        </div>
+
+        <section class="cos-card">
+            <p class="cos-card__eyebrow">Context</p>
+            <h2>Повідомлення ліда</h2>
+            <p class="cos-card__copy">{{ lead.message ?? 'Немає додаткового повідомлення.' }}</p>
+        </section>
+    </section>
+</twig:CosWorkspace>
+{% endblock %}
