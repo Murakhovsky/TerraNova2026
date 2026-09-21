@@ -32,6 +32,37 @@ final readonly class PublicPropertyController
         }
     }
 
+    public function favourites(Request $request): JsonResponse
+    {
+        $session = $request->getSession();
+        $key = 'cos_public_property_favourites';
+        $items = array_values(array_filter(
+            $session->get($key, []),
+            static fn (mixed $id): bool => is_string($id) && $id !== '',
+        ));
+
+        if ($request->isMethod('POST')) {
+            $publicId = trim((string) $request->request->get('public_id', ''));
+            if ($publicId === '' || strlen($publicId) > 128 || preg_match('/^[A-Za-z0-9_-]+$/', $publicId) !== 1) {
+                return $this->error(422, 'invalid_property_public_id', 'Некоректний ідентифікатор об’єкта.');
+            }
+
+            $index = array_search($publicId, $items, true);
+            if ($index === false) {
+                if (count($items) < 100) {
+                    $items[] = $publicId;
+                }
+            } else {
+                unset($items[$index]);
+                $items = array_values($items);
+            }
+
+            $session->set($key, $items);
+        }
+
+        return $this->ok(['items' => $items]);
+    }
+
     public function show(string $slug): JsonResponse
     {
         try {
