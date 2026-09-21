@@ -13,6 +13,16 @@ cos_web_workspace_platform_preview:
   controller: App\Web\Experience\Dev\WorkspacePlatformPreviewController
   methods: [GET, HEAD]
 
+cos_web_realtime_platform_preview:
+  path: /dev/realtime
+  controller: App\Web\Experience\Dev\RealtimePlatformPreviewController
+  methods: [GET, HEAD]
+
+cos_web_realtime_platform_publish:
+  path: /dev/realtime/publish
+  controller: App\Web\Experience\Dev\RealtimePlatformPublishController
+  methods: [POST]
+
 cos_web_design_system_catalog:
   path: /dev/ui
   controller: App\Web\Experience\Dev\DesignSystemCatalogController

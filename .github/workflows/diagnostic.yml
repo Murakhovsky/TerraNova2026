@@ -43,6 +43,7 @@ jobs:
           php tests/architecture/web_experience_wave12_extensions.php
           php tests/architecture/web_experience_wave12_actions.php
           php tests/architecture/web_experience_wave12_runtime_actions.php
+          php tests/architecture/web_experience_wave12_realtime.php
           php tests/architecture/web_experience_wave12_interactions.php
           php tests/architecture/web_experience_wave12_forms.php
           php tests/architecture/web_experience_wave12_data.php

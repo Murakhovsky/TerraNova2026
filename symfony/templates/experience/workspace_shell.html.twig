@@ -110,8 +110,9 @@
                 <span
                     class="cos-shell__connection"
                     data-state="{{ shell.connectionState.value }}"
+                    data-cos-realtime-state
                     title="Realtime connection state"
-                ><span>{{ shell.connectionState.value|capitalize }}</span></span>
+                ><span data-cos-realtime-state-label>{{ shell.connectionState.value|capitalize }}</span></span>
 
                 <button class="cos-shell__icon-button" type="button" aria-label="Notifications">
                     NT

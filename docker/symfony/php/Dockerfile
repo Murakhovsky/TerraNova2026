@@ -50,6 +50,9 @@ RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=de
     SPATIAL_BLENDER_BINARY="" \
     SPATIAL_GLTF_TRANSFORM_BINARY="" \
     APP_URL="http://127.0.0.1:8081" \
+    MERCURE_URL="http://127.0.0.1/.well-known/mercure" \
+    MERCURE_PUBLIC_URL="http://127.0.0.1:8081/.well-known/mercure" \
+    MERCURE_JWT_SECRET="build-only-mercure-secret-0123456789abcdef" \
     TELEGRAM_BOT_TOKEN="" \
     TELEGRAM_BOT_NAME="" \
     sh -c 'php bin/console cache:warmup && php bin/console importmap:install && php bin/console asset-map:compile'

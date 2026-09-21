@@ -25,6 +25,9 @@ x-app-environment: &app-environment
   N8N_OUTBOUND_URL: ${N8N_OUTBOUND_URL:-}
   N8N_OUTBOUND_SECRET: ${N8N_OUTBOUND_SECRET:-}
   APP_URL: ${APP_URL:-http://127.0.0.1:8081}
+  MERCURE_URL: http://mercure/.well-known/mercure
+  MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-${APP_URL:-http://127.0.0.1:8081}/.well-known/mercure}
+  MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-${SYMFONY_APP_SECRET}}
   TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
   TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME:-}
 
@@ -165,6 +168,23 @@ services:
     healthcheck: { disable: true }
     networks: [backend]
 
+  mercure:
+    image: dunglas/mercure:v0.24.2
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ':80'
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:-${SYMFONY_APP_SECRET}}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:-${SYMFONY_APP_SECRET}}
+    volumes:
+      - mercure_data:/data
+      - mercure_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/mercure/health/ready"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks: [frontend, backend]
+
   mysql:
     image: mysql:8.4
     restart: unless-stopped
@@ -206,6 +226,8 @@ volumes:
   symfony_sessions:
   symfony_assets:
   spatial_uploads:
+  mercure_data:
+  mercure_config:
 
 networks:
   frontend:

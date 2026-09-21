@@ -1,0 +1,19 @@
+<div
+    class="cos-realtime-subscription"
+    data-controller="realtime-connection"
+    data-realtime-connection-topic-value="{{ topic.value }}"
+    data-action="
+        online@window->realtime-connection#online
+        offline@window->realtime-connection#offline
+        turbo:before-stream-render@document->realtime-connection#stream
+    "
+>
+    <span
+        hidden
+        aria-hidden="true"
+        {{ turbo_stream_listen(topic.value, transport, {
+            subscribe: topic.value,
+            withCredentials: true
+        }) }}
+    ></span>
+</div>

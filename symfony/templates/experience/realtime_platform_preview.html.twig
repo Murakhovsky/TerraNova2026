@@ -1,0 +1,45 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}COS Realtime Platform{% endblock %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block workspace_content %}
+    <twig:CosRealtimeSubscription :topic="topic" />
+
+    <section class="cos-ui-catalog__section cos-realtime-demo">
+        <div class="cos-ui-catalog__section-head">
+            <div>
+                <p class="cos-ui-catalog__eyebrow">Wave 12.12</p>
+                <h2>Private Turbo Stream over Mercure</h2>
+                <p>Open this page in two tabs and publish from either tab. The other subscribed tab updates without polling.</p>
+            </div>
+        </div>
+
+        {% if published %}
+            <p class="cos-alert cos-alert--success">Update published to the private tenant-scoped topic.</p>
+        {% endif %}
+
+        <div id="cos-realtime-demo-message" class="cos-card">
+            <strong>Waiting for a realtime projection.</strong>
+            <small>{{ topic.value }}</small>
+        </div>
+
+        <form class="cos-form" method="post" action="/dev/realtime/publish">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <label class="cos-field">
+                <span class="cos-field__label">Projection message</span>
+                <input
+                    class="cos-input"
+                    name="message"
+                    maxlength="160"
+                    value="Workspace projection updated"
+                    autocomplete="off"
+                >
+            </label>
+            <button class="cos-button cos-button--primary" type="submit">Publish private stream</button>
+        </form>
+    </section>
+{% endblock %}
