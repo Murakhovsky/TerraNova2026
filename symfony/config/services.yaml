@@ -1577,6 +1577,8 @@ services:
 
   App\Web\Property\PropertyPageController:
     public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
     tags: ['controller.service_arguments']
 
   App\Web\Operations\ControlCenterPageController:

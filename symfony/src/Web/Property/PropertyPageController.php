@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace App\Web\Property;
 
+use App\Security\SessionCsrfValidator;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Property\Application\Contract\PropertyCatalogInterface;
 use Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface;
+use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -22,11 +24,15 @@ final readonly class PropertyPageController
         private NavigationBuilder $navigation,
         private PropertyCatalogInterface $catalog,
         private PropertyWorkspaceReadModelInterface $workspace,
+        private SalesWriteServiceFactoryInterface $writes,
+        private SessionCsrfValidator $csrf,
+        private string $organizationId,
     ) {
     }
 
     public function catalog(Request $request): Response
     {
+        $inboundRequestStatus=$this->publicLeadStatus($request);
         $variables = $this->catalogData($request);
         $variables += [
             'title' => 'Каталог нерухомості',
@@ -35,7 +41,7 @@ final readonly class PropertyPageController
             'metaUrl' => $request->getSchemeAndHttpHost() . '/property/catalog',
             'interfaceSurface' => 'public',
             'pageAssetEntries' => ['terranova-catalog-api'],
-            'inboundRequestStatus' => null,
+            'inboundRequestStatus' => $inboundRequestStatus,
             'managerClientCases' => [],
             'propertyMatchStatus' => '',
         ];
@@ -57,6 +63,7 @@ final readonly class PropertyPageController
 
     public function show(Request $request, string $slug): Response
     {
+        $inboundRequestStatus=$this->publicLeadStatus($request);
         try {
             $property = $this->catalog->propertyBySlug($slug);
             if ($property === null) return new Response('Property was not found.', Response::HTTP_NOT_FOUND);
@@ -97,6 +104,7 @@ final readonly class PropertyPageController
 
     public function presentation(Request $request, string $slug): Response
     {
+        $inboundRequestStatus=$this->publicLeadStatus($request);
         try {
             $property = $this->catalog->propertyBySlug($slug);
             if ($property !== null) {
@@ -106,7 +114,7 @@ final readonly class PropertyPageController
                     'interfaceSurface'=>'public','pageAssetEntries'=>['public-surface','terranova-copy'],
                     'property'=>$property,'images'=>$images,'features'=>$this->catalog->propertyFeatures((int)$property['id']),
                     'relatedProperties'=>$this->catalog->relatedProperties($property),'group'=>null,'properties'=>[],
-                    'inboundRequestStatus'=>null,'pageStatus'=>null,
+                    'inboundRequestStatus'=>$inboundRequestStatus,'pageStatus'=>null,
                     'metaTitle'=>(($property['meta_title']??'')?:($property['title']??'Об’єкт')).' | Презентація Terra Nova CLUB',
                     'metaDescription'=>(($property['meta_description']??'')?:($property['short_description']??'Презентація об’єкта Terra Nova CLUB.')),
                     'metaImage'=>(string)($images[0]['image_url']??''),
@@ -122,7 +130,7 @@ final readonly class PropertyPageController
                 'interfaceSurface'=>'public','pageAssetEntries'=>['public-surface','terranova-copy'],
                 'property'=>null,'images'=>[],'features'=>[],'relatedProperties'=>[],
                 'group'=>$group,'properties'=>$this->catalog->propertyGroupPresentationProperties((int)$group['id']),
-                'inboundRequestStatus'=>null,'pageStatus'=>null,
+                'inboundRequestStatus'=>$inboundRequestStatus,'pageStatus'=>null,
                 'metaTitle'=>(string)$group['title'].' | Презентація Terra Nova CLUB',
                 'metaDescription'=>(string)(($group['description']??'')?:'Добірка опублікованих об’єктів Terra Nova CLUB.'),
                 'metaUrl'=>$request->getSchemeAndHttpHost().'/property/presentation/'.rawurlencode($slug),
@@ -172,6 +180,16 @@ final readonly class PropertyPageController
         ], $httpStatus);
     }
 
+    public function presentationShare(Request $request): Response
+    {
+        $tenant=$this->manager();
+        if($tenant instanceof Response)return $tenant;
+        if(!$this->csrf->isValid($request))return new Response('Invalid CSRF token.',Response::HTTP_FORBIDDEN);
+        $slug=trim((string)$request->request->get('slug',''));
+        if($slug===''||!preg_match('/^[A-Za-z0-9_-]+$/',$slug))return new Response('Invalid property slug.',Response::HTTP_BAD_REQUEST);
+        return new RedirectResponse('/property/presentation/'.rawurlencode($slug));
+    }
+
     public function manage(Request $request): Response
     {
         return $this->inventoryWorkspace($request, 'Inventory', 'objects', 'manage');
@@ -179,7 +197,7 @@ final readonly class PropertyPageController
 
     public function listing(Request $request): Response
     {
-        return $this->inventoryWorkspace($request, 'Listing', 'listing', 'listing');
+        return $this->inventoryWorkspace($request, 'Listing', 'listing', 'listing', true);
     }
 
     public function submissions(Request $request): Response
@@ -217,9 +235,9 @@ final readonly class PropertyPageController
         }
     }
 
-    private function inventoryWorkspace(Request $request, string $title, string $active, string $mode): Response
+    private function inventoryWorkspace(Request $request, string $title, string $active, string $mode, bool $listingAccess = false): Response
     {
-        $tenant = $this->manager();
+        $tenant = $listingAccess ? $this->listingUser() : $this->manager();
         if ($tenant instanceof Response) return $tenant;
 
         try {
@@ -270,6 +288,32 @@ final readonly class PropertyPageController
         }
     }
 
+    private function listingUser(): TenantContext|Response
+    {
+        $tenant=$this->tenants->current();
+        if($tenant===null)return new RedirectResponse('/auth/login');
+        if(!in_array($tenant->role()->value(),['realtor','developer','partner','manager','admin'],true))return new Response('Forbidden',Response::HTTP_FORBIDDEN);
+        return $tenant;
+    }
+
+    private function publicLeadStatus(Request $request): ?string
+    {
+        if(!$request->isMethod('POST'))return null;
+        try{
+            $result=$this->writes->forOrganization($this->organizationId)->receivePublicLead($request->request->all(),$request->getRequestUri());
+            return $result->ok
+                ? 'Заявку прийнято. Менеджер зв’яжеться з вами.'
+                : match($result->code){
+                    'contact_required'=>'Вкажіть ім’я та телефон або email.',
+                    'invalid_email'=>'Перевірте email.',
+                    default=>'Заявку не вдалося зберегти.',
+                };
+        }catch(Throwable $error){
+            error_log('property.public.lead_failed '.$error->getMessage());
+            return 'Заявку не вдалося зберегти.';
+        }
+    }
+
     private function manager(): TenantContext|Response
     {
         $tenant = $this->tenants->current();
@@ -285,7 +329,7 @@ final readonly class PropertyPageController
             'title'=>$title,'metaTitle'=>$title.' | Terra Nova COS','metaRobots'=>'noindex,nofollow',
             'interfaceSurface'=>'workspace','workspaceSection'=>'properties','workspaceActive'=>$active,
             'workspaceActiveSection'=>$this->navigation->activeSection($active),'pageAssetEntries'=>['property-workspace'],
-            'currentUser'=>['id'=>(int)$tenant->userId()->value(),'role'=>$role],'role'=>$role,'isTeam'=>true,
+            'currentUser'=>['id'=>(int)$tenant->userId()->value(),'role'=>$role],'role'=>$role,'isTeam'=>$tenant->isManager(),
             'isAdmin'=>$tenant->isAdmin(),'workspaceNavigation'=>$this->navigation->workspace($tenant),
         ], $extra), $status);
     }

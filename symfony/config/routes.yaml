@@ -1307,7 +1307,7 @@ cos_web_property_root:
 cos_web_property_catalog:
   path: /property/catalog
   controller: App\Web\Property\PropertyPageController::catalog
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
 
 cos_web_property_map:
   path: /property/map
@@ -1317,13 +1317,13 @@ cos_web_property_map:
 cos_web_property_show:
   path: /property/show/{slug}
   controller: App\Web\Property\PropertyPageController::show
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
 cos_web_property_presentation:
   path: /property/presentation/{slug}
   controller: App\Web\Property\PropertyPageController::presentation
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
 cos_web_property_pdf:
@@ -1388,10 +1388,33 @@ cos_web_property_submission:
   methods: [GET, HEAD]
   requirements: { id: '[1-9][0-9]*' }
 
+cos_web_property_presentation_share:
+  path: /property/presentationShare
+  controller: App\Web\Property\PropertyPageController::presentationShare
+  methods: [POST]
+
 cos_web_cos_control_center:
   path: /cos/control-center
   controller: App\Web\Operations\ControlCenterPageController::index
   methods: [GET, HEAD]
+
+cos_web_cos_action_execute:
+  path: /cos/action/{id}/execute
+  controller: App\Web\Operations\ControlCenterPageController::execute
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_web_cos_approval_approve:
+  path: /cos/approval/{id}/approve
+  controller: App\Web\Operations\ControlCenterPageController::approve
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_web_cos_approval_reject:
+  path: /cos/approval/{id}/reject
+  controller: App\Web\Operations\ControlCenterPageController::reject
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
 
 
 # Final Web retirement — Sales SSR
