@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 use App\Infrastructure\Observability\HttpExecutionContextSubscriber;
 use Kernel\Observability\StructuredLoggerInterface;
+use Kernel\Operations\Contract\MetricsRecorderInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,6 +31,13 @@ $logger = new class implements StructuredLoggerInterface {
 $tenants = new class implements TenantContextProviderInterface {
     public function current(): ?TenantContext { return null; }
 };
+$metrics = new class implements MetricsRecorderInterface {
+    public array $records = [];
+    public function record(string $metric, float $value, ?string $organizationId = null, array $labels = []): void
+    {
+        $this->records[] = compact('metric', 'value', 'organizationId', 'labels');
+    }
+};
 $kernel = new class implements HttpKernelInterface {
     public function handle(Request $request, int $type = self::MAIN_REQUEST, bool $catch = true): Response
     {
@@ -37,8 +45,9 @@ $kernel = new class implements HttpKernelInterface {
     }
 };
 
-$subscriber = new HttpExecutionContextSubscriber($logger, $tenants);
+$subscriber = new HttpExecutionContextSubscriber($logger, $tenants, $metrics);
 $request = Request::create('/api/v1/status');
+$request->attributes->set('_route', 'cos_api_v1_status');
 $request->headers->set('X-Correlation-ID', 'client-corr-1');
 $subscriber->onRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
 
@@ -49,6 +58,9 @@ expectCorrelation($response->headers->get('X-Correlation-ID') === 'client-corr-1
 expectCorrelation(($logger->entries[0]['message'] ?? null) === 'http.request.completed', 'HTTP completion must emit a structured log.');
 expectCorrelation(($logger->entries[0]['context']['correlation_id'] ?? null) === 'client-corr-1', 'Structured HTTP log must contain correlation id.');
 expectCorrelation(($logger->entries[0]['context']['status_code'] ?? null) === 403, 'Structured HTTP log must contain response status.');
+expectCorrelation($response->headers->has('Server-Timing'), 'HTTP response must expose Server-Timing.');
+expectCorrelation(count($metrics->records) >= 3, 'HTTP completion must record request, duration and error metrics.');
+expectCorrelation(($metrics->records[0]['labels']['route'] ?? null) === 'cos_api_v1_status', 'HTTP metric must use bounded route label.');
 
 $invalidRequest = Request::create('/health');
 $invalidRequest->headers->set('X-Correlation-ID', '../bad correlation');

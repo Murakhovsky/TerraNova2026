@@ -32,6 +32,11 @@ on:
       - 'tests/architecture/web_experience_wave12_audit_history.php'
       - 'tests/architecture/web_experience_wave12_ui_catalog.php'
       - 'tests/architecture/web_experience_wave12_testing.php'
+      - 'tests/architecture/web_experience_wave12_performance_observability.php'
+      - 'tests/browser/web_performance_budget.mjs'
+      - 'symfony/tests/http_correlation_contract.php'
+      - 'symfony/tests/web_telemetry_contract.php'
+      - 'docs/03-architecture/web-performance-observability.md'
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
@@ -365,6 +370,20 @@ jobs:
           name: wave-12-23-web-quality
           path: tmp/web-quality
           if-no-files-found: warn
+
+      - name: Wave 12.24 architecture gate
+        run: php tests/architecture/web_experience_wave12_performance_observability.php
+
+      - name: Wave 12.24 HTTP observability contract
+        run: docker compose exec -T php php tests/http_correlation_contract.php
+
+      - name: Wave 12.24 browser telemetry contract
+        run: docker compose exec -T php php tests/web_telemetry_contract.php
+
+      - name: Wave 12.24 performance budgets
+        env:
+          BROWSER_EXECUTABLE: /usr/bin/google-chrome
+        run: npm run test:web-performance -- http://127.0.0.1:8081
 
       - name: Web Security response headers smoke
         run: |

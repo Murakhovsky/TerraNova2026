@@ -54,6 +54,7 @@ jobs:
           php tests/architecture/web_experience_wave12_audit_history.php
           php tests/architecture/web_experience_wave12_ui_catalog.php
           php tests/architecture/web_experience_wave12_testing.php
+          php tests/architecture/web_experience_wave12_performance_observability.php
           php tests/component/web_experience_components.php
           php -l symfony/tests/Panther/WebExperiencePantherTest.php
           php tests/architecture/web_experience_wave12_interactions.php
@@ -65,11 +66,11 @@ jobs:
           php tests/architecture/web_experience_style_lab.php
           php tests/architecture/web_experience_geometry.php
           php tests/architecture/web_experience_surfaces.php
-          php tests/architecture/web_experience_typography.php
-          php tests/architecture/web_experience_primitives.php
-          php tests/architecture/web_experience_business_ux.php
-          php tests/architecture/web_experience_stress_screens.php
           php tests/architecture/web_experience_production_sales.php
+          php tests/architecture/web_experience_stress_screens.php
+          php tests/architecture/web_experience_business_ux.php
+          php tests/architecture/web_experience_primitives.php
+          php tests/architecture/web_experience_typography.php
 
       - name: Zero legacy production gate
         run: php tests/architecture/zero_legacy_runtime.php
