@@ -44,7 +44,7 @@ final readonly class SalesReferenceController
         $data = $this->queries->ask(new GetSalesDashboardQuery($tenant->organizationId(), $ownerId));
 
         $context = $this->context($tenant, 'sales-overview');
-        return $this->render('experience/sales/reference_dashboard.html.twig', [
+        return $this->render('experience/sales/dashboard.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Sales Dashboard', [
                 new ShellBreadcrumb('Workspace', '/admin'),
                 new ShellBreadcrumb('Sales'),
@@ -62,7 +62,7 @@ final readonly class SalesReferenceController
         $data = $this->queries->ask(new ListSalesLeadsQuery($tenant->organizationId(), $request->query->all()));
         $context = $this->context($tenant, 'leads');
 
-        return $this->render('experience/sales/reference_leads.html.twig', [
+        return $this->render('experience/sales/leads.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Lead List', [
                 new ShellBreadcrumb('Workspace', '/admin'),
                 new ShellBreadcrumb('Sales', '/sales/dashboard'),
@@ -97,7 +97,7 @@ final readonly class SalesReferenceController
             new EntityRef('sales.lead', (string) $leadId),
         );
 
-        return $this->render('experience/sales/reference_lead_workspace.html.twig', [
+        return $this->render('experience/sales/lead_workspace.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Lead Workspace', [
                 new ShellBreadcrumb('Workspace', '/admin'),
                 new ShellBreadcrumb('Sales', '/sales/dashboard'),
