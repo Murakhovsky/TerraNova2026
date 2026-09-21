@@ -60,13 +60,13 @@ body {
 }
 
 .cos-button--primary {
-  color: #fff;
+  color: var(--cos-color-on-primary);
   background: var(--cos-color-primary);
   border-color: var(--cos-color-primary);
 }
 
 .cos-button--primary:hover {
-  color: #fff;
+  color: var(--cos-color-on-primary);
   background: var(--cos-color-primary-hover);
   border-color: var(--cos-color-primary-hover);
 }
