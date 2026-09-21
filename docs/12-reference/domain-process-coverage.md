@@ -16,8 +16,8 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 9
-- **Покрито канонічним процесом:** 5
+- **Installable Domains:** 10
+- **Покрито канонічним процесом:** 6
 - **Явних exemptions:** 4
 - **Без покриття:** 0
 
@@ -26,6 +26,7 @@ generated: true
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `growth` · Growth | `0.1.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
@@ -48,6 +49,10 @@ generated: true
 
 - **Exempt:** V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation.
 - **Owner:** COS Architecture
+
+### Growth (`growth`)
+
+- `growth.opportunity-candidate-to-handoff`
 
 ### HR (`hr`)
 
