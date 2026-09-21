@@ -42,23 +42,20 @@ if ($stageRules) {
 
 <main class="tn-page">
   <?php if ($pageStatus): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h1>Форма недоступна</h1>
-      <p><?php echo $h($pageStatus); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/manage'); ?>">До об’єктів</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'error',
+        'title' => 'Форма недоступна',
+        'message' => $pageStatus,
+        'action' => ['label' => 'До об’єктів', 'href' => 'property/manage'],
+    ]); ?>
   <?php else: ?>
-    <section class="tn-page-hero tn-page-hero--catalog">
-      <div>
-        <p class="tn-kicker">Чернетка</p>
-        <h1>Новий об’єкт</h1>
-        <p>Базові дані й фото. Після збереження відкриється повний редактор.</p>
-      </div>
-      <div class="tn-page-hero__meta">
-        <strong>draft</strong>
-        <span>публікація після перевірки</span>
-      </div>
-    </section>
+    <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => 'Property · Draft',
+        'title' => 'Новий об’єкт',
+        'description' => 'Базові дані й фото. Після збереження відкриється повний редактор.',
+        'meta' => ['value' => 'draft', 'label' => 'публікація після перевірки'],
+        'actions' => [['label' => 'До списку', 'href' => 'property/manage', 'variant' => 'ghost']],
+    ]); ?>
 
     <section class="tn-admin-workspace">
       <?php if ($actionStatus): ?>
@@ -66,8 +63,8 @@ if ($stageRules) {
       <?php endif; ?>
 
       <form class="tn-property-edit-form" action="<?php echo $this->url->get('property/add'); ?>" method="post" enctype="multipart/form-data">
-        <article class="tn-admin-card">
-          <div class="tn-admin-card__head">
+        <article class="tn-ui-panel">
+          <div class="tn-ui-panel__head">
             <div>
               <p class="tn-kicker">Основа</p>
               <h2>Картка об’єкта</h2>
@@ -159,7 +156,7 @@ if ($stageRules) {
           </div>
         </article>
 
-        <article class="tn-admin-card">
+        <article class="tn-ui-panel">
           <p class="tn-kicker">Параметри</p>
           <h2>Початкові дані</h2>
           <div class="tn-form-grid">
@@ -234,7 +231,7 @@ if ($stageRules) {
           </div>
         </article>
 
-        <article class="tn-admin-card">
+        <article class="tn-ui-panel">
           <p class="tn-kicker">Медіа</p>
           <h2>Фото об’єкта</h2>
           <div class="tn-form-grid tn-dropzone-grid">
@@ -256,7 +253,7 @@ if ($stageRules) {
           <p class="tn-auth-form__note">Медіа збережуться разом із новим об’єктом. Головне фото автоматично стане cover у каталозі.</p>
         </article>
 
-        <article class="tn-admin-card">
+        <article class="tn-ui-panel">
           <p class="tn-kicker">Описи</p>
           <h2>Публічний і службовий контекст</h2>
           <div class="tn-form-grid">
