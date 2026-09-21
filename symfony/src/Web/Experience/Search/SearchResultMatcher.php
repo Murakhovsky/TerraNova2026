@@ -85,7 +85,7 @@ final readonly class SearchResultMatcher
 
     private function wordStartsWith(string $value, string $query): bool
     {
-        foreach (preg_split('/[^a-z0-9._:-]+/', $value) ?: [] as $word) {
+        foreach (preg_split('/[^\p{L}\p{N}._:-]+/u', $value) ?: [] as $word) {
             if ($word !== '' && str_starts_with($word, $query)) {
                 return true;
             }
@@ -96,6 +96,8 @@ final readonly class SearchResultMatcher
 
     private function normalize(string $value): string
     {
-        return strtolower(trim($value));
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+        return mb_strtolower($value, 'UTF-8');
     }
 }
