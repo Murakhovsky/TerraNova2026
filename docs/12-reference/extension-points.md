@@ -22,6 +22,7 @@ generated: true
 | `web.navigation` | module-defined | 3 |
 | `web.search` | module-defined | 3 |
 | `web.workspace` | module-defined | 3 |
+| `web.workspace.extensions` | module-defined | 1 |
 
 ## `api.routes`
 
@@ -93,6 +94,15 @@ generated: true
 | --- | --- |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
+| `sales` | `salesNavigationContributor` |
+
+
+## `web.workspace.extensions`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
 | `sales` | `salesNavigationContributor` |
 
 ## Семантика реєстрації

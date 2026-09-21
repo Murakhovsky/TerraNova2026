@@ -107,6 +107,7 @@ diagnosticNavigationContributor
 - `web.search`;
 - `web.commands`;
 - `web.workspace`;
+- `web.workspace.extensions`;
 - `web.actions`.
 
 Інші canonical Web points уже мають contracts і можуть отримувати contributions без зміни Kernel semantics.

@@ -1,0 +1,86 @@
+<section
+    class="cos-workspace"
+    data-controller="workspace-platform"
+    data-workspace-platform-entity-key-value="{{ workspace.entityKey() ?: '' }}"
+    data-workspace-id="{{ workspace.definition.id }}"
+>
+    <twig:CosWorkspaceHeader :workspace="workspace" />
+
+    {% if workspace.hasSlot('navigation') %}
+        <nav class="cos-workspace__local-nav" aria-label="{{ workspace.definition.label }} navigation">
+            {% for extension in workspace.extensions('navigation') %}
+                {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                {% include extension.template with extensionContext only %}
+            {% endfor %}
+        </nav>
+    {% endif %}
+
+    {% if workspace.hasSlot('tabs') %}
+        <div class="cos-workspace__tabs">
+            {% for extension in workspace.extensions('tabs') %}
+                {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                {% include extension.template with extensionContext only %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="cos-workspace__layout">
+        <div class="cos-workspace__main">
+            {% block content %}{% endblock %}
+
+            {% for extension in workspace.extensions('main') %}
+                {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                {% include extension.template with extensionContext only %}
+            {% endfor %}
+
+            {% if workspace.hasSlot('documents') %}
+                <section class="cos-workspace__documents" aria-label="Workspace documents">
+                    {% for extension in workspace.extensions('documents') %}
+                        {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                        {% include extension.template with extensionContext only %}
+                    {% endfor %}
+                </section>
+            {% endif %}
+        </div>
+
+        {% if workspace.hasSlot('sidebar') or workspace.hasSlot('activity') or workspace.hasSlot('ai') %}
+            <aside class="cos-workspace__rail" aria-label="Workspace context">
+                {% if workspace.hasSlot('sidebar') %}
+                    <twig:CosContextPanel id="workspace-context-panel" title="Context">
+                        {% for extension in workspace.extensions('sidebar') %}
+                            {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                            {% include extension.template with extensionContext only %}
+                        {% endfor %}
+                    </twig:CosContextPanel>
+                {% endif %}
+
+                {% if workspace.hasSlot('activity') %}
+                    <twig:CosActivityPanel id="workspace-activity-panel" title="Activity">
+                        {% for extension in workspace.extensions('activity') %}
+                            {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                            {% include extension.template with extensionContext only %}
+                        {% endfor %}
+                    </twig:CosActivityPanel>
+                {% endif %}
+
+                {% if workspace.hasSlot('ai') %}
+                    <twig:CosAIContext id="workspace-ai-context" title="AI context">
+                        {% for extension in workspace.extensions('ai') %}
+                            {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                            {% include extension.template with extensionContext only %}
+                        {% endfor %}
+                    </twig:CosAIContext>
+                {% endif %}
+            </aside>
+        {% endif %}
+    </div>
+
+    {% if workspace.hasSlot('footer') %}
+        <footer class="cos-workspace__footer">
+            {% for extension in workspace.extensions('footer') %}
+                {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+                {% include extension.template with extensionContext only %}
+            {% endfor %}
+        </footer>
+    {% endif %}
+</section>

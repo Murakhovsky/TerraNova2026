@@ -78,8 +78,20 @@ final class WebExtensionsSmokeCommand extends Command
             return Command::FAILURE;
         }
 
+        $workspaceExtensionIds = array_map(
+            static fn($provider): string => $provider->serviceId(),
+            $providers->workspaceExtensions(),
+        );
+        if ($workspaceExtensionIds !== ['salesNavigationContributor']) {
+            $output->writeln(sprintf(
+                '<error>Unexpected active workspace extension providers: %s</error>',
+                implode(', ', $workspaceExtensionIds),
+            ));
+
+            return Command::FAILURE;
+        }
+
         foreach ([
-            'workspace extensions' => $providers->workspaceExtensions(),
             'dashboard widgets' => $providers->dashboardWidgets(),
             'entity links' => $providers->entityLinks(),
             'notifications' => $providers->notifications(),

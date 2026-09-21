@@ -1,0 +1,11 @@
+<div class="cos-workspace-extension">
+    <p>AI receives the same entity reference and governed actions as the human Workspace.</p>
+    {% set proposals = workspace.primaryActions|merge(workspace.secondaryActions) %}
+    {% if proposals is not empty %}
+        <ul class="cos-workspace-extension__list">
+            {% for action in proposals %}
+                <li>{{ action.label }}{% if not action.enabled %} · unavailable{% endif %}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

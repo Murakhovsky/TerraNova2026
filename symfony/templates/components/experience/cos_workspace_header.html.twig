@@ -1,0 +1,51 @@
+<header class="cos-workspace__header">
+    <div class="cos-workspace__heading">
+        <p class="cos-workspace__eyebrow">{{ workspace.definition.id }}</p>
+        <h1>{{ workspace.definition.label }}</h1>
+        {% if workspace.entity %}
+            <p class="cos-workspace__entity">
+                <span>{{ workspace.entity.type }}</span>
+                <strong>{{ workspace.entity.id }}</strong>
+            </p>
+        {% endif %}
+
+        {% for extension in workspace.extensions('header') %}
+            {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+            {% include extension.template with extensionContext only %}
+        {% endfor %}
+    </div>
+
+    <div class="cos-workspace__header-actions" aria-label="Workspace actions">
+        {% for action in workspace.primaryActions %}
+            <button
+                class="cos-button cos-button--primary"
+                type="button"
+                data-action="click->workspace-platform#action"
+                data-workspace-action-id="{{ action.id }}"
+                {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
+            >{{ action.label }}</button>
+        {% endfor %}
+
+        {% if workspace.secondaryActions is not empty %}
+            <details class="cos-workspace__action-menu">
+                <summary class="cos-button cos-button--ghost">More</summary>
+                <div class="cos-workspace__action-menu-panel">
+                    {% for action in workspace.secondaryActions %}
+                        <button
+                            class="cos-workspace__menu-action"
+                            type="button"
+                            data-action="click->workspace-platform#action"
+                            data-workspace-action-id="{{ action.id }}"
+                            {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
+                        >{{ action.label }}</button>
+                    {% endfor %}
+                </div>
+            </details>
+        {% endif %}
+
+        {% for extension in workspace.extensions('primary_actions') %}
+            {% set extensionContext = extension.props|merge({'workspace': workspace}) %}
+            {% include extension.template with extensionContext only %}
+        {% endfor %}
+    </div>
+</header>
