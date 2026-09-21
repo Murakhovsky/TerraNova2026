@@ -66,7 +66,8 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
             || str_starts_with($path,'/admin/diagnostics')
             || str_starts_with($path,'/admin/content')
             || str_starts_with($path,'/diagnostics/')
-            || str_starts_with($path,'/spatial');
+            || str_starts_with($path,'/spatial')
+            || str_starts_with($path,'/dev');
     }
 
     private static function spatialUnauthorized(): JsonResponse { return new JsonResponse(['ok'=>false,'message'=>'Unauthorized.'],Response::HTTP_UNAUTHORIZED); }
