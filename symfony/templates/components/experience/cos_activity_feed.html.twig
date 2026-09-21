@@ -1,0 +1,14 @@
+<ol class="cos-activity-feed" aria-label="{{ label }}">
+    {% for item in items %}
+        <li class="cos-activity-feed__item">
+            <span class="cos-activity-feed__actor">{{ item.actor }}</span>
+            <div class="cos-activity-feed__content">
+                <p><strong>{{ item.action }}</strong>{% if item.detail ?? false %} {{ item.detail }}{% endif %}</p>
+                <div class="cos-activity-feed__meta">
+                    <time class="cos-numeric">{{ item.time }}</time>
+                    {% if item.source ?? false %}<span>{{ item.source }}</span>{% endif %}
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+</ol>
