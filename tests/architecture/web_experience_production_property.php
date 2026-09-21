@@ -66,9 +66,9 @@ $docs = $read('docs/03-architecture/cos-production-property-adoption.md');
 foreach ([
     '# Впровадження Property у production UI',
     '## Хвиля 1',
-    '### Реєстр менеджера (\`Manager Registry\`)',
+    '### Реєстр менеджера (`Manager Registry`)',
     '### Sales Inventory',
-    '### Порівняння (\`Compare\`)',
+    '### Порівняння (`Compare`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
