@@ -111,7 +111,7 @@ diagnosticNavigationContributor
 
 Інші canonical Web points уже мають contracts і можуть отримувати contributions без зміни Kernel semantics.
 
-## Unified UIAction contributions
+## Внески Unified UIAction
 
 `web.actions` використовує той самий module-aware provider runtime, що navigation/search/commands/workspaces.
 
