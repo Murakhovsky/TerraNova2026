@@ -3,13 +3,13 @@
 {% block workspace_content %}
 <section class="cos-primitive-stack" data-sales-reference="lead-list">
     <twig:CosEntityHeader
-        eyebrow="Sales reference vertical"
+        eyebrow="Sales"
         title="Lead List"
         subtitle="Кваліфікація та пріоритезація вхідного попиту на канонічних COS primitives."
         identity="{{ items|length }} у вибірці"
     />
 
-    <twig:CosFilterBar action="/sales/reference/leads" label="Lead filters">
+    <twig:CosFilterBar action="/sales/leads" label="Lead filters">
         <label class="cos-field">
             <span>Пошук</span>
             <input class="cos-input" type="search" name="q" value="{{ filters.q }}" placeholder="Ім’я, телефон, email">
@@ -33,7 +33,7 @@
     <section class="cos-card">
         <div class="cos-card__header">
             <div><p class="cos-card__eyebrow">Demand</p><h2>Leads</h2></div>
-            <a class="cos-button cos-button--ghost cos-button--sm" href="/sales/reference/dashboard">Dashboard</a>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/sales/dashboard">Dashboard</a>
         </div>
         <div class="cos-entity-list">
             {% for lead in items %}
@@ -43,7 +43,7 @@
                     meta="{{ lead.owner_name ?? 'Unassigned' }}"
                     statusLabel="{{ lead.status ?? 'new' }}"
                     statusTone="{{ (lead.status ?? '') == 'qualified' ? 'positive' : ((lead.status ?? '') == 'disqualified' ? 'danger' : 'neutral') }}"
-                    href="/sales/reference/leads/{{ lead.id }}"
+                    href="/sales/leads/{{ lead.id }}"
                 />
             {% else %}
                 <p class="cos-card__copy">Лідів не знайдено. Змініть фільтри або дочекайтеся нових звернень.</p>
