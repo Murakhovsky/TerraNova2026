@@ -1,0 +1,10 @@
+<label class="cos-field">
+    <span class="cos-field__label">{{ label }}</span>
+    <textarea
+        class="cos-textarea"
+        name="{{ name }}"
+        {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if required %}required aria-required="true"{% endif %}
+    >{{ value }}</textarea>
+</label>
