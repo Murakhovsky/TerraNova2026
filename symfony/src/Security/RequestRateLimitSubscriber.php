@@ -94,6 +94,10 @@ final readonly class RequestRateLimitSubscriber implements EventSubscriberInterf
             return ['public.analytics', 120, 60];
         }
 
+        if ($path === '/telemetry/web') {
+            return ['web.telemetry', 180, 60];
+        }
+
         if ($path === '/api/spatial/events') {
             return ['spatial.events', 120, 60];
         }

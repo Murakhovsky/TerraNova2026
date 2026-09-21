@@ -7,6 +7,8 @@ use InvalidArgumentException;
 use Kernel\Observability\CorrelationId;
 use Kernel\Observability\ExecutionContext;
 use Kernel\Observability\StructuredLoggerInterface;
+use Kernel\Operations\Contract\MetricsRecorderInterface;
+use Throwable;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -21,6 +23,7 @@ final readonly class HttpExecutionContextSubscriber implements EventSubscriberIn
     public function __construct(
         private StructuredLoggerInterface $logger,
         private TenantContextProviderInterface $tenants,
+        private MetricsRecorderInterface $metrics,
     ) {
     }
 
@@ -76,11 +79,42 @@ final readonly class HttpExecutionContextSubscriber implements EventSubscriberIn
 
         $started = $request->attributes->get(self::START_ATTRIBUTE);
         $durationMs = is_int($started) ? max(0.0, (hrtime(true) - $started) / 1_000_000) : null;
+        $statusCode = $event->getResponse()->getStatusCode();
+        $route = (string) $request->attributes->get('_route', 'unmatched');
+        $method = strtoupper($request->getMethod());
+        $statusClass = intdiv($statusCode, 100) . 'xx';
+
+        if ($durationMs !== null) {
+            $event->getResponse()->headers->set('Server-Timing', sprintf('app;dur=%.2f', $durationMs));
+        }
+
+        try {
+            $organizationId = $tenant?->organizationId()->value();
+            $labels = [
+                'method' => $method,
+                'route' => $route !== '' ? $route : 'unmatched',
+                'status_class' => $statusClass,
+            ];
+
+            $this->metrics->record('cos.web.http.requests', 1.0, $organizationId, $labels);
+            if ($durationMs !== null) {
+                $this->metrics->record('cos.web.http.duration_ms', $durationMs, $organizationId, $labels);
+            }
+            if ($statusCode >= 400) {
+                $this->metrics->record('cos.web.http.errors', 1.0, $organizationId, $labels);
+            }
+        } catch (Throwable $exception) {
+            $this->logger->log('warning', 'http.metrics.failed', [
+                'correlation_id' => $correlationId->value(),
+                'error_class' => $exception::class,
+            ]);
+        }
 
         $this->logger->log('info', 'http.request.completed', array_merge($context->toLogContext(), [
-            'method' => $request->getMethod(),
+            'method' => $method,
+            'route' => $route !== '' ? $route : 'unmatched',
             'path' => $request->getPathInfo(),
-            'status_code' => $event->getResponse()->getStatusCode(),
+            'status_code' => $statusCode,
             'duration_ms' => $durationMs,
         ]));
     }
