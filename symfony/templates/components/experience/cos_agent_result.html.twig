@@ -1,0 +1,78 @@
+<div class="cos-agent-result">
+    {% if result.summary is not empty %}
+        <section class="cos-agent-result__summary">
+            <h4>Structured result</h4>
+            <dl>
+                {% for key, value in result.summary %}
+                    <div>
+                        <dt>{{ key|replace({'_':' '})|title }}</dt>
+                        <dd>
+                            {% if value is iterable %}
+                                <code>{{ value|json_encode }}</code>
+                            {% elseif value is same as(true) or value is same as(false) %}
+                                {{ value ? 'true' : 'false' }}
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        </dd>
+                    </div>
+                {% endfor %}
+            </dl>
+        </section>
+    {% endif %}
+
+    {% if result.warnings is not empty %}
+        <section>
+            <h4>Warnings</h4>
+            <div class="cos-agent-result__stack">
+                {% for warning in result.warnings %}
+                    <twig:CosAgentWarning :warning="warning" />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if result.metrics is not empty %}
+        <section>
+            <h4>Metrics</h4>
+            <div class="cos-agent-result__metrics">
+                {% for metric in result.metrics %}
+                    <twig:CosAgentMetric :metric="metric" />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if result.entities is not empty %}
+        <section>
+            <h4>Entities</h4>
+            <ul class="cos-agent-result__entities">
+                {% for entity in result.entities %}
+                    <li><code>{{ entity.key() }}</code></li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {% if result.recommendations is not empty %}
+        <section>
+            <h4>Recommendations</h4>
+            <div class="cos-agent-result__stack">
+                {% for recommendation in result.recommendations %}
+                    <twig:CosAgentRecommendation :recommendation="recommendation" />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if result.evidence is not empty %}
+        <section>
+            <h4>Evidence</h4>
+            <div class="cos-agent-result__stack">
+                {% for evidence in result.evidence %}
+                    <twig:CosAgentEvidence :evidence="evidence" />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</div>

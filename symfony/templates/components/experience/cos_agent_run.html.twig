@@ -1,0 +1,48 @@
+<article class="cos-agent-run" data-agent-run-id="{{ run.run.id }}">
+    <header class="cos-agent-run__header">
+        <div>
+            <p class="cos-agent-run__eyebrow">{{ run.run.agentName }} · v{{ run.run.agentVersion }}</p>
+            <h3>Agent run</h3>
+        </div>
+        <twig:CosAgentStatus :status="run.run.status" />
+    </header>
+
+    <div class="cos-agent-run__meta">
+        {% if run.run.subjectType and run.run.subjectId %}
+            <span>Subject <code>{{ run.run.subjectType }}:{{ run.run.subjectId }}</code></span>
+        {% endif %}
+        <span>Correlation <code>{{ run.run.correlationId }}</code></span>
+        {% if run.run.confidence is not null %}
+            <span>Confidence {{ (run.run.confidence * 100)|round }}%</span>
+        {% endif %}
+        {% if run.run.durationMs is not null %}
+            <span>{{ run.run.durationMs }} ms</span>
+        {% endif %}
+        {% if run.run.provider and run.run.provider != 'pending' %}
+            <span>{{ run.run.provider }} / {{ run.run.model }}</span>
+        {% endif %}
+        {% if run.run.inputTokens is not null or run.run.outputTokens is not null %}
+            <span>{{ run.run.inputTokens ?? 0 }} in / {{ run.run.outputTokens ?? 0 }} out</span>
+        {% endif %}
+        {% if run.run.costAmount is not null %}
+            <span>{{ run.run.costAmount }} {{ run.run.costCurrency ?? '' }}</span>
+        {% endif %}
+    </div>
+
+    {% if run.run.error %}
+        <div class="cos-agent-warning" role="alert">{{ run.run.error }}</div>
+    {% endif %}
+
+    <twig:CosAgentResult :result="run.result" />
+
+    {% if run.actions is not empty %}
+        <section class="cos-agent-run__actions">
+            <h4>Governed actions</h4>
+            <div class="cos-agent-result__stack">
+                {% for action in run.actions %}
+                    <twig:CosAgentAction :action="action" />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</article>

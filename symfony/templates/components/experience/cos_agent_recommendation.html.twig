@@ -1,0 +1,11 @@
+<article class="cos-agent-recommendation">
+    <div class="cos-agent-recommendation__label">Recommendation</div>
+    <strong>{{ recommendation.type }}</strong>
+    {% if recommendation.targetType and recommendation.targetId %}
+        <small>{{ recommendation.targetType }}:{{ recommendation.targetId }}</small>
+    {% endif %}
+    {% if recommendation.parameters is not empty %}
+        <pre>{{ recommendation.parameters|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+    {% endif %}
+    <p class="cos-agent-recommendation__note">Not executable until it enters the governed Action lifecycle.</p>
+</article>

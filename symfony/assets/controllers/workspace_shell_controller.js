@@ -14,11 +14,15 @@ export default class extends Controller {
         'notificationButton',
         'activityCounter',
         'notificationCounter',
+        'aiPanel',
+        'aiFrame',
+        'aiButton',
     ];
 
     static values = {
         searchUrl: String,
         activityUrl: String,
+        aiUrl: String,
     };
 
     connect() {
@@ -57,6 +61,54 @@ export default class extends Controller {
         }
     }
 
+
+    openAI() {
+        if (!this.hasAiPanelTarget || !this.hasAiFrameTarget || !this.hasAiUrlValue) {
+            return;
+        }
+
+        const url = new URL(this.aiUrlValue, window.location.origin);
+        const workspace = this.element.querySelector('[data-workspace-id]');
+        if (workspace) {
+            const workspaceId = workspace.dataset.workspaceId || '';
+            const entityKey = workspace.dataset.workspacePlatformEntityKeyValue || '';
+            if (workspaceId !== '') {
+                url.searchParams.set('workspace', workspaceId);
+            }
+            if (entityKey !== '') {
+                url.searchParams.set('entity', entityKey);
+            }
+        }
+
+        this.aiPanelTarget.hidden = false;
+        document.body.dataset.cosAiOpen = 'true';
+        this.aiFrameTarget.setAttribute('src', url.toString());
+
+        if (this.hasAiButtonTarget) {
+            this.aiButtonTarget.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    closeAI() {
+        if (!this.hasAiPanelTarget) {
+            return;
+        }
+
+        this.aiPanelTarget.hidden = true;
+        delete document.body.dataset.cosAiOpen;
+
+        if (this.hasAiButtonTarget) {
+            this.aiButtonTarget.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    aiLoaded() {
+        if (!this.hasAiFrameTarget) {
+            return;
+        }
+
+        this.aiFrameTarget.removeAttribute('aria-busy');
+    }
 
     openActivityCenter() {
         this.openActivitySurface('activity');
@@ -275,6 +327,10 @@ export default class extends Controller {
 
             if (this.hasActivityPanelTarget && !this.activityPanelTarget.hidden) {
                 this.closeActivityCenter();
+            }
+
+            if (this.hasAiPanelTarget && !this.aiPanelTarget.hidden) {
+                this.closeAI();
             }
 
             if (this.sidebarTarget.classList.contains('is-mobile-open')) {

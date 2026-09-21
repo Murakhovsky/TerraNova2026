@@ -76,6 +76,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Experience\AI\AIPanelController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Experience\Search\GlobalSearchController:
     public: true
     tags: ['controller.service_arguments']
@@ -169,6 +173,13 @@ services:
 
   Kernel\Queue\Contract\AsyncOperationReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel
+
+  Infrastructure\Platform\ReadModel\MySql\MysqlAgentRunReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Kernel\Agent\Contract\AgentRunReadModelInterface:
+    alias: Infrastructure\Platform\ReadModel\MySql\MysqlAgentRunReadModel
 
   Kernel\Operations\Service\OperationsSectionReader:
     arguments:
