@@ -6,13 +6,13 @@
     <meta name="robots" content="noindex,nofollow">
 {% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/style-lab.css') }}">
+{% endblock %}
+
 {% block body %}
-<main
-    class="cos-ui-catalog"
-    data-controller="appearance"
-    data-appearance-theme-value="light"
-    data-appearance-density-value="comfortable"
->
+<main class="cos-ui-catalog">
     <header class="cos-ui-catalog__header">
         <div>
             <p class="cos-ui-catalog__kicker">COS Experience Platform</p>
@@ -23,14 +23,38 @@
             </p>
         </div>
 
-        <div class="cos-ui-catalog__controls" aria-label="Appearance controls">
-            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="light">Light</button>
-            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="dark">Dark</button>
-            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setTheme" data-theme="system">System</button>
-            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setDensity" data-density="comfortable">Comfortable</button>
-            <button class="cos-button cos-button--sm" type="button" data-action="click->appearance#setDensity" data-density="compact">Compact</button>
-        </div>
     </header>
+
+    {% include 'experience/_style_lab_switcher.html.twig' with {'style': 'origin-a'} only %}
+
+    <section class="cos-ui-catalog__section" aria-labelledby="style-lab-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="style-lab-heading">PHASE 2 Style Lab</h2>
+            <p>Light/Dark are controls; Origin A/B/C and Glass are visual candidates.</p>
+        </div>
+        <div class="cos-ui-catalog__grid">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Origin A</p>
+                <h3 class="cos-card__title">Graphite Precision</h3>
+                <p class="cos-card__copy">Найсуворіший Calm Technical: cold neutral workspace, graphite shell, cobalt signal.</p>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Origin B</p>
+                <h3 class="cos-card__title">Executive Warmth</h3>
+                <p class="cos-card__copy">Точна структура з дуже стриманим amber atmosphere для premium business character.</p>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Origin C</p>
+                <h3 class="cos-card__title">Future Mineral</h3>
+                <p class="cos-card__copy">Холодніший mineral/cobalt direction із сильнішим відчуттям operating system нового покоління.</p>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Glass</p>
+                <h3 class="cos-card__title">Executive Glass</h3>
+                <p class="cos-card__copy">Maximum controlled glassmorphism: translucent structure, amber+cobalt atmosphere, opaque-enough data.</p>
+            </article>
+        </div>
+    </section>
 
     <section class="cos-ui-catalog__section" aria-labelledby="constitution-heading">
         <div class="cos-ui-catalog__section-head">
