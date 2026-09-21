@@ -64,11 +64,19 @@ final class SecurityPlatformSmokeCommand extends Command
             $download = $this->downloads->create('security-smoke', '../unsafe/report.txt', 'text/plain');
             foreach ([
                 'Content-Disposition' => 'attachment;',
-                'Cache-Control' => 'private, no-store',
                 'X-Content-Type-Options' => 'nosniff',
             ] as $header => $marker) {
                 if (!str_contains((string) $download->headers->get($header), $marker)) {
                     $output->writeln(sprintf('<error>Private download header is invalid: %s</error>', $header));
+
+                    return Command::FAILURE;
+                }
+            }
+
+            $cacheControl = (string) $download->headers->get('Cache-Control');
+            foreach (['private', 'no-store', 'max-age=0'] as $directive) {
+                if (!str_contains($cacheControl, $directive)) {
+                    $output->writeln(sprintf('<error>Private download cache directive is missing: %s</error>', $directive));
 
                     return Command::FAILURE;
                 }
