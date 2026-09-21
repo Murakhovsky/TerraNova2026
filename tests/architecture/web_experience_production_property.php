@@ -55,21 +55,21 @@ $notContains($listing, '<form class="tn-crm-filters"', 'Property Listing must no
 
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
-    "($value['kind'] ?? '') === 'actions'",
+    '($value[\'kind\'] ?? \'\') === \'actions\'',
     "partial('components/ui/action_bar'",
-    "'actions' => is_array($value['items']",
+    '\'actions\' => is_array($value[\'items\']',
 ] as $marker) {
     $contains($dataTable, $marker, 'Canonical DataTable must support reusable action cells.');
 }
 
 $docs = $read('docs/03-architecture/cos-production-property-adoption.md');
 foreach ([
-    '# COS Production Property Adoption',
+    '# Впровадження Property у production UI',
     '## Хвиля 1',
-    '### Manager Registry',
+    '### Реєстр менеджера (\`Manager Registry\`)',
     '### Sales Inventory',
-    '### Compare',
-    '## Editable grid boundary',
+    '### Порівняння (\`Compare\`)',
+    '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'Property production adoption documentation is incomplete.');
