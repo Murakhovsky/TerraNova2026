@@ -56,6 +56,22 @@ ensure_secret() {
   echo "Initialized missing runtime secret: $key"
 }
 
+wait_for_healthy_service() {
+  local service="$1"
+  local attempts="${2:-30}"
+  local container_id=""
+
+  for attempt in $(seq 1 "$attempts"); do
+    container_id="$("${COMPOSE[@]}" ps -q "$service" 2>/dev/null || true)"
+    if [[ -n "$container_id" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$container_id" 2>/dev/null || true)" == "healthy" ]]; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  return 1
+}
+
 ensure_secret SYMFONY_APP_SECRET
 ensure_secret SPATIAL_JWT_SECRET
 ensure_secret MERCURE_JWT_SECRET
@@ -63,10 +79,7 @@ ensure_secret MERCURE_JWT_SECRET
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" build --pull php nginx
 
-# Port 8081 is reserved for the canonical COS HTTP runtime. Older compose
-# projects can survive a runtime cutover and keep that host binding even
-# after their files have been retired. Remove only foreign Docker owners;
-# the canonical cos/nginx container is left for Compose to reconcile.
+# Port 8081 belongs exclusively to the canonical COS HTTP runtime.
 COS_HTTP_PORT="${COS_HTTP_PORT:-8081}"
 while IFS= read -r container_id; do
   [[ -n "$container_id" ]] || continue
@@ -82,13 +95,13 @@ while IFS= read -r container_id; do
   "${DOCKER[@]}" rm -f "$container_id"
 done < <("${DOCKER[@]}" ps --filter "publish=$COS_HTTP_PORT" --format '{{.ID}}')
 
-# Keep the public HTTP socket alive across application deployments.
-# Nginx uses Docker DNS with dynamic upstream resolution, so PHP/Mercure can
-# be replaced behind it without dropping 127.0.0.1:8081.
+# Preserve the current public socket while application containers are replaced.
+# The nginx config uses Docker DNS with dynamically resolved PHP/Mercure upstreams.
 NGINX_ID="$("${COMPOSE[@]}" ps -q nginx 2>/dev/null || true)"
 NGINX_HOT_RELOAD=0
 if [[ -n "$NGINX_ID" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Running}}' "$NGINX_ID" 2>/dev/null || true)" == "true" ]]; then
   echo "Hot-reloading canonical nginx without dropping 127.0.0.1:$COS_HTTP_PORT."
+
   "${DOCKER[@]}" exec "$NGINX_ID" cp /etc/nginx/conf.d/default.conf /tmp/default.conf.deploy-backup
   "${DOCKER[@]}" cp docker/symfony/nginx/default.conf "$NGINX_ID":/etc/nginx/conf.d/default.conf
 
@@ -116,16 +129,7 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 
-for attempt in $(seq 1 30); do
-  mercure_id="$("${COMPOSE[@]}" ps -q mercure)"
-  if [[ -n "$mercure_id" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$mercure_id" 2>/dev/null || true)" == "healthy" ]]; then
-    break
-  fi
-  sleep 2
-done
-
-mercure_id="$("${COMPOSE[@]}" ps -q mercure)"
-if [[ -z "$mercure_id" ]] || [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$mercure_id" 2>/dev/null || true)" != "healthy" ]]; then
+if ! wait_for_healthy_service mercure 30; then
   echo "Mercure failed readiness before canonical HTTP startup." >&2
   "${COMPOSE[@]}" logs --no-color --tail=200 mercure >&2 || true
   exit 32
@@ -134,40 +138,13 @@ fi
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:schema:migrate
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
-mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)for attempt in $(seq 1 30); do
-  if curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
-    break
-  fi
-  sleep 2
-done
-
-if ! curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
-  cat /tmp/cos-health.json >&2 2>/dev/null || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mercure mysql redis >&2 || true
-  exit 31
-fi
-
-if ! "${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke; then
-  echo "Architecture Graph runtime smoke failed." >&2
-  exit 30
-fi
-"${COMPOSE[@]}" ps
-printf 'COS Symfony deployment completed successfully.\n'
-)
+# Replace application and worker containers, but deliberately leave nginx alive.
+mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)$')
 if (( ${#RUNTIME_SERVICES[@]} > 0 )); then
   "${COMPOSE[@]}" up -d --no-deps --remove-orphans "${RUNTIME_SERVICES[@]}"
 fi
 
-for attempt in $(seq 1 30); do
-  php_id="$("${COMPOSE[@]}" ps -q php)"
-  if [[ -n "$php_id" ]] && [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$php_id" 2>/dev/null || true)" == "healthy" ]]; then
-    break
-  fi
-  sleep 2
-done
-
-php_id="$("${COMPOSE[@]}" ps -q php)"
-if [[ -z "$php_id" ]] || [[ "$("${DOCKER[@]}" inspect -f '{{.State.Health.Status}}' "$php_id" 2>/dev/null || true)" != "healthy" ]]; then
+if ! wait_for_healthy_service php 30; then
   echo "Symfony PHP failed readiness during rolling deployment." >&2
   "${COMPOSE[@]}" logs --no-color --tail=200 php >&2 || true
   exit 34
@@ -195,5 +172,6 @@ if ! "${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke; then
   echo "Architecture Graph runtime smoke failed." >&2
   exit 30
 fi
+
 "${COMPOSE[@]}" ps
-printf 'COS Symfony deployment completed successfully.\n'
+printf 'COS Symfony rolling deployment completed successfully.\n'
