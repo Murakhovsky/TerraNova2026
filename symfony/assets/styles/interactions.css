@@ -356,3 +356,30 @@
     transition: none;
   }
 }
+
+
+/* PHASE 6 selected / active states for canonical navigation primitives. */
+.cos-dropdown__menu :where(a, button, [role="menuitem"]):active,
+.cos-dropdown__menu :where(a, button, [role="menuitem"])[aria-current="page"],
+.cos-dropdown__menu :where(a, button, [role="menuitem"])[aria-checked="true"],
+.cos-dropdown__menu :where(a, button, [role="menuitem"])[data-cos-state="selected"] {
+  color: var(--cos-color-primary-strong);
+  background: var(--cos-state-selected-bg);
+}
+
+.cos-tabs__tab:active,
+.cos-tabs__tab[data-cos-state="active"] {
+  background: var(--cos-state-active-bg);
+}
+
+.cos-tabs__tab[data-cos-state="focus"] {
+  color: var(--cos-color-text);
+  outline: 3px solid var(--cos-focus-ring);
+  outline-offset: -3px;
+}
+
+.cos-tabs__tab[data-cos-state="selected"] {
+  color: var(--cos-color-primary-strong);
+  background: var(--cos-state-selected-bg);
+  border-bottom-color: var(--cos-color-primary);
+}
