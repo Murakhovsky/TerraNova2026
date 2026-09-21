@@ -141,6 +141,26 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 - media review, contact information та published-property deep link збережені;
 - moderation POST contract не змінено: review, needs_changes, approve, publish, reject і spam лишаються окремими `moderation_action`.
 
+## Хвиля 7
+
+### SEO-добірка (`SEO Landing`)
+
+`property/seo.phtml`
+
+- legacy SEO hero замінено на canonical PageHeader;
+- sale/rent/investment navigation переведено у canonical actions;
+- unavailable/empty catalog states переведено на canonical State;
+- schema.org Product/Offer markup, pagination та favourite behavior збережені.
+
+### Публічна подача (`Property Submit`)
+
+`property/submit.phtml`
+
+- legacy submit hero замінено на canonical PageHeader;
+- unavailable state використовує canonical State;
+- multipart POST form лишається спеціалізованою submission form;
+- honeypot, owner/contact fields, property fields, media inputs і moderation submission contract не змінені.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -164,5 +184,6 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 - Catalog, Map і Favourites використовують canonical PageHeader/State із збереженням live JS counters;
 - Property Show/Presentation використовують canonical State + ActionBar, а simple group presentation — PageHeader;
 - Submission Detail використовує canonical State + PageHeader + Panel без зміни moderation actions;
+- SEO Landing і Property Submit використовують canonical PageHeader/State без зміни structured catalog або submission contracts;
 - editable grids явно зафіксовані як наступний migration boundary;
 - architecture gate виконується у CI.
