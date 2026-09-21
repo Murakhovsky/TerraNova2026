@@ -30,6 +30,8 @@ on:
       - 'tests/architecture/web_experience_wave12_security.php'
       - 'tests/architecture/web_experience_wave12_feature_flags.php'
       - 'tests/architecture/web_experience_wave12_audit_history.php'
+      - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'tests/unit/ui_catalog_registry.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -78,6 +80,8 @@ on:
       - 'tests/architecture/web_experience_wave12_security.php'
       - 'tests/architecture/web_experience_wave12_feature_flags.php'
       - 'tests/architecture/web_experience_wave12_audit_history.php'
+      - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'tests/unit/ui_catalog_registry.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -290,6 +294,15 @@ jobs:
 
       - name: Audit History runtime smoke
         run: docker compose exec -T php php bin/console cos:platform:audit-history:smoke
+
+      - name: UI Catalog architecture gate
+        run: php tests/architecture/web_experience_wave12_ui_catalog.php
+
+      - name: UI Catalog registry unit
+        run: php tests/unit/ui_catalog_registry.php
+
+      - name: UI Catalog runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:ui-catalog:smoke
 
       - name: Web Security response headers smoke
         run: |
