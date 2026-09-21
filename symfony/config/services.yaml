@@ -247,6 +247,9 @@ services:
   Domains\Property\Contract\PropertyBrokerageReferencePort:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort
 
+  App\Application\Experience\Search\Contract\PropertyEntitySearchInterface:
+    alias: App\Infrastructure\Experience\Search\PropertyEntitySearchAdapter
+
   # Wave 9 — Property / RealEstate business cutover
   Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyCanonicalRuntimeRepository:
     arguments:
@@ -367,6 +370,9 @@ services:
 
   Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
+
+  App\Application\Experience\Search\Contract\SalesEntitySearchInterface:
+    alias: App\Infrastructure\Experience\Search\SalesEntitySearchAdapter
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAssignmentAuthority:
     arguments:
