@@ -10,7 +10,7 @@ kind: architecture
 
 Wave 12.26 завершує production cutover референсного Sales vertical.
 
-## Production routes
+## Production-маршрути
 
 Після cutover:
 
