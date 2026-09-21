@@ -33,7 +33,7 @@ $componentNames = array_map(
 );
 sort($componentNames);
 
-preg_match_all("/\\$this->entry\\('([^']+)'/", $registry, $matches);
+preg_match_all("/entry\\('([^']+)'/", $registry, $matches);
 $registered = $matches[1] ?? [];
 sort($registered);
 
