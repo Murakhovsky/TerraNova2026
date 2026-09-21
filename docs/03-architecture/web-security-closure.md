@@ -8,7 +8,7 @@ kind: architecture
 
 # Закриття Web-безпеки
 
-Wave 12.19 не створює окрему security-систему для UI. Вона фіксує, що Symfony Web Platform використовує ті самі identity, tenant, permissions та write contracts, що й решта COS, і додає відсутні transport-level guards. Це відповідає переліку Wave 12.19 у ТЗ. fileciteturn239file2L1-L1
+Wave 12.19 не створює окрему security-систему для UI. Вона фіксує, що Symfony Web Platform використовує ті самі identity, tenant, permissions та write contracts, що й решта COS, і додає відсутні transport-level guards. Це відповідає переліку Wave 12.19 у канонічному ТЗ.
 
 ## Захист запитів із сесією
 
