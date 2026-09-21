@@ -125,7 +125,7 @@ if (!preg_match('/nginx:\s.*?depends_on:\s.*?php:\s*condition:\s*service_healthy
 }
 
 $nginx = (string) file_get_contents($root . '/docker/symfony/nginx/default.conf');
-foreach (['location = /.well-known/mercure', 'proxy_pass http://mercure', 'proxy_buffering off', 'X-Accel-Buffering'] as $marker) {
+foreach (['location = /.well-known/mercure', 'proxy_pass http://cos_mercure_backend', 'proxy_buffering off', 'X-Accel-Buffering'] as $marker) {
     if (!str_contains($nginx, $marker)) {
         throw new RuntimeException('Mercure same-origin SSE proxy is missing: ' . $marker);
     }
