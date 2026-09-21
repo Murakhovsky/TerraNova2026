@@ -96,7 +96,6 @@ generated: true
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
-
 ## `web.workspace.extensions`
 
 Тип: **module-defined**.
