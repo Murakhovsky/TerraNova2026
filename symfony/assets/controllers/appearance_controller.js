@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
     static values = {
-        theme: { type: String, default: 'light' },
+        theme: { type: String, default: 'origin' },
         density: { type: String, default: 'comfortable' },
     };
 
@@ -33,7 +33,7 @@ export default class extends Controller {
     }
 
     normalizeTheme(theme) {
-        return ['light', 'dark', 'system'].includes(theme) ? theme : 'system';
+        return ['light', 'dark', 'origin', 'system'].includes(theme) ? theme : 'origin';
     }
 
     normalizeDensity(density) {
