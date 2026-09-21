@@ -27,6 +27,7 @@ on:
       - 'tests/architecture/web_experience_wave12_mobile.php'
       - 'tests/architecture/web_experience_wave12_pwa.php'
       - 'tests/architecture/web_experience_wave12_native.php'
+      - 'tests/architecture/web_experience_wave12_security.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -66,6 +67,7 @@ on:
       - 'tests/architecture/web_experience_wave12_mobile.php'
       - 'tests/architecture/web_experience_wave12_pwa.php'
       - 'tests/architecture/web_experience_wave12_native.php'
+      - 'tests/architecture/web_experience_wave12_security.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -240,6 +242,17 @@ jobs:
 
       - name: Native-ready runtime smoke
         run: docker compose exec -T php php bin/console cos:web:native-ready:smoke
+
+      - name: Web Security architecture gate
+        run: php tests/architecture/web_experience_wave12_security.php
+
+      - name: Web Security runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:security:smoke
+
+      - name: Web Security response headers smoke
+        run: |
+          curl --fail --silent --head http://127.0.0.1:8081/ | grep -qi '^content-security-policy:'
+          curl --fail --silent --head http://127.0.0.1:8081/ | grep -qi '^x-content-type-options: nosniff'
 
       - name: PWA static delivery smoke
         run: |
