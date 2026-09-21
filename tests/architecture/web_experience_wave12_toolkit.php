@@ -6,8 +6,6 @@ $root = dirname(__DIR__, 2);
 
 require_once $root . '/symfony/src/Web/Experience/Adapter/BrowserAdapter.php';
 
-use App\Web\Experience\Adapter\BrowserAdapter;
-
 $requiredPackages = [
     'symfony/form',
     'symfony/translation',
@@ -88,11 +86,11 @@ foreach ([
 }
 
 $expectedAdapters = [
-    [BrowserAdapter::Tabulator, 'tabulator-tables', 'adapters--tabulator'],
-    [BrowserAdapter::FullCalendar, 'fullcalendar', 'adapters--calendar'],
-    [BrowserAdapter::Sortable, 'sortablejs', 'adapters--sortable'],
-    [BrowserAdapter::Flatpickr, 'flatpickr', 'adapters--flatpickr'],
-    [BrowserAdapter::Cytoscape, 'cytoscape', 'adapters--cytoscape'],
+    [\App\Web\Experience\Adapter\BrowserAdapter::Tabulator, 'tabulator-tables', 'adapters--tabulator'],
+    [\App\Web\Experience\Adapter\BrowserAdapter::FullCalendar, 'fullcalendar', 'adapters--calendar'],
+    [\App\Web\Experience\Adapter\BrowserAdapter::Sortable, 'sortablejs', 'adapters--sortable'],
+    [\App\Web\Experience\Adapter\BrowserAdapter::Flatpickr, 'flatpickr', 'adapters--flatpickr'],
+    [\App\Web\Experience\Adapter\BrowserAdapter::Cytoscape, 'cytoscape', 'adapters--cytoscape'],
 ];
 
 foreach ($expectedAdapters as [$adapter, $module, $controller]) {
@@ -129,6 +127,39 @@ foreach ($adapterFiles as $file) {
             ));
         }
     }
+}
+
+$importmap = (string) file_get_contents($root . '/symfony/importmap.php');
+foreach ([
+    "'bootstrap'",
+    "'bootstrap/dist/css/bootstrap.min.css'",
+    "'chart.js'",
+    "'tabulator-tables'",
+    "'fullcalendar'",
+    "'sortablejs'",
+    "'flatpickr'",
+    "'cytoscape'",
+    "'tom-select'",
+    "'@symfony/ux-translator'",
+    "'intl-messageformat'",
+] as $specifier) {
+    if (!str_contains($importmap, $specifier)) {
+        throw new RuntimeException('Browser import is missing from canonical ImportMap: ' . $specifier);
+    }
+}
+
+if (str_contains($importmap, 'https://') || str_contains($importmap, 'http://')) {
+    throw new RuntimeException('Canonical ImportMap must not contain runtime CDN URLs.');
+}
+
+$app = (string) file_get_contents($root . '/symfony/assets/app.js');
+if (!str_contains($app, "import 'bootstrap';")) {
+    throw new RuntimeException('Bootstrap browser runtime is not activated by app.js.');
+}
+
+$base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
+if (!str_contains($base, "asset('bootstrap/dist/css/bootstrap.min.css')")) {
+    throw new RuntimeException('Bootstrap stylesheet is not loaded by the canonical Twig layout.');
 }
 
 $translator = (string) file_get_contents($root . '/symfony/assets/translator.js');
