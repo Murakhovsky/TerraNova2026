@@ -140,3 +140,185 @@
     justify-content: flex-start;
   }
 }
+
+
+/* Wave 12.22 — internal component playground. */
+.cos-ui-playground__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cos-space-2);
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+}
+
+.cos-ui-playground__stats span {
+  padding: var(--cos-space-1) var(--cos-space-2);
+  background: var(--cos-color-surface-subtle);
+  border: 1px solid var(--cos-color-border);
+  border-radius: var(--cos-radius-pill);
+}
+
+.cos-ui-playground__toolbar {
+  position: sticky;
+  top: calc(var(--cos-space-2) + 4.25rem);
+  z-index: var(--cos-z-header);
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) minmax(11rem, .35fr) auto;
+  gap: var(--cos-space-3);
+  align-items: end;
+  padding: var(--cos-space-3);
+  background: color-mix(in srgb, var(--cos-color-surface) 94%, transparent);
+  border: 1px solid var(--cos-color-border);
+  border-radius: var(--cos-radius-md);
+  box-shadow: var(--cos-shadow-ui);
+  backdrop-filter: blur(12px);
+}
+
+.cos-ui-playground__search,
+.cos-ui-playground__category {
+  display: grid;
+  gap: var(--cos-space-1);
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+  font-weight: 700;
+}
+
+.cos-ui-playground__groups {
+  display: grid;
+  gap: var(--cos-space-6);
+}
+
+.cos-ui-playground__group {
+  display: grid;
+  gap: var(--cos-space-3);
+}
+
+.cos-ui-playground__group[hidden],
+.cos-ui-playground__entry[hidden] {
+  display: none;
+}
+
+.cos-ui-playground__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cos-space-3);
+  padding-bottom: var(--cos-space-2);
+  border-bottom: 1px solid var(--cos-color-border);
+}
+
+.cos-ui-playground__group-head h3 {
+  margin: 0;
+  color: var(--cos-color-text);
+  font-size: var(--cos-font-base);
+}
+
+.cos-ui-playground__group-head span {
+  color: var(--cos-color-text-muted);
+  font-family: var(--cos-font-mono);
+  font-size: var(--cos-font-xs);
+}
+
+.cos-ui-playground__inventory {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--cos-space-3);
+}
+
+.cos-ui-playground__entry {
+  display: grid;
+  gap: var(--cos-space-3);
+  min-width: 0;
+  padding: var(--cos-space-4);
+  background: var(--cos-color-surface);
+  border: 1px solid var(--cos-color-border);
+  border-radius: var(--cos-radius-md);
+}
+
+.cos-ui-playground__entry-head {
+  display: flex;
+  gap: var(--cos-space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cos-ui-playground__entry code {
+  overflow-wrap: anywhere;
+  color: var(--cos-color-text);
+  font-family: var(--cos-font-mono);
+  font-size: var(--cos-font-sm);
+  font-weight: 750;
+}
+
+.cos-ui-playground__entry p {
+  margin: 0;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-sm);
+}
+
+.cos-ui-playground__maturity {
+  flex: none;
+  padding: .15rem .45rem;
+  color: var(--cos-color-positive);
+  background: var(--cos-color-positive-soft);
+  border-radius: var(--cos-radius-pill);
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.cos-ui-playground__maturity--reference {
+  color: var(--cos-color-info);
+  background: var(--cos-color-info-soft);
+}
+
+.cos-ui-playground__maturity--experimental {
+  color: var(--cos-color-warning);
+  background: var(--cos-color-warning-soft);
+}
+
+.cos-ui-playground__states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cos-space-1);
+}
+
+.cos-ui-playground__states span {
+  padding: .1rem .4rem;
+  color: var(--cos-color-text-muted);
+  background: var(--cos-color-surface-subtle);
+  border-radius: var(--cos-radius-sm);
+  font-family: var(--cos-font-mono);
+  font-size: .65rem;
+}
+
+.cos-ui-playground__reference {
+  width: fit-content;
+  color: var(--cos-color-primary-strong);
+  font-size: var(--cos-font-xs);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.cos-ui-playground__reference:hover,
+.cos-ui-playground__reference:focus-visible {
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .cos-ui-playground__stats {
+    justify-content: flex-start;
+  }
+
+  .cos-ui-playground__toolbar {
+    position: static;
+    grid-template-columns: 1fr;
+  }
+
+  .cos-ui-playground__inventory {
+    grid-template-columns: 1fr;
+  }
+}
