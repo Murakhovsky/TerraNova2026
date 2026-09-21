@@ -6,14 +6,21 @@ namespace App\Web\Experience\Extension\Provider;
 
 use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
+use App\Web\Experience\Extension\Contract\SearchProviderInterface;
 use App\Web\Experience\Extension\Contract\WorkspaceProviderInterface;
 use App\Web\Experience\Extension\Model\NavigationContribution;
+use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 
-final class SalesWebProvider implements NavigationProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
+final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
 {
+    public function __construct(private readonly SearchResultMatcher $matcher)
+    {
+    }
+
     public function serviceId(): string
     {
         return 'salesNavigationContributor';
@@ -45,6 +52,19 @@ final class SalesWebProvider implements NavigationProviderInterface, CommandProv
         }
 
         return $items;
+    }
+
+    public function search(WebExtensionContext $context, string $query, int $limit = 10): array
+    {
+        return $this->matcher->match([
+            new SearchResult('sales.search.overview', 'Sales Overview', '/sales/dashboard', 'workspace', 'Sales dashboard'),
+            new SearchResult('sales.search.today', 'Sales Today', '/sales/today', 'workspace', 'Today queue'),
+            new SearchResult('sales.search.pipeline', 'Sales Pipeline', '/sales/pipeline', 'workspace', 'Pipeline'),
+            new SearchResult('sales.search.leads', 'Lead Workspace', '/sales/leads', 'workspace', 'Sales leads'),
+            new SearchResult('sales.search.deals', 'Deal Workspace', '/sales/deals', 'workspace', 'Sales deals'),
+            new SearchResult('sales.search.clients', 'Client Inbox', '/client-case/inbox', 'workspace', 'Clients'),
+            new SearchResult('sales.search.director', 'Sales Director', '/sales/director', 'workspace', 'Sales analytics'),
+        ], $query, $limit);
     }
 
     public function commands(WebExtensionContext $context): array
