@@ -24,9 +24,9 @@ return [
             'event.consumers' => [
                 'salesHistoricalEventConsumer',
             ],
-            'web.navigation' => ['salesWebProvider'],
-            'web.commands' => ['salesWebProvider'],
-            'web.workspace' => ['salesWebProvider'],
+            'web.navigation' => ['salesNavigationContributor'],
+            'web.commands' => ['salesNavigationContributor'],
+            'web.workspace' => ['salesNavigationContributor'],
         ],
         'cross_domain_contracts' => [
             [
