@@ -6,6 +6,7 @@ namespace App\Web\Observability;
 
 use Kernel\Observability\StructuredLoggerInterface;
 use Kernel\Operations\Contract\MetricsRecorderInterface;
+use Throwable;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,17 +49,21 @@ final readonly class WebTelemetryController
             'user_agent' => $this->boundedText((string) $request->headers->get('User-Agent', ''), 240),
         ];
 
-        $this->logger->log($type === 'error' || $type === 'unhandledrejection' ? 'warning' : 'info', 'web.telemetry.' . $type, $context);
+        try {
+            $this->logger->log($type === 'error' || $type === 'unhandledrejection' ? 'warning' : 'info', 'web.telemetry.' . $type, $context);
 
-        $labels = ['type' => $type, 'surface' => $surface];
-        $this->metrics->record('cos.web.telemetry.events', 1.0, null, $labels);
+            $labels = ['type' => $type, 'surface' => $surface];
+            $this->metrics->record('cos.web.telemetry.events', 1.0, null, $labels);
 
-        if ($durationMs !== null) {
-            $this->metrics->record('cos.web.telemetry.duration_ms', $durationMs, null, $labels);
-        }
+            if ($durationMs !== null) {
+                $this->metrics->record('cos.web.telemetry.duration_ms', $durationMs, null, $labels);
+            }
 
-        if ($value !== null) {
-            $this->metrics->record('cos.web.telemetry.value', $value, null, $labels);
+            if ($value !== null) {
+                $this->metrics->record('cos.web.telemetry.value', $value, null, $labels);
+            }
+        } catch (Throwable) {
+            // Browser telemetry is diagnostic-only. Storage failure must never affect the page.
         }
 
         return new Response('', Response::HTTP_NO_CONTENT, [
