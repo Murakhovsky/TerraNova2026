@@ -117,6 +117,55 @@ foreach ([
 $notContains($director, '<form method="get" class="tn-ui-toolbar">', 'Sales Director must not restore a local toolbar.');
 $notContains($director, 'class="tn-ui-table"', 'Sales Director must not restore raw local tables.');
 
+
+$adminLegacySurfaces = [
+    'Teams' => $read('app/Interfaces/Web/View/sales_admin/teams.phtml'),
+    'Integrations' => $read('app/Interfaces/Web/View/sales_admin/integrations.phtml'),
+    'Health & Audit' => $read('app/Interfaces/Web/View/sales_admin/health.phtml'),
+];
+foreach ($adminLegacySurfaces as $surface => $source) {
+    foreach ([
+        "partial('components/sales/navigation'",
+        "partial('components/ui/page_header'",
+    ] as $marker) {
+        $contains($source, $marker, 'Sales Admin ' . $surface . ' must use the canonical workspace shell.');
+    }
+    foreach ([
+        'sales-admin-page',
+        'sales-admin-header',
+        'sales-admin-card',
+    ] as $legacyMarker) {
+        $notContains($source, $legacyMarker, 'Sales Admin ' . $surface . ' must not restore the legacy administration visual shell.');
+    }
+}
+foreach ([
+    "partial('components/ui/data_table'",
+    'data-sales-team-admin',
+    'data-membership-form',
+    'data-capabilities-form',
+] as $marker) {
+    $contains($adminLegacySurfaces['Teams'], $marker, 'Sales Teams migration lost a canonical or behavior contract.');
+}
+foreach ([
+    "partial('components/ui/status_badge'",
+    'data-sales-integration-admin',
+    'data-create-integration',
+    'data-update-integration',
+    'data-test-integration',
+    'data-route-form',
+] as $marker) {
+    $contains($adminLegacySurfaces['Integrations'], $marker, 'Sales Integrations migration lost a canonical or behavior contract.');
+}
+foreach ([
+    "partial('components/ui/kpi_card'",
+    "partial('components/ui/status_badge'",
+    'Operational metrics',
+    'Audit timeline',
+    'Configuration',
+] as $marker) {
+    $contains($adminLegacySurfaces['Health & Audit'], $marker, 'Sales Health migration lost a canonical observability contract.');
+}
+
 $filterBar = $read('app/Interfaces/Web/View/components/ui/filter_bar.phtml');
 foreach ([
     "'number'",
@@ -139,6 +188,10 @@ foreach ([
     'Список угод (`Deals`)',
     'Операційний inbox (`Today`)',
     'Робочий простір директора (`Director Workspace`)',
+    'Хвиля 3',
+    'Команди та повноваження (`Teams & Authority`)',
+    'Інтеграції (`Integrations`)',
+    'Стан та аудит (`Health & Audit`)',
     'Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 9 documentation is incomplete.');
