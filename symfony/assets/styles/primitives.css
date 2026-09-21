@@ -520,10 +520,10 @@ body {
   width: min(22rem, calc(100vw - 2rem));
   padding: var(--cos-density-panel-padding);
   color: var(--cos-color-text);
-  background: var(--cos-color-surface);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-floating-bg);
+  border: 1px solid var(--cos-surface-border);
   border-radius: var(--cos-radius-md);
-  box-shadow: var(--cos-shadow-overlay);
+  box-shadow: var(--cos-surface-floating-shadow);
 }
 
 .cos-popover__title {
