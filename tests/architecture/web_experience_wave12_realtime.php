@@ -106,6 +106,24 @@ foreach ([
     }
 }
 
+$deploy = (string) file_get_contents($root . '/deploy/dev.sh');
+foreach ([
+    'ensure_secret SYMFONY_APP_SECRET',
+    'ensure_secret SPATIAL_JWT_SECRET',
+    'ensure_secret MERCURE_JWT_SECRET',
+    'up -d mysql redis mercure',
+    'Mercure failed readiness before canonical HTTP startup.',
+    'logs --no-color --tail=250 nginx php mercure mysql redis',
+] as $deployMarker) {
+    if (!str_contains($deploy, $deployMarker)) {
+        throw new RuntimeException('Mercure deployment readiness contract is missing: ' . $deployMarker);
+    }
+}
+
+if (!preg_match('/nginx:\s.*?depends_on:\s.*?php:\s*condition:\s*service_healthy\s*mercure:\s*condition:\s*service_healthy/s', $compose)) {
+    throw new RuntimeException('Nginx must wait for healthy Mercure before startup.');
+}
+
 $nginx = (string) file_get_contents($root . '/docker/symfony/nginx/default.conf');
 foreach (['location = /.well-known/mercure', 'proxy_pass http://mercure', 'proxy_buffering off', 'X-Accel-Buffering'] as $marker) {
     if (!str_contains($nginx, $marker)) {
