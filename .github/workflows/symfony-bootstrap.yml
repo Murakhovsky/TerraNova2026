@@ -32,6 +32,8 @@ on:
       - 'tests/architecture/web_experience_wave12_workspace.php'
       - 'tests/architecture/web_experience_wave12_search.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'tests/architecture/web_experience_style_lab.php'
+      - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
       - 'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md'
       - '.github/workflows/symfony-bootstrap.yml'
@@ -66,6 +68,8 @@ on:
       - 'tests/architecture/web_experience_wave12_workspace.php'
       - 'tests/architecture/web_experience_wave12_search.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'tests/architecture/web_experience_style_lab.php'
+      - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
       - 'docs/11-decisions/ADR-0010-web-ui-foundation-freeze.md'
       - '.github/workflows/symfony-bootstrap.yml'
@@ -173,6 +177,10 @@ jobs:
 
       - name: Visual foundation freeze gate
         run: php tests/architecture/web_experience_visual_foundation.php
+
+      - name: PHASE 2 Style Lab gate
+        run: php tests/architecture/web_experience_style_lab.php
+
 
 
       - name: Workspace Shell runtime smoke
