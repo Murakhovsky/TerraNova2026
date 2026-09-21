@@ -98,9 +98,34 @@ if (str_contains($importmap, "'preload' => true")) {
     throw new RuntimeException('Deprecated AssetMapper preload metadata must not be used.');
 }
 
+foreach ([
+    "'@hotwired/stimulus'",
+    "'@symfony/stimulus-bundle'",
+    "'@hotwired/turbo'",
+    "'@symfony/ux-live-component'",
+] as $runtimeImport) {
+    if (!str_contains($importmap, $runtimeImport)) {
+        throw new RuntimeException('Experience browser runtime import is missing: ' . $runtimeImport);
+    }
+}
+
+$appJs = (string) file_get_contents($root . '/symfony/assets/app.js');
+if (!str_contains($appJs, "import './stimulus_bootstrap.js';")) {
+    throw new RuntimeException('Stimulus bootstrap is not activated by the app entrypoint.');
+}
+
 $base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
 if (!str_contains($base, "importmap('app')") || !str_contains($base, "asset('styles/app.css')")) {
     throw new RuntimeException('Canonical Twig base layout is not AssetMapper-enabled.');
+}
+
+if (!str_contains($base, 'ux_controller_link_tags()')) {
+    throw new RuntimeException('Stimulus controller CSS autoimports are not rendered by the base layout.');
+}
+
+$dockerfile = (string) file_get_contents($root . '/docker/symfony/php/Dockerfile');
+if (!str_contains($dockerfile, 'php bin/console importmap:install')) {
+    throw new RuntimeException('Production image does not vendor ImportMap packages.');
 }
 
 echo "Wave 12.1 Symfony Experience runtime foundation passed.\n";
