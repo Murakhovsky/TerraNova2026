@@ -1,3 +1,8 @@
+cos_web_global_search:
+  path: /workspace/search
+  controller: App\Web\Experience\Search\GlobalSearchController
+  methods: [GET, HEAD]
+
 cos_web_workspace_shell_preview:
   path: /dev/shell
   controller: App\Web\Experience\Dev\WorkspaceShellPreviewController
