@@ -1,0 +1,3 @@
+<form class="cos-filter-bar" method="{{ this.formMethod() }}" {% if action %}action="{{ action }}"{% endif %} aria-label="{{ label }}">
+    <div class="cos-filter-bar__fields">{% block content %}{% endblock %}</div>
+</form>
