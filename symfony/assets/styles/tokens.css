@@ -233,6 +233,12 @@ html[data-cos-density="comfortable"] {
     --cos-color-on-primary: #10131a;
     --cos-color-border: #2e343d;
     --cos-color-border-strong: #414955;
+    --cos-color-shell: #101216;
+    --cos-color-shell-text: #f3f5f7;
+    --cos-color-shell-muted: rgba(243, 245, 247, 0.62);
+    --cos-color-shell-border: rgba(255, 255, 255, 0.08);
+    --cos-color-shell-hover: rgba(255, 255, 255, 0.06);
+    --cos-color-shell-active: rgba(125, 140, 255, 0.18);
 
     --cos-color-primary: #7d8cff;
     --cos-color-primary-hover: #919dff;
