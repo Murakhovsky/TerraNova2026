@@ -7,6 +7,7 @@ namespace App\Web\Sales;
 use App\Application\Sales\Query\GetSalesDashboardQuery;
 use App\Application\Sales\Query\GetSalesLeadQuery;
 use App\Application\Sales\Query\ListSalesLeadsQuery;
+use App\Application\Sales\Admin\SalesAdminQuery;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\ProviderBackedShellNavigation;
 use App\Web\Experience\Model\EntityRef;
@@ -75,10 +76,12 @@ final readonly class SalesWorkspaceController
                 'status' => trim((string) $request->query->get('status', '')),
                 'source' => trim((string) $request->query->get('source', '')),
             ],
+            'owners' => $this->owners($tenant),
+            'csrfToken' => $this->csrf($request),
         ]);
     }
 
-    public function lead(string $id): Response
+    public function lead(Request $request, string $id): Response
     {
         $tenant = $this->manager();
         if ($tenant instanceof Response) return $tenant;
@@ -106,6 +109,8 @@ final readonly class SalesWorkspaceController
             ]),
             'workspace' => $workspace,
             'lead' => $lead,
+            'owners' => $this->owners($tenant),
+            'csrfToken' => $this->csrf($request),
         ]);
     }
 
@@ -148,6 +153,33 @@ final readonly class SalesWorkspaceController
             connectionState: ShellConnectionState::Live,
             aiAvailable: true,
         );
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function owners(TenantContext $tenant): array
+    {
+        $users = $this->queries->ask(new SalesAdminQuery($tenant->organizationId(), 'team.users'));
+        if (!is_array($users)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $users,
+            static fn (mixed $user): bool => is_array($user)
+                && strtolower((string) ($user['status'] ?? '')) === 'active'
+                && in_array(
+                    strtolower((string) ($user['organization_role'] ?? $user['role'] ?? '')),
+                    ['manager', 'admin'],
+                    true,
+                ),
+        ));
+    }
+
+    private function csrf(Request $request): string
+    {
+        return $request->hasSession()
+            ? (string) $request->getSession()->get('cos_csrf_token', '')
+            : '';
     }
 
     /** @param array<string,mixed> $variables */
