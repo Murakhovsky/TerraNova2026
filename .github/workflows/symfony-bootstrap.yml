@@ -137,6 +137,8 @@ jobs:
           curl --fail --silent http://127.0.0.1:8081/auth/login | grep -q 'Вхід'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/cabinet)" = "302"
           curl --silent --head http://127.0.0.1:8081/cabinet | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/ui)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/ui | grep -qi '^location: /auth/login'
 
       - name: Logs on failure
         if: failure()
