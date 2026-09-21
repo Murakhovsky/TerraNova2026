@@ -173,7 +173,7 @@ Domain rollout
 
 Експеримент не повинен вимагати зміни business contracts або duplication component tree.
 
-## Definition of Done PHASE 0
+## Критерії завершення PHASE 0
 
 Foundation вважається замороженою, якщо:
 
