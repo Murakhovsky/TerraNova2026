@@ -1,3 +1,8 @@
+cos_web_workspace_shell_preview:
+  path: /dev/shell
+  controller: App\Web\Experience\Dev\WorkspaceShellPreviewController
+  methods: [GET, HEAD]
+
 cos_web_design_system_catalog:
   path: /dev/ui
   controller: App\Web\Experience\Dev\DesignSystemCatalogController
