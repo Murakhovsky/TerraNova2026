@@ -38,6 +38,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Experience\Dev\DesignSystemCatalogController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Security\CosIdentityLoader:
     arguments:
       $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
