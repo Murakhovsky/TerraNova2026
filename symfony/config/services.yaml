@@ -1736,6 +1736,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Sales\SalesReferenceController:
+    public: true
+    tags: ['controller.service_arguments']
+
   Domains\Sales\Application\Service\SalesAdministrationHealthClassifier: ~
 
   Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel:
