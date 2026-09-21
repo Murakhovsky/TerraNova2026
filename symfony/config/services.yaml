@@ -124,6 +124,9 @@ services:
   Kernel\Tenant\Contract\TenantContextProviderInterface:
     alias: App\Security\SecurityTenantContextProvider
 
+  App\Application\Security\Contract\MutationLockManagerInterface:
+    alias: App\Infrastructure\Security\MySqlMutationLockManager
+
   App\Infrastructure\Messenger\SymfonyCommandBus:
     arguments:
       $messageBus: '@command.bus'
