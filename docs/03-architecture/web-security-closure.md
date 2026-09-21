@@ -1,18 +1,18 @@
 ---
-title: Закриття Web-безпеки
+title: Закриття безпеки вебплатформи
 description: Канонічні правила CSRF, авторизації, tenant isolation, sessions, uploads, CSP, downloads, rate limits, idempotency та locking для Web Platform COS.
 status: active
 updated: 2026-09-21
 kind: architecture
 ---
 
-# Закриття Web-безпеки
+# Закриття безпеки вебплатформи
 
 Wave 12.19 не створює окрему security-систему для UI. Вона фіксує, що Symfony Web Platform використовує ті самі identity, tenant, permissions та write contracts, що й решта COS, і додає відсутні transport-level guards. Це відповідає переліку Wave 12.19 у канонічному ТЗ.
 
 ## Захист запитів із сесією
 
-Authenticated browser write запити:
+Запити на зміну стану з автентифікованої браузерної сесії:
 
 ```text
 POST / PUT / PATCH / DELETE
@@ -38,9 +38,9 @@ Token приймається через:
 - `csrf_token` form field;
 - `csrf_token` JSON field.
 
-Public webhook та bearer-token transport не повинні залежати від browser CSRF.
+Публічний webhook і transport із bearer-токеном не повинні залежати від браузерного CSRF.
 
-## Авторизація і tenant isolation
+## Авторизація та ізоляція орендарів
 
 Authorization не визначається Twig, Stimulus або visibility кнопки.
 
@@ -136,7 +136,7 @@ domain concurrency rule
 lock only when serialized access is actually required
 ```
 
-## Idempotency
+## Ідемпотентність
 
 Wave 12.19 не створює другий idempotency layer.
 
@@ -188,7 +188,7 @@ Malware scanner не симулюється. Якщо для конкретно�
 - explicit content type;
 - `nosniff`.
 
-Resource authorization виконується до створення download response через Application/Tenant policy. Factory не перетворює шлях до файлу на право доступу.
+Авторизація ресурсу виконується до створення відповіді на завантаження через Application/Tenant policy. Factory не перетворює шлях до файлу на право доступу.
 
 ## Межі
 
