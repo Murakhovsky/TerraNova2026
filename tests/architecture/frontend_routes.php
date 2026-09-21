@@ -174,4 +174,16 @@ foreach ([
     }
 }
 
+$framework = (string) file_get_contents($root . '/symfony/config/packages/framework.yaml');
+foreach ([
+    'name: COSSESSID',
+    'cookie_secure: auto',
+    'cookie_httponly: true',
+    'cookie_samesite: lax',
+] as $sessionMarker) {
+    if (!str_contains($framework, $sessionMarker)) {
+        throw new RuntimeException('Native Symfony session cookie policy is missing: ' . $sessionMarker);
+    }
+}
+
 echo "Frontend route declaration and navigation integrity contract passed on Symfony-only routing.\n";
