@@ -27,7 +27,7 @@ error
 
 Business state при цьому залишається у ViewModel, UIAction, Workflow та Application layer. CSS state не стає business logic.
 
-## Controls
+## Елементи керування
 
 Канонічні controls: Button, IconButton, Input, Select, Textarea, Checkbox, Radio і Switch.
 
@@ -35,7 +35,7 @@ Button та IconButton отримують backward-compatible loading і pressed
 
 Input, Select і Textarea мають спільні hover, focus, disabled та error правила.
 
-## Signals
+## Сигнали
 
 Канонічні signals: Badge, Status, Alert, Progress, Spinner і Skeleton.
 
@@ -43,7 +43,7 @@ Input, Select і Textarea мають спільні hover, focus, disabled та 
 
 Status завжди має textual label і shape signal, тому семантика не передається лише кольором.
 
-## Surfaces
+## Поверхні
 
 Card не отримує нову декоративну мову.
 
@@ -51,13 +51,13 @@ Selected surface використовує ті самі semantic state tokens. P
 
 Modal, Drawer, Popover, Tooltip і Dropdown продовжують використовувати Floating/Overlay surface contracts.
 
-## Navigation
+## Навігація
 
 Tabs, Dropdown та shell navigation використовують одну selected/active/focus grammar.
 
 Command Palette, Sidebar і Topbar не отримують локальні палітри чи радіуси: вони наслідують shell, surface і state tokens.
 
-## Semantic state tokens
+## Семантичні state tokens
 
 PHASE 6 вводить:
 
@@ -74,7 +74,7 @@ PHASE 6 вводить:
 
 Domain CSS не створює власні аналоги цих станів.
 
-## Deterministic visual QA
+## Детермінований visual QA
 
 `data-cos-state` є inspection/test hook для `/dev/ui` та visual regression.
 
@@ -82,7 +82,7 @@ Domain CSS не створює власні аналоги цих станів.
 
 Application business logic не повинна керувати lifecycle через цей attribute.
 
-## Accessibility
+## Доступність
 
 Стан компонента має дублюватися native/ARIA semantics там, де це доречно:
 
