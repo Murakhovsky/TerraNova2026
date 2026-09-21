@@ -12,13 +12,17 @@ use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
+use Domains\Property\Contract\PropertyReferencePort;
 
 final class PropertyWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
 {
-    public function __construct(private readonly SearchResultMatcher $matcher)
-    {
+    public function __construct(
+        private readonly SearchResultMatcher $matcher,
+        private readonly PropertyReferencePort $properties,
+    ) {
     }
 
     public function serviceId(): string
@@ -41,7 +45,8 @@ final class PropertyWebProvider implements NavigationProviderInterface, SearchPr
 
     public function search(WebExtensionContext $context, string $query, int $limit = 10): array
     {
-        return $this->matcher->match([
+        $limit = max(1, min(50, $limit));
+        $navigation = $this->matcher->match([
             new SearchResult('property.search.inventory', 'Property Inventory', '/property/manage', 'workspace', 'Properties'),
             new SearchResult('property.search.listing', 'Property Listing', '/property/listing', 'workspace', 'Listings'),
             new SearchResult('property.search.locations', 'Property Locations', '/property/map', 'workspace', 'Map'),
@@ -49,6 +54,51 @@ final class PropertyWebProvider implements NavigationProviderInterface, SearchPr
             new SearchResult('property.search.spatial', 'Spatial Workspace', '/spatial/manage', 'workspace', '3D / Spatial'),
             new SearchResult('property.search.catalog', 'Public Property Catalog', '/property/catalog', 'workspace', 'Catalog'),
         ], $query, $limit);
+
+        $query = trim($query);
+        if ($query === '') {
+            return $navigation;
+        }
+
+        $entities = [];
+        foreach ($this->properties->searchPropertyReferences($context->organizationId, $query, min($limit, 12)) as $reference) {
+            $assetId = trim((string) ($reference['asset_id'] ?? ''));
+            if ($assetId === '') {
+                continue;
+            }
+
+            $presentation = $this->properties->getPropertyPresentation($context->organizationId, $assetId);
+            $property = is_array($presentation['property'] ?? null) ? $presentation['property'] : [];
+            $inventory = is_array($presentation['inventory'] ?? null) ? $presentation['inventory'] : [];
+            $listing = is_array($presentation['listing'] ?? null) ? $presentation['listing'] : [];
+
+            $title = trim((string) ($listing['title'] ?? ''));
+            $address = trim((string) ($property['formatted_address'] ?? ''));
+            $location = trim((string) ($property['location_name'] ?? ''));
+            $type = trim((string) ($property['type_code'] ?? $property['kind'] ?? ''));
+            $slug = trim((string) ($listing['slug'] ?? ''));
+
+            $label = $title !== ''
+                ? $title
+                : ($address !== '' ? $address : ($location !== '' ? $location . ' · ' . $type : 'Property ' . $assetId));
+
+            $entities[] = new SearchResult(
+                id: 'property.asset.' . $assetId,
+                label: $label,
+                path: $slug !== '' ? '/property/show/' . rawurlencode($slug) : '/property/manage',
+                kind: 'entity',
+                subtitle: implode(' · ', array_values(array_filter([
+                    $assetId,
+                    $location,
+                    $type,
+                    trim((string) ($inventory['status'] ?? '')),
+                ]))),
+                entity: new EntityRef('property.asset', $assetId),
+                score: 91.0,
+            );
+        }
+
+        return array_slice([...$entities, ...$navigation], 0, $limit);
     }
 
     public function commands(WebExtensionContext $context): array

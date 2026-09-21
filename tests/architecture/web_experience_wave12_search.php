@@ -38,6 +38,46 @@ foreach ($providers as $domain => [$class, $serviceId]) {
     }
 }
 
+
+$salesSearch = (string) file_get_contents(
+    $root . '/symfony/src/Web/Experience/Extension/Provider/SalesWebProvider.php',
+);
+foreach ([
+    'SalesWorkspaceReadModelInterface',
+    '$this->sales->deals($context->organizationId',
+    '$this->sales->leads($context->organizationId',
+    "new EntityRef('sales.deal'",
+    "new EntityRef('sales.lead'",
+    "kind: 'entity'",
+] as $contract) {
+    if (!str_contains($salesSearch, $contract)) {
+        throw new RuntimeException('Sales entity search contract is missing: ' . $contract);
+    }
+}
+
+$propertySearch = (string) file_get_contents(
+    $root . '/symfony/src/Web/Experience/Extension/Provider/PropertyWebProvider.php',
+);
+foreach ([
+    'PropertyReferencePort',
+    '$this->properties->searchPropertyReferences($context->organizationId',
+    '$this->properties->getPropertyPresentation($context->organizationId',
+    "new EntityRef('property.asset'",
+    "kind: 'entity'",
+] as $contract) {
+    if (!str_contains($propertySearch, $contract)) {
+        throw new RuntimeException('Property entity search contract is missing: ' . $contract);
+    }
+}
+
+foreach ([$salesSearch, $propertySearch] as $entityProvider) {
+    foreach (['SELECT ', 'INSERT ', 'UPDATE ', 'DELETE ', 'PDO', 'Doctrine\\', '/api/v1/'] as $forbidden) {
+        if (str_contains($entityProvider, $forbidden)) {
+            throw new RuntimeException('Entity search provider bypasses Application/Domain read boundary: ' . $forbidden);
+        }
+    }
+}
+
 $catalog = (string) file_get_contents(
     $root . '/symfony/src/Web/Experience/Extension/WebExtensionContextCatalog.php',
 );

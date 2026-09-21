@@ -24,11 +24,14 @@ use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 use App\Web\Experience\Workspace\WorkspaceSlot;
+use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 
 final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, WorkspaceExtensionProviderInterface, ActionProviderInterface
 {
-    public function __construct(private readonly SearchResultMatcher $matcher)
-    {
+    public function __construct(
+        private readonly SearchResultMatcher $matcher,
+        private readonly SalesWorkspaceReadModelInterface $sales,
+    ) {
     }
 
     public function serviceId(): string
@@ -66,7 +69,8 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
 
     public function search(WebExtensionContext $context, string $query, int $limit = 10): array
     {
-        return $this->matcher->match([
+        $limit = max(1, min(50, $limit));
+        $navigation = $this->matcher->match([
             new SearchResult('sales.search.overview', 'Sales Overview', '/sales/dashboard', 'workspace', 'Sales dashboard'),
             new SearchResult('sales.search.today', 'Sales Today', '/sales/today', 'workspace', 'Today queue'),
             new SearchResult('sales.search.pipeline', 'Sales Pipeline', '/sales/pipeline', 'workspace', 'Pipeline'),
@@ -75,6 +79,58 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
             new SearchResult('sales.search.clients', 'Client Inbox', '/client-case/inbox', 'workspace', 'Clients'),
             new SearchResult('sales.search.director', 'Sales Director', '/sales/director', 'workspace', 'Sales analytics'),
         ], $query, $limit);
+
+        $query = trim($query);
+        if ($query === '') {
+            return $navigation;
+        }
+
+        $entities = [];
+
+        foreach ($this->sales->deals($context->organizationId, ['q' => $query, 'limit' => $limit]) as $deal) {
+            $id = (int) ($deal['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $title = trim((string) ($deal['title'] ?? ''));
+            $publicId = trim((string) ($deal['public_id'] ?? ''));
+            $customer = trim((string) ($deal['customer'] ?? ''));
+            $stage = trim((string) ($deal['stage_name'] ?? $deal['stage_code'] ?? ''));
+
+            $entities[] = new SearchResult(
+                id: 'sales.deal.' . $id,
+                label: $title !== '' ? $title : ($publicId !== '' ? $publicId : 'Deal #' . $id),
+                path: '/sales/deals/' . $id,
+                kind: 'entity',
+                subtitle: implode(' · ', array_values(array_filter([$publicId, $customer, $stage]))),
+                entity: new EntityRef('sales.deal', (string) $id),
+                score: 92.0,
+            );
+        }
+
+        foreach ($this->sales->leads($context->organizationId, ['q' => $query, 'limit' => $limit]) as $lead) {
+            $id = (int) ($lead['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $name = trim((string) ($lead['name'] ?? ''));
+            $source = trim((string) ($lead['source'] ?? ''));
+            $status = trim((string) ($lead['status'] ?? ''));
+
+            $entities[] = new SearchResult(
+                id: 'sales.lead.' . $id,
+                label: $name !== '' ? $name : 'Lead #' . $id,
+                path: '/sales/leads?q=' . rawurlencode($name !== '' ? $name : (string) $id),
+                kind: 'entity',
+                subtitle: implode(' · ', array_values(array_filter(['Lead #' . $id, $source, $status]))),
+                entity: new EntityRef('sales.lead', (string) $id),
+                score: 90.0,
+            );
+        }
+
+        return array_slice([...$entities, ...$navigation], 0, $limit);
     }
 
     public function commands(WebExtensionContext $context): array
