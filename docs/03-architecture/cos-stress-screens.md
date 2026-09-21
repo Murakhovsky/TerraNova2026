@@ -23,7 +23,7 @@ PHASE 8 перевіряє visual language не на ізольованих ко
 
 Surface є лабораторією, а не новим business Domain чи production dashboard.
 
-## 1. Executive / Company Home
+## 1. Керівний екран (`Company Home`)
 
 Перевіряє:
 
@@ -36,7 +36,7 @@ Surface є лабораторією, а не новим business Domain чи pro
 
 Ключове правило: Company Home показує company-level operating projection і не дублює повні Domain dashboards.
 
-## 2. Dense Operational DataGrid
+## 2. Щільний операційний `DataGrid`
 
 Використовує canonical `CosDataGrid` без окремої grid system.
 
@@ -55,7 +55,7 @@ Surface є лабораторією, а не новим business Domain чи pro
 
 PHASE 8 не створює новий table engine.
 
-## 3. Entity Workspace
+## 3. Робочий простір сутності
 
 Композиція:
 
@@ -74,7 +74,7 @@ ActionBar
 
 EntityHeader лишається identity surface, а не декоративною dashboard card.
 
-## 4. COS Control / AI / Operations
+## 4. Контроль COS, AI та операцій
 
 Перевіряє одночасно:
 
