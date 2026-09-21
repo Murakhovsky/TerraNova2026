@@ -11,7 +11,7 @@ $registry = new UiCatalogRegistry();
 $entries = $registry->entries();
 $names = array_map(static fn ($entry): string => $entry->name, $entries);
 
-assert(count($entries) >= 43);
+assert(count($entries) >= 44);
 assert(count($names) === count(array_unique($names)));
 assert(in_array('CosButton', $names, true));
 assert(in_array('CosDataGrid', $names, true));
