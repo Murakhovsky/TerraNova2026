@@ -374,3 +374,4 @@ Surface
 Business → Workflow → Domain → Capability → Runtime → Service → Code
 ```
 > Routing recovery rule: retained server-rendered surfaces must not expose links or forms to undeclared Symfony routes.
+> Route recovery is rebased on the current Experience Platform interaction layer; recovered PHTML surfaces remain server-driven and Symfony-owned.
