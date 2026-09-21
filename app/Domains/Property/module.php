@@ -18,6 +18,7 @@ return [
         'configuration_provisioner_services' => ['propertyModuleConfigurationProvisioner'],
         'extension_services' => [
             'web.navigation' => ['propertyNavigationContributor'],
+            'web.search' => ['propertyNavigationContributor'],
             'web.commands' => ['propertyNavigationContributor'],
             'web.workspace' => ['propertyNavigationContributor'],
         ],
