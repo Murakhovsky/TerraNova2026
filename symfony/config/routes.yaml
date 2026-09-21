@@ -1477,24 +1477,8 @@ cos_web_sales_root:
 
 cos_web_sales_dashboard:
   path: /sales/dashboard
-  controller: App\Web\Sales\SalesPageController::dashboard
-  methods: [GET]
-
-cos_web_sales_reference_dashboard:
-  path: /sales/reference/dashboard
   controller: App\Web\Sales\SalesReferenceController::dashboard
   methods: [GET]
-
-cos_web_sales_reference_leads:
-  path: /sales/reference/leads
-  controller: App\Web\Sales\SalesReferenceController::leads
-  methods: [GET]
-
-cos_web_sales_reference_lead:
-  path: /sales/reference/leads/{id}
-  controller: App\Web\Sales\SalesReferenceController::lead
-  methods: [GET]
-  requirements: { id: '[1-9][0-9]*' }
 
 cos_web_sales_today:
   path: /sales/today
@@ -1508,8 +1492,14 @@ cos_web_sales_pipeline:
 
 cos_web_sales_leads:
   path: /sales/leads
-  controller: App\Web\Sales\SalesPageController::leads
+  controller: App\Web\Sales\SalesReferenceController::leads
   methods: [GET]
+
+cos_web_sales_lead:
+  path: /sales/leads/{id}
+  controller: App\Web\Sales\SalesReferenceController::lead
+  methods: [GET]
+  requirements: { id: '[1-9][0-9]*' }
 
 cos_web_sales_deals:
   path: /sales/deals
