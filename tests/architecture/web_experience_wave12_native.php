@@ -92,7 +92,7 @@ foreach (['supported', 'upgrade_recommended', 'upgrade_required'] as $marker) {
 }
 
 $linkResolver = (string) file_get_contents($root . '/symfony/src/Web/Experience/Extension/EntityLinkResolver.php');
-foreach (['entityLinks()', 'Multiple canonical links resolved', "str_starts_with($link->path, '/')"] as $marker) {
+foreach (['entityLinks()', 'Multiple canonical links resolved', 'str_starts_with($link->path, \'/\')'] as $marker) {
     if (!str_contains($linkResolver, $marker)) {
         throw new RuntimeException('EntityLinkResolver contract is incomplete: ' . $marker);
     }
