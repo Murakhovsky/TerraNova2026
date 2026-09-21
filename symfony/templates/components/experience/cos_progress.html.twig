@@ -1,0 +1,16 @@
+<div
+    class="cos-progress"
+    role="progressbar"
+    aria-label="{{ label }}"
+    aria-valuemin="0"
+    aria-valuemax="{{ max }}"
+    aria-valuenow="{{ value }}"
+>
+    <div class="cos-progress__track">
+        <div class="cos-progress__bar" style="--cos-progress: {{ this.percent() }}%"></div>
+    </div>
+    <div class="cos-progress__meta">
+        <span>{{ label }}</span>
+        <span>{{ this.percent() }}%</span>
+    </div>
+</div>
