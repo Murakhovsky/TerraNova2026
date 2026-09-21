@@ -147,4 +147,31 @@ foreach ([
     }
 }
 
+$security = (string) file_get_contents($root . '/symfony/config/packages/security.yaml');
+$sessionAuthenticator = (string) file_get_contents($root . '/symfony/src/Security/SessionAuthenticator.php');
+
+foreach ([
+    'client-case',
+    'cos/(?:architecture|control-center|action|approval)',
+    'admin',
+    'property/(?:manage|listing|submissions|submission|presentationShare)',
+] as $protectedPattern) {
+    if (!str_contains($security, $protectedPattern)) {
+        throw new RuntimeException('Recovered Workspace route family is missing from Symfony firewall: ' . $protectedPattern);
+    }
+}
+
+foreach ([
+    "str_starts_with($path,'/client-case')",
+    "str_starts_with($path,'/cos/control-center')",
+    "str_starts_with($path,'/cos/action')",
+    "str_starts_with($path,'/cos/approval')",
+    "str_starts_with($path,'/admin')",
+    "property/(?:manage|listing|submissions|submission|presentationShare)",
+] as $authBoundary) {
+    if (!str_contains($sessionAuthenticator, $authBoundary)) {
+        throw new RuntimeException('Recovered Workspace route family is missing from native session authentication: ' . $authBoundary);
+    }
+}
+
 echo "Frontend route declaration and navigation integrity contract passed on Symfony-only routing.\n";
