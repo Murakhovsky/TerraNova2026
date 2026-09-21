@@ -102,8 +102,8 @@ foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card', 'tn-admin-card_
 
 $actionBar = $read('app/Interfaces/Web/View/components/ui/action_bar.phtml');
 foreach ([
-    "foreach ($attributes as $name => $value)",
-    "href="<?php echo $h($href",
+    'foreach ($attributes as $name => $value)',
+    'href="<?php echo $h($href',
 ] as $marker) {
     $contains($actionBar, $marker, 'Canonical ActionBar must preserve generic attributes on link actions.');
 }
