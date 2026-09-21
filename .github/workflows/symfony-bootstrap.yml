@@ -25,6 +25,7 @@ on:
       - 'tests/architecture/web_experience_wave12_async_operations.php'
       - 'tests/architecture/web_experience_wave12_ai_ui.php'
       - 'tests/architecture/web_experience_wave12_mobile.php'
+      - 'tests/architecture/web_experience_wave12_pwa.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -58,6 +59,7 @@ on:
       - 'tests/architecture/web_experience_wave12_async_operations.php'
       - 'tests/architecture/web_experience_wave12_ai_ui.php'
       - 'tests/architecture/web_experience_wave12_mobile.php'
+      - 'tests/architecture/web_experience_wave12_pwa.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -208,6 +210,18 @@ jobs:
 
       - name: Mobile Foundation runtime smoke
         run: docker compose exec -T php php bin/console cos:web:mobile:smoke
+
+      - name: PWA Foundation architecture gate
+        run: php tests/architecture/web_experience_wave12_pwa.php
+
+      - name: PWA Foundation runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:pwa:smoke
+
+      - name: PWA static delivery smoke
+        run: |
+          curl --fail --silent http://127.0.0.1:8081/manifest.webmanifest | grep -q 'COS — Company Operating System'
+          curl --fail --silent http://127.0.0.1:8081/offline.html | grep -q 'data-cos-offline-fallback'
+          curl --fail --silent --head http://127.0.0.1:8081/sw.js | grep -qi '^service-worker-allowed: /'
 
       - name: Global Search runtime smoke
         run: docker compose exec -T php php bin/console cos:web:search:smoke

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="COS">
+  <rect width="512" height="512" rx="112" fill="#17191d"/>
+  <path d="M117 151c0-18.78 15.22-34 34-34h210c18.78 0 34 15.22 34 34v210c0 18.78-15.22 34-34 34H151c-18.78 0-34-15.22-34-34V151Z" fill="#5367ff"/>
+  <path d="M192 199h128v38h-90v48h90v38H192V199Z" fill="#fff"/>
+</svg>
