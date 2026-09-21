@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use Domains\Spatial\Application\Service\SpatialSceneService;
 use Infrastructure\Media\SpatialAssetService;
+use Infrastructure\Media\UploadQuarantineService;
 use Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyTourPublisher;
 use Infrastructure\Spatial\SpatialProcessingService;
@@ -37,7 +38,11 @@ if ($cleanupArgument) {
     echo 'spatial fixture ' . $cleanupSceneId . " removed\n";
     exit(0);
 }
-$assets = new SpatialAssetService($database, 5 * 1024 * 1024);
+$assets = new SpatialAssetService(
+    $database,
+    new UploadQuarantineService(sys_get_temp_dir() . '/cos-spatial-quarantine-test'),
+    5 * 1024 * 1024,
+);
 $scenes = new SpatialSceneService(new MysqlSpatialSceneRepository(
     $database, $assets, new MysqlPropertyTourPublisher($database),
 ));
