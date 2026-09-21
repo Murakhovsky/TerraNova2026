@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17191d">
+  <title>COS — офлайн</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; min-height: 100dvh; margin: 0; display: grid; place-items: center; padding: 24px; background: #f5f6f8; color: #17191c; }
+    main { width: min(100%, 560px); padding: 32px; border: 1px solid #dfe3e8; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px rgba(17, 19, 23, .12); }
+    .mark { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: #17191d; color: #fff; font-weight: 800; letter-spacing: .04em; }
+    h1 { margin: 24px 0 8px; font-size: clamp(1.6rem, 6vw, 2.25rem); }
+    p { margin: 0; color: #68707b; line-height: 1.6; }
+    a { display: inline-flex; min-height: 44px; align-items: center; margin-top: 24px; padding: 0 18px; border-radius: 10px; background: #5367ff; color: #fff; font-weight: 700; text-decoration: none; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111317; color: #f7f8fa; }
+      main { background: #181b20; border-color: #2e343d; box-shadow: none; }
+      p { color: #9299a3; }
+    }
+  </style>
+</head>
+<body>
+  <main data-cos-offline-fallback>
+    <span class="mark" aria-hidden="true">COS</span>
+    <h1>Немає з’єднання</h1>
+    <p>COS працює online-first. Дані та дії не кешуються локально без окремої Domain capability. Відновіть мережу і повторіть запит.</p>
+    <a href="/admin">Спробувати знову</a>
+  </main>
+</body>
+</html>
