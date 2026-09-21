@@ -54,7 +54,7 @@ Domain state
 
 На entity surface має бути один очевидний primary action. Secondary та danger actions не конкурують із ним декоративною вагою.
 
-## Workflow, ownership і next action
+## Етапи, відповідальність і наступна дія
 
 `CosStage` описує позицію у workflow, а `CosStatus` описує semantic state/result.
 
@@ -69,7 +69,7 @@ Status: At risk
 
 `CosNextAction` показує операційний наступний крок і due context. COS має відповідати на питання “що робити далі?” без пошуку по вкладках.
 
-## Relations та activity
+## Зв’язки та активність
 
 `CosRelations` показує typed relations між бізнес-сутностями.
 
@@ -123,7 +123,7 @@ Drawer
 
 Це patterns, а не готові Domain screens.
 
-## Responsive contract
+## Адаптивний контракт
 
 На mobile:
 
