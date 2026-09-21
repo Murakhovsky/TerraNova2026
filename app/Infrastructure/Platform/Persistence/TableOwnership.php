@@ -50,6 +50,7 @@ final class TableOwnership
             'cos_jobs', 'cos_configuration_provisions', 'cos_operational_metrics', 'cos_crm_inbox',
             'cos_external_references', 'cos_integrations', 'cos_sync_state', 'cos_llm_budgets', 'cos_llm_usage',
             'cos_documents', 'cos_document_files', 'cos_document_versions', 'cos_document_relations',
+            'cos_feature_flags', 'cos_feature_flag_overrides',
             'cos_document_templates', 'cos_document_signatures', 'cos_document_operation_receipts',
             'tn_notification_outbox', 'tn_analytics_events',
             'tn_integration_outbox', 'tn_webhook_deliveries', 'tn_migrations',
