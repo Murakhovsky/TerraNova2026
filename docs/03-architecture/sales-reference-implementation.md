@@ -38,7 +38,7 @@ Sales-owned read model
 
 Web controller не залежить напряму від Sales read-model interfaces і не використовує PHTML renderer.
 
-## Platform capabilities
+## Можливості платформи
 
 Референсний vertical використовує:
 
@@ -53,17 +53,17 @@ Web controller не залежить напряму від Sales read-model inte
 - tenant context;
 - QueryBus.
 
-## Sales Dashboard
+## Панель продажів
 
 Dashboard використовує наявний `GetSalesDashboardQuery` і візуалізує бізнес-факти через canonical metrics, entity list та next-action primitives.
 
-## Lead List
+## Список лідів
 
 Lead List використовує `ListSalesLeadsQuery`, server-side filters і canonical `CosFilterBar` + `CosEntityListItem`.
 
 UI не володіє правилами кваліфікації ліда.
 
-## Lead Workspace
+## Робочий простір ліда
 
 Lead Workspace використовує `GetSalesLeadQuery` і резолвить Workspace:
 
