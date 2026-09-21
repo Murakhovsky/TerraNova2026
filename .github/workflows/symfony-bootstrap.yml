@@ -31,6 +31,12 @@ on:
       - 'tests/architecture/web_experience_wave12_feature_flags.php'
       - 'tests/architecture/web_experience_wave12_audit_history.php'
       - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'tests/architecture/web_experience_wave12_testing.php'
+      - 'tests/component/web_experience_components.php'
+      - 'tests/functional/web_platform_contract.sh'
+      - 'tests/browser/web_platform_quality.mjs'
+      - 'symfony/tests/Panther/WebExperiencePantherTest.php'
+      - 'docs/03-architecture/web-testing.md'
       - 'tests/unit/ui_catalog_registry.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
@@ -79,6 +85,12 @@ on:
       - 'tests/architecture/web_experience_wave12_feature_flags.php'
       - 'tests/architecture/web_experience_wave12_audit_history.php'
       - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'tests/architecture/web_experience_wave12_testing.php'
+      - 'tests/component/web_experience_components.php'
+      - 'tests/functional/web_platform_contract.sh'
+      - 'tests/browser/web_platform_quality.mjs'
+      - 'symfony/tests/Panther/WebExperiencePantherTest.php'
+      - 'docs/03-architecture/web-testing.md'
       - 'tests/unit/ui_catalog_registry.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
@@ -296,6 +308,31 @@ jobs:
 
       - name: UI Catalog runtime smoke
         run: docker compose exec -T php php bin/console cos:web:ui-catalog:smoke
+
+      - name: Wave 12.23 architecture gate
+        run: php tests/architecture/web_experience_wave12_testing.php
+
+      - name: Wave 12.23 component contract
+        run: php tests/component/web_experience_components.php
+
+      - name: Wave 12.23 Panther suite readiness
+        run: php -l symfony/tests/Panther/WebExperiencePantherTest.php
+
+      - name: Wave 12.23 functional contract
+        run: bash tests/functional/web_platform_contract.sh http://127.0.0.1:8081
+
+      - name: Wave 12.23 browser quality
+        env:
+          BROWSER_EXECUTABLE: /usr/bin/google-chrome
+        run: npm run test:web-quality -- http://127.0.0.1:8081
+
+      - name: Upload Wave 12.23 visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-12-23-web-quality
+          path: tmp/web-quality
+          if-no-files-found: warn
 
       - name: Web Security response headers smoke
         run: |
