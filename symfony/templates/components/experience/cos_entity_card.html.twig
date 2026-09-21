@@ -1,0 +1,16 @@
+{% set tag = href ? 'a' : 'article' %}
+<{{ tag }} class="cos-entity-card" {% if href %}href="{{ href }}"{% endif %}>
+    <div class="cos-entity-card__head">
+        <div>
+            {% if eyebrow %}<p class="cos-entity-card__eyebrow">{{ eyebrow }}</p>{% endif %}
+            <h3 class="cos-entity-card__title">{{ title }}</h3>
+            {% if subtitle %}<p class="cos-entity-card__subtitle">{{ subtitle }}</p>{% endif %}
+        </div>
+        {% if statusLabel %}<twig:CosStatus label="{{ statusLabel }}" tone="{{ statusTone }}" />{% endif %}
+    </div>
+    {% if meta is not empty %}
+        <dl class="cos-entity-card__meta">
+            {% for item in meta %}<div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>{% endfor %}
+        </dl>
+    {% endif %}
+</{{ tag }}>
