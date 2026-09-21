@@ -62,7 +62,25 @@ const accessibilityIssues = async (page) => page.evaluate(() => {
     if (!name) issues.push(`interactive element has no accessible name: ${node.tagName.toLowerCase()}`);
   }
   const overflow = Math.max(document.body.scrollWidth, html.scrollWidth) - window.innerWidth;
-  if (overflow > 3) issues.push(`horizontal overflow: ${overflow}px`);
+  if (overflow > 3) {
+    const offenders = [...document.querySelectorAll('body *')]
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          tag: node.tagName.toLowerCase(),
+          id: node.id || '',
+          className: typeof node.className === 'string' ? node.className : '',
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+          scrollWidth: node.scrollWidth,
+        };
+      })
+      .filter((item) => item.right > window.innerWidth + 3 || item.left < -3)
+      .sort((a, b) => (b.right - window.innerWidth) - (a.right - window.innerWidth))
+      .slice(0, 8);
+    issues.push(`horizontal overflow: ${overflow}px; offenders=${JSON.stringify(offenders)}`);
+  }
   return issues;
 });
 
