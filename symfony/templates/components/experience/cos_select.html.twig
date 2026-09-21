@@ -1,8 +1,22 @@
-<label class="cos-field">
-    <span class="cos-field__label">{{ label }}</span>
-    <select class="cos-select" name="{{ name }}" {% if disabled %}disabled{% endif %}>
+<div class="cos-field {{ errors is not empty ? 'cos-field--invalid' : '' }}">
+    <label class="cos-field__label" for="{{ this.fieldId() }}">{{ label }}</label>
+    <select
+        id="{{ this.fieldId() }}"
+        class="cos-select"
+        name="{{ name }}"
+        {% if disabled %}disabled{% endif %}
+        {% if required %}required aria-required="true"{% endif %}
+        {% if errors is not empty %}aria-invalid="true"{% endif %}
+        {% if this.describedBy() %}aria-describedby="{{ this.describedBy() }}"{% endif %}
+    >
         {% for value, optionLabel in options %}
             <option value="{{ value }}" {% if selected == value %}selected{% endif %}>{{ optionLabel }}</option>
         {% endfor %}
     </select>
-</label>
+    {% if help %}<p id="{{ this.fieldId() }}-help" class="cos-field__help">{{ help }}</p>{% endif %}
+    {% if errors is not empty %}
+        <ul id="{{ this.fieldId() }}-errors" class="cos-field__errors" role="alert">
+            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+    {% endif %}
+</div>

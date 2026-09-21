@@ -41,7 +41,7 @@
         "enabled": true,
         "fetch": "lazy",
         "autoimport": {
-          "@symfony/ux-dropzone/dist/style.min.css": true
+          "@symfony/ux-dropzone/dist/style.min.css": false
         }
       }
     }
