@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Extension;
 
+use App\Web\Experience\Action\UIAction;
 use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Shell\ShellCommandItem;
 
 final readonly class WebExtensionContextCatalog
@@ -67,6 +69,18 @@ final readonly class WebExtensionContextCatalog
         );
 
         return array_slice($items, 0, $limit);
+    }
+
+    /** @return list<UIAction> */
+    public function actions(?EntityRef $entity = null): array
+    {
+        $items = [];
+
+        foreach ($this->providers->actions() as $provider) {
+            array_push($items, ...$provider->actions($this->context, $entity));
+        }
+
+        return $items;
     }
 
     /** @return list<WorkspaceDefinition> */
