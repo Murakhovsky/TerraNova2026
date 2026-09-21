@@ -135,14 +135,15 @@ body {
 .cos-card {
   min-width: 0;
   padding: var(--cos-density-panel-padding);
-  background: var(--cos-color-surface);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-default-bg);
+  border: 1px solid var(--cos-surface-border);
   border-radius: var(--cos-radius-md);
-  box-shadow: var(--cos-shadow-ui);
+  box-shadow: var(--cos-surface-default-shadow);
 }
 
 .cos-card--raised {
-  box-shadow: var(--cos-shadow-raised);
+  background: var(--cos-surface-raised-bg);
+  box-shadow: var(--cos-surface-raised-shadow);
 }
 
 .cos-card__eyebrow {
