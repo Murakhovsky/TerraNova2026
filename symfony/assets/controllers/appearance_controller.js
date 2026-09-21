@@ -33,7 +33,7 @@ export default class extends Controller {
     }
 
     normalizeTheme(theme) {
-        return ['light', 'dark'].includes(theme) ? theme : 'light';
+        return ['light', 'dark', 'system'].includes(theme) ? theme : 'system';
     }
 
     normalizeDensity(density) {
