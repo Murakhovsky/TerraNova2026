@@ -81,6 +81,40 @@ Sales read model
 - public identity, semantic risk state, pipeline/stage/owner/value metadata стають частиною entity anatomy;
 - існуючі KPI, tabs, forms, approvals, communications, intelligence та timeline не змінюють behavior.
 
+
+## Хвиля 2
+
+Хвиля 2 закриває решту operational Sales surfaces, які ще використовували локальні presentation patterns.
+
+### Список угод (`Deals`)
+
+`sales/deals.phtml`
+
+- локальний filter form замінено на shared FilterBar;
+- raw table замінено на canonical DataTable;
+- stage і risk використовують semantic presentation;
+- mobile rendering переходить на record-card contract;
+- query params і URL переходу в Deal Workspace збережені.
+
+### Операційний inbox (`Today`)
+
+`sales/today.phtml`
+
+- вісім operational queues збираються через canonical Panel;
+- domain-specific list body винесено в `components/sales/today_section.phtml`;
+- approval, complete і reschedule data attributes збережені;
+- My Work / Team scope semantics не змінені.
+
+### Робочий простір директора (`Director Workspace`)
+
+`sales/director.phtml`
+
+- локальний toolbar замінено на shared FilterBar;
+- executive currency table, historical transitions, manager performance та at-risk deals переведено на canonical DataTable;
+- section shells переведено на canonical Panel;
+- KPI залишаються canonical KPI cards;
+- currency isolation, attribution policy і explainability semantics не змінені.
+
 ## Розширення FilterBar
 
 Compatibility FilterBar отримує:
@@ -111,6 +145,9 @@ Canonical layer стандартизує повторювану anatomy. Domain 
 - Leads використовує canonical FilterBar і Status;
 - Pipeline використовує canonical FilterBar;
 - Deal використовує canonical EntityHeader;
+- Deals використовує canonical FilterBar + DataTable;
+- Today використовує canonical Panel composition;
+- Director використовує canonical FilterBar + Panel + DataTable;
 - query names та mutation data attributes збережені;
 - не повертаються локальні дублікати table/filter/entity-header patterns;
 - PHTML syntax зелений;
