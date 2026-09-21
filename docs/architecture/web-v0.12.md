@@ -22,7 +22,7 @@ The bootstrap-level `500` fallback is deliberately self-contained because it mus
 
 Browser persistence is not application truth.
 
-- favourites use server session state via `/api/property/favourites`;
+- favourites use server session state via `/api/v1/public/properties/favourites`;
 - Workspace sidebar collapse is ephemeral presentation state;
 - campaign parameters are derived from the current URL and submitted with the current request;
 - canonical frontend JavaScript may not use `localStorage` or `sessionStorage`.
