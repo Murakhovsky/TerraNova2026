@@ -160,6 +160,7 @@ CREATE TABLE cos_audit_log (
     category VARCHAR(100) NOT NULL,
     actor_type VARCHAR(32) NOT NULL,
     actor_id VARCHAR(100) NOT NULL,
+    source_type VARCHAR(32) NOT NULL DEFAULT 'SYSTEM',
     subject_type VARCHAR(100) NOT NULL,
     subject_id VARCHAR(100) NOT NULL,
     action VARCHAR(160) NULL,

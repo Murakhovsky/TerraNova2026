@@ -13,11 +13,14 @@ on:
       - 'app/Bootstrap/InfrastructureServices.php'
       - 'app/Bootstrap/KernelServices.php'
       - 'app/migrations/20260917_000061_platform_agent_trace.sql'
+      - 'app/migrations/20260921_000066_platform_audit_history.sql'
       - 'tests/unit/platform_audit_foundation.php'
       - 'tests/unit/platform_audit_agent_runtime.php'
+      - 'tests/unit/platform_audit_history.php'
       - 'tests/unit/kernel_execution_context.php'
       - 'tests/architecture/platform_audit_boundaries.php'
       - 'tests/architecture/platform_audit_runtime_wiring.php'
+      - 'tests/architecture/web_experience_wave12_audit_history.php'
       - '.github/workflows/platform-audit.yml'
   pull_request:
     branches: [main, migration/symfony, migration/platform-knowledge]
@@ -31,11 +34,14 @@ on:
       - 'app/Bootstrap/InfrastructureServices.php'
       - 'app/Bootstrap/KernelServices.php'
       - 'app/migrations/20260917_000061_platform_agent_trace.sql'
+      - 'app/migrations/20260921_000066_platform_audit_history.sql'
       - 'tests/unit/platform_audit_foundation.php'
       - 'tests/unit/platform_audit_agent_runtime.php'
+      - 'tests/unit/platform_audit_history.php'
       - 'tests/unit/kernel_execution_context.php'
       - 'tests/architecture/platform_audit_boundaries.php'
       - 'tests/architecture/platform_audit_runtime_wiring.php'
+      - 'tests/architecture/web_experience_wave12_audit_history.php'
       - '.github/workflows/platform-audit.yml'
   workflow_dispatch:
 
@@ -51,8 +57,10 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: php tests/architecture/platform_audit_boundaries.php
       - run: php tests/architecture/platform_audit_runtime_wiring.php
+      - run: php tests/architecture/web_experience_wave12_audit_history.php
       - run: php tests/unit/platform_audit_foundation.php
       - run: php tests/unit/platform_audit_agent_runtime.php
+      - run: php tests/unit/platform_audit_history.php
       - run: php tests/unit/kernel_execution_context.php
       - run: php tests/smoke/agent_runtime.php
       - run: php tests/smoke/agent_safety.php

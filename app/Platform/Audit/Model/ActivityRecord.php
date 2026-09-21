@@ -29,6 +29,7 @@ final readonly class ActivityRecord
         public string $correlationId,
         public DateTimeImmutable $timestamp,
         public array $metadata = [],
+        public ActivitySource $source = ActivitySource::SYSTEM,
     ) {
         if (trim($this->id) === '' || trim($this->action) === '' || trim($this->correlationId) === '') {
             throw new InvalidArgumentException('Activity record requires id, action and correlation id.');
@@ -51,6 +52,7 @@ final readonly class ActivityRecord
             'id' => $this->id,
             'organization_id' => $this->organizationId->value(),
             'actor' => $this->actor->toArray(),
+            'source' => $this->source->value,
             'action' => $this->action,
             'resource' => $this->resource->toArray(),
             'input' => $this->input,

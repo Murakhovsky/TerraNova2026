@@ -29,6 +29,7 @@ on:
       - 'tests/architecture/web_experience_wave12_native.php'
       - 'tests/architecture/web_experience_wave12_security.php'
       - 'tests/architecture/web_experience_wave12_feature_flags.php'
+      - 'tests/architecture/web_experience_wave12_audit_history.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -72,6 +73,7 @@ on:
       - 'tests/architecture/web_experience_wave12_native.php'
       - 'tests/architecture/web_experience_wave12_security.php'
       - 'tests/architecture/web_experience_wave12_feature_flags.php'
+      - 'tests/architecture/web_experience_wave12_audit_history.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -142,6 +144,7 @@ jobs:
           for table in tn_users tn_content_items tn_spatial_processing_jobs cos_organization_memberships cos_feature_flags cos_feature_flag_overrides; do
             docker compose exec -T mysql mysql -N -h127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SHOW TABLES LIKE '$table';" | grep -qx "$table"
           done
+          docker compose exec -T mysql mysql -N -h127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SHOW COLUMNS FROM cos_audit_log LIKE 'source_type';" | grep -q '^source_type'
 
       - name: Apply Doctrine migrations
         run: docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
@@ -264,6 +267,15 @@ jobs:
 
       - name: Feature Flags runtime smoke
         run: docker compose exec -T php php bin/console cos:platform:feature-flags:smoke
+
+      - name: Audit History architecture gate
+        run: php tests/architecture/web_experience_wave12_audit_history.php
+
+      - name: Audit History model unit
+        run: php tests/unit/platform_audit_history.php
+
+      - name: Audit History runtime smoke
+        run: docker compose exec -T php php bin/console cos:platform:audit-history:smoke
 
       - name: Web Security response headers smoke
         run: |
