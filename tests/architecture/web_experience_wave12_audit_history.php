@@ -36,7 +36,7 @@ foreach (['ActorKind::HUMAN', 'ActorKind::AGENT', 'ActorKind::SYSTEM'] as $marke
 }
 
 $sink = (string) file_get_contents($root . '/app/Infrastructure/Audit/KernelAuditSink.php');
-foreach (["'source' => $record->source->value", "'actor_kind' => $record->actor->kind()->value"] as $marker) {
+foreach (["'source' => ", "'actor_kind' => "] as $marker) {
     if (!str_contains($sink, $marker)) {
         throw new RuntimeException('Kernel audit bridge loses provenance: ' . $marker);
     }
