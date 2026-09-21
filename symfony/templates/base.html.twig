@@ -19,7 +19,7 @@
     {% endblock %}
 
     {% block javascripts %}
-        {{ importmap('app') }}
+        {{ importmap('app', {'nonce': app.request.attributes.get('cos_csp_nonce')}) }}
     {% endblock %}
 </head>
 <body>
