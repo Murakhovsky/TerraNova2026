@@ -7,6 +7,9 @@ $files = [
     'app/Kernel/Module/ModuleExtensionPoint.php',
     'symfony/src/Web/Experience/Model/EntityRef.php',
     'symfony/src/Web/Experience/Action/UIActionIntent.php',
+    'symfony/src/Web/Experience/Action/UIActionConfirmation.php',
+    'symfony/src/Web/Experience/Action/UIActionDangerLevel.php',
+    'symfony/src/Web/Experience/Action/UIActionPlacement.php',
     'symfony/src/Web/Experience/Action/UIAction.php',
     'docs/11-decisions/ADR-0009-web-experience-platform.md',
 ];
@@ -20,6 +23,9 @@ foreach ($files as $relative) {
 require_once $root . '/app/Kernel/Module/ModuleExtensionPoint.php';
 require_once $root . '/symfony/src/Web/Experience/Model/EntityRef.php';
 require_once $root . '/symfony/src/Web/Experience/Action/UIActionIntent.php';
+require_once $root . '/symfony/src/Web/Experience/Action/UIActionPlacement.php';
+require_once $root . '/symfony/src/Web/Experience/Action/UIActionDangerLevel.php';
+require_once $root . '/symfony/src/Web/Experience/Action/UIActionConfirmation.php';
 require_once $root . '/symfony/src/Web/Experience/Action/UIAction.php';
 
 $expectedExtensionPoints = [
