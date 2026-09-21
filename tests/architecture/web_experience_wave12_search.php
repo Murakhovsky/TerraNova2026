@@ -43,15 +43,13 @@ $salesSearch = (string) file_get_contents(
     $root . '/symfony/src/Web/Experience/Extension/Provider/SalesWebProvider.php',
 );
 foreach ([
-    'SalesWorkspaceReadModelInterface',
-    '$this->sales->deals($context->organizationId',
-    '$this->sales->leads($context->organizationId',
-    "new EntityRef('sales.deal'",
-    "new EntityRef('sales.lead'",
+    'SalesEntitySearchInterface',
+    '$this->entitySearch->search($context->organizationId',
+    'new EntityRef($hit->entityType, $hit->entityId)',
     "kind: 'entity'",
 ] as $contract) {
     if (!str_contains($salesSearch, $contract)) {
-        throw new RuntimeException('Sales entity search contract is missing: ' . $contract);
+        throw new RuntimeException('Sales entity search Web contract is missing: ' . $contract);
     }
 }
 
@@ -59,22 +57,64 @@ $propertySearch = (string) file_get_contents(
     $root . '/symfony/src/Web/Experience/Extension/Provider/PropertyWebProvider.php',
 );
 foreach ([
-    'PropertyReferencePort',
-    '$this->properties->searchPropertyReferences($context->organizationId',
-    '$this->properties->getPropertyPresentation($context->organizationId',
-    "new EntityRef('property.asset'",
+    'PropertyEntitySearchInterface',
+    '$this->entitySearch->search($context->organizationId',
+    'new EntityRef($hit->entityType, $hit->entityId)',
     "kind: 'entity'",
 ] as $contract) {
     if (!str_contains($propertySearch, $contract)) {
-        throw new RuntimeException('Property entity search contract is missing: ' . $contract);
+        throw new RuntimeException('Property entity search Web contract is missing: ' . $contract);
     }
 }
 
 foreach ([$salesSearch, $propertySearch] as $entityProvider) {
-    foreach (['SELECT ', 'INSERT ', 'UPDATE ', 'DELETE ', 'PDO', 'Doctrine\\', '/api/v1/'] as $forbidden) {
+    foreach (['Domains\\', 'SELECT ', 'INSERT ', 'UPDATE ', 'DELETE ', 'PDO', 'Doctrine\\', '/api/v1/'] as $forbidden) {
         if (str_contains($entityProvider, $forbidden)) {
-            throw new RuntimeException('Entity search provider bypasses Application/Domain read boundary: ' . $forbidden);
+            throw new RuntimeException('Entity search provider bypasses Application boundary: ' . $forbidden);
         }
+    }
+}
+
+$salesAdapter = (string) file_get_contents(
+    $root . '/symfony/src/Infrastructure/Experience/Search/SalesEntitySearchAdapter.php',
+);
+foreach ([
+    'implements SalesEntitySearchInterface',
+    'SalesWorkspaceReadModelInterface',
+    '$this->sales->deals($organizationId',
+    '$this->sales->leads($organizationId',
+    "entityType: 'sales.deal'",
+    "entityType: 'sales.lead'",
+] as $contract) {
+    if (!str_contains($salesAdapter, $contract)) {
+        throw new RuntimeException('Sales entity search adapter is missing: ' . $contract);
+    }
+}
+
+$propertyAdapter = (string) file_get_contents(
+    $root . '/symfony/src/Infrastructure/Experience/Search/PropertyEntitySearchAdapter.php',
+);
+foreach ([
+    'implements PropertyEntitySearchInterface',
+    'PropertyReferencePort',
+    '$this->properties->searchPropertyReferences($organizationId',
+    '$this->properties->getPropertyPresentation($organizationId',
+    "entityType: 'property.asset'",
+] as $contract) {
+    if (!str_contains($propertyAdapter, $contract)) {
+        throw new RuntimeException('Property entity search adapter is missing: ' . $contract);
+    }
+}
+
+$searchServices = (string) file_get_contents($root . '/symfony/config/services.yaml');
+foreach ([
+    'App\\Application\\Experience\\Search\\Contract\\SalesEntitySearchInterface:',
+    'alias: App\\Infrastructure\\Experience\\Search\\SalesEntitySearchAdapter',
+    'App\\Application\\Experience\\Search\\Contract\\PropertyEntitySearchInterface:',
+    'alias: App\\Infrastructure\\Experience\\Search\\PropertyEntitySearchAdapter',
+] as $contract) {
+    if (!str_contains($searchServices, $contract)) {
+        throw new RuntimeException('Entity search DI contract is missing: ' . $contract);
     }
 }
 
