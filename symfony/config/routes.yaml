@@ -87,6 +87,11 @@ cos_web_public_analytics:
   controller: App\Web\PublicEdge\PublicEdgeController::analytics
   methods: [POST]
 
+cos_web_telemetry:
+  path: /telemetry/web
+  controller: App\Web\Observability\WebTelemetryController
+  methods: [POST]
+
 cos_web_n8n_content_webhook:
   path: /webhooks/n8n/content
   controller: App\Web\PublicEdge\PublicEdgeController::contentWebhook
