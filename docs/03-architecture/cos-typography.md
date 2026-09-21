@@ -39,7 +39,7 @@ PHASE 3 фіксує semantic type contract до канонічного візу
 
 Лабораторія не завантажує сторонні шрифти приховано. Якщо candidate family не встановлена або не bundled, використовується оголошений fallback stack. Brand font приймається лише окремим рішенням щодо asset і ліцензування.
 
-## Production baseline
+## Базовий production-режим
 
 Поки рішення щодо brand font не заморожене, production baseline залишається Inter із системними fallback.
 
