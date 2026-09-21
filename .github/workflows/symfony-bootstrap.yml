@@ -50,10 +50,12 @@ on:
       - 'tests/architecture/web_experience_typography.php'
       - 'tests/architecture/web_experience_primitives.php'
       - 'tests/architecture/web_experience_business_ux.php'
+      - 'tests/architecture/web_experience_stress_screens.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-business-ux.md'
+      - 'docs/03-architecture/cos-stress-screens.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -108,10 +110,12 @@ on:
       - 'tests/architecture/web_experience_typography.php'
       - 'tests/architecture/web_experience_primitives.php'
       - 'tests/architecture/web_experience_business_ux.php'
+      - 'tests/architecture/web_experience_stress_screens.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-business-ux.md'
+      - 'docs/03-architecture/cos-stress-screens.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -190,6 +194,7 @@ jobs:
           grep -q 'cos_symfony_home' /tmp/routes.txt
           grep -q 'cos_web_cabinet' /tmp/routes.txt
           grep -q 'cos_web_design_system_catalog' /tmp/routes.txt
+          grep -q 'cos_web_visual_stress' /tmp/routes.txt
           grep -q 'cos_web_workspace_shell_preview' /tmp/routes.txt
           grep -q 'cos_web_workspace_platform_preview' /tmp/routes.txt
           grep -q 'cos_web_realtime_platform_preview' /tmp/routes.txt
@@ -240,6 +245,12 @@ jobs:
 
       - name: PHASE 7 Entity business UX gate
         run: php tests/architecture/web_experience_business_ux.php
+
+      - name: PHASE 8 Stress screens gate
+        run: php tests/architecture/web_experience_stress_screens.php
+
+      - name: PHASE 8 Stress screens runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:visual-stress:smoke
 
 
 
@@ -370,6 +381,8 @@ jobs:
           curl --silent --head http://127.0.0.1:8081/cabinet | grep -qi '^location: /auth/login'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/ui)" = "302"
           curl --silent --head http://127.0.0.1:8081/dev/ui | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/stress)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/stress | grep -qi '^location: /auth/login'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/shell)" = "302"
           curl --silent --head http://127.0.0.1:8081/dev/shell | grep -qi '^location: /auth/login'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/realtime)" = "302"
