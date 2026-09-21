@@ -60,6 +60,14 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Experience\Dev\RealtimePlatformPreviewController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Experience\Dev\RealtimePlatformPublishController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Experience\Search\GlobalSearchController:
     public: true
     tags: ['controller.service_arguments']

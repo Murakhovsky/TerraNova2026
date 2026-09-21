@@ -21,6 +21,7 @@ on:
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
       - 'tests/architecture/web_experience_wave12_runtime_actions.php'
+      - 'tests/architecture/web_experience_wave12_realtime.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -47,6 +48,7 @@ on:
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
       - 'tests/architecture/web_experience_wave12_runtime_actions.php'
+      - 'tests/architecture/web_experience_wave12_realtime.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -73,6 +75,8 @@ jobs:
       SPATIAL_JWT_SECRET: ci-spatial-secret-0123456789abcdef
       WAVE6_CRM_WEBHOOK_SECRET: ci-crm-secret
       N8N_WEBHOOK_SECRET: ci-n8n-secret
+      MERCURE_JWT_SECRET: ci-mercure-secret-0123456789abcdef
+      MERCURE_PUBLIC_URL: http://127.0.0.1:8081/.well-known/mercure
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -96,7 +100,7 @@ jobs:
         run: docker compose build php nginx
 
       - name: Start dependencies
-        run: docker compose up -d --wait mysql redis
+        run: docker compose up -d --wait mysql redis mercure
 
       - name: Apply COS schema
         run: docker compose run --rm --no-deps php php bin/console cos:schema:migrate
@@ -125,6 +129,7 @@ jobs:
           grep -q 'cos_web_design_system_catalog' /tmp/routes.txt
           grep -q 'cos_web_workspace_shell_preview' /tmp/routes.txt
           grep -q 'cos_web_workspace_platform_preview' /tmp/routes.txt
+          grep -q 'cos_web_realtime_platform_preview' /tmp/routes.txt
           grep -q 'cos_web_global_search' /tmp/routes.txt
 
       - name: Runtime health
@@ -176,6 +181,9 @@ jobs:
       - name: Workspace Platform runtime smoke
         run: docker compose exec -T php php bin/console cos:web:workspace:smoke
 
+      - name: Realtime Platform runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:realtime:smoke
+
       - name: Global Search runtime smoke
         run: docker compose exec -T php php bin/console cos:web:search:smoke
 
@@ -189,6 +197,8 @@ jobs:
           curl --silent --head http://127.0.0.1:8081/dev/ui | grep -qi '^location: /auth/login'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/shell)" = "302"
           curl --silent --head http://127.0.0.1:8081/dev/shell | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/realtime)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/realtime | grep -qi '^location: /auth/login'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/workspace/search)" = "302"
           curl --silent --head http://127.0.0.1:8081/workspace/search | grep -qi '^location: /auth/login'
 
