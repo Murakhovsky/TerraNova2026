@@ -25,7 +25,7 @@ Reference routes після cutover видалені, щоб не лишати �
 ```text
 Symfony route
   ↓
-SalesReferenceController
+тимчасовий reference controller
   ↓
 QueryBusInterface
   ↓
