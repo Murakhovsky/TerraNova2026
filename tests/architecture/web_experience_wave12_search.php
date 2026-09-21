@@ -103,6 +103,11 @@ if (!str_contains($security, '|workspace|')
     throw new RuntimeException('Workspace search is not protected by authenticated Symfony security.');
 }
 
+$authenticator = (string) file_get_contents($root . '/symfony/src/Security/SessionAuthenticator.php');
+if (!str_contains($authenticator, "str_starts_with($path,'/workspace')")) {
+    throw new RuntimeException('Workspace search must use the canonical Web authentication entry point.');
+}
+
 $appJs = (string) file_get_contents($root . '/symfony/assets/app.js');
 if (!str_contains($appJs, "import '@hotwired/turbo';")) {
     throw new RuntimeException('Turbo runtime is not explicitly started by the canonical app entrypoint.');
