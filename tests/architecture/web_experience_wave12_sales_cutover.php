@@ -14,6 +14,8 @@ $routes = file_get_contents($root . '/symfony/config/routes.yaml');
 $production = file_get_contents($root . '/symfony/src/Web/Sales/SalesWorkspaceController.php');
 $legacy = file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
 $services = file_get_contents($root . '/symfony/config/services.yaml');
+$leadRuntime = file_get_contents($root . '/symfony/assets/controllers/sales_lead_controller.js');
+$leadList = file_get_contents($root . '/symfony/templates/experience/sales/leads.html.twig');
 
 foreach ([
     "cos_web_sales_dashboard:\n  path: /sales/dashboard\n  controller: App\\Web\\Sales\\SalesWorkspaceController::dashboard",
@@ -55,5 +57,29 @@ foreach ([
 ] as $template) {
     expectSalesCutover(is_file($root . '/' . $template), 'Production Sales Twig template missing: ' . $template);
 }
+
+foreach ([
+    'data-sales-lead-status',
+    'data-sales-lead-owner',
+    'data-sales-lead-deal',
+    'data-sales-lead-followup',
+    'data-controller="sales-lead"',
+] as $marker) {
+    expectSalesCutover(str_contains($leadList, $marker), 'Lead mutation parity missing from production Twig: ' . $marker);
+}
+
+foreach ([
+    '/api/v1/sales/leads/',
+    '/opportunity',
+    '/followups',
+    "'PATCH'",
+    "'X-CSRF-Token'",
+    "'X-Idempotency-Key'",
+] as $marker) {
+    expectSalesCutover(str_contains($leadRuntime, $marker), 'Lead mutation runtime contract missing: ' . $marker);
+}
+
+expectSalesCutover(str_contains($production, 'SalesAdminQuery'), 'Production Sales controller must source owner choices through QueryBus.');
+expectSalesCutover(str_contains($production, "'team.users'"), 'Production Sales owner projection must use the canonical Sales admin query operation.');
 
 echo "Wave 12.26 Sales Cutover architecture gate passed.\n";
