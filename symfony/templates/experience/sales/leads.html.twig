@@ -1,7 +1,7 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 {% block title %}Lead List | COS{% endblock %}
 {% block workspace_content %}
-<section class="cos-primitive-stack" data-sales-reference="lead-list">
+<section class="cos-primitive-stack" data-sales-surface="lead-list">
     <twig:CosEntityHeader
         eyebrow="Sales"
         title="Lead List"
@@ -37,14 +37,49 @@
         </div>
         <div class="cos-entity-list">
             {% for lead in items %}
-                <twig:CosEntityListItem
-                    title="{{ lead.name ?? 'Lead #' ~ lead.id }}"
-                    subtitle="{{ (lead.source ?? 'Direct') ~ ' · ' ~ (lead.phone ?? lead.email ?? 'без контакту') }}"
-                    meta="{{ lead.owner_name ?? 'Unassigned' }}"
-                    statusLabel="{{ lead.status ?? 'new' }}"
-                    statusTone="{{ (lead.status ?? '') == 'qualified' ? 'positive' : ((lead.status ?? '') == 'disqualified' ? 'danger' : 'neutral') }}"
-                    href="/sales/leads/{{ lead.id }}"
-                />
+                <article
+                    class="cos-card cos-primitive-stack"
+                    data-controller="sales-lead"
+                    data-sales-lead-lead-id-value="{{ lead.id }}"
+                    data-sales-lead-csrf-value="{{ csrfToken }}"
+                    data-lead-id="{{ lead.id }}"
+                >
+                    <twig:CosEntityListItem
+                        title="{{ lead.name ?? 'Lead #' ~ lead.id }}"
+                        subtitle="{{ (lead.source ?? 'Direct') ~ ' · ' ~ (lead.phone ?? lead.email ?? 'без контакту') }}"
+                        meta="{{ lead.owner_name ?? 'Unassigned' }}"
+                        statusLabel="{{ lead.status ?? 'new' }}"
+                        statusTone="{{ (lead.status ?? '') == 'qualified' ? 'positive' : ((lead.status ?? '') == 'disqualified' ? 'danger' : 'neutral') }}"
+                        href="/sales/leads/{{ lead.id }}"
+                    />
+
+                    <twig:CosActionBar label="Lead actions">
+                        {% if (lead.status ?? 'new') == 'new' %}
+                            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-sales-lead-status data-status="contacted" data-action="sales-lead#status">Contacted</button>
+                        {% endif %}
+                        <button class="cos-button cos-button--primary cos-button--sm" type="button" data-sales-lead-status data-status="qualified" data-action="sales-lead#status">Qualify</button>
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-sales-lead-status data-status="disqualified" data-action="sales-lead#status">Disqualify</button>
+
+                        {% if lead.deal_id ?? false %}
+                            <a class="cos-button cos-button--primary cos-button--sm" href="/sales/deals/{{ lead.deal_id }}">Open Deal</a>
+                        {% else %}
+                            <button class="cos-button cos-button--primary cos-button--sm" type="button" data-sales-lead-deal data-action="sales-lead#convert">Create Deal</button>
+                        {% endif %}
+
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-sales-lead-followup data-action="sales-lead#followup">Follow-up</button>
+                    </twig:CosActionBar>
+
+                    <label class="cos-field">
+                        <span>Owner</span>
+                        <select class="cos-select" data-sales-lead-owner data-action="change->sales-lead#owner">
+                            <option value="">Оберіть</option>
+                            {% for owner in owners %}
+                                <option value="{{ owner.id }}" {% if (lead.owner_id ?? 0) == owner.id %}selected{% endif %}>{{ owner.full_name ?? owner.email ?? ('#' ~ owner.id) }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <p class="cos-card__copy" data-sales-lead-status-text aria-live="polite"></p>
+                </article>
             {% else %}
                 <p class="cos-card__copy">Лідів не знайдено. Змініть фільтри або дочекайтеся нових звернень.</p>
             {% endfor %}
