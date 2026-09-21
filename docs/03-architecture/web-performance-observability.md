@@ -1,4 +1,12 @@
-# Wave 12.24 — Performance & Observability
+---
+title: Продуктивність і спостережуваність Web Experience
+description: Канонічний контракт Wave 12.24 для HTTP-метрик, correlation tracing, браузерної телеметрії, frontend errors і performance budgets у COS.
+status: active
+updated: 2026-09-21
+kind: architecture
+---
+
+# Продуктивність і спостережуваність Web Experience
 
 ## Мета
 
@@ -11,7 +19,7 @@ Wave 12.24 закриває експлуатаційну видимість Web 
 - `X-Correlation-ID`;
 - `cos_operational_metrics`.
 
-## HTTP metrics
+## HTTP-метрики
 
 `HttpExecutionContextSubscriber` записує:
 
@@ -32,7 +40,7 @@ Correlation ID не використовується як metric label. Він �
 - `X-Correlation-ID`;
 - `Server-Timing: app;dur=...`.
 
-## Browser telemetry
+## Браузерна телеметрія
 
 Same-origin endpoint:
 
@@ -49,7 +57,7 @@ Payload bounded. Query string від path відкидається. Повідо
 
 Telemetry не є заміною Audit/History. Це runtime diagnostics, а не бізнес-аудит.
 
-## Performance budgets
+## Бюджети продуктивності
 
 Live browser gate перевіряє канонічні сторінки на desktop і mobile:
 
