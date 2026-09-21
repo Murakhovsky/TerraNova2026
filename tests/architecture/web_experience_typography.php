@@ -83,7 +83,7 @@ foreach ([
 
 $docs = (string) file_get_contents($root . '/docs/03-architecture/cos-typography.md');
 foreach ([
-    'Production baseline',
+    'Базовий production-режим',
     'Лабораторія кандидатів',
     'Фінансова та числова типографіка',
     'Критерії завершення PHASE 3',
