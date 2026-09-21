@@ -113,12 +113,19 @@ jobs:
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "
             cd $REMOTE_PATH 2>/dev/null || true
+            if docker info >/dev/null 2>&1; then
+              DOCKER='docker'
+            elif sudo -n docker info >/dev/null 2>&1; then
+              DOCKER='sudo -n docker'
+            else
+              DOCKER=''
+            fi
             echo '=== docker ps -a ==='
-            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+            if [ -n "$DOCKER" ]; then $DOCKER ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; fi
             echo '=== cos-nginx-1 logs ==='
-            docker logs --tail=160 cos-nginx-1 2>&1 || true
+            if [ -n "$DOCKER" ]; then $DOCKER logs --tail=160 cos-nginx-1 2>&1 || true; fi
             echo '=== cos-mercure-1 logs ==='
-            docker logs --tail=160 cos-mercure-1 2>&1 || true
+            if [ -n "$DOCKER" ]; then $DOCKER logs --tail=160 cos-mercure-1 2>&1 || true; fi
             echo '=== localhost:8081 readiness ==='
             curl -sv --max-time 8 http://127.0.0.1:8081/health/dependencies 2>&1 || true
           "
@@ -183,6 +190,10 @@ jobs:
           REMOTE_PATH=$(printf '%q' "$DEV_PATH")
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "
             cd $REMOTE_PATH
-            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            if docker info >/dev/null 2>&1; then
+              docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            elif sudo -n docker info >/dev/null 2>&1; then
+              sudo -n docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            fi
             curl --fail --show-error --silent http://127.0.0.1:8081/health/dependencies > /dev/null
           "
