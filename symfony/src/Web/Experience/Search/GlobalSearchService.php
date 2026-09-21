@@ -7,6 +7,7 @@ namespace App\Web\Experience\Search;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\WebExtensionCatalog;
+use App\Web\Experience\Shell\CoreCommandCatalog;
 use App\Web\Experience\Shell\ShellCommandItem;
 
 final readonly class GlobalSearchService
@@ -14,6 +15,7 @@ final readonly class GlobalSearchService
     public function __construct(
         private WebExtensionCatalog $extensions,
         private SearchResultMatcher $matcher,
+        private CoreCommandCatalog $coreCommands,
     ) {
     }
 
@@ -27,10 +29,7 @@ final readonly class GlobalSearchService
         $catalog = $this->extensions->forContext($context);
 
         $commands = [
-            new ShellCommandItem('core.home', 'Open Workspace Overview', '/admin', 'command', 'Core'),
-            new ShellCommandItem('core.cos', 'Open COS Control Center', '/cos/control-center', 'command', 'Core'),
-            new ShellCommandItem('core.analytics', 'Open Analytics', '/admin/analytics', 'command', 'Core'),
-            new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'command', 'Core'),
+            ...$this->coreCommands->commands($context),
             ...$catalog->commands(),
         ];
 
