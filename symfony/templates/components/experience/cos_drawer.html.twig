@@ -1,0 +1,36 @@
+<div class="cos-drawer-host">
+    {% if triggerLabel %}
+        <button
+            class="cos-button"
+            type="button"
+            data-controller="dialog-trigger"
+            data-dialog-trigger-dialog-id-value="{{ id }}"
+            data-action="click->dialog-trigger#open"
+            aria-haspopup="dialog"
+        >{{ triggerLabel }}</button>
+    {% endif %}
+
+    <dialog
+        id="{{ id }}"
+        class="{{ this.cssClass() }}"
+        aria-labelledby="{{ id }}-title"
+        data-controller="dialog"
+        data-dialog-dismissible-value="{{ dismissible ? 'true' : 'false' }}"
+        data-action="cancel->dialog#cancel click->dialog#backdrop"
+    >
+        <div class="cos-drawer__panel" data-dialog-target="panel">
+            <header class="cos-dialog__header">
+                <h2 id="{{ id }}-title" class="cos-dialog__title">{{ title }}</h2>
+                {% if dismissible %}
+                    <button
+                        class="cos-icon-button"
+                        type="button"
+                        aria-label="{{ closeLabel }}"
+                        data-action="click->dialog#close"
+                    >×</button>
+                {% endif %}
+            </header>
+            <div class="cos-dialog__body">{% block content %}{% endblock %}</div>
+        </div>
+    </dialog>
+</div>

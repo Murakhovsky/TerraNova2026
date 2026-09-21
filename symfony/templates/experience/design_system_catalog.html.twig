@@ -173,5 +173,103 @@
             copy="Change filters, switch saved view or create the first record through a governed action."
         />
     </section>
+    {% set interactionTabs = [
+        {'key': 'overview', 'label': 'Overview'},
+        {'key': 'activity', 'label': 'Activity'},
+        {'key': 'disabled', 'label': 'Disabled', 'disabled': true}
+    ] %}
+
+    <section class="cos-ui-catalog__section" aria-labelledby="interaction-heading">
+        <div class="cos-ui-catalog__section-head">
+            <h2 id="interaction-heading">Interaction components</h2>
+            <p>Server-rendered semantics with small, isolated Stimulus behavior.</p>
+        </div>
+
+        <div class="cos-ui-catalog__grid">
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Modal</p>
+                <twig:CosModal id="catalog-modal" title="Modal example" triggerLabel="Open modal">
+                    <p>Modal content remains server-rendered Twig content.</p>
+                </twig:CosModal>
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Drawer</p>
+                <twig:CosDrawer id="catalog-drawer" title="Drawer example" triggerLabel="Open drawer">
+                    <p>Inspect or edit without losing list context.</p>
+                </twig:CosDrawer>
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Dropdown</p>
+                <twig:CosDropdown id="catalog-dropdown" label="Open menu">
+                    <a href="#interaction-heading" role="menuitem">First action</a>
+                    <button type="button" role="menuitem">Second action</button>
+                </twig:CosDropdown>
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Tabs</p>
+                <twig:CosTabs id="catalog-tabs" label="Catalog tabs" :items="interactionTabs" active="overview">
+                    <section
+                        id="catalog-tabs-panel-overview"
+                        role="tabpanel"
+                        aria-labelledby="catalog-tabs-tab-overview"
+                        data-tabs-target="panel"
+                        data-tab-key="overview"
+                    >Overview panel</section>
+                    <section
+                        id="catalog-tabs-panel-activity"
+                        role="tabpanel"
+                        aria-labelledby="catalog-tabs-tab-activity"
+                        data-tabs-target="panel"
+                        data-tab-key="activity"
+                        hidden
+                    >Activity panel</section>
+                </twig:CosTabs>
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Popover + Tooltip</p>
+                <div class="cos-ui-catalog__row">
+                    <twig:CosPopover
+                        id="catalog-popover"
+                        triggerLabel="Details"
+                        title="Popover"
+                        copy="Contextual server-rendered information."
+                    />
+                    <twig:CosTooltip
+                        id="catalog-tooltip"
+                        label="Hover or focus"
+                        text="Accessible tooltip content"
+                    />
+                </div>
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Confirm</p>
+                <twig:CosConfirm
+                    id="catalog-confirm"
+                    title="Confirm destructive action"
+                    message="This is presentation confirmation only; backend authorization remains authoritative."
+                    triggerLabel="Open confirmation"
+                    confirmLabel="Confirm"
+                    stepUp
+                />
+            </section>
+
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Toast</p>
+                <twig:CosToast
+                    id="catalog-toast"
+                    title="Saved"
+                    message="The operation completed successfully."
+                    tone="positive"
+                    :duration="0"
+                />
+            </section>
+        </div>
+    </section>
+
 </main>
 {% endblock %}

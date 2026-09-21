@@ -12,5 +12,17 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 )]
 final class CosTooltip
 {
+    public string $id = 'cos-tooltip';
+    public string $label = 'Info';
     public string $text = '';
+    public string $placement = 'top';
+
+    public function cssClass(): string
+    {
+        $placement = in_array($this->placement, ['top', 'end', 'bottom', 'start'], true)
+            ? $this->placement
+            : 'top';
+
+        return 'cos-tooltip-host cos-tooltip-host--' . $placement;
+    }
 }

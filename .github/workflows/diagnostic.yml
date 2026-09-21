@@ -42,6 +42,7 @@ jobs:
           php tests/architecture/web_experience_wave12_shell.php
           php tests/architecture/web_experience_wave12_extensions.php
           php tests/architecture/web_experience_wave12_actions.php
+          php tests/architecture/web_experience_wave12_interactions.php
           php tests/architecture/web_experience_wave12_search.php
 
       - name: Zero legacy production gate
