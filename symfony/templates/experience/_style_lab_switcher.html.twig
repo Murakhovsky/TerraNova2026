@@ -1,0 +1,46 @@
+<section
+    class="cos-style-lab"
+    data-controller="appearance"
+    data-appearance-theme-value="light"
+    data-appearance-density-value="comfortable"
+    data-appearance-style-value="{{ style|default('origin-a') }}"
+    aria-label="COS Style Lab"
+>
+    <div class="cos-style-lab__identity">
+        <strong>PHASE 2 · Style Lab</strong>
+        <small>Перемикай стиль на живому UI. Без persistence, без магії, без голосування CSS-фреймворків.</small>
+    </div>
+
+    <div class="cos-style-lab__styles" role="group" aria-label="Style candidates">
+        {% for value, label in {
+            'light': 'Light',
+            'dark': 'Dark',
+            'origin-a': 'Origin A',
+            'origin-b': 'Origin B',
+            'origin-c': 'Origin C',
+            'glass': 'Glass'
+        } %}
+            <button
+                class="cos-style-lab__button"
+                type="button"
+                data-appearance-target="styleButton"
+                data-action="click->appearance#setStyle"
+                data-style="{{ value }}"
+                aria-pressed="false"
+            >{{ label }}</button>
+        {% endfor %}
+    </div>
+
+    <div class="cos-style-lab__density" role="group" aria-label="Density">
+        {% for value, label in {'comfortable': 'Comfort', 'compact': 'Compact'} %}
+            <button
+                class="cos-style-lab__density-button"
+                type="button"
+                data-appearance-target="densityButton"
+                data-action="click->appearance#setDensity"
+                data-density="{{ value }}"
+                aria-pressed="false"
+            >{{ label }}</button>
+        {% endfor %}
+    </div>
+</section>

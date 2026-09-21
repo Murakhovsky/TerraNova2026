@@ -6,6 +6,12 @@
     <meta name="robots" content="noindex,nofollow">
 {% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/style-lab.css') }}">
+{% endblock %}
+
 {% block workspace_content %}
+    {% include 'experience/_style_lab_switcher.html.twig' with {'style': 'origin-a'} only %}
     {% include 'experience/workspace_platform_fragment.html.twig' with {'workspace': workspace} only %}
 {% endblock %}
