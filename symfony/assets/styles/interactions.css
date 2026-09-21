@@ -33,10 +33,10 @@
   max-height: inherit;
   overflow: hidden;
   color: var(--cos-color-text);
-  background: var(--cos-color-surface);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-overlay-bg);
+  border: 1px solid var(--cos-surface-border);
   border-radius: var(--cos-radius-lg);
-  box-shadow: var(--cos-shadow-overlay);
+  box-shadow: var(--cos-surface-overlay-shadow);
 }
 
 .cos-dialog__header,
@@ -118,10 +118,10 @@
   min-width: 13rem;
   padding: var(--cos-space-2);
   color: var(--cos-color-text);
-  background: var(--cos-color-surface);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-floating-bg);
+  border: 1px solid var(--cos-surface-border);
   border-radius: var(--cos-radius-md);
-  box-shadow: var(--cos-shadow-overlay);
+  box-shadow: var(--cos-surface-floating-shadow);
 }
 
 .cos-dropdown__menu[hidden] {
@@ -282,11 +282,11 @@
   width: min(26rem, calc(100vw - 2rem));
   padding: var(--cos-space-3);
   color: var(--cos-color-text);
-  background: var(--cos-color-surface);
-  border: 1px solid var(--cos-color-border);
+  background: var(--cos-surface-floating-bg);
+  border: 1px solid var(--cos-surface-border);
   border-left-width: 3px;
   border-radius: var(--cos-radius-md);
-  box-shadow: var(--cos-shadow-overlay);
+  box-shadow: var(--cos-surface-floating-shadow);
   transition: opacity var(--cos-motion-fast) var(--cos-ease-standard),
     transform var(--cos-motion-fast) var(--cos-ease-standard);
 }
