@@ -368,13 +368,11 @@
             statusTone="positive"
             :meta="phase7Meta"
         >
-            {% block actions %}
-                <twig:CosActionBar label="Opportunity actions">
-                    <twig:CosButton label="Advance stage" variant="primary" />
-                    <twig:CosButton label="Add note" />
-                    <twig:CosButton label="Close" variant="ghost" />
-                </twig:CosActionBar>
-            {% endblock %}
+            <twig:CosActionBar label="Opportunity actions">
+                <twig:CosButton label="Advance stage" variant="primary" />
+                <twig:CosButton label="Add note" />
+                <twig:CosButton label="Close" variant="ghost" />
+            </twig:CosActionBar>
         </twig:CosEntityHeader>
 
         <twig:CosEntitySummary label="Opportunity summary" :items="phase7Summary" />
