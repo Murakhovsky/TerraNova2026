@@ -1,0 +1,76 @@
+name: Wave 12.2 ImportMap
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  importmap:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: prod
+      APP_DEBUG: '0'
+      APP_SECRET: wave12-ui-importmap-secret
+      COS_ORGANIZATION_ID: default
+      DATABASE_URL: 'mysql://cos:wave12@127.0.0.1:3306/cos?serverVersion=8.4.0&charset=utf8mb4'
+      REDIS_URL: redis://127.0.0.1:6379
+      MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_async
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_failed
+      MESSENGER_CONSUMER_NAME: wave12-ui-importmap
+      COS_SALES_AUTOMATION_SCHEDULER_ENABLED: '0'
+      COS_AGENT_LLM_MODE: fixture
+      LLM_ENDPOINT: ''
+      LLM_TOKEN: ''
+      LLM_MODEL: wave12-ui
+      LLM_PROVIDER: fixture
+      SPATIAL_MAX_UPLOAD_BYTES: '209715200'
+      SPATIAL_JWT_SECRET: wave12-ui-spatial-secret
+      SPATIAL_JWT_TTL: '28800'
+      SPATIAL_BLENDER_BINARY: ''
+      SPATIAL_GLTF_TRANSFORM_BINARY: ''
+      APP_URL: http://127.0.0.1:8081
+      TELEGRAM_BOT_TOKEN: ''
+      TELEGRAM_BOT_NAME: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+      - name: Install canonical Symfony runtime
+        run: composer install --working-dir=symfony --no-interaction --prefer-dist --no-progress
+      - name: Resolve browser packages into canonical import map
+        working-directory: symfony
+        run: |
+          php bin/console importmap:require bootstrap@5.3.8
+          php bin/console importmap:require bootstrap/dist/css/bootstrap.min.css
+          php bin/console importmap:require chart.js@4.5.1
+          php bin/console importmap:require tabulator-tables@6.5.3
+          php bin/console importmap:require tabulator-tables/dist/css/tabulator.min.css
+          php bin/console importmap:require fullcalendar@7.1.0
+          php bin/console importmap:require fullcalendar/daygrid
+          php bin/console importmap:require fullcalendar/interaction
+          php bin/console importmap:require fullcalendar/skeleton.css
+          php bin/console importmap:require sortablejs@1.15.7
+          php bin/console importmap:require flatpickr@4.6.13
+          php bin/console importmap:require flatpickr/dist/flatpickr.min.css
+          php bin/console importmap:require cytoscape@3.34.3
+          php bin/console importmap:require tom-select@2.6.2
+          php bin/console importmap:require tom-select/dist/css/tom-select.bootstrap5.css
+          php bin/console importmap:require intl-messageformat@10.7.18
+      - name: Commit canonical import map
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add symfony/importmap.php
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Wave 12.2: lock browser adapter import map"
+          git push origin HEAD:${{ github.head_ref }}
