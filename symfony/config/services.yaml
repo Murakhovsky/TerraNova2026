@@ -19,6 +19,9 @@ services:
     App\Web\Experience\Extension\Contract\WebExtensionProviderInterface:
       tags:
         - { name: 'cos.web.extension.provider' }
+    App\Web\Experience\Action\UIActionPermissionCheckerInterface:
+      tags:
+        - { name: 'cos.web.action.permission_checker' }
 
   App\:
     resource: '../src/'
@@ -52,6 +55,10 @@ services:
   App\Web\Experience\Search\GlobalSearchController:
     public: true
     tags: ['controller.service_arguments']
+
+  App\Web\Experience\Action\UIActionPermissionResolver:
+    arguments:
+      $checkers: !tagged_iterator cos.web.action.permission_checker
 
   App\Security\CosIdentityLoader:
     arguments:
