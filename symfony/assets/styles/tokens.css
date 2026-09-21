@@ -124,6 +124,7 @@ html[data-cos-theme="system"] {
   --cos-control-height-sm: 2rem;
   --cos-control-height: 2.375rem;
   --cos-control-height-lg: 2.75rem;
+  --cos-touch-target-min: 2.75rem;
   --cos-density-gap: 1rem;
   --cos-density-panel-padding: 1.25rem;
 }

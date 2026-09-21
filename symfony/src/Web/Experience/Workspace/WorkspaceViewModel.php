@@ -16,6 +16,8 @@ final readonly class WorkspaceViewModel
      * @param list<WorkspaceExtension> $extensions
      * @param list<UIAction> $primaryActions
      * @param list<UIAction> $secondaryActions
+     * @param list<UIAction> $mobilePrimaryActions
+     * @param list<UIAction> $mobileMenuActions
      */
     public function __construct(
         public WorkspaceDefinition $definition,
@@ -24,6 +26,8 @@ final readonly class WorkspaceViewModel
         public array $extensions,
         public array $primaryActions,
         public array $secondaryActions,
+        public array $mobilePrimaryActions,
+        public array $mobileMenuActions,
     ) {
     }
 

@@ -24,6 +24,7 @@ on:
       - 'tests/architecture/web_experience_wave12_realtime.php'
       - 'tests/architecture/web_experience_wave12_async_operations.php'
       - 'tests/architecture/web_experience_wave12_ai_ui.php'
+      - 'tests/architecture/web_experience_wave12_mobile.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -53,6 +54,7 @@ on:
       - 'tests/architecture/web_experience_wave12_realtime.php'
       - 'tests/architecture/web_experience_wave12_async_operations.php'
       - 'tests/architecture/web_experience_wave12_ai_ui.php'
+      - 'tests/architecture/web_experience_wave12_mobile.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -193,6 +195,9 @@ jobs:
 
       - name: AI UI Platform runtime smoke
         run: docker compose exec -T php php bin/console cos:web:ai-ui:smoke
+
+      - name: Mobile Foundation runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:mobile:smoke
 
       - name: Global Search runtime smoke
         run: docker compose exec -T php php bin/console cos:web:search:smoke
