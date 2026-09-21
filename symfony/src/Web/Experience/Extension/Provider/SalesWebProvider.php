@@ -24,13 +24,13 @@ use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 use App\Web\Experience\Workspace\WorkspaceSlot;
-use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use App\Application\Experience\Search\Contract\SalesEntitySearchInterface;
 
 final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, WorkspaceExtensionProviderInterface, ActionProviderInterface
 {
     public function __construct(
         private readonly SearchResultMatcher $matcher,
-        private readonly SalesWorkspaceReadModelInterface $sales,
+        private readonly SalesEntitySearchInterface $entitySearch,
     ) {
     }
 
@@ -85,50 +85,18 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
             return $navigation;
         }
 
-        $entities = [];
-
-        foreach ($this->sales->deals($context->organizationId, ['q' => $query, 'limit' => $limit]) as $deal) {
-            $id = (int) ($deal['id'] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-
-            $title = trim((string) ($deal['title'] ?? ''));
-            $publicId = trim((string) ($deal['public_id'] ?? ''));
-            $customer = trim((string) ($deal['customer'] ?? ''));
-            $stage = trim((string) ($deal['stage_name'] ?? $deal['stage_code'] ?? ''));
-
-            $entities[] = new SearchResult(
-                id: 'sales.deal.' . $id,
-                label: $title !== '' ? $title : ($publicId !== '' ? $publicId : 'Deal #' . $id),
-                path: '/sales/deals/' . $id,
+        $entities = array_map(
+            static fn ($hit): SearchResult => new SearchResult(
+                id: $hit->id,
+                label: $hit->label,
+                path: $hit->path,
                 kind: 'entity',
-                subtitle: implode(' · ', array_values(array_filter([$publicId, $customer, $stage]))),
-                entity: new EntityRef('sales.deal', (string) $id),
-                score: 92.0,
-            );
-        }
-
-        foreach ($this->sales->leads($context->organizationId, ['q' => $query, 'limit' => $limit]) as $lead) {
-            $id = (int) ($lead['id'] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-
-            $name = trim((string) ($lead['name'] ?? ''));
-            $source = trim((string) ($lead['source'] ?? ''));
-            $status = trim((string) ($lead['status'] ?? ''));
-
-            $entities[] = new SearchResult(
-                id: 'sales.lead.' . $id,
-                label: $name !== '' ? $name : 'Lead #' . $id,
-                path: '/sales/leads?q=' . rawurlencode($name !== '' ? $name : (string) $id),
-                kind: 'entity',
-                subtitle: implode(' · ', array_values(array_filter(['Lead #' . $id, $source, $status]))),
-                entity: new EntityRef('sales.lead', (string) $id),
-                score: 90.0,
-            );
-        }
+                subtitle: $hit->subtitle,
+                entity: new EntityRef($hit->entityType, $hit->entityId),
+                score: $hit->score,
+            ),
+            $this->entitySearch->search($context->organizationId, $query, $limit),
+        );
 
         return array_slice([...$entities, ...$navigation], 0, $limit);
     }
