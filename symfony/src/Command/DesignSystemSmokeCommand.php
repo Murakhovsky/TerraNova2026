@@ -43,6 +43,8 @@ final class DesignSystemSmokeCommand extends Command
             'cos-empty-state',
             'Semantic color tokens',
             'PHASE 6 Canonical Primitives Pass',
+            'PHASE 7 Entity + Business UX',
+            'cos-entity-header',
             'cos-status--positive',
         ] as $marker) {
             if (!str_contains($html, $marker)) {
