@@ -93,6 +93,16 @@ html[data-cos-theme="system"] {
   --cos-focus-ring: rgba(83, 103, 255, 0.28);
   --cos-overlay: rgba(12, 15, 20, 0.52);
 
+  /* PHASE 6 canonical component state grammar. */
+  --cos-state-hover-bg: var(--cos-color-surface-raised);
+  --cos-state-active-bg: var(--cos-color-surface-subtle);
+  --cos-state-selected-bg: var(--cos-color-primary-soft);
+  --cos-state-selected-border: var(--cos-color-primary-border);
+  --cos-state-focus-border: var(--cos-color-primary);
+  --cos-state-error-border: var(--cos-color-danger);
+  --cos-state-disabled-opacity: 0.48;
+  --cos-state-loading-opacity: 0.72;
+
   --cos-space-1: 0.25rem;
   --cos-space-2: 0.5rem;
   --cos-space-3: 0.75rem;

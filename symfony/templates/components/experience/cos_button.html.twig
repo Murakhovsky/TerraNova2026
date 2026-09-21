@@ -1,9 +1,15 @@
-{% if href and not disabled %}
+{% set unavailable = disabled or loading %}
+{% if href and not unavailable %}
     <a class="{{ this.cssClass() }}" href="{{ href }}">{{ label }}</a>
 {% else %}
     <button
         class="{{ this.cssClass() }}"
         type="{{ type }}"
-        {% if disabled %}disabled aria-disabled="true"{% endif %}
-    >{{ label }}</button>
+        {% if unavailable %}disabled aria-disabled="true"{% endif %}
+        {% if loading %}aria-busy="true"{% endif %}
+        {% if pressed is not null %}aria-pressed="{{ pressed ? 'true' : 'false' }}"{% endif %}
+    >
+        {% if loading %}<span class="cos-control-spinner" aria-hidden="true"></span>{% endif %}
+        <span>{{ loading ? loadingLabel : label }}</span>
+    </button>
 {% endif %}

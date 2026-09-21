@@ -42,8 +42,10 @@ on:
       - 'tests/architecture/web_experience_geometry.php'
       - 'tests/architecture/web_experience_surfaces.php'
       - 'tests/architecture/web_experience_typography.php'
+      - 'tests/architecture/web_experience_primitives.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
+      - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -90,8 +92,10 @@ on:
       - 'tests/architecture/web_experience_geometry.php'
       - 'tests/architecture/web_experience_surfaces.php'
       - 'tests/architecture/web_experience_typography.php'
+      - 'tests/architecture/web_experience_primitives.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
+      - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -214,6 +218,9 @@ jobs:
 
       - name: PHASE 5 Surface hierarchy gate
         run: php tests/architecture/web_experience_surfaces.php
+
+      - name: PHASE 6 Canonical primitives gate
+        run: php tests/architecture/web_experience_primitives.php
 
 
 

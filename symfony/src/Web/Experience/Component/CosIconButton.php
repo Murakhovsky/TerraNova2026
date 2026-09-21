@@ -17,6 +17,9 @@ final class CosIconButton
     public string $variant = 'secondary';
     public string $type = 'button';
     public bool $disabled = false;
+    public bool $loading = false;
+    public string $loadingLabel = 'Loading';
+    public ?bool $pressed = null;
 
     public function cssClass(): string
     {
@@ -24,8 +27,14 @@ final class CosIconButton
             ? $this->variant
             : 'secondary';
 
-        return $variant === 'secondary'
-            ? 'cos-icon-button'
-            : 'cos-icon-button cos-icon-button--' . $variant;
+        $classes = $variant === 'secondary'
+            ? ['cos-icon-button']
+            : ['cos-icon-button', 'cos-icon-button--' . $variant];
+
+        if ($this->loading) {
+            $classes[] = 'is-loading';
+        }
+
+        return implode(' ', $classes);
     }
 }

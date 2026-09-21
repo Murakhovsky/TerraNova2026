@@ -322,3 +322,34 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.cos-state-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--cos-space-3);
+}
+
+.cos-state-matrix__cell {
+  display: grid;
+  align-content: start;
+  gap: var(--cos-space-3);
+  min-width: 0;
+  padding: var(--cos-space-4);
+  background: var(--cos-surface-subtle-bg);
+  border: 1px solid var(--cos-surface-border);
+  border-radius: var(--cos-radius-panel);
+}
+
+.cos-state-matrix__label {
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+  font-weight: var(--cos-font-weight-strong);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cos-primitive-stack {
+  display: grid;
+  gap: var(--cos-space-4);
+}

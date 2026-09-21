@@ -236,6 +236,94 @@
         </div>
     </section>
 
+    <section class="cos-ui-catalog__section" aria-labelledby="phase6-primitives-heading">
+        <div class="cos-ui-catalog__section-head">
+            <div>
+                <h2 id="phase6-primitives-heading">PHASE 6 Canonical Primitives Pass</h2>
+                <p>Одна state grammar для controls, signals, surfaces та navigation. Preview hooks існують лише для deterministic visual QA.</p>
+            </div>
+        </div>
+
+        <div class="cos-state-matrix" aria-label="Canonical control state matrix">
+            {% for state in ['default', 'hover', 'focus', 'active'] %}
+                <article class="cos-state-matrix__cell">
+                    <span class="cos-state-matrix__label">{{ state|capitalize }}</span>
+                    <button
+                        class="cos-button"
+                        type="button"
+                        {% if state != 'default' %}data-cos-state="{{ state }}"{% endif %}
+                    >Control</button>
+                </article>
+            {% endfor %}
+            <article class="cos-state-matrix__cell">
+                <span class="cos-state-matrix__label">Selected</span>
+                <twig:CosButton label="Selected" :pressed="true" />
+            </article>
+            <article class="cos-state-matrix__cell">
+                <span class="cos-state-matrix__label">Disabled</span>
+                <twig:CosButton label="Disabled" disabled />
+            </article>
+            <article class="cos-state-matrix__cell">
+                <span class="cos-state-matrix__label">Loading</span>
+                <twig:CosButton label="Execute" loading loadingLabel="Executing" variant="primary" />
+            </article>
+            <article class="cos-state-matrix__cell">
+                <span class="cos-state-matrix__label">Error</span>
+                <twig:CosInput
+                    name="phase6_error"
+                    label="Amount"
+                    value="invalid"
+                    :errors="['Enter a valid amount']"
+                />
+            </article>
+        </div>
+
+        <div class="cos-ui-catalog__grid">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Controls</p>
+                <div class="cos-primitive-stack">
+                    <twig:CosInput name="phase6_input" label="Input" value="Operational value" />
+                    <twig:CosSelect
+                        name="phase6_select"
+                        label="Select"
+                        :options="{'normal': 'Normal', 'priority': 'Priority'}"
+                        selected="normal"
+                    />
+                    <twig:CosTextarea name="phase6_textarea" label="Textarea" value="Context remains compact and readable." />
+                    <div class="cos-ui-catalog__row">
+                        <twig:CosCheckbox name="phase6_checkbox" label="Checkbox" checked />
+                        <twig:CosRadio name="phase6_radio" label="Radio" value="one" checked />
+                        <twig:CosSwitch name="phase6_switch" label="Switch" checked />
+                    </div>
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Signals</p>
+                <div class="cos-primitive-stack">
+                    <div class="cos-ui-catalog__row">
+                        <twig:CosStatus label="Live" tone="positive" />
+                        <twig:CosStatus label="Attention" tone="warning" />
+                        <twig:CosStatus label="Blocked" tone="danger" />
+                        <twig:CosStatus label="Processing" tone="info" />
+                    </div>
+                    <twig:CosAlert title="Operational warning" copy="Status uses text and shape in addition to color." tone="warning" />
+                    <twig:CosProgress :value="68" label="Processing" />
+                    <div class="cos-ui-catalog__row">
+                        <twig:CosSpinner label="Loading state" />
+                        <twig:CosSkeleton shape="line" />
+                    </div>
+                </div>
+            </article>
+
+            <article class="cos-card" data-cos-state="selected">
+                <p class="cos-card__eyebrow">Surface state</p>
+                <h3 class="cos-card__title">Selected surface</h3>
+                <p class="cos-card__copy">Selection reuses semantic state tokens instead of a Domain-specific card treatment.</p>
+            </article>
+        </div>
+    </section>
+
     <section class="cos-ui-catalog__section" aria-labelledby="cards-heading">
         <div class="cos-ui-catalog__section-head">
             <h2 id="cards-heading">Cards and metrics</h2>

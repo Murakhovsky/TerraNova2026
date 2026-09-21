@@ -17,6 +17,7 @@ final class UiCatalogRegistry
             $this->entry('CosButton', 'Actions', 'Canonical button presentation for governed UIAction flows.', ['primary', 'secondary', 'ghost', 'danger', 'disabled'], '#buttons-heading'),
             $this->entry('CosIconButton', 'Actions', 'Compact icon-only action with accessible labeling.', ['default', 'disabled'], '#buttons-heading'),
             $this->entry('CosBadge', 'Status', 'Compact semantic status label.', ['neutral', 'positive', 'warning', 'danger', 'info'], '#status-heading'),
+            $this->entry('CosStatus', 'Status', 'Compact system state signal with textual and shape semantics.', ['neutral', 'positive', 'warning', 'danger', 'info'], '#phase6-primitives-heading'),
 
             $this->entry('CosAlert', 'Feedback', 'Persistent semantic feedback message.', ['info', 'positive', 'warning', 'danger'], '#catalog-feedback-primitives'),
             $this->entry('CosEmptyState', 'Feedback', 'Explicit zero-result or first-use state.', ['default'], '#empty-heading'),

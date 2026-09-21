@@ -552,3 +552,174 @@ body {
     transition: none;
   }
 }
+
+
+/* PHASE 6 canonical primitive state grammar.
+   data-cos-state is a deterministic visual-test/catalog hook; application state still uses native/ARIA semantics. */
+
+.cos-button:focus-visible,
+.cos-button[data-cos-state="focus"],
+.cos-icon-button:focus-visible,
+.cos-icon-button[data-cos-state="focus"] {
+  outline: 3px solid var(--cos-focus-ring);
+  outline-offset: 2px;
+}
+
+.cos-button[data-cos-state="hover"]:not(.cos-button--primary),
+.cos-icon-button[data-cos-state="hover"]:not(.cos-icon-button--primary) {
+  color: var(--cos-color-text);
+  background: var(--cos-state-hover-bg);
+  border-color: var(--cos-color-border-strong);
+}
+
+.cos-button:active:not(.cos-button--primary),
+.cos-button[data-cos-state="active"]:not(.cos-button--primary),
+.cos-icon-button:active:not(.cos-icon-button--primary),
+.cos-icon-button[data-cos-state="active"]:not(.cos-icon-button--primary) {
+  background: var(--cos-state-active-bg);
+  border-color: var(--cos-color-border-strong);
+  box-shadow: none;
+}
+
+.cos-button--primary[data-cos-state="hover"],
+.cos-icon-button--primary[data-cos-state="hover"] {
+  color: var(--cos-color-on-primary);
+  background: var(--cos-color-primary-hover);
+  border-color: var(--cos-color-primary-hover);
+}
+
+.cos-button--primary:active,
+.cos-button--primary[data-cos-state="active"],
+.cos-icon-button--primary:active,
+.cos-icon-button--primary[data-cos-state="active"],
+.cos-button--primary[aria-pressed="true"],
+.cos-icon-button--primary[aria-pressed="true"] {
+  color: var(--cos-color-on-primary);
+  background: var(--cos-color-primary-strong);
+  border-color: var(--cos-color-primary-strong);
+}
+
+.cos-button[aria-pressed="true"]:not(.cos-button--primary),
+.cos-button[data-cos-state="selected"]:not(.cos-button--primary),
+.cos-icon-button[aria-pressed="true"]:not(.cos-icon-button--primary),
+.cos-icon-button[data-cos-state="selected"]:not(.cos-icon-button--primary) {
+  color: var(--cos-color-primary-strong);
+  background: var(--cos-state-selected-bg);
+  border-color: var(--cos-state-selected-border);
+  box-shadow: none;
+}
+
+.cos-button[disabled],
+.cos-button[aria-disabled="true"],
+.cos-icon-button[disabled],
+.cos-icon-button[aria-disabled="true"] {
+  opacity: var(--cos-state-disabled-opacity);
+}
+
+.cos-button[aria-busy="true"],
+.cos-icon-button[aria-busy="true"] {
+  cursor: progress;
+  opacity: var(--cos-state-loading-opacity);
+}
+
+.cos-control-spinner {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cos-spin 0.8s linear infinite;
+}
+
+:is(.cos-input, .cos-select, .cos-textarea)[data-cos-state="hover"] {
+  border-color: var(--cos-color-border-strong);
+}
+
+:is(.cos-input, .cos-select, .cos-textarea)[data-cos-state="focus"] {
+  border-color: var(--cos-state-focus-border);
+  box-shadow: 0 0 0 3px var(--cos-focus-ring);
+  outline: 0;
+}
+
+:is(.cos-input, .cos-select, .cos-textarea)[aria-invalid="true"],
+:is(.cos-input, .cos-select, .cos-textarea)[data-cos-state="error"] {
+  border-color: var(--cos-state-error-border);
+}
+
+:is(.cos-input, .cos-select, .cos-textarea)[aria-invalid="true"]:focus,
+:is(.cos-input, .cos-select, .cos-textarea)[data-cos-state="error"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cos-color-danger) 22%, transparent);
+}
+
+:is(.cos-input, .cos-select, .cos-textarea):disabled {
+  color: var(--cos-color-text-muted);
+  background: var(--cos-color-surface-subtle);
+  opacity: var(--cos-state-disabled-opacity);
+  cursor: not-allowed;
+}
+
+.cos-choice input:checked + span {
+  color: var(--cos-color-text);
+  font-weight: var(--cos-font-weight-medium);
+}
+
+.cos-choice input:disabled {
+  cursor: not-allowed;
+  opacity: var(--cos-state-disabled-opacity);
+}
+
+.cos-choice input:disabled + span {
+  color: var(--cos-color-text-muted);
+  cursor: not-allowed;
+}
+
+.cos-switch input:focus-visible + .cos-switch__control,
+.cos-switch[data-cos-state="focus"] .cos-switch__control {
+  box-shadow: 0 0 0 3px var(--cos-focus-ring);
+}
+
+.cos-switch input:disabled + .cos-switch__control {
+  opacity: var(--cos-state-disabled-opacity);
+}
+
+.cos-switch input:disabled ~ span:last-child {
+  color: var(--cos-color-text-muted);
+}
+
+.cos-card[data-cos-state="selected"] {
+  background: var(--cos-state-selected-bg);
+  border-color: var(--cos-state-selected-border);
+}
+
+.cos-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cos-space-2);
+  min-height: 1.5rem;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-sm);
+  font-weight: var(--cos-font-weight-medium);
+  line-height: var(--cos-line-height-ui);
+}
+
+.cos-status__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.cos-status--positive { color: var(--cos-color-positive); }
+.cos-status--warning { color: var(--cos-color-warning); }
+.cos-status--danger { color: var(--cos-color-danger); }
+.cos-status--info { color: var(--cos-color-info); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cos-control-spinner {
+    animation: none;
+  }
+}

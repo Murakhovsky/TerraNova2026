@@ -18,6 +18,9 @@ final class CosButton
     public ?string $href = null;
     public string $type = 'button';
     public bool $disabled = false;
+    public bool $loading = false;
+    public string $loadingLabel = 'Loading';
+    public ?bool $pressed = null;
 
     public function cssClass(): string
     {
@@ -32,6 +35,10 @@ final class CosButton
         $classes = ['cos-button', 'cos-button--' . $variant];
         if ($size !== 'md') {
             $classes[] = 'cos-button--' . $size;
+        }
+
+        if ($this->loading) {
+            $classes[] = 'is-loading';
         }
 
         return implode(' ', $classes);
