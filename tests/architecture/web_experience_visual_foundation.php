@@ -13,6 +13,8 @@ $requiredFiles = [
     'symfony/assets/styles/forms.css',
     'symfony/assets/styles/data-grid.css',
     'symfony/assets/styles/workspace-platform.css',
+    'symfony/assets/styles/async-operations.css',
+    'symfony/assets/styles/ai-ui.css',
     'symfony/assets/styles/shell.css',
     'symfony/importmap.php',
     'package.json',
@@ -127,11 +129,23 @@ foreach ([
     "@import './forms.css';",
     "@import './data-grid.css';",
     "@import './workspace-platform.css';",
+    "@import './async-operations.css';",
+    "@import './ai-ui.css';",
     "@import './shell.css';",
 ] as $canonicalLayer) {
     if (!str_contains($appCss, $canonicalLayer)) {
         throw new RuntimeException('Canonical visual foundation layer is missing: ' . $canonicalLayer);
     }
+}
+
+$catalog = (string) file_get_contents($root . '/symfony/templates/experience/design_system_catalog.html.twig');
+if (!str_contains($catalog, 'COS Visual Constitution')) {
+    throw new RuntimeException('Design System catalog does not expose the Visual Constitution.');
+}
+
+$decisionsIndex = (string) file_get_contents($root . '/docs/11-decisions/README.md');
+if (!str_contains($decisionsIndex, 'ADR-0010-web-ui-foundation-freeze.md')) {
+    throw new RuntimeException('ADR-0010 is missing from the decisions index.');
 }
 
 $tokens = (string) file_get_contents($root . '/symfony/assets/styles/tokens.css');
