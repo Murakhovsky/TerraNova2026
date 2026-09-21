@@ -156,5 +156,5 @@ jobs:
           curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused \
             "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
 
-      - name: HTTPS reverse-proxy and native-session smoke
+      - name: HTTPS reverse-proxy and protected-route smoke
         run: bash tests/smoke/https_proxy_contract.sh "https://$COMPANY_OS_DOMAIN"
