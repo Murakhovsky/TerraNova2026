@@ -24,9 +24,9 @@
   bottom: 0;
   width: min(31rem, 100vw);
   overflow: hidden;
-  background: var(--cos-color-surface);
-  border-left: 1px solid var(--cos-color-border);
-  box-shadow: var(--cos-shadow-overlay);
+  background: var(--cos-surface-overlay-bg);
+  border-left: 1px solid var(--cos-surface-border);
+  box-shadow: var(--cos-surface-overlay-shadow);
 }
 
 .cos-activity-center__body {
