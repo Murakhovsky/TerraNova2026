@@ -1535,6 +1535,94 @@ services:
       $token: '%env(TELEGRAM_BOT_TOKEN)%'
 
 
+  # Web routing recovery — Symfony-native page composition for retained PHTML surfaces.
+  Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Identity\Application\Contract\AdministrationServiceInterface:
+    alias: Domains\Identity\Infrastructure\ReadModel\MySql\AdminDashboardService
+
+  Domains\Property\Infrastructure\ReadModel\MySql\CatalogService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $analytics: null
+
+  Domains\Property\Application\Contract\PropertyCatalogInterface:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\CatalogService
+
+  Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyWorkspaceReadModel:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface:
+    alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyWorkspaceReadModel
+
+  Infrastructure\Media\MediaStorageService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $imageOptimizer: null
+
+  Domains\Property\Application\Contract\PropertyMediaStorageInterface:
+    alias: Infrastructure\Media\MediaStorageService
+
+  Domains\Property\Application\Contract\PropertyNotificationInterface:
+    alias: Infrastructure\Integration\Telegram\TelegramAutomationService
+
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $mediaStorage: '@Domains\Property\Application\Contract\PropertyMediaStorageInterface'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+      $workflow: null
+
+  Domains\Property\Application\Contract\PropertyManagementRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository
+
+  Domains\Property\Application\Service\PropertyManagementService:
+    arguments:
+      $properties: '@Domains\Property\Application\Contract\PropertyManagementRepositoryInterface'
+      $notifications: '@Domains\Property\Application\Contract\PropertyNotificationInterface'
+      $workflow: null
+
+  Domains\Property\Application\Contract\PropertyManagementInterface:
+    alias: Domains\Property\Application\Service\PropertyManagementService
+
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $mediaStorage: '@Domains\Property\Application\Contract\PropertyMediaStorageInterface'
+      $locations: '@Domains\Property\Application\Contract\LocationReferenceInterface'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  Domains\Property\Application\Contract\PropertyModerationRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository
+
+  Domains\Property\Application\UseCase\PropertyModerationService:
+    arguments:
+      $submissions: '@Domains\Property\Application\Contract\PropertyModerationRepositoryInterface'
+      $notifications: '@Domains\Property\Application\Contract\PropertyNotificationInterface'
+      $identity: '@Domains\Property\Application\Service\PropertyIdentityWorkflowService'
+
+  Domains\Property\Application\Contract\PropertyModerationInterface:
+    alias: Domains\Property\Application\UseCase\PropertyModerationService
+
+  App\Web\Workspace\CoreWorkspacePageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCasePageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertyPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Operations\ControlCenterPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Final Web retirement — PHTML renderer and Sales SSR.
   App\Web\Phtml\ViteAssetManifest:
     arguments:

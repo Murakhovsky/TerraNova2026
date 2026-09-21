@@ -2,7 +2,7 @@
 title: Карта Web-поверхонь
 description: Канонічна продуктова карта Public, Portal і Workspace, власність маршрутів та правила індексації.
 status: active
-updated: 2026-09-16
+updated: 2026-09-21
 kind: ui
 ---
 
@@ -18,7 +18,7 @@ Workspace = компанія й операційна робота
 
 Карта будується за **призначенням поверхні**, а не за назвами controllers.
 
-> Це продуктова карта, а не повний реєстр технічних routes. Точні module-owned routes генеруються в [Module Routes](../12-reference/module-routes.md). Частина старішого Web усе ще використовує generic routes на кшталт `/property/:action`, тому карта також звіряється з `CoreWebRoutes`, `FrontendRoutes` і navigation contributors.
+> Це продуктова карта, а не повний реєстр технічних routes. Після Symfony-only cutover джерелом істини для HTTP-маршрутів є `symfony/config/routes.yaml`, а navigation contributors проходять architecture-gate: кожен їхній page URL повинен мати Symfony `GET`/`HEAD` route.
 
 ## 1. Канонічна карта
 
@@ -107,7 +107,7 @@ Public є єдиною поверхнею, призначеною для ано�
 
 ### Основна навігація
 
-`FrontendNavigation::public()` зараз визначає:
+Public navigation визначає:
 
 1. Нерухомість → `/property/catalog`;
 2. Послуги → `/services`;
@@ -127,7 +127,7 @@ Public є єдиною поверхнею, призначеною для ано�
 
 ### Публічний COS
 
-`CompanyOsController` підтримує п’ять мов:
+Публічна COS surface підтримує п’ять мов:
 
 ```text
 en  de  fr  pl  uk
@@ -245,15 +245,16 @@ Diagnostic → COS / Diagnostics
 
 ### Базове адміністрування
 
-`CoreWebRoutes` явно реєструє:
+Symfony routing явно реєструє:
 
 ```text
 /admin
 /admin/users
 /admin/analytics
+/admin/content
 ```
 
-`/admin/content` належить content surface і також входить до секції адміністрування.
+Після routing recovery ці URL належать лише Symfony runtime; Phalcon `CoreWebRoutes` більше не існує.
 
 ## 5. Автентифікація
 
@@ -343,12 +344,12 @@ Route належить поверхні за призначенням, а не �
 Стан на `2026-09-20` звірено з:
 
 ```text
-app/Interfaces/Web/Routing/CoreWebRoutes.php
-app/Interfaces/Web/Routing/FrontendRoutes.php
-app/Interfaces/Web/Navigation/FrontendNavigation.php
-app/Interfaces/Web/Navigation/*NavigationContributor.php
+symfony/config/routes.yaml
+symfony/src/Web/Navigation/NavigationBuilder.php
+symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php
+symfony/src/Web/Experience/Extension/Provider/*WebProvider.php
 app/Domains/Content/Application/Service/PublicPageCatalog.php
-app/Interfaces/Web/Controller/CompanyOsController.php
+symfony/src/Web/Operations/ControlCenterPageController.php
 symfony/src/Web/Seo/RobotsController.php
 symfony/src/Web/Seo/SitemapController.php
 docs/12-reference/module-routes.md

@@ -1210,6 +1210,74 @@ cos_spatial_event:
   methods: [POST]
 
 
+# Web routing recovery — canonical Symfony page surfaces.
+cos_web_workspace_home:
+  path: /admin
+  controller: App\Web\Workspace\CoreWorkspacePageController::home
+  methods: [GET, HEAD]
+
+cos_web_workspace_users:
+  path: /admin/users
+  controller: App\Web\Workspace\CoreWorkspacePageController::users
+  methods: [GET, HEAD]
+
+cos_web_workspace_user_create:
+  path: /admin/createUser
+  controller: App\Web\Workspace\CoreWorkspacePageController::createUser
+  methods: [POST]
+
+cos_web_workspace_user_update:
+  path: /admin/updateUser/{id}
+  controller: App\Web\Workspace\CoreWorkspacePageController::updateUser
+  methods: [POST]
+  requirements: { id: '[1-9][0-9]*' }
+
+cos_web_workspace_analytics:
+  path: /admin/analytics
+  controller: App\Web\Workspace\CoreWorkspacePageController::analytics
+  methods: [GET, HEAD]
+
+cos_web_client_cases:
+  path: /client-case
+  controller: App\Web\Sales\ClientCasePageController::index
+  methods: [GET, HEAD]
+
+cos_web_client_case_inbox:
+  path: /client-case/inbox
+  controller: App\Web\Sales\ClientCasePageController::inbox
+  methods: [GET, HEAD]
+
+cos_web_property_catalog:
+  path: /property/catalog
+  controller: App\Web\Property\PropertyPageController::catalog
+  methods: [GET, HEAD]
+
+cos_web_property_map:
+  path: /property/map
+  controller: App\Web\Property\PropertyPageController::map
+  methods: [GET, HEAD]
+
+cos_web_property_manage:
+  path: /property/manage
+  controller: App\Web\Property\PropertyPageController::manage
+  methods: [GET, HEAD]
+
+cos_web_property_listing:
+  path: /property/listing
+  controller: App\Web\Property\PropertyPageController::listing
+  methods: [GET, HEAD]
+
+cos_web_property_submissions:
+  path: /property/submissions
+  controller: App\Web\Property\PropertyPageController::submissions
+  methods: [GET, HEAD]
+
+cos_web_cos_control_center:
+  path: /cos/control-center
+  controller: App\Web\Operations\ControlCenterPageController::index
+  methods: [GET, HEAD]
+
+
 # Final Web retirement — Sales SSR
 cos_web_sales_root:
   path: /sales
