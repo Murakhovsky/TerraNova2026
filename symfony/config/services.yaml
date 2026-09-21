@@ -378,6 +378,8 @@ services:
     arguments:
       $ruleContextProvider: '@Domains\Service\Rule\ServiceRuleContextProvider'
 
+  Domains\Growth\Bootstrap\GrowthDomainModule: ~
+
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
       $connection: '@cos.database.pdo'
@@ -831,6 +833,7 @@ services:
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
+        - '@Domains\Growth\Bootstrap\GrowthDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
