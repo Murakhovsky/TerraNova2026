@@ -106,9 +106,30 @@ diagnosticNavigationContributor
 - `web.navigation`;
 - `web.search`;
 - `web.commands`;
-- `web.workspace`.
+- `web.workspace`;
+- `web.actions`.
 
 Інші canonical Web points уже мають contracts і можуть отримувати contributions без зміни Kernel semantics.
+
+## Unified UIAction contributions
+
+`web.actions` використовує той самий module-aware provider runtime, що navigation/search/commands/workspaces.
+
+Перший real contribution належить Sales:
+
+```text
+sales/module.php
+    ↓ web.actions
+salesNavigationContributor
+    ↓ ActionProviderInterface
+UIActionRegistry
+    ↓
+UIActionResolver
+```
+
+Permission resolution є pluggable. Shared Experience layer не імпортує Domain capability model; Sales capability access підключений окремим Web adapter через Application contract.
+
+Докладніше: [Unified UIAction Platform](./unified-action-platform.md).
 
 ## Глобальний пошук і палітра команд
 
