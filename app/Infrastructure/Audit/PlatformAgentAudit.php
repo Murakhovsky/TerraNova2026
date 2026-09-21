@@ -12,6 +12,7 @@ use Kernel\Shared\Domain\OrganizationId;
 use Platform\Audit\Contract\AgentTraceRepositoryInterface;
 use Platform\Audit\Model\ActivityRecord;
 use Platform\Audit\Model\ActivityStatus;
+use Platform\Audit\Model\ActivitySource;
 use Platform\Audit\Model\Actor;
 use Platform\Audit\Model\AgentRunHistory;
 use Platform\Audit\Model\ResourceReference;
@@ -72,6 +73,7 @@ final readonly class PlatformAgentAudit implements AgentAuditInterface
             correlationId: $invocation->correlationId,
             timestamp: new DateTimeImmutable(),
             metadata: ['agent_run_id' => $runId, 'trace_sequence' => $sequence],
+            source: ActivitySource::AGENT,
         ));
     }
 }
