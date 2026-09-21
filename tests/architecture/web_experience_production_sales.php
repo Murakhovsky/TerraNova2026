@@ -79,19 +79,19 @@ foreach ([
     "'number'",
     '$hidden = is_array',
     'type="hidden"',
-    "isset($field['min'])",
-    "isset($field['step'])",
+    'isset($field[\'min\'])',
+    'isset($field[\'step\'])',
 ] as $marker) {
     $contains($filterBar, $marker, 'Canonical PHTML FilterBar compatibility contract is incomplete.');
 }
 
 $docs = $read('docs/03-architecture/cos-production-sales-adoption.md');
 foreach ([
-    'Compatibility bridge',
-    'Sales Dashboard',
-    'Lead Inbox',
-    'Sales Pipeline',
-    'Deal Workspace',
+    'Сумісний перехідний шар',
+    'Панель продажів (`Sales Dashboard`)',
+    'Вхідні ліди (`Lead Inbox`)',
+    'Воронка продажів (`Sales Pipeline`)',
+    'Робочий простір угоди (`Deal Workspace`)',
     'Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 9 documentation is incomplete.');
