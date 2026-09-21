@@ -420,7 +420,7 @@
 }
 
 .cos-command__item.is-selected {
-  outline: 2px solid var(--cos-color-focus);
+  outline: 2px solid var(--cos-focus-ring);
   outline-offset: -2px;
 }
 
