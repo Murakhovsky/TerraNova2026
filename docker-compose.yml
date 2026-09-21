@@ -40,6 +40,8 @@ services:
     depends_on:
       php:
         condition: service_healthy
+      mercure:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8081:80"
     healthcheck:
