@@ -1,0 +1,6 @@
+ux_translator:
+  dump_directory: '%kernel.project_dir%/var/translations'
+
+when@prod:
+  ux_translator:
+    dump_typescript: false

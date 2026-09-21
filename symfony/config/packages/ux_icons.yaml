@@ -1,0 +1,11 @@
+ux_icons:
+  icon_dir: '%kernel.project_dir%/assets/icons'
+  default_icon_attributes:
+    width: '1em'
+    height: '1em'
+    stroke: currentColor
+    fill: none
+    'aria-hidden': 'true'
+  iconify:
+    enabled: false
+  ignore_not_found: false

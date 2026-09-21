@@ -15,6 +15,7 @@ on:
       - 'deploy/**'
       - 'tests/architecture/zero_legacy_runtime.php'
       - 'tests/architecture/web_experience_wave12_runtime.php'
+      - 'tests/architecture/web_experience_wave12_toolkit.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
     branches: [main]
@@ -30,6 +31,7 @@ on:
       - 'deploy/**'
       - 'tests/architecture/zero_legacy_runtime.php'
       - 'tests/architecture/web_experience_wave12_runtime.php'
+      - 'tests/architecture/web_experience_wave12_toolkit.php'
       - '.github/workflows/symfony-bootstrap.yml'
 
 permissions:
@@ -119,6 +121,9 @@ jobs:
 
       - name: Experience Platform runtime smoke
         run: docker compose exec -T php php bin/console cos:web:experience:smoke
+
+      - name: UI Toolkit runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:toolkit:smoke
 
       - name: Native web cutover smoke
         run: |
