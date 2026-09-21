@@ -70,7 +70,7 @@ jobs:
       DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
       DEV_PATH: ${{ vars.DEV_PATH }}
       COMPANY_OS_DOMAIN: company-os.shop
-      COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/api/v1/health
+      COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/health/dependencies
 
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
         run: |
           getent ahostsv4 "$COMPANY_OS_DOMAIN"
           curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused \
-            "http://$COMPANY_OS_DOMAIN/api/v1/health" > /dev/null
+            "http://$COMPANY_OS_DOMAIN/health/dependencies" > /dev/null
 
       - name: Configure canonical HTTPS reverse proxy
         run: |
