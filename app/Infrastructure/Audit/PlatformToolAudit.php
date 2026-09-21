@@ -9,6 +9,7 @@ use Kernel\Tool\Model\ToolExecution;
 use Platform\Audit\Contract\AgentTraceRepositoryInterface;
 use Platform\Audit\Model\ActivityRecord;
 use Platform\Audit\Model\ActivityStatus;
+use Platform\Audit\Model\ActivitySource;
 use Platform\Audit\Model\Actor;
 use Platform\Audit\Model\ResourceReference;
 use Platform\Audit\Model\TraceEvent;
@@ -54,6 +55,7 @@ final readonly class PlatformToolAudit implements ToolAuditInterface
             correlationId: $invocation->correlationId(),
             timestamp: new DateTimeImmutable(),
             metadata: ['attempts' => $execution->attempts(), 'tool_effect' => $execution->definition->effect()->value],
+            source: ActivitySource::TOOL,
         ));
 
         if ($this->traces === null) {
