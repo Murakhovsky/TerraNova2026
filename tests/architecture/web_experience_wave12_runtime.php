@@ -80,6 +80,15 @@ if (!str_contains($routes, '@LiveComponentBundle/config/routes.php')) {
     throw new RuntimeException('Live Component route resource is not registered.');
 }
 
+$importmap = (string) file_get_contents($root . '/symfony/importmap.php');
+if (!str_contains($importmap, "'entrypoint' => true")) {
+    throw new RuntimeException('AssetMapper app import must be marked as an entrypoint.');
+}
+
+if (str_contains($importmap, "'preload' => true")) {
+    throw new RuntimeException('Deprecated AssetMapper preload metadata must not be used.');
+}
+
 $base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
 if (!str_contains($base, "importmap('app')") || !str_contains($base, "asset('styles/app.css')")) {
     throw new RuntimeException('Canonical Twig base layout is not AssetMapper-enabled.');
