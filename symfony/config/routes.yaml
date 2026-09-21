@@ -45,6 +45,11 @@ cos_web_design_system_catalog:
   controller: App\Web\Experience\Dev\DesignSystemCatalogController
   methods: [GET, HEAD]
 
+cos_web_visual_stress:
+  path: /dev/stress
+  controller: App\Web\Experience\Dev\VisualStressController
+  methods: [GET, HEAD]
+
 cos_web_design_system_data_export:
   path: /dev/ui/data-export
   controller: App\Web\Experience\Dev\DataGridCatalogExportController
