@@ -23,6 +23,7 @@ generated: true
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
+| `growth` | Growth | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
@@ -71,6 +72,25 @@ Manifest capabilities не задекларовані.
 ### Задекларовані capabilities
 
 Manifest capabilities не задекларовані.
+
+## Growth (`growth`)
+
+**Опис із manifest:** Opportunity intelligence from observable signals to qualified business opportunity handoff.
+
+- runtime service модуля: `growthDomainModule`;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+- `growth.candidate.monitor`;
+- `growth.candidate.qualify`;
+- `growth.candidate.research`;
+- `growth.candidate.score`;
+- `growth.handoff.prepare`;
+- `growth.signal.detect`;
 
 ## HR (`hr`)
 
