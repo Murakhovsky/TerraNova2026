@@ -133,7 +133,7 @@ $event = (string) file_get_contents($root . '/app/Kernel/Queue/Event/AsyncOperat
 foreach ([
     "TYPE = 'kernel.queue.operation.changed'",
     "aggregateType: 'async_operation'",
-    "'job_id' => $jobId",
+    "'job_id' => \$jobId",
 ] as $marker) {
     if (!str_contains($event, $marker)) {
         throw new RuntimeException('Async operation durable event is missing: ' . $marker);
