@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require dirname(__DIR__, 2) . '/symfony/src/Web/Experience/Dev/UiCatalogEntry.php';
+require dirname(__DIR__, 2) . '/symfony/src/Web/Experience/Dev/UiCatalogRegistry.php';
 
 use App\Web\Experience\Dev\UiCatalogRegistry;
 
