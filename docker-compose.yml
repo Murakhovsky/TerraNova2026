@@ -179,7 +179,7 @@ services:
       - mercure_data:/data
       - mercure_config:/config
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2019/mercure/health/ready"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/mercure/health/ready"]
       timeout: 5s
       retries: 5
       start_period: 60s
