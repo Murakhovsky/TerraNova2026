@@ -67,6 +67,39 @@ foreach ([
 }
 $notContains($group, 'tn-listing-table tn-manage-table', 'Property Group must not restore the legacy object table.');
 
+$add = $read('app/Interfaces/Web/View/property/add.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-ui-panel',
+    'property/add',
+    'enctype="multipart/form-data"',
+] as $marker) {
+    $contains($add, $marker, 'Property Add must use the canonical form shell without losing create behavior.');
+}
+foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card', 'tn-admin-card__head'] as $legacyMarker) {
+    $notContains($add, $legacyMarker, 'Property Add must not restore the legacy visual shell.');
+}
+
+$edit = $read('app/Interfaces/Web/View/property/edit.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-ui-panel',
+    'data-copy-value',
+    'property/quick/',
+    'property/presentationShare',
+    '#tn-edit-main',
+    '#tn-edit-media',
+    '#tn-edit-public',
+    '#tn-edit-service',
+] as $marker) {
+    $contains($edit, $marker, 'Property Edit must use the canonical form shell without losing editor behavior.');
+}
+foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card', 'tn-admin-card__head'] as $legacyMarker) {
+    $notContains($edit, $legacyMarker, 'Property Edit must not restore the legacy visual shell.');
+}
+
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
     '($value[\'kind\'] ?? \'\') === \'actions\'',
@@ -85,6 +118,9 @@ foreach ([
     '### Порівняння (`Compare`)',
     '## Хвиля 2',
     '### Робочий простір групи (`Group Workspace`)',
+    '## Хвиля 3',
+    '### Створення об’єкта (`Property Add`)',
+    '### Редактор об’єкта (`Property Edit`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
