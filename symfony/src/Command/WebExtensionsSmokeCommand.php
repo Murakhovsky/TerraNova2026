@@ -65,13 +65,25 @@ final class WebExtensionsSmokeCommand extends Command
             }
         }
 
+        $actionProviderIds = array_map(
+            static fn($provider): string => $provider->serviceId(),
+            $providers->actions(),
+        );
+        if ($actionProviderIds !== ['salesNavigationContributor']) {
+            $output->writeln(sprintf(
+                '<error>Unexpected active action providers: %s</error>',
+                implode(', ', $actionProviderIds),
+            ));
+
+            return Command::FAILURE;
+        }
+
         foreach ([
             'workspace extensions' => $providers->workspaceExtensions(),
             'dashboard widgets' => $providers->dashboardWidgets(),
             'entity links' => $providers->entityLinks(),
             'notifications' => $providers->notifications(),
             'activity' => $providers->activity(),
-            'actions' => $providers->actions(),
         ] as $surface => $resolved) {
             if ($resolved !== []) {
                 $output->writeln(sprintf('<error>Unexpected providers for undeclared surface: %s</error>', $surface));
