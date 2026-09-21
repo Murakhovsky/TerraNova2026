@@ -18,6 +18,7 @@ on:
       - 'tests/architecture/web_experience_wave12_toolkit.php'
       - 'tests/architecture/web_experience_wave12_design_system.php'
       - 'tests/architecture/web_experience_wave12_shell.php'
+      - 'tests/architecture/web_experience_wave12_extensions.php'
       - '.github/workflows/symfony-bootstrap.yml'
   pull_request:
     branches: [main]
@@ -36,6 +37,7 @@ on:
       - 'tests/architecture/web_experience_wave12_toolkit.php'
       - 'tests/architecture/web_experience_wave12_design_system.php'
       - 'tests/architecture/web_experience_wave12_shell.php'
+      - 'tests/architecture/web_experience_wave12_extensions.php'
       - '.github/workflows/symfony-bootstrap.yml'
 
 permissions:
@@ -136,6 +138,9 @@ jobs:
 
       - name: Workspace Shell runtime smoke
         run: docker compose exec -T php php bin/console cos:web:shell:smoke
+
+      - name: Domain UI extension runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:extensions:smoke
 
       - name: Native web cutover smoke
         run: |
