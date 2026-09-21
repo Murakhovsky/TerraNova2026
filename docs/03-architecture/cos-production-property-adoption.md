@@ -42,6 +42,19 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - вибір об'єкта зберігає `data-save-property` та `data-toggle-text`;
 - DataTable отримав generic action-cell contract через canonical ActionBar.
 
+## Хвиля 2
+
+### Робочий простір групи (`Group Workspace`)
+
+`property/group.phtml`
+
+- legacy page hero замінено на canonical PageHeader;
+- missing-group state використовує canonical State;
+- список об’єктів локації/ЖК/проєкту переведено на canonical Panel + DataTable;
+- status, price, media та presentation link подані через semantic table cells;
+- edit/view actions використовують canonical ActionBar через DataTable action-cell contract;
+- edit, PDF/share і client-presentation форми залишені функціонально без змін.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -60,5 +73,6 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - Manager Registry використовує shared FilterBar;
 - Sales Inventory використовує shared FilterBar;
 - query parameters і manager mutation contracts збережені;
+- Group Workspace використовує canonical PageHeader + State + Panel + DataTable;
 - editable grids явно зафіксовані як наступний migration boundary;
 - architecture gate виконується у CI.

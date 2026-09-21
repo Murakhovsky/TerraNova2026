@@ -53,6 +53,20 @@ foreach ([
 }
 $notContains($listing, '<form class="tn-crm-filters"', 'Property Listing must not restore the legacy local filter form.');
 
+$group = $read('app/Interfaces/Web/View/property/group.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    "partial('components/ui/panel'",
+    "'bodyPartial' => 'components/ui/data_table'",
+    "'responsive' => 'cards'",
+    'property/edit/',
+    'property/show/',
+] as $marker) {
+    $contains($group, $marker, 'Property Group must use canonical workspace/table contracts while preserving object navigation.');
+}
+$notContains($group, 'tn-listing-table tn-manage-table', 'Property Group must not restore the legacy object table.');
+
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
     '($value[\'kind\'] ?? \'\') === \'actions\'',
@@ -69,6 +83,8 @@ foreach ([
     '### Реєстр менеджера (`Manager Registry`)',
     '### Sales Inventory',
     '### Порівняння (`Compare`)',
+    '## Хвиля 2',
+    '### Робочий простір групи (`Group Workspace`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
