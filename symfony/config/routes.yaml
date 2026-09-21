@@ -13,6 +13,11 @@ cos_web_design_system_catalog:
   controller: App\Web\Experience\Dev\DesignSystemCatalogController
   methods: [GET, HEAD]
 
+cos_web_design_system_data_export:
+  path: /dev/ui/data-export
+  controller: App\Web\Experience\Dev\DataGridCatalogExportController
+  methods: [GET, HEAD]
+
 cos_web_auth_login:
   path: /auth/login
   controller: App\Web\Auth\AuthPageController::login
