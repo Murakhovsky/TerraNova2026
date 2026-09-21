@@ -1,4 +1,12 @@
-# Wave 12.21 — Audit / History
+---
+title: Аудит та історія активності
+description: Канонічна модель аудиту COS для джерела дії, кореляції, історії ресурсу та явного розрізнення людських і агентних дій.
+status: active
+updated: 2026-09-21
+kind: architecture
+---
+
+# Аудит та історія активності
 
 Цей етап закриває канонічний audit/history contract COS без створення другого журналу подій. Durable store залишається `cos_audit_log`; Agent trace залишається окремою деталізованою трасою виконання.
 
@@ -17,13 +25,13 @@ Source має фіксований словник:
 
 Actor додатково нормалізується до `human | agent | system`. Це не те саме, що source. Наприклад, користувач може бути actor=`human`, а source=`TOOL`, якщо він вручну запустив tool.
 
-## Correlation
+## Наскрізна кореляція
 
 `correlation_id` залишається обов'язковим durable атрибутом. Він проходить через Platform ActivityRecord → Kernel AuditEntry → `cos_audit_log` і використовується для відновлення наскрізної історії одного процесу.
 
 Agent trace може бути прив'язаний до того самого correlation id, але не замінює загальний activity history.
 
-## History read contract
+## Контракт читання історії
 
 `ActivityHistoryRepositoryInterface` підтримує:
 
@@ -35,13 +43,13 @@ Agent trace може бути прив'язаний до того самого c
 
 Ліміт жорстко обмежується максимумом 250 записів, щоб UI або агент не могли випадково перетворити audit store на бездонний SELECT.
 
-## Persistence
+## Зберігання
 
 Wave 12.21 додає до `cos_audit_log` індексоване поле `source_type`. Історичні записи backfill-яться з `actor_type` там, де source ще не існував.
 
 Новий audit store не створюється. `MysqlAuditRepository` продовжує бути єдиним append path для Kernel audit, а `MysqlActivityHistoryRepository` є read-side projection над тією самою таблицею.
 
-## Agent / Human differentiation
+## Розрізнення агентних і людських дій
 
 `ActorKind` робить відмінність human vs agent явною на рівні Platform model. `KernelAuditSink` записує `actor_kind` та `source` у metadata, а `MysqlAuditRepository` дублює source у queryable `source_type`.
 
