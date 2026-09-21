@@ -8,6 +8,11 @@ cos_web_workspace_shell_preview:
   controller: App\Web\Experience\Dev\WorkspaceShellPreviewController
   methods: [GET, HEAD]
 
+cos_web_workspace_platform_preview:
+  path: /dev/workspace
+  controller: App\Web\Experience\Dev\WorkspacePlatformPreviewController
+  methods: [GET, HEAD]
+
 cos_web_design_system_catalog:
   path: /dev/ui
   controller: App\Web\Experience\Dev\DesignSystemCatalogController

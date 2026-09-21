@@ -1,0 +1,11 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}COS Workspace Platform{% endblock %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block workspace_content %}
+    {% include 'experience/workspace_platform_fragment.html.twig' with {'workspace': workspace} only %}
+{% endblock %}

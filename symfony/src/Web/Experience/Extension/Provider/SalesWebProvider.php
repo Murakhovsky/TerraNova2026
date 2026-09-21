@@ -14,15 +14,18 @@ use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
 use App\Web\Experience\Extension\Contract\SearchProviderInterface;
 use App\Web\Experience\Extension\Contract\WorkspaceProviderInterface;
+use App\Web\Experience\Extension\Contract\WorkspaceExtensionProviderInterface;
 use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Extension\Model\WorkspaceExtension;
 use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
+use App\Web\Experience\Workspace\WorkspaceSlot;
 
-final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, ActionProviderInterface
+final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, WorkspaceExtensionProviderInterface, ActionProviderInterface
 {
     public function __construct(private readonly SearchResultMatcher $matcher)
     {
@@ -174,6 +177,35 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
         }
 
         return [];
+    }
+
+
+    public function extensions(WebExtensionContext $context, string $workspaceId): array
+    {
+        if (!in_array($workspaceId, ['sales.lead', 'sales.deal'], true)) {
+            return [];
+        }
+
+        return [
+            new WorkspaceExtension(
+                $workspaceId,
+                WorkspaceSlot::Sidebar,
+                'experience/workspace/extensions/sales/context.html.twig',
+                10,
+            ),
+            new WorkspaceExtension(
+                $workspaceId,
+                WorkspaceSlot::Activity,
+                'experience/workspace/extensions/sales/activity.html.twig',
+                20,
+            ),
+            new WorkspaceExtension(
+                $workspaceId,
+                WorkspaceSlot::Ai,
+                'experience/workspace/extensions/sales/ai_context.html.twig',
+                30,
+            ),
+        ];
     }
 
     public function workspaces(WebExtensionContext $context): array

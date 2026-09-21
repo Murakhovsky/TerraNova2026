@@ -9,8 +9,10 @@ use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
+use App\Web\Experience\Extension\Model\WorkspaceExtension;
 use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Shell\ShellCommandItem;
+use LogicException;
 
 final readonly class WebExtensionContextCatalog
 {
@@ -96,6 +98,48 @@ final readonly class WebExtensionContextCatalog
             $items,
             static fn (WorkspaceDefinition $left, WorkspaceDefinition $right): int
                 => [$left->priority, $left->id] <=> [$right->priority, $right->id],
+        );
+
+        return $items;
+    }
+
+
+    /** @return list<WorkspaceExtension> */
+    public function workspaceExtensions(string $workspaceId): array
+    {
+        $items = [];
+        $seen = [];
+
+        foreach ($this->providers->workspaceExtensions() as $provider) {
+            foreach ($provider->extensions($this->context, $workspaceId) as $extension) {
+                if ($extension->workspaceId !== $workspaceId) {
+                    throw new LogicException(sprintf(
+                        'Workspace extension provider %s returned contribution for %s while resolving %s.',
+                        $provider->serviceId(),
+                        $extension->workspaceId,
+                        $workspaceId,
+                    ));
+                }
+
+                $key = $extension->slot->value . '|' . $extension->template;
+                if (isset($seen[$key])) {
+                    throw new LogicException(sprintf(
+                        'Duplicate Workspace extension for %s: %s.',
+                        $workspaceId,
+                        $key,
+                    ));
+                }
+
+                $seen[$key] = true;
+                $items[] = $extension;
+            }
+        }
+
+        usort(
+            $items,
+            static fn (WorkspaceExtension $left, WorkspaceExtension $right): int
+                => [$left->slot->order(), $left->priority, $left->template]
+                <=> [$right->slot->order(), $right->priority, $right->template],
         );
 
         return $items;
