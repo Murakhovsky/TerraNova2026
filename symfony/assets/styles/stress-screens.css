@@ -1,0 +1,152 @@
+/* PHASE 8 — reference-only canonical stress screens. */
+
+.cos-stress {
+  display: grid;
+  gap: var(--cos-space-8);
+  width: min(100% - (2 * var(--cos-space-5)), 96rem);
+  margin-inline: auto;
+  padding-block: var(--cos-space-6) var(--cos-space-10);
+}
+
+.cos-stress__intro,
+.cos-stress__screen-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cos-space-5);
+  align-items: flex-start;
+}
+
+.cos-stress__intro {
+  padding-bottom: var(--cos-space-5);
+  border-bottom: var(--cos-border-width) solid var(--cos-surface-border);
+}
+
+.cos-stress__intro h1,
+.cos-stress__screen-head h2 {
+  margin: 0;
+  color: var(--cos-color-text);
+  letter-spacing: var(--cos-letter-spacing-tight);
+}
+
+.cos-stress__intro p:last-child,
+.cos-stress__screen-head p:last-child {
+  max-width: 52rem;
+  margin-bottom: 0;
+  color: var(--cos-color-text-muted);
+}
+
+.cos-stress__screen {
+  display: grid;
+  gap: var(--cos-space-4);
+  padding: var(--cos-space-5);
+  background: var(--cos-surface-canvas-bg);
+  border: var(--cos-border-width) solid var(--cos-surface-border);
+  border-radius: var(--cos-radius-panel);
+}
+
+.cos-stress__screen-head {
+  align-items: end;
+}
+
+.cos-stress__screen-head--compact {
+  align-items: start;
+}
+
+.cos-stress__executive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) repeat(2, minmax(14rem, 0.8fr));
+  gap: var(--cos-space-4);
+}
+
+.cos-stress__metric-stack,
+.cos-stress__health-list {
+  display: grid;
+  gap: var(--cos-space-4);
+}
+
+.cos-stress__health-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cos-space-3);
+  align-items: center;
+  padding-bottom: var(--cos-space-2);
+  border-bottom: var(--cos-border-width) solid var(--cos-surface-border);
+}
+
+.cos-stress__health-list > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.cos-stress__entity-grid {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.7fr) minmax(16rem, 1fr) minmax(18rem, 1fr);
+  gap: var(--cos-space-4);
+}
+
+.cos-stress__entity-history {
+  grid-column: 1 / -1;
+}
+
+.cos-stress__control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cos-space-4);
+}
+
+.cos-stress__control-span {
+  grid-column: 1 / -1;
+}
+
+.cos-stress [data-stress-screen="data-grid"] .cos-data-grid {
+  min-width: 0;
+}
+
+.cos-stress [data-stress-screen="data-grid"] .cos-data-grid__table-wrap {
+  max-height: 34rem;
+  overflow: auto;
+}
+
+@media (max-width: 1100px) {
+  .cos-stress__executive-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cos-stress__priority-card {
+    grid-column: 1 / -1;
+  }
+
+  .cos-stress__entity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .cos-stress {
+    width: min(100% - (2 * var(--cos-space-3)), 96rem);
+    gap: var(--cos-space-5);
+    padding-block: var(--cos-space-4) var(--cos-space-8);
+  }
+
+  .cos-stress__intro,
+  .cos-stress__screen-head {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cos-stress__screen {
+    padding: var(--cos-space-3);
+  }
+
+  .cos-stress__executive-grid,
+  .cos-stress__entity-grid,
+  .cos-stress__control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cos-stress__priority-card,
+  .cos-stress__entity-history,
+  .cos-stress__control-span {
+    grid-column: auto;
+  }
+}
