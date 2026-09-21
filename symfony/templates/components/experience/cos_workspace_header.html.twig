@@ -22,6 +22,7 @@
                 type="button"
                 data-action="click->workspace-platform#action"
                 data-workspace-action-id="{{ action.id }}"
+                data-workspace-action-resource-id="{{ action.resourceId ?: '' }}"
                 {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
             >{{ action.label }}</button>
         {% endfor %}
@@ -36,6 +37,7 @@
                             type="button"
                             data-action="click->workspace-platform#action"
                             data-workspace-action-id="{{ action.id }}"
+                data-workspace-action-resource-id="{{ action.resourceId ?: '' }}"
                             {% if not action.enabled %}disabled title="{{ action.disabledReason }}"{% endif %}
                         >{{ action.label }}</button>
                     {% endfor %}

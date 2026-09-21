@@ -25,6 +25,7 @@ final readonly class UIAction
         public int $dangerLevel = 0,
         public int $priority = 100,
         public array $placements = [UIActionPlacement::WORKSPACE],
+        public ?string $resourceId = null,
     ) {
         if (!preg_match('/^[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+$/', $this->id)) {
             throw new InvalidArgumentException('UIAction id must be a stable namespaced identifier.');
@@ -36,6 +37,10 @@ final readonly class UIAction
 
         if ($this->permission !== null && trim($this->permission) === '') {
             throw new InvalidArgumentException('UIAction permission must be null or a non-empty identifier.');
+        }
+
+        if ($this->resourceId !== null && ($this->resourceId === '' || trim($this->resourceId) !== $this->resourceId)) {
+            throw new InvalidArgumentException('UIAction resourceId must be null or a canonical non-empty identifier.');
         }
 
         if ($this->intent === UIActionIntent::Execute && ($this->command === null || trim($this->command) === '')) {
@@ -124,6 +129,7 @@ final readonly class UIAction
             dangerLevel: $this->dangerLevel,
             priority: $this->priority,
             placements: $this->placements,
+            resourceId: $this->resourceId,
         );
     }
 }

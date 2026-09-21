@@ -59,23 +59,21 @@ final readonly class WorkspaceCompositionResolver
             ));
         }
 
+        $resolvedActions = $this->actions->resolve($tenant, $context, $entity);
+
         return new WorkspaceViewModel(
             definition: $definition,
             context: $context,
             entity: $entity,
             extensions: $catalog->workspaceExtensions($workspaceId),
-            primaryActions: $this->actions->resolve(
-                $tenant,
-                $context,
-                $entity,
-                UIActionPlacement::WORKSPACE_PRIMARY,
-            ),
-            secondaryActions: $this->actions->resolve(
-                $tenant,
-                $context,
-                $entity,
-                UIActionPlacement::WORKSPACE_SECONDARY,
-            ),
+            primaryActions: array_values(array_filter(
+                $resolvedActions,
+                static fn ($action): bool => $action->supportsPlacement(UIActionPlacement::WORKSPACE_PRIMARY),
+            )),
+            secondaryActions: array_values(array_filter(
+                $resolvedActions,
+                static fn ($action): bool => $action->supportsPlacement(UIActionPlacement::WORKSPACE_SECONDARY),
+            )),
         );
     }
 }

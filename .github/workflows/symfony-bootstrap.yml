@@ -20,6 +20,7 @@ on:
       - 'tests/architecture/web_experience_wave12_shell.php'
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
+      - 'tests/architecture/web_experience_wave12_runtime_actions.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -45,6 +46,7 @@ on:
       - 'tests/architecture/web_experience_wave12_shell.php'
       - 'tests/architecture/web_experience_wave12_extensions.php'
       - 'tests/architecture/web_experience_wave12_actions.php'
+      - 'tests/architecture/web_experience_wave12_runtime_actions.php'
       - 'tests/architecture/web_experience_wave12_interactions.php'
       - 'tests/architecture/web_experience_wave12_forms.php'
       - 'tests/architecture/web_experience_wave12_data.php'
@@ -158,6 +160,9 @@ jobs:
 
       - name: Unified UIAction runtime smoke
         run: docker compose exec -T php php bin/console cos:web:actions:smoke
+
+      - name: Runtime-generated UIAction smoke
+        run: docker compose exec -T php php bin/console cos:web:runtime-actions:smoke
 
       - name: Interaction Components runtime smoke
         run: docker compose exec -T php php bin/console cos:web:interactions:smoke

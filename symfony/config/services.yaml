@@ -140,6 +140,13 @@ services:
   Kernel\Operations\Contract\OperationsReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlOperationsReadModel
 
+  Infrastructure\Platform\ReadModel\MySql\MysqlRuntimeActionReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Kernel\Action\Contract\RuntimeActionReadModelInterface:
+    alias: Infrastructure\Platform\ReadModel\MySql\MysqlRuntimeActionReadModel
+
   Kernel\Operations\Service\OperationsSectionReader:
     arguments:
       $operations: '@Kernel\Operations\Contract\OperationsReadModelInterface'

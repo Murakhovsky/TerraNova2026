@@ -17,6 +17,7 @@ export default class extends Controller {
             bubbles: true,
             detail: {
                 actionId: trigger.dataset.workspaceActionId || '',
+                resourceId: trigger.dataset.workspaceActionResourceId || '',
                 entityKey: this.hasEntityKeyValue ? this.entityKeyValue : '',
             },
         }));

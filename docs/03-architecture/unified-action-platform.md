@@ -104,7 +104,7 @@ Queue / execution
 Audit / events
 ```
 
-Wave 12.6 закриває presentation action model. Workflow-generated actions будуть окремо підключені у Wave 12.11.
+Wave 12.6 закриває presentation action model. Wave 12.11 підключає workflow-, rule- та agent-generated Kernel Actions через `RuntimeUIActionProvider` до того самого `UIActionRegistry`.
 
 ## Еталонна реалізація
 
