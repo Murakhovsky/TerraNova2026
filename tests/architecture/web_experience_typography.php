@@ -84,9 +84,9 @@ foreach ([
 $docs = (string) file_get_contents($root . '/docs/03-architecture/cos-typography.md');
 foreach ([
     'Production baseline',
-    'Candidate lab',
-    'Financial/data typography',
-    'Completion criteria',
+    'Лабораторія кандидатів',
+    'Фінансова та числова типографіка',
+    'Критерії завершення PHASE 3',
 ] as $marker) {
     if (!str_contains($docs, $marker)) {
         throw new RuntimeException('PHASE 3 typography documentation is incomplete: ' . $marker);
