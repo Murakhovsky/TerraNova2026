@@ -88,14 +88,14 @@ foreach ([
 }
 
 $expectedAdapters = [
-    BrowserAdapter::Tabulator => ['tabulator-tables', 'adapters--tabulator'],
-    BrowserAdapter::FullCalendar => ['fullcalendar', 'adapters--calendar'],
-    BrowserAdapter::Sortable => ['sortablejs', 'adapters--sortable'],
-    BrowserAdapter::Flatpickr => ['flatpickr', 'adapters--flatpickr'],
-    BrowserAdapter::Cytoscape => ['cytoscape', 'adapters--cytoscape'],
+    [BrowserAdapter::Tabulator, 'tabulator-tables', 'adapters--tabulator'],
+    [BrowserAdapter::FullCalendar, 'fullcalendar', 'adapters--calendar'],
+    [BrowserAdapter::Sortable, 'sortablejs', 'adapters--sortable'],
+    [BrowserAdapter::Flatpickr, 'flatpickr', 'adapters--flatpickr'],
+    [BrowserAdapter::Cytoscape, 'cytoscape', 'adapters--cytoscape'],
 ];
 
-foreach ($expectedAdapters as $adapter => [$module, $controller]) {
+foreach ($expectedAdapters as [$adapter, $module, $controller]) {
     if ($adapter->moduleSpecifier() !== $module) {
         throw new RuntimeException('Browser adapter module specifier drifted: ' . $adapter->value);
     }
