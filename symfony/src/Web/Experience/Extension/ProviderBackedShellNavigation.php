@@ -6,13 +6,16 @@ namespace App\Web\Experience\Extension;
 
 use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
+use App\Web\Experience\Shell\CoreCommandCatalog;
 use App\Web\Experience\Shell\ShellCommandItem;
 use App\Web\Experience\Shell\ShellNavigationItem;
 
 final readonly class ProviderBackedShellNavigation
 {
-    public function __construct(private WebExtensionCatalog $extensions)
-    {
+    public function __construct(
+        private WebExtensionCatalog $extensions,
+        private CoreCommandCatalog $coreCommands,
+    ) {
     }
 
     /**
@@ -60,10 +63,7 @@ final readonly class ProviderBackedShellNavigation
         ];
 
         $commands = [
-            new ShellCommandItem('core.home', 'Open Workspace Overview', '/admin', 'navigation', 'Core'),
-            new ShellCommandItem('core.cos', 'Open COS Control Center', '/cos/control-center', 'navigation', 'Core'),
-            new ShellCommandItem('core.analytics', 'Open Analytics', '/admin/analytics', 'navigation', 'Core'),
-            new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'navigation', 'Core'),
+            ...$this->coreCommands->commands($context),
             ...$extensions->commands(),
         ];
 
