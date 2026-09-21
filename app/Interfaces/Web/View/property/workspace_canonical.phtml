@@ -18,13 +18,18 @@ $statusLabels = [
     'meta' => ['value'=>(int)($stats['all']??count($items)),'label'=>'inventory items'],
   ]); ?>
 
-  <section class="tn-ui-panel tn-workspace-section">
-    <form class="tn-ui-filter-bar" method="get">
-      <label><span>Пошук</span><input type="search" name="q" value="<?php echo $h($filters['q']??''); ?>" placeholder="Asset, listing, location"></label>
-      <label><span>Статус</span><select name="status"><option value="">Усі</option><?php foreach($statusLabels as $code=>$label): ?><option value="<?php echo $h($code); ?>" <?php echo ($filters['status']??'')===$code?'selected':''; ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Операція</span><select name="transaction_type"><option value="">Усі</option><?php foreach(['sale'=>'Продаж','rent'=>'Оренда','investment'=>'Інвестиція'] as $code=>$label): ?><option value="<?php echo $h($code); ?>" <?php echo ($filters['transaction_type']??'')===$code?'selected':''; ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <button class="tn-ui-button tn-ui-button--primary" type="submit">Фільтрувати</button>
-    </form>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar', [
+      'fields' => [
+        ['name'=>'q','type'=>'search','label'=>'Пошук','value'=>$filters['q']??'','placeholder'=>'Asset, listing, location','grow'=>true],
+        ['name'=>'status','type'=>'select','label'=>'Статус','value'=>$filters['status']??'','options'=>[''=>'Усі'] + $statusLabels],
+        ['name'=>'transaction_type','type'=>'select','label'=>'Операція','value'=>$filters['transaction_type']??'','options'=>[''=>'Усі','sale'=>'Продаж','rent'=>'Оренда','investment'=>'Інвестиція']],
+      ],
+      'actions' => [
+        ['label'=>'Фільтрувати','type'=>'submit','variant'=>'primary'],
+        ['label'=>'Скинути','href'=>$mode === 'listing' ? 'property/listing' : 'property/manage','variant'=>'ghost'],
+      ],
+    ]); ?>
   </section>
 
   <?php if($pageStatus): ?>
