@@ -16,7 +16,7 @@ final class SalesWebProvider implements NavigationProviderInterface, CommandProv
 {
     public function serviceId(): string
     {
-        return 'salesWebProvider';
+        return 'salesNavigationContributor';
     }
 
     public function navigation(WebExtensionContext $context): array
