@@ -58,7 +58,7 @@ final readonly class RuntimeUIActionProvider
         };
 
         return [new UIAction(
-            id: 'runtime.action.' . $action->id,
+            id: 'runtime.action.a' . $action->id,
             label: $verb . ' · ' . $this->label($action->type),
             intent: UIActionIntent::Execute,
             icon: 'bolt',
@@ -112,7 +112,7 @@ final readonly class RuntimeUIActionProvider
 
         return [
             new UIAction(
-                id: 'runtime.approval.' . $action->approvalId . '.approve',
+                id: 'runtime.approval.a' . $action->approvalId . '.approve',
                 label: 'Approve · ' . $this->label($action->type),
                 intent: UIActionIntent::Approve,
                 icon: 'check',
@@ -132,7 +132,7 @@ final readonly class RuntimeUIActionProvider
                 resourceId: $action->approvalId,
             ),
             new UIAction(
-                id: 'runtime.approval.' . $action->approvalId . '.reject',
+                id: 'runtime.approval.a' . $action->approvalId . '.reject',
                 label: 'Reject · ' . $this->label($action->type),
                 intent: UIActionIntent::Reject,
                 icon: 'x',
