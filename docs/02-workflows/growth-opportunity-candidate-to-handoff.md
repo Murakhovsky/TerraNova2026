@@ -1,0 +1,199 @@
+---
+title: Signal → Qualified Opportunity Handoff
+description: "Канонічний Growth V0.1 процес від перевіреного сигналу через research, rationale та explainable scoring до handoff-ready Opportunity Candidate."
+status: active
+updated: 2026-09-21
+kind: workflow
+contract: workflow-v2
+process_state: to-be
+process_id: growth.opportunity-candidate-to-handoff
+---
+
+# Signal → Qualified Opportunity Handoff
+
+## Бізнес-мета
+
+Перетворити зовнішні або внутрішні бізнес-сигнали на **конкретні, досліджені та пояснювані Opportunity Candidates**, не підміняючи Growth звичайною базою Lead-ів.
+
+Growth відповідає за **FIND VALUE**:
+
+```text
+Signal
+  ↓
+Research
+  ↓
+Rationale
+  ↓
+Score
+  ↓
+Qualification
+  ├─ not now → Monitoring
+  └─ qualified → Opportunity Handoff
+```
+
+Після handoff ownership майбутньої угоди, проєкту, кандидата, закупівлі або іншого execution lifecycle переходить у відповідний target Domain.
+
+## Учасники
+
+- growth operator;
+- Growth automation;
+- target Domain owner.
+
+## Тригер
+
+COS отримує спостережуваний факт або набір фактів, які можуть означати нову бізнес-можливість: зміна керівництва, hiring, funding, expansion, нова потреба існуючого клієнта, tender, supplier event, property event або інший signal.
+
+## Межа домену
+
+```text
+MARKET / BUSINESS STATE
+        ↓
+      Signal
+        ↓
+OpportunityCandidate
+        ↓
+ Research + Rationale
+        ↓
+ Explainable Score
+        ↓
+ Qualification
+   ┌────┴─────┐
+   ↓          ↓
+Monitor    Handoff Package
+               ↓
+          TARGET DOMAIN
+```
+
+Growth **не** створює Sales deal, invoice, project або service ticket. Він створює достатньо обґрунтований package, який target Domain може прийняти або відхилити через окремий міждоменний контракт у наступній фазі.
+
+## Процес
+
+<ProcessDiagram process-id="growth.opportunity-candidate-to-handoff" />
+
+## Представлення відповідальності
+
+<ProcessDiagram process-id="growth.opportunity-candidate-to-handoff" view="ownership" direction="LR" />
+
+Growth automation може знаходити факти, enrichment і score evidence. Qualification та handoff залишаються явними бізнесовими рішеннями Growth до появи policy-controlled auto-qualification.
+
+## Представлення доменів
+
+<ProcessDiagram process-id="growth.opportunity-candidate-to-handoff" view="domain" direction="LR" />
+
+V0.1 є внутрішньодоменним процесом. Межа з Sales, Procurement, HR, Finance, Real Estate та іншими Domains завершується на `OpportunityHandoff`; прямого читання або mutation чужого persistence немає.
+
+## Представлення можливостей
+
+<ProcessDiagram process-id="growth.opportunity-candidate-to-handoff" view="capability" direction="LR" />
+
+Кожен canonical step має Growth-owned capability без capability debt.
+
+## Інваріанти
+
+1. **Signal = observable fact.** Інтерпретація не записується назад у Signal.
+2. **Rationale ≠ fact.** `OpportunityRationale` явно зберігає WHY IT MATTERS, problem hypothesis, WHY NOW, evidence, counter-evidence, assumptions, unknowns і confidence.
+3. Candidate не може існувати без хоча б одного Signal reference.
+4. Candidate не може бути scored до research.
+5. Candidate не може бути qualified до score.
+6. Handoff неможливий без rationale, score, expected value, recommended play і recommended action.
+7. Growth не може disqualify або expire candidate після передачі ownership у target Domain.
+8. Один агрегований «AI score» не є canonical truth. Fit, Need, Timing, Access і Value залишаються окремими explainable dimensions.
+9. Усі core objects tenant-scoped через `OrganizationId`.
+10. Target Domain не отримує mutation authority над Growth state через shared таблицю або framework model.
+
+## Lifecycle
+
+```text
+DETECTED
+  ↓
+ENRICHING
+  ↓
+RESEARCHED
+  ↓
+SCORED
+  ↓
+QUALIFIED
+  ↓
+READY_FOR_HANDOFF
+  ↓
+HANDED_OFF
+```
+
+Бічні стани:
+
+```text
+MONITORING
+DISQUALIFIED
+DUPLICATE
+EXPIRED
+REJECTED_BY_TARGET_DOMAIN
+```
+
+## Growth modes
+
+```text
+ACQUIRE
+EXPAND
+REACTIVATE
+DISCOVER
+```
+
+Це дозволяє одному Domain шукати не лише клієнтів, а й expansion opportunities, старі можливості для reactivation, партнерів, suppliers, investors, candidates, tenders, properties, acquisitions, projects та technologies.
+
+## WHY NOW
+
+WHY NOW є частиною rationale, а не декоративним текстовим полем CRM.
+
+```text
+Observed facts
+      ↓
+Interpretation
+      ↓
+Problem hypothesis
+      ↓
+WHY IT MATTERS
+      ↓
+WHY NOW
+      ↓
+Unknowns / counter evidence
+      ↓
+Qualification decision
+```
+
+## Handoff contract
+
+V0.1 формує `OpportunityHandoff` із:
+
+- candidate / organization identity;
+- opportunity type і Growth mode;
+- subject та target Domain;
+- Signal references;
+- WHY IT MATTERS;
+- problem hypothesis;
+- WHY NOW;
+- evidence та unknowns;
+- explainable score dimensions;
+- expected value;
+- recommended play;
+- recommended action.
+
+Це не Sales Lead. Це **Opportunity Package**.
+
+## Статус V0.1
+
+`process_state: to-be` навмисний. Domain model, lifecycle, Process Registry і runtime identity реалізовані першими; persistence, external signal collectors, AI agents, cross-domain acceptance, API та UI додаються окремими хвилями.
+
+## Карта коду
+
+```text
+app/Domains/Growth/module.php
+app/Domains/Growth/Domain/Signal.php
+app/Domains/Growth/Domain/OpportunityCandidate.php
+app/Domains/Growth/Domain/OpportunityRationale.php
+app/Domains/Growth/Domain/ScoreDimension.php
+app/Domains/Growth/Domain/OpportunityScore.php
+app/Domains/Growth/Application/DTO/OpportunityHandoff.php
+app/Domains/Growth/Application/UseCase/PrepareOpportunityHandoff.php
+app/Domains/Growth/Bootstrap/GrowthDomainModule.php
+resources/processes/growth-opportunity-candidate-to-handoff.json
+```
