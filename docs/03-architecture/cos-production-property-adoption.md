@@ -1,4 +1,9 @@
-# COS Production Property Adoption
+---
+title: "Впровадження Property у production UI"
+description: "Канонічне впровадження Property production surfaces, фільтрів, порівняння та межі editable grid у COS."
+---
+
+# Впровадження Property у production UI
 
 PHASE 10 переносить production Property surfaces на canonical COS presentation contracts без зміни Property business logic, permissions, routing або mutation semantics.
 
@@ -6,7 +11,7 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 
 ## Хвиля 1
 
-### Manager Registry
+### Реєстр менеджера (`Manager Registry`)
 
 `property/manage.phtml`
 
@@ -24,7 +29,7 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - inline property editing forms, reservation/fixation controls та save semantics не змінені;
 - таблиця залишається domain-specific editable grid до окремої canonical DataGrid хвилі.
 
-### Compare
+### Порівняння (`Compare`)
 
 `property/compare.phtml`
 
@@ -34,7 +39,7 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 - вибір об'єкта зберігає `data-save-property` та `data-toggle-text`;
 - DataTable отримав generic action-cell contract через canonical ActionBar.
 
-## Editable grid boundary
+## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
 
