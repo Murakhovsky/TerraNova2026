@@ -94,7 +94,7 @@ AUTH_STATUS="$(curl --silent --show-error \
 
 if [[ "$AUTH_STATUS" != "302" && "$AUTH_STATUS" != "303" ]]; then
   echo "Expected unauthenticated /sales to redirect to native login, got status $AUTH_STATUS." >&2
-  cat "$AUTH_HEADERS" >&2
+  cat "$LOGIN_HEADERS" >&2
   exit 65
 fi
 
@@ -105,9 +105,17 @@ if [[ "$AUTH_LOCATION" != "/auth/login" && "$AUTH_LOCATION" != "$HTTPS_URL/auth/
   exit 70
 fi
 
-SESSION_COOKIE="$(grep -i '^set-cookie:' "$AUTH_HEADERS" | grep -i 'COSSESSID=' | head -n 1 || true)"
+LOGIN_HEADERS="$TMP_DIR/login-headers.txt"
+COOKIE_JAR="$TMP_DIR/cookies.txt"
+curl --fail --silent --show-error \
+  --dump-header "$LOGIN_HEADERS" \
+  --cookie-jar "$COOKIE_JAR" \
+  "$HTTPS_URL/auth/login" \
+  --output /dev/null
+
+SESSION_COOKIE="$(grep -i '^set-cookie:' "$LOGIN_HEADERS" | grep -i 'COSSESSID=' | head -n 1 || true)"
 if [[ -z "$SESSION_COOKIE" ]]; then
-  echo "Native Symfony authentication did not issue COSSESSID." >&2
+  echo "Native Symfony login page did not start COSSESSID." >&2
   cat "$AUTH_HEADERS" >&2
   exit 71
 fi
