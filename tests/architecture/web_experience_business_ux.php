@@ -135,8 +135,8 @@ foreach ($components as $component) {
 $docs = (string) file_get_contents($root . '/docs/03-architecture/cos-business-ux.md');
 foreach ([
     'Сутність як основна одиниця роботи',
-    'Workflow, ownership і next action',
-    'Relations та activity',
+    'Етапи, відповідальність і наступна дія',
+    'Зв’язки та активність',
     'Фінансова мова',
     'Критерії завершення PHASE 7',
 ] as $marker) {
