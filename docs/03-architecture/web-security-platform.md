@@ -73,6 +73,10 @@ CSRF token перевидається для нової authenticated session.
 
 HTML policy забороняє object embedding і framing COS, обмежує base/form origins та переводить insecure subresources на HTTPS.
 
+Для Symfony AssetMapper кожен main request отримує криптографічний CSP nonce. Той самий nonce передається в `importmap('app', {'nonce': ...})`, тому inline importmap не потребує `script-src 'unsafe-inline'`.
+
+Поточний AssetMapper також створює `data:application/javascript` entries для CSS imports, тому `script-src` дозволяє `data:` разом із `'self'` та request nonce. Це compatibility allowance саме для canonical AssetMapper runtime, а не дозвіл на довільний inline JavaScript.
+
 `style-src 'unsafe-inline'` залишається тимчасовим compatibility allowance для поточного server-rendered UI. Послаблювати `script-src` до `unsafe-inline` заборонено.
 
 ## Обмеження частоти
