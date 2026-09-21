@@ -44,7 +44,7 @@ Theme не змінює базову geometry scale.
 
 ## Семантичні ролі
 
-### Controls
+### Елементи керування
 
 Button, Input, Select, Search, IconButton та подібні controls:
 
@@ -58,7 +58,7 @@ Small compact controls можуть використовувати:
 --cos-radius-control-sm = 4 px
 ```
 
-### Panels
+### Панелі
 
 Card, Panel, Data surface, Dropdown, Toast, Alert:
 
@@ -66,7 +66,7 @@ Card, Panel, Data surface, Dropdown, Toast, Alert:
 --cos-radius-panel = 8 px
 ```
 
-### Overlays
+### Накладні поверхні
 
 Modal та великі floating overlays:
 
@@ -74,7 +74,7 @@ Modal та великі floating overlays:
 --cos-radius-overlay = 10 px
 ```
 
-### Pills
+### Капсульні елементи
 
 Badge, tag, status chip, compact state indicator та справді pill-shaped control:
 
@@ -84,7 +84,7 @@ Badge, tag, status chip, compact state indicator та справді pill-shaped
 
 Pill не використовується як універсальний спосіб зробити інтерфейс "м'якшим".
 
-## Border width
+## Товщина межі
 
 Канонічний structural border:
 
@@ -94,7 +94,7 @@ Pill не використовується як універсальний сп�
 
 Focus ring, selected outline або special emphasis не є structural border і можуть мати іншу товщину через окремий interaction contract.
 
-## Bootstrap
+## Інтеграція з Bootstrap
 
 Bootstrap CSS завантажується до COS `app.css`.
 
@@ -122,7 +122,7 @@ Bootstrap CSS завантажується до COS `app.css`.
 
 Отже Bootstrap автоматично успадковує COS geometry, а не диктує її.
 
-## Theme contract
+## Контракт тем оформлення
 
 `Light`, `Dark` і майбутній canonical `Origin` не повинні змінювати geometry scale.
 
@@ -137,7 +137,7 @@ Bootstrap CSS завантажується до COS `app.css`.
 
 Вона не означає іншу базову форму component tree.
 
-## Style Lab і Glass
+## Експериментальні стилі та Glass
 
 PHASE 2 дозволяв Glass експериментально збільшувати global radii.
 
@@ -156,7 +156,7 @@ Glass лишається виразним через:
 
 Це важливо для cross-theme consistency і для того, щоб Glass не перетворився на окремий design system.
 
-## Domains
+## Домени
 
 Domain не може визначати власну глобальну шкалу:
 
