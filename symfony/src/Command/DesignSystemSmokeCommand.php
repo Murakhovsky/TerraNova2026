@@ -42,6 +42,8 @@ final class DesignSystemSmokeCommand extends Command
             'cos-badge--positive',
             'cos-empty-state',
             'Semantic color tokens',
+            'PHASE 6 Canonical Primitives Pass',
+            'cos-status--positive',
         ] as $marker) {
             if (!str_contains($html, $marker)) {
                 $output->writeln(sprintf('<error>Missing Design System marker: %s</error>', $marker));
