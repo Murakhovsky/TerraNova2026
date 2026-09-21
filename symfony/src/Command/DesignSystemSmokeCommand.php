@@ -41,7 +41,7 @@ final class DesignSystemSmokeCommand extends Command
             'cos-button--primary',
             'cos-badge--positive',
             'cos-empty-state',
-            '--cos-color-canvas',
+            'Semantic color tokens',
         ] as $marker) {
             if (!str_contains($html, $marker)) {
                 $output->writeln(sprintf('<error>Missing Design System marker: %s</error>', $marker));
