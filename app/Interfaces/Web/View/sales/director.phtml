@@ -10,11 +10,71 @@ $quality = $workspace['quality'] ?? [];
 $percent = static fn($value) => $value === null ? '—' : number_format((float) $value * 100, 1, '.', ' ') . '%';
 $duration = static fn($seconds) => $seconds === null ? '—' : number_format((float) $seconds / 3600, 1, '.', ' ') . ' h';
 $money = static fn($value, $currency) => number_format((float) $value, 0, '.', ' ') . ' ' . (string) $currency;
+
 $pipelineRows = (array) ($headline['pipeline_by_currency'] ?? []);
 $forecastRows = (array) ($headline['forecast_by_currency'] ?? []);
 $riskRows = (array) ($headline['at_risk_by_currency'] ?? []);
 $managers = (array) ($operations['manager_performance']['managers'] ?? []);
 $atRiskDeals = array_values(array_filter((array) ($forecast['deals'] ?? []), static fn($deal) => is_array($deal) && !empty($deal['risk']['at_risk'])));
+
+$currencies = [];
+foreach ([$pipelineRows, $forecastRows, $riskRows] as $sourceRows) {
+    foreach ($sourceRows as $row) if (is_array($row) && !empty($row['currency'])) $currencies[(string) $row['currency']] = true;
+}
+ksort($currencies);
+$findCurrency = static function (array $rows, string $currency): array {
+    foreach ($rows as $row) if (is_array($row) && (string) ($row['currency'] ?? '') === $currency) return $row;
+    return [];
+};
+
+$executiveRows = [];
+foreach (array_keys($currencies) as $currency) {
+    $pipeline = $findCurrency($pipelineRows, $currency);
+    $forecastRow = $findCurrency($forecastRows, $currency);
+    $risk = $findCurrency($riskRows, $currency);
+    $executiveRows[] = [
+        'currency' => $currency,
+        'pipeline' => $money($pipeline['pipeline_value'] ?? 0, $currency),
+        'weighted' => $money($pipeline['weighted_pipeline'] ?? 0, $currency),
+        'forecast' => $money($forecastRow['value'] ?? 0, $currency),
+        'risk' => $money($risk['value'] ?? 0, $currency),
+    ];
+}
+
+$transitionRows = [];
+foreach ((array) ($historical['stage_conversion'] ?? []) as $row) {
+    $transitionRows[] = [
+        'pipeline' => $row['pipeline_id'] ?? '',
+        'from' => $row['from_stage_code'] ?? '',
+        'to' => $row['to_stage_code'] ?? '',
+        'transitions' => (int) ($row['transition_count'] ?? 0),
+        'conversion' => $percent($row['conversion_rate'] ?? null),
+    ];
+}
+
+$managerRows = [];
+foreach ($managers as $manager) {
+    $managerRows[] = [
+        'owner' => '#' . (int) ($manager['owner_id'] ?? 0),
+        'response' => $percent($manager['response']['response_rate'] ?? null),
+        'median_response' => $duration($manager['response']['median_seconds'] ?? null),
+        'followup' => $percent($manager['followup']['completion_rate'] ?? null),
+        'on_time' => $percent($manager['followup']['on_time_rate'] ?? null),
+        'won_closed' => $percent($manager['outcomes']['win_rate_closed'] ?? null),
+    ];
+}
+
+$riskDealRows = [];
+foreach ($atRiskDeals as $deal) {
+    $codes = array_map(static fn($reason) => is_array($reason) ? (string) ($reason['code'] ?? '') : '', (array) ($deal['risk']['reasons'] ?? []));
+    $riskDealRows[] = [
+        'deal' => $deal['title'] ?? $deal['deal_id'] ?? 'Deal',
+        'stage' => ['label' => $deal['stage_code'] ?? '—', 'kind' => 'stage', 'tone' => 'warning'],
+        'expected_close' => $deal['expected_close_at'] ?? '—',
+        'reasons' => implode(', ', array_filter($codes)),
+        'money' => !empty($deal['money']['available']) ? $money($deal['money']['value'] ?? 0, $deal['money']['currency'] ?? '') : '—',
+    ];
+}
 ?>
 <main class="tn-page tn-workspace-page tn-sales-workspace" data-sales-workspace>
   <?php $this->partial('components/sales/navigation', ['active' => 'director']); ?>
@@ -25,32 +85,36 @@ $atRiskDeals = array_values(array_filter((array) ($forecast['deals'] ?? []), sta
       'actions' => [['label' => 'Pipeline', 'href' => 'sales/pipeline', 'variant' => 'primary']],
   ]); ?>
 
-  <section class="tn-ui-panel tn-workspace-section">
-    <form method="get" class="tn-ui-toolbar">
-      <label>History days <input type="number" name="history_days" min="1" max="366" value="<?php echo (int) ($filters['history_days'] ?? 30); ?>"></label>
-      <label>Forecast days <input type="number" name="forecast_days" min="1" max="366" value="<?php echo (int) ($filters['forecast_days'] ?? 30); ?>"></label>
-      <label>Pipeline <input type="text" name="pipeline_id" value="<?php echo $h($filters['pipeline_id'] ?? ''); ?>" placeholder="all"></label>
-      <button class="tn-ui-button tn-ui-button--primary" type="submit">Apply</button>
-    </form>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar', [
+        'fields' => [
+            ['name' => 'history_days', 'type' => 'number', 'label' => 'History days', 'value' => (string) (int) ($filters['history_days'] ?? 30), 'min' => 1, 'max' => 366],
+            ['name' => 'forecast_days', 'type' => 'number', 'label' => 'Forecast days', 'value' => (string) (int) ($filters['forecast_days'] ?? 30), 'min' => 1, 'max' => 366],
+            ['name' => 'pipeline_id', 'type' => 'text', 'label' => 'Pipeline', 'value' => $filters['pipeline_id'] ?? '', 'placeholder' => 'all'],
+        ],
+        'actions' => [['label' => 'Apply', 'type' => 'submit', 'variant' => 'primary']],
+    ]); ?>
   </section>
 
-  <section class="tn-ui-panel tn-workspace-section">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Executive picture</p><h2>Pipeline and forecast by currency</h2></div></div>
-    <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Currency</th><th>Pipeline</th><th>Weighted pipeline</th><th>Forecast</th><th>Current at risk</th></tr></thead><tbody>
-      <?php
-      $currencies = [];
-      foreach ([$pipelineRows, $forecastRows, $riskRows] as $rows) foreach ($rows as $row) if (is_array($row) && !empty($row['currency'])) $currencies[(string) $row['currency']] = true;
-      ksort($currencies);
-      $find = static function (array $rows, string $currency): array { foreach ($rows as $row) if (is_array($row) && (string) ($row['currency'] ?? '') === $currency) return $row; return []; };
-      foreach (array_keys($currencies) as $currency):
-          $pipeline = $find($pipelineRows, $currency);
-          $forecastRow = $find($forecastRows, $currency);
-          $risk = $find($riskRows, $currency);
-      ?>
-      <tr><td><?php echo $h($currency); ?></td><td><?php echo $h($money($pipeline['pipeline_value'] ?? 0, $currency)); ?></td><td><?php echo $h($money($pipeline['weighted_pipeline'] ?? 0, $currency)); ?></td><td><?php echo $h($money($forecastRow['value'] ?? 0, $currency)); ?></td><td><?php echo $h($money($risk['value'] ?? 0, $currency)); ?></td></tr>
-      <?php endforeach; ?>
-    </tbody></table></div>
-    <?php if ($currencies === []): ?><p class="tn-sales-note">No monetary facts for the selected scope.</p><?php endif; ?>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Executive picture',
+        'title' => 'Pipeline and forecast by currency',
+        'description' => 'Currencies remain isolated by contract; monetary facts are never mixed.',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'currency', 'label' => 'Currency'],
+                ['key' => 'pipeline', 'label' => 'Pipeline'],
+                ['key' => 'weighted', 'label' => 'Weighted pipeline'],
+                ['key' => 'forecast', 'label' => 'Forecast'],
+                ['key' => 'risk', 'label' => 'Current at risk'],
+            ],
+            'rows' => $executiveRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'No monetary facts for the selected scope.',
+        ],
+    ]); ?>
   </section>
 
   <section class="tn-ui-kpi-grid tn-workspace-section">
@@ -61,36 +125,75 @@ $atRiskDeals = array_values(array_filter((array) ($forecast['deals'] ?? []), sta
   </section>
 
   <div class="tn-ui-split tn-workspace-section">
-    <section class="tn-ui-panel">
-      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Historical funnel</p><h2>Actual transitions</h2></div></div>
-      <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Pipeline</th><th>From</th><th>To</th><th>Transitions</th><th>Conversion</th></tr></thead><tbody>
-        <?php foreach ((array) ($historical['stage_conversion'] ?? []) as $row): ?><tr><td><?php echo $h($row['pipeline_id'] ?? ''); ?></td><td><?php echo $h($row['from_stage_code'] ?? ''); ?></td><td><?php echo $h($row['to_stage_code'] ?? ''); ?></td><td><?php echo (int) ($row['transition_count'] ?? 0); ?></td><td><?php echo $h($percent($row['conversion_rate'] ?? null)); ?></td></tr><?php endforeach; ?>
-      </tbody></table></div>
-    </section>
-    <section class="tn-ui-panel">
-      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Velocity</p><h2>Cycle and stage duration</h2></div></div>
-      <dl class="tn-sales-definition-list">
-        <div><dt>Sales cycle median</dt><dd><?php echo $h($duration($historical['sales_cycle']['median_seconds'] ?? null)); ?></dd></div>
-        <div><dt>Sales cycle p75</dt><dd><?php echo $h($duration($historical['sales_cycle']['p75_seconds'] ?? null)); ?></dd></div>
-        <div><dt>Cycle samples</dt><dd><?php echo (int) ($historical['sales_cycle']['sample_count'] ?? 0); ?></dd></div>
-      </dl>
-      <p class="tn-sales-note"><?php echo $h($quality['historical_policy'] ?? ''); ?></p>
-    </section>
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Historical funnel',
+        'title' => 'Actual transitions',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'pipeline', 'label' => 'Pipeline'],
+                ['key' => 'from', 'label' => 'From'],
+                ['key' => 'to', 'label' => 'To'],
+                ['key' => 'transitions', 'label' => 'Transitions'],
+                ['key' => 'conversion', 'label' => 'Conversion'],
+            ],
+            'rows' => $transitionRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'No historical transitions for the selected scope.',
+        ],
+    ]); ?>
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Velocity',
+        'title' => 'Cycle and stage duration',
+        'bodyPartial' => 'components/sales/director_velocity',
+        'bodyParams' => ['historical' => $historical, 'quality' => $quality],
+    ]); ?>
   </div>
 
-  <section class="tn-ui-panel tn-workspace-section">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Manager performance</p><h2>Attributed facts only</h2><p>Поточний owner не отримує заднім числом чужі response, follow-up чи outcomes.</p></div></div>
-    <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Owner</th><th>Response</th><th>Median response</th><th>Follow-up</th><th>On time</th><th>Won / closed</th></tr></thead><tbody>
-      <?php foreach ($managers as $manager): ?><tr><td>#<?php echo (int) ($manager['owner_id'] ?? 0); ?></td><td><?php echo $h($percent($manager['response']['response_rate'] ?? null)); ?></td><td><?php echo $h($duration($manager['response']['median_seconds'] ?? null)); ?></td><td><?php echo $h($percent($manager['followup']['completion_rate'] ?? null)); ?></td><td><?php echo $h($percent($manager['followup']['on_time_rate'] ?? null)); ?></td><td><?php echo $h($percent($manager['outcomes']['win_rate_closed'] ?? null)); ?></td></tr><?php endforeach; ?>
-    </tbody></table></div>
-    <p class="tn-sales-note">Attribution coverage: response <?php echo $h($percent($quality['performance_attribution']['response']['rate'] ?? null)); ?> · follow-up <?php echo $h($percent($quality['performance_attribution']['followup']['rate'] ?? null)); ?> · outcome <?php echo $h($percent($quality['performance_attribution']['outcome']['rate'] ?? null)); ?>.</p>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Manager performance',
+        'title' => 'Attributed facts only',
+        'description' => 'Поточний owner не отримує заднім числом чужі response, follow-up чи outcomes.',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'owner', 'label' => 'Owner'],
+                ['key' => 'response', 'label' => 'Response'],
+                ['key' => 'median_response', 'label' => 'Median response'],
+                ['key' => 'followup', 'label' => 'Follow-up'],
+                ['key' => 'on_time', 'label' => 'On time'],
+                ['key' => 'won_closed', 'label' => 'Won / closed'],
+            ],
+            'rows' => $managerRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'No attributed manager facts for the selected scope.',
+        ],
+        'footerPartial' => 'components/sales/director_attribution',
+        'footerParams' => ['quality' => $quality],
+    ]); ?>
   </section>
 
-  <section class="tn-ui-panel tn-workspace-section">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Risk & explainability</p><h2>Deals requiring attention</h2><p>Ніяких магічних risk score. Кожен ризик має observable evidence.</p></div></div>
-    <div class="tn-ui-table-wrap"><table class="tn-ui-table"><thead><tr><th>Deal</th><th>Stage</th><th>Expected close</th><th>Risk reasons</th><th>Money</th></tr></thead><tbody>
-      <?php foreach ($atRiskDeals as $deal): $codes = array_map(static fn($reason) => is_array($reason) ? (string) ($reason['code'] ?? '') : '', (array) ($deal['risk']['reasons'] ?? [])); ?><tr><td><?php echo $h($deal['title'] ?? $deal['deal_id'] ?? 'Deal'); ?></td><td><?php echo $h($deal['stage_code'] ?? ''); ?></td><td><?php echo $h($deal['expected_close_at'] ?? '—'); ?></td><td><?php echo $h(implode(', ', array_filter($codes))); ?></td><td><?php echo !empty($deal['money']['available']) ? $h($money($deal['money']['value'] ?? 0, $deal['money']['currency'] ?? '')) : '—'; ?></td></tr><?php endforeach; ?>
-    </tbody></table></div>
-    <p class="tn-sales-note"><?php echo $h($quality['currency_policy'] ?? ''); ?> Currencies are never mixed.</p>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Risk & explainability',
+        'title' => 'Deals requiring attention',
+        'description' => 'Кожен ризик має observable evidence; opaque risk score тут не використовується.',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'deal', 'label' => 'Deal'],
+                ['key' => 'stage', 'label' => 'Stage'],
+                ['key' => 'expected_close', 'label' => 'Expected close'],
+                ['key' => 'reasons', 'label' => 'Risk reasons'],
+                ['key' => 'money', 'label' => 'Money'],
+            ],
+            'rows' => $riskDealRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'No at-risk deals for the selected scope.',
+        ],
+        'footerPartial' => 'components/sales/director_currency_policy',
+        'footerParams' => ['quality' => $quality],
+    ]); ?>
   </section>
 </main>
