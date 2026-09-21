@@ -1477,7 +1477,7 @@ cos_web_sales_root:
 
 cos_web_sales_dashboard:
   path: /sales/dashboard
-  controller: App\Web\Sales\SalesReferenceController::dashboard
+  controller: App\Web\Sales\SalesWorkspaceController::dashboard
   methods: [GET]
 
 cos_web_sales_today:
@@ -1492,12 +1492,12 @@ cos_web_sales_pipeline:
 
 cos_web_sales_leads:
   path: /sales/leads
-  controller: App\Web\Sales\SalesReferenceController::leads
+  controller: App\Web\Sales\SalesWorkspaceController::leads
   methods: [GET]
 
 cos_web_sales_lead:
   path: /sales/leads/{id}
-  controller: App\Web\Sales\SalesReferenceController::lead
+  controller: App\Web\Sales\SalesWorkspaceController::lead
   methods: [GET]
   requirements: { id: '[1-9][0-9]*' }
 
