@@ -1,6 +1,9 @@
 ---
 title: "Впровадження Property у production UI"
 description: "Канонічне впровадження Property production surfaces, фільтрів, порівняння та межі editable grid у COS."
+status: active
+updated: 2026-09-21
+kind: architecture
 ---
 
 # Впровадження Property у production UI
