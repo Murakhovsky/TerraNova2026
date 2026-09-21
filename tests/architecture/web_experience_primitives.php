@@ -96,10 +96,7 @@ foreach ([
 $catalog = (string) file_get_contents($root . '/symfony/templates/experience/design_system_catalog.html.twig');
 foreach ([
     'PHASE 6 Canonical Primitives Pass',
-    'Default',
-    'Hover',
-    'Focus',
-    'Active',
+    "['default', 'hover', 'focus', 'active']",
     'Selected',
     'Disabled',
     'Loading',
@@ -116,9 +113,9 @@ foreach ([
 
 $docs = (string) file_get_contents($root . '/docs/03-architecture/cos-canonical-primitives.md');
 foreach ([
-    'Semantic state tokens',
-    'Deterministic visual QA',
-    'Accessibility',
+    'Семантичні state tokens',
+    'Детермінований visual QA',
+    'Доступність',
     'Критерії завершення PHASE 6',
 ] as $marker) {
     if (!str_contains($docs, $marker)) {
