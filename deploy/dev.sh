@@ -29,6 +29,26 @@ fi
 
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" build --pull php nginx
+
+# Port 8081 is reserved for the canonical COS HTTP runtime. Older compose
+# projects can survive a runtime cutover and keep that host binding even
+# after their files have been retired. Remove only foreign Docker owners;
+# the canonical cos/nginx container is left for Compose to reconcile.
+COS_HTTP_PORT="${COS_HTTP_PORT:-8081}"
+while IFS= read -r container_id; do
+  [[ -n "$container_id" ]] || continue
+  container_name="$("${DOCKER[@]}" inspect -f '{{.Name}}' "$container_id" 2>/dev/null | sed 's#^/##')"
+  compose_project="$("${DOCKER[@]}" inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$container_id" 2>/dev/null || true)"
+  compose_service="$("${DOCKER[@]}" inspect -f '{{ index .Config.Labels "com.docker.compose.service" }}' "$container_id" 2>/dev/null || true)"
+
+  if [[ "$compose_project" == "cos" && "$compose_service" == "nginx" ]]; then
+    continue
+  fi
+
+  echo "Removing stale Docker owner of 127.0.0.1:$COS_HTTP_PORT: ${container_name:-$container_id} (project=${compose_project:-unknown}, service=${compose_service:-unknown})"
+  "${DOCKER[@]}" rm -f "$container_id"
+done < <("${DOCKER[@]}" ps --filter "publish=$COS_HTTP_PORT" --format '{{.ID}}')
+
 "${COMPOSE[@]}" up -d mysql redis
 
 for attempt in $(seq 1 30); do
