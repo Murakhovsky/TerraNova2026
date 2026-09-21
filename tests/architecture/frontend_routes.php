@@ -162,11 +162,11 @@ foreach ([
 }
 
 foreach ([
-    "str_starts_with($path,'/client-case')",
-    "str_starts_with($path,'/cos/control-center')",
-    "str_starts_with($path,'/cos/action')",
-    "str_starts_with($path,'/cos/approval')",
-    "str_starts_with($path,'/admin')",
+    "str_starts_with(\$path,'/client-case')",
+    "str_starts_with(\$path,'/cos/control-center')",
+    "str_starts_with(\$path,'/cos/action')",
+    "str_starts_with(\$path,'/cos/approval')",
+    "str_starts_with(\$path,'/admin')",
     "property/(?:manage|listing|submissions|submission|presentationShare)",
 ] as $authBoundary) {
     if (!str_contains($sessionAuthenticator, $authBoundary)) {
