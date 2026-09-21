@@ -1,12 +1,12 @@
 ---
-title: COS Visual Constitution v1
+title: Візуальна конституція COS v1
 description: Канонічні принципи візуальної мови Company Operating System для всіх Domains, themes і business surfaces.
 status: active
 updated: 2026-09-21
 kind: architecture
 ---
 
-# COS Visual Constitution v1
+# Візуальна конституція COS v1
 
 ## 1. Призначення
 
@@ -65,13 +65,13 @@ COS не повинен виглядати як:
 
 ## 3. Десять канонічних принципів
 
-### 3.1 Calm
+### 3.1 Спокійність
 
 Декоративний шум мінімізується.
 
 Колір, shadow, animation і accent існують лише тоді, коли допомагають ієрархії, стану або дії.
 
-### 3.2 Precise
+### 3.2 Точність
 
 Основний характер створюють:
 
@@ -84,7 +84,7 @@ COS не повинен виглядати як:
 
 Компоненти не повинні "плавати" у випадкових картках.
 
-### 3.3 Information-dense
+### 3.3 Інформаційна щільність
 
 COS є професійним робочим інструментом.
 
@@ -95,19 +95,19 @@ Whitespace використовується для ієрархії, а не я�
 - comfortable density;
 - compact density.
 
-### 3.4 Financial
+### 3.4 Фінансова орієнтація
 
 Гроші, KPI, conversion, margin, forecast, target і variance є first-class visual data.
 
 Financial information не оформлюється як звичайний body text.
 
-### 3.5 Operational
+### 3.5 Операційність
 
 Primary action і next action повинні бути помітними без пошуку.
 
 Користувач має розуміти, що робити далі.
 
-### 3.6 Premium
+### 3.6 Преміальність
 
 Premium означає:
 
@@ -121,19 +121,19 @@ Premium означає:
 
 Premium не означає gold gradients, glass everywhere або великі тіні.
 
-### 3.7 Technical, not developer-only
+### 3.7 Технологічність без developer-only мислення
 
 COS може виглядати технологічно, але не повинен вимагати від керівника мислити як програміст.
 
 Технічні деталі відображаються лише там, де це частина use case.
 
-### 3.8 Neutral by default
+### 3.8 Нейтральність за замовчуванням
 
 Нейтральні surfaces і typography складають більшу частину UI.
 
 Колір використовується як signal.
 
-### 3.9 Alive
+### 3.9 Відчуття живої системи
 
 Realtime, activity, async operations та AI повинні створювати відчуття живої системи.
 
@@ -148,7 +148,7 @@ Realtime, activity, async operations та AI повинні створювати
 
 Не через постійні декоративні animation.
 
-### 3.10 One product
+### 3.10 Єдиний продукт
 
 Sales, Finance, HR, Property, Service, Procurement, Documents та інші Domains використовують одну UI мову.
 
@@ -174,7 +174,7 @@ Domain surfaces
 
 Domain surface не має права звертатися напряму до foundation palette, якщо існує semantic token.
 
-## 5. Themes
+## 5. Теми оформлення
 
 Канонічна продуктова модель:
 
@@ -189,7 +189,7 @@ Appearance preferences
 └── Dark
 ```
 
-### Origin
+### Origin як фірмовий режим
 
 Origin є signature appearance COS.
 
@@ -216,7 +216,7 @@ Origin використовується за замовчуванням у:
 
 Origin не є dark mode.
 
-### Light
+### Light як світлий режим
 
 Повністю світлий професійний workspace.
 
@@ -227,7 +227,7 @@ Origin не є dark mode.
 - світла navigation hierarchy;
 - офісне середовище.
 
-### Dark
+### Dark як темний режим
 
 Повноцінний dark workspace.
 
@@ -235,7 +235,7 @@ Origin не є dark mode.
 
 Кожен semantic state повинен мати власні dark values.
 
-### System
+### System як системне налаштування
 
 System може існувати як user preference, що вибирає Light або Dark за налаштуванням ОС.
 
@@ -243,7 +243,7 @@ System не є четвертою brand theme.
 
 ## 6. Колірна філософія
 
-### Brand accent
+### Фірмовий акцент
 
 Канонічний напрям accent:
 
@@ -265,7 +265,7 @@ Accent не використовується як:
 - financial growth;
 - arbitrary decoration.
 
-### Semantic colors
+### Семантичні кольори
 
 Семантика незалежна від brand:
 
@@ -279,7 +279,7 @@ Status ніколи не передається лише кольором.
 
 Потрібен text, icon, shape або інший redundant signal.
 
-### Surface colors
+### Ієрархія поверхонь
 
 Більшість інтерфейсу складається з neutral hierarchy:
 
@@ -299,7 +299,7 @@ Overlay
 
 Surface hierarchy повинна читатися навіть без shadow.
 
-## 7. Typography
+## 7. Типографіка
 
 Типографіка має передавати:
 
@@ -324,7 +324,7 @@ Surface hierarchy повинна читатися навіть без shadow.
 
 Поки font не затверджений остаточно, semantic type scale важливіша за конкретну family.
 
-### Numeric typography
+### Типографіка чисел
 
 Для financial/data surfaces:
 
@@ -343,7 +343,7 @@ font-variant-numeric: tabular-nums;
 - forecast;
 - secondary metadata.
 
-## 8. Geometry
+## 8. Геометрія
 
 Канонічний напрям:
 
@@ -410,7 +410,7 @@ Card використовується, коли блок справді є ок�
 
 Мета: менше "card inside card inside card".
 
-## 12. Actions
+## 12. Дії
 
 У кожному контексті має існувати зрозуміла action hierarchy:
 
@@ -425,7 +425,7 @@ Destructive action не використовує brand accent.
 
 UIAction contract є semantic source, але visual placement регулюється canonical UX patterns.
 
-## 13. Forms
+## 13. Форми
 
 Forms повинні бути:
 
@@ -456,7 +456,7 @@ Canonical DataGrid повинен підтримувати:
 
 Data table не повинна перетворюватися на декоративний dashboard.
 
-## 15. Financial visual language
+## 15. Візуальна мова фінансів
 
 Financial UI є окремою частиною COS identity.
 
@@ -482,7 +482,7 @@ Financial UI є окремою частиною COS identity.
 - risk не маскується brand accent;
 - великі KPI не повинні займати непропорційно багато viewport.
 
-## 16. Entity visual language
+## 16. Візуальна мова бізнес-сутностей
 
 Business entity повинна мати стабільну anatomy незалежно від Domain:
 
@@ -511,7 +511,7 @@ History
 - ActivityItem;
 - NextAction.
 
-## 17. Workspace
+## 17. Робочий простір
 
 Workspace Shell є незмінною cross-domain оболонкою.
 
@@ -534,7 +534,7 @@ Workspace має підтримувати:
 - documents;
 - AI context.
 
-## 18. AI visual language
+## 18. Візуальна мова AI
 
 AI є capability COS, а не окремою декоративною темою.
 
@@ -558,7 +558,7 @@ AI content не повинно світитися неоном або мати g
 
 Human і AI actions використовують один UIAction permission contract.
 
-## 19. Motion
+## 19. Рух та анімація
 
 Motion пояснює state change.
 
@@ -579,7 +579,7 @@ Motion пояснює state change.
 - parallax у operational workspace;
 - animation, що затримує доступ до дії.
 
-## 20. Iconography
+## 20. Іконографіка
 
 Іконка:
 
@@ -590,7 +590,7 @@ Motion пояснює state change.
 
 Icon-only action потребує accessible label і, де доречно, tooltip.
 
-## 21. Accessibility
+## 21. Доступність
 
 Цільовий мінімум: WCAG 2.2 AA для стандартного product UI.
 
@@ -607,7 +607,7 @@ Icon-only action потребує accessible label і, де доречно, tool
 
 Accessibility не є окремим "режимом дизайну". Вона входить у Definition of Done кожного компонента.
 
-## 22. Responsive philosophy
+## 22. Принципи адаптивності
 
 Адаптивність означає зміну поведінки, а не просте shrink desktop.
 
@@ -653,7 +653,7 @@ Truncation використовується лише там, де існує с�
 - довільні raw colors у Domain CSS;
 - decorative animation без UX purpose.
 
-## 25. Canonical reference surfaces
+## 25. Канонічні еталонні поверхні
 
 Visual language перевіряється не на ізольованому Button.
 
@@ -688,7 +688,7 @@ Visual language перевіряється не на ізольованому Bu
 
 Стиль не приймається лише тому, що hero screenshot виглядає ефектно.
 
-## 27. Definition of Done PHASE 1
+## 27. Критерії завершення PHASE 1
 
 Visual Constitution вважається впровадженою, якщо:
 
