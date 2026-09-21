@@ -1,0 +1,17 @@
+<aside
+    id="{{ id }}"
+    class="{{ this.cssClass() }}"
+    role="{{ this.liveRole() }}"
+    aria-live="{{ this.liveRole() == 'alert' ? 'assertive' : 'polite' }}"
+    data-controller="toast"
+    data-toast-duration-value="{{ duration }}"
+    data-toast-dismissible-value="{{ dismissible ? 'true' : 'false' }}"
+>
+    <div class="cos-toast__copy">
+        {% if title %}<strong class="cos-toast__title">{{ title }}</strong>{% endif %}
+        <p class="cos-toast__message">{{ message }}</p>
+    </div>
+    {% if dismissible %}
+        <button class="cos-icon-button" type="button" aria-label="Dismiss" data-action="click->toast#dismiss">×</button>
+    {% endif %}
+</aside>

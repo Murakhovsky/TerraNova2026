@@ -1,1 +1,24 @@
-<span class="cos-tooltip" role="tooltip">{{ text }}</span>
+<span
+    class="{{ this.cssClass() }}"
+    data-controller="tooltip"
+    data-action="
+        mouseenter->tooltip#show
+        mouseleave->tooltip#hide
+        focusin->tooltip#show
+        focusout->tooltip#hide
+        keydown.esc->tooltip#hide
+    "
+>
+    <button
+        class="cos-tooltip__trigger"
+        type="button"
+        aria-describedby="{{ id }}"
+    >{{ label }}</button>
+    <span
+        id="{{ id }}"
+        class="cos-tooltip"
+        role="tooltip"
+        hidden
+        data-tooltip-target="tooltip"
+    >{{ text }}</span>
+</span>

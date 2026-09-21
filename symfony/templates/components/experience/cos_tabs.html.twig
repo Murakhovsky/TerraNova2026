@@ -1,0 +1,30 @@
+<section
+    id="{{ id }}"
+    class="cos-tabs"
+    data-controller="tabs"
+    data-tabs-active-value="{{ this.activeKey() }}"
+>
+    <div
+        class="cos-tabs__list"
+        role="tablist"
+        aria-label="{{ label }}"
+        data-action="keydown->tabs#keydown"
+    >
+        {% for item in items %}
+            <button
+                id="{{ id }}-tab-{{ item.key }}"
+                class="cos-tabs__tab"
+                type="button"
+                role="tab"
+                aria-controls="{{ id }}-panel-{{ item.key }}"
+                aria-selected="{{ item.key == this.activeKey() ? 'true' : 'false' }}"
+                tabindex="{{ item.key == this.activeKey() ? '0' : '-1' }}"
+                data-tabs-target="tab"
+                data-tab-key="{{ item.key }}"
+                data-action="click->tabs#select"
+                {% if item.disabled ?? false %}disabled aria-disabled="true"{% endif %}
+            >{{ item.label }}</button>
+        {% endfor %}
+    </div>
+    <div class="cos-tabs__panels">{% block content %}{% endblock %}</div>
+</section>

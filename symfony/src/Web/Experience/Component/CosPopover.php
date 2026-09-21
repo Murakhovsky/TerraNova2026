@@ -12,6 +12,18 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 )]
 final class CosPopover
 {
+    public string $id = 'cos-popover';
+    public string $triggerLabel = 'Details';
     public string $title = '';
     public string $copy = '';
+    public string $placement = 'bottom';
+
+    public function cssClass(): string
+    {
+        $placement = in_array($this->placement, ['top', 'end', 'bottom', 'start'], true)
+            ? $this->placement
+            : 'bottom';
+
+        return 'cos-popover-host cos-popover-host--' . $placement;
+    }
 }
