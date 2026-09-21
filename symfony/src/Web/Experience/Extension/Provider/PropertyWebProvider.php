@@ -15,13 +15,13 @@ use App\Web\Experience\Extension\Model\WorkspaceDefinition;
 use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
-use Domains\Property\Contract\PropertyReferencePort;
+use App\Application\Experience\Search\Contract\PropertyEntitySearchInterface;
 
 final class PropertyWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface
 {
     public function __construct(
         private readonly SearchResultMatcher $matcher,
-        private readonly PropertyReferencePort $properties,
+        private readonly PropertyEntitySearchInterface $entitySearch,
     ) {
     }
 
@@ -60,43 +60,18 @@ final class PropertyWebProvider implements NavigationProviderInterface, SearchPr
             return $navigation;
         }
 
-        $entities = [];
-        foreach ($this->properties->searchPropertyReferences($context->organizationId, $query, min($limit, 12)) as $reference) {
-            $assetId = trim((string) ($reference['asset_id'] ?? ''));
-            if ($assetId === '') {
-                continue;
-            }
-
-            $presentation = $this->properties->getPropertyPresentation($context->organizationId, $assetId);
-            $property = is_array($presentation['property'] ?? null) ? $presentation['property'] : [];
-            $inventory = is_array($presentation['inventory'] ?? null) ? $presentation['inventory'] : [];
-            $listing = is_array($presentation['listing'] ?? null) ? $presentation['listing'] : [];
-
-            $title = trim((string) ($listing['title'] ?? ''));
-            $address = trim((string) ($property['formatted_address'] ?? ''));
-            $location = trim((string) ($property['location_name'] ?? ''));
-            $type = trim((string) ($property['type_code'] ?? $property['kind'] ?? ''));
-            $slug = trim((string) ($listing['slug'] ?? ''));
-
-            $label = $title !== ''
-                ? $title
-                : ($address !== '' ? $address : ($location !== '' ? $location . ' · ' . $type : 'Property ' . $assetId));
-
-            $entities[] = new SearchResult(
-                id: 'property.asset.' . $assetId,
-                label: $label,
-                path: $slug !== '' ? '/property/show/' . rawurlencode($slug) : '/property/manage',
+        $entities = array_map(
+            static fn ($hit): SearchResult => new SearchResult(
+                id: $hit->id,
+                label: $hit->label,
+                path: $hit->path,
                 kind: 'entity',
-                subtitle: implode(' · ', array_values(array_filter([
-                    $assetId,
-                    $location,
-                    $type,
-                    trim((string) ($inventory['status'] ?? '')),
-                ]))),
-                entity: new EntityRef('property.asset', $assetId),
-                score: 91.0,
-            );
-        }
+                subtitle: $hit->subtitle,
+                entity: new EntityRef($hit->entityType, $hit->entityId),
+                score: $hit->score,
+            ),
+            $this->entitySearch->search($context->organizationId, $query, $limit),
+        );
 
         return array_slice([...$entities, ...$navigation], 0, $limit);
     }
