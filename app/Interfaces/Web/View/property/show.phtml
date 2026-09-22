@@ -171,13 +171,11 @@ if ($property) {
         'action' => ['label' => 'Перейти в каталог', 'href' => 'property/catalog'],
     ]); ?>
   <?php else: ?>
-    <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-      <a href="<?php echo $this->url->get(); ?>">Головна</a>
-      <span>/</span>
-      <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-      <span>/</span>
-      <span><?php echo $h($property['title']); ?></span>
-    </nav>
+    <?php $this->partial('components/ui/breadcrumbs', ['items' => [
+      ['label' => 'Головна', 'href' => ''],
+      ['label' => 'Каталог', 'href' => 'property/catalog'],
+      ['label' => (string) $property['title'], 'current' => true],
+    ]]); ?>
 
     <nav class="tn-mobile-catalog-actions" aria-label="Швидкі дії об’єкта">
       <a href="<?php echo $this->url->get('property/catalog'); ?>">До списку</a>
