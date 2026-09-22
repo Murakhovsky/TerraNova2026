@@ -33,7 +33,7 @@ Panther suite зберігається у `symfony/tests/Panther`. Він є Sym
 
 CI baseline ловить високосигнальні регресії: відсутній `lang` або `title`, duplicate ids, form controls без label, images без `alt`, interactive controls без accessible name, неможливість увійти в keyboard focus, horizontal overflow у mobile viewport та browser console/page errors.
 
-PHASE 15 доповнює цей baseline pinned `@axe-core/cli@4.13.0` audit для WCAG 2.x / 2.1 / 2.2 Level A + AA на reference public surfaces. Евристичний layer не видаляється: він ловить runtime, focus та overflow регресії, які не є повною заміною standards-based axe аналізу.
+PHASE 15 доповнює цей baseline pinned `@axe-core/playwright@4.13.0` audit для WCAG 2.x / 2.1 / 2.2 Level A + AA на reference public surfaces. Евристичний layer не видаляється: він ловить runtime, focus та overflow регресії, які не є повною заміною standards-based axe аналізу.
 
 ## Візуальна перевірка
 
