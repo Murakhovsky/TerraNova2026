@@ -288,13 +288,6 @@ $globalForbidden = [
     'class="tn-sales-cta"',
     'tn-section-heading',
 ];
-$breadcrumbWhitelist = [
-    'property/catalog.phtml',
-    'property/map.phtml',
-    'property/show.phtml',
-    'property/presentation.phtml',
-];
-
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($viewRoot));
 foreach ($iterator as $file) {
     if (!$file->isFile() || $file->getExtension() !== 'phtml') {
@@ -310,9 +303,25 @@ foreach ($iterator as $file) {
         }
     }
 
-    if (str_contains($source, 'tn-breadcrumbs') && !in_array($relative, $breadcrumbWhitelist, true)) {
-        throw new RuntimeException('Unclassified breadcrumb shell remains in production view ' . $relative);
+    if (str_contains($source, 'tn-breadcrumbs')) {
+        throw new RuntimeException('Legacy breadcrumb shell remains in production view ' . $relative);
     }
+}
+
+foreach ([
+    'app/Interfaces/Web/View/property/catalog.phtml',
+    'app/Interfaces/Web/View/property/map.phtml',
+    'app/Interfaces/Web/View/property/show.phtml',
+    'app/Interfaces/Web/View/property/presentation.phtml',
+] as $propertyBreadcrumbView) {
+    $source = $read($propertyBreadcrumbView);
+    $contains($source, "partial('components/ui/breadcrumbs'", 'Property surface must use canonical Breadcrumbs.');
+    $notContains($source, 'tn-breadcrumbs', 'Property surface must not restore legacy breadcrumbs.');
+}
+
+$breadcrumbs = $read('app/Interfaces/Web/View/components/ui/breadcrumbs.phtml');
+foreach (['tn-ui-breadcrumbs', '<ol>', 'aria-current="page"'] as $marker) {
+    $contains($breadcrumbs, $marker, 'Canonical Breadcrumbs contract is incomplete.');
 }
 
 $propertyWorkspaceCss = $read('frontend/features/property/workspace.css');
