@@ -36,6 +36,9 @@ on:
       - 'tests/architecture/web_experience_wave12_sales_reference.php'
       - 'tests/architecture/web_experience_wave12_sales_cutover.php'
       - 'tests/architecture/web_platform_v1_freeze.php'
+      - 'tests/architecture/web_platform_definition_of_done.php'
+      - 'tests/architecture/contracts/web_platform_definition_of_done.php'
+      - 'docs/03-architecture/web-platform-definition-of-done.md'
       - 'tests/architecture/contracts/web_platform_v1.php'
       - 'docs/11-decisions/ADR-0011-web-platform-v1-freeze.md'
       - 'symfony/tests/sales_cutover_access_contract.php'
@@ -462,6 +465,9 @@ jobs:
             git fetch --no-tags --depth=1 origin "$COS_WEB_PLATFORM_FREEZE_BASE_SHA"
           fi
           php tests/architecture/web_platform_v1_freeze.php
+
+      - name: Wave 12 Definition of Done
+        run: php tests/architecture/web_platform_definition_of_done.php
 
       - name: Web Security response headers smoke
         run: |
