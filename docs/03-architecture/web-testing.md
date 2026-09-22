@@ -25,9 +25,11 @@ Wave 12.23 закриває quality contract для Web Experience Platform. М�
 
 ## Браузерна стратегія
 
-Поточний executable browser layer використовує `playwright-core`, який уже є locked dependency COS. Він перевіряє public Symfony surfaces у desktop і mobile режимах, збирає screenshots і падає на browser runtime errors.
+Поточний executable browser layer має два незалежні рівні доказів.
 
-Panther suite зберігається у `symfony/tests/Panther`. Він є Symfony-native browser contract і готовий до увімкнення після додавання `symfony/panther` як locked dev dependency. До цього моменту CI не прикидається, що Panther встановлено: реальний browser gate виконує Playwright.
+`playwright-core` є locked dependency COS і перевіряє public Symfony surfaces у desktop/mobile режимах, screenshots, runtime errors, responsive overflow та accessibility.
+
+Symfony-native Panther suite у `symfony/tests/Panther` тепер також виконується реально в CI проти вже запущеного canonical runtime через `PANTHER_EXTERNAL_BASE_URI`. Тест використовує standalone `Symfony\\Component\\Panther\\Client` і не boot-ить локальний Symfony Kernel, тому перевіряє саме production-like HTTP/browser boundary. Щоб не забруднювати production dependency graph, CI створює isolated test-only Composer sandbox і встановлює exact `symfony/panther:2.4.0` разом із PHPUnit. Production Docker image, як і раніше, збирається `--no-dev`.
 
 ## Базова доступність
 

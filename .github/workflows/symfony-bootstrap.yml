@@ -35,6 +35,8 @@ on:
       - 'tests/architecture/web_experience_wave12_performance_observability.php'
       - 'tests/architecture/web_experience_wave12_sales_reference.php'
       - 'tests/architecture/web_experience_wave12_sales_cutover.php'
+      - 'tests/architecture/web_experience_wave12_closure.php'
+      - 'docs/03-architecture/wave12-closure-report.md'
       - 'tests/architecture/web_platform_v1_freeze.php'
       - 'tests/architecture/contracts/web_platform_v1.php'
       - 'docs/11-decisions/ADR-0011-web-platform-v1-freeze.md'
@@ -426,8 +428,18 @@ jobs:
       - name: Wave 12.23 component contract
         run: php tests/component/web_experience_components.php
 
-      - name: Wave 12.23 Panther suite readiness
-        run: php -l symfony/tests/Panther/WebExperiencePantherTest.php
+      - name: Wave 12.23 Panther E2E
+        env:
+          PANTHER_EXTERNAL_BASE_URI: http://127.0.0.1:8081
+          PANTHER_CHROME_BINARY: /usr/bin/google-chrome
+          PANTHER_NO_SANDBOX: '1'
+          PANTHER_CHROME_ARGUMENTS: --disable-dev-shm-usage
+        run: |
+          rm -rf /tmp/cos-panther
+          mkdir -p /tmp/cos-panther
+          cp symfony/composer.json symfony/composer.lock /tmp/cos-panther/
+          composer require --working-dir=/tmp/cos-panther --dev symfony/panther:2.4.0 phpunit/phpunit:^11.5 --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies
+          /tmp/cos-panther/vendor/bin/phpunit --bootstrap /tmp/cos-panther/vendor/autoload.php symfony/tests/Panther/WebExperiencePantherTest.php
 
       - name: Wave 12.23 functional contract
         run: bash tests/functional/web_platform_contract.sh http://127.0.0.1:8081
@@ -492,6 +504,9 @@ jobs:
           docker compose exec -T php php bin/console debug:router cos_web_sales_dashboard >/dev/null
           docker compose exec -T php php bin/console debug:router cos_web_sales_leads >/dev/null
           docker compose exec -T php php bin/console debug:router cos_web_sales_lead >/dev/null
+
+      - name: Wave 12 final acceptance gate
+        run: php tests/architecture/web_experience_wave12_closure.php
 
       - name: Web Platform v1 freeze change-control
         env:

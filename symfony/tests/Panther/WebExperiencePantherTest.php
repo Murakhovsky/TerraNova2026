@@ -4,25 +4,41 @@ declare(strict_types=1);
 
 namespace App\Tests\Panther;
 
-use Symfony\Component\Panther\PantherTestCase;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Panther\Client;
 
 /**
- * Wave 12.23 Panther suite. It becomes executable once symfony/panther is a
- * locked dev dependency. Current canonical browser CI is Playwright-based.
+ * Wave 12.23 browser E2E evidence.
+ *
+ * This test drives Chrome against the already-started canonical Symfony
+ * runtime. It intentionally does not boot a local Symfony Kernel.
  */
-if (class_exists(PantherTestCase::class)) {
-    final class WebExperiencePantherTest extends PantherTestCase
+final class WebExperiencePantherTest extends TestCase
+{
+    private ?Client $client = null;
+
+    protected function tearDown(): void
     {
-        public function testPublicExperienceAndProtectedDevSurface(): void
-        {
-            $client = static::createPantherClient();
-            $crawler = $client->request('GET', '/auth/login');
-            self::assertResponseIsSuccessful();
-            self::assertGreaterThan(0, $crawler->filter('form')->count());
-            $client->request('GET', '/property/catalog');
-            self::assertResponseIsSuccessful();
-            $client->request('GET', '/dev/ui');
-            self::assertResponseRedirects('/auth/login');
-        }
+        $this->client?->quit();
+        $this->client = null;
+    }
+
+    public function testPublicExperienceAndProtectedDevSurface(): void
+    {
+        $baseUri = rtrim(getenv('PANTHER_EXTERNAL_BASE_URI') ?: 'http://127.0.0.1:8081', '/');
+
+        $client = Client::createChromeClient(null, null, [], $baseUri);
+        $this->client = $client;
+
+        $crawler = $client->request('GET', '/auth/login');
+        self::assertGreaterThan(0, $crawler->filter('form')->count());
+        self::assertSame($baseUri.'/auth/login', $client->getCurrentURL());
+
+        $crawler = $client->request('GET', '/property/catalog');
+        self::assertGreaterThan(0, $crawler->filter('main')->count());
+        self::assertSame($baseUri.'/property/catalog', $client->getCurrentURL());
+
+        $client->request('GET', '/dev/ui');
+        self::assertSame($baseUri.'/auth/login', $client->getCurrentURL());
     }
 }
