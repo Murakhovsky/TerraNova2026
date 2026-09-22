@@ -98,7 +98,6 @@ $canonicalTableRenderers = [
 ];
 $allowedTableViews = [
     'app/Interfaces/Web/View/admin/users.phtml' => 'editable Users mutation grid',
-    'app/Interfaces/Web/View/client_case/index.phtml' => 'operational Client Case quick-update grid',
     'app/Interfaces/Web/View/methodology_studio/index.phtml' => 'interactive Methodology Studio editor grid',
     'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
 ];
@@ -133,8 +132,20 @@ foreach (['tn-admin-editable-grid', 'admin/updateUser/', 'name="csrf_token"', 'u
 }
 
 $clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
-foreach (['tn-client-case-operational-grid', 'client-case/quickUpdate/', 'name="csrf_token"', 'tn-quick-case-form'] as $marker) {
-    $contains($clientIndex, $marker, 'Client Case raw table exception must remain an operational mutation grid.');
+$notContains($clientIndex, '<table', 'Client Case index must not restore a raw operational table.');
+foreach ([
+    '$caseRows = [];',
+    "partial('components/ui/operational_grid'",
+    "'_form' => [",
+    "'action' => 'client-case/quickUpdate/'",
+    "'csrf_token' => (string) (\$csrfToken ?? '')",
+    "'return_url' => 'client-case'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
+] as $marker) {
+    $contains($clientIndex, $marker, 'Client Case must use canonical OperationalGrid row editor: ' . $marker);
 }
 
 $studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
