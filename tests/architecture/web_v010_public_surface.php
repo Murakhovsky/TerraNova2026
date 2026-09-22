@@ -42,9 +42,14 @@ foreach ([
 
 $contentController = $read('symfony/src/Web/Content/PublicContentPageController.php');
 foreach ([
+    "public function page(Request \$request, string \$slug): Response",
     "public function blog(Request \$request): Response",
     "public function article(Request \$request, string \$slug): Response",
     "public function guide(Request \$request, string \$slug): Response",
+    "'page/show'",
+    "PublicPageCatalog",
+    "SalesWriteServiceFactoryInterface",
+    "receivePublicLead",
     "'blog/index'",
     "'blog/show'",
     "'blog/landing'",
@@ -75,6 +80,9 @@ $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /',
     'HomePageController',
+    'path: /{slug}',
+    'PublicContentPageController::page',
+    "slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art'",
     'path: /blog',
     'PublicContentPageController::blog',
     'path: /blog/{slug}',
