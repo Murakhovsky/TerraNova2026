@@ -56,7 +56,7 @@ foreach (['Cos*.php', 'template:', 'Domains\\', 'Doctrine\\'] as $marker) {
 }
 
 $panther = (string) file_get_contents($root . '/symfony/tests/Panther/WebExperiencePantherTest.php');
-foreach (['PantherTestCase', 'createPantherClient', '/auth/login', '/property/catalog', '/dev/ui'] as $marker) {
+foreach (['Symfony\\\\Component\\\\Panther\\\\Client', 'Client::createChromeClient', '/auth/login', '/property/catalog', '/dev/ui'] as $marker) {
     if (!str_contains($panther, $marker)) {
         throw new RuntimeException('Wave 12.23 Panther suite contract is incomplete: ' . $marker);
     }
@@ -66,6 +66,7 @@ $workflow = (string) file_get_contents($root . '/.github/workflows/symfony-boots
 foreach ([
     'Wave 12.23 architecture gate',
     'Wave 12.23 component contract',
+    'Wave 12.23 Panther E2E',
     'Wave 12.23 functional contract',
     'Wave 12.23 browser quality',
 ] as $marker) {
