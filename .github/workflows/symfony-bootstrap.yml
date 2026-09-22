@@ -53,7 +53,7 @@ on:
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
-      - 'tests/browser/web_accessibility.sh'
+      - 'tests/browser/web_accessibility.mjs'
       - 'tests/architecture/web_experience_quality_closure.php'
       - 'docs/03-architecture/cos-quality-closure.md'
       - 'symfony/tests/Panther/WebExperiencePantherTest.php'
@@ -132,7 +132,7 @@ on:
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
-      - 'tests/browser/web_accessibility.sh'
+      - 'tests/browser/web_accessibility.mjs'
       - 'tests/architecture/web_experience_quality_closure.php'
       - 'docs/03-architecture/cos-quality-closure.md'
       - 'symfony/tests/Panther/WebExperiencePantherTest.php'
@@ -439,7 +439,7 @@ jobs:
       - name: PHASE 15 WCAG accessibility
         env:
           BROWSER_EXECUTABLE: /usr/bin/google-chrome
-        run: bash tests/browser/web_accessibility.sh http://127.0.0.1:8081
+        run: node tests/browser/web_accessibility.mjs http://127.0.0.1:8081
 
       - name: Upload PHASE 15 accessibility evidence
         if: always()
