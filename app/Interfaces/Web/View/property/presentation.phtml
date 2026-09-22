@@ -126,8 +126,8 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
           <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel"></label>
           <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
           <label><span>Повідомлення</span><textarea name="message" rows="4" placeholder="Хочу отримати презентацію цього об’єкта"></textarea></label>
-          <button class="tn-btn tn-btn--accent" type="submit">Надіслати запит</button>
-          <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+          <button class="tn-ui-button tn-ui-button--primary" type="submit">Надіслати запит</button>
+          <?php if ($inboundRequestStatus): ?><p class="tn-ui-alert tn-ui-alert--positive" role="status"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
         </form>
       </aside>
     </section>
