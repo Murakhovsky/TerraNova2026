@@ -14,7 +14,7 @@ PHASE 15 закриває quality debt, який був свідомо відк�
 
 ## Контракт доступності
 
-CI запускає `@axe-core/cli@4.13.0` на канонічних public surfaces:
+CI запускає `@axe-core/playwright@4.13.0` на канонічних public surfaces:
 
 - `/`;
 - `/auth/login`;
@@ -76,7 +76,7 @@ PHASE 15 не змінює:
 
 ## Критерії завершення
 
-- axe-core pinned до конкретної версії;
+- `@axe-core/playwright` pinned до конкретної версії;
 - public reference surfaces проходять WCAG 2.2 AA automated audit;
 - existing heuristic/browser quality suite залишається;
 - axe JSON evidence зберігається у CI;
