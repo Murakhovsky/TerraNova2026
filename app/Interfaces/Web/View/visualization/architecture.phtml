@@ -170,11 +170,14 @@ if (!is_string($graphJson)) {
 
     <div class="tn-architecture-stage-wrap">
       <?php if ($architectureDiagnostic): ?>
-        <div class="tn-form-status is-visible" data-architecture-backend-diagnostic>
-          <strong>Backend diagnostic</strong><br>
-          stage: <?php echo $h($architectureDiagnostic['stage'] ?? 'unknown'); ?><br>
-          exception: <?php echo $h($architectureDiagnostic['exception'] ?? 'unknown'); ?><br>
-          detail: <?php echo $h($architectureDiagnostic['detail'] ?? 'No details.'); ?>
+        <div data-architecture-backend-diagnostic>
+          <?php $this->partial('components/ui/state', [
+              'kind' => 'error',
+              'title' => 'Backend diagnostic',
+              'message' => 'stage: ' . (string) ($architectureDiagnostic['stage'] ?? 'unknown')
+                  . ' · exception: ' . (string) ($architectureDiagnostic['exception'] ?? 'unknown')
+                  . ' · detail: ' . (string) ($architectureDiagnostic['detail'] ?? 'No details.'),
+          ]); ?>
         </div>
       <?php endif; ?>
       <div class="tn-architecture-stage" data-architecture-stage aria-label="Interactive COS architecture graph"></div>
