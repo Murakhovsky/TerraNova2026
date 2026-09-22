@@ -771,7 +771,8 @@ textarea:focus {
 
 .tn-inbound-request-form .is-wide,
 .tn-inbound-request-form button,
-.tn-form-status {
+.tn-inbound-request-form .tn-ui-alert,
+.tn-object-form .tn-ui-alert {
   grid-column: 1 / -1;
 }
 
@@ -779,12 +780,6 @@ textarea:focus {
   width: min(320px, 100%);
 }
 
-.tn-form-status {
-  min-height: 24px;
-  margin: 0;
-  color: var(--tn-green);
-  font-weight: 800;
-}
 
 .tn-mobile-dock {
   position: fixed;
