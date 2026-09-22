@@ -53,6 +53,7 @@ jobs:
         run: |
           node --check frontend/features/sales/workspace.js
           node --check frontend/features/sales/rule-editor.js
+          node --check symfony/assets/controllers/sales_lead_controller.js
           node --check tests/browser/sales_workspace.mjs
 
   mutation-e2e:

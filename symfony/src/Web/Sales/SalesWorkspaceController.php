@@ -7,6 +7,7 @@ namespace App\Web\Sales;
 use App\Application\Sales\Query\GetSalesDashboardQuery;
 use App\Application\Sales\Query\GetSalesLeadQuery;
 use App\Application\Sales\Query\ListSalesLeadsQuery;
+use App\Application\Sales\Admin\SalesAdminQuery;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\ProviderBackedShellNavigation;
 use App\Web\Experience\Model\EntityRef;
@@ -23,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Twig\Environment;
 
-final readonly class SalesReferenceController
+final readonly class SalesWorkspaceController
 {
     public function __construct(
         private Environment $twig,
@@ -44,7 +45,7 @@ final readonly class SalesReferenceController
         $data = $this->queries->ask(new GetSalesDashboardQuery($tenant->organizationId(), $ownerId));
 
         $context = $this->context($tenant, 'sales-overview');
-        return $this->render('experience/sales/reference_dashboard.html.twig', [
+        return $this->render('experience/sales/dashboard.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Sales Dashboard', [
                 new ShellBreadcrumb('Workspace', '/admin'),
                 new ShellBreadcrumb('Sales'),
@@ -62,10 +63,10 @@ final readonly class SalesReferenceController
         $data = $this->queries->ask(new ListSalesLeadsQuery($tenant->organizationId(), $request->query->all()));
         $context = $this->context($tenant, 'leads');
 
-        return $this->render('experience/sales/reference_leads.html.twig', [
+        return $this->render('experience/sales/leads.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Lead List', [
                 new ShellBreadcrumb('Workspace', '/admin'),
-                new ShellBreadcrumb('Sales', '/sales/reference/dashboard'),
+                new ShellBreadcrumb('Sales', '/sales/dashboard'),
                 new ShellBreadcrumb('Leads'),
             ]),
             'items' => is_array($data['items'] ?? null) ? $data['items'] : [],
@@ -75,10 +76,12 @@ final readonly class SalesReferenceController
                 'status' => trim((string) $request->query->get('status', '')),
                 'source' => trim((string) $request->query->get('source', '')),
             ],
+            'owners' => $this->owners($tenant),
+            'csrfToken' => $this->csrf($request),
         ]);
     }
 
-    public function lead(string $id): Response
+    public function lead(Request $request, string $id): Response
     {
         $tenant = $this->manager();
         if ($tenant instanceof Response) return $tenant;
@@ -97,15 +100,17 @@ final readonly class SalesReferenceController
             new EntityRef('sales.lead', (string) $leadId),
         );
 
-        return $this->render('experience/sales/reference_lead_workspace.html.twig', [
+        return $this->render('experience/sales/lead_workspace.html.twig', [
             'shell' => $this->shell($tenant, $context, 'Lead Workspace', [
                 new ShellBreadcrumb('Workspace', '/admin'),
-                new ShellBreadcrumb('Sales', '/sales/reference/dashboard'),
-                new ShellBreadcrumb('Leads', '/sales/reference/leads'),
+                new ShellBreadcrumb('Sales', '/sales/dashboard'),
+                new ShellBreadcrumb('Leads', '/sales/leads'),
                 new ShellBreadcrumb((string) ($lead['name'] ?? ('Lead #' . $leadId))),
             ]),
             'workspace' => $workspace,
             'lead' => $lead,
+            'owners' => $this->owners($tenant),
+            'csrfToken' => $this->csrf($request),
         ]);
     }
 
@@ -148,6 +153,33 @@ final readonly class SalesReferenceController
             connectionState: ShellConnectionState::Live,
             aiAvailable: true,
         );
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function owners(TenantContext $tenant): array
+    {
+        $users = $this->queries->ask(new SalesAdminQuery($tenant->organizationId(), 'team.users'));
+        if (!is_array($users)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $users,
+            static fn (mixed $user): bool => is_array($user)
+                && strtolower((string) ($user['status'] ?? '')) === 'active'
+                && in_array(
+                    strtolower((string) ($user['organization_role'] ?? $user['role'] ?? '')),
+                    ['manager', 'admin'],
+                    true,
+                ),
+        ));
+    }
+
+    private function csrf(Request $request): string
+    {
+        return $request->hasSession()
+            ? (string) $request->getSession()->get('cos_csrf_token', '')
+            : '';
     }
 
     /** @param array<string,mixed> $variables */

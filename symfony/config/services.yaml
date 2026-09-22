@@ -1736,7 +1736,7 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
-  App\Web\Sales\SalesReferenceController:
+  App\Web\Sales\SalesWorkspaceController:
     public: true
     tags: ['controller.service_arguments']
 
