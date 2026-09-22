@@ -32,7 +32,7 @@ foreach ([
     'method="post"',
     'status_badge',
     "components/ui/stage",
-    "($value['kind'] ?? 'status') === 'stage'",
+    '(\$value[\'kind\'] ?? \'status\') === \'stage\'',
 ] as $marker) {
     if (!str_contains($grid, $marker)) {
         throw new RuntimeException('OperationalGrid contract incomplete: ' . $marker);
