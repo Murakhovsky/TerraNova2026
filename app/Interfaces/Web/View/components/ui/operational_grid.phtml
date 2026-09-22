@@ -78,10 +78,17 @@ $fieldType = static function (mixed $value): string {
                   <?php if ($editableSecondary !== ''): ?><span class="tn-ui-data-table__secondary"><?php echo $h($editableSecondary); ?></span><?php endif; ?>
                 </div>
               <?php elseif (is_array($value) && isset($value['label'])): ?>
-                <?php $this->partial('components/ui/status_badge', [
-                    'label' => $value['label'],
-                    'tone' => $value['tone'] ?? 'neutral',
-                ]); ?>
+                <?php if (($value['kind'] ?? 'status') === 'stage'): ?>
+                  <?php $this->partial('components/ui/stage', [
+                      'label' => $value['label'],
+                      'tone' => $value['tone'] ?? 'neutral',
+                  ]); ?>
+                <?php else: ?>
+                  <?php $this->partial('components/ui/status_badge', [
+                      'label' => $value['label'],
+                      'tone' => $value['tone'] ?? 'neutral',
+                  ]); ?>
+                <?php endif; ?>
                 <?php if (isset($value['secondary'])): ?><span class="tn-ui-data-table__secondary"><?php echo $h($value['secondary']); ?></span><?php endif; ?>
               <?php elseif (is_array($value)): ?>
                 <?php $primary = trim((string) ($value['primary'] ?? '')); $secondary = trim((string) ($value['secondary'] ?? '')); ?>
