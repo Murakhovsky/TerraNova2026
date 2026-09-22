@@ -21,7 +21,7 @@ foreach([$root.'/public/js',$root.'/public/css',$root.'/public/assets/js',$root.
 if(!is_dir($root.'/frontend'))throw new RuntimeException('Frontend source must live under /frontend.');
 
 $viewRoot=$root.'/app/Interfaces/Web/View';
-$exceptions=['app/Interfaces/Web/View/property/pdf.phtml'];
+$exceptions=[];
 $views=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($viewRoot,FilesystemIterator::SKIP_DOTS));
 foreach($views as $view){
     if(!$view->isFile()||strtolower($view->getExtension())!=='phtml')continue;
