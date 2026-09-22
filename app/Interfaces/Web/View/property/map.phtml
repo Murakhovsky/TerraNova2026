@@ -89,10 +89,10 @@ $position = static function (array $property) use ($geoProperties, $maxLat, $min
   </section>
 
   <?php if (count($properties) > count($geoProperties)): ?>
-    <section class="tn-empty-state tn-public-map-page__notice">
+    <section class="tn-ui-panel tn-public-map-page__notice">
       <h2><?php echo count($properties) - count($geoProperties); ?> об’єктів не показано на карті</h2>
       <p>У них поки немає координат. Вони залишаються доступними у звичайному каталозі.</p>
-      <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути всі</a>
+      <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути всі</a>
     </section>
   <?php endif; ?>
 </main>
