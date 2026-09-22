@@ -219,6 +219,22 @@ Post-freeze cleanup закриває цей протокол:
 
 Це additive cleanup presentation contract. Воно не означає, що весь specialized public UI вже має позбутися `tn-btn`; окремі rich/domain-specific surfaces можуть ще мати власні локальні actions. Закрито саме shared header boundary.
 
+## Після freeze: inline feedback
+
+Residual primitive audit показав ще один shared presentation leak: короткі результати форм і upload-status використовували legacy `tn-form-status`.
+
+Post-freeze cleanup вводить canonical utility `tn-ui-inline-status` без нового template component:
+
+- base semantics живуть у `frontend/styles/components.css`;
+- positive є default tone;
+- danger/warning/info підтримуються через `data-tone`;
+- public layout відповідає лише за grid placement;
+- server-rendered form results отримують `role=status` та `aria-live=polite`;
+- Spatial upload зберігає `data-spatial-upload-status` і existing JS lifecycle;
+- production PHTML більше не може містити `tn-form-status`.
+
+Міграція охоплює Page contact form, Property submit/catalog/show/presentation та Spatial upload feedback.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
