@@ -11,22 +11,38 @@ $publicPath = ($item['content_type'] ?? 'blog_post') === 'seo_landing' ? 'guide/
 <?php $this->partial('shared/manager_header', ['active' => 'content']); ?>
 
 <main class="tn-page">
-  <nav class="tn-breadcrumbs"><a href="<?php echo $this->url->get('admin/content'); ?>">Контент</a><span>/</span><span><?php echo !empty($item['id']) ? $h($item['title']) : 'Новий матеріал'; ?></span></nav>
-  <section class="tn-page-hero tn-page-hero--catalog">
-    <div><p class="tn-kicker"><?php echo !empty($item['id']) ? 'Редагування' : 'Створення'; ?></p><h1><?php echo !empty($item['id']) ? $h($item['title']) : 'Новий матеріал'; ?></h1><p>Контент, публікація та SEO-метадані в одній картці.</p></div>
-    <div class="tn-page-hero__meta">
-      <strong><?php echo (int) ($item['seo_score'] ?? 0); ?>%</strong><span>SEO готовність</span>
-      <?php if (($item['status'] ?? '') === 'published' && !empty($item['slug'])): ?><a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get($publicPath . $item['slug']); ?>" target="_blank" rel="noopener">Відкрити</a><?php endif; ?>
-    </div>
-  </section>
+  <?php
+    $headerActions = [['label' => 'До контенту', 'href' => 'admin/content', 'variant' => 'ghost']];
+    if (($item['status'] ?? '') === 'published' && !empty($item['slug'])) {
+        $headerActions[] = [
+            'label' => 'Відкрити публічно',
+            'href' => $publicPath . (string) $item['slug'],
+            'variant' => 'primary',
+            'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+        ];
+    }
+    $this->partial('components/ui/page_header', [
+        'eyebrow' => !empty($item['id']) ? 'Administration · Content · Edit' : 'Administration · Content · Create',
+        'title' => !empty($item['id']) ? (string) ($item['title'] ?? 'Матеріал') : 'Новий матеріал',
+        'description' => 'Контент, публікація та SEO-метадані в одній картці.',
+        'meta' => ['value' => (int) ($item['seo_score'] ?? 0) . '%', 'label' => 'SEO готовність'],
+        'actions' => $headerActions,
+    ]);
+  ?>
 
-  <?php if ($actionStatus): ?><div class="tn-form-status is-visible" role="status"><?php echo $h($actionStatus); ?></div><?php endif; ?>
+  <?php if ($actionStatus): ?>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'success',
+        'title' => 'Зміни застосовано',
+        'message' => (string) $actionStatus,
+    ]); ?>
+  <?php endif; ?>
 
   <form class="tn-content-editor" method="post" action="<?php echo $this->url->get('admin/content/save/' . (int) ($item['id'] ?? 0)); ?>">
     <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
     <input type="hidden" name="id" value="<?php echo (int) ($item['id'] ?? 0); ?>">
-    <section class="tn-admin-card">
-      <div class="tn-admin-card__head"><div><p class="tn-kicker">Матеріал</p><h2>Зміст</h2></div><button class="tn-btn tn-btn--accent" type="submit">Зберегти</button></div>
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Матеріал</p><h2>Зміст</h2></div><button class="tn-ui-button tn-ui-button--primary" type="submit">Зберегти</button></div>
       <div class="tn-form-grid">
         <label class="tn-field--wide"><span>Назва</span><input name="title" type="text" maxlength="240" value="<?php echo $h($value('title')); ?>" required></label>
         <label><span>Тип</span><select name="content_type"><option value="blog_post"<?php echo $value('content_type') === 'blog_post' ? ' selected' : ''; ?>>Стаття</option><option value="seo_landing"<?php echo $value('content_type') === 'seo_landing' ? ' selected' : ''; ?>>SEO-лендінг</option></select></label>
@@ -41,16 +57,16 @@ $publicPath = ($item['content_type'] ?? 'blog_post') === 'seo_landing' ? 'guide/
       </div>
     </section>
 
-    <section class="tn-admin-card">
-      <div class="tn-admin-card__head"><div><p class="tn-kicker">Медіа</p><h2>Обкладинка</h2></div></div>
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Медіа</p><h2>Обкладинка</h2></div></div>
       <div class="tn-form-grid">
         <label class="tn-field--wide"><span>URL зображення</span><input name="featured_image_url" type="url" maxlength="700" value="<?php echo $h($value('featured_image_url')); ?>"></label>
         <label class="tn-field--wide"><span>Alt-текст</span><input name="featured_image_alt" type="text" maxlength="240" value="<?php echo $h($value('featured_image_alt')); ?>"></label>
       </div>
     </section>
 
-    <section class="tn-admin-card">
-      <div class="tn-admin-card__head"><div><p class="tn-kicker">Пошук</p><h2>SEO та Open Graph</h2></div></div>
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Пошук</p><h2>SEO та Open Graph</h2></div></div>
       <div class="tn-form-grid">
         <label class="tn-field--wide"><span>SEO title</span><input name="meta_title" type="text" maxlength="240" value="<?php echo $h($value('meta_title')); ?>"></label>
         <label class="tn-field--wide"><span>SEO description</span><textarea name="meta_description" rows="3" maxlength="500"><?php echo $h($value('meta_description')); ?></textarea></label>
@@ -63,8 +79,8 @@ $publicPath = ($item['content_type'] ?? 'blog_post') === 'seo_landing' ? 'guide/
     </section>
 
     <?php if ($revisions): ?>
-      <section class="tn-admin-card">
-        <div class="tn-admin-card__head"><div><p class="tn-kicker">Історія</p><h2>Останні ревізії</h2></div></div>
+      <section class="tn-ui-panel">
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Історія</p><h2>Останні ревізії</h2></div></div>
         <div class="tn-content-deliveries"><?php foreach ($revisions as $revision): ?><div><strong><?php echo $h($revision['user_name'] ?: $revision['source']); ?></strong><span><?php echo $h($revision['source']); ?> / <?php echo $h($revision['created_at']); ?></span></div><?php endforeach; ?></div>
       </section>
     <?php endif; ?>
