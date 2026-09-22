@@ -25,7 +25,7 @@ Status vocabulary:
 | `frontend/styles/workspace.css` | MIGRATED | consumed only through canonical Workspace surface composition |
 | `frontend/styles/workspace-mobile.css` | MIGRATED | consumed only through canonical Workspace surface composition; historical compatibility comment is source debt, not runtime ownership |
 | `frontend/layouts/surfaces.css` | USED | shared density/layout contract imported by design system |
-| feature CSS under `frontend/features/*` | USED | must load after surface ownership |
+| feature CSS under `frontend/features/*` | USED | must load after surface ownership; Cabinet feature CSS is reduced to live profile/layout selectors |
 
 ## Historical selector families
 
@@ -36,7 +36,8 @@ Status vocabulary:
 | `.tn-property-*`, `.tn-card-*`, catalog/presentation selectors | MIGRATED | Public surface plus Property feature bundles |
 | `.tn-ui-*` primitives | USED | shared design system |
 | `.tn-workspace-*`, `.tn-command-palette*` | USED | Workspace surface |
-| `.tn-portal-*` | USED | Portal surface / Cabinet feature |
+| `.tn-portal-profile`, `.tn-portal-page` | USED | minimal native Cabinet presentation |
+| historical `.tn-portal-header*`, `.tn-portal-hero*`, `.tn-portal-card*`, `.tn-portal-state*` | DEAD | retired after native Cabinet/PHASE 14 shell closure |
 | old homepage-only `.tn-home-*` visual blocks not rendered by WEB V0.10 | DEAD | no canonical runtime owner |
 
 ## JavaScript inventory
@@ -49,7 +50,7 @@ Status vocabulary:
 | `frontend/entrypoints/terranova-interface.js` | USED | canonical Workspace entrypoint |
 | `frontend/core/workspace-shell.js` | USED | Workspace presentation shell |
 | `frontend/entrypoints/portal-cabinet.js` | USED | canonical Portal entrypoint |
-| `frontend/features/portal/cabinet.js` | USED | Portal-only interaction |
+| `frontend/features/portal/cabinet.js` | DEAD | removed after dedicated Portal header/menu retirement; shared production UX remains authoritative |
 | `frontend/entrypoints/terranova-club.js` | DEAD | removed from Vite runtime; historical source may remain quarantined |
 | `frontend/entrypoints/terranova-home.js` | DEAD | removed from Vite runtime after WEB V0.10 homepage replacement |
 | historical fake `data-inbound-request-form` success handler | DEAD | removed; browser must not report CRM success without backend success |
@@ -77,6 +78,7 @@ Canonical runtime must not:
 - expose `terranova-club` or `terranova-home` as Vite inputs;
 - import `terranova-club.css` from an entrypoint;
 - let Public persistence/analytics behavior execute in Portal or Workspace;
+- restore a dedicated Portal header/menu browser module without a live rendered contract;
 - bypass the Vite manifest with hand-written browser asset URLs.
 
 Canonical runtime must:
