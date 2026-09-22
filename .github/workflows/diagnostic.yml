@@ -76,6 +76,7 @@ jobs:
           php tests/architecture/web_experience_production_administration.php
           php tests/architecture/web_experience_production_client_case.php
           php tests/architecture/web_experience_residual_control_surfaces.php
+          php tests/architecture/web_experience_operational_grid.php
           php tests/architecture/web_experience_remaining_shells.php
           php tests/architecture/web_experience_quality_closure.php
           php tests/architecture/web_experience_stress_screens.php

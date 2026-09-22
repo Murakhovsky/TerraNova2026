@@ -86,12 +86,19 @@ PHASE 13 gate рекурсивно сканує `app/Interfaces/Web/View/**/*.ph
 
 Будь-який PHTML із `<table>` має бути або canonical DataTable renderer, або явно класифікованим винятком. На момент closure whitelist складається лише з:
 
-1. `components/ui/data_table.phtml` — canonical renderer;
-2. `admin/users.phtml` — editable identity grid із row-level forms;
-3. `cos/index.phtml` — operational Proposed Actions grid із Execute/Approval mutations;
-4. `client_case/index.phtml` — operational quick-update grid;
-5. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
-6. `property/pdf.phtml` — service-level print renderer.
+Canonical table renderers:
+
+1. `components/ui/data_table.phtml` — read-only DataTable;
+2. `components/ui/operational_grid.phtml` — mutation-aware OperationalGrid.
+
+Product-level raw-table exceptions після post-freeze cleanup:
+
+1. `admin/users.phtml` — editable identity grid із row-level forms;
+2. `client_case/index.phtml` — operational quick-update grid;
+3. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
+4. `property/pdf.phtml` — service-level print renderer.
+
+Після PHASE 15 перший post-freeze cleanup прибрав `cos/index.phtml` із product whitelist: Proposed Actions переведено на canonical `OperationalGrid` із first-class mutation actions.
 
 Якщо новий raw table з’явиться в іншому production view, PHASE 13 gate падає. Якщо один із винятків перестає містити table, gate також падає, змушуючи прибрати застарілий whitelist entry. Так винятки не перетворюються на вічні археологічні пам’ятки.
 
@@ -116,7 +123,7 @@ PHASE 13 gate рекурсивно сканує `app/Interfaces/Web/View/**/*.ph
 - property deep links збережені;
 - PHASE 12 workflow/mutation guards лишаються intact;
 - шість read-only runtime tables COS використовують canonical DataTable;
-- Proposed Actions лишається явним operational exception з execute/approval forms;
+- Proposed Actions після post-freeze cleanup використовує canonical OperationalGrid з execute/approval forms;
 - Company Home decision queue використовує canonical DataTable;
 - production PHTML raw-table whitelist обмежений шістьма класифікованими surfaces;
 - PHASE 13 architecture gate запускається у CI;

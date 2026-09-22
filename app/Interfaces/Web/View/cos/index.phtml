@@ -119,6 +119,49 @@ foreach ($results as $result) {
         'finished' => (string) ($result['finished_at'] ?? ''),
     ];
 }
+
+$actionRows = [];
+foreach ($actions as $action) {
+    $rowActions = [];
+
+    if (($action['status'] ?? '') === 'QUEUED') {
+        $rowActions[] = [
+            'kind' => 'form',
+            'label' => 'Execute',
+            'action' => 'cos/action/' . (string) ($action['id'] ?? '') . '/execute',
+            'variant' => 'primary',
+            'hidden' => ['csrf_token' => $csrfToken],
+        ];
+    }
+
+    if (($action['status'] ?? '') === 'PENDING_APPROVAL' && ($action['approval_status'] ?? '') === 'PENDING') {
+        $rowActions[] = [
+            'kind' => 'link',
+            'label' => 'Approve',
+            'href' => '#approval-' . (string) ($action['approval_id'] ?? ''),
+            'variant' => 'ghost',
+        ];
+    }
+
+    $actionRows[] = [
+        'action' => [
+            'primary' => (string) ($action['type'] ?? ''),
+            'secondary' => (string) (($action['source_type'] ?? '') . ' · ' . $shortId($action['id'] ?? '')),
+        ],
+        'target' => (string) ((($action['target_type'] ?? '') ?: '—') . ' #' . (($action['target_id'] ?? '') ?: '—')),
+        'status' => [
+            'label' => (string) ($action['status'] ?? ''),
+            'tone' => $statusTone($action['status'] ?? ''),
+            'secondary' => 'Risk: ' . (string) ($action['risk_level'] ?? '—'),
+        ],
+        'parameters' => [
+            'kind' => 'details',
+            'summary' => 'JSON',
+            'content' => $json($action['parameters'] ?? null),
+        ],
+        '_actions' => $rowActions,
+    ];
+}
 ?>
 
 <main class="tn-page tn-workspace-page tn-workspace-page--wide tn-cos-page">
@@ -270,21 +313,26 @@ foreach ($results as $result) {
     </div>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="actions">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Execution intent</p><h2>Proposed Actions</h2><p><?php echo count($actions); ?> останніх</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Action</th><th>Target</th><th>Status / Risk</th><th>Parameters</th><th></th></tr></thead><tbody>
-      <?php foreach ($actions as $action): ?><tr>
-        <td><strong><?php echo $h($action['type']); ?></strong><span><?php echo $h($action['source_type'] . ' · ' . $shortId($action['id'])); ?></span></td>
-        <td><?php echo $h(($action['target_type'] ?: '—') . ' #' . ($action['target_id'] ?: '—')); ?></td>
-        <td><?php $this->partial('components/ui/status_badge', ['label' => $action['status'], 'tone' => $statusTone($action['status'])]); ?><span>Risk: <?php echo $h($action['risk_level']); ?></span></td>
-        <td><details><summary>JSON</summary><pre><?php echo $h($json($action['parameters'])); ?></pre></details></td>
-        <td class="tn-cos-actions">
-          <?php if ($action['status'] === 'QUEUED'): ?><form action="<?php echo $this->url->get('cos/action/' . $action['id'] . '/execute'); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>"><button class="tn-ui-button tn-ui-button--primary" type="submit">Execute</button></form><?php endif; ?>
-          <?php if ($action['status'] === 'PENDING_APPROVAL' && $action['approval_status'] === 'PENDING'): ?><a class="tn-ui-button tn-ui-button--ghost" href="#approval-<?php echo $h($action['approval_id']); ?>">Approve</a><?php endif; ?>
-        </td>
-      </tr><?php endforeach; ?>
-      <?php if (!$actions): ?><tr><td colspan="5">Actions ще немає.</td></tr><?php endif; ?>
-    </tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="actions">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Execution intent',
+        'title' => 'Proposed Actions',
+        'description' => count($actions) . ' останніх',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/operational_grid',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'action', 'label' => 'Action'],
+                ['key' => 'target', 'label' => 'Target'],
+                ['key' => 'status', 'label' => 'Status / Risk'],
+                ['key' => 'parameters', 'label' => 'Parameters'],
+            ],
+            'rows' => $actionRows,
+            'actionsLabel' => 'Actions',
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Actions ще немає.',
+        ],
+    ]); ?>
   </section>
 
   <section class="tn-ui-panel tn-cos-section tn-workspace-section" id="approvals">
