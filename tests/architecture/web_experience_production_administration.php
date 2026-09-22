@@ -259,6 +259,41 @@ foreach ([
     $contains($publicScene, $marker, 'Public Spatial scene specialized surface must remain intact.');
 }
 
+$companyHome = $read('app/Interfaces/Web/View/admin/index.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    "partial('components/ui/kpi_card'",
+    'tn-ui-panel',
+    'data-company-home',
+] as $marker) {
+    $contains($companyHome, $marker, 'Company Home must remain on canonical Administration/workspace composition.');
+}
+
+$analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/filter_bar'",
+    "partial('components/ui/state'",
+    "partial('components/ui/kpi_card'",
+    "partial('components/ui/data_table'",
+    'tn-ui-panel',
+] as $marker) {
+    $contains($analytics, $marker, 'Administration Analytics must remain canonical.');
+}
+foreach (['tn-page-hero', 'tn-admin-metrics', 'tn-admin-card', 'tn-listing-table'] as $legacyMarker) {
+    $notContains($analytics, $legacyMarker, 'Administration Analytics must not restore legacy presentation primitives.');
+}
+
+foreach ([
+    'path: /admin',
+    'CoreWorkspacePageController::home',
+    'path: /admin/analytics',
+    'CoreWorkspacePageController::analytics',
+] as $marker) {
+    $contains($routes, $marker, 'Administration closure route contract is incomplete.');
+}
+
 $docs = $read('docs/03-architecture/cos-production-administration-adoption.md');
 foreach ([
     '# Впровадження Administration у production UI',
@@ -270,6 +305,8 @@ foreach ([
     '## Хвиля 3',
     '### Керування Spatial (`Spatial Administration`)',
     '### Редактор Spatial (`Spatial Editor`)',
+    '## Хвиля 4',
+    '### Закриття Administration (`Administration Closure`)',
     '## Межа editable grid',
     '## Критерії завершення',
 ] as $marker) {
