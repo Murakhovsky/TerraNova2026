@@ -112,6 +112,16 @@ foreach (array_unique($runtimeEntryMatches[1]) as $entrypointPath) {
 $publicInteractions = $read('frontend/features/public/interactions.js');
 $notContains($publicInteractions, "preventDefault()", 'Public extraction must not fake successful backend form submissions.');
 $notContains($publicInteractions, "Заявку підготовлено до передачі", 'Historical fake CRM confirmation must not return.');
+foreach (['localStorage', 'sessionStorage'] as $forbiddenPersistence) {
+    $notContains($publicInteractions, $forbiddenPersistence, 'Public interactions must not restore browser persistence.');
+}
+foreach ([
+    '/api/v1/public/properties/favourites',
+    'campaignFromLocation',
+    'window.location.search',
+] as $marker) {
+    $contains($publicInteractions, $marker, 'Public interactions persistence/attribution contract is incomplete.');
+}
 
 $assetGate = $read('tests/architecture/frontend_assets.php');
 foreach (["'cos-architecture-explorer'", "'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $needle) {
@@ -128,8 +138,30 @@ foreach (["'terranova-club'", "'terranova-home'"] as $retiredEntry) {
 }
 
 $legacyAudit = $read('docs/architecture/frontend-legacy-audit.md');
-foreach (['USED', 'MIGRATED', 'DUPLICATE', 'DEAD', 'localStorage', 'sessionStorage'] as $needle) {
+foreach ([
+    'USED',
+    'MIGRATED',
+    'DEAD',
+    '## Browser persistence closure',
+    '/api/v1/public/properties/favourites',
+    'current URL',
+    'localStorage',
+    'sessionStorage',
+    'tests/architecture/web_v012_production_closure.php',
+] as $needle) {
     $contains($legacyAudit, $needle, 'Legacy audit is incomplete.');
+}
+$notContains($legacyAudit, '## Browser persistence debt', 'Legacy audit must not restore already-closed browser persistence debt.');
+$notContains($legacyAudit, 'still uses:', 'Legacy audit must not claim canonical interactions still use browser storage.');
+
+$productionClosure = $read('tests/architecture/web_v012_production_closure.php');
+foreach ([
+    "RecursiveDirectoryIterator(\$root.'/frontend'",
+    "'localStorage'",
+    "'sessionStorage'",
+    'Browser persistence cannot be canonical state',
+] as $needle) {
+    $contains($productionClosure, $needle, 'WEB V0.12 browser persistence gate is incomplete.');
 }
 
 echo "WEB V0.11 design system and legacy extraction architecture passed.\n";
