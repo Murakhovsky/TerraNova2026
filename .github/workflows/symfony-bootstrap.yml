@@ -77,6 +77,9 @@ on:
       - 'tests/architecture/web_experience_production_administration.php'
       - 'tests/architecture/web_experience_production_client_case.php'
       - 'tests/architecture/web_experience_residual_control_surfaces.php'
+      - 'tests/architecture/web_experience_operational_grid.php'
+      - 'app/Interfaces/Web/View/components/ui/operational_grid.phtml'
+      - 'docs/03-architecture/cos-operational-grid.md'
       - 'tests/architecture/web_experience_remaining_shells.php'
       - 'app/Interfaces/Web/View/page/show.phtml'
       - 'app/Interfaces/Web/View/blog/index.phtml'
@@ -156,6 +159,9 @@ on:
       - 'tests/architecture/web_experience_production_administration.php'
       - 'tests/architecture/web_experience_production_client_case.php'
       - 'tests/architecture/web_experience_residual_control_surfaces.php'
+      - 'tests/architecture/web_experience_operational_grid.php'
+      - 'app/Interfaces/Web/View/components/ui/operational_grid.phtml'
+      - 'docs/03-architecture/cos-operational-grid.md'
       - 'tests/architecture/web_experience_remaining_shells.php'
       - 'app/Interfaces/Web/View/page/show.phtml'
       - 'app/Interfaces/Web/View/blog/index.phtml'
@@ -322,6 +328,9 @@ jobs:
 
       - name: PHASE 13 residual control surface closure gate
         run: php tests/architecture/web_experience_residual_control_surfaces.php
+
+      - name: Operational Grid architecture gate
+        run: php tests/architecture/web_experience_operational_grid.php
 
       - name: PHASE 14 remaining shell closure gate
         run: php tests/architecture/web_experience_remaining_shells.php
