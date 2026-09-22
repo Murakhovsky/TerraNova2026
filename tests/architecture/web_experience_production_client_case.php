@@ -98,9 +98,58 @@ foreach ([
     $contains($index, $marker, 'Client Case index lost a funnel/create/quick-update contract.');
 }
 
+$show = $read('app/Interfaces/Web/View/client_case/show.phtml');
+foreach ([
+    "partial('components/ui/entity_header'",
+    "partial('components/ui/state'",
+    "partial('components/ui/kpi_card'",
+    'tn-workspace-page',
+    'tn-ui-panel',
+    'tn-ai-deal-card',
+    'tn-crm-timeline',
+    'tn-match-form',
+] as $marker) {
+    $contains($show, $marker, 'Client Case show must use canonical entity workspace while retaining specialized operational patterns.');
+}
+foreach ([
+    'tn-listing-hero',
+    'tn-breadcrumbs',
+    'tn-admin-panel',
+    'tn-section-heading',
+    'tn-empty-state',
+    'tn-btn tn-btn--dark',
+] as $legacyMarker) {
+    $notContains($show, $legacyMarker, 'Client Case show must not restore legacy entity shell primitives.');
+}
+foreach ([
+    'client-case/update/',
+    'client-case/activity/',
+    'client-case/updatePropertyMatch/',
+    'cos/action/',
+    'cos/approval/',
+    'property/presentationShare',
+    'property/pdf/',
+    'name="csrf_token"',
+    'name="return_url"',
+    'name="full_name"',
+    'name="stage_id"',
+    'name="assigned_user_id"',
+    'name="next_contact_at"',
+    'name="activity_type"',
+    'name="match_status"',
+    'name="score"',
+    'name="note"',
+] as $marker) {
+    $contains($show, $marker, 'Client Case show lost an entity/workflow mutation contract.');
+}
+
 $controller = $read('symfony/src/Web/Sales/ClientCasePageController.php');
 foreach ([
     'public function index(Request $request): Response',
+    'public function show(Request $request,string $id): Response',
+    'public function update(Request $r,string $id): Response',
+    'public function activity(Request $r,string $id): Response',
+    'public function updatePropertyMatch(Request $r,string $id): Response',
     'public function inbox(Request $request): Response',
     'public function create(Request $r): Response',
     'public function quickUpdate(Request $r,string $id): Response',
@@ -110,6 +159,9 @@ foreach ([
     'private function mutationTenant(Request $r): TenantContext|Response',
     '$this->csrf->isValid($r)',
     '$this->write($t)->createOpportunity',
+    '$this->write($t)->updateOpportunity',
+    '$this->write($t)->addOpportunityActivity',
+    '$this->write($t)->updateOpportunityPropertyMatch',
     '$this->write($t)->quickUpdateOpportunity',
     '$this->write($t)->updateLead',
     '$this->write($t)->convertLeadToOpportunity',
@@ -122,6 +174,14 @@ foreach ([
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /client-case',
+    'path: /client-case/show/{id}',
+    'ClientCasePageController::show',
+    'path: /client-case/update/{id}',
+    'ClientCasePageController::update',
+    'path: /client-case/activity/{id}',
+    'ClientCasePageController::activity',
+    'path: /client-case/updatePropertyMatch/{id}',
+    'ClientCasePageController::updatePropertyMatch',
     'ClientCasePageController::index',
     'path: /client-case/create',
     'ClientCasePageController::create',
@@ -146,6 +206,8 @@ foreach ([
     '### Вхідні заявки (`Client Case Inbox`)',
     '## Хвиля 2',
     '### Клієнтські кейси (`Client Case Index`)',
+    '## Хвиля 3',
+    '### Робочий простір кейсу (`Client Case Workspace`)',
     '## Межа operational cards',
     '## Критерії завершення',
 ] as $marker) {
