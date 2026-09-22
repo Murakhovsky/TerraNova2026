@@ -87,6 +87,25 @@ Arbitrary HTML так само не приймається.
 
 Create-user form лишається окремою canonical panel form, бо не є row mutation у grid.
 
+
+## Третя production adoption
+
+`Client Case → операційний список` переведено з локальної quick-update таблиці на OperationalGrid.
+
+Кожен рядок зберігає окремий row form:
+
+- POST `client-case/quickUpdate/{id}`;
+- CSRF token;
+- `return_url=client-case`;
+- `stage_id`;
+- `status`;
+- `priority`;
+- `assigned_user_id`.
+
+Stage presentation використовує semantic `kind: stage`, workflow controls використовують `kind: fields`, а actions містять row submit `ОК` і deep-link `Відкрити`.
+
+Client Case funnel лишається domain-specific visualization і не змішується з OperationalGrid.
+
 ## Сумісність із замороженою платформою
 
 Ця зміна не змінює frozen Web Platform v1 contracts з ADR-0011.
