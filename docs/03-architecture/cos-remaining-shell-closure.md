@@ -76,6 +76,47 @@ Wave 2 закриває outer-shell debt для Page / Blog / SEO landing без
 
 Wave 2 не намагається перетворити article body, blog cards або property cards на generic primitives.
 
+## Хвиля 3
+
+### Auth і Cabinet entry surfaces
+
+Wave 3 закриває outer-shell debt для входу, реєстрації та живого cabinet entry surface без зміни identity/session semantics.
+
+#### Login
+
+`auth/login.phtml`
+
+- спеціалізований `tn-auth-layout` лишається;
+- copy/header переведено на canonical PageHeader;
+- submit control використовує canonical primary button;
+- auth feedback використовує canonical alert geometry;
+- POST route, email/password fields та autocomplete contract не змінені.
+
+#### Register
+
+`auth/register.phtml`
+
+- specialized auth layout лишається;
+- copy/header переведено на canonical PageHeader;
+- submit control використовує canonical primary button;
+- feedback використовує canonical alert geometry;
+- role choices, password constraints і registration POST contract не змінені.
+
+#### Cabinet
+
+Production route `/cabinet` рендерить `cabinet/canonical.phtml`, а не історичний `cabinet/index.phtml`.
+
+Live cabinet surface тепер використовує:
+
+- canonical PageHeader;
+- canonical Panel shell;
+- canonical ActionBar;
+- existing portal profile content.
+
+`CabinetPageController` і native Symfony/COS identity/session lifecycle не змінюються.
+
+Legacy `cabinet/index.phtml` не є routed production surface і класифікується у фінальному Wave 4 audit, а не канонізується штучно.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
@@ -85,7 +126,7 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 ## Наступні хвилі
 
 - Wave 2: public content shells — Page / Blog / SEO landing — виконано;
-- Wave 3: auth/cabinet entry surfaces;
+- Wave 3: auth/cabinet entry surfaces — виконано;
 - Wave 4: фінальний legacy-shell audit і classification specialized marketing/runtime surfaces.
 
 ## Критерії завершення
@@ -96,4 +137,6 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - legacy internal shell primitives не повертаються через PHASE 14 gate;
 - specialized graph interaction model залишається недоторканим;
 - Page / Blog / SEO landing не використовують legacy breadcrumbs/page-hero/empty-state/section-heading shells там, де існує canonical primitive;
-- article body, schema.org та property/blog content cards лишаються domain/content-specific.
+- article body, schema.org та property/blog content cards лишаються domain/content-specific;
+- login/register зберігають auth field/POST semantics, але використовують canonical PageHeader/button/alert anatomy;
+- live `/cabinet` використовує canonical PageHeader/Panel/ActionBar і не повертає legacy portal hero/section shell.
