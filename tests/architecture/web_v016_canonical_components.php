@@ -28,6 +28,7 @@ $components = [
     'Drawer' => 'app/Interfaces/Web/View/components/ui/drawer.phtml',
     'Stage' => 'app/Interfaces/Web/View/components/ui/stage.phtml',
     'Status' => 'app/Interfaces/Web/View/components/ui/status_badge.phtml',
+    'Breadcrumbs' => 'app/Interfaces/Web/View/components/ui/breadcrumbs.phtml',
 ];
 foreach ($components as $name => $path) {
     $read($path);
@@ -45,11 +46,17 @@ foreach ([
     '.tn-ui-action-bar',
     '.tn-ui-filter-bar__group',
     '.tn-ui-data-table',
+    '.tn-ui-breadcrumbs',
     'data-responsive="cards"',
     '@media (max-width: 760px)',
     '.tn-ui-drawer { width: 100vw',
 ] as $needle) {
     $contains($css, $needle, 'Canonical component CSS contract is incomplete');
+}
+
+$breadcrumbs = $read($components['Breadcrumbs']);
+foreach (['<nav class="tn-ui-breadcrumbs"', '<ol>', 'aria-current="page"', "'items'"] as $needle) {
+    $contains($breadcrumbs, $needle, 'Breadcrumbs semantic navigation contract is incomplete');
 }
 
 $pageHeader = $read($components['PageHeader']);
@@ -91,7 +98,7 @@ $agent = $read('app/Interfaces/Web/View/sales_admin/agent.phtml');
 $contains($agent, "components/ui/entity_header", 'Sales agent detail must prove canonical EntityHeader on a real entity workspace');
 
 $docs = $read('docs/architecture/web-v0.16.md');
-foreach (['PageHeader', 'EntityHeader', 'Panel', 'DataTable', 'FilterBar', 'ActionBar', 'Drawer', 'Status / Stage', 'WCAG 2.2 AA', 'Server-first', 'Definition of Done'] as $needle) {
+foreach (['PageHeader', 'EntityHeader', 'Panel', 'DataTable', 'FilterBar', 'ActionBar', 'Drawer', 'Status / Stage', 'Breadcrumbs', 'WCAG 2.2 AA', 'Server-first', 'Definition of Done'] as $needle) {
     $contains($docs, $needle, 'WEB V0.16 documentation is incomplete');
 }
 
