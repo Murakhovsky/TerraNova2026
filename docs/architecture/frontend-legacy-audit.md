@@ -19,11 +19,11 @@ Status vocabulary:
 | `frontend/styles/layouts/public.css` | MIGRATED | Public visual contract now surface-owned rather than globally injected |
 | `frontend/styles/layouts/portal.css` | USED | Portal surface baseline |
 | `frontend/styles/layouts/workspace.css` | USED | Workspace surface baseline and compatibility composition |
-| `frontend/styles/terranova-club.css` | DEAD | retained only as quarantined historical source/reference; canonical runtime must not import it |
-| `frontend/styles/terranova-home.css` | DEAD | WEB V0.10 homepage replaced this bundle |
-| `frontend/styles/interface.css` | DUPLICATE | old aggregate; Workspace entrypoint composes canonical files directly |
+| `frontend/styles/terranova-club.css` | DEAD | removed; Git history is the archive and canonical runtime must not restore it |
+| `frontend/styles/terranova-home.css` | DEAD | removed after WEB V0.10 homepage replacement |
+| `frontend/styles/interface.css` | DEAD | removed post-freeze; Workspace entrypoint composes canonical design-system + surface CSS directly |
 | `frontend/styles/workspace.css` | MIGRATED | consumed only through canonical Workspace surface composition |
-| `frontend/styles/workspace-mobile.css` | MIGRATED | consumed only through canonical Workspace surface composition; historical compatibility comment is source debt, not runtime ownership |
+| `frontend/styles/workspace-mobile.css` | USED | canonical narrow-screen Workspace contract imported by `layouts/workspace.css` |
 | `frontend/layouts/surfaces.css` | USED | shared density/layout contract imported by design system |
 | feature CSS under `frontend/features/*` | USED | must load after surface ownership; Cabinet, Property workspace and Analytics workspace bundles are reduced to live canonical selectors |
 
