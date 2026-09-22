@@ -112,6 +112,72 @@ Native Symfony auth lifecycle лишається у `AuthPageController`:
 
 `cabinet/index.phtml` і `cabinet/submission.phtml` не є canonical runtime renderers. Вони поки зберігаються як historical regression artifacts для WEB V0.9 і мають бути класифіковані або retired у Wave 4 audit, а не стилізовані як production surfaces.
 
+## Хвиля 4
+
+### Фінальний audit і classification
+
+Wave 4 закриває PHASE 14 через фактичний аудит усього `app/Interfaces/Web/View`, а не через перелік сторінок у пам’яті.
+
+Repository-wide gate тепер забороняє повернення таких legacy shell primitives у production PHTML:
+
+- `tn-page-hero`;
+- `tn-listing-hero`;
+- `tn-admin-card`;
+- `tn-admin-panel`;
+- `tn-portal-hero`;
+- `tn-auth-copy`;
+- `tn-sales-cta`;
+- `tn-section-heading`.
+
+`tn-breadcrumbs` дозволений лише для явно класифікованих Property discovery/rich-detail surfaces:
+
+- `property/catalog.phtml`;
+- `property/map.phtml`;
+- `property/show.phtml`;
+- `property/presentation.phtml`.
+
+Це не означає, що breadcrumbs є canonical primitive. Це означає, що вони є свідомо класифікованим залишковим navigation pattern і більше не можуть непомітно розповзатися по інших surfaces.
+
+### Guide landing
+
+`blog/landing.phtml` був останнім live public content renderer з legacy breadcrumbs + `tn-page-hero`.
+
+У Wave 4:
+
+- outer shell переведено на canonical PageHeader;
+- CTA переведено на canonical Panel + ActionBar;
+- featured image, article body та WebPage schema.org JSON-LD збережені;
+- `PublicContentPageController::guide` та route `/guide/{slug}` не змінені.
+
+### Виведені historical renderers
+
+Як непідключені до canonical Symfony runtime видалено:
+
+- `cabinet/index.phtml`;
+- `cabinet/submission.phtml`;
+- `index/public.phtml`.
+
+WEB V0.9 та WEB V0.10 regression gates переведені з Phalcon-era controllers/views на актуальні:
+
+- `CabinetPageController` + `cabinet/canonical.phtml` + `cabinet/retired-submission.phtml`;
+- `HomePageController` + `home/canonical.phtml`;
+- `PublicContentPageController`;
+- `PropertyPageController`;
+- Symfony `routes.yaml`.
+
+### Whitelist specialized surfaces
+
+Наступні surfaces навмисно не перетворюються на generic PageHeader/Card composition:
+
+- `home/canonical.phtml` — marketing/runtime hero;
+- `property/show.phtml` — rich property hero, Product/Offer schema, gallery;
+- `property/presentation.phtml` — presentation hero та share behavior;
+- `spatial/scene.phtml` — public 3D viewer runtime;
+- `methodology_studio/index.phtml` — full application/studio interaction model;
+- `error/failure.phtml` — minimal failure utility surface.
+
+PHASE 14 gate перевіряє їхні domain-specific markers окремо. Whitelist не є дозволом на довільні legacy shells: кожен виняток має конкретну runtime причину і executable contract.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
@@ -122,7 +188,7 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 
 - Wave 2: public content shells — Page / Blog / SEO landing — виконано;
 - Wave 3: auth/cabinet entry surfaces — виконано;
-- Wave 4: фінальний legacy-shell audit і classification specialized marketing/runtime surfaces.
+- Wave 4: фінальний legacy-shell audit і classification specialized marketing/runtime surfaces — виконано.
 
 ## Критерії завершення
 
@@ -134,4 +200,8 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - Page / Blog / SEO landing не використовують legacy breadcrumbs/page-hero/empty-state/section-heading shells там, де існує canonical primitive;
 - article body, schema.org та property/blog content cards лишаються domain/content-specific;
 - Login/Register/Cabinet використовують canonical shell primitives без зміни native auth/session contracts;
-- retired cabinet submission лишається явним HTTP 410 compatibility boundary.
+- retired cabinet submission лишається явним HTTP 410 compatibility boundary;
+- historical Cabinet/Public renderers не повертаються у runtime;
+- Guide landing не використовує legacy breadcrumbs/page hero/CTA shell;
+- repository-wide gate забороняє legacy page/admin/portal/auth shells;
+- specialized home/property/spatial/studio/failure surfaces мають явний whitelist contract.
