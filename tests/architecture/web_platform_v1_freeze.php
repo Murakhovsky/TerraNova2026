@@ -89,7 +89,7 @@ if ($baseSha !== '' && preg_match('/^[a-f0-9]{40}$/', $baseSha) === 1 && !preg_m
     $changedCode = 0;
     exec(
         'git -C ' . escapeshellarg($root)
-        . ' diff --name-only ' . escapeshellarg($baseSha . '...HEAD')
+        . ' diff --name-only ' . escapeshellarg($baseSha . '..HEAD')
         . ' -- ' . $pathspec . ' 2>&1',
         $changedOutput,
         $changedCode,
@@ -104,7 +104,7 @@ if ($baseSha !== '' && preg_match('/^[a-f0-9]{40}$/', $baseSha) === 1 && !preg_m
         $adrCode = 0;
         exec(
             'git -C ' . escapeshellarg($root)
-            . ' diff --name-only ' . escapeshellarg($baseSha . '...HEAD')
+            . ' diff --name-only ' . escapeshellarg($baseSha . '..HEAD')
             . ' -- ' . escapeshellarg('docs/11-decisions/ADR-*.md') . ' 2>&1',
             $adrOutput,
             $adrCode,
