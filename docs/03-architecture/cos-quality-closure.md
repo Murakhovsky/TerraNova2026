@@ -6,13 +6,13 @@ updated: 2026-09-22
 kind: architecture
 ---
 
-# PHASE 15 — Quality Closure
+# PHASE 15 — Закриття якості
 
 PHASE 9–14 завершили production adoption і legacy shell closure. ADR-0011 заморозив Web Platform v1, тому наступна хвиля не перебудовує foundation.
 
 PHASE 15 закриває quality debt, який був свідомо відкладений у Wave 12.23: heuristic accessibility checks доповнюються реальним axe-core audit.
 
-## Accessibility contract
+## Контракт доступності
 
 CI запускає `@axe-core/cli@4.13.0` на канонічних public surfaces:
 
@@ -50,7 +50,7 @@ PHASE 15 не видаляє існуючий Wave 12.23 browser quality suite.
 
 Axe додає standards-based semantic accessibility audit поверх цих перевірок.
 
-## Evidence
+## Докази виконання
 
 JSON-звіти зберігаються у:
 
@@ -60,7 +60,7 @@ tmp/web-accessibility/
 
 CI завантажує їх як artifact навіть при падінні gate.
 
-## Freeze boundary
+## Межа заморожених контрактів
 
 PHASE 15 не змінює:
 
