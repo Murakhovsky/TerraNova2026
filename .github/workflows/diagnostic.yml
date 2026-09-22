@@ -71,6 +71,7 @@ jobs:
           php tests/architecture/web_experience_production_property.php
           php tests/architecture/web_experience_production_administration.php
           php tests/architecture/web_experience_production_client_case.php
+          php tests/architecture/web_experience_production_visualization.php
           php tests/architecture/web_experience_stress_screens.php
           php tests/architecture/web_experience_business_ux.php
           php tests/architecture/web_experience_primitives.php
