@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.11.0','Growth V0.11 manifest version must be 0.11.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.11.0','>='),'Growth manifest must remain V0.11+.');
 $assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.11 must keep schema version 0.8.0.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.11 must remain disabled before tenant cutover.');
 $assert(in_array('growth.workspace',$manifest['contributions']['capabilities']??[],true),'Growth Workspace capability is missing.');
@@ -72,7 +72,7 @@ foreach([
 ] as $route){
     $assert(str_contains($routes,$route),'Growth Workspace route missing: '.$route);
 }
-$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')===5,'Growth V0.11 must expose exactly five SSR routes.');
+$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=5,'Growth V0.11 core SSR routes must remain available.');
 
 $vite=$read('vite.config.js');
 $assert(str_contains($vite,"'growth-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/growth-workspace.js')"),'Growth Vite entry is missing.');

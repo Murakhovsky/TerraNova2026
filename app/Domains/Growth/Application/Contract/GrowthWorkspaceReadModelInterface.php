@@ -19,4 +19,16 @@ interface GrowthWorkspaceReadModelInterface
      * @return list<array<string,mixed>>
      */
     public function accounts(string $organizationId,array $filters=[],int $limit=100): array;
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return list<array<string,mixed>>
+     */
+    public function signals(string $organizationId,array $filters=[],int $limit=100): array;
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return list<array<string,mixed>>
+     */
+    public function collectorRuns(string $organizationId,array $filters=[],int $limit=100): array;
 }

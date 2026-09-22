@@ -14,6 +14,7 @@ use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
+use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
@@ -38,6 +39,7 @@ final readonly class GrowthPageController
         private GrowthIntelligenceBoundary $intelligence,
         private GrowthBuyingCommitteeBoundary $committee,
         private GrowthResearchBoundary $research,
+        private GrowthSignalCollectorBoundary $collectors,
         private GrowthDecisionBoundary $decisions,
         private GrowthHandoffBoundary $handoff,
     ) {}
@@ -99,6 +101,34 @@ final readonly class GrowthPageController
                 'workspace'=>[
                     'accounts'=>$this->workspace->accounts($tenant->organizationId()->value(),[
                         'q'=>$request->query->get('q'),
+                    ],150),
+                ],
+            ]);
+    }
+
+    public function signals(Request $request): Response
+    {
+        return $this->page($request,'Growth Signals','growth-signals','growth/signals',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'signals'=>$this->workspace->signals($tenant->organizationId()->value(),[
+                        'q'=>$request->query->get('q'),
+                        'signal_type'=>$request->query->get('signal_type'),
+                        'subject_type'=>$request->query->get('subject_type'),
+                    ],150),
+                ],
+            ]);
+    }
+
+    public function collectors(Request $request): Response
+    {
+        return $this->page($request,'Growth Collectors','growth-collectors','growth/collectors',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'collectors'=>$this->collectors->collectors(),
+                    'runs'=>$this->workspace->collectorRuns($tenant->organizationId()->value(),[
+                        'collector_name'=>$request->query->get('collector_name'),
+                        'status'=>$request->query->get('status'),
                     ],150),
                 ],
             ]);

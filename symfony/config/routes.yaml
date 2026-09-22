@@ -362,6 +362,17 @@ cos_growth_account:
   requirements: { id: '[A-Za-z0-9_-]{8,80}' }
 
 
+cos_growth_signals:
+  path: /growth/signals
+  controller: App\Web\Growth\GrowthPageController::signals
+  methods: [GET]
+
+cos_growth_collectors:
+  path: /growth/collectors
+  controller: App\Web\Growth\GrowthPageController::collectors
+  methods: [GET]
+
+
 # Growth V0.10 — executable Opportunity Intelligence API
 cos_api_v1_growth_collectors:
   path: /api/v1/growth/collectors

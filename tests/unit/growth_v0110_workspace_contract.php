@@ -16,17 +16,18 @@ $provider=new GrowthWebProvider(new SearchResultMatcher());
 $context=new WebExtensionContext('org-1','manager','workspace','growth','growth-candidates');
 
 $navigation=$provider->navigation($context);
-expectGrowthV0110(count($navigation)===4,'Growth provider navigation contribution count changed.');
+expectGrowthV0110(count($navigation)>=4,'Growth provider lost V0.11 navigation contributions.');
 expectGrowthV0110($navigation[0]->key==='growth'&&$navigation[0]->path==='/growth','Growth root navigation is invalid.');
 expectGrowthV0110($navigation[1]->parentKey==='growth','Growth child navigation must remain under Growth.');
 
 $commands=$provider->commands($context);
-expectGrowthV0110(count($commands)===3,'Growth command contribution count changed.');
+expectGrowthV0110(count($commands)>=3,'Growth provider lost V0.11 commands.');
 
 $workspaces=$provider->workspaces($context);
-expectGrowthV0110(array_map(static fn($item)=>$item->id,$workspaces)===[
-    'growth.overview','growth.candidate','growth.account',
-],'Growth workspace definitions changed unexpectedly.');
+$workspaceIds=array_map(static fn($item)=>$item->id,$workspaces);
+foreach(['growth.overview','growth.candidate','growth.account'] as $workspaceId){
+    expectGrowthV0110(in_array($workspaceId,$workspaceIds,true),'Growth V0.11 workspace missing: '.$workspaceId);
+}
 
 $search=$provider->search($context,'growth',10);
 expectGrowthV0110($search!==[],'Growth provider search should resolve Growth workspace navigation.');

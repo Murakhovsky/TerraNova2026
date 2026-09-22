@@ -183,6 +183,27 @@ canonical Signal
 
 Collector run зберігає status, request/next cursor, collected/accepted/duplicate/failed counters та error summary. Зовнішній provider call не тримає відкриту DB transaction; кожний item ingestиться окремо, тому failure одного item не відкочує інші accepted signals.
 
+## Signal Operations Workspace
+
+V0.12 робить collector runtime операційно видимим:
+
+```text
+Registered SignalCollectorInterface adapters
+        ↓
+/growth/collectors
+        ├─ run history
+        ├─ accepted / duplicate / failed counters
+        ├─ cursor / next cursor
+        └─ partial / failed error summary
+        ↓
+POST /api/v1/growth/collectors/{name}/run
+        ↓
+/growth/signals
+        └─ observable evidence stream
+```
+
+SSR layer лише читає projections. Запуск collector виконується через canonical API із CSRF та idempotency key.
+
 ## Account Intelligence перед Opportunity
 
 V0.3 додає upstream intelligence layer:
@@ -394,9 +415,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.11
+## Статус V0.12
 
-`process_state: to-be` поки навмисний. V0.11 додає provider-backed SSR Growth Workspace поверх API/Application boundaries. Інші target adapters, signal provider adapters та engagement додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.12 додає Signal Operations Workspace поверх existing collector runtime: evidence stream, collector registry, run history, counters, cursor/error visibility та API-driven execution. Інші target adapters, concrete signal provider adapters та engagement додаються окремими хвилями.
 
 ## Карта коду
 

@@ -41,6 +41,7 @@ generated: true
 | `growth` | `app/migrations/20260922_000073_growth_v080_handoff_protocol.sql` | `tn_growth_handoff_attempts` |
 | `growth` | `app/migrations/20260922_000074_growth_v0100_api_surface.sql` | — |
 | `growth` | `app/migrations/20260922_000075_growth_v0110_workspace.sql` | — |
+| `growth` | `app/migrations/20260922_000076_growth_v0120_signal_operations.sql` | — |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

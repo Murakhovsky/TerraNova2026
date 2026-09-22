@@ -95,8 +95,61 @@ const initGrowthCandidate=(root)=>{
   });
 };
 
+const initGrowthCollectors=(root)=>{
+  root.querySelectorAll('[data-growth-collector-run]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const collectorName=form.dataset.collectorName||'';
+      if(!collectorName)return;
+
+      const status=form.querySelector('[data-growth-form-status]');
+      const button=form.querySelector('button[type="submit"]');
+      const raw=Object.fromEntries([...new FormData(form).entries()].map(([key,value])=>[
+        key,typeof value==='string'?value.trim():value,
+      ]));
+      const data={
+        cursor:raw.cursor||null,
+        limit:Number(raw.limit||100),
+      };
+
+      button?.setAttribute('disabled','disabled');
+      setStatus(status,'Running collector…','loading');
+      try{
+        const response=await mutation(
+          '/api/v1/growth/collectors/'+encodeURIComponent(collectorName)+'/run',
+          data,root,form,
+        );
+        const run=response?.data??response;
+        delete form.dataset.idempotencyKey;
+        const runStatus=String(run?.status||'').toLowerCase();
+        if(runStatus==='failed'){
+          throw new Error(run?.error_summary||'Collector failed.');
+        }
+        if(runStatus==='partial'){
+          setStatus(
+            status,
+            'Partial: '+Number(run?.accepted_count||0)+' accepted, '+Number(run?.duplicate_count||0)+' duplicates, '+Number(run?.failed_count||0)+' failed.',
+            'warning',
+          );
+        }else{
+          setStatus(
+            status,
+            'Completed: '+Number(run?.accepted_count||0)+' accepted, '+Number(run?.duplicate_count||0)+' duplicates.',
+            'success',
+          );
+        }
+        window.setTimeout(()=>window.location.reload(),500);
+      }catch(error){
+        setStatus(status,error.message||'Collector run failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
+};
+
 const boot=()=>{
   document.querySelectorAll('[data-growth-candidate]').forEach(initGrowthCandidate);
+  document.querySelectorAll('[data-growth-collectors]').forEach(initGrowthCollectors);
 };
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});

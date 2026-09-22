@@ -72,7 +72,9 @@ Workspace = компанія й операційна робота
     │   ├── /growth/candidates
     │   ├── /growth/candidates/{id}
     │   ├── /growth/accounts
-    │   └── /growth/accounts/{id}
+    │   ├── /growth/accounts/{id}
+    │   ├── /growth/signals
+    │   └── /growth/collectors
     ├── Sales
     │   ├── /sales/dashboard
     │   ├── /sales/today
@@ -199,6 +201,8 @@ Diagnostic → COS / Diagnostics
 /growth/candidates/{id}
 /growth/accounts
 /growth/accounts/{id}
+/growth/signals
+/growth/collectors
 ```
 
 Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer.

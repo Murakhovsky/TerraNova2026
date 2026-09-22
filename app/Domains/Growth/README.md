@@ -101,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.11 Executable Opportunity Intelligence Workspace
+## V0.12 Signal Operations Workspace
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -247,5 +247,14 @@ V0.11 adds the first Growth Workspace on the current COS Web Experience foundati
 ```
 
 Navigation, search, commands and workspace definitions are contributed through `growthNavigationContributor`, so the surface disappears automatically when the Growth module is disabled. SSR lists use a read-only Growth projection; detail pages compose existing application briefs. Candidate mutations call the canonical V0.10 API with CSRF and idempotency instead of duplicating lifecycle rules in the browser.
+
+V0.12 adds operator-visible signal ingestion:
+
+```text
+/growth/signals
+/growth/collectors
+```
+
+Signals expose observable evidence with source, confidence and Candidate usage. Collectors expose the registered adapter list and run history with accepted/duplicate/failed counters, cursors and error summaries. Running a collector still goes through `POST /api/v1/growth/collectors/{name}/run`; the SSR controller remains read-only.
 
 Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters and outbound engagement.

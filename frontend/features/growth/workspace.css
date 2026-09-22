@@ -10,3 +10,7 @@
 .tn-growth-signal-list article:last-child{border-bottom:0}
 .tn-growth-signal-list article p{grid-column:1/-1;margin:0;overflow-wrap:anywhere}
 .tn-growth-signal-list article small{color:var(--tn-text-muted,#6b746f)}
+
+.tn-growth-action-status[data-state="warning"],[data-growth-form-status][data-state="warning"]{color:var(--tn-warning,#8a6116)}
+.tn-growth-collector-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:1rem}
+.tn-growth-run-error{margin-top:.75rem}

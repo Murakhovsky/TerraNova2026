@@ -200,6 +200,90 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
         return $rows;
     }
 
+    public function signals(string $organizationId,array $filters=[],int $limit=100): array
+    {
+        $limit=max(1,min(200,$limit));
+        $where=['s.organization_id=:organization_id'];
+        $params=['organization_id'=>$organizationId];
+
+        $signalType=$this->filter($filters,'signal_type',120);
+        if($signalType!==null){
+            $where[]='s.signal_type=:signal_type';
+            $params['signal_type']=$signalType;
+        }
+        $subjectType=$this->filter($filters,'subject_type',80);
+        if($subjectType!==null){
+            $where[]='s.subject_type=:subject_type';
+            $params['subject_type']=$subjectType;
+        }
+        $query=$this->filter($filters,'q',191);
+        if($query!==null){
+            $where[]='(s.signal_id LIKE :q OR s.subject_id LIKE :q OR s.signal_type LIKE :q OR s.source_reference LIKE :q)';
+            $params['q']='%'.$this->like($query).'%';
+        }
+
+        $sql='SELECT s.signal_id,s.subject_type,s.subject_id,s.signal_type,s.source_reference,s.confidence,
+                    s.occurred_at,s.detected_at,s.created_at,
+                    COUNT(DISTINCT cs.candidate_id) AS candidate_count,
+                    sr.collector_name,sr.external_key
+             FROM tn_growth_signals s
+             LEFT JOIN tn_growth_candidate_signals cs
+               ON cs.organization_id=s.organization_id AND cs.signal_id=s.signal_id
+             LEFT JOIN tn_growth_signal_source_receipts sr
+               ON sr.organization_id=s.organization_id AND sr.signal_id=s.signal_id
+             WHERE '.implode(' AND ',$where).'
+             GROUP BY s.id,sr.collector_name,sr.external_key
+             ORDER BY s.detected_at DESC,s.signal_id DESC
+             LIMIT '.$limit;
+
+        $statement=$this->connection->prepare($sql);
+        $statement->execute($params);
+        $rows=$statement->fetchAll(PDO::FETCH_ASSOC)?:[];
+        foreach($rows as &$row){
+            $row['confidence']=(float)$row['confidence'];
+            $row['candidate_count']=(int)$row['candidate_count'];
+        }
+        unset($row);
+        return $rows;
+    }
+
+    public function collectorRuns(string $organizationId,array $filters=[],int $limit=100): array
+    {
+        $limit=max(1,min(200,$limit));
+        $where=['r.organization_id=:organization_id'];
+        $params=['organization_id'=>$organizationId];
+
+        $collector=$this->filter($filters,'collector_name',120);
+        if($collector!==null){
+            $where[]='r.collector_name=:collector_name';
+            $params['collector_name']=$collector;
+        }
+        $status=$this->filter($filters,'status',24);
+        if($status!==null){
+            $where[]='r.status=:status';
+            $params['status']=$status;
+        }
+
+        $sql='SELECT r.run_id,r.collector_name,r.status,r.request_cursor,r.requested_limit,r.next_cursor,
+                    r.collected_count,r.accepted_count,r.duplicate_count,r.failed_count,r.error_summary,
+                    r.started_at,r.finished_at,r.created_at
+             FROM tn_growth_signal_collector_runs r
+             WHERE '.implode(' AND ',$where).'
+             ORDER BY r.started_at DESC,r.id DESC
+             LIMIT '.$limit;
+
+        $statement=$this->connection->prepare($sql);
+        $statement->execute($params);
+        $rows=$statement->fetchAll(PDO::FETCH_ASSOC)?:[];
+        foreach($rows as &$row){
+            foreach(['requested_limit','collected_count','accepted_count','duplicate_count','failed_count'] as $key){
+                $row[$key]=(int)$row[$key];
+            }
+        }
+        unset($row);
+        return $rows;
+    }
+
     private function scalar(string $sql,array $params): string|int|false
     {
         $statement=$this->connection->prepare($sql);

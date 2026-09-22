@@ -125,6 +125,7 @@ jobs:
           php tests/architecture/growth_v090_sales_handoff_adapter.php
           php tests/architecture/growth_v0100_api_surface.php
           php tests/architecture/growth_v0110_workspace.php
+          php tests/architecture/growth_v0120_signal_operations.php
 
       - name: Process registry invariants
         run: |
@@ -140,6 +141,7 @@ jobs:
           php tests/unit/growth_v090_sales_handoff_adapter.php
           php tests/unit/growth_v0100_api_contract.php
           php tests/unit/growth_v0110_workspace_contract.php
+          php tests/unit/growth_v0120_signal_operations_contract.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -184,4 +186,6 @@ jobs:
           php -l app/Domains/Growth/Infrastructure/ReadModel/MySql/MysqlGrowthWorkspaceReadModel.php
           php -l tests/unit/growth_v0110_workspace_contract.php
           php -l tests/architecture/growth_v0110_workspace.php
+          php -l tests/architecture/growth_v0120_signal_operations.php
+          php -l tests/unit/growth_v0120_signal_operations_contract.php
           php -l tests/architecture/process_v01.php
