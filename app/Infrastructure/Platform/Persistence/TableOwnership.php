@@ -39,6 +39,8 @@ final class TableOwnership
             'tn_growth_signals', 'tn_growth_candidates', 'tn_growth_candidate_signals',
             'tn_growth_operation_receipts', 'tn_growth_icp_profiles', 'tn_growth_accounts',
             'tn_growth_account_snapshots', 'tn_growth_account_icp_matches',
+            'tn_growth_contacts', 'tn_growth_account_contacts', 'tn_growth_contact_snapshots',
+            'tn_growth_buying_committee_assessments',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],

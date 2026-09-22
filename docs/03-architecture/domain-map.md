@@ -2,7 +2,7 @@
 title: Карта доменів COS
 description: Карта встановлюваних доменів, допоміжних областей, ядра та меж інтерфейсів і інфраструктури.
 status: active
-updated: 2026-09-21
+updated: 2026-09-22
 kind: architecture
 ---
 
@@ -47,7 +47,7 @@ Bootstrap: корінь композиції
 повністю інтегрований домен середовища виконання
 ```
 
-Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.3.0` має installable contract, persistence/application runtime та ICP/Account Intelligence, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
+Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.4.0` має installable contract, persistence/application runtime, ICP/Account Intelligence та Buying Committee Intelligence, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
 
 Identity, Content і Spatial фізично відокремлені як обмежені області відповідальності (bounded areas), але не зобов’язані мати той самий контракт встановлюваного модуля.
 
@@ -59,10 +59,14 @@ Identity, Content і Spatial фізично відокремлені як обм
 
 ## Growth: пошук бізнес-можливостей
 
-Growth `0.3.0` володіє ICP, Account Intelligence та раннім lifecycle бізнес-можливості до моменту explicit handoff:
+Growth `0.4.0` володіє ICP, Account Intelligence, Contact/Buying Committee Intelligence та раннім lifecycle бізнес-можливості до explicit handoff:
 
 ```text
-Signal
+ICP
+→ Account
+→ Account Evidence
+→ Contact / Buying Committee Evidence
+→ Signal
 → OpportunityCandidate
 → Research / Rationale
 → Explainable Score
@@ -72,9 +76,13 @@ Signal
 
 Канонічний інваріант: **Growth не створює Lead або Deal**. Він знаходить, досліджує, оцінює, пріоритизує та маршрутизує можливість. Sales або інший target Domain створює власний execution aggregate тільки після прийнятого handoff.
 
-`Signal` зберігає observable facts. `OpportunityRationale` зберігає interpretation, WHY IT MATTERS, problem hypothesis, WHY NOW, evidence, counter-evidence, assumptions та unknowns. Це не дозволяє AI-припущенню непомітно перетворитися на «факт».
+`Signal` зберігає observable facts. `OpportunityRationale` зберігає interpretation, WHY IT MATTERS, problem hypothesis, WHY NOW, evidence, counter-evidence, assumptions та unknowns.
 
-Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, scoring semantics, lifecycle, handoff DTO та runtime module identity вже визначені; persistence, collectors, cross-domain acceptance, agents, API та UI ще не оголошуються реалізованими.
+Людина в Growth має стабільну `GrowthContact` identity з provenance. Посада, department, seniority, buying role і relationship strength не вважаються вічними властивостями людини: вони зберігаються як immutable `ContactSnapshot` у контексті конкретного Account.
+
+`BuyingCommitteeAssessment` детерміновано рахує required-role coverage, gaps, champions, blockers і relationship risk із конкретних snapshot ids та фіксує `model_version`.
+
+Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, MySQL runtime, ICP/Account/Contact intelligence, idempotency, Events і Audit уже визначені; external collectors, engagement, cross-domain acceptance, agents, API та UI ще не оголошуються реалізованими.
 
 ## Sales: продажі
 

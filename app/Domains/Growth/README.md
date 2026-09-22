@@ -99,7 +99,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.3 ICP + Account Intelligence
+## V0.4 ICP + Account + Buying Committee Intelligence
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -116,4 +116,20 @@ ICP
 
 Enrichment history is append-only at the snapshot level. A newer provider response does not silently rewrite what COS believed at an earlier decision point. ICP revisions are immutable business definitions; activating a new revision archives the previous active revision while historical matches keep their original `profile_revision` and scoring `model_version`.
 
-Still intentionally absent: contacts/buying committee, external signal collectors, outbound campaigns, AI agents, cross-domain handoff acceptance, public API and Growth UI.
+V0.4 extends the chain with people and buying dynamics:
+
+```text
+GrowthAccount
+→ GrowthContact identity + provenance
+→ immutable ContactSnapshot
+→ BuyingRole / RelationshipStrength
+→ deterministic Buying Committee Assessment
+→ Committee Brief
+→ OpportunityCandidate / recommended play
+```
+
+The same person may participate in several accounts, while title, department, seniority, buying role and relationship are account-specific observations. Those observations are snapshots, not mutable properties of the human identity.
+
+The committee assessment records required roles, coverage, gaps, champions, blockers, weak relationships, evidence snapshot ids and a deterministic model version.
+
+Still intentionally absent: external signal collectors, outbound engagement, AI agents, cross-domain handoff acceptance, public API and Growth UI.

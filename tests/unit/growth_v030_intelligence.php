@@ -44,7 +44,7 @@ $match=(new IcpMatcher())->match($profile,$snapshot,$captured);
 expectGrowthV030($match->fit->score===100,'Fully matching AccountSnapshot must score 100 ICP fit.');
 expectGrowthV030($match->gaps===[],'Fully matching AccountSnapshot must not expose ICP gaps.');
 expectGrowthV030($match->fit->modelVersion===IcpMatcher::MODEL_VERSION,'ICP score must preserve model version.');
-expectGrowthV030(count(GrowthEventType::values())===14,'Growth V0.3 must expose fourteen canonical events.');
+expectGrowthV030(count(array_unique(GrowthEventType::values()))===count(GrowthEventType::values()),'Growth event types must remain unique.');
 expectGrowthV030(in_array(GrowthEventType::ICP_REVISED,GrowthEventType::values(),true),'Growth ICP revised event is missing.');
 
 echo "Growth V0.3 ICP and Account Intelligence contracts passed.\n";

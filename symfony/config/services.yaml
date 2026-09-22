@@ -411,6 +411,20 @@ services:
   Domains\Growth\Application\Contract\GrowthIntelligenceBoundary:
     alias: Domains\Growth\Application\Service\GrowthIntelligenceService
 
+  Domains\Growth\Domain\BuyingCommitteeAnalyzer: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthBuyingCommitteeRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthBuyingCommitteeRepository
+
+  Domains\Growth\Application\Service\GrowthBuyingCommitteeService: ~
+
+  Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary:
+    alias: Domains\Growth\Application\Service\GrowthBuyingCommitteeService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

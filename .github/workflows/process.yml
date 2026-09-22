@@ -97,6 +97,7 @@ jobs:
           php tests/architecture/process_v01.php
           php tests/architecture/growth_v020_runtime.php
           php tests/architecture/growth_v030_intelligence.php
+          php tests/architecture/growth_v040_buying_committee.php
 
       - name: Process registry invariants
         run: |
@@ -104,6 +105,7 @@ jobs:
           php tests/unit/growth_domain_foundation.php
           php tests/unit/growth_v020_runtime.php
           php tests/unit/growth_v030_intelligence.php
+          php tests/unit/growth_v040_buying_committee.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -128,4 +130,6 @@ jobs:
           php -l tests/architecture/growth_v020_runtime.php
           php -l tests/unit/growth_v030_intelligence.php
           php -l tests/architecture/growth_v030_intelligence.php
+          php -l tests/unit/growth_v040_buying_committee.php
+          php -l tests/architecture/growth_v040_buying_committee.php
           php -l tests/architecture/process_v01.php

@@ -11,6 +11,9 @@ final class GrowthEventType
     public const ACCOUNT_DISCOVERED = 'growth.account.discovered';
     public const ACCOUNT_SNAPSHOT_CAPTURED = 'growth.account.snapshot_captured';
     public const ACCOUNT_ICP_SCORED = 'growth.account.icp_scored';
+    public const CONTACT_DISCOVERED = 'growth.contact.discovered';
+    public const CONTACT_SNAPSHOT_CAPTURED = 'growth.contact.snapshot_captured';
+    public const BUYING_COMMITTEE_ASSESSED = 'growth.buying_committee.assessed';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -31,6 +34,9 @@ final class GrowthEventType
             self::ACCOUNT_DISCOVERED,
             self::ACCOUNT_SNAPSHOT_CAPTURED,
             self::ACCOUNT_ICP_SCORED,
+            self::CONTACT_DISCOVERED,
+            self::CONTACT_SNAPSHOT_CAPTURED,
+            self::BUYING_COMMITTEE_ASSESSED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

@@ -2,7 +2,7 @@
 title: Signal → Qualified Opportunity Handoff
 description: "Канонічний Growth V0.1 процес від перевіреного сигналу через research, rationale та explainable scoring до handoff-ready Opportunity Candidate."
 status: active
-updated: 2026-09-21
+updated: 2026-09-22
 kind: workflow
 contract: workflow-v2
 process_state: to-be
@@ -182,6 +182,35 @@ Signal / OpportunityCandidate
 
 Account enrichment зберігається append-only snapshots. Нові дані не перезаписують попередні факти заднім числом.
 
+## Buying Committee Intelligence
+
+V0.4 додає people layer між Account Brief та Opportunity:
+
+```text
+GrowthAccount
+   ↓
+GrowthContact identity + provenance
+   ↓
+ContactSnapshot per account
+   ↓
+Buying Roles + Relationship Strength
+   ↓
+Buying Committee Assessment
+   ├─ role coverage
+   ├─ gaps
+   ├─ champions
+   ├─ blockers
+   └─ weak relationship risk
+   ↓
+Committee Brief
+   ↓
+Opportunity research / play
+```
+
+Контактна identity не містить «вічної» посади або buying role. Title, department, seniority, buying roles і relationship strength є спостереженнями в контексті конкретного Account і зберігаються append-only snapshots із source references.
+
+Committee Assessment фіксує конкретний набір required roles, snapshot ids і `model_version`, тому історичне рішення можна відтворити.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -201,9 +230,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.3
+## Статус V0.4
 
-`process_state: to-be` поки навмисний. V0.3 поверх lifecycle runtime додає versioned ICP, Growth Account identity, immutable AccountSnapshot, evidence-backed ICP Match і Account Brief. Contacts/Buying Committee, external signal collectors, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.4 поверх lifecycle runtime, ICP та Account Intelligence додає evidence-backed Contact identity, immutable ContactSnapshot, Buying Roles, relationship strength, committee coverage/gaps та deterministic Buying Committee Assessment. External collectors, engagement, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -219,8 +248,12 @@ app/Domains/Growth/Application/UseCase/PrepareOpportunityHandoff.php
 app/Domains/Growth/Application/Service/GrowthWorkflowService.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthRepository.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMutationReceipt.php
+app/Domains/Growth/Application/Service/GrowthBuyingCommitteeService.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthBuyingCommitteeRepository.php
 app/Domains/Growth/Automation/Event/GrowthEventType.php
 app/Domains/Growth/Bootstrap/GrowthDomainModule.php
 app/migrations/20260921_000067_growth_v020_runtime.sql
+app/migrations/20260921_000068_growth_v030_account_intelligence.sql
+app/migrations/20260922_000069_growth_v040_buying_committee.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

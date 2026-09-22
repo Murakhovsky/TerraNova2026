@@ -23,7 +23,7 @@ generated: true
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
-| `growth` | Growth | `0.3.0` | `0.3.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
+| `growth` | Growth | `0.4.0` | `0.4.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
@@ -81,7 +81,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260921_000067_growth_v020_runtime.sql`, `app/migrations/20260921_000068_growth_v030_account_intelligence.sql`.
+- міграції: `app/migrations/20260921_000067_growth_v020_runtime.sql`, `app/migrations/20260921_000068_growth_v030_account_intelligence.sql`, `app/migrations/20260922_000069_growth_v040_buying_committee.sql`.
 
 ### Задекларовані capabilities
 
@@ -89,10 +89,14 @@ Manifest capabilities не задекларовані.
 - `growth.account.discover`;
 - `growth.account.enrich`;
 - `growth.account.score`;
+- `growth.buying_committee.assess`;
+- `growth.buying_committee.brief`;
 - `growth.candidate.monitor`;
 - `growth.candidate.qualify`;
 - `growth.candidate.research`;
 - `growth.candidate.score`;
+- `growth.contact.discover`;
+- `growth.contact.enrich`;
 - `growth.handoff.prepare`;
 - `growth.icp.manage`;
 - `growth.signal.detect`;
