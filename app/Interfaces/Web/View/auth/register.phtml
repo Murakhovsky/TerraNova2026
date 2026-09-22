@@ -11,9 +11,11 @@ $authStatus = $authStatus ?? null;
 <main class="tn-page">
   <section class="tn-auth-layout">
     <div class="tn-auth-copy">
-      <p class="tn-kicker">Новий акаунт</p>
-      <h1>Створіть кабінет Terra Nova</h1>
-      <p>Після реєстрації ви зможете бачити свої подані об’єкти, заявки та майбутні персональні добірки.</p>
+      <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => 'Новий акаунт',
+        'title' => 'Створіть кабінет Terra Nova',
+        'description' => 'Після реєстрації ви зможете бачити свої подані об’єкти, заявки та майбутні персональні добірки.',
+      ]); ?>
     </div>
     <form class="tn-auth-form" action="<?php echo $this->url->get('auth/register'); ?>" method="post">
       <label><span>Ім’я</span><input name="full_name" type="text" autocomplete="name" value="<?php echo $field($formData, 'full_name'); ?>" required></label>
@@ -32,8 +34,8 @@ $authStatus = $authStatus ?? null;
       </label>
       <label><span>Пароль</span><input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
       <label><span>Повторіть пароль</span><input name="password_repeat" type="password" autocomplete="new-password" minlength="8" required></label>
-      <button class="tn-btn tn-btn--accent" type="submit">Створити кабінет</button>
-      <?php if ($authStatus): ?><p class="tn-form-status is-visible"><?php echo $h($authStatus); ?></p><?php endif; ?>
+      <button class="tn-ui-button tn-ui-button--primary" type="submit">Створити кабінет</button>
+      <?php if ($authStatus): ?><div class="tn-ui-alert" role="status"><?php echo $h($authStatus); ?></div><?php endif; ?>
       <p class="tn-auth-form__note">Вже маєте акаунт? <a href="<?php echo $this->url->get('auth/login'); ?>">Увійти</a></p>
     </form>
   </section>
