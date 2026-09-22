@@ -275,16 +275,7 @@
     .tn-client-workspace .tn-crm-detail-grid {
       grid-template-columns: 1fr;
     }
-
-    .tn-client-workspace .tn-listing-hero {
-      align-items: stretch;
-      flex-direction: column;
-    }
-
-    .tn-client-workspace .tn-hero-metric {
-      min-width: 0;
-    }
-  }
+}
 
   @media (max-width: 650px) {
     .tn-client-workspace {
