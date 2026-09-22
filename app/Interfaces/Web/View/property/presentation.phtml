@@ -53,15 +53,12 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
         'action' => ['label' => 'До каталогу', 'href' => 'property/catalog'],
     ]); ?>
   <?php elseif ($property): ?>
-    <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-      <a href="<?php echo $this->url->get(); ?>">Головна</a>
-      <span>/</span>
-      <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-      <span>/</span>
-      <a href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Картка</a>
-      <span>/</span>
-      <span>Презентація</span>
-    </nav>
+    <?php $this->partial('components/ui/breadcrumbs', ['items' => [
+      ['label' => 'Головна', 'href' => ''],
+      ['label' => 'Каталог', 'href' => 'property/catalog'],
+      ['label' => 'Картка', 'href' => 'property/show/' . (string) $property['slug']],
+      ['label' => 'Презентація', 'current' => true],
+    ]]); ?>
 
     <section class="tn-presentation-hero">
       <div class="tn-presentation-hero__media">
@@ -173,13 +170,11 @@ $coverImage = $property ? ($images[0]['image_url'] ?? $fallbackImage) : $fallbac
       </section>
     <?php endif; ?>
   <?php else: ?>
-    <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-      <a href="<?php echo $this->url->get(); ?>">Головна</a>
-      <span>/</span>
-      <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-      <span>/</span>
-      <span><?php echo $h($group['title']); ?></span>
-    </nav>
+    <?php $this->partial('components/ui/breadcrumbs', ['items' => [
+      ['label' => 'Головна', 'href' => ''],
+      ['label' => 'Каталог', 'href' => 'property/catalog'],
+      ['label' => (string) $group['title'], 'current' => true],
+    ]]); ?>
 
     <?php $this->partial('components/ui/page_header', [
         'eyebrow' => 'Property · Group Presentation',
