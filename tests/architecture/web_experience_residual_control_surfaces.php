@@ -96,10 +96,8 @@ $canonicalTableRenderers = [
     'app/Interfaces/Web/View/components/ui/data_table.phtml' => 'canonical read-only DataTable renderer',
     'app/Interfaces/Web/View/components/ui/operational_grid.phtml' => 'canonical mutation-aware OperationalGrid renderer',
 ];
-$allowedTableViews = [
-    'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
-];
-$classifiedTableViews = $canonicalTableRenderers + $allowedTableViews;
+$allowedTableViews = [];
+$classifiedTableViews = $canonicalTableRenderers;
 
 $viewRoot = $root . '/app/Interfaces/Web/View';
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($viewRoot, FilesystemIterator::SKIP_DOTS));
@@ -199,11 +197,24 @@ foreach ([
 $notContains($studioCss, '.studio table', 'Methodology Studio must not restore table-specific styling.');
 
 $pdf = $read('app/Interfaces/Web/View/property/pdf.phtml');
-foreach (['<style>', 'page-break-inside', 'documentType', 'group-card'] as $marker) {
-    $contains($pdf, $marker, 'Property PDF table exception must remain a print-layout renderer.');
+foreach ([
+    '<style>',
+    'page-break-inside',
+    'documentType',
+    'group-card',
+    'class="hero"',
+    'class="facts"',
+    'class="feature-table"',
+    'class="gallery"',
+    'class="partner-row"',
+] as $marker) {
+    $contains($pdf, $marker, 'Property PDF print-layout contract is incomplete.');
 }
+$notContains($pdf, '<table', 'Property PDF must not restore raw table layout.');
+$notContains($pdf, '<tr', 'Property PDF must not restore table-row layout.');
+$notContains($pdf, '<td', 'Property PDF must not restore table-cell layout.');
 $pdfService = $read('app/Domains/Property/Infrastructure/Presentation/PropertyPresentationService.php');
-$contains($pdfService, 'property/pdf.phtml', 'Property PDF exception must remain owned by PropertyPresentationService.');
+$contains($pdfService, 'property/pdf.phtml', 'Property PDF renderer must remain owned by PropertyPresentationService.');
 
 $docs = $read('docs/03-architecture/cos-residual-control-surface-closure.md');
 foreach ([
