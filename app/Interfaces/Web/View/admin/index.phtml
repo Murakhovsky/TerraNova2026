@@ -23,6 +23,27 @@ $openActions = array_values(array_filter(
     is_array($cosOverview['actions'] ?? null) ? $cosOverview['actions'] : [],
     static fn (array $item): bool => !in_array((string) ($item['status'] ?? ''), ['COMPLETED', 'REJECTED'], true),
 ));
+$decisionTone = static function (string $status): string {
+    $value = strtoupper(trim($status));
+    return match ($value) {
+        'APPROVED', 'COMPLETED', 'EXECUTED', 'SUCCESS' => 'positive',
+        'FAILED', 'REJECTED', 'DENIED', 'ERROR' => 'danger',
+        'PENDING', 'PENDING_APPROVAL', 'QUEUED' => 'warning',
+        default => 'neutral',
+    };
+};
+$decisionRows = [];
+foreach (array_slice(array_merge($pendingApprovals, $openActions), 0, 8) as $item) {
+    if (!is_array($item)) continue;
+    $status = (string) ($item['status'] ?? $item['approval_status'] ?? '—');
+    $risk = (string) ($item['risk_level'] ?? '—');
+    $decisionRows[] = [
+        'type' => (string) ($item['action_type'] ?? $item['type'] ?? 'Action'),
+        'target' => (string) (($item['target_type'] ?? '—') . ' / ' . ($item['target_id'] ?? '—')),
+        'status' => ['label' => $status, 'tone' => $decisionTone($status)],
+        'risk' => ['label' => $risk, 'tone' => strtoupper($risk) === 'HIGH' ? 'danger' : (strtoupper($risk) === 'MEDIUM' ? 'warning' : 'neutral')],
+    ];
+}
 ?>
 
 <main class="tn-page tn-workspace-page tn-company-home" data-company-home>
@@ -203,21 +224,17 @@ $openActions = array_values(array_filter(
     <?php if (($cos['available'] ?? false) && (!empty($pendingApprovals) || !empty($openActions))): ?>
       <section class="tn-ui-panel tn-workspace-section">
         <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Decision queue</p><h2>Що чекає рішення</h2></div><a href="<?php echo $this->url->get('cos/control-center'); ?>">Відкрити COS</a></div>
-        <div class="tn-ui-table-wrap">
-          <table class="tn-ui-table">
-            <thead><tr><th>Тип</th><th>Target</th><th>Status</th><th>Risk</th></tr></thead>
-            <tbody>
-              <?php foreach (array_slice(array_merge($pendingApprovals, $openActions), 0, 8) as $item): ?>
-                <tr>
-                  <td><strong><?php echo $h($item['action_type'] ?? $item['type'] ?? 'Action'); ?></strong></td>
-                  <td><?php echo $h(($item['target_type'] ?? '—') . ' / ' . ($item['target_id'] ?? '—')); ?></td>
-                  <td><?php echo $h($item['status'] ?? $item['approval_status'] ?? '—'); ?></td>
-                  <td><?php echo $h($item['risk_level'] ?? '—'); ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
+        <?php $this->partial('components/ui/data_table', [
+            'columns' => [
+                ['key' => 'type', 'label' => 'Тип'],
+                ['key' => 'target', 'label' => 'Target'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'risk', 'label' => 'Risk'],
+            ],
+            'rows' => $decisionRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'Немає рішень, що очікують уваги.',
+        ]); ?>
       </section>
     <?php endif; ?>
   <?php endif; ?>
