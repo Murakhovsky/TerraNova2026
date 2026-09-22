@@ -69,8 +69,9 @@ foreach ([
     "partial('components/ui/filter_bar'",
     'tn-ui-panel',
     'tn-case-funnel',
-    'tn-client-case-operational-grid',
-    'tn-quick-case-form',
+    "partial('components/ui/operational_grid'",
+    '$caseRows = [];',
+    "'_form' => [",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index must use canonical shell while retaining funnel and operational mutations.');
 }
