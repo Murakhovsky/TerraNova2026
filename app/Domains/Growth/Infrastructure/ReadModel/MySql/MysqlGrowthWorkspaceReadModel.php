@@ -284,6 +284,111 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
         return $rows;
     }
 
+    public function learningOverview(string $organizationId): array
+    {
+        $counts=[];
+        $statement=$this->connection->prepare(
+            'SELECT outcome_type,COUNT(*) AS total
+             FROM tn_growth_outcomes
+             WHERE organization_id=:organization_id
+             GROUP BY outcome_type ORDER BY outcome_type'
+        );
+        $statement->execute(['organization_id'=>$organizationId]);
+        foreach($statement->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $counts[(string)$row['outcome_type']]=(int)$row['total'];
+        }
+
+        $wonValues=[];
+        $statement=$this->connection->prepare(
+            'SELECT currency,SUM(economic_value) AS total_value
+             FROM tn_growth_outcomes
+             WHERE organization_id=:organization_id AND outcome_type=\'won\' AND economic_value IS NOT NULL
+             GROUP BY currency ORDER BY currency'
+        );
+        $statement->execute(['organization_id'=>$organizationId]);
+        foreach($statement->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $currency=(string)($row['currency']??'');
+            if($currency!=='')$wonValues[$currency]=(float)$row['total_value'];
+        }
+
+        $reasons=[];
+        $statement=$this->connection->prepare(
+            'SELECT outcome_type,reason_code,COUNT(*) AS total
+             FROM tn_growth_outcomes
+             WHERE organization_id=:organization_id
+               AND outcome_type IN (\'lost\',\'disqualified\')
+               AND reason_code IS NOT NULL AND reason_code<>\'\'
+             GROUP BY outcome_type,reason_code
+             ORDER BY total DESC,outcome_type,reason_code
+             LIMIT 20'
+        );
+        $statement->execute(['organization_id'=>$organizationId]);
+        foreach($statement->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $reasons[]=[
+                'outcome_type'=>(string)$row['outcome_type'],
+                'reason_code'=>(string)$row['reason_code'],
+                'total'=>(int)$row['total'],
+            ];
+        }
+
+        return [
+            'outcome_total'=>array_sum($counts),
+            'candidate_total'=>(int)$this->scalar(
+                'SELECT COUNT(DISTINCT candidate_id) FROM tn_growth_outcomes WHERE organization_id=:organization_id',
+                ['organization_id'=>$organizationId],
+            ),
+            'counts'=>$counts,
+            'won_value_by_currency'=>$wonValues,
+            'top_reasons'=>$reasons,
+            'recent_outcomes'=>$this->outcomes($organizationId,[],12),
+        ];
+    }
+
+    public function outcomes(string $organizationId,array $filters=[],int $limit=100): array
+    {
+        $limit=max(1,min(300,$limit));
+        $where=['o.organization_id=:organization_id'];
+        $params=['organization_id'=>$organizationId];
+
+        $type=$this->filter($filters,'outcome_type',80);
+        if($type!==null){
+            $where[]='o.outcome_type=:outcome_type';
+            $params['outcome_type']=$type;
+        }
+        $currency=$this->filter($filters,'currency',8);
+        if($currency!==null){
+            $where[]='o.currency=:currency';
+            $params['currency']=strtoupper($currency);
+        }
+        $query=$this->filter($filters,'q',191);
+        if($query!==null){
+            $where[]='(o.candidate_id LIKE :q OR o.reference_id LIKE :q OR o.reason_code LIKE :q OR c.subject_id LIKE :q OR a.name LIKE :q)';
+            $params['q']='%'.$this->like($query).'%';
+        }
+
+        $sql='SELECT o.outcome_id,o.candidate_id,o.source_domain,o.source_event_id,o.reference_type,o.reference_id,
+                    o.outcome_type,o.reason_code,o.reason_text,o.economic_value,o.currency,o.observed_at,o.created_at,
+                    c.subject_type,c.subject_id,c.opportunity_type,c.growth_mode,c.target_domain,
+                    a.name AS account_name,a.canonical_domain AS account_domain
+             FROM tn_growth_outcomes o
+             INNER JOIN tn_growth_candidates c
+               ON c.organization_id=o.organization_id AND c.candidate_id=o.candidate_id
+             LEFT JOIN tn_growth_accounts a
+               ON c.subject_type=\'account\' AND a.organization_id=c.organization_id AND a.account_id=c.subject_id
+             WHERE '.implode(' AND ',$where).'
+             ORDER BY o.observed_at DESC,o.id DESC
+             LIMIT '.$limit;
+
+        $statement=$this->connection->prepare($sql);
+        $statement->execute($params);
+        $rows=$statement->fetchAll(PDO::FETCH_ASSOC)?:[];
+        foreach($rows as &$row){
+            $row['economic_value']=$row['economic_value']===null?null:(float)$row['economic_value'];
+        }
+        unset($row);
+        return $rows;
+    }
+
     private function scalar(string $sql,array $params): string|int|false
     {
         $statement=$this->connection->prepare($sql);

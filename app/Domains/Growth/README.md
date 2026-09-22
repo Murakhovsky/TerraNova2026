@@ -318,4 +318,20 @@ LeadChanged
 
 Growth stores normalized learning observations, not Sales business state. The feedback consumer never reads Sales persistence and never stores arbitrary message payloads. Won deal value is retained as economic outcome by currency; it is not treated as Finance-recognized revenue.
 
+V0.16 makes the learning loop operationally visible:
+
+```text
+/growth/learning
+  ├─ outcome funnel
+  ├─ Candidates with feedback
+  ├─ won value by currency
+  ├─ lost / disqualified reason evidence
+  └─ recent outcomes → Candidate drill-down
+
+/growth/candidates/{id}
+  └─ observed outcome panel
+```
+
+The Learning Workspace is read-only. It projects Growth-owned outcome observations and does not query or mutate Sales state.
+
 Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and automatic scoring/ICP optimization.

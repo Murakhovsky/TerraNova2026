@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.15.0','Growth V0.15 manifest version must be 0.15.0.');
-$assert(($manifest['schema_version']??null)==='0.15.0','Growth V0.15 schema version must be 0.15.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.15.0','>='),'Growth manifest must remain V0.15+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.15.0','>='),'Growth schema must remain V0.15+.');
 foreach(['growth.learning.feedback','growth.learning.brief'] as $capability){
     $assert(in_array($capability,$manifest['contributions']['capabilities']??[],true),'Growth learning capability missing: '.$capability);
 }
@@ -76,7 +76,7 @@ foreach(['GrowthLearningBoundary','function learningBrief('] as $needle){
 }
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===39,'Growth V0.15 must expose exactly 39 canonical Growth API routes.');
+$assert(count($matches[0])>=39,'Growth V0.15 canonical API surface must not shrink below 39 routes.');
 $assert(str_contains($routes,'path: /api/v1/growth/candidates/{id}/learning'),'Growth learning brief route missing.');
 
 echo "Growth V0.15 Learning Feedback architecture: OK\n";

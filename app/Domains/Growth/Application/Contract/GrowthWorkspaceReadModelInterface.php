@@ -31,4 +31,13 @@ interface GrowthWorkspaceReadModelInterface
      * @return list<array<string,mixed>>
      */
     public function collectorRuns(string $organizationId,array $filters=[],int $limit=100): array;
+
+    /** @return array<string,mixed> */
+    public function learningOverview(string $organizationId): array;
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return list<array<string,mixed>>
+     */
+    public function outcomes(string $organizationId,array $filters=[],int $limit=100): array;
 }

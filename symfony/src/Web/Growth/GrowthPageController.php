@@ -13,6 +13,7 @@ use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
+use Domains\Growth\Application\Contract\GrowthLearningBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
@@ -41,6 +42,7 @@ final readonly class GrowthPageController
         private GrowthResearchBoundary $research,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthDecisionBoundary $decisions,
+        private GrowthLearningBoundary $learning,
         private GrowthHandoffBoundary $handoff,
     ) {}
 
@@ -89,6 +91,7 @@ final readonly class GrowthPageController
                         'research'=>$this->research->researchBrief($organizationId,$id),
                         'decision'=>$this->decisions->decisionBrief($organizationId,$id),
                         'handoff'=>$this->handoff->handoffBrief($organizationId,$id),
+                        'learning'=>$this->learning->learningBrief($organizationId,$id),
                     ],
                 ];
             });
@@ -116,6 +119,21 @@ final readonly class GrowthPageController
                         'signal_type'=>$request->query->get('signal_type'),
                         'subject_type'=>$request->query->get('subject_type'),
                     ],150),
+                ],
+            ]);
+    }
+
+    public function learning(Request $request): Response
+    {
+        return $this->page($request,'Growth Learning','growth-learning','growth/learning',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'learning'=>$this->workspace->learningOverview($tenant->organizationId()->value()),
+                    'outcomes'=>$this->workspace->outcomes($tenant->organizationId()->value(),[
+                        'q'=>$request->query->get('q'),
+                        'outcome_type'=>$request->query->get('outcome_type'),
+                        'currency'=>$request->query->get('currency'),
+                    ],200),
                 ],
             ]);
     }

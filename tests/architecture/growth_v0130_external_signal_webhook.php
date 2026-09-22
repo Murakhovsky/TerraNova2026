@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.13.0','Growth V0.13 manifest version must be 0.13.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.13.0','>='),'Growth manifest must remain V0.13+.');
 $assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.8.0','>='),'Growth schema must remain V0.8+.');
 $assert(in_array('growth.signal.external_webhook',$manifest['contributions']['capabilities']??[],true),'Growth external webhook capability is missing.');
 

@@ -74,7 +74,8 @@ Workspace = компанія й операційна робота
     │   ├── /growth/accounts
     │   ├── /growth/accounts/{id}
     │   ├── /growth/signals
-    │   └── /growth/collectors
+    │   ├── /growth/collectors
+    │   └── /growth/learning
     ├── Sales
     │   ├── /sales/dashboard
     │   ├── /sales/today
@@ -203,6 +204,7 @@ Diagnostic → COS / Diagnostics
 /growth/accounts/{id}
 /growth/signals
 /growth/collectors
+/growth/learning
 ```
 
 Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer.
@@ -366,7 +368,7 @@ Route належить поверхні за призначенням, а не �
 
 ## 10. Джерела перевірки
 
-Стан на `2026-09-22` звірено з:
+Стан на `2026-09-23` звірено з:
 
 ```text
 symfony/config/routes.yaml

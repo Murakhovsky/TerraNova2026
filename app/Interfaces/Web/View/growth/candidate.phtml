@@ -6,6 +6,10 @@ $signals=is_array($workspace['signals']??null)?$workspace['signals']:[];
 $research=is_array($workspace['research']??null)?$workspace['research']:[];
 $decision=is_array($workspace['decision']??null)?$workspace['decision']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
+$learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
+$learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
+$learningCounts=is_array($learningSummary['counts']??null)?$learningSummary['counts']:[];
+$learningOutcomes=is_array($learning['outcomes']??null)?$learning['outcomes']:[];
 $proposal=is_array($research['latest_proposal']??null)?$research['latest_proposal']:null;
 $evaluation=is_array($decision['latest_evaluation']??null)?$decision['latest_evaluation']:null;
 $attempt=is_array($handoff['latest_attempt']??null)?$handoff['latest_attempt']:null;
@@ -100,6 +104,36 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
       <p class="tn-growth-action-status" data-growth-action-status></p>
     <?php elseif($status==='handoff_pending'): ?>
       <p class="tn-growth-muted">Handoff is in progress. Re-dispatch with the same operation identity is resumable through the API runtime.</p>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Learning</p><h2>Observed outcomes</h2></div><a href="<?php echo $this->url->get('growth/learning'); ?>">Open Growth Learning</a></div>
+    <section class="tn-ui-kpi-grid">
+      <?php foreach([
+        ['Contacted',$learningCounts['contacted']??0,'neutral'],
+        ['Qualified',$learningCounts['qualified']??0,'info'],
+        ['Replies',$learningCounts['reply_received']??0,'info'],
+        ['Meetings',$learningCounts['meeting_completed']??0,'info'],
+        ['Won',$learningCounts['won']??0,'positive'],
+        ['Lost',$learningCounts['lost']??0,'danger'],
+      ] as [$label,$value,$tone]): ?>
+        <?php $this->partial('components/ui/kpi_card',['label'=>$label,'value'=>$value,'tone'=>$tone]); ?>
+      <?php endforeach; ?>
+    </section>
+    <?php if($learningOutcomes): ?>
+      <div class="tn-growth-signal-list">
+        <?php foreach(array_slice($learningOutcomes,0,8) as $outcome): ?>
+          <article>
+            <div><strong><?php echo $h(strtoupper((string)($outcome['outcome_type']??'outcome'))); ?></strong><small><?php echo $h($outcome['observed_at']??''); ?></small></div>
+            <p><?php echo $h(($outcome['reference_type']??'').' : '.($outcome['reference_id']??'')); ?></p>
+            <?php if(!empty($outcome['reason_code'])): ?><small><?php echo $h($outcome['reason_code']); ?><?php if(!empty($outcome['reason_text'])): ?> · <?php echo $h($outcome['reason_text']); ?><?php endif; ?></small><?php endif; ?>
+            <?php if(array_key_exists('economic_value',$outcome)&&$outcome['economic_value']!==null): ?><small><?php echo $h($outcome['economic_value'].' '.($outcome['currency']??'')); ?></small><?php endif; ?>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="tn-growth-muted">No downstream outcomes observed yet.</p>
     <?php endif; ?>
   </section>
 

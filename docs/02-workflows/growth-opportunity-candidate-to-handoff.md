@@ -2,7 +2,7 @@
 title: Signal → Qualified Opportunity Handoff
 description: "Канонічний Growth V0.1 процес від перевіреного сигналу через research, rationale та explainable scoring до handoff-ready Opportunity Candidate."
 status: active
-updated: 2026-09-22
+updated: 2026-09-23
 kind: workflow
 contract: workflow-v2
 process_state: to-be
@@ -378,6 +378,25 @@ Correlation працює через Growth-owned handoff reference та learning
 
 `deal.won` може додати `economic_value + currency`; це pipeline/business outcome, а не Finance-recognized revenue. Lost reason зберігається лише якщо Sales event його фактично передав.
 
+## Learning Workspace
+
+V0.16 додає операційну проєкцію поверх Growth-owned outcomes:
+
+```text
+GrowthOutcomeObservation
+        ↓
+read-only Growth Workspace projection
+        ├─ /growth/learning
+        │   ├─ outcome funnel
+        │   ├─ won value by currency
+        │   ├─ lost/disqualified reasons
+        │   └─ recent outcomes
+        └─ /growth/candidates/{id}
+            └─ Candidate outcome history
+```
+
+Workspace не читає Sales persistence і не створює Sales mutations. Його завдання — зробити feedback loop видимим для оператора та придатним для наступного Learning/Optimization cycle.
+
 ## Cross-domain Handoff Protocol
 
 V0.8 робить handoff окремим resumable protocol:
@@ -487,9 +506,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.15
+## Статус V0.16
 
-`process_state: to-be` поки навмисний. V0.15 додає closed-loop outcome feedback із Sales через durable Event consumption. Growth корелює target references з Candidate, нормалізує фактичні Sales outcomes і зберігає learning history без читання Sales persistence.
+`process_state: to-be` поки навмисний. V0.16 робить closed-loop outcome feedback операційно видимим через read-only Learning Workspace та Candidate-level outcome panel; durable feedback semantics V0.15 не змінюються.
 
 ## Карта коду
 

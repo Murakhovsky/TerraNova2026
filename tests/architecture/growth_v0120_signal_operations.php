@@ -53,7 +53,7 @@ $routes=$read('symfony/config/routes.yaml');
 foreach(['path: /growth/signals','path: /growth/collectors'] as $route){
     $assert(str_contains($routes,$route),'Growth Signal Operations route missing: '.$route);
 }
-$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')===7,'Growth V0.12 must expose exactly seven SSR routes.');
+$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=7,'Growth V0.12 SSR surface must not shrink below seven routes.');
 
 $frontend=$read('frontend/features/growth/workspace.js');
 foreach([

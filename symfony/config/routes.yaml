@@ -378,6 +378,12 @@ cos_growth_collectors:
   methods: [GET]
 
 
+cos_growth_learning:
+  path: /growth/learning
+  controller: App\Web\Growth\GrowthPageController::learning
+  methods: [GET]
+
+
 # Growth V0.10 — executable Opportunity Intelligence API
 cos_api_v1_growth_collectors:
   path: /api/v1/growth/collectors
