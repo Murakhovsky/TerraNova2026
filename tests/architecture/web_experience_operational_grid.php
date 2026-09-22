@@ -23,8 +23,10 @@ foreach ([
     "'hidden'] ?? null",
     "'fields'] ?? null",
     "'type'] ?? 'select'",
+    "!== 'select'",
     'method="post"',
     'status_badge',
+    "components/ui/stage",
 ] as $marker) {
     if (!str_contains($grid, $marker)) {
         throw new RuntimeException('OperationalGrid contract incomplete: ' . $marker);
@@ -52,6 +54,9 @@ if (str_contains($cos, '<table class="tn-listing-table">')) {
 foreach ([
     '.tn-ui-operational-grid__actions',
     '.tn-ui-operational-grid__form',
+    '.tn-ui-operational-grid__editor',
+    '.tn-ui-operational-grid__fields',
+    '.tn-ui-operational-grid__field',
     '.tn-ui-operational-grid__actions-heading',
 ] as $marker) {
     if (!str_contains($css, $marker)) {
