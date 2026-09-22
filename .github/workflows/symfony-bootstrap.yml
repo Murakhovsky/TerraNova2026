@@ -35,6 +35,9 @@ on:
       - 'tests/architecture/web_experience_wave12_performance_observability.php'
       - 'tests/architecture/web_experience_wave12_sales_reference.php'
       - 'tests/architecture/web_experience_wave12_sales_cutover.php'
+      - 'tests/architecture/web_platform_v1_freeze.php'
+      - 'tests/architecture/contracts/web_platform_v1.php'
+      - 'docs/11-decisions/ADR-0011-web-platform-v1-freeze.md'
       - 'symfony/tests/sales_cutover_access_contract.php'
       - 'tests/smoke/sales_workspace.php'
       - 'tests/browser/sales_workspace.mjs'
@@ -443,6 +446,55 @@ jobs:
           docker compose exec -T php php bin/console debug:router cos_web_sales_dashboard >/dev/null
           docker compose exec -T php php bin/console debug:router cos_web_sales_leads >/dev/null
           docker compose exec -T php php bin/console debug:router cos_web_sales_lead >/dev/null
+
+      - name: Web Platform v1 freeze change-control
+        env:
+          COS_WEB_PLATFORM_FREEZE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" ] && ! printf '%s' "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" | grep -Eq '^0{40}      - name: Web Security response headers smoke
+        run: |
+          curl --fail --silent --head http://127.0.0.1:8081/ | grep -qi '^content-security-policy:'
+          curl --fail --silent --head http://127.0.0.1:8081/ | grep -qi '^x-content-type-options: nosniff'
+
+      - name: PWA static delivery smoke
+        run: |
+          curl --fail --silent http://127.0.0.1:8081/manifest.webmanifest | grep -q 'COS — Company Operating System'
+          curl --fail --silent http://127.0.0.1:8081/offline.html | grep -q 'data-cos-offline-fallback'
+          curl --fail --silent --head http://127.0.0.1:8081/sw.js | grep -qi '^service-worker-allowed: /'
+
+      - name: Global Search runtime smoke
+        run: docker compose exec -T php php bin/console cos:web:search:smoke
+
+      - name: Native web cutover smoke
+        run: |
+          curl --fail --silent http://127.0.0.1:8081/ | grep -q 'Company Operating System'
+          curl --fail --silent http://127.0.0.1:8081/auth/login | grep -q 'Вхід'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/cabinet)" = "302"
+          curl --silent --head http://127.0.0.1:8081/cabinet | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/ui)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/ui | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/stress)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/stress | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/shell)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/shell | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/dev/realtime)" = "302"
+          curl --silent --head http://127.0.0.1:8081/dev/realtime | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/workspace/ai)" = "302"
+          curl --silent --head http://127.0.0.1:8081/workspace/ai | grep -qi '^location: /auth/login'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/workspace/search)" = "302"
+          curl --silent --head http://127.0.0.1:8081/workspace/search | grep -qi '^location: /auth/login'
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=300 || true
+
+      - name: Shutdown
+        if: always()
+        run: docker compose down -v --remove-orphans
+; then
+            git fetch --no-tags --depth=1 origin "$COS_WEB_PLATFORM_FREEZE_BASE_SHA"
+          fi
+          php tests/architecture/web_platform_v1_freeze.php
 
       - name: Web Security response headers smoke
         run: |
