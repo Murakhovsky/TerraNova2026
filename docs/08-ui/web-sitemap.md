@@ -113,7 +113,7 @@ Public navigation визначає:
 2. Послуги → `/services`;
 3. Партнерам → `/partners`;
 4. Terra Nova → `/terra-nova`;
-5. COS → `/cos/en`.
+5. COS → `/cos`.
 
 ### Terra Nova
 
