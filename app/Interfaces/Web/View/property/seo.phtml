@@ -150,7 +150,7 @@ foreach ($properties as $index => $property) {
                 <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h($number($property['area_total'])); ?> м²<?php endif; ?></span>
               </div>
               <div class="tn-card-actions">
-                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
+                <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
                 <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Зберегти</button>
               </div>
             </div>
@@ -161,11 +161,11 @@ foreach ($properties as $index => $property) {
       <?php if ((int) ($pagination['total_pages'] ?? 1) > 1): ?>
         <nav class="tn-card-actions" aria-label="Сторінки добірки">
           <?php if (!empty($pagination['has_previous'])): ?>
-            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get($pageUrl((int) $pagination['previous_page'])); ?>">Назад</a>
+            <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get($pageUrl((int) $pagination['previous_page'])); ?>">Назад</a>
           <?php endif; ?>
           <span><?php echo (int) $pagination['page']; ?> / <?php echo (int) $pagination['total_pages']; ?></span>
           <?php if (!empty($pagination['has_next'])): ?>
-            <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get($pageUrl((int) $pagination['next_page'])); ?>">Далі</a>
+            <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get($pageUrl((int) $pagination['next_page'])); ?>">Далі</a>
           <?php endif; ?>
         </nav>
       <?php endif; ?>
