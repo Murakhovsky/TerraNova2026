@@ -41,9 +41,11 @@ $position = static function (array $property) use ($geoProperties, $maxLat, $min
 ]); ?>
 
 <main class="tn-page tn-public-map-page">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a><span>/</span><span>Карта</span>
-  </nav>
+  <?php $this->partial('components/ui/breadcrumbs', ['items' => [
+    ['label' => 'Головна', 'href' => ''],
+    ['label' => 'Каталог', 'href' => 'property/catalog'],
+    ['label' => 'Карта', 'current' => true],
+  ]]); ?>
 
   <?php $this->partial('components/ui/page_header', [
     'eyebrow' => 'Property · Map',
