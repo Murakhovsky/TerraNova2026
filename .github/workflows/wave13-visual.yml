@@ -42,8 +42,10 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-      - name: Wave 13.0 visual foundation gate
-        run: php tests/architecture/web_experience_wave13_foundation.php
+      - name: Wave 13 visual foundation and shell gates
+        run: |
+          php tests/architecture/web_experience_wave13_foundation.php
+          php tests/architecture/web_experience_wave13_shell.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php
