@@ -17,6 +17,10 @@ final class GrowthEventType
     public const COLLECTOR_RUN_STARTED = 'growth.collector.run_started';
     public const COLLECTOR_RUN_COMPLETED = 'growth.collector.run_completed';
     public const COLLECTOR_RUN_FAILED = 'growth.collector.run_failed';
+    public const QUALIFICATION_POLICY_DRAFTED = 'growth.qualification_policy.drafted';
+    public const QUALIFICATION_POLICY_REVISED = 'growth.qualification_policy.revised';
+    public const QUALIFICATION_POLICY_ACTIVATED = 'growth.qualification_policy.activated';
+    public const CANDIDATE_EVALUATED = 'growth.candidate.evaluated';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -43,6 +47,10 @@ final class GrowthEventType
             self::COLLECTOR_RUN_STARTED,
             self::COLLECTOR_RUN_COMPLETED,
             self::COLLECTOR_RUN_FAILED,
+            self::QUALIFICATION_POLICY_DRAFTED,
+            self::QUALIFICATION_POLICY_REVISED,
+            self::QUALIFICATION_POLICY_ACTIVATED,
+            self::CANDIDATE_EVALUATED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

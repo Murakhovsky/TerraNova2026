@@ -231,6 +231,31 @@ Opportunity research / play
 
 Committee Assessment фіксує конкретний набір required roles, snapshot ids і `model_version`, тому історичне рішення можна відтворити.
 
+## Decision Intelligence
+
+V0.6 формалізує qualification decision:
+
+```text
+OpportunityRationale
++ Fit / Need / Timing / Access / Value
++ rationale confidence
++ score confidence
+        ↓
+QualificationPolicy revision
+        ↓
+hard reject?
+   ├─ yes → DISQUALIFIED
+   └─ no
+        ↓
+all qualification minimums + confidence met?
+   ├─ yes → QUALIFIED
+   └─ no  → MONITOR
+        ↓
+QualificationEvaluation snapshot
+```
+
+Policy не згортає dimensions в один synthetic score. Кожна evaluation зберігає exact rationale, exact score payload, policy revision, failed criteria, outcome, reason та `model_version`. Це дозволяє відтворити історичне рішення навіть після зміни ICP, policy або scoring model.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -250,9 +275,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.5
+## Статус V0.6
 
-`process_state: to-be` поки навмисний. V0.5 додає provider-agnostic Signal Collector runtime, source-level dedupe, run accounting і canonical Signal ingestion поверх ICP/Account/Buying Committee Intelligence. Concrete provider adapters, engagement, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.6 додає versioned deterministic Qualification Policy та immutable Candidate Evaluation поверх Signal/Account/Buying Committee Intelligence. Concrete provider adapters, AI-assisted research, engagement, cross-domain acceptance, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -270,6 +295,8 @@ app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthRepository.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMutationReceipt.php
 app/Domains/Growth/Application/Service/GrowthBuyingCommitteeService.php
 app/Domains/Growth/Application/Service/GrowthSignalCollectorService.php
+app/Domains/Growth/Application/Service/GrowthDecisionService.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthDecisionRepository.php
 app/Domains/Growth/Application/Contract/SignalCollectorInterface.php
 app/Domains/Growth/Application/Service/SignalCollectorRegistry.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthBuyingCommitteeRepository.php
@@ -279,5 +306,6 @@ app/migrations/20260921_000067_growth_v020_runtime.sql
 app/migrations/20260921_000068_growth_v030_account_intelligence.sql
 app/migrations/20260922_000069_growth_v040_buying_committee.sql
 app/migrations/20260922_000070_growth_v050_signal_collectors.sql
+app/migrations/20260922_000071_growth_v060_decision_intelligence.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

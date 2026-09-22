@@ -444,6 +444,20 @@ services:
   Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary:
     alias: Domains\Growth\Application\Service\GrowthSignalCollectorService
 
+  Domains\Growth\Domain\QualificationPolicyEvaluator: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthDecisionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthDecisionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthDecisionRepository
+
+  Domains\Growth\Application\Service\GrowthDecisionService: ~
+
+  Domains\Growth\Application\Contract\GrowthDecisionBoundary:
+    alias: Domains\Growth\Application\Service\GrowthDecisionService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

@@ -99,7 +99,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.5 Opportunity Intelligence runtime
+## V0.6 Opportunity & Decision Intelligence runtime
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -148,4 +148,24 @@ Provider calls happen outside database transactions. Each collected item is inge
 
 Collector source identity uses `collector_name + SHA-256(external_key)`; a repeated external key with identical payload is a duplicate, while reuse with a different normalized payload is rejected as a source conflict.
 
-Still intentionally absent: concrete external provider adapters, outbound engagement, AI agents, cross-domain handoff acceptance, public API and Growth UI.
+V0.6 adds deterministic qualification decision intelligence:
+
+```text
+Rationale + OpportunityScore
+        ↓
+versioned QualificationPolicy
+        ↓
+hard-reject thresholds
+qualification minimums
+research + score confidence threshold
+        ↓
+QUALIFIED / MONITOR / DISQUALIFIED
+        ↓
+immutable QualificationEvaluation
+```
+
+No canonical weighted "magic score" is introduced. Fit, Need, Timing, Access and Value remain independent evidence-backed dimensions. Every policy decision stores the exact rationale, exact score payload, policy id/revision, failed criteria, decision reason and `model_version`.
+
+Policy-controlled evaluation also emits the normal candidate lifecycle event, so automated qualification does not create a parallel event vocabulary invisible to downstream consumers.
+
+Still intentionally absent: concrete external provider adapters, AI-assisted research agents, outbound engagement, cross-domain handoff acceptance, public API and Growth UI.
