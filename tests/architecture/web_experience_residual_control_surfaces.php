@@ -42,7 +42,7 @@ $docs = $read('docs/03-architecture/cos-residual-control-surface-closure.md');
 foreach ([
     '# Закриття залишкових control surfaces',
     '## Хвиля 1',
-    '### Client Case inbound relations',
+    '### Вхідні зв’язки Client Case',
     '## Винятки',
     '## Критерії завершення',
 ] as $marker) {
