@@ -80,6 +80,85 @@ foreach ($stageLabels as $code => $label) {
 $activeTab = (string) (($filters['stage'] ?? '') ?: 'all');
 $managerFilterOptions = ['0' => 'Усі'];
 foreach ($managerOptions as $manager) $managerFilterOptions[(string) $manager['id']] = (string) ($manager['full_name'] ?: $manager['email']);
+
+$quickStageOptions = [];
+foreach ($pipelineStages as $stage) {
+    if (!is_array($stage)) continue;
+    $quickStageOptions[(string) ($stage['id'] ?? '')] = (string) ($stage['name'] ?? $stage['id'] ?? '');
+}
+$quickManagerOptions = ['0' => 'Без менеджера'];
+foreach ($managerOptions as $manager) {
+    if (!is_array($manager)) continue;
+    $quickManagerOptions[(string) ($manager['id'] ?? 0)] = (string) (($manager['full_name'] ?? '') ?: ($manager['email'] ?? ''));
+}
+
+$caseRows = [];
+foreach ($cases as $caseItem) {
+    if (!is_array($caseItem)) continue;
+    $caseId = (int) ($caseItem['id'] ?? 0);
+    $formId = 'case-quick-form-' . $caseId;
+    $caseType = (string) ($caseItem['type'] ?? '');
+    $priority = (string) ($caseItem['priority'] ?? '');
+    $propertyContext = trim(
+        (string) ($caseItem['property_type_name'] ?? '')
+        . (!empty($caseItem['location_city']) ? ' · ' . (string) $caseItem['location_city'] : ''),
+        ' ·'
+    );
+    $managerName = (string) (($caseItem['manager_name'] ?? '') ?: 'не призначено');
+    $caseRows[] = [
+        '_form' => [
+            'id' => $formId,
+            'action' => 'client-case/quickUpdate/' . $caseId,
+            'method' => 'post',
+            'hidden' => [
+                'csrf_token' => (string) ($csrfToken ?? ''),
+                'return_url' => 'client-case',
+            ],
+        ],
+        'case' => [
+            'primary' => (string) ($caseItem['title'] ?? ''),
+            'secondary' => trim(
+                (string) ($caseItem['public_id'] ?? '')
+                . ' · ' . (string) ($typeLabels[$caseType] ?? $caseType)
+                . ' · ' . (string) ($priorityLabels[$priority] ?? $priority)
+                . ($propertyContext !== '' ? ' · ' . $propertyContext : '')
+                . ' · Менеджер: ' . $managerName,
+                ' ·'
+            ),
+        ],
+        'person' => [
+            'primary' => (string) ($caseItem['full_name'] ?? ''),
+            'secondary' => (string) (($caseItem['phone'] ?? '') ?: ($caseItem['email'] ?? '') ?: ($caseItem['telegram'] ?? '') ?: 'контакт не вказано'),
+        ],
+        'stage' => [
+            'kind' => 'stage',
+            'label' => (string) ($stageLabels[(string) ($caseItem['stage'] ?? '')] ?? ($caseItem['stage'] ?? '')),
+            'tone' => $stageTone((string) ($caseItem['stage'] ?? '')),
+        ],
+        'budget' => $money($caseItem['budget_max'] ?? null, $caseItem['currency'] ?? 'USD'),
+        'relations' => [
+            'primary' => (int) ($caseItem['inquiry_count'] ?? 0) . ' заявок',
+            'secondary' => (int) ($caseItem['match_count'] ?? 0) . ' підборів',
+        ],
+        'next_contact' => [
+            'primary' => (string) (($caseItem['next_contact_at'] ?? '') ?: 'не задано'),
+            'secondary' => (int) ($caseItem['activity_count'] ?? 0) . ' дій',
+        ],
+        'workflow' => [
+            'kind' => 'fields',
+            'items' => [
+                ['name' => 'stage_id', 'type' => 'select', 'value' => (string) ($caseItem['stage_id'] ?? ''), 'options' => $quickStageOptions, 'ariaLabel' => 'Етап'],
+                ['name' => 'status', 'type' => 'select', 'value' => (string) ($caseItem['status'] ?? ''), 'options' => $statusLabels, 'ariaLabel' => 'Статус'],
+                ['name' => 'priority', 'type' => 'select', 'value' => $priority, 'options' => $priorityLabels, 'ariaLabel' => 'Пріоритет'],
+                ['name' => 'assigned_user_id', 'type' => 'select', 'value' => (string) ($caseItem['assigned_user_id'] ?? 0), 'options' => $quickManagerOptions, 'ariaLabel' => 'Відповідальний'],
+            ],
+        ],
+        '_actions' => [
+            ['kind' => 'submit', 'label' => 'ОК', 'variant' => 'primary'],
+            ['kind' => 'link', 'label' => 'Відкрити', 'href' => 'client-case/show/' . $caseId, 'variant' => 'ghost'],
+        ],
+    ];
+}
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'cases']); ?>
@@ -209,40 +288,28 @@ foreach ($managerOptions as $manager) $managerFilterOptions[(string) $manager['i
     </div>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-workspace-section">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Операційний список</p><h2>Кейси</h2><p><?php echo count($cases); ?> записів у поточному представленні.</p></div></div>
-    <?php if (!$cases): ?>
-      <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'Кейсів за цими фільтрами немає', 'message' => 'Створіть перший кейс або змініть фільтри.']); ?>
-    <?php else: ?>
-      <div class="tn-table-wrap tn-client-case-operational-grid">
-        <table class="tn-ui-data-table tn-crm-table">
-          <thead><tr><th>Кейс</th><th>Людина</th><th>Етап</th><th>Бюджет</th><th>Звʼязки</th><th>Наступний контакт</th><th></th></tr></thead>
-          <tbody>
-            <?php foreach ($cases as $case): ?>
-              <tr>
-                <td><strong><?php echo $h($case['public_id']); ?></strong><a class="tn-listing-title" href="<?php echo $this->url->get('client-case/show/' . $case['id']); ?>"><?php echo $h($case['title']); ?></a><span><?php echo $h($typeLabels[$case['type']] ?? $case['type']); ?> / <?php echo $h($priorityLabels[$case['priority']] ?? $case['priority']); ?></span><?php if (!empty($case['property_type_name']) || !empty($case['location_city'])): ?><span><?php echo $h(trim(($case['property_type_name'] ?? '') . ' / ' . ($case['location_city'] ?? ''), ' /')); ?></span><?php endif; ?><span>Менеджер: <?php echo $h($case['manager_name'] ?: 'не призначено'); ?></span></td>
-                <td><?php echo $h($case['full_name']); ?><span><?php echo $h($case['phone'] ?: $case['email'] ?: $case['telegram'] ?: 'контакт не вказано'); ?></span></td>
-                <td>
-                  <?php $this->partial('components/ui/stage', ['label' => $stageLabels[$case['stage']] ?? $case['stage'], 'tone' => $stageTone((string) $case['stage'])]); ?>
-                  <form class="tn-quick-case-form" action="<?php echo $this->url->get('client-case/quickUpdate/' . $case['id']); ?>" method="post">
-                    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
-                    <input name="return_url" type="hidden" value="client-case">
-                    <select name="stage_id" aria-label="Етап"><?php foreach ($pipelineStages as $stage): ?><option value="<?php echo $h($stage['id']); ?>" <?php echo $selected($case['stage_id'] ?? '', $stage['id']); ?>><?php echo $h($stage['name']); ?></option><?php endforeach; ?></select>
-                    <select name="status" aria-label="Статус"><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['status'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select>
-                    <select name="priority" aria-label="Пріоритет"><?php foreach ($priorityLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($case['priority'], $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select>
-                    <select name="assigned_user_id" aria-label="Відповідальний"><option value="0">Без менеджера</option><?php foreach ($managerOptions as $manager): ?><option value="<?php echo (int) $manager['id']; ?>" <?php echo $selected($case['assigned_user_id'] ?? 0, $manager['id']); ?>><?php echo $h($manager['full_name'] ?: $manager['email']); ?></option><?php endforeach; ?></select>
-                    <button class="tn-ui-button tn-ui-button--primary" type="submit">ОК</button>
-                  </form>
-                </td>
-                <td><?php echo $h($money($case['budget_max'], $case['currency'])); ?></td>
-                <td><?php echo (int) $case['inquiry_count']; ?> заявок<span><?php echo (int) $case['match_count']; ?> підборів</span></td>
-                <td><?php echo (int) $case['activity_count']; ?> дій<span><?php echo $h($case['next_contact_at'] ?: 'не задано'); ?></span></td>
-                <td class="tn-listing-actions"><a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get('client-case/show/' . $case['id']); ?>">Відкрити</a></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-    <?php endif; ?>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Операційний список',
+        'title' => 'Кейси',
+        'description' => count($cases) . ' записів у поточному представленні.',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/operational_grid',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'case', 'label' => 'Кейс'],
+                ['key' => 'person', 'label' => 'Людина'],
+                ['key' => 'stage', 'label' => 'Етап'],
+                ['key' => 'budget', 'label' => 'Бюджет'],
+                ['key' => 'relations', 'label' => 'Звʼязки'],
+                ['key' => 'next_contact', 'label' => 'Наступний контакт'],
+                ['key' => 'workflow', 'label' => 'Швидке оновлення'],
+            ],
+            'rows' => $caseRows,
+            'responsive' => 'scroll',
+            'actionsLabel' => 'Дії',
+            'emptyMessage' => 'Кейсів за цими фільтрами немає.',
+        ],
+    ]); ?>
   </section>
 </main>
