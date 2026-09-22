@@ -18,7 +18,7 @@ PHASE 13 працює не з окремим доменом, а з залишк�
 
 ## Хвиля 1
 
-### Client Case inbound relations
+### Вхідні зв’язки Client Case
 
 `client_case/show.phtml`
 
@@ -40,11 +40,11 @@ PHASE 13 працює не з окремим доменом, а з залишк�
 
 ## Винятки
 
-### Users editable grid
+### Редагована таблиця користувачів
 
 `admin/users.phtml` містить inline user mutations і form ownership на рівні рядка. Це не read-only DataTable і лишається explicit editable-grid boundary.
 
-### COS operational actions
+### Операційні дії COS
 
 У COS Control Center секції з execute/approval forms можуть залишатися specialized operational grids навіть після канонізації read-only runtime tables.
 
