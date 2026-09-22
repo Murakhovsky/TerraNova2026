@@ -129,14 +129,16 @@ Repository-wide gate тепер забороняє повернення таки
 - `tn-sales-cta`;
 - `tn-section-heading`.
 
-`tn-breadcrumbs` дозволений лише для явно класифікованих Property discovery/rich-detail surfaces:
+Post-freeze breadcrumb cleanup прибрав останній `tn-breadcrumbs` whitelist.
+
+Для PHTML додано canonical `components/ui/breadcrumbs.phtml`, після чого на нього переведено:
 
 - `property/catalog.phtml`;
 - `property/map.phtml`;
 - `property/show.phtml`;
 - `property/presentation.phtml`.
 
-Це не означає, що breadcrumbs є canonical primitive. Це означає, що вони є свідомо класифікованим залишковим navigation pattern і більше не можуть непомітно розповзатися по інших surfaces.
+Компонент використовує semantic `nav > ol > li`, `aria-current="page"` і COS token styling. PHASE 14 gate тепер забороняє `tn-breadcrumbs` у будь-якому production PHTML без винятків.
 
 ### Публічний SEO-лендінг
 
@@ -229,6 +231,6 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - retired cabinet submission лишається явним HTTP 410 compatibility boundary;
 - historical Cabinet/Public renderers не повертаються у runtime;
 - Guide landing не використовує legacy breadcrumbs/page hero/CTA shell;
-- repository-wide gate забороняє legacy page/admin/portal/auth shells;
+- repository-wide gate забороняє legacy page/admin/portal/auth shells та `tn-breadcrumbs` без whitelist;
 - specialized home/property/spatial/studio/failure surfaces мають явний whitelist contract;
 - Property та Analytics feature CSS не містять selectors retired compatibility views.
