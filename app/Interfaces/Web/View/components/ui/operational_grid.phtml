@@ -58,8 +58,45 @@ $variantClass = static function (mixed $value): string {
           <?php endforeach; ?>
 
           <td class="tn-ui-operational-grid__actions" data-label="<?php echo $h($actionsLabel ?? 'Actions'); ?>">
+            <?php $rowForm = is_array($row['_form'] ?? null) ? $row['_form'] : null; ?>
+            <?php if ($rowForm !== null):
+              $formAction = trim((string) ($rowForm['action'] ?? ''));
+              $formFields = is_array($rowForm['fields'] ?? null) ? $rowForm['fields'] : [];
+              $submit = is_array($rowForm['submit'] ?? null) ? $rowForm['submit'] : [];
+            ?>
+              <?php if ($formAction !== ''): ?>
+                <form class="tn-ui-operational-grid__editor" action="<?php echo $h($href($this, $formAction)); ?>" method="post">
+                  <?php foreach ((is_array($rowForm['hidden'] ?? null) ? $rowForm['hidden'] : []) as $name => $value): ?>
+                    <input type="hidden" name="<?php echo $h($name); ?>" value="<?php echo $h($value); ?>">
+                  <?php endforeach; ?>
+
+                  <div class="tn-ui-operational-grid__fields">
+                    <?php foreach ($formFields as $field): if (!is_array($field) || ($field['type'] ?? 'select') !== 'select') continue;
+                      $name = trim((string) ($field['name'] ?? ''));
+                      if ($name === '') continue;
+                      $label = trim((string) ($field['label'] ?? $name));
+                      $current = (string) ($field['value'] ?? '');
+                      $options = is_array($field['options'] ?? null) ? $field['options'] : [];
+                    ?>
+                      <label class="tn-ui-operational-grid__field">
+                        <span><?php echo $h($label); ?></span>
+                        <select name="<?php echo $h($name); ?>" aria-label="<?php echo $h($label); ?>">
+                          <?php foreach ($options as $optionValue => $optionLabel): ?>
+                            <option value="<?php echo $h($optionValue); ?>"<?php echo (string) $optionValue === $current ? ' selected' : ''; ?>><?php echo $h($optionLabel); ?></option>
+                          <?php endforeach; ?>
+                        </select>
+                      </label>
+                    <?php endforeach; ?>
+                  </div>
+
+                  <?php $submitLabel = trim((string) ($submit['label'] ?? 'Save')); ?>
+                  <button class="<?php echo $h('tn-ui-button' . $variantClass($submit['variant'] ?? 'primary')); ?>" type="submit"><?php echo $h($submitLabel !== '' ? $submitLabel : 'Save'); ?></button>
+                </form>
+              <?php endif; ?>
+            <?php endif; ?>
+
             <?php $rowActions = is_array($row['_actions'] ?? null) ? $row['_actions'] : []; ?>
-            <?php if ($rowActions === []): ?><span class="tn-muted">—</span><?php endif; ?>
+            <?php if ($rowActions === [] && $rowForm === null): ?><span class="tn-muted">—</span><?php endif; ?>
             <?php foreach ($rowActions as $action): if (!is_array($action)) continue;
               $label = trim((string) ($action['label'] ?? ''));
               if ($label === '') continue;
