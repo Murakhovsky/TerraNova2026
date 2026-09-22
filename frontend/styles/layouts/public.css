@@ -205,6 +205,20 @@ textarea {
   text-transform: uppercase;
 }
 
+/* Public surface is unlayered and therefore must preserve canonical primary-button
+   contrast when page-specific button rules participate in the cascade. */
+body[data-interface-surface="public"] .tn-ui-button--primary {
+  color: #fff;
+  background: var(--tn-color-accent-strong);
+  border-color: var(--tn-color-accent-strong);
+}
+
+body[data-interface-surface="public"] .tn-ui-button--primary:hover {
+  color: #fff;
+  background: var(--tn-color-accent-hover);
+  border-color: var(--tn-color-accent-hover);
+}
+
 h1,
 h2,
 h3,
