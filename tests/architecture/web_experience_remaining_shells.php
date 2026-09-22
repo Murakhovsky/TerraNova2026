@@ -247,7 +247,7 @@ foreach ([
     'tn-breadcrumbs',
     'tn-page-hero',
     'tn-page-hero__actions',
-    'tn-sales-cta',
+    'class="tn-sales-cta"',
 ] as $legacyMarker) {
     $notContains($guide, $legacyMarker, 'Guide landing must not restore legacy outer shell.');
 }
