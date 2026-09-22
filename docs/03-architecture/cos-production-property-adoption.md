@@ -186,7 +186,7 @@ Canonical runtime тепер явно використовує:
 
 Одночасно canonical State отримав generic `attributes` contract, а empty state Favourites знову експонує `data-favourite-empty`. Це відновлює browser contract у `frontend/features/public/interactions.js`, який приховує empty state після завантаження збережених об’єктів.
 
-### Retired compatibility views
+### Виведені compatibility views
 
 Як непідключені до canonical Symfony runtime видалено:
 
