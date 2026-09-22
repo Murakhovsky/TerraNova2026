@@ -92,14 +92,14 @@ foreach ([
     'client-case/create',
     'client-case/createFromInboundRequest/',
     'client-case/linkInboundRequest',
-    'client-case/quickUpdate/',
-    'client-case/show/',
-    'name="csrf_token"',
-    'name="stage_id"',
-    'name="status"',
-    'name="priority"',
-    'name="assigned_user_id"',
-    'name="return_url"',
+    "'action' => 'client-case/quickUpdate/'",
+    "'href' => 'client-case/show/'",
+    "'csrf_token' => (string) (\$csrfToken ?? '')",
+    "'return_url' => 'client-case'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index lost a funnel/create/quick-update contract.');
 }
