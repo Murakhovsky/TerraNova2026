@@ -53,6 +53,72 @@ $tabs = [
     ['key' => 'results', 'label' => 'Results', 'href' => '#results'],
     ['key' => 'audit', 'label' => 'Audit', 'href' => '#audit'],
 ];
+
+$eventRows = [];
+foreach ($events as $event) {
+    $eventRows[] = [
+        'event' => ['primary' => (string) ($event['type'] ?? ''), 'secondary' => $shortId($event['id'] ?? '')],
+        'aggregate' => (string) (($event['aggregate_type'] ?? '') . ' #' . ($event['aggregate_id'] ?? '')),
+        'payload' => ['kind' => 'details', 'summary' => 'JSON', 'content' => $json($event['payload'] ?? null)],
+        'occurred' => (string) ($event['occurred_at'] ?? ''),
+        'correlation' => $shortId($event['correlation_id'] ?? ''),
+    ];
+}
+
+$ruleRows = [];
+foreach ($rules as $rule) {
+    $ruleRows[] = [
+        'rule' => ['primary' => (string) ($rule['name'] ?? ''), 'secondary' => (string) ($rule['code'] ?? '')],
+        'trigger' => (string) ($rule['trigger_type'] ?? ''),
+        'status' => ['label' => (string) ($rule['status'] ?? ''), 'tone' => $statusTone($rule['status'] ?? '')],
+        'priority' => (string) (int) ($rule['priority'] ?? 0),
+        'effect' => ['kind' => 'details', 'summary' => 'Configuration', 'content' => $json($rule['effect'] ?? null)],
+    ];
+}
+
+$agentRows = [];
+foreach ($agentRuns as $run) {
+    $confidence = $run['confidence'] ?? null;
+    $agentRows[] = [
+        'agent' => ['primary' => (string) ($run['agent_name'] ?? ''), 'secondary' => trim((string) ($run['agent_version'] ?? '') . ' · ' . (string) ($run['model'] ?? ''), ' ·')],
+        'subject' => (string) (($run['subject_type'] ?? '') ?: '—') . ' #' . (string) (($run['subject_id'] ?? '') ?: '—'),
+        'status' => ['label' => (string) ($run['status'] ?? ''), 'tone' => $statusTone($run['status'] ?? '')],
+        'confidence' => $confidence !== null ? (string) round((float) $confidence * 100) . '%' : '—',
+        'runtime' => (string) ((int) ($run['duration_ms'] ?? 0)) . ' ms',
+    ];
+}
+
+$policyRows = [];
+foreach ($policies as $policy) {
+    $policyRows[] = [
+        'policy' => ['primary' => (string) ($policy['name'] ?? ''), 'secondary' => (string) ($policy['code'] ?? '')],
+        'action' => (string) ($policy['action_type'] ?? ''),
+        'decision' => ['label' => (string) ($policy['decision'] ?? ''), 'tone' => $statusTone($policy['decision'] ?? '')],
+        'status' => ['label' => (string) ($policy['status'] ?? ''), 'tone' => $statusTone($policy['status'] ?? '')],
+    ];
+}
+
+$integrationRows = [];
+foreach ($integrations as $integration) {
+    $integrationRows[] = [
+        'name' => (string) ($integration['name'] ?? ''),
+        'provider' => (string) ($integration['provider'] ?? ''),
+        'type' => (string) ($integration['type'] ?? ''),
+        'status' => ['label' => (string) ($integration['status'] ?? ''), 'tone' => $statusTone($integration['status'] ?? '')],
+    ];
+}
+
+$resultRows = [];
+foreach ($results as $result) {
+    $error = (string) ($result['error'] ?? '');
+    $resultRows[] = [
+        'action' => ['primary' => (string) ($result['action_type'] ?? ''), 'secondary' => (string) ((($result['target_type'] ?? '') ?: '—') . ' #' . (($result['target_id'] ?? '') ?: '—'))],
+        'attempt' => '#' . (string) (int) ($result['attempt'] ?? 0),
+        'status' => ['label' => (string) ($result['status'] ?? ''), 'tone' => $statusTone($result['status'] ?? '')],
+        'output' => ['kind' => 'details', 'summary' => $error !== '' ? 'Error' : 'Output', 'content' => $error !== '' ? $error : $json($result['result'] ?? null)],
+        'finished' => (string) ($result['finished_at'] ?? ''),
+    ];
+}
 ?>
 
 <main class="tn-page tn-workspace-page tn-workspace-page--wide tn-cos-page">
@@ -84,43 +150,112 @@ $tabs = [
     <?php $this->partial('components/ui/tabs', ['items' => $tabs, 'label' => 'COS sections']); ?>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="events">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Input</p><h2>Events</h2><p><?php echo count($events); ?> останніх</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Event</th><th>Aggregate</th><th>Payload</th><th>Occurred</th><th>Correlation</th></tr></thead><tbody>
-      <?php foreach ($events as $event): ?><tr>
-        <td><strong><?php echo $h($event['type']); ?></strong><span><?php echo $h($shortId($event['id'])); ?></span></td>
-        <td><?php echo $h($event['aggregate_type'] . ' #' . $event['aggregate_id']); ?></td>
-        <td><details><summary>JSON</summary><pre><?php echo $h($json($event['payload'])); ?></pre></details></td>
-        <td><?php echo $h($event['occurred_at']); ?></td><td><code><?php echo $h($shortId($event['correlation_id'])); ?></code></td>
-      </tr><?php endforeach; ?>
-      <?php if (!$events): ?><tr><td colspan="5">Подій ще немає.</td></tr><?php endif; ?>
-    </tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="events">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Input',
+        'title' => 'Events',
+        'description' => count($events) . ' останніх',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'event', 'label' => 'Event'],
+                ['key' => 'aggregate', 'label' => 'Aggregate'],
+                ['key' => 'payload', 'label' => 'Payload'],
+                ['key' => 'occurred', 'label' => 'Occurred'],
+                ['key' => 'correlation', 'label' => 'Correlation'],
+            ],
+            'rows' => $eventRows,
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Подій ще немає.',
+        ],
+    ]); ?>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="rules">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Deterministic automation</p><h2>Rules</h2><p><?php echo count($rules); ?> configured</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Rule</th><th>Trigger</th><th>Status</th><th>Priority</th><th>Effect</th></tr></thead><tbody>
-      <?php foreach ($rules as $rule): ?><tr><td><strong><?php echo $h($rule['name']); ?></strong><span><?php echo $h($rule['code']); ?></span></td><td><?php echo $h($rule['trigger_type']); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $rule['status'], 'tone' => $statusTone($rule['status'])]); ?></td><td><?php echo (int)$rule['priority']; ?></td><td><details><summary>Configuration</summary><pre><?php echo $h($json($rule['effect'])); ?></pre></details></td></tr><?php endforeach; ?>
-      <?php if (!$rules): ?><tr><td colspan="5">Rules ще не provisioned.</td></tr><?php endif; ?>
-    </tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="rules">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Deterministic automation',
+        'title' => 'Rules',
+        'description' => count($rules) . ' configured',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'rule', 'label' => 'Rule'],
+                ['key' => 'trigger', 'label' => 'Trigger'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'priority', 'label' => 'Priority'],
+                ['key' => 'effect', 'label' => 'Effect'],
+            ],
+            'rows' => $ruleRows,
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Rules ще не provisioned.',
+        ],
+    ]); ?>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="agents">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Intelligence runtime</p><h2>Agents</h2><p><?php echo count($agentRuns); ?> runs</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Agent</th><th>Subject</th><th>Status</th><th>Confidence</th><th>Runtime</th></tr></thead><tbody>
-      <?php foreach ($agentRuns as $run): ?><tr><td><strong><?php echo $h($run['agent_name']); ?></strong><span><?php echo $h($run['agent_version'].' · '.$run['model']); ?></span></td><td><?php echo $h(($run['subject_type']?:'—').' #'.($run['subject_id']?:'—')); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $run['status'], 'tone' => $statusTone($run['status'])]); ?></td><td><?php echo $run['confidence']!==null?$h(round((float)$run['confidence']*100).'%'):'—'; ?></td><td><?php echo $h(($run['duration_ms']??0).' ms'); ?></td></tr><?php endforeach; ?>
-      <?php if (!$agentRuns): ?><tr><td colspan="5">Agent runs ще немає.</td></tr><?php endif; ?>
-    </tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="agents">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Intelligence runtime',
+        'title' => 'Agents',
+        'description' => count($agentRuns) . ' runs',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'agent', 'label' => 'Agent'],
+                ['key' => 'subject', 'label' => 'Subject'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'confidence', 'label' => 'Confidence'],
+                ['key' => 'runtime', 'label' => 'Runtime'],
+            ],
+            'rows' => $agentRows,
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Agent runs ще немає.',
+        ],
+    ]); ?>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="policies">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Governance</p><h2>Policies</h2><p><?php echo count($policies); ?> configured</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Policy</th><th>Action</th><th>Decision</th><th>Status</th></tr></thead><tbody><?php foreach ($policies as $policy): ?><tr><td><strong><?php echo $h($policy['name']); ?></strong><span><?php echo $h($policy['code']); ?></span></td><td><?php echo $h($policy['action_type']); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $policy['decision'], 'tone' => $statusTone($policy['decision'])]); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $policy['status'], 'tone' => $statusTone($policy['status'])]); ?></td></tr><?php endforeach; ?><?php if (!$policies): ?><tr><td colspan="4">Policies ще не налаштовані.</td></tr><?php endif; ?></tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="policies">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Governance',
+        'title' => 'Policies',
+        'description' => count($policies) . ' configured',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'policy', 'label' => 'Policy'],
+                ['key' => 'action', 'label' => 'Action'],
+                ['key' => 'decision', 'label' => 'Decision'],
+                ['key' => 'status', 'label' => 'Status'],
+            ],
+            'rows' => $policyRows,
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Policies ще не налаштовані.',
+        ],
+    ]); ?>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="integrations">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Infrastructure boundary</p><h2>Integrations</h2><p><?php echo count($integrations); ?> connected</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Name</th><th>Provider</th><th>Type</th><th>Status</th></tr></thead><tbody><?php foreach ($integrations as $integration): ?><tr><td><strong><?php echo $h($integration['name']); ?></strong></td><td><?php echo $h($integration['provider']); ?></td><td><?php echo $h($integration['type']); ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $integration['status'], 'tone' => $statusTone($integration['status'])]); ?></td></tr><?php endforeach; ?><?php if (!$integrations): ?><tr><td colspan="4">Інтеграції не налаштовані.</td></tr><?php endif; ?></tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="integrations">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Infrastructure boundary',
+        'title' => 'Integrations',
+        'description' => count($integrations) . ' connected',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'name', 'label' => 'Name'],
+                ['key' => 'provider', 'label' => 'Provider'],
+                ['key' => 'type', 'label' => 'Type'],
+                ['key' => 'status', 'label' => 'Status'],
+            ],
+            'rows' => $integrationRows,
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Інтеграції не налаштовані.',
+        ],
+    ]); ?>
   </section>
 
   <section class="tn-ui-panel tn-cos-section tn-workspace-section" id="decisions">
@@ -168,12 +303,26 @@ $tabs = [
     </div>
   </section>
 
-  <section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="results">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Outcome</p><h2>Results</h2><p><?php echo count($results); ?> останніх</p></div></div>
-    <div class="tn-table-wrap"><table class="tn-listing-table"><thead><tr><th>Action</th><th>Attempt</th><th>Status</th><th>Output / error</th><th>Finished</th></tr></thead><tbody>
-      <?php foreach ($results as $result): ?><tr><td><strong><?php echo $h($result['action_type']); ?></strong><span><?php echo $h(($result['target_type'] ?: '—') . ' #' . ($result['target_id'] ?: '—')); ?></span></td><td>#<?php echo (int) $result['attempt']; ?></td><td><?php $this->partial('components/ui/status_badge', ['label' => $result['status'], 'tone' => $statusTone($result['status'])]); ?></td><td><details><summary><?php echo $result['error'] ? 'Error' : 'Output'; ?></summary><pre><?php echo $h($result['error'] ?: $json($result['result'])); ?></pre></details></td><td><?php echo $h($result['finished_at']); ?></td></tr><?php endforeach; ?>
-      <?php if (!$results): ?><tr><td colspan="5">Результатів ще немає.</td></tr><?php endif; ?>
-    </tbody></table></div>
+  <section class="tn-cos-section tn-workspace-section" id="results">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Outcome',
+        'title' => 'Results',
+        'description' => count($results) . ' останніх',
+        'variant' => 'flush',
+        'bodyPartial' => 'components/ui/data_table',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'action', 'label' => 'Action'],
+                ['key' => 'attempt', 'label' => 'Attempt'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'output', 'label' => 'Output / error'],
+                ['key' => 'finished', 'label' => 'Finished'],
+            ],
+            'rows' => $resultRows,
+            'responsive' => 'scroll',
+            'emptyMessage' => 'Результатів ще немає.',
+        ],
+    ]); ?>
   </section>
 
   <section class="tn-ui-panel tn-cos-section tn-workspace-section" id="audit">

@@ -33,9 +33,42 @@ PHASE 13 працює не з окремим доменом, а з залишк�
 
 Ця зміна не торкається Client Case mutations, AI actions, timeline, property-match forms або presentation sharing.
 
+## Хвиля 2
+
+### Таблиці COS Control Center
+
+`cos/index.phtml`
+
+Read-only runtime sections переведено на canonical Panel + DataTable:
+
+- Events;
+- Rules;
+- Agents;
+- Policies;
+- Integrations;
+- Results.
+
+Для JSON/config/error payload canonical DataTable отримав safe `details` cell:
+
+- summary рендериться як текст;
+- content рендериться всередині escaped `<pre>`;
+- довільний HTML не приймається.
+
+Це дозволяє показувати payload, rule configuration та result/error output без локального table markup і без unsafe rendering.
+
+`Proposed Actions` свідомо лишається operational raw grid, тому що рядки містять:
+
+- POST Execute form;
+- CSRF token;
+- approval anchor;
+- status/risk context;
+- JSON parameters.
+
+Це не read-only dataset. Його наступний canonical pattern має бути operational action grid із first-class mutation cells, а не розширення DataTable до універсального form renderer.
+
 ## Наступні хвилі
 
-- Wave 2: COS Control Center read-only runtime tables;
+- Wave 2: COS Control Center read-only runtime tables — виконано;
 - Wave 3: residual audit та classification винятків.
 
 ## Винятки
@@ -53,5 +86,7 @@ PHASE 13 працює не з окремим доменом, а з залишк�
 - Client Case Show не містить raw `tn-listing-table` для inbound relations;
 - property deep links збережені;
 - PHASE 12 workflow/mutation guards лишаються intact;
+- шість read-only runtime tables COS використовують canonical DataTable;
+- Proposed Actions лишається явним operational exception з execute/approval forms;
 - PHASE 13 architecture gate запускається у CI;
 - винятки класифіковані явно, а не залишені випадково.
