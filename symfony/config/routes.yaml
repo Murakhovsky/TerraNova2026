@@ -151,7 +151,7 @@ cos_web_public_page:
   controller: App\Web\Content\PublicContentPageController::page
   methods: [GET, HEAD, POST]
   requirements:
-    slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art'
+    slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art|cos'
 
 cos_web_sitemap:
   path: /sitemap.xml
