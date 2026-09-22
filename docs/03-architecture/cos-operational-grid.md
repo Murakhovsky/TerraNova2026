@@ -25,7 +25,7 @@ kind: architecture
 - status/risk context;
 - structured details payload.
 
-Renderer не приймає arbitrary HTML callbacks. Row actions описуються даними.
+Renderer не приймає arbitrary HTML callbacks. Row actions і editable fields описуються даними.
 
 ## Перша production adoption
 
@@ -41,6 +41,51 @@ Renderer не приймає arbitrary HTML callbacks. Row actions описую�
 - empty state.
 
 Backend command path не змінювався.
+
+
+
+## Editable row forms
+
+Другий additive post-freeze крок розширює OperationalGrid для row-owned mutation forms.
+
+Row може оголосити `_form`:
+
+- стабільний form id;
+- action;
+- method;
+- hidden fields, включно з CSRF.
+
+Editable cells використовують `kind: field` або `kind: fields` і можуть рендерити:
+
+- text/email/tel/password/number/date/datetime-local/url/search inputs;
+- select;
+- placeholder;
+- min/max/step;
+- minlength/maxlength;
+- autocomplete;
+- required;
+- aria-label.
+
+Submit action використовує `kind: submit` і посилається на row form через HTML `form` ownership. Тобто control може фізично бути в іншій cell, але mutation semantics лишається однією формою.
+
+Arbitrary HTML так само не приймається.
+
+## Друга production adoption
+
+`Administration → Users` переведено з raw editable table на OperationalGrid.
+
+Збережено:
+
+- `admin/updateUser/{id}`;
+- CSRF token;
+- `full_name`;
+- `phone`;
+- `role`;
+- `status`;
+- optional password reset;
+- row-level Save action.
+
+Create-user form лишається окремою canonical panel form, бо не є row mutation у grid.
 
 ## Сумісність із замороженою платформою
 
