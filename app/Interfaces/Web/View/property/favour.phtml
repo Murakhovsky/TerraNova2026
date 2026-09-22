@@ -33,7 +33,7 @@ $catalogStatus = $catalogStatus ?? null;
       <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Дані тимчасово недоступні', 'message' => $catalogStatus]); ?>
     <?php endif; ?>
 
-    <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'У вибраному поки порожньо', 'message' => 'Відкрийте каталог і збережіть об’єкти, які хочете переглянути, порівняти або обговорити з менеджером.', 'action' => ['label' => 'Перейти в каталог', 'href' => 'property/catalog']]); ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'У вибраному поки порожньо', 'message' => 'Відкрийте каталог і збережіть об’єкти, які хочете переглянути, порівняти або обговорити з менеджером.', 'action' => ['label' => 'Перейти в каталог', 'href' => 'property/catalog'], 'attributes' => ['data-favourite-empty' => '']]); ?>
 
     <div class="tn-property-grid tn-property-grid--catalog">
       <?php foreach ($properties as $property): ?>

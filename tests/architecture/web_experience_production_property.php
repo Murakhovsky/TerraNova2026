@@ -4,7 +4,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 $read = static function (string $path) use ($root): string {
     $full = $root . '/' . ltrim($path, '/');
-    if (!is_file($full)) throw new RuntimeException('Missing required file: ' . $path);
+    if (!is_file($full)) throw new RuntimeException('Missing PHASE 10 Property artifact: ' . $path);
     $content = file_get_contents($full);
     if ($content === false) throw new RuntimeException('Unable to read: ' . $path);
     return $content;
@@ -16,260 +16,133 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$compare = $read('app/Interfaces/Web/View/property/compare.phtml');
+$routes = $read('symfony/config/routes.yaml');
 foreach ([
+    'path: /property',
+    'path: /property/catalog',
+    'path: /property/map',
+    'path: /property/favour',
+    'PropertyPageController::favour',
+    'path: /property/show/{slug}',
+    'path: /property/presentation/{slug}',
+    'path: /property/pdf/{slug}',
+    'path: /property/submit',
+    'path: /property/create',
+    'path: /submit-property',
+    'path: /property/manage',
+    'path: /property/listing',
+    'path: /property/submissions',
+    'path: /property/submission/{id}',
+] as $marker) {
+    $contains($routes, $marker, 'Canonical Property route contract is incomplete.');
+}
+foreach ([
+    'path: /property/add',
+    'path: /property/edit/{id}',
+    'path: /property/group/{id}',
+    'path: /property/compare',
+] as $retiredRoute) {
+    $notContains($routes, $retiredRoute, 'Retired Property compatibility route restored.');
+}
+
+$controller = $read('symfony/src/Web/Property/PropertyPageController.php');
+foreach ([
+    "public function favour(Request \$request): Response",
+    "'property/favour'",
+    "'property/workspace_canonical'",
+    "'property/submissions'",
+    "'property/submission_canonical'",
+    "new RedirectResponse('/property/presentation/'",
+] as $marker) {
+    $contains($controller, $marker, 'Canonical Symfony Property controller is incomplete.');
+}
+
+$workspace = $read('app/Interfaces/Web/View/property/workspace_canonical.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
     "partial('components/ui/data_table'",
-    "partial('components/ui/state'",
-    "'responsive' => 'cards'",
-    'data-save-property',
-    'data-toggle-text',
+    'tn-property-workspace',
 ] as $marker) {
-    $contains($compare, $marker, 'Property Compare must use canonical table/state contracts without losing selection behavior.');
+    $contains($workspace, $marker, 'Canonical Property inventory/listing workspace is incomplete.');
 }
-$notContains($compare, 'tn-listing-table tn-compare-table', 'Property Compare must not restore the legacy comparison table.');
 
-$manage = $read('app/Interfaces/Web/View/property/manage.phtml');
-foreach ([
-    "partial('components/ui/filter_bar'",
-    "'name' => 'operational_stage'",
-    "'name' => 'quality'",
-    "'name' => 'sort'",
-    'tn-inline-status-form',
-] as $marker) {
-    $contains($manage, $marker, 'Property Manage must use canonical filters while preserving editable operational behavior.');
-}
-$notContains($manage, '<form class="tn-manage-filters"', 'Property Manage must not restore the legacy local filter form.');
-
-$listing = $read('app/Interfaces/Web/View/property/listing.phtml');
-foreach ([
-    "partial('components/ui/filter_bar'",
-    "'name' => 'property_group_id'",
-    "'name' => 'agent_id'",
-    "'name' => 'visibility'",
-    "'name' => 'sale_priority'",
-    'listing-form-',
-] as $marker) {
-    $contains($listing, $marker, 'Property Listing must use canonical filters while preserving inventory editing behavior.');
-}
-$notContains($listing, '<form class="tn-crm-filters"', 'Property Listing must not restore the legacy local filter form.');
-
-$group = $read('app/Interfaces/Web/View/property/group.phtml');
+$submissions = $read('app/Interfaces/Web/View/property/submissions.phtml');
 foreach ([
     "partial('components/ui/page_header'",
     "partial('components/ui/state'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    "'responsive' => 'cards'",
-    'property/edit/',
-    'property/show/',
+    "partial('components/ui/data_table'",
+    'property/submission/',
 ] as $marker) {
-    $contains($group, $marker, 'Property Group must use canonical workspace/table contracts while preserving object navigation.');
+    $contains($submissions, $marker, 'Canonical Property submissions queue is incomplete.');
 }
-$notContains($group, 'tn-listing-table tn-manage-table', 'Property Group must not restore the legacy object table.');
 
-$add = $read('app/Interfaces/Web/View/property/add.phtml');
+$submission = $read('app/Interfaces/Web/View/property/submission_canonical.phtml');
 foreach ([
     "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
-    'property/add',
-    'enctype="multipart/form-data"',
+    'Read-only canonical intake view',
+    'property/submissions',
 ] as $marker) {
-    $contains($add, $marker, 'Property Add must use the canonical form shell without losing create behavior.');
-}
-foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card', 'tn-admin-card__head'] as $legacyMarker) {
-    $notContains($add, $legacyMarker, 'Property Add must not restore the legacy visual shell.');
+    $contains($submission, $marker, 'Canonical Property submission detail is incomplete.');
 }
 
-$edit = $read('app/Interfaces/Web/View/property/edit.phtml');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
-    'data-copy-value',
-    'property/quick/',
-    'property/presentationShare',
-    '#tn-edit-main',
-    '#tn-edit-media',
-    '#tn-edit-public',
-    '#tn-edit-service',
-] as $marker) {
-    $contains($edit, $marker, 'Property Edit must use the canonical form shell without losing editor behavior.');
-}
-foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card', 'tn-admin-card__head'] as $legacyMarker) {
-    $notContains($edit, $legacyMarker, 'Property Edit must not restore the legacy visual shell.');
+    'catalog' => ['page_header', 'data-catalog-form', 'data-catalog-count'],
+    'map' => ['page_header', 'state', 'tn-map-canvas', 'tn-map-pin'],
+    'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
+    'show' => ['state', 'action_bar', 'data-request-intent', 'data-save-property', 'data-property-gallery'],
+    'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
+    'seo' => ['page_header', 'state', 'itemscope itemtype="https://schema.org/Product"'],
+    'submit' => ['page_header', 'state', 'enctype="multipart/form-data"', 'name="owner_name"', 'name="property_type"'],
+] as $view => $markers) {
+    $source = $read('app/Interfaces/Web/View/property/' . $view . '.phtml');
+    foreach ($markers as $marker) {
+        $needle = in_array($marker, ['page_header', 'state', 'action_bar'], true)
+            ? "partial('components/ui/" . $marker . "'"
+            : $marker;
+        $contains($source, $needle, 'Property ' . $view . ' surface lost a canonical or behavior contract.');
+    }
 }
 
-$actionBar = $read('app/Interfaces/Web/View/components/ui/action_bar.phtml');
-foreach ([
-    'foreach ($attributes as $name => $value)',
-    'href="<?php echo $h($href',
-] as $marker) {
-    $contains($actionBar, $marker, 'Canonical ActionBar must preserve generic attributes on link actions.');
+$state = $read('app/Interfaces/Web/View/components/ui/state.phtml');
+foreach (['$attributes', 'foreach ($attributes as $name => $value)'] as $marker) {
+    $contains($state, $marker, 'Canonical State must support generic DOM attributes.');
 }
 
-$catalog = $read('app/Interfaces/Web/View/property/catalog.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "'data-catalog-count' => ''",
-    'data-catalog-form',
-    'data-catalog-stat',
-    'data-catalog-results-title',
-] as $marker) {
-    $contains($catalog, $marker, 'Property Catalog must use the canonical header without losing live catalog behavior.');
-}
-$notContains($catalog, 'tn-page-hero tn-page-hero--catalog', 'Property Catalog must not restore the legacy hero.');
-
-$map = $read('app/Interfaces/Web/View/property/map.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'tn-map-canvas',
-    'tn-map-pin',
-] as $marker) {
-    $contains($map, $marker, 'Property Map must use canonical shell/state while preserving map behavior.');
-}
-$notContains($map, 'tn-page-hero tn-page-hero--catalog', 'Property Map must not restore the legacy hero.');
-
-$favour = $read('app/Interfaces/Web/View/property/favour.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "'data-favourite-count' => ''",
-    'data-favourite-list',
-    'data-favourite-item',
-    'data-save-property',
-] as $marker) {
-    $contains($favour, $marker, 'Property Favourites must use canonical shell/state without losing saved-property behavior.');
-}
-$notContains($favour, 'tn-page-hero tn-page-hero--catalog', 'Property Favourites must not restore the legacy hero.');
-
-$pageHeader = $read('app/Interfaces/Web/View/components/ui/page_header.phtml');
-foreach ([
-    '$metaValueAttributes',
-    'foreach ($metaValueAttributes as $name => $value)',
-] as $marker) {
-    $contains($pageHeader, $marker, 'Canonical PageHeader must preserve generic meta value attributes.');
+$favourJs = $read('frontend/features/public/interactions.js');
+foreach (['data-favourite-empty', 'data-favourite-count', 'data-favourite-item', '/api/v1/public/properties/favourites'] as $marker) {
+    $contains($favourJs, $marker, 'Favourites browser contract is incomplete.');
 }
 
-$show = $read('app/Interfaces/Web/View/property/show.phtml');
 foreach ([
-    "partial('components/ui/state'",
-    "partial('components/ui/action_bar'",
-    'data-analytics-event',
-    'data-request-intent',
-    'data-save-property',
-    'data-toggle-text',
-    'data-property-gallery',
-    'data-gallery-thumb',
-] as $marker) {
-    $contains($show, $marker, 'Property Show must use canonical State/ActionBar without losing detail interactions.');
-}
-$notContains($show, '<div class="tn-hero-actions">', 'Property Show must not restore the legacy hero action cluster.');
-
-$presentation = $read('app/Interfaces/Web/View/property/presentation.phtml');
-foreach ([
-    "partial('components/ui/state'",
-    "partial('components/ui/action_bar'",
-    "partial('components/ui/page_header'",
-    'data-request-intent',
-    'data-analytics-event',
-    'data-copy-value',
-    'property/pdf/',
-    'property/show/',
-] as $marker) {
-    $contains($presentation, $marker, 'Property Presentation must use canonical actions/states while preserving presentation behavior.');
-}
-$notContains($presentation, '<div class="tn-hero-actions">', 'Property Presentation must not restore the legacy hero action cluster.');
-$notContains($presentation, 'tn-page-hero tn-page-hero--catalog', 'Property group presentation must not restore the legacy simple hero.');
-
-$submission = $read('app/Interfaces/Web/View/property/submission.phtml');
-foreach ([
-    "partial('components/ui/state'",
-    "partial('components/ui/page_header'",
-    'tn-ui-panel',
-    'property/moderate/',
-    'name="moderation_action"',
-    'value="review"',
-    'value="needs_changes"',
-    'value="approve"',
-    'value="publish"',
-    'value="reject"',
-    'value="spam"',
-] as $marker) {
-    $contains($submission, $marker, 'Property Submission detail must use canonical shell without losing moderation behavior.');
-}
-foreach (['tn-page-hero tn-page-hero--catalog', 'tn-admin-card'] as $legacyMarker) {
-    $notContains($submission, $legacyMarker, 'Property Submission detail must not restore the legacy shell.');
+    'app/Interfaces/Web/View/property/manage.phtml',
+    'app/Interfaces/Web/View/property/listing.phtml',
+    'app/Interfaces/Web/View/property/add.phtml',
+    'app/Interfaces/Web/View/property/edit.phtml',
+    'app/Interfaces/Web/View/property/group.phtml',
+    'app/Interfaces/Web/View/property/submission.phtml',
+    'app/Interfaces/Web/View/property/create.phtml',
+    'app/Interfaces/Web/View/property/compare.phtml',
+] as $retiredView) {
+    if (is_file($root . '/' . $retiredView)) {
+        throw new RuntimeException('Retired Property compatibility view restored: ' . $retiredView);
+    }
 }
 
-$seo = $read('app/Interfaces/Web/View/property/seo.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'itemscope itemtype="https://schema.org/Product"',
-    'data-save-property',
-    'property/catalog?deal_type=sale',
-] as $marker) {
-    $contains($seo, $marker, 'Property SEO landing must use canonical shell without losing structured catalog behavior.');
-}
-$notContains($seo, 'tn-page-hero tn-page-hero--catalog', 'Property SEO landing must not restore the legacy hero.');
-
-$submit = $read('app/Interfaces/Web/View/property/submit.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'action="<?php echo $this->url->get(\'property/submit\'); ?>"',
-    'enctype="multipart/form-data"',
-    'name="website"',
-    'name="owner_name"',
-    'name="owner_phone"',
-    'name="property_type"',
-    'name="description"',
-    'name="main_photo"',
-    'name="gallery_photos[]"',
-] as $marker) {
-    $contains($submit, $marker, 'Property Submit must use canonical shell without losing public submission contracts.');
-}
-$notContains($submit, 'tn-page-hero tn-page-hero--submit', 'Property Submit must not restore the legacy hero.');
-
-$dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
-foreach ([
-    '($value[\'kind\'] ?? \'\') === \'actions\'',
-    "partial('components/ui/action_bar'",
-    '\'actions\' => is_array($value[\'items\']',
-] as $marker) {
-    $contains($dataTable, $marker, 'Canonical DataTable must support reusable action cells.');
-}
+$pdfService = $read('app/Domains/Property/Infrastructure/Presentation/PropertyPresentationService.php');
+$contains($pdfService, "property/pdf.phtml", 'Property PDF service renderer must remain available outside the web route renderer.');
+$read('app/Interfaces/Web/View/property/pdf.phtml');
 
 $docs = $read('docs/03-architecture/cos-production-property-adoption.md');
 foreach ([
     '# Впровадження Property у production UI',
-    '## Хвиля 1',
-    '### Реєстр менеджера (`Manager Registry`)',
-    '### Sales Inventory',
-    '### Порівняння (`Compare`)',
-    '## Хвиля 2',
-    '### Робочий простір групи (`Group Workspace`)',
-    '## Хвиля 3',
-    '### Створення об’єкта (`Property Add`)',
-    '### Редактор об’єкта (`Property Edit`)',
-    '## Хвиля 4',
-    '### Каталог (`Catalog`)',
-    '### Карта (`Map`)',
-    '### Вибране (`Favourites`)',
-    '## Хвиля 5',
-    '### Публічна картка (`Property Show`)',
-    '### Презентація (`Presentation`)',
-    '## Хвиля 6',
-    '### Деталі заявки (`Submission Detail`)',
-    '## Хвиля 7',
-    '### SEO-добірка (`SEO Landing`)',
-    '### Публічна подача (`Property Submit`)',
-    '## Межа editable grid',
+    '## Хвиля 8',
+    '### Закриття route/view debt',
+    '### Вибране (Favourites) route closure',
+    '### Виведені compatibility views',
     '## Критерії завершення',
 ] as $marker) {
-    $contains($docs, $marker, 'Property production adoption documentation is incomplete.');
+    $contains($docs, $marker, 'Property production adoption closure documentation is incomplete.');
 }
 
-echo "PHASE 10 Property production adoption passed.\n";
+echo "PHASE 10 Property production adoption closure passed.\n";

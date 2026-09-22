@@ -1366,6 +1366,11 @@ cos_web_property_map:
   controller: App\Web\Property\PropertyPageController::map
   methods: [GET, HEAD]
 
+cos_web_property_favour:
+  path: /property/favour
+  controller: App\Web\Property\PropertyPageController::favour
+  methods: [GET, HEAD]
+
 cos_web_property_show:
   path: /property/show/{slug}
   controller: App\Web\Property\PropertyPageController::show
