@@ -14,6 +14,14 @@ $assert=static function(bool $condition,string $message):void{
 $assert(!is_dir($root.'/app/Domains/Frontend'),'Frontend must remain Presentation, not a DDD Domain.');
 
 foreach([
+    'frontend/styles/interface.css',
+    'frontend/styles/terranova-club.css',
+    'frontend/styles/terranova-home.css',
+] as $retiredFrontendSource){
+    $assert(!is_file($root.'/'.$retiredFrontendSource),'Retired frontend aggregate restored: '.$retiredFrontendSource);
+}
+
+foreach([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
@@ -43,7 +51,9 @@ foreach([
     'frontend/entrypoints/terranova-interface.js',
     'frontend/entrypoints/diagnostics-methodology-studio.js',
     'frontend/entrypoints/sales-workspace.js',
-    'frontend/styles/interface.css',
+    'frontend/styles/design-system.css',
+    'frontend/styles/layouts/workspace.css',
+    'frontend/styles/workspace-mobile.css',
     'frontend/styles/foundation.css',
     'frontend/styles/components.css',
     'frontend/styles/patterns.css',
