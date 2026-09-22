@@ -237,6 +237,31 @@
     display: inline-flex;
     margin: 0;
   }
+  .tn-ui-operational-grid__editor {
+    display: grid;
+    gap: var(--tn-space-2);
+    min-width: min(460px, 70vw);
+    margin: 0;
+  }
+  .tn-ui-operational-grid__fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+    gap: var(--tn-space-2);
+  }
+  .tn-ui-operational-grid__field {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+  .tn-ui-operational-grid__field > span {
+    color: var(--tn-color-muted-quiet);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tn-ui-operational-grid__field select {
+    width: 100%;
+    min-width: 0;
+  }
   .tn-ui-operational-grid__actions-heading {
     width: 1%;
     white-space: nowrap;
@@ -281,6 +306,8 @@
       letter-spacing: .035em;
       text-transform: uppercase;
     }
+    .tn-ui-operational-grid__editor { min-width: 0; width: 100%; }
+    .tn-ui-operational-grid__fields { grid-template-columns: 1fr; }
     .tn-ui-drawer { width: 100vw; border-left: 0; }
   }
 }
