@@ -16,6 +16,10 @@ foreach ([
     $assert(str_contains($routes, $needle), 'Symfony sitemap route contract missing: ' . $needle);
 }
 
+$assert(str_contains($routes, 'path: /{slug}'), 'Static PublicPageCatalog pages must have a canonical Symfony route.');
+$assert(str_contains($routes, "slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art'"), 'Static PublicPageCatalog route allowlist is missing.');
+$assert(str_contains($routes, 'PublicContentPageController::page'), 'Static PublicPageCatalog pages must be delivered by PublicContentPageController.');
+
 $services = $read('symfony/config/services.yaml');
 foreach ([
     'App\\Web\\Seo\\SitemapController:',
