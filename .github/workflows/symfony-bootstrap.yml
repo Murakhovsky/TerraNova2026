@@ -71,6 +71,7 @@ on:
       - 'tests/architecture/web_experience_production_administration.php'
       - 'tests/architecture/web_experience_production_client_case.php'
       - 'tests/architecture/web_experience_residual_control_surfaces.php'
+      - 'tests/architecture/web_experience_remaining_shells.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
@@ -81,6 +82,7 @@ on:
       - 'docs/03-architecture/cos-production-administration-adoption.md'
       - 'docs/03-architecture/cos-production-client-case-adoption.md'
       - 'docs/03-architecture/cos-residual-control-surface-closure.md'
+      - 'docs/03-architecture/cos-remaining-shell-closure.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -141,6 +143,7 @@ on:
       - 'tests/architecture/web_experience_production_administration.php'
       - 'tests/architecture/web_experience_production_client_case.php'
       - 'tests/architecture/web_experience_residual_control_surfaces.php'
+      - 'tests/architecture/web_experience_remaining_shells.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
@@ -151,6 +154,7 @@ on:
       - 'docs/03-architecture/cos-production-administration-adoption.md'
       - 'docs/03-architecture/cos-production-client-case-adoption.md'
       - 'docs/03-architecture/cos-residual-control-surface-closure.md'
+      - 'docs/03-architecture/cos-remaining-shell-closure.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -301,6 +305,9 @@ jobs:
 
       - name: PHASE 13 residual control surface closure gate
         run: php tests/architecture/web_experience_residual_control_surfaces.php
+
+      - name: PHASE 14 remaining shell closure gate
+        run: php tests/architecture/web_experience_remaining_shells.php
 
 
 
