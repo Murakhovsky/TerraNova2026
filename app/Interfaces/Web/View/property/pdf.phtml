@@ -1,0 +1,150 @@
+<?php
+$h = static fn($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$money = static function ($amount, string $currency = 'USD', string $period = 'total'): string {
+    if ($amount === null || $amount === '') {
+        return 'Ціна за запитом';
+    }
+    $suffix = $period === 'month' ? ' / міс.' : ($period === 'day' ? ' / день' : '');
+    return number_format((float) $amount, 0, '.', ' ') . ' ' . $currency . $suffix;
+};
+$number = static fn($value): string => $value === null || $value === ''
+    ? '-'
+    : rtrim(rtrim(number_format((float) $value, 1, '.', ' '), '0'), '.');
+$commission = static function (array $item) use ($money): string {
+    return match ((string) ($item['commission_type'] ?? 'none')) {
+        'percent' => rtrim(rtrim(number_format((float) ($item['commission_value'] ?? 0), 2, '.', ''), '0'), '.') . '%',
+        'fixed' => $money($item['commission_value'] ?? null, (string) ($item['price_currency'] ?? 'USD')),
+        'included' => 'Включена у ціну',
+        default => 'Не задана',
+    };
+};
+$dealLabels = ['sale' => 'Продаж', 'rent' => 'Оренда', 'investment' => 'Інвестиція'];
+$variantLabel = $variant === 'partner' ? 'Партнерська версія' : 'Презентація для клієнта';
+?>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { margin: 28mm 16mm 18mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #111714; font-family: "DejaVu Sans", sans-serif; font-size: 10pt; line-height: 1.45; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 5mm; font-size: 27pt; line-height: 1.08; }
+    h2 { margin: 8mm 0 4mm; font-size: 17pt; }
+    h3 { margin-bottom: 2mm; font-size: 12pt; }
+    .brand { position: fixed; top: -19mm; left: 0; right: 0; border-bottom: 0.3mm solid #d7d5cf; padding-bottom: 3mm; font-size: 8pt; color: #5c625f; }
+    .brand strong { color: #111714; font-size: 11pt; }
+    .brand-right { float: right; }
+    .hero { width: 100%; border-collapse: collapse; margin-bottom: 7mm; }
+    .hero td { vertical-align: top; }
+    .hero-media { width: 58%; padding-right: 7mm; }
+    .hero-media img { width: 100%; height: 88mm; object-fit: cover; }
+    .hero-copy { width: 42%; padding: 7mm 0; }
+    .kicker { margin-bottom: 3mm; color: #a77a2b; font-size: 8pt; font-weight: bold; text-transform: uppercase; }
+    .price { display: block; margin: 7mm 0 3mm; font-size: 20pt; font-weight: bold; }
+    .muted { color: #656b68; }
+    .facts { width: 100%; border-collapse: collapse; margin: 5mm 0; }
+    .facts td { width: 25%; padding: 3.5mm; border: 0.3mm solid #d7d5cf; vertical-align: top; }
+    .facts span { display: block; color: #656b68; font-size: 7.5pt; }
+    .facts strong { display: block; margin-top: 1.3mm; font-size: 11pt; }
+    .section { page-break-inside: avoid; }
+    .description { font-size: 11pt; line-height: 1.65; }
+    .feature-table { width: 100%; border-collapse: collapse; }
+    .feature-table td { padding: 2.6mm 3mm; border-bottom: 0.3mm solid #deddd9; }
+    .feature-table td:first-child { width: 42%; color: #656b68; }
+    .gallery { width: 100%; border-collapse: separate; border-spacing: 3mm; margin: 0 -3mm; }
+    .gallery td { width: 50%; vertical-align: top; }
+    .gallery img { width: 100%; height: 67mm; object-fit: cover; }
+    .partner { margin-top: 7mm; padding: 6mm; border: 0.5mm solid #b98b3d; background: #f7f2e8; page-break-inside: avoid; }
+    .partner table { width: 100%; border-collapse: collapse; }
+    .partner td { padding: 2mm 0; vertical-align: top; }
+    .partner td:first-child { width: 42%; color: #656b68; }
+    .partner--sheet { min-height: 210mm; margin-top: 0; padding: 28mm 16mm; page-break-before: always; }
+    .partner--sheet h2 { margin: 4mm 0 10mm; font-size: 25pt; }
+    .contact { height: 210mm; padding: 48mm 18mm 18mm; background: #111714; color: #fff; page-break-before: always; page-break-inside: avoid; }
+    .contact .kicker { margin-bottom: 6mm; }
+    .contact h2 { max-width: 120mm; margin: 0 0 8mm; font-size: 28pt; line-height: 1.12; }
+    .contact p { max-width: 125mm; margin-bottom: 18mm; color: #d9dcda; font-size: 12pt; }
+    .contact strong { display: block; margin-bottom: 3mm; font-size: 17pt; }
+    .contact .contact-line { margin-top: 2mm; font-size: 11pt; }
+    .group-hero { margin: 8mm 0; padding: 10mm; background: #111714; color: #fff; }
+    .group-card { width: 100%; border-collapse: collapse; margin-bottom: 5mm; border: 0.3mm solid #d7d5cf; page-break-inside: avoid; }
+    .group-card td { vertical-align: top; }
+    .group-card .photo { width: 36%; }
+    .group-card .photo img { width: 100%; height: 54mm; object-fit: cover; }
+    .group-card .copy { width: 64%; padding: 5mm; }
+    .group-card .copy h2 { margin: 0 0 3mm; font-size: 15pt; }
+    .group-meta { margin-top: 4mm; font-size: 9pt; color: #656b68; }
+    .break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <div class="brand"><strong>Terra Nova CLUB</strong><span class="brand-right"><?php echo $h($variantLabel); ?> · <?php echo $h($generatedAt); ?></span></div>
+
+  <?php if ($documentType === 'property' && $property): ?>
+    <table class="hero"><tr>
+      <td class="hero-media">
+        <?php if (!empty($images[0]['data_url'])): ?><img src="<?php echo $h($images[0]['data_url']); ?>" alt=""><?php endif; ?>
+      </td>
+      <td class="hero-copy">
+        <p class="kicker"><?php echo $h($property['public_id']); ?> · <?php echo $h($dealLabels[$property['deal_type']] ?? $property['deal_type']); ?></p>
+        <h1><?php echo $h($property['title']); ?></h1>
+        <p class="muted"><?php echo $h(trim(($property['city'] ?? '') . ', ' . ($property['address'] ?? ''), ', ')); ?></p>
+        <strong class="price"><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong>
+        <p><?php echo $h($property['short_description'] ?: mb_substr((string) $property['description'], 0, 260)); ?></p>
+      </td>
+    </tr></table>
+
+    <table class="facts"><tr>
+      <td><span>Тип</span><strong><?php echo $h($property['type_name']); ?></strong></td>
+      <td><span>Площа</span><strong><?php echo $h($number($property['area_total'])); ?> м²</strong></td>
+      <td><span>Кімнати</span><strong><?php echo $h($number($property['rooms'])); ?></strong></td>
+      <td><span>Поверх</span><strong><?php echo $h($number($property['floor'])); ?> / <?php echo $h($number($property['floors'])); ?></strong></td>
+    </tr></table>
+
+    <div class="section"><h2>Про об’єкт</h2><p class="description"><?php echo nl2br($h($property['description'] ?: $property['short_description'])); ?></p></div>
+
+    <?php if ($features): ?>
+      <div class="section"><h2>Характеристики</h2><table class="feature-table">
+        <?php foreach ($features as $feature): ?><tr><td><?php echo $h($feature['feature_key']); ?></td><td><strong><?php echo $h($feature['feature_value']); ?></strong></td></tr><?php endforeach; ?>
+      </table></div>
+    <?php endif; ?>
+
+    <?php if ($variant === 'partner'): ?>
+      <div class="partner partner--sheet"><p class="kicker">Партнерська версія · не передавати клієнту</p><h2>Комерційні умови</h2><table>
+        <tr><td>Публічна ціна</td><td><strong><?php echo $h($money($property['price_amount'], $property['price_currency'], $property['price_period'])); ?></strong></td></tr>
+        <tr><td>Мінімальна ціна</td><td><strong><?php echo $h($money($property['min_price_amount'], $property['price_currency'])); ?></strong></td></tr>
+        <tr><td>Комісія</td><td><strong><?php echo $h($commission($property)); ?></strong></td></tr>
+        <tr><td>Джерело</td><td><?php echo $h($property['source_type']); ?><?php if (!empty($property['source_note'])): ?> · <?php echo $h($property['source_note']); ?><?php endif; ?></td></tr>
+        <tr><td>Відповідальний</td><td><?php echo $h($property['agent_name'] ?: 'не призначено'); ?></td></tr>
+        <tr><td>Пріоритет / видимість</td><td><?php echo $h($property['sale_priority'] . ' / ' . $property['visibility']); ?></td></tr>
+        <?php if (!empty($property['manager_note'])): ?><tr><td>Нотатка менеджера</td><td><?php echo nl2br($h($property['manager_note'])); ?></td></tr><?php endif; ?>
+      </table></div>
+    <?php endif; ?>
+
+    <?php if (count($images) > 1): ?>
+      <div class="break"><h2>Фотогалерея</h2><table class="gallery">
+        <?php foreach (array_chunk(array_slice($images, 1), 2) as $row): ?><tr>
+          <?php foreach ($row as $image): ?><td><?php if (!empty($image['data_url'])): ?><img src="<?php echo $h($image['data_url']); ?>" alt=""><?php endif; ?></td><?php endforeach; ?>
+          <?php if (count($row) === 1): ?><td></td><?php endif; ?>
+        </tr><?php endforeach; ?>
+      </table></div>
+    <?php endif; ?>
+
+    <div class="contact"><div class="kicker">Наступний крок</div><h2>Організуємо перегляд у зручний для вас час</h2><p>Уточнимо деталі, відповімо на запитання та підготуємо схожі пропозиції, якщо цей об’єкт не закриває всі ваші потреби.</p><strong><?php echo $h($property['agent_name'] ?: 'Terra Nova CLUB'); ?></strong><?php if (!empty($property['agent_phone'])): ?><div class="contact-line"><?php echo $h($property['agent_phone']); ?></div><?php endif; ?><div class="contact-line"><?php echo $h($property['agent_email'] ?: 'hello@terra-nova.ua'); ?></div></div>
+  <?php elseif ($documentType === 'group' && $group): ?>
+    <div class="group-hero"><p class="kicker">Добірка об’єктів</p><h1><?php echo $h($group['title']); ?></h1><p><?php echo $h(trim(($group['city'] ?? '') . ', ' . ($group['address'] ?? ''), ', ')); ?></p><p><?php echo $h($group['description'] ?? ''); ?></p></div>
+    <h2>Актуальні пропозиції · <?php echo count($properties); ?></h2>
+    <?php foreach ($properties as $item): ?>
+      <table class="group-card"><tr>
+        <td class="photo"><?php if (!empty($item['cover_data_url'])): ?><img src="<?php echo $h($item['cover_data_url']); ?>" alt=""><?php endif; ?></td>
+        <td class="copy"><p class="kicker"><?php echo $h($item['public_id']); ?> · <?php echo $h($dealLabels[$item['deal_type']] ?? $item['deal_type']); ?></p><h2><?php echo $h($item['title']); ?></h2><strong class="price"><?php echo $h($money($item['price_amount'], $item['price_currency'], $item['price_period'])); ?></strong><p><?php echo $h($item['short_description']); ?></p><div class="group-meta"><?php echo $h($item['type_name']); ?> · <?php echo $h($number($item['area_total'])); ?> м² · <?php echo $h($number($item['rooms'])); ?> кімн.</div>
+          <?php if ($variant === 'partner'): ?><div class="partner"><strong>Мінімум: <?php echo $h($money($item['min_price_amount'] ?? null, $item['price_currency'])); ?> · Комісія: <?php echo $h($commission($item)); ?></strong></div><?php endif; ?>
+        </td>
+      </tr></table>
+    <?php endforeach; ?>
+    <div class="contact"><div class="kicker">Наступний крок</div><h2>Допоможемо обрати найкращий варіант</h2><p>Порівняємо доступні об’єкти, організуємо перегляди та підготуємо персональний маршрут по локації.</p><strong>Terra Nova CLUB</strong><div class="contact-line">hello@terra-nova.ua</div></div>
+  <?php endif; ?>
+</body>
+</html>
