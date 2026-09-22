@@ -182,7 +182,7 @@ PHASE 14 gate перевіряє їхні domain-specific markers окремо. 
 
 Після закриття PHTML shell debt окремий audit показав, що feature bundles Property і Analytics ще містили CSS для вже retired compatibility markup.
 
-### Property workspace CSS
+### CSS робочого простору Property
 
 `frontend/features/property/workspace.css` скорочено до реального canonical contract:
 
@@ -192,7 +192,7 @@ PHASE 14 gate перевіряє їхні domain-specific markers окремо. 
 
 Окремо виправлено стару помилку композиції: selector `.tn-property-workspace .tn-page` не міг спрацювати для canonical view, де `tn-page` і `tn-property-workspace` знаходяться на одному `<main>`.
 
-### Analytics workspace CSS
+### CSS робочого простору Analytics
 
 `frontend/features/analytics/workspace.css` скорочено до:
 
