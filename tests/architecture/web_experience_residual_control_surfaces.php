@@ -23,7 +23,7 @@ foreach ([
     "'responsive' => 'cards'",
     "'emptyMessage' => 'До кейсу ще не привʼязано заявок.'",
     "'property' => [",
-    "'_href' => $propertySlug !== '' ? 'property/show/' . $propertySlug : ''",
+    "'_href' => \$propertySlug !== '' ? 'property/show/' . \$propertySlug : ''",
 ] as $marker) {
     $contains($show, $marker, 'Client Case inbound relations must use canonical DataTable and preserve property deep links.');
 }
