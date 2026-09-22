@@ -40,9 +40,9 @@ foreach ([
 
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
 foreach ([
-    "($value['kind'] ?? '') === 'details'",
+    '($value[\'kind\'] ?? \'\') === \'details\'',
     'tn-ui-data-table__details',
-    "summary><?php echo $h($value['summary'] ?? 'Details');",
+    'summary><?php echo $h($value[\'summary\'] ?? \'Details\');',
 ] as $marker) {
     $contains($dataTable, $marker, 'Canonical DataTable must support safe details cells for runtime JSON/config output.');
 }
