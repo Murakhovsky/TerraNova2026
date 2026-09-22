@@ -29,6 +29,26 @@ PHASE 12 закриває останній явно зафіксований б�
 - `updateInboundRequest`, `createFromInboundRequest`, `linkInboundRequest` routes не змінені;
 - `csrf_token`, `return_url` і всі triage field names не змінені.
 
+## Хвиля 2
+
+### Клієнтські кейси (`Client Case Index`)
+
+`client_case/index.phtml`
+
+Index уже мав значну частину canonical composition після WEB V0.17 compatibility bridge, тому хвиля не переписує його повторно.
+
+Доведено до фінального production contract:
+
+- action/error feedback переведено з локальних alerts на canonical State;
+- Tabs тепер отримують явний `active` contract і правильно відображають вибраний funnel stage;
+- redundant breadcrumb прибрано, бо workspace shell + PageHeader вже задають контекст;
+- PageHeader, Tabs, FilterBar, Panel, State, Stage та canonical buttons лишаються базовою UX-мовою;
+- create-case, unlinked-inbound triage та quick-update forms не змінені;
+- funnel `tn-case-funnel` збережений як domain-specific visualization;
+- case list з inline quick-update формою явно позначений як `tn-client-case-operational-grid`, а не маскується під read-only DataTable.
+
+Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`, `linkInboundRequest` та всі CSRF/mutation fields не змінені.
+
 ## Межа operational cards
 
 Inbox card одночасно містить:
@@ -45,7 +65,7 @@ Inbox card одночасно містить:
 
 ## Наступні хвилі
 
-- Wave 2: Client Case Index;
+- Wave 2: Client Case Index — виконано;
 - Wave 3: Client Case Workspace / Show;
 - Wave 4: WEB V0.17 closure та compatibility cleanup.
 
@@ -54,5 +74,7 @@ Inbox card одночасно містить:
 - Inbox використовує canonical PageHeader, State, KPI, Tabs, FilterBar і Panel;
 - operational cards і mutation forms зберігають існуючу семантику;
 - CSRF та return-url contracts не змінені;
+- Index використовує canonical PageHeader, State, Tabs, FilterBar і Panel;
+- funnel та operational quick-update grid явно зафіксовані як domain-specific interaction boundaries;
 - controller/route ownership лишається у ClientCasePageController;
 - PHASE 12 architecture gate запускається у CI.
