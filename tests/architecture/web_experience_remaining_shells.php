@@ -50,6 +50,42 @@ foreach ([
     $notContains($view, $legacyMarker, 'Architecture Explorer must not restore the legacy shell.');
 }
 
+$page = $read('app/Interfaces/Web/View/page/show.phtml');
+foreach (["partial('components/ui/page_header'", "'Переглянути об’єкти'", "'Подати об’єкт'"] as $marker) {
+    $contains($page, $marker, 'Public Page canonical shell contract is incomplete.');
+}
+foreach (['tn-breadcrumbs', 'tn-page-hero', 'tn-page-hero__actions'] as $legacyMarker) {
+    $notContains($page, $legacyMarker, 'Public Page must not restore legacy outer shell.');
+}
+
+$blogIndex = $read('app/Interfaces/Web/View/blog/index.phtml');
+foreach (["partial('components/ui/page_header'", "partial('components/ui/state'", "'opублікованих матеріалів'"] as $marker) {
+    if ($marker === "'opублікованих матеріалів'") continue;
+    $contains($blogIndex, $marker, 'Blog Index canonical shell contract is incomplete.');
+}
+foreach (['tn-breadcrumbs', 'tn-page-hero', 'tn-empty-state'] as $legacyMarker) {
+    $notContains($blogIndex, $legacyMarker, 'Blog Index must not restore legacy outer shell.');
+}
+
+$blogShow = $read('app/Interfaces/Web/View/blog/show.phtml');
+foreach (['tn-ui-panel', "partial('components/ui/action_bar'", 'tn-ui-eyebrow'] as $marker) {
+    $contains($blogShow, $marker, 'Blog Article canonical shell contract is incomplete.');
+}
+foreach (['tn-breadcrumbs', 'tn-sales-cta', 'tn-section-heading'] as $legacyMarker) {
+    $notContains($blogShow, $legacyMarker, 'Blog Article must not restore legacy shell primitives.');
+}
+foreach (['tn-article__header', 'tn-article__body', 'application/ld+json'] as $marker) {
+    $contains($blogShow, $marker, 'Blog Article specialized content contract must remain intact.');
+}
+
+$seo = $read('app/Interfaces/Web/View/property/seo.phtml');
+foreach (["partial('components/ui/page_header'", "partial('components/ui/state'", 'tn-ui-panel', 'BreadcrumbList', 'ItemList'] as $marker) {
+    $contains($seo, $marker, 'Property SEO landing canonical/specialized contract is incomplete.');
+}
+foreach (['tn-breadcrumbs', 'tn-seo-panel'] as $legacyMarker) {
+    $notContains($seo, $legacyMarker, 'Property SEO landing must not restore legacy outer shell.');
+}
+
 $kpi = $read('app/Interfaces/Web/View/components/ui/kpi_card.phtml');
 foreach ([
     '$valueAttributes',
@@ -89,6 +125,8 @@ foreach ([
     '# Закриття залишкових UI shells',
     '## Хвиля 1',
     '### Architecture Explorer',
+    '## Хвиля 2',
+    '### Публічні контентні surfaces',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
