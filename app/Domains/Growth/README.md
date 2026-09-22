@@ -300,4 +300,22 @@ The vocabulary is explicit: ignore, monitor, connect on LinkedIn, send email, ca
 
 A recommendation is deliberately **not** a Kernel Action. V0.14 performs no outbound side effect. Future execution may convert an accepted recommendation into an ActionProposal only where a concrete action handler and Policy exist.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors and outbound execution.
+V0.15 closes the first cross-domain learning loop:
+
+```text
+Growth Candidate
+   ↓ handoff accepted
+sales_lead:<id>
+   ↓ durable Sales events
+LeadChanged
+   ├─ contacted / qualified / disqualified outcome
+   └─ client_case_id.to → bind sales_deal:<id>
+                         ↓
+                  deal won / lost
+                         ↓
+               GrowthOutcomeObservation
+```
+
+Growth stores normalized learning observations, not Sales business state. The feedback consumer never reads Sales persistence and never stores arbitrary message payloads. Won deal value is retained as economic outcome by currency; it is not treated as Finance-recognized revenue.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and automatic scoring/ICP optimization.

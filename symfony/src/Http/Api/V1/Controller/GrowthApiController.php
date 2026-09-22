@@ -11,6 +11,7 @@ use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
+use Domains\Growth\Application\Contract\GrowthLearningBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use InvalidArgumentException;
@@ -33,6 +34,7 @@ final readonly class GrowthApiController
         private GrowthResearchBoundary $research,
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
+        private GrowthLearningBoundary $learning,
         private GrowthHandoffBoundary $handoff,
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
@@ -317,6 +319,12 @@ final readonly class GrowthApiController
     {
         return $this->read(fn(TenantContext $tenant):array=>
             $this->engagement->engagementBrief($tenant->organizationId()->value(),$id));
+    }
+
+    public function learningBrief(string $id): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->learning->learningBrief($tenant->organizationId()->value(),$id));
     }
 
     public function handoffTargets(): JsonResponse

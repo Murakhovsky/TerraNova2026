@@ -37,6 +37,8 @@ final class GrowthEventType
     public const ENGAGEMENT_RECOMMENDATION_ACCEPTED = 'growth.engagement.recommendation_accepted';
     public const ENGAGEMENT_RECOMMENDATION_DISMISSED = 'growth.engagement.recommendation_dismissed';
     public const ENGAGEMENT_RECOMMENDATION_SUPERSEDED = 'growth.engagement.recommendation_superseded';
+    public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
+    public const OUTCOME_RECORDED = 'growth.outcome.recorded';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -83,6 +85,8 @@ final class GrowthEventType
             self::ENGAGEMENT_RECOMMENDATION_ACCEPTED,
             self::ENGAGEMENT_RECOMMENDATION_DISMISSED,
             self::ENGAGEMENT_RECOMMENDATION_SUPERSEDED,
+            self::LEARNING_BINDING_CREATED,
+            self::OUTCOME_RECORDED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

@@ -352,6 +352,32 @@ Accept / Dismiss
 
 Recommendation не є `ActionProposal` і не має mutation authority. Поки немає concrete handler та Policy, Growth не відправляє email, LinkedIn message, call або meeting автоматично.
 
+## Outcome Feedback / Growth Learning
+
+V0.15 повертає фактичний результат назад у Growth:
+
+```text
+Growth handoff accepted
+        ↓
+sales_lead:<id>
+        ↓
+Sales durable events
+        ↓
+LeadChanged.client_case_id.to
+        ↓
+sales_deal:<id>
+        ↓
+contacted / qualified / disqualified / reply / meeting / won / lost
+        ↓
+GrowthOutcomeObservation
+        ↓
+Learning Brief
+```
+
+Correlation працює через Growth-owned handoff reference та learning bindings, не через SQL у Sales tables. Один source event може створити максимум один normalized outcome. Unsupported aggregate type не вгадується.
+
+`deal.won` може додати `economic_value + currency`; це pipeline/business outcome, а не Finance-recognized revenue. Lost reason зберігається лише якщо Sales event його фактично передав.
+
 ## Cross-domain Handoff Protocol
 
 V0.8 робить handoff окремим resumable protocol:
@@ -461,9 +487,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.14
+## Статус V0.15
 
-`process_state: to-be` поки навмисний. V0.14 додає governed Engagement Intelligence поверх Signal/Research/Decision context: Next Best Action recommendation, evidence/contact validation і explicit Accept/Dismiss. Outbound execution лишається окремою хвилею та має проходити Kernel Action/Policy.
+`process_state: to-be` поки навмисний. V0.15 додає closed-loop outcome feedback із Sales через durable Event consumption. Growth корелює target references з Candidate, нормалізує фактичні Sales outcomes і зберігає learning history без читання Sales persistence.
 
 ## Карта коду
 
@@ -485,6 +511,9 @@ app/Domains/Growth/Application/Service/GrowthDecisionService.php
 app/Domains/Growth/Application/Service/GrowthResearchService.php
 app/Domains/Growth/Application/Service/GrowthHandoffService.php
 app/Domains/Growth/Application/Service/GrowthEngagementService.php
+app/Domains/Growth/Application/Service/GrowthLearningService.php
+app/Domains/Growth/Automation/Event/GrowthOutcomeFeedbackConsumer.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthLearningRepository.php
 app/Domains/Growth/Application/AI/GrowthEngagementPrompt.php
 app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthEngagementGateway.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthEngagementRepository.php

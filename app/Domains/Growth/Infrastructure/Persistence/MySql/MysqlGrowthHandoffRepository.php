@@ -79,6 +79,25 @@ final readonly class MysqlGrowthHandoffRepository implements GrowthHandoffReposi
         return $this->hydrateAttempt($row);
     }
 
+    public function candidateByTargetReference(
+        string $organizationId,string $targetDomain,string $referenceType,string $referenceId
+    ): ?string {
+        $value=$this->scalar(
+            'SELECT candidate_id FROM tn_growth_handoff_attempts
+             WHERE organization_id=:organization_id
+               AND target_domain=:target_domain
+               AND status=\'accepted\'
+               AND target_reference_type=:reference_type
+               AND target_reference_id=:reference_id
+             ORDER BY finished_at DESC,attempt_id DESC LIMIT 1',
+            [
+                'organization_id'=>$organizationId,'target_domain'=>$targetDomain,
+                'reference_type'=>$referenceType,'reference_id'=>$referenceId,
+            ],
+        );
+        return $value===false?null:(string)$value;
+    }
+
     private function complete(
         string $organizationId,string $attemptId,string $status,?string $reason,?string $errorSummary,
         ?string $referenceType,?string $referenceId

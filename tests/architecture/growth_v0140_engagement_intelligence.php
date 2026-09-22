@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.14.0','Growth V0.14 manifest version must be 0.14.0.');
-$assert(($manifest['schema_version']??null)==='0.14.0','Growth V0.14 schema version must be 0.14.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.14.0','>='),'Growth manifest must remain V0.14+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.14.0','>='),'Growth schema must remain V0.14+.');
 $assert(in_array('growth.engagement.intelligence',$manifest['contributions']['capabilities']??[],true),'Growth engagement capability is missing.');
 $migration='app/migrations/20260922_000078_growth_v0140_engagement_intelligence.sql';
 $assert(in_array($migration,$manifest['contributions']['migration_files']??[],true),'Growth V0.14 migration is missing.');
@@ -68,7 +68,7 @@ foreach(['GrowthEngagementBoundary','generateEngagement','acceptEngagement','dis
 }
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===38,'Growth V0.14 must expose exactly 38 canonical Growth API routes.');
+$assert(count($matches[0])>=38,'Growth V0.14 canonical API surface must not shrink below 38 routes.');
 foreach([
     '/api/v1/growth/candidates/{id}/engagement/recommendations',
     '/api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/accept',

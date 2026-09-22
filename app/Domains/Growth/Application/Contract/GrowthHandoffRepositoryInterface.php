@@ -30,4 +30,8 @@ interface GrowthHandoffRepositoryInterface
 
     /** @return array<string,mixed>|null */
     public function latestAttempt(string $organizationId,string $candidateId): ?array;
+
+    public function candidateByTargetReference(
+        string $organizationId,string $targetDomain,string $referenceType,string $referenceId
+    ): ?string;
 }

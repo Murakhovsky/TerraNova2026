@@ -535,6 +535,20 @@ services:
   Domains\Growth\Application\Contract\GrowthEngagementBoundary:
     alias: Domains\Growth\Application\Service\GrowthEngagementService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthLearningRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthLearningRepository
+
+  Domains\Growth\Application\Service\GrowthLearningService: ~
+
+  Domains\Growth\Application\Contract\GrowthLearningBoundary:
+    alias: Domains\Growth\Application\Service\GrowthLearningService
+
+  Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer: ~
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
@@ -1184,6 +1198,7 @@ services:
         sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
         diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
         platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
+        growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:
