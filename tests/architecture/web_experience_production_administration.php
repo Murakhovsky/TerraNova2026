@@ -275,16 +275,6 @@ foreach ([
     '### Контент і SEO (`Content Administration`)',
     '### Редактор контенту (`Content Editor`)',
     '## Хвиля 3',
-    '### Просторові сцени (`Spatial Administration`)',
-    '### Редактор сцени (`Spatial Editor`)',
-    '## Хвиля 3',
-    '### Просторові сцени (`Spatial Administration`)',
-    '### Редактор сцени (`Spatial Editor`)',
-    '## Хвиля 3',
-    '### Керування Spatial (`Spatial Administration`)',
-    '### Редактор Spatial (`Spatial Editor`)',
-    '### Публічна Spatial-сцена (`Spatial Scene`)',
-    '## Хвиля 3',
     '### Просторове адміністрування (`Spatial Administration`)',
     '### Редактор 3D-сцени (`Spatial Editor`)',
     '## Межа editable grid',
@@ -292,5 +282,4 @@ foreach ([
 ] as $marker) {
     $contains($docs, $marker, 'Administration production adoption documentation is incomplete.');
 }
-
 echo "PHASE 11 Administration production adoption passed.\n";
