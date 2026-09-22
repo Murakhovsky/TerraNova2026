@@ -42,7 +42,7 @@ $statusLabels = ['draft'=>'Чернетка','processing'=>'Обробка','rev
   <form class="tn-content-editor" method="post" action="<?php echo $this->url->get('spatial/save/' . $id); ?>">
     <input type="hidden" name="id" value="<?php echo $id; ?>">
     <section class="tn-ui-panel">
-      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Сцена</p><h2>Конфігурація</h2></div><button class="tn-btn tn-btn--accent" type="submit">Зберегти</button></div>
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Сцена</p><h2>Конфігурація</h2></div><button class="tn-ui-button tn-ui-button--primary" type="submit">Зберегти</button></div>
       <div class="tn-form-grid">
         <label class="tn-field--wide"><span>Назва</span><input name="title" type="text" maxlength="220" value="<?php echo $h($value('title')); ?>" required></label>
         <label><span>Slug</span><input name="slug" type="text" maxlength="190" value="<?php echo $h($value('slug')); ?>" placeholder="генерується"></label>
@@ -73,10 +73,10 @@ $statusLabels = ['draft'=>'Чернетка','processing'=>'Обробка','rev
           <label><span>Роль</span><select name="asset_type"><option value="">Автоматично</option><?php foreach (['source','model_web','model_ar','texture','point_cloud','gaussian_splat','panorama','floorplan','poster','video','other'] as $type): ?><option value="<?php echo $type; ?>"><?php echo $type; ?></option><?php endforeach; ?></select></label>
           <label><span>Версія</span><select name="version_id"><option value="0">Остання</option><?php foreach ($scene['versions'] as $version): ?><option value="<?php echo (int) $version['id']; ?>">v<?php echo (int) $version['version_number']; ?> / <?php echo $h($version['label']); ?></option><?php endforeach; ?></select></label>
           <label class="tn-checkbox"><input name="is_primary" type="checkbox" value="1" checked><span>Основний asset</span></label>
-          <button class="tn-btn tn-btn--accent" type="submit">Завантажити</button>
+          <button class="tn-ui-button tn-ui-button--primary" type="submit">Завантажити</button>
         </div>
         <div class="tn-spatial-upload-progress" hidden data-spatial-progress><span></span><strong>0%</strong></div>
-        <p class="tn-form-status" data-spatial-upload-status role="status"></p>
+        <p class="tn-ui-alert" data-spatial-upload-status role="status" hidden></p>
       </form>
     </article>
 
@@ -87,13 +87,13 @@ $statusLabels = ['draft'=>'Чернетка','processing'=>'Обробка','rev
         <label><span>Тип</span><select name="asset_type"><?php foreach (['model_web','model_ar','gaussian_splat','panorama','floorplan','video','other'] as $type): ?><option value="<?php echo $type; ?>"><?php echo $type; ?></option><?php endforeach; ?></select></label>
         <label><span>Формат</span><input name="format" type="text" maxlength="30" placeholder="external"></label>
         <label class="tn-checkbox"><input name="is_primary" type="checkbox" value="1" checked><span>Основний</span></label>
-        <button class="tn-btn tn-btn--dark" type="submit">Підключити</button>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Підключити</button>
       </form>
     </article>
   </section>
 
   <section class="tn-ui-panel">
-    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Assets</p><h2>Склад сцени</h2></div><?php if ($scene['status'] !== 'published'): ?><form method="post" action="<?php echo $this->url->get('spatial/publish/' . $id); ?>"><button class="tn-btn tn-btn--accent" type="submit">Опублікувати</button></form><?php endif; ?></div>
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Assets</p><h2>Склад сцени</h2></div><?php if ($scene['status'] !== 'published'): ?><form method="post" action="<?php echo $this->url->get('spatial/publish/' . $id); ?>"><button class="tn-ui-button tn-ui-button--primary" type="submit">Опублікувати</button></form><?php endif; ?></div>
     <div class="tn-spatial-asset-list">
       <?php foreach ($scene['assets'] as $asset): ?><div><strong><?php echo $h($asset['asset_type']); ?><?php echo (int) $asset['is_primary'] ? ' / primary' : ''; ?></strong><span><?php echo $h($asset['format']); ?> / <?php echo $h($asset['status']); ?> / <?php echo number_format((int) $asset['size_bytes'] / 1048576, 1); ?> MB</span><a href="<?php echo $h($asset['uri']); ?>" target="_blank" rel="noopener">Відкрити</a><?php if (!empty($asset['error_message'])): ?><small><?php echo $h($asset['error_message']); ?></small><?php endif; ?></div><?php endforeach; ?>
       <?php if (!$scene['assets']): ?><p>Ще немає assets.</p><?php endif; ?>
@@ -109,7 +109,7 @@ $statusLabels = ['draft'=>'Чернетка','processing'=>'Обробка','rev
         <label><span>Пристрій</span><input name="device_name" type="text" maxlength="160" placeholder="iPhone Pro LiDAR"></label>
         <label><span>Дата</span><input name="captured_at" type="datetime-local"></label>
         <label class="tn-field--wide"><span>Примітка</span><textarea name="notes" rows="3"></textarea></label>
-        <button class="tn-btn tn-btn--dark" type="submit">Створити capture</button>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Створити capture</button>
       </form>
     </article>
     <article class="tn-ui-panel">
@@ -120,7 +120,7 @@ $statusLabels = ['draft'=>'Чернетка','processing'=>'Обробка','rev
         <label><span>X</span><input name="position_x" type="number" step="0.01" value="0"></label><label><span>Y</span><input name="position_y" type="number" step="0.01" value="1"></label><label><span>Z</span><input name="position_z" type="number" step="0.01" value="0"></label>
         <label class="tn-field--wide"><span>Опис</span><textarea name="body" rows="3"></textarea></label>
         <label class="tn-field--wide"><span>Action URL</span><input name="action_url" type="url"></label>
-        <input type="hidden" name="is_active" value="1"><button class="tn-btn tn-btn--dark" type="submit">Додати hotspot</button>
+        <input type="hidden" name="is_active" value="1"><button class="tn-ui-button tn-ui-button--primary" type="submit">Додати hotspot</button>
       </form>
     </article>
   </section>
