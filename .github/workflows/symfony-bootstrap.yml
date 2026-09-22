@@ -62,6 +62,7 @@ on:
       - 'tests/architecture/web_experience_stress_screens.php'
       - 'tests/architecture/web_experience_production_sales.php'
       - 'tests/architecture/web_experience_production_property.php'
+      - 'tests/architecture/web_experience_production_administration.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
@@ -69,6 +70,7 @@ on:
       - 'docs/03-architecture/cos-stress-screens.md'
       - 'docs/03-architecture/cos-production-sales-adoption.md'
       - 'docs/03-architecture/cos-production-property-adoption.md'
+      - 'docs/03-architecture/cos-production-administration-adoption.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -126,6 +128,7 @@ on:
       - 'tests/architecture/web_experience_stress_screens.php'
       - 'tests/architecture/web_experience_production_sales.php'
       - 'tests/architecture/web_experience_production_property.php'
+      - 'tests/architecture/web_experience_production_administration.php'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
@@ -133,6 +136,7 @@ on:
       - 'docs/03-architecture/cos-stress-screens.md'
       - 'docs/03-architecture/cos-production-sales-adoption.md'
       - 'docs/03-architecture/cos-production-property-adoption.md'
+      - 'docs/03-architecture/cos-production-administration-adoption.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -274,6 +278,9 @@ jobs:
 
       - name: PHASE 10 Property production adoption gate
         run: php tests/architecture/web_experience_production_property.php
+
+      - name: PHASE 11 Administration production adoption gate
+        run: php tests/architecture/web_experience_production_administration.php
 
 
 
