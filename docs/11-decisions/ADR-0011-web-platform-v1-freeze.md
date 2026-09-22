@@ -105,7 +105,7 @@ Breaking change потребує ADR із:
 
 ADR-0011 не supersede попередні рішення, а завершує їх.
 
-## CI enforcement
+## Контроль змін у CI
 
 `tests/architecture/web_platform_v1_freeze.php` виконує два рівні перевірки:
 
