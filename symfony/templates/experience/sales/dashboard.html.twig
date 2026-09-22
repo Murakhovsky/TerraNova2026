@@ -1,0 +1,87 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Sales Dashboard | COS{% endblock %}
+{% block workspace_content %}
+{% set kpis = sales.kpis ?? {} %}
+{% set today = sales.today ?? {} %}
+<section class="cos-primitive-stack" data-sales-surface="dashboard">
+    <twig:CosEntityHeader
+        eyebrow="Sales"
+        title="Sales Dashboard"
+        subtitle="Операційний стан продажів, ризики та наступні дії через канонічну Web Experience Platform."
+        identity="Production"
+        statusLabel="Live"
+        statusTone="positive"
+    />
+
+    <section class="cos-primitive-stack" aria-label="Sales metrics">
+        <twig:CosTrendMetric label="Активні угоди" value="{{ kpis.active_deals ?? 0 }}" period="current" />
+        <twig:CosMoneyMetric label="Pipeline value" value="{{ (kpis.pipeline_value ?? 0)|number_format(0, '.', ' ') ~ ' USD' }}" />
+        <twig:CosMoneyMetric label="Expected revenue" value="{{ (kpis.expected_revenue ?? 0)|number_format(0, '.', ' ') ~ ' USD' }}" />
+        <twig:CosTrendMetric label="У ризику" value="{{ kpis.deals_at_risk ?? 0 }}" direction="down" />
+    </section>
+
+    <div class="cos-primitive-stack">
+        <section class="cos-card">
+            <div class="cos-card__header">
+                <div><p class="cos-card__eyebrow">Risk</p><h2>At-risk deals</h2></div>
+                <a class="cos-button cos-button--ghost cos-button--sm" href="/sales/deals?risk=high">Усі угоди</a>
+            </div>
+            <div class="cos-entity-list">
+                {% for deal in sales.at_risk ?? [] %}
+                    <twig:CosEntityListItem
+                        title="{{ deal.customer ?? 'Deal' }}"
+                        subtitle="{{ deal.stage_name ?? '' }}"
+                        meta="{{ (deal.deal_value ?? 0)|number_format(0, '.', ' ') ~ ' USD' }}"
+                        statusLabel="HIGH"
+                        statusTone="danger"
+                        href="/sales/deals/{{ deal.id }}"
+                    />
+                {% else %}
+                    <p class="cos-card__copy">Критичних угод немає.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="cos-card">
+            <div class="cos-card__header">
+                <div><p class="cos-card__eyebrow">Today</p><h2>Наступні дії</h2></div>
+                <a class="cos-button cos-button--ghost cos-button--sm" href="/sales/today">Відкрити Today</a>
+            </div>
+            <div class="cos-primitive-stack">
+                {% for item in (today.overdue ?? [])|merge(today.must_do ?? [])|slice(0, 8) %}
+                    <twig:CosNextAction
+                        title="{{ item.customer ?? item.title ?? 'Follow-up' }}"
+                        copy="{{ item.title ?? 'Sales action' }}"
+                        due="{{ item.next_contact_at ?? 'Без дати' }}"
+                        tone="{{ loop.first ? 'danger' : 'neutral' }}"
+                        href="/sales/deals/{{ item.id }}"
+                    />
+                {% else %}
+                    <p class="cos-card__copy">На сьогодні немає запланованих дій.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <section class="cos-card">
+        <div class="cos-card__header">
+            <div><p class="cos-card__eyebrow">Fresh demand</p><h2>New Leads</h2></div>
+            <a class="cos-button cos-button--primary cos-button--sm" href="/sales/leads">Lead List</a>
+        </div>
+        <div class="cos-entity-list">
+            {% for lead in sales.new_leads ?? [] %}
+                <twig:CosEntityListItem
+                    title="{{ lead.name ?? 'Lead' }}"
+                    subtitle="{{ lead.source ?? 'Direct' }}"
+                    meta="{{ lead.owner_name ?? 'Unassigned' }}"
+                    statusLabel="{{ lead.status ?? 'new' }}"
+                    statusTone="neutral"
+                    href="/sales/leads/{{ lead.id }}"
+                />
+            {% else %}
+                <p class="cos-card__copy">Нових лідів немає.</p>
+            {% endfor %}
+        </div>
+    </section>
+</section>
+{% endblock %}
