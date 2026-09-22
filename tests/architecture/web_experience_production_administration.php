@@ -266,6 +266,114 @@ foreach ([
     $contains($spatialScene, $marker, 'Public Spatial scene must remain a specialized public viewer surface.');
 }
 
+$spatialManage = $read('app/Interfaces/Web/View/spatial/manage.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    "partial('components/ui/kpi_card'",
+    "partial('components/ui/filter_bar'",
+    "partial('components/ui/panel'",
+    "'bodyPartial' => 'components/ui/data_table'",
+    'spatial/edit/',
+    'id="queue"',
+] as $marker) {
+    $contains($spatialManage, $marker, 'Spatial Administration listing must use canonical workspace composition.');
+}
+foreach ([
+    'tn-page-hero tn-page-hero--catalog',
+    '<section class="tn-admin-metrics"',
+    '<form class="tn-filter-bar"',
+    '<table class="tn-listing-table"',
+] as $legacyMarker) {
+    $notContains($spatialManage, $legacyMarker, 'Spatial Administration listing must not restore legacy shell/filter/table composition.');
+}
+
+$spatialEdit = $read('app/Interfaces/Web/View/spatial/edit.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-ui-panel',
+    'spatial/save/',
+    'spatial/upload/',
+    'spatial/external/',
+    'spatial/capture/',
+    'spatial/hotspot/',
+    'spatial/publish/',
+    'data-spatial-upload',
+    'data-spatial-dropzone',
+    'data-spatial-progress',
+    'enctype="multipart/form-data"',
+    'name="asset_file"',
+    'name="capture_type"',
+    'name="hotspot_type"',
+] as $marker) {
+    $contains($spatialEdit, $marker, 'Spatial editor lost a canonical or interaction contract.');
+}
+foreach ([
+    'tn-page-hero tn-page-hero--catalog',
+    'tn-admin-card',
+    'tn-admin-card__head',
+] as $legacyMarker) {
+    $notContains($spatialEdit, $legacyMarker, 'Spatial editor must not restore the legacy visual shell.');
+}
+
+$spatialScene = $read('app/Interfaces/Web/View/spatial/scene.phtml');
+foreach ([
+    "partial('shared/spatial_viewer'",
+    'tn-spatial-public',
+    'tn-spatial-summary',
+] as $marker) {
+    $contains($spatialScene, $marker, 'Public Spatial scene must retain its specialized viewer surface.');
+}
+
+$spatialController = $read('symfony/src/Web/Spatial/SpatialPageController.php');
+foreach ([
+    'public function manage(Request $request): Response',
+    'public function edit(Request $request, ?string $id = null): Response',
+    'public function save(Request $request, ?string $id = null): Response',
+    'public function upload(Request $request, string $id): Response',
+    'public function external(Request $request, string $id): Response',
+    'public function capture(Request $request, string $id): Response',
+    'public function hotspot(Request $request, string $id): Response',
+    'public function publish(string $id): Response',
+    'public function scene(Request $request, string $slug): Response',
+    '$this->manager()',
+    '$this->scenes->save',
+    '$this->scenes->upload',
+    '$this->scenes->externalAsset',
+    '$this->scenes->capture',
+    '$this->scenes->saveHotspot',
+    '$this->scenes->publish',
+    "'spatial/manage'",
+    "'spatial/edit'",
+    "'spatial/scene'",
+] as $marker) {
+    $contains($spatialController, $marker, 'Spatial Administration controller contract is incomplete.');
+}
+
+foreach ([
+    'path: /spatial/manage',
+    'SpatialPageController::manage',
+    'path: /spatial/edit',
+    'SpatialPageController::edit',
+    'path: /spatial/save/{id}',
+    'SpatialPageController::save',
+    'path: /spatial/upload/{id}',
+    'SpatialPageController::upload',
+    'path: /spatial/external/{id}',
+    'SpatialPageController::external',
+    'path: /spatial/capture/{id}',
+    'SpatialPageController::capture',
+    'path: /spatial/hotspot/{id}',
+    'SpatialPageController::hotspot',
+    'path: /spatial/publish/{id}',
+    'SpatialPageController::publish',
+    'path: /spatial/scene/{slug}',
+    'SpatialPageController::scene',
+] as $marker) {
+    $contains($routes, $marker, 'Spatial route contract is incomplete.');
+}
+
 $docs = $read('docs/03-architecture/cos-production-administration-adoption.md');
 foreach ([
     '# Впровадження Administration у production UI',
@@ -274,6 +382,10 @@ foreach ([
     '## Хвиля 2',
     '### Контент і SEO (`Content Administration`)',
     '### Редактор контенту (`Content Editor`)',
+    '## Хвиля 3',
+    '### Керування Spatial (`Spatial Administration`)',
+    '### Редактор Spatial (`Spatial Editor`)',
+    '### Публічна Spatial-сцена (`Spatial Scene`)',
     '## Хвиля 3',
     '### Просторове адміністрування (`Spatial Administration`)',
     '### Редактор 3D-сцени (`Spatial Editor`)',
