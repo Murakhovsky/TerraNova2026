@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.10.0','Growth V0.10 manifest version must be 0.10.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.10.0','>='),'Growth manifest must remain V0.10+.');
 $assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.10 must keep schema version 0.8.0.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.10 must remain disabled before tenant cutover.');
 $assert(in_array('growth.api.v1',$manifest['contributions']['capabilities']??[],true),'Growth V0.10 API capability is missing.');

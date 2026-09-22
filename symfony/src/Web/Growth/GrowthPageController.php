@@ -1,0 +1,234 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Web\Growth;
+
+use App\Security\SessionCsrfValidator;
+use App\Web\Experience\Extension\Model\WebExtensionContext;
+use App\Web\Experience\Extension\ProviderBackedShellNavigation;
+use App\Web\Experience\Shell\ShellNavigationItem;
+use App\Web\Phtml\PhtmlRenderer;
+use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
+use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
+use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
+use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
+use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
+use Domains\Growth\Application\Contract\GrowthResearchBoundary;
+use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
+use InvalidArgumentException;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Model\TenantPermissions;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
+
+final readonly class GrowthPageController
+{
+    public function __construct(
+        private PhtmlRenderer $renderer,
+        private TenantContextProviderInterface $tenants,
+        private ActiveModuleResolver $modules,
+        private ProviderBackedShellNavigation $shell,
+        private SessionCsrfValidator $csrf,
+        private GrowthWorkspaceReadModelInterface $workspace,
+        private GrowthApplicationBoundary $growth,
+        private GrowthIntelligenceBoundary $intelligence,
+        private GrowthBuyingCommitteeBoundary $committee,
+        private GrowthResearchBoundary $research,
+        private GrowthDecisionBoundary $decisions,
+        private GrowthHandoffBoundary $handoff,
+    ) {}
+
+    public function overview(Request $request): Response
+    {
+        return $this->page($request,'Growth Overview','growth-overview','growth/dashboard',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>$this->workspace->overview($tenant->organizationId()->value()),
+            ]);
+    }
+
+    public function candidates(Request $request): Response
+    {
+        return $this->page($request,'Growth Opportunities','growth-candidates','growth/candidates',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'candidates'=>$this->workspace->candidates($tenant->organizationId()->value(),[
+                        'q'=>$request->query->get('q'),
+                        'status'=>$request->query->get('status'),
+                        'growth_mode'=>$request->query->get('growth_mode'),
+                        'target_domain'=>$request->query->get('target_domain'),
+                    ],150),
+                ],
+            ]);
+    }
+
+    public function candidate(Request $request,string $id): Response
+    {
+        return $this->page($request,'Growth Opportunity','growth-candidates','growth/candidate',
+            function(TenantContext $tenant)use($id):array{
+                $organizationId=$tenant->organizationId()->value();
+                $candidate=$this->growth->viewCandidate($organizationId,$id);
+                if($candidate===null)return ['notFound'=>true,'workspace'=>[]];
+
+                $signals=[];
+                foreach($candidate['signal_ids']??[] as $signalId){
+                    if(!is_string($signalId))continue;
+                    $signal=$this->growth->viewSignal($organizationId,$signalId);
+                    if($signal!==null)$signals[]=$signal;
+                }
+
+                return [
+                    'workspace'=>[
+                        'candidate'=>$candidate,
+                        'signals'=>$signals,
+                        'research'=>$this->research->researchBrief($organizationId,$id),
+                        'decision'=>$this->decisions->decisionBrief($organizationId,$id),
+                        'handoff'=>$this->handoff->handoffBrief($organizationId,$id),
+                    ],
+                ];
+            });
+    }
+
+    public function accounts(Request $request): Response
+    {
+        return $this->page($request,'Growth Accounts','growth-accounts','growth/accounts',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'accounts'=>$this->workspace->accounts($tenant->organizationId()->value(),[
+                        'q'=>$request->query->get('q'),
+                    ],150),
+                ],
+            ]);
+    }
+
+    public function account(Request $request,string $id): Response
+    {
+        return $this->page($request,'Growth Account','growth-accounts','growth/account',
+            function(TenantContext $tenant)use($id):array{
+                $organizationId=$tenant->organizationId()->value();
+                try{
+                    $account=$this->intelligence->accountBrief($organizationId,$id);
+                }catch(InvalidArgumentException){
+                    return ['notFound'=>true,'workspace'=>[]];
+                }
+
+                $committee=[];
+                try{$committee=$this->committee->buyingCommitteeBrief($organizationId,$id);}
+                catch(Throwable){}
+
+                return [
+                    'workspace'=>[
+                        'account'=>$account,
+                        'committee'=>$committee,
+                        'candidates'=>$this->workspace->candidates($organizationId,[
+                            'subject_type'=>'account',
+                            'subject_id'=>$id,
+                        ],100),
+                    ],
+                ];
+            });
+    }
+
+    /** @param callable(TenantContext):array<string,mixed> $reader */
+    private function page(Request $request,string $title,string $active,string $view,callable $reader): Response
+    {
+        $tenant=$this->manager();
+        if($tenant instanceof Response)return $tenant;
+
+        try{
+            $extra=$reader($tenant);
+            if(!empty($extra['notFound'])){
+                return $this->render($request,$tenant,'Not found',$active,'error/failure',[
+                    'failureCode'=>404,
+                    'failureTitle'=>'Growth entity not found',
+                    'failureMessage'=>'The requested Growth entity does not exist in this organization.',
+                    'failureRequestId'=>'TN-'.strtoupper(bin2hex(random_bytes(5))),
+                    'failureActionUrl'=>'/growth',
+                    'failureActionLabel'=>'Back to Growth',
+                ],Response::HTTP_NOT_FOUND);
+            }
+            return $this->render($request,$tenant,$title,$active,$view,$extra);
+        }catch(Throwable $error){
+            error_log(sprintf('growth.workspace.read_failed [%s] %s',$view,$error->getMessage()));
+            return $this->render($request,$tenant,'Growth temporarily unavailable',$active,'error/failure',[
+                'failureCode'=>503,
+                'failureTitle'=>'Growth workspace temporarily unavailable',
+                'failureMessage'=>'The Growth read model could not be loaded. Details were written to the application log.',
+                'failureRequestId'=>'TN-'.strtoupper(bin2hex(random_bytes(5))),
+                'failureActionUrl'=>'/growth',
+                'failureActionLabel'=>'Retry Growth',
+            ],Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private function manager(): TenantContext|Response
+    {
+        $tenant=$this->tenants->current();
+        if($tenant===null)return new RedirectResponse('/auth/login');
+        if(!$tenant->isManager())return new Response('Forbidden',Response::HTTP_FORBIDDEN);
+        if(!$this->modules->isEnabled($tenant->organizationId()->value(),'growth')){
+            return new Response('Growth module is disabled.',Response::HTTP_FORBIDDEN);
+        }
+        return $tenant;
+    }
+
+    /** @param array<string,mixed> $extra */
+    private function render(
+        Request $request,TenantContext $tenant,string $title,string $active,string $view,array $extra=[],int $status=200
+    ): Response {
+        $role=$tenant->role()->value();
+        $context=new WebExtensionContext(
+            $tenant->organizationId()->value(),$role,'workspace','growth',$active,
+        );
+        $navigation=$this->navigation($this->shell->compose($context));
+
+        $variables=array_replace([
+            'title'=>$title,
+            'metaTitle'=>$title.' | Terra Nova COS',
+            'metaRobots'=>'noindex,nofollow',
+            'interfaceSurface'=>'workspace',
+            'workspaceSection'=>'growth',
+            'workspaceActive'=>$active,
+            'workspaceActiveSection'=>'growth',
+            'pageAssetEntries'=>['growth-workspace'],
+            'csrfToken'=>$this->csrf->token($request),
+            'currentUser'=>['id'=>(int)$tenant->userId()->value(),'role'=>$role],
+            'role'=>$role,
+            'isTeam'=>true,
+            'isAdmin'=>$tenant->isAdmin(),
+            'canManageGrowth'=>$tenant->allows(TenantPermissions::MANAGE),
+            'workspaceNavigation'=>$navigation,
+        ],$extra);
+
+        return new Response(
+            $this->renderer->render($request,$view,$variables),
+            $status,
+            ['Content-Type'=>'text/html; charset=UTF-8'],
+        );
+    }
+
+    /** @param array{primary:list<ShellNavigationItem>,utility:list<ShellNavigationItem>,commands:array} $navigation */
+    private function navigation(array $navigation): array
+    {
+        return [
+            'surface'=>'workspace',
+            'primary'=>array_map($this->navigationItem(...),$navigation['primary']),
+            'utility'=>array_map($this->navigationItem(...),$navigation['utility']),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function navigationItem(ShellNavigationItem $item): array
+    {
+        return [
+            'key'=>$item->key,
+            'label'=>$item->label,
+            'path'=>ltrim($item->path,'/'),
+            'glyph'=>$item->glyph,
+            'children'=>array_map($this->navigationItem(...),$item->children),
+        ];
+    }
+}

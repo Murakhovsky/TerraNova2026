@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.10.0',
+    'version' => '0.11.0',
     'schema_version' => '0.8.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
@@ -16,7 +16,12 @@ return [
         'job_handler_services' => [],
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
-        'extension_services' => [],
+        'extension_services' => [
+            'web.navigation' => ['growthNavigationContributor'],
+            'web.search' => ['growthNavigationContributor'],
+            'web.commands' => ['growthNavigationContributor'],
+            'web.workspace' => ['growthNavigationContributor'],
+        ],
         'migration_files' => [
             'app/migrations/20260921_000067_growth_v020_runtime.sql',
             'app/migrations/20260921_000068_growth_v030_account_intelligence.sql',
@@ -26,8 +31,10 @@ return [
             'app/migrations/20260922_000072_growth_v070_research_intelligence.sql',
             'app/migrations/20260922_000073_growth_v080_handoff_protocol.sql',
             'app/migrations/20260922_000074_growth_v0100_api_surface.sql',
+            'app/migrations/20260922_000075_growth_v0110_workspace.sql',
         ],
         'capabilities' => [
+            'growth.workspace',
             'growth.api.v1',
             'growth.handoff.target.sales',
             'growth.handoff.dispatch',

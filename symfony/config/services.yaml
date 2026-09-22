@@ -502,6 +502,17 @@ services:
       $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
       $modules: '@Kernel\Module\ActiveModuleResolver'
 
+  Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthWorkspaceReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface:
+    alias: Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthWorkspaceReadModel
+
+  App\Web\Growth\GrowthPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
@@ -921,6 +932,9 @@ services:
 
   diagnosticNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\DiagnosticWebProvider
+
+  growthNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\GrowthWebProvider
 
   App\Infrastructure\Module\PdoModuleStateRepository:
     arguments:

@@ -353,6 +353,28 @@ Domain / Persistence / Events / Audit
 
 Read surface використовує `cos.tenant.access`. Mutation surface використовує `cos.tenant.manage`, CSRF, `X-Idempotency-Key` та correlation id. Web layer не залежить від Growth repositories, PDO або target-domain persistence.
 
+## Growth Workspace
+
+V0.11 додає canonical Web surface:
+
+```text
+Growth Overview
+  ├─ Opportunity Candidates
+  │   └─ Candidate Workspace
+  │       ├─ Evidence / Signals
+  │       ├─ Research
+  │       ├─ Decision
+  │       └─ Handoff
+  └─ Accounts
+      └─ Account Workspace
+          ├─ ICP fit
+          ├─ Account snapshot
+          ├─ Buying Committee
+          └─ related Candidates
+```
+
+Lists читаються через `GrowthWorkspaceReadModelInterface`. Detail pages складаються з існуючих application briefs. UI mutations не дублюють lifecycle: frontend викликає `/api/v1/growth/*` із CSRF та idempotency key.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -372,9 +394,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.10
+## Статус V0.11
 
-`process_state: to-be` поки навмисний. V0.10 додає executable Symfony API V1 поверх усіх Growth application boundaries. Інші target adapters, signal provider adapters, engagement і production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.11 додає provider-backed SSR Growth Workspace поверх API/Application boundaries. Інші target adapters, signal provider adapters та engagement додаються окремими хвилями.
 
 ## Карта коду
 

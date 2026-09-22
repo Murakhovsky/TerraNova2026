@@ -67,6 +67,12 @@ Workspace = компанія й операційна робота
 │
 └── WORKSPACE
     ├── /admin
+    ├── Growth
+    │   ├── /growth
+    │   ├── /growth/candidates
+    │   ├── /growth/candidates/{id}
+    │   ├── /growth/accounts
+    │   └── /growth/accounts/{id}
     ├── Sales
     │   ├── /sales/dashboard
     │   ├── /sales/today
@@ -177,10 +183,25 @@ Workspace є операційним контекстом компанії. На�
 
 ```text
 Core       → Огляд, COS, Аналітика, Адміністрування
+Growth     → Growth Opportunity Intelligence
 Sales      → Sales, Клієнти
 Property   → Нерухомість
 Diagnostic → COS / Diagnostics
 ```
+
+### Growth
+
+`GrowthWebProvider` визначає provider-backed Workspace surface:
+
+```text
+/growth
+/growth/candidates
+/growth/candidates/{id}
+/growth/accounts
+/growth/accounts/{id}
+```
+
+Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer.
 
 ### Sales
 
@@ -322,7 +343,7 @@ Workspace → noindex,nofollow
 API       → не є HTML-ціллю індексації
 ```
 
-Базовий Web layout класифікує `/admin`, `/auth`, `/cabinet`, `/client-case`, `/sales`, `/cos/control-center` та операційні Property paths як private для meta robots.
+Базовий Web layout класифікує `/admin`, `/auth`, `/cabinet`, `/client-case`, `/sales`, `/growth`, `/cos/control-center` та операційні Property paths як private для meta robots.
 
 `robots.txt` додатково закриває `/admin`, `/auth`, `/cabinet`, `/client-case` та основні операційні Property paths. Це лише crawler hint, не authorization mechanism.
 
@@ -341,7 +362,7 @@ Route належить поверхні за призначенням, а не �
 
 ## 10. Джерела перевірки
 
-Стан на `2026-09-20` звірено з:
+Стан на `2026-09-22` звірено з:
 
 ```text
 symfony/config/routes.yaml

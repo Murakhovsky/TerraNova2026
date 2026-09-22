@@ -101,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.10 Executable Opportunity Intelligence API
+## V0.11 Executable Opportunity Intelligence Workspace
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -236,4 +236,16 @@ V0.10 exposes the implemented Growth runtime through a thin Symfony API V1 surfa
 
 The controller depends only on Growth application boundaries plus tenant/module/security services. Reads require tenant `ACCESS`; mutations require tenant `MANAGE`, valid session CSRF, a bounded `X-Idempotency-Key`, and correlation propagation. No repository or PDO access exists in the HTTP layer.
 
-Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters, outbound engagement and production Growth UI.
+V0.11 adds the first Growth Workspace on the current COS Web Experience foundation:
+
+```text
+/growth
+├─ /growth/candidates
+│  └─ /growth/candidates/{id}
+└─ /growth/accounts
+   └─ /growth/accounts/{id}
+```
+
+Navigation, search, commands and workspace definitions are contributed through `growthNavigationContributor`, so the surface disappears automatically when the Growth module is disabled. SSR lists use a read-only Growth projection; detail pages compose existing application briefs. Candidate mutations call the canonical V0.10 API with CSRF and idempotency instead of duplicating lifecycle rules in the browser.
+
+Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters and outbound engagement.

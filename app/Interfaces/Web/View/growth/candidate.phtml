@@ -1,0 +1,119 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$candidate=is_array($workspace['candidate']??null)?$workspace['candidate']:[];
+$signals=is_array($workspace['signals']??null)?$workspace['signals']:[];
+$research=is_array($workspace['research']??null)?$workspace['research']:[];
+$decision=is_array($workspace['decision']??null)?$workspace['decision']:[];
+$handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
+$proposal=is_array($research['latest_proposal']??null)?$research['latest_proposal']:null;
+$evaluation=is_array($decision['latest_evaluation']??null)?$decision['latest_evaluation']:null;
+$attempt=is_array($handoff['latest_attempt']??null)?$handoff['latest_attempt']:null;
+$status=strtolower((string)($candidate['status']??'unknown'));
+$tone=match($status){
+    'qualified','handed_off'=>'positive',
+    'ready_for_handoff','handoff_pending'=>'info',
+    'monitoring'=>'warning',
+    'disqualified','rejected_by_target_domain'=>'danger',
+    default=>'neutral',
+};
+$score=is_array($candidate['score']??null)?$candidate['score']:[];
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-candidate data-candidate-id="<?php echo $h($candidate['candidate_id']??''); ?>" data-csrf="<?php echo $h($csrfToken??''); ?>">
+  <?php $this->partial('components/ui/entity_header',[
+    'eyebrow'=>'Growth · Opportunity Candidate',
+    'identity'=>$candidate['candidate_id']??'',
+    'title'=>$candidate['subject_id']??'Opportunity',
+    'subtitle'=>trim((string)(($candidate['opportunity_type']??'').' · '.($candidate['growth_mode']??'').' → '.($candidate['target_domain']??''))),
+    'status'=>['label'=>strtoupper($status),'tone'=>$tone],
+    'meta'=>[
+      ['label'=>'Signals','value'=>count($signals)],
+      ['label'=>'Updated','value'=>$candidate['updated_at']??'—'],
+      ['label'=>'Recommended play','value'=>$candidate['recommended_play']??'—'],
+      ['label'=>'Expected value','value'=>$candidate['expected_value']??'—'],
+    ],
+    'actions'=>[
+      ['label'=>'All opportunities','href'=>'growth/candidates','variant'=>'ghost'],
+      ['label'=>'Growth overview','href'=>'growth','variant'=>'ghost'],
+    ],
+  ]); ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section">
+    <?php foreach(['fit','need','timing','access','value'] as $dimension): $value=is_array($score[$dimension]??null)?($score[$dimension]['score']??null):null; ?>
+      <?php $this->partial('components/ui/kpi_card',['label'=>ucfirst($dimension),'value'=>$value===null?'—':$value.'/100']); ?>
+    <?php endforeach; ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Score confidence','value'=>isset($score['confidence'])?round((float)$score['confidence']*100).'%':'—']); ?>
+  </section>
+
+  <div class="tn-ui-split tn-workspace-section">
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Research</p><h2>WHY NOW / Problem</h2></div></div>
+      <?php if($proposal): ?>
+        <h3><?php echo $h($proposal['why_it_matters']??''); ?></h3>
+        <p><?php echo $h($proposal['problem_hypothesis']??''); ?></p>
+        <p><strong>Why now:</strong> <?php echo $h($proposal['why_now']??''); ?></p>
+        <small>Confidence <?php echo round((float)($proposal['confidence']??0)*100); ?>% · <?php echo $h(($proposal['provider']??'').' / '.($proposal['model']??'')); ?></small>
+      <?php else: ?>
+        <p class="tn-growth-muted">No research proposal yet.</p>
+      <?php endif; ?>
+      <?php if(!empty($canManageGrowth)&&in_array($status,['detected','enriching'],true)): ?>
+        <button class="tn-ui-button tn-ui-button--primary" type="button" data-growth-action="research-generate">Generate research</button>
+      <?php endif; ?>
+      <?php if(!empty($canManageGrowth)&&$proposal&&!($proposal['accepted_at']??null)&&in_array($status,['detected','enriching'],true)): ?>
+        <button class="tn-ui-button tn-ui-button--ghost" type="button" data-growth-action="research-accept" data-proposal-id="<?php echo $h($proposal['proposal_id']??''); ?>">Accept research</button>
+      <?php endif; ?>
+      <p class="tn-growth-action-status" data-growth-action-status></p>
+    </section>
+
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Decision Intelligence</p><h2>Qualification</h2></div></div>
+      <?php if($evaluation): ?>
+        <p><strong><?php echo $h(strtoupper((string)($evaluation['outcome']??''))); ?></strong></p>
+        <p><?php echo $h($evaluation['reason']??''); ?></p>
+        <small>Policy <?php echo $h(($evaluation['policy_id']??'').' r'.($evaluation['policy_revision']??'')); ?> · <?php echo $h($evaluation['model_version']??''); ?></small>
+      <?php else: ?>
+        <p class="tn-growth-muted">No policy evaluation snapshot yet.</p>
+      <?php endif; ?>
+      <?php if(!empty($candidate['qualification_reason'])): ?><p><strong>Lifecycle reason:</strong> <?php echo $h($candidate['qualification_reason']); ?></p><?php endif; ?>
+    </section>
+  </div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Handoff</p><h2><?php echo $h($candidate['target_domain']??'Target Domain'); ?></h2></div></div>
+    <?php if($attempt): ?>
+      <p><strong>Latest attempt:</strong> <?php echo $h(strtoupper((string)($attempt['status']??''))); ?></p>
+      <?php if(!empty($attempt['target_reference_id'])): ?><p><?php echo $h(($attempt['target_reference_type']??'').' : '.($attempt['target_reference_id']??'')); ?></p><?php endif; ?>
+      <?php if(!empty($attempt['reason'])): ?><p><?php echo $h($attempt['reason']); ?></p><?php endif; ?>
+      <?php if(!empty($attempt['error_summary'])): ?><p class="tn-growth-error"><?php echo $h($attempt['error_summary']); ?></p><?php endif; ?>
+    <?php endif; ?>
+
+    <?php if(!empty($canManageGrowth)&&$status==='qualified'): ?>
+      <form data-growth-handoff-prepare class="tn-growth-action-form">
+        <label class="tn-ui-field"><span>Expected value</span><input class="tn-ui-input" name="expected_value" required value="<?php echo $h($candidate['expected_value']??''); ?>"></label>
+        <label class="tn-ui-field"><span>Recommended play</span><input class="tn-ui-input" name="recommended_play" required value="<?php echo $h($candidate['recommended_play']??''); ?>"></label>
+        <label class="tn-ui-field"><span>Recommended action</span><textarea class="tn-ui-input" name="recommended_action" rows="3" required><?php echo $h($candidate['recommended_action']??''); ?></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Prepare handoff</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php elseif(!empty($canManageGrowth)&&$status==='ready_for_handoff'): ?>
+      <button class="tn-ui-button tn-ui-button--primary" type="button" data-growth-action="handoff-dispatch">Dispatch to <?php echo $h($candidate['target_domain']??'target'); ?></button>
+      <p class="tn-growth-action-status" data-growth-action-status></p>
+    <?php elseif($status==='handoff_pending'): ?>
+      <p class="tn-growth-muted">Handoff is in progress. Re-dispatch with the same operation identity is resumable through the API runtime.</p>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Evidence</p><h2>Signals</h2></div><span><?php echo count($signals); ?></span></div>
+    <div class="tn-growth-signal-list">
+      <?php foreach($signals as $signal): ?>
+        <article>
+          <div><strong><?php echo $h($signal['signal_type']??'Signal'); ?></strong><small><?php echo $h($signal['occurred_at']??''); ?></small></div>
+          <p><?php echo $h($signal['source_reference']??''); ?></p>
+          <small>Confidence <?php echo round((float)($signal['confidence']??0)*100); ?>%</small>
+        </article>
+      <?php endforeach; ?>
+      <?php if(!$signals): ?><p class="tn-growth-muted">No readable signals.</p><?php endif; ?>
+    </div>
+  </section>
+</main>

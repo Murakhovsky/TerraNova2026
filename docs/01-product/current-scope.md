@@ -16,7 +16,7 @@ kind: product
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
 | Sales | `0.8.6` | повний модуль середовища виконання та еталонний домен |
-| Growth | `0.10.0` | Opportunity Intelligence + resumable Handoff + Sales target + full Symfony API V1 surface; schema remains `0.8.0`; disabled by default |
+| Growth | `0.11.0` | Opportunity Intelligence + API V1 + provider-backed SSR Workspace for overview, candidates and accounts; schema remains `0.8.0`; disabled by default |
 | Diagnostic | `0.6.1` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Property | `0.12.0` | встановлюваний модуль із канонічними записами Asset/Inventory/Listing, сумісним представленням, аналітикою, інтелектом і зовнішньою взаємодією |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
@@ -30,9 +30,9 @@ kind: product
 
 ## Growth: Opportunity Intelligence
 
-Growth `0.10.0` розвиває окремий bounded context для **FIND VALUE**. Canonical runtime визначає `Signal`, `OpportunityCandidate`, `OpportunityRationale`, explainable Fit/Need/Timing/Access/Value scoring, lifecycle qualification та `OpportunityHandoff`.
+Growth `0.11.0` розвиває окремий bounded context для **FIND VALUE**. Canonical runtime визначає `Signal`, `OpportunityCandidate`, `OpportunityRationale`, explainable Fit/Need/Timing/Access/Value scoring, lifecycle qualification та `OpportunityHandoff`.
 
-Growth свідомо не володіє Sales Deal, Pipeline, Contract, Invoice або delivery state. V0.8 додає cross-domain Handoff Protocol: immutable Opportunity Package snapshot, `handoff_pending`, target registry, resumable running attempts, stable target-side idempotency per Candidate, accepted/rejected/failed outcomes та target reference. Growth не пише в persistence target Domain. V0.9 додає перший concrete target adapter для Sales: account-level package приймається лише коли latest Buying Committee має рівно одного explicit champion із email identity; тоді Sales через власний `SalesWriteService` створює inbound Lead і повертає `sales_lead` reference. V0.10 додає 34 tenant-safe Symfony API routes для Signal, Candidate, ICP, Account, Buying Committee, Research, Qualification і Handoff. Read operations вимагають `cos.tenant.access`; mutations — `cos.tenant.manage`, CSRF та `X-Idempotency-Key`. Інші target adapters, signal provider adapters, engagement/outreach і production UI належать наступним хвилям.
+Growth свідомо не володіє Sales Deal, Pipeline, Contract, Invoice або delivery state. V0.8 додає cross-domain Handoff Protocol: immutable Opportunity Package snapshot, `handoff_pending`, target registry, resumable running attempts, stable target-side idempotency per Candidate, accepted/rejected/failed outcomes та target reference. Growth не пише в persistence target Domain. V0.9 додає перший concrete target adapter для Sales: account-level package приймається лише коли latest Buying Committee має рівно одного explicit champion із email identity; тоді Sales через власний `SalesWriteService` створює inbound Lead і повертає `sales_lead` reference. V0.10 додає 34 tenant-safe Symfony API routes для Signal, Candidate, ICP, Account, Buying Committee, Research, Qualification і Handoff. Read operations вимагають `cos.tenant.access`; mutations — `cos.tenant.manage`, CSRF та `X-Idempotency-Key`. V0.11 додає provider-backed SSR Growth Workspace: overview, Opportunity queue, Account Intelligence, Candidate workspace та Account workspace. Lists читаються через read-only Growth projection, detail pages складаються з existing application briefs, а mutations йдуть тільки через canonical API. Інші target adapters, signal provider adapters та engagement/outreach належать наступним хвилям.
 
 ## Sales: продажі та попит
 

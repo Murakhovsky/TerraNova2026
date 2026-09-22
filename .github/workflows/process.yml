@@ -11,6 +11,12 @@ on:
       - 'symfony/config/services.yaml'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
+      - 'symfony/src/Web/Growth/**'
+      - 'symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php'
+      - 'app/Interfaces/Web/View/growth/**'
+      - 'frontend/features/growth/**'
+      - 'frontend/entrypoints/growth-workspace.js'
+      - 'vite.config.js'
       - 'docs/.vitepress/generate-application-reference.php'
       - 'docs/12-reference/module-routes.md'
       - 'resources/processes/**'
@@ -52,6 +58,12 @@ on:
       - 'symfony/config/services.yaml'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
+      - 'symfony/src/Web/Growth/**'
+      - 'symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php'
+      - 'app/Interfaces/Web/View/growth/**'
+      - 'frontend/features/growth/**'
+      - 'frontend/entrypoints/growth-workspace.js'
+      - 'vite.config.js'
       - 'docs/.vitepress/generate-application-reference.php'
       - 'docs/12-reference/module-routes.md'
       - 'resources/processes/**'
@@ -112,6 +124,7 @@ jobs:
           php tests/architecture/growth_v080_handoff_protocol.php
           php tests/architecture/growth_v090_sales_handoff_adapter.php
           php tests/architecture/growth_v0100_api_surface.php
+          php tests/architecture/growth_v0110_workspace.php
 
       - name: Process registry invariants
         run: |
@@ -126,6 +139,7 @@ jobs:
           php tests/unit/growth_v080_handoff_protocol.php
           php tests/unit/growth_v090_sales_handoff_adapter.php
           php tests/unit/growth_v0100_api_contract.php
+          php tests/unit/growth_v0110_workspace_contract.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -165,4 +179,9 @@ jobs:
           php -l tests/unit/growth_v0100_api_contract.php
           php -l tests/architecture/growth_v0100_api_surface.php
           php -l symfony/src/Http/Api/V1/Controller/GrowthApiController.php
+          php -l symfony/src/Web/Growth/GrowthPageController.php
+          php -l symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php
+          php -l app/Domains/Growth/Infrastructure/ReadModel/MySql/MysqlGrowthWorkspaceReadModel.php
+          php -l tests/unit/growth_v0110_workspace_contract.php
+          php -l tests/architecture/growth_v0110_workspace.php
           php -l tests/architecture/process_v01.php

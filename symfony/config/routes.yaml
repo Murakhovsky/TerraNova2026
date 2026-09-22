@@ -333,6 +333,35 @@ cos_api_v1_sales_opportunity_next_action:
   requirements:
     id: '[1-9][0-9]*'
 
+# Growth V0.11 — Opportunity Intelligence Workspace
+cos_growth_overview:
+  path: /growth
+  controller: App\Web\Growth\GrowthPageController::overview
+  methods: [GET]
+
+cos_growth_candidates:
+  path: /growth/candidates
+  controller: App\Web\Growth\GrowthPageController::candidates
+  methods: [GET]
+
+cos_growth_candidate:
+  path: /growth/candidates/{id}
+  controller: App\Web\Growth\GrowthPageController::candidate
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_growth_accounts:
+  path: /growth/accounts
+  controller: App\Web\Growth\GrowthPageController::accounts
+  methods: [GET]
+
+cos_growth_account:
+  path: /growth/accounts/{id}
+  controller: App\Web\Growth\GrowthPageController::account
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
 # Growth V0.10 — executable Opportunity Intelligence API
 cos_api_v1_growth_collectors:
   path: /api/v1/growth/collectors
