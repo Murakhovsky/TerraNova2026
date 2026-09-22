@@ -79,22 +79,60 @@ foreach (['tn-listing-hero', 'tn-cos-metrics', 'tn-admin-tabs', 'tn-admin-panel'
 }
 
 $clientCss = $read('frontend/features/clients/workspace.css');
-$clientJs = $read('frontend/features/clients/workspace.js');
+$clientEntrypoint = $read('frontend/entrypoints/clients-workspace.js');
+foreach ([
+    '.tn-client-workspace',
+    '.tn-inbox-card',
+    '.tn-case-funnel',
+    '.tn-ai-deal-card',
+    'var(--tn-color-accent)',
+    '@media (max-width: 650px)',
+] as $needle) {
+    $requireContains($clientCss, $needle, 'Client Case domain CSS must retain live specialized patterns and COS tokens.');
+}
 foreach ([
     'Compatibility bridge while Client Case PHTML moves to canonical components.',
-    'var(--tn-color-accent)',
-    'var(--tn-color-accent-soft)',
-    'var(--tn-color-accent-border)',
-    'var(--tn-shadow-ui)',
-] as $needle) {
-    $requireContains($clientCss, $needle, 'Client Case compatibility layer must follow Calm Technical tokens.');
+    'tn-listing-hero',
+    'tn-admin-metrics',
+    'tn-admin-tabs',
+    'tn-admin-panel',
+    'tn-empty-state',
+    'tn-section-heading',
+] as $legacy) {
+    $requireNotContains($clientCss, $legacy, 'Client Case CSS must not restore retired compatibility selectors.');
 }
-foreach (['rgba(198, 155, 79', 'var(--tn-color-positive);\n    font-size: 10px'] as $legacy) {
-    $requireNotContains($clientCss, $legacy, 'Client Case compatibility layer must not restore the old beige/gold presentation language.');
-}
-$requireContains($clientJs, "workspace.classList.add('tn-client-workspace')", 'Client Case workspace scoping must remain explicit.');
-foreach (['addEventListener(\'submit\'', 'dataset.submitting', "classList.add('is-pending')"] as $duplicateSubmitBehavior) {
-    $requireNotContains($clientJs, $duplicateSubmitBehavior, 'Client Case must rely on the shared production form guard instead of duplicating submit-state behavior.');
+$requireContains($clientEntrypoint, "../features/clients/workspace.css", 'Client Case Vite entrypoint must retain domain CSS.');
+$requireNotContains($clientEntrypoint, "../features/clients/workspace.js", 'Client Case Vite entrypoint must not restore the retired scoping script.');
+
+foreach ([
+    'app/Interfaces/Web/View/client_case/inbox.phtml' => [
+        "partial('components/ui/page_header'",
+        "partial('components/ui/state'",
+        "partial('components/ui/kpi_card'",
+        "partial('components/ui/tabs'",
+        "partial('components/ui/filter_bar'",
+    ],
+    'app/Interfaces/Web/View/client_case/index.phtml' => [
+        "partial('components/ui/page_header'",
+        "partial('components/ui/state'",
+        "partial('components/ui/tabs'",
+        "partial('components/ui/filter_bar'",
+        'tn-client-case-operational-grid',
+    ],
+    'app/Interfaces/Web/View/client_case/show.phtml' => [
+        "partial('components/ui/entity_header'",
+        "partial('components/ui/state'",
+        "partial('components/ui/kpi_card'",
+        'tn-ui-panel',
+    ],
+] as $path => $needles) {
+    $view = $read($path);
+    foreach ($needles as $needle) {
+        $requireContains($view, $needle, 'Client Case view is missing canonical production composition: ' . $path);
+    }
+    foreach (['tn-listing-hero', 'tn-admin-panel', 'tn-empty-state', 'tn-breadcrumbs'] as $legacy) {
+        $requireNotContains($view, $legacy, 'Client Case view must not restore compatibility presentation primitives: ' . $path);
+    }
 }
 
 $kpi = $read('app/Interfaces/Web/View/components/ui/kpi_card.phtml');
@@ -104,7 +142,7 @@ $requireContains($components, '.tn-ui-kpi--brand', 'Canonical KPI brand tone mus
 $requireContains($components, 'var(--tn-color-accent-border)', 'KPI brand tone must be owned by COS design tokens.');
 
 $docs = $read('docs/architecture/web-v0.17.md');
-foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'Хвиля 2'] as $needle) {
+foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'PHASE 12', 'Завершення WEB V0.17'] as $needle) {
     $requireContains($docs, $needle, 'WEB V0.17 documentation is incomplete.');
 }
 
