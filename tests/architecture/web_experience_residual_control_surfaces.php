@@ -97,7 +97,6 @@ $canonicalTableRenderers = [
     'app/Interfaces/Web/View/components/ui/operational_grid.phtml' => 'canonical mutation-aware OperationalGrid renderer',
 ];
 $allowedTableViews = [
-    'app/Interfaces/Web/View/client_case/index.phtml' => 'operational Client Case quick-update grid',
     'app/Interfaces/Web/View/methodology_studio/index.phtml' => 'interactive Methodology Studio editor grid',
     'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
 ];
@@ -144,9 +143,24 @@ foreach ([
 $notContains($users, '<table', 'Users Administration must not retain a raw table after OperationalGrid migration.');
 
 $clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
-foreach (['tn-client-case-operational-grid', 'client-case/quickUpdate/', 'name="csrf_token"', 'tn-quick-case-form'] as $marker) {
-    $contains($clientIndex, $marker, 'Client Case raw table exception must remain an operational mutation grid.');
+foreach ([
+    '$caseRows = [];',
+    "'bodyPartial' => 'components/ui/operational_grid'",
+    "'_form' => [",
+    "'action' => 'client-case/quickUpdate/'",
+    "'csrf_token' => (string) (\$csrfToken ?? '')",
+    "'return_url' => 'client-case'",
+    "'kind' => 'stage'",
+    "'kind' => 'fields'",
+    "'kind' => 'submit'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
+] as $marker) {
+    $contains($clientIndex, $marker, 'Client Case quick-update list must use canonical OperationalGrid.');
 }
+$notContains($clientIndex, '<table', 'Client Case index must not retain a raw table after OperationalGrid migration.');
 
 $studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
 foreach (['data-entities', 'data-editor', 'data-action="add"', 'data-action="publish"'] as $marker) {

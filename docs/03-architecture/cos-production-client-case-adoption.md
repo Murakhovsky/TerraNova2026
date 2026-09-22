@@ -43,11 +43,14 @@ Index уже мав значну частину canonical composition після
 - Tabs тепер отримують явний `active` contract і правильно відображають вибраний funnel stage;
 - redundant breadcrumb прибрано, бо workspace shell + PageHeader вже задають контекст;
 - PageHeader, Tabs, FilterBar, Panel, State, Stage та canonical buttons лишаються базовою UX-мовою;
-- create-case, unlinked-inbound triage та quick-update forms не змінені;
+- create-case та unlinked-inbound triage forms не змінені;
 - funnel `tn-case-funnel` збережений як domain-specific visualization;
-- case list з inline quick-update формою явно позначений як `tn-client-case-operational-grid`, а не маскується під read-only DataTable.
+- post-freeze case list переведено на canonical OperationalGrid;
+- quick-update row form зберігає `client-case/quickUpdate/{id}`, CSRF, `return_url`, `stage_id`, `status`, `priority` та `assigned_user_id`;
+- Stage рендериться semantic Stage cell, workflow fields лишаються first-class editable controls;
+- row actions зберігають submit `ОК` та deep-link `Відкрити`.
 
-Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`, `linkInboundRequest` та всі CSRF/mutation fields не змінені.
+Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`, `linkInboundRequest` та mutation semantics не змінені.
 
 ## Хвиля 3
 
@@ -116,7 +119,7 @@ Inbox card одночасно містить:
 - operational cards і mutation forms зберігають існуючу семантику;
 - CSRF та return-url contracts не змінені;
 - Index використовує canonical PageHeader, State, Tabs, FilterBar і Panel;
-- funnel та operational quick-update grid явно зафіксовані як domain-specific interaction boundaries;
+- funnel лишається domain-specific interaction boundary, а quick-update list використовує canonical OperationalGrid із row-owned mutation forms;
 - Show використовує canonical EntityHeader, State, Panel і KPI summary;
 - AI, timeline, property-match і presentation-share patterns зберігають існуючу workflow семантику;
 - controller/route ownership лишається у ClientCasePageController;

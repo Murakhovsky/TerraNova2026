@@ -69,8 +69,12 @@ foreach ([
     "partial('components/ui/filter_bar'",
     'tn-ui-panel',
     'tn-case-funnel',
-    'tn-client-case-operational-grid',
-    'tn-quick-case-form',
+    '$caseRows = [];',
+    "'bodyPartial' => 'components/ui/operational_grid'",
+    "'_form' => [",
+    "'kind' => 'fields'",
+    "'kind' => 'stage'",
+    "'kind' => 'submit'",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index must use canonical shell while retaining funnel and operational mutations.');
 }
@@ -88,15 +92,18 @@ foreach ([
     'client-case/linkInboundRequest',
     'client-case/quickUpdate/',
     'client-case/show/',
-    'name="csrf_token"',
-    'name="stage_id"',
-    'name="status"',
-    'name="priority"',
-    'name="assigned_user_id"',
-    'name="return_url"',
+    "'csrf_token' => (string) (\$csrfToken ?? '')",
+    "'return_url' => 'client-case'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index lost a funnel/create/quick-update contract.');
 }
+$notContains($index, '<table', 'Client Case index must not retain a raw operational table after OperationalGrid migration.');
+$notContains($index, 'tn-client-case-operational-grid', 'Client Case index must not restore retired raw-grid marker.');
+$notContains($index, 'tn-quick-case-form', 'Client Case index must not restore retired inline quick-update form.');
 
 $show = $read('app/Interfaces/Web/View/client_case/show.phtml');
 foreach ([
