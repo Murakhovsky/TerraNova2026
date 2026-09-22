@@ -140,6 +140,20 @@ list → select entity → drawer → inspect/edit/action → return to list con
 
 Колір ніколи не є єдиним носієм значення: компонент завжди має текстову мітку.
 
+### 9. Breadcrumbs
+
+`components/ui/breadcrumbs.phtml`
+
+Призначення: компактна семантична навігація по ієрархії сторінок без локальних separator/layout реалізацій.
+
+Контракт:
+- `items`;
+- `label`;
+- `label` + `href` для link item;
+- `current` для поточної сторінки.
+
+Компонент рендерить `nav > ol > li`, використовує `aria-current="page"` для поточного item і не приймає довільний HTML.
+
 ## Правила композиції
 
 Канонічна entity-сторінка збирається приблизно так:
