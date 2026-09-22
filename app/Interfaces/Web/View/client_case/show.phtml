@@ -48,44 +48,68 @@ $money = function ($amount, $currency): string {
 
     return number_format((float) $amount, 0, '.', ' ') . ' ' . (string) $currency;
 };
+$statusTone = static function (string $status): string {
+    return match ($status) {
+        'active' => 'positive',
+        'paused' => 'warning',
+        'lost' => 'danger',
+        default => 'neutral',
+    };
+};
+$stageTone = static function (string $stage): string {
+    return match ($stage) {
+        'deal', 'aftercare', 'repeat' => 'positive',
+        'paused' => 'warning',
+        'lost' => 'danger',
+        'qualification', 'need_defined', 'matching', 'viewing', 'negotiation' => 'info',
+        default => 'neutral',
+    };
+};
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'cases']); ?>
 
-<main class="tn-page tn-admin-page">
-  <nav class="tn-breadcrumbs">
-    <a href="<?php echo $this->url->get(''); ?>">Головна</a>
-    <span>/</span>
-    <a href="<?php echo $this->url->get('client-case'); ?>">Кейси</a>
-    <span>/</span>
-    <span>Картка</span>
-  </nav>
-
+<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-client-workspace">
   <?php if (!$case): ?>
-    <section class="tn-empty-state">
-      <h1>Кейс не знайдено</h1>
-      <p><?php echo $h($pageStatus ?: 'Перевірте посилання або поверніться до списку кейсів.'); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('client-case'); ?>">До CRM</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'error',
+        'title' => 'Кейс не знайдено',
+        'message' => (string) ($pageStatus ?: 'Перевірте посилання або поверніться до списку кейсів.'),
+        'action' => ['label' => 'До CRM', 'href' => 'client-case'],
+    ]); ?>
   <?php else: ?>
-    <section class="tn-listing-hero">
-      <div>
-        <p class="tn-kicker"><?php echo $h($case['public_id']); ?> / <?php echo $h($case['person_public_id']); ?></p>
-        <h1><?php echo $h($case['title']); ?></h1>
-        <p><?php echo $h($case['full_name']); ?> · <?php echo $h($case['phone'] ?: 'телефон не вказано'); ?><?php if ($case['email']): ?> · <?php echo $h($case['email']); ?><?php endif; ?></p>
-      </div>
-      <div class="tn-hero-metric">
-        <span><?php echo $h($typeLabels[$case['type']] ?? $case['type']); ?></span>
-        <strong><?php echo $h($stageLabels[$case['stage']] ?? $case['stage']); ?></strong>
-      </div>
-    </section>
+    <?php $this->partial('components/ui/entity_header', [
+        'eyebrow' => 'Clients · Client Case',
+        'identity' => (string) ($case['public_id'] ?? '') . ' / ' . (string) ($case['person_public_id'] ?? ''),
+        'title' => (string) ($case['title'] ?? ''),
+        'subtitle' => trim((string) ($case['full_name'] ?? '') . ' · ' . (string) (($case['phone'] ?? '') ?: 'телефон не вказано') . (!empty($case['email']) ? ' · ' . (string) $case['email'] : ''), ' ·'),
+        'status' => [
+            'label' => $statusLabels[(string) ($case['status'] ?? '')] ?? (string) ($case['status'] ?? ''),
+            'tone' => $statusTone((string) ($case['status'] ?? '')),
+        ],
+        'meta' => [
+            ['label' => 'Тип', 'value' => $typeLabels[(string) ($case['type'] ?? '')] ?? (string) ($case['type'] ?? '')],
+            ['label' => 'Етап', 'value' => $stageLabels[(string) ($case['stage'] ?? '')] ?? (string) ($case['stage'] ?? '')],
+            ['label' => 'Менеджер', 'value' => (string) (($case['manager_name'] ?? '') ?: 'не призначено')],
+            ['label' => 'Бюджет', 'value' => $money($case['budget_max'] ?? null, $case['currency'] ?? 'USD')],
+            ['label' => 'Наступний контакт', 'value' => (string) (($case['next_contact_at'] ?? '') ?: 'не задано')],
+        ],
+        'actions' => [
+            ['label' => 'До кейсів', 'href' => 'client-case', 'variant' => 'ghost'],
+            ['label' => 'Inbox', 'href' => 'client-case/inbox', 'variant' => 'ghost'],
+        ],
+    ]); ?>
 
-    <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
-    <?php if ($pageStatus): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
+    <?php if ($actionStatus): ?>
+      <?php $this->partial('components/ui/state', ['kind' => 'success', 'title' => 'Зміни застосовано', 'message' => (string) $actionStatus]); ?>
+    <?php endif; ?>
+    <?php if ($pageStatus): ?>
+      <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Кейс тимчасово недоступний', 'message' => (string) $pageStatus]); ?>
+    <?php endif; ?>
 
     <section class="tn-ai-deal-card">
       <div class="tn-ai-deal-card__head">
-        <div><p class="tn-kicker">AI Intelligence</p><h2>Recommendation</h2></div>
+        <div><p class="tn-ui-eyebrow">AI Intelligence</p><h2>Recommendation</h2></div>
         <?php if ($aiActions): ?><span class="tn-cos-status tn-cos-status--<?php echo $h($cosStatusClass($aiActions[0]['risk_level'])); ?>">Risk: <?php echo $h($aiActions[0]['risk_level']); ?></span><?php endif; ?>
       </div>
       <?php if (!$aiDecision && !$aiActions): ?>
@@ -109,18 +133,18 @@ $money = function ($amount, $currency): string {
                   <form action="<?php echo $this->url->get('cos/action/' . $aiAction['id'] . '/execute'); ?>" method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
-                    <button class="tn-btn tn-btn--dark" type="submit">Execute</button>
+                    <button class="tn-ui-button tn-ui-button--primary" type="submit">Execute</button>
                   </form>
                 <?php elseif ($aiAction['status'] === 'PENDING_APPROVAL' && $aiAction['approval_status'] === 'PENDING'): ?>
                   <form action="<?php echo $this->url->get('cos/approval/' . $aiAction['approval_id'] . '/approve'); ?>" method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
-                    <button class="tn-btn tn-btn--dark" type="submit">Approve</button>
+                    <button class="tn-ui-button tn-ui-button--primary" type="submit">Approve</button>
                   </form>
                   <form action="<?php echo $this->url->get('cos/approval/' . $aiAction['approval_id'] . '/reject'); ?>" method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
-                    <button class="tn-btn tn-btn--ghost" type="submit">Reject</button>
+                    <button class="tn-ui-button tn-ui-button--ghost" type="submit">Reject</button>
                   </form>
                 <?php endif; ?>
               </div>
@@ -132,10 +156,10 @@ $money = function ($amount, $currency): string {
     </section>
 
     <section class="tn-crm-detail-grid">
-      <article class="tn-admin-panel">
-        <div class="tn-section-heading">
-          <div><p class="tn-kicker">Кейс і людина</p><h2>Базові дані</h2></div>
-          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case'); ?>">До списку</a>
+      <article class="tn-ui-panel">
+        <div class="tn-ui-panel__head">
+          <div><p class="tn-ui-eyebrow">Кейс і людина</p><h2>Базові дані</h2></div>
+          <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get('client-case'); ?>">До списку</a>
         </div>
         <form class="tn-crm-form" action="<?php echo $this->url->get('client-case/update/' . $case['id']); ?>" method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
@@ -160,25 +184,25 @@ $money = function ($amount, $currency): string {
           <label><span>Наступний контакт</span><input name="next_contact_at" type="datetime-local" value="<?php echo $h($case['next_contact_at'] ? date('Y-m-d\TH:i', strtotime($case['next_contact_at'])) : ''); ?>"></label>
           <label class="is-wide"><span>Description</span><textarea name="description" rows="5"><?php echo $h($case['description']); ?></textarea></label>
           <label class="is-wide"><span>Нотатки по людині</span><textarea name="person_notes" rows="3"><?php echo $h($case['person_notes']); ?></textarea></label>
-          <button class="tn-btn tn-btn--dark" type="submit">Зберегти</button>
+          <button class="tn-ui-button tn-ui-button--primary" type="submit">Зберегти</button>
         </form>
       </article>
 
-      <aside class="tn-admin-panel">
-        <h2>Зведення</h2>
-        <div class="tn-admin-stats">
-          <div><span>Заявки</span><strong><?php echo count($inboundRequests); ?></strong></div>
-          <div><span>Підбори</span><strong><?php echo count($propertyMatches); ?></strong></div>
-          <div><span>Бюджет</span><strong><?php echo $h($money($case['budget_max'], $case['currency'])); ?></strong></div>
-          <div><span>Менеджер</span><strong><?php echo $h($case['manager_name'] ?: 'не задано'); ?></strong></div>
-          <div><span>Тип обʼєкта</span><strong><?php echo $h($case['property_type_name'] ?: 'не задано'); ?></strong></div>
-          <div><span>Місто</span><strong><?php echo $h($case['location_city'] ?: 'не задано'); ?></strong></div>
+      <aside class="tn-ui-panel">
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Зведення</p><h2>Контекст кейсу</h2></div></div>
+        <div class="tn-ui-kpi-grid">
+          <?php $this->partial('components/ui/kpi_card', ['label' => 'Заявки', 'value' => count($inboundRequests), 'hint' => 'прив’язані']); ?>
+          <?php $this->partial('components/ui/kpi_card', ['label' => 'Підбори', 'value' => count($propertyMatches), 'hint' => 'об’єкти']); ?>
+          <?php $this->partial('components/ui/kpi_card', ['label' => 'Бюджет', 'value' => $money($case['budget_max'], $case['currency']), 'hint' => 'до']); ?>
+          <?php $this->partial('components/ui/kpi_card', ['label' => 'Менеджер', 'value' => (string) ($case['manager_name'] ?: 'не задано')]); ?>
+          <?php $this->partial('components/ui/kpi_card', ['label' => 'Тип обʼєкта', 'value' => (string) ($case['property_type_name'] ?: 'не задано')]); ?>
+          <?php $this->partial('components/ui/kpi_card', ['label' => 'Місто', 'value' => (string) ($case['location_city'] ?: 'не задано')]); ?>
         </div>
       </aside>
     </section>
 
     <section class="tn-crm-grid">
-      <article class="tn-admin-panel">
+      <article class="tn-ui-panel">
         <h2>Нова дія</h2>
         <form class="tn-crm-form" action="<?php echo $this->url->get('client-case/activity/' . $case['id']); ?>" method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>">
@@ -189,11 +213,11 @@ $money = function ($amount, $currency): string {
           <label><span>Результат дзвінка</span><input name="call_result" type="text" maxlength="100" placeholder="client_thinking"></label>
           <label class="is-wide"><span>Опис</span><textarea name="body" rows="4"></textarea></label>
           <label class="tn-checkbox"><input name="completed" type="checkbox" value="1"><span>Виконано зараз</span></label>
-          <button class="tn-btn tn-btn--dark" type="submit">Додати дію</button>
+          <button class="tn-ui-button tn-ui-button--primary" type="submit">Додати дію</button>
         </form>
       </article>
 
-      <article class="tn-admin-panel">
+      <article class="tn-ui-panel">
         <h2>Історія</h2>
         <?php if (!$activities): ?>
           <p class="tn-muted">Дій ще немає.</p>
@@ -212,7 +236,7 @@ $money = function ($amount, $currency): string {
     </section>
 
     <section class="tn-crm-detail-grid">
-      <article class="tn-admin-panel">
+      <article class="tn-ui-panel">
         <h2>Вхідні заявки</h2>
         <?php if (!$inboundRequests): ?>
           <p class="tn-muted">До кейсу ще не привʼязано заявок.</p>
@@ -237,7 +261,7 @@ $money = function ($amount, $currency): string {
         <?php endif; ?>
       </article>
 
-      <article class="tn-admin-panel">
+      <article class="tn-ui-panel">
         <h2>Підібрані обʼєкти</h2>
         <?php if (!$propertyMatches): ?>
           <p class="tn-muted">Підборів ще немає. Додайте обʼєкт у кейс із каталогу або картки обʼєкта.</p>
@@ -259,13 +283,13 @@ $money = function ($amount, $currency): string {
                   <button type="submit">Оновити</button>
                 </form>
                 <div class="tn-match-presentation-actions">
-                  <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $match['slug']); ?>" target="_blank" rel="noopener">Відкрити PDF</a>
+                  <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get('property/pdf/' . $match['slug']); ?>" target="_blank" rel="noopener">Відкрити PDF</a>
                   <form class="tn-presentation-share-form tn-presentation-share-form--compact" action="<?php echo $this->url->get('property/presentationShare'); ?>" method="post" target="_blank">
                     <input type="hidden" name="client_case_id" value="<?php echo (int) $case['id']; ?>">
                     <input type="hidden" name="slug" value="<?php echo $h($match['slug']); ?>">
                     <input type="hidden" name="variant" value="client">
                     <input type="hidden" name="return_url" value="client-case/show/<?php echo (int) $case['id']; ?>">
-                    <div class="tn-presentation-share-form__channels"><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="email">Email</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="telegram">Telegram</button><button class="tn-btn tn-btn--ghost" type="submit" name="channel" value="viber">Viber</button></div>
+                    <div class="tn-presentation-share-form__channels"><button class="tn-ui-button tn-ui-button--ghost" type="submit" name="channel" value="email">Email</button><button class="tn-ui-button tn-ui-button--ghost" type="submit" name="channel" value="telegram">Telegram</button><button class="tn-ui-button tn-ui-button--ghost" type="submit" name="channel" value="viber">Viber</button></div>
                   </form>
                 </div>
               </div>
