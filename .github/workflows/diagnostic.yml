@@ -28,6 +28,211 @@ jobs:
           php tests/architecture/table_ownership.php
           php tests/architecture/domain_module_contract.php
 
+      - name: Web Platform v1 freeze change-control
+        env:
+          COS_WEB_PLATFORM_FREEZE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" ] && ! printf '%s' "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" | grep -Eq '^0{40}          npm run build
+          php tests/architecture/frontend_assets.php
+          php tests/architecture/frontend_interface.php
+          php tests/architecture/frontend_routes.php
+          php tests/architecture/web_v012_production_closure.php
+          php tests/architecture/web_experience_wave12_foundation.php
+          php tests/architecture/web_experience_wave12_runtime.php
+          php tests/architecture/web_experience_wave12_toolkit.php
+          php tests/architecture/web_experience_wave12_design_system.php
+          php tests/architecture/web_experience_wave12_shell.php
+          php tests/architecture/web_experience_wave12_extensions.php
+          php tests/architecture/web_experience_wave12_actions.php
+          php tests/architecture/web_experience_wave12_runtime_actions.php
+          php tests/architecture/web_experience_wave12_realtime.php
+          php tests/architecture/web_experience_wave12_async_operations.php
+          php tests/architecture/web_experience_wave12_ai_ui.php
+          php tests/architecture/web_experience_wave12_mobile.php
+          php tests/architecture/web_experience_wave12_pwa.php
+          php tests/architecture/web_experience_wave12_native.php
+          php tests/architecture/web_experience_wave12_security.php
+          php tests/architecture/web_experience_wave12_feature_flags.php
+          php tests/architecture/web_experience_wave12_audit_history.php
+          php tests/architecture/web_experience_wave12_ui_catalog.php
+          php tests/architecture/web_experience_wave12_testing.php
+          php tests/architecture/web_experience_wave12_performance_observability.php
+          php tests/architecture/web_experience_wave12_sales_reference.php
+          php tests/architecture/web_experience_wave12_sales_cutover.php
+          php -l symfony/tests/sales_cutover_access_contract.php
+          php tests/smoke/sales_workspace.php
+          php tests/component/web_experience_components.php
+          php -l symfony/tests/Panther/WebExperiencePantherTest.php
+          php tests/architecture/web_experience_wave12_interactions.php
+          php tests/architecture/web_experience_wave12_forms.php
+          php tests/architecture/web_experience_wave12_data.php
+          php tests/architecture/web_experience_wave12_workspace.php
+          php tests/architecture/web_experience_wave12_search.php
+          php tests/architecture/web_experience_visual_foundation.php
+          php tests/architecture/web_experience_style_lab.php
+          php tests/architecture/web_experience_geometry.php
+          php tests/architecture/web_experience_surfaces.php
+          php tests/architecture/web_experience_production_sales.php
+          php tests/architecture/web_experience_production_property.php
+          php tests/architecture/web_experience_production_administration.php
+          php tests/architecture/web_experience_production_client_case.php
+          php tests/architecture/web_experience_residual_control_surfaces.php
+          php tests/architecture/web_experience_stress_screens.php
+          php tests/architecture/web_experience_business_ux.php
+          php tests/architecture/web_experience_primitives.php
+          php tests/architecture/web_experience_typography.php
+
+      - name: Zero legacy production gate
+        run: php tests/architecture/zero_legacy_runtime.php
+
+      - name: Canonical Symfony syntax
+        run: |
+          find symfony/src app/Kernel app/Platform app/Domains app/Infrastructure -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+
+  deploy-dev:
+    name: Deploy main to AWS dev
+    needs: runtime-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      COMPANY_OS_DOMAIN: company-os.shop
+      COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/health/dependencies
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate deployment configuration
+        run: |
+          : "${DEV_HOST:?DEV_HOST secret is missing}"
+          : "${DEV_USER:?DEV_USER secret is missing}"
+          : "${DEV_PORT:?DEV_PORT secret is missing}"
+          : "${DEV_SSH_KEY:?DEV_SSH_KEY secret is missing}"
+          : "${DEV_PATH:?DEV_PATH environment variable is missing}"
+          : "${COMPANY_OS_DOMAIN:?COMPANY_OS_DOMAIN is missing}"
+          : "${COMPANY_OS_HEALTHCHECK_URL:?COMPANY_OS_HEALTHCHECK_URL is missing}"
+
+      - name: Configure SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/dev_deploy_key
+          chmod 600 ~/.ssh/dev_deploy_key
+          ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Capture pre-deploy runtime state
+        continue-on-error: true
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "
+            cd $REMOTE_PATH 2>/dev/null || true
+            if docker info >/dev/null 2>&1; then
+              DOCKER='docker'
+            elif sudo -n docker info >/dev/null 2>&1; then
+              DOCKER='sudo -n docker'
+            else
+              DOCKER=''
+            fi
+            echo '=== docker ps -a ==='
+            if [ -n "$DOCKER" ]; then $DOCKER ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; fi
+            echo '=== cos-nginx-1 logs ==='
+            if [ -n "$DOCKER" ]; then $DOCKER logs --tail=160 cos-nginx-1 2>&1 || true; fi
+            echo '=== cos-mercure-1 logs ==='
+            if [ -n "$DOCKER" ]; then $DOCKER logs --tail=160 cos-mercure-1 2>&1 || true; fi
+            echo '=== localhost:8081 readiness ==='
+            curl -sv --max-time 8 http://127.0.0.1:8081/health/dependencies 2>&1 || true
+          "
+
+      - name: Prepare server directory
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- $REMOTE_PATH"
+
+      - name: Sync repository to dev server
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='.env' \
+            --exclude='.env.docker' \
+            --exclude='vendor/' \
+            --exclude='node_modules/' \
+            --exclude='tmp/' \
+            --exclude='public/uploads/' \
+            --exclude='public/docs/' \
+            -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
+            ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
+
+      - name: Configure canonical HTTP reverse proxy
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/configure-company-os-http.sh $REMOTE_DOMAIN 127.0.0.1:8081"
+
+      - name: Deploy canonical containers and migrations
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/dev.sh"
+
+      - name: HTTP preflight
+        run: |
+          getent ahostsv4 "$COMPANY_OS_DOMAIN"
+          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused \
+            "http://$COMPANY_OS_DOMAIN/health/dependencies" > /dev/null
+
+      - name: Configure canonical HTTPS reverse proxy
+        run: |
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          REMOTE_DOMAIN=$(printf '%q' "$COMPANY_OS_DOMAIN")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd $REMOTE_PATH && bash deploy/configure-dev-tls.sh $REMOTE_DOMAIN 127.0.0.1:8081"
+
+      - name: External HTTPS application health check
+        run: |
+          curl --fail --show-error --silent --location --retry 2 --retry-delay 2 --retry-connrefused \
+            "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
+
+      - name: HTTPS reverse-proxy and protected-route smoke
+        run: bash tests/smoke/https_proxy_contract.sh "https://$COMPANY_OS_DOMAIN"
+
+      - name: Post-deploy stability soak
+        run: |
+          sleep 90
+          curl --fail --show-error --silent --location --retry 3 --retry-delay 2 --retry-connrefused             "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
+          REMOTE_PATH=$(printf '%q' "$DEV_PATH")
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "
+            cd $REMOTE_PATH
+            if docker info >/dev/null 2>&1; then
+              docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            elif sudo -n docker info >/dev/null 2>&1; then
+              sudo -n docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            fi
+            curl --fail --show-error --silent http://127.0.0.1:8081/health/dependencies > /dev/null
+          "
+; then
+            git fetch --no-tags --depth=1 origin "$COS_WEB_PLATFORM_FREEZE_BASE_SHA"
+          fi
+          php tests/architecture/web_platform_v1_freeze.php
+
       - name: Final frontend architecture
         run: |
           npm run build
