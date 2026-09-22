@@ -178,6 +178,32 @@ WEB V0.9 та WEB V0.10 regression gates переведені з Phalcon-era con
 
 PHASE 14 gate перевіряє їхні domain-specific markers окремо. Whitelist не є дозволом на довільні legacy shells: кожен виняток має конкретну runtime причину і executable contract.
 
+## Після PHASE 14: cleanup feature assets
+
+Після закриття PHTML shell debt окремий audit показав, що feature bundles Property і Analytics ще містили CSS для вже retired compatibility markup.
+
+### Property workspace CSS
+
+`frontend/features/property/workspace.css` скорочено до реального canonical contract:
+
+- `.tn-property-workspace` задає лише surface width/padding;
+- responsive padding збережено;
+- видалені selectors для retired page/listing heroes, admin metrics/cards, CRM filters, raw listing/manage/admin tables, old cabinet/admin grids та empty-state shell.
+
+Окремо виправлено стару помилку композиції: selector `.tn-property-workspace .tn-page` не міг спрацювати для canonical view, де `tn-page` і `tn-property-workspace` знаходяться на одному `<main>`.
+
+### Analytics workspace CSS
+
+`frontend/features/analytics/workspace.css` скорочено до:
+
+- surface width/padding;
+- живого `.tn-dashboard-bars` pattern;
+- responsive layout для цього pattern.
+
+Legacy selectors для page hero, admin metrics/dashboard cards, raw tables та table wrappers видалені.
+
+PHASE 14 architecture gate тепер перевіряє не лише production PHTML, а й ці feature CSS bundles, щоб retired compatibility selectors не поверталися разом із майбутніми змінами.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
@@ -204,4 +230,5 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - historical Cabinet/Public renderers не повертаються у runtime;
 - Guide landing не використовує legacy breadcrumbs/page hero/CTA shell;
 - repository-wide gate забороняє legacy page/admin/portal/auth shells;
-- specialized home/property/spatial/studio/failure surfaces мають явний whitelist contract.
+- specialized home/property/spatial/studio/failure surfaces мають явний whitelist contract;
+- Property та Analytics feature CSS не містять selectors retired compatibility views.
