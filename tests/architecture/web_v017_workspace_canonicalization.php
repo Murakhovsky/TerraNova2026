@@ -117,7 +117,8 @@ foreach ([
         "partial('components/ui/state'",
         "partial('components/ui/tabs'",
         "partial('components/ui/filter_bar'",
-        'tn-client-case-operational-grid',
+        "$caseRows = [];",
+        "'bodyPartial' => 'components/ui/operational_grid'",
     ],
     'app/Interfaces/Web/View/client_case/show.phtml' => [
         "partial('components/ui/entity_header'",
