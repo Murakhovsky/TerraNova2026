@@ -33,10 +33,10 @@ foreach ([
 
 $docs = (string) file_get_contents($root . '/docs/03-architecture/cos-quality-closure.md');
 foreach ([
-    'PHASE 15 — Quality Closure',
-    'Accessibility contract',
+    'PHASE 15 — Закриття якості',
+    'Контракт доступності',
     'WCAG 2.2 AA',
-    'Freeze boundary',
+    'Межа заморожених контрактів',
     'Критерії завершення',
 ] as $marker) {
     if (!str_contains($docs, $marker)) {
