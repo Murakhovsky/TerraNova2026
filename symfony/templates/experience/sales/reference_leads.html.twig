@@ -1,0 +1,59 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Lead List | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-primitive-stack" data-sales-reference="lead-list">
+    <twig:CosEntityHeader
+        eyebrow="Sales reference vertical"
+        title="Lead List"
+        subtitle="Кваліфікація та пріоритезація вхідного попиту на канонічних COS primitives."
+        identity="{{ items|length }} у вибірці"
+    />
+
+    <twig:CosFilterBar action="/sales/reference/leads" label="Lead filters">
+        <label class="cos-field">
+            <span>Пошук</span>
+            <input class="cos-input" type="search" name="q" value="{{ filters.q }}" placeholder="Ім’я, телефон, email">
+        </label>
+        <label class="cos-field">
+            <span>Статус</span>
+            <select class="cos-select" name="status">
+                <option value="">Усі</option>
+                {% for value in ['new','contacted','qualified','disqualified'] %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ value|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>Джерело</span>
+            <input class="cos-input" name="source" value="{{ filters.source }}">
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Застосувати</button>
+    </twig:CosFilterBar>
+
+    <section class="cos-card">
+        <div class="cos-card__header">
+            <div><p class="cos-card__eyebrow">Demand</p><h2>Leads</h2></div>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/sales/reference/dashboard">Dashboard</a>
+        </div>
+        <div class="cos-entity-list">
+            {% for lead in items %}
+                <twig:CosEntityListItem
+                    title="{{ lead.name ?? 'Lead #' ~ lead.id }}"
+                    subtitle="{{ (lead.source ?? 'Direct') ~ ' · ' ~ (lead.phone ?? lead.email ?? 'без контакту') }}"
+                    meta="{{ lead.owner_name ?? 'Unassigned' }}"
+                    statusLabel="{{ lead.status ?? 'new' }}"
+                    statusTone="{{ (lead.status ?? '') == 'qualified' ? 'positive' : ((lead.status ?? '') == 'disqualified' ? 'danger' : 'neutral') }}"
+                    href="/sales/reference/leads/{{ lead.id }}"
+                />
+            {% else %}
+                <p class="cos-card__copy">Лідів не знайдено. Змініть фільтри або дочекайтеся нових звернень.</p>
+            {% endfor %}
+        </div>
+        {% if pagination.has_more ?? false %}
+            <div class="cos-card__footer">
+                <a class="cos-button cos-button--ghost" href="?page={{ (pagination.page ?? 1) + 1 }}&q={{ filters.q|url_encode }}&status={{ filters.status|url_encode }}&source={{ filters.source|url_encode }}">Наступна сторінка</a>
+            </div>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}
