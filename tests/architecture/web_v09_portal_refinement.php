@@ -70,6 +70,8 @@ foreach ([
 foreach ([
     'app/Interfaces/Web/View/cabinet/index.phtml',
     'app/Interfaces/Web/View/cabinet/submission.phtml',
+    'app/Interfaces/Web/View/shared/portal_header.phtml',
+    'frontend/features/portal/cabinet.js',
 ] as $historical) {
     if (is_file($root . '/' . $historical)) {
         throw new RuntimeException('Historical Cabinet renderer restored: ' . $historical);
@@ -77,9 +79,17 @@ foreach ([
 }
 
 $entrypoint = $read('frontend/entrypoints/portal-cabinet.js');
-$contains($entrypoint, '../features/portal/cabinet.css', 'Portal entrypoint must retain cabinet CSS');
-$contains($entrypoint, '../features/portal/cabinet.js', 'Portal entrypoint must retain cabinet JS');
+$contains($entrypoint, '../features/portal/cabinet.css', 'Portal entrypoint must retain canonical Cabinet CSS');
 $contains($entrypoint, '../core/production.js', 'Portal entrypoint must retain production guard');
+$notContains($entrypoint, '../features/portal/cabinet.js', 'Portal entrypoint must not restore the retired shell browser module');
+
+$styles = $read('frontend/features/portal/cabinet.css');
+foreach (['.tn-portal-page', '.tn-portal-profile'] as $needle) {
+    $contains($styles, $needle, 'Canonical Cabinet CSS is missing a live profile/layout selector');
+}
+foreach (['tn-portal-header', 'tn-portal-hero', 'tn-portal-card', 'tn-portal-state', 'tn-portal-menu-button'] as $needle) {
+    $notContains($styles, $needle, 'Canonical Cabinet CSS must not restore retired Portal shell selectors');
+}
 
 $production = $read('frontend/core/production.js');
 $contains($production, 'aria-busy', 'Portal forms must inherit progressive submit state');

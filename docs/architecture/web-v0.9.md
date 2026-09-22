@@ -1,183 +1,97 @@
-# WEB V0.9 — Portal / Cabinet Refinement
+# WEB V0.9 — Portal / Cabinet: актуальний native contract
 
-## Goal
+WEB V0.9 історично ввів окрему Portal surface. Після native Symfony cutover і PHASE 14 shell closure production contract спрощено до фактичного runtime, без збереження мертвого UI shell заради історичної версії.
 
-WEB V0.9 turns `/cabinet*` into a real authenticated **Portal surface**.
+## Runtime ownership
 
-The frontend contract is now explicit:
+Canonical routes:
 
-- **Workspace** = company + work;
-- **Portal** = user + interaction with the company;
-- **Public** = external world.
+- `/cabinet` → `CabinetPageController::index`;
+- `/cabinet/submission/{id}` → `CabinetPageController::retiredSubmission`.
 
-A user being a manager or administrator does not change the ownership of `/cabinet`. Staff can open the Portal as users, while operational work stays in Workspace routes.
+`CabinetPageController`:
 
-This is an Interface/Presentation release. It does not create a `Portal` DDD domain and does not move Property, Identity or Sales business rules into browser code.
+- читає native COS/Symfony tenant context;
+- redirect-ить unauthenticated user на `/auth/login`;
+- redirect-ить manager user на `/sales`;
+- для Portal user рендерить `cabinet/canonical.phtml`;
+- старий submission editor повертає HTTP 410 через `cabinet/retired-submission.phtml`.
 
-## Portal surface
+Portal лишається Interface/Presentation surface і не створює `Domains/Portal`.
 
-The refined routes are:
+## Canonical Cabinet
 
-- `/cabinet`;
-- `/cabinet/submission/{id}`;
-- existing Telegram connect/disconnect actions.
+`cabinet/canonical.phtml` використовує:
 
-`CabinetController` always declares:
+- canonical PageHeader;
+- canonical Panel;
+- server-owned `currentUser`, `portalRole`, `organizationId`;
+- logout через native `/auth/logout`;
+- read-only `tn-portal-profile` для identity context.
 
-```php
-interfaceSurface = portal
-pageAssetEntries = ['portal-cabinet']
-metaRobots = noindex,nofollow
-```
+Окремий Portal navigation/header більше не існує. Після PHASE 14 були виведені:
 
-The controller keeps backend truth for:
+- `shared/portal_header.phtml`;
+- `frontend/features/portal/cabinet.js`;
+- historical `cabinet/index.phtml`;
+- historical `cabinet/submission.phtml`.
 
-- authenticated user;
-- effective organization role;
-- role capabilities;
-- ownership checks for submissions;
-- cabinet data;
-- Telegram binding.
+Це не втрата функціональності: canonical Cabinet більше не рендерив dedicated Portal header, тому browser module був no-op.
 
-Manager-only property operations are no longer assembled inside the Portal controller.
+## Asset ownership
 
-## Portal shell
+`frontend/entrypoints/portal-cabinet.js` залишається canonical Portal entrypoint і завантажує:
 
-`shared/portal_header.phtml` is the canonical Portal shell.
+- shared design system;
+- Portal layout baseline;
+- мінімальний `frontend/features/portal/cabinet.css`;
+- shared `initProductionUX()`.
 
-It owns:
+Feature CSS тепер володіє лише живим Cabinet presentation contract:
 
-- Terra Nova Portal identity;
-- module-aware Portal navigation;
-- authenticated user identity;
-- mobile navigation;
-- `aria-current` state;
-- one surface marker: `data-interface-surface="portal"`.
+- `.tn-portal-page`;
+- `.tn-portal-profile`;
+- mobile profile layout.
 
-Cabinet views no longer render `shared/manager_header.phtml`.
+Header/menu/hero/card/list selectors старого Portal shell видалені.
 
-## Information architecture
+Окремого Portal JavaScript немає. Progressive busy/submission behavior належить shared `frontend/core/production.js`.
 
-Only capabilities backed by current application/runtime behaviour are shown.
+## Security and business ownership
 
-### Overview
+Browser layer не визначає:
 
-`/cabinet`
+- role/capabilities;
+- tenant/organization;
+- permissions;
+- redirect policy;
+- submission lifecycle.
 
-### Real Estate
-
-Property module contributes:
-
-- Catalog;
-- Favourites;
-- My Properties → `/cabinet#properties`;
-- Submit Property when the server-side role allows it.
-
-`My Properties` is intentionally not linked to `property/listing`: Listing remains a Company Workspace capability.
-
-### Requests
-
-`/cabinet#requests` renders the existing `cabinetData().inbound_requests` projection.
-
-### Profile
-
-`/cabinet#profile` currently exposes read-only account identity because no profile-edit application contract exists yet.
-
-A decorative edit form was deliberately not invented.
-
-### Documents / activity
-
-Not shown because there is no current capability contract that supports it.
-
-## Portal states
-
-The server-rendered UI explicitly handles:
-
-- loaded data;
-- empty My Properties;
-- empty submissions;
-- empty requests;
-- controller/service failure;
-- Telegram success/error status;
-- submission not found;
-- submission service unavailable;
-- saving state through `aria-busy`.
-
-Validation remains native/server-side; browser JavaScript does not reproduce business validation rules.
-
-## Responsive behaviour
-
-Portal is mobile-first relative to Workspace.
-
-At `<= 1050px`:
-
-- Portal navigation moves behind a dedicated menu control;
-- dense desktop identity chrome is removed;
-- cards reduce columns.
-
-At `<= 650px`:
-
-- navigation becomes vertical;
-- actions become one-column;
-- page sections use compact spacing;
-- form grids collapse to one column;
-- primary controls target at least 44px interaction height.
-
-Reduced-motion preferences are respected.
-
-## Browser ownership
-
-`frontend/entrypoints/portal-cabinet.js` loads:
-
-- `frontend/features/portal/cabinet.css`;
-- `frontend/features/portal/cabinet.js`.
-
-Browser JavaScript owns only presentation behaviour:
-
-- Portal mobile navigation;
-- progressive submit state.
-
-It does not decide permissions, property state, submission state or business transitions.
-
-## Navigation ownership
-
-`ModuleAwareNavigationService` remains authoritative.
-
-Core Portal navigation owns generic Portal destinations:
-
-- Overview;
-- Requests;
-- Profile.
-
-Property contributes Property-specific destinations and submission role gating.
-
-This keeps Portal as an interface surface rather than a new business domain.
+Ці рішення лишаються server-side.
 
 ## Regression gate
 
-`tests/architecture/web_v09_portal_refinement.php` protects the release against:
+`tests/architecture/web_v09_portal_refinement.php` перевіряє:
 
-- rendering Workspace shell from Cabinet;
-- role-based switching of Portal/Workspace surface ownership;
-- rebuilding manager operational data in Cabinet;
-- duplicated role rules in PHTML;
-- sending My Properties to Workspace Listing;
-- missing Portal bundle/shell/mobile behaviour;
-- accidental creation of `app/Domains/Portal`.
-
-The dedicated workflow runs on `main`.
+- native `CabinetPageController`;
+- canonical Cabinet і HTTP 410 retired submission boundary;
+- Symfony routes;
+- відсутність historical Cabinet renderers;
+- відсутність retired `portal_header.phtml` і Portal browser module;
+- мінімальний Cabinet CSS contract;
+- Vite `portal-cabinet` entrypoint;
+- shared production guard;
+- відсутність `Domains/Portal`.
 
 ## Definition of Done
 
-WEB V0.9 is closed when:
+WEB V0.9 у поточному runtime вважається закритим, коли:
 
-1. `/cabinet*` always owns the Portal surface;
-2. Portal has one dedicated shell and centralized navigation;
-3. Cabinet never renders the Workspace shell;
-4. My Properties, submissions, requests, Telegram and profile projection use shared Portal presentation patterns;
-5. role/capability truth remains server-side;
-6. mobile navigation and one-column mobile forms are usable;
-7. loading/saving, empty and failure states are represented where the current server contract supports them;
-8. the Portal bundle is managed through Vite;
-9. architecture/regression gates protect the boundary;
-10. no `Domains/Portal` exists.
+1. `/cabinet` належить native Symfony/COS identity lifecycle;
+2. manager не отримує окремий дубль Workspace всередині Portal;
+3. Cabinet використовує canonical UI primitives;
+4. retired submission route лишається явним HTTP 410 compatibility boundary;
+5. dedicated legacy Portal header/menu artifacts не повертаються;
+6. Portal entrypoint містить тільки реально потрібні assets;
+7. permission/business truth лишається server-side;
+8. architecture gates захищають цей boundary.
