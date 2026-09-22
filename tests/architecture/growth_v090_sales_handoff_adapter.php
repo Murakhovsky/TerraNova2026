@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.9.0','Growth V0.9 manifest version must be 0.9.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.9.0','>='),'Growth manifest must remain V0.9+.');
 $assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.9 must not invent a schema migration.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.9 must remain disabled before delivery cutover.');
 $assert(in_array('growth.handoff.target.sales',$manifest['contributions']['capabilities']??[],true),'Growth Sales handoff capability is missing.');
@@ -33,7 +33,7 @@ foreach(['PDO','Mysql','tn_leads','tn_client_cases','Infrastructure\\Platform'] 
 }
 
 $services=$read('symfony/config/services.yaml');
-foreach(['SalesGrowthHandoffTarget','GrowthBuyingCommitteeRepositoryInterface','SalesWriteServiceFactoryInterface'] as $needle){
+foreach(['SalesGrowthHandoffTarget','GrowthBuyingCommitteeRepositoryInterface','SalesWriteServiceFactoryInterface','ActiveModuleResolver'] as $needle){
     $assert(str_contains($services,$needle),'Growth Sales handoff DI missing: '.$needle);
 }
 

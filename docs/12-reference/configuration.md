@@ -17,6 +17,7 @@ generated: true
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `0.6.1` | — | 0 |
 | `finance` | `0.1.0` | — | 0 |
+| `growth` | `0.10.0` | — | 29 |
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 18 |
@@ -41,6 +42,12 @@ generated: true
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `growth`
+
+- manifest: `app/Domains/Growth/module.php`;
+- configuration provisioners: —;
+- capabilities: `growth.api.v1`, `growth.handoff.target.sales`, `growth.handoff.dispatch`, `growth.handoff.brief`, `growth.handoff.targets`, `growth.research.accept`, `growth.research.brief`, `growth.research.generate`, `growth.qualification.policy`, `growth.candidate.evaluate`, `growth.candidate.decision_brief`, `growth.signal.collect`, `growth.signal.dedupe`, `growth.signal.ingest`, `growth.buying_committee.assess`, `growth.buying_committee.brief`, `growth.contact.discover`, `growth.contact.enrich`, `growth.icp.manage`, `growth.account.discover`, `growth.account.enrich`, `growth.account.score`, `growth.account.brief`, `growth.signal.detect`, `growth.candidate.research`, `growth.candidate.score`, `growth.candidate.qualify`, `growth.handoff.prepare`, `growth.candidate.monitor`.
 
 ## `hr`
 

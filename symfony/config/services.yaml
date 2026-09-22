@@ -500,6 +500,7 @@ services:
     arguments:
       $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
       $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
 
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 

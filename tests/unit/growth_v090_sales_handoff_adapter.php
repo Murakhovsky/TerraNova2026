@@ -15,6 +15,10 @@ use Domains\Sales\Application\Contract\SalesWriteServiceInterface;
 use Domains\Sales\Application\DTO\ChangeDealStageResult;
 use Domains\Sales\Application\DTO\ClientCaseCommandResult;
 use Domains\Sales\Application\DTO\OperationResult;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\Contract\ModuleStateRepositoryInterface;
+use Kernel\Module\ModuleCatalog;
+use Kernel\Module\ModuleManifest;
 
 function expectGrowthV090(bool $condition,string $message):void
 {
@@ -96,13 +100,29 @@ $factory=new class($salesService) implements SalesWriteServiceFactoryInterface {
     public function forOrganization(string $organizationId): SalesWriteServiceInterface { return $this->service; }
 };
 
+$states=new class implements ModuleStateRepositoryInterface {
+    /** @var array<string,bool> */
+    private array $values=[];
+    public function enabledOverride(string $organizationId,string $moduleId): ?bool
+    {
+        return $this->values[$organizationId.':'.$moduleId]??null;
+    }
+    public function setEnabled(string $organizationId,string $moduleId,bool $enabled): void
+    {
+        $this->values[$organizationId.':'.$moduleId]=$enabled;
+    }
+};
+$modules=new ActiveModuleResolver(new ModuleCatalog([
+    new ModuleManifest('sales','Sales','0.8.6'),
+]),$states);
+
 $handoff=new OpportunityHandoff(
     'candidate-1','org-1','customer_acquisition','acquire','account','account-1','sales',
     ['signal-1'],'Scaling matters','Operational gap','Leadership changed',['signal-1'],[],
     ['fit'=>['score'=>80]],'Implementation value','diagnostic','schedule diagnostic',
 );
 
-$target=new SalesGrowthHandoffTarget($contacts,$factory);
+$target=new SalesGrowthHandoffTarget($contacts,$factory,$modules);
 $result=$target->accept($handoff,42,'corr-1','stable-target-key');
 expectGrowthV090($result->accepted,'Sales Growth handoff should accept a valid champion email.');
 expectGrowthV090($result->referenceType==='sales_lead'&&$result->referenceId==='77','Sales Growth handoff returned wrong target reference.');
@@ -112,6 +132,11 @@ expectGrowthV090(($salesService->lastInput['source']??null)==='growth-handoff','
 expectGrowthV090($salesService->lastActor===42,'Sales Growth handoff lost actor provenance.');
 expectGrowthV090($salesService->lastCorrelation==='corr-1','Sales Growth handoff lost correlation id.');
 expectGrowthV090($salesService->lastIdempotency==='stable-target-key','Sales Growth handoff lost target idempotency key.');
+
+$states->setEnabled('org-1','sales',false);
+$disabled=$target->accept($handoff,42,'corr-disabled','stable-target-key');
+expectGrowthV090(!$disabled->accepted&&str_contains($disabled->reason,'disabled'),'Sales Growth handoff must reject disabled Sales module.');
+$states->setEnabled('org-1','sales',true);
 
 $contacts->assessment=null;
 $rejected=$target->accept($handoff,42,'corr-2','stable-target-key');

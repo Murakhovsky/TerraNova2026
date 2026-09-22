@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.9.0',
+    'version' => '0.10.0',
     'schema_version' => '0.8.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
@@ -25,8 +25,10 @@ return [
             'app/migrations/20260922_000071_growth_v060_decision_intelligence.sql',
             'app/migrations/20260922_000072_growth_v070_research_intelligence.sql',
             'app/migrations/20260922_000073_growth_v080_handoff_protocol.sql',
+            'app/migrations/20260922_000074_growth_v0100_api_surface.sql',
         ],
         'capabilities' => [
+            'growth.api.v1',
             'growth.handoff.target.sales',
             'growth.handoff.dispatch',
             'growth.handoff.brief',

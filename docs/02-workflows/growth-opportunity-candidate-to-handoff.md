@@ -335,6 +335,24 @@ sales_lead:<id>
 
 Sales сам створює свій execution object через власний application boundary. Growth лише передає package та стабільний Candidate-level idempotency key. Multiple champions, відсутній committee або non-email identity дають explicit target rejection замість евристичного вибору людини.
 
+## Executable API V1
+
+V0.10 відкриває Growth runtime через 34 canonical routes під `/api/v1/growth/*`.
+
+Контролер лишається thin adapter:
+
+```text
+HTTP
+  ↓
+tenant/module/security guard
+  ↓
+Growth Application Boundary
+  ↓
+Domain / Persistence / Events / Audit
+```
+
+Read surface використовує `cos.tenant.access`. Mutation surface використовує `cos.tenant.manage`, CSRF, `X-Idempotency-Key` та correlation id. Web layer не залежить від Growth repositories, PDO або target-domain persistence.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -354,9 +372,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.9
+## Статус V0.10
 
-`process_state: to-be` поки навмисний. V0.9 додає перший concrete `sales` target adapter до resumable Handoff Protocol. Інші target adapters, signal provider adapters, engagement, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.10 додає executable Symfony API V1 поверх усіх Growth application boundaries. Інші target adapters, signal provider adapters, engagement і production UI додаються окремими хвилями.
 
 ## Карта коду
 

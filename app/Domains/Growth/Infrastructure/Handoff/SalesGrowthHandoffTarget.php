@@ -9,6 +9,7 @@ use Domains\Growth\Application\DTO\HandoffTargetResult;
 use Domains\Growth\Application\DTO\OpportunityHandoff;
 use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use InvalidArgumentException;
+use Kernel\Module\ActiveModuleResolver;
 use RuntimeException;
 
 final readonly class SalesGrowthHandoffTarget implements GrowthHandoffTargetInterface
@@ -16,6 +17,7 @@ final readonly class SalesGrowthHandoffTarget implements GrowthHandoffTargetInte
     public function __construct(
         private GrowthBuyingCommitteeRepositoryInterface $contacts,
         private SalesWriteServiceFactoryInterface $sales,
+        private ActiveModuleResolver $modules,
     ) {}
 
     public function domain(): string
@@ -31,6 +33,9 @@ final readonly class SalesGrowthHandoffTarget implements GrowthHandoffTargetInte
     ): HandoffTargetResult {
         if($handoff->targetDomain!==$this->domain()){
             throw new InvalidArgumentException('Sales Growth handoff target received a package for another Domain.');
+        }
+        if(!$this->modules->isEnabled($handoff->organizationId,'sales')){
+            return HandoffTargetResult::rejected('Sales module is disabled for this organization.');
         }
 
         $contact=$this->resolveContact($handoff);

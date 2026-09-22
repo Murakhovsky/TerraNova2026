@@ -101,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.9 Opportunity Intelligence + Sales Handoff Adapter
+## V0.10 Executable Opportunity Intelligence API
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -223,4 +223,17 @@ For a Growth `contact` subject, Sales intake requires a valid email identity. Fo
 
 When accepted, the adapter calls the target-owned `SalesWriteServiceFactoryInterface → createLead()` boundary with the stable Candidate-level idempotency key and returns a `sales_lead:<id>` reference. Growth never writes `tn_leads` or other Sales persistence.
 
-Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters, outbound engagement, public API and Growth UI.
+V0.10 exposes the implemented Growth runtime through a thin Symfony API V1 surface:
+
+```text
+/api/v1/growth/signals
+/api/v1/growth/candidates
+/api/v1/growth/icp
+/api/v1/growth/accounts
+/api/v1/growth/qualification-policies
+/api/v1/growth/handoff/*
+```
+
+The controller depends only on Growth application boundaries plus tenant/module/security services. Reads require tenant `ACCESS`; mutations require tenant `MANAGE`, valid session CSRF, a bounded `X-Idempotency-Key`, and correlation propagation. No repository or PDO access exists in the HTTP layer.
+
+Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters, outbound engagement and production Growth UI.
