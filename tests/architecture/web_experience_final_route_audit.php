@@ -165,7 +165,7 @@ if (is_file($root . '/frontend/entrypoints/cos-site.js') || is_file($root . '/fr
     $fail('Retired COS-site source files were restored.');
 }
 
-foreach (['tn-filter-bar', 'tn-crm-filters', 'tn-manage-filters', 'tn-ui-toolbar', 'tn-status-pill'] as $legacyMarker) {
+foreach (['tn-filter-bar', 'tn-crm-filters', 'tn-manage-filters', 'tn-ui-toolbar', 'tn-status-pill', 'tn-btn', 'tn-form-status', 'tn-empty-state'] as $legacyMarker) {
     foreach ($views as $key => $path) {
         if (str_contains((string) file_get_contents($path), $legacyMarker)) {
             $fail('Legacy UI primitive restored in ' . $key . ': ' . $legacyMarker);
