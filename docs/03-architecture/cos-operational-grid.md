@@ -44,7 +44,7 @@ Backend command path не змінювався.
 
 
 
-## Editable row forms
+## Редаговані рядкові форми
 
 Другий additive post-freeze крок розширює OperationalGrid для row-owned mutation forms.
 
