@@ -165,4 +165,4 @@ Architecture gate перевіряє не лише наявність canonical 
 - окремий WEB V0.17 gate захищає мігровані surfaces від регресії;
 - зміни проходять live AWS dev deploy без зміни runtime/business behavior.
 
-Після хвилі 2 головний залишковий борг WEB V0.17: server-component міграція Client Case views, решта Property operational tables, локальні Sales Administration primitives та Content / Spatial / Users administration.
+Після завершення PHASE 9–11 залишковий борг WEB V0.17 звужено до server-component міграції Client Case views (`index`, `inbox`, `show`) без зміни workflow forms, funnel та mutation behavior. Property operational surfaces, Sales Administration, Users, Content і Spatial уже переведені на canonical production contracts або закриті на фактичному Symfony route/view graph.
