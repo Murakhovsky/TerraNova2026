@@ -33,6 +33,49 @@ Graph behavior не змінюється:
 - JSON bootstrap `#cos-architecture-data` збережений;
 - manager-only access лишається canonical authorization boundary.
 
+## Хвиля 2
+
+### Public Page
+
+`page/show.phtml`
+
+- legacy breadcrumbs/hero замінено на canonical PageHeader;
+- generic CTA actions використовують canonical ActionBar;
+- contact result використовує canonical State;
+- contact form, honeypot, request intent, role, deal type та public `/contacts` POST contract не змінені.
+
+### Blog
+
+`blog/index.phtml`
+
+- legacy breadcrumbs + page hero замінено на canonical PageHeader;
+- empty state переведено на canonical State;
+- blog grid, article cards та pagination лишаються specialized public content patterns;
+- `blog?page={n}` pagination contract не змінений.
+
+`blog/show.phtml`
+
+- article identity/header переведено на canonical PageHeader;
+- practical CTA використовує canonical ActionBar;
+- related-content shell прибирає legacy section-heading/kicker;
+- article body, cover, tags та related content лишаються editorial patterns;
+- JSON-LD Article schema збережена без змін.
+
+### SEO landing
+
+`blog/landing.phtml`
+
+- simple landing hero замінено на canonical PageHeader;
+- featured image лишається окремим editorial media block;
+- CTA використовує canonical ActionBar;
+- body HTML та JSON-LD WebPage schema не змінені.
+
+Public content controller/routes лишаються canonical Symfony contracts:
+
+- `/blog` → `PublicContentPageController::blog`;
+- `/blog/{slug}` → `article`;
+- `/guide/{slug}` → `guide`.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
@@ -41,7 +84,7 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 
 ## Наступні хвилі
 
-- Wave 2: public content shells — Page / Blog / SEO landing;
+- Wave 2: public content shells — Page / Blog / SEO landing — виконано;
 - Wave 3: auth/cabinet entry surfaces;
 - Wave 4: фінальний legacy-shell audit і classification specialized marketing/runtime surfaces.
 
@@ -51,4 +94,6 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - live graph counters не втратили DOM hooks;
 - graph/projection/health routes та manager authorization збережені;
 - legacy internal shell primitives не повертаються через PHASE 14 gate;
-- specialized graph interaction model залишається недоторканим.
+- specialized graph interaction model залишається недоторканим;
+- Public Page, Blog та SEO landing використовують canonical shell primitives без втрати form/pagination/schema contracts;
+- Article/editorial content і public schema лишаються specialized content patterns.
