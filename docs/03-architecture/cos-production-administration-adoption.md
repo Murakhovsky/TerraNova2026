@@ -83,6 +83,21 @@ Public `spatial/scene.phtml` не канонізується під administrati
 
 Controller contract лишається у `SpatialPageController`: manage/edit/mutations вимагають manager context, public scene залишається session-free read surface.
 
+## Хвиля 4
+
+### Закриття Administration (`Administration Closure`)
+
+Closure audit перевірив решту routed administration surfaces:
+
+- `admin/index.phtml` уже використовує canonical PageHeader, State, KPI та Panel як Company Home;
+- `admin/analytics.phtml` уже використовує canonical PageHeader, FilterBar, State, KPI, Panel та DataTable;
+- Users, Content і Spatial закриті хвилями 1–3;
+- public `spatial/scene.phtml` лишається specialized public viewer, а не administration surface.
+
+Додатковий редизайн Company Home або Analytics не потрібен. PHASE 11 gate тепер прямо захищає їх canonical contracts і route ownership.
+
+Після цього PHASE 11 не має окремого presentation debt у Users / Content / Spatial / core Administration. Залишковий борг WEB V0.17 звужується до server-component міграції Client Case views.
+
 ## Межа editable grid
 
 Users table не є read-only data table. Кожен рядок одночасно є формою редагування `full_name`, `phone`, `role`, `status` та optional password reset.
@@ -101,7 +116,7 @@ Users table не є read-only data table. Кожен рядок одночасн
 
 - Wave 2: Content Administration — виконано;
 - Wave 3: Spatial Administration — виконано;
-- Wave 4: administration closure та route/view cleanup, якщо аудит покаже compatibility debt.
+- Wave 4: Administration closure — виконано.
 
 ## Критерії завершення
 
@@ -113,4 +128,5 @@ Users table не є read-only data table. Кожен рядок одночасн
 - Content editor зберігає save/CSRF/content/SEO mutation contracts;
 - Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
 - Spatial editor зберігає upload/external/capture/hotspot/publish та data-spatial-* contracts;
+- Company Home і Administration Analytics зафіксовані як canonical routed surfaces;
 - PHASE 11 architecture gate запускається у CI.
