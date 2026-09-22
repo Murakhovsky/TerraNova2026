@@ -33,6 +33,49 @@ Graph behavior не змінюється:
 - JSON bootstrap `#cos-architecture-data` збережений;
 - manager-only access лишається canonical authorization boundary.
 
+## Хвиля 2
+
+### Публічні контентні surfaces
+
+Wave 2 закриває outer-shell debt для Page / Blog / SEO landing без переписування domain-specific content.
+
+#### Page
+
+`page/show.phtml`
+
+- legacy breadcrumbs та `tn-page-hero` замінено на canonical PageHeader;
+- primary/secondary CTA проходять через canonical ActionBar;
+- content sections і contact form зберігають існуючу структуру та mutation contract.
+
+#### Blog Index
+
+`blog/index.phtml`
+
+- legacy breadcrumbs + page hero замінено на canonical PageHeader;
+- published material count використовує canonical meta contract;
+- empty state переведено на canonical State;
+- blog cards і pagination залишаються specialized content pattern.
+
+#### Blog Article
+
+`blog/show.phtml`
+
+- redundant breadcrumbs видалено;
+- rich article header, cover, body, tags та Article schema залишаються specialized;
+- CTA shell переведено на canonical Panel + ActionBar;
+- related-content heading переведено на canonical panel anatomy.
+
+#### Property SEO Landing
+
+`property/seo.phtml`
+
+- PageHeader/State лишаються canonical contract із PHASE 10;
+- redundant breadcrumbs видалено;
+- informational SEO panel переведено на canonical panel shell;
+- schema.org BreadcrumbList/ItemList, property cards, pagination та favourite hooks не змінені.
+
+Wave 2 не намагається перетворити article body, blog cards або property cards на generic primitives.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
@@ -41,7 +84,7 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 
 ## Наступні хвилі
 
-- Wave 2: public content shells — Page / Blog / SEO landing;
+- Wave 2: public content shells — Page / Blog / SEO landing — виконано;
 - Wave 3: auth/cabinet entry surfaces;
 - Wave 4: фінальний legacy-shell audit і classification specialized marketing/runtime surfaces.
 
@@ -51,4 +94,6 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - live graph counters не втратили DOM hooks;
 - graph/projection/health routes та manager authorization збережені;
 - legacy internal shell primitives не повертаються через PHASE 14 gate;
-- specialized graph interaction model залишається недоторканим.
+- specialized graph interaction model залишається недоторканим;
+- Page / Blog / SEO landing не використовують legacy breadcrumbs/page-hero/empty-state/section-heading shells там, де існує canonical primitive;
+- article body, schema.org та property/blog content cards лишаються domain/content-specific.
