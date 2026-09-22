@@ -82,7 +82,7 @@ foreach ([
     'HomePageController',
     'path: /{slug}',
     'PublicContentPageController::page',
-    "slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art'",
+    "slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art|cos'",
     'path: /blog',
     'PublicContentPageController::blog',
     'path: /blog/{slug}',
@@ -154,7 +154,7 @@ foreach ([
     $contains($caller, "partial('shared/public_header'", 'Public header caller contract is missing');
     $notContains($caller, "'class' => 'tn-btn--", 'Public header caller must use semantic action variants');
 }
-foreach (['property/catalog', 'services', 'partners', 'terra-nova', 'cos/en'] as $needle) {
+foreach (['property/catalog', 'services', 'partners', 'terra-nova', "'path' => 'cos'", 'contacts'] as $needle) {
     $contains($footer, $needle, 'Public footer is missing a canonical destination');
 }
 
