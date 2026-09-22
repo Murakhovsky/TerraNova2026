@@ -231,6 +231,32 @@ Opportunity research / play
 
 Committee Assessment фіксує конкретний набір required roles, snapshot ids і `model_version`, тому історичне рішення можна відтворити.
 
+## Evidence-bound Research Intelligence
+
+V0.7 додає AI-assisted research без mutation authority:
+
+```text
+Candidate
++ referenced Signals
++ sanitized Account / Committee context
+        ↓
+governed Kernel\Llm
+        ↓
+ResearchProposal
+        ↓
+validate evidence ids ⊆ Candidate.signalIds
+        ↓
+explicit Accept
+        ↓
+OpportunityRationale
+```
+
+Prompt і structured schema мають власні versions. Research run фіксує exact sanitized context snapshot, provider/model, token usage, cost, status і error summary; proposal зберігає rationale fields, confidence та inference metadata.
+
+Контактні email/LinkedIn identifiers у LLM context не передаються. Модель отримує лише `contact_id` та account-specific role/relationship snapshot.
+
+LLM output не може створити або переписати Signal. Навіть після генерації proposal evidence references перевіряються server-side, а перед acceptance перевіряються повторно всередині transaction.
+
 ## Decision Intelligence
 
 V0.6 формалізує qualification decision:
@@ -275,9 +301,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.6
+## Статус V0.7
 
-`process_state: to-be` поки навмисний. V0.6 додає versioned deterministic Qualification Policy та immutable Candidate Evaluation поверх Signal/Account/Buying Committee Intelligence. Concrete provider adapters, AI-assisted research, engagement, cross-domain acceptance, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.7 додає governed evidence-bound structured Research Proposal з explicit acceptance поверх Signal/Account/Buying Committee/Decision Intelligence. Concrete signal provider adapters, engagement, cross-domain acceptance, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -296,6 +322,10 @@ app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMutationReceipt.p
 app/Domains/Growth/Application/Service/GrowthBuyingCommitteeService.php
 app/Domains/Growth/Application/Service/GrowthSignalCollectorService.php
 app/Domains/Growth/Application/Service/GrowthDecisionService.php
+app/Domains/Growth/Application/Service/GrowthResearchService.php
+app/Domains/Growth/Application/AI/GrowthResearchPrompt.php
+app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthResearchGateway.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthResearchRepository.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthDecisionRepository.php
 app/Domains/Growth/Application/Contract/SignalCollectorInterface.php
 app/Domains/Growth/Application/Service/SignalCollectorRegistry.php
@@ -307,5 +337,6 @@ app/migrations/20260921_000068_growth_v030_account_intelligence.sql
 app/migrations/20260922_000069_growth_v040_buying_committee.sql
 app/migrations/20260922_000070_growth_v050_signal_collectors.sql
 app/migrations/20260922_000071_growth_v060_decision_intelligence.sql
+app/migrations/20260922_000072_growth_v070_research_intelligence.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

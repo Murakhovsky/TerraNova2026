@@ -458,6 +458,25 @@ services:
   Domains\Growth\Application\Contract\GrowthDecisionBoundary:
     alias: Domains\Growth\Application\Service\GrowthDecisionService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthResearchRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthResearchRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthResearchRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResearchGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthResearchGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResearchGateway
+
+  Domains\Growth\Application\Service\GrowthResearchService: ~
+
+  Domains\Growth\Application\Contract\GrowthResearchBoundary:
+    alias: Domains\Growth\Application\Service\GrowthResearchService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

@@ -21,6 +21,11 @@ final class GrowthEventType
     public const QUALIFICATION_POLICY_REVISED = 'growth.qualification_policy.revised';
     public const QUALIFICATION_POLICY_ACTIVATED = 'growth.qualification_policy.activated';
     public const CANDIDATE_EVALUATED = 'growth.candidate.evaluated';
+    public const RESEARCH_RUN_STARTED = 'growth.research.run_started';
+    public const RESEARCH_RUN_COMPLETED = 'growth.research.run_completed';
+    public const RESEARCH_RUN_FAILED = 'growth.research.run_failed';
+    public const RESEARCH_PROPOSAL_CREATED = 'growth.research.proposal_created';
+    public const RESEARCH_PROPOSAL_ACCEPTED = 'growth.research.proposal_accepted';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -51,6 +56,11 @@ final class GrowthEventType
             self::QUALIFICATION_POLICY_REVISED,
             self::QUALIFICATION_POLICY_ACTIVATED,
             self::CANDIDATE_EVALUATED,
+            self::RESEARCH_RUN_STARTED,
+            self::RESEARCH_RUN_COMPLETED,
+            self::RESEARCH_RUN_FAILED,
+            self::RESEARCH_PROPOSAL_CREATED,
+            self::RESEARCH_PROPOSAL_ACCEPTED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

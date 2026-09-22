@@ -99,7 +99,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.6 Opportunity & Decision Intelligence runtime
+## V0.7 Opportunity, Decision & Research Intelligence runtime
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -168,4 +168,34 @@ No canonical weighted "magic score" is introduced. Fit, Need, Timing, Access and
 
 Policy-controlled evaluation also emits the normal candidate lifecycle event, so automated qualification does not create a parallel event vocabulary invisible to downstream consumers.
 
-Still intentionally absent: concrete external provider adapters, AI-assisted research agents, outbound engagement, cross-domain handoff acceptance, public API and Growth UI.
+V0.7 adds evidence-bound structured research through the governed Kernel LLM boundary:
+
+```text
+Candidate + referenced Signals
++ sanitized Account / Committee context
+        ↓
+Kernel\Llm governed structured request
+        ↓
+ResearchProposal
+  WHY IT MATTERS
+  problem hypothesis
+  WHY NOW
+  evidence / counter-evidence
+  assumptions / unknowns
+  confidence
+  provider / model / prompt / schema
+        ↓
+server-side evidence validation
+        ↓
+explicit proposal acceptance
+        ↓
+OpportunityRationale
+```
+
+Each research run persists the exact sanitized context snapshot seen by the model, making historical inference reproducible even after newer Account or Committee snapshots exist.
+
+The model cannot write a Signal, qualify a Candidate or mutate the Candidate directly. Generated evidence identifiers must be a subset of the Candidate's existing Signal ids, and acceptance re-validates that constraint inside the mutation transaction.
+
+The LLM context intentionally excludes contact email/LinkedIn identity. It may receive contact ids and account-specific role/relationship snapshots, which are sufficient for buying-committee reasoning without shipping personal contact identifiers into model context.
+
+Still intentionally absent: concrete external signal provider adapters, outbound engagement, cross-domain handoff acceptance, public API and Growth UI.

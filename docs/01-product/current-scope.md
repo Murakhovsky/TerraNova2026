@@ -16,7 +16,7 @@ kind: product
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
 | Sales | `0.8.6` | повний модуль середовища виконання та еталонний домен |
-| Growth | `0.6.0` | Opportunity + Account/Buying Committee + Signal Collector + deterministic Decision Intelligence runtime; disabled by default |
+| Growth | `0.7.0` | Opportunity + Account/Buying Committee + Signal Intake + deterministic Decision + evidence-bound LLM Research runtime; disabled by default |
 | Diagnostic | `0.6.1` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Property | `0.12.0` | встановлюваний модуль із канонічними записами Asset/Inventory/Listing, сумісним представленням, аналітикою, інтелектом і зовнішньою взаємодією |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
@@ -30,9 +30,9 @@ kind: product
 
 ## Growth: Opportunity Intelligence
 
-Growth `0.6.0` розвиває окремий bounded context для **FIND VALUE**. Canonical runtime визначає `Signal`, `OpportunityCandidate`, `OpportunityRationale`, explainable Fit/Need/Timing/Access/Value scoring, lifecycle qualification та `OpportunityHandoff`.
+Growth `0.7.0` розвиває окремий bounded context для **FIND VALUE**. Canonical runtime визначає `Signal`, `OpportunityCandidate`, `OpportunityRationale`, explainable Fit/Need/Timing/Access/Value scoring, lifecycle qualification та `OpportunityHandoff`.
 
-Growth свідомо не володіє Sales Deal, Pipeline, Contract, Invoice або delivery state. V0.6 додає versioned Qualification Policy, hard-reject thresholds, per-dimension qualification minimums, research/score confidence threshold та immutable Candidate Evaluation snapshot з rationale, score, failed criteria і model version. Політика не створює canonical aggregate score: Fit / Need / Timing / Access / Value залишаються окремими explainable dimensions. Concrete provider adapters, AI-assisted research, engagement/outreach, cross-domain acceptance, API та production UI належать наступним хвилям.
+Growth свідомо не володіє Sales Deal, Pipeline, Contract, Invoice або delivery state. V0.7 додає evidence-bound structured LLM Research через governed `Kernel\\Llm`: versioned prompt/schema, immutable sanitized research context snapshot + ResearchProposal, provider/model/token/cost metadata, server-side evidence-subset validation і explicit proposal acceptance перед mutation `OpportunityCandidate`. Contact email/LinkedIn identity не передається в research context. Concrete signal provider adapters, engagement/outreach, cross-domain acceptance, API та production UI належать наступним хвилям.
 
 ## Sales: продажі та попит
 
