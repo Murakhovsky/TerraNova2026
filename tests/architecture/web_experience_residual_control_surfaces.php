@@ -75,6 +75,71 @@ if (substr_count($cos, '<table class="tn-listing-table">') !== 1) {
 }
 $contains($cos, '<section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="actions">', 'Operational Proposed Actions surface must remain explicit.');
 
+$companyHome = $read('app/Interfaces/Web/View/admin/index.phtml');
+foreach ([
+    '$decisionRows = [];',
+    "partial('components/ui/data_table'",
+    "'responsive' => 'cards'",
+    "'emptyMessage' => 'Немає рішень, що очікують уваги.'",
+] as $marker) {
+    $contains($companyHome, $marker, 'Company Home decision queue must use canonical DataTable.');
+}
+$notContains($companyHome, '<table', 'Company Home must not retain a raw read-only table.');
+
+$allowedTableViews = [
+    'app/Interfaces/Web/View/components/ui/data_table.phtml' => 'canonical DataTable renderer',
+    'app/Interfaces/Web/View/admin/users.phtml' => 'editable Users mutation grid',
+    'app/Interfaces/Web/View/cos/index.phtml' => 'operational Proposed Actions mutation grid',
+    'app/Interfaces/Web/View/client_case/index.phtml' => 'operational Client Case quick-update grid',
+    'app/Interfaces/Web/View/methodology_studio/index.phtml' => 'interactive Methodology Studio editor grid',
+    'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
+];
+
+$viewRoot = $root . '/app/Interfaces/Web/View';
+$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($viewRoot, FilesystemIterator::SKIP_DOTS));
+$seenTableViews = [];
+foreach ($iterator as $file) {
+    if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'phtml') {
+        continue;
+    }
+    $source = file_get_contents($file->getPathname());
+    if ($source === false || !str_contains($source, '<table')) {
+        continue;
+    }
+    $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
+    $seenTableViews[$relative] = true;
+    if (!isset($allowedTableViews[$relative])) {
+        throw new RuntimeException('Unclassified raw table surface found: ' . $relative);
+    }
+}
+foreach ($allowedTableViews as $relative => $reason) {
+    if (!isset($seenTableViews[$relative])) {
+        throw new RuntimeException('Declared table exception no longer contains a table; update the whitelist: ' . $relative . ' (' . $reason . ')');
+    }
+}
+
+$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+foreach (['tn-admin-editable-grid', 'admin/updateUser/', 'name="csrf_token"', 'user-form-'] as $marker) {
+    $contains($users, $marker, 'Users raw table exception must remain an editable mutation grid.');
+}
+
+$clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
+foreach (['tn-client-case-operational-grid', 'client-case/quickUpdate/', 'name="csrf_token"', 'tn-quick-case-form'] as $marker) {
+    $contains($clientIndex, $marker, 'Client Case raw table exception must remain an operational mutation grid.');
+}
+
+$studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
+foreach (['data-entities', 'data-editor', 'data-action="add"', 'data-action="publish"'] as $marker) {
+    $contains($studio, $marker, 'Methodology Studio raw table exception must remain an interactive editor surface.');
+}
+
+$pdf = $read('app/Interfaces/Web/View/property/pdf.phtml');
+foreach (['<style>', 'page-break-inside', 'documentType', 'group-card'] as $marker) {
+    $contains($pdf, $marker, 'Property PDF table exception must remain a print-layout renderer.');
+}
+$pdfService = $read('app/Domains/Property/Infrastructure/Presentation/PropertyPresentationService.php');
+$contains($pdfService, 'property/pdf.phtml', 'Property PDF exception must remain owned by PropertyPresentationService.');
+
 $docs = $read('docs/03-architecture/cos-residual-control-surface-closure.md');
 foreach ([
     '# Закриття залишкових control surfaces',
@@ -82,6 +147,9 @@ foreach ([
     '### Вхідні зв’язки Client Case',
     '## Хвиля 2',
     '### Таблиці COS Control Center',
+    '## Хвиля 3',
+    '### Фінальний аудит таблиць',
+    '### Черга рішень Company Home',
     '## Винятки',
     '## Критерії завершення',
 ] as $marker) {
