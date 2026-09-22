@@ -72,6 +72,11 @@ foreach ([
     "partial('components/ui/operational_grid'",
     '$caseRows = [];',
     "'_form' => [",
+    "'kind' => 'stage'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index must use canonical shell while retaining funnel and operational mutations.');
 }
