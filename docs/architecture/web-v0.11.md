@@ -133,7 +133,7 @@ The extracted module owns only Public presentation behavior:
 
 A historical fake form-success handler that called `preventDefault()` without submitting to the backend is removed.
 
-`localStorage` / `sessionStorage` remain explicitly documented debt for WEB V0.12. They are no longer injected into Workspace or Portal.
+WEB V0.12 subsequently closed the historical `localStorage` / `sessionStorage` debt: favourites moved to the server-session `/api/v1/public/properties/favourites` contract, campaign attribution is derived from the current URL, and canonical frontend JavaScript is guarded against browser persistence.
 
 ## Vite ownership
 
