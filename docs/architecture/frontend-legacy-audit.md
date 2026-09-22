@@ -25,7 +25,7 @@ Status vocabulary:
 | `frontend/styles/workspace.css` | MIGRATED | consumed only through canonical Workspace surface composition |
 | `frontend/styles/workspace-mobile.css` | MIGRATED | consumed only through canonical Workspace surface composition; historical compatibility comment is source debt, not runtime ownership |
 | `frontend/layouts/surfaces.css` | USED | shared density/layout contract imported by design system |
-| feature CSS under `frontend/features/*` | USED | must load after surface ownership; Cabinet feature CSS is reduced to live profile/layout selectors |
+| feature CSS under `frontend/features/*` | USED | must load after surface ownership; Cabinet, Property workspace and Analytics workspace bundles are reduced to live canonical selectors |
 
 ## Historical selector families
 
@@ -33,7 +33,7 @@ Status vocabulary:
 | --- | --- | --- |
 | `.tn-header`, `.tn-nav`, `.tn-footer`, `.tn-logo` | MIGRATED | Public surface |
 | `.tn-page`, `.tn-page-hero`, `.tn-kicker` on public pages | MIGRATED | Public surface / Public feature |
-| `.tn-property-*`, `.tn-card-*`, catalog/presentation selectors | MIGRATED | Public surface plus Property feature bundles |
+| `.tn-property-*`, `.tn-card-*`, catalog/presentation selectors | MIGRATED | Public surface plus live Property public patterns; canonical Property workspace feature CSS no longer carries retired admin/table selectors |
 | `.tn-ui-*` primitives | USED | shared design system |
 | `.tn-workspace-*`, `.tn-command-palette*` | USED | Workspace surface |
 | `.tn-portal-profile`, `.tn-portal-page` | USED | minimal native Cabinet presentation |
