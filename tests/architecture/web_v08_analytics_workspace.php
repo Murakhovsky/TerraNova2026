@@ -2,35 +2,69 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-
-$adminController = file_get_contents($root . '/app/Interfaces/Web/Controller/AdminController.php');
-$analyticsView = file_get_contents($root . '/app/Interfaces/Web/View/admin/analytics.phtml');
-$entrypoint = file_get_contents($root . '/frontend/entrypoints/analytics-workspace.js');
-$browserModule = file_get_contents($root . '/frontend/features/analytics/workspace.js');
-$styles = file_get_contents($root . '/frontend/features/analytics/workspace.css');
-$vite = file_get_contents($root . '/vite.config.js');
-$frontendAssets = file_get_contents($root . '/tests/architecture/frontend_assets.php');
-$diagnosticWorkflow = file_get_contents($root . '/.github/workflows/diagnostic.yml');
-
+$read = static function (string $path) use ($root): string {
+    $full = $root . '/' . ltrim($path, '/');
+    if (!is_file($full)) throw new RuntimeException('Missing WEB V0.8 Analytics artifact: ' . $path);
+    $content = file_get_contents($full);
+    if ($content === false) throw new RuntimeException('Unable to read: ' . $path);
+    return $content;
+};
 $requireContains = static function (string $content, string $needle, string $message): void {
-    if (!str_contains($content, $needle)) {
-        throw new RuntimeException($message);
-    }
+    if (!str_contains($content, $needle)) throw new RuntimeException($message . ' Missing: ' . $needle);
 };
-
 $requireNotContains = static function (string $content, string $needle, string $message): void {
-    if (str_contains($content, $needle)) {
-        throw new RuntimeException($message);
-    }
+    if (str_contains($content, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$requireContains($adminController, "\$this->view->workspaceSection = 'analytics';", 'Analytics action must declare the Analytics workspace section.');
-$requireContains($adminController, "\$this->view->workspaceActive = 'analytics';", 'Analytics action must declare the Analytics active navigation key.');
-$requireContains($adminController, "\$this->view->pageAssetEntries = ['analytics-workspace'];", 'Analytics action must load the dedicated Vite bundle.');
-$requireContains($adminController, "\$this->view->metaRobots = 'noindex,nofollow';", 'Analytics workspace must remain private for search engines.');
-$requireContains($analyticsView, "partial('shared/manager_header'", 'Historical analytics header call is expected and must stay covered by the shared shell compatibility guard.');
-$requireNotContains($analyticsView, '/assets/js/', 'Analytics view must not bypass Vite with direct JS assets.');
-$requireNotContains($analyticsView, '/assets/css/', 'Analytics view must not bypass Vite with direct CSS assets.');
+$controller = $read('symfony/src/Web/Workspace/CoreWorkspacePageController.php');
+$analyticsView = $read('app/Interfaces/Web/View/admin/analytics.phtml');
+$entrypoint = $read('frontend/entrypoints/analytics-workspace.js');
+$browserModule = $read('frontend/features/analytics/workspace.js');
+$styles = $read('frontend/features/analytics/workspace.css');
+$vite = $read('vite.config.js');
+$frontendAssets = $read('tests/architecture/frontend_assets.php');
+$diagnosticWorkflow = $read('.github/workflows/diagnostic.yml');
+$routes = $read('symfony/config/routes.yaml');
+
+foreach ([
+    'public function analytics(Request $request): Response',
+    '$tenant = $this->manager()',
+    '$this->render($request, $tenant, \'Аналітика\', \'analytics\', \'analytics\', \'admin/analytics\'',
+    '[\'analytics-workspace\']',
+    '\'metaRobots\' => \'noindex,nofollow\'',
+    '\'workspaceSection\' => $section',
+    '\'workspaceActive\' => $active',
+] as $needle) {
+    $requireContains($controller, $needle, 'Canonical Analytics controller contract is incomplete.');
+}
+foreach ([
+    'path: /admin/analytics',
+    'CoreWorkspacePageController::analytics',
+] as $needle) {
+    $requireContains($routes, $needle, 'Canonical Analytics route contract is incomplete.');
+}
+
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/filter_bar'",
+    "partial('components/ui/state'",
+    "partial('components/ui/kpi_card'",
+    "partial('components/ui/data_table'",
+    'tn-analytics-workspace',
+] as $needle) {
+    $requireContains($analyticsView, $needle, 'Analytics view lost canonical workspace composition.');
+}
+foreach ([
+    'tn-page-hero',
+    'tn-admin-metrics',
+    'tn-admin-card',
+    'tn-listing-table',
+    '/assets/js/',
+    '/assets/css/',
+] as $needle) {
+    $requireNotContains($analyticsView, $needle, 'Analytics view restored a retired presentation/runtime primitive.');
+}
+
 $requireContains($entrypoint, "../features/analytics/workspace.css", 'Analytics entrypoint must import feature CSS.');
 $requireContains($entrypoint, "../features/analytics/workspace.js", 'Analytics entrypoint must import feature JS.');
 $requireContains($browserModule, 'dataset.analyticsWorkspace', 'Analytics browser module must expose its migrated workspace state.');
@@ -41,4 +75,4 @@ $requireContains($vite, "'analytics-workspace'", 'Vite must expose the analytics
 $requireContains($frontendAssets, "'analytics-workspace'", 'Frontend asset validation must include the analytics workspace entrypoint.');
 $requireNotContains($diagnosticWorkflow, 'tests/unit/sales_v063.php', 'Runtime workflow must not invoke the deleted Sales V0.6.3 unit test.');
 
-echo "WEB V0.8 analytics workspace architecture passed.\n";
+echo "WEB V0.8 analytics workspace canonical runtime passed.\n";
