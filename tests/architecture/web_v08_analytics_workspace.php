@@ -29,11 +29,11 @@ $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'public function analytics(Request $request): Response',
     '$tenant = $this->manager()',
-    "$this->render($request, $tenant, 'Аналітика', 'analytics', 'analytics', 'admin/analytics'",
-    "['analytics-workspace']",
-    "'metaRobots' => 'noindex,nofollow'",
-    "'workspaceSection' => $section",
-    "'workspaceActive' => $active",
+    '$this->render($request, $tenant, \'Аналітика\', \'analytics\', \'analytics\', \'admin/analytics\'',
+    '[\'analytics-workspace\']',
+    '\'metaRobots\' => \'noindex,nofollow\'',
+    '\'workspaceSection\' => $section',
+    '\'workspaceActive\' => $active',
 ] as $needle) {
     $requireContains($controller, $needle, 'Canonical Analytics controller contract is incomplete.');
 }
