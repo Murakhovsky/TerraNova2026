@@ -5,7 +5,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 
 $required = [
-    'tests/browser/web_accessibility.sh',
+    'tests/browser/web_accessibility.mjs',
     'docs/03-architecture/cos-quality-closure.md',
     '.github/workflows/symfony-bootstrap.yml',
 ];
@@ -16,15 +16,16 @@ foreach ($required as $relative) {
     }
 }
 
-$script = (string) file_get_contents($root . '/tests/browser/web_accessibility.sh');
+$script = (string) file_get_contents($root . '/tests/browser/web_accessibility.mjs');
 foreach ([
-    '@axe-core/cli@',
+    "from '@axe-core/playwright'",
+    "from 'playwright-core'",
     '4.13.0',
     'wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa',
-    'scan home /',
-    'scan login /auth/login',
-    'scan property-catalog /property/catalog',
-    '--exit',
+    "{ name: 'home', path: '/' }",
+    "{ name: 'login', path: '/auth/login' }",
+    "{ name: 'property-catalog', path: '/property/catalog' }",
+    'withTags(wcagTags)',
 ] as $marker) {
     if (!str_contains($script, $marker)) {
         throw new RuntimeException('PHASE 15 accessibility executable contract is incomplete: ' . $marker);
