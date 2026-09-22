@@ -241,7 +241,7 @@ if ($property) {
           ]);
         ?>
         <p class="tn-property-hero__note">Після запиту менеджер уточнить актуальність, деталі по документах і зручний час перегляду.</p>
-        <?php if ($propertyMatchStatus): ?><p class="tn-form-status is-visible"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
+        <?php if ($propertyMatchStatus): ?><p class="tn-ui-inline-status is-visible" role="status" aria-live="polite"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
         <?php if ($managerClientCases): ?>
           <form class="tn-property-crm-form" action="<?php echo $this->url->get('client-case/matchProperty'); ?>" method="post">
             <input type="hidden" name="property_id" value="<?php echo (int) $property['id']; ?>">
