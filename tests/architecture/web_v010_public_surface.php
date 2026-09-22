@@ -124,6 +124,28 @@ $contains($header, '$publicNavigation', 'Public header must consume canonical na
 $notContains($header, 'FrontendNavigation::public()', 'Public header must not construct navigation inside the template');
 $notContains($header, 'getDI()', 'Public header must remain container-free');
 $contains($header, 'data-interface-surface="public"', 'Public header must expose the surface marker');
+$contains($header, "partial('components/ui/action_bar'", 'Public header actions must use canonical ActionBar');
+$notContains($header, 'class="tn-btn ', 'Public header must not render legacy tn-btn actions');
+$notContains($header, "$action['class']", 'Public header must not consume presentation class descriptors');
+
+foreach ([
+    'app/Interfaces/Web/View/page/show.phtml',
+    'app/Interfaces/Web/View/blog/show.phtml',
+    'app/Interfaces/Web/View/blog/index.phtml',
+    'app/Interfaces/Web/View/blog/landing.phtml',
+    'app/Interfaces/Web/View/auth/login.phtml',
+    'app/Interfaces/Web/View/auth/register.phtml',
+    'app/Interfaces/Web/View/property/map.phtml',
+    'app/Interfaces/Web/View/property/seo.phtml',
+    'app/Interfaces/Web/View/property/submit.phtml',
+    'app/Interfaces/Web/View/property/presentation.phtml',
+    'app/Interfaces/Web/View/property/show.phtml',
+    'app/Interfaces/Web/View/property/catalog.phtml',
+] as $publicHeaderCaller) {
+    $caller = $read($publicHeaderCaller);
+    $contains($caller, "partial('shared/public_header'", 'Public header caller contract is missing');
+    $notContains($caller, "'class' => 'tn-btn--", 'Public header caller must use semantic action variants');
+}
 foreach (['property/catalog', 'services', 'partners', 'terra-nova', 'cos/en'] as $needle) {
     $contains($footer, $needle, 'Public footer is missing a canonical destination');
 }
