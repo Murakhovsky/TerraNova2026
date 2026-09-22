@@ -77,6 +77,65 @@ final readonly class GrowthWorkflowService implements GrowthApplicationBoundary
         });
     }
 
+    public function ingestExternalSignal(
+        string $organizationId,
+        int $actorId,
+        string $correlationId,
+        string $source,
+        string $idempotencyKey,
+        array $input,
+    ): array {
+        $organizationId=$this->bounded(trim($organizationId),'organizationId',64);
+        if($actorId<=0)throw new InvalidArgumentException('Growth external signal actorId must be positive.');
+        $source=strtolower(trim($source));
+        if(!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/',$source)){
+            throw new InvalidArgumentException('Growth external signal source is invalid.');
+        }
+        $idempotencyKey=$this->bounded(trim($idempotencyKey),'idempotencyKey',191);
+        $subjectType=$this->required($input,'subject_type',80);
+        $subjectId=$this->required($input,'subject_id',191);
+        $signalType=$this->required($input,'signal_type',120);
+        $sourceReference=$this->required($input,'source_reference',500);
+        $facts=$this->facts($input['facts']??null);
+        $confidence=$this->confidence($input['confidence']??null,'confidence');
+        $occurredAt=$this->date($input['occurred_at']??null,'occurred_at');
+        $detectedAt=$this->now();
+        $signalId='GSIG-'.$this->stableId($organizationId.':external_signal:'.$source.':'.$idempotencyKey);
+        $fingerprint=$this->fingerprint([
+            'source'=>$source,'subject_type'=>$subjectType,'subject_id'=>$subjectId,'signal_type'=>$signalType,
+            'source_reference'=>$sourceReference,'facts'=>$facts,'confidence'=>$confidence,
+            'occurred_at'=>$occurredAt->format(DATE_ATOM),
+        ]);
+        $operation='external_signal_'.substr(hash('sha256',$source),0,16);
+
+        return $this->transactions->transactional(function()use(
+            $organizationId,$actorId,$correlationId,$source,$idempotencyKey,$subjectType,$subjectId,$signalType,
+            $sourceReference,$facts,$confidence,$occurredAt,$detectedAt,$signalId,$fingerprint,$operation
+        ):array{
+            if(!$this->receipts->claim($organizationId,$operation,$idempotencyKey,$fingerprint)){
+                return ($this->growth->viewSignal($organizationId,$signalId)
+                    ?? throw new InvalidArgumentException('Growth external signal receipt exists but Signal was not found.'))
+                    + ['replayed'=>true];
+            }
+            $signal=new Signal(
+                $signalId,OrganizationId::fromString($organizationId),$subjectType,$subjectId,$signalType,
+                $facts,$sourceReference,$confidence,$occurredAt,$detectedAt,
+            );
+            $this->growth->createSignal($signal,$actorId);
+            $this->publishAs('SYSTEM',GrowthEventType::SIGNAL_DETECTED,$organizationId,'growth_signal',$signalId,[
+                'ingress'=>'external_webhook','source'=>$source,'subject_type'=>$subjectType,'subject_id'=>$subjectId,
+                'signal_type'=>$signalType,'source_reference'=>$sourceReference,'confidence'=>$confidence,
+            ],$actorId,$correlationId);
+            $this->appendAuditAs(
+                'SYSTEM','growth.external_signal',$organizationId,$actorId,$correlationId,
+                'growth.signal.external_ingest','growth_signal',$signalId,$idempotencyKey,
+                ['source'=>$source,'source_reference'=>$sourceReference],
+            );
+            return $this->growth->viewSignal($organizationId,$signalId)
+                ?? throw new InvalidArgumentException('Created external Growth signal could not be read back.');
+        });
+    }
+
     public function detectCandidate(string $organizationId,int $actorId,string $correlationId,string $idempotencyKey,array $input): array
     {
         $type=OpportunityType::tryFrom($this->required($input,'opportunity_type',80))
@@ -349,9 +408,17 @@ final readonly class GrowthWorkflowService implements GrowthApplicationBoundary
     /** @param array<string,mixed> $payload */
     private function publish(string $type,string $organizationId,string $aggregateType,string $aggregateId,array $payload,int $actorId,string $correlationId): void
     {
+        $this->publishAs('USER',$type,$organizationId,$aggregateType,$aggregateId,$payload,$actorId,$correlationId);
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function publishAs(
+        string $actorType,string $type,string $organizationId,string $aggregateType,string $aggregateId,
+        array $payload,int $actorId,string $correlationId
+    ): void {
         $this->events->publish(new DomainEvent(
             bin2hex(random_bytes(16)),$organizationId,$type,$aggregateType,$aggregateId,$payload,
-            new EventMetadata($correlationId,null,'USER',(string)$actorId),$this->now(),
+            new EventMetadata($correlationId,null,$actorType,(string)$actorId),$this->now(),
         ));
     }
 
@@ -360,8 +427,19 @@ final readonly class GrowthWorkflowService implements GrowthApplicationBoundary
         string $organizationId,int $actorId,string $correlationId,string $action,string $subjectType,
         string $subjectId,string $idempotencyKey,array $data=[]
     ): void {
+        $this->appendAuditAs(
+            'USER','growth.mutation',$organizationId,$actorId,$correlationId,$action,
+            $subjectType,$subjectId,$idempotencyKey,$data,
+        );
+    }
+
+    /** @param array<string,mixed> $data */
+    private function appendAuditAs(
+        string $actorType,string $component,string $organizationId,int $actorId,string $correlationId,string $action,
+        string $subjectType,string $subjectId,string $idempotencyKey,array $data=[]
+    ): void {
         $this->audit->append(new AuditEntry(
-            bin2hex(random_bytes(16)),$organizationId,'growth.mutation','USER',(string)$actorId,
+            bin2hex(random_bytes(16)),$organizationId,$component,$actorType,(string)$actorId,
             $subjectType,$subjectId,null,['action'=>$action,'idempotency_key_hash'=>hash('sha256',$idempotencyKey),'result'=>$data],
             $correlationId,$this->now(),
         ));

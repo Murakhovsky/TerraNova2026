@@ -11,6 +11,8 @@ on:
       - 'symfony/config/services.yaml'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
+      - 'symfony/src/Application/Growth/**'
+      - 'symfony/src/Web/PublicEdge/PublicEdgeController.php'
       - 'symfony/src/Web/Growth/**'
       - 'symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php'
       - 'app/Interfaces/Web/View/growth/**'
@@ -58,6 +60,8 @@ on:
       - 'symfony/config/services.yaml'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
+      - 'symfony/src/Application/Growth/**'
+      - 'symfony/src/Web/PublicEdge/PublicEdgeController.php'
       - 'symfony/src/Web/Growth/**'
       - 'symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php'
       - 'app/Interfaces/Web/View/growth/**'
@@ -126,6 +130,7 @@ jobs:
           php tests/architecture/growth_v0100_api_surface.php
           php tests/architecture/growth_v0110_workspace.php
           php tests/architecture/growth_v0120_signal_operations.php
+          php tests/architecture/growth_v0130_external_signal_webhook.php
 
       - name: Process registry invariants
         run: |
@@ -142,6 +147,7 @@ jobs:
           php tests/unit/growth_v0100_api_contract.php
           php tests/unit/growth_v0110_workspace_contract.php
           php tests/unit/growth_v0120_signal_operations_contract.php
+          php tests/unit/growth_v0130_external_signal_webhook.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -188,4 +194,8 @@ jobs:
           php -l tests/architecture/growth_v0110_workspace.php
           php -l tests/architecture/growth_v0120_signal_operations.php
           php -l tests/unit/growth_v0120_signal_operations_contract.php
+          php -l tests/unit/growth_v0130_external_signal_webhook.php
+          php -l tests/architecture/growth_v0130_external_signal_webhook.php
+          php -l symfony/src/Application/Growth/Integration/GrowthExternalSignalWebhook.php
+          php -l symfony/src/Web/PublicEdge/PublicEdgeController.php
           php -l tests/architecture/process_v01.php

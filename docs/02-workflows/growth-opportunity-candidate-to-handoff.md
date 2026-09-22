@@ -183,6 +183,27 @@ canonical Signal
 
 Collector run зберігає status, request/next cursor, collected/accepted/duplicate/failed counters та error summary. Зовнішній provider call не тримає відкриту DB transaction; кожний item ingestиться окремо, тому failure одного item не відкочує інші accepted signals.
 
+## External Signal Intake
+
+V0.13 додає push integration path для зовнішніх джерел:
+
+```text
+raw JSON envelope
++ X-TN-Timestamp
++ X-TN-Signature
++ X-TN-Idempotency-Key
+        ↓
+GrowthExternalSignalWebhook
+        ↓
+organization/source/module validation
+        ↓
+GrowthApplicationBoundary::ingestExternalSignal
+        ↓
+canonical Signal
+```
+
+Signature: `HMAC_SHA256(timestamp + "." + raw_body, GROWTH_SIGNAL_WEBHOOK_SECRET)`. External ingress має окремий idempotency namespace, SYSTEM event/audit provenance та configured service actor. Edge не залежить від Growth repository або SQL.
+
 ## Signal Operations Workspace
 
 V0.12 робить collector runtime операційно видимим:
@@ -415,9 +436,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.12
+## Статус V0.13
 
-`process_state: to-be` поки навмисний. V0.12 додає Signal Operations Workspace поверх existing collector runtime: evidence stream, collector registry, run history, counters, cursor/error visibility та API-driven execution. Інші target adapters, concrete signal provider adapters та engagement додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.13 додає signed external Signal intake поверх canonical Growth mutation runtime. Push sources отримують HMAC/idempotency integration edge, але не обхід Signal invariants, Events або Audit. Інші target adapters, provider-specific pull collectors та engagement додаються окремими хвилями.
 
 ## Карта коду
 

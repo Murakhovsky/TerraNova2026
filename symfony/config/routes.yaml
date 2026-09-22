@@ -102,6 +102,11 @@ cos_web_n8n_content_webhook:
   controller: App\Web\PublicEdge\PublicEdgeController::contentWebhook
   methods: [POST]
 
+cos_web_growth_signal_webhook:
+  path: /webhooks/growth/signals
+  controller: App\Web\PublicEdge\PublicEdgeController::growthSignalWebhook
+  methods: [POST]
+
 # Wave 14 — Manager Content/Admin SSR and write cutover.
 cos_web_content_admin:
   path: /admin/content

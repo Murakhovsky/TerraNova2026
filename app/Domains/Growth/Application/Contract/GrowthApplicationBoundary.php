@@ -9,6 +9,16 @@ interface GrowthApplicationBoundary
     public function detectSignal(string $organizationId, int $actorId, string $correlationId, string $idempotencyKey, array $input): array;
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function ingestExternalSignal(
+        string $organizationId,
+        int $actorId,
+        string $correlationId,
+        string $source,
+        string $idempotencyKey,
+        array $input,
+    ): array;
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
     public function detectCandidate(string $organizationId, int $actorId, string $correlationId, string $idempotencyKey, array $input): array;
 
     /** @param array<string,mixed> $input @return array<string,mixed> */

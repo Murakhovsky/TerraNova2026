@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Web\PublicEdge;
 
+use App\Application\Growth\Integration\GrowthExternalSignalWebhook;
 use Domains\Content\Application\Contract\InboundContentWebhookInterface;
 use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,6 +15,7 @@ final readonly class PublicEdgeController
     public function __construct(
         private PropertyFunnelAnalyticsInterface $analytics,
         private InboundContentWebhookInterface $contentWebhook,
+        private GrowthExternalSignalWebhook $growthSignalWebhook,
     ) {
     }
 
@@ -44,6 +46,18 @@ final readonly class PublicEdgeController
         );
 
         return new JsonResponse((array) $result['payload'], (int) $result['status']);
+    }
+
+    public function growthSignalWebhook(Request $request): JsonResponse
+    {
+        $result=$this->growthSignalWebhook->handle(
+            $request->getContent(),
+            (string)$request->headers->get('X-TN-Signature',''),
+            (string)$request->headers->get('X-TN-Timestamp',''),
+            (string)$request->headers->get('X-TN-Idempotency-Key',''),
+        );
+
+        return new JsonResponse((array)$result['payload'],(int)$result['status']);
     }
 
     private function sameOrigin(Request $request): bool

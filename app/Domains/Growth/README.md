@@ -101,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.12 Signal Operations Workspace
+## V0.13 External Signal Intake
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -257,4 +257,20 @@ V0.12 adds operator-visible signal ingestion:
 
 Signals expose observable evidence with source, confidence and Candidate usage. Collectors expose the registered adapter list and run history with accepted/duplicate/failed counters, cursors and error summaries. Running a collector still goes through `POST /api/v1/growth/collectors/{name}/run`; the SSR controller remains read-only.
 
-Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters and outbound engagement.
+V0.13 adds a signed push ingress for external market intelligence:
+
+```text
+external source / n8n / scraper
+        ↓
+POST /webhooks/growth/signals
+        ↓
+timestamp + HMAC-SHA256 + idempotency
+        ↓
+GrowthApplicationBoundary::ingestExternalSignal()
+        ↓
+canonical Signal + Event + Audit
+```
+
+The edge does not know Growth persistence. External signals use a dedicated idempotency namespace and are recorded with SYSTEM provenance. The Growth module must be enabled for the target organization.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors and outbound engagement.

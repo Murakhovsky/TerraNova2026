@@ -1,5 +1,8 @@
 parameters:
   env(N8N_WEBHOOK_SECRET): ''
+  env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
+  env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
+  env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
 
 services:
   _defaults:
@@ -1635,6 +1638,14 @@ services:
 
   Domains\Content\Application\Contract\InboundContentWebhookInterface:
     alias: Infrastructure\Integration\N8n\N8nWebhookService
+
+  App\Application\Growth\Integration\GrowthExternalSignalWebhook:
+    arguments:
+      $growth: '@Domains\Growth\Application\Contract\GrowthApplicationBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $secret: '%env(GROWTH_SIGNAL_WEBHOOK_SECRET)%'
+      $actorId: '%env(int:GROWTH_SIGNAL_WEBHOOK_ACTOR_ID)%'
+      $maxClockSkew: '%env(int:GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW)%'
 
   App\Web\PublicEdge\PublicEdgeController:
     public: true

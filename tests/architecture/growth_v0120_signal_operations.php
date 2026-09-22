@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.12.0','Growth V0.12 manifest version must be 0.12.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.12.0','>='),'Growth manifest must remain V0.12+.');
 $assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.12 must keep schema version 0.8.0.');
 $assert(in_array('growth.signal.operations',$manifest['contributions']['capabilities']??[],true),'Growth signal operations capability is missing.');
 
