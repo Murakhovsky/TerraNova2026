@@ -19,7 +19,7 @@ $notContains = static function (string $source, string $needle, string $message)
 $show = $read('app/Interfaces/Web/View/client_case/show.phtml');
 foreach ([
     '$inboundRows = [];',
-    "'bodyPartial' => 'components/ui/data_table'",
+    "partial('components/ui/data_table'",
     "'responsive' => 'cards'",
     "'emptyMessage' => 'До кейсу ще не привʼязано заявок.'",
     "'property' => [",
@@ -55,7 +55,7 @@ foreach ([
     '$policyRows = [];',
     '$integrationRows = [];',
     '$resultRows = [];',
-    "partial('components/ui/data_table'",
+    "'bodyPartial' => 'components/ui/data_table'",
     "'kind' => 'details'",
     'id="events"',
     'id="rules"',
