@@ -34,7 +34,12 @@ on:
       - 'tests/architecture/web_experience_wave12_testing.php'
       - 'tests/architecture/web_experience_wave12_performance_observability.php'
       - 'tests/architecture/web_experience_wave12_sales_reference.php'
-      - 'symfony/src/Web/Sales/SalesReferenceController.php'
+      - 'tests/architecture/web_experience_wave12_sales_cutover.php'
+      - 'tests/smoke/sales_workspace.php'
+      - 'tests/browser/sales_workspace.mjs'
+      - 'symfony/assets/controllers/sales_lead_controller.js'
+      - 'docs/03-architecture/sales-cutover.md'
+      - 'symfony/src/Web/Sales/SalesWorkspaceController.php'
       - 'symfony/templates/experience/sales/**'
       - 'docs/03-architecture/sales-reference-implementation.md'
       - 'tests/browser/web_performance_budget.mjs'
@@ -413,14 +418,20 @@ jobs:
       - name: Wave 12.25 Sales reference architecture gate
         run: php tests/architecture/web_experience_wave12_sales_reference.php
 
-      - name: Wave 12.25 Sales reference Twig lint
+      - name: Wave 12.25 Sales production Twig lint
         run: docker compose exec -T php php bin/console lint:twig templates/experience/sales
 
-      - name: Wave 12.25 Sales reference routes
+      - name: Wave 12.26 Sales cutover architecture gate
+        run: php tests/architecture/web_experience_wave12_sales_cutover.php
+
+      - name: Wave 12.26 Sales workspace smoke
+        run: php tests/smoke/sales_workspace.php
+
+      - name: Wave 12.26 Sales production routes
         run: |
-          docker compose exec -T php php bin/console debug:router cos_web_sales_reference_dashboard >/dev/null
-          docker compose exec -T php php bin/console debug:router cos_web_sales_reference_leads >/dev/null
-          docker compose exec -T php php bin/console debug:router cos_web_sales_reference_lead >/dev/null
+          docker compose exec -T php php bin/console debug:router cos_web_sales_dashboard >/dev/null
+          docker compose exec -T php php bin/console debug:router cos_web_sales_leads >/dev/null
+          docker compose exec -T php php bin/console debug:router cos_web_sales_lead >/dev/null
 
       - name: Web Security response headers smoke
         run: |
