@@ -139,7 +139,7 @@ foreach ([
     '## Хвиля 8',
     '### Закриття route/view debt',
     '### Вибране (Favourites) route closure',
-    '### Retired compatibility views',
+    '### Виведені compatibility views',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'Property production adoption closure documentation is incomplete.');
