@@ -432,6 +432,8 @@ jobs:
         env:
           PANTHER_EXTERNAL_BASE_URI: http://127.0.0.1:8081
           PANTHER_CHROME_BINARY: /usr/bin/google-chrome
+          PANTHER_NO_SANDBOX: '1'
+          PANTHER_CHROME_ARGUMENTS: --disable-dev-shm-usage
         run: |
           rm -rf /tmp/cos-panther
           mkdir -p /tmp/cos-panther

@@ -4,32 +4,41 @@ declare(strict_types=1);
 
 namespace App\Tests\Panther;
 
-use Symfony\Component\Panther\PantherTestCase;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Panther\Client;
 
 /**
  * Wave 12.23 browser E2E evidence.
  *
- * CI runs this suite against the already-started canonical Symfony runtime
- * through PANTHER_EXTERNAL_BASE_URI, so the production image can stay --no-dev.
+ * This test drives Chrome against the already-started canonical Symfony
+ * runtime. It intentionally does not boot a local Symfony Kernel.
  */
-final class WebExperiencePantherTest extends PantherTestCase
+final class WebExperiencePantherTest extends TestCase
 {
+    private ?Client $client = null;
+
+    protected function tearDown(): void
+    {
+        $this->client?->quit();
+        $this->client = null;
+    }
+
     public function testPublicExperienceAndProtectedDevSurface(): void
     {
-        $baseUri = getenv('PANTHER_EXTERNAL_BASE_URI') ?: 'http://127.0.0.1:8081';
+        $baseUri = rtrim(getenv('PANTHER_EXTERNAL_BASE_URI') ?: 'http://127.0.0.1:8081', '/');
 
-        $client = static::createPantherClient([
-            'external_base_uri' => $baseUri,
-        ]);
+        $client = Client::createChromeClient(null, null, [], $baseUri);
+        $this->client = $client;
 
         $crawler = $client->request('GET', '/auth/login');
-        self::assertResponseIsSuccessful();
         self::assertGreaterThan(0, $crawler->filter('form')->count());
+        self::assertSame($baseUri.'/auth/login', $client->getCurrentURL());
 
-        $client->request('GET', '/property/catalog');
-        self::assertResponseIsSuccessful();
+        $crawler = $client->request('GET', '/property/catalog');
+        self::assertGreaterThan(0, $crawler->filter('main')->count());
+        self::assertSame($baseUri.'/property/catalog', $client->getCurrentURL());
 
         $client->request('GET', '/dev/ui');
-        self::assertStringEndsWith('/auth/login', $client->getCurrentURL());
+        self::assertSame($baseUri.'/auth/login', $client->getCurrentURL());
     }
 }

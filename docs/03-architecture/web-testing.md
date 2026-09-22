@@ -29,7 +29,7 @@ Wave 12.23 закриває quality contract для Web Experience Platform. М�
 
 `playwright-core` є locked dependency COS і перевіряє public Symfony surfaces у desktop/mobile режимах, screenshots, runtime errors, responsive overflow та accessibility.
 
-Symfony-native Panther suite у `symfony/tests/Panther` тепер також виконується реально в CI проти вже запущеного canonical runtime через `PANTHER_EXTERNAL_BASE_URI`. Щоб не забруднювати production dependency graph, CI створює isolated test-only Composer sandbox і встановлює exact `symfony/panther:2.4.0` разом із PHPUnit. Production Docker image, як і раніше, збирається `--no-dev`.
+Symfony-native Panther suite у `symfony/tests/Panther` тепер також виконується реально в CI проти вже запущеного canonical runtime через `PANTHER_EXTERNAL_BASE_URI`. Тест використовує standalone `Symfony\\Component\\Panther\\Client` і не boot-ить локальний Symfony Kernel, тому перевіряє саме production-like HTTP/browser boundary. Щоб не забруднювати production dependency graph, CI створює isolated test-only Composer sandbox і встановлює exact `symfony/panther:2.4.0` разом із PHPUnit. Production Docker image, як і раніше, збирається `--no-dev`.
 
 ## Базова доступність
 

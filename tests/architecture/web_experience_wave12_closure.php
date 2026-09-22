@@ -53,8 +53,9 @@ foreach ([
 
 $panther = (string) file_get_contents($root . '/symfony/tests/Panther/WebExperiencePantherTest.php');
 foreach ([
-    'extends PantherTestCase',
-    "'external_base_uri' => \\$baseUri",
+    'extends TestCase',
+    'Client::createChromeClient',
+    "getenv('PANTHER_EXTERNAL_BASE_URI')",
     "request('GET', '/auth/login')",
     "request('GET', '/property/catalog')",
     "request('GET', '/dev/ui')",
@@ -65,6 +66,9 @@ foreach ([
 }
 if (str_contains($panther, 'if (class_exists(PantherTestCase::class))')) {
     throw new RuntimeException('Panther suite must be executable, not readiness-only guarded.');
+}
+if (str_contains($panther, 'createPantherClient')) {
+    throw new RuntimeException('External Panther E2E must not require booting the local Symfony Kernel.');
 }
 
 $freeze = (string) file_get_contents($root . '/docs/11-decisions/ADR-0011-web-platform-v1-freeze.md');
