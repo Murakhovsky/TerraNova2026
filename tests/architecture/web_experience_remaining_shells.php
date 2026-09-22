@@ -59,8 +59,7 @@ foreach (['tn-breadcrumbs', 'tn-page-hero', 'tn-page-hero__actions'] as $legacyM
 }
 
 $blogIndex = $read('app/Interfaces/Web/View/blog/index.phtml');
-foreach (["partial('components/ui/page_header'", "partial('components/ui/state'", "'opублікованих матеріалів'"] as $marker) {
-    if ($marker === "'opублікованих матеріалів'") continue;
+foreach (["partial('components/ui/page_header'", "partial('components/ui/state'", "'опублікованих матеріалів'"] as $marker) {
     $contains($blogIndex, $marker, 'Blog Index canonical shell contract is incomplete.');
 }
 foreach (['tn-breadcrumbs', 'tn-page-hero', 'tn-empty-state'] as $legacyMarker) {
