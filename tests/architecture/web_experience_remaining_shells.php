@@ -285,7 +285,7 @@ $globalForbidden = [
     'tn-admin-panel',
     'tn-portal-hero',
     'tn-auth-copy',
-    'tn-sales-cta',
+    'class="tn-sales-cta"',
     'tn-section-heading',
 ];
 $breadcrumbWhitelist = [
