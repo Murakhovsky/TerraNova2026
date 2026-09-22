@@ -198,12 +198,11 @@ Canonical runtime тепер явно використовує:
 - `property/submission.phtml`;
 - `property/create.phtml`;
 - `property/compare.phtml`;
-- `property/pdf.phtml`.
 
 `/property/manage` і `/property/listing` рендерять `property/workspace_canonical.phtml`.
 `/property/submission/{id}` рендерить `property/submission_canonical.phtml`.
 `/property/create` є alias до `PropertyPageController::submit`.
-`/property/pdf/{slug}` є redirect до presentation print flow і не має окремого PHTML renderer.
+`/property/pdf/{slug}` у web runtime є redirect до presentation print flow. Водночас `property/pdf.phtml` зберігається як окремий non-web print renderer для `PropertyPresentationService` і не є compatibility web surface.
 
 Історичний `WEB V0.7 Property Workspace` gate збережено як ім’я CI-контракту, але переведено з видаленого Phalcon-era `PropertyController` на актуальний Symfony Property runtime.
 
@@ -234,6 +233,6 @@ Canonical runtime тепер явно використовує:
 - canonical Symfony route/view graph не посилається на retired compatibility views;
 - /property/favour має живий Symfony route та збережений browser empty-state contract;
 - /property/create залишається alias до canonical public submit flow;
-- /property/pdf/{slug} використовує presentation print flow без окремого PHTML;
+- /property/pdf/{slug} використовує presentation print flow, а `property/pdf.phtml` лишається service-level print renderer;
 - WEB V0.7 gate переведений на canonical Symfony Property runtime;
 - architecture gate виконується у CI.
