@@ -30,15 +30,6 @@ final readonly class SalesPageController
     ) {
     }
 
-    public function dashboard(Request $request): Response
-    {
-        return $this->managerPage($request, 'Sales Overview', 'sales', 'sales/dashboard',
-            fn(TenantContext $tenant): array => $this->workspace->dashboard(
-                $tenant->organizationId()->value(),
-                (int) $tenant->userId()->value(),
-            ));
-    }
-
     public function pipeline(Request $request): Response
     {
         return $this->managerPage($request, 'Sales Pipeline', 'pipeline', 'sales/pipeline',
@@ -60,15 +51,6 @@ final readonly class SalesPageController
                     'sections' => $this->workspace->today($tenant->organizationId()->value(), $ownerId),
                 ];
             });
-    }
-
-    public function leads(Request $request): Response
-    {
-        return $this->managerPage($request, 'Sales Leads', 'leads', 'sales/leads',
-            fn(TenantContext $tenant): array => [
-                'leads' => $this->workspace->leads($tenant->organizationId()->value(), $request->query->all()),
-                'owners' => $this->owners($tenant),
-            ]);
     }
 
     public function deals(Request $request): Response
