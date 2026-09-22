@@ -42,7 +42,7 @@ Renderer не приймає arbitrary HTML callbacks. Row actions описую�
 
 Backend command path не змінювався.
 
-## Freeze compatibility
+## Сумісність із замороженою платформою
 
 Ця зміна не змінює frozen Web Platform v1 contracts з ADR-0011.
 
