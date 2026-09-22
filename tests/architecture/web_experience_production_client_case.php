@@ -69,8 +69,14 @@ foreach ([
     "partial('components/ui/filter_bar'",
     'tn-ui-panel',
     'tn-case-funnel',
-    'tn-client-case-operational-grid',
-    'tn-quick-case-form',
+    "partial('components/ui/operational_grid'",
+    '$caseRows = [];',
+    "'_form' => [",
+    "'kind' => 'stage'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index must use canonical shell while retaining funnel and operational mutations.');
 }
@@ -86,14 +92,14 @@ foreach ([
     'client-case/create',
     'client-case/createFromInboundRequest/',
     'client-case/linkInboundRequest',
-    'client-case/quickUpdate/',
-    'client-case/show/',
-    'name="csrf_token"',
-    'name="stage_id"',
-    'name="status"',
-    'name="priority"',
-    'name="assigned_user_id"',
-    'name="return_url"',
+    "'action' => 'client-case/quickUpdate/'",
+    "'href' => 'client-case/show/'",
+    "'csrf_token' => (string) (\$csrfToken ?? '')",
+    "'return_url' => 'client-case'",
+    "'name' => 'stage_id'",
+    "'name' => 'status'",
+    "'name' => 'priority'",
+    "'name' => 'assigned_user_id'",
 ] as $marker) {
     $contains($index, $marker, 'Client Case index lost a funnel/create/quick-update contract.');
 }

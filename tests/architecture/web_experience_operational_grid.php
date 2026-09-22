@@ -18,10 +18,15 @@ foreach ([
     'tn-ui-operational-grid',
     'tn-ui-data-table',
     '$rowActions',
+    '$rowForm',
     "'kind'] ?? 'link'",
     "'hidden'] ?? null",
+    "'fields'] ?? null",
+    "'type'] ?? 'select'",
+    "!== 'select'",
     'method="post"',
     'status_badge',
+    "components/ui/stage",
 ] as $marker) {
     if (!str_contains($grid, $marker)) {
         throw new RuntimeException('OperationalGrid contract incomplete: ' . $marker);
@@ -49,11 +54,29 @@ if (str_contains($cos, '<table class="tn-listing-table">')) {
 foreach ([
     '.tn-ui-operational-grid__actions',
     '.tn-ui-operational-grid__form',
+    '.tn-ui-operational-grid__editor',
+    '.tn-ui-operational-grid__fields',
+    '.tn-ui-operational-grid__field',
     '.tn-ui-operational-grid__actions-heading',
 ] as $marker) {
     if (!str_contains($css, $marker)) {
         throw new RuntimeException('OperationalGrid CSS contract incomplete: ' . $marker);
     }
+}
+
+$clientCase = $read('app/Interfaces/Web/View/client_case/index.phtml');
+foreach ([
+    '$caseRows = [];',
+    "partial('components/ui/operational_grid'",
+    "'_form' => [",
+    "'action' => 'client-case/quickUpdate/'",
+] as $marker) {
+    if (!str_contains($clientCase, $marker)) {
+        throw new RuntimeException('Client Case OperationalGrid adoption incomplete: ' . $marker);
+    }
+}
+if (str_contains($clientCase, '<table')) {
+    throw new RuntimeException('Client Case index raw operational table must remain retired.');
 }
 
 echo "OperationalGrid canonical mutation surface passed.\n";
