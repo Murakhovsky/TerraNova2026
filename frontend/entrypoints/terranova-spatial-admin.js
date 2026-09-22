@@ -45,7 +45,7 @@
       request.setRequestHeader('Accept', 'application/json');
       request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       progress.hidden = false;
-      status.classList.remove('is-visible');
+      status.hidden = true;
       request.upload.addEventListener('progress', function (upload) {
         if (!upload.lengthComputable) return;
         var value = Math.round((upload.loaded / upload.total) * 100);
@@ -56,12 +56,12 @@
         var response = {};
         try { response = JSON.parse(request.responseText); } catch (error) { response.message = 'Сервер повернув некоректну відповідь.'; }
         status.textContent = response.message || (request.status < 300 ? 'Asset завантажено.' : 'Завантаження не вдалося.');
-        status.classList.add('is-visible');
+        status.hidden = false;
         if (request.status >= 200 && request.status < 300) window.setTimeout(function () { window.location.reload(); }, 700);
       });
       request.addEventListener('error', function () {
         status.textContent = 'З’єднання перервано. Повторіть завантаження.';
-        status.classList.add('is-visible');
+        status.hidden = false;
       });
       request.send(new FormData(form));
     });

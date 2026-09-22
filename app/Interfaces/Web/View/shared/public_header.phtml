@@ -7,7 +7,7 @@ $navItems = is_array($publicNavigation ?? null) ? $publicNavigation : [
     ['key' => 'services', 'path' => 'services', 'label' => 'Послуги'],
     ['key' => 'partners', 'path' => 'partners', 'label' => 'Партнерам'],
     ['key' => 'about', 'path' => 'terra-nova', 'label' => 'Terra Nova'],
-    ['key' => 'cos', 'path' => 'cos/en', 'label' => 'COS'],
+    ['key' => 'cos', 'path' => 'cos', 'label' => 'COS'],
 ];
 $href = function (string $path): string {
     if ($path === '' || $path === '/') {

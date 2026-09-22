@@ -1514,6 +1514,8 @@ services:
   App\Web\Content\PublicContentPageController:
     public: true
     tags: ['controller.service_arguments']
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   App\Web\Content\ContentAdminPageController:
     public: true

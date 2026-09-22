@@ -135,8 +135,8 @@ $pageStatus = $pageStatus ?? null;
         </fieldset>
 
         <div class="tn-submit-form__actions">
-          <button class="tn-btn tn-btn--accent" type="submit">Подати на модерацію</button>
-          <?php if ($submissionStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($submissionStatus); ?></p><?php endif; ?>
+          <button class="tn-ui-button tn-ui-button--primary" type="submit">Подати на модерацію</button>
+          <?php if ($submissionStatus): ?><p class="tn-ui-alert tn-ui-alert--positive" role="status" aria-live="polite"><?php echo $h($submissionStatus); ?></p><?php endif; ?>
         </div>
       </form>
 
@@ -147,7 +147,7 @@ $pageStatus = $pageStatus ?? null;
           <li>Менеджер перевіряє контакти, параметри й матеріали.</li>
           <li>Після підтвердження об’єкт можна перенести в каталог.</li>
         </ol>
-        <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути каталог</a>
+        <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути каталог</a>
       </aside>
     </section>
   <?php endif; ?>

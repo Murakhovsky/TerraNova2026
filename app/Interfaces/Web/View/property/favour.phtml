@@ -55,7 +55,7 @@ $catalogStatus = $catalogStatus ?? null;
               <span><?php echo $h($property['city']); ?><?php if ($property['area_total']): ?> / <?php echo $h((float) $property['area_total']); ?> м²<?php endif; ?></span>
             </div>
             <div class="tn-card-actions">
-              <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
+              <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
               <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Зберегти</button>
             </div>
           </div>

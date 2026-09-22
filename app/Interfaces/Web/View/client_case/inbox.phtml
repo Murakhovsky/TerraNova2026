@@ -203,7 +203,7 @@ $activeTab = (string) (($filters['status'] ?? '') ?: 'all');
                     </form>
                   <?php endif; ?>
                 <?php else: ?>
-                  <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case/show/' . (int) $request['client_case_id']); ?>">Відкрити кейс</a>
+                  <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get('client-case/show/' . (int) $request['client_case_id']); ?>">Відкрити кейс</a>
                 <?php endif; ?>
               </div>
             </div>

@@ -13,9 +13,9 @@ $failureActionLabel = (string) ($failureActionLabel ?? 'На головну');
     <h1 id="tn-failure-title"><?php echo $h($failureTitle); ?></h1>
     <p class="tn-failure__message"><?php echo $h($failureMessage); ?></p>
     <div class="tn-failure__actions">
-      <a class="tn-btn tn-btn--dark" href="<?php echo $h($failureActionUrl); ?>"><?php echo $h($failureActionLabel); ?></a>
+      <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $h($failureActionUrl); ?>"><?php echo $h($failureActionLabel); ?></a>
       <?php if ($failureActionUrl !== $this->url->get('')): ?>
-        <a class="tn-btn" href="<?php echo $h($this->url->get('')); ?>">На головну</a>
+        <a class="tn-ui-button" href="<?php echo $h($this->url->get('')); ?>">На головну</a>
       <?php endif; ?>
     </div>
     <?php if ($failureRequestId !== ''): ?>

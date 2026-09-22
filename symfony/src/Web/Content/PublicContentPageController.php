@@ -5,6 +5,8 @@ namespace App\Web\Content;
 
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Content\Application\Contract\ContentServiceInterface;
+use Domains\Content\Application\Service\PublicPageCatalog;
+use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -13,7 +15,52 @@ final readonly class PublicContentPageController
     public function __construct(
         private PhtmlRenderer $renderer,
         private ContentServiceInterface $content,
+        private PublicPageCatalog $pages,
+        private SalesWriteServiceFactoryInterface $writes,
+        private string $organizationId,
     ) {
+    }
+
+    public function page(Request $request, string $slug): Response
+    {
+        $page = $this->pages->page($slug);
+        if ($page === null) {
+            return new Response('Page was not found.', Response::HTTP_NOT_FOUND);
+        }
+
+        $inboundRequestStatus = null;
+        if ($request->isMethod('POST')) {
+            if (empty($page['has_form'])) {
+                return new Response('Method Not Allowed', Response::HTTP_METHOD_NOT_ALLOWED, ['Allow' => 'GET, HEAD']);
+            }
+
+            try {
+                $result = $this->writes
+                    ->forOrganization($this->organizationId)
+                    ->receivePublicLead($request->request->all(), $request->getRequestUri());
+
+                $inboundRequestStatus = $result->ok
+                    ? 'Заявку прийнято. Менеджер зв’яжеться з вами.'
+                    : match ($result->code) {
+                        'contact_required' => 'Вкажіть ім’я та телефон або email.',
+                        'invalid_email' => 'Перевірте email.',
+                        default => 'Заявку не вдалося зберегти.',
+                    };
+            } catch (\Throwable $error) {
+                error_log('public.page.lead_failed ' . $error->getMessage());
+                $inboundRequestStatus = 'Заявку не вдалося зберегти.';
+            }
+        }
+
+        return $this->html($request, 'page/show', [
+            'interfaceSurface' => 'public',
+            'pageAssetEntries' => ['public-surface'],
+            'page' => $page,
+            'inboundRequestStatus' => $inboundRequestStatus,
+            'metaTitle' => (string) ($page['title'] ?? 'Terra Nova CLUB') . ' | Terra Nova CLUB',
+            'metaDescription' => (string) ($page['description'] ?? ''),
+            'metaUrl' => $request->getSchemeAndHttpHost() . '/' . rawurlencode($slug),
+        ]);
     }
 
     public function blog(Request $request): Response

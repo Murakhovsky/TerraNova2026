@@ -241,7 +241,7 @@ if ($property) {
           ]);
         ?>
         <p class="tn-property-hero__note">Після запиту менеджер уточнить актуальність, деталі по документах і зручний час перегляду.</p>
-        <?php if ($propertyMatchStatus): ?><p class="tn-form-status is-visible"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
+        <?php if ($propertyMatchStatus): ?><p class="tn-ui-alert tn-ui-alert--positive" role="status"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
         <?php if ($managerClientCases): ?>
           <form class="tn-property-crm-form" action="<?php echo $this->url->get('client-case/matchProperty'); ?>" method="post">
             <input type="hidden" name="property_id" value="<?php echo (int) $property['id']; ?>">
@@ -272,7 +272,7 @@ if ($property) {
               <span>Нотатка</span>
               <input name="note" type="text" maxlength="500" placeholder="Чому об’єкт підходить">
             </label>
-            <button class="tn-btn tn-btn--dark" type="submit">Додати в підбір</button>
+            <button class="tn-ui-button tn-ui-button--primary" type="submit">Додати в підбір</button>
           </form>
         <?php endif; ?>
       </div>
@@ -351,20 +351,20 @@ if ($property) {
             <p class="tn-kicker">Перегляд</p>
             <h2>Записатися на перегляд</h2>
             <p>Залиште заявку, і менеджер узгодить час, формат перегляду та підготує відповіді по об’єкту.</p>
-            <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="viewing">Записатися</a>
+            <a class="tn-ui-button tn-ui-button--primary" href="#request" data-request-intent="viewing">Записатися</a>
           </article>
           <article>
             <p class="tn-kicker">Презентація</p>
             <h2>Отримати коротку презентацію</h2>
             <p>Надішлемо ключові параметри, фото, ціну, локацію та наступні кроки для ухвалення рішення.</p>
-            <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" data-analytics-event="presentation_request">Відкрити</a>
-            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">PDF</a>
+            <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" data-analytics-event="presentation_request">Відкрити</a>
+            <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">PDF</a>
           </article>
           <article>
             <p class="tn-kicker">Підбір</p>
             <h2>Підібрати схожий об’єкт</h2>
             <p>Якщо цей варіант близький, але не ідеальний, менеджер підбере альтернативи за бюджетом, локацією та сценарієм покупки.</p>
-            <a class="tn-btn tn-btn--ghost" href="#request" data-request-intent="similar_search">Підібрати схожий</a>
+            <a class="tn-ui-button tn-ui-button--ghost" href="#request" data-request-intent="similar_search">Підібрати схожий</a>
           </article>
         </section>
 
@@ -387,9 +387,9 @@ if ($property) {
             <p>Для об’єкта можна підключити Matterport, відео, власний 3D-тур або інтерактивний план. Якщо медіа ще не додані, сторінка вже готова до їхнього показу.</p>
           </div>
           <?php if ($property['tour_url']): ?>
-            <a class="tn-btn tn-btn--accent" href="<?php echo $h($property['tour_url']); ?>">Відкрити тур</a>
+            <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $h($property['tour_url']); ?>">Відкрити тур</a>
           <?php elseif ($property['video_url']): ?>
-            <a class="tn-btn tn-btn--accent" href="<?php echo $h($property['video_url']); ?>">Відкрити відео</a>
+            <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $h($property['video_url']); ?>">Відкрити відео</a>
           <?php else: ?>
             <span class="tn-tour-placeholder__badge">3D pending</span>
           <?php endif; ?>
@@ -425,9 +425,9 @@ if ($property) {
         <?php if ($phoneHref): ?><a href="tel:<?php echo $h($phoneHref); ?>"><?php echo $h($property['agent_phone']); ?></a><?php endif; ?>
         <?php if ($property['agent_email']): ?><a href="mailto:<?php echo $h($property['agent_email']); ?>"><?php echo $h($property['agent_email']); ?></a><?php endif; ?>
         <div class="tn-contact-actions">
-          <?php if ($telegramHref): ?><a class="tn-btn tn-btn--ghost" href="<?php echo $h($telegramHref); ?>">Telegram</a><?php endif; ?>
-          <?php if ($viberHref): ?><a class="tn-btn tn-btn--ghost" href="<?php echo $h($viberHref); ?>">Viber</a><?php endif; ?>
-          <?php if ($phoneHref): ?><a class="tn-btn tn-btn--dark" href="tel:<?php echo $h($phoneHref); ?>">Дзвінок</a><?php endif; ?>
+          <?php if ($telegramHref): ?><a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $h($telegramHref); ?>">Telegram</a><?php endif; ?>
+          <?php if ($viberHref): ?><a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $h($viberHref); ?>">Viber</a><?php endif; ?>
+          <?php if ($phoneHref): ?><a class="tn-ui-button tn-ui-button--primary" href="tel:<?php echo $h($phoneHref); ?>">Дзвінок</a><?php endif; ?>
         </div>
 
         <div class="tn-agent-card__request">
@@ -445,8 +445,8 @@ if ($property) {
           <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel"></label>
           <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
           <label><span>Повідомлення</span><textarea name="message" rows="4" placeholder="Хочу переглянути об’єкт або отримати деталі"></textarea></label>
-          <button class="tn-btn tn-btn--accent" type="submit">Надіслати запит</button>
-          <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+          <button class="tn-ui-button tn-ui-button--primary" type="submit">Надіслати запит</button>
+          <?php if ($inboundRequestStatus): ?><p class="tn-ui-alert tn-ui-alert--positive" role="status"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
         </form>
       </aside>
     </section>

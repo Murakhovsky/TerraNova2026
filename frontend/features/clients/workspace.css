@@ -82,7 +82,7 @@
   }
 
   .tn-client-workspace button,
-  .tn-client-workspace .tn-btn {
+  .tn-client-workspace .tn-ui-button {
     min-height: 38px;
     padding: 8px 12px;
     border-radius: var(--tn-radius-sm);
@@ -92,14 +92,14 @@
     cursor: pointer;
   }
 
-  .tn-client-workspace button:not(.tn-btn):not(.tn-ui-button) {
+  .tn-client-workspace button:not(.tn-ui-button) {
     color: #fff;
     background: var(--tn-color-accent);
     border: 1px solid var(--tn-color-accent);
     box-shadow: 0 1px 2px rgba(49, 68, 216, .18);
   }
 
-  .tn-client-workspace button:not(.tn-btn):not(.tn-ui-button):hover {
+  .tn-client-workspace button:not(.tn-ui-button):hover {
     background: var(--tn-color-accent-hover);
     border-color: var(--tn-color-accent-hover);
   }
