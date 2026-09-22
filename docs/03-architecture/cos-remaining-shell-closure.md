@@ -204,6 +204,21 @@ Legacy selectors для page hero, admin metrics/dashboard cards, raw tables т�
 
 PHASE 14 architecture gate тепер перевіряє не лише production PHTML, а й ці feature CSS bundles, щоб retired compatibility selectors не поверталися разом із майбутніми змінами.
 
+## Після freeze: canonical public header actions
+
+Residual primitive audit показав, що shared public header уже жив у canonical Symfony runtime, але його action cluster досі рендерив legacy `tn-btn` і приймав presentation-oriented `class => tn-btn--*` descriptors від callers.
+
+Post-freeze cleanup закриває цей протокол:
+
+- `shared/public_header.phtml` делегує quick actions у canonical `components/ui/action_bar.phtml`;
+- callers передають semantic `variant`, а не CSS class;
+- legacy `tn-btn--ghost` мапується на `variant=ghost`;
+- legacy `tn-btn--dark` замінено на `variant=primary`;
+- navigation, active state, public surface marker та destinations не змінені;
+- WEB V0.10 gate забороняє повернення `$action['class']` і `class => tn-btn--*` у public-header callers.
+
+Це additive cleanup presentation contract. Воно не означає, що весь specialized public UI вже має позбутися `tn-btn`; окремі rich/domain-specific surfaces можуть ще мати власні локальні actions. Закрито саме shared header boundary.
+
 ## Принцип specialized surfaces
 
 Canonical shell не означає, що specialized application повинна перетворитися на набір стандартних cards.
