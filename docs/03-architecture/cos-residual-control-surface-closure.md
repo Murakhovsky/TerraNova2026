@@ -116,7 +116,7 @@ Product-level raw-table exceptions після post-freeze cleanup:
 
 `admin/users.phtml` більше не є raw-table винятком. Inline user mutations перенесені на canonical OperationalGrid editable row form contract без зміни Identity routes або field semantics.
 
-### Methodology Studio entity browser
+### Браузер сутностей Methodology Studio
 
 `methodology_studio/index.phtml` більше не є raw-table винятком. Це лишається specialized JS-driven editor surface, але entity collection рендериться через semantic `role=table/row/columnheader/cell` CSS grid, а не через локальний HTML `<table>`.
 
