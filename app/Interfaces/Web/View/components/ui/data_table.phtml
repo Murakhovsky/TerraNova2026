@@ -31,6 +31,11 @@ $href = static function ($view, string $path): string {
                     'align' => $value['align'] ?? 'start',
                     'ariaLabel' => $value['ariaLabel'] ?? ($label . ' actions'),
                 ]); ?>
+              <?php elseif (is_array($value) && ($value['kind'] ?? '') === 'details'): ?>
+                <details class="tn-ui-data-table__details">
+                  <summary><?php echo $h($value['summary'] ?? 'Details'); ?></summary>
+                  <pre><?php echo $h($value['content'] ?? ''); ?></pre>
+                </details>
               <?php elseif (is_array($value) && isset($value['label'])): ?>
                 <?php if (($value['kind'] ?? 'status') === 'stage'): ?>
                   <?php $this->partial('components/ui/stage', ['label' => $value['label'], 'tone' => $value['tone'] ?? 'neutral']); ?>
