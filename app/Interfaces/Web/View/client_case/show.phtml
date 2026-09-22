@@ -65,6 +65,23 @@ $stageTone = static function (string $stage): string {
         default => 'neutral',
     };
 };
+$inboundRows = [];
+foreach ($inboundRequests as $inboundRequest) {
+    if (!is_array($inboundRequest)) continue;
+    $propertySlug = trim((string) ($inboundRequest['property_slug'] ?? ''));
+    $inboundRows[] = [
+        '_href' => $propertySlug !== '' ? 'property/show/' . $propertySlug : '',
+        'id' => '#' . (string) ($inboundRequest['id'] ?? ''),
+        'intent' => (string) ($intentLabels[$inboundRequest['request_intent'] ?? 'general_contact'] ?? ($inboundRequest['request_intent'] ?? 'Заявка')),
+        'deal_type' => (string) ($inboundRequest['deal_type'] ?? ''),
+        'property' => [
+            'primary' => $propertySlug !== '' ? (string) (($inboundRequest['property_title'] ?? '') ?: $propertySlug) : 'без обʼєкта',
+            'secondary' => $propertySlug,
+        ],
+        'message' => mb_substr((string) ($inboundRequest['message'] ?? ''), 0, 120),
+        'created_at' => (string) ($inboundRequest['created_at'] ?? ''),
+    ];
+}
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'cases']); ?>
@@ -237,28 +254,20 @@ $stageTone = static function (string $stage): string {
 
     <section class="tn-crm-detail-grid">
       <article class="tn-ui-panel">
-        <h2>Вхідні заявки</h2>
-        <?php if (!$inboundRequests): ?>
-          <p class="tn-muted">До кейсу ще не привʼязано заявок.</p>
-        <?php else: ?>
-          <div class="tn-table-wrap">
-            <table class="tn-listing-table">
-              <thead><tr><th>#</th><th>Намір</th><th>Тип</th><th>Обʼєкт</th><th>Повідомлення</th><th>Дата</th></tr></thead>
-              <tbody>
-                <?php foreach ($inboundRequests as $inboundRequest): ?>
-                  <tr>
-                    <td>#<?php echo $h($inboundRequest['id']); ?></td>
-                    <td><?php echo $h($intentLabels[$inboundRequest['request_intent'] ?? 'general_contact'] ?? ($inboundRequest['request_intent'] ?? 'Заявка')); ?></td>
-                    <td><?php echo $h($inboundRequest['deal_type']); ?></td>
-                    <td><?php if ($inboundRequest['property_slug']): ?><a href="<?php echo $this->url->get('property/show/' . $inboundRequest['property_slug']); ?>"><?php echo $h($inboundRequest['property_title']); ?></a><?php else: ?>без обʼєкта<?php endif; ?></td>
-                    <td><?php echo $h(mb_substr((string) $inboundRequest['message'], 0, 120)); ?></td>
-                    <td><?php echo $h($inboundRequest['created_at']); ?></td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php endif; ?>
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Relations</p><h2>Вхідні заявки</h2></div></div>
+        <?php $this->partial('components/ui/data_table', [
+            'columns' => [
+                ['key' => 'id', 'label' => '#'],
+                ['key' => 'intent', 'label' => 'Намір'],
+                ['key' => 'deal_type', 'label' => 'Тип'],
+                ['key' => 'property', 'label' => 'Обʼєкт'],
+                ['key' => 'message', 'label' => 'Повідомлення'],
+                ['key' => 'created_at', 'label' => 'Дата'],
+            ],
+            'rows' => $inboundRows,
+            'responsive' => 'cards',
+            'emptyMessage' => 'До кейсу ще не привʼязано заявок.',
+        ]); ?>
       </article>
 
       <article class="tn-ui-panel">

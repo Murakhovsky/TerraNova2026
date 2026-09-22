@@ -82,7 +82,7 @@ foreach ([
     $notContains($index, $legacyMarker, 'Client Case index must not restore redundant breadcrumb/local alert composition.');
 }
 foreach ([
-    "'active' => $activeTab",
+    "'active' => \$activeTab",
     'client-case/create',
     'client-case/createFromInboundRequest/',
     'client-case/linkInboundRequest',
