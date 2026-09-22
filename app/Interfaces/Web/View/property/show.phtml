@@ -446,7 +446,7 @@ if ($property) {
           <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
           <label><span>Повідомлення</span><textarea name="message" rows="4" placeholder="Хочу переглянути об’єкт або отримати деталі"></textarea></label>
           <button class="tn-btn tn-btn--accent" type="submit">Надіслати запит</button>
-          <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+          <?php if ($inboundRequestStatus): ?><p class="tn-ui-inline-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
         </form>
       </aside>
     </section>
