@@ -496,6 +496,11 @@ services:
   Domains\Growth\Application\Contract\GrowthHandoffBoundary:
     alias: Domains\Growth\Application\Service\GrowthHandoffService
 
+  Domains\Growth\Infrastructure\Handoff\SalesGrowthHandoffTarget:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

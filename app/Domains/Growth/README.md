@@ -101,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.8 Opportunity Intelligence + Cross-domain Handoff runtime
+## V0.9 Opportunity Intelligence + Sales Handoff Adapter
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -217,4 +217,10 @@ Growth persists an immutable Opportunity Package per attempt and never writes di
 
 A `running` attempt is resumable from its persisted package snapshot. If a process dies after entering `handoff_pending`, replaying the same Growth idempotency key resumes the target call rather than leaving the Candidate stranded. Concurrent resumes serialize on the Candidate row and return the already persisted outcome.
 
-Still intentionally absent: concrete Sales/HR/Procurement/Service handoff adapters, concrete external signal provider adapters, outbound engagement, public API and Growth UI.
+V0.9 provides the first concrete target adapter: `sales`.
+
+For a Growth `contact` subject, Sales intake requires a valid email identity. For an `account` subject, the latest Buying Committee assessment must contain exactly one explicit champion, and that Growth contact must have a valid email identity. The adapter does not guess among multiple champions and does not treat LinkedIn identity as an email substitute.
+
+When accepted, the adapter calls the target-owned `SalesWriteServiceFactoryInterface → createLead()` boundary with the stable Candidate-level idempotency key and returns a `sales_lead:<id>` reference. Growth never writes `tn_leads` or other Sales persistence.
+
+Still intentionally absent: HR/Procurement/Service target adapters, concrete external signal provider adapters, outbound engagement, public API and Growth UI.

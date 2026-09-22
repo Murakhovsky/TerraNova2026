@@ -62,7 +62,7 @@ expectGrowthV080(
 
 $target=new class implements GrowthHandoffTargetInterface {
     public function domain(): string { return 'sales'; }
-    public function accept(OpportunityHandoff $handoff,string $correlationId,string $idempotencyKey): HandoffTargetResult
+    public function accept(OpportunityHandoff $handoff,int $actorId,string $correlationId,string $idempotencyKey): HandoffTargetResult
     {
         return HandoffTargetResult::accepted('sales_opportunity','42');
     }

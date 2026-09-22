@@ -12,6 +12,7 @@ interface GrowthHandoffTargetInterface
 
     public function accept(
         OpportunityHandoff $handoff,
+        int $actorId,
         string $correlationId,
         string $idempotencyKey,
     ): HandoffTargetResult;

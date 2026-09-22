@@ -308,6 +308,33 @@ Running attempt можна resume з persisted `package_json`. Resolution сер
 
 Growth не знає persistence Sales/HR/Procurement/Service і не створює їх aggregates напряму. Конкретний target adapter реалізує Growth-owned port та повертає target-owned reference.
 
+## Sales target adapter
+
+V0.9 підключає перший concrete target:
+
+```text
+Growth OpportunityHandoff
+        ↓
+target_domain = sales
+        ↓
+contact subject
+  └─ valid email required
+
+account subject
+  ↓
+latest Buying Committee
+  ↓
+exactly one champion
+  ↓
+valid champion email
+        ↓
+SalesWriteService::createLead()
+        ↓
+sales_lead:<id>
+```
+
+Sales сам створює свій execution object через власний application boundary. Growth лише передає package та стабільний Candidate-level idempotency key. Multiple champions, відсутній committee або non-email identity дають explicit target rejection замість евристичного вибору людини.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -327,9 +354,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.8
+## Статус V0.9
 
-`process_state: to-be` поки навмисний. V0.8 додає resumable cross-domain Handoff Protocol поверх Signal/Account/Buying Committee/Research/Decision Intelligence. Concrete target adapters, signal provider adapters, engagement, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.9 додає перший concrete `sales` target adapter до resumable Handoff Protocol. Інші target adapters, signal provider adapters, engagement, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -351,6 +378,7 @@ app/Domains/Growth/Application/Service/GrowthDecisionService.php
 app/Domains/Growth/Application/Service/GrowthResearchService.php
 app/Domains/Growth/Application/Service/GrowthHandoffService.php
 app/Domains/Growth/Application/Service/GrowthHandoffTargetRegistry.php
+app/Domains/Growth/Infrastructure/Handoff/SalesGrowthHandoffTarget.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthHandoffRepository.php
 app/Domains/Growth/Application/AI/GrowthResearchPrompt.php
 app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthResearchGateway.php

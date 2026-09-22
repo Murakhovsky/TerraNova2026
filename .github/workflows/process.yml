@@ -102,6 +102,7 @@ jobs:
           php tests/architecture/growth_v060_decision_intelligence.php
           php tests/architecture/growth_v070_research_intelligence.php
           php tests/architecture/growth_v080_handoff_protocol.php
+          php tests/architecture/growth_v090_sales_handoff_adapter.php
 
       - name: Process registry invariants
         run: |
@@ -114,6 +115,7 @@ jobs:
           php tests/unit/growth_v060_decision_intelligence.php
           php tests/unit/growth_v070_research_intelligence.php
           php tests/unit/growth_v080_handoff_protocol.php
+          php tests/unit/growth_v090_sales_handoff_adapter.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -148,4 +150,6 @@ jobs:
           php -l tests/architecture/growth_v070_research_intelligence.php
           php -l tests/unit/growth_v080_handoff_protocol.php
           php -l tests/architecture/growth_v080_handoff_protocol.php
+          php -l tests/unit/growth_v090_sales_handoff_adapter.php
+          php -l tests/architecture/growth_v090_sales_handoff_adapter.php
           php -l tests/architecture/process_v01.php

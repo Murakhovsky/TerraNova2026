@@ -118,7 +118,7 @@ final readonly class GrowthHandoffService implements GrowthHandoffBoundary
         $targetIdempotencyKey='growth-handoff-'.$this->stableId($organizationId.':candidate:'.$candidateId);
 
         try{
-            $result=$target->accept($handoff,$correlationId,$targetIdempotencyKey);
+            $result=$target->accept($handoff,$actorId,$correlationId,$targetIdempotencyKey);
         }catch(Throwable $error){
             return $this->recoverFailure(
                 $organizationId,$actorId,$correlationId,$candidateId,$attemptId,$idempotencyKey,$handoff,$error,
