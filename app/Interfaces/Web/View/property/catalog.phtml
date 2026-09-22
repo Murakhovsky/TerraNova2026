@@ -147,11 +147,10 @@ $breadcrumbJson = [
 ]); ?>
 
 <main class="tn-page">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a>
-    <span>/</span>
-    <span>Каталог нерухомості</span>
-  </nav>
+  <?php $this->partial('components/ui/breadcrumbs', ['items' => [
+    ['label' => 'Головна', 'href' => ''],
+    ['label' => 'Каталог нерухомості', 'current' => true],
+  ]]); ?>
 
   <?php $this->partial('components/ui/page_header', [
     'eyebrow' => 'Каталог Terra Nova',
