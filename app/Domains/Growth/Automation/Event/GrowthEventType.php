@@ -26,6 +26,10 @@ final class GrowthEventType
     public const RESEARCH_RUN_FAILED = 'growth.research.run_failed';
     public const RESEARCH_PROPOSAL_CREATED = 'growth.research.proposal_created';
     public const RESEARCH_PROPOSAL_ACCEPTED = 'growth.research.proposal_accepted';
+    public const HANDOFF_DISPATCH_STARTED = 'growth.handoff.dispatch_started';
+    public const HANDOFF_DISPATCH_FAILED = 'growth.handoff.dispatch_failed';
+    public const HANDOFF_ACCEPTED = 'growth.handoff.accepted';
+    public const HANDOFF_REJECTED = 'growth.handoff.rejected';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -61,6 +65,10 @@ final class GrowthEventType
             self::RESEARCH_RUN_FAILED,
             self::RESEARCH_PROPOSAL_CREATED,
             self::RESEARCH_PROPOSAL_ACCEPTED,
+            self::HANDOFF_DISPATCH_STARTED,
+            self::HANDOFF_DISPATCH_FAILED,
+            self::HANDOFF_ACCEPTED,
+            self::HANDOFF_REJECTED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

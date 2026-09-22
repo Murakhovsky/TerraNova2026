@@ -116,7 +116,10 @@ QUALIFIED
   ↓
 READY_FOR_HANDOFF
   ↓
-HANDED_OFF
+HANDOFF_PENDING
+  ├─ accepted → HANDED_OFF
+  ├─ rejected → REJECTED_BY_TARGET_DOMAIN
+  └─ technical failure → READY_FOR_HANDOFF
 ```
 
 Бічні стани:
@@ -282,6 +285,29 @@ QualificationEvaluation snapshot
 
 Policy не згортає dimensions в один synthetic score. Кожна evaluation зберігає exact rationale, exact score payload, policy revision, failed criteria, outcome, reason та `model_version`. Це дозволяє відтворити історичне рішення навіть після зміни ICP, policy або scoring model.
 
+## Cross-domain Handoff Protocol
+
+V0.8 робить handoff окремим resumable protocol:
+
+```text
+OpportunityHandoff package
+        ↓
+persist attempt + package fingerprint
+        ↓
+Candidate: READY_FOR_HANDOFF → HANDOFF_PENDING
+        ↓
+GrowthHandoffTargetInterface
+        ├─ accept(reference) → HANDED_OFF
+        ├─ reject(reason)    → REJECTED_BY_TARGET_DOMAIN
+        └─ technical error   → READY_FOR_HANDOFF
+```
+
+Target call виконується поза DB transaction. Target-side idempotency key стабільний по Candidate, тому retry після timeout не повинен створити duplicate execution object у target Domain.
+
+Running attempt можна resume з persisted `package_json`. Resolution серіалізується Candidate row lock; concurrent resume після першого завершення повертає persisted attempt замість повторного lifecycle transition.
+
+Growth не знає persistence Sales/HR/Procurement/Service і не створює їх aggregates напряму. Конкретний target adapter реалізує Growth-owned port та повертає target-owned reference.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -301,9 +327,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.7
+## Статус V0.8
 
-`process_state: to-be` поки навмисний. V0.7 додає governed evidence-bound structured Research Proposal з explicit acceptance поверх Signal/Account/Buying Committee/Decision Intelligence. Concrete signal provider adapters, engagement, cross-domain acceptance, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.8 додає resumable cross-domain Handoff Protocol поверх Signal/Account/Buying Committee/Research/Decision Intelligence. Concrete target adapters, signal provider adapters, engagement, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -323,6 +349,9 @@ app/Domains/Growth/Application/Service/GrowthBuyingCommitteeService.php
 app/Domains/Growth/Application/Service/GrowthSignalCollectorService.php
 app/Domains/Growth/Application/Service/GrowthDecisionService.php
 app/Domains/Growth/Application/Service/GrowthResearchService.php
+app/Domains/Growth/Application/Service/GrowthHandoffService.php
+app/Domains/Growth/Application/Service/GrowthHandoffTargetRegistry.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthHandoffRepository.php
 app/Domains/Growth/Application/AI/GrowthResearchPrompt.php
 app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthResearchGateway.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthResearchRepository.php
@@ -338,5 +367,6 @@ app/migrations/20260922_000069_growth_v040_buying_committee.sql
 app/migrations/20260922_000070_growth_v050_signal_collectors.sql
 app/migrations/20260922_000071_growth_v060_decision_intelligence.sql
 app/migrations/20260922_000072_growth_v070_research_intelligence.sql
+app/migrations/20260922_000073_growth_v080_handoff_protocol.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

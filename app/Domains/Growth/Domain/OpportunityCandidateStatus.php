@@ -11,6 +11,7 @@ enum OpportunityCandidateStatus: string
     case Scored = 'scored';
     case Qualified = 'qualified';
     case ReadyForHandoff = 'ready_for_handoff';
+    case HandoffPending = 'handoff_pending';
     case HandedOff = 'handed_off';
 
     case Monitoring = 'monitoring';

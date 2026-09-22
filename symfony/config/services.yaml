@@ -19,6 +19,9 @@ services:
     Domains\Growth\Application\Contract\SignalCollectorInterface:
       tags:
         - { name: 'growth.signal_collector' }
+    Domains\Growth\Application\Contract\GrowthHandoffTargetInterface:
+      tags:
+        - { name: 'growth.handoff_target' }
     App\Web\Experience\Extension\Contract\WebExtensionProviderInterface:
       tags:
         - { name: 'cos.web.extension.provider' }
@@ -476,6 +479,22 @@ services:
 
   Domains\Growth\Application\Contract\GrowthResearchBoundary:
     alias: Domains\Growth\Application\Service\GrowthResearchService
+
+  Domains\Growth\Application\Service\GrowthHandoffTargetRegistry:
+    arguments:
+      $targets: !tagged_iterator growth.handoff_target
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthHandoffRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthHandoffRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthHandoffRepository
+
+  Domains\Growth\Application\Service\GrowthHandoffService: ~
+
+  Domains\Growth\Application\Contract\GrowthHandoffBoundary:
+    alias: Domains\Growth\Application\Service\GrowthHandoffService
 
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 

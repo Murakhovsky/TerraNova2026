@@ -79,6 +79,8 @@ QUALIFIED
   ↓
 READY_FOR_HANDOFF
   ↓
+HANDOFF_PENDING
+  ↓
 HANDED_OFF
 ```
 
@@ -99,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.7 Opportunity, Decision & Research Intelligence runtime
+## V0.8 Opportunity Intelligence + Cross-domain Handoff runtime
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -198,4 +200,21 @@ The model cannot write a Signal, qualify a Candidate or mutate the Candidate dir
 
 The LLM context intentionally excludes contact email/LinkedIn identity. It may receive contact ids and account-specific role/relationship snapshots, which are sufficient for buying-committee reasoning without shipping personal contact identifiers into model context.
 
-Still intentionally absent: concrete external signal provider adapters, outbound engagement, cross-domain handoff acceptance, public API and Growth UI.
+V0.8 adds a resumable target-domain handoff protocol:
+
+```text
+QUALIFIED
+  ↓
+READY_FOR_HANDOFF
+  ↓
+HANDOFF_PENDING
+  ├─ target accepted → HANDED_OFF
+  ├─ target rejected → REJECTED_BY_TARGET_DOMAIN
+  └─ technical failure → READY_FOR_HANDOFF
+```
+
+Growth persists an immutable Opportunity Package per attempt and never writes directly to target-domain tables. Target adapters implement the Growth-owned `GrowthHandoffTargetInterface`, receive a stable Candidate-level idempotency key, and return either an accepted target reference or an explicit rejection reason.
+
+A `running` attempt is resumable from its persisted package snapshot. If a process dies after entering `handoff_pending`, replaying the same Growth idempotency key resumes the target call rather than leaving the Candidate stranded. Concurrent resumes serialize on the Candidate row and return the already persisted outcome.
+
+Still intentionally absent: concrete Sales/HR/Procurement/Service handoff adapters, concrete external signal provider adapters, outbound engagement, public API and Growth UI.

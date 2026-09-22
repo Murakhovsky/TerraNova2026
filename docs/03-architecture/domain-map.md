@@ -47,7 +47,7 @@ Bootstrap: корінь композиції
 повністю інтегрований домен середовища виконання
 ```
 
-Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.7.0` має installable contract, persistence/application runtime, ICP/Account/Buying Committee Intelligence, Signal Collector, deterministic Decision Intelligence та evidence-bound governed Research runtime, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
+Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.8.0` має installable contract, persistence/application runtime, ICP/Account/Buying Committee Intelligence, Signal/Research/Decision Intelligence та resumable cross-domain Handoff Protocol, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
 
 Identity, Content і Spatial фізично відокремлені як обмежені області відповідальності (bounded areas), але не зобов’язані мати той самий контракт встановлюваного модуля.
 
@@ -59,7 +59,7 @@ Identity, Content і Spatial фізично відокремлені як обм
 
 ## Growth: пошук бізнес-можливостей
 
-Growth `0.7.0` володіє Signal Intake, ICP, Account/Buying Committee Intelligence, deterministic qualification policy, evidence-bound Research та раннім lifecycle бізнес-можливості до explicit handoff:
+Growth `0.8.0` володіє Signal Intake, ICP, Account/Buying Committee Intelligence, deterministic qualification policy, evidence-bound Research та explicit resumable handoff lifecycle:
 
 ```text
 ICP
@@ -82,7 +82,7 @@ ICP
 
 `BuyingCommitteeAssessment` детерміновано рахує required-role coverage, gaps, champions, blockers і relationship risk із конкретних snapshot ids та фіксує `model_version`.
 
-Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, MySQL runtime, ICP/Account/Contact intelligence, collector registry/source dedupe, versioned Qualification Policy, immutable Candidate Evaluation, governed evidence-bound Research Proposal/acceptance, idempotency, Events і Audit уже визначені; concrete signal provider adapters, engagement, cross-domain acceptance, API та UI ще не оголошуються реалізованими.
+Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, MySQL runtime, ICP/Account/Contact intelligence, collector registry/source dedupe, Qualification Policy, Candidate Evaluation, governed Research та resumable Handoff Protocol уже визначені. Growth володіє target port, але concrete Sales/HR/Procurement/Service adapters, signal provider adapters, engagement, API та UI ще не оголошуються реалізованими.
 
 ## Sales: продажі
 

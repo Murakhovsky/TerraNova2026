@@ -104,6 +104,7 @@ final class OpportunityCandidate
             OpportunityCandidateStatus::Scored,
             OpportunityCandidateStatus::Qualified,
             OpportunityCandidateStatus::ReadyForHandoff,
+            OpportunityCandidateStatus::HandoffPending,
             OpportunityCandidateStatus::HandedOff,
             OpportunityCandidateStatus::RejectedByTargetDomain,
         ],true)&&($rationale===null||$score===null)){
@@ -111,6 +112,7 @@ final class OpportunityCandidate
         }
         if(in_array($status,[
             OpportunityCandidateStatus::ReadyForHandoff,
+            OpportunityCandidateStatus::HandoffPending,
             OpportunityCandidateStatus::HandedOff,
             OpportunityCandidateStatus::RejectedByTargetDomain,
         ],true)&&($expectedValue===null||$recommendedPlay===null||$recommendedAction===null)){
@@ -201,8 +203,8 @@ final class OpportunityCandidate
     {
         $this->assertNotTerminal('be disqualified');
 
-        if ($this->status === OpportunityCandidateStatus::HandedOff) {
-            throw new DomainException('Handed-off Growth candidate cannot be disqualified by Growth.');
+        if (in_array($this->status,[OpportunityCandidateStatus::HandoffPending,OpportunityCandidateStatus::HandedOff],true)) {
+            throw new DomainException('Growth candidate with target-domain handoff ownership cannot be disqualified by Growth.');
         }
 
         $this->qualificationReason = self::required($reason, 'disqualification reason');
@@ -224,6 +226,9 @@ final class OpportunityCandidate
     public function markDuplicate(string $reason): void
     {
         $this->assertNotTerminal('be marked duplicate');
+        if(in_array($this->status,[OpportunityCandidateStatus::HandoffPending,OpportunityCandidateStatus::HandedOff],true)){
+            throw new DomainException('Growth candidate with target-domain handoff ownership cannot be marked duplicate.');
+        }
         $this->qualificationReason = self::required($reason, 'duplicate reason');
         $this->status = OpportunityCandidateStatus::Duplicate;
     }
@@ -232,8 +237,8 @@ final class OpportunityCandidate
     {
         $this->assertNotTerminal('expire');
 
-        if ($this->status === OpportunityCandidateStatus::HandedOff) {
-            throw new DomainException('Handed-off Growth candidate cannot expire inside Growth.');
+        if (in_array($this->status,[OpportunityCandidateStatus::HandoffPending,OpportunityCandidateStatus::HandedOff],true)) {
+            throw new DomainException('Growth candidate with target-domain handoff ownership cannot expire inside Growth.');
         }
 
         $this->qualificationReason = self::required($reason, 'expiration reason');
@@ -257,15 +262,30 @@ final class OpportunityCandidate
         $this->status = OpportunityCandidateStatus::ReadyForHandoff;
     }
 
+    public function startHandoffDispatch(): void
+    {
+        $this->assertStatus([OpportunityCandidateStatus::ReadyForHandoff], 'start handoff dispatch');
+        $this->status = OpportunityCandidateStatus::HandoffPending;
+    }
+
+    public function markHandoffDispatchFailed(): void
+    {
+        $this->assertStatus([OpportunityCandidateStatus::HandoffPending], 'recover from handoff dispatch failure');
+        $this->status = OpportunityCandidateStatus::ReadyForHandoff;
+    }
+
     public function markHandedOff(): void
     {
-        $this->assertStatus([OpportunityCandidateStatus::ReadyForHandoff], 'be handed off');
+        $this->assertStatus([OpportunityCandidateStatus::HandoffPending], 'be handed off');
         $this->status = OpportunityCandidateStatus::HandedOff;
     }
 
     public function markRejectedByTargetDomain(string $reason): void
     {
-        $this->assertStatus([OpportunityCandidateStatus::HandedOff], 'be rejected by target Domain');
+        $this->assertStatus([
+            OpportunityCandidateStatus::HandoffPending,
+            OpportunityCandidateStatus::HandedOff,
+        ], 'be rejected by target Domain');
         $this->qualificationReason = self::required($reason, 'handoff rejection reason');
         $this->status = OpportunityCandidateStatus::RejectedByTargetDomain;
     }

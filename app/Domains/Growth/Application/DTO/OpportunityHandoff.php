@@ -6,6 +6,7 @@ namespace Domains\Growth\Application\DTO;
 use DomainException;
 use Domains\Growth\Domain\OpportunityCandidate;
 use Domains\Growth\Domain\OpportunityCandidateStatus;
+use InvalidArgumentException;
 
 final readonly class OpportunityHandoff
 {
@@ -33,7 +34,26 @@ final readonly class OpportunityHandoff
         public string $expectedValue,
         public string $recommendedPlay,
         public string $recommendedAction,
-    ) {}
+    ) {
+        foreach([
+            'candidateId'=>$candidateId,'organizationId'=>$organizationId,'opportunityType'=>$opportunityType,
+            'growthMode'=>$growthMode,'subjectType'=>$subjectType,'subjectId'=>$subjectId,'targetDomain'=>$targetDomain,
+            'whyItMatters'=>$whyItMatters,'problemHypothesis'=>$problemHypothesis,'whyNow'=>$whyNow,
+            'expectedValue'=>$expectedValue,'recommendedPlay'=>$recommendedPlay,'recommendedAction'=>$recommendedAction,
+        ] as $field=>$value){
+            if(trim($value)==='')throw new InvalidArgumentException('Growth OpportunityHandoff '.$field.' is required.');
+        }
+        if($signalIds===[]||$evidenceIds===[]||$scores===[]){
+            throw new InvalidArgumentException('Growth OpportunityHandoff requires signals, evidence and scores.');
+        }
+        foreach([$signalIds,$evidenceIds,$unknowns] as $values){
+            if(!array_is_list($values))throw new InvalidArgumentException('Growth OpportunityHandoff list field is invalid.');
+            foreach($values as $value){
+                if(!is_string($value)||trim($value)==='')throw new InvalidArgumentException('Growth OpportunityHandoff list value is invalid.');
+            }
+        }
+        if(array_is_list($scores))throw new InvalidArgumentException('Growth OpportunityHandoff scores must be an object.');
+    }
 
     public static function fromCandidate(OpportunityCandidate $candidate): self
     {
@@ -66,6 +86,46 @@ final readonly class OpportunityHandoff
             expectedValue: (string) $candidate->expectedValue(),
             recommendedPlay: (string) $candidate->recommendedPlay(),
             recommendedAction: (string) $candidate->recommendedAction(),
+        );
+    }
+
+    /** @param array<string,mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        $strings=static function(mixed $value,string $field): string {
+            if(!is_string($value)||trim($value)==='')throw new InvalidArgumentException('Growth OpportunityHandoff '.$field.' is invalid.');
+            return trim($value);
+        };
+        $list=static function(mixed $value,string $field): array {
+            if(!is_array($value)||!array_is_list($value))throw new InvalidArgumentException('Growth OpportunityHandoff '.$field.' must be a list.');
+            $out=[];
+            foreach($value as $item){
+                if(!is_string($item)||trim($item)==='')throw new InvalidArgumentException('Growth OpportunityHandoff '.$field.' contains invalid value.');
+                $out[]=trim($item);
+            }
+            return $out;
+        };
+        $scores=$data['scores']??null;
+        if(!is_array($scores)||$scores===[]||array_is_list($scores))throw new InvalidArgumentException('Growth OpportunityHandoff scores are invalid.');
+
+        return new self(
+            $strings($data['candidate_id']??null,'candidate_id'),
+            $strings($data['organization_id']??null,'organization_id'),
+            $strings($data['opportunity_type']??null,'opportunity_type'),
+            $strings($data['growth_mode']??null,'growth_mode'),
+            $strings($data['subject_type']??null,'subject_type'),
+            $strings($data['subject_id']??null,'subject_id'),
+            $strings($data['target_domain']??null,'target_domain'),
+            $list($data['signal_ids']??null,'signal_ids'),
+            $strings($data['why_it_matters']??null,'why_it_matters'),
+            $strings($data['problem_hypothesis']??null,'problem_hypothesis'),
+            $strings($data['why_now']??null,'why_now'),
+            $list($data['evidence_ids']??null,'evidence_ids'),
+            $list($data['unknowns']??[],'unknowns'),
+            $scores,
+            $strings($data['expected_value']??null,'expected_value'),
+            $strings($data['recommended_play']??null,'recommended_play'),
+            $strings($data['recommended_action']??null,'recommended_action'),
         );
     }
 

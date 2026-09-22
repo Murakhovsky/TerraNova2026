@@ -44,6 +44,7 @@ final class TableOwnership
             'tn_growth_signal_collector_runs', 'tn_growth_signal_source_receipts',
             'tn_growth_qualification_policies', 'tn_growth_candidate_evaluations',
             'tn_growth_research_runs', 'tn_growth_research_proposals',
+            'tn_growth_handoff_attempts',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],
