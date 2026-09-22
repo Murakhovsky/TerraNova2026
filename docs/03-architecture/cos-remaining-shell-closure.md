@@ -138,7 +138,7 @@ Repository-wide gate тепер забороняє повернення таки
 
 Це не означає, що breadcrumbs є canonical primitive. Це означає, що вони є свідомо класифікованим залишковим navigation pattern і більше не можуть непомітно розповзатися по інших surfaces.
 
-### Guide landing (`Guide Landing`)
+### Публічний SEO-лендінг
 
 `blog/landing.phtml` був останнім live public content renderer з legacy breadcrumbs + `tn-page-hero`.
 
