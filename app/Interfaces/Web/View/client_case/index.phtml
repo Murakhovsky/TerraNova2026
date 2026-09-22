@@ -43,7 +43,6 @@ $intentLabels = [
     'viewing' => 'Перегляд',
     'similar_search' => 'Підібрати схожий',
 ];
-$selected = fn($actual, $expected) => (string) $actual === (string) $expected ? 'selected' : '';
 $money = function ($amount, $currency): string {
     if ($amount === null || $amount === '') return 'не задано';
     return number_format((float) $amount, 0, '.', ' ') . ' ' . (string) $currency;
@@ -99,6 +98,7 @@ foreach ($cases as $case) {
                 (string) ($case['title'] ?? ''),
                 (string) ($typeLabels[$case['type'] ?? ''] ?? ($case['type'] ?? '')),
                 (string) ($priorityLabels[$case['priority'] ?? ''] ?? ($case['priority'] ?? '')),
+                trim((string) (($case['property_type_name'] ?? '') . (!empty($case['location_city']) ? ' / ' . $case['location_city'] : '')), ' /'),
                 !empty($case['manager_name']) ? 'Менеджер: ' . (string) $case['manager_name'] : 'Менеджер: не призначено',
             ]))),
         ],
@@ -107,6 +107,7 @@ foreach ($cases as $case) {
             'secondary' => (string) (($case['phone'] ?? '') ?: ($case['email'] ?? '') ?: ($case['telegram'] ?? '') ?: 'контакт не вказано'),
         ],
         'stage' => [
+            'kind' => 'stage',
             'label' => (string) ($stageLabels[$case['stage'] ?? ''] ?? ($case['stage'] ?? '')),
             'tone' => $stageTone((string) ($case['stage'] ?? '')),
             'secondary' => (string) ($statusLabels[$case['status'] ?? ''] ?? ($case['status'] ?? '')),
