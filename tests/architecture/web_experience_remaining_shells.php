@@ -233,6 +233,88 @@ foreach ([
     $contains($routes, $marker, 'Auth/Cabinet route contract is incomplete.');
 }
 
+$guide = $read('app/Interfaces/Web/View/blog/landing.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/action_bar'",
+    'tn-ui-panel',
+    'tn-article__body',
+    'application/ld+json',
+] as $marker) {
+    $contains($guide, $marker, 'Guide landing canonical/content contract is incomplete.');
+}
+foreach ([
+    'tn-breadcrumbs',
+    'tn-page-hero',
+    'tn-page-hero__actions',
+    'tn-sales-cta',
+] as $legacyMarker) {
+    $notContains($guide, $legacyMarker, 'Guide landing must not restore legacy outer shell.');
+}
+
+foreach ([
+    'app/Interfaces/Web/View/cabinet/index.phtml',
+    'app/Interfaces/Web/View/cabinet/submission.phtml',
+    'app/Interfaces/Web/View/index/public.phtml',
+] as $historicalView) {
+    if (is_file($root . '/' . $historicalView)) {
+        throw new RuntimeException('Historical unrouted shell artifact restored: ' . $historicalView);
+    }
+}
+
+$specializedContracts = [
+    'app/Interfaces/Web/View/home/canonical.phtml' => ['tn-public-hero', 'Company Operating System'],
+    'app/Interfaces/Web/View/property/show.phtml' => ['tn-property-hero', 'application/ld+json', 'data-property-gallery'],
+    'app/Interfaces/Web/View/property/presentation.phtml' => ['tn-presentation-hero', 'data-copy-value'],
+    'app/Interfaces/Web/View/spatial/scene.phtml' => ['tn-spatial-public', "partial('shared/spatial_viewer'"],
+    'app/Interfaces/Web/View/methodology_studio/index.phtml' => ['data-studio', 'studio-shell', 'data-editor'],
+    'app/Interfaces/Web/View/error/failure.phtml' => ['tn-failure', 'data-failure-code'],
+];
+foreach ($specializedContracts as $path => $markers) {
+    $source = $read($path);
+    foreach ($markers as $marker) {
+        $contains($source, $marker, 'Specialized surface contract is incomplete for ' . $path . '.');
+    }
+}
+
+$viewRoot = $root . '/app/Interfaces/Web/View';
+$globalForbidden = [
+    'tn-page-hero',
+    'tn-listing-hero',
+    'tn-admin-card',
+    'tn-admin-panel',
+    'tn-portal-hero',
+    'tn-auth-copy',
+    'tn-sales-cta',
+    'tn-section-heading',
+];
+$breadcrumbWhitelist = [
+    'property/catalog.phtml',
+    'property/map.phtml',
+    'property/show.phtml',
+    'property/presentation.phtml',
+];
+
+$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($viewRoot));
+foreach ($iterator as $file) {
+    if (!$file->isFile() || $file->getExtension() !== 'phtml') {
+        continue;
+    }
+
+    $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($viewRoot) + 1));
+    $source = (string) file_get_contents($file->getPathname());
+
+    foreach ($globalForbidden as $legacyMarker) {
+        if (str_contains($source, $legacyMarker)) {
+            throw new RuntimeException('Legacy shell marker ' . $legacyMarker . ' remains in production view ' . $relative);
+        }
+    }
+
+    if (str_contains($source, 'tn-breadcrumbs') && !in_array($relative, $breadcrumbWhitelist, true)) {
+        throw new RuntimeException('Unclassified breadcrumb shell remains in production view ' . $relative);
+    }
+}
+
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
 foreach ([
     '# Закриття залишкових UI shells',
@@ -243,6 +325,10 @@ foreach ([
     '## Хвиля 3',
     '### Вхід та реєстрація',
     '### Нативний кабінет',
+    '## Хвиля 4',
+    '### Фінальний audit і classification',
+    '### Retired historical renderers',
+    '### Specialized surface whitelist',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
