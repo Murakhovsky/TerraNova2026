@@ -82,7 +82,7 @@ foreach (['Wave 12.26 завершує production cutover', '/sales/dashboard', 
 }
 
 $closure = (string) file_get_contents($root . '/docs/03-architecture/wave12-closure-report.md');
-foreach (['status: closed', 'Wave 12 — CLOSED', '12.0–12.26', 'Panther E2E'] as $marker) {
+foreach (['status: closed', 'Wave 12 — закрито', '12.0–12.26', 'Panther E2E'] as $marker) {
     if (!str_contains($closure, $marker)) {
         throw new RuntimeException('Wave 12 closure report is incomplete: ' . $marker);
     }

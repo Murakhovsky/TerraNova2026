@@ -1,18 +1,18 @@
 ---
-title: Wave 12 — Final Closure Report
-description: Фінальний acceptance record для Web & Experience Platform після Wave 12.0–12.26, production Sales cutover і Web Platform v1 freeze.
+title: Wave 12 — фінальний звіт про закриття
+description: Фінальний запис приймання Web & Experience Platform після Wave 12.0–12.26, production Sales cutover і Web Platform v1 freeze.
 status: closed
 updated: 2026-09-22
 kind: architecture
 ---
 
-# Wave 12 — CLOSED
+# Wave 12 — закрито
 
 Wave 12 завершена як горизонтальна **COS Web & Experience Platform v1**.
 
-Closure не означає, що кожен legacy screen COS переписаний на Twig. Це ніколи не було ціллю Wave 12. Closure означає, що platform contracts, reference vertical, production cutover, quality gates і change-control достатні, щоб наступні Domains інтегрувалися у стабільний Web runtime без створення власного frontend stack.
+Закриття не означає, що кожен legacy screen COS переписаний на Twig. Це ніколи не було ціллю Wave 12. Закриття означає, що platform contracts, reference vertical, production cutover, quality gates і change-control достатні, щоб наступні Domains інтегрувалися у стабільний Web runtime без створення власного frontend stack.
 
-## Acceptance scope
+## Обсяг приймання
 
 Виконаний canonical execution plan **12.0–12.26**:
 
@@ -28,53 +28,53 @@ Closure не означає, що кожен legacy screen COS переписа�
 | 12.25 | Sales reference vertical |
 | 12.26 | production Sales Dashboard / Lead List / Lead Workspace cutover |
 
-## Final quality closure
+## Фінальне закриття якості
 
-Wave 12.23 originally kept a source-controlled Panther suite as readiness evidence while Playwright was the executable browser layer.
+Wave 12.23 спочатку зберігав source-controlled Panther suite як readiness evidence, тоді як Playwright був executable browser layer.
 
-Final closure removes that exception:
+Фінальне закриття прибирає цей виняток:
 
-- Panther test is no longer wrapped in a `class_exists()` readiness guard;
-- CI runs real **Panther E2E** against the already-started canonical runtime;
-- the browser dependency is isolated from production and pinned to `symfony/panther:2.4.0`;
-- production Symfony image remains `composer install --no-dev`;
-- Playwright remains the broader desktop/mobile/visual/accessibility browser quality layer;
-- PHASE 15 axe-core WCAG evidence remains additive, not replaced by Panther.
+- Panther test більше не загорнутий у `class_exists()` readiness guard;
+- CI запускає реальний **Panther E2E** проти вже запущеного canonical runtime;
+- browser dependency ізольована від production і зафіксована як `symfony/panther:2.4.0`;
+- production Symfony image і далі використовує `composer install --no-dev`;
+- Playwright лишається ширшим desktop/mobile/visual/accessibility browser quality layer;
+- PHASE 15 axe-core WCAG evidence лишається додатковим шаром і не замінюється Panther.
 
-This closes the last literal testing gap in the Wave 12 Definition of Done without polluting runtime dependencies.
+Це закриває останню буквальну прогалину тестування у Definition of Done Wave 12 без забруднення runtime dependencies.
 
-## Production reference proof
+## Доказ на production-вертикалі
 
-Wave 12.26 moved the reference Sales slice to canonical production routes:
+Wave 12.26 перевів reference Sales slice на canonical production routes:
 
 - `/sales/dashboard`;
 - `/sales/leads`;
 - `/sales/leads/{id}`.
 
-The reference slice proves the platform against real QueryBus/Application behavior, permissions, tenant isolation, mobile composition, realtime, AI context and audit semantics.
+Reference slice перевіряє платформу на реальній QueryBus/Application поведінці, permissions, tenant isolation, mobile composition, realtime, AI context та audit semantics.
 
-## Freeze
+## Замороження платформи
 
-ADR-0011 is accepted. Web Experience Platform v1 public contracts are frozen and protected by architecture/change-control gates.
+ADR-0011 прийнятий. Public contracts Web Experience Platform v1 заморожені та захищені architecture/change-control gates.
 
-After this closure:
+Після цього закриття:
 
-1. fundamental Web Platform contract changes require ADR-governed evolution;
-2. new Domains must consume the canonical extension/workspace/action/component model;
-3. product-specific UI may evolve without reopening Wave 12 when it does not break frozen contracts;
-4. remaining PHTML/legacy screen migrations are **production adoption work**, not unfinished Wave 12 foundation.
+1. фундаментальні зміни Web Platform contracts потребують ADR-governed evolution;
+2. нові Domains мають використовувати canonical extension/workspace/action/component model;
+3. product-specific UI може еволюціонувати без повторного відкриття Wave 12, якщо frozen contracts не ламаються;
+4. решта PHTML/legacy screen migrations є **production adoption work**, а не незавершеним фундаментом Wave 12.
 
-## Explicitly outside closure debt
+## Роботи поза боргом закриття
 
-The following work may continue, but does not reopen Wave 12:
+Такі роботи можуть продовжуватися, але не відкривають Wave 12 знову:
 
-- migration of remaining Sales Today/Pipeline/Deals/Deal Workspace/Director/Admin surfaces;
-- Property, Client Case, Administration, Growth, Service and later Domain adoption;
-- visual refinements and new canonical components;
+- migration решти Sales Today/Pipeline/Deals/Deal Workspace/Director/Admin surfaces;
+- Property, Client Case, Administration, Growth, Service та подальший Domain adoption;
+- visual refinements і нові canonical components;
 - performance/accessibility tuning;
-- optional new capabilities added without parallel frontend foundations.
+- optional capabilities без створення паралельної frontend foundation.
 
-## Final state
+## Фінальний стан
 
 ```text
 Wave 12
@@ -93,4 +93,4 @@ Wave 12
   Platform v1 Freeze ACCEPTED
 ```
 
-Further work proceeds **on top of Web Platform v1**, not by extending the Wave 12 execution sequence.
+Подальша робота виконується **поверх Web Platform v1**, а не шляхом продовження execution sequence Wave 12.
