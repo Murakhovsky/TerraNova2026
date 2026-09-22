@@ -6,18 +6,6 @@
   --tn-arch-muted: #667085;
 }
 
-.tn-architecture-hero { align-items: flex-end; }
-.tn-architecture-hero__stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.tn-architecture-hero__stats > span {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-  padding: 9px 12px;
-  border: 1px solid var(--tn-arch-border);
-  border-radius: 10px;
-  background: var(--tn-arch-panel);
-}
-
 .tn-architecture-toolbar {
   display: grid;
   grid-template-columns: auto minmax(220px, 1fr) minmax(160px, 220px) 120px auto;
