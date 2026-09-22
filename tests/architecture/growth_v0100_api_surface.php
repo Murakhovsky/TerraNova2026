@@ -9,7 +9,7 @@ $assert=static function(bool $condition,string $message):void{
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.10.0','>='),'Growth manifest must remain V0.10+.');
-$assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.10 must keep schema version 0.8.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.8.0','>='),'Growth schema must remain V0.8+.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.10 must remain disabled before tenant cutover.');
 $assert(in_array('growth.api.v1',$manifest['contributions']['capabilities']??[],true),'Growth V0.10 API capability is missing.');
 $lifecycleMigration='app/migrations/20260922_000074_growth_v0100_api_surface.sql';
@@ -55,7 +55,7 @@ foreach($requiredMethods as $method){
 
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===34,'Growth V0.10 must expose exactly 34 canonical API routes.');
+$assert(count($matches[0])>=34,'Growth V0.10 canonical API surface must not shrink below 34 routes.');
 foreach([
     '/api/v1/growth/collectors',
     '/api/v1/growth/collectors/{name}/run',
@@ -71,7 +71,7 @@ foreach([
 ] as $path){
     $assert(str_contains($routes,'path: '.$path),'Growth canonical route missing: '.$path);
 }
-$assert(substr_count($routes,'App\\Http\\Api\\V1\\Controller\\GrowthApiController::')===34,'All Growth API routes must resolve through GrowthApiController.');
+$assert(substr_count($routes,'App\\Http\\Api\\V1\\Controller\\GrowthApiController::')>=34,'Growth API controller route ownership must not shrink below V0.10.');
 
 $adapter=$read('app/Domains/Growth/Infrastructure/Handoff/SalesGrowthHandoffTarget.php');
 foreach(['ActiveModuleResolver',"isEnabled($handoff->organizationId,'sales')",'Sales module is disabled'] as $needle){
@@ -79,6 +79,6 @@ foreach(['ActiveModuleResolver',"isEnabled($handoff->organizationId,'sales')",'S
 }
 
 $services=$read('symfony/config/services.yaml');
-$assert(str_contains($services,"$modules: '@Kernel\\Module\\ActiveModuleResolver'"),'Growth Sales adapter module resolver DI is missing.');
+$assert(str_contains($services,'$modules: \'@Kernel\\Module\\ActiveModuleResolver\''),'Growth Sales adapter module resolver DI is missing.');
 
 echo "Growth V0.10 Executable API Surface architecture: OK\n";

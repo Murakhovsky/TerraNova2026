@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.13.0',
-    'schema_version' => '0.8.0',
+    'version' => '0.14.0',
+    'schema_version' => '0.14.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
     'icon' => 'radar',
@@ -34,8 +34,10 @@ return [
             'app/migrations/20260922_000075_growth_v0110_workspace.sql',
             'app/migrations/20260922_000076_growth_v0120_signal_operations.sql',
             'app/migrations/20260922_000077_growth_v0130_external_signal_webhook.sql',
+            'app/migrations/20260922_000078_growth_v0140_engagement_intelligence.sql',
         ],
         'capabilities' => [
+            'growth.engagement.intelligence',
             'growth.signal.external_webhook',
             'growth.workspace',
             'growth.signal.operations',

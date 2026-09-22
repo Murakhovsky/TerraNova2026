@@ -516,6 +516,25 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthEngagementGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthEngagementGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthEngagementGateway
+
+  Domains\Growth\Application\Service\GrowthEngagementService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

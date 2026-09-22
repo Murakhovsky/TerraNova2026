@@ -8,6 +8,7 @@ use DomainException;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
+use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
@@ -31,6 +32,7 @@ final readonly class GrowthApiController
         private GrowthBuyingCommitteeBoundary $committee,
         private GrowthResearchBoundary $research,
         private GrowthDecisionBoundary $decisions,
+        private GrowthEngagementBoundary $engagement,
         private GrowthHandoffBoundary $handoff,
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
@@ -281,6 +283,40 @@ final readonly class GrowthApiController
     {
         return $this->read(fn(TenantContext $tenant):array=>
             $this->decisions->decisionBrief($tenant->organizationId()->value(),$id));
+    }
+
+    public function generateEngagement(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->engagement->generateRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$key
+            ),202);
+    }
+
+    public function acceptEngagement(Request $request,string $id,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId):array{
+            $reason=$this->requiredString($this->input($request),'reason');
+            return $this->engagement->acceptRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,$reason,$key
+            );
+        });
+    }
+
+    public function dismissEngagement(Request $request,string $id,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId):array{
+            $reason=$this->requiredString($this->input($request),'reason');
+            return $this->engagement->dismissRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,$reason,$key
+            );
+        });
+    }
+
+    public function engagementBrief(string $id): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->engagement->engagementBrief($tenant->organizationId()->value(),$id));
     }
 
     public function handoffTargets(): JsonResponse

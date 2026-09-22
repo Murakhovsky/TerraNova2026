@@ -327,6 +327,31 @@ QualificationEvaluation snapshot
 
 Policy не згортає dimensions в один synthetic score. Кожна evaluation зберігає exact rationale, exact score payload, policy revision, failed criteria, outcome, reason та `model_version`. Це дозволяє відтворити історичне рішення навіть після зміни ICP, policy або scoring model.
 
+## Engagement Intelligence / Next Best Action
+
+V0.14 формалізує «що робити далі» окремо від execution:
+
+```text
+Candidate
++ Signals
++ Rationale / Score
++ Account / Buying Committee
+        ↓
+governed structured LLM
+        ↓
+EngagementRecommendation
+        ↓
+validate evidence ids ⊆ Candidate Signals
+validate contact id ⊆ Candidate account contacts
+validate action ↔ channel
+        ↓
+Accept / Dismiss
+```
+
+Одночасно для Candidate може бути лише один `proposed` recommendation; новий supersede-ить старий із збереженням історії. Prompt/model/context snapshot і confidence фіксуються для replay та learning.
+
+Recommendation не є `ActionProposal` і не має mutation authority. Поки немає concrete handler та Policy, Growth не відправляє email, LinkedIn message, call або meeting автоматично.
+
 ## Cross-domain Handoff Protocol
 
 V0.8 робить handoff окремим resumable protocol:
@@ -436,9 +461,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.13
+## Статус V0.14
 
-`process_state: to-be` поки навмисний. V0.13 додає signed external Signal intake поверх canonical Growth mutation runtime. Push sources отримують HMAC/idempotency integration edge, але не обхід Signal invariants, Events або Audit. Інші target adapters, provider-specific pull collectors та engagement додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.14 додає governed Engagement Intelligence поверх Signal/Research/Decision context: Next Best Action recommendation, evidence/contact validation і explicit Accept/Dismiss. Outbound execution лишається окремою хвилею та має проходити Kernel Action/Policy.
 
 ## Карта коду
 
@@ -459,6 +484,10 @@ app/Domains/Growth/Application/Service/GrowthSignalCollectorService.php
 app/Domains/Growth/Application/Service/GrowthDecisionService.php
 app/Domains/Growth/Application/Service/GrowthResearchService.php
 app/Domains/Growth/Application/Service/GrowthHandoffService.php
+app/Domains/Growth/Application/Service/GrowthEngagementService.php
+app/Domains/Growth/Application/AI/GrowthEngagementPrompt.php
+app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthEngagementGateway.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthEngagementRepository.php
 app/Domains/Growth/Application/Service/GrowthHandoffTargetRegistry.php
 app/Domains/Growth/Infrastructure/Handoff/SalesGrowthHandoffTarget.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthHandoffRepository.php

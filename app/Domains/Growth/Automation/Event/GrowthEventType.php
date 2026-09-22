@@ -30,6 +30,13 @@ final class GrowthEventType
     public const HANDOFF_DISPATCH_FAILED = 'growth.handoff.dispatch_failed';
     public const HANDOFF_ACCEPTED = 'growth.handoff.accepted';
     public const HANDOFF_REJECTED = 'growth.handoff.rejected';
+    public const ENGAGEMENT_RUN_STARTED = 'growth.engagement.run_started';
+    public const ENGAGEMENT_RUN_COMPLETED = 'growth.engagement.run_completed';
+    public const ENGAGEMENT_RUN_FAILED = 'growth.engagement.run_failed';
+    public const ENGAGEMENT_RECOMMENDATION_CREATED = 'growth.engagement.recommendation_created';
+    public const ENGAGEMENT_RECOMMENDATION_ACCEPTED = 'growth.engagement.recommendation_accepted';
+    public const ENGAGEMENT_RECOMMENDATION_DISMISSED = 'growth.engagement.recommendation_dismissed';
+    public const ENGAGEMENT_RECOMMENDATION_SUPERSEDED = 'growth.engagement.recommendation_superseded';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -69,6 +76,13 @@ final class GrowthEventType
             self::HANDOFF_DISPATCH_FAILED,
             self::HANDOFF_ACCEPTED,
             self::HANDOFF_REJECTED,
+            self::ENGAGEMENT_RUN_STARTED,
+            self::ENGAGEMENT_RUN_COMPLETED,
+            self::ENGAGEMENT_RUN_FAILED,
+            self::ENGAGEMENT_RECOMMENDATION_CREATED,
+            self::ENGAGEMENT_RECOMMENDATION_ACCEPTED,
+            self::ENGAGEMENT_RECOMMENDATION_DISMISSED,
+            self::ENGAGEMENT_RECOMMENDATION_SUPERSEDED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

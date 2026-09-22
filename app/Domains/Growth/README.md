@@ -273,4 +273,31 @@ canonical Signal + Event + Audit
 
 The edge does not know Growth persistence. External signals use a dedicated idempotency namespace and are recorded with SYSTEM provenance. The Growth module must be enabled for the target organization.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors and outbound engagement.
+V0.14 adds evidence-bound Next Best Action reasoning:
+
+```text
+Candidate + Signals + Rationale + Score
++ sanitized Account / Buying Committee context
+        ↓
+governed Kernel\Llm
+        ↓
+GrowthEngagementRecommendation
+  action type
+  channel
+  contact_id
+  rationale
+  message angle
+  evidence ids
+  unknowns
+  confidence
+        ↓
+server-side evidence/contact/channel validation
+        ↓
+Accept / Dismiss
+```
+
+The vocabulary is explicit: ignore, monitor, connect on LinkedIn, send email, call, offer diagnostic, send case study, ask introduction, invite webinar or create report. Contact email/LinkedIn identities are not sent to the model.
+
+A recommendation is deliberately **not** a Kernel Action. V0.14 performs no outbound side effect. Future execution may convert an accepted recommendation into an ActionProposal only where a concrete action handler and Policy exist.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors and outbound execution.

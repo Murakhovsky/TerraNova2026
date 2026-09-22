@@ -9,7 +9,7 @@ $assert=static function(bool $condition,string $message):void{
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.11.0','>='),'Growth manifest must remain V0.11+.');
-$assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.11 must keep schema version 0.8.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.8.0','>='),'Growth schema must remain V0.8+.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.11 must remain disabled before tenant cutover.');
 $assert(in_array('growth.workspace',$manifest['contributions']['capabilities']??[],true),'Growth Workspace capability is missing.');
 $lifecycleMigration='app/migrations/20260922_000075_growth_v0110_workspace.sql';

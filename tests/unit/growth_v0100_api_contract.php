@@ -12,7 +12,7 @@ function expectGrowthV0100(bool $condition,string $message):void
 
 preg_match_all('/^(cos_api_v1_growth_[a-z0-9_]+):$/m',$routes,$matches);
 $names=$matches[1]??[];
-expectGrowthV0100(count($names)===34,'Growth API route count changed unexpectedly.');
+expectGrowthV0100(count($names)>=34,'Growth API route surface shrank below V0.10 contract.');
 expectGrowthV0100(count(array_unique($names))===count($names),'Growth API route names must be unique.');
 
 $mutations=[
