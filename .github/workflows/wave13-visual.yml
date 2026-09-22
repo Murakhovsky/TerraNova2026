@@ -1,0 +1,55 @@
+name: Wave 13 Visual System
+
+on:
+  push:
+    branches:
+      - main
+      - 'visual/wave-13-*'
+    paths:
+      - 'symfony/assets/styles/**'
+      - 'symfony/templates/**'
+      - 'symfony/src/Web/Experience/**'
+      - 'tests/architecture/web_experience_wave13_*.php'
+      - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'tests/architecture/web_experience_geometry.php'
+      - 'tests/architecture/web_experience_wave12_shell.php'
+      - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'docs/03-architecture/wave13-*.md'
+      - 'docs/11-decisions/ADR-0012-*.md'
+      - 'docs/11-decisions/README.md'
+      - '.github/workflows/wave13-visual.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'symfony/assets/styles/**'
+      - 'symfony/templates/**'
+      - 'symfony/src/Web/Experience/**'
+      - 'tests/architecture/web_experience_wave13_*.php'
+      - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'tests/architecture/web_experience_geometry.php'
+      - 'tests/architecture/web_experience_wave12_shell.php'
+      - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'docs/03-architecture/wave13-*.md'
+      - 'docs/11-decisions/ADR-0012-*.md'
+      - 'docs/11-decisions/README.md'
+      - '.github/workflows/wave13-visual.yml'
+
+jobs:
+  visual-system-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Wave 13 visual foundation and shell gates
+        run: |
+          php tests/architecture/web_experience_wave13_foundation.php
+          php tests/architecture/web_experience_wave13_shell.php
+      - name: Preserve Wave 12 visual foundation
+        run: |
+          php tests/architecture/web_experience_visual_foundation.php
+          php tests/architecture/web_experience_geometry.php
+          php tests/architecture/web_experience_wave12_design_system.php
+          php tests/architecture/web_experience_wave12_shell.php
+          php tests/architecture/web_experience_wave12_ui_catalog.php

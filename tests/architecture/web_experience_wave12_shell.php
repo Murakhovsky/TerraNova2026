@@ -124,7 +124,7 @@ foreach ([
     '.cos-shell__topbar',
     '.cos-shell__mobile-nav',
     '.cos-command__panel',
-    '@media (max-width: 760px)',
+    '@media (max-width: 650px)',
 ] as $selector) {
     if (!str_contains($shellCss, $selector)) {
         throw new RuntimeException('Workspace Shell responsive style contract is missing: ' . $selector);
