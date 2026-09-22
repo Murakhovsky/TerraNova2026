@@ -2,7 +2,7 @@
 title: "Впровадження Property у production UI"
 description: "Канонічне впровадження Property production surfaces, фільтрів, порівняння та межі editable grid у COS."
 status: active
-updated: 2026-09-21
+updated: 2026-09-22
 kind: architecture
 ---
 
@@ -161,6 +161,52 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 - multipart POST form лишається спеціалізованою submission form;
 - honeypot, owner/contact fields, property fields, media inputs і moderation submission contract не змінені.
 
+## Хвиля 8
+
+### Закриття route/view debt
+
+PHASE 10 завершено не тільки візуально, а й на рівні фактичного Symfony route/view graph.
+
+Canonical runtime тепер явно використовує:
+
+- `property/catalog.phtml`;
+- `property/map.phtml`;
+- `property/favour.phtml`;
+- `property/show.phtml`;
+- `property/presentation.phtml`;
+- `property/seo.phtml`;
+- `property/submit.phtml`;
+- `property/workspace_canonical.phtml`;
+- `property/submissions.phtml`;
+- `property/submission_canonical.phtml`.
+
+### Вибране (Favourites) route closure
+
+`/property/favour` повернуто в canonical Symfony routing через `PropertyPageController::favour`.
+
+Одночасно canonical State отримав generic `attributes` contract, а empty state Favourites знову експонує `data-favourite-empty`. Це відновлює browser contract у `frontend/features/public/interactions.js`, який приховує empty state після завантаження збережених об’єктів.
+
+### Retired compatibility views
+
+Як непідключені до canonical Symfony runtime видалено:
+
+- `property/manage.phtml`;
+- `property/listing.phtml`;
+- `property/add.phtml`;
+- `property/edit.phtml`;
+- `property/group.phtml`;
+- `property/submission.phtml`;
+- `property/create.phtml`;
+- `property/compare.phtml`;
+- `property/pdf.phtml`.
+
+`/property/manage` і `/property/listing` рендерять `property/workspace_canonical.phtml`.
+`/property/submission/{id}` рендерить `property/submission_canonical.phtml`.
+`/property/create` є alias до `PropertyPageController::submit`.
+`/property/pdf/{slug}` є redirect до presentation print flow і не має окремого PHTML renderer.
+
+Історичний `WEB V0.7 Property Workspace` gate збережено як ім’я CI-контракту, але переведено з видаленого Phalcon-era `PropertyController` на актуальний Symfony Property runtime.
+
 ## Межа editable grid
 
 `property/manage.phtml` і `property/listing.phtml` містять не звичайні таблиці, а робочі editable grids: inline status mutations, form ownership, reservation, client fixation, commission, owner та next-action controls.
@@ -185,5 +231,9 @@ PageHeader отримав generic `metaValueAttributes`, щоб live DOM counter
 - Property Show/Presentation використовують canonical State + ActionBar, а simple group presentation — PageHeader;
 - Submission Detail використовує canonical State + PageHeader + Panel без зміни moderation actions;
 - SEO Landing і Property Submit використовують canonical PageHeader/State без зміни structured catalog або submission contracts;
-- editable grids явно зафіксовані як наступний migration boundary;
+- canonical Symfony route/view graph не посилається на retired compatibility views;
+- /property/favour має живий Symfony route та збережений browser empty-state contract;
+- /property/create залишається alias до canonical public submit flow;
+- /property/pdf/{slug} використовує presentation print flow без окремого PHTML;
+- WEB V0.7 gate переведений на canonical Symfony Property runtime;
 - architecture gate виконується у CI.
