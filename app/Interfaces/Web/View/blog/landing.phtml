@@ -10,8 +10,8 @@ $schema = !empty($landing['schema_json']) ? json_decode((string) $landing['schem
 ?>
 
 <?php $this->partial('shared/public_header', ['active' => 'catalog', 'actions' => [
-    ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-    ['href' => 'contacts', 'label' => 'Отримати добірку', 'class' => 'tn-btn--dark'],
+    ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+    ['href' => 'contacts', 'label' => 'Отримати добірку', 'variant' => 'primary'],
 ]]); ?>
 
 <main class="tn-page tn-seo-landing">

@@ -4,8 +4,8 @@ $blog = $blog ?? ['items' => [], 'page' => 1, 'pages' => 1, 'total' => 0];
 ?>
 
 <?php $this->partial('shared/public_header', ['active' => 'blog', 'actions' => [
-    ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-    ['href' => 'contacts', 'label' => 'Залишити запит', 'class' => 'tn-btn--dark'],
+    ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+    ['href' => 'contacts', 'label' => 'Залишити запит', 'variant' => 'primary'],
 ]]); ?>
 
 <main class="tn-page tn-blog-page">

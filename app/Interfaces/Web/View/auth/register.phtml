@@ -6,7 +6,7 @@ $formData = $formData ?? [];
 $authStatus = $authStatus ?? null;
 ?>
 
-<?php $this->partial('shared/public_header', ['active' => '', 'actions' => [['href' => 'auth/login', 'label' => 'Вхід', 'class' => 'tn-btn--ghost']]]); ?>
+<?php $this->partial('shared/public_header', ['active' => '', 'actions' => [['href' => 'auth/login', 'label' => 'Вхід', 'variant' => 'ghost']]]); ?>
 
 <main class="tn-page tn-auth-page">
   <?php $this->partial('components/ui/page_header', [
