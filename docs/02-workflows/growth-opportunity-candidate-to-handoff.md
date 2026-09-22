@@ -160,6 +160,26 @@ Unknowns / counter evidence
 Qualification decision
 ```
 
+## Signal Collector runtime
+
+V0.5 формалізує вхід зовнішніх та внутрішніх джерел:
+
+```text
+Provider / internal source
+   ↓
+SignalCollectorInterface
+   ↓
+CollectedSignal
+   ↓
+source fingerprint + dedupe receipt
+   ├─ same source + same payload → duplicate
+   └─ same source + changed payload → conflict
+   ↓
+canonical Signal
+```
+
+Collector run зберігає status, request/next cursor, collected/accepted/duplicate/failed counters та error summary. Зовнішній provider call не тримає відкриту DB transaction; кожний item ingestиться окремо, тому failure одного item не відкочує інші accepted signals.
+
 ## Account Intelligence перед Opportunity
 
 V0.3 додає upstream intelligence layer:
@@ -230,9 +250,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.4
+## Статус V0.5
 
-`process_state: to-be` поки навмисний. V0.4 поверх lifecycle runtime, ICP та Account Intelligence додає evidence-backed Contact identity, immutable ContactSnapshot, Buying Roles, relationship strength, committee coverage/gaps та deterministic Buying Committee Assessment. External collectors, engagement, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
+`process_state: to-be` поки навмисний. V0.5 додає provider-agnostic Signal Collector runtime, source-level dedupe, run accounting і canonical Signal ingestion поверх ICP/Account/Buying Committee Intelligence. Concrete provider adapters, engagement, AI agents, cross-domain acceptance, API та production UI додаються окремими хвилями.
 
 ## Карта коду
 
@@ -249,11 +269,15 @@ app/Domains/Growth/Application/Service/GrowthWorkflowService.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthRepository.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMutationReceipt.php
 app/Domains/Growth/Application/Service/GrowthBuyingCommitteeService.php
+app/Domains/Growth/Application/Service/GrowthSignalCollectorService.php
+app/Domains/Growth/Application/Contract/SignalCollectorInterface.php
+app/Domains/Growth/Application/Service/SignalCollectorRegistry.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthBuyingCommitteeRepository.php
 app/Domains/Growth/Automation/Event/GrowthEventType.php
 app/Domains/Growth/Bootstrap/GrowthDomainModule.php
 app/migrations/20260921_000067_growth_v020_runtime.sql
 app/migrations/20260921_000068_growth_v030_account_intelligence.sql
 app/migrations/20260922_000069_growth_v040_buying_committee.sql
+app/migrations/20260922_000070_growth_v050_signal_collectors.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

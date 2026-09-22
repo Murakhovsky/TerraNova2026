@@ -99,7 +99,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.4 ICP + Account + Buying Committee Intelligence
+## V0.5 Opportunity Intelligence runtime
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -132,4 +132,20 @@ The same person may participate in several accounts, while title, department, se
 
 The committee assessment records required roles, coverage, gaps, champions, blockers, weak relationships, evidence snapshot ids and a deterministic model version.
 
-Still intentionally absent: external signal collectors, outbound engagement, AI agents, cross-domain handoff acceptance, public API and Growth UI.
+V0.5 adds the provider-agnostic signal intake boundary:
+
+```text
+Provider adapter
+→ SignalCollectorInterface
+→ SignalCollectionBatch
+→ source receipt / fingerprint dedupe
+→ canonical Signal
+→ collector run accounting
+→ Growth intelligence
+```
+
+Provider calls happen outside database transactions. Each collected item is ingested in its own transaction, so one malformed or conflicting source record produces a partial run instead of rolling back unrelated accepted signals.
+
+Collector source identity uses `collector_name + SHA-256(external_key)`; a repeated external key with identical payload is a duplicate, while reuse with a different normalized payload is rejected as a source conflict.
+
+Still intentionally absent: concrete external provider adapters, outbound engagement, AI agents, cross-domain handoff acceptance, public API and Growth UI.

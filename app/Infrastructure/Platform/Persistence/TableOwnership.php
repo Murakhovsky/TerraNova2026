@@ -41,6 +41,7 @@ final class TableOwnership
             'tn_growth_account_snapshots', 'tn_growth_account_icp_matches',
             'tn_growth_contacts', 'tn_growth_account_contacts', 'tn_growth_contact_snapshots',
             'tn_growth_buying_committee_assessments',
+            'tn_growth_signal_collector_runs', 'tn_growth_signal_source_receipts',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],

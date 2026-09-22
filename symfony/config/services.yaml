@@ -16,6 +16,9 @@ services:
     Kernel\Application\Event\EventHandlerInterface:
       tags:
         - { name: 'messenger.message_handler', bus: 'event.bus' }
+    Domains\Growth\Application\Contract\SignalCollectorInterface:
+      tags:
+        - { name: 'growth.signal_collector' }
     App\Web\Experience\Extension\Contract\WebExtensionProviderInterface:
       tags:
         - { name: 'cos.web.extension.provider' }
@@ -424,6 +427,22 @@ services:
 
   Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary:
     alias: Domains\Growth\Application\Service\GrowthBuyingCommitteeService
+
+  Domains\Growth\Application\Service\SignalCollectorRegistry:
+    arguments:
+      $collectors: !tagged_iterator growth.signal_collector
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalIntakeRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalIntakeRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalIntakeRepository
+
+  Domains\Growth\Application\Service\GrowthSignalCollectorService: ~
+
+  Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary:
+    alias: Domains\Growth\Application\Service\GrowthSignalCollectorService
 
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
