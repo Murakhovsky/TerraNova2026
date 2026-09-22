@@ -49,6 +49,31 @@ Index уже мав значну частину canonical composition після
 
 Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`, `linkInboundRequest` та всі CSRF/mutation fields не змінені.
 
+## Хвиля 3
+
+### Робочий простір кейсу (`Client Case Workspace`)
+
+`client_case/show.phtml`
+
+- legacy case hero замінено на canonical EntityHeader;
+- entity identity поєднує case public id та person public id;
+- status відображається через semantic Status;
+- type, stage, manager, budget і next contact винесені у entity metadata;
+- missing/action/error states використовують canonical State;
+- базові секції переведено з `tn-admin-panel` на canonical Panel;
+- context summary переведено на KPI cards;
+- redundant breadcrumb та legacy dark/ghost button shell прибрані.
+
+Свідомо збережені specialized operational patterns:
+
+- AI Intelligence recommendation/action block;
+- activity timeline;
+- inbound-request relation table;
+- property-match cards та inline mutation form;
+- presentation share/PDF actions.
+
+Mutation contracts `client-case/update/{id}`, `activity/{id}`, `updatePropertyMatch/{id}`, COS execute/approval actions та Property presentation sharing не змінені. CSRF і `return_url` поля збережені.
+
 ## Межа operational cards
 
 Inbox card одночасно містить:
@@ -66,7 +91,7 @@ Inbox card одночасно містить:
 ## Наступні хвилі
 
 - Wave 2: Client Case Index — виконано;
-- Wave 3: Client Case Workspace / Show;
+- Wave 3: Client Case Workspace / Show — виконано;
 - Wave 4: WEB V0.17 closure та compatibility cleanup.
 
 ## Критерії завершення
@@ -76,5 +101,7 @@ Inbox card одночасно містить:
 - CSRF та return-url contracts не змінені;
 - Index використовує canonical PageHeader, State, Tabs, FilterBar і Panel;
 - funnel та operational quick-update grid явно зафіксовані як domain-specific interaction boundaries;
+- Show використовує canonical EntityHeader, State, Panel і KPI summary;
+- AI, timeline, property-match і presentation-share patterns зберігають існуючу workflow семантику;
 - controller/route ownership лишається у ClientCasePageController;
 - PHASE 12 architecture gate запускається у CI.
