@@ -49,7 +49,7 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
         <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
         <label><span>Повідомлення</span><textarea name="message" rows="5" required></textarea></label>
         <button class="tn-btn tn-btn--accent" type="submit">Надіслати</button>
-        <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+        <?php if ($inboundRequestStatus): ?><p class="tn-ui-inline-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
       </form>
     </section>
   <?php else: ?>
