@@ -3,12 +3,12 @@
 {% block workspace_content %}
 {% set kpis = sales.kpis ?? {} %}
 {% set today = sales.today ?? {} %}
-<section class="cos-primitive-stack" data-sales-reference="dashboard">
+<section class="cos-primitive-stack" data-sales-surface="dashboard">
     <twig:CosEntityHeader
-        eyebrow="Sales reference vertical"
+        eyebrow="Sales"
         title="Sales Dashboard"
         subtitle="Операційний стан продажів, ризики та наступні дії через канонічну Web Experience Platform."
-        identity="Reference implementation"
+        identity="Production"
         statusLabel="Live"
         statusTone="positive"
     />
@@ -66,7 +66,7 @@
     <section class="cos-card">
         <div class="cos-card__header">
             <div><p class="cos-card__eyebrow">Fresh demand</p><h2>New Leads</h2></div>
-            <a class="cos-button cos-button--primary cos-button--sm" href="/sales/reference/leads">Lead List</a>
+            <a class="cos-button cos-button--primary cos-button--sm" href="/sales/leads">Lead List</a>
         </div>
         <div class="cos-entity-list">
             {% for lead in sales.new_leads ?? [] %}
@@ -76,7 +76,7 @@
                     meta="{{ lead.owner_name ?? 'Unassigned' }}"
                     statusLabel="{{ lead.status ?? 'new' }}"
                     statusTone="neutral"
-                    href="/sales/reference/leads/{{ lead.id }}"
+                    href="/sales/leads/{{ lead.id }}"
                 />
             {% else %}
                 <p class="cos-card__copy">Нових лідів немає.</p>

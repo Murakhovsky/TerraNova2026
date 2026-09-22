@@ -10,7 +10,7 @@ function expectSalesReference(bool $condition, string $message): void
     }
 }
 
-$controller = file_get_contents($root . '/symfony/src/Web/Sales/SalesReferenceController.php');
+$controller = file_get_contents($root . '/symfony/src/Web/Sales/SalesWorkspaceController.php');
 $routes = file_get_contents($root . '/symfony/config/routes.yaml');
 $services = file_get_contents($root . '/symfony/config/services.yaml');
 $provider = file_get_contents($root . '/symfony/src/Web/Experience/Extension/Provider/SalesWebProvider.php');
@@ -25,7 +25,7 @@ foreach ([
     "new EntityRef('sales.lead'",
     "'sales.lead'",
 ] as $needle) {
-    expectSalesReference(str_contains($controller, $needle), 'Sales reference controller missing canonical dependency: ' . $needle);
+    expectSalesReference(str_contains($controller, $needle), 'Sales production controller missing canonical dependency: ' . $needle);
 }
 
 foreach ([
@@ -38,14 +38,14 @@ foreach ([
 }
 
 foreach ([
-    'path: /sales/reference/dashboard',
-    'path: /sales/reference/leads',
-    'path: /sales/reference/leads/{id}',
+    'path: /sales/dashboard',
+    'path: /sales/leads',
+    'path: /sales/leads/{id}',
 ] as $route) {
-    expectSalesReference(str_contains($routes, $route), 'Sales reference route missing: ' . $route);
+    expectSalesReference(str_contains($routes, $route), 'Sales production route missing: ' . $route);
 }
 
-expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesReferenceController:'), 'Sales reference controller service is missing.');
+expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesWorkspaceController:'), 'Sales reference controller service is missing.');
 expectSalesReference(str_contains($services, "tags: ['controller.service_arguments']"), 'Sales reference controller must be a Symfony controller service.');
 
 foreach ([
@@ -60,23 +60,23 @@ foreach ([
 }
 
 foreach ([
-    'symfony/templates/experience/sales/reference_dashboard.html.twig',
-    'symfony/templates/experience/sales/reference_leads.html.twig',
-    'symfony/templates/experience/sales/reference_lead_workspace.html.twig',
+    'symfony/templates/experience/sales/dashboard.html.twig',
+    'symfony/templates/experience/sales/leads.html.twig',
+    'symfony/templates/experience/sales/lead_workspace.html.twig',
 ] as $template) {
-    expectSalesReference(is_file($root . '/' . $template), 'Sales reference template missing: ' . $template);
+    expectSalesReference(is_file($root . '/' . $template), 'Sales production template missing: ' . $template);
 }
 
-$leadWorkspace = file_get_contents($root . '/symfony/templates/experience/sales/reference_lead_workspace.html.twig');
+$leadWorkspace = file_get_contents($root . '/symfony/templates/experience/sales/lead_workspace.html.twig');
 expectSalesReference(str_contains($leadWorkspace, '<twig:CosWorkspace'), 'Lead Workspace must use canonical CosWorkspace composition.');
 expectSalesReference(str_contains($leadWorkspace, '<twig:CosEntityHeader'), 'Lead Workspace must use canonical entity header.');
 expectSalesReference(str_contains($leadWorkspace, '<twig:CosNextAction'), 'Lead Workspace must use canonical next-action primitive.');
 
-$dashboard = file_get_contents($root . '/symfony/templates/experience/sales/reference_dashboard.html.twig');
+$dashboard = file_get_contents($root . '/symfony/templates/experience/sales/dashboard.html.twig');
 expectSalesReference(str_contains($dashboard, '<twig:CosMoneyMetric'), 'Sales Dashboard must use canonical money metric.');
 expectSalesReference(str_contains($dashboard, '<twig:CosTrendMetric'), 'Sales Dashboard must use canonical trend metric.');
 
-$leads = file_get_contents($root . '/symfony/templates/experience/sales/reference_leads.html.twig');
+$leads = file_get_contents($root . '/symfony/templates/experience/sales/leads.html.twig');
 expectSalesReference(str_contains($leads, '<twig:CosFilterBar'), 'Lead List must use canonical filter bar.');
 expectSalesReference(str_contains($leads, '<twig:CosEntityListItem'), 'Lead List must use canonical entity list items.');
 
