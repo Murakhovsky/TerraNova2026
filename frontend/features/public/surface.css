@@ -19,10 +19,10 @@
 
 .tn-public-header a,
 .tn-public-header button,
-.tn-public-home .tn-btn,
+.tn-public-home .tn-ui-button,
 .tn-public-home input,
 .tn-public-home select,
-.tn-public-map-page .tn-btn {
+.tn-public-map-page .tn-ui-button {
   min-height: var(--public-touch);
 }
 
