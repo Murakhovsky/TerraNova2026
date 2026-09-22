@@ -112,14 +112,6 @@ Users table не є read-only data table. Кожен рядок одночасн
 - Content Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
 - Content editor зберігає save/CSRF/content/SEO mutation contracts;
 - Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
-- Spatial editor зберігає upload/external/capture/hotspot/publish behavior contracts;
-- Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
-- Spatial editor зберігає upload/external/capture/hotspot/publish та drag-and-drop contracts;
+- Spatial editor зберігає upload/external/capture/hotspot/publish та `data-spatial-*` contracts;
 - public Spatial viewer лишається specialized public surface;
-- Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
-- Spatial editor зберігає upload/capture/hotspot/publish interaction contracts;
-- Public Spatial Scene лишається specialized viewer surface;
-- Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
-- Spatial editor зберігає upload/external/capture/hotspot/publish та data-spatial-* contracts;
-- public Spatial viewer лишається specialized surface;
 - PHASE 11 architecture gate запускається у CI.
