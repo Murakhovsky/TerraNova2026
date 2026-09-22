@@ -77,6 +77,7 @@ foreach ($stageLabels as $code => $label) {
         'active' => ($filters['stage'] ?? '') === $code,
     ];
 }
+$activeTab = (string) (($filters['stage'] ?? '') ?: 'all');
 $managerFilterOptions = ['0' => 'Усі'];
 foreach ($managerOptions as $manager) $managerFilterOptions[(string) $manager['id']] = (string) ($manager['full_name'] ?: $manager['email']);
 ?>
@@ -84,14 +85,6 @@ foreach ($managerOptions as $manager) $managerFilterOptions[(string) $manager['i
 <?php $this->partial('shared/manager_header', ['active' => 'cases']); ?>
 
 <main class="tn-page tn-workspace-page tn-workspace-page--wide tn-client-workspace">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(''); ?>">Головна</a>
-    <span>/</span>
-    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a>
-    <span>/</span>
-    <span>Кейси</span>
-  </nav>
-
   <?php $this->partial('components/ui/page_header', [
     'eyebrow' => 'CRM',
     'title' => 'Клієнтські кейси',
@@ -104,11 +97,15 @@ foreach ($managerOptions as $manager) $managerFilterOptions[(string) $manager['i
     ]],
   ]); ?>
 
-  <?php if ($actionStatus): ?><div class="tn-ui-alert tn-ui-alert--positive tn-workspace-section" role="status"><?php echo $h($actionStatus); ?></div><?php endif; ?>
-  <?php if ($pageStatus): ?><div class="tn-ui-alert tn-ui-alert--danger tn-workspace-section" role="alert"><?php echo $h($pageStatus); ?></div><?php endif; ?>
+  <?php if ($actionStatus): ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'success', 'title' => 'Зміни застосовано', 'message' => (string) $actionStatus]); ?>
+  <?php endif; ?>
+  <?php if ($pageStatus): ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Клієнтські кейси недоступні', 'message' => (string) $pageStatus]); ?>
+  <?php endif; ?>
 
   <section class="tn-workspace-section">
-    <?php $this->partial('components/ui/tabs', ['items' => $tabItems, 'label' => 'Етапи клієнтських кейсів']); ?>
+    <?php $this->partial('components/ui/tabs', ['items' => $tabItems, 'active' => $activeTab, 'label' => 'Етапи клієнтських кейсів']); ?>
   </section>
 
   <section class="tn-workspace-section">
@@ -217,7 +214,7 @@ foreach ($managerOptions as $manager) $managerFilterOptions[(string) $manager['i
     <?php if (!$cases): ?>
       <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'Кейсів за цими фільтрами немає', 'message' => 'Створіть перший кейс або змініть фільтри.']); ?>
     <?php else: ?>
-      <div class="tn-table-wrap">
+      <div class="tn-table-wrap tn-client-case-operational-grid">
         <table class="tn-ui-data-table tn-crm-table">
           <thead><tr><th>Кейс</th><th>Людина</th><th>Етап</th><th>Бюджет</th><th>Звʼязки</th><th>Наступний контакт</th><th></th></tr></thead>
           <tbody>
