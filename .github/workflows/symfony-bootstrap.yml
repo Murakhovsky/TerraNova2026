@@ -35,6 +35,7 @@ on:
       - 'tests/architecture/web_experience_wave12_performance_observability.php'
       - 'tests/architecture/web_experience_wave12_sales_reference.php'
       - 'tests/architecture/web_experience_wave12_sales_cutover.php'
+      - 'symfony/tests/sales_cutover_access_contract.php'
       - 'tests/smoke/sales_workspace.php'
       - 'tests/browser/sales_workspace.mjs'
       - 'symfony/assets/controllers/sales_lead_controller.js'
@@ -423,6 +424,9 @@ jobs:
 
       - name: Wave 12.26 Sales cutover architecture gate
         run: php tests/architecture/web_experience_wave12_sales_cutover.php
+
+      - name: Wave 12.26 Sales access contract
+        run: docker compose exec -T php php tests/sales_cutover_access_contract.php
 
       - name: Wave 12.26 Sales workspace smoke
         run: php tests/smoke/sales_workspace.php
