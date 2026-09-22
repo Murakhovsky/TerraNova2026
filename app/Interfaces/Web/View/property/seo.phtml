@@ -98,14 +98,6 @@ foreach ($properties as $index => $property) {
 ]); ?>
 
 <main class="tn-page">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a>
-    <span>/</span>
-    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-    <span>/</span>
-    <span><?php echo $h($seoTitle); ?></span>
-  </nav>
-
   <?php $this->partial('components/ui/page_header', [
     'eyebrow' => $seoKicker,
     'title' => $seoTitle,
@@ -180,12 +172,14 @@ foreach ($properties as $index => $property) {
     <?php endif; ?>
   </section>
 
-  <section class="tn-seo-panel">
-    <div>
-      <p class="tn-kicker">Добірка</p>
-      <h2>Окрема сторінка для швидкого вибору</h2>
+  <section class="tn-ui-panel">
+    <div class="tn-ui-panel__head">
+      <div>
+        <p class="tn-ui-eyebrow">Добірка</p>
+        <h2>Окрема сторінка для швидкого вибору</h2>
+        <p>Тут зібрані об’єкти за конкретним типом, містом або сценарієм. Можна перейти в повну картку, зберегти варіант або повернутись до каталогу для ширшого пошуку.</p>
+      </div>
     </div>
-    <p>Тут зібрані об’єкти за конкретним типом, містом або сценарієм. Можна перейти в повну картку, зберегти варіант або повернутись до каталогу для ширшого пошуку.</p>
   </section>
 </main>
 
