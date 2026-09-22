@@ -70,10 +70,16 @@ foreach ([
 ] as $marker) {
     $contains($cos, $marker, 'COS Control Center lost a canonical read-only table or operational action contract.');
 }
-if (substr_count($cos, '<table class="tn-listing-table">') !== 1) {
-    throw new RuntimeException('COS Control Center must keep exactly one raw table: the operational Proposed Actions grid.');
+$notContains($cos, '<table class="tn-listing-table">', 'COS Control Center must not retain the retired raw Proposed Actions table.');
+foreach ([
+    '$actionRows = [];',
+    "'bodyPartial' => 'components/ui/operational_grid'",
+    "'_actions' => $rowActions",
+    "'kind' => 'form'",
+    "'csrf_token' => $csrfToken",
+] as $marker) {
+    $contains($cos, $marker, 'COS Proposed Actions must use canonical OperationalGrid: ' . $marker);
 }
-$contains($cos, '<section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="actions">', 'Operational Proposed Actions surface must remain explicit.');
 
 $companyHome = $read('app/Interfaces/Web/View/admin/index.phtml');
 foreach ([
@@ -89,7 +95,6 @@ $notContains($companyHome, '<table', 'Company Home must not retain a raw read-on
 $allowedTableViews = [
     'app/Interfaces/Web/View/components/ui/data_table.phtml' => 'canonical DataTable renderer',
     'app/Interfaces/Web/View/admin/users.phtml' => 'editable Users mutation grid',
-    'app/Interfaces/Web/View/cos/index.phtml' => 'operational Proposed Actions mutation grid',
     'app/Interfaces/Web/View/client_case/index.phtml' => 'operational Client Case quick-update grid',
     'app/Interfaces/Web/View/methodology_studio/index.phtml' => 'interactive Methodology Studio editor grid',
     'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
