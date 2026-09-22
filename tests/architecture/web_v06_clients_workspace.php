@@ -65,7 +65,7 @@ foreach ([
 }
 
 $contains($layout, "'layoutOwned' => true", 'Global Web layout must keep the shared Workspace shell layout-owned.');
-foreach (['$layoutOwned', '$workspaceSection', "if (!$layoutOwned && $workspaceSection !== '')"] as $needle) {
+foreach (['$layoutOwned', '$workspaceSection', 'if (!$layoutOwned && $workspaceSection !== \'\')'] as $needle) {
     $contains($managerHeader, $needle, 'Shared manager header is missing the duplicate-shell guard.');
 }
 
