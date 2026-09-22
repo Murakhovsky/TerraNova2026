@@ -53,11 +53,17 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
       </form>
     </section>
   <?php else: ?>
-    <section class="tn-sales-cta">
-      <div><p class="tn-kicker">Наступний крок</p><h2>Перейдіть до конкретної пропозиції</h2></div>
-      <div class="tn-hero-actions">
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('contacts'); ?>">Зв’язатися</a>
+    <section class="tn-ui-panel tn-workspace-section">
+      <div class="tn-ui-panel__head">
+        <div><p class="tn-ui-eyebrow">Наступний крок</p><h2>Перейдіть до конкретної пропозиції</h2></div>
+      </div>
+      <div class="tn-ui-panel__body">
+        <?php $this->partial('components/ui/action_bar', [
+            'actions' => [
+                ['label' => 'Каталог', 'href' => 'property/catalog', 'variant' => 'primary'],
+                ['label' => 'Зв’язатися', 'href' => 'contacts', 'variant' => 'ghost'],
+            ],
+        ]); ?>
       </div>
     </section>
   <?php endif; ?>
