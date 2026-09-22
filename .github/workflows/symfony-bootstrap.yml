@@ -53,6 +53,9 @@ on:
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
+      - 'tests/browser/web_accessibility.mjs'
+      - 'tests/architecture/web_experience_quality_closure.php'
+      - 'docs/03-architecture/cos-quality-closure.md'
       - 'symfony/tests/Panther/WebExperiencePantherTest.php'
       - 'docs/03-architecture/web-testing.md'
       - 'tests/unit/ui_catalog_registry.php'
@@ -129,6 +132,9 @@ on:
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
+      - 'tests/browser/web_accessibility.mjs'
+      - 'tests/architecture/web_experience_quality_closure.php'
+      - 'docs/03-architecture/cos-quality-closure.md'
       - 'symfony/tests/Panther/WebExperiencePantherTest.php'
       - 'docs/03-architecture/web-testing.md'
       - 'tests/unit/ui_catalog_registry.php'
@@ -320,6 +326,9 @@ jobs:
       - name: PHASE 14 remaining shell closure gate
         run: php tests/architecture/web_experience_remaining_shells.php
 
+      - name: PHASE 15 quality closure gate
+        run: php tests/architecture/web_experience_quality_closure.php
+
 
 
 
@@ -425,6 +434,19 @@ jobs:
         with:
           name: wave-12-23-web-quality
           path: tmp/web-quality
+          if-no-files-found: warn
+
+      - name: PHASE 15 WCAG accessibility
+        env:
+          BROWSER_EXECUTABLE: /usr/bin/google-chrome
+        run: npm run test:web-accessibility -- http://127.0.0.1:8081
+
+      - name: Upload PHASE 15 accessibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-15-web-accessibility
+          path: tmp/web-accessibility
           if-no-files-found: warn
 
       - name: Wave 12.24 architecture gate

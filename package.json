@@ -15,7 +15,8 @@
     "test:frontend": "node tests/frontend/api_client.mjs",
     "test:sales-browser": "node tests/browser/sales_workspace.mjs",
     "test:web-quality": "node tests/browser/web_platform_quality.mjs",
-    "test:web-performance": "node tests/browser/web_performance_budget.mjs"
+    "test:web-performance": "node tests/browser/web_performance_budget.mjs",
+    "test:web-accessibility": "node tests/browser/web_accessibility.mjs"
   },
   "dependencies": {
     "@popperjs/core": "2.11.8",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "playwright-core": "^1.62.1",
     "pngjs": "^7.0.0",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "@axe-core/playwright": "4.13.0"
   }
 }

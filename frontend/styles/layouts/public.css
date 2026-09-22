@@ -31,7 +31,7 @@ body {
   background: var(--tn-paper);
 }
 
-a {
+a:not(.tn-ui-button) {
   color: inherit;
   text-decoration: none;
 }
@@ -198,11 +198,25 @@ textarea {
 
 .tn-kicker {
   margin: 0 0 14px;
-  color: var(--tn-gold);
+  color: var(--tn-color-accent-strong);
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+}
+
+/* Public surface is unlayered and therefore must preserve canonical primary-button
+   contrast when page-specific button rules participate in the cascade. */
+body[data-interface-surface="public"] .tn-ui-button--primary {
+  color: #fff;
+  background: var(--tn-color-accent-strong);
+  border-color: var(--tn-color-accent-strong);
+}
+
+body[data-interface-surface="public"] .tn-ui-button--primary:hover {
+  color: #fff;
+  background: var(--tn-color-accent-hover);
+  border-color: var(--tn-color-accent-hover);
 }
 
 h1,
