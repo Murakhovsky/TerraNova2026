@@ -20,6 +20,7 @@ kind: index
 | [ADR-0008](ADR-0008-main-is-canonical-branch.md) | `main` є єдиною canonical code/docs/CI branch |
 | [ADR-0009](ADR-0009-web-experience-platform.md) | Symfony Web & Experience Platform є канонічним UI runtime COS |
 | [ADR-0010](ADR-0010-web-ui-foundation-freeze.md) | Web/UI foundation заморожена; visual system розвивається поверх semantic tokens і canonical components |
+| [ADR-0011](ADR-0011-web-platform-v1-freeze.md) | Web Platform v1 зафіксовано після Sales cutover; зміни фундаментальних contracts потребують ADR |
 
 ## Ієрархія джерел істини
 
