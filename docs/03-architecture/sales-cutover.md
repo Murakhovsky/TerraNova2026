@@ -20,6 +20,21 @@ Wave 12.26 завершує production cutover референсного Sales ve
 
 Окремі `/sales/reference/*` routes видалені.
 
+## Матриця приймання Wave 12.26
+
+| Критерій | Доказ |
+| --- | --- |
+| Functional parity | Lead status, owner, Lead → Opportunity і follow-up лишаються на canonical Sales commands/API; mutation-safe browser E2E перевіряє persistence після reload. |
+| Permissions | `SalesWorkspaceController` вимагає manager/admin; executable access contract перевіряє redirect і 403 до виконання QueryBus. |
+| Tenant isolation | Усі reads отримують `OrganizationId` тільки з `TenantContext`; Workspace resolver звіряє organization context. |
+| Mobile | Browser E2E запускає desktop і 390×844 mobile profiles; UIAction provider має `MOBILE_PRIMARY` і `MOBILE_MENU`. |
+| Performance | Authenticated Sales E2E застосовує budgets для navigation time, transfer bytes та DOM size на Dashboard, Lead List і Lead Workspace. |
+| Realtime | Production surfaces успадковують canonical `workspace_shell` із realtime connection state та `cos:realtime-update`. |
+| Agent integration | `SalesWebProvider` публікує AI Workspace slot та `AI_PROPOSAL` action placement; AI context працює з тим самим `EntityRef` і governed actions. |
+| Audit | Mutations несуть correlation/idempotency; Sales write/follow-up flows публікують `EventMetadata`, а Action/Approval flows проходять через Kernel audit-enabled services. |
+
+Після проходження цієї матриці retired reference/PHTML ownership видаляється.
+
 ## Видалене подвійне ownership
 
 Видалено:
