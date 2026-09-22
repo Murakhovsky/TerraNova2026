@@ -31,7 +31,7 @@ body {
   background: var(--tn-paper);
 }
 
-a {
+a:not(.tn-ui-button) {
   color: inherit;
   text-decoration: none;
 }
