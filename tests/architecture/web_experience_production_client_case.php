@@ -143,6 +143,44 @@ foreach ([
     $contains($show, $marker, 'Client Case show lost an entity/workflow mutation contract.');
 }
 
+$clientEntrypoint = $read('frontend/entrypoints/clients-workspace.js');
+$contains($clientEntrypoint, "../features/clients/workspace.css", 'Client Case entrypoint must retain domain CSS.');
+$notContains($clientEntrypoint, "../features/clients/workspace.js", 'Client Case entrypoint must not restore retired scoping JS.');
+if (is_file($root . '/frontend/features/clients/workspace.js')) {
+    throw new RuntimeException('Retired Client Case workspace scoping script restored.');
+}
+
+$clientCss = $read('frontend/features/clients/workspace.css');
+foreach ([
+    '.tn-client-workspace',
+    '.tn-inbox-card',
+    '.tn-case-funnel',
+    '.tn-ai-deal-card',
+    '@media (max-width: 650px)',
+] as $marker) {
+    $contains($clientCss, $marker, 'Client Case domain CSS lost a live specialized pattern.');
+}
+foreach ([
+    'Compatibility bridge while Client Case PHTML moves to canonical components.',
+    'tn-listing-hero',
+    'tn-admin-metrics',
+    'tn-admin-tabs',
+    'tn-admin-panel',
+    'tn-empty-state',
+    'tn-section-heading',
+] as $legacyMarker) {
+    $notContains($clientCss, $legacyMarker, 'Client Case compatibility CSS must remain retired.');
+}
+
+$webV017 = $read('docs/architecture/web-v0.17.md');
+foreach ([
+    'PHASE 12',
+    '## Завершення WEB V0.17',
+    'WEB V0.17 більше не має окремого compatibility-bridge боргу',
+] as $marker) {
+    $contains($webV017, $marker, 'WEB V0.17 closure documentation is incomplete.');
+}
+
 $controller = $read('symfony/src/Web/Sales/ClientCasePageController.php');
 foreach ([
     'public function index(Request $request): Response',
@@ -208,6 +246,8 @@ foreach ([
     '### Клієнтські кейси (`Client Case Index`)',
     '## Хвиля 3',
     '### Робочий простір кейсу (`Client Case Workspace`)',
+    '## Хвиля 4',
+    '### Завершення WEB V0.17',
     '## Межа operational cards',
     '## Критерії завершення',
 ] as $marker) {
