@@ -1,4 +1,39 @@
 @layer tn-components {
+  .tn-ui-breadcrumbs {
+    margin: 0 0 var(--tn-space-4);
+    color: var(--tn-color-muted);
+    font-size: var(--tn-font-sm);
+  }
+  .tn-ui-breadcrumbs ol {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tn-ui-breadcrumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .tn-ui-breadcrumbs li + li::before {
+    content: '/';
+    color: var(--tn-color-muted-quiet);
+  }
+  .tn-ui-breadcrumbs a {
+    color: var(--tn-color-ink-soft);
+    text-decoration: none;
+  }
+  .tn-ui-breadcrumbs a:hover {
+    color: var(--tn-color-accent-strong);
+  }
+  .tn-ui-breadcrumbs [aria-current="page"] {
+    color: var(--tn-color-muted);
+  }
+
   .tn-ui-entity-head {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
