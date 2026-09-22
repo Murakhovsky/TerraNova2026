@@ -21,11 +21,20 @@ const absolute = (path) => new URL(path, baseUrl).toString();
 const pages = [
   { name: 'home', path: '/' },
   { name: 'login', path: '/auth/login' },
+  { name: 'register', path: '/auth/register' },
+  { name: 'blog', path: '/blog' },
   { name: 'property-catalog', path: '/property/catalog' },
+  { name: 'property-map', path: '/property/map' },
+  { name: 'property-favourites', path: '/property/favour' },
+  { name: 'property-submit', path: '/property/submit' },
+  { name: 'services', path: '/services' },
+  { name: 'contacts', path: '/contacts' },
 ];
 const profiles = [
-  { name: 'desktop', viewport: { width: 1440, height: 1000 }, isMobile: false },
-  { name: 'mobile', viewport: { width: 390, height: 844 }, isMobile: true },
+  { name: 'desktop-light', viewport: { width: 1440, height: 1000 }, isMobile: false, colorScheme: 'light' },
+  { name: 'desktop-dark', viewport: { width: 1440, height: 1000 }, isMobile: false, colorScheme: 'dark' },
+  { name: 'mobile-light', viewport: { width: 390, height: 844 }, isMobile: true, colorScheme: 'light' },
+  { name: 'mobile-dark', viewport: { width: 390, height: 844 }, isMobile: true, colorScheme: 'dark' },
 ];
 
 const assertVisual = async (buffer, label) => {
@@ -42,6 +51,69 @@ const assertVisual = async (buffer, label) => {
   }
   if (opaque < 100 || colors.size < 6) throw new Error(`${label}: screenshot looks blank or degenerate (opaque=${opaque}, colors=${colors.size}).`);
 };
+
+const layoutIssues = async (page, expectedScheme) => page.evaluate((scheme) => {
+  const issues = [];
+  const html = document.documentElement;
+  const body = document.body;
+  const bodyStyle = getComputedStyle(body);
+  const fontSize = Number.parseFloat(bodyStyle.fontSize || '0');
+  const lineHeight = Number.parseFloat(bodyStyle.lineHeight || '0');
+
+  if (fontSize && fontSize < 14) issues.push(`body font-size is too small: ${fontSize}px`);
+  if (fontSize && lineHeight && lineHeight < fontSize * 1.15) {
+    issues.push(`body line-height is too tight: ${lineHeight}px for ${fontSize}px font`);
+  }
+
+  const expectedDark = scheme === 'dark';
+  if (matchMedia('(prefers-color-scheme: dark)').matches !== expectedDark) {
+    issues.push(`browser color-scheme preference mismatch: expected ${scheme}`);
+  }
+
+  const main = document.querySelector('main');
+  if (!main) {
+    issues.push('main landmark is missing');
+  } else {
+    const rect = main.getBoundingClientRect();
+    if (rect.width < 200 || rect.height < 80) issues.push(`main geometry is suspicious: ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+    if (rect.right > window.innerWidth + 3 || rect.left < -3) issues.push('main overflows viewport');
+  }
+
+  const visible = (node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  };
+
+  for (const control of document.querySelectorAll('input:not([type="hidden"]), textarea, select, button')) {
+    if (!visible(control)) continue;
+    const rect = control.getBoundingClientRect();
+    if (rect.right > window.innerWidth + 3 || rect.left < -3) {
+      issues.push(`form control clips viewport: ${control.tagName.toLowerCase()} ${Math.round(rect.left)}..${Math.round(rect.right)}`);
+    }
+    if (rect.height < 28) {
+      issues.push(`form control target is too short: ${control.tagName.toLowerCase()} ${Math.round(rect.height)}px`);
+    }
+  }
+
+  for (const node of document.querySelectorAll('body *')) {
+    if (!visible(node)) continue;
+    const style = getComputedStyle(node);
+    if (style.position !== 'sticky' && style.position !== 'fixed') continue;
+    const rect = node.getBoundingClientRect();
+    if (rect.width > window.innerWidth + 4 || rect.left < -4 || rect.right > window.innerWidth + 4) {
+      issues.push(`sticky/fixed element overflows viewport: ${node.tagName.toLowerCase()}.${typeof node.className === 'string' ? node.className : ''}`);
+    }
+    if (rect.height > window.innerHeight * 0.75) {
+      issues.push(`sticky/fixed element obscures too much viewport: ${Math.round(rect.height)}px`);
+    }
+  }
+
+  const rootWidth = Math.max(body.scrollWidth, html.scrollWidth);
+  if (rootWidth > window.innerWidth + 3) issues.push(`document overflow after layout audit: ${rootWidth - window.innerWidth}px`);
+
+  return issues;
+}, expectedScheme);
 
 const accessibilityIssues = async (page) => page.evaluate(() => {
   const issues = [];
@@ -86,7 +158,7 @@ const accessibilityIssues = async (page) => page.evaluate(() => {
 
 try {
   for (const profile of profiles) {
-    const context = await browser.newContext({ viewport: profile.viewport, isMobile: profile.isMobile, reducedMotion: 'reduce', colorScheme: 'light' });
+    const context = await browser.newContext({ viewport: profile.viewport, isMobile: profile.isMobile, reducedMotion: 'reduce', colorScheme: profile.colorScheme });
     for (const target of pages) {
       const page = await context.newPage();
       const errors = [];
@@ -105,6 +177,8 @@ try {
       if (!response || response.status() >= 400) throw new Error(`${profile.name}/${target.name}: HTTP ${response?.status() ?? 'no response'}`);
       const a11y = await accessibilityIssues(page);
       if (a11y.length) throw new Error(`${profile.name}/${target.name}: accessibility contract failed:\n- ${a11y.join('\n- ')}`);
+      const layout = await layoutIssues(page, profile.colorScheme);
+      if (layout.length) throw new Error(`${profile.name}/${target.name}: layout contract failed:\n- ${layout.join('\n- ')}`);
       if (errors.length) throw new Error(`${profile.name}/${target.name}: browser errors:\n- ${errors.join('\n- ')}`);
       await page.keyboard.press('Tab');
       const focused = await page.evaluate(() => document.activeElement && document.activeElement !== document.body);
@@ -115,7 +189,7 @@ try {
     }
     await context.close();
   }
-  console.log(JSON.stringify({ ok: true, suite: 'Wave 12.23 Web Platform quality', profiles: profiles.map((p) => p.name), pages: pages.map((p) => p.path), checks: ['visual','mobile','accessibility','browser-runtime'] }, null, 2));
+  console.log(JSON.stringify({ ok: true, suite: 'Wave 12.23 Web Platform quality', profiles: profiles.map((p) => p.name), pages: pages.map((p) => p.path), checks: ['visual','desktop-mobile','light-dark-preference','typography','overflow','sticky-fixed','forms','accessibility','browser-runtime'] }, null, 2));
 } finally {
   await browser.close();
 }
