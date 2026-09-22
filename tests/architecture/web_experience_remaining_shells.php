@@ -84,11 +84,108 @@ foreach ([
     $contains($routes, $marker, 'Architecture Explorer route contract is incomplete.');
 }
 
+$publicPage = $read('app/Interfaces/Web/View/page/show.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/action_bar'",
+    "partial('components/ui/state'",
+    'name="request_intent"',
+    'name="full_name"',
+    'name="message"',
+    'contacts',
+] as $marker) {
+    $contains($publicPage, $marker, 'Public Page canonical shell or contact contract is incomplete.');
+}
+foreach (['tn-page-hero', 'tn-breadcrumbs', 'tn-kicker', 'tn-hero-actions'] as $legacyMarker) {
+    $notContains($publicPage, $legacyMarker, 'Public Page must not restore legacy shell primitives.');
+}
+
+$blogIndex = $read('app/Interfaces/Web/View/blog/index.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-blog-grid',
+    'tn-blog-card',
+    'tn-pagination',
+    "blog?page=",
+] as $marker) {
+    $contains($blogIndex, $marker, 'Blog index canonical shell/pagination contract is incomplete.');
+}
+foreach (['tn-page-hero', 'tn-breadcrumbs', 'tn-kicker', 'tn-empty-state'] as $legacyMarker) {
+    $notContains($blogIndex, $legacyMarker, 'Blog index must not restore legacy shell primitives.');
+}
+
+$blogShow = $read('app/Interfaces/Web/View/blog/show.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/action_bar'",
+    'tn-article__body',
+    'tn-article__cover',
+    'tn-related-content',
+    'application/ld+json',
+    'JSON_UNESCAPED_UNICODE',
+    'property/catalog',
+    'contacts',
+] as $marker) {
+    $contains($blogShow, $marker, 'Blog article canonical/editorial/SEO contract is incomplete.');
+}
+foreach (['tn-breadcrumbs', 'tn-article__header', 'tn-kicker', 'tn-hero-actions', 'tn-section-heading'] as $legacyMarker) {
+    $notContains($blogShow, $legacyMarker, 'Blog article must not restore legacy shell primitives.');
+}
+
+$seoLanding = $read('app/Interfaces/Web/View/blog/landing.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/action_bar'",
+    'tn-seo-landing__media',
+    'tn-article__body',
+    'application/ld+json',
+    'JSON_UNESCAPED_UNICODE',
+    'property/catalog',
+    'contacts',
+] as $marker) {
+    $contains($seoLanding, $marker, 'SEO landing canonical/content/schema contract is incomplete.');
+}
+foreach (['tn-page-hero', 'tn-breadcrumbs', 'tn-kicker', 'tn-page-hero__actions'] as $legacyMarker) {
+    $notContains($seoLanding, $legacyMarker, 'SEO landing must not restore legacy shell primitives.');
+}
+
+$publicContentController = $read('symfony/src/Web/Content/PublicContentPageController.php');
+foreach ([
+    'public function blog(Request $request): Response',
+    'public function article(Request $request, string $slug): Response',
+    'public function guide(Request $request, string $slug): Response',
+    "'blog/index'",
+    "'blog/show'",
+    "'blog/landing'",
+    'metaTitle',
+    'metaDescription',
+    'metaUrl',
+    'metaRobots',
+] as $marker) {
+    $contains($publicContentController, $marker, 'Public Content controller contract is incomplete.');
+}
+
+foreach ([
+    'path: /blog',
+    'PublicContentPageController::blog',
+    'path: /blog/{slug}',
+    'PublicContentPageController::article',
+    'path: /guide/{slug}',
+    'PublicContentPageController::guide',
+] as $marker) {
+    $contains($routes, $marker, 'Public Content route contract is incomplete.');
+}
+
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
 foreach ([
     '# Закриття залишкових UI shells',
     '## Хвиля 1',
     '### Architecture Explorer',
+    '## Хвиля 2',
+    '### Public Page',
+    '### Blog',
+    '### SEO landing',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
