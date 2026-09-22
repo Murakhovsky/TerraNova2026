@@ -241,8 +241,8 @@ foreach ([
     '## Хвиля 2',
     '### Публічні контентні surfaces',
     '## Хвиля 3',
-    '### Auth entry surfaces',
-    '### Native Cabinet',
+    '### Вхід та реєстрація',
+    '### Нативний кабінет',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
