@@ -38,11 +38,50 @@ foreach ([
     $contains($clientCaseGate, $marker, 'PHASE 12 Client Case workflow guard must remain intact.');
 }
 
+$dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
+foreach ([
+    "($value['kind'] ?? '') === 'details'",
+    'tn-ui-data-table__details',
+    "summary><?php echo $h($value['summary'] ?? 'Details');",
+] as $marker) {
+    $contains($dataTable, $marker, 'Canonical DataTable must support safe details cells for runtime JSON/config output.');
+}
+
+$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+foreach ([
+    '$eventRows = [];',
+    '$ruleRows = [];',
+    '$agentRows = [];',
+    '$policyRows = [];',
+    '$integrationRows = [];',
+    '$resultRows = [];',
+    "partial('components/ui/data_table'",
+    "'kind' => 'details'",
+    'id="events"',
+    'id="rules"',
+    'id="agents"',
+    'id="policies"',
+    'id="integrations"',
+    'id="results"',
+    'id="actions"',
+    'cos/action/',
+    'cos/approval/',
+    'name="csrf_token"',
+] as $marker) {
+    $contains($cos, $marker, 'COS Control Center lost a canonical read-only table or operational action contract.');
+}
+if (substr_count($cos, '<table class="tn-listing-table">') !== 1) {
+    throw new RuntimeException('COS Control Center must keep exactly one raw table: the operational Proposed Actions grid.');
+}
+$contains($cos, '<section class="tn-ui-panel tn-ui-panel--flush tn-cos-section tn-workspace-section" id="actions">', 'Operational Proposed Actions surface must remain explicit.');
+
 $docs = $read('docs/03-architecture/cos-residual-control-surface-closure.md');
 foreach ([
     '# Закриття залишкових control surfaces',
     '## Хвиля 1',
     '### Вхідні зв’язки Client Case',
+    '## Хвиля 2',
+    '### Таблиці COS Control Center',
     '## Винятки',
     '## Критерії завершення',
 ] as $marker) {
