@@ -33,7 +33,7 @@ pageAssetEntries = clients-workspace
 
 The global Web layout owns the shared Workspace shell. Client Case views still contain their historical `shared/manager_header` partial call for compatibility with older rendering paths, but the partial suppresses that call whenever a migrated controller has declared `workspaceSection`. The layout then renders the shell exactly once with `layoutOwned=true`.
 
-This bridge is intentionally small and temporary. It prevents duplicate sidebars/topbars while avoiding a risky rewrite of large, already-functional CRM templates in the same release.
+Історичний duplicate-shell guard зберігається лише як layout safety contract. Після PHASE 12 самі Client Case views уже використовують canonical presentation components і більше не залежать від окремого compatibility bridge.
 
 ## Navigation ownership
 
@@ -53,7 +53,6 @@ WEB V0.6 adds a dedicated Vite entrypoint:
 ```text
 frontend/entrypoints/clients-workspace.js
     -> frontend/features/clients/workspace.css
-    -> frontend/features/clients/workspace.js
 ```
 
 The bundle is loaded only by Client Case read screens.
@@ -70,7 +69,7 @@ The CSS adapts the existing CRM markup to the shared Workspace visual system:
 - Case Workspace detail grids;
 - responsive mobile/tablet behavior.
 
-The browser behavior is deliberately small. It marks the Clients surface and exposes a pending/`aria-busy` submit state. Business transitions stay server-side.
+`tn-client-workspace` тепер оголошується безпосередньо в трьох canonical Client Case views. Окремий browser scoping script видалено як зайвий. Pending/`aria-busy` submit behavior лишається у спільному `initProductionUX`, а бізнес-переходи залишаються server-side.
 
 ## Data and failure behavior
 
@@ -90,13 +89,13 @@ Existing read behavior remains:
 
 Existing partial-failure behavior also remains. A Client read failure returns the existing 503 page state; COS intelligence failure does not make the entire Case Workspace unavailable.
 
-## Compatibility debt retained intentionally
+## Історичний compatibility debt
 
 `Interfaces\Web\Service\ClientCaseService` remains a deprecated compatibility facade. Removing it requires a separate delivery refactor because the current controller exposes multiple mature mutation flows through that facade.
 
 WEB V0.6 does not mix that refactor into a UI migration merely to make the directory tree look more enlightened.
 
-The historical `shared/manager_header` call also remains inside the three large PHTML views, but it becomes inert under the migrated Workspace contract. Future template cleanup may remove those calls once all legacy rendering paths are retired.
+The historical `shared/manager_header` call залишається у трьох PHTML views як inert duplicate-shell guard. Presentation bridge для Client Case вже закрито PHASE 12; подальше видалення самого guard має бути окремим layout cleanup, а не умовою canonical UI.
 
 ## Security boundary
 
@@ -113,7 +112,7 @@ WEB V0.6 does not claim to introduce a new authorization or CSRF model. Existing
 - no Clients Domain is invented;
 - Sales continues to own Clients navigation;
 - the dedicated Vite bundle exists and is covered by frontend asset checks;
-- responsive Clients CSS and submit-state behavior exist;
+- responsive Clients CSS існує, а submit-state behavior централізований у shared production runtime;
 - Client Case PHTML does not bypass Vite with direct asset references.
 
 `.github/workflows/web-v06.yml` runs this contract independently of the larger COS Runtime Checks workflow. That matters while unrelated legacy gates can still fail before the general frontend stage is reached.

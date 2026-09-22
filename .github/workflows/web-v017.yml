@@ -9,8 +9,12 @@ on:
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
+      - 'app/Interfaces/Web/View/client_case/inbox.phtml'
+      - 'app/Interfaces/Web/View/client_case/index.phtml'
+      - 'app/Interfaces/Web/View/client_case/show.phtml'
+      - 'tests/architecture/web_experience_production_client_case.php'
+      - 'docs/03-architecture/cos-production-client-case-adoption.md'
       - 'frontend/features/clients/workspace.css'
-      - 'frontend/features/clients/workspace.js'
       - 'frontend/styles/components.css'
       - 'tests/architecture/web_v017_workspace_canonicalization.php'
       - 'docs/architecture/web-v0.17.md'
@@ -23,8 +27,12 @@ on:
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
+      - 'app/Interfaces/Web/View/client_case/inbox.phtml'
+      - 'app/Interfaces/Web/View/client_case/index.phtml'
+      - 'app/Interfaces/Web/View/client_case/show.phtml'
+      - 'tests/architecture/web_experience_production_client_case.php'
+      - 'docs/03-architecture/cos-production-client-case-adoption.md'
       - 'frontend/features/clients/workspace.css'
-      - 'frontend/features/clients/workspace.js'
       - 'frontend/styles/components.css'
       - 'tests/architecture/web_v017_workspace_canonicalization.php'
       - 'docs/architecture/web-v0.17.md'
@@ -52,11 +60,15 @@ jobs:
           php -l app/Interfaces/Web/View/admin/analytics.phtml
           php -l app/Interfaces/Web/View/diagnostic_report/show.phtml
           php -l app/Interfaces/Web/View/cos/index.phtml
+          php -l app/Interfaces/Web/View/client_case/inbox.phtml
+          php -l app/Interfaces/Web/View/client_case/index.phtml
+          php -l app/Interfaces/Web/View/client_case/show.phtml
           php -l app/Interfaces/Web/View/components/ui/kpi_card.phtml
       - name: Workspace canonicalization gates
         run: |
           php -l tests/architecture/web_v017_workspace_canonicalization.php
           php tests/architecture/web_v017_workspace_canonicalization.php
+          php tests/architecture/web_experience_production_client_case.php
           php tests/architecture/web_v016_canonical_components.php
           php tests/architecture/web_v015_visual_language.php
           php tests/architecture/web_v08_analytics_workspace.php
