@@ -46,29 +46,29 @@ Status vocabulary:
 | --- | --- | --- |
 | `frontend/entrypoints/public-surface.js` | USED | canonical Public entrypoint |
 | `frontend/features/public/surface.js` | USED | menu close, lazy image hints, submit busy state |
-| `frontend/features/public/interactions.js` | MIGRATED | Public-only saved state, attribution and analytics |
+| `frontend/features/public/interactions.js` | USED | Public-only favourites session sync, URL-derived attribution and analytics; no browser persistence |
 | `frontend/entrypoints/terranova-interface.js` | USED | canonical Workspace entrypoint |
 | `frontend/core/workspace-shell.js` | USED | Workspace presentation shell |
 | `frontend/entrypoints/portal-cabinet.js` | USED | canonical Portal entrypoint |
 | `frontend/features/portal/cabinet.js` | DEAD | removed after dedicated Portal header/menu retirement; shared production UX remains authoritative |
-| `frontend/entrypoints/terranova-club.js` | DEAD | removed from Vite runtime; historical source may remain quarantined |
-| `frontend/entrypoints/terranova-home.js` | DEAD | removed from Vite runtime after WEB V0.10 homepage replacement |
+| `frontend/entrypoints/terranova-club.js` | DEAD | removed from source/runtime; Git history is the archive |
+| `frontend/entrypoints/terranova-home.js` | DEAD | removed from source/runtime after WEB V0.10 homepage replacement |
 | historical fake `data-inbound-request-form` success handler | DEAD | removed; browser must not report CRM success without backend success |
 
-## Browser persistence debt
+## Browser persistence closure
 
-`frontend/features/public/interactions.js` still uses:
+WEB V0.12 закрив історичний browser-persistence debt.
 
-- `localStorage` for historical favourite/saved-property UI state;
-- `sessionStorage` for marketing campaign attribution.
+Canonical runtime тепер має такий контракт:
 
-These are **MIGRATED but deprecated**. They are now confined to Public and no longer execute in Portal or Workspace.
+- favourites є server-owned session state через `/api/v1/public/properties/favourites`;
+- `frontend/features/public/interactions.js` синхронізує UI з цим API, але не зберігає business state у браузері;
+- campaign attribution виводиться з current URL через `window.location.search` і додається лише до поточного request/form context;
+- `localStorage` і `sessionStorage` заборонені у canonical frontend JavaScript.
 
-WEB V0.12 owns the next decision:
+`tests/architecture/web_v012_production_closure.php` рекурсивно сканує `frontend/**/*.js` і падає, якщо browser persistence повертається.
 
-- replace favourites persistence with an application/backend contract or explicitly downgrade the feature;
-- move campaign attribution into a controlled request/session contract if persistence remains necessary;
-- prohibit browser persistence from becoming business truth.
+Browser storage більше не є compatibility debt і не може використовуватися як application truth.
 
 ## Runtime rules after V0.11
 
@@ -77,7 +77,8 @@ Canonical runtime must not:
 - globally load `terranova-club` + `terranova-interface` together;
 - expose `terranova-club` or `terranova-home` as Vite inputs;
 - import `terranova-club.css` from an entrypoint;
-- let Public persistence/analytics behavior execute in Portal or Workspace;
+- let Public favourites/analytics behavior execute in Portal or Workspace;
+- use `localStorage` or `sessionStorage` as canonical frontend state;
 - restore a dedicated Portal header/menu browser module without a live rendered contract;
 - bypass the Vite manifest with hand-written browser asset URLs.
 
