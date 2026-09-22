@@ -27,7 +27,18 @@ kind: architecture
 
 Renderer не приймає arbitrary HTML callbacks. Row actions описуються даними.
 
-## Перша production adoption
+### Редактор рядка
+
+Для bounded quick-update сценаріїв рядок може містити `_form`:
+
+- `action`;
+- `hidden`;
+- `fields` лише типу `select`;
+- `submit`.
+
+Це навмисно вузький контракт. Textarea, arbitrary input widgets, nested templates та HTML callbacks не підтримуються.
+
+## Production adoption
 
 `COS Control Center → Proposed Actions` переведено з raw `tn-listing-table` на OperationalGrid.
 
@@ -41,6 +52,21 @@ Renderer не приймає arbitrary HTML callbacks. Row actions описую�
 - empty state.
 
 Backend command path не змінювався.
+
+### Client Case quick-update
+
+`client_case/index.phtml` переведено з raw operational table на OperationalGrid row editor.
+
+Збережено без зміни backend contract:
+
+- POST `client-case/quickUpdate/{id}`;
+- CSRF token;
+- `return_url=client-case`;
+- stage;
+- status;
+- priority;
+- assigned manager;
+- deep-link «Відкрити».
 
 ## Сумісність із замороженою платформою
 
