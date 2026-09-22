@@ -78,7 +78,7 @@ Wave 2 не намагається перетворити article body, blog car
 
 ## Хвиля 3
 
-### Auth entry surfaces
+### Вхід та реєстрація
 
 `auth/login.phtml` і `auth/register.phtml` переведені на canonical entry-shell:
 
@@ -95,7 +95,7 @@ Native Symfony auth lifecycle лишається у `AuthPageController`:
 - session зберігає `tn_auth_user_id`, `cos_organization_id`, `cos_csrf_token`;
 - logout invalidates native session.
 
-### Native Cabinet
+### Нативний кабінет
 
 `cabinet/canonical.phtml`
 
