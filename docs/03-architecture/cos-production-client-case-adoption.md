@@ -74,6 +74,22 @@ Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`
 
 Mutation contracts `client-case/update/{id}`, `activity/{id}`, `updatePropertyMatch/{id}`, COS execute/approval actions та Property presentation sharing не змінені. CSRF і `return_url` поля збережені.
 
+## Хвиля 4
+
+### Завершення WEB V0.17
+
+PHASE 12 закриває compatibility bridge Client Case повністю:
+
+- `frontend/features/clients/workspace.js` видалено як зайвий scoping script;
+- `clients-workspace` Vite entrypoint завантажує лише domain CSS;
+- compatibility-only CSS для legacy hero, metrics, tabs, admin panels, breadcrumbs та empty states видалено;
+- WEB V0.6 gate переведено з bridge assumptions на canonical Client Case views;
+- WEB V0.17 gate напряму перевіряє `index/inbox/show`;
+- WEB V0.17 CI лінтить усі три canonical Client Case PHTML;
+- `docs/architecture/web-v0.17.md` більше не описує Client Case як тимчасовий bridge.
+
+Спільний production submit-state runtime лишається єдиним власником pending/aria-busy behavior.
+
 ## Межа operational cards
 
 Inbox card одночасно містить:
@@ -92,7 +108,7 @@ Inbox card одночасно містить:
 
 - Wave 2: Client Case Index — виконано;
 - Wave 3: Client Case Workspace / Show — виконано;
-- Wave 4: WEB V0.17 closure та compatibility cleanup.
+- Wave 4: WEB V0.17 closure та compatibility cleanup — виконано.
 
 ## Критерії завершення
 
@@ -104,4 +120,7 @@ Inbox card одночасно містить:
 - Show використовує canonical EntityHeader, State, Panel і KPI summary;
 - AI, timeline, property-match і presentation-share patterns зберігають існуючу workflow семантику;
 - controller/route ownership лишається у ClientCasePageController;
-- PHASE 12 architecture gate запускається у CI.
+- compatibility-only Client Case CSS/JS bridge видалено;
+- WEB V0.6/V0.17 gates захищають canonical Client Case contracts;
+- PHASE 12 architecture gate запускається у CI;
+- WEB V0.17 production migration debt закрито.
