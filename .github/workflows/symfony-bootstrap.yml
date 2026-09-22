@@ -439,7 +439,7 @@ jobs:
       - name: PHASE 15 WCAG accessibility
         env:
           BROWSER_EXECUTABLE: /usr/bin/google-chrome
-        run: node tests/browser/web_accessibility.mjs http://127.0.0.1:8081
+        run: npm run test:web-accessibility -- http://127.0.0.1:8081
 
       - name: Upload PHASE 15 accessibility evidence
         if: always()
