@@ -138,7 +138,7 @@ Repository-wide gate тепер забороняє повернення таки
 
 Це не означає, що breadcrumbs є canonical primitive. Це означає, що вони є свідомо класифікованим залишковим navigation pattern і більше не можуть непомітно розповзатися по інших surfaces.
 
-### Guide landing
+### Guide landing (`Guide Landing`)
 
 `blog/landing.phtml` був останнім live public content renderer з legacy breadcrumbs + `tn-page-hero`.
 
@@ -165,7 +165,7 @@ WEB V0.9 та WEB V0.10 regression gates переведені з Phalcon-era con
 - `PropertyPageController`;
 - Symfony `routes.yaml`.
 
-### Whitelist specialized surfaces
+### Whitelist спеціалізованих surfaces (`Specialized Surface Whitelist`)
 
 Наступні surfaces навмисно не перетворюються на generic PageHeader/Card composition:
 
