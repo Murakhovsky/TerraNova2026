@@ -12,20 +12,20 @@ Wave 12.25 доводить, що Web Experience Platform працює на ре
 
 ## Референсний зріз
 
-Паралельні маршрути до cutover:
+Wave 12.25 спочатку перевірив vertical на паралельних reference routes. Після завершення Wave 12.26 цей самий зріз піднято на production routes:
 
-- `/sales/reference/dashboard` — Sales Dashboard;
-- `/sales/reference/leads` — Lead List;
-- `/sales/reference/leads/{id}` — Lead Workspace.
+- `/sales/dashboard` — Sales Dashboard;
+- `/sales/leads` — Lead List;
+- `/sales/leads/{id}` — Lead Workspace.
 
-Старі `/sales/*` маршрути не видаляються у цій хвилі. Їх перемикання належить Wave 12.26.
+Reference routes після cutover видалені, щоб не лишати подвійне ownership.
 
 ## Архітектурний шлях
 
 ```text
 Symfony route
   ↓
-SalesReferenceController
+тимчасовий reference controller
   ↓
 QueryBusInterface
   ↓
@@ -73,12 +73,6 @@ Lead Workspace використовує `GetSalesLeadQuery` і резолвит�
 
 ## Межа Wave 12.25
 
-Ця хвиля не:
+Wave 12.25 не змінював Sales business rules, не створював нового read model і не дублював Search, Actions, Workspace або AI platform.
 
-- видаляє старі Sales PHTML templates;
-- перемикає production `/sales/dashboard` або `/sales/leads`;
-- змінює Sales business rules;
-- створює новий Sales read model;
-- дублює Search, Actions, Workspace або AI platform.
-
-Production route cutover і видалення старого UI належать Wave 12.26.
+Production route cutover виконано окремою Wave 12.26. Історичний reference slice залишився архітектурним доказом, але більше не має окремих routes або controller naming.
