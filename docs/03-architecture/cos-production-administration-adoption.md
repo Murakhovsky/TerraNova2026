@@ -145,6 +145,33 @@ Controller contract лишається у `SpatialPageController`: manage/edit �
 
 Controller contract лишається у `SpatialPageController`: manage/edit та mutations потребують manager context, тоді як public scene є окремим read surface.
 
+## Хвиля 3
+
+### Просторові сцени (`Spatial Administration`)
+
+`spatial/manage.phtml`
+
+- legacy hero замінено на canonical PageHeader;
+- status message використовує canonical State;
+- spatial summary переведено на canonical KPI cards;
+- локальний filter form замінено на shared FilterBar;
+- scenes listing переведено на canonical Panel + DataTable;
+- scene status використовує semantic status cells;
+- create/edit navigation збережена.
+
+### Редактор сцени (`Spatial Editor`)
+
+`spatial/edit.phtml`
+
+- legacy breadcrumbs + hero замінено на canonical PageHeader;
+- save/status result використовує canonical State;
+- configuration, upload, external provider, assets, capture, hotspot, versions і worker sections переведено на canonical panel shell;
+- publish/view actions зберігають existing routes і target/rel behavior;
+- drag-and-drop contracts `data-spatial-upload`, `data-spatial-dropzone`, `data-spatial-file`, `data-spatial-progress` і `data-spatial-upload-status` не змінені;
+- multipart upload, external asset, capture, hotspot і publish routes не змінені.
+
+Public `spatial/scene.phtml` лишається specialized viewer surface. Він не є administration page і не повинен штучно перетворюватися на generic workspace shell.
+
 ## Межа editable grid
 
 Users table не є read-only data table. Кожен рядок одночасно є формою редагування `full_name`, `phone`, `role`, `status` та optional password reset.
@@ -173,6 +200,8 @@ Users table не є read-only data table. Кожен рядок одночасн
 - editable accounts grid явно зафіксований як interaction boundary;
 - Content Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
 - Content editor зберігає save/CSRF/content/SEO mutation contracts;
+- Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
+- Spatial editor зберігає upload/external/capture/hotspot/publish behavior contracts;
 - Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
 - Spatial editor зберігає upload/external/capture/hotspot/publish та drag-and-drop contracts;
 - public Spatial viewer лишається specialized public surface;
