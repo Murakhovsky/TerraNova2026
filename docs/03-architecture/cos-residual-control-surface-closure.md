@@ -93,14 +93,15 @@ Canonical table renderers:
 
 Product-level raw-table exceptions після post-freeze cleanup:
 
-1. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
-2. `property/pdf.phtml` — service-level print renderer.
+1. `property/pdf.phtml` — service-level print renderer.
 
 Після PHASE 15 перший post-freeze cleanup прибрав `cos/index.phtml` із product whitelist: Proposed Actions переведено на canonical `OperationalGrid` із first-class mutation actions.
 
 Другий post-freeze cleanup прибрав `admin/users.phtml` із whitelist: row-level Identity mutations переведено на editable OperationalGrid з row form ownership, CSRF, typed field cells та submit action.
 
 Третій post-freeze cleanup прибрав `client_case/index.phtml` із whitelist: quick-update workflow переведено на OperationalGrid із row form ownership, semantic Stage, editable workflow fields, CSRF/return-url та submit/deep-link actions.
+
+Четвертий post-freeze cleanup прибрав `methodology_studio/index.phtml` із whitelist: JS-driven entity browser більше не використовує HTML table. `data-entities` лишився client-render mount, а rows переведені на responsive semantic CSS grid із збереженням `data-edit` delegation та editor workflow.
 
 Якщо новий raw table з’явиться в іншому production view, PHASE 13 gate падає. Якщо один із винятків перестає містити table, gate також падає, змушуючи прибрати застарілий whitelist entry. Так винятки не перетворюються на вічні археологічні пам’ятки.
 
@@ -115,6 +116,10 @@ Product-level raw-table exceptions після post-freeze cleanup:
 
 `admin/users.phtml` більше не є raw-table винятком. Inline user mutations перенесені на canonical OperationalGrid editable row form contract без зміни Identity routes або field semantics.
 
+### Браузер сутностей Methodology Studio
+
+`methodology_studio/index.phtml` більше не є raw-table винятком. Це лишається specialized JS-driven editor surface, але entity collection рендериться через semantic `role=table/row/columnheader/cell` CSS grid, а не через локальний HTML `<table>`.
+
 ### Операційні дії COS
 
 У COS Control Center секції з execute/approval forms можуть залишатися specialized operational grids навіть після канонізації read-only runtime tables.
@@ -127,6 +132,6 @@ Product-level raw-table exceptions після post-freeze cleanup:
 - шість read-only runtime tables COS використовують canonical DataTable;
 - Proposed Actions після post-freeze cleanup використовує canonical OperationalGrid з execute/approval forms;
 - Company Home decision queue використовує canonical DataTable;
-- production PHTML raw-table whitelist обмежений двома класифікованими product exceptions плюс canonical renderers;
+- production PHTML raw-table whitelist обмежений одним класифікованим service-level exception плюс canonical renderers;
 - PHASE 13 architecture gate запускається у CI;
 - винятки класифіковані явно, а не залишені випадково.
