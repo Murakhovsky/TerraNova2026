@@ -315,6 +315,49 @@ foreach ($iterator as $file) {
     }
 }
 
+$propertyWorkspaceCss = $read('frontend/features/property/workspace.css');
+foreach ([
+    '@layer tn-property-workspace',
+    '.tn-property-workspace {',
+] as $marker) {
+    $contains($propertyWorkspaceCss, $marker, 'Property workspace CSS lost its live canonical shell contract.');
+}
+foreach ([
+    '.tn-property-workspace .tn-page-hero',
+    '.tn-property-workspace .tn-listing-hero',
+    '.tn-property-workspace .tn-admin-metrics',
+    '.tn-property-workspace .tn-admin-panel',
+    '.tn-property-workspace .tn-admin-card',
+    '.tn-property-workspace .tn-crm-filters',
+    '.tn-property-workspace .tn-listing-table',
+    '.tn-property-workspace .tn-manage-table',
+    '.tn-property-workspace .tn-admin-table',
+    '.tn-property-workspace .tn-cabinet-grid',
+    '.tn-property-workspace .tn-admin-grid',
+    '.tn-property-workspace .tn-empty-state',
+] as $legacySelector) {
+    $notContains($propertyWorkspaceCss, $legacySelector, 'Property workspace CSS restored a selector from retired compatibility views.');
+}
+
+$analyticsWorkspaceCss = $read('frontend/features/analytics/workspace.css');
+foreach ([
+    '@layer tn-analytics-workspace',
+    '.tn-analytics-workspace {',
+    '.tn-analytics-workspace .tn-dashboard-bars',
+] as $marker) {
+    $contains($analyticsWorkspaceCss, $marker, 'Analytics workspace CSS lost its live canonical contract.');
+}
+foreach ([
+    '.tn-analytics-workspace .tn-page-hero',
+    '.tn-analytics-workspace .tn-admin-metrics',
+    '.tn-analytics-workspace .tn-admin-dashboard-grid',
+    '.tn-analytics-workspace .tn-admin-card',
+    '.tn-analytics-workspace .tn-table-wrap',
+    '.tn-analytics-workspace .tn-listing-table',
+] as $legacySelector) {
+    $notContains($analyticsWorkspaceCss, $legacySelector, 'Analytics workspace CSS restored a selector from retired compatibility views.');
+}
+
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
 foreach ([
     '# Закриття залишкових UI shells',
