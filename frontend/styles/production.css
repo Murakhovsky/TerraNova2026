@@ -1,5 +1,5 @@
 @layer tn-production {
-  :where(button, input[type="button"], input[type="submit"], select, .tn-btn, [role="button"]) {
+  :where(button, input[type="button"], input[type="submit"], select, .tn-ui-button, [role="button"]) {
     min-height: 44px;
   }
 
@@ -61,7 +61,7 @@
   @media (max-width: 650px) {
     .tn-failure { padding: 24px 12px calc(80px + env(safe-area-inset-bottom)); }
     .tn-failure__actions { display: grid; grid-template-columns: 1fr; }
-    .tn-failure__actions .tn-btn { width: 100%; justify-content: center; }
+    .tn-failure__actions .tn-ui-button { width: 100%; justify-content: center; }
   }
 
   @media (min-width: 651px) and (max-width: 1050px) {
