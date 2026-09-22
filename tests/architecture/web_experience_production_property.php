@@ -123,12 +123,15 @@ foreach ([
     'app/Interfaces/Web/View/property/submission.phtml',
     'app/Interfaces/Web/View/property/create.phtml',
     'app/Interfaces/Web/View/property/compare.phtml',
-    'app/Interfaces/Web/View/property/pdf.phtml',
 ] as $retiredView) {
     if (is_file($root . '/' . $retiredView)) {
         throw new RuntimeException('Retired Property compatibility view restored: ' . $retiredView);
     }
 }
+
+$pdfService = $read('app/Domains/Property/Infrastructure/Presentation/PropertyPresentationService.php');
+$contains($pdfService, "property/pdf.phtml", 'Property PDF service renderer must remain available outside the web route renderer.');
+$read('app/Interfaces/Web/View/property/pdf.phtml');
 
 $docs = $read('docs/03-architecture/cos-production-property-adoption.md');
 foreach ([
