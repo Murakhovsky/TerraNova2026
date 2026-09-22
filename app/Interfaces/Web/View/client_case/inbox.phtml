@@ -37,11 +37,38 @@ $priorityLabels = ['low' => 'Низький', 'normal' => 'Звичайний', 
 $selected = fn($actual, $expected) => (string) $actual === (string) $expected ? 'selected' : '';
 $returnUrl = ltrim((string) $this->request->getURI(), '/');
 $formatDateInput = static fn($value) => $value ? date('Y-m-d\TH:i', strtotime((string) $value)) : '';
+$managerFilterOptions = ['0' => 'Усі'];
+foreach ($managerOptions as $manager) $managerFilterOptions[(string) ($manager['id'] ?? 0)] = (string) (($manager['full_name'] ?? '') ?: ($manager['email'] ?? ''));
+$statusOptions = ['' => 'Усі'] + $statusLabels;
+$intentOptions = ['' => 'Усі'] + $intentLabels;
+$caseOptions = ['' => 'Усі', 'yes' => 'Є кейс', 'no' => 'Без кейса'];
+$sortOptions = ['newest' => 'Нові', 'next_contact' => 'Наступний контакт', 'status' => 'За статусом'];
+$tabItems = [[
+    'key' => 'all',
+    'label' => 'Усі · ' . (int) ($inboundStats['total'] ?? 0),
+    'href' => 'client-case/inbox',
+    'active' => ($filters['status'] ?? '') === '',
+]];
+foreach ($statusLabels as $code => $label) {
+    $tabItems[] = [
+        'key' => $code,
+        'label' => $label . ' · ' . (int) ($inboundStats['status'][$code] ?? 0),
+        'href' => 'client-case/inbox?status=' . $code,
+        'active' => ($filters['status'] ?? '') === $code,
+    ];
+}
+$statusTone = static fn(string $status): string => match ($status) {
+    'won' => 'positive',
+    'lost', 'spam' => 'danger',
+    'qualified', 'viewing_planned', 'viewing', 'negotiation' => 'accent',
+    'contacted' => 'info',
+    default => 'neutral',
+};
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'inbox']); ?>
 
-<main class="tn-page tn-admin-page">
+<main class="tn-page tn-workspace-page tn-workspace-page--wide tn-client-workspace">
   <nav class="tn-breadcrumbs">
     <a href="<?php echo $this->url->get(''); ?>">Головна</a>
     <span>/</span>
@@ -50,57 +77,60 @@ $formatDateInput = static fn($value) => $value ? date('Y-m-d\TH:i', strtotime((s
     <span>Заявки</span>
   </nav>
 
-  <section class="tn-listing-hero">
-    <div>
-      <p class="tn-kicker">Inbox</p>
-      <h1>Вхідні заявки</h1>
-      <p>Презентації, перегляди, контакти, нотатки й прив’язка до кейсів.</p>
-    </div>
-    <div class="tn-hero-metric">
-      <span>Нові</span>
-      <strong><?php echo (int) ($inboundStats['new'] ?? 0); ?></strong>
-    </div>
+  <?php $this->partial('components/ui/page_header', [
+      'eyebrow' => 'CRM · Inbox',
+      'title' => 'Вхідні заявки',
+      'description' => 'Презентації, перегляди, контакти, нотатки й прив’язка до клієнтських кейсів.',
+      'meta' => ['value' => (int) ($inboundStats['new'] ?? 0), 'label' => 'нових'],
+      'actions' => [['label' => 'Клієнтські кейси', 'href' => 'client-case', 'variant' => 'ghost']],
+  ]); ?>
+
+  <?php if ($actionStatus): ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'success', 'title' => 'Зміни застосовано', 'message' => (string) $actionStatus]); ?>
+  <?php endif; ?>
+  <?php if ($pageStatus): ?>
+    <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Inbox недоступний', 'message' => (string) $pageStatus]); ?>
+  <?php endif; ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section" aria-label="Зведення заявок">
+    <?php $this->partial('components/ui/kpi_card', ['label' => 'Всього', 'value' => (int) ($inboundStats['total'] ?? 0), 'hint' => 'усі заявки', 'href' => 'client-case/inbox']); ?>
+    <?php $this->partial('components/ui/kpi_card', ['label' => 'Нові', 'value' => (int) ($inboundStats['status']['new'] ?? 0), 'hint' => 'потребують першої дії', 'tone' => 'warning', 'href' => 'client-case/inbox?status=new']); ?>
+    <?php $this->partial('components/ui/kpi_card', ['label' => 'Презентації', 'value' => (int) ($inboundStats['intent']['presentation'] ?? 0), 'hint' => 'запит презентації', 'href' => 'client-case/inbox?request_intent=presentation']); ?>
+    <?php $this->partial('components/ui/kpi_card', ['label' => 'Без кейса', 'value' => (int) ($inboundStats['no_case'] ?? 0), 'hint' => 'потрібно створити або прив’язати', 'tone' => 'warning', 'href' => 'client-case/inbox?has_case=no']); ?>
+    <?php $this->partial('components/ui/kpi_card', ['label' => 'Контакт', 'value' => (int) ($inboundStats['due'] ?? 0), 'hint' => 'прострочено або сьогодні', 'href' => 'client-case/inbox?sort=next_contact']); ?>
   </section>
 
-  <?php if ($actionStatus): ?><p class="tn-form-status is-visible"><?php echo $h($actionStatus); ?></p><?php endif; ?>
-  <?php if ($pageStatus): ?><p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p><?php endif; ?>
-
-  <section class="tn-admin-metrics" aria-label="Зведення заявок">
-    <a href="<?php echo $this->url->get('client-case/inbox'); ?>"><span>Всього</span><strong><?php echo (int) ($inboundStats['total'] ?? 0); ?></strong><small>усі заявки</small></a>
-    <a href="<?php echo $this->url->get('client-case/inbox?status=new'); ?>"><span>Нові</span><strong><?php echo (int) ($inboundStats['status']['new'] ?? 0); ?></strong><small>потребують першої дії</small></a>
-    <a href="<?php echo $this->url->get('client-case/inbox?request_intent=presentation'); ?>"><span>Презентації</span><strong><?php echo (int) ($inboundStats['intent']['presentation'] ?? 0); ?></strong><small>запит презентації</small></a>
-    <a href="<?php echo $this->url->get('client-case/inbox?has_case=no'); ?>"><span>Без кейса</span><strong><?php echo (int) ($inboundStats['no_case'] ?? 0); ?></strong><small>потрібно створити або прив’язати</small></a>
-    <a href="<?php echo $this->url->get('client-case/inbox?sort=next_contact'); ?>"><span>Контакт</span><strong><?php echo (int) ($inboundStats['due'] ?? 0); ?></strong><small>прострочено або сьогодні</small></a>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/tabs', ['items' => $tabItems, 'label' => 'Статуси вхідних заявок']); ?>
   </section>
 
-  <section class="tn-admin-tabs">
-    <a class="<?php echo ($filters['status'] ?? '') === '' ? 'is-active' : ''; ?>" href="<?php echo $this->url->get('client-case/inbox'); ?>">Усі</a>
-    <?php foreach ($statusLabels as $code => $label): ?>
-      <a class="<?php echo ($filters['status'] ?? '') === $code ? 'is-active' : ''; ?>" href="<?php echo $this->url->get('client-case/inbox?status=' . $code); ?>"><?php echo $h($label); ?> · <?php echo (int) ($inboundStats['status'][$code] ?? 0); ?></a>
-    <?php endforeach; ?>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar', [
+        'method' => 'GET',
+        'action' => 'client-case/inbox',
+        'fields' => [
+            ['name' => 'q', 'type' => 'search', 'label' => 'Пошук', 'value' => $filters['q'] ?? '', 'placeholder' => 'Ім’я, телефон, email, об’єкт, кейс', 'grow' => true],
+            ['name' => 'request_intent', 'type' => 'select', 'label' => 'Намір', 'value' => $filters['request_intent'] ?? '', 'options' => $intentOptions],
+            ['name' => 'status', 'type' => 'select', 'label' => 'Статус', 'value' => $filters['status'] ?? '', 'options' => $statusOptions],
+            ['name' => 'assigned_user_id', 'type' => 'select', 'label' => 'Відповідальний', 'value' => (string) ($filters['assigned_user_id'] ?? 0), 'options' => $managerFilterOptions],
+            ['name' => 'has_case', 'type' => 'select', 'label' => 'Кейс', 'value' => $filters['has_case'] ?? '', 'options' => $caseOptions],
+            ['name' => 'sort', 'type' => 'select', 'label' => 'Сортування', 'value' => $filters['sort'] ?? 'newest', 'options' => $sortOptions],
+        ],
+        'actions' => [
+            ['label' => 'Застосувати', 'type' => 'submit', 'variant' => 'primary'],
+            ['label' => 'Скинути', 'href' => 'client-case/inbox', 'variant' => 'ghost'],
+        ],
+    ]); ?>
   </section>
 
-  <section class="tn-admin-panel">
-    <form class="tn-crm-filters" action="<?php echo $this->url->get('client-case/inbox'); ?>" method="get">
-      <label><span>Пошук</span><input name="q" type="search" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Ім’я, телефон, email, об’єкт, кейс"></label>
-      <label><span>Намір</span><select name="request_intent"><option value="">Усі</option><?php foreach ($intentLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['request_intent'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Статус</span><select name="status"><option value="">Усі</option><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo $selected($filters['status'] ?? '', $code); ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></label>
-      <label><span>Відповідальний</span><select name="assigned_user_id"><option value="0">Усі</option><?php foreach ($managerOptions as $manager): ?><option value="<?php echo (int) $manager['id']; ?>" <?php echo $selected($filters['assigned_user_id'] ?? 0, $manager['id']); ?>><?php echo $h($manager['full_name'] ?: $manager['email']); ?></option><?php endforeach; ?></select></label>
-      <label><span>Кейс</span><select name="has_case"><option value="">Усі</option><option value="yes" <?php echo $selected($filters['has_case'] ?? '', 'yes'); ?>>Є кейс</option><option value="no" <?php echo $selected($filters['has_case'] ?? '', 'no'); ?>>Без кейса</option></select></label>
-      <label><span>Сортування</span><select name="sort"><option value="newest" <?php echo $selected($filters['sort'] ?? '', 'newest'); ?>>Нові</option><option value="next_contact" <?php echo $selected($filters['sort'] ?? '', 'next_contact'); ?>>Наступний контакт</option><option value="status" <?php echo $selected($filters['sort'] ?? '', 'status'); ?>>За статусом</option></select></label>
-      <div class="tn-form-actions">
-        <button class="tn-btn tn-btn--dark" type="submit">Застосувати</button>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('client-case/inbox'); ?>">Скинути</a>
-      </div>
-    </form>
-  </section>
-
-  <section class="tn-admin-panel">
+  <section class="tn-ui-panel tn-workspace-section">
     <?php if (!$inboundRequests): ?>
-      <div class="tn-empty-state">
-        <h2>Заявок за цими фільтрами немає</h2>
-        <p>Змініть фільтри або поверніться до загальної черги.</p>
-      </div>
+      <?php $this->partial('components/ui/state', [
+          'kind' => 'empty',
+          'title' => 'Заявок за цими фільтрами немає',
+          'message' => 'Змініть фільтри або поверніться до загальної черги.',
+          'action' => ['label' => 'До всієї черги', 'href' => 'client-case/inbox'],
+      ]); ?>
     <?php else: ?>
       <div class="tn-inbox-list">
         <?php foreach ($inboundRequests as $request): ?>
@@ -111,7 +141,10 @@ $formatDateInput = static fn($value) => $value ? date('Y-m-d\TH:i', strtotime((s
                 <h2><?php echo $h($request['full_name']); ?></h2>
                 <p><?php echo $h($request['phone'] ?: $request['email'] ?: 'контакт не вказано'); ?> · <?php echo $h($request['created_at']); ?></p>
               </div>
-              <strong><?php echo $h($statusLabels[$request['status']] ?? $request['status']); ?></strong>
+              <?php $this->partial('components/ui/status_badge', [
+                  'label' => $statusLabels[$request['status']] ?? $request['status'],
+                  'tone' => $statusTone((string) $request['status']),
+              ]); ?>
             </header>
 
             <div class="tn-inbox-card__body">
