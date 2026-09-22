@@ -226,6 +226,21 @@
   .tn-ui-data-table__link { color: inherit; text-decoration: none; }
   .tn-ui-data-table__link:hover .tn-ui-data-table__primary { color: var(--tn-color-accent-strong); }
   .tn-ui-data-table__empty { padding: var(--tn-space-8) !important; color: var(--tn-color-muted); text-align: center !important; }
+  .tn-ui-operational-grid__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tn-space-2);
+    flex-wrap: wrap;
+    min-width: 148px;
+  }
+  .tn-ui-operational-grid__form {
+    display: inline-flex;
+    margin: 0;
+  }
+  .tn-ui-operational-grid__actions-heading {
+    width: 1%;
+    white-space: nowrap;
+  }
 
   @media (max-width: 760px) {
     .tn-ui-entity-head { grid-template-columns: 1fr; }
