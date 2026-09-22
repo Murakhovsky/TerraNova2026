@@ -42,9 +42,12 @@ foreach(['app/Interfaces/Web/Routing/FrontendRoutes.php','app/Interfaces/Web/Con
 
 $catalogJs=$read('frontend/entrypoints/terranova-catalog-api.js');
 $catalogView=$read('app/Interfaces/Web/View/property/catalog.phtml');
-$homeView=$read('app/Interfaces/Web/View/index/index.phtml');
+$homeController=$read('symfony/src/Controller/HomePageController.php');
+$homeView=$read('app/Interfaces/Web/View/home/canonical.phtml');
 $assert(str_contains($catalogJs,'/api/v1/public/properties'),'Catalog JavaScript is not using canonical public reads.');
 $assert(str_contains($catalogView,'api/v1/public/properties'),'Catalog view is not using canonical public reads.');
-$assert(str_contains($homeView,'api/v1/public/properties/featured'),'Homepage featured feed is not using canonical public reads.');
+$assert(str_contains($homeController,"'home/canonical'"),'Canonical Home controller must render the active homepage.');
+$assert(str_contains($homeView,'Company Operating System'),'Canonical homepage renderer is missing.');
+$assert(!file_exists($root.'/app/Interfaces/Web/View/index/index.phtml'),'Retired public homepage renderer returned.');
 
 echo "Public Property Symfony read cutover boundary OK\n";
