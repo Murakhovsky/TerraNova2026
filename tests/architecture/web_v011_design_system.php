@@ -17,6 +17,16 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ': ' . $needle);
 };
 
+foreach ([
+    'frontend/styles/interface.css',
+    'frontend/styles/terranova-club.css',
+    'frontend/styles/terranova-home.css',
+] as $retiredSource) {
+    if (is_file($root . '/' . $retiredSource)) {
+        throw new RuntimeException('Retired global frontend source restored: ' . $retiredSource);
+    }
+}
+
 foreach (['app/Domains/Frontend', 'app/Domains/Public', 'app/Domains/Portal'] as $forbiddenDomain) {
     if (is_dir($root . '/' . $forbiddenDomain)) {
         throw new RuntimeException('Frontend surfaces must remain Interface/Presentation concerns: ' . $forbiddenDomain);

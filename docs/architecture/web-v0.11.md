@@ -109,11 +109,11 @@ Feature bundles are appended and de-duplicated after the surface bundle.
 
 ## Legacy CSS extraction
 
-`terranova-club.css` is no longer a global runtime dependency. Its Public visual contract is moved under Public surface ownership. Historical source files may remain in the repository temporarily as quarantine/reference, but canonical entrypoints and the root layout may not import them.
+`terranova-club.css` is no longer a global runtime dependency. Its Public visual contract is moved under Public surface ownership. The historical source file has been removed; Git history is the archive.
 
 The old homepage bundle `terranova-home` is retired from Vite because WEB V0.10 replaced that homepage with the canonical Public surface.
 
-`interface.css` remains a compatibility source during this release but is no longer the Workspace runtime entry. `terranova-interface.js` now composes `design-system.css` and `layouts/workspace.css` directly.
+`interface.css` was a compatibility aggregate during WEB V0.11 and is now retired post-freeze. `terranova-interface.js` composes `design-system.css` and `layouts/workspace.css` directly, while `layouts/workspace.css` owns the live responsive workspace composition.
 
 ## Legacy JavaScript extraction
 
