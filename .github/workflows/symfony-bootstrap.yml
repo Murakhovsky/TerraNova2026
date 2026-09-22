@@ -35,6 +35,9 @@ on:
       - 'tests/architecture/web_experience_wave12_performance_observability.php'
       - 'tests/architecture/web_experience_wave12_sales_reference.php'
       - 'tests/architecture/web_experience_wave12_sales_cutover.php'
+      - 'tests/architecture/web_platform_v1_freeze.php'
+      - 'tests/architecture/contracts/web_platform_v1.php'
+      - 'docs/11-decisions/ADR-0011-web-platform-v1-freeze.md'
       - 'symfony/tests/sales_cutover_access_contract.php'
       - 'tests/smoke/sales_workspace.php'
       - 'tests/browser/sales_workspace.mjs'
@@ -450,6 +453,15 @@ jobs:
           docker compose exec -T php php bin/console debug:router cos_web_sales_dashboard >/dev/null
           docker compose exec -T php php bin/console debug:router cos_web_sales_leads >/dev/null
           docker compose exec -T php php bin/console debug:router cos_web_sales_lead >/dev/null
+
+      - name: Web Platform v1 freeze change-control
+        env:
+          COS_WEB_PLATFORM_FREEZE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" ] && ! printf '%s' "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" | grep -Eq '^0{40}$'; then
+            git fetch --no-tags --depth=1 origin "$COS_WEB_PLATFORM_FREEZE_BASE_SHA"
+          fi
+          php tests/architecture/web_platform_v1_freeze.php
 
       - name: Web Security response headers smoke
         run: |
