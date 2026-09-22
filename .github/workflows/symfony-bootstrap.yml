@@ -436,7 +436,7 @@ jobs:
           rm -rf /tmp/cos-panther
           mkdir -p /tmp/cos-panther
           cp symfony/composer.json symfony/composer.lock /tmp/cos-panther/
-          composer require --working-dir=/tmp/cos-panther --dev symfony/panther:2.4.0 phpunit/phpunit:^11.5 --no-interaction --no-progress --no-scripts --with-all-dependencies
+          composer require --working-dir=/tmp/cos-panther --dev symfony/panther:2.4.0 phpunit/phpunit:^11.5 --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies
           /tmp/cos-panther/vendor/bin/phpunit --bootstrap /tmp/cos-panther/vendor/autoload.php symfony/tests/Panther/WebExperiencePantherTest.php
 
       - name: Wave 12.23 functional contract
