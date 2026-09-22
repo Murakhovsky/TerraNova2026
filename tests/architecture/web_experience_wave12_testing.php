@@ -21,12 +21,21 @@ foreach ($required as $relative) {
 
 $browser = (string) file_get_contents($root . '/tests/browser/web_platform_quality.mjs');
 foreach ([
-    "name: 'desktop'",
-    "name: 'mobile'",
+    "name: 'desktop-light'",
+    "name: 'desktop-dark'",
+    "name: 'mobile-light'",
+    "name: 'mobile-dark'",
     'accessibilityIssues',
+    'layoutIssues',
     'assertVisual',
     "reducedMotion: 'reduce'",
+    "colorScheme: profile.colorScheme",
+    '/services',
+    '/contacts',
+    '/property/favour',
     'horizontal overflow',
+    'sticky/fixed element',
+    'form control clips viewport',
     'keyboard focus',
 ] as $marker) {
     if (!str_contains($browser, $marker)) {
