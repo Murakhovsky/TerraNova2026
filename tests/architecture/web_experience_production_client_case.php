@@ -61,14 +61,56 @@ foreach ([
     $contains($inbox, $marker, 'Client Case inbox lost a triage mutation/navigation contract.');
 }
 
+$index = $read('app/Interfaces/Web/View/client_case/index.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    "partial('components/ui/tabs'",
+    "partial('components/ui/filter_bar'",
+    'tn-ui-panel',
+    'tn-case-funnel',
+    'tn-client-case-operational-grid',
+    'tn-quick-case-form',
+] as $marker) {
+    $contains($index, $marker, 'Client Case index must use canonical shell while retaining funnel and operational mutations.');
+}
+foreach ([
+    'tn-breadcrumbs',
+    'tn-ui-alert tn-ui-alert--positive',
+    'tn-ui-alert tn-ui-alert--danger',
+] as $legacyMarker) {
+    $notContains($index, $legacyMarker, 'Client Case index must not restore redundant breadcrumb/local alert composition.');
+}
+foreach ([
+    "'active' => $activeTab",
+    'client-case/create',
+    'client-case/createFromInboundRequest/',
+    'client-case/linkInboundRequest',
+    'client-case/quickUpdate/',
+    'client-case/show/',
+    'name="csrf_token"',
+    'name="stage_id"',
+    'name="status"',
+    'name="priority"',
+    'name="assigned_user_id"',
+    'name="return_url"',
+] as $marker) {
+    $contains($index, $marker, 'Client Case index lost a funnel/create/quick-update contract.');
+}
+
 $controller = $read('symfony/src/Web/Sales/ClientCasePageController.php');
 foreach ([
+    'public function index(Request $request): Response',
     'public function inbox(Request $request): Response',
+    'public function create(Request $r): Response',
+    'public function quickUpdate(Request $r,string $id): Response',
     'public function updateInboundRequest(Request $r,string $id): Response',
     'public function createFromInboundRequest(Request $r,string $id): Response',
     'public function linkInboundRequest(Request $r): Response',
     'private function mutationTenant(Request $r): TenantContext|Response',
     '$this->csrf->isValid($r)',
+    '$this->write($t)->createOpportunity',
+    '$this->write($t)->quickUpdateOpportunity',
     '$this->write($t)->updateLead',
     '$this->write($t)->convertLeadToOpportunity',
     '$this->write($t)->attachInboundRequest',
@@ -79,6 +121,12 @@ foreach ([
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
+    'path: /client-case',
+    'ClientCasePageController::index',
+    'path: /client-case/create',
+    'ClientCasePageController::create',
+    'path: /client-case/quickUpdate/{id}',
+    'ClientCasePageController::quickUpdate',
     'path: /client-case/inbox',
     'ClientCasePageController::inbox',
     'path: /client-case/updateInboundRequest/{id}',
@@ -96,6 +144,8 @@ foreach ([
     '# Впровадження Client Case у production UI',
     '## Хвиля 1',
     '### Вхідні заявки (`Client Case Inbox`)',
+    '## Хвиля 2',
+    '### Клієнтські кейси (`Client Case Index`)',
     '## Межа operational cards',
     '## Критерії завершення',
 ] as $marker) {
