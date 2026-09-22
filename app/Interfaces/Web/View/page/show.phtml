@@ -13,21 +13,15 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
 ]); ?>
 
 <main class="tn-page tn-public-page">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><span><?php echo $h($page['kicker'] ?? 'Terra Nova'); ?></span>
-  </nav>
-
-  <section class="tn-page-hero">
-    <div>
-      <p class="tn-kicker"><?php echo $h($page['kicker'] ?? 'Terra Nova'); ?></p>
-      <h1><?php echo $h($page['title'] ?? 'Terra Nova CLUB'); ?></h1>
-      <p><?php echo $h($page['description'] ?? ''); ?></p>
-      <div class="tn-page-hero__actions">
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути об’єкти</a>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/submit'); ?>">Подати об’єкт</a>
-      </div>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+      'eyebrow' => $page['kicker'] ?? 'Terra Nova',
+      'title' => $page['title'] ?? 'Terra Nova CLUB',
+      'description' => $page['description'] ?? '',
+      'actions' => [
+          ['label' => 'Переглянути об’єкти', 'href' => 'property/catalog', 'variant' => 'primary'],
+          ['label' => 'Подати об’єкт', 'href' => 'property/submit', 'variant' => 'ghost'],
+      ],
+  ]); ?>
 
   <section class="tn-public-page__sections">
     <?php foreach (($page['sections'] ?? []) as $section): ?>
@@ -41,7 +35,7 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
   <?php if (!empty($page['has_form'])): ?>
     <section class="tn-public-contact" id="request">
       <div>
-        <p class="tn-kicker">Заявка</p>
+        <p class="tn-ui-eyebrow">Заявка</p>
         <h2>Що потрібно зробити?</h2>
         <p>Залиште контакт і короткий контекст. Запит потрапить у CRM та буде призначений менеджеру.</p>
       </div>
@@ -54,17 +48,21 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
         <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel"></label>
         <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
         <label><span>Повідомлення</span><textarea name="message" rows="5" required></textarea></label>
-        <button class="tn-btn tn-btn--accent" type="submit">Надіслати</button>
-        <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Надіслати</button>
+        <?php if ($inboundRequestStatus): ?><?php $this->partial('components/ui/state', ['kind' => 'info', 'title' => 'Статус запиту', 'message' => (string) $inboundRequestStatus]); ?><?php endif; ?>
       </form>
     </section>
   <?php else: ?>
     <section class="tn-sales-cta">
-      <div><p class="tn-kicker">Наступний крок</p><h2>Перейдіть до конкретної пропозиції</h2></div>
-      <div class="tn-hero-actions">
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('contacts'); ?>">Зв’язатися</a>
-      </div>
+      <div><p class="tn-ui-eyebrow">Наступний крок</p><h2>Перейдіть до конкретної пропозиції</h2></div>
+      <?php $this->partial('components/ui/action_bar', [
+          'actions' => [
+              ['label' => 'Каталог', 'href' => 'property/catalog', 'variant' => 'primary'],
+              ['label' => 'Зв’язатися', 'href' => 'contacts', 'variant' => 'ghost'],
+          ],
+          'align' => 'start',
+          'ariaLabel' => 'Наступний крок',
+      ]); ?>
     </section>
   <?php endif; ?>
 </main>
