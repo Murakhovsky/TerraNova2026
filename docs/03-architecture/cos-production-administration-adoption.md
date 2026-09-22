@@ -27,6 +27,33 @@ PHASE 11 переносить production Administration surfaces на canonical 
 
 Controller contract лишається у `CoreWorkspacePageController`: read surface вимагає admin context, create/update виконують окрему CSRF validation перед викликом Identity Administration service.
 
+## Хвиля 2
+
+### Контент і SEO (`Content Administration`)
+
+`content/manage.phtml`
+
+- legacy hero замінено на canonical PageHeader;
+- unavailable state використовує canonical State;
+- content summary переведено на KPI cards;
+- локальний filter form замінено на shared FilterBar;
+- materials listing переведено на canonical Panel + DataTable;
+- content status та SEO score відображаються semantic status cells;
+- n8n delivery history лишається domain-specific list у canonical panel shell;
+- edit/create links та query semantics не змінені.
+
+### Редактор контенту (`Content Editor`)
+
+`content/edit.phtml`
+
+- legacy hero замінено на canonical PageHeader;
+- save result використовує canonical State;
+- content, media, SEO/Open Graph та revisions sections переведено на canonical panel shell;
+- public preview action зберігає `target=_blank` та `rel=noopener`;
+- save route `admin/content/save/{id}`, CSRF і всі content/SEO fields не змінені.
+
+Controller contract лишається у `ContentAdminPageController`: manage/edit потребують manager context, а save окремо перевіряє CSRF перед викликом Content service.
+
 ## Межа editable grid
 
 Users table не є read-only data table. Кожен рядок одночасно є формою редагування `full_name`, `phone`, `role`, `status` та optional password reset.
@@ -43,7 +70,7 @@ Users table не є read-only data table. Кожен рядок одночасн
 
 ## Наступні хвилі
 
-- Wave 2: Content Administration;
+- Wave 2: Content Administration — виконано;
 - Wave 3: Spatial Administration;
 - Wave 4: administration closure та route/view cleanup, якщо аудит покаже compatibility debt.
 
@@ -53,4 +80,6 @@ Users table не є read-only data table. Кожен рядок одночасн
 - role capability semantics не змінені;
 - create/update user mutations і CSRF contract збережені;
 - editable accounts grid явно зафіксований як interaction boundary;
+- Content Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
+- Content editor зберігає save/CSRF/content/SEO mutation contracts;
 - PHASE 11 architecture gate запускається у CI.
