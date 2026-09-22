@@ -93,7 +93,9 @@ Canonical table renderers:
 
 Product-level raw-table exceptions після post-freeze cleanup:
 
-1. `property/pdf.phtml` — service-level print renderer.
+- немає.
+
+`property/pdf.phtml` лишається service-level print renderer, але більше не використовує HTML table як layout primitive. Print layout побудовано на Dompdf-safe float / inline-block blocks, тому PHASE 13 raw-table whitelist тепер складається лише з canonical renderers.
 
 Після PHASE 15 перший post-freeze cleanup прибрав `cos/index.phtml` із product whitelist: Proposed Actions переведено на canonical `OperationalGrid` із first-class mutation actions.
 
@@ -102,6 +104,8 @@ Product-level raw-table exceptions після post-freeze cleanup:
 Третій post-freeze cleanup прибрав `client_case/index.phtml` із whitelist: quick-update workflow переведено на OperationalGrid із row form ownership, semantic Stage, editable workflow fields, CSRF/return-url та submit/deep-link actions.
 
 Четвертий post-freeze cleanup прибрав `methodology_studio/index.phtml` із whitelist: JS-driven entity browser більше не використовує HTML table. `data-entities` лишився client-render mount, а rows переведені на responsive semantic CSS grid із збереженням `data-edit` delegation та editor workflow.
+
+П’ятий post-freeze cleanup прибрав останній product-level exception `property/pdf.phtml` із raw-table whitelist. PDF template зберігається як service-level print renderer у `PropertyPresentationService`, але hero, facts, characteristics, partner conditions, gallery та group cards більше не будуються через `<table>`. Для Dompdf використано print-safe float / inline-block layout без зміни document variants або PDF ownership.
 
 Якщо новий raw table з’явиться в іншому production view, PHASE 13 gate падає. Якщо один із винятків перестає містити table, gate також падає, змушуючи прибрати застарілий whitelist entry. Так винятки не перетворюються на вічні археологічні пам’ятки.
 
@@ -132,6 +136,7 @@ Product-level raw-table exceptions після post-freeze cleanup:
 - шість read-only runtime tables COS використовують canonical DataTable;
 - Proposed Actions після post-freeze cleanup використовує canonical OperationalGrid з execute/approval forms;
 - Company Home decision queue використовує canonical DataTable;
-- production PHTML raw-table whitelist обмежений одним класифікованим service-level exception плюс canonical renderers;
+- production PHTML raw-table whitelist не має product-level exceptions і містить лише canonical renderers;
 - PHASE 13 architecture gate запускається у CI;
+- Property PDF лишається service-level print renderer без raw HTML tables;
 - винятки класифіковані явно, а не залишені випадково.
