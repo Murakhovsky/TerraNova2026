@@ -46,23 +46,27 @@ Sales read model
 
 ### Панель продажів (`Sales Dashboard`)
 
-`sales/dashboard.phtml`
+`symfony/templates/experience/sales/dashboard.html.twig` після Wave 12.26.
 
-- PageHeader залишається canonical;
-- KPI використовують canonical KPI cards;
-- New Leads переходить з локальної HTML table на canonical DataTable;
-- status отримує semantic tone;
-- mobile table використовує record-card contract.
+Початкова PHASE 9 міграція використовувала PHTML compatibility layer. Після canonical Sales cutover production ownership перейшов до Twig:
+
+- canonical `CosEntityHeader`;
+- `CosMoneyMetric` / `CosTrendMetric`;
+- canonical entity list;
+- server-owned Sales query projection;
+- production route `/sales/dashboard`.
 
 ### Вхідні ліди (`Lead Inbox`)
 
-`sales/leads.phtml`
+`symfony/templates/experience/sales/leads.html.twig` та `lead_workspace.html.twig` після Wave 12.26.
 
-- PageHeader залишається canonical;
-- filter form переходить на shared FilterBar;
-- status label переходить на semantic Status;
-- workflow buttons та JS data attributes не змінюються;
-- lead detail drawer behavior не переписується в цій хвилі.
+Початкова PHASE 9 міграція зберігала PHTML interaction hooks. Після cutover ці ж операційні контракти перенесені у Twig + Stimulus:
+
+- `CosFilterBar`;
+- semantic Status;
+- status / owner / create deal / follow-up mutations;
+- canonical `/sales/leads/{id}` Lead Workspace;
+- CSRF та idempotency contracts.
 
 ### Воронка продажів (`Sales Pipeline`)
 
