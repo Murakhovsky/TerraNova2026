@@ -97,7 +97,6 @@ $canonicalTableRenderers = [
     'app/Interfaces/Web/View/components/ui/operational_grid.phtml' => 'canonical mutation-aware OperationalGrid renderer',
 ];
 $allowedTableViews = [
-    'app/Interfaces/Web/View/admin/users.phtml' => 'editable Users mutation grid',
     'app/Interfaces/Web/View/client_case/index.phtml' => 'operational Client Case quick-update grid',
     'app/Interfaces/Web/View/methodology_studio/index.phtml' => 'interactive Methodology Studio editor grid',
     'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
@@ -128,9 +127,21 @@ foreach ($classifiedTableViews as $relative => $reason) {
 }
 
 $users = $read('app/Interfaces/Web/View/admin/users.phtml');
-foreach (['tn-admin-editable-grid', 'admin/updateUser/', 'name="csrf_token"', 'user-form-'] as $marker) {
-    $contains($users, $marker, 'Users raw table exception must remain an editable mutation grid.');
+foreach ([
+    '$userRows = [];',
+    "'bodyPartial' => 'components/ui/operational_grid'",
+    "'_form' => [",
+    "'action' => 'admin/updateUser/'",
+    "'kind' => 'submit'",
+    "'name' => 'full_name'",
+    "'name' => 'phone'",
+    "'name' => 'role'",
+    "'name' => 'status'",
+    "'name' => 'password'",
+] as $marker) {
+    $contains($users, $marker, 'Users must use canonical OperationalGrid editable row forms.');
 }
+$notContains($users, '<table', 'Users Administration must not retain a raw table after OperationalGrid migration.');
 
 $clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
 foreach (['tn-client-case-operational-grid', 'client-case/quickUpdate/', 'name="csrf_token"', 'tn-quick-case-form'] as $marker) {
