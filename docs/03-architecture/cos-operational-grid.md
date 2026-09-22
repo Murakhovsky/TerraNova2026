@@ -38,7 +38,7 @@ Renderer не приймає arbitrary HTML callbacks. Row actions описую�
 
 Це навмисно вузький контракт. Textarea, arbitrary input widgets, nested templates та HTML callbacks не підтримуються.
 
-## Production adoption
+## Впровадження у production
 
 `COS Control Center → Proposed Actions` переведено з raw `tn-listing-table` на OperationalGrid.
 
@@ -53,7 +53,7 @@ Renderer не приймає arbitrary HTML callbacks. Row actions описую�
 
 Backend command path не змінювався.
 
-### Client Case quick-update
+### Швидке оновлення Client Case
 
 `client_case/index.phtml` переведено з raw operational table на OperationalGrid row editor.
 
