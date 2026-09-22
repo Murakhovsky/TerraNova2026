@@ -146,6 +146,13 @@ cos_web_guide:
   requirements:
     slug: '[a-z0-9-]+'
 
+cos_web_public_page:
+  path: /{slug}
+  controller: App\Web\Content\PublicContentPageController::page
+  methods: [GET, HEAD, POST]
+  requirements:
+    slug: 'terra-nova|agency|services|partners|team|cases|vacancies|contacts|it|art'
+
 cos_web_sitemap:
   path: /sitemap.xml
   controller: App\Web\Seo\SitemapController
