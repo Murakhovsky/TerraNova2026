@@ -10,15 +10,17 @@ $authStatus = $authStatus ?? null;
 <main class="tn-page">
   <section class="tn-auth-layout">
     <div class="tn-auth-copy">
-      <p class="tn-kicker">Terra Nova CLUB</p>
-      <h1>Вхід у кабінет</h1>
-      <p>Кабінет зберігає ваші подані об’єкти, заявки, майбутні добірки, перегляди й персональні сценарії Terra Nova.</p>
+      <?php $this->partial('components/ui/page_header', [
+        'eyebrow' => 'Terra Nova CLUB',
+        'title' => 'Вхід у кабінет',
+        'description' => 'Кабінет зберігає ваші подані об’єкти, заявки, майбутні добірки, перегляди й персональні сценарії Terra Nova.',
+      ]); ?>
     </div>
     <form class="tn-auth-form" action="<?php echo $this->url->get('auth/login'); ?>" method="post">
       <label><span>Email</span><input name="email" type="email" autocomplete="email" value="<?php echo $field($formData, 'email'); ?>" required></label>
       <label><span>Пароль</span><input name="password" type="password" autocomplete="current-password" required></label>
-      <button class="tn-btn tn-btn--accent" type="submit">Увійти</button>
-      <?php if ($authStatus): ?><p class="tn-form-status is-visible"><?php echo $h($authStatus); ?></p><?php endif; ?>
+      <button class="tn-ui-button tn-ui-button--primary" type="submit">Увійти</button>
+      <?php if ($authStatus): ?><div class="tn-ui-alert tn-ui-alert--danger" role="alert"><?php echo $h($authStatus); ?></div><?php endif; ?>
       <p class="tn-auth-form__note">Ще немає акаунта? <a href="<?php echo $this->url->get('auth/register'); ?>">Зареєструватися</a></p>
     </form>
   </section>
