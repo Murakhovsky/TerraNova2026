@@ -328,7 +328,7 @@ foreach ([
     '## Хвиля 4',
     '### Фінальний audit і classification',
     '### Виведені historical renderers',
-    '### Whitelist specialized surfaces',
+    '### Whitelist спеціалізованих surfaces (`Specialized Surface Whitelist`)',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
