@@ -9,14 +9,22 @@ $blog = $blog ?? ['items' => [], 'page' => 1, 'pages' => 1, 'total' => 0];
 ]]); ?>
 
 <main class="tn-page tn-blog-page">
-  <nav class="tn-breadcrumbs"><a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><span>Блог</span></nav>
-  <section class="tn-page-hero">
-    <div><p class="tn-kicker">Terra Nova Journal</p><h1>Блог про нерухомість</h1><p>Практичні матеріали про вибір, продаж, підготовку та управління об’єктами.</p></div>
-    <div class="tn-page-hero__meta"><strong><?php echo (int) $blog['total']; ?></strong><span>опублікованих матеріалів</span></div>
-  </section>
-
+  <?php $this->partial('components/ui/page_header', [
+      'eyebrow' => 'Terra Nova Journal',
+      'title' => 'Блог про нерухомість',
+      'description' => 'Практичні матеріали про вибір, продаж, підготовку та управління об’єктами.',
+      'meta' => ['value' => (int) $blog['total'], 'label' => 'опублікованих матеріалів'],
+      'actions' => [
+          ['label' => 'Каталог', 'href' => 'property/catalog', 'variant' => 'ghost'],
+          ['label' => 'Залишити запит', 'href' => 'contacts', 'variant' => 'primary'],
+      ],
+  ]); ?>
   <?php if (!$blog['items']): ?>
-    <section class="tn-empty-state"><h2>Матеріали готуються</h2><p>Нові статті з’являться після редакційної перевірки.</p></section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'empty',
+        'title' => 'Матеріали готуються',
+        'message' => 'Нові статті з’являться після редакційної перевірки.',
+    ]); ?>
   <?php else: ?>
     <section class="tn-blog-grid">
       <?php foreach ($blog['items'] as $article): ?>
@@ -25,7 +33,7 @@ $blog = $blog ?? ['items' => [], 'page' => 1, 'pages' => 1, 'total' => 0];
             <?php if (!empty($article['featured_image_url'])): ?><img src="<?php echo $h($article['featured_image_url']); ?>" alt="<?php echo $h($article['featured_image_alt'] ?: $article['title']); ?>" loading="lazy"><?php else: ?><span>Terra Nova</span><?php endif; ?>
           </a>
           <div>
-            <p class="tn-kicker"><?php echo $h($article['category'] ?: 'Нерухомість'); ?></p>
+            <p class="tn-ui-eyebrow"><?php echo $h($article['category'] ?: 'Нерухомість'); ?></p>
             <h2><a href="<?php echo $this->url->get('blog/' . $article['slug']); ?>"><?php echo $h($article['title']); ?></a></h2>
             <p><?php echo $h($article['excerpt']); ?></p>
             <span><?php echo $h(date('d.m.Y', strtotime((string) $article['published_at']))); ?></span>
