@@ -21,7 +21,7 @@ foreach ([
     "from '@axe-core/playwright'",
     "from 'playwright-core'",
     '4.13.0',
-    'wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa',
+    "'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'",
     "{ name: 'home', path: '/' }",
     "{ name: 'login', path: '/auth/login' }",
     "{ name: 'property-catalog', path: '/property/catalog' }",
@@ -50,6 +50,7 @@ foreach ([
     'PHASE 15 quality closure gate',
     'PHASE 15 WCAG accessibility',
     'Upload PHASE 15 accessibility evidence',
+    'npm run test:web-accessibility',
 ] as $marker) {
     if (!str_contains($workflow, $marker)) {
         throw new RuntimeException('PHASE 15 CI coverage is incomplete: ' . $marker);
