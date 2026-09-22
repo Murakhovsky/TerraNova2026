@@ -12,7 +12,7 @@ kind: architecture
 
 ## Що перевіряється
 
-### Route → controller → view
+### Маршрут → контролер → представлення
 
 `tests/architecture/web_experience_final_route_audit.php`:
 
@@ -49,7 +49,7 @@ Audit знайшов реальний public 404-кластер: `PublicPageCata
 
 Старий public navigation target `/cos/en` видалено. Замість воскресіння retired multilingual `company_os` створено один canonical public COS page на `/cos`.
 
-## Dead views і assets
+## Мертві представлення та assets
 
 Після перевірки runtime references видалено:
 
@@ -64,7 +64,7 @@ Audit знайшов реальний public 404-кластер: `PublicPageCata
 
 `property/pdf.phtml` не видаляється: Web route використовує presentation print flow, але `PropertyPresentationService` використовує цей PHTML як service-level print renderer.
 
-## Legacy primitive cleanup
+## Очищення legacy primitives
 
 Живі routed PHTML більше не повинні використовувати:
 
@@ -83,7 +83,7 @@ Spatial upload зберігає `data-spatial-upload-status`, але visibility 
 
 Obsolete selectors прибрано або переведено на canonical selectors у production/public/client CSS.
 
-## Tables і forms
+## Таблиці та форми
 
 PHASE 13 вже забороняє product-level raw tables, окрім canonical table renderers. Editable operational surfaces використовують `OperationalGrid` або явно зафіксований domain-specific mutation pattern.
 
@@ -94,7 +94,7 @@ Final audit не перетворює form-heavy workflow на read-only DataTab
 - routed forms залишаються видимими, підписаними та не виходять за viewport;
 - CSRF/mutation contracts захищаються domain/production gates.
 
-## Visual QA matrix
+## Матриця Visual QA
 
 `tests/browser/web_platform_quality.mjs` проходить representative public journey:
 
@@ -130,7 +130,7 @@ Final audit не перетворює form-heavy workflow на read-only DataTab
 
 Screenshots зберігаються у CI artifact `wave-12-23-web-quality`.
 
-## Dark / light scope
+## Межі темної та світлої тем
 
 Canonical Symfony Experience Platform має explicit theme tokens і dark/light contracts.
 
@@ -138,7 +138,7 @@ Retained PHTML compatibility/public surfaces на момент freeze мають
 
 Тобто dark preference перевіряється як robustness state, а не як обіцянка повного dark skin для кожної retained PHTML surface.
 
-## Specialized surfaces
+## Спеціалізовані surfaces
 
 Canonicalization не означає, що всі екрани повинні мати однаковий shell.
 
@@ -152,7 +152,7 @@ Canonicalization не означає, що всі екрани повинні м
 
 Вони проходять спільні architecture/runtime/visual gates, але не підміняються generic component лише заради однакового DOM.
 
-## Stale tests і документація
+## Застарілі тести й документація
 
 Під час audit:
 
@@ -161,7 +161,7 @@ Canonicalization не означає, що всі екрани повинні м
 - `web-sitemap.md` переведено з dead `/cos/en` на live `/cos`;
 - sitemap architecture gate тепер вимагає, щоб `PublicPageCatalog` мав фактичний Symfony route.
 
-## Freeze rule
+## Правило freeze
 
 Після merge цього audit будь-який новий routed UI повинен одночасно:
 
