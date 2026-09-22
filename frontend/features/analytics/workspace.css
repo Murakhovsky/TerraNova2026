@@ -1,42 +1,8 @@
 @layer tn-analytics-workspace {
-  .tn-analytics-workspace .tn-page {
+  .tn-analytics-workspace {
     width: min(100%, 1680px);
     margin-inline: auto;
     padding-inline: clamp(18px, 2.4vw, 36px);
-  }
-
-  .tn-analytics-workspace .tn-page-hero {
-    align-items: end;
-    gap: 24px;
-  }
-
-  .tn-analytics-workspace .tn-analytics-period {
-    min-width: min(100%, 220px);
-  }
-
-  .tn-analytics-workspace .tn-analytics-period label {
-    display: grid;
-    gap: 6px;
-  }
-
-  .tn-analytics-workspace .tn-admin-metrics {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
-
-  .tn-analytics-workspace .tn-admin-dashboard-grid,
-  .tn-analytics-workspace .tn-admin-card {
-    min-width: 0;
-  }
-
-  .tn-analytics-workspace .tn-table-wrap {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-  }
-
-  .tn-analytics-workspace .tn-listing-table {
-    min-width: 760px;
   }
 
   .tn-analytics-workspace .tn-dashboard-bars {
@@ -50,42 +16,15 @@
     align-items: baseline;
   }
 
-  .tn-analytics-workspace form[aria-busy='true'] button[type='submit'],
-  .tn-analytics-workspace form[data-submitting='true'] input[type='submit'] {
-    cursor: progress;
-    opacity: 0.68;
-  }
-
   @media (max-width: 1050px) {
-    .tn-analytics-workspace .tn-page {
+    .tn-analytics-workspace {
       padding-inline: 20px;
-    }
-
-    .tn-analytics-workspace .tn-admin-dashboard-grid {
-      grid-template-columns: 1fr;
     }
   }
 
   @media (max-width: 650px) {
-    .tn-analytics-workspace .tn-page {
+    .tn-analytics-workspace {
       padding-inline: 14px;
-    }
-
-    .tn-analytics-workspace .tn-page-hero {
-      align-items: stretch;
-      gap: 16px;
-    }
-
-    .tn-analytics-workspace .tn-analytics-period {
-      width: 100%;
-    }
-
-    .tn-analytics-workspace .tn-admin-metrics {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .tn-analytics-workspace .tn-listing-table {
-      min-width: 680px;
     }
 
     .tn-analytics-workspace .tn-dashboard-bars > div {
