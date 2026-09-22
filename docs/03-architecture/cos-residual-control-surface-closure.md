@@ -94,11 +94,12 @@ Canonical table renderers:
 Product-level raw-table exceptions після post-freeze cleanup:
 
 1. `admin/users.phtml` — editable identity grid із row-level forms;
-2. `client_case/index.phtml` — operational quick-update grid;
-3. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
-4. `property/pdf.phtml` — service-level print renderer.
+2. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
+3. `property/pdf.phtml` — service-level print renderer.
 
-Після PHASE 15 перший post-freeze cleanup прибрав `cos/index.phtml` із product whitelist: Proposed Actions переведено на canonical `OperationalGrid` із first-class mutation actions.
+Після PHASE 15 post-freeze cleanup уже прибрав два product exceptions:
+- `cos/index.phtml` → Proposed Actions переведено на canonical `OperationalGrid` із first-class mutation actions;
+- `client_case/index.phtml` → quick-update list переведено на `OperationalGrid` row editor із bounded select fields.
 
 Якщо новий raw table з’явиться в іншому production view, PHASE 13 gate падає. Якщо один із винятків перестає містити table, gate також падає, змушуючи прибрати застарілий whitelist entry. Так винятки не перетворюються на вічні археологічні пам’ятки.
 
@@ -125,6 +126,6 @@ Product-level raw-table exceptions після post-freeze cleanup:
 - шість read-only runtime tables COS використовують canonical DataTable;
 - Proposed Actions після post-freeze cleanup використовує canonical OperationalGrid з execute/approval forms;
 - Company Home decision queue використовує canonical DataTable;
-- production PHTML raw-table whitelist обмежений шістьма класифікованими surfaces;
+- Client Case Index використовує canonical OperationalGrid row editor без raw table;
 - PHASE 13 architecture gate запускається у CI;
 - винятки класифіковані явно, а не залишені випадково.
