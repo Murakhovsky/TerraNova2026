@@ -215,7 +215,7 @@ $breadcrumbJson = [
             <option value="<?php echo $h($location['slug']); ?>" <?php echo ($filters['location'] ?? '') === $location['slug'] ? 'selected' : ''; ?>><?php echo $h($location['city']); ?></option>
           <?php endforeach; ?>
         </select>
-        <button class="tn-btn tn-btn--dark" type="submit">Показати</button>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Показати</button>
       </div>
     </form>
   </section>
@@ -319,7 +319,7 @@ $breadcrumbJson = [
           </select>
         </label>
 
-        <button class="tn-btn tn-btn--accent" type="submit">Показати</button>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Показати</button>
         <a class="tn-filter-panel__reset" href="<?php echo $this->url->get('property/catalog'); ?>">Скинути фільтри</a>
       </form>
     </aside>
@@ -338,20 +338,23 @@ $breadcrumbJson = [
       </div>
 
       <?php if ($catalogStatus): ?>
-        <div class="tn-empty-state" data-catalog-empty>
-          <h2>Каталог тимчасово недоступний</h2>
-          <p><?php echo $h($catalogStatus); ?></p>
-        </div>
+        <?php $this->partial('components/ui/state', [
+            'kind' => 'error',
+            'title' => 'Каталог тимчасово недоступний',
+            'message' => $catalogStatus,
+            'attributes' => ['data-catalog-empty' => ''],
+        ]); ?>
       <?php endif; ?>
 
-      <?php if ($propertyMatchStatus): ?><p class="tn-form-status is-visible"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
+      <?php if ($propertyMatchStatus): ?><p class="tn-ui-alert tn-ui-alert--positive" role="status"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
 
       <?php if (!$properties && !$catalogStatus): ?>
-        <div class="tn-empty-state">
-          <h2>За цими фільтрами об’єктів поки немає</h2>
-          <p>Змініть параметри або залиште запит, і ми підготуємо добірку вручну.</p>
-          <a class="tn-btn tn-btn--dark" href="#request">Залишити запит</a>
-        </div>
+        <?php $this->partial('components/ui/state', [
+            'kind' => 'empty',
+            'title' => 'За цими фільтрами об’єктів поки немає',
+            'message' => 'Змініть параметри або залиште запит, і ми підготуємо добірку вручну.',
+            'action' => ['label' => 'Залишити запит', 'href' => '#request'],
+        ]); ?>
       <?php endif; ?>
 
       <div class="tn-property-grid tn-property-grid--catalog" data-catalog-grid data-api-url="<?php echo $this->url->get('api/v1/public/properties'); ?>">
@@ -387,8 +390,8 @@ $breadcrumbJson = [
                 <span><?php echo $h($property['public_id']); ?></span>
               </div>
               <div class="tn-card-actions">
-                <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
-                <a class="tn-btn tn-btn--ghost" href="#request">Запит</a>
+                <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get('property/show/' . $property['slug']); ?>">Відкрити</a>
+                <a class="tn-ui-button tn-ui-button--ghost" href="#request">Запит</a>
                 <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному" aria-label="Додати у вибране">♡</button>
               </div>
               <?php if ($managerClientCases): ?>
@@ -413,11 +416,11 @@ $breadcrumbJson = [
       <?php if ((int) ($pagination['total_pages'] ?? 1) > 1): ?>
         <nav class="tn-card-actions" aria-label="Сторінки каталогу" data-catalog-pagination>
           <?php if (!empty($pagination['has_previous'])): ?>
-            <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get($pageUrl((int) $pagination['previous_page'])); ?>">Назад</a>
+            <a class="tn-ui-button tn-ui-button--ghost" href="<?php echo $this->url->get($pageUrl((int) $pagination['previous_page'])); ?>">Назад</a>
           <?php endif; ?>
           <span><?php echo (int) $pagination['page']; ?> / <?php echo (int) $pagination['total_pages']; ?></span>
           <?php if (!empty($pagination['has_next'])): ?>
-            <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get($pageUrl((int) $pagination['next_page'])); ?>">Далі</a>
+            <a class="tn-ui-button tn-ui-button--primary" href="<?php echo $this->url->get($pageUrl((int) $pagination['next_page'])); ?>">Далі</a>
           <?php endif; ?>
         </nav>
       <?php else: ?>
@@ -456,8 +459,8 @@ $breadcrumbJson = [
       <label><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required></label>
       <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
       <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип об’єкта або короткий опис задачі"></textarea></label>
-      <button class="tn-btn tn-btn--dark" type="submit">Надіслати заявку</button>
-      <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+      <button class="tn-ui-button tn-ui-button--primary" type="submit">Надіслати заявку</button>
+      <?php if ($inboundRequestStatus): ?><p class="tn-ui-alert tn-ui-alert--positive" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
     </form>
   </section>
 </main>
