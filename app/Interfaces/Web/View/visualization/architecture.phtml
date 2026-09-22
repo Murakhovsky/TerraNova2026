@@ -34,56 +34,75 @@ if (!is_string($graphJson)) {
   data-architecture-endpoint="<?php echo $h($this->url->get('cos/architecture/graph')); ?>"
   data-architecture-default-view="<?php echo $h($defaultView); ?>"
 >
-  <nav class="tn-breadcrumbs">
-    <a href="<?php echo $this->url->get('cabinet'); ?>">Кабінет</a><span>/</span>
-    <a href="<?php echo $this->url->get('cos/control-center'); ?>">COS</a><span>/</span><span>Architecture Explorer</span>
-  </nav>
+  <?php $this->partial('components/ui/page_header', [
+      'eyebrow' => 'COS Visualization',
+      'title' => 'Architecture Explorer',
+      'description' => 'Канонічний Architecture Graph з server-side projections для system, runtime, domain, dependencies, events, actions, agents, integrations та code surface.',
+      'actions' => [
+          ['label' => 'Control Center', 'href' => 'cos/control-center', 'variant' => 'ghost'],
+          ['label' => 'JSON health', 'href' => 'cos/architecture/health', 'variant' => 'ghost', 'attributes' => ['target' => '_blank', 'rel' => 'noopener']],
+      ],
+  ]); ?>
 
-  <section class="tn-listing-hero tn-architecture-hero">
-    <div>
-      <p class="tn-kicker">COS Visualization</p>
-      <h1>Architecture Explorer</h1>
-      <p>Канонічний Architecture Graph з server-side projections для system, runtime, domain, dependencies, events, actions, agents, integrations та code surface.</p>
-    </div>
-    <div class="tn-architecture-hero__stats" aria-label="Active graph summary">
-      <span><strong data-architecture-view-label><?php echo $h($viewDescriptions[$defaultView]['label'] ?? $defaultView); ?></strong> view</span>
-      <span><strong data-architecture-node-count><?php echo (int) ($summary['nodes'] ?? 0); ?></strong> nodes</span>
-      <span><strong data-architecture-edge-count><?php echo (int) ($summary['edges'] ?? 0); ?></strong> edges</span>
-      <span><strong><?php echo $h($healthStatus); ?></strong> health</span>
-      <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('cos/control-center'); ?>">Control Center</a>
-    </div>
+  <section class="tn-ui-kpi-grid tn-workspace-section" aria-label="Active graph summary">
+    <?php $this->partial('components/ui/kpi_card', [
+        'label' => 'Projection',
+        'value' => $viewDescriptions[$defaultView]['label'] ?? $defaultView,
+        'hint' => 'active view',
+        'tone' => 'brand',
+        'valueAttributes' => ['data-architecture-view-label' => ''],
+    ]); ?>
+    <?php $this->partial('components/ui/kpi_card', [
+        'label' => 'Nodes',
+        'value' => (int) ($summary['nodes'] ?? 0),
+        'hint' => 'active projection',
+        'valueAttributes' => ['data-architecture-node-count' => ''],
+    ]); ?>
+    <?php $this->partial('components/ui/kpi_card', [
+        'label' => 'Edges',
+        'value' => (int) ($summary['edges'] ?? 0),
+        'hint' => 'active projection',
+        'valueAttributes' => ['data-architecture-edge-count' => ''],
+    ]); ?>
+    <?php $this->partial('components/ui/kpi_card', [
+        'label' => 'Graph health',
+        'value' => strtoupper($healthStatus),
+        'hint' => (int) ($architectureHealth['errors'] ?? 0) . ' errors · ' . (int) ($architectureHealth['warnings'] ?? 0) . ' warnings',
+        'tone' => $healthStatus === 'ok' ? 'positive' : ($healthStatus === 'error' ? 'danger' : 'warning'),
+    ]); ?>
   </section>
 
   <?php if ($pageStatus): ?>
-    <p class="tn-form-status is-visible"><?php echo $h($pageStatus); ?></p>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'error',
+        'title' => 'Architecture Explorer недоступний',
+        'message' => (string) $pageStatus,
+    ]); ?>
   <?php endif; ?>
 
   <?php if ($architectureHealth): ?>
-    <section class="tn-admin-panel" aria-label="Architecture graph health">
-      <div class="tn-section-heading">
+    <section class="tn-ui-panel tn-workspace-section" aria-label="Architecture graph health">
+      <div class="tn-ui-panel__head">
         <div>
-          <p class="tn-kicker">Graph Health</p>
+          <p class="tn-ui-eyebrow">Graph Health</p>
           <h2><?php echo $h(strtoupper($healthStatus)); ?></h2>
+          <p><?php echo (int) ($architectureHealth['errors'] ?? 0); ?> errors · <?php echo (int) ($architectureHealth['warnings'] ?? 0); ?> warnings · <?php echo (int) ($architectureHealth['info'] ?? 0); ?> info</p>
         </div>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('cos/architecture/health'); ?>">JSON health</a>
       </div>
-      <p class="tn-muted">
-        <?php echo (int) ($architectureHealth['errors'] ?? 0); ?> errors ·
-        <?php echo (int) ($architectureHealth['warnings'] ?? 0); ?> warnings ·
-        <?php echo (int) ($architectureHealth['info'] ?? 0); ?> info
-      </p>
-      <?php if ($healthIssues): ?>
-        <ul>
-          <?php foreach (array_slice($healthIssues, 0, 5) as $issue): ?>
-            <li>
-              <strong><?php echo $h($issue['severity'] ?? 'info'); ?> / <?php echo $h($issue['code'] ?? 'unknown'); ?></strong>
-              <?php echo $h($issue['message'] ?? 'Architecture health issue.'); ?>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else: ?>
-        <p>Структурних проблем Architecture Graph не виявлено.</p>
-      <?php endif; ?>
+      <div class="tn-ui-panel__body">
+        <?php if ($healthIssues): ?>
+          <ul>
+            <?php foreach (array_slice($healthIssues, 0, 5) as $issue): ?>
+              <li>
+                <strong><?php echo $h($issue['severity'] ?? 'info'); ?> / <?php echo $h($issue['code'] ?? 'unknown'); ?></strong>
+                <?php echo $h($issue['message'] ?? 'Architecture health issue.'); ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?>
+          <p>Структурних проблем Architecture Graph не виявлено.</p>
+        <?php endif; ?>
+      </div>
     </section>
   <?php endif; ?>
 
@@ -126,7 +145,7 @@ if (!is_string($graphJson)) {
 
   <section class="tn-architecture-shell">
     <aside class="tn-architecture-sidebar" aria-label="Node type filters">
-      <div class="tn-section-heading"><div><p class="tn-kicker">Filters</p><h2>Node types</h2></div></div>
+      <div><p class="tn-ui-eyebrow">Filters</p><h2>Node types</h2></div>
       <div class="tn-architecture-types" data-architecture-types>
         <?php foreach ($nodeTypes as $type => $count): ?>
           <label>
@@ -140,12 +159,14 @@ if (!is_string($graphJson)) {
 
     <div class="tn-architecture-stage-wrap">
       <?php if ($architectureDiagnostic): ?>
-        <div class="tn-form-status is-visible" data-architecture-backend-diagnostic>
-          <strong>Backend diagnostic</strong><br>
-          stage: <?php echo $h($architectureDiagnostic['stage'] ?? 'unknown'); ?><br>
-          exception: <?php echo $h($architectureDiagnostic['exception'] ?? 'unknown'); ?><br>
-          detail: <?php echo $h($architectureDiagnostic['detail'] ?? 'No details.'); ?>
-        </div>
+        <?php $this->partial('components/ui/state', [
+            'kind' => 'error',
+            'title' => 'Backend diagnostic',
+            'message' => 'stage: ' . (string) ($architectureDiagnostic['stage'] ?? 'unknown')
+                . ' · exception: ' . (string) ($architectureDiagnostic['exception'] ?? 'unknown')
+                . ' · detail: ' . (string) ($architectureDiagnostic['detail'] ?? 'No details.'),
+            'attributes' => ['data-architecture-backend-diagnostic' => ''],
+        ]); ?>
       <?php endif; ?>
       <div class="tn-architecture-stage" data-architecture-stage aria-label="Interactive COS architecture graph"></div>
       <div class="tn-architecture-loading" data-architecture-loading>Loading Architecture Graph…</div>
@@ -153,7 +174,7 @@ if (!is_string($graphJson)) {
     </div>
 
     <aside class="tn-architecture-details" data-architecture-details>
-      <p class="tn-kicker">Selection</p>
+      <p class="tn-ui-eyebrow">Selection</p>
       <h2>Node details</h2>
       <p class="tn-muted">Виберіть вузол графа. Тут з’являться ownership, dependencies, runtime relations, source metadata та локальні дії.</p>
     </aside>
