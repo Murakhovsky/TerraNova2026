@@ -198,7 +198,7 @@ textarea {
 
 .tn-kicker {
   margin: 0 0 14px;
-  color: var(--tn-gold);
+  color: var(--tn-color-accent-strong);
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.15em;
