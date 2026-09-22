@@ -85,6 +85,36 @@ foreach (['tn-breadcrumbs', 'tn-seo-panel'] as $legacyMarker) {
     $notContains($seo, $legacyMarker, 'Property SEO landing must not restore legacy outer shell.');
 }
 
+$login = $read('app/Interfaces/Web/View/auth/login.phtml');
+foreach (["partial('components/ui/page_header'", 'tn-ui-button tn-ui-button--primary', 'tn-ui-alert tn-ui-alert--danger', "name=\"email\"", "name=\"password\""] as $marker) {
+    $contains($login, $marker, 'Login canonical entry contract is incomplete.');
+}
+foreach (['tn-kicker', 'tn-form-status is-visible', 'tn-btn tn-btn--accent'] as $legacyMarker) {
+    $notContains($login, $legacyMarker, 'Login entry must not restore legacy shell primitives.');
+}
+
+$register = $read('app/Interfaces/Web/View/auth/register.phtml');
+foreach (["partial('components/ui/page_header'", 'tn-ui-button tn-ui-button--primary', 'tn-ui-alert', "name=\"role\"", "name=\"password_repeat\""] as $marker) {
+    $contains($register, $marker, 'Registration canonical entry contract is incomplete.');
+}
+foreach (['tn-kicker', 'tn-form-status is-visible', 'tn-btn tn-btn--accent'] as $legacyMarker) {
+    $notContains($register, $legacyMarker, 'Registration entry must not restore legacy shell primitives.');
+}
+
+$cabinet = $read('app/Interfaces/Web/View/cabinet/canonical.phtml');
+foreach (["partial('components/ui/page_header'", 'tn-ui-panel', "partial('components/ui/action_bar'", 'tn-portal-profile'] as $marker) {
+    $contains($cabinet, $marker, 'Cabinet canonical entry contract is incomplete.');
+}
+foreach (['tn-portal-hero', 'tn-portal-section', 'tn-actions'] as $legacyMarker) {
+    $notContains($cabinet, $legacyMarker, 'Live Cabinet must not restore legacy portal shell.');
+}
+
+$cabinetController = $read('symfony/src/Controller/CabinetPageController.php');
+foreach (["'cabinet/canonical'", "new RedirectResponse('/auth/login')", 'retiredSubmission'] as $marker) {
+    $contains($cabinetController, $marker, 'Cabinet route/identity ownership contract is incomplete.');
+}
+$notContains($cabinetController, "'cabinet/index'", 'Production Cabinet must not route back to the historical index view.');
+
 $kpi = $read('app/Interfaces/Web/View/components/ui/kpi_card.phtml');
 foreach ([
     '$valueAttributes',
@@ -126,6 +156,8 @@ foreach ([
     '### Architecture Explorer',
     '## Хвиля 2',
     '### Публічні контентні surfaces',
+    '## Хвиля 3',
+    '### Auth і Cabinet entry surfaces',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
