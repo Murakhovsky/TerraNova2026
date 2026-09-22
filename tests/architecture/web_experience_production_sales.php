@@ -25,29 +25,30 @@ $notContains = static function (string $source, string $needle, string $message)
     }
 };
 
-$dashboard = $read('app/Interfaces/Web/View/sales/dashboard.phtml');
+$dashboard = $read('symfony/templates/experience/sales/dashboard.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/data_table'",
-    "'responsive' => 'cards'",
+    '<twig:CosEntityHeader',
+    '<twig:CosTrendMetric',
+    '<twig:CosMoneyMetric',
+    '<twig:CosEntityListItem',
+    '<twig:CosNextAction',
+    'href="/sales/leads"',
 ] as $marker) {
-    $contains($dashboard, $marker, 'Sales Dashboard must use canonical presentation contracts.');
+    $contains($dashboard, $marker, 'Sales Dashboard must use canonical Twig presentation contracts after Wave 12.26 cutover.');
 }
-$notContains($dashboard, 'class="tn-ui-table"', 'Sales Dashboard must not restore a local raw table.');
+$notContains($dashboard, '/sales/reference/', 'Sales Dashboard must not retain reference routes after cutover.');
 
-$leads = $read('app/Interfaces/Web/View/sales/leads.phtml');
+$leads = $read('symfony/templates/experience/sales/leads.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/status_badge'",
-    'data-sales-lead-status',
-    'data-sales-lead-deal',
-    'data-sales-lead-followup',
+    '<twig:CosEntityHeader',
+    '<twig:CosFilterBar',
+    '<twig:CosEntityListItem',
+    'action="/sales/leads"',
+    'href="/sales/leads/',
 ] as $marker) {
-    $contains($leads, $marker, 'Lead Inbox migration lost a canonical or behavior contract.');
+    $contains($leads, $marker, 'Lead Inbox cutover lost a canonical Twig or route contract.');
 }
-$notContains($leads, '<form class="tn-ui-filter-bar', 'Lead Inbox must not restore a local filter form.');
+$notContains($leads, '/sales/reference/', 'Lead Inbox must not retain reference routes after cutover.');
 
 $pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
 foreach ([
