@@ -119,6 +119,120 @@ foreach ([
     $contains($routes, $marker, 'Architecture Explorer route contract is incomplete.');
 }
 
+$login = $read('app/Interfaces/Web/View/auth/login.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-ui-panel',
+    'tn-ui-button tn-ui-button--primary',
+    'action="<?php echo $this->url->get(\'auth/login\'); ?>"',
+    'name="email"',
+    'name="password"',
+    'autocomplete="email"',
+    'autocomplete="current-password"',
+] as $marker) {
+    $contains($login, $marker, 'Login canonical/auth contract is incomplete.');
+}
+foreach (['tn-auth-copy', 'tn-kicker', 'tn-form-status is-visible', 'tn-btn tn-btn--accent'] as $legacyMarker) {
+    $notContains($login, $legacyMarker, 'Login must not restore legacy shell primitives.');
+}
+
+$register = $read('app/Interfaces/Web/View/auth/register.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    'tn-ui-panel',
+    'tn-ui-button tn-ui-button--primary',
+    'action="<?php echo $this->url->get(\'auth/register\'); ?>"',
+    'name="full_name"',
+    'name="email"',
+    'name="phone"',
+    'name="role"',
+    'name="password"',
+    'name="password_repeat"',
+    'minlength="8"',
+] as $marker) {
+    $contains($register, $marker, 'Registration canonical/auth contract is incomplete.');
+}
+foreach (['tn-auth-copy', 'tn-kicker', 'tn-form-status is-visible', 'tn-btn tn-btn--accent'] as $legacyMarker) {
+    $notContains($register, $legacyMarker, 'Registration must not restore legacy shell primitives.');
+}
+
+$cabinet = $read('app/Interfaces/Web/View/cabinet/canonical.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    'tn-ui-panel',
+    'tn-portal-profile',
+    '$currentUser',
+    '$organizationId',
+    '$portalRole',
+    '/auth/logout',
+] as $marker) {
+    $contains($cabinet, $marker, 'Native Cabinet canonical/identity contract is incomplete.');
+}
+foreach (['tn-portal-hero', 'tn-kicker', 'tn-actions'] as $legacyMarker) {
+    $notContains($cabinet, $legacyMarker, 'Native Cabinet must not restore legacy shell primitives.');
+}
+
+$retiredSubmission = $read('app/Interfaces/Web/View/cabinet/retired-submission.phtml');
+foreach ([
+    "partial('components/ui/state'",
+    'Старий редактор заявки закрито',
+    '/cabinet',
+] as $marker) {
+    $contains($retiredSubmission, $marker, 'Retired cabinet submission state contract is incomplete.');
+}
+foreach (['tn-portal-state', 'tn-kicker', 'tn-btn tn-btn--accent'] as $legacyMarker) {
+    $notContains($retiredSubmission, $legacyMarker, 'Retired cabinet submission must not restore legacy shell primitives.');
+}
+
+$authController = $read('symfony/src/Web/Auth/AuthPageController.php');
+foreach ([
+    'public function login(Request $request): Response',
+    'public function register(Request $request): Response',
+    'public function logout(Request $request): Response',
+    '$this->accounts->authenticate($form)',
+    '$this->accounts->register($form)',
+    '$session->migrate(true)',
+    "$session->set('tn_auth_user_id'",
+    "$session->set('cos_organization_id'",
+    "$session->set('cos_csrf_token'",
+    '$request->getSession()->invalidate()',
+    "'auth/login'",
+    "'auth/register'",
+] as $marker) {
+    $contains($authController, $marker, 'Native Auth controller/session contract is incomplete.');
+}
+
+$cabinetController = $read('symfony/src/Controller/CabinetPageController.php');
+foreach ([
+    'public function index(Request $request): Response',
+    'public function retiredSubmission(Request $request, string $id): Response',
+    '$this->tenants->current()',
+    "return new RedirectResponse('/auth/login')",
+    "return new RedirectResponse('/sales')",
+    "'cabinet/canonical'",
+    "'cabinet/retired-submission'",
+    'Response::HTTP_GONE',
+] as $marker) {
+    $contains($cabinetController, $marker, 'Native Cabinet controller contract is incomplete.');
+}
+
+foreach ([
+    'path: /auth/login',
+    'AuthPageController::login',
+    'path: /auth/register',
+    'AuthPageController::register',
+    'path: /auth/logout',
+    'AuthPageController::logout',
+    'path: /cabinet',
+    'CabinetPageController::index',
+    'path: /cabinet/submission/{id}',
+    'CabinetPageController::retiredSubmission',
+] as $marker) {
+    $contains($routes, $marker, 'Auth/Cabinet route contract is incomplete.');
+}
+
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
 foreach ([
     '# Закриття залишкових UI shells',
@@ -126,6 +240,9 @@ foreach ([
     '### Architecture Explorer',
     '## Хвиля 2',
     '### Публічні контентні surfaces',
+    '## Хвиля 3',
+    '### Вхід та реєстрація',
+    '### Нативний кабінет',
     '## Критерії завершення',
 ] as $marker) {
     $contains($docs, $marker, 'PHASE 14 documentation is incomplete.');
