@@ -97,7 +97,6 @@ $canonicalTableRenderers = [
     'app/Interfaces/Web/View/components/ui/operational_grid.phtml' => 'canonical mutation-aware OperationalGrid renderer',
 ];
 $allowedTableViews = [
-    'app/Interfaces/Web/View/methodology_studio/index.phtml' => 'interactive Methodology Studio editor grid',
     'app/Interfaces/Web/View/property/pdf.phtml' => 'service-level print renderer',
 ];
 $classifiedTableViews = $canonicalTableRenderers + $allowedTableViews;
@@ -163,9 +162,41 @@ foreach ([
 $notContains($clientIndex, '<table', 'Client Case index must not retain a raw table after OperationalGrid migration.');
 
 $studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
-foreach (['data-entities', 'data-editor', 'data-action="add"', 'data-action="publish"'] as $marker) {
-    $contains($studio, $marker, 'Methodology Studio raw table exception must remain an interactive editor surface.');
+foreach ([
+    'class="entity-grid"',
+    'class="entity-grid__head"',
+    'class="entity-grid__body"',
+    'data-entities',
+    'data-editor',
+    'data-action="add"',
+    'data-action="publish"',
+] as $marker) {
+    $contains($studio, $marker, 'Methodology Studio entity browser must retain its interactive editor surface.');
 }
+$notContains($studio, '<table', 'Methodology Studio must not retain a raw table after entity-grid migration.');
+
+$studioJs = $read('frontend/features/diagnostics/methodology-studio.js');
+foreach ([
+    'entity-grid__row',
+    'entity-grid__identity',
+    'data-edit=',
+    "q('[data-entities]').onclick",
+] as $marker) {
+    $contains($studioJs, $marker, 'Methodology Studio JS must preserve entity-grid rendering and edit delegation.');
+}
+$notContains($studioJs, '<tr>', 'Methodology Studio JS must not restore table-row rendering.');
+
+$studioCss = $read('frontend/features/diagnostics/methodology-studio.css');
+foreach ([
+    '.entity-grid',
+    '.entity-grid__head',
+    '.entity-grid__row',
+    '.entity-grid__identity',
+    '.entity-grid__empty',
+] as $marker) {
+    $contains($studioCss, $marker, 'Methodology Studio entity-grid styling is incomplete.');
+}
+$notContains($studioCss, '.studio table', 'Methodology Studio must not restore table-specific styling.');
 
 $pdf = $read('app/Interfaces/Web/View/property/pdf.phtml');
 foreach (['<style>', 'page-break-inside', 'documentType', 'group-card'] as $marker) {
