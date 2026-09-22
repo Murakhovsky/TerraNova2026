@@ -54,6 +54,35 @@ Controller contract лишається у `CoreWorkspacePageController`: read su
 
 Controller contract лишається у `ContentAdminPageController`: manage/edit потребують manager context, а save окремо перевіряє CSRF перед викликом Content service.
 
+## Хвиля 3
+
+### Керування Spatial (`Spatial Administration`)
+
+`spatial/manage.phtml`
+
+- legacy hero замінено на canonical PageHeader;
+- status feedback використовує canonical State;
+- Spatial summary переведено на KPI cards;
+- локальний filter form замінено на shared FilterBar;
+- scenes inventory переведено на canonical Panel + DataTable;
+- scene status відображається semantic Status;
+- create/edit navigation та query semantics не змінені.
+
+### Редактор Spatial (`Spatial Editor`)
+
+`spatial/edit.phtml`
+
+- legacy editor hero замінено на canonical PageHeader;
+- action result використовує canonical State;
+- configuration, uploads, external assets, assets, capture, hotspot, history та jobs sections переведено на canonical panel shell;
+- published-scene preview зберігає окремий public route;
+- multipart upload і browser contracts `data-spatial-*` не змінені;
+- save/upload/external/capture/hotspot/publish routes та field names збережені.
+
+Public `spatial/scene.phtml` не канонізується під administration shell. Це specialized public Spatial Viewer surface, який навмисно зберігає `shared/spatial_viewer` та власну summary information architecture.
+
+Controller contract лишається у `SpatialPageController`: manage/edit/mutations вимагають manager context, public scene залишається session-free read surface.
+
 ## Межа editable grid
 
 Users table не є read-only data table. Кожен рядок одночасно є формою редагування `full_name`, `phone`, `role`, `status` та optional password reset.
@@ -71,7 +100,7 @@ Users table не є read-only data table. Кожен рядок одночасн
 ## Наступні хвилі
 
 - Wave 2: Content Administration — виконано;
-- Wave 3: Spatial Administration;
+- Wave 3: Spatial Administration — виконано;
 - Wave 4: administration closure та route/view cleanup, якщо аудит покаже compatibility debt.
 
 ## Критерії завершення
@@ -82,4 +111,6 @@ Users table не є read-only data table. Кожен рядок одночасн
 - editable accounts grid явно зафіксований як interaction boundary;
 - Content Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
 - Content editor зберігає save/CSRF/content/SEO mutation contracts;
+- Spatial Administration використовує canonical PageHeader, State, KPI, FilterBar, Panel і DataTable;
+- Spatial editor зберігає upload/external/capture/hotspot/publish та data-spatial-* contracts;
 - PHASE 11 architecture gate запускається у CI.
