@@ -93,12 +93,13 @@ Canonical table renderers:
 
 Product-level raw-table exceptions після post-freeze cleanup:
 
-1. `admin/users.phtml` — editable identity grid із row-level forms;
-2. `client_case/index.phtml` — operational quick-update grid;
-3. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
-4. `property/pdf.phtml` — service-level print renderer.
+1. `client_case/index.phtml` — operational quick-update grid;
+2. `methodology_studio/index.phtml` — JS-driven methodology editor grid;
+3. `property/pdf.phtml` — service-level print renderer.
 
 Після PHASE 15 перший post-freeze cleanup прибрав `cos/index.phtml` із product whitelist: Proposed Actions переведено на canonical `OperationalGrid` із first-class mutation actions.
+
+Другий post-freeze cleanup прибрав `admin/users.phtml` із whitelist: row-level Identity mutations переведено на editable OperationalGrid з row form ownership, CSRF, typed field cells та submit action.
 
 Якщо новий raw table з’явиться в іншому production view, PHASE 13 gate падає. Якщо один із винятків перестає містити table, gate також падає, змушуючи прибрати застарілий whitelist entry. Так винятки не перетворюються на вічні археологічні пам’ятки.
 
@@ -111,7 +112,7 @@ Product-level raw-table exceptions після post-freeze cleanup:
 
 ### Редагована таблиця користувачів
 
-`admin/users.phtml` містить inline user mutations і form ownership на рівні рядка. Це не read-only DataTable і лишається explicit editable-grid boundary.
+`admin/users.phtml` більше не є raw-table винятком. Inline user mutations перенесені на canonical OperationalGrid editable row form contract без зміни Identity routes або field semantics.
 
 ### Операційні дії COS
 
@@ -125,6 +126,6 @@ Product-level raw-table exceptions після post-freeze cleanup:
 - шість read-only runtime tables COS використовують canonical DataTable;
 - Proposed Actions після post-freeze cleanup використовує canonical OperationalGrid з execute/approval forms;
 - Company Home decision queue використовує canonical DataTable;
-- production PHTML raw-table whitelist обмежений шістьма класифікованими surfaces;
+- production PHTML raw-table whitelist обмежений трьома класифікованими product exceptions плюс canonical renderers;
 - PHASE 13 architecture gate запускається у CI;
 - винятки класифіковані явно, а не залишені випадково.

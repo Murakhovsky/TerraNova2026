@@ -24,7 +24,10 @@ foreach ([
     "partial('components/ui/filter_bar'",
     "partial('components/ui/panel'",
     "'bodyPartial' => 'components/ui/data_table'",
-    'tn-admin-editable-grid',
+    "'bodyPartial' => 'components/ui/operational_grid'",
+    '$userRows = [];',
+    "'_form' => [",
+    "'kind' => 'submit'",
 ] as $marker) {
     $contains($users, $marker, 'Users Administration must use canonical workspace composition.');
 }
@@ -47,9 +50,15 @@ foreach ([
     'name="role"',
     'name="status"',
     'user-form-',
+    "'name' => 'full_name'",
+    "'name' => 'phone'",
+    "'name' => 'role'",
+    "'name' => 'status'",
+    "'name' => 'password'",
 ] as $marker) {
     $contains($users, $marker, 'Users Administration lost a create/update mutation contract.');
 }
+$notContains($users, '<table', 'Users Administration must not retain a raw editable table.');
 
 $controller = $read('symfony/src/Web/Workspace/CoreWorkspacePageController.php');
 foreach ([

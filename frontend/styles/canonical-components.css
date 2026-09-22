@@ -237,6 +237,18 @@
     display: inline-flex;
     margin: 0;
   }
+  .tn-ui-operational-grid__row-form {
+    display: contents;
+  }
+  .tn-ui-operational-grid__field-stack {
+    display: grid;
+    gap: 6px;
+    min-width: 160px;
+  }
+  .tn-ui-operational-grid__field {
+    width: 100%;
+    min-width: 0;
+  }
   .tn-ui-operational-grid__actions-heading {
     width: 1%;
     white-space: nowrap;

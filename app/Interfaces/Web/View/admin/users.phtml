@@ -53,6 +53,73 @@ foreach ($roleLabels as $role => $label) {
     }
     $capabilityRows[] = $row;
 }
+
+$userRows = [];
+foreach ($users as $user) {
+    if (!is_array($user)) continue;
+    $userId = (int) ($user['id'] ?? 0);
+    $formId = 'user-form-' . $userId;
+    $userRows[] = [
+        '_form' => [
+            'id' => $formId,
+            'action' => 'admin/updateUser/' . $userId,
+            'method' => 'post',
+            'hidden' => ['csrf_token' => (string) ($csrfToken ?? '')],
+        ],
+        'identity' => [
+            'kind' => 'field',
+            'name' => 'full_name',
+            'type' => 'text',
+            'value' => (string) ($user['full_name'] ?? ''),
+            'maxLength' => 160,
+            'ariaLabel' => 'Імʼя',
+            'secondary' => (string) ($user['email'] ?? ''),
+        ],
+        'phone' => [
+            'kind' => 'field',
+            'name' => 'phone',
+            'type' => 'tel',
+            'value' => (string) ($user['phone'] ?? ''),
+            'maxLength' => 50,
+            'ariaLabel' => 'Телефон',
+        ],
+        'role' => [
+            'kind' => 'field',
+            'name' => 'role',
+            'type' => 'select',
+            'value' => (string) ($user['role'] ?? ''),
+            'ariaLabel' => 'Роль',
+            'options' => $roleLabels,
+        ],
+        'status' => [
+            'kind' => 'field',
+            'name' => 'status',
+            'type' => 'select',
+            'value' => (string) ($user['status'] ?? ''),
+            'ariaLabel' => 'Статус',
+            'options' => $statusLabels,
+        ],
+        'last_login' => [
+            'primary' => (string) (($user['last_login_at'] ?? '') ?: 'ще не входив'),
+            'secondary' => 'Останній вхід',
+        ],
+        'password' => [
+            'kind' => 'field',
+            'name' => 'password',
+            'type' => 'password',
+            'value' => '',
+            'placeholder' => 'Новий пароль',
+            'minLength' => 8,
+            'autocomplete' => 'new-password',
+            'ariaLabel' => 'Новий пароль',
+        ],
+        '_actions' => [[
+            'kind' => 'submit',
+            'label' => 'Зберегти',
+            'variant' => 'primary',
+        ]],
+    ];
+}
 ?>
 
 <?php $this->partial('shared/manager_header', ['active' => 'users', 'brandSuffix' => 'ADMIN']); ?>
@@ -180,48 +247,26 @@ foreach ($roleLabels as $role => $label) {
     </div>
   </section>
 
-  <section class="tn-ui-panel tn-workspace-section">
-    <div class="tn-ui-panel__head">
-      <div>
-        <p class="tn-ui-eyebrow">Список</p>
-        <h2>Акаунти</h2>
-        <p><?php echo count($users); ?> у поточній вибірці.</p>
-      </div>
-    </div>
-
-    <?php if ($users === []): ?>
-      <?php $this->partial('components/ui/state', [
-          'kind' => 'empty',
-          'title' => 'Користувачів не знайдено',
-          'message' => 'Змініть фільтри або створіть новий акаунт.',
-      ]); ?>
-    <?php else: ?>
-      <div class="tn-listing-table-wrap tn-admin-editable-grid">
-        <table class="tn-listing-table tn-users-table">
-          <thead>
-            <tr><th>Користувач</th><th>Роль</th><th>Статус</th><th>Останній вхід</th><th>Оновити</th></tr>
-          </thead>
-          <tbody>
-            <?php foreach ($users as $user): ?>
-              <tr>
-                <td>
-                  <form id="user-form-<?php echo (int) $user['id']; ?>" action="<?php echo $this->url->get('admin/updateUser/' . (int) $user['id']); ?>" method="post"><input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken ?? ''); ?>"></form>
-                  <input form="user-form-<?php echo (int) $user['id']; ?>" name="full_name" type="text" maxlength="160" value="<?php echo $h($user['full_name']); ?>" aria-label="Імʼя">
-                  <span><?php echo $h($user['email']); ?><?php if ($user['phone']): ?> / <?php echo $h($user['phone']); ?><?php endif; ?></span>
-                  <input form="user-form-<?php echo (int) $user['id']; ?>" name="phone" type="tel" maxlength="50" value="<?php echo $h($user['phone']); ?>" aria-label="Телефон">
-                </td>
-                <td><select form="user-form-<?php echo (int) $user['id']; ?>" name="role" aria-label="Роль"><?php foreach ($roleLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo (string) $user['role'] === (string) $code ? 'selected' : ''; ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></td>
-                <td><select form="user-form-<?php echo (int) $user['id']; ?>" name="status" aria-label="Статус"><?php foreach ($statusLabels as $code => $label): ?><option value="<?php echo $h($code); ?>" <?php echo (string) $user['status'] === (string) $code ? 'selected' : ''; ?>><?php echo $h($label); ?></option><?php endforeach; ?></select></td>
-                <td>
-                  <span><?php echo $h($user['last_login_at'] ?: 'ще не входив'); ?></span>
-                  <input form="user-form-<?php echo (int) $user['id']; ?>" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="Новий пароль" aria-label="Новий пароль">
-                </td>
-                <td><button class="tn-ui-button tn-ui-button--primary" form="user-form-<?php echo (int) $user['id']; ?>" type="submit">Зберегти</button></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-    <?php endif; ?>
+  <section class="tn-workspace-section">
+    <?php $this->partial('components/ui/panel', [
+        'eyebrow' => 'Список',
+        'title' => 'Акаунти',
+        'description' => count($users) . ' у поточній вибірці.',
+        'bodyPartial' => 'components/ui/operational_grid',
+        'bodyParams' => [
+            'columns' => [
+                ['key' => 'identity', 'label' => 'Користувач'],
+                ['key' => 'phone', 'label' => 'Телефон'],
+                ['key' => 'role', 'label' => 'Роль'],
+                ['key' => 'status', 'label' => 'Статус'],
+                ['key' => 'last_login', 'label' => 'Останній вхід'],
+                ['key' => 'password', 'label' => 'Новий пароль'],
+            ],
+            'rows' => $userRows,
+            'responsive' => 'scroll',
+            'actionsLabel' => 'Оновити',
+            'emptyMessage' => 'Користувачів за цими фільтрами не знайдено.',
+        ],
+    ]); ?>
   </section>
 </main>
