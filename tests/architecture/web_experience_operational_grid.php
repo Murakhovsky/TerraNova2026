@@ -26,7 +26,7 @@ foreach ([
     '$editableFields',
     "'kind'] ?? 'link'",
     "'submit'",
-    'form="<?php echo $h($rowFormId); ?>"',
+    'type="submit" form="<?php echo $h($target); ?>"',
     'minlength=',
     'method="post"',
     'status_badge',
