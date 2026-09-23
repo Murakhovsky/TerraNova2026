@@ -4,6 +4,7 @@ $workspace=is_array($workspace??null)?$workspace:[];
 $collectors=is_array($workspace['collectors']??null)?$workspace['collectors']:[];
 $feeds=is_array($workspace['feeds']??null)?$workspace['feeds']:[];
 $jsonSources=is_array($workspace['json_sources']??null)?$workspace['json_sources']:[];
+$polling=is_array($workspace['polling']??null)?$workspace['polling']:[];
 $runs=is_array($workspace['runs']??null)?$workspace['runs']:[];
 $collectorFilter=trim((string)$this->request->getQuery('collector_name','string',''));
 $statusFilter=trim((string)$this->request->getQuery('status','string',''));
@@ -45,6 +46,63 @@ foreach($runs as $run){
       ['label'=>'Overview','href'=>'growth','variant'=>'ghost'],
     ],
   ]); ?>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-polling-status>
+    <?php
+      $pollingReady=!empty($polling['ready']);
+      $pollingEnabled=!empty($polling['enabled']);
+      $actorConfigured=!empty($polling['actor_configured']);
+      $moduleEnabled=!empty($polling['module_enabled']);
+      $pollingReason=(string)($polling['reason']??'unknown');
+      $pollingCollectors=is_array($polling['collectors']??null)?$polling['collectors']:[];
+      $sourceCounts=is_array($polling['source_counts']??null)?$polling['source_counts']:[];
+    ?>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Automatic monitoring</p><h2>Scheduled Signal Polling</h2></div>
+      <span class="tn-ui-badge tn-ui-badge--<?php echo $pollingReady?'positive':($pollingEnabled?'warning':'neutral'); ?>">
+        <?php echo $pollingReady?'READY':($pollingEnabled?'ATTENTION':'DISABLED'); ?>
+      </span>
+    </div>
+
+    <div class="tn-growth-collector-grid">
+      <article>
+        <strong>Scheduler</strong>
+        <div class="tn-growth-muted"><?php echo $pollingEnabled?'Enabled':'Disabled'; ?></div>
+      </article>
+      <article>
+        <strong>Cadence</strong>
+        <div class="tn-growth-muted"><?php echo $h((int)($polling['interval_minutes']??0)); ?> min</div>
+      </article>
+      <article>
+        <strong>System actor</strong>
+        <div class="tn-growth-muted"><?php echo $actorConfigured?'Configured':'Missing'; ?></div>
+      </article>
+      <article>
+        <strong>Growth module</strong>
+        <div class="tn-growth-muted"><?php echo $moduleEnabled?'Enabled':'Disabled'; ?></div>
+      </article>
+      <article>
+        <strong>Enabled sources</strong>
+        <div class="tn-growth-muted"><?php echo $h((int)($polling['enabled_source_count']??0)); ?></div>
+      </article>
+      <article>
+        <strong>Per-run limit</strong>
+        <div class="tn-growth-muted"><?php echo $h((int)($polling['signal_limit']??0)); ?> signals</div>
+      </article>
+    </div>
+
+    <div class="tn-growth-muted">
+      Status: <strong><?php echo $h($pollingReason); ?></strong>
+      <?php if($pollingCollectors): ?>
+        · targets:
+        <?php foreach($pollingCollectors as $index=>$collector): ?>
+          <?php if($index>0): ?>, <?php endif; ?>
+          <?php echo $h($collector); ?> (<?php echo $h((int)($sourceCounts[$collector]??0)); ?>)
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+    <p class="tn-growth-muted">Scheduler configuration is deployment-owned and read-only here. Provider calls execute in the async worker through the canonical collector runtime.</p>
+  </section>
 
   <section class="tn-ui-panel tn-workspace-section" data-growth-signal-feeds>
     <div class="tn-ui-panel__head">

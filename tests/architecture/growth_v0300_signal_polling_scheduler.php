@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.30.0','Growth V0.30 manifest version must be 0.30.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.30.0','>='),'Growth manifest must remain V0.30+.');
 $assert(($manifest['schema_version']??null)==='0.28.0','Growth V0.30 must keep schema version 0.28.0.');
 $assert(in_array('growth.signal.scheduled_polling',$manifest['contributions']['capabilities']??[],true),'Growth scheduled polling capability is missing.');
 

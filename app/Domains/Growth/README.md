@@ -639,4 +639,23 @@ Polling is disabled by default. Enabling it requires an explicit system actor id
 
 The polling target read model reads only organization ids and collector kinds from enabled Growth sources. It does not load URLs, credential references or provider payloads. Each cadence bucket produces stable collector idempotency keys, while source receipts remain the durable content-level dedupe mechanism.
 
+V0.31 exposes scheduled monitoring health in the existing Collectors workspace:
+
+```text
+/growth/collectors
+  ↓
+GrowthSignalPollingStatusProvider
+  ↓
+current tenant only
+  ├─ scheduler enabled / disabled
+  ├─ ready / reason
+  ├─ cadence
+  ├─ system actor configured? (boolean only)
+  ├─ Growth module state
+  ├─ per-run signal limit
+  └─ enabled RSS / JSON source counts
+```
+
+The workspace does not enumerate other organizations and never renders the configured actor id, source credentials or cross-tenant scheduler limits. Scheduler configuration remains deployment-owned; the SSR surface is read-only.
+
 Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous outreach/activation.

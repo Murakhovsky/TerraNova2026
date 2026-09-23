@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Web\Growth;
 
 use App\Security\SessionCsrfValidator;
+use App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\ProviderBackedShellNavigation;
 use App\Web\Experience\Shell\ShellNavigationItem;
@@ -52,6 +53,7 @@ final readonly class GrowthPageController
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthSignalFeedBoundary $signalFeeds,
         private GrowthJsonSignalSourceBoundary $jsonSignalSources,
+        private GrowthSignalPollingStatusProvider $pollingStatus,
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
         private GrowthEngagementExecutionBoundary $engagementExecution,
@@ -174,6 +176,7 @@ final readonly class GrowthPageController
                     'collectors'=>$this->collectors->collectors(),
                     'feeds'=>$this->signalFeeds->feeds($tenant->organizationId()->value()),
                     'json_sources'=>$this->jsonSignalSources->sources($tenant->organizationId()->value()),
+                    'polling'=>$this->pollingStatus->status($tenant->organizationId()->value()),
                     'runs'=>$this->workspace->collectorRuns($tenant->organizationId()->value(),[
                         'collector_name'=>$request->query->get('collector_name'),
                         'status'=>$request->query->get('status'),

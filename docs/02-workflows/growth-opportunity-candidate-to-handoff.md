@@ -849,6 +849,26 @@ Idempotency key формується з cadence bucket + collector name. Оск�
 
 Polling default-off. Якщо scheduler enable flag увімкнено без positive system actor id, composition fail-closed.
 
+## Polling Operations Workspace
+
+V0.31 додає read-only operational projection поверх V0.30:
+
+```text
+current tenant
+        ↓
+GrowthSignalPollingStatusProvider
+        ↓
+targetForOrganization(organization_id)
+        ↓
+enabled collector kinds + source counts
+        +
+deployment scheduler config
+        ↓
+/growth/collectors status panel
+```
+
+Projection tenant-scoped. Він не використовує global `targets()`, не показує кількість інших organizations, raw system actor id, credential references або provider URLs. Browser не може enable/disable scheduler; для цього немає нового endpoint чи SSR mutation.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -937,6 +957,7 @@ app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthJsonSignalSourceR
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthSignalPollingTargetRepository.php
 symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommand.php
 symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommandHandler.php
+symfony/src/Application/Growth/ReadModel/GrowthSignalPollingStatusProvider.php
 app/Domains/Growth/Automation/Event/GrowthEventType.php
 app/Domains/Growth/Bootstrap/GrowthDomainModule.php
 app/migrations/20260921_000067_growth_v020_runtime.sql
@@ -948,5 +969,6 @@ app/migrations/20260922_000072_growth_v070_research_intelligence.sql
 app/migrations/20260922_000073_growth_v080_handoff_protocol.sql
 app/migrations/20260924_000093_growth_v0280_credentialed_json_collector.sql
 app/migrations/20260924_000095_growth_v0300_signal_polling_scheduler.sql
+app/migrations/20260924_000096_growth_v0310_polling_operations_workspace.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

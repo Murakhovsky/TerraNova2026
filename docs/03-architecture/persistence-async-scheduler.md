@@ -65,7 +65,7 @@ AgentRuntime / Integration port
 
 Цей механізм є канонічним для scheduled agents, reports, synchronization, follow-ups, diagnostics і cleanup. Domain-specific recurring messages додаються лише разом із реальним Application command/use case, а не як порожні cron-заглушки.
 
-Growth V0.30 є першим provider-monitoring прикладом цього правила: `CosScheduleProvider` створює лише recurring `RunGrowthSignalPollingCommand`, redispatch-нутий в `async`. Worker через Growth-owned target read port знаходить organizations з enabled RSS/JSON sources і викликає canonical collector boundary. Scheduler не виконує provider HTTP calls сам і не має доступу до credential material.
+Growth V0.30 є першим provider-monitoring прикладом цього правила: `CosScheduleProvider` створює лише recurring `RunGrowthSignalPollingCommand`, redispatch-нутий в `async`. Worker через Growth-owned target read port знаходить organizations з enabled RSS/JSON sources і викликає canonical collector boundary. Scheduler не виконує provider HTTP calls сам і не має доступу до credential material. V0.31 додає read-only tenant-scoped status projection для `/growth/collectors`: вона показує operational readiness і cadence, але не змінює scheduler configuration та не розкриває cross-tenant target metadata.
 
 ## Середовище виконання Docker
 

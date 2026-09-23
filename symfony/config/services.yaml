@@ -721,6 +721,15 @@ services:
       $organizationLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT)%'
       $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
 
+  App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider:
+    arguments:
+      $targets: '@Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $enabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
+      $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
+
   Domains\Growth\Bootstrap\GrowthDomainModule:
     arguments:
       $sendMessage: '@Domains\Growth\Automation\Action\GrowthSendMessageHandler'

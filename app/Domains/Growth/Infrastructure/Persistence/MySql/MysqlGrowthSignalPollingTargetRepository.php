@@ -53,4 +53,45 @@ final readonly class MysqlGrowthSignalPollingTargetRepository implements GrowthS
         }
         return $result;
     }
+
+    public function targetForOrganization(string $organizationId):array
+    {
+        $organizationId=trim($organizationId);
+        if($organizationId===''||mb_strlen($organizationId)>64){
+            throw new InvalidArgumentException('Growth polling organization id is invalid.');
+        }
+
+        $statement=$this->connection->prepare(
+            'SELECT collector,source_count
+             FROM (
+                 SELECT \'rss_atom\' AS collector,COUNT(*) AS source_count
+                 FROM tn_growth_signal_feeds
+                 WHERE organization_id=:organization_id AND enabled=1
+                 UNION ALL
+                 SELECT \'credentialed_json\' AS collector,COUNT(*) AS source_count
+                 FROM tn_growth_json_signal_sources
+                 WHERE organization_id=:organization_id2 AND enabled=1
+             ) source_counts
+             WHERE source_count>0
+             ORDER BY collector'
+        );
+        $statement->execute([
+            'organization_id'=>$organizationId,
+            'organization_id2'=>$organizationId,
+        ]);
+
+        $counts=[];
+        foreach($statement->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $collector=trim((string)($row['collector']??''));
+            $count=(int)($row['source_count']??0);
+            if($collector!==''&&$count>0)$counts[$collector]=$count;
+        }
+        ksort($counts,SORT_STRING);
+
+        return [
+            'organization_id'=>$organizationId,
+            'collectors'=>array_keys($counts),
+            'source_counts'=>$counts,
+        ];
+    }
 }
