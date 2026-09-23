@@ -10,7 +10,9 @@ $projection = $read('app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSales
 $base = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceReadModelInterface.php');
 $services = $read('app/Bootstrap/SalesServices.php');
 $web = $read('symfony/src/Web/Sales/SalesPageController.php');
-$today = $read('app/Interfaces/Web/View/sales/today.phtml');
+$today = $read('symfony/templates/experience/sales/today.html.twig');
+$todayPresenter = $read('symfony/src/Web/Sales/SalesTodayPresenter.php');
+$todayController = $read('symfony/assets/controllers/sales_today_controller.js');
 $leads = $read('symfony/templates/experience/sales/leads.html.twig');
 $leadController = $read('symfony/assets/controllers/sales_lead_controller.js');
 $pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
@@ -37,9 +39,10 @@ foreach (['sales->communications(', 'sales->approvals(', 'OperationsReadModelInt
 }
 $assert(str_contains($services, 'MysqlSalesWorkspaceOperationalReadModel'), 'Composition root must own the concrete operational read model.');
 $assert(!str_contains($web, 'new MysqlSalesWorkspaceOperationalReadModel'), 'Web controller must not construct Infrastructure projections directly.');
-foreach (['Needs My Approval', 'data-sales-today-root', 'data-sales-activity-complete', 'data-sales-activity-reschedule', 'My Work', 'Team'] as $marker) {
-    $assert(str_contains($today, $marker), 'Today missing: ' . $marker);
+foreach (['data-sales-today-root', 'data-sales-activity-complete', 'data-sales-activity-reschedule', 'My Work', 'Team'] as $marker) {
+    $assert(str_contains($today, $marker), 'Canonical Today missing: ' . $marker);
 }
+$assert(str_contains($todayPresenter, 'Needs My Approval'), 'Today presenter lost the approval queue label.');
 foreach (['data-lead-id', 'data-sales-lead-status', 'data-sales-lead-owner', 'data-sales-lead-deal', 'data-sales-lead-followup', 'sales-lead#status', 'sales-lead#owner', 'sales-lead#convert', 'sales-lead#followup'] as $marker) {
     $assert(str_contains($leads, $marker), 'Canonical Lead Inbox missing operational contract: ' . $marker);
 }
@@ -58,8 +61,12 @@ foreach (['name="owner_id"', 'name="priority"', 'name="source"', 'attention_reas
 foreach (['Funnel', 'Historical stage transitions', 'Pipeline health', 'Manager performance', 'Pending approvals'] as $marker) {
     $assert(str_contains($director, $marker), 'Director missing: ' . $marker);
 }
-foreach (['initToday', 'error.status === 409', 'concurrent_stage_change'] as $marker) {
-    $assert(str_contains($js, $marker), 'Retained legacy Sales JS missing shared interaction: ' . $marker);
+foreach (['error.status === 409', 'concurrent_stage_change'] as $marker) {
+    $assert(str_contains($js, $marker), 'Retained legacy Sales JS missing shared Pipeline interaction: ' . $marker);
+}
+$assert(!str_contains($js, 'const initToday ='), 'Retired legacy Today runtime must not return.');
+foreach (['/api/v1/sales/approvals/', '/activities/', '/complete', '/reschedule', 'X-CSRF-Token', 'X-Idempotency-Key'] as $marker) {
+    $assert(str_contains($todayController, $marker), 'Canonical Today Stimulus controller missing: ' . $marker);
 }
 foreach (['/api/v1/sales/actions/', '/communications', 'refreshIntelligence', 'click->sales-deal#decision', 'X-Idempotency-Key'] as $marker) {
     $assert(str_contains($dealController, $marker), 'Deal Stimulus controller missing: ' . $marker);

@@ -9,7 +9,8 @@ $assert = static function (bool $condition, string $message): void {
 };
 
 $pipeline = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/pipeline.phtml');
-$today = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/today.phtml');
+$today = (string) file_get_contents($root . '/symfony/templates/experience/sales/today.html.twig');
+$todayPresenter = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesTodayPresenter.php');
 $deal = (string) file_get_contents($root . '/symfony/templates/experience/sales/deal_workspace.html.twig');
 $js = (string) file_get_contents($root . '/frontend/features/sales/workspace.js');
 $css = (string) file_get_contents($root . '/frontend/features/sales/workspace.css');
@@ -27,10 +28,10 @@ foreach (['initSalesPipeline', 'postStageChange', 'is-drop-target', '/stage'] as
 // Only anchors actually used by Today belong to this contract. Timeline remains a valid
 // Deal section, but New Replies now deep-link to Communications where the manager can answer.
 foreach (['work', 'intelligence', 'communications'] as $anchor) {
-    $assert(str_contains($today, "'" . $anchor . "'"), 'Today workspace is missing Deal Workspace mapping: ' . $anchor);
+    $assert(str_contains($todayPresenter, "'" . $anchor . "'"), 'Today presenter is missing Deal Workspace mapping: ' . $anchor);
     $assert(str_contains($deal, 'id="' . $anchor . '"'), 'Deal Workspace is missing mapped section: ' . $anchor);
 }
-$assert(str_contains($today, "'#'.\$anchor") || str_contains($today, "'#' . \$anchor"), 'Today workspace must compose section deep links from the configured mapping.');
+$assert(str_contains($todayPresenter, "'#' . \$anchor"), 'Today presenter must compose section deep links from the configured mapping.');
 foreach (['is-drop-target', 'is-dragging'] as $marker) {
     $assert(str_contains($css, $marker), 'Sales workspace CSS is missing drag/drop state: ' . $marker);
 }

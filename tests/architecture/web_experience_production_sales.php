@@ -95,24 +95,30 @@ foreach ([
 $notContains($deals, '<form class="tn-ui-filter-bar', 'Sales Deals must not restore a local filter form.');
 $notContains($deals, 'class="tn-ui-table"', 'Sales Deals must not restore a local raw table.');
 
-$today = $read('app/Interfaces/Web/View/sales/today.phtml');
+$today = $read('symfony/templates/experience/sales/today.html.twig');
 foreach ([
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/sales/today_section'",
+    '<twig:CosPageHeader',
+    '<twig:CosActionBar',
+    '<twig:CosEntityListItem',
+    '<twig:CosEmptyState',
+    'data-controller="sales-today"',
     'data-sales-today-root',
     'data-sales-today-status',
-] as $marker) {
-    $contains($today, $marker, 'Sales Today must use canonical Panel composition without losing behavior.');
-}
-$todaySection = $read('app/Interfaces/Web/View/components/sales/today_section.phtml');
-foreach ([
     'data-sales-approval',
     'data-sales-activity-complete',
     'data-sales-activity-reschedule',
+    'data-cos-archetype',
 ] as $marker) {
-    $contains($todaySection, $marker, 'Sales Today section must preserve operational interaction contracts.');
+    $contains($today, $marker, 'Sales Today Operational Queue cutover lost a canonical or behavior contract.');
 }
-$notContains($today, '<section class="tn-ui-panel', 'Sales Today must not restore locally assembled panels.');
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($today, $forbidden, 'Sales Today must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/today.phtml')
+    || is_file($root . '/app/Interfaces/Web/View/components/sales/today_section.phtml')
+) {
+    throw new RuntimeException('Legacy Sales Today PHTML ownership must stay retired.');
+}
 
 $director = $read('app/Interfaces/Web/View/sales/director.phtml');
 foreach ([
