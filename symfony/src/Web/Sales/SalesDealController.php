@@ -145,6 +145,7 @@ final readonly class SalesDealController
             'ContextPanel',
             'ActionBar',
             'Timeline',
+            'EmptyState',
             'ErrorState',
         ];
     }

@@ -11,6 +11,18 @@ final class PatternRegistry
 {
     private const OWNER = 'COS Experience Platform';
 
+    /** @var list<string> */
+    private const STABLE_PATTERNS = [
+        'PageHeader',
+        'WorkspaceHeader',
+        'EntityHeader',
+        'KpiStrip',
+        'FilterBar',
+        'EntityList',
+        'EmptyState',
+        'ErrorState',
+    ];
+
     /** @return array<string,PatternDefinition> */
     public function all(): array
     {
@@ -92,7 +104,9 @@ final class PatternRegistry
             accessibilityRules: $accessibilityRules,
             dependencies: $dependencies,
             owner: self::OWNER,
-            stability: VisualStability::Experimental,
+            stability: in_array($name, self::STABLE_PATTERNS, true)
+                ? VisualStability::Stable
+                : VisualStability::Experimental,
         );
     }
 }

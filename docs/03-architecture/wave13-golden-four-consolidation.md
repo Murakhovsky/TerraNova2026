@@ -63,3 +63,36 @@ Suite перевіряє desktop 1440×1000 і mobile 390×844 для:
 Для кожного target перевіряються canonical archetype marker, horizontal overflow і axe-core WCAG 2.x/2.1/2.2 A/AA violations.
 
 Запуск входить у authenticated Sales `workflow_dispatch` перед mutation E2E та зберігає JSON evidence artifact. Stability promotion не повинна трактувати public-only PHASE 15 axe як доказ Golden Four.
+
+## Політика першої стабілізації
+
+Phase 2.5 не переводить весь Visual System у `stable`.
+
+Стабільними стають лише archetypes, доведені Golden Four:
+
+- Executive Dashboard;
+- Domain Dashboard;
+- Collection;
+- Entity Workspace.
+
+Для stable archetype:
+
+1. усі fixed required Patterns мають бути `stable`;
+2. кожна required Pattern group має мати щонайменше один `stable` шлях;
+3. optional Patterns можуть лишатися `experimental` і не входять у stable guarantee;
+4. top-level state matrix містить лише стани, реально доведені production ViewModel/Controller/Twig flow.
+
+Перший stable Pattern subset:
+
+- PageHeader;
+- WorkspaceHeader;
+- EntityHeader;
+- KpiStrip;
+- FilterBar;
+- EntityList;
+- EmptyState;
+- ErrorState.
+
+`DataGrid + Toolbar` залишаються experimental альтернативою Collection. `ActionBar`, `ContextPanel`, `Timeline` та інші optional Patterns також не отримують stability автоматично лише через один production use.
+
+`PagePresentationFactory` після Phase 2.5 відхиляє Pattern, якого немає серед required, optional або required-group contracts archetype.

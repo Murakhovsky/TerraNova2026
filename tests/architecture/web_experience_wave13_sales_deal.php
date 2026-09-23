@@ -141,8 +141,8 @@ if (!str_contains($browser, "page.locator('.cos-sales-message')")) {
 }
 
 $registry = (string) file_get_contents($root . '/symfony/src/Web/Experience/Archetype/PageArchetypeRegistry.php');
-if (!str_contains($registry, "['KpiStrip', 'ContextPanel', 'ActivityFeed', 'Timeline', 'ActionBar', 'AIRecommendations']")) {
-    throw new RuntimeException('Entity Workspace archetype does not expose the KPI pattern proven by VR-004.');
+if (!str_contains($registry, "['KpiStrip', 'ContextPanel', 'Timeline', 'ActionBar', 'EmptyState', 'ErrorState']")) {
+    throw new RuntimeException('Entity Workspace archetype does not expose the consolidated optional Pattern contract proven by VR-004.');
 }
 
 echo "Wave 13 VR-004 /sales/deals/{id} Entity Workspace passed.\n";

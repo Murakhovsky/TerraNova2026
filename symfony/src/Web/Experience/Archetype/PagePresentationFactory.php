@@ -50,6 +50,19 @@ final readonly class PagePresentationFactory
             }
         }
 
+        $declared = array_merge($definition->requiredPatterns, $definition->optionalPatterns);
+        foreach ($definition->requiredPatternGroups as $group) {
+            array_push($declared, ...$group);
+        }
+        $undeclared = array_values(array_diff($patterns, array_unique($declared)));
+        if ($undeclared !== []) {
+            throw new InvalidArgumentException(sprintf(
+                'Page archetype %s received undeclared patterns: %s',
+                $definition->id->value,
+                implode(', ', $undeclared),
+            ));
+        }
+
         if (!in_array($state, $definition->states, true)) {
             throw new InvalidArgumentException(sprintf(
                 'Unsupported page state %s for archetype %s.',
