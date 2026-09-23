@@ -20,6 +20,7 @@ use Domains\Growth\Application\Contract\GrowthLearningBoundary;
 use Domains\Growth\Application\Contract\GrowthOptimizationBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
+use Domains\Growth\Application\Contract\GrowthSignalFeedBoundary;
 use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
 use Domains\Growth\Domain\GrowthExperimentDimension;
 use Domains\Growth\Domain\GrowthExperimentStatus;
@@ -48,6 +49,7 @@ final readonly class GrowthPageController
         private GrowthBuyingCommitteeBoundary $committee,
         private GrowthResearchBoundary $research,
         private GrowthSignalCollectorBoundary $collectors,
+        private GrowthSignalFeedBoundary $signalFeeds,
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
         private GrowthEngagementExecutionBoundary $engagementExecution,
@@ -168,6 +170,7 @@ final readonly class GrowthPageController
             fn(TenantContext $tenant):array=>[
                 'workspace'=>[
                     'collectors'=>$this->collectors->collectors(),
+                    'feeds'=>$this->signalFeeds->feeds($tenant->organizationId()->value()),
                     'runs'=>$this->workspace->collectorRuns($tenant->organizationId()->value(),[
                         'collector_name'=>$request->query->get('collector_name'),
                         'status'=>$request->query->get('status'),

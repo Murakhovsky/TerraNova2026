@@ -550,4 +550,17 @@ Feed URLs are restricted to HTTPS on port 443. The reader rejects private/reserv
 
 RSS/Atom collection is intentionally cursorless: source receipts provide durable dedupe across repeated polling. Each tenant feed explicitly maps external entries to `subject_type`, `subject_id`, `signal_type` and confidence.
 
+V0.27 makes tenant feed configuration operational in the existing Collectors workspace:
+
+```text
+/growth/collectors
+  ├─ registered collectors
+  ├─ RSS/Atom feed list
+  ├─ create feed
+  ├─ enable / disable
+  └─ collector run history
+```
+
+The SSR controller reads feed state through `GrowthSignalFeedBoundary::feeds()`. Browser mutations use only the canonical `/api/v1/growth/signal-feeds/*` endpoints with CSRF and idempotency; the page controller does not create or toggle feeds itself.
+
 Still intentionally absent: HR/Procurement target adapters, credentialed provider collectors, pre-handoff LinkedIn/call execution and autonomous activation.

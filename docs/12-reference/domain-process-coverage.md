@@ -26,7 +26,7 @@ generated: true
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `growth` · Growth | `0.26.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
+| `growth` · Growth | `0.27.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `0.12.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |

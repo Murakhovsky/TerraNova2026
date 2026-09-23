@@ -6,8 +6,8 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.26.0','Growth V0.26 manifest version must be 0.26.0.');
-$assert(($manifest['schema_version']??null)==='0.26.0','Growth V0.26 schema version must be 0.26.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.26.0','>='),'Growth manifest must remain V0.26+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.26.0','>='),'Growth schema must remain V0.26+.');
 foreach(['growth.signal.feed.manage','growth.signal.collector.rss_atom'] as $capability){
     $assert(in_array($capability,$manifest['contributions']['capabilities']??[],true),'Growth RSS/Atom capability missing: '.$capability);
 }
@@ -76,7 +76,7 @@ foreach(['GrowthSignalFeedBoundary','signalFeeds','createSignalFeed','enableSign
 }
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===64,'Growth V0.26 must expose exactly 64 canonical Growth API routes.');
+$assert(count($matches[0])>=64,'Growth canonical API surface must not shrink below V0.26 contract.');
 foreach([
     '/api/v1/growth/signal-feeds',
     '/api/v1/growth/signal-feeds/{id}/enable',

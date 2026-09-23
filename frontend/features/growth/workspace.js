@@ -239,6 +239,66 @@ const initGrowthCollectors=(root)=>{
       }
     });
   });
+
+  root.querySelector('[data-growth-signal-feed-create]')?.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const status=form.querySelector('[data-growth-form-status]');
+    const button=form.querySelector('button[type="submit"]');
+    const values=new FormData(form);
+    const confidence=Number(values.get('confidence')??0.75);
+    const payload={
+      name:String(values.get('name')||'').trim(),
+      url:String(values.get('url')||'').trim(),
+      subject_type:String(values.get('subject_type')||'').trim(),
+      subject_id:String(values.get('subject_id')||'').trim(),
+      signal_type:String(values.get('signal_type')||'').trim(),
+      confidence,
+      enabled:values.get('enabled')!==null,
+    };
+    if(!payload.name||!payload.url||!payload.subject_type||!payload.subject_id||!payload.signal_type){
+      setStatus(status,'All feed mapping fields are required.','error');
+      return;
+    }
+    if(!Number.isFinite(confidence)||confidence<0||confidence>1){
+      setStatus(status,'Confidence must be between 0 and 1.','error');
+      return;
+    }
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Adding feed…','loading');
+    try{
+      await mutation('/api/v1/growth/signal-feeds',payload,root,form);
+      delete form.dataset.idempotencyKey;
+      setStatus(status,'Feed added. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Feed creation failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
+  root.querySelectorAll('[data-growth-signal-feed-toggle]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const feedId=form.dataset.feedId||'';
+      const action=form.dataset.action||'';
+      if(!feedId||!['enable','disable'].includes(action))return;
+      const status=form.querySelector('[data-growth-form-status]');
+      const button=form.querySelector('button[type="submit"]');
+      button?.setAttribute('disabled','disabled');
+      setStatus(status,action==='enable'?'Enabling…':'Disabling…','loading');
+      try{
+        await mutation('/api/v1/growth/signal-feeds/'+encodeURIComponent(feedId)+'/'+action,{},root,form);
+        delete form.dataset.idempotencyKey;
+        setStatus(status,'Feed updated. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),250);
+      }catch(error){
+        setStatus(status,error.message||'Feed update failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
 };
 
 const optimizationEndpoint=(recommendationId,suffix='')=>{

@@ -549,6 +549,26 @@ Feed configuration є Growth-owned і tenant-scoped. Collector не пише Sig
 
 Collector не використовує cursor. Повторний polling є нормальним режимом роботи: зовнішня entry identity нормалізується в stable external key, а duplicate payload відсікається existing source receipt runtime.
 
+## Signal Feed Workspace
+
+V0.27 робить RSS/Atom configuration керованою з `/growth/collectors`:
+
+```text
+SSR read
+  GrowthSignalFeedBoundary::feeds()
+        ↓
+feed list + status
+
+Browser mutation
+  create / enable / disable
+        ↓
+/api/v1/growth/signal-feeds/*
+        ↓
+canonical Growth API guards
+```
+
+Page controller не викликає `createFeed()`, `setEnabled()` або `runCollector()`. Mutations залишаються API-owned, із tenant permission, CSRF, correlation та idempotency.
+
 ## Executable API V1
 
 V0.10 відкриває Growth runtime через 34 canonical routes під `/api/v1/growth/*`.

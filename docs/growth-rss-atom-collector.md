@@ -34,6 +34,8 @@ POST /api/v1/growth/signal-feeds/{id}/disable
 POST /api/v1/growth/collectors/rss_atom/run
 ```
 
+V0.27 exposes the same feed contract in `/growth/collectors`. The SSR page reads feed state only; Create/Enable/Disable remain API mutations.
+
 Mutations use the normal Growth API security contract: tenant manage permission, CSRF, correlation and `X-Idempotency-Key`.
 
 ## Collection contract

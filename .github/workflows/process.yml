@@ -144,6 +144,7 @@ jobs:
           php tests/architecture/growth_v0240_pre_handoff_execution.php
           php tests/architecture/growth_v0250_service_handoff_adapter.php
           php tests/architecture/growth_v0260_rss_atom_collector.php
+          php tests/architecture/growth_v0270_signal_feed_workspace.php
 
       - name: Process registry invariants
         run: |
@@ -173,6 +174,7 @@ jobs:
           php tests/unit/growth_v0240_pre_handoff_execution.php
           php tests/unit/growth_v0250_service_handoff_adapter.php
           php tests/unit/growth_v0260_rss_atom_collector.php
+          php tests/unit/growth_v0270_signal_feed_workspace.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -246,6 +248,8 @@ jobs:
           php -l tests/architecture/growth_v0250_service_handoff_adapter.php
           php -l tests/unit/growth_v0260_rss_atom_collector.php
           php -l tests/architecture/growth_v0260_rss_atom_collector.php
+          php -l tests/unit/growth_v0270_signal_feed_workspace.php
+          php -l tests/architecture/growth_v0270_signal_feed_workspace.php
           php -l app/Interfaces/Web/View/growth/candidate.phtml
           php -l app/Interfaces/Web/View/growth/experiments.phtml
           php -l app/Interfaces/Web/View/growth/experiment.phtml
