@@ -124,7 +124,7 @@ $requireContains($components, '.tn-ui-kpi--brand', 'Canonical KPI brand tone mus
 $requireContains($components, 'var(--tn-color-accent-border)', 'KPI brand tone must be owned by COS design tokens.');
 
 $docs = $read('docs/architecture/web-v0.17.md');
-foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'PHASE 12', 'Завершення WEB V0.17'] as $needle) {
+foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'Wave 13 Phase 4', 'Завершення WEB V0.17'] as $needle) {
     $requireContains($docs, $needle, 'WEB V0.17 documentation is incomplete.');
 }
 
