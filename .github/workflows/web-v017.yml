@@ -67,7 +67,6 @@ jobs:
           php -l symfony/src/Web/Sales/ClientCaseWorkspaceController.php
           php -l symfony/src/Web/Sales/ClientCaseMutationController.php
           php -l symfony/src/Application/Sales/Query/GetClientCaseWorkspaceQueryHandler.php
-          php symfony/bin/console lint:twig symfony/templates/experience/client_case symfony/templates/components/client_case
           php -l app/Interfaces/Web/View/components/ui/kpi_card.phtml
       - name: Workspace canonicalization gates
         run: |

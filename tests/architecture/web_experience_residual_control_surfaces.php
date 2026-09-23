@@ -20,8 +20,8 @@ $show = $read('symfony/templates/experience/client_case/show.html.twig');
 foreach ([
     '<twig:CosWorkspace',
     '<twig:CosEntityHeader',
-    '/property/show/',
-    '/property/pdf/',
+    'request.propertyHref',
+    'match.pdfHref',
     '/property/presentationShare',
     '/client-case/updatePropertyMatch/',
 ] as $marker) {
@@ -29,6 +29,11 @@ foreach ([
 }
 foreach (['<table', 'tn-', 'style=', '<script'] as $forbidden) {
     $notContains($show, $forbidden, 'Client Case Workspace must not restore residual raw/legacy presentation.');
+}
+
+$clientCasePresenter=$read('symfony/src/Web/Sales/ClientCaseWorkspacePresenter.php');
+foreach(["'/property/show/'","'/property/pdf/'"] as $marker){
+    $contains($clientCasePresenter,$marker,'Client Case presenter must preserve property deep links.');
 }
 
 $clientCaseGate = $read('tests/architecture/web_experience_production_client_case.php');

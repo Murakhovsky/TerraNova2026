@@ -66,13 +66,18 @@ foreach([
     '/cos/action/',
     '/cos/approval/',
     '/property/presentationShare',
-    '/property/pdf/',
+    'match.pdfHref',
     'name="csrf_token"',
 ] as $marker){
     if(!str_contains($template,$marker))throw new RuntimeException('VR-012 Entity Workspace composition incomplete: '.$marker);
 }
 foreach(['tn-','style=','<script','<table'] as $forbidden){
     if(str_contains($template,$forbidden))throw new RuntimeException('VR-012 restored legacy/local presentation: '.$forbidden);
+}
+
+$presenter=$read('symfony/src/Web/Sales/ClientCaseWorkspacePresenter.php');
+foreach(["'/property/show/'","'/property/pdf/'"] as $marker){
+    if(!str_contains($presenter,$marker))throw new RuntimeException('VR-012 presenter lost property route construction: '.$marker);
 }
 
 $mutation=$read('symfony/src/Web/Sales/ClientCaseMutationController.php');

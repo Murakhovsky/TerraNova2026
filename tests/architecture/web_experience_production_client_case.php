@@ -43,12 +43,17 @@ foreach([
     '<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','<twig:CosTimeline',
     'data-client-case-workspace','/client-case/update/','/client-case/activity/',
     '/client-case/updatePropertyMatch/','/cos/action/','/cos/approval/',
-    '/property/presentationShare','/property/pdf/',
+    '/property/presentationShare','match.pdfHref',
     'name="csrf_token"','name="return_url"','name="full_name"','name="stage_id"',
     'name="assigned_user_id"','name="next_contact_at"','name="activity_type"',
     'name="match_status"','name="score"','name="note"',
 ] as $marker)$contains($show,$marker,'Client Case Entity Workspace lost composition/workflow parity.');
 foreach(['tn-','style=','<script','<table'] as $forbidden)$notContains($show,$forbidden,'Client Case Workspace restored legacy/local presentation.');
+
+$presenter=$read('symfony/src/Web/Sales/ClientCaseWorkspacePresenter.php');
+foreach(["'/property/show/'","'/property/pdf/'"] as $marker){
+    $contains($presenter,$marker,'Client Case presenter lost property deep-link construction.');
+}
 
 $workspaceController=$read('symfony/src/Web/Sales/ClientCaseWorkspaceController.php');
 foreach(['GetClientCaseWorkspaceQuery','PageArchetype::EntityWorkspace','WorkspaceCompositionResolver',"'sales.client_case'","new EntityRef('sales.deal'"] as $marker){

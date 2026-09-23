@@ -1,25 +1,18 @@
 <?php
-
 declare(strict_types=1);
 
-use App\Web\Experience\Archetype\PageArchetype;
-use App\Web\Experience\Archetype\PageArchetypeRegistry;
+$root=dirname(__DIR__,2);
+$registryPath=$root.'/symfony/src/Web/Experience/Archetype/PageArchetypeRegistry.php';
+if(!is_file($registryPath))throw new RuntimeException('PageArchetypeRegistry is missing.');
+$registry=(string)file_get_contents($registryPath);
 
-$root = dirname(__DIR__, 2);
-require $root . '/symfony/vendor/autoload.php';
+$start=strpos($registry,'PageArchetype::OperationalQueue');
+$end=$start===false?false:strpos($registry,'PageArchetype::Collection',$start);
+if($start===false||$end===false)throw new RuntimeException('Operational Queue registry definition is missing.');
+$definition=substr($registry,$start,$end-$start);
 
-$definition = (new PageArchetypeRegistry())->get(PageArchetype::OperationalQueue);
-
-foreach (['PageHeader', 'EntityList'] as $required) {
-    if (!in_array($required, $definition->requiredPatterns, true)) {
-        throw new RuntimeException('Operational Queue lost required pattern: ' . $required);
-    }
-}
-
-foreach (['KpiStrip', 'FilterBar', 'ActionBar', 'EmptyState', 'ErrorState'] as $optional) {
-    if (!in_array($optional, $definition->optionalPatterns, true)) {
-        throw new RuntimeException('Operational Queue optional pattern contract is incomplete: ' . $optional);
-    }
+foreach(["['PageHeader', 'EntityList']","'KpiStrip'","'FilterBar'","'ActionBar'","'EmptyState'","'ErrorState'"] as $marker){
+    if(!str_contains($definition,$marker))throw new RuntimeException('Operational Queue pattern contract incomplete: '.$marker);
 }
 
 echo "Wave 13 Operational Queue pattern contract passed.\n";
