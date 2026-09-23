@@ -228,10 +228,165 @@ const initGrowthLearning=(root)=>{
   });
 };
 
+
+const experimentEndpoint=(experimentId,suffix='')=>{
+  const base='/api/v1/growth/experiments';
+  return experimentId
+    ? base+'/'+encodeURIComponent(experimentId)+(suffix?'/'+suffix:'')
+    : base;
+};
+
+const experimentVariant=(row)=>{
+  const key=String(row.querySelector('[data-variant-key]')?.value||'').trim().toLowerCase();
+  const name=String(row.querySelector('[data-variant-name]')?.value||'').trim();
+  const weight=Number(row.querySelector('[data-variant-weight]')?.value||0);
+  const rawConfig=String(row.querySelector('[data-variant-config]')?.value||'').trim();
+  if(!key||!name||!Number.isInteger(weight)||weight<1)throw new Error('Each variant requires key, name and positive integer weight.');
+  let config;
+  try{config=JSON.parse(rawConfig);}catch{throw new Error('Variant configuration must be valid JSON.');}
+  if(!config||Array.isArray(config)||typeof config!=='object'||Object.keys(config).length===0){
+    throw new Error('Variant configuration must be a non-empty JSON object.');
+  }
+  return {key,name,allocation_weight:weight,config};
+};
+
+const bindVariantRemoval=(root)=>{
+  root.querySelectorAll('[data-growth-experiment-variant-remove]').forEach((button)=>{
+    if(button.dataset.bound==='true')return;
+    button.dataset.bound='true';
+    button.addEventListener('click',()=>{
+      const rows=root.querySelectorAll('[data-growth-experiment-variant]');
+      if(rows.length<=2){
+        setStatus(root.querySelector('[data-growth-form-status]'),'An experiment requires at least two variants.','error');
+        return;
+      }
+      button.closest('[data-growth-experiment-variant]')?.remove();
+    });
+  });
+};
+
+const initGrowthExperiments=(root)=>{
+  const form=root.querySelector('[data-growth-experiment-create]');
+  if(!form)return;
+
+  bindVariantRemoval(root);
+  root.querySelector('[data-growth-experiment-variant-add]')?.addEventListener('click',()=>{
+    const container=root.querySelector('[data-growth-experiment-variants]');
+    const template=root.querySelector('[data-growth-experiment-variant-template]');
+    if(!container||!template)return;
+    const count=container.querySelectorAll('[data-growth-experiment-variant]').length;
+    const status=form.querySelector('[data-growth-form-status]');
+    if(count>=12){
+      setStatus(status,'An experiment supports at most twelve variants.','error');
+      return;
+    }
+    container.append(template.content.cloneNode(true));
+    bindVariantRemoval(root);
+  });
+
+  form.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=form.querySelector('[data-growth-form-status]');
+    const button=form.querySelector('button[type="submit"]');
+    const values=new FormData(form);
+    let variants;
+    try{
+      variants=[...form.querySelectorAll('[data-growth-experiment-variant]')].map(experimentVariant);
+    }catch(error){
+      setStatus(status,error.message||'Variant configuration is invalid.','error');
+      return;
+    }
+    if(variants.length<2||variants.length>12){
+      setStatus(status,'An experiment requires between two and twelve variants.','error');
+      return;
+    }
+
+    const data={
+      name:String(values.get('name')||'').trim(),
+      hypothesis:String(values.get('hypothesis')||'').trim(),
+      dimension:String(values.get('dimension')||'').trim(),
+      primary_outcome:String(values.get('primary_outcome')||'').trim(),
+      variants,
+    };
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Creating experiment…','loading');
+    try{
+      const response=await mutation(experimentEndpoint(''),data,root,form);
+      const payload=response?.data??response;
+      const experimentId=payload?.experiment?.experiment_id||'';
+      delete form.dataset.idempotencyKey;
+      if(!experimentId)throw new Error('Created experiment did not return an identifier.');
+      setStatus(status,'Experiment created. Opening…','success');
+      window.setTimeout(()=>{window.location.href='/growth/experiments/'+encodeURIComponent(experimentId);},250);
+    }catch(error){
+      setStatus(status,error.message||'Experiment creation failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+};
+
+const initGrowthExperiment=(root)=>{
+  const experimentId=root.dataset.experimentId||'';
+  if(!experimentId)return;
+  const status=root.querySelector('[data-growth-experiment-status]');
+
+  root.querySelectorAll('[data-growth-experiment-transition]').forEach((button)=>{
+    button.addEventListener('click',async()=>{
+      const transition=button.dataset.growthExperimentTransition||'';
+      if(!['start','pause','resume','complete','archive'].includes(transition))return;
+      button.disabled=true;
+      setStatus(status,transition.charAt(0).toUpperCase()+transition.slice(1)+' experiment…','loading');
+      try{
+        await mutation(experimentEndpoint(experimentId,transition),{},root,button);
+        delete button.dataset.idempotencyKey;
+        setStatus(status,'Experiment updated. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),250);
+      }catch(error){
+        setStatus(status,error.message||'Experiment transition failed.','error');
+        button.disabled=false;
+      }
+    });
+  });
+
+  root.querySelector('[data-growth-experiment-assign]')?.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const localStatus=form.querySelector('[data-growth-form-status]')||status;
+    const button=form.querySelector('button[type="submit"]');
+    const values=new FormData(form);
+    const candidateId=String(values.get('candidate_id')||'').trim();
+    const variantKey=String(values.get('variant_key')||'').trim();
+    if(!candidateId){
+      setStatus(localStatus,'Candidate ID is required.','error');
+      return;
+    }
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(localStatus,'Assigning Candidate…','loading');
+    try{
+      await mutation(
+        experimentEndpoint(experimentId,'assignments/'+encodeURIComponent(candidateId)),
+        {variant_key:variantKey||null},
+        root,
+        form,
+      );
+      delete form.dataset.idempotencyKey;
+      setStatus(localStatus,'Candidate assigned. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(localStatus,error.message||'Candidate assignment failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+};
+
 const boot=()=>{
   document.querySelectorAll('[data-growth-candidate]').forEach(initGrowthCandidate);
   document.querySelectorAll('[data-growth-collectors]').forEach(initGrowthCollectors);
   document.querySelectorAll('[data-growth-learning]').forEach(initGrowthLearning);
+  document.querySelectorAll('[data-growth-experiments]').forEach(initGrowthExperiments);
+  document.querySelectorAll('[data-growth-experiment]').forEach(initGrowthExperiment);
 };
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});

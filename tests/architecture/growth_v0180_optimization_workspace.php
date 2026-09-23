@@ -56,7 +56,7 @@ foreach(['tn-growth-optimization-grid','tn-growth-optimization-card','tn-growth-
 
 $routes=$read('symfony/config/routes.yaml');
 $assert(str_contains($routes,'path: /growth/learning'),'Growth Learning SSR route is missing.');
-$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')===8,'Growth V0.18 must keep exactly eight Growth SSR routes.');
+$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=8,'Growth V0.18 SSR route surface must not shrink below eight routes.');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
 $assert(count($matches[0])>=44,'Growth canonical API surface must not shrink below V0.18 contract.');
 

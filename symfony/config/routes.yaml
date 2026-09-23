@@ -384,6 +384,18 @@ cos_growth_learning:
   methods: [GET]
 
 
+cos_growth_experiments:
+  path: /growth/experiments
+  controller: App\Web\Growth\GrowthPageController::experiments
+  methods: [GET]
+
+cos_growth_experiment:
+  path: /growth/experiments/{id}
+  controller: App\Web\Growth\GrowthPageController::experiment
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
 # Growth V0.10 — executable Opportunity Intelligence API
 cos_api_v1_growth_collectors:
   path: /api/v1/growth/collectors

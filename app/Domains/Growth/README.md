@@ -408,4 +408,23 @@ A Candidate may have only one immutable variant assignment per experiment. New a
 
 The runtime deliberately does not select a winner or execute the tested channel/message. Experiment measurement and execution remain separate authorities.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution, Experiment Workspace and autonomous activation.
+V0.20 exposes Experiments inside the existing Growth Workspace:
+
+```text
+/growth/experiments
+  ├─ create DRAFT experiment
+  ├─ filter lifecycle / dimension
+  └─ open experiment
+
+/growth/experiments/{id}
+  ├─ lifecycle controls
+  ├─ deterministic / manual Candidate assignment
+  ├─ per-variant attribution
+  ├─ primary conversion rate
+  ├─ downstream outcome counts
+  └─ won value by currency
+```
+
+The SSR controller is read-only. All create / transition / assignment mutations go through the canonical V0.19 API with CSRF and idempotency. The Workspace does not select a winner and does not execute the tested channel or message.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation.

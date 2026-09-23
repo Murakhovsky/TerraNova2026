@@ -75,7 +75,9 @@ Workspace = компанія й операційна робота
     │   ├── /growth/accounts/{id}
     │   ├── /growth/signals
     │   ├── /growth/collectors
-    │   └── /growth/learning
+    │   ├── /growth/learning
+    │   ├── /growth/experiments
+    │   └── /growth/experiments/{id}
     ├── Sales
     │   ├── /sales/dashboard
     │   ├── /sales/today
@@ -205,9 +207,11 @@ Diagnostic → COS / Diagnostics
 /growth/signals
 /growth/collectors
 /growth/learning
+/growth/experiments
+/growth/experiments/{id}
 ```
 
-Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer. `/growth/learning` також показує governed Optimization evidence/recommendation і виконує Generate / Accept / Dismiss / Materialize через canonical API; policy activation у Workspace навмисно відсутня.
+Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer. `/growth/learning` також показує governed Optimization evidence/recommendation і виконує Generate / Accept / Dismiss / Materialize через canonical API; policy activation у Workspace навмисно відсутня. `/growth/experiments` і `/growth/experiments/{id}` показують experiment lifecycle, assignments та attribution; mutations ідуть через canonical Growth API, winner selection та outbound execution відсутні.
 
 ### Sales
 

@@ -397,6 +397,26 @@ read-only Growth Workspace projection
 
 Workspace не читає Sales persistence і не створює Sales mutations. Його завдання — зробити feedback loop видимим для оператора та придатним для наступного Learning/Optimization cycle.
 
+## Experiment Workspace
+
+V0.20 робить V0.19 runtime операційним:
+
+```text
+/growth/experiments
+        ↓
+create draft through API
+        ↓
+DRAFT → RUNNING ↔ PAUSED → COMPLETED → ARCHIVED
+        ↓
+/growth/experiments/{id}
+  ├─ assignments
+  └─ attribution report
+        ↓
+operator interpretation
+```
+
+SSR page controller лише читає `GrowthExperimentBoundary`. Browser mutations використовують `/api/v1/growth/experiments/*` з CSRF та idempotency. Workspace показує conversion rates і outcome evidence, але не має endpoint або UI action для winner selection чи automatic execution.
+
 ## Cross-domain Handoff Protocol
 
 V0.8 робить handoff окремим resumable protocol:
@@ -592,7 +612,7 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.19
+## Статус V0.20
 
 `process_state: to-be` поки навмисний. V0.19 додає controlled Growth Experiments & Attribution: immutable Candidate assignment до variant і outcome attribution у bounded assignment/completion window. Experiment runtime вимірює ефект, але не виконує outreach і не оголошує winner.
 
@@ -622,6 +642,11 @@ app/Domains/Growth/Application/AI/GrowthOptimizationPrompt.php
 app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthOptimizationGateway.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthOptimizationRepository.php
 app/Domains/Growth/Application/Service/GrowthExperimentService.php
+symfony/src/Web/Growth/GrowthPageController.php
+symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php
+app/Interfaces/Web/View/growth/experiments.phtml
+app/Interfaces/Web/View/growth/experiment.phtml
+frontend/features/growth/workspace.js
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthExperimentRepository.php
 app/Domains/Growth/Automation/Event/GrowthOutcomeFeedbackConsumer.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthLearningRepository.php

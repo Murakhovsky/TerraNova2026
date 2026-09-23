@@ -33,6 +33,7 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new NavigationContribution('growth-signals','Signals','/growth/signals',priority:40,parentKey:'growth'),
             new NavigationContribution('growth-collectors','Collectors','/growth/collectors',priority:50,parentKey:'growth'),
             new NavigationContribution('growth-learning','Learning','/growth/learning',priority:60,parentKey:'growth'),
+            new NavigationContribution('growth-experiments','Experiments','/growth/experiments',priority:70,parentKey:'growth'),
         ];
     }
 
@@ -45,6 +46,7 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new SearchResult('growth.search.signals','Growth Signals','/growth/signals','workspace','Evidence stream'),
             new SearchResult('growth.search.collectors','Growth Collectors','/growth/collectors','workspace','Signal ingestion operations'),
             new SearchResult('growth.search.learning','Growth Learning','/growth/learning','workspace','Outcome feedback and learning'),
+            new SearchResult('growth.search.experiments','Growth Experiments','/growth/experiments','workspace','Controlled experiments and attribution'),
         ],$query,$limit);
     }
 
@@ -57,6 +59,7 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new ShellCommandItem('growth.signals','Open Growth Signals','/growth/signals','navigation','Growth'),
             new ShellCommandItem('growth.collectors','Open Growth Collectors','/growth/collectors','navigation','Growth'),
             new ShellCommandItem('growth.learning','Open Growth Learning','/growth/learning','navigation','Growth'),
+            new ShellCommandItem('growth.experiments','Open Growth Experiments','/growth/experiments','navigation','Growth'),
         ];
     }
 
@@ -69,6 +72,8 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new WorkspaceDefinition('growth.signals','Growth Signals','/growth/signals',null,40),
             new WorkspaceDefinition('growth.collectors','Growth Collectors','/growth/collectors',null,50),
             new WorkspaceDefinition('growth.learning','Growth Learning','/growth/learning',null,60),
+            new WorkspaceDefinition('growth.experiments','Growth Experiments','/growth/experiments',null,70),
+            new WorkspaceDefinition('growth.experiment','Growth Experiment','/growth/experiments','growth.experiment',80),
         ];
     }
 }

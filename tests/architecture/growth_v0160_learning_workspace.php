@@ -53,7 +53,7 @@ foreach([
 
 $routes=$read('symfony/config/routes.yaml');
 $assert(str_contains($routes,'path: /growth/learning'),'Growth Learning SSR route missing.');
-$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')===8,'Growth V0.16 must expose exactly eight Growth SSR routes.');
+$assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=8,'Growth V0.16 SSR route surface must not shrink below eight routes.');
 
 $learningView='app/Interfaces/Web/View/growth/learning.phtml';
 $candidateView='app/Interfaces/Web/View/growth/candidate.phtml';

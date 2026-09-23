@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.19.0','Growth V0.19 manifest version must be 0.19.0.');
-$assert(($manifest['schema_version']??null)==='0.19.0','Growth V0.19 schema version must be 0.19.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.19.0','>='),'Growth manifest must remain V0.19+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.19.0','>='),'Growth schema must remain V0.19+.');
 foreach(['growth.experiments','growth.attribution'] as $capability){
     $assert(in_array($capability,$manifest['contributions']['capabilities']??[],true),'Growth experiment capability missing: '.$capability);
 }

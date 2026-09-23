@@ -11,6 +11,7 @@ use App\Web\Phtml\PhtmlRenderer;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
+use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthLearningBoundary;
@@ -18,6 +19,9 @@ use Domains\Growth\Application\Contract\GrowthOptimizationBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
+use Domains\Growth\Domain\GrowthExperimentDimension;
+use Domains\Growth\Domain\GrowthExperimentStatus;
+use Domains\Growth\Domain\GrowthOutcomeType;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -43,6 +47,7 @@ final readonly class GrowthPageController
         private GrowthResearchBoundary $research,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthDecisionBoundary $decisions,
+        private GrowthExperimentBoundary $experiments,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
@@ -153,6 +158,42 @@ final readonly class GrowthPageController
                     ],150),
                 ],
             ]);
+    }
+
+    public function experiments(Request $request): Response
+    {
+        return $this->page($request,'Growth Experiments','growth-experiments','growth/experiments',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'experiments'=>$this->experiments->experiments($tenant->organizationId()->value(),[
+                        'q'=>$request->query->get('q'),
+                        'status'=>$request->query->get('status'),
+                        'dimension'=>$request->query->get('dimension'),
+                    ],200),
+                    'dimensions'=>GrowthExperimentDimension::values(),
+                    'outcomes'=>GrowthOutcomeType::values(),
+                    'statuses'=>array_map(static fn(GrowthExperimentStatus $status):string=>$status->value,GrowthExperimentStatus::cases()),
+                ],
+            ]);
+    }
+
+    public function experiment(Request $request,string $id): Response
+    {
+        return $this->page($request,'Growth Experiment','growth-experiments','growth/experiment',
+            function(TenantContext $tenant)use($id):array{
+                try{
+                    $brief=$this->experiments->experimentBrief($tenant->organizationId()->value(),$id);
+                }catch(InvalidArgumentException){
+                    return ['notFound'=>true,'workspace'=>[]];
+                }
+
+                return [
+                    'workspace'=>[
+                        'brief'=>$brief,
+                        'statuses'=>array_map(static fn(GrowthExperimentStatus $status):string=>$status->value,GrowthExperimentStatus::cases()),
+                    ],
+                ];
+            });
     }
 
     public function account(Request $request,string $id): Response
