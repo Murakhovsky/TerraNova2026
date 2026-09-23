@@ -79,10 +79,11 @@ Sales read model
 
 ### Робочий простір угоди (`Deal Workspace`)
 
-`sales/deal.phtml`
+`symfony/templates/experience/sales/deal_workspace.html.twig`
 
-- звичайний PageHeader замінено на EntityHeader;
+- production route використовує `CosWorkspace` + canonical EntityHeader;
 - public identity, semantic risk state, pipeline/stage/owner/value metadata стають частиною entity anatomy;
+- Stimulus `sales_deal_controller.js` володіє stage/owner/follow-up/meeting/message/approval/intelligence interactions без inline JS;
 - існуючі KPI, tabs, forms, approvals, communications, intelligence та timeline не змінюють behavior.
 
 

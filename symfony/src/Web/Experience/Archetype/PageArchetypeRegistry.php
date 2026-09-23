@@ -82,7 +82,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Operate on one business entity with context, history and governed actions.',
                 ['WorkspaceHeader', 'EntityHeader'],
-                ['ContextPanel', 'ActivityFeed', 'Timeline', 'ActionBar', 'AIRecommendations'],
+                ['KpiStrip', 'ContextPanel', 'ActivityFeed', 'Timeline', 'ActionBar', 'AIRecommendations'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),

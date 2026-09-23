@@ -10,7 +10,7 @@ $assert = static function (bool $condition, string $message): void {
 
 $pipeline = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/pipeline.phtml');
 $today = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/today.phtml');
-$deal = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/deal.phtml');
+$deal = (string) file_get_contents($root . '/symfony/templates/experience/sales/deal_workspace.html.twig');
 $js = (string) file_get_contents($root . '/frontend/features/sales/workspace.js');
 $css = (string) file_get_contents($root . '/frontend/features/sales/workspace.css');
 $routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
