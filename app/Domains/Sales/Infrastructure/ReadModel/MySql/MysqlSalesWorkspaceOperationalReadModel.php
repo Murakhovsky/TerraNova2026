@@ -136,7 +136,9 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             . 'LEFT JOIN tn_users u ON u.id=c.assigned_user_id AND u.organization_id=c.organization_id '
             . 'LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id '
             . 'LEFT JOIN sales_deal_stage_history h ON h.organization_id=c.organization_id AND h.deal_id=c.id AND h.pipeline_id=c.pipeline_id AND h.stage_id=c.stage_id AND h.left_at IS NULL '
-            . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY COALESCE(s.sort_order,0),c.updated_at DESC LIMIT ' . $this->limit($filters['limit'] ?? 100),
+            . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY COALESCE(s.sort_order,0),c.updated_at DESC LIMIT '
+            . $this->limit($filters['limit'] ?? 100)
+            . ' OFFSET ' . $this->offset($filters['offset'] ?? 0),
             $params,
         );
     }
@@ -460,6 +462,11 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
     private function limit(mixed $value): int
     {
         return max(1, min((int) $value, 250));
+    }
+
+    private function offset(mixed $value): int
+    {
+        return max(0, min((int) $value, 1000000));
     }
 
     /** @return list<array<string, mixed>> */

@@ -7,8 +7,8 @@ $contracts = [
     'app/Kernel/Policy/Service/ActionPolicyService.php' => 'PolicyDecision::Denied, PolicyDecision::HumanOnly => $this->actions->reject',
     'app/Infrastructure/Platform/Persistence/MySql/Configuration/MysqlSalesPolicyAdministration.php' => '$this->engine->evaluate',
     'symfony/config/routes.yaml' => 'cos_web_sales_admin_actions_page:',
-    'app/Interfaces/Web/View/sales_admin/actions.phtml' => 'Test Policy',
-    'app/Interfaces/Web/View/sales/admin.phtml' => 'Actions & Policies',
+    'symfony/templates/experience/sales/admin/actions.html.twig' => 'Test Policy',
+    'symfony/templates/experience/sales/admin/dashboard.html.twig' => 'Actions & Policies',
 ];
 foreach ($contracts as $file => $needle) {
     $text = file_get_contents($root . '/' . $file);

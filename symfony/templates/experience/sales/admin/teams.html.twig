@@ -1,0 +1,97 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Users, Teams & Authority | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Users, Teams & Authority"
+        subtitle="Team membership controls assignability and approval scope. Direct capabilities are explicit exceptions."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Integrations" href="/sales/admin/integrations" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Users, Teams & Authority недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        {% set catalog = admin.data.catalog ?? {} %}
+        <section
+            class="cos-page__stack"
+            data-controller="sales-admin-teams"
+            data-sales-admin-teams-csrf-value="{{ csrfToken }}"
+        >
+            <div class="cos-section-grid">
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Organization structure</p>
+                    <h2 class="cos-card__title">Create team</h2>
+                    <form class="cos-pattern-stack" data-create-team data-action="submit->sales-admin-teams#create">
+                        <label class="cos-field"><span>Name</span><input class="cos-input" name="name" required maxlength="160"></label>
+                        <label class="cos-field"><span>Code</span><input class="cos-input" name="code" required maxlength="80" pattern="[A-Za-z0-9_]+"></label>
+                        <label class="cos-field"><span>Assignment mode</span><select class="cos-select" name="assignment_mode">{% for mode in catalog.assignment_modes ?? ['MANUAL'] %}<option value="{{ mode }}">{{ mode }}</option>{% endfor %}</select></label>
+                        <button class="cos-button cos-button--primary" type="submit">Create team</button>
+                    </form>
+                </article>
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Authority boundary</p>
+                    <h2 class="cos-card__title">Explicit permissions</h2>
+                    <p class="cos-card__copy"><code>sales.deal.assign</code>, <code>sales.approval.decide</code> та <code>sales.approval.any_team</code> лишаються explicit capability contracts.</p>
+                </article>
+            </div>
+
+            <section class="cos-page__section">
+                <h2 class="cos-section-title">Teams</h2>
+                <div class="cos-entity-list" role="list">
+                    {% for team in admin.data.teams ?? [] %}
+                        <twig:CosEntityListItem
+                            title="{{ team.name ?? team.code ?? 'Team' }}"
+                            subtitle="{{ (team.code ?? '') ~ ' · ' ~ (team.assignment_mode ?? '') }}"
+                            meta="{{ (team.active_members ?? 0) ~ ' members · ' ~ (team.leads ?? 0) ~ ' leads · v' ~ (team.configuration_version ?? 1) }}"
+                            statusLabel="{{ team.status ?? 'UNKNOWN' }}"
+                            statusTone="{{ (team.status ?? '') == 'ACTIVE' ? 'positive' : 'neutral' }}"
+                        />
+                    {% else %}
+                        <twig:CosEmptyState title="Teams не налаштовані" copy="Створіть першу команду." />
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="cos-page__section">
+                <h2 class="cos-section-title">Users & effective Sales authority</h2>
+                <div class="cos-section-grid">
+                    {% for user in admin.data.users ?? [] %}
+                        <article class="cos-card" data-user-id="{{ user.id }}">
+                            <p class="cos-card__eyebrow">{{ user.email ?? '' }}</p>
+                            <h3 class="cos-card__title">{{ user.full_name ?? 'User' }}</h3>
+                            <p class="cos-card__copy">Organization role: {{ user.organization_role ?? '' }}</p>
+                            <form class="cos-pattern-stack" data-membership-form data-action="submit->sales-admin-teams#membership">
+                                <label class="cos-field"><span>Team</span><select class="cos-select" name="team_id" required><option value="">Select team</option>{% for team in admin.data.teams ?? [] %}{% if (team.status ?? '') != 'ARCHIVED' %}<option value="{{ team.id }}">{{ team.name }} ({{ team.code }})</option>{% endif %}{% endfor %}</select></label>
+                                <label class="cos-field"><span>Role</span><select class="cos-select" name="role"><option>MEMBER</option><option>LEAD</option></select></label>
+                                <label class="cos-field"><span>Status</span><select class="cos-select" name="status"><option>ACTIVE</option><option>INACTIVE</option></select></label>
+                                <label class="cos-choice"><input type="checkbox" name="assignment_enabled" value="1" checked><span>Assignable</span></label>
+                                <label class="cos-choice"><input type="checkbox" name="approval_enabled" value="1"><span>May approve for team</span></label>
+                                <label class="cos-field"><span>Assignment weight</span><input class="cos-input" type="number" name="assignment_weight" min="1" max="100" value="1"></label>
+                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Save membership</button>
+                            </form>
+                            <form class="cos-pattern-stack" data-capabilities-form data-action="submit->sales-admin-teams#capabilities">
+                                <fieldset class="cos-field"><legend>Direct capabilities</legend>{% set activeCaps = user.capabilities ?? [] %}{% for capability in catalog.capabilities ?? [] %}<label class="cos-choice"><input type="checkbox" name="capabilities[]" value="{{ capability }}" {% if capability in activeCaps %}checked{% endif %}><span>{{ capability }}</span></label>{% endfor %}</fieldset>
+                                <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Save capabilities</button>
+                            </form>
+                            <span class="cos-card__copy" data-user-status aria-live="polite"></span>
+                        </article>
+                    {% else %}
+                        <twig:CosEmptyState title="Users відсутні" copy="No users are available." />
+                    {% endfor %}
+                </div>
+            </section>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

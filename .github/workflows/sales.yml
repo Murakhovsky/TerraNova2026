@@ -51,9 +51,16 @@ jobs:
 
       - name: Frontend syntax
         run: |
-          node --check frontend/features/sales/workspace.js
-          node --check frontend/features/sales/rule-editor.js
           node --check symfony/assets/controllers/sales_lead_controller.js
+          node --check symfony/assets/controllers/sales_today_controller.js
+          node --check symfony/assets/controllers/sales_pipeline_controller.js
+          node --check symfony/assets/controllers/sales_deal_controller.js
+          node --check symfony/assets/controllers/sales_admin_pipeline_controller.js
+          node --check symfony/assets/controllers/sales_admin_rule_editor_controller.js
+          node --check symfony/assets/controllers/sales_admin_agent_controller.js
+          node --check symfony/assets/controllers/sales_admin_policies_controller.js
+          node --check symfony/assets/controllers/sales_admin_teams_controller.js
+          node --check symfony/assets/controllers/sales_admin_integrations_controller.js
           node --check tests/browser/sales_workspace.mjs
           node --check tests/browser/golden_four_accessibility.mjs
 

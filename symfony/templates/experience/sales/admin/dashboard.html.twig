@@ -1,0 +1,99 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Administration | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Налаштування Sales Domain"
+        subtitle="Бізнес-конфігурація Sales окремо від технічної телеметрії Kernel і generic COS runtime."
+    >
+        <twig:CosButton label="Sales Dashboard" href="/sales/dashboard" variant="ghost" />
+        <twig:CosButton label="COS Control Center" href="/cos/control-center" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Sales administration sections">
+        {% block start %}
+            <span class="cos-card__copy">System control surface · business configuration</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Pipelines" href="/sales/admin/pipelines" variant="ghost" size="sm" />
+            <twig:CosButton label="Rules" href="/sales/admin/rules" variant="ghost" size="sm" />
+            <twig:CosButton label="Health" href="/sales/admin/health" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Sales Admin недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="sales-admin-kpis">
+            <h2 id="sales-admin-kpis" class="cos-section-title">Administration pulse</h2>
+            <div class="cos-kpi-strip">
+                {% for metric in admin.kpis %}
+                    <article class="cos-card">
+                        <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Sales administration areas">
+            {% for area in admin.areas %}
+                <a class="cos-card cos-entity-card" href="{{ area.href }}">
+                    <p class="cos-card__eyebrow">Control surface</p>
+                    <h2 class="cos-card__title">{{ area.label }}</h2>
+                    <p class="cos-card__copy">{{ area.copy }}</p>
+                </a>
+            {% endfor %}
+        </section>
+
+        <section class="cos-page__section" aria-labelledby="admin-pipelines">
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Pipelines</p>
+                <h2 id="admin-pipelines" class="cos-card__title">Воронки та етапи</h2>
+                <p class="cos-card__copy">{{ admin.pipelines|length }} configured pipelines.</p>
+            </div>
+            {% if admin.pipelines is empty %}
+                <twig:CosEmptyState title="Pipeline configuration відсутня" copy="Створіть перший pipeline у Sales Administration." />
+            {% else %}
+                <div class="cos-section-grid">
+                    {% for pipeline in admin.pipelines %}
+                        <article class="cos-card">
+                            <div class="cos-card__header">
+                                <div>
+                                    <p class="cos-card__eyebrow">{{ pipeline.code }}</p>
+                                    <h3 class="cos-card__title">{{ pipeline.name }}</h3>
+                                </div>
+                                {% if pipeline.isDefault %}
+                                    <twig:CosStatus label="Default" tone="positive" />
+                                {% endif %}
+                            </div>
+                            <p class="cos-card__copy">{{ pipeline.stageCount }} stages</p>
+                            <div class="cos-pattern-stack">
+                                {% for stage in pipeline.stages %}
+                                    <div class="cos-next-action">
+                                        <span class="cos-next-action__signal"></span>
+                                        <div>
+                                            <strong>{{ stage.name }}</strong>
+                                            <small>{{ stage.code }} · {{ stage.probability }}%</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <twig:CosActionBar label="Pipeline administration" align="start">
+                                <twig:CosButton label="Configure" href="/sales/admin/pipelines/{{ pipeline.id }}" variant="ghost" size="sm" />
+                            </twig:CosActionBar>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

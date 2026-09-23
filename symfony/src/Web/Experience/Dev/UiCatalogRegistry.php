@@ -54,6 +54,7 @@ final class UiCatalogRegistry
             $this->entry('CosEntityCard', 'Business', 'Reusable entity preview surface with status and metadata.', ['default', 'linked'], '#phase7-business-heading'),
             $this->entry('CosEntityListItem', 'Business', 'Dense row-like entity representation for operational lists.', ['default', 'linked'], '#phase7-business-heading'),
             $this->entry('CosActionBar', 'Business', 'Canonical primary/secondary/danger action composition.', ['start', 'between', 'end', 'sticky'], '#phase7-business-heading'),
+            $this->entry('CosToolbar', 'Business', 'Contextual controls for pages, collections and process surfaces.', ['default', 'compact'], '#phase7-business-heading'),
             $this->entry('CosBulkActionBar', 'Business', 'Selection-aware bulk action surface.', ['default'], '#phase7-business-heading'),
             $this->entry('CosFilterBar', 'Business', 'Composable server-first search and filter surface.', ['default', 'mobile'], '#phase7-business-heading'),
             $this->entry('CosStage', 'Business', 'Workflow position distinct from semantic outcome status.', ['complete', 'current', 'upcoming', 'blocked'], '#phase7-business-heading'),

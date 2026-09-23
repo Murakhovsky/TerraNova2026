@@ -1,0 +1,116 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Health & Audit | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Health & Audit"
+        subtitle="Read-only operational control center over canonical Kernel and Platform runtime data."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Integrations" href="/sales/admin/integrations" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Health & Audit недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        {% set health = admin.data.health ?? {} %}
+        {% set status = health.status ?? 'UNKNOWN' %}
+
+        <section class="cos-page__section">
+            <div class="cos-kpi-strip">
+                <article class="cos-card"><twig:CosMetric label="Overall status" value="{{ status }}" hint="{{ health.generated_at ?? '' }}" /></article>
+                {% for name, subsystem in health.subsystems ?? {} %}
+                    <article class="cos-card"><twig:CosMetric label="{{ name|replace({'_':' '})|title }}" value="{{ subsystem }}" /></article>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if (health.issues.critical ?? []) is not empty or (health.issues.warnings ?? []) is not empty %}
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Attention</p>
+                <h2 class="cos-card__title">Issues</h2>
+                <div class="cos-pattern-stack">
+                    {% for issue in health.issues.critical ?? [] %}<twig:CosAlert title="ERROR · {{ issue.count ?? 0 }}" copy="{{ issue.message ?? '' }}" tone="danger" />{% endfor %}
+                    {% for issue in health.issues.warnings ?? [] %}<twig:CosAlert title="DEGRADED · {{ issue.count ?? 0 }}" copy="{{ issue.message ?? '' }}" tone="warning" />{% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="cos-section-grid">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Runtime</p>
+                <h2 class="cos-card__title">Summary</h2>
+                <dl class="cos-entity-summary">{% for key, value in health.summary ?? {} %}<div class="cos-entity-summary__item"><span>{{ key|replace({'_':' '})|title }}</span><strong>{{ value }}</strong></div>{% endfor %}</dl>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Providers</p>
+                <h2 class="cos-card__title">Integrations</h2>
+                <div class="cos-entity-list">{% for item in health.integrations ?? [] %}<twig:CosEntityListItem title="{{ item.name ?? item.integration_key ?? 'Integration' }}" subtitle="{{ (item.integration_key ?? '') ~ ' · ' ~ (item.provider ?? '') }}" meta="{{ 'checked ' ~ (item.last_health_check_at ?? 'never') }}" statusLabel="{{ (item.status ?? '') ~ ' · ' ~ (item.health_status ?? 'UNKNOWN') }}" statusTone="{{ (item.health_status ?? '') == 'HEALTHY' ? 'positive' : 'warning' }}" />{% endfor %}</div>
+            </article>
+        </section>
+
+        {% set runtimeLabels = {
+            'failed_actions':'Failed actions',
+            'problem_jobs':'Problem jobs',
+            'pending_approvals':'Pending approvals',
+            'agent_failures':'Agent failures',
+            'crm_failures':'CRM inbox failures'
+        } %}
+        <section class="cos-section-grid">
+            {% for key, label in runtimeLabels %}
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Operational queue</p>
+                    <h2 class="cos-card__title">{{ label }} · {{ (health.runtime[key] ?? [])|length }}</h2>
+                    <div class="cos-entity-list">
+                        {% for row in health.runtime[key] ?? [] %}
+                            <twig:CosEntityListItem
+                                title="{{ row.type ?? row.action_type ?? row.agent_name ?? row.event_type ?? row.id ?? 'Item' }}"
+                                subtitle="{{ row.last_error ?? row.error ?? row.reason ?? '' }}"
+                                meta="{{ row.correlation_id ?? '' }}"
+                                statusLabel="{{ row.status ?? null }}"
+                                statusTone="{{ (row.status ?? '') in ['FAILED','ERROR'] ? 'danger' : 'warning' }}"
+                            />
+                        {% else %}
+                            <twig:CosEmptyState title="No current items" copy="Operational queue is clear." />
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+
+        <section class="cos-section-grid">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Audit</p>
+                <h2 class="cos-card__title">Audit timeline</h2>
+                <div class="cos-pattern-stack">
+                    {% for row in health.audit ?? [] %}
+                        <p class="cos-card__copy"><strong>{{ row.category ?? '' }} · {{ row.action ?? '' }}</strong><br>{{ row.actor_type ?? '' }}:{{ row.actor_id ?? '' }} → {{ row.subject_type ?? '' }}:{{ row.subject_id ?? '' }}<br>{{ row.created_at ?? '' }} · {{ row.correlation_id ?? '' }}</p>
+                    {% else %}
+                        <twig:CosEmptyState title="Audit порожній" copy="No audit records." />
+                    {% endfor %}
+                </div>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Configuration</p>
+                <h2 class="cos-card__title">Revisions</h2>
+                <div class="cos-pattern-stack">
+                    {% for row in health.configuration_revisions ?? [] %}
+                        <p class="cos-card__copy"><strong>{{ row.configuration_type ?? '' }} · {{ row.action ?? '' }} · v{{ row.entity_version ?? '' }}</strong><br>{{ row.entity_id ?? '' }}<br>{{ row.actor_type ?? '' }}:{{ row.actor_id ?? '' }} · {{ row.created_at ?? '' }}</p>
+                    {% else %}
+                        <twig:CosEmptyState title="Revisions відсутні" copy="No Sales configuration revisions." />
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

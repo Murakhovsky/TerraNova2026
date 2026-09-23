@@ -37,11 +37,8 @@ if (str_contains(
     throw new RuntimeException('VR-004 retained legacy Deal route ownership.');
 }
 
-$legacy = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
-foreach (['public function deal(', 'OperationsReadModelInterface', 'normalizeDealIntelligence'] as $forbidden) {
-    if (str_contains($legacy, $forbidden)) {
-        throw new RuntimeException('VR-004 left Deal-specific legacy controller ownership: ' . $forbidden);
-    }
+if (is_file($root . '/symfony/src/Web/Sales/SalesPageController.php')) {
+    throw new RuntimeException('Legacy SalesPageController returned after VR-008 completed the remaining Sales surface cutover.');
 }
 
 $query = (string) file_get_contents($root . '/symfony/src/Application/Sales/Query/GetSalesDealWorkspaceQueryHandler.php');

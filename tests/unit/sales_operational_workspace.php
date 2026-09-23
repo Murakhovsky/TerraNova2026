@@ -8,11 +8,12 @@ $assert = static function (bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
 };
 
-$pipeline = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/pipeline.phtml');
-$today = (string) file_get_contents($root . '/app/Interfaces/Web/View/sales/today.phtml');
+$pipeline = (string) file_get_contents($root . '/symfony/templates/experience/sales/pipeline.html.twig');
+$pipelineController = (string) file_get_contents($root . '/symfony/assets/controllers/sales_pipeline_controller.js');
+$pipelineStyles = (string) file_get_contents($root . '/symfony/assets/styles/domains/sales.css');
+$today = (string) file_get_contents($root . '/symfony/templates/experience/sales/today.html.twig');
+$todayPresenter = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesTodayPresenter.php');
 $deal = (string) file_get_contents($root . '/symfony/templates/experience/sales/deal_workspace.html.twig');
-$js = (string) file_get_contents($root . '/frontend/features/sales/workspace.js');
-$css = (string) file_get_contents($root . '/frontend/features/sales/workspace.css');
 $routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 
 foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-deal-card', 'draggable="true"'] as $marker) {
@@ -20,19 +21,19 @@ foreach (['data-sales-pipeline-root', 'data-sales-stage-dropzone', 'data-sales-d
 }
 $assert(str_contains($pipeline, 'data-csrf='), 'Pipeline workspace must expose CSRF for canonical stage mutations.');
 $assert(str_contains($routes, '/api/v1/sales/opportunities/{id}/stage'), 'Canonical Symfony Sales stage endpoint is missing.');
-foreach (['initSalesPipeline', 'postStageChange', 'is-drop-target', '/stage'] as $marker) {
-    $assert(str_contains($js, $marker), 'Sales workspace JS is missing Pipeline interaction: ' . $marker);
+foreach (['dragStart', 'drop(event)', 'changeStage', 'concurrent_stage_change', '/stage'] as $marker) {
+    $assert(str_contains($pipelineController, $marker), 'Canonical Pipeline Stimulus controller is missing interaction: ' . $marker);
 }
 
 // Only anchors actually used by Today belong to this contract. Timeline remains a valid
 // Deal section, but New Replies now deep-link to Communications where the manager can answer.
 foreach (['work', 'intelligence', 'communications'] as $anchor) {
-    $assert(str_contains($today, "'" . $anchor . "'"), 'Today workspace is missing Deal Workspace mapping: ' . $anchor);
+    $assert(str_contains($todayPresenter, "'anchor' => '" . $anchor . "'"), 'Today presenter is missing Deal Workspace mapping: ' . $anchor);
     $assert(str_contains($deal, 'id="' . $anchor . '"'), 'Deal Workspace is missing mapped section: ' . $anchor);
 }
-$assert(str_contains($today, "'#'.\$anchor") || str_contains($today, "'#' . \$anchor"), 'Today workspace must compose section deep links from the configured mapping.');
-foreach (['is-drop-target', 'is-dragging'] as $marker) {
-    $assert(str_contains($css, $marker), 'Sales workspace CSS is missing drag/drop state: ' . $marker);
+$assert(str_contains($todayPresenter, "'/sales/deals/' . \$dealId . '#' . \$definition['anchor']"), 'Today presenter must compose canonical Deal Workspace deep links.');
+foreach (['is-drop-target', 'is-dragging', '.cos-sales-pipeline-card__stage-form'] as $marker) {
+    $assert(str_contains($pipelineStyles, $marker), 'Canonical Sales domain CSS is missing Pipeline state: ' . $marker);
 }
 
 echo "Sales operational workspace passed: Pipeline mutation and Today deep links use canonical Deal Workspace flows.\n";

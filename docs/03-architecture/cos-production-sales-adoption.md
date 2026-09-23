@@ -70,12 +70,13 @@ Sales read model
 
 ### Воронка продажів (`Sales Pipeline`)
 
-`sales/pipeline.phtml`
+`symfony/templates/experience/sales/pipeline.html.twig`
 
-- локальний filter form переходить на shared FilterBar;
+- canonical `CosToolbar` і `CosFilterBar` володіють shared controls;
 - Pipeline/Owner/Risk/Priority/Value/Source/Search лишаються тими самими query params;
-- Kanban і drag/drop залишаються Sales-specific pattern;
-- Deal cards не перетворюються механічно на generic EntityCard, бо мають pipeline interaction semantics.
+- Kanban живе як Sales-specific `SalesPipelineBoard`, а не fake generic table;
+- drag/drop збережено у `sales_pipeline_controller.js`;
+- keyboard stage select дає ту саму mutation без мишки.
 
 ### Робочий простір угоди (`Deal Workspace`)
 
@@ -93,32 +94,33 @@ Sales read model
 
 ### Список угод (`Deals`)
 
-`sales/deals.phtml`
+`symfony/templates/experience/sales/deals.html.twig`
 
-- локальний filter form замінено на shared FilterBar;
-- raw table замінено на canonical DataTable;
-- stage і risk використовують semantic presentation;
-- mobile rendering переходить на record-card contract;
-- query params і URL переходу в Deal Workspace збережені.
+- Collection використовує canonical `CosDataGrid` з search/filter/columns/pagination/mobile-card contract;
+- generic DataGrid filter підтримує select і text inputs без Sales-specific логіки;
+- legacy flat filter query params лишаються backward-compatible aliases;
+- Open row action веде в canonical Deal Workspace;
+- operational read model підтримує offset server pagination.
 
 ### Операційний inbox (`Today`)
 
-`sales/today.phtml`
+`symfony/templates/experience/sales/today.html.twig`
 
-- вісім operational queues збираються через canonical Panel;
-- domain-specific list body винесено в `components/sales/today_section.phtml`;
+- вісім operational queues збираються через canonical Operational Queue composition;
+- queue items використовують `CosEntityListItem`, а швидкі дії — `CosActionBar`;
 - approval, complete і reschedule data attributes збережені;
 - My Work / Team scope semantics не змінені.
 
 ### Робочий простір директора (`Director Workspace`)
 
-`sales/director.phtml`
+`symfony/templates/experience/sales/director.html.twig`
 
-- локальний toolbar замінено на shared FilterBar;
-- executive currency table, historical transitions, manager performance та at-risk deals переведено на canonical DataTable;
-- section shells переведено на canonical Panel;
-- KPI залишаються canonical KPI cards;
-- currency isolation, attribution policy і explainability semantics не змінені.
+- `SalesDirectorCockpitService` лишається source of truth через Application Query;
+- filters рендеряться canonical `CosFilterBar`;
+- executive currency, historical transitions, manager performance та at-risk deals використовують `CosDataGrid`;
+- KPI використовують canonical KpiStrip;
+- currency isolation, attribution policy і explainability semantics не змінені;
+- старий `SalesPageController` видалено після завершення останнього PHTML-owned Sales surface.
 
 
 ## Хвиля 3
@@ -127,7 +129,7 @@ Sales read model
 
 ### Команди та повноваження (`Teams & Authority`)
 
-`sales_admin/teams.phtml`
+`symfony/templates/experience/sales/admin/teams.html.twig`
 
 - legacy admin header замінено на canonical Sales navigation + PageHeader;
 - create-team і authority model розміщені у canonical panels;
@@ -137,7 +139,7 @@ Sales read model
 
 ### Інтеграції (`Integrations`)
 
-`sales_admin/integrations.phtml`
+`symfony/templates/experience/sales/admin/integrations.html.twig`
 
 - legacy admin shell замінено на canonical workspace shell;
 - provider configuration та runtime boundary використовують canonical panels;
@@ -147,7 +149,7 @@ Sales read model
 
 ### Стан та аудит (`Health & Audit`)
 
-`sales_admin/health.phtml`
+`symfony/templates/experience/sales/admin/health.html.twig`
 
 - overall/subsystem health подано через canonical KPI cards;
 - issue та runtime states використовують semantic Status;
@@ -196,3 +198,20 @@ Canonical layer стандартизує повторювану anatomy. Domain 
 - production Vite build зелений;
 - PHASE 0–8 gates залишаються зеленими;
 - окремий PHASE 9 architecture gate захищає adoption від regression.
+
+
+## Завершення Wave 13 Phase 3
+
+Sales presentation ownership is now canonical Symfony/Twig/Stimulus end to end.
+
+- `/sales/today` → Operational Queue;
+- `/sales/pipeline` → Process / Pipeline;
+- `/sales/deals` → Collection / DataGrid;
+- `/sales/director` → Executive Dashboard;
+- `/sales/admin/*` → System / Control Surface;
+- Sales-specific drag/drop remains a domain component;
+- Rule, Pipeline, Agent, Teams, Integrations and Policy administration use dedicated Stimulus controllers;
+- legacy `SalesPageController` and `SalesAdminPageController` are retired;
+- legacy `sales-workspace` Vite entrypoint is retired;
+- **Sales visual PHTML = 0**.
+

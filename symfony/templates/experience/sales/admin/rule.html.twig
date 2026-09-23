@@ -1,0 +1,137 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Business Rule Editor | COS{% endblock %}
+
+{% block workspace_content %}
+{% set rule = admin.data.rule ?? {} %}
+{% set catalog = admin.data.catalog ?? {} %}
+<section
+    class="cos-page__stack"
+    data-controller="sales-admin-rule-editor"
+    data-sales-admin-rule-editor-rule-id-value="{{ rule.id ?? '' }}"
+    data-sales-admin-rule-editor-version-value="{{ rule.configuration_version ?? 0 }}"
+    data-sales-admin-rule-editor-csrf-value="{{ csrfToken }}"
+    data-sales-admin-rule-editor-catalog-value="{{ catalog|json_encode|e('html_attr') }}"
+    data-sales-admin-rule-editor-current-value="{{ rule|json_encode|e('html_attr') }}"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration · Rule"
+        title="{{ rule.name ?? 'Business Rule Editor' }}"
+        subtitle="{{ (rule.code ?? '') ~ ' · ' ~ (rule.status ?? 'DRAFT') ~ ' · ' ~ (rule.ownership ?? 'SYSTEM') }}"
+        metaValue="{{ rule.status ?? 'DRAFT' }}"
+        metaLabel="lifecycle"
+    >
+        <twig:CosButton label="All rules" href="/sales/admin/rules" variant="ghost" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Rule lifecycle">
+        {% block start %}
+            <span class="cos-card__copy">WHEN → IF → THEN · cfg v{{ rule.configuration_version ?? 0 }}</span>
+        {% endblock %}
+        {% block end %}
+            <button class="cos-button cos-button--primary cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#save">Save draft</button>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#dryRun">Test Rule</button>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-rule-lifecycle="activate" data-action="click->sales-admin-rule-editor#lifecycle">Activate</button>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-rule-lifecycle="disable" data-action="click->sales-admin-rule-editor#lifecycle">Disable</button>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-rule-lifecycle="archive" data-action="click->sales-admin-rule-editor#lifecycle">Archive</button>
+            {% if rule.system_definition is iterable %}
+                <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-rule-lifecycle="restore-system" data-action="click->sales-admin-rule-editor#lifecycle">Restore system definition</button>
+            {% endif %}
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Rule editor unavailable" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+        {% if rule.system_update_available ?? false %}
+            <twig:CosAlert
+                title="System default update available"
+                copy="Admin customization remains authoritative until the system definition is explicitly restored."
+                tone="warning"
+            />
+        {% endif %}
+
+        <article class="cos-card">
+            <div class="cos-card__header">
+                <div>
+                    <p class="cos-card__eyebrow">Editor</p>
+                    <h2 class="cos-card__title">WHEN → IF → THEN</h2>
+                </div>
+                <twig:CosActionBar label="Rule editor mode">
+                    <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-mode="basic" data-action="click->sales-admin-rule-editor#mode">Basic Mode</button>
+                    <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-mode="advanced" data-action="click->sales-admin-rule-editor#mode">Advanced Mode</button>
+                </twig:CosActionBar>
+            </div>
+
+            <div class="cos-pattern-stack" data-sales-admin-rule-editor-target="basic">
+                <div class="cos-section-grid">
+                    <label class="cos-field"><span>Name</span><input class="cos-input" data-rule-name maxlength="220" value="{{ rule.name ?? '' }}"></label>
+                    <label class="cos-field"><span>Priority</span><input class="cos-input" data-rule-priority type="number" min="1" max="10000" value="{{ rule.priority ?? 100 }}"></label>
+                </div>
+
+                <section class="cos-card">
+                    <p class="cos-card__eyebrow">WHEN</p>
+                    <label class="cos-field"><span>Trigger</span><select class="cos-select" data-rule-trigger></select></label>
+                </section>
+
+                <section class="cos-card">
+                    <p class="cos-card__eyebrow">IF</p>
+                    <div class="cos-action-bar cos-action-bar--start">
+                        <select class="cos-select" data-rule-condition-mode aria-label="Condition mode">
+                            <option value="all">ALL conditions (AND)</option>
+                            <option value="any">ANY condition (OR)</option>
+                        </select>
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#addCondition">Add condition</button>
+                    </div>
+                    <div class="cos-pattern-stack" data-sales-admin-rule-editor-target="conditions"></div>
+                </section>
+
+                <section class="cos-card">
+                    <p class="cos-card__eyebrow">THEN</p>
+                    <div class="cos-action-bar cos-action-bar--start">
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#addAction">Add action</button>
+                    </div>
+                    <div class="cos-pattern-stack" data-sales-admin-rule-editor-target="actions"></div>
+                </section>
+            </div>
+
+            <div class="cos-pattern-stack" data-sales-admin-rule-editor-target="advanced" hidden>
+                <twig:CosAlert
+                    title="Advanced declarative mode"
+                    copy="The same trigger, field, operator, action and parameter allowlists are enforced server-side. SQL/PHP or unknown keys are rejected."
+                    tone="info"
+                />
+                <textarea class="cos-textarea" rows="26" spellcheck="false" data-sales-admin-rule-editor-target="json"></textarea>
+            </div>
+
+            <p class="cos-card__copy" data-sales-admin-rule-editor-target="status" aria-live="polite"></p>
+        </article>
+
+        <section class="cos-card" data-sales-admin-rule-editor-target="previewPanel" hidden>
+            <div class="cos-card__header">
+                <div><p class="cos-card__eyebrow">Dry Run</p><h2 class="cos-card__title">Read-only preview</h2></div>
+                <span class="cos-card__copy">0 mutations</span>
+            </div>
+            <div class="cos-kpi-strip" data-sales-admin-rule-editor-target="preview"></div>
+            <p class="cos-card__copy" data-sales-admin-rule-editor-target="previewNote"></p>
+        </section>
+
+        <section class="cos-card">
+            <div class="cos-card__header">
+                <div><p class="cos-card__eyebrow">Audit</p><h2 class="cos-card__title">Revision history</h2></div>
+                <span class="cos-card__copy">{{ (admin.data.revisions ?? [])|length }}</span>
+            </div>
+            <div class="cos-pattern-stack">
+                {% for revision in admin.data.revisions ?? [] %}
+                    <p class="cos-card__copy"><strong>{{ revision.action ?? 'UPDATE' }}</strong> · v{{ revision.entity_version ?? 0 }} · {{ revision.actor_id ?? 'system' }} · {{ revision.created_at ?? '' }}</p>
+                {% else %}
+                    <twig:CosEmptyState title="Revision history is empty" copy="Changes will appear here after rule configuration mutations." />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

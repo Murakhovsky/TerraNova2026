@@ -77,16 +77,17 @@ try {
     for (const path of ['/sales/today', '/sales/pipeline']) {
       const response = await page.goto(absolute(path), { waitUntil: 'networkidle' });
       assertOk(response, `${profile.name}: ${path}`);
-      await page.locator('[data-sales-workspace]').waitFor({ state: 'visible' });
-      await page.locator('[data-sales-global-search]').waitFor({ state: 'visible' });
+      await page.locator('.cos-shell[data-controller="workspace-shell"]').waitFor({ state: 'visible' });
+      await assertPerformance(page, `${profile.name}: ${path}`);
     }
 
-    const legacyInput = page.locator('[data-sales-global-search-input]').first();
-    await legacyInput.fill('test');
-    const searchResponse = page.waitForResponse((response) => response.url().includes('/api/v1/sales/search'));
-    await legacyInput.dispatchEvent('input');
-    assertOk(await searchResponse, `${profile.name}: Sales search`);
-    await page.locator('[data-sales-global-search-results]:not([hidden])').waitFor({ state: 'visible' });
+    await page.locator('[data-action="click->workspace-shell#openPalette"]').first().click();
+    const canonicalInput = page.locator('[data-workspace-shell-target="paletteInput"]').first();
+    await canonicalInput.fill('test');
+    const searchResponse = page.waitForResponse((response) => response.url().includes('/workspace/search'));
+    await canonicalInput.dispatchEvent('input');
+    assertOk(await searchResponse, `${profile.name}: canonical workspace search`);
+    await page.locator('[data-workspace-shell-target="searchFrame"]').waitFor({ state: 'visible' });
 
     const leadsResponse = await page.goto(absolute('/sales/leads'), { waitUntil: 'networkidle' });
     assertOk(leadsResponse, `${profile.name}: /sales/leads`);

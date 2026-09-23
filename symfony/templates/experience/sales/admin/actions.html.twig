@@ -1,0 +1,98 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Actions & Policies Administration | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Actions & Policies Administration"
+        subtitle="Policies govern AI/COS automation. Human authorization remains a separate authority boundary."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Rules" href="/sales/admin/rules" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Actions & Policies Administration недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        {% set catalog = admin.data.catalog ?? {} %}
+        <section
+            class="cos-page__stack"
+            data-controller="sales-admin-policies"
+            data-sales-admin-policies-csrf-value="{{ csrfToken }}"
+        >
+            <twig:CosToolbar label="Policy administration">
+                {% block start %}<span class="cos-card__copy">Governed automation constraints</span>{% endblock %}
+            </twig:CosToolbar>
+
+            {% for action in admin.data.actions ?? [] %}
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">{{ action.type ?? '' }}</p>
+                    <h2 class="cos-card__title">{{ action.label ?? action.type ?? 'Action' }}</h2>
+                    <div class="cos-pattern-stack">
+                        {% for policy in action.policies ?? [] %}
+                            <details class="cos-card" data-policy-row data-id="{{ policy.id }}">
+                                <summary>{{ policy.decision }} · {{ policy.name }} · cfg v{{ policy.configuration_version }}</summary>
+                                <form class="cos-pattern-stack" data-edit data-action="submit->sales-admin-policies#save">
+                                    <input type="hidden" name="configuration_version" value="{{ policy.configuration_version }}">
+                                    <label class="cos-field"><span>Name</span><input class="cos-input" name="name" value="{{ policy.name }}"></label>
+                                    <label class="cos-field"><span>Enabled</span><select class="cos-select" name="enabled"><option value="1" {% if policy.enabled %}selected{% endif %}>Yes</option><option value="0" {% if not policy.enabled %}selected{% endif %}>No</option></select></label>
+                                    <label class="cos-field"><span>Execution Mode</span><select class="cos-select" name="decision">{% for decision in catalog.decisions ?? [] %}<option value="{{ decision.value }}" {% if policy.decision == decision.value %}selected{% endif %}>{{ decision.label }}</option>{% endfor %}</select></label>
+                                    <label class="cos-field"><span>Reason</span><input class="cos-input" name="reason" value="{{ policy.decision_reason ?? '' }}"></label>
+                                    <label class="cos-field"><span>Priority</span><input class="cos-input" name="priority" type="number" value="{{ policy.priority }}"></label>
+                                    <label class="cos-field"><span>Conditions</span><textarea class="cos-textarea" name="conditions" rows="4">{{ policy.conditions|json_encode }}</textarea></label>
+                                    <twig:CosActionBar label="Policy actions" align="start">
+                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">Save</button>
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-policies#archive">Archive</button>
+                                    </twig:CosActionBar>
+                                    <span class="cos-card__copy" data-status aria-live="polite"></span>
+                                </form>
+                            </details>
+                        {% else %}
+                            <twig:CosEmptyState title="Policies відсутні" copy="Для цієї action policy ще не визначена." />
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">New policy</p>
+                <h2 class="cos-card__title">Business constraints</h2>
+                <form class="cos-section-grid" data-create data-action="submit->sales-admin-policies#create">
+                    <label class="cos-field"><span>Name</span><input class="cos-input" name="name" required></label>
+                    <label class="cos-field"><span>Action Type</span><select class="cos-select" name="action_type">{% for action in catalog.actions ?? [] %}<option value="{{ action.type }}">{{ action.label }}</option>{% endfor %}</select></label>
+                    <label class="cos-field"><span>Execution Mode</span><select class="cos-select" name="decision">{% for decision in catalog.decisions ?? [] %}<option value="{{ decision.value }}">{{ decision.label }}</option>{% endfor %}</select></label>
+                    <label class="cos-field"><span>Allowed Roles</span><input class="cos-input" name="allowed_roles" placeholder="AGENT, RULE"></label>
+                    <label class="cos-field"><span>Pipeline</span><select class="cos-select" name="pipeline_id"><option value="">Any</option>{% for pipeline in catalog.pipelines ?? [] %}<option value="{{ pipeline.id }}">{{ pipeline.name }}</option>{% endfor %}</select></label>
+                    <label class="cos-field"><span>Risk Limit</span><select class="cos-select" name="risk_limit"><option value="">Any</option>{% for risk in catalog.risks ?? [] %}<option>{{ risk }}</option>{% endfor %}</select></label>
+                    <label class="cos-field"><span>Reason</span><input class="cos-input" name="reason"></label>
+                    <label class="cos-field"><span>Priority</span><input class="cos-input" name="priority" type="number" value="100"></label>
+                    <label class="cos-field"><span>Extra Conditions JSON</span><textarea class="cos-textarea" name="conditions" rows="3">[]</textarea></label>
+                    <button class="cos-button cos-button--primary" type="submit">Create Policy</button>
+                    <span class="cos-card__copy" data-create-status aria-live="polite"></span>
+                </form>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Read-only</p>
+                <h2 class="cos-card__title">Test Policy</h2>
+                <form class="cos-section-grid" data-preview data-action="submit->sales-admin-policies#preview">
+                    <label class="cos-field"><span>Action</span><select class="cos-select" name="action_type">{% for action in catalog.actions ?? [] %}<option value="{{ action.type }}">{{ action.label }}</option>{% endfor %}</select></label>
+                    <label class="cos-field"><span>Actor</span><select class="cos-select" name="actor_role">{% for role in catalog.roles ?? [] %}<option>{{ role }}</option>{% endfor %}</select></label>
+                    <label class="cos-field"><span>Deal</span><input class="cos-input" name="deal_id" required></label>
+                    <label class="cos-field"><span>Risk</span><select class="cos-select" name="risk_level">{% for risk in catalog.risks ?? [] %}<option>{{ risk }}</option>{% endfor %}</select></label>
+                    <button class="cos-button cos-button--ghost" type="submit">Test Policy</button>
+                </form>
+                <pre data-preview-result class="cos-card__copy"></pre>
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

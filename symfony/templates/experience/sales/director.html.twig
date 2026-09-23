@@ -1,0 +1,147 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Director | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Director Workspace"
+        title="Historical Sales Intelligence"
+        subtitle="Історичний funnel, операційна дисципліна, forecast, risk та explainability без змішування валют."
+    >
+        <twig:CosButton label="Dashboard" href="/sales/dashboard" variant="ghost" />
+        <twig:CosButton label="Pipeline" href="/sales/pipeline" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosFilterBar action="/sales/director" label="Director filters">
+        <label class="cos-field">
+            <span>History days</span>
+            <input class="cos-input" type="number" min="1" max="366" name="history_days" value="{{ director.filters.history_days }}">
+        </label>
+        <label class="cos-field">
+            <span>Forecast days</span>
+            <input class="cos-input" type="number" min="1" max="366" name="forecast_days" value="{{ director.filters.forecast_days }}">
+        </label>
+        <label class="cos-field">
+            <span>Pipeline</span>
+            <input class="cos-input" name="pipeline_id" value="{{ director.filters.pipeline_id }}" placeholder="all">
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Apply</button>
+    </twig:CosFilterBar>
+
+    {% if director.error %}
+        <twig:CosAlert title="Sales Director недоступний" copy="{{ director.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="director-kpis">
+            <h2 id="director-kpis" class="cos-section-title">Executive pulse</h2>
+            <div class="cos-kpi-strip">
+                {% for metric in director.kpis %}
+                    <article class="cos-card">
+                        <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" />
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="cos-page__section" aria-labelledby="director-money">
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Executive picture</p>
+                <h2 id="director-money" class="cos-card__title">Pipeline and forecast by currency</h2>
+                <p class="cos-card__copy">Currencies remain isolated by contract; monetary facts are never mixed.</p>
+            </div>
+            <twig:CosDataGrid
+                id="sales-director-money"
+                label="Pipeline and forecast by currency"
+                baseUrl="/sales/director"
+                rowIdKey="currency"
+                :query="director.executiveGrid.query"
+                :page="director.executiveGrid.page"
+                :columns="director.executiveGrid.columns"
+                :state="director.executiveGrid.state"
+            />
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Historical funnel and velocity">
+            <div class="cos-pattern-stack">
+                <div class="cos-card">
+                    <p class="cos-card__eyebrow">Historical funnel</p>
+                    <h2 class="cos-card__title">Actual transitions</h2>
+                </div>
+                <twig:CosDataGrid
+                    id="sales-director-transitions"
+                    label="Historical stage transitions"
+                    baseUrl="/sales/director"
+                    rowIdKey="pipeline"
+                    :query="director.transitionGrid.query"
+                    :page="director.transitionGrid.page"
+                    :columns="director.transitionGrid.columns"
+                    :state="director.transitionGrid.state"
+                />
+            </div>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Velocity</p>
+                <h2 class="cos-card__title">Cycle and stage duration</h2>
+                <dl class="cos-entity-summary">
+                    {% for item in director.velocity %}
+                        <div class="cos-entity-summary__item">
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                        </div>
+                    {% endfor %}
+                </dl>
+                {% if director.qualityNotes[0] %}
+                    <p class="cos-card__copy">{{ director.qualityNotes[0] }}</p>
+                {% endif %}
+            </article>
+        </section>
+
+        <section class="cos-page__section" aria-labelledby="director-managers">
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Manager performance</p>
+                <h2 id="director-managers" class="cos-card__title">Attributed facts only</h2>
+                <p class="cos-card__copy">Поточний owner не отримує заднім числом чужі response, follow-up чи outcomes.</p>
+            </div>
+            <twig:CosDataGrid
+                id="sales-director-managers"
+                label="Manager performance"
+                baseUrl="/sales/director"
+                rowIdKey="owner"
+                :query="director.managerGrid.query"
+                :page="director.managerGrid.page"
+                :columns="director.managerGrid.columns"
+                :state="director.managerGrid.state"
+            />
+            {% if director.qualityNotes[1] %}
+                <p class="cos-card__copy">{{ director.qualityNotes[1] }}</p>
+            {% endif %}
+        </section>
+
+        <section class="cos-page__section" aria-labelledby="director-risk">
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Risk & explainability</p>
+                <h2 id="director-risk" class="cos-card__title">Deals requiring attention</h2>
+                <p class="cos-card__copy">Кожен ризик має observable evidence; opaque risk score тут не використовується.</p>
+            </div>
+            <twig:CosDataGrid
+                id="sales-director-risk"
+                label="At-risk deals"
+                baseUrl="/sales/director"
+                rowIdKey="deal"
+                :query="director.riskGrid.query"
+                :page="director.riskGrid.page"
+                :columns="director.riskGrid.columns"
+                :state="director.riskGrid.state"
+            />
+            {% if director.qualityNotes[2] %}
+                <p class="cos-card__copy">{{ director.qualityNotes[2] }}</p>
+            {% endif %}
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

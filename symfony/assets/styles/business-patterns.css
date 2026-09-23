@@ -288,6 +288,35 @@ a.cos-entity-list-item:focus-visible {
   border-radius: var(--cos-radius-panel);
 }
 
+.cos-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cos-space-3);
+  min-width: 0;
+  padding: var(--cos-space-3);
+  background: var(--cos-surface-default-bg);
+  border: var(--cos-border-width) solid var(--cos-surface-border);
+  border-radius: var(--cos-radius-panel);
+}
+
+.cos-toolbar--compact {
+  padding: var(--cos-space-2) var(--cos-space-3);
+}
+
+.cos-toolbar__start,
+.cos-toolbar__end {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cos-space-2);
+  min-width: 0;
+}
+
+.cos-toolbar__end {
+  justify-content: flex-end;
+}
+
 .cos-action-bar,
 .cos-bulk-action-bar,
 .cos-filter-bar {

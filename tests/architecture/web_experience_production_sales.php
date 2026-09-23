@@ -51,17 +51,33 @@ foreach ([
 }
 $notContains($leads, '/sales/reference/', 'Lead Inbox must not retain reference routes after cutover.');
 
-$pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
+$pipeline = $read('symfony/templates/experience/sales/pipeline.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosFilterBar',
+    '<twig:SalesPipelineBoard',
+    'data-controller="sales-pipeline"',
     'data-sales-pipeline-root',
+] as $marker) {
+    $contains($pipeline, $marker, 'Sales Pipeline must use canonical Process/Pipeline composition.');
+}
+$pipelineBoard = $read('symfony/templates/components/sales/sales_pipeline_board.html.twig');
+foreach ([
     'data-sales-stage-dropzone',
     'data-sales-deal-card',
+    'draggable="true"',
+    'submit->sales-pipeline#changeStage',
 ] as $marker) {
-    $contains($pipeline, $marker, 'Sales Pipeline migration lost a canonical or interaction contract.');
+    $contains($pipelineBoard, $marker, 'Sales Pipeline domain board lost an interaction contract.');
 }
-$notContains($pipeline, '<form class="tn-ui-filter-bar', 'Sales Pipeline must not restore a local filter form.');
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($pipeline, $forbidden, 'Sales Pipeline must not restore legacy/local page presentation.');
+    $notContains($pipelineBoard, $forbidden, 'Sales Pipeline board must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/pipeline.phtml')) {
+    throw new RuntimeException('Legacy Sales Pipeline PHTML must stay retired after VR-006.');
+}
 
 $deal = $read('symfony/templates/experience/sales/deal_workspace.html.twig');
 foreach ([
@@ -84,95 +100,125 @@ if (is_file($root . '/app/Interfaces/Web/View/sales/deal.phtml')) {
 }
 
 
-$deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
+$deals = $read('symfony/templates/experience/sales/deals.html.twig');
 foreach ([
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/data_table'",
-    "'responsive' => 'cards'",
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosDataGrid',
+    'data-controller="sales-deals"',
+    'cos:datagrid-row-action->sales-deals#rowAction',
 ] as $marker) {
-    $contains($deals, $marker, 'Sales Deals list must use canonical FilterBar and DataTable contracts.');
+    $contains($deals, $marker, 'Sales Deals must use canonical Collection/DataGrid composition.');
 }
-$notContains($deals, '<form class="tn-ui-filter-bar', 'Sales Deals must not restore a local filter form.');
-$notContains($deals, 'class="tn-ui-table"', 'Sales Deals must not restore a local raw table.');
+foreach (['tn-', 'style=', '<script', '<table'] as $forbidden) {
+    $notContains($deals, $forbidden, 'Sales Deals page must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/deals.phtml')) {
+    throw new RuntimeException('Legacy Sales Deals PHTML must stay retired after VR-007.');
+}
 
-$today = $read('app/Interfaces/Web/View/sales/today.phtml');
+$today = $read('symfony/templates/experience/sales/today.html.twig');
 foreach ([
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/sales/today_section'",
+    '<twig:CosPageHeader',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    '<twig:CosEmptyState',
+    'data-controller="sales-today"',
     'data-sales-today-root',
     'data-sales-today-status',
-] as $marker) {
-    $contains($today, $marker, 'Sales Today must use canonical Panel composition without losing behavior.');
-}
-$todaySection = $read('app/Interfaces/Web/View/components/sales/today_section.phtml');
-foreach ([
     'data-sales-approval',
     'data-sales-activity-complete',
     'data-sales-activity-reschedule',
 ] as $marker) {
-    $contains($todaySection, $marker, 'Sales Today section must preserve operational interaction contracts.');
+    $contains($today, $marker, 'Sales Today must use canonical Operational Queue composition without losing behavior.');
 }
-$notContains($today, '<section class="tn-ui-panel', 'Sales Today must not restore locally assembled panels.');
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($today, $forbidden, 'Sales Today must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/today.phtml')) {
+    throw new RuntimeException('Legacy Sales Today PHTML must stay retired after VR-005.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/components/sales/today_section.phtml')) {
+    throw new RuntimeException('Legacy Sales Today section PHTML must stay retired after VR-005.');
+}
 
-$director = $read('app/Interfaces/Web/View/sales/director.phtml');
+$director = $read('symfony/templates/experience/sales/director.html.twig');
 foreach ([
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    "partial('components/ui/kpi_card'",
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    'class="cos-kpi-strip"',
+    '<twig:CosDataGrid',
+    'Historical Sales Intelligence',
+    'Pipeline and forecast by currency',
+    'Historical funnel',
+    'Manager performance',
+    'Risk & explainability',
 ] as $marker) {
-    $contains($director, $marker, 'Sales Director must use canonical filter, panel, table and KPI contracts.');
+    $contains($director, $marker, 'Sales Director must use canonical Executive Dashboard composition.');
 }
-$notContains($director, '<form method="get" class="tn-ui-toolbar">', 'Sales Director must not restore a local toolbar.');
-$notContains($director, 'class="tn-ui-table"', 'Sales Director must not restore raw local tables.');
+foreach (['tn-', 'style=', '<script', '<table'] as $forbidden) {
+    $notContains($director, $forbidden, 'Sales Director must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/director.phtml')) {
+    throw new RuntimeException('Legacy Sales Director PHTML must stay retired after VR-008.');
+}
 
 
-$adminLegacySurfaces = [
-    'Teams' => $read('app/Interfaces/Web/View/sales_admin/teams.phtml'),
-    'Integrations' => $read('app/Interfaces/Web/View/sales_admin/integrations.phtml'),
-    'Health & Audit' => $read('app/Interfaces/Web/View/sales_admin/health.phtml'),
+$adminSurfaces = [
+    'Dashboard' => $read('symfony/templates/experience/sales/admin/dashboard.html.twig'),
+    'Teams' => $read('symfony/templates/experience/sales/admin/teams.html.twig'),
+    'Integrations' => $read('symfony/templates/experience/sales/admin/integrations.html.twig'),
+    'Health & Audit' => $read('symfony/templates/experience/sales/admin/health.html.twig'),
+    'Rule Editor' => $read('symfony/templates/experience/sales/admin/rule.html.twig'),
 ];
-foreach ($adminLegacySurfaces as $surface => $source) {
-    foreach ([
-        "partial('components/sales/navigation'",
-        "partial('components/ui/page_header'",
-    ] as $marker) {
-        $contains($source, $marker, 'Sales Admin ' . $surface . ' must use the canonical workspace shell.');
+foreach ($adminSurfaces as $surface => $source) {
+    foreach (['<twig:CosPageHeader'] as $marker) {
+        $contains($source, $marker, 'Sales Admin ' . $surface . ' must use canonical Twig shell composition.');
     }
-    foreach ([
-        'sales-admin-page',
-        'sales-admin-header',
-        'sales-admin-card',
-    ] as $legacyMarker) {
-        $notContains($source, $legacyMarker, 'Sales Admin ' . $surface . ' must not restore the legacy administration visual shell.');
+    foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+        $notContains($source, $legacyMarker, 'Sales Admin ' . $surface . ' must not restore legacy presentation.');
     }
 }
 foreach ([
-    "'bodyPartial' => 'components/ui/data_table'",
-    'data-sales-team-admin',
+    'data-controller="sales-admin-teams"',
     'data-membership-form',
     'data-capabilities-form',
 ] as $marker) {
-    $contains($adminLegacySurfaces['Teams'], $marker, 'Sales Teams migration lost a canonical or behavior contract.');
+    $contains($adminSurfaces['Teams'], $marker, 'Sales Teams migration lost a canonical or behavior contract.');
 }
 foreach ([
-    "partial('components/ui/status_badge'",
-    'data-sales-integration-admin',
+    'data-controller="sales-admin-integrations"',
     'data-create-integration',
     'data-update-integration',
-    'data-test-integration',
     'data-route-form',
 ] as $marker) {
-    $contains($adminLegacySurfaces['Integrations'], $marker, 'Sales Integrations migration lost a canonical or behavior contract.');
+    $contains($adminSurfaces['Integrations'], $marker, 'Sales Integrations migration lost a canonical or behavior contract.');
 }
 foreach ([
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/status_badge'",
-    'Operational metrics',
+    'class="cos-kpi-strip"',
+    'Operational queue',
     'Audit timeline',
     'Configuration',
 ] as $marker) {
-    $contains($adminLegacySurfaces['Health & Audit'], $marker, 'Sales Health migration lost a canonical observability contract.');
+    $contains($adminSurfaces['Health & Audit'], $marker, 'Sales Health migration lost a canonical observability contract.');
+}
+foreach ([
+    'data-controller="sales-admin-rule-editor"',
+    'sales-admin-rule-editor#save',
+    'sales-admin-rule-editor#dryRun',
+] as $marker) {
+    $contains($adminSurfaces['Rule Editor'], $marker, 'Sales Rule editor migration lost canonical behavior.');
+}
+
+$iterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($root . '/app/Interfaces/Web/View', FilesystemIterator::SKIP_DOTS)
+);
+foreach ($iterator as $view) {
+    if (!$view->isFile() || strtolower($view->getExtension()) !== 'phtml') continue;
+    $relative = str_replace('\\', '/', substr($view->getPathname(), strlen($root) + 1));
+    if (str_contains($relative, '/sales/') || str_contains($relative, '/sales_admin/')) {
+        throw new RuntimeException('Phase 3 Sales visual PHTML must be zero: ' . $relative);
+    }
 }
 
 $filterBar = $read('app/Interfaces/Web/View/components/ui/filter_bar.phtml');

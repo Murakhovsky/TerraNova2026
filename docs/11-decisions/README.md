@@ -22,6 +22,7 @@ kind: index
 | [ADR-0010](ADR-0010-web-ui-foundation-freeze.md) | Web/UI foundation заморожена; visual system розвивається поверх semantic tokens і canonical components |
 | [ADR-0011](ADR-0011-web-platform-v1-freeze.md) | Web Platform v1 contract surface заморожена після Sales cutover; фундаментальні зміни потребують ADR |
 | [ADR-0012](ADR-0012-wave13-visual-migration.md) | Wave 13 додає Page Archetypes, reusable Patterns і visual governance поверх замороженої Web Platform v1 |
+| [ADR-0013](ADR-0013-datagrid-filter-contract.md) | DataGridFilter v1 отримує additive text-filter contract для production Collections |
 
 ## Ієрархія джерел істини
 
