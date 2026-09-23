@@ -27,7 +27,8 @@ $notContains = static function (string $source, string $needle, string $message)
 
 $dashboard = $read('symfony/templates/experience/sales/dashboard.html.twig');
 foreach ([
-    '<twig:CosEntityHeader',
+    '<twig:CosPageHeader',
+    'class="cos-kpi-strip"',
     '<twig:CosTrendMetric',
     '<twig:CosMoneyMetric',
     '<twig:CosEntityListItem',

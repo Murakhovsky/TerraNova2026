@@ -48,6 +48,7 @@ jobs:
           php tests/architecture/web_experience_wave13_shell.php
           php tests/architecture/web_experience_wave13_admin_foundation.php
           php tests/architecture/web_experience_wave13_admin_home.php
+          php tests/architecture/web_experience_wave13_sales_dashboard.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

@@ -51,7 +51,7 @@ if (!str_contains($index, 'ADR-0011-web-platform-v1-freeze.md')) {
 // Sales is the compatibility anchor that makes v1 a production contract, not a dev-only declaration.
 $routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 foreach ([
-    'controller: App\\Web\\Sales\\SalesWorkspaceController::dashboard',
+    'controller: App\\Web\\Sales\\SalesDashboardController::index',
     'controller: App\\Web\\Sales\\SalesWorkspaceController::leads',
     'controller: App\\Web\\Sales\\SalesWorkspaceController::lead',
 ] as $marker) {

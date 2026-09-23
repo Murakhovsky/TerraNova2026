@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Web\Sales;
 
-use App\Application\Sales\Query\GetSalesDashboardQuery;
 use App\Application\Sales\Query\GetSalesLeadQuery;
 use App\Application\Sales\Query\ListSalesLeadsQuery;
 use App\Application\Sales\Admin\SalesAdminQuery;
@@ -33,26 +32,6 @@ final readonly class SalesWorkspaceController
         private ProviderBackedShellNavigation $navigation,
         private WorkspaceCompositionResolver $workspaces,
     ) {
-    }
-
-    public function dashboard(): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-
-        $actor = $tenant->userId()->value();
-        $ownerId = ctype_digit($actor) ? (int) $actor : null;
-        $data = $this->queries->ask(new GetSalesDashboardQuery($tenant->organizationId(), $ownerId));
-
-        $context = $this->context($tenant, 'sales-overview');
-        return $this->render('experience/sales/dashboard.html.twig', [
-            'shell' => $this->shell($tenant, $context, 'Sales Dashboard', [
-                new ShellBreadcrumb('Workspace', '/admin'),
-                new ShellBreadcrumb('Sales'),
-                new ShellBreadcrumb('Dashboard'),
-            ]),
-            'sales' => is_array($data) ? $data : [],
-        ]);
     }
 
     public function leads(Request $request): Response

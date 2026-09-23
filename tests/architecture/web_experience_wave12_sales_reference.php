@@ -11,13 +11,13 @@ function expectSalesReference(bool $condition, string $message): void
 }
 
 $controller = file_get_contents($root . '/symfony/src/Web/Sales/SalesWorkspaceController.php');
+$dashboardController = file_get_contents($root . '/symfony/src/Web/Sales/SalesDashboardController.php');
 $routes = file_get_contents($root . '/symfony/config/routes.yaml');
 $services = file_get_contents($root . '/symfony/config/services.yaml');
 $provider = file_get_contents($root . '/symfony/src/Web/Experience/Extension/Provider/SalesWebProvider.php');
 
 foreach ([
     'QueryBusInterface',
-    'GetSalesDashboardQuery',
     'ListSalesLeadsQuery',
     'GetSalesLeadQuery',
     'ProviderBackedShellNavigation',
@@ -29,12 +29,23 @@ foreach ([
 }
 
 foreach ([
+    'QueryBusInterface',
+    'GetSalesDashboardQuery',
+    'WorkspaceShellFactory',
+    'PagePresentationFactory',
+    'PageArchetype::DomainDashboard',
+] as $needle) {
+    expectSalesReference(str_contains($dashboardController, $needle), 'Sales Dashboard controller missing canonical dependency: ' . $needle);
+}
+
+foreach ([
     'PhtmlRenderer',
     'SalesWorkspaceReadModelInterface',
     'SalesWorkspaceOperationalReadModelInterface',
     'PDO',
 ] as $forbidden) {
     expectSalesReference(!str_contains($controller, $forbidden), 'Sales reference controller must not depend on legacy/direct read boundary: ' . $forbidden);
+    expectSalesReference(!str_contains($dashboardController, $forbidden), 'Sales Dashboard controller must not depend on legacy/direct read boundary: ' . $forbidden);
 }
 
 foreach ([
@@ -46,6 +57,7 @@ foreach ([
 }
 
 expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesWorkspaceController:'), 'Sales reference controller service is missing.');
+expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesDashboardController:'), 'Sales Dashboard controller service is missing.');
 expectSalesReference(str_contains($services, "tags: ['controller.service_arguments']"), 'Sales reference controller must be a Symfony controller service.');
 
 foreach ([
@@ -73,6 +85,8 @@ expectSalesReference(str_contains($leadWorkspace, '<twig:CosEntityHeader'), 'Lea
 expectSalesReference(str_contains($leadWorkspace, '<twig:CosNextAction'), 'Lead Workspace must use canonical next-action primitive.');
 
 $dashboard = file_get_contents($root . '/symfony/templates/experience/sales/dashboard.html.twig');
+expectSalesReference(str_contains($dashboard, '<twig:CosPageHeader'), 'Sales Dashboard must use canonical page header.');
+expectSalesReference(str_contains($dashboard, 'class="cos-kpi-strip"'), 'Sales Dashboard must use canonical KPI strip.');
 expectSalesReference(str_contains($dashboard, '<twig:CosMoneyMetric'), 'Sales Dashboard must use canonical money metric.');
 expectSalesReference(str_contains($dashboard, '<twig:CosTrendMetric'), 'Sales Dashboard must use canonical trend metric.');
 
