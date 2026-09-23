@@ -92,6 +92,8 @@ $assert($handoff->targetDomain === 'sales', 'Growth handoff lost target Domain.'
 $assert($handoff->whyNow !== '', 'Growth handoff must preserve WHY NOW.');
 $assert(($handoff->scores['timing']['score'] ?? null) === 94, 'Growth handoff lost explainable score dimensions.');
 
+$candidate->startHandoffDispatch();
+$assert($candidate->status() === OpportunityCandidateStatus::HandoffPending, 'Growth candidate did not enter handoff-pending state.');
 $candidate->markHandedOff();
 $assert($candidate->status() === OpportunityCandidateStatus::HandedOff, 'Growth candidate did not enter handed-off state.');
 

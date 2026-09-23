@@ -619,7 +619,21 @@ services:
   Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
     alias: Domains\Growth\Application\Service\GrowthEngagementExecutionService
 
-  Domains\Growth\Bootstrap\GrowthDomainModule: ~
+  Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthOutboundMessageGateway:
+    arguments:
+      $notifications: '@Platform\Notification\Contract\NotificationDispatcherInterface'
+
+  Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthOutboundMessageGateway
+
+  Domains\Growth\Automation\Action\GrowthSendMessageHandler:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $outbound: '@Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface'
+
+  Domains\Growth\Bootstrap\GrowthDomainModule:
+    arguments:
+      $sendMessage: '@Domains\Growth\Automation\Action\GrowthSendMessageHandler'
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
@@ -1601,6 +1615,38 @@ services:
   Infrastructure\Platform\Persistence\Pdo\PdoConnection:
     arguments:
       $config: '@cos.database.pdo'
+
+  Infrastructure\Platform\Notification\BuiltinNotificationTemplateRepository: ~
+
+  Platform\Notification\Contract\TemplateRepositoryInterface:
+    alias: Infrastructure\Platform\Notification\BuiltinNotificationTemplateRepository
+
+  Infrastructure\Platform\Notification\SimpleNotificationTemplateRenderer: ~
+
+  Platform\Notification\Contract\TemplateRendererInterface:
+    alias: Infrastructure\Platform\Notification\SimpleNotificationTemplateRenderer
+
+  Infrastructure\Platform\Notification\MysqlNotificationDeliveryRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Notification\Contract\DeliveryRepositoryInterface:
+    alias: Infrastructure\Platform\Notification\MysqlNotificationDeliveryRepository
+
+  Infrastructure\Platform\Notification\N8nEmailNotificationChannel:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Notification\Service\NotificationDispatcher:
+    arguments:
+      $channels:
+        - '@Infrastructure\Platform\Notification\N8nEmailNotificationChannel'
+      $templates: '@Platform\Notification\Contract\TemplateRepositoryInterface'
+      $renderer: '@Platform\Notification\Contract\TemplateRendererInterface'
+      $deliveries: '@Platform\Notification\Contract\DeliveryRepositoryInterface'
+
+  Platform\Notification\Contract\NotificationDispatcherInterface:
+    alias: Platform\Notification\Service\NotificationDispatcher
 
   Infrastructure\Media\UploadQuarantineService:
     arguments:

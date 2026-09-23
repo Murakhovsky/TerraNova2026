@@ -23,7 +23,7 @@ generated: true
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
-| `growth` | Growth | `0.23.0` | `0.22.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
+| `growth` | Growth | `0.24.0` | `0.22.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `0.12.0` | `0.12.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
@@ -81,7 +81,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260921_000067_growth_v020_runtime.sql`, `app/migrations/20260921_000068_growth_v030_account_intelligence.sql`, `app/migrations/20260922_000069_growth_v040_buying_committee.sql`, `app/migrations/20260922_000070_growth_v050_signal_collectors.sql`, `app/migrations/20260922_000071_growth_v060_decision_intelligence.sql`, `app/migrations/20260922_000072_growth_v070_research_intelligence.sql`, `app/migrations/20260922_000073_growth_v080_handoff_protocol.sql`, `app/migrations/20260922_000074_growth_v0100_api_surface.sql`, `app/migrations/20260922_000075_growth_v0110_workspace.sql`, `app/migrations/20260922_000076_growth_v0120_signal_operations.sql`, `app/migrations/20260922_000077_growth_v0130_external_signal_webhook.sql`, `app/migrations/20260922_000078_growth_v0140_engagement_intelligence.sql`, `app/migrations/20260923_000079_growth_v0150_learning_feedback.sql`, `app/migrations/20260923_000080_growth_v0160_learning_workspace.sql`, `app/migrations/20260923_000081_growth_v0170_learning_optimization.sql`, `app/migrations/20260923_000082_growth_v0180_optimization_workspace.sql`, `app/migrations/20260923_000083_growth_v0190_experiments_attribution.sql`, `app/migrations/20260923_000084_growth_v0200_experiment_workspace.sql`, `app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql`, `app/migrations/20260923_000086_growth_v0220_engagement_execution_bridge.sql`, `app/migrations/20260923_000087_growth_v0230_engagement_execution_workspace.sql`.
+- міграції: `app/migrations/20260921_000067_growth_v020_runtime.sql`, `app/migrations/20260921_000068_growth_v030_account_intelligence.sql`, `app/migrations/20260922_000069_growth_v040_buying_committee.sql`, `app/migrations/20260922_000070_growth_v050_signal_collectors.sql`, `app/migrations/20260922_000071_growth_v060_decision_intelligence.sql`, `app/migrations/20260922_000072_growth_v070_research_intelligence.sql`, `app/migrations/20260922_000073_growth_v080_handoff_protocol.sql`, `app/migrations/20260922_000074_growth_v0100_api_surface.sql`, `app/migrations/20260922_000075_growth_v0110_workspace.sql`, `app/migrations/20260922_000076_growth_v0120_signal_operations.sql`, `app/migrations/20260922_000077_growth_v0130_external_signal_webhook.sql`, `app/migrations/20260922_000078_growth_v0140_engagement_intelligence.sql`, `app/migrations/20260923_000079_growth_v0150_learning_feedback.sql`, `app/migrations/20260923_000080_growth_v0160_learning_workspace.sql`, `app/migrations/20260923_000081_growth_v0170_learning_optimization.sql`, `app/migrations/20260923_000082_growth_v0180_optimization_workspace.sql`, `app/migrations/20260923_000083_growth_v0190_experiments_attribution.sql`, `app/migrations/20260923_000084_growth_v0200_experiment_workspace.sql`, `app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql`, `app/migrations/20260923_000086_growth_v0220_engagement_execution_bridge.sql`, `app/migrations/20260923_000087_growth_v0230_engagement_execution_workspace.sql`, `app/migrations/20260923_000089_growth_v0240_pre_handoff_execution.sql`.
 
 ### Задекларовані capabilities
 
@@ -104,6 +104,7 @@ Manifest capabilities не задекларовані.
 - `growth.engagement.execution`;
 - `growth.engagement.execution_workspace`;
 - `growth.engagement.intelligence`;
+- `growth.engagement.pre_handoff_execution`;
 - `growth.experiments`;
 - `growth.experiments.decision`;
 - `growth.experiments.workspace`;

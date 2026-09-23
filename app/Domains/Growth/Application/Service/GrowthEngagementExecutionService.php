@@ -6,6 +6,7 @@ namespace Domains\Growth\Application\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface;
+use Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
@@ -33,6 +34,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
     public function __construct(
         private GrowthEngagementRepositoryInterface $engagement,
         private GrowthLearningRepositoryInterface $learning,
+        private GrowthBuyingCommitteeRepositoryInterface $contacts,
         private GrowthEngagementExecutionRepositoryInterface $executions,
         private GrowthMutationReceiptInterface $receipts,
         private GrowthActionProposalGatewayInterface $actionGateway,
@@ -71,14 +73,43 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         }
 
         $deals=$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal');
-        if(count($deals)!==1){
-            throw new InvalidArgumentException('Growth engagement execution requires exactly one bound sales_deal; found '.count($deals).'.');
+        if(count($deals)>1){
+            throw new InvalidArgumentException('Growth engagement execution has ambiguous sales_deal bindings; found '.count($deals).'.');
         }
-        $dealId=$deals[0];
+
+        $targetDomain='';
+        $targetReferenceType='';
+        $targetReferenceId='';
+        $kernelActionType='';
+        $confidence=isset($recommendation['confidence'])?(float)$recommendation['confidence']:null;
+        $kernelIdempotency='growth-engagement-'.substr(hash('sha256',$organizationId.':'.$recommendationId),0,40);
+
+        if(count($deals)===1){
+            $targetDomain='sales';
+            $targetReferenceType='sales_deal';
+            $targetReferenceId=$deals[0];
+            $kernelActionType='sales.send_message';
+        }else{
+            if($channel!==EngagementChannel::Email->value){
+                throw new InvalidArgumentException('Pre-handoff Growth execution currently supports email only.');
+            }
+            $contactId=trim((string)($recommendation['contact_id']??''));
+            if($contactId===''){
+                throw new InvalidArgumentException('Pre-handoff Growth execution requires recommendation contact_id.');
+            }
+            if(!$this->hasUsableEmailContact($organizationId,$contactId)){
+                throw new InvalidArgumentException('Pre-handoff Growth execution requires a contact with valid email identity.');
+            }
+            $targetDomain='growth';
+            $targetReferenceType='growth_contact';
+            $targetReferenceId=$contactId;
+            $kernelActionType='growth.send_message';
+        }
 
         $payloadFingerprint=hash('sha256',json_encode([
-            'candidate_id'=>$candidateId,'recommendation_id'=>$recommendationId,'deal_id'=>$dealId,
-            'action_type'=>'sales.send_message','channel'=>$channel,'body'=>$body,
+            'candidate_id'=>$candidateId,'recommendation_id'=>$recommendationId,
+            'target_domain'=>$targetDomain,'target_reference_type'=>$targetReferenceType,'target_reference_id'=>$targetReferenceId,
+            'action_type'=>$kernelActionType,'channel'=>$channel,'body'=>$body,
         ],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
         $this->receipts->claim(
             $organizationId,'engagement_execution_payload',$recommendationId,$payloadFingerprint,
@@ -94,19 +125,23 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             return ['execution'=>$existing,'action'=>$action->toArray(),'replayed'=>true];
         }
 
-        $kernelIdempotency='growth-engagement-'.substr(hash('sha256',$organizationId.':'.$recommendationId),0,40);
-        $action=$this->actionGateway->proposeSalesMessage(
-            $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$dealId,$channel,$body,
-            isset($recommendation['confidence'])?(float)$recommendation['confidence']:null,$kernelIdempotency,
-        );
+        $action=$kernelActionType==='sales.send_message'
+            ? $this->actionGateway->proposeSalesMessage(
+                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
+                $confidence,$kernelIdempotency,
+            )
+            : $this->actionGateway->proposeGrowthMessage(
+                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
+                $confidence,$kernelIdempotency,
+            );
         $executionId='GEXE-'.strtoupper(substr(hash('sha256',$organizationId.':'.$recommendationId),0,20));
 
         return $this->transactions->transactional(function()use(
-            $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$dealId,$channel,
-            $payloadFingerprint,$executionId,$action,$idempotencyKey
+            $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetDomain,$targetReferenceType,
+            $targetReferenceId,$channel,$payloadFingerprint,$executionId,$action,$idempotencyKey
         ):array{
             $this->executions->createOrVerify(
-                $organizationId,$executionId,$candidateId,$recommendationId,'sales','sales_deal',$dealId,
+                $organizationId,$executionId,$candidateId,$recommendationId,$targetDomain,$targetReferenceType,$targetReferenceId,
                 $action->id,$action->type,$channel,$payloadFingerprint,$actorId,
             );
             $this->events->publish(new DomainEvent(
@@ -114,7 +149,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'growth_candidate',$candidateId,[
                     'execution_id'=>$executionId,'recommendation_id'=>$recommendationId,
                     'action_id'=>$action->id,'action_type'=>$action->type,'action_status'=>$action->status,
-                    'target_domain'=>'sales','target_reference_type'=>'sales_deal','target_reference_id'=>$dealId,
+                    'target_domain'=>$targetDomain,'target_reference_type'=>$targetReferenceType,'target_reference_id'=>$targetReferenceId,
                     'channel'=>$channel,
                 ],
                 new EventMetadata($correlationId,null,'USER',(string)$actorId),$this->now(),
@@ -124,7 +159,12 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'growth_candidate',$candidateId,null,[
                     'action'=>'growth.engagement.execution_proposed',
                     'idempotency_key_hash'=>hash('sha256',$idempotencyKey),
-                    'input_references'=>['recommendation_id'=>$recommendationId,'sales_deal_id'=>$dealId],
+                    'input_references'=>[
+                        'recommendation_id'=>$recommendationId,
+                        'target_domain'=>$targetDomain,
+                        'target_reference_type'=>$targetReferenceType,
+                        'target_reference_id'=>$targetReferenceId,
+                    ],
                     'result'=>['execution_id'=>$executionId,'action_id'=>$action->id,'status'=>$action->status],
                 ],$correlationId,$this->now(),
             ));
@@ -187,24 +227,69 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         }
 
         $deals=$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal');
-        if(count($deals)!==1){
+        if(count($deals)>1){
             return [
                 'can_propose'=>false,
-                'code'=>'sales_deal_binding_required',
-                'reason'=>'Execution requires exactly one bound sales_deal; found '.count($deals).'.',
+                'code'=>'ambiguous_sales_deal_binding',
+                'reason'=>'Execution has ambiguous sales_deal bindings; found '.count($deals).'.',
+            ];
+        }
+
+        if(count($deals)===1){
+            return [
+                'can_propose'=>true,
+                'code'=>'eligible_post_handoff',
+                'reason'=>'Accepted recommendation is eligible for governed Sales message proposal.',
+                'target_domain'=>'sales',
+                'target_reference_type'=>'sales_deal',
+                'target_reference_id'=>$deals[0],
+                'action_type'=>'sales.send_message',
+                'channel'=>$channel,
+            ];
+        }
+
+        if($channel!==EngagementChannel::Email->value){
+            return [
+                'can_propose'=>false,
+                'code'=>'pre_handoff_channel_not_supported',
+                'reason'=>'Pre-handoff execution currently supports email only.',
+            ];
+        }
+        $contactId=trim((string)($recommendation['contact_id']??''));
+        if($contactId===''){
+            return [
+                'can_propose'=>false,
+                'code'=>'pre_handoff_contact_required',
+                'reason'=>'Pre-handoff execution requires an explicit recommendation contact.',
+            ];
+        }
+        if(!$this->hasUsableEmailContact($organizationId,$contactId)){
+            return [
+                'can_propose'=>false,
+                'code'=>'pre_handoff_contact_email_required',
+                'reason'=>'Pre-handoff execution requires a Growth contact with valid email identity.',
             ];
         }
 
         return [
             'can_propose'=>true,
-            'code'=>'eligible',
-            'reason'=>'Accepted recommendation is eligible for governed Sales message proposal.',
-            'target_domain'=>'sales',
-            'target_reference_type'=>'sales_deal',
-            'target_reference_id'=>$deals[0],
-            'action_type'=>'sales.send_message',
+            'code'=>'eligible_pre_handoff',
+            'reason'=>'Accepted recommendation is eligible for governed pre-handoff Growth email proposal.',
+            'target_domain'=>'growth',
+            'target_reference_type'=>'growth_contact',
+            'target_reference_id'=>$contactId,
+            'action_type'=>'growth.send_message',
             'channel'=>$channel,
         ];
+    }
+
+    private function hasUsableEmailContact(string $organizationId,string $contactId):bool
+    {
+        $contact=$this->contacts->viewContact($organizationId,$contactId);
+        if($contact===null)return false;
+        if(strtolower(trim((string)($contact['identity_type']??'')))!=='email')return false;
+        $email=trim((string)($contact['identity_value']??''));
+        return filter_var($email,FILTER_VALIDATE_EMAIL)!==false;
     }
 
     private function bounded(string $value,string $field,int $limit):string

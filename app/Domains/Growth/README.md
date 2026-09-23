@@ -101,7 +101,7 @@ REJECTED_BY_TARGET_DOMAIN
 - `REACTIVATE` — reconsider old prospects, customers or previously mistimed opportunities;
 - `DISCOVER` — find partners, suppliers, investors, candidates, tenders, properties, acquisitions, projects or technologies.
 
-## V0.13 External Signal Intake
+## Current Opportunity Intelligence runtime (V0.24)
 
 V0.3 adds versioned ICP profiles, Growth-owned Account identity, immutable evidence snapshots, deterministic evidence-backed ICP matching and an Account Brief that composes account facts with recent Growth signals and opportunities.
 
@@ -481,4 +481,34 @@ V0.22 supports message-capable accepted recommendations on email or LinkedIn cha
 
 V0.23 exposes the V0.22 execution bridge inside the Candidate Workspace. Operators can generate and decide a recommendation, inspect execution eligibility, provide the outbound body and propose the governed Action. Existing Kernel/Sales approval and execution authority is preserved; Growth UI never calls Sales approval or execute endpoints directly.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, pre-handoff outbound execution and autonomous activation.
+V0.24 extends governed engagement execution to the pre-handoff stage without inventing a Sales Deal:
+
+```text
+Accepted EngagementRecommendation
+        ↓
+execution target resolution
+  ├─ exactly one sales_deal → sales.send_message
+  ├─ zero sales_deal + email contact → growth.send_message
+  └─ multiple sales_deal bindings → reject as ambiguous
+        ↓
+Kernel ActionProposal
+        ↓
+Action Policy
+  growth.send_message = APPROVAL_REQUIRED
+        ↓
+approval / queue / reject
+        ↓
+GrowthSendMessageHandler
+        ↓
+GrowthOutboundMessageGateway
+        ↓
+Platform Notification
+        ↓
+durable n8n integration outbox
+```
+
+The pre-handoff action targets `growth_contact`, not a synthetic Sales Deal. Contact email is resolved and revalidated at execution time and is not copied into the Kernel Action parameters or Growth execution-link persistence. One recommendation still creates at most one canonical Action payload.
+
+The first production pre-handoff transport is email. LinkedIn/call execution remains intentionally unavailable until a canonical transport adapter exists.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, pre-handoff LinkedIn/call execution and autonomous activation.

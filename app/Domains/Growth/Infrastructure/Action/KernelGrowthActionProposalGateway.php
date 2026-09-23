@@ -45,6 +45,35 @@ final readonly class KernelGrowthActionProposalGateway implements GrowthActionPr
         return $this->map($this->policies->submit($organizationId,$proposal,$correlationId));
     }
 
+    public function proposeGrowthMessage(
+        string $organizationId,int $actorId,string $correlationId,string $candidateId,string $recommendationId,
+        string $contactId,string $channel,string $body,?float $confidence,string $kernelIdempotencyKey
+    ):GrowthExecutionAction {
+        $proposal=new ActionProposal(
+            type:'growth.send_message',
+            targetType:'growth_contact',
+            targetId:$contactId,
+            parameters:[
+                'channel'=>strtolower($channel),'body'=>$body,
+                'growth_candidate_id'=>$candidateId,'growth_recommendation_id'=>$recommendationId,
+            ],
+            sourceType:'GROWTH',
+            sourceId:$recommendationId,
+            executionMode:'APPROVAL_REQUIRED',
+            riskLevel:'MEDIUM',
+            idempotencyKey:$kernelIdempotencyKey,
+            policyContext:[
+                'actor'=>['role'=>'USER','user_id'=>(string)$actorId],
+                'growth'=>[
+                    'candidate_id'=>$candidateId,'recommendation_id'=>$recommendationId,
+                    'contact_id'=>$contactId,'channel'=>$channel,'confidence'=>$confidence,
+                    'stage'=>'pre_handoff',
+                ],
+            ],
+        );
+        return $this->map($this->policies->submit($organizationId,$proposal,$correlationId));
+    }
+
     public function find(string $organizationId,string $actionId):?GrowthExecutionAction
     {
         $action=$this->actions->find($organizationId,$actionId);

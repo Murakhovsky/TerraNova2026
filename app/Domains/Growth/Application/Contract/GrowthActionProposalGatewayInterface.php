@@ -20,5 +20,18 @@ interface GrowthActionProposalGatewayInterface
         string $kernelIdempotencyKey,
     ):GrowthExecutionAction;
 
+    public function proposeGrowthMessage(
+        string $organizationId,
+        int $actorId,
+        string $correlationId,
+        string $candidateId,
+        string $recommendationId,
+        string $contactId,
+        string $channel,
+        string $body,
+        ?float $confidence,
+        string $kernelIdempotencyKey,
+    ):GrowthExecutionAction;
+
     public function find(string $organizationId,string $actionId):?GrowthExecutionAction;
 }

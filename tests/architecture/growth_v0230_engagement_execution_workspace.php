@@ -6,7 +6,7 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.23.0','Growth V0.23 manifest version must be 0.23.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.23.0','>='),'Growth manifest must remain V0.23+.');
 $assert(($manifest['schema_version']??null)==='0.22.0','Growth V0.23 must keep schema version 0.22.0.');
 $assert(in_array('growth.engagement.execution_workspace',$manifest['contributions']['capabilities']??[],true),'Growth execution workspace capability missing.');
 
@@ -17,7 +17,7 @@ $assert(str_contains($sql,"installed_version='0.23.0'")&&str_contains($sql,"inst
 foreach(['CREATE TABLE','ALTER TABLE','DROP TABLE'] as $forbidden)$assert(!str_contains(strtoupper($sql),$forbidden),'Growth V0.23 must remain schema-neutral.');
 
 $service=$read('app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php');
-foreach(['executionEligibility','sales_deal_binding_required','already_proposed','channel_not_supported','target_reference_id'] as $needle){
+foreach(['executionEligibility','eligible_post_handoff','already_proposed','channel_not_supported','target_reference_id'] as $needle){
     $assert(str_contains($service,$needle),'Growth V0.23 execution eligibility missing: '.$needle);
 }
 

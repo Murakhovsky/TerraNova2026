@@ -417,6 +417,35 @@ operator interpretation
 
 SSR page controller лише читає `GrowthExperimentBoundary`. Browser mutations використовують `/api/v1/growth/experiments/*` з CSRF та idempotency. Workspace показує conversion rates і outcome evidence, але не має endpoint або UI action для winner selection чи automatic execution.
 
+## Governed Pre-Handoff Engagement Execution
+
+V0.24 розширює V0.22 execution bridge без створення фіктивного Sales state:
+
+```text
+Accepted EngagementRecommendation
+        ↓
+resolve existing Growth learning bindings
+        ├─ 1 sales_deal
+        │     ↓
+        │   sales.send_message → deal
+        │
+        ├─ 0 sales_deal + email GrowthContact
+        │     ↓
+        │   growth.send_message → growth_contact
+        │     ↓
+        │   APPROVAL_REQUIRED
+        │     ↓
+        │   Platform Notification → n8n outbox
+        │
+        └─ >1 sales_deal
+              ↓
+            reject ambiguity
+```
+
+Pre-handoff action не містить email address у Kernel Action parameters. `GrowthSendMessageHandler` повторно читає GrowthContact під час execution, перевіряє email identity і лише тоді викликає Growth-owned outbound port.
+
+Durable queue acceptance і provider delivery не змішуються: успішний Kernel Action означає, що Platform Notification прийняла повідомлення у durable integration runtime. Фактична доставка n8n/provider має власний status/retry lifecycle.
+
 ## Cross-domain Handoff Protocol
 
 V0.8 робить handoff окремим resumable protocol:
@@ -691,7 +720,7 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.23
+## Статус V0.24
 
 `process_state: to-be` поки навмисний. V0.23 додає Candidate Workspace surface над governed Engagement Intelligence + Execution Bridge. Mutation authority не змінюється: recommendation decisions і Action proposal йдуть через canonical Growth API, а approval/execute лишаються під Kernel/Sales authority.
 
@@ -714,6 +743,9 @@ app/Domains/Growth/Application/Service/GrowthSignalCollectorService.php
 app/Domains/Growth/Application/Service/GrowthDecisionService.php
 app/Domains/Growth/Application/Service/GrowthResearchService.php
 app/Domains/Growth/Application/Service/GrowthHandoffService.php
+app/Domains/Growth/Automation/Action/GrowthSendMessageHandler.php
+app/Domains/Growth/Automation/Policy/GrowthPolicyCatalog.php
+app/Domains/Growth/Infrastructure/Notification/PlatformNotificationGrowthOutboundMessageGateway.php
 app/Domains/Growth/Application/Service/GrowthEngagementService.php
 app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php
 app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php
