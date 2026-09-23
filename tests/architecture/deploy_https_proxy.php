@@ -45,6 +45,10 @@ foreach ([
     'return 301 https://\\$host\\$request_uri;',
     'proxy_set_header X-Forwarded-Proto https;',
     'proxy_set_header X-Forwarded-Port 443;',
+    'PUBLIC_STATIC_ROOT="${COS_PUBLIC_STATIC_ROOT:-/var/www/company-os}"',
+    'location = /docs {',
+    'location ^~ /docs/ {',
+    'root $PUBLIC_STATIC_ROOT;',
 ] as $needle) {
     if (!str_contains($tls, $needle)) {
         throw new RuntimeException('TLS reverse-proxy contract is missing: ' . $needle);

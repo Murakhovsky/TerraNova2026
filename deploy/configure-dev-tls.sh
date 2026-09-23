@@ -7,6 +7,7 @@ CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 SITE_AVAILABLE="/etc/nginx/sites-available/$DOMAIN"
 SITE_ENABLED="/etc/nginx/sites-enabled/$DOMAIN"
 ACME_ROOT="/var/www/letsencrypt"
+PUBLIC_STATIC_ROOT="${COS_PUBLIC_STATIC_ROOT:-/var/www/company-os}"
 
 if ! command -v nginx >/dev/null 2>&1; then
   echo "Host nginx is not installed." >&2
@@ -73,6 +74,16 @@ server {
 
     ssl_certificate $CERT_DIR/fullchain.pem;
     ssl_certificate_key $CERT_DIR/privkey.pem;
+
+    location = /docs {
+        return 301 /docs/;
+    }
+
+    location ^~ /docs/ {
+        root $PUBLIC_STATIC_ROOT;
+        index index.html;
+        try_files \$uri \$uri/ \$uri.html =404;
+    }
 
     location / {
         proxy_http_version 1.1;
