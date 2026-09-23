@@ -48,6 +48,7 @@ final class UiCatalogRegistry
             $this->entry('CosTrendMetric', 'Business', 'Metric with explicit up/down/neutral movement semantics.', ['up', 'down', 'neutral'], '#phase7-business-heading'),
             $this->entry('CosDataGrid', 'Data', 'Server-owned dense data exploration platform.', ['search', 'filter', 'sort', 'pagination', 'bulk', 'mobile'], '#data-platform-heading'),
 
+            $this->entry('CosPageHeader', 'Layout', 'Canonical page identity, metadata and page-level action composition.', ['default', 'mobile'], '#phase7-business-heading'),
             $this->entry('CosEntityHeader', 'Business', 'Identity, semantic status, metadata and actions for a business entity.', ['default', 'mobile'], '#phase7-business-heading'),
             $this->entry('CosEntitySummary', 'Business', 'Dense key-value summary for an entity workspace.', ['default', 'mobile'], '#phase7-business-heading'),
             $this->entry('CosEntityCard', 'Business', 'Reusable entity preview surface with status and metadata.', ['default', 'linked'], '#phase7-business-heading'),
