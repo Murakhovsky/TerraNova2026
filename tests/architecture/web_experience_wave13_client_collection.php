@@ -56,7 +56,8 @@ foreach(['tn-','<table','data-controller='] as $forbidden) {
     if(str_contains($item,$forbidden))throw new RuntimeException('VR-011 Collection item restored legacy/local runtime: '.$forbidden);
 }
 
-$legacy=(string)file_get_contents($root.'/symfony/src/Web/Sales/ClientCasePageController.php');
-if(str_contains($legacy,'public function index('))throw new RuntimeException('VR-011 left duplicate Collection controller ownership.');
+if(is_file($root.'/symfony/src/Web/Sales/ClientCasePageController.php')) {
+    throw new RuntimeException('VR-011 must not restore legacy ClientCasePageController after Phase 4 cutover.');
+}
 
 echo "Wave 13 VR-011 /client-case Collection passed.\n";

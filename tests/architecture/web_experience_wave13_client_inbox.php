@@ -96,8 +96,8 @@ foreach ([
     '/client-case/updateInboundRequest/',
     '/client-case/createFromInboundRequest/',
     '/client-case/linkInboundRequest',
-    '/client-case/show/',
-    '/property/show/',
+    'item.caseHref',
+    'item.propertyHref',
     'name="csrf_token"',
     'name="return_url"',
     'name="status"',
@@ -120,9 +120,14 @@ foreach (['tn-', 'style=', '<script', 'data-controller='] as $forbidden) {
     }
 }
 
-$legacyController = (string) file_get_contents($root . '/symfony/src/Web/Sales/ClientCasePageController.php');
-if (str_contains($legacyController, 'public function inbox(')) {
-    throw new RuntimeException('VR-010 left duplicate Client Case Inbox controller ownership.');
+$presenter = (string) file_get_contents($root . '/symfony/src/Web/Sales/ClientCaseInboxPresenter.php');
+foreach (["'/client-case/show/'", "'/property/show/'"] as $marker) {
+    if (!str_contains($presenter, $marker)) {
+        throw new RuntimeException('VR-010 presenter lost deep-link construction: ' . $marker);
+    }
+}
+if (is_file($root . '/symfony/src/Web/Sales/ClientCasePageController.php')) {
+    throw new RuntimeException('VR-010 must not restore legacy ClientCasePageController after Phase 4 cutover.');
 }
 
 echo "Wave 13 VR-010 /client-case/inbox Operational Queue passed.\n";
