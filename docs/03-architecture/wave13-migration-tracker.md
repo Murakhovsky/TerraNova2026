@@ -20,7 +20,7 @@ kind: architecture
 | VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | DONE |
 | VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | DONE |
-| VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | QA |
+| VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -58,3 +58,18 @@ VR-009 Cycle B переводить Pipelines/Rules/Agents/Actions/Teams/Integra
 VR-009 Cycle C переводить Pipeline і Agent detail editors на canonical Twig + Stimulus. Legacy `frontend/features/sales/admin.js` видалено; єдиний PHTML surface у Sales — Rule editor.
 
 VR-009 Cycle D переводить Rule editor на canonical Twig + Stimulus і видаляє `SalesAdminPageController`, `sales-workspace` Vite entrypoint та весь legacy Sales frontend source. Sales visual PHTML burn-down після цього циклу: **0**.
+
+
+## Фаза 3 — завершення Sales
+
+Sales production visual migration units VR-005…VR-009 завершені.
+
+- regular Sales routes використовують canonical Symfony/Twig archetypes;
+- Sales Admin route family використовує System / Control Surface;
+- Sales visual PHTML = **0**;
+- legacy `SalesPageController` = **0**;
+- legacy `SalesAdminPageController` = **0**;
+- legacy `frontend/features/sales/*` = **0**;
+- legacy `sales-workspace` Vite entrypoint = **0**.
+
+Наступна production migration family: **Phase 4 — Clients**.
