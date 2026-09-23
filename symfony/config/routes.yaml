@@ -408,6 +408,28 @@ cos_api_v1_growth_collector_run:
   methods: [POST]
   requirements: { name: '[A-Za-z0-9._:-]{1,120}' }
 
+cos_api_v1_growth_signal_feeds:
+  path: /api/v1/growth/signal-feeds
+  controller: App\Http\Api\V1\Controller\GrowthApiController::signalFeeds
+  methods: [GET]
+
+cos_api_v1_growth_signal_feed_create:
+  path: /api/v1/growth/signal-feeds
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createSignalFeed
+  methods: [POST]
+
+cos_api_v1_growth_signal_feed_enable:
+  path: /api/v1/growth/signal-feeds/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableSignalFeed
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_signal_feed_disable:
+  path: /api/v1/growth/signal-feeds/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableSignalFeed
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
 cos_api_v1_growth_signal_create:
   path: /api/v1/growth/signals
   controller: App\Http\Api\V1\Controller\GrowthApiController::createSignal

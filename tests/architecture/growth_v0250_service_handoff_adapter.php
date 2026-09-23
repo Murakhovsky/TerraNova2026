@@ -6,8 +6,8 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.25.0','Growth V0.25 manifest version must be 0.25.0.');
-$assert(($manifest['schema_version']??null)==='0.22.0','Growth V0.25 must keep schema version 0.22.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.25.0','>='),'Growth manifest must remain V0.25+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.22.0','>='),'Growth schema must remain V0.22+.');
 $assert(in_array('growth.handoff.target.service',$manifest['contributions']['capabilities']??[],true),'Growth Service handoff capability missing.');
 
 $migration='app/migrations/20260923_000090_growth_v0250_service_handoff_adapter.sql';

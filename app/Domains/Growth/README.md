@@ -527,4 +527,27 @@ service_request:<id>
 
 Growth maps the immutable Opportunity Package into a bounded Service Request subject/summary and a `growth:<subject_type>:<subject_id>` requester reference. It does not create Tickets, set SLA, assign work or touch Service persistence. Service remains the owner of decomposition and delivery lifecycle. The adapter is optional and rejects the handoff when the Service module is disabled.
 
-Still intentionally absent: HR/Procurement target adapters, provider-specific pull collectors, pre-handoff LinkedIn/call execution and autonomous activation.
+V0.26 adds the first concrete pull collector with tenant-owned RSS/Atom feed configuration:
+
+```text
+Growth Signal Feed
+  url + subject mapping + confidence
+        ↓
+rss_atom collector
+        ↓
+safe HTTPS transport
+        ↓
+RSS / Atom parser
+        ↓
+CollectedSignal
+        ↓
+canonical collector runtime
+        ↓
+Signal + source dedupe + Events + Audit
+```
+
+Feed URLs are restricted to HTTPS on port 443. The reader rejects private/reserved addresses, pins the resolved public IPv4 with `CURLOPT_RESOLVE`, follows no redirects and caps responses at 2 MB. The XML parser uses `LIBXML_NONET` and does not enable entity expansion.
+
+RSS/Atom collection is intentionally cursorless: source receipts provide durable dedupe across repeated polling. Each tenant feed explicitly maps external entries to `subject_type`, `subject_id`, `signal_type` and confidence.
+
+Still intentionally absent: HR/Procurement target adapters, credentialed provider collectors, pre-handoff LinkedIn/call execution and autonomous activation.

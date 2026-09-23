@@ -9,7 +9,7 @@ $assert=static function(bool $condition,string $message):void{
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.22.0','>='),'Growth manifest must remain V0.22+.');
-$assert(($manifest['schema_version']??null)==='0.22.0','Growth V0.22 schema version must be 0.22.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.22.0','>='),'Growth schema must remain V0.22+.');
 $assert(in_array('growth.engagement.execution',$manifest['contributions']['capabilities']??[],true),'Growth engagement execution capability is missing.');
 
 $migration='app/migrations/20260923_000086_growth_v0220_engagement_execution_bridge.sql';
@@ -89,7 +89,7 @@ foreach(['GrowthEngagementExecutionBoundary','proposeEngagementExecution','engag
 
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===60,'Growth V0.22 must expose exactly 60 canonical Growth API routes.');
+$assert(count($matches[0])>=60,'Growth canonical API surface must not shrink below V0.22 contract.');
 $executionPath='/api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/execution';
 $assert(substr_count($routes,'path: '.$executionPath)===2,'Growth engagement execution must expose GET + POST on one canonical path.');
 

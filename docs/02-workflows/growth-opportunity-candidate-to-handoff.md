@@ -518,6 +518,37 @@ Mapping навмисно зупиняється на Service Request. Growth п�
 
 Target-side idempotency key лишається Candidate-stable з V0.8, тому retry handoff не має створювати дубльовані Service Requests.
 
+## Tenant RSS/Atom Signal Collector
+
+V0.26 додає перший production-shaped pull source:
+
+```text
+tenant SignalFeed config
+  HTTPS URL
+  subject_type / subject_id
+  signal_type / confidence
+        ↓
+rss_atom collector
+        ↓
+SSRF-safe transport
+  public IPv4 only
+  DNS pinning
+  redirects off
+  2 MB cap
+        ↓
+RSS / Atom normalize
+        ↓
+CollectedSignal
+        ↓
+source receipt dedupe
+        ↓
+canonical Growth Signal
+```
+
+Feed configuration є Growth-owned і tenant-scoped. Collector не пише Signal напряму: він повертає `CollectedSignal`, а чинний `GrowthSignalCollectorService` виконує canonical ingestion, run accounting, Event/Audit і idempotent source receipt.
+
+Collector не використовує cursor. Повторний polling є нормальним режимом роботи: зовнішня entry identity нормалізується в stable external key, а duplicate payload відсікається existing source receipt runtime.
+
 ## Executable API V1
 
 V0.10 відкриває Growth runtime через 34 canonical routes під `/api/v1/growth/*`.

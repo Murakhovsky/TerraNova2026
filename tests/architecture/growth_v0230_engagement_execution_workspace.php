@@ -7,7 +7,7 @@ $assert=static function(bool $condition,string $message):void{if(!$condition)thr
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.23.0','>='),'Growth manifest must remain V0.23+.');
-$assert(($manifest['schema_version']??null)==='0.22.0','Growth V0.23 must keep schema version 0.22.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.22.0','>='),'Growth schema must remain V0.22+.');
 $assert(in_array('growth.engagement.execution_workspace',$manifest['contributions']['capabilities']??[],true),'Growth execution workspace capability missing.');
 
 $migration='app/migrations/20260923_000087_growth_v0230_engagement_execution_workspace.sql';

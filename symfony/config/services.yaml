@@ -450,6 +450,33 @@ services:
   Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary:
     alias: Domains\Growth\Application\Service\GrowthSignalCollectorService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalFeedRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalFeedRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalFeedRepository
+
+  Domains\Growth\Application\Service\GrowthSignalFeedService: ~
+
+  Domains\Growth\Application\Contract\GrowthSignalFeedBoundary:
+    alias: Domains\Growth\Application\Service\GrowthSignalFeedService
+
+  Domains\Growth\Infrastructure\Feed\RssAtomFeedParser: ~
+
+  Domains\Growth\Infrastructure\Feed\SafeHttpRssAtomFeedReader:
+    arguments:
+      $calls: '@Kernel\Resilience\ExternalCallExecutor'
+      $parser: '@Domains\Growth\Infrastructure\Feed\RssAtomFeedParser'
+
+  Domains\Growth\Application\Contract\GrowthFeedReaderInterface:
+    alias: Domains\Growth\Infrastructure\Feed\SafeHttpRssAtomFeedReader
+
+  Domains\Growth\Infrastructure\Collector\RssAtomSignalCollector:
+    arguments:
+      $feeds: '@Domains\Growth\Application\Contract\GrowthSignalFeedRepositoryInterface'
+      $reader: '@Domains\Growth\Application\Contract\GrowthFeedReaderInterface'
+
   Domains\Growth\Domain\QualificationPolicyEvaluator: ~
 
   Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthDecisionRepository:

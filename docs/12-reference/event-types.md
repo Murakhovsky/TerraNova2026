@@ -16,7 +16,7 @@ generated: true
 
 | Модуль | Типів подій |
 | --- | ---: |
-| `growth` | 66 |
+| `growth` | 69 |
 | `property` | 17 |
 | `sales` | 16 |
 
@@ -90,6 +90,9 @@ generated: true
 | `growth` | `growth.research.run_failed` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.research.run_started` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.signal.detected` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.signal_feed.created` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.signal_feed.disabled` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.signal_feed.enabled` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `property` | `property.asset.lifecycle_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.asset.location_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.asset.registered` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |

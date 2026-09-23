@@ -18,6 +18,7 @@ use Domains\Growth\Application\Contract\GrowthLearningBoundary;
 use Domains\Growth\Application\Contract\GrowthOptimizationBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
+use Domains\Growth\Application\Contract\GrowthSignalFeedBoundary;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
@@ -33,6 +34,7 @@ final readonly class GrowthApiController
     public function __construct(
         private GrowthApplicationBoundary $growth,
         private GrowthSignalCollectorBoundary $collectors,
+        private GrowthSignalFeedBoundary $signalFeeds,
         private GrowthIntelligenceBoundary $intelligence,
         private GrowthBuyingCommitteeBoundary $committee,
         private GrowthResearchBoundary $research,
@@ -69,6 +71,37 @@ final readonly class GrowthApiController
                 $cursor===null?null:trim($cursor),(int)$limit,
             );
         },202);
+    }
+
+    public function signalFeeds(): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>[
+            'feeds'=>$this->signalFeeds->feeds($tenant->organizationId()->value()),
+        ]);
+    }
+
+    public function createSignalFeed(Request $request): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->signalFeeds->createFeed(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ),201);
+    }
+
+    public function enableSignalFeed(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->signalFeeds->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,true,$key
+            ));
+    }
+
+    public function disableSignalFeed(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->signalFeeds->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,false,$key
+            ));
     }
 
     public function createSignal(Request $request): JsonResponse
