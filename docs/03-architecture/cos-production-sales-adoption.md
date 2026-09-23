@@ -200,7 +200,7 @@ Canonical layer стандартизує повторювану anatomy. Domain 
 - окремий PHASE 9 architecture gate захищає adoption від regression.
 
 
-## Wave 13 Phase 3 closure
+## Завершення Wave 13 Phase 3
 
 Sales presentation ownership is now canonical Symfony/Twig/Stimulus end to end.
 

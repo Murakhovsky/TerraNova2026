@@ -58,9 +58,8 @@ foreach (['PhtmlRenderer', 'Doctrine\\', 'Repository'] as $forbidden) {
     }
 }
 
-$legacyController = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
-if (str_contains($legacyController, 'public function today(')) {
-    throw new RuntimeException('VR-005 left duplicate Sales Today controller ownership.');
+if (is_file($root . '/symfony/src/Web/Sales/SalesPageController.php')) {
+    throw new RuntimeException('Retired SalesPageController returned after final Sales cutover.');
 }
 
 $presenter = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesTodayPresenter.php');

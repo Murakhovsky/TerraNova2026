@@ -83,11 +83,8 @@ foreach (['tn-', 'style=', '<script', '<table'] as $forbidden) {
     }
 }
 
-$legacyController = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
-foreach (['public function deals(', 'SalesWorkspaceOperationalReadModelInterface', 'SalesTeamAdministrationInterface'] as $retired) {
-    if (str_contains($legacyController, $retired)) {
-        throw new RuntimeException('VR-007 left Deals-specific legacy controller ownership: ' . $retired);
-    }
+if (is_file($root . '/symfony/src/Web/Sales/SalesPageController.php')) {
+    throw new RuntimeException('VR-007 retired SalesPageController returned after final Sales cutover.');
 }
 
 echo "Wave 13 VR-007 /sales/deals Collection DataGrid passed.\n";

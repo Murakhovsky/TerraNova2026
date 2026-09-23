@@ -98,15 +98,12 @@ foreach ([
     }
 }
 
-$legacyController = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
-if (str_contains($legacyController, 'public function pipeline(')) {
-    throw new RuntimeException('VR-006 left duplicate Pipeline controller ownership.');
-}
-
-$legacyJs = (string) file_get_contents($root . '/frontend/features/sales/workspace.js');
-foreach (['initSalesPipeline', 'postStageChange'] as $retired) {
-    if (str_contains($legacyJs, $retired)) {
-        throw new RuntimeException('VR-006 left Pipeline behavior in legacy workspace.js: ' . $retired);
+foreach ([
+    'symfony/src/Web/Sales/SalesPageController.php',
+    'frontend/features/sales/workspace.js',
+] as $retired) {
+    if (is_file($root . '/' . $retired)) {
+        throw new RuntimeException('VR-006 retired legacy Pipeline owner returned: ' . $retired);
     }
 }
 

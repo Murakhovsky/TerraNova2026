@@ -43,7 +43,7 @@ foreach (['SalesDirectorCockpitService', 'DateTimeImmutable', 'director->overvie
         throw new RuntimeException('VR-008 Application Query contract is incomplete: ' . $marker);
     }
 }
-foreach (['App\Web\', 'Twig', 'PhtmlRenderer'] as $forbidden) {
+foreach (['App\\Web\\', 'Twig', 'PhtmlRenderer'] as $forbidden) {
     if (str_contains($handler, $forbidden)) {
         throw new RuntimeException('VR-008 Application Query leaked presentation dependency: ' . $forbidden);
     }
