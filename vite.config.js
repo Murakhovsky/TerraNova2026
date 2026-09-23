@@ -38,7 +38,7 @@ export default defineConfig({
         'portal-cabinet': resolve(import.meta.dirname, 'frontend/entrypoints/portal-cabinet.js'),
         'property-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/property-workspace.js'),
         'public-surface': resolve(import.meta.dirname, 'frontend/entrypoints/public-surface.js'),
-        'sales-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/sales-workspace.js'),
+
         'terranova-catalog-api': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-catalog-api.js'),
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),
         'terranova-interface': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-interface.js'),

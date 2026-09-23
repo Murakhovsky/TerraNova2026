@@ -20,7 +20,7 @@ kind: architecture
 | VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | DONE |
 | VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | DONE |
-| VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | BUILD |
+| VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | QA |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -56,3 +56,5 @@ VR-009 стартував як route-family cutover `/sales/admin/*`. Перши
 VR-009 Cycle B переводить Pipelines/Rules/Agents/Actions/Teams/Integrations/Health на canonical System Control Surface + Stimulus. Після цього legacy Sales Admin PHTML лишається тільки для трьох detail editors: Pipeline, Rule, Agent.
 
 VR-009 Cycle C переводить Pipeline і Agent detail editors на canonical Twig + Stimulus. Legacy `frontend/features/sales/admin.js` видалено; єдиний PHTML surface у Sales — Rule editor.
+
+VR-009 Cycle D переводить Rule editor на canonical Twig + Stimulus і видаляє `SalesAdminPageController`, `sales-workspace` Vite entrypoint та весь legacy Sales frontend source. Sales visual PHTML burn-down після цього циклу: **0**.

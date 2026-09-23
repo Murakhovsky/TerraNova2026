@@ -25,7 +25,6 @@ foreach([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
-    'symfony/src/Web/Sales/SalesAdminPageController.php',
     'symfony/src/Web/Diagnostic/DiagnosticPageController.php',
     'symfony/src/Web/Content/ContentAdminPageController.php',
     'app/Interfaces/Web/View/components/workspace_sidebar.phtml',
@@ -56,10 +55,14 @@ foreach([
     'symfony/assets/controllers/sales_deal_controller.js',
     'symfony/src/Web/Sales/SalesDirectorController.php',
     'symfony/templates/experience/sales/director.html.twig',
+    'symfony/src/Web/Sales/SalesAdminDashboardController.php',
+    'symfony/src/Web/Sales/SalesAdminControlController.php',
+    'symfony/templates/experience/sales/admin/dashboard.html.twig',
+    'symfony/templates/experience/sales/admin/rule.html.twig',
+    'symfony/assets/controllers/sales_admin_rule_editor_controller.js',
     'frontend/core/workspace-shell.js',
     'frontend/entrypoints/terranova-interface.js',
     'frontend/entrypoints/diagnostics-methodology-studio.js',
-    'frontend/entrypoints/sales-workspace.js',
     'frontend/styles/design-system.css',
     'frontend/styles/layouts/workspace.css',
     'frontend/styles/workspace-mobile.css',
@@ -68,6 +71,15 @@ foreach([
     'frontend/styles/patterns.css',
     'frontend/styles/workspace.css',
 ] as $path)$read($path);
+
+foreach([
+    'symfony/src/Web/Sales/SalesAdminPageController.php',
+    'frontend/entrypoints/sales-workspace.js',
+    'frontend/features/sales/workspace.js',
+    'frontend/features/sales/rule-editor.js',
+] as $retiredSalesSource){
+    $assert(!is_file($root.'/'.$retiredSalesSource),'Retired Sales presentation source restored: '.$retiredSalesSource);
+}
 
 $navigation=$read('symfony/src/Web/Navigation/NavigationBuilder.php');
 foreach([

@@ -53,6 +53,11 @@ final readonly class SalesAdminQueryHandler implements QueryHandlerInterface
                 'rules' => $this->rules->rules($org),
                 'catalog' => $this->rules->catalog(),
             ],
+            'page.rule' => [
+                'rule' => $this->required($this->rules->rule($org, $this->configId($id, 'rule')), 'Sales rule not found.'),
+                'catalog' => $this->rules->catalog(),
+                'revisions' => $this->rules->revisions($org, $this->configId($id, 'rule'), min(50, $limit)),
+            ],
             'page.agents' => [
                 'agents' => $this->agents->agents($org),
                 'catalog' => $this->agents->catalog(),

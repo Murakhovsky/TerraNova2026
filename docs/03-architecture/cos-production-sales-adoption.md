@@ -129,7 +129,7 @@ Sales read model
 
 ### Команди та повноваження (`Teams & Authority`)
 
-`sales_admin/teams.phtml`
+`symfony/templates/experience/sales/admin/teams.html.twig`
 
 - legacy admin header замінено на canonical Sales navigation + PageHeader;
 - create-team і authority model розміщені у canonical panels;
@@ -139,7 +139,7 @@ Sales read model
 
 ### Інтеграції (`Integrations`)
 
-`sales_admin/integrations.phtml`
+`symfony/templates/experience/sales/admin/integrations.html.twig`
 
 - legacy admin shell замінено на canonical workspace shell;
 - provider configuration та runtime boundary використовують canonical panels;
@@ -149,7 +149,7 @@ Sales read model
 
 ### Стан та аудит (`Health & Audit`)
 
-`sales_admin/health.phtml`
+`symfony/templates/experience/sales/admin/health.html.twig`
 
 - overall/subsystem health подано через canonical KPI cards;
 - issue та runtime states використовують semantic Status;
@@ -198,3 +198,20 @@ Canonical layer стандартизує повторювану anatomy. Domain 
 - production Vite build зелений;
 - PHASE 0–8 gates залишаються зеленими;
 - окремий PHASE 9 architecture gate захищає adoption від regression.
+
+
+## Wave 13 Phase 3 closure
+
+Sales presentation ownership is now canonical Symfony/Twig/Stimulus end to end.
+
+- `/sales/today` → Operational Queue;
+- `/sales/pipeline` → Process / Pipeline;
+- `/sales/deals` → Collection / DataGrid;
+- `/sales/director` → Executive Dashboard;
+- `/sales/admin/*` → System / Control Surface;
+- Sales-specific drag/drop remains a domain component;
+- Rule, Pipeline, Agent, Teams, Integrations and Policy administration use dedicated Stimulus controllers;
+- legacy `SalesPageController` and `SalesAdminPageController` are retired;
+- legacy `sales-workspace` Vite entrypoint is retired;
+- **Sales visual PHTML = 0**.
+

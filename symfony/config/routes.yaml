@@ -1545,7 +1545,7 @@ cos_web_sales_admin_rules_page:
 
 cos_web_sales_admin_rule_page:
   path: /sales/admin/rules/{id}
-  controller: App\Web\Sales\SalesAdminPageController::rule
+  controller: App\Web\Sales\SalesAdminControlController::rule
   methods: [GET]
   requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
 

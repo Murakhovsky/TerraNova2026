@@ -13,7 +13,7 @@ $contracts = [
     ['app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAssignmentAuthority.php', 'SalesCapability::DealAssign'],
     ['app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesAccessControl.php', 'SalesAccessControlInterface'],
     ['symfony/config/routes.yaml', 'cos_web_sales_admin_teams_page:'],
-    ['app/Interfaces/Web/View/sales_admin/teams.phtml', 'Users, Teams & Authority'],
+    ['symfony/templates/experience/sales/admin/teams.html.twig', 'Users, Teams & Authority'],
     ['app/Bootstrap/SalesAuthorityServices.php', 'salesApprovalAuthority'],
     ['app/config/services_kernel.php', 'SalesAuthorityServices.php'],
 ];

@@ -73,13 +73,29 @@ foreach ([
 }
 
 foreach ([
-    'frontend/features/sales/workspace.js',
-    'frontend/features/sales/rule-editor.js',
+    'symfony/assets/controllers/sales_lead_controller.js',
+    'symfony/assets/controllers/sales_today_controller.js',
+    'symfony/assets/controllers/sales_pipeline_controller.js',
+    'symfony/assets/controllers/sales_deals_controller.js',
+    'symfony/assets/controllers/sales_deal_controller.js',
     'symfony/assets/controllers/sales_admin_pipeline_controller.js',
+    'symfony/assets/controllers/sales_admin_rule_editor_controller.js',
     'symfony/assets/controllers/sales_admin_agent_controller.js',
+    'symfony/assets/controllers/sales_admin_policies_controller.js',
+    'symfony/assets/controllers/sales_admin_teams_controller.js',
+    'symfony/assets/controllers/sales_admin_integrations_controller.js',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, '/api/sales/'), 'Live Sales frontend restored a legacy API dependency: ' . $path);
+}
+
+foreach ([
+    'frontend/features/sales/workspace.js',
+    'frontend/features/sales/rule-editor.js',
+    'frontend/features/sales/admin.js',
+    'frontend/entrypoints/sales-workspace.js',
+] as $retired) {
+    $assert(!is_file($root . '/' . $retired), 'Retired Sales frontend source returned: ' . $retired);
 }
 
 echo "Sales legacy API + SSR retirement boundary passed.\n";

@@ -81,14 +81,16 @@ foreach (['data-ui-drawer-open', 'data-ui-drawer-close', 'HTMLDialogElement', 's
     $contains($interactive, $needle, 'Drawer browser behavior is incomplete');
 }
 
-$agents = $read('app/Interfaces/Web/View/sales_admin/agents.phtml');
-$contains($agents, "components/ui/data_table", 'Sales agents list must prove canonical DataTable on real data');
+$agents = $read('symfony/templates/experience/sales/admin/agents.html.twig');
+$contains($agents, '<twig:CosEntityListItem', 'Sales agents list must prove canonical entity-list composition on real data');
 if (str_contains($agents, 'style="')) {
     throw new RuntimeException('Canonical Sales agents migration must not reintroduce inline styling');
 }
 
-$agent = $read('app/Interfaces/Web/View/sales_admin/agent.phtml');
-$contains($agent, "components/ui/entity_header", 'Sales agent detail must prove canonical EntityHeader on a real entity workspace');
+$agent = $read('symfony/templates/experience/sales/admin/agent.html.twig');
+foreach (['<twig:CosPageHeader', '<twig:CosToolbar', 'data-controller="sales-admin-agent"'] as $needle) {
+    $contains($agent, $needle, 'Sales agent detail must prove canonical System Control Surface composition');
+}
 
 $docs = $read('docs/architecture/web-v0.16.md');
 foreach (['PageHeader', 'EntityHeader', 'Panel', 'DataTable', 'FilterBar', 'ActionBar', 'Drawer', 'Status / Stage', 'WCAG 2.2 AA', 'Server-first', 'Definition of Done'] as $needle) {

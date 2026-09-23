@@ -1786,11 +1786,6 @@ services:
   Domains\Sales\Application\Contract\SalesAdministrationReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel
 
-  App\Web\Sales\SalesAdminPageController:
-    public: true
-    tags: ['controller.service_arguments']
-
-
   # Final Web retirement — Visualization / Diagnostic SSR.
   App\Web\Visualization\ArchitecturePageController:
     public: true

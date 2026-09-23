@@ -164,52 +164,61 @@ if (is_file($root . '/app/Interfaces/Web/View/sales/director.phtml')) {
 }
 
 
-$adminLegacySurfaces = [
-    'Teams' => $read('app/Interfaces/Web/View/sales_admin/teams.phtml'),
-    'Integrations' => $read('app/Interfaces/Web/View/sales_admin/integrations.phtml'),
-    'Health & Audit' => $read('app/Interfaces/Web/View/sales_admin/health.phtml'),
+$adminSurfaces = [
+    'Dashboard' => $read('symfony/templates/experience/sales/admin/dashboard.html.twig'),
+    'Teams' => $read('symfony/templates/experience/sales/admin/teams.html.twig'),
+    'Integrations' => $read('symfony/templates/experience/sales/admin/integrations.html.twig'),
+    'Health & Audit' => $read('symfony/templates/experience/sales/admin/health.html.twig'),
+    'Rule Editor' => $read('symfony/templates/experience/sales/admin/rule.html.twig'),
 ];
-foreach ($adminLegacySurfaces as $surface => $source) {
-    foreach ([
-        "partial('components/sales/navigation'",
-        "partial('components/ui/page_header'",
-    ] as $marker) {
-        $contains($source, $marker, 'Sales Admin ' . $surface . ' must use the canonical workspace shell.');
+foreach ($adminSurfaces as $surface => $source) {
+    foreach (['<twig:CosPageHeader'] as $marker) {
+        $contains($source, $marker, 'Sales Admin ' . $surface . ' must use canonical Twig shell composition.');
     }
-    foreach ([
-        'sales-admin-page',
-        'sales-admin-header',
-        'sales-admin-card',
-    ] as $legacyMarker) {
-        $notContains($source, $legacyMarker, 'Sales Admin ' . $surface . ' must not restore the legacy administration visual shell.');
+    foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+        $notContains($source, $legacyMarker, 'Sales Admin ' . $surface . ' must not restore legacy presentation.');
     }
 }
 foreach ([
-    "'bodyPartial' => 'components/ui/data_table'",
-    'data-sales-team-admin',
+    'data-controller="sales-admin-teams"',
     'data-membership-form',
     'data-capabilities-form',
 ] as $marker) {
-    $contains($adminLegacySurfaces['Teams'], $marker, 'Sales Teams migration lost a canonical or behavior contract.');
+    $contains($adminSurfaces['Teams'], $marker, 'Sales Teams migration lost a canonical or behavior contract.');
 }
 foreach ([
-    "partial('components/ui/status_badge'",
-    'data-sales-integration-admin',
+    'data-controller="sales-admin-integrations"',
     'data-create-integration',
     'data-update-integration',
-    'data-test-integration',
     'data-route-form',
 ] as $marker) {
-    $contains($adminLegacySurfaces['Integrations'], $marker, 'Sales Integrations migration lost a canonical or behavior contract.');
+    $contains($adminSurfaces['Integrations'], $marker, 'Sales Integrations migration lost a canonical or behavior contract.');
 }
 foreach ([
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/status_badge'",
-    'Operational metrics',
+    'class="cos-kpi-strip"',
+    'Operational queue',
     'Audit timeline',
     'Configuration',
 ] as $marker) {
-    $contains($adminLegacySurfaces['Health & Audit'], $marker, 'Sales Health migration lost a canonical observability contract.');
+    $contains($adminSurfaces['Health & Audit'], $marker, 'Sales Health migration lost a canonical observability contract.');
+}
+foreach ([
+    'data-controller="sales-admin-rule-editor"',
+    'sales-admin-rule-editor#save',
+    'sales-admin-rule-editor#dryRun',
+] as $marker) {
+    $contains($adminSurfaces['Rule Editor'], $marker, 'Sales Rule editor migration lost canonical behavior.');
+}
+
+$iterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($root . '/app/Interfaces/Web/View', FilesystemIterator::SKIP_DOTS)
+);
+foreach ($iterator as $view) {
+    if (!$view->isFile() || strtolower($view->getExtension()) !== 'phtml') continue;
+    $relative = str_replace('\\', '/', substr($view->getPathname(), strlen($root) + 1));
+    if (str_contains($relative, '/sales/') || str_contains($relative, '/sales_admin/')) {
+        throw new RuntimeException('Phase 3 Sales visual PHTML must be zero: ' . $relative);
+    }
 }
 
 $filterBar = $read('app/Interfaces/Web/View/components/ui/filter_bar.phtml');

@@ -27,6 +27,7 @@ foreach ([
 }
 
 $assert(!is_file($root . '/symfony/src/Web/Sales/SalesPageController.php'), 'Retired SalesPageController returned after canonical Sales surface cutover.');
+$assert(!is_file($root . '/symfony/src/Web/Sales/SalesAdminPageController.php'), 'Retired SalesAdminPageController returned after canonical Sales Admin cutover.');
 
 foreach ([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
@@ -34,7 +35,6 @@ foreach ([
     'symfony/src/Web/Phtml/RequestQueryAdapter.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
-    'symfony/src/Web/Sales/SalesAdminPageController.php',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, 'Phalcon\\'), 'Canonical Symfony Web layer depends on Phalcon: ' . $path);
@@ -47,7 +47,6 @@ $assert(!str_contains($layout, '$this->assets('), 'Global PHTML layout still dep
 
 foreach ([
     'app/Interfaces/Web/View/shared/manager_header.phtml',
-    'app/Interfaces/Web/View/components/sales/navigation.phtml',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, 'getDI()'), 'PHTML template still uses a service locator: ' . $path);

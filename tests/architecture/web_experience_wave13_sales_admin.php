@@ -163,4 +163,61 @@ foreach ([
     }
 }
 
-echo "Wave 13 VR-009 Sales Admin foundation + control + Pipeline/Agent detail surfaces passed.\n";
+$ruleTemplate = (string) file_get_contents($root . '/symfony/templates/experience/sales/admin/rule.html.twig');
+foreach ([
+    'data-controller="sales-admin-rule-editor"',
+    'sales-admin-rule-editor#save',
+    'sales-admin-rule-editor#dryRun',
+    'sales-admin-rule-editor#lifecycle',
+    'data-sales-admin-rule-editor-catalog-value',
+    'data-sales-admin-rule-editor-current-value',
+] as $marker) {
+    if (!str_contains($ruleTemplate, $marker)) {
+        throw new RuntimeException('VR-009 Rule editor contract is incomplete: ' . $marker);
+    }
+}
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    if (str_contains($ruleTemplate, $forbidden)) {
+        throw new RuntimeException('VR-009 Rule editor restored legacy presentation: ' . $forbidden);
+    }
+}
+
+$ruleRuntime = (string) file_get_contents($root . '/symfony/assets/controllers/sales_admin_rule_editor_controller.js');
+foreach ([
+    '/api/v1/sales/admin/rules/',
+    'conditionRow',
+    'actionRow',
+    'dryRun',
+    'restore-system',
+] as $marker) {
+    if (!str_contains($ruleRuntime, $marker)) {
+        throw new RuntimeException('VR-009 Rule Stimulus runtime is incomplete: ' . $marker);
+    }
+}
+
+foreach ([
+    'symfony/src/Web/Sales/SalesAdminPageController.php',
+    'frontend/entrypoints/sales-workspace.js',
+    'frontend/features/sales/workspace.js',
+    'frontend/features/sales/workspace.css',
+    'frontend/features/sales/rule-editor.js',
+    'frontend/features/sales/rule-editor.css',
+    'app/Interfaces/Web/View/components/sales/navigation.phtml',
+] as $legacy) {
+    if (is_file($root . '/' . $legacy)) {
+        throw new RuntimeException('VR-009 final legacy Sales presentation returned: ' . $legacy);
+    }
+}
+
+$views = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($root . '/app/Interfaces/Web/View', FilesystemIterator::SKIP_DOTS)
+);
+foreach ($views as $view) {
+    if (!$view->isFile() || strtolower($view->getExtension()) !== 'phtml') continue;
+    $relative = str_replace('\\', '/', substr($view->getPathname(), strlen($root) + 1));
+    if (str_contains($relative, '/sales/') || str_contains($relative, '/sales_admin/')) {
+        throw new RuntimeException('VR-009 final Sales PHTML burn-down failed: ' . $relative);
+    }
+}
+
+echo "Wave 13 VR-009 Sales Admin complete: canonical Twig/Stimulus, Sales PHTML = 0.\n";

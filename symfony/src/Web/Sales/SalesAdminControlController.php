@@ -48,6 +48,11 @@ final readonly class SalesAdminControlController
         return $this->adminPage($request, 'rules', 'Sales Business Rules', 'page.rules');
     }
 
+    public function rule(Request $request, string $id): Response
+    {
+        return $this->adminPage($request, 'rule', 'Business Rule Editor', 'page.rule', $id);
+    }
+
     public function agents(Request $request): Response
     {
         return $this->adminPage($request, 'agents', 'Sales Intelligence Agents', 'page.agents');
