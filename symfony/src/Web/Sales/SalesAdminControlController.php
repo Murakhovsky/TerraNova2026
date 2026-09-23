@@ -38,6 +38,11 @@ final readonly class SalesAdminControlController
         return $this->adminPage($request, 'pipelines', 'Sales Pipelines', 'page.pipelines');
     }
 
+    public function pipeline(Request $request, string $id): Response
+    {
+        return $this->adminPage($request, 'pipeline', 'Pipeline Configuration', 'page.pipeline', $id);
+    }
+
     public function rules(Request $request): Response
     {
         return $this->adminPage($request, 'rules', 'Sales Business Rules', 'page.rules');
@@ -46,6 +51,11 @@ final readonly class SalesAdminControlController
     public function agents(Request $request): Response
     {
         return $this->adminPage($request, 'agents', 'Sales Intelligence Agents', 'page.agents');
+    }
+
+    public function agent(Request $request, string $name): Response
+    {
+        return $this->adminPage($request, 'agent', 'Sales Intelligence Agent', 'page.agent', $name);
     }
 
     public function actions(Request $request): Response
@@ -91,13 +101,14 @@ final readonly class SalesAdminControlController
         string $kind,
         string $title,
         string $operation,
+        ?string $resourceId = null,
     ): Response {
         $tenant = $this->admin();
         if ($tenant instanceof Response) {
             return $tenant;
         }
 
-        return $this->page($request, $tenant, $kind, $title, $operation);
+        return $this->page($request, $tenant, $kind, $title, $operation, $resourceId);
     }
 
     private function capabilityPage(
@@ -121,6 +132,7 @@ final readonly class SalesAdminControlController
         string $kind,
         string $title,
         string $operation,
+        ?string $resourceId = null,
     ): Response {
         $context = new WebExtensionContext(
             organizationId: $tenant->organizationId()->value(),
@@ -140,6 +152,7 @@ final readonly class SalesAdminControlController
             $data = $this->queries->ask(new SalesAdminQuery(
                 organizationId: $tenant->organizationId(),
                 operation: $operation,
+                resourceId: $resourceId,
                 input: ['limit' => 100],
             ));
             $admin = $this->presenter->present($kind, is_array($data) ? $data : []);

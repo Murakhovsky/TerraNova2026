@@ -45,6 +45,10 @@ final readonly class SalesAdminQueryHandler implements QueryHandlerInterface
             'page.pipelines' => [
                 'pipelines' => $this->pipelines->pipelines($org),
             ],
+            'page.pipeline' => [
+                'pipeline' => $this->required($this->pipelines->pipeline($org, $this->id($id)), 'Pipeline not found.'),
+                'revisions' => $this->pipelineGovernance->revisions($org, $this->id($id), $limit),
+            ],
             'page.rules' => [
                 'rules' => $this->rules->rules($org),
                 'catalog' => $this->rules->catalog(),
@@ -52,6 +56,11 @@ final readonly class SalesAdminQueryHandler implements QueryHandlerInterface
             'page.agents' => [
                 'agents' => $this->agents->agents($org),
                 'catalog' => $this->agents->catalog(),
+            ],
+            'page.agent' => [
+                'agent' => $this->required($this->agents->agent($org, $this->agentName($id)), 'Sales agent not found.'),
+                'catalog' => $this->agents->catalog(),
+                'revisions' => $this->agents->revisions($org, $this->agentName($id), $limit),
             ],
             'page.actions' => [
                 'actions' => $this->policies->actions($org),

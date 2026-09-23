@@ -54,3 +54,5 @@ VR-008 переводить Sales Director на Executive Dashboard: Domain cock
 VR-009 стартував як route-family cutover `/sales/admin/*`. Перший цикл переводить dashboard на System / Control Surface та централізує read boundary через `SalesAdminQuery`; legacy підсторінки залишаються доступними до наступних циклів міграції.
 
 VR-009 Cycle B переводить Pipelines/Rules/Agents/Actions/Teams/Integrations/Health на canonical System Control Surface + Stimulus. Після цього legacy Sales Admin PHTML лишається тільки для трьох detail editors: Pipeline, Rule, Agent.
+
+VR-009 Cycle C переводить Pipeline і Agent detail editors на canonical Twig + Stimulus. Legacy `frontend/features/sales/admin.js` видалено; єдиний PHTML surface у Sales — Rule editor.

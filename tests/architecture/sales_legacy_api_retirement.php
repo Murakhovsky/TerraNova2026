@@ -74,8 +74,9 @@ foreach ([
 
 foreach ([
     'frontend/features/sales/workspace.js',
-    'frontend/features/sales/admin.js',
     'frontend/features/sales/rule-editor.js',
+    'symfony/assets/controllers/sales_admin_pipeline_controller.js',
+    'symfony/assets/controllers/sales_admin_agent_controller.js',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, '/api/sales/'), 'Live Sales frontend restored a legacy API dependency: ' . $path);

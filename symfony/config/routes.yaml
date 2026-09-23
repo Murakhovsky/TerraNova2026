@@ -1534,7 +1534,7 @@ cos_web_sales_admin_pipelines_page:
 
 cos_web_sales_admin_pipeline_page:
   path: /sales/admin/pipelines/{id}
-  controller: App\Web\Sales\SalesAdminPageController::pipeline
+  controller: App\Web\Sales\SalesAdminControlController::pipeline
   methods: [GET]
   requirements: { id: '[A-Za-z0-9_-]{8,64}' }
 
@@ -1556,7 +1556,7 @@ cos_web_sales_admin_agents_page:
 
 cos_web_sales_admin_agent_page:
   path: /sales/admin/agents/{name}
-  controller: App\Web\Sales\SalesAdminPageController::agent
+  controller: App\Web\Sales\SalesAdminControlController::agent
   methods: [GET]
   requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
 

@@ -15,7 +15,6 @@ $assert = static function (bool $ok, string $message): void {
 
 foreach ([
     'frontend/features/sales/workspace.js',
-    'frontend/features/sales/admin.js',
     'frontend/features/sales/rule-editor.js',
     'app/Interfaces/Web/View/components/sales/navigation.phtml',
     'app/Interfaces/Web/View/sales_admin/pipeline.phtml',
@@ -49,15 +48,12 @@ foreach ([
     $assert(str_contains($workspace, $needle), 'Wave 7 workspace v1 dependency missing: ' . $needle);
 }
 
-$admin = $read('frontend/features/sales/admin.js');
-foreach ([
-    '/api/v1/sales/admin/teams',
-    '/api/v1/sales/admin/agents/',
-    '/api/v1/sales/admin/policies',
-    '/api/v1/sales/integrations',
-] as $needle) {
-    $assert(str_contains($admin, $needle), 'Wave 7 admin v1 dependency missing: ' . $needle);
+$adminPipeline = $read('symfony/assets/controllers/sales_admin_pipeline_controller.js');
+$adminAgent = $read('symfony/assets/controllers/sales_admin_agent_controller.js');
+foreach (['/api/v1/sales/admin/pipelines/', '/stages', '/transitions'] as $needle) {
+    $assert(str_contains($adminPipeline, $needle), 'Canonical admin Pipeline v1 dependency missing: ' . $needle);
 }
+$assert(str_contains($adminAgent, '/api/v1/sales/admin/agents/'), 'Canonical admin Agent v1 dependency missing.');
 
 $rules = $read('frontend/features/sales/rule-editor.js');
 $assert(str_contains($rules, '/api/v1/sales/admin/rules'), 'Wave 7 rule editor is not on Symfony v1.');

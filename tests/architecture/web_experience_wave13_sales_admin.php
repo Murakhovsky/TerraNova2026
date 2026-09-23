@@ -132,4 +132,35 @@ foreach ([
     }
 }
 
-echo "Wave 13 VR-009 Sales Admin foundation + control surfaces passed.\n";
+foreach ([
+    'pipeline' => ['sales-admin-pipeline', 'data-action="submit->sales-admin-pipeline#transitions"'],
+    'agent' => ['sales-admin-agent', 'data-action="submit->sales-admin-agent#save"'],
+] as $surface => $markers) {
+    $templatePath = $root . '/symfony/templates/experience/sales/admin/' . $surface . '.html.twig';
+    if (!is_file($templatePath)) {
+        throw new RuntimeException('VR-009 detail surface template is missing: ' . $surface);
+    }
+    $source = (string) file_get_contents($templatePath);
+    foreach ($markers as $marker) {
+        if (!str_contains($source, $marker)) {
+            throw new RuntimeException('VR-009 ' . $surface . ' lost editor behavior: ' . $marker);
+        }
+    }
+    foreach (['tn-', 'style=', '<script'] as $forbidden) {
+        if (str_contains($source, $forbidden)) {
+            throw new RuntimeException('VR-009 ' . $surface . ' restored legacy presentation: ' . $forbidden);
+        }
+    }
+}
+
+foreach ([
+    'app/Interfaces/Web/View/sales_admin/pipeline.phtml',
+    'app/Interfaces/Web/View/sales_admin/agent.phtml',
+    'frontend/features/sales/admin.js',
+] as $legacy) {
+    if (is_file($root . '/' . $legacy)) {
+        throw new RuntimeException('VR-009 migrated detail/admin runtime returned: ' . $legacy);
+    }
+}
+
+echo "Wave 13 VR-009 Sales Admin foundation + control + Pipeline/Agent detail surfaces passed.\n";
