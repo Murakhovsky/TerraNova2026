@@ -774,6 +774,34 @@ Kernel Action status / target trace
 
 Workspace не approve і не execute Sales Actions напряму. Він не викликає Sales approval/action endpoints і не дублює message body у Growth persistence. Якщо recommendation ще не accepted, не message-capable, channel не підтримується або немає рівно одного `sales_deal` binding, UI показує server-side eligibility reason замість імпровізації на клієнті.
 
+## Credentialed JSON Signal Intake
+
+V0.28 додає provider-neutral pull path:
+
+```text
+GrowthJsonSignalSource
+  url
+  auth_mode
+  credential_reference
+  subject mapping
+        ↓
+CredentialVaultInterface
+        ↓
+SafeHttpCredentialedJsonSignalReader
+        ↓
+CredentialedJsonSignalParser
+        ↓
+CredentialedJsonSignalCollector
+        ↓
+canonical GrowthSignalCollectorService
+        ↓
+Signal
+```
+
+Domain persistence містить лише opaque `credential_reference`. API read model його редагує до `credential_configured` + короткого hash reference. Raw credential material існує лише в transport call scope.
+
+Поточний envelope: `items[]` із `id`, `occurred_at`, `source_reference`, `facts`. Collector cursorless; durable source receipts виконують dedupe між повторними polling runs.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -793,9 +821,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.24
+## Статус V0.28
 
-`process_state: to-be` поки навмисний. V0.23 додає Candidate Workspace surface над governed Engagement Intelligence + Execution Bridge. Mutation authority не змінюється: recommendation decisions і Action proposal йдуть через canonical Growth API, а approval/execute лишаються під Kernel/Sales authority.
+`process_state: to-be` поки навмисний. V0.28 додає credentialed provider-neutral JSON pull intake поверх canonical Signal Collector runtime. Mutation authority не змінюється: provider data стає Signal тільки через collector dedupe/run/Event/Audit path; credentials залишаються у Platform Vault.
 
 ## Карта коду
 
@@ -854,6 +882,11 @@ app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthDecisionRepositor
 app/Domains/Growth/Application/Contract/SignalCollectorInterface.php
 app/Domains/Growth/Application/Service/SignalCollectorRegistry.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthBuyingCommitteeRepository.php
+app/Domains/Growth/Application/Service/GrowthJsonSignalSourceService.php
+app/Domains/Growth/Infrastructure/Collector/CredentialedJsonSignalCollector.php
+app/Domains/Growth/Infrastructure/Feed/SafeHttpCredentialedJsonSignalReader.php
+app/Domains/Growth/Infrastructure/Feed/CredentialedJsonSignalParser.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthJsonSignalSourceRepository.php
 app/Domains/Growth/Automation/Event/GrowthEventType.php
 app/Domains/Growth/Bootstrap/GrowthDomainModule.php
 app/migrations/20260921_000067_growth_v020_runtime.sql
@@ -863,5 +896,6 @@ app/migrations/20260922_000070_growth_v050_signal_collectors.sql
 app/migrations/20260922_000071_growth_v060_decision_intelligence.sql
 app/migrations/20260922_000072_growth_v070_research_intelligence.sql
 app/migrations/20260922_000073_growth_v080_handoff_protocol.sql
+app/migrations/20260924_000093_growth_v0280_credentialed_json_collector.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

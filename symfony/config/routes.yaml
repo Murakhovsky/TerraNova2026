@@ -430,6 +430,28 @@ cos_api_v1_growth_signal_feed_disable:
   methods: [POST]
   requirements: { id: '[A-Za-z0-9_-]{8,80}' }
 
+cos_api_v1_growth_json_signal_sources:
+  path: /api/v1/growth/json-signal-sources
+  controller: App\Http\Api\V1\Controller\GrowthApiController::jsonSignalSources
+  methods: [GET]
+
+cos_api_v1_growth_json_signal_source_create:
+  path: /api/v1/growth/json-signal-sources
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createJsonSignalSource
+  methods: [POST]
+
+cos_api_v1_growth_json_signal_source_enable:
+  path: /api/v1/growth/json-signal-sources/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableJsonSignalSource
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_json_signal_source_disable:
+  path: /api/v1/growth/json-signal-sources/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableJsonSignalSource
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
 cos_api_v1_growth_signal_create:
   path: /api/v1/growth/signals
   controller: App\Http\Api\V1\Controller\GrowthApiController::createSignal

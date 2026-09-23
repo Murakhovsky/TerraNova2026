@@ -7,6 +7,7 @@ on:
       - 'app/Kernel/Process/**'
       - 'app/Infrastructure/Process/**'
       - 'app/Domains/Growth/**'
+      - 'app/Infrastructure/Platform/Integration/**'
       - 'app/Kernel/Module/KernelVersion.php'
       - 'symfony/config/services.yaml'
       - 'symfony/config/routes.yaml'
@@ -56,6 +57,7 @@ on:
       - 'app/Kernel/Process/**'
       - 'app/Infrastructure/Process/**'
       - 'app/Domains/Growth/**'
+      - 'app/Infrastructure/Platform/Integration/**'
       - 'app/Kernel/Module/KernelVersion.php'
       - 'symfony/config/services.yaml'
       - 'symfony/config/routes.yaml'
@@ -145,6 +147,7 @@ jobs:
           php tests/architecture/growth_v0250_service_handoff_adapter.php
           php tests/architecture/growth_v0260_rss_atom_collector.php
           php tests/architecture/growth_v0270_signal_feed_workspace.php
+          php tests/architecture/growth_v0280_credentialed_json_collector.php
 
       - name: Process registry invariants
         run: |
@@ -174,6 +177,7 @@ jobs:
           php tests/unit/growth_v0240_pre_handoff_execution.php
           php tests/unit/growth_v0250_service_handoff_adapter.php
           php tests/unit/growth_v0260_rss_atom_collector.php
+          php tests/unit/growth_v0280_credentialed_json_collector.php
           php tests/unit/growth_v0270_signal_feed_workspace.php
 
       - name: Process evidence and schema-v5 compatibility
@@ -250,6 +254,12 @@ jobs:
           php -l tests/architecture/growth_v0260_rss_atom_collector.php
           php -l tests/unit/growth_v0270_signal_feed_workspace.php
           php -l tests/architecture/growth_v0270_signal_feed_workspace.php
+          php -l tests/unit/growth_v0280_credentialed_json_collector.php
+          php -l tests/architecture/growth_v0280_credentialed_json_collector.php
+          php -l app/Infrastructure/Platform/Integration/EnvironmentCredentialVault.php
+          php -l app/Domains/Growth/Application/Service/GrowthJsonSignalSourceService.php
+          php -l app/Domains/Growth/Infrastructure/Feed/SafeHttpCredentialedJsonSignalReader.php
+          php -l app/Domains/Growth/Infrastructure/Collector/CredentialedJsonSignalCollector.php
           php -l app/Interfaces/Web/View/growth/candidate.phtml
           php -l app/Interfaces/Web/View/growth/experiments.phtml
           php -l app/Interfaces/Web/View/growth/experiment.phtml

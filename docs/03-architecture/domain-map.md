@@ -2,7 +2,7 @@
 title: Карта доменів COS
 description: Карта встановлюваних доменів, допоміжних областей, ядра та меж інтерфейсів і інфраструктури.
 status: active
-updated: 2026-09-23
+updated: 2026-09-24
 kind: architecture
 ---
 
@@ -47,7 +47,7 @@ Bootstrap: корінь композиції
 повністю інтегрований домен середовища виконання
 ```
 
-Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.27.0` має installable contract, persistence/application runtime, ICP/Account/Buying Committee Intelligence, Signal/Research/Decision Intelligence, resumable Handoff, Sales target, Symfony API V1 та provider-backed SSR Workspace, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
+Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.28.0` має installable contract, persistence/application runtime, ICP/Account/Buying Committee Intelligence, Signal/Research/Decision Intelligence, resumable Handoff, Sales target, Symfony API V1 та provider-backed SSR Workspace, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
 
 Identity, Content і Spatial фізично відокремлені як обмежені області відповідальності (bounded areas), але не зобов’язані мати той самий контракт встановлюваного модуля.
 
@@ -59,7 +59,7 @@ Identity, Content і Spatial фізично відокремлені як обм
 
 ## Growth: пошук бізнес-можливостей
 
-Growth `0.27.0` володіє Signal Intake, ICP, Account/Buying Committee Intelligence, deterministic qualification policy, evidence-bound Research та explicit resumable handoff lifecycle:
+Growth `0.28.0` володіє Signal Intake, ICP, Account/Buying Committee Intelligence, deterministic qualification policy, evidence-bound Research та explicit resumable handoff lifecycle:
 
 ```text
 ICP
@@ -82,7 +82,7 @@ ICP
 
 `BuyingCommitteeAssessment` детерміновано рахує required-role coverage, gaps, champions, blockers і relationship risk із конкретних snapshot ids та фіксує `model_version`.
 
-Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, MySQL runtime, ICP/Account/Contact intelligence, collector registry/source dedupe, Qualification Policy, Candidate Evaluation, governed Research та resumable Handoff Protocol уже визначені. Growth володіє target port; V0.9 має concrete Sales adapter через Sales application boundary, а V0.25 — concrete Service adapter через `ServiceApplicationBoundary::createRequest()`. Growth не створює Service Tickets і не має hard dependency на Service. V0.26 має tenant-scoped RSS/Atom pull collector через canonical Signal Collector runtime; V0.27 додає його operational feed-management surface у `/growth/collectors`, не створюючи другого mutation path. Transport обмежений HTTPS/public IPv4 і не обходить source dedupe. HR/Procurement adapters, credentialed provider collectors, pre-handoff LinkedIn/call execution та autonomous activation ще не оголошуються реалізованими. V0.22 має governed post-handoff bridge: accepted engagement recommendation + однозначний `sales_deal` binding можуть створити `sales.send_message` Kernel Action через Sales Policy, але Growth не виконує Action і не зберігає message body. V0.24 додає Growth-owned `growth.send_message` для pre-handoff email: target = `growth_contact`, default policy = `APPROVAL_REQUIRED`, execution резолвить contact identity в останній момент і делегує delivery через Platform Notification → durable n8n outbox. V0.19 має governed learning optimization + Optimization Workspace та controlled Experiments & Attribution, Experiment Workspace та governed Experiment Decision Intelligence: immutable Candidate→Variant assignment, bounded outcome window і Growth-owned attribution report. Experiment runtime не отримує outbound execution authority. V0.21 може сформувати evidence-bound recommendation про promote/iterate/continue/stop/inconclusive, але accepted recommendation не мутує Experiment і не є автоматичним winner selection. Symfony API V1, Growth Workspace, Signal Operations і Learning Workspace уже є executable surfaces над application/read boundaries. Collector execution лишається mutation через canonical API, а Workspace projection є read-only.
+Поточний canonical process `growth.opportunity-candidate-to-handoff` має стан `to-be`. Domain model, MySQL runtime, ICP/Account/Contact intelligence, collector registry/source dedupe, Qualification Policy, Candidate Evaluation, governed Research та resumable Handoff Protocol уже визначені. Growth володіє target port; V0.9 має concrete Sales adapter через Sales application boundary, а V0.25 — concrete Service adapter через `ServiceApplicationBoundary::createRequest()`. Growth не створює Service Tickets і не має hard dependency на Service. V0.26 має tenant-scoped RSS/Atom pull collector через canonical Signal Collector runtime; V0.27 додає його operational feed-management surface у `/growth/collectors`, не створюючи другого mutation path. V0.28 додає provider-neutral `credentialed_json` collector: tenant source config зберігає opaque credential reference, Platform Vault резолвить raw secret тільки на transport boundary, а canonical JSON envelope проходить той самий source-dedupe/run/Event/Audit path. Обидва pull transports обмежені HTTPS/public IPv4 і не обходять Signal invariants. HR/Procurement adapters, pre-handoff LinkedIn/call execution та autonomous activation ще не оголошуються реалізованими. V0.22 має governed post-handoff bridge: accepted engagement recommendation + однозначний `sales_deal` binding можуть створити `sales.send_message` Kernel Action через Sales Policy, але Growth не виконує Action і не зберігає message body. V0.24 додає Growth-owned `growth.send_message` для pre-handoff email: target = `growth_contact`, default policy = `APPROVAL_REQUIRED`, execution резолвить contact identity в останній момент і делегує delivery через Platform Notification → durable n8n outbox. V0.19 має governed learning optimization + Optimization Workspace та controlled Experiments & Attribution, Experiment Workspace та governed Experiment Decision Intelligence: immutable Candidate→Variant assignment, bounded outcome window і Growth-owned attribution report. Experiment runtime не отримує outbound execution authority. V0.21 може сформувати evidence-bound recommendation про promote/iterate/continue/stop/inconclusive, але accepted recommendation не мутує Experiment і не є автоматичним winner selection. Symfony API V1, Growth Workspace, Signal Operations і Learning Workspace уже є executable surfaces над application/read boundaries. Collector execution лишається mutation через canonical API, а Workspace projection є read-only.
 
 ## Sales: продажі
 

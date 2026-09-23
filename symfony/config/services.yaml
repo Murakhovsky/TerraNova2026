@@ -477,6 +477,39 @@ services:
       $feeds: '@Domains\Growth\Application\Contract\GrowthSignalFeedRepositoryInterface'
       $reader: '@Domains\Growth\Application\Contract\GrowthFeedReaderInterface'
 
+  Infrastructure\Platform\Integration\EnvironmentCredentialVault: ~
+
+  Platform\Integration\Contract\CredentialVaultInterface:
+    alias: Infrastructure\Platform\Integration\EnvironmentCredentialVault
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthJsonSignalSourceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthJsonSignalSourceRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthJsonSignalSourceRepository
+
+  Domains\Growth\Application\Service\GrowthJsonSignalSourceService: ~
+
+  Domains\Growth\Application\Contract\GrowthJsonSignalSourceBoundary:
+    alias: Domains\Growth\Application\Service\GrowthJsonSignalSourceService
+
+  Domains\Growth\Infrastructure\Feed\CredentialedJsonSignalParser: ~
+
+  Domains\Growth\Infrastructure\Feed\SafeHttpCredentialedJsonSignalReader:
+    arguments:
+      $calls: '@Kernel\Resilience\ExternalCallExecutor'
+      $vault: '@Platform\Integration\Contract\CredentialVaultInterface'
+      $parser: '@Domains\Growth\Infrastructure\Feed\CredentialedJsonSignalParser'
+
+  Domains\Growth\Application\Contract\GrowthJsonSignalReaderInterface:
+    alias: Domains\Growth\Infrastructure\Feed\SafeHttpCredentialedJsonSignalReader
+
+  Domains\Growth\Infrastructure\Collector\CredentialedJsonSignalCollector:
+    arguments:
+      $sources: '@Domains\Growth\Application\Contract\GrowthJsonSignalSourceRepositoryInterface'
+      $reader: '@Domains\Growth\Application\Contract\GrowthJsonSignalReaderInterface'
+
   Domains\Growth\Domain\QualificationPolicyEvaluator: ~
 
   Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthDecisionRepository:

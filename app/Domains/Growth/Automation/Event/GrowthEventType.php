@@ -20,6 +20,9 @@ final class GrowthEventType
     public const SIGNAL_FEED_CREATED = 'growth.signal_feed.created';
     public const SIGNAL_FEED_ENABLED = 'growth.signal_feed.enabled';
     public const SIGNAL_FEED_DISABLED = 'growth.signal_feed.disabled';
+    public const SIGNAL_JSON_SOURCE_CREATED = 'growth.signal_json_source.created';
+    public const SIGNAL_JSON_SOURCE_ENABLED = 'growth.signal_json_source.enabled';
+    public const SIGNAL_JSON_SOURCE_DISABLED = 'growth.signal_json_source.disabled';
     public const QUALIFICATION_POLICY_DRAFTED = 'growth.qualification_policy.drafted';
     public const QUALIFICATION_POLICY_REVISED = 'growth.qualification_policy.revised';
     public const QUALIFICATION_POLICY_ACTIVATED = 'growth.qualification_policy.activated';
@@ -95,6 +98,9 @@ final class GrowthEventType
             self::SIGNAL_FEED_CREATED,
             self::SIGNAL_FEED_ENABLED,
             self::SIGNAL_FEED_DISABLED,
+            self::SIGNAL_JSON_SOURCE_CREATED,
+            self::SIGNAL_JSON_SOURCE_ENABLED,
+            self::SIGNAL_JSON_SOURCE_DISABLED,
             self::QUALIFICATION_POLICY_DRAFTED,
             self::QUALIFICATION_POLICY_REVISED,
             self::QUALIFICATION_POLICY_ACTIVATED,

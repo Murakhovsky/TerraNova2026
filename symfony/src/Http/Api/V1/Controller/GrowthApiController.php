@@ -19,6 +19,7 @@ use Domains\Growth\Application\Contract\GrowthOptimizationBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalFeedBoundary;
+use Domains\Growth\Application\Contract\GrowthJsonSignalSourceBoundary;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
@@ -35,6 +36,7 @@ final readonly class GrowthApiController
         private GrowthApplicationBoundary $growth,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthSignalFeedBoundary $signalFeeds,
+        private GrowthJsonSignalSourceBoundary $jsonSignalSources,
         private GrowthIntelligenceBoundary $intelligence,
         private GrowthBuyingCommitteeBoundary $committee,
         private GrowthResearchBoundary $research,
@@ -100,6 +102,37 @@ final readonly class GrowthApiController
     {
         return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
             $this->signalFeeds->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,false,$key
+            ));
+    }
+
+    public function jsonSignalSources(): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>[
+            'sources'=>$this->jsonSignalSources->sources($tenant->organizationId()->value()),
+        ]);
+    }
+
+    public function createJsonSignalSource(Request $request): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->jsonSignalSources->createSource(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ),201);
+    }
+
+    public function enableJsonSignalSource(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->jsonSignalSources->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,true,$key
+            ));
+    }
+
+    public function disableJsonSignalSource(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->jsonSignalSources->setEnabled(
                 $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,false,$key
             ));
     }

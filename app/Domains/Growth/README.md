@@ -563,4 +563,42 @@ V0.27 makes tenant feed configuration operational in the existing Collectors wor
 
 The SSR controller reads feed state through `GrowthSignalFeedBoundary::feeds()`. Browser mutations use only the canonical `/api/v1/growth/signal-feeds/*` endpoints with CSRF and idempotency; the page controller does not create or toggle feeds itself.
 
-Still intentionally absent: HR/Procurement target adapters, credentialed provider collectors, pre-handoff LinkedIn/call execution and autonomous activation.
+V0.28 adds the first credentialed provider-neutral pull collector:
+
+```text
+Tenant JSON Signal Source
+  HTTPS endpoint
+  bearer | X-* API key auth
+  opaque credential_reference
+        ↓
+Platform CredentialVault
+        ↓
+safe public HTTPS transport
+        ↓
+canonical JSON envelope
+        ↓
+credentialed_json collector
+        ↓
+Signal + source dedupe + run history + Events/Audit
+```
+
+Growth persists only the credential reference, never raw token or API key material. The first concrete vault adapter resolves `env://VARIABLE_NAME` where the environment value is a JSON secret object such as `{"token":"..."}` or `{"api_key":"..."}`.
+
+The provider response contract is intentionally narrow:
+
+```json
+{
+  "items": [
+    {
+      "id": "stable-provider-id",
+      "occurred_at": "2026-09-24T12:00:00+00:00",
+      "source_reference": "https://provider.example/events/42",
+      "facts": { "kind": "funding", "stage": "series_a" }
+    }
+  ]
+}
+```
+
+Vendor-specific payload translation belongs outside the Growth Domain. The transport is HTTPS/443 only, resolves public IPv4, pins DNS, follows no redirects, caps the response at 2 MB and uses the canonical ExternalCall resilience runtime.
+
+Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous activation.

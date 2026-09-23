@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.27.0',
-    'schema_version' => '0.26.0',
+    'version' => '0.28.0',
+    'schema_version' => '0.28.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
     'icon' => 'radar',
@@ -48,8 +48,11 @@ return [
             'app/migrations/20260923_000090_growth_v0250_service_handoff_adapter.sql',
             'app/migrations/20260923_000091_growth_v0260_rss_atom_collector.sql',
             'app/migrations/20260923_000092_growth_v0270_signal_feed_workspace.sql',
+            'app/migrations/20260924_000093_growth_v0280_credentialed_json_collector.sql',
         ],
         'capabilities' => [
+            'growth.signal.collector.credentialed_json',
+            'growth.signal.json_source.manage',
             'growth.signal.feed.workspace',
             'growth.signal.collector.rss_atom',
             'growth.signal.feed.manage',
