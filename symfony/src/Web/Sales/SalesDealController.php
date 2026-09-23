@@ -143,10 +143,9 @@ final readonly class SalesDealController
             'EntityHeader',
             'KpiStrip',
             'ContextPanel',
-            'ActivityFeed',
-            'AIRecommendations',
             'ActionBar',
             'Timeline',
+            'EmptyState',
             'ErrorState',
         ];
     }

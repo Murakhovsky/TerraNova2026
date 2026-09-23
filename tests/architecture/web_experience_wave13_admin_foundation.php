@@ -47,7 +47,7 @@ if (!str_contains($catalog, "entry('CosPageHeader'")) {
 }
 
 $presentation = (string) file_get_contents($root . '/symfony/src/Web/Experience/Archetype/PagePresentationFactory.php');
-foreach (['requiredPatterns', 'requiredPatternGroups', 'Unsupported page state', 'Unsupported density', 'PatternRegistry'] as $marker) {
+foreach (['requiredPatterns', 'requiredPatternGroups', 'received undeclared patterns', 'Unsupported page state', 'Unsupported density', 'PatternRegistry'] as $marker) {
     if (!str_contains($presentation, $marker)) {
         throw new RuntimeException('PagePresentationFactory does not enforce archetype contract: ' . $marker);
     }

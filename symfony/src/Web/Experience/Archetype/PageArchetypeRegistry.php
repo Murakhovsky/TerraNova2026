@@ -21,6 +21,22 @@ final class PageArchetypeRegistry
         'reconnecting',
     ];
 
+    /** @var list<string> */
+    private const STABLE_ARCHETYPE_IDS = [
+        'executive_dashboard',
+        'domain_dashboard',
+        'collection',
+        'entity_workspace',
+    ];
+
+    /** @var array<string,list<string>> */
+    private const STABLE_STATE_MATRIX = [
+        'executive_dashboard' => ['normal', 'error', 'permission_denied'],
+        'domain_dashboard' => ['normal', 'error'],
+        'collection' => ['normal', 'empty', 'error'],
+        'entity_workspace' => ['normal', 'error'],
+    ];
+
     /** @return array<string,PageArchetypeDefinition> */
     public function all(): array
     {
@@ -28,6 +44,12 @@ final class PageArchetypeRegistry
             'desktop: shell + main + optional context panel',
             'tablet: collapsible shell + main + context drawer',
             'mobile: header + main + tabs + sticky actions + bottom navigation',
+        ];
+
+        $entityWorkspaceResponsive = [
+            'desktop: workspace header + main + context rail',
+            'tablet: shell collapses; main becomes one column; context rail moves below main',
+            'mobile: stacked workspace header + single-column context rail + mobile workspace actions',
         ];
 
         $publicResponsive = [
@@ -42,7 +64,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Answer what is happening across the business.',
                 ['PageHeader', 'KpiStrip'],
-                ['ActionBar', 'ActivityFeed', 'AIRecommendations', 'StatGrid'],
+                ['EntityList', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),
@@ -51,7 +73,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Answer what is happening inside one business Domain.',
                 ['PageHeader', 'KpiStrip'],
-                ['ActionBar', 'ActivityFeed', 'EntityList', 'StatGrid'],
+                ['EntityList', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),
@@ -69,7 +91,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Explore, filter and act on a collection of business entities.',
                 ['PageHeader'],
-                ['SearchBar', 'Toolbar', 'FilterBar', 'SavedViews', 'ActionBar', 'DataGrid', 'EntityList', 'Pagination'],
+                ['SearchBar', 'Toolbar', 'FilterBar', 'SavedViews', 'ActionBar', 'DataGrid', 'EntityList', 'Pagination', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
                 [
@@ -82,9 +104,9 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Operate on one business entity with context, history and governed actions.',
                 ['WorkspaceHeader', 'EntityHeader'],
-                ['KpiStrip', 'ContextPanel', 'ActivityFeed', 'Timeline', 'ActionBar', 'AIRecommendations'],
+                ['KpiStrip', 'ContextPanel', 'Timeline', 'ActionBar', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
-                $workspaceResponsive,
+                $entityWorkspaceResponsive,
             ),
             $this->definition(
                 PageArchetype::ProcessPipeline,
@@ -195,10 +217,12 @@ final class PageArchetypeRegistry
             requiredPatterns: $requiredPatterns,
             optionalPatterns: $optionalPatterns,
             requiredPatternGroups: $requiredPatternGroups,
-            states: self::STANDARD_STATES,
+            states: self::STABLE_STATE_MATRIX[$id->value] ?? self::STANDARD_STATES,
             densities: $densities,
             responsiveContract: $responsiveContract,
-            stability: VisualStability::Experimental,
+            stability: in_array($id->value, self::STABLE_ARCHETYPE_IDS, true)
+                ? VisualStability::Stable
+                : VisualStability::Experimental,
         );
     }
 }

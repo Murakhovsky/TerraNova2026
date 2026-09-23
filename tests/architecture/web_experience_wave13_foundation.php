@@ -34,13 +34,31 @@ $standardStates = [
     'reconnecting',
 ];
 
+$stableArchetypes = [
+    PageArchetype::ExecutiveDashboard->value,
+    PageArchetype::DomainDashboard->value,
+    PageArchetype::Collection->value,
+    PageArchetype::EntityWorkspace->value,
+];
+$stableStateMatrix = [
+    PageArchetype::ExecutiveDashboard->value => ['normal', 'error', 'permission_denied'],
+    PageArchetype::DomainDashboard->value => ['normal', 'error'],
+    PageArchetype::Collection->value => ['normal', 'empty', 'error'],
+    PageArchetype::EntityWorkspace->value => ['normal', 'error'],
+];
+
 foreach ($definitions as $definition) {
-    if ($definition->stability !== VisualStability::Experimental) {
-        throw new RuntimeException('No Page Archetype may be stable before Golden Four + Phase 2.5: ' . $definition->id->value);
+    $expectedStability = in_array($definition->id->value, $stableArchetypes, true)
+        ? VisualStability::Stable
+        : VisualStability::Experimental;
+
+    if ($definition->stability !== $expectedStability) {
+        throw new RuntimeException('Archetype stability drift: ' . $definition->id->value);
     }
 
-    if (array_diff($standardStates, $definition->states) !== []) {
-        throw new RuntimeException('Archetype state matrix is incomplete: ' . $definition->id->value);
+    $expectedStates = $stableStateMatrix[$definition->id->value] ?? $standardStates;
+    if ($definition->states !== $expectedStates) {
+        throw new RuntimeException('Archetype state matrix drift: ' . $definition->id->value);
     }
 
     if ($definition->requiredPatterns === [] || $definition->responsiveContract === []) {
@@ -88,9 +106,24 @@ foreach ($expectedPatterns as $patternName) {
     }
 }
 
+$stablePatterns = [
+    'PageHeader',
+    'WorkspaceHeader',
+    'EntityHeader',
+    'KpiStrip',
+    'FilterBar',
+    'EntityList',
+    'EmptyState',
+    'ErrorState',
+];
+
 foreach ($registeredPatterns as $pattern) {
-    if ($pattern->stability !== VisualStability::Experimental) {
-        throw new RuntimeException('No Pattern may be stable before Golden Four + Phase 2.5: ' . $pattern->name);
+    $expectedStability = in_array($pattern->name, $stablePatterns, true)
+        ? VisualStability::Stable
+        : VisualStability::Experimental;
+
+    if ($pattern->stability !== $expectedStability) {
+        throw new RuntimeException('Pattern stability drift: ' . $pattern->name);
     }
 
     if (
@@ -120,6 +153,37 @@ foreach ($definitions as $definition) {
                 'Archetype %s references an unregistered Pattern: %s',
                 $definition->id->value,
                 $patternName,
+            ));
+        }
+    }
+}
+
+foreach ($definitions as $definition) {
+    if ($definition->stability !== VisualStability::Stable) {
+        continue;
+    }
+
+    foreach ($definition->requiredPatterns as $requiredPattern) {
+        if ($registeredPatterns[$requiredPattern]->stability !== VisualStability::Stable) {
+            throw new RuntimeException(sprintf(
+                'Stable archetype %s depends on experimental required Pattern %s.',
+                $definition->id->value,
+                $requiredPattern,
+            ));
+        }
+    }
+
+    foreach ($definition->requiredPatternGroups as $group) {
+        $stablePath = array_filter(
+            $group,
+            static fn (string $patternName): bool =>
+                $registeredPatterns[$patternName]->stability === VisualStability::Stable,
+        );
+        if ($stablePath === []) {
+            throw new RuntimeException(sprintf(
+                'Stable archetype %s has no stable required Pattern path for group %s.',
+                $definition->id->value,
+                implode(' | ', $group),
             ));
         }
     }

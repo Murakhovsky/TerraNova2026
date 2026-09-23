@@ -16,7 +16,8 @@
     "test:sales-browser": "node tests/browser/sales_workspace.mjs",
     "test:web-quality": "node tests/browser/web_platform_quality.mjs",
     "test:web-performance": "node tests/browser/web_performance_budget.mjs",
-    "test:web-accessibility": "node tests/browser/web_accessibility.mjs"
+    "test:web-accessibility": "node tests/browser/web_accessibility.mjs",
+    "test:golden-four-accessibility": "node tests/browser/golden_four_accessibility.mjs"
   },
   "dependencies": {
     "@popperjs/core": "2.11.8",

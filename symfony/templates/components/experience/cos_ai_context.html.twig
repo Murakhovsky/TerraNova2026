@@ -1,7 +1,7 @@
-<section id="{{ id }}" class="cos-workspace-panel cos-workspace-panel--ai">
+<section id="{{ id }}" class="cos-workspace-panel cos-workspace-panel--ai" aria-labelledby="{{ id }}-title">
     <header class="cos-workspace-panel__header">
         <span class="cos-workspace-panel__signal" aria-hidden="true">AI</span>
-        <h2>{{ title }}</h2>
+        <h2 id="{{ id }}-title">{{ title }}</h2>
     </header>
     <div class="cos-workspace-panel__body">{% block content %}{% endblock %}</div>
 </section>
