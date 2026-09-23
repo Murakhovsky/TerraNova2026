@@ -223,42 +223,6 @@ const initActionControls = (root, csrf) => root.querySelectorAll('[data-sales-ac
   }));
 });
 
-const initToday = (root) => {
-  const csrf = root.dataset.csrf || '';
-  const status = root.querySelector('[data-sales-today-status]');
-  initApprovalControls(root, csrf);
-
-  root.querySelectorAll('[data-sales-activity-complete]').forEach((button) => button.addEventListener('click', async () => {
-    const panel = button.closest('[data-deal-id][data-activity-id]');
-    if (!panel) return;
-    button.setAttribute('disabled', 'disabled');
-    setStatus(status, 'Completing activity…', 'loading');
-    try {
-      await postJson(`/api/v1/sales/opportunities/${panel.dataset.dealId}/activities/${panel.dataset.activityId}/complete`, {}, csrf);
-      panel.closest('.tn-sales-list-row')?.remove();
-      setStatus(status, 'Activity completed.', 'success');
-    } catch (error) {
-      button.removeAttribute('disabled');
-      setStatus(status, error.message || 'Activity completion failed.', 'error');
-    }
-  }));
-
-  root.querySelectorAll('[data-sales-activity-reschedule]').forEach((button) => button.addEventListener('click', async () => {
-    const panel = button.closest('[data-deal-id][data-activity-id]');
-    if (!panel) return;
-    const dueAt = window.prompt('New due date/time (YYYY-MM-DD HH:MM)');
-    if (!dueAt) return;
-    setStatus(status, 'Rescheduling…', 'loading');
-    try {
-      await postJson(`/api/v1/sales/opportunities/${panel.dataset.dealId}/activities/${panel.dataset.activityId}/reschedule`, { due_at: dueAt }, csrf);
-      setStatus(status, 'Activity rescheduled.', 'success');
-      window.setTimeout(() => window.location.reload(), 250);
-    } catch (error) {
-      setStatus(status, error.message || 'Reschedule failed.', 'error');
-    }
-  }));
-};
-
 const initLeadInbox = (root) => {
   const csrf = root.dataset.csrf || '';
   root.querySelectorAll('[data-lead-id]').forEach((card) => {
@@ -446,7 +410,6 @@ const initSalesGlobalSearch = (root) => {
 const initSalesWorkspace = () => {
   document.querySelectorAll('[data-sales-deal-workspace]').forEach(initDealWorkspace);
   document.querySelectorAll('[data-sales-pipeline-root]').forEach(initSalesPipeline);
-  document.querySelectorAll('[data-sales-today-root]').forEach(initToday);
   document.querySelectorAll('[data-sales-lead-inbox]').forEach(initLeadInbox);
   document.querySelectorAll('[data-sales-global-search]').forEach(initSalesGlobalSearch);
   document.querySelectorAll('.tn-sales-click-row[data-href]').forEach((row) => row.addEventListener('click', (event) => {

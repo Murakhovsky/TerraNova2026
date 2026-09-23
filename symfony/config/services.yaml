@@ -1744,6 +1744,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Sales\SalesTodayController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Sales\SalesLeadsController:
     public: true
     tags: ['controller.service_arguments']

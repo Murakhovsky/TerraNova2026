@@ -103,12 +103,13 @@ Sales read model
 
 ### Операційний inbox (`Today`)
 
-`sales/today.phtml`
+`symfony/templates/experience/sales/today.html.twig`
 
-- вісім operational queues збираються через canonical Panel;
-- domain-specific list body винесено в `components/sales/today_section.phtml`;
-- approval, complete і reschedule data attributes збережені;
-- My Work / Team scope semantics не змінені.
+- `/sales/today` використовує `OperationalQueue` archetype;
+- вісім operational queues нормалізуються через окремий Presenter/ViewModel та canonical EntityList;
+- approval, complete і reschedule mutations належать `sales_today_controller.js` і зберігають API/data-attribute contracts;
+- My Work / Team scope semantics не змінені;
+- legacy `sales/today.phtml` і `components/sales/today_section.phtml` видалені.
 
 ### Робочий простір директора (`Director Workspace`)
 
