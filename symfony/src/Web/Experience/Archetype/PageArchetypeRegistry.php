@@ -30,6 +30,12 @@ final class PageArchetypeRegistry
             'mobile: header + main + tabs + sticky actions + bottom navigation',
         ];
 
+        $entityWorkspaceResponsive = [
+            'desktop: workspace header + main + context rail',
+            'tablet: shell collapses; main becomes one column; context rail moves below main',
+            'mobile: stacked workspace header + single-column context rail + mobile workspace actions',
+        ];
+
         $publicResponsive = [
             'desktop: bounded content grid',
             'tablet: reduced columns and preserved hierarchy',
@@ -84,7 +90,7 @@ final class PageArchetypeRegistry
                 ['WorkspaceHeader', 'EntityHeader'],
                 ['KpiStrip', 'ContextPanel', 'ActivityFeed', 'Timeline', 'ActionBar', 'AIRecommendations'],
                 ['comfortable', 'compact'],
-                $workspaceResponsive,
+                $entityWorkspaceResponsive,
             ),
             $this->definition(
                 PageArchetype::ProcessPipeline,

@@ -38,7 +38,7 @@ $units = [
         'controller' => 'symfony/src/Web/Sales/SalesDealController.php',
         'template' => 'symfony/templates/experience/sales/deal_workspace.html.twig',
         'archetype' => 'PageArchetype::EntityWorkspace',
-        'patterns' => ["'WorkspaceHeader'", "'EntityHeader'", "'KpiStrip'", "'ContextPanel'", "'ActivityFeed'", "'AIRecommendations'", "'ActionBar'", "'Timeline'", "'ErrorState'"],
+        'patterns' => ["'WorkspaceHeader'", "'EntityHeader'", "'KpiStrip'", "'ContextPanel'", "'ActionBar'", "'Timeline'", "'ErrorState'"],
         'templateMarkers' => ['<twig:CosWorkspace', '<twig:CosEntityHeader', 'class="cos-kpi-strip"', '<twig:CosActionBar', '<twig:CosTimeline', '<twig:CosAlert'],
     ],
 ];
