@@ -73,4 +73,63 @@ foreach (['tn-', 'style=', '<script'] as $forbidden) {
     }
 }
 
-echo "Wave 13 VR-009 Sales Admin foundation passed.\n";
+
+$controlController = (string) file_get_contents($root . '/symfony/src/Web/Sales/SalesAdminControlController.php');
+foreach ([
+    "'page.pipelines'",
+    "'page.rules'",
+    "'page.agents'",
+    "'page.actions'",
+    "'page.teams'",
+    "'page.integrations'",
+    "'page.health'",
+    'SalesAdminAuthorization::TEAMS',
+    'SalesAdminAuthorization::INTEGRATIONS',
+    'SalesAdminAuthorization::AUDIT',
+] as $marker) {
+    if (!str_contains($controlController, $marker)) {
+        throw new RuntimeException('VR-009 control surface controller is incomplete: ' . $marker);
+    }
+}
+
+foreach ([
+    'pipelines' => ['sales-admin-pipelines', 'data-action="submit->sales-admin-pipelines#create"'],
+    'rules' => ['sales-admin-rules', 'data-action="submit->sales-admin-rules#create"'],
+    'agents' => ['Sales Intelligence Agents', '<twig:CosEntityListItem'],
+    'actions' => ['sales-admin-policies', 'data-action="submit->sales-admin-policies#create"'],
+    'teams' => ['sales-admin-teams', 'data-action="submit->sales-admin-teams#membership"'],
+    'integrations' => ['sales-admin-integrations', 'data-action="submit->sales-admin-integrations#update"'],
+    'health' => ['class="cos-kpi-strip"', 'Operational queue'],
+] as $surface => $markers) {
+    $templatePath = $root . '/symfony/templates/experience/sales/admin/' . $surface . '.html.twig';
+    if (!is_file($templatePath)) {
+        throw new RuntimeException('VR-009 control surface template is missing: ' . $surface);
+    }
+    $source = (string) file_get_contents($templatePath);
+    foreach ($markers as $marker) {
+        if (!str_contains($source, $marker)) {
+            throw new RuntimeException('VR-009 ' . $surface . ' lost behavior/composition marker: ' . $marker);
+        }
+    }
+    foreach (['tn-', 'style=', '<script'] as $forbidden) {
+        if (str_contains($source, $forbidden)) {
+            throw new RuntimeException('VR-009 ' . $surface . ' restored legacy presentation: ' . $forbidden);
+        }
+    }
+}
+
+foreach ([
+    'app/Interfaces/Web/View/sales_admin/pipelines.phtml',
+    'app/Interfaces/Web/View/sales_admin/rules.phtml',
+    'app/Interfaces/Web/View/sales_admin/agents.phtml',
+    'app/Interfaces/Web/View/sales_admin/actions.phtml',
+    'app/Interfaces/Web/View/sales_admin/teams.phtml',
+    'app/Interfaces/Web/View/sales_admin/integrations.phtml',
+    'app/Interfaces/Web/View/sales_admin/health.phtml',
+] as $legacy) {
+    if (is_file($root . '/' . $legacy)) {
+        throw new RuntimeException('VR-009 migrated control PHTML returned: ' . $legacy);
+    }
+}
+
+echo "Wave 13 VR-009 Sales Admin foundation + control surfaces passed.\n";

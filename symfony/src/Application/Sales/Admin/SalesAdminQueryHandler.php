@@ -42,6 +42,34 @@ final readonly class SalesAdminQueryHandler implements QueryHandlerInterface
                 'pipelines' => $this->workspace->pipelines($org),
                 'metrics' => $this->workspace->metrics($org, 30),
             ],
+            'page.pipelines' => [
+                'pipelines' => $this->pipelines->pipelines($org),
+            ],
+            'page.rules' => [
+                'rules' => $this->rules->rules($org),
+                'catalog' => $this->rules->catalog(),
+            ],
+            'page.agents' => [
+                'agents' => $this->agents->agents($org),
+                'catalog' => $this->agents->catalog(),
+            ],
+            'page.actions' => [
+                'actions' => $this->policies->actions($org),
+                'catalog' => $this->policies->catalog($org),
+            ],
+            'page.teams' => [
+                'teams' => $this->teams->teams($org),
+                'users' => $this->teams->users($org),
+                'catalog' => $this->teams->catalog(),
+            ],
+            'page.integrations' => [
+                'integrations' => $this->integrationList($org),
+                'catalog' => $this->integrations->catalog(),
+                'routing' => $this->integrations->routingOptions($org),
+            ],
+            'page.health' => [
+                'health' => $this->health->dashboard($org, $limit),
+            ],
 
             'pipeline.list' => $this->pipelines->pipelines($org),
             'pipeline.view' => $this->required($this->pipelines->pipeline($org, $this->id($id)), 'Pipeline not found.'),

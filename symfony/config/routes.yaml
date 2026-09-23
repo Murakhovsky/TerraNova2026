@@ -1529,7 +1529,7 @@ cos_web_sales_admin:
 
 cos_web_sales_admin_pipelines_page:
   path: /sales/admin/pipelines
-  controller: App\Web\Sales\SalesAdminPageController::pipelines
+  controller: App\Web\Sales\SalesAdminControlController::pipelines
   methods: [GET]
 
 cos_web_sales_admin_pipeline_page:
@@ -1540,7 +1540,7 @@ cos_web_sales_admin_pipeline_page:
 
 cos_web_sales_admin_rules_page:
   path: /sales/admin/rules
-  controller: App\Web\Sales\SalesAdminPageController::rules
+  controller: App\Web\Sales\SalesAdminControlController::rules
   methods: [GET]
 
 cos_web_sales_admin_rule_page:
@@ -1551,7 +1551,7 @@ cos_web_sales_admin_rule_page:
 
 cos_web_sales_admin_agents_page:
   path: /sales/admin/agents
-  controller: App\Web\Sales\SalesAdminPageController::agents
+  controller: App\Web\Sales\SalesAdminControlController::agents
   methods: [GET]
 
 cos_web_sales_admin_agent_page:
@@ -1562,22 +1562,22 @@ cos_web_sales_admin_agent_page:
 
 cos_web_sales_admin_actions_page:
   path: /sales/admin/actions
-  controller: App\Web\Sales\SalesAdminPageController::actions
+  controller: App\Web\Sales\SalesAdminControlController::actions
   methods: [GET]
 
 cos_web_sales_admin_teams_page:
   path: /sales/admin/teams
-  controller: App\Web\Sales\SalesAdminPageController::teams
+  controller: App\Web\Sales\SalesAdminControlController::teams
   methods: [GET]
 
 cos_web_sales_admin_integrations_page:
   path: /sales/admin/integrations
-  controller: App\Web\Sales\SalesAdminPageController::integrations
+  controller: App\Web\Sales\SalesAdminControlController::integrations
   methods: [GET]
 
 cos_web_sales_admin_health_page:
   path: /sales/admin/health
-  controller: App\Web\Sales\SalesAdminPageController::health
+  controller: App\Web\Sales\SalesAdminControlController::health
   methods: [GET]
 
 
