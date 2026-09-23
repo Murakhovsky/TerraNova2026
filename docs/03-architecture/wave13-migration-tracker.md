@@ -21,6 +21,9 @@ kind: architecture
 | VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | DONE |
 | VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | DONE |
+| VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | QA |
+| VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | BACKLOG |
+| VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -73,3 +76,6 @@ Sales production visual migration units VR-005…VR-009 завершені.
 - legacy `sales-workspace` Vite entrypoint = **0**.
 
 Наступна production migration family: **Phase 4 — Clients**.
+
+
+VR-010 переводить Client Case Inbox на Operational Queue без створення окремого Clients Domain: read path проходить через Sales Application Query, triage cards лишаються domain component, mutation forms працюють server-first через існуючі Sales commands.

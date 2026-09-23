@@ -1296,7 +1296,7 @@ cos_web_client_cases:
 
 cos_web_client_case_inbox:
   path: /client-case/inbox
-  controller: App\Web\Sales\ClientCasePageController::inbox
+  controller: App\Web\Sales\ClientCaseInboxController::index
   methods: [GET, HEAD]
 
 cos_web_client_case_show:

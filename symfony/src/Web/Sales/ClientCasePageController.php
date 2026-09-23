@@ -60,28 +60,6 @@ final readonly class ClientCasePageController
         }
     }
 
-    public function inbox(Request $request): Response
-    {
-        $tenant=$this->manager(); if($tenant instanceof Response)return $tenant;
-        $read=$this->cases->forOrganization($tenant->organizationId()->value());
-        $filters=$read->inboundFilters($request->query->all());
-        try{
-            return $this->render($request,$tenant,'Вхідні заявки','inbox','client_case/inbox',[
-                'filters'=>$filters,'inboundRequests'=>$read->inboundInbox($filters),'inboundStats'=>$read->inboundInboxStats(),
-                'openCaseOptions'=>$read->openCaseOptions(),'managerOptions'=>$read->managerOptions(),'pipelineStages'=>[],
-                'pageStatus'=>null,'actionStatus'=>(string)$request->query->get('status_message',''),
-                'csrfToken'=>$this->csrf->token($request),
-            ]);
-        }catch(Throwable $error){
-            error_log('client-case.inbox.read_failed '.$error->getMessage());
-            return $this->render($request,$tenant,'Вхідні заявки','inbox','client_case/inbox',[
-                'filters'=>$filters,'inboundRequests'=>[],'inboundStats'=>[],'openCaseOptions'=>[],
-                'managerOptions'=>[],'pipelineStages'=>[],'pageStatus'=>'CRM заявки тимчасово недоступні.',
-                'actionStatus'=>'','csrfToken'=>$this->csrf->token($request),
-            ],Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
     public function show(Request $request,string $id): Response
     {
         $tenant=$this->manager(); if($tenant instanceof Response)return $tenant;

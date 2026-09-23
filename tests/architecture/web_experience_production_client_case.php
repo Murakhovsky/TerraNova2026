@@ -16,30 +16,25 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$inbox = $read('app/Interfaces/Web/View/client_case/inbox.phtml');
+$inbox = $read('symfony/templates/experience/client_case/inbox.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/tabs'",
-    "partial('components/ui/filter_bar'",
-    'tn-ui-panel tn-workspace-section',
-    'tn-inbox-list',
-    'tn-inbox-card',
-    'tn-inbound-workflow-form',
+    '<twig:CosPageHeader',
+    'class="cos-kpi-strip"',
+    '<twig:CosMetric',
+    '<twig:CosFilterBar',
+    '<twig:ClientCaseInboxItem',
+    'data-client-case-inbox',
 ] as $marker) {
-    $contains($inbox, $marker, 'Client Case inbox must use canonical shell while retaining triage cards.');
+    $contains($inbox, $marker, 'Client Case Inbox must use canonical Operational Queue composition.');
 }
-foreach ([
-    'tn-listing-hero',
-    '<section class="tn-admin-metrics"',
-    '<section class="tn-admin-tabs"',
-    '<form class="tn-crm-filters"',
-    '<div class="tn-empty-state">',
-] as $legacyMarker) {
-    $notContains($inbox, $legacyMarker, 'Client Case inbox must not restore legacy shell/filter/empty-state primitives.');
+foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+    $notContains($inbox, $legacyMarker, 'Client Case Inbox must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/client_case/inbox.phtml')) {
+    throw new RuntimeException('Legacy Client Case Inbox PHTML must stay retired after VR-010.');
 }
 
+$inboxItem = $read('symfony/templates/components/client_case/client_case_inbox_item.html.twig');
 foreach ([
     'client-case/updateInboundRequest/',
     'client-case/createFromInboundRequest/',
@@ -58,7 +53,7 @@ foreach ([
     'name="request_id"',
     'name="case_id"',
 ] as $marker) {
-    $contains($inbox, $marker, 'Client Case inbox lost a triage mutation/navigation contract.');
+    $contains($inboxItem, $marker, 'Client Case Inbox lost a triage mutation/navigation contract.');
 }
 
 $index = $read('app/Interfaces/Web/View/client_case/index.phtml');
@@ -189,13 +184,13 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Web/Sales/ClientCasePageController.php');
+$inboxController = $read('symfony/src/Web/Sales/ClientCaseInboxController.php');
 foreach ([
     'public function index(Request $request): Response',
     'public function show(Request $request,string $id): Response',
     'public function update(Request $r,string $id): Response',
     'public function activity(Request $r,string $id): Response',
     'public function updatePropertyMatch(Request $r,string $id): Response',
-    'public function inbox(Request $request): Response',
     'public function create(Request $r): Response',
     'public function quickUpdate(Request $r,string $id): Response',
     'public function updateInboundRequest(Request $r,string $id): Response',
@@ -211,9 +206,12 @@ foreach ([
     '$this->write($t)->updateLead',
     '$this->write($t)->convertLeadToOpportunity',
     '$this->write($t)->attachInboundRequest',
-    "'client_case/inbox'",
 ] as $marker) {
     $contains($controller, $marker, 'Client Case controller inbox contract is incomplete.');
+}
+
+foreach (['GetClientCaseInboxQuery', 'PageArchetype::OperationalQueue', 'WorkspaceShellFactory'] as $marker) {
+    $contains($inboxController, $marker, 'Client Case Inbox controller cutover is incomplete.');
 }
 
 $routes = $read('symfony/config/routes.yaml');
@@ -233,7 +231,7 @@ foreach ([
     'path: /client-case/quickUpdate/{id}',
     'ClientCasePageController::quickUpdate',
     'path: /client-case/inbox',
-    'ClientCasePageController::inbox',
+    'ClientCaseInboxController::index',
     'path: /client-case/updateInboundRequest/{id}',
     'ClientCasePageController::updateInboundRequest',
     'path: /client-case/createFromInboundRequest/{id}',
