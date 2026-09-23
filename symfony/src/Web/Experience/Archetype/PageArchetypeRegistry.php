@@ -64,7 +64,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Answer what is happening across the business.',
                 ['PageHeader', 'KpiStrip'],
-                ['EntityList', 'EmptyState', 'ErrorState'],
+                ['EntityList', 'FilterBar', 'DataGrid', 'Toolbar', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),

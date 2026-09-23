@@ -1519,7 +1519,7 @@ cos_web_sales_deal:
 
 cos_web_sales_director:
   path: /sales/director
-  controller: App\Web\Sales\SalesPageController::director
+  controller: App\Web\Sales\SalesDirectorController::index
   methods: [GET]
 
 cos_web_sales_admin:

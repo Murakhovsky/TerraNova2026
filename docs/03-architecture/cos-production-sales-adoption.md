@@ -113,13 +113,14 @@ Sales read model
 
 ### Робочий простір директора (`Director Workspace`)
 
-`sales/director.phtml`
+`symfony/templates/experience/sales/director.html.twig`
 
-- локальний toolbar замінено на shared FilterBar;
-- executive currency table, historical transitions, manager performance та at-risk deals переведено на canonical DataTable;
-- section shells переведено на canonical Panel;
-- KPI залишаються canonical KPI cards;
-- currency isolation, attribution policy і explainability semantics не змінені.
+- `SalesDirectorCockpitService` лишається source of truth через Application Query;
+- filters рендеряться canonical `CosFilterBar`;
+- executive currency, historical transitions, manager performance та at-risk deals використовують `CosDataGrid`;
+- KPI використовують canonical KpiStrip;
+- currency isolation, attribution policy і explainability semantics не змінені;
+- старий `SalesPageController` видалено після завершення останнього PHTML-owned Sales surface.
 
 
 ## Хвиля 3

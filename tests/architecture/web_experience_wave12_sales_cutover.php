@@ -14,7 +14,6 @@ $routes = file_get_contents($root . '/symfony/config/routes.yaml');
 $production = file_get_contents($root . '/symfony/src/Web/Sales/SalesWorkspaceController.php');
 $dashboardController = file_get_contents($root . '/symfony/src/Web/Sales/SalesDashboardController.php');
 $leadsController = file_get_contents($root . '/symfony/src/Web/Sales/SalesLeadsController.php');
-$legacy = file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
 $services = file_get_contents($root . '/symfony/config/services.yaml');
 $leadRuntime = file_get_contents($root . '/symfony/assets/controllers/sales_lead_controller.js');
 $leadList = file_get_contents($root . '/symfony/templates/experience/sales/leads.html.twig');
@@ -50,8 +49,7 @@ foreach ([
 expectSalesCutover(!is_file($root . '/symfony/src/Web/Sales/SalesReferenceController.php'), 'Reference Sales controller file must be removed.');
 expectSalesCutover(!is_file($root . '/app/Interfaces/Web/View/sales/dashboard.phtml'), 'Legacy Sales dashboard PHTML must be removed.');
 expectSalesCutover(!is_file($root . '/app/Interfaces/Web/View/sales/leads.phtml'), 'Legacy Sales leads PHTML must be removed.');
-expectSalesCutover(!str_contains($legacy, 'function dashboard('), 'Legacy SalesPageController dashboard action must be removed.');
-expectSalesCutover(!str_contains($legacy, 'function leads('), 'Legacy SalesPageController leads action must be removed.');
+expectSalesCutover(!is_file($root . '/symfony/src/Web/Sales/SalesPageController.php'), 'Legacy SalesPageController must stay retired after VR-008.');
 expectSalesCutover(str_contains($services, 'App\\Web\\Sales\\SalesWorkspaceController:'), 'Production SalesWorkspaceController service wiring is missing.');
 expectSalesCutover(str_contains($services, 'App\\Web\\Sales\\SalesDashboardController:'), 'Production SalesDashboardController service wiring is missing.');
 expectSalesCutover(str_contains($services, 'App\\Web\\Sales\\SalesLeadsController:'), 'Production SalesLeadsController service wiring is missing.');

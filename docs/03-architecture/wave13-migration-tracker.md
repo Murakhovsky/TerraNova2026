@@ -18,8 +18,8 @@ kind: architecture
 | VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | DONE |
 | VR-005 | `/sales/today` | Workspace | Sales | Operational Queue | P0 | Twig | DONE |
 | VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | DONE |
-| VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | QA |
-| VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | BACKLOG |
+| VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | DONE |
+| VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | QA |
 | VR-009 | `/sales/admin` | System | Sales | System / Control Surface | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
@@ -48,3 +48,5 @@ VR-001 додатково видаляє один production PHTML screen і о�
 VR-006 переводить Sales Pipeline на Process / Pipeline archetype: canonical PageHeader/Toolbar/FilterBar обрамляють Sales-specific Kanban; drag/drop збережено, а keyboard stage mutation додано як accessibility parity.
 
 VR-007 переводить Deals на canonical Collection/DataGrid. Generic DataGrid filter отримав text-filter contract, а operational Sales read model — offset pagination без зміни filter semantics.
+
+VR-008 переводить Sales Director на Executive Dashboard: Domain cockpit лишається source of truth, а currency/transition/manager/risk projections рендеряться canonical DataGrid-ами. `SalesPageController` повністю видалено.

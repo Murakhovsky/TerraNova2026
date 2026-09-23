@@ -142,17 +142,26 @@ if (is_file($root . '/app/Interfaces/Web/View/components/sales/today_section.pht
     throw new RuntimeException('Legacy Sales Today section PHTML must stay retired after VR-005.');
 }
 
-$director = $read('app/Interfaces/Web/View/sales/director.phtml');
+$director = $read('symfony/templates/experience/sales/director.html.twig');
 foreach ([
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    "partial('components/ui/kpi_card'",
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    'class="cos-kpi-strip"',
+    '<twig:CosDataGrid',
+    'Historical Sales Intelligence',
+    'Pipeline and forecast by currency',
+    'Historical funnel',
+    'Manager performance',
+    'Risk & explainability',
 ] as $marker) {
-    $contains($director, $marker, 'Sales Director must use canonical filter, panel, table and KPI contracts.');
+    $contains($director, $marker, 'Sales Director must use canonical Executive Dashboard composition.');
 }
-$notContains($director, '<form method="get" class="tn-ui-toolbar">', 'Sales Director must not restore a local toolbar.');
-$notContains($director, 'class="tn-ui-table"', 'Sales Director must not restore raw local tables.');
+foreach (['tn-', 'style=', '<script', '<table'] as $forbidden) {
+    $notContains($director, $forbidden, 'Sales Director must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/director.phtml')) {
+    throw new RuntimeException('Legacy Sales Director PHTML must stay retired after VR-008.');
+}
 
 
 $adminLegacySurfaces = [

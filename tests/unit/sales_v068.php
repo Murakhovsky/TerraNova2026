@@ -28,10 +28,9 @@ $projection = $read('app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSales
 $contains($projection, '$visits[$pipelineId][$dealId][$stageId] ??= $enteredAt;', 'Historical funnel must retain the first exact stage timestamp.');
 $contains($projection, 'strtotime((string) $currentEnteredAt) >= strtotime((string) $previousEnteredAt)', 'Historical funnel conversion must prove chronological forward order.');
 
-$controller = $read('symfony/src/Web/Sales/SalesPageController.php');
-$contains($controller, "'contract_version' => 'sales.intelligence.v1'", 'Deal intelligence must expose a versioned Sales contract.');
+$dealPresenter = $read('symfony/src/Web/Sales/SalesDealPresenter.php');
 foreach (['deal_health', 'customer_intent', 'objections', 'missing_information', 'next_best_action', 'recommended_timing', 'confidence'] as $key) {
-    $contains($controller, "'{$key}' =>", 'Deal intelligence contract is incomplete.');
+    $contains($dealPresenter, "'{$key}' =>", 'Deal intelligence presentation contract is incomplete.');
 }
 
 $browser = $read('tests/browser/sales_workspace.mjs');

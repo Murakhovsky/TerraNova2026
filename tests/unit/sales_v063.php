@@ -9,7 +9,6 @@ $contract = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceOperatio
 $projection = $read('app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php');
 $base = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceReadModelInterface.php');
 $services = $read('app/Bootstrap/SalesServices.php');
-$web = $read('symfony/src/Web/Sales/SalesPageController.php');
 $today = $read('symfony/templates/experience/sales/today.html.twig');
 $todayController = $read('symfony/assets/controllers/sales_today_controller.js');
 $leads = $read('symfony/templates/experience/sales/leads.html.twig');
@@ -23,7 +22,9 @@ $dealController = $read('symfony/assets/controllers/sales_deal_controller.js');
 $deals = $read('symfony/templates/experience/sales/deals.html.twig');
 $dealsPresenter = $read('symfony/src/Web/Sales/SalesDealsPresenter.php');
 $dealsController = $read('symfony/assets/controllers/sales_deals_controller.js');
-$director = $read('app/Interfaces/Web/View/sales/director.phtml');
+$director = $read('symfony/templates/experience/sales/director.html.twig');
+$directorHandler = $read('symfony/src/Application/Sales/Query/GetSalesDirectorDashboardQueryHandler.php');
+$directorPresenter = $read('symfony/src/Web/Sales/SalesDirectorPresenter.php');
 $js = $read('frontend/features/sales/workspace.js');
 
 foreach (['communications(', 'approvals(', 'directorAnalytics('] as $marker) {
@@ -34,14 +35,11 @@ foreach (['communications(', 'approvals(', 'directorAnalytics('] as $marker) {
 foreach (['attention_reason', 'days_in_stage', 'weighted_value', 'avg_days_in_stage', 'needs_approval', 'historical_stage_transitions'] as $marker) {
     $assert(str_contains($projection, $marker), 'Projection missing: ' . $marker);
 }
-foreach (['SalesDirectorCockpitService', 'SalesWorkspaceOperationalReadModelInterface'] as $marker) {
-    $assert(str_contains($web, $marker), 'Legacy Sales page composition missing retained shared dependency: ' . $marker);
-}
+$assert(str_contains($directorHandler, 'SalesDirectorCockpitService'), 'Director Application Query must own cockpit orchestration.');
 foreach (['sales->communications(', 'sales->approvals(', 'OperationsReadModelInterface', 'SalesTeamAdministrationInterface'] as $marker) {
     $assert(str_contains($dealHandler, $marker), 'Deal Workspace query composition missing: ' . $marker);
 }
 $assert(str_contains($services, 'MysqlSalesWorkspaceOperationalReadModel'), 'Composition root must own the concrete operational read model.');
-$assert(!str_contains($web, 'new MysqlSalesWorkspaceOperationalReadModel'), 'Web controller must not construct Infrastructure projections directly.');
 foreach (['Needs My Approval', 'data-sales-today-root', 'data-sales-activity-complete', 'data-sales-activity-reschedule', 'My Work', 'Team'] as $marker) {
     $assert(str_contains($today, $marker), 'Today missing: ' . $marker);
 }
@@ -64,8 +62,11 @@ foreach (['owner_id', 'priority', 'source', 'pipeline_id', 'stage_id', 'risk'] a
     $assert(str_contains($dealsPresenter, $marker), 'Deals DataGrid filter projection missing: ' . $marker);
 }
 $assert(str_contains($dealsController, '/sales/deals/'), 'Deals DataGrid row action must navigate to Deal Workspace.');
-foreach (['Funnel', 'Historical stage transitions', 'Pipeline health', 'Manager performance', 'Pending approvals'] as $marker) {
-    $assert(str_contains($director, $marker), 'Director missing: ' . $marker);
+foreach (['Historical Sales Intelligence', 'Historical funnel', 'Manager performance', 'Risk & explainability', 'CosDataGrid'] as $marker) {
+    $assert(str_contains($director, $marker), 'Canonical Director dashboard missing: ' . $marker);
+}
+foreach (['pipeline_by_currency', 'stage_conversion', 'manager_performance', 'at_risk'] as $marker) {
+    $assert(str_contains($directorPresenter, $marker), 'Director presenter projection missing: ' . $marker);
 }
 foreach (['concurrent_stage_change', '/api/v1/sales/opportunities/', '/stage', 'X-CSRF-Token', 'X-Idempotency-Key'] as $marker) {
     $assert(str_contains($pipelineController, $marker), 'Canonical Pipeline Stimulus controller missing: ' . $marker);
@@ -81,7 +82,6 @@ foreach ([
     'app/Domains/Sales/Application/Contract/SalesWorkspaceOperationalReadModelInterface.php',
     'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php',
     'app/Bootstrap/SalesServices.php',
-    'symfony/src/Web/Sales/SalesPageController.php',
     'symfony/src/Application/Sales/Query/GetSalesDealWorkspaceQueryHandler.php',
     'symfony/src/Web/Sales/SalesDealController.php',
     'symfony/src/Web/Sales/SalesDealPresenter.php',
@@ -94,6 +94,9 @@ foreach ([
     'symfony/src/Application/Sales/Query/GetSalesDealsCollectionQueryHandler.php',
     'symfony/src/Web/Sales/SalesDealsController.php',
     'symfony/src/Web/Sales/SalesDealsPresenter.php',
+    'symfony/src/Application/Sales/Query/GetSalesDirectorDashboardQueryHandler.php',
+    'symfony/src/Web/Sales/SalesDirectorController.php',
+    'symfony/src/Web/Sales/SalesDirectorPresenter.php',
 ] as $file) {
     $output = [];
     $code = 0;

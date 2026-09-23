@@ -25,7 +25,6 @@ foreach([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
-    'symfony/src/Web/Sales/SalesPageController.php',
     'symfony/src/Web/Sales/SalesAdminPageController.php',
     'symfony/src/Web/Diagnostic/DiagnosticPageController.php',
     'symfony/src/Web/Content/ContentAdminPageController.php',
@@ -55,7 +54,8 @@ foreach([
     'symfony/src/Web/Sales/SalesDealController.php',
     'symfony/templates/experience/sales/deal_workspace.html.twig',
     'symfony/assets/controllers/sales_deal_controller.js',
-    'app/Interfaces/Web/View/sales/director.phtml',
+    'symfony/src/Web/Sales/SalesDirectorController.php',
+    'symfony/templates/experience/sales/director.html.twig',
     'frontend/core/workspace-shell.js',
     'frontend/entrypoints/terranova-interface.js',
     'frontend/entrypoints/diagnostics-methodology-studio.js',
@@ -85,10 +85,7 @@ foreach(['salesNavigationContributor','propertyNavigationContributor','diagnosti
     $assert(!str_contains($navigation,$retired),'Symfony navigation restored retired contributor: '.$retired);
 }
 
-$sales=$read('symfony/src/Web/Sales/SalesPageController.php');
-foreach(["'workspaceSection' => 'sales'","['sales-workspace']",'public function director('] as $needle){
-    $assert(str_contains($sales,$needle),'Remaining legacy Sales page owner missing Director workspace contract: '.$needle);
-}
+$assert(!is_file($root.'/symfony/src/Web/Sales/SalesPageController.php'),'Retired Sales PHTML page controller returned after VR-008.');
 $diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
 $assert(str_contains($diagnostic,"['diagnostics-methodology-studio']"),'Diagnostic Symfony owner must load its Vite entrypoint.');
 

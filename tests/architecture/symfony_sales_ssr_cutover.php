@@ -26,13 +26,14 @@ foreach ([
     $assert(!file_exists($root . '/' . $path), 'Retired Phalcon Sales SSR artifact restored: ' . $path);
 }
 
+$assert(!is_file($root . '/symfony/src/Web/Sales/SalesPageController.php'), 'Retired SalesPageController returned after canonical Sales surface cutover.');
+
 foreach ([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
     'symfony/src/Web/Phtml/UrlHelper.php',
     'symfony/src/Web/Phtml/RequestQueryAdapter.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
-    'symfony/src/Web/Sales/SalesPageController.php',
     'symfony/src/Web/Sales/SalesAdminPageController.php',
 ] as $path) {
     $source = $read($path);

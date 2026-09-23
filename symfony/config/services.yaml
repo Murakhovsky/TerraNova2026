@@ -1736,10 +1736,6 @@ services:
       $operations: '@Domains\Sales\Application\Service\SalesOperationalPerformanceService'
       $forecast: '@Domains\Sales\Application\Service\SalesForecastRiskService'
 
-  App\Web\Sales\SalesPageController:
-    public: true
-    tags: ['controller.service_arguments']
-
   App\Web\Sales\SalesDashboardController:
     public: true
     tags: ['controller.service_arguments']
@@ -1753,6 +1749,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Sales\SalesDealsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesDirectorController:
     public: true
     tags: ['controller.service_arguments']
 
