@@ -19,8 +19,8 @@ kind: architecture
 | VR-005 | `/sales/today` | Workspace | Sales | Operational Queue | P0 | Twig | DONE |
 | VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | DONE |
 | VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | DONE |
-| VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | QA |
-| VR-009 | `/sales/admin` | System | Sales | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | DONE |
+| VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | BUILD |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -50,3 +50,5 @@ VR-006 переводить Sales Pipeline на Process / Pipeline archetype: ca
 VR-007 переводить Deals на canonical Collection/DataGrid. Generic DataGrid filter отримав text-filter contract, а operational Sales read model — offset pagination без зміни filter semantics.
 
 VR-008 переводить Sales Director на Executive Dashboard: Domain cockpit лишається source of truth, а currency/transition/manager/risk projections рендеряться canonical DataGrid-ами. `SalesPageController` повністю видалено.
+
+VR-009 стартував як route-family cutover `/sales/admin/*`. Перший цикл переводить dashboard на System / Control Surface та централізує read boundary через `SalesAdminQuery`; legacy підсторінки залишаються доступними до наступних циклів міграції.

@@ -1524,7 +1524,7 @@ cos_web_sales_director:
 
 cos_web_sales_admin:
   path: /sales/admin
-  controller: App\Web\Sales\SalesAdminPageController::index
+  controller: App\Web\Sales\SalesAdminDashboardController::index
   methods: [GET]
 
 cos_web_sales_admin_pipelines_page:

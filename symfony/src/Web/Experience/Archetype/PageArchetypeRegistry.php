@@ -140,7 +140,7 @@ final class PageArchetypeRegistry
                 'system',
                 'Inspect runtime state, diagnostics, architecture and controlled system actions.',
                 ['PageHeader', 'Toolbar'],
-                ['KpiStrip', 'ActivityFeed', 'Timeline', 'ContextPanel', 'ActionBar'],
+                ['KpiStrip', 'ActivityFeed', 'Timeline', 'ContextPanel', 'ActionBar', 'EntityList', 'DataGrid', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),
