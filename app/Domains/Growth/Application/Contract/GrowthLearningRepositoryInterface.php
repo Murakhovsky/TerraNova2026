@@ -16,6 +16,11 @@ interface GrowthLearningRepositoryInterface
         string $organizationId,string $sourceDomain,string $referenceType,string $referenceId
     ):?string;
 
+    /** @return list<string> */
+    public function externalSubjectsForCandidate(
+        string $organizationId,string $candidateId,string $sourceDomain,string $referenceType
+    ):array;
+
     public function recordOutcome(GrowthOutcomeObservation $outcome):void;
 
     /** @return list<array<string,mixed>> */

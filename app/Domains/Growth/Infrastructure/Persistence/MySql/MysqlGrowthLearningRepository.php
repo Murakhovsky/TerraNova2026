@@ -49,6 +49,22 @@ final readonly class MysqlGrowthLearningRepository implements GrowthLearningRepo
         return $value===false?null:(string)$value;
     }
 
+    public function externalSubjectsForCandidate(
+        string $organizationId,string $candidateId,string $sourceDomain,string $referenceType
+    ):array {
+        $statement=$this->connection->prepare(
+            'SELECT reference_id FROM tn_growth_learning_bindings
+             WHERE organization_id=:organization_id AND candidate_id=:candidate_id
+               AND source_domain=:source_domain AND reference_type=:reference_type
+             ORDER BY created_at,reference_id'
+        );
+        $statement->execute([
+            'organization_id'=>$organizationId,'candidate_id'=>$candidateId,
+            'source_domain'=>$sourceDomain,'reference_type'=>$referenceType,
+        ]);
+        return array_values(array_map('strval',$statement->fetchAll(PDO::FETCH_COLUMN)?:[]));
+    }
+
     public function recordOutcome(GrowthOutcomeObservation $outcome):void
     {
         $statement=$this->connection->prepare(

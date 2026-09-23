@@ -599,6 +599,26 @@ services:
   Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary:
     alias: Domains\Growth\Application\Service\GrowthExperimentDecisionService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementExecutionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementExecutionRepository
+
+  Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway:
+    arguments:
+      $policies: '@Kernel\Policy\Service\ActionPolicyService'
+      $actions: '@Kernel\Action\Service\ActionService'
+
+  Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway
+
+  Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementExecutionService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

@@ -1,0 +1,28 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\Growth\Application\Contract;
+
+interface GrowthEngagementExecutionRepositoryInterface
+{
+    /** @return array<string,mixed>|null */
+    public function byRecommendation(string $organizationId,string $recommendationId):?array;
+
+    public function createOrVerify(
+        string $organizationId,
+        string $executionId,
+        string $candidateId,
+        string $recommendationId,
+        string $targetDomain,
+        string $targetReferenceType,
+        string $targetReferenceId,
+        string $actionId,
+        string $actionType,
+        string $channel,
+        string $payloadFingerprint,
+        int $actorId,
+    ):void;
+
+    /** @return array<string,mixed>|null */
+    public function latestForCandidate(string $organizationId,string $candidateId):?array;
+}

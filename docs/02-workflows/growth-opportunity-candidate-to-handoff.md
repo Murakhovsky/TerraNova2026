@@ -622,6 +622,34 @@ Accept / Dismiss
 
 Accepted recommendation не має execution authority. Experiment status, variant config, outreach, ICP/Qualification activation та будь-яка інша mutation лишаються поза V0.21.
 
+## Governed post-handoff engagement execution
+
+V0.22 додає execution bridge без передачі execution authority Growth:
+
+```text
+Accepted EngagementRecommendation
+        ↓
+exactly one sales_deal binding
+        ↓
+human-provided body
+        ↓
+GrowthEngagementExecutionService
+        ↓
+GrowthActionProposalGateway
+        ↓
+Kernel ActionProposal
+        ↓
+Sales Policy
+        ↓
+Pending approval / Queued / Rejected
+```
+
+Для recommendation зберігається один canonical execution link. Payload fingerprint блокує повторне використання recommendation з іншим body навіть у crash-retry window. Kernel Action idempotency key стабільний по recommendation.
+
+Growth persistence не дублює message body; зберігаються лише action/reference linkage, channel та payload fingerprint. Application service не залежить від Kernel Action/Policy implementation і не викликає `execute()` або command dispatch.
+
+Поточний bridge підтримує `send_email`, `connect_linkedin`, `offer_diagnostic`, `send_case_study`, `ask_introduction`, `invite_webinar` лише для email/LinkedIn channels. Call, monitor, ignore та create_report execution лишаються поза V0.22.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -641,9 +669,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.21
+## Статус V0.22
 
-`process_state: to-be` поки навмисний. V0.21 додає governed Experiment Decision Intelligence поверх frozen attribution completed experiment. Runtime формує evidence-bound recommendation, але не мутує Experiment, не оголошує автоматичного winner і не виконує tested variant.
+`process_state: to-be` поки навмисний. V0.22 додає governed post-handoff Engagement Execution Bridge. Accepted recommendation може породити canonical `sales.send_message` Action лише при однозначному `sales_deal` binding; виконання лишається під Kernel Action + Sales Policy authority.
 
 ## Карта коду
 
@@ -665,6 +693,9 @@ app/Domains/Growth/Application/Service/GrowthDecisionService.php
 app/Domains/Growth/Application/Service/GrowthResearchService.php
 app/Domains/Growth/Application/Service/GrowthHandoffService.php
 app/Domains/Growth/Application/Service/GrowthEngagementService.php
+app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php
+app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthEngagementExecutionRepository.php
 app/Domains/Growth/Application/Service/GrowthLearningService.php
 app/Domains/Growth/Application/Service/GrowthOptimizationService.php
 app/Domains/Growth/Application/AI/GrowthOptimizationPrompt.php

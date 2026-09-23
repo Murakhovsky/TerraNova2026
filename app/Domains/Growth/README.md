@@ -453,4 +453,30 @@ The model never receives raw outcome rows and does not calculate conversion metr
 
 An accepted experiment decision remains a recommendation. V0.21 does not mutate experiment lifecycle, activate a variant, archive the experiment, change ICP/policy, or execute outreach.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation.
+V0.22 adds the first governed outbound execution bridge, but only after Growth has a confirmed `sales_deal` binding:
+
+```text
+Accepted EngagementRecommendation
+        ↓
+exactly one Growth → sales_deal binding
+        ↓
+human-provided outbound body
+        ↓
+GrowthActionProposalGateway
+        ↓
+Kernel ActionProposal
+  type = sales.send_message
+  target = deal
+  source = GROWTH
+        ↓
+Sales Action Policy
+  default = APPROVAL_REQUIRED
+        ↓
+approval / queue / reject
+```
+
+Growth does not execute the Action and does not dispatch a worker command. The Application layer never imports Kernel Action/Policy classes; the concrete bridge lives behind a Growth-owned port. One recommendation can create at most one canonical Action payload. Growth stores only the execution link and payload fingerprint, not the outbound body.
+
+V0.22 supports message-capable accepted recommendations on email or LinkedIn channels. `call`, `monitor`, `ignore` and `create_report` remain non-executable through this bridge.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, pre-handoff outbound execution and autonomous activation.

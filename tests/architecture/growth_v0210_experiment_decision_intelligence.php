@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.21.0','Growth V0.21 manifest version must be 0.21.0.');
-$assert(($manifest['schema_version']??null)==='0.21.0','Growth V0.21 schema version must be 0.21.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.21.0','>='),'Growth manifest must remain V0.21+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.21.0','>='),'Growth schema must remain V0.21+.');
 $assert(in_array('growth.experiments.decision',$manifest['contributions']['capabilities']??[],true),'Growth experiment decision capability is missing.');
 
 $migration='app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql';
@@ -95,7 +95,7 @@ foreach([
 
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===58,'Growth V0.21 must expose exactly 58 canonical Growth API routes.');
+$assert(count($matches[0])>=58,'Growth V0.21 canonical API surface must not shrink below 58 routes.');
 foreach([
     '/api/v1/growth/experiments/{id}/decision/recommendations',
     '/api/v1/growth/experiments/{id}/decision/recommendations/{recommendationId}/accept',

@@ -611,6 +611,22 @@ cos_api_v1_growth_engagement_dismiss:
     id: '[A-Za-z0-9_-]{8,80}'
     recommendationId: '[A-Za-z0-9_-]{8,80}'
 
+cos_api_v1_growth_engagement_execution_propose:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/execution
+  controller: App\Http\Api\V1\Controller\GrowthApiController::proposeEngagementExecution
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_execution:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/execution
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementExecution
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
 cos_api_v1_growth_engagement_brief:
   path: /api/v1/growth/candidates/{id}/engagement
   controller: App\Http\Api\V1\Controller\GrowthApiController::engagementBrief

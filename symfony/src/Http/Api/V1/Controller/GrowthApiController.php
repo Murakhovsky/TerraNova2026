@@ -9,6 +9,7 @@ use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
+use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
@@ -37,6 +38,7 @@ final readonly class GrowthApiController
         private GrowthResearchBoundary $research,
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
+        private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
@@ -323,6 +325,25 @@ final readonly class GrowthApiController
     {
         return $this->read(fn(TenantContext $tenant):array=>
             $this->engagement->engagementBrief($tenant->organizationId()->value(),$id));
+    }
+
+    public function proposeEngagementExecution(Request $request,string $id,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId):array{
+            $body=$this->requiredString($this->input($request),'body');
+            return $this->engagementExecution->proposeMessageAction(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,
+                $id,$recommendationId,$body,$key
+            );
+        },202);
+    }
+
+    public function engagementExecution(string $id,string $recommendationId): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->engagementExecution->executionBrief(
+                $tenant->organizationId()->value(),$id,$recommendationId
+            ));
     }
 
     public function learningBrief(string $id): JsonResponse

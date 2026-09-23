@@ -45,7 +45,7 @@ final class TableOwnership
             'tn_growth_qualification_policies', 'tn_growth_candidate_evaluations',
             'tn_growth_research_runs', 'tn_growth_research_proposals',
             'tn_growth_handoff_attempts',
-            'tn_growth_engagement_runs', 'tn_growth_engagement_recommendations',
+            'tn_growth_engagement_runs', 'tn_growth_engagement_recommendations', 'tn_growth_engagement_execution_links',
             'tn_growth_learning_bindings', 'tn_growth_outcomes',
             'tn_growth_optimization_runs', 'tn_growth_optimization_recommendations',
             'tn_growth_experiments', 'tn_growth_experiment_assignments',
