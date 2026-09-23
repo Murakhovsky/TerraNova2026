@@ -70,12 +70,13 @@ Sales read model
 
 ### Воронка продажів (`Sales Pipeline`)
 
-`sales/pipeline.phtml`
+`symfony/templates/experience/sales/pipeline.html.twig`
 
-- локальний filter form переходить на shared FilterBar;
+- canonical `CosToolbar` і `CosFilterBar` володіють shared controls;
 - Pipeline/Owner/Risk/Priority/Value/Source/Search лишаються тими самими query params;
-- Kanban і drag/drop залишаються Sales-specific pattern;
-- Deal cards не перетворюються механічно на generic EntityCard, бо мають pipeline interaction semantics.
+- Kanban живе як Sales-specific `SalesPipelineBoard`, а не fake generic table;
+- drag/drop збережено у `sales_pipeline_controller.js`;
+- keyboard stage select дає ту саму mutation без мишки.
 
 ### Робочий простір угоди (`Deal Workspace`)
 

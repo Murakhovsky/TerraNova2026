@@ -51,17 +51,33 @@ foreach ([
 }
 $notContains($leads, '/sales/reference/', 'Lead Inbox must not retain reference routes after cutover.');
 
-$pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
+$pipeline = $read('symfony/templates/experience/sales/pipeline.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosFilterBar',
+    '<twig:SalesPipelineBoard',
+    'data-controller="sales-pipeline"',
     'data-sales-pipeline-root',
+] as $marker) {
+    $contains($pipeline, $marker, 'Sales Pipeline must use canonical Process/Pipeline composition.');
+}
+$pipelineBoard = $read('symfony/templates/components/sales/sales_pipeline_board.html.twig');
+foreach ([
     'data-sales-stage-dropzone',
     'data-sales-deal-card',
+    'draggable="true"',
+    'submit->sales-pipeline#changeStage',
 ] as $marker) {
-    $contains($pipeline, $marker, 'Sales Pipeline migration lost a canonical or interaction contract.');
+    $contains($pipelineBoard, $marker, 'Sales Pipeline domain board lost an interaction contract.');
 }
-$notContains($pipeline, '<form class="tn-ui-filter-bar', 'Sales Pipeline must not restore a local filter form.');
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($pipeline, $forbidden, 'Sales Pipeline must not restore legacy/local page presentation.');
+    $notContains($pipelineBoard, $forbidden, 'Sales Pipeline board must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/pipeline.phtml')) {
+    throw new RuntimeException('Legacy Sales Pipeline PHTML must stay retired after VR-006.');
+}
 
 $deal = $read('symfony/templates/experience/sales/deal_workspace.html.twig');
 foreach ([

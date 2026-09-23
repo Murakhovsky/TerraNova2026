@@ -78,12 +78,6 @@ const getJson = async (endpoint, signal) => {
   return payload.data || payload;
 };
 
-const postStageChange = (dealId, stageId, csrf) => postJson(
-  `/api/v1/sales/opportunities/${encodeURIComponent(dealId)}/stage`,
-  { stage_id: stageId },
-  csrf,
-);
-
 const operationRequest = (dealId, operation, data) => {
   const id = encodeURIComponent(dealId);
   if (operation === 'quick') return { endpoint: `/api/v1/sales/opportunities/${id}`, method: 'PATCH', data };
@@ -344,45 +338,6 @@ const initDealWorkspace = (root) => {
   }));
 };
 
-const initSalesPipeline = (root) => {
-  const status = root.querySelector('[data-sales-pipeline-status]');
-  let draggedCard = null;
-  root.querySelectorAll('[data-sales-deal-card]').forEach((card) => {
-    card.addEventListener('dragstart', (event) => {
-      draggedCard = card;
-      card.classList.add('is-dragging');
-      event.dataTransfer?.setData('text/plain', card.dataset.dealId || '');
-    });
-    card.addEventListener('dragend', () => {
-      card.classList.remove('is-dragging');
-      root.querySelectorAll('[data-sales-stage-dropzone]').forEach((zone) => zone.classList.remove('is-drop-target'));
-      draggedCard = null;
-    });
-  });
-  root.querySelectorAll('[data-sales-stage-dropzone]').forEach((zone) => {
-    zone.addEventListener('dragover', (event) => { event.preventDefault(); zone.classList.add('is-drop-target'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('is-drop-target'));
-    zone.addEventListener('drop', async (event) => {
-      event.preventDefault();
-      zone.classList.remove('is-drop-target');
-      const card = draggedCard;
-      const dealId = card?.dataset.dealId || event.dataTransfer?.getData('text/plain') || '';
-      const targetStageId = zone.dataset.stageId || '';
-      if (!dealId || !targetStageId || card?.dataset.stageId === targetStageId) return;
-      setStatus(status, 'Змінюю stage…', 'loading');
-      try {
-        const result = await postStageChange(dealId, targetStageId, root.dataset.csrf || '');
-        setStatus(status, result.changed === false ? 'Stage уже актуальний.' : 'Stage змінено.', 'success');
-        if (result.changed !== false) window.setTimeout(() => window.location.reload(), 250);
-      } catch (error) {
-        const conflict = error.status === 409 || error.message === 'concurrent_stage_change';
-        setStatus(status, conflict ? 'Stage змінив інший користувач. Оновлюю…' : error.message, conflict ? 'warning' : 'error');
-        if (conflict) window.setTimeout(() => window.location.reload(), 700);
-      }
-    });
-  });
-};
-
 const searchResultMarkup = (item) => {
   const tag = item.href ? 'a' : 'div';
   const href = item.href ? ` href="${escapeHtml(item.href)}"` : '';
@@ -445,7 +400,6 @@ const initSalesGlobalSearch = (root) => {
 
 const initSalesWorkspace = () => {
   document.querySelectorAll('[data-sales-deal-workspace]').forEach(initDealWorkspace);
-  document.querySelectorAll('[data-sales-pipeline-root]').forEach(initSalesPipeline);
   document.querySelectorAll('[data-sales-today-root]').forEach(initToday);
   document.querySelectorAll('[data-sales-lead-inbox]').forEach(initLeadInbox);
   document.querySelectorAll('[data-sales-global-search]').forEach(initSalesGlobalSearch);

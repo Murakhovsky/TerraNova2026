@@ -28,16 +28,6 @@ final readonly class SalesPageController
     ) {
     }
 
-    public function pipeline(Request $request): Response
-    {
-        return $this->managerPage($request, 'Sales Pipeline', 'pipeline', 'sales/pipeline',
-            fn(TenantContext $tenant): array => [
-                'pipelines' => $this->workspace->pipelines($tenant->organizationId()->value()),
-                'deals' => $this->workspace->deals($tenant->organizationId()->value(), $request->query->all()),
-                'owners' => $this->owners($tenant),
-            ]);
-    }
-
     public function deals(Request $request): Response
     {
         return $this->managerPage($request, 'Sales Deals', 'deals', 'sales/deals',

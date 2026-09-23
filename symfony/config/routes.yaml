@@ -1492,7 +1492,7 @@ cos_web_sales_today:
 
 cos_web_sales_pipeline:
   path: /sales/pipeline
-  controller: App\Web\Sales\SalesPageController::pipeline
+  controller: App\Web\Sales\SalesPipelineController::index
   methods: [GET]
 
 cos_web_sales_leads:

@@ -1748,6 +1748,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Sales\SalesPipelineController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Sales\SalesLeadsController:
     public: true
     tags: ['controller.service_arguments']

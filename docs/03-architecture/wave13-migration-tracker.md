@@ -16,8 +16,8 @@ kind: architecture
 | VR-002 | `/sales/dashboard` | Workspace | Sales | Domain Dashboard | P0 | Twig | DONE |
 | VR-003 | `/sales/leads` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | DONE |
-| VR-005 | `/sales/today` | Workspace | Sales | Operational Queue | P0 | Twig | QA |
-| VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | BACKLOG |
+| VR-005 | `/sales/today` | Workspace | Sales | Operational Queue | P0 | Twig | DONE |
+| VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | QA |
 | VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | BACKLOG |
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | BACKLOG |
 | VR-009 | `/sales/admin` | System | Sales | System / Control Surface | P0 | Twig | BACKLOG |
@@ -43,3 +43,6 @@ VR-005 переводить Sales Today на Operational Queue: Query → Presen
 - canonical inline-style debt: не більше 12.
 
 VR-001 додатково видаляє один production PHTML screen і один page-specific frontend entrypoint.
+
+
+VR-006 переводить Sales Pipeline на Process / Pipeline archetype: canonical PageHeader/Toolbar/FilterBar обрамляють Sales-specific Kanban; drag/drop збережено, а keyboard stage mutation додано як accessibility parity.
