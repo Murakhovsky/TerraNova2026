@@ -122,8 +122,8 @@ Inbox card одночасно містить:
 - funnel лишається domain-specific interaction boundary, а quick-update list використовує canonical OperationalGrid із row-owned mutation forms;
 - Show використовує canonical EntityHeader, State, Panel і KPI summary;
 - AI, timeline, property-match і presentation-share patterns зберігають існуючу workflow семантику;
-- controller/route ownership лишається у ClientCasePageController;
-- compatibility-only Client Case CSS/JS bridge видалено;
-- WEB V0.6/V0.17 gates захищають canonical Client Case contracts;
+- read ownership розділений між `ClientCaseInboxController`, `ClientCaseCollectionController`, `ClientCaseWorkspaceController`; mutation ownership централізований у `ClientCaseMutationController`;
+- legacy Client Case PHTML/CSS/Vite bridge видалено повністю;
+- WEB V0.6/V0.17 та Wave 13 gates захищають canonical Client Case contracts;
 - PHASE 12 architecture gate запускається у CI;
 - WEB V0.17 production migration debt закрито.

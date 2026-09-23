@@ -1,0 +1,293 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Client Case Workspace | COS{% endblock %}
+
+{% block workspace_content %}
+<twig:CosWorkspace :workspace="workspace">
+    <section
+        class="cos-page__stack"
+        data-client-case-workspace
+        data-case-id="{{ case.id }}"
+        data-cos-archetype="{{ page.archetypeId() }}"
+        data-cos-page-state="{{ page.state }}"
+        data-cos-page-density="{{ page.density }}"
+    >
+        <twig:CosEntityHeader
+            eyebrow="Clients · Client Case"
+            title="{{ case.title }}"
+            subtitle="{{ case.subtitle }}"
+            identity="{{ case.identity }}"
+            statusLabel="{{ case.statusLabel }}"
+            statusTone="{{ case.statusTone }}"
+            :meta="case.meta"
+        >
+            <twig:CosButton label="До кейсів" href="/client-case" variant="ghost" />
+            <twig:CosButton label="Inbox" href="/client-case/inbox" variant="ghost" />
+        </twig:CosEntityHeader>
+
+        {% if actionStatus %}
+            <twig:CosAlert title="Зміни застосовано" copy="{{ actionStatus }}" tone="positive" />
+        {% endif %}
+
+        {% if case.error %}
+            <twig:CosAlert title="Кейс тимчасово недоступний" copy="{{ case.error }}" tone="danger" />
+        {% else %}
+            <section class="cos-page__section" aria-labelledby="client-case-intelligence">
+                <article class="cos-card cos-pattern-stack">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">AI Intelligence</p>
+                            <h2 id="client-case-intelligence" class="cos-card__title">Recommendation</h2>
+                        </div>
+                        {% if case.aiActions is not empty and case.aiActions[0].risk %}
+                            <twig:CosStatus label="{{ 'Risk: ' ~ case.aiActions[0].risk }}" tone="{{ case.aiActions[0].riskTone }}" />
+                        {% endif %}
+                    </div>
+
+                    {% if case.aiDecision is null and case.aiActions is empty %}
+                        <twig:CosEmptyState
+                            title="AI ще не аналізував цей кейс"
+                            copy="Завершіть контакт або іншу дію, щоб Sales Intelligence отримав новий сигнал."
+                        />
+                    {% else %}
+                        {% if case.aiDecision %}
+                            <article class="cos-card cos-pattern-stack">
+                                <div class="cos-card__header">
+                                    <strong>{{ case.aiDecision.decision }} · {{ case.aiDecision.confidence }}%</strong>
+                                    <small>{{ case.aiDecision.agent }} · {{ case.aiDecision.model }}</small>
+                                </div>
+                                {% if case.aiDecision.reason %}<p class="cos-card__copy">{{ case.aiDecision.reason }}</p>{% endif %}
+                            </article>
+                        {% endif %}
+
+                        <div class="cos-pattern-stack">
+                            {% for action in case.aiActions %}
+                                <article class="cos-card cos-pattern-stack">
+                                    <div class="cos-card__header">
+                                        <strong>{{ action.type }}</strong>
+                                        <twig:CosStatus label="{{ action.status }}" tone="{{ action.statusTone }}" />
+                                    </div>
+                                    <p class="cos-card__copy">{{ action.reason }}</p>
+                                    {% if action.resultStatus %}
+                                        <p class="cos-card__copy">Result: {{ action.resultStatus }}{% if action.resultError %} · {{ action.resultError }}{% endif %}</p>
+                                    {% endif %}
+
+                                    <twig:CosActionBar label="AI action" align="start">
+                                        {% if action.status == 'QUEUED' %}
+                                            <form action="/cos/action/{{ action.id }}/execute" method="post">
+                                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                                <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
+                                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Execute</button>
+                                            </form>
+                                        {% elseif action.status == 'PENDING_APPROVAL' and action.approvalStatus == 'PENDING' %}
+                                            <form action="/cos/approval/{{ action.approvalId }}/approve" method="post">
+                                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                                <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
+                                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Approve</button>
+                                            </form>
+                                            <form action="/cos/approval/{{ action.approvalId }}/reject" method="post">
+                                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                                <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
+                                                <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Reject</button>
+                                            </form>
+                                        {% endif %}
+                                    </twig:CosActionBar>
+                                </article>
+                            {% endfor %}
+                        </div>
+
+                        <twig:CosButton label="Відкрити повний audit trail" href="/cos" variant="ghost" />
+                    {% endif %}
+                </article>
+            </section>
+
+            <section class="cos-page__section cos-section-grid" aria-label="Client Case core data">
+                <article class="cos-card cos-pattern-stack">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">Кейс і людина</p>
+                            <h2 class="cos-card__title">Базові дані</h2>
+                        </div>
+                    </div>
+
+                    <form class="cos-pattern-stack" action="/client-case/update/{{ case.id }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <div class="cos-section-grid">
+                            <label class="cos-field"><span>Людина</span><input class="cos-input" name="full_name" type="text" maxlength="160" required value="{{ case.form.full_name }}"></label>
+                            <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50" value="{{ case.form.phone }}"></label>
+                            <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" maxlength="160" value="{{ case.form.email }}"></label>
+                            <label class="cos-field"><span>Telegram</span><input class="cos-input" name="telegram" type="text" maxlength="80" value="{{ case.form.telegram }}"></label>
+                            <label class="cos-field"><span>Назва кейсу</span><input class="cos-input" name="title" type="text" maxlength="220" value="{{ case.form.title }}"></label>
+
+                            <label class="cos-field"><span>Тип</span><select class="cos-select" name="type">
+                                {% for code,label in case.typeOptions %}<option value="{{ code }}" {% if case.form.type == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Статус</span><select class="cos-select" name="status">
+                                {% for code,label in case.statusOptions %}<option value="{{ code }}" {% if case.form.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Етап</span><select class="cos-select" name="stage_id">
+                                {% for option in case.stageOptions %}<option value="{{ option.id }}" {% if case.form.stage_id == option.id %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Пріоритет</span><select class="cos-select" name="priority">
+                                {% for code,label in case.priorityOptions %}<option value="{{ code }}" {% if case.form.priority == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Відповідальний</span><select class="cos-select" name="assigned_user_id">
+                                <option value="0">Не призначено</option>
+                                {% for manager in case.managerOptions %}<option value="{{ manager.id }}" {% if case.form.assigned_user_id == manager.id %}selected{% endif %}>{{ manager.label }}</option>{% endfor %}
+                            </select></label>
+
+                            <label class="cos-field"><span>Джерело</span><input class="cos-input" name="source" type="text" maxlength="120" value="{{ case.form.source }}"></label>
+                            <label class="cos-field"><span>Тип обʼєкта</span><select class="cos-select" name="property_type_id">
+                                <option value="0">Не задано</option>
+                                {% for option in case.propertyTypeOptions %}<option value="{{ option.id }}" {% if case.form.property_type_id == option.id %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Місто</span><select class="cos-select" name="location_id">
+                                <option value="0">Не задано</option>
+                                {% for option in case.locationOptions %}<option value="{{ option.id }}" {% if case.form.location_id == option.id %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
+                            </select></label>
+
+                            <label class="cos-field"><span>Бюджет від</span><input class="cos-input" name="budget_min" type="number" min="0" step="1000" value="{{ case.form.budget_min }}"></label>
+                            <label class="cos-field"><span>Бюджет до</span><input class="cos-input" name="budget_max" type="number" min="0" step="1000" value="{{ case.form.budget_max }}"></label>
+                            <label class="cos-field"><span>Валюта</span><select class="cos-select" name="currency">
+                                {% for currency in ['USD','EUR','UAH'] %}<option value="{{ currency }}" {% if case.form.currency == currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Площа від</span><input class="cos-input" name="area_min" type="number" min="0" step="1" value="{{ case.form.area_min }}"></label>
+                            <label class="cos-field"><span>Площа до</span><input class="cos-input" name="area_max" type="number" min="0" step="1" value="{{ case.form.area_max }}"></label>
+                            <label class="cos-field"><span>Наступний контакт</span><input class="cos-input" name="next_contact_at" type="datetime-local" value="{{ case.form.next_contact_at }}"></label>
+                        </div>
+
+                        <label class="cos-field"><span>Description</span><textarea class="cos-textarea" name="description" rows="5">{{ case.form.description }}</textarea></label>
+                        <label class="cos-field"><span>Нотатки по людині</span><textarea class="cos-textarea" name="person_notes" rows="3">{{ case.form.person_notes }}</textarea></label>
+
+                        <twig:CosActionBar label="Збереження кейсу" align="start">
+                            <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+                        </twig:CosActionBar>
+                    </form>
+                </article>
+
+                <aside class="cos-card cos-pattern-stack" aria-labelledby="client-case-context">
+                    <div>
+                        <p class="cos-card__eyebrow">Зведення</p>
+                        <h2 id="client-case-context" class="cos-card__title">Контекст кейсу</h2>
+                    </div>
+                    <div class="cos-kpi-strip">
+                        {% for metric in case.kpis %}
+                            <article class="cos-card">
+                                <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                            </article>
+                        {% endfor %}
+                    </div>
+                </aside>
+            </section>
+
+            <section class="cos-page__section cos-section-grid" aria-label="Client Case activity">
+                <article class="cos-card cos-pattern-stack">
+                    <h2 class="cos-card__title">Нова дія</h2>
+                    <form class="cos-pattern-stack" action="/client-case/activity/{{ case.id }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <div class="cos-section-grid">
+                            <label class="cos-field"><span>Тип</span><select class="cos-select" name="activity_type">
+                                {% for code,label in case.activityOptions %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+                            </select></label>
+                            <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" type="text" maxlength="180" required></label>
+                            <label class="cos-field"><span>Коли</span><input class="cos-input" name="due_at" type="datetime-local"></label>
+                            <label class="cos-field"><span>Тривалість дзвінка, сек.</span><input class="cos-input" name="duration_seconds" type="number" min="0" step="1"></label>
+                            <label class="cos-field"><span>Результат дзвінка</span><input class="cos-input" name="call_result" type="text" maxlength="100" placeholder="client_thinking"></label>
+                        </div>
+                        <label class="cos-field"><span>Опис</span><textarea class="cos-textarea" name="body" rows="4"></textarea></label>
+                        <label class="cos-checkbox"><input name="completed" type="checkbox" value="1"><span>Виконано зараз</span></label>
+                        <button class="cos-button cos-button--primary" type="submit">Додати дію</button>
+                    </form>
+                </article>
+
+                <article class="cos-card cos-pattern-stack">
+                    <h2 class="cos-card__title">Історія</h2>
+                    {% if case.timeline is empty %}
+                        <twig:CosEmptyState title="Дій ще немає" copy="Нова активність зʼявиться тут після першого контакту або нотатки." />
+                    {% else %}
+                        <twig:CosTimeline :items="case.timeline" label="Client Case history" />
+                    {% endif %}
+                </article>
+            </section>
+
+            <section class="cos-page__section cos-section-grid" aria-label="Client Case relations">
+                <article class="cos-card cos-pattern-stack">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">Relations</p>
+                            <h2 class="cos-card__title">Вхідні заявки</h2>
+                        </div>
+                        <span class="cos-card__copy">{{ case.inboundRequests|length }}</span>
+                    </div>
+
+                    {% for request in case.inboundRequests %}
+                        <article class="cos-card cos-pattern-stack">
+                            <div class="cos-card__header">
+                                <strong>#{{ request.id }} · {{ request.intent }}</strong>
+                                <small>{{ request.createdAt }}</small>
+                            </div>
+                            {% if request.dealType %}<p class="cos-card__copy">{{ request.dealType }}</p>{% endif %}
+                            {% if request.propertyHref %}
+                                <a href="{{ request.propertyHref }}">{{ request.propertyLabel }}</a>
+                            {% else %}
+                                <p class="cos-card__copy">{{ request.propertyLabel }}</p>
+                            {% endif %}
+                            {% if request.message %}<p class="cos-card__copy">{{ request.message }}</p>{% endif %}
+                        </article>
+                    {% else %}
+                        <twig:CosEmptyState title="Заявок ще немає" copy="До кейсу ще не привʼязано вхідних заявок." />
+                    {% endfor %}
+                </article>
+
+                <article class="cos-card cos-pattern-stack">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">Matching</p>
+                            <h2 class="cos-card__title">Підібрані обʼєкти</h2>
+                        </div>
+                        <span class="cos-card__copy">{{ case.propertyMatches|length }}</span>
+                    </div>
+
+                    {% for match in case.propertyMatches %}
+                        <article class="cos-card cos-pattern-stack">
+                            <div class="cos-card__header">
+                                <div>
+                                    {% if match.href %}<h3 class="cos-card__title"><a href="{{ match.href }}">{{ match.title }}</a></h3>{% else %}<h3 class="cos-card__title">{{ match.title }}</h3>{% endif %}
+                                    <p class="cos-card__copy">{{ match.city }} · {{ match.price }} · {{ match.matchStatusLabel }}{% if match.score %} · {{ match.score }}%{% endif %}</p>
+                                </div>
+                                <twig:CosStatus label="{{ match.matchStatusLabel }}" tone="neutral" />
+                            </div>
+
+                            <form class="cos-section-grid" action="/client-case/updatePropertyMatch/{{ match.id }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                <label class="cos-field"><span>Статус підбору</span><select class="cos-select" name="match_status">
+                                    {% for code,label in case.matchStatusOptions %}<option value="{{ code }}" {% if match.matchStatus == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                                </select></label>
+                                <label class="cos-field"><span>Оцінка</span><input class="cos-input" name="score" type="number" min="0" max="100" step="5" value="{{ match.score }}" placeholder="0-100"></label>
+                                <label class="cos-field"><span>Нотатка</span><input class="cos-input" name="note" type="text" maxlength="500" value="{{ match.note }}" placeholder="Нотатка"></label>
+                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Оновити</button>
+                            </form>
+
+                            <twig:CosActionBar label="Property presentation" align="start">
+                                {% if match.pdfHref %}<a class="cos-button cos-button--ghost cos-button--sm" href="{{ match.pdfHref }}" target="_blank" rel="noopener">Відкрити PDF</a>{% endif %}
+                                {% if match.slug %}
+                                    <form class="cos-action-bar cos-action-bar--start" action="/property/presentationShare" method="post" target="_blank">
+                                        <input type="hidden" name="client_case_id" value="{{ case.id }}">
+                                        <input type="hidden" name="slug" value="{{ match.slug }}">
+                                        <input type="hidden" name="variant" value="client">
+                                        <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="email">Email</button>
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="telegram">Telegram</button>
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="viber">Viber</button>
+                                    </form>
+                                {% endif %}
+                            </twig:CosActionBar>
+                        </article>
+                    {% else %}
+                        <twig:CosEmptyState title="Підборів ще немає" copy="Додайте обʼєкт у кейс із каталогу або картки обʼєкта." />
+                    {% endfor %}
+                </article>
+            </section>
+        {% endif %}
+    </section>
+</twig:CosWorkspace>
+{% endblock %}

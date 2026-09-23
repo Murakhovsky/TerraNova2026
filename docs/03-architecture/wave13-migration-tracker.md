@@ -22,8 +22,8 @@ kind: architecture
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | DONE |
 | VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | DONE |
 | VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | DONE |
-| VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | QA |
-| VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | BACKLOG |
+| VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | DONE |
+| VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | QA |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -82,3 +82,6 @@ VR-010 переводить Client Case Inbox на Operational Queue без ст
 
 
 VR-011 переводить Client Case Collection на стабільний Collection contract `EntityList + FilterBar`. Editable quick-update row і funnel лишаються Sales/Client Case domain components; generic DataGrid не отримує mutation semantics, яких у нього немає.
+
+
+VR-012 переводить Client Case Workspace на повний `CosWorkspace` runtime через `sales.client_case`. Entity лишається `sales.deal`, тому governed Sales UIActions та extension slots перевикористовуються без нового business Domain. Legacy `ClientCasePageController`, `client_case/show.phtml` і `clients-workspace` frontend bundle видаляються.

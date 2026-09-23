@@ -29,7 +29,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'analytics-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/analytics-workspace.js'),
-        'clients-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/clients-workspace.js'),
         'cos-architecture-explorer': resolve(import.meta.dirname, 'frontend/entrypoints/cos-architecture-explorer.js'),
         'cos-control-center': resolve(import.meta.dirname, 'frontend/entrypoints/cos-control-center.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),

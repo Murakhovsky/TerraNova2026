@@ -9,12 +9,13 @@ on:
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
-      - 'app/Interfaces/Web/View/client_case/inbox.phtml'
-      - 'app/Interfaces/Web/View/client_case/index.phtml'
-      - 'app/Interfaces/Web/View/client_case/show.phtml'
+      - 'symfony/templates/experience/client_case/**'
+      - 'symfony/templates/components/client_case/**'
+      - 'symfony/src/Web/Sales/ClientCase*'
+      - 'symfony/src/Application/Sales/Query/GetClientCase*'
+      - 'symfony/assets/styles/domains/client-case.css'
       - 'tests/architecture/web_experience_production_client_case.php'
       - 'docs/03-architecture/cos-production-client-case-adoption.md'
-      - 'frontend/features/clients/workspace.css'
       - 'frontend/styles/components.css'
       - 'tests/architecture/web_v017_workspace_canonicalization.php'
       - 'docs/architecture/web-v0.17.md'
@@ -27,12 +28,13 @@ on:
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
-      - 'app/Interfaces/Web/View/client_case/inbox.phtml'
-      - 'app/Interfaces/Web/View/client_case/index.phtml'
-      - 'app/Interfaces/Web/View/client_case/show.phtml'
+      - 'symfony/templates/experience/client_case/**'
+      - 'symfony/templates/components/client_case/**'
+      - 'symfony/src/Web/Sales/ClientCase*'
+      - 'symfony/src/Application/Sales/Query/GetClientCase*'
+      - 'symfony/assets/styles/domains/client-case.css'
       - 'tests/architecture/web_experience_production_client_case.php'
       - 'docs/03-architecture/cos-production-client-case-adoption.md'
-      - 'frontend/features/clients/workspace.css'
       - 'frontend/styles/components.css'
       - 'tests/architecture/web_v017_workspace_canonicalization.php'
       - 'docs/architecture/web-v0.17.md'
@@ -60,9 +62,12 @@ jobs:
           php -l app/Interfaces/Web/View/admin/analytics.phtml
           php -l app/Interfaces/Web/View/diagnostic_report/show.phtml
           php -l app/Interfaces/Web/View/cos/index.phtml
-          php -l app/Interfaces/Web/View/client_case/inbox.phtml
-          php -l app/Interfaces/Web/View/client_case/index.phtml
-          php -l app/Interfaces/Web/View/client_case/show.phtml
+          php -l symfony/src/Web/Sales/ClientCaseInboxController.php
+          php -l symfony/src/Web/Sales/ClientCaseCollectionController.php
+          php -l symfony/src/Web/Sales/ClientCaseWorkspaceController.php
+          php -l symfony/src/Web/Sales/ClientCaseMutationController.php
+          php -l symfony/src/Application/Sales/Query/GetClientCaseWorkspaceQueryHandler.php
+          php symfony/bin/console lint:twig symfony/templates/experience/client_case symfony/templates/components/client_case
           php -l app/Interfaces/Web/View/components/ui/kpi_card.phtml
       - name: Workspace canonicalization gates
         run: |

@@ -57,6 +57,14 @@ foreach([
     'symfony/templates/experience/sales/director.html.twig',
     'symfony/src/Web/Sales/SalesAdminDashboardController.php',
     'symfony/src/Web/Sales/SalesAdminControlController.php',
+    'symfony/src/Web/Sales/ClientCaseInboxController.php',
+    'symfony/src/Web/Sales/ClientCaseCollectionController.php',
+    'symfony/src/Web/Sales/ClientCaseWorkspaceController.php',
+    'symfony/src/Web/Sales/ClientCaseMutationController.php',
+    'symfony/templates/experience/client_case/inbox.html.twig',
+    'symfony/templates/experience/client_case/index.html.twig',
+    'symfony/templates/experience/client_case/show.html.twig',
+    'symfony/assets/styles/domains/client-case.css',
     'symfony/templates/experience/sales/admin/dashboard.html.twig',
     'symfony/templates/experience/sales/admin/rule.html.twig',
     'symfony/assets/controllers/sales_admin_rule_editor_controller.js',
@@ -77,6 +85,12 @@ foreach([
     'frontend/entrypoints/sales-workspace.js',
     'frontend/features/sales/workspace.js',
     'frontend/features/sales/rule-editor.js',
+    'symfony/src/Web/Sales/ClientCasePageController.php',
+    'frontend/entrypoints/clients-workspace.js',
+    'frontend/features/clients/workspace.css',
+    'app/Interfaces/Web/View/client_case/inbox.phtml',
+    'app/Interfaces/Web/View/client_case/index.phtml',
+    'app/Interfaces/Web/View/client_case/show.phtml',
 ] as $retiredSalesSource){
     $assert(!is_file($root.'/'.$retiredSalesSource),'Retired Sales presentation source restored: '.$retiredSalesSource);
 }

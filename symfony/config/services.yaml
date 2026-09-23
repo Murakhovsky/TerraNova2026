@@ -1668,15 +1668,19 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
-  App\Web\Sales\ClientCasePageController:
-    public: true
-    tags: ['controller.service_arguments']
-
   App\Web\Sales\ClientCaseInboxController:
     public: true
     tags: ['controller.service_arguments']
 
   App\Web\Sales\ClientCaseCollectionController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCaseWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCaseMutationController:
     public: true
     tags: ['controller.service_arguments']
 

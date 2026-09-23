@@ -20,16 +20,14 @@ PHASE 13 працює не з окремим доменом, а з залишк�
 
 ### Вхідні зв’язки Client Case
 
-`client_case/show.phtml`
+`symfony/templates/experience/client_case/show.html.twig`
 
-Остання raw read-only таблиця у Client Case Workspace переведена на canonical DataTable:
+Історично остання raw read-only таблиця у Client Case Workspace була переведена на canonical DataTable. Wave 13 Phase 4 після цього завершив повний Twig cutover:
 
-- inbound requests нормалізуються у `$inboundRows`;
-- intent, deal type, message і created-at залишаються scalar cells;
-- property relation використовує primary/secondary cell;
-- `_href` зберігає deep-link на `property/show/{slug}`, якщо заявка прив’язана до об’єкта;
-- empty state переходить у стандартний DataTable empty contract;
-- responsive mode — `cards`.
+- inbound relations тепер рендеряться responsive Entity Workspace cards;
+- property deep-link на `property/show/{slug}` збережений;
+- empty state використовує canonical `CosEmptyState`;
+- raw table/PHTML dependency видалений разом із `client_case/show.phtml`.
 
 Ця зміна не торкається Client Case mutations, AI actions, timeline, property-match forms або presentation sharing.
 
@@ -130,7 +128,7 @@ Product-level raw-table exceptions після post-freeze cleanup:
 
 ## Критерії завершення
 
-- Client Case Show не містить raw `tn-listing-table` для inbound relations;
+- Client Case Show є canonical Twig Entity Workspace і не містить raw tables або `tn-*` presentation;
 - property deep links збережені;
 - PHASE 12 workflow/mutation guards лишаються intact;
 - шість read-only runtime tables COS використовують canonical DataTable;
