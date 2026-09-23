@@ -537,6 +537,42 @@ V0.18 не створює нового learning lifecycle. Він робить V
 
 Workspace навмисно не має `Activate` action. Після materialization нова revision залишається `draft`, доки її окремо не активують через існуючий ICP / Qualification governance flow.
 
+## Experiments & Attribution
+
+V0.19 додає окремий measurement lifecycle:
+
+```text
+Hypothesis
+  ↓
+Experiment draft
+  ↓
+2–12 weighted variants
+  ↓
+RUNNING
+  ↓
+Candidate assignment
+  ├─ deterministic weighted split
+  └─ explicit manual variant
+  ↓
+GrowthOutcomeObservation
+  ↓
+Attribution Report
+  ↓
+COMPLETE → frozen ended_at window
+```
+
+Assignment immutable для пари `Experiment + Candidate`. Candidate з terminal Growth status або вже зафіксованим `won/lost/disqualified` outcome не може заднім числом увійти в новий experiment.
+
+Attribution rules:
+
+- outcome враховується лише якщо `observed_at >= assigned_at`;
+- completed experiment додатково обмежує `observed_at <= ended_at`;
+- funnel counts — distinct Candidates, а не кількість event rows;
+- won value бере останній `won` observation Candidate у межах attribution window;
+- один Candidate може брати участь у різних experiments, але лише в одному variant кожного experiment.
+
+V0.19 не робить statistical winner selection і не виконує variant config. Це measurement runtime; execution та decision policy лишаються окремими шарами.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -556,9 +592,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.18
+## Статус V0.19
 
-`process_state: to-be` поки навмисний. V0.18 додає Optimization Workspace поверх V0.17 runtime: evidence/recommendation/diff/actions доступні в `/growth/learning`, але mutation authority та draft-only materialization semantics не змінюються.
+`process_state: to-be` поки навмисний. V0.19 додає controlled Growth Experiments & Attribution: immutable Candidate assignment до variant і outcome attribution у bounded assignment/completion window. Experiment runtime вимірює ефект, але не виконує outreach і не оголошує winner.
 
 ## Карта коду
 
@@ -585,6 +621,8 @@ app/Domains/Growth/Application/Service/GrowthOptimizationService.php
 app/Domains/Growth/Application/AI/GrowthOptimizationPrompt.php
 app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthOptimizationGateway.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthOptimizationRepository.php
+app/Domains/Growth/Application/Service/GrowthExperimentService.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthExperimentRepository.php
 app/Domains/Growth/Automation/Event/GrowthOutcomeFeedbackConsumer.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthLearningRepository.php
 app/Domains/Growth/Application/AI/GrowthEngagementPrompt.php

@@ -381,4 +381,31 @@ Activation remains separate
 
 The page uses the canonical Growth API for mutations with CSRF and idempotency. It does not add a second Web mutation path and intentionally exposes no activation control.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation.
+V0.19 adds controlled Growth Experiments and outcome attribution:
+
+```text
+Experiment
+  hypothesis
+  dimension
+  primary outcome
+  weighted variants
+        ↓
+DRAFT → RUNNING ↔ PAUSED → COMPLETED → ARCHIVED
+        ↓
+Candidate assignment
+  deterministic weighted split
+  or explicit manual variant
+        ↓
+Growth-owned downstream outcomes
+        ↓
+variant attribution
+  reply / qualified / meeting / won / lost / disqualified
+  primary conversion rate
+  won value by currency
+```
+
+A Candidate may have only one immutable variant assignment per experiment. New assignments are rejected after a terminal Growth outcome. Attribution starts at `assigned_at`; a completed experiment freezes its window at `ended_at`. Counts use distinct Candidates, and won economic value uses the latest won observation inside the assignment window.
+
+The runtime deliberately does not select a winner or execute the tested channel/message. Experiment measurement and execution remain separate authorities.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution, Experiment Workspace and autonomous activation.

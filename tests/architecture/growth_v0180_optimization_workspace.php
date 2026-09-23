@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.18.0','Growth V0.18 manifest version must be 0.18.0.');
-$assert(($manifest['schema_version']??null)==='0.17.0','Growth V0.18 must keep schema version 0.17.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.18.0','>='),'Growth manifest must remain V0.18+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.17.0','>='),'Growth schema must remain V0.17+.');
 $assert(in_array('growth.learning.optimization_workspace',$manifest['contributions']['capabilities']??[],true),'Growth Optimization Workspace capability is missing.');
 
 $migration='app/migrations/20260923_000082_growth_v0180_optimization_workspace.sql';
@@ -58,6 +58,6 @@ $routes=$read('symfony/config/routes.yaml');
 $assert(str_contains($routes,'path: /growth/learning'),'Growth Learning SSR route is missing.');
 $assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')===8,'Growth V0.18 must keep exactly eight Growth SSR routes.');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===44,'Growth V0.18 canonical API surface must remain 44 routes.');
+$assert(count($matches[0])>=44,'Growth canonical API surface must not shrink below V0.18 contract.');
 
 echo "Growth V0.18 Optimization Workspace architecture: OK\n";

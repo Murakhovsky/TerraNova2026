@@ -568,6 +568,18 @@ services:
   Domains\Growth\Application\Contract\GrowthOptimizationBoundary:
     alias: Domains\Growth\Application\Service\GrowthOptimizationService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthExperimentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthExperimentRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthExperimentRepository
+
+  Domains\Growth\Application\Service\GrowthExperimentService: ~
+
+  Domains\Growth\Application\Contract\GrowthExperimentBoundary:
+    alias: Domains\Growth\Application\Service\GrowthExperimentService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

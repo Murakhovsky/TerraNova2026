@@ -642,6 +642,67 @@ cos_api_v1_growth_optimization_materialize:
   requirements: { recommendationId: '[A-Za-z0-9_-]{8,80}' }
 
 
+cos_api_v1_growth_experiments_create:
+  path: /api/v1/growth/experiments
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createExperiment
+  methods: [POST]
+
+cos_api_v1_growth_experiments:
+  path: /api/v1/growth/experiments
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experiments
+  methods: [GET]
+
+cos_api_v1_growth_experiment:
+  path: /api/v1/growth/experiments/{id}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experiment
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_start:
+  path: /api/v1/growth/experiments/{id}/start
+  controller: App\Http\Api\V1\Controller\GrowthApiController::startExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_pause:
+  path: /api/v1/growth/experiments/{id}/pause
+  controller: App\Http\Api\V1\Controller\GrowthApiController::pauseExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_resume:
+  path: /api/v1/growth/experiments/{id}/resume
+  controller: App\Http\Api\V1\Controller\GrowthApiController::resumeExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_complete:
+  path: /api/v1/growth/experiments/{id}/complete
+  controller: App\Http\Api\V1\Controller\GrowthApiController::completeExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_archive:
+  path: /api/v1/growth/experiments/{id}/archive
+  controller: App\Http\Api\V1\Controller\GrowthApiController::archiveExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_assign:
+  path: /api/v1/growth/experiments/{id}/assignments/{candidateId}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::assignExperimentCandidate
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    candidateId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_experiment_report:
+  path: /api/v1/growth/experiments/{id}/report
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experimentReport
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
 cos_api_v1_growth_handoff_targets:
   path: /api/v1/growth/handoff/targets
   controller: App\Http\Api\V1\Controller\GrowthApiController::handoffTargets

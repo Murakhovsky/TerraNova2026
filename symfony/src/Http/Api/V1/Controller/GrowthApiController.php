@@ -9,6 +9,7 @@ use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
+use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthLearningBoundary;
@@ -371,6 +372,80 @@ final readonly class GrowthApiController
             ),201);
     }
 
+    public function createExperiment(Request $request): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->experiments->createExperiment(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ),201);
+    }
+
+    public function experiments(Request $request): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>[
+            'experiments'=>$this->experiments->experiments($tenant->organizationId()->value(),[
+                'q'=>$request->query->get('q'),
+                'status'=>$request->query->get('status'),
+                'dimension'=>$request->query->get('dimension'),
+            ],200),
+        ]);
+    }
+
+    public function experiment(string $id): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->experiments->experimentBrief($tenant->organizationId()->value(),$id));
+    }
+
+    public function startExperiment(Request $request,string $id): JsonResponse
+    {
+        return $this->experimentTransition($request,$id,'start');
+    }
+
+    public function pauseExperiment(Request $request,string $id): JsonResponse
+    {
+        return $this->experimentTransition($request,$id,'pause');
+    }
+
+    public function resumeExperiment(Request $request,string $id): JsonResponse
+    {
+        return $this->experimentTransition($request,$id,'resume');
+    }
+
+    public function completeExperiment(Request $request,string $id): JsonResponse
+    {
+        return $this->experimentTransition($request,$id,'complete');
+    }
+
+    public function archiveExperiment(Request $request,string $id): JsonResponse
+    {
+        return $this->experimentTransition($request,$id,'archive');
+    }
+
+    public function assignExperimentCandidate(Request $request,string $id,string $candidateId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$candidateId):array{
+            $input=$this->input($request);
+            $variant=$input['variant_key']??null;
+            if($variant!==null&&!is_string($variant))throw new InvalidArgumentException('variant_key must be null or string.');
+            return $this->experiments->assignCandidate(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$candidateId,
+                $variant===null?null:trim($variant),$key,
+            );
+        },201);
+    }
+
+    public function experimentReport(string $id): JsonResponse
+    {
+        return $this->read(function(TenantContext $tenant)use($id):array{
+            $brief=$this->experiments->experimentBrief($tenant->organizationId()->value(),$id);
+            return [
+                'experiment'=>$brief['experiment']??null,
+                'attribution'=>$brief['attribution']??null,
+            ];
+        });
+    }
+
     public function handoffTargets(): JsonResponse
     {
         return $this->read(fn(TenantContext $tenant):array=>['targets'=>$this->handoff->targets()]);
@@ -386,6 +461,22 @@ final readonly class GrowthApiController
     {
         return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
             $this->handoff->dispatch($tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$key),202);
+    }
+
+    private function experimentTransition(Request $request,string $id,string $transition): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($id,$transition):array{
+            $organizationId=$tenant->organizationId()->value();
+            $actorId=$this->actor($tenant);
+            return match($transition){
+                'start'=>$this->experiments->startExperiment($organizationId,$actorId,$correlation,$id,$key),
+                'pause'=>$this->experiments->pauseExperiment($organizationId,$actorId,$correlation,$id,$key),
+                'resume'=>$this->experiments->resumeExperiment($organizationId,$actorId,$correlation,$id,$key),
+                'complete'=>$this->experiments->completeExperiment($organizationId,$actorId,$correlation,$id,$key),
+                'archive'=>$this->experiments->archiveExperiment($organizationId,$actorId,$correlation,$id,$key),
+                default=>throw new InvalidArgumentException('Unsupported Growth experiment transition.'),
+            };
+        });
     }
 
     private function candidateReasonMutation(Request $request,string $id,string $operation): JsonResponse

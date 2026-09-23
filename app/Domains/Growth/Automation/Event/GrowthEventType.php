@@ -39,6 +39,13 @@ final class GrowthEventType
     public const ENGAGEMENT_RECOMMENDATION_SUPERSEDED = 'growth.engagement.recommendation_superseded';
     public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
     public const OUTCOME_RECORDED = 'growth.outcome.recorded';
+    public const EXPERIMENT_DRAFTED = 'growth.experiment.drafted';
+    public const EXPERIMENT_STARTED = 'growth.experiment.started';
+    public const EXPERIMENT_PAUSED = 'growth.experiment.paused';
+    public const EXPERIMENT_RESUMED = 'growth.experiment.resumed';
+    public const EXPERIMENT_COMPLETED = 'growth.experiment.completed';
+    public const EXPERIMENT_ARCHIVED = 'growth.experiment.archived';
+    public const EXPERIMENT_CANDIDATE_ASSIGNED = 'growth.experiment.candidate_assigned';
     public const OPTIMIZATION_RUN_STARTED = 'growth.optimization.run_started';
     public const OPTIMIZATION_RUN_COMPLETED = 'growth.optimization.run_completed';
     public const OPTIMIZATION_RUN_FAILED = 'growth.optimization.run_failed';
@@ -96,6 +103,13 @@ final class GrowthEventType
             self::ENGAGEMENT_RECOMMENDATION_SUPERSEDED,
             self::LEARNING_BINDING_CREATED,
             self::OUTCOME_RECORDED,
+            self::EXPERIMENT_DRAFTED,
+            self::EXPERIMENT_STARTED,
+            self::EXPERIMENT_PAUSED,
+            self::EXPERIMENT_RESUMED,
+            self::EXPERIMENT_COMPLETED,
+            self::EXPERIMENT_ARCHIVED,
+            self::EXPERIMENT_CANDIDATE_ASSIGNED,
             self::OPTIMIZATION_RUN_STARTED,
             self::OPTIMIZATION_RUN_COMPLETED,
             self::OPTIMIZATION_RUN_FAILED,
