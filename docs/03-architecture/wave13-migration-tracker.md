@@ -16,6 +16,11 @@ kind: architecture
 | VR-002 | `/sales/dashboard` | Workspace | Sales | Domain Dashboard | P0 | Twig | DONE |
 | VR-003 | `/sales/leads` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | DONE |
+| VR-005 | `/sales/today` | Workspace | Sales | Operational Queue | P0 | Twig | QA |
+| VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | BACKLOG |
+| VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | BACKLOG |
+| VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | BACKLOG |
+| VR-009 | `/sales/admin` | System | Sales | System / Control Surface | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -26,6 +31,8 @@ VR-003 використовує Collection archetype з `EntityList + FilterBar`
 VR-004 завершений: Deal Workspace працює через `CosWorkspace + EntityHeader`, окремий ViewModel/Presenter і Stimulus runtime; legacy PHTML ownership видалено.
 
 Phase 2.5 консолідує Golden Four і вводить вибіркову stability policy: стабілізуються лише чотири доведені archetypes та мінімальний Pattern core, решта Visual System лишається experimental.
+
+VR-005 переводить Sales Today на Operational Queue: Query → Presenter/ViewModel → Twig + Stimulus, зі збереженням approval/complete/reschedule API contracts.
 
 ## Зменшення legacy
 

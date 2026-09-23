@@ -10,7 +10,8 @@ $projection = $read('app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSales
 $base = $read('app/Domains/Sales/Application/Contract/SalesWorkspaceReadModelInterface.php');
 $services = $read('app/Bootstrap/SalesServices.php');
 $web = $read('symfony/src/Web/Sales/SalesPageController.php');
-$today = $read('app/Interfaces/Web/View/sales/today.phtml');
+$today = $read('symfony/templates/experience/sales/today.html.twig');
+$todayController = $read('symfony/assets/controllers/sales_today_controller.js');
 $leads = $read('symfony/templates/experience/sales/leads.html.twig');
 $leadController = $read('symfony/assets/controllers/sales_lead_controller.js');
 $pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
@@ -58,8 +59,11 @@ foreach (['name="owner_id"', 'name="priority"', 'name="source"', 'attention_reas
 foreach (['Funnel', 'Historical stage transitions', 'Pipeline health', 'Manager performance', 'Pending approvals'] as $marker) {
     $assert(str_contains($director, $marker), 'Director missing: ' . $marker);
 }
-foreach (['initToday', 'error.status === 409', 'concurrent_stage_change'] as $marker) {
-    $assert(str_contains($js, $marker), 'Retained legacy Sales JS missing shared interaction: ' . $marker);
+foreach (['error.status === 409', 'concurrent_stage_change'] as $marker) {
+    $assert(str_contains($js, $marker), 'Retained legacy Sales JS missing shared Pipeline interaction: ' . $marker);
+}
+foreach (['/api/v1/sales/approvals/', '/activities/', '/complete', '/reschedule', 'X-CSRF-Token', 'X-Idempotency-Key'] as $marker) {
+    $assert(str_contains($todayController, $marker), 'Sales Today Stimulus controller missing: ' . $marker);
 }
 foreach (['/api/v1/sales/actions/', '/communications', 'refreshIntelligence', 'click->sales-deal#decision', 'X-Idempotency-Key'] as $marker) {
     $assert(str_contains($dealController, $marker), 'Deal Stimulus controller missing: ' . $marker);
@@ -73,6 +77,9 @@ foreach ([
     'symfony/src/Application/Sales/Query/GetSalesDealWorkspaceQueryHandler.php',
     'symfony/src/Web/Sales/SalesDealController.php',
     'symfony/src/Web/Sales/SalesDealPresenter.php',
+    'symfony/src/Application/Sales/Query/GetSalesTodayQueryHandler.php',
+    'symfony/src/Web/Sales/SalesTodayController.php',
+    'symfony/src/Web/Sales/SalesTodayPresenter.php',
 ] as $file) {
     $output = [];
     $code = 0;

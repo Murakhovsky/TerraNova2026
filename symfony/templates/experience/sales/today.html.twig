@@ -1,0 +1,97 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Today | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-controller="sales-today"
+    data-sales-today-csrf-value="{{ csrfToken }}"
+    data-sales-today-root
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Operational inbox"
+        title="Today"
+        subtitle="Сигнал → рішення → дія. Усі пріоритетні Sales queues в одному Operational Queue."
+        metaValue="{{ today.total }}"
+        metaLabel="операційних сигналів"
+    >
+        <twig:CosButton label="Pipeline" href="/sales/pipeline" variant="ghost" />
+        <twig:CosButton label="Deals" href="/sales/deals" variant="primary" />
+    </twig:CosPageHeader>
+
+    <nav class="cos-action-bar cos-action-bar--start" aria-label="Sales work scope">
+        <a
+            class="cos-button {{ today.scope == 'mine' ? 'cos-button--primary' : 'cos-button--ghost' }}"
+            href="/sales/today?scope=mine"
+            {% if today.scope == 'mine' %}aria-current="page"{% endif %}
+        >My Work</a>
+        <a
+            class="cos-button {{ today.scope == 'team' ? 'cos-button--primary' : 'cos-button--ghost' }}"
+            href="/sales/today?scope=team"
+            {% if today.scope == 'team' %}aria-current="page"{% endif %}
+        >Team</a>
+    </nav>
+
+    {% if today.error %}
+        <twig:CosAlert title="Sales Today недоступний" copy="{{ today.error }}" tone="danger" />
+    {% else %}
+        <div class="cos-section-grid">
+            {% for section in today.sections %}
+                <section class="cos-card" aria-labelledby="sales-today-{{ section.key }}">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">{{ section.eyebrow }}</p>
+                            <h2 id="sales-today-{{ section.key }}" class="cos-card__title">{{ section.label }} · {{ section.items|length }}</h2>
+                            <p class="cos-card__copy">{{ section.description }}</p>
+                        </div>
+                    </div>
+
+                    {% if section.items is empty %}
+                        <twig:CosEmptyState
+                            title="Немає елементів"
+                            copy="У цій operational queue зараз немає дій."
+                        />
+                    {% else %}
+                        <div class="cos-entity-list" role="list">
+                            {% for item in section.items %}
+                                <article class="cos-pattern-stack" data-sales-today-item>
+                                    <twig:CosEntityListItem
+                                        title="{{ item.title }}"
+                                        subtitle="{{ item.subtitle }}"
+                                        meta="{{ item.meta }}"
+                                        statusLabel="{{ item.statusLabel }}"
+                                        statusTone="{{ item.statusTone }}"
+                                        href="{{ item.href }}"
+                                    />
+
+                                    {% if item.approvalId %}
+                                        <twig:CosActionBar label="Approval actions">
+                                            <div data-sales-approval data-approval-id="{{ item.approvalId }}">
+                                                <button type="button" class="cos-button cos-button--primary cos-button--sm" data-decision="approve" data-action="click->sales-today#approval">Approve</button>
+                                                <button type="button" class="cos-button cos-button--ghost cos-button--sm" data-decision="reject" data-action="click->sales-today#approval">Reject</button>
+                                            </div>
+                                        </twig:CosActionBar>
+                                    {% elseif item.activityId and item.dealId %}
+                                        <twig:CosActionBar label="Activity actions">
+                                            <div data-deal-id="{{ item.dealId }}" data-activity-id="{{ item.activityId }}">
+                                                <button type="button" class="cos-button cos-button--primary cos-button--sm" data-sales-activity-complete data-action="click->sales-today#complete">Complete</button>
+                                                <button type="button" class="cos-button cos-button--ghost cos-button--sm" data-sales-activity-reschedule data-action="click->sales-today#reschedule">Reschedule</button>
+                                            </div>
+                                        </twig:CosActionBar>
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </section>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <p class="cos-card__copy" data-sales-today-target="status" data-sales-today-status aria-live="polite"></p>
+</section>
+{% endblock %}

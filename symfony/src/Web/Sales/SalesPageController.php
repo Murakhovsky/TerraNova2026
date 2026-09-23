@@ -38,19 +38,6 @@ final readonly class SalesPageController
             ]);
     }
 
-    public function today(Request $request): Response
-    {
-        return $this->managerPage($request, 'Sales Today', 'today', 'sales/today',
-            function(TenantContext $tenant) use ($request): array {
-                $scope = strtolower(trim((string) $request->query->get('scope', 'mine')));
-                $ownerId = $scope === 'team' ? 0 : (int) $tenant->userId()->value();
-                return [
-                    'scope' => $scope === 'team' ? 'team' : 'mine',
-                    'sections' => $this->workspace->today($tenant->organizationId()->value(), $ownerId),
-                ];
-            });
-    }
-
     public function deals(Request $request): Response
     {
         return $this->managerPage($request, 'Sales Deals', 'deals', 'sales/deals',

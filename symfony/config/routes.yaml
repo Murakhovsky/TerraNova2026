@@ -1477,7 +1477,7 @@ cos_web_cos_approval_reject:
 # Final Web retirement — Sales SSR
 cos_web_sales_root:
   path: /sales
-  controller: App\Web\Sales\SalesPageController::today
+  controller: App\Web\Sales\SalesTodayController::index
   methods: [GET]
 
 cos_web_sales_dashboard:
@@ -1487,7 +1487,7 @@ cos_web_sales_dashboard:
 
 cos_web_sales_today:
   path: /sales/today
-  controller: App\Web\Sales\SalesPageController::today
+  controller: App\Web\Sales\SalesTodayController::index
   methods: [GET]
 
 cos_web_sales_pipeline:

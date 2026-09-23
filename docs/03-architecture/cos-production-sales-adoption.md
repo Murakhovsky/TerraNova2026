@@ -103,10 +103,10 @@ Sales read model
 
 ### Операційний inbox (`Today`)
 
-`sales/today.phtml`
+`symfony/templates/experience/sales/today.html.twig`
 
-- вісім operational queues збираються через canonical Panel;
-- domain-specific list body винесено в `components/sales/today_section.phtml`;
+- вісім operational queues збираються через canonical Operational Queue composition;
+- queue items використовують `CosEntityListItem`, а швидкі дії — `CosActionBar`;
 - approval, complete і reschedule data attributes збережені;
 - My Work / Team scope semantics не змінені.
 

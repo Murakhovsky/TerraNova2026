@@ -9,6 +9,9 @@ on:
       - 'symfony/assets/styles/**'
       - 'symfony/templates/**'
       - 'symfony/src/Web/Experience/**'
+      - 'symfony/src/Web/Sales/**'
+      - 'symfony/src/Application/Sales/**'
+      - 'symfony/assets/controllers/sales_*_controller.js'
       - 'tests/architecture/web_experience_wave13_*.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_geometry.php'
@@ -24,6 +27,9 @@ on:
       - 'symfony/assets/styles/**'
       - 'symfony/templates/**'
       - 'symfony/src/Web/Experience/**'
+      - 'symfony/src/Web/Sales/**'
+      - 'symfony/src/Application/Sales/**'
+      - 'symfony/assets/controllers/sales_*_controller.js'
       - 'tests/architecture/web_experience_wave13_*.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_geometry.php'
@@ -55,6 +61,7 @@ jobs:
           php tests/architecture/web_experience_wave13_golden_four_consolidation.php
           php tests/architecture/web_experience_wave13_golden_four_quality.php
           php tests/architecture/web_experience_wave13_stability.php
+          php tests/architecture/web_experience_wave13_sales_today.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php
