@@ -802,6 +802,26 @@ Domain persistence містить лише opaque `credential_reference`. API re
 
 Поточний envelope: `items[]` із `id`, `occurred_at`, `source_reference`, `facts`. Collector cursorless; durable source receipts виконують dedupe між повторними polling runs.
 
+## Credentialed Source Workspace
+
+V0.29 додає UI без нового mutation authority:
+
+```text
+/growth/collectors
+        ↓
+GrowthJsonSignalSourceBoundary::sources()
+        ↓
+sanitized source rows
+
+browser create / toggle
+        ↓
+/api/v1/growth/json-signal-sources/*
+        ↓
+V0.28 Application Boundary
+```
+
+Existing `credential_reference` не повертається у Workspace. Create form приймає reference як write-only configuration value; після створення UI показує лише `credential_configured`, auth mode/header та source mapping.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -821,9 +841,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.28
+## Статус V0.29
 
-`process_state: to-be` поки навмисний. V0.28 додає credentialed provider-neutral JSON pull intake поверх canonical Signal Collector runtime. Mutation authority не змінюється: provider data стає Signal тільки через collector dedupe/run/Event/Audit path; credentials залишаються у Platform Vault.
+`process_state: to-be` поки навмисний. V0.29 додає operational Workspace surface для credentialed JSON sources поверх V0.28 runtime. SSR controller лише читає sanitized source projection; create/enable/disable виконуються через canonical Growth API.
 
 ## Карта коду
 

@@ -148,6 +148,7 @@ jobs:
           php tests/architecture/growth_v0260_rss_atom_collector.php
           php tests/architecture/growth_v0270_signal_feed_workspace.php
           php tests/architecture/growth_v0280_credentialed_json_collector.php
+          php tests/architecture/growth_v0290_json_signal_source_workspace.php
 
       - name: Process registry invariants
         run: |
@@ -256,6 +257,9 @@ jobs:
           php -l tests/architecture/growth_v0270_signal_feed_workspace.php
           php -l tests/unit/growth_v0280_credentialed_json_collector.php
           php -l tests/architecture/growth_v0280_credentialed_json_collector.php
+          php -l tests/architecture/growth_v0290_json_signal_source_workspace.php
+          php -l symfony/src/Web/Growth/GrowthPageController.php
+          php -l app/Interfaces/Web/View/growth/collectors.phtml
           php -l app/Infrastructure/Platform/Integration/EnvironmentCredentialVault.php
           php -l app/Domains/Growth/Application/Service/GrowthJsonSignalSourceService.php
           php -l app/Domains/Growth/Infrastructure/Feed/SafeHttpCredentialedJsonSignalReader.php

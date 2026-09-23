@@ -299,6 +299,79 @@ const initGrowthCollectors=(root)=>{
       }
     });
   });
+
+  root.querySelector('[data-growth-json-source-create]')?.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const status=form.querySelector('[data-growth-form-status]');
+    const button=form.querySelector('button[type="submit"]');
+    const values=new FormData(form);
+    const confidence=Number(values.get('confidence')??0.75);
+    const authMode=String(values.get('auth_mode')||'').trim();
+    const apiKeyHeader=String(values.get('api_key_header')||'').trim();
+    const payload={
+      name:String(values.get('name')||'').trim(),
+      url:String(values.get('url')||'').trim(),
+      auth_mode:authMode,
+      credential_reference:String(values.get('credential_reference')||'').trim(),
+      api_key_header:authMode==='api_key_header'?apiKeyHeader:null,
+      subject_type:String(values.get('subject_type')||'').trim(),
+      subject_id:String(values.get('subject_id')||'').trim(),
+      signal_type:String(values.get('signal_type')||'').trim(),
+      confidence,
+      enabled:values.get('enabled')!==null,
+    };
+    if(!payload.name||!payload.url||!payload.auth_mode||!payload.credential_reference||!payload.subject_type||!payload.subject_id||!payload.signal_type){
+      setStatus(status,'All JSON source mapping and credential fields are required.','error');
+      return;
+    }
+    if(!['bearer','api_key_header'].includes(authMode)){
+      setStatus(status,'Unsupported authentication mode.','error');
+      return;
+    }
+    if(authMode==='api_key_header'&&!/^X-[A-Za-z0-9-]{1,63}$/.test(apiKeyHeader)){
+      setStatus(status,'API key header must be a safe X-* header name.','error');
+      return;
+    }
+    if(!Number.isFinite(confidence)||confidence<0||confidence>1){
+      setStatus(status,'Confidence must be between 0 and 1.','error');
+      return;
+    }
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Adding JSON source…','loading');
+    try{
+      await mutation('/api/v1/growth/json-signal-sources',payload,root,form);
+      delete form.dataset.idempotencyKey;
+      setStatus(status,'JSON source added. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'JSON source creation failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
+  root.querySelectorAll('[data-growth-json-source-toggle]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const sourceId=form.dataset.sourceId||'';
+      const action=form.dataset.action||'';
+      if(!sourceId||!['enable','disable'].includes(action))return;
+      const status=form.querySelector('[data-growth-form-status]');
+      const button=form.querySelector('button[type="submit"]');
+      button?.setAttribute('disabled','disabled');
+      setStatus(status,action==='enable'?'Enabling…':'Disabling…','loading');
+      try{
+        await mutation('/api/v1/growth/json-signal-sources/'+encodeURIComponent(sourceId)+'/'+action,{},root,form);
+        delete form.dataset.idempotencyKey;
+        setStatus(status,'JSON source updated. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),250);
+      }catch(error){
+        setStatus(status,error.message||'JSON source update failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
 };
 
 const optimizationEndpoint=(recommendationId,suffix='')=>{

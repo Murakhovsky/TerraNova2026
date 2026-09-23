@@ -2,7 +2,7 @@
 title: Карта Web-поверхонь
 description: Канонічна продуктова карта Public, Portal і Workspace, власність маршрутів та правила індексації.
 status: active
-updated: 2026-09-21
+updated: 2026-09-24
 kind: ui
 ---
 
@@ -211,7 +211,7 @@ Diagnostic → COS / Diagnostics
 /growth/experiments/{id}
 ```
 
-Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer. `/growth/learning` також показує governed Optimization evidence/recommendation і виконує Generate / Accept / Dismiss / Materialize через canonical API; policy activation у Workspace навмисно відсутня. `/growth/experiments` і `/growth/experiments/{id}` показують experiment lifecycle, assignments та attribution; mutations ідуть через canonical Growth API, winner selection та outbound execution відсутні.
+Overview і list pages використовують read-only Growth Workspace projection. Candidate/Account detail pages складають existing application briefs; mutation actions проходять через `/api/v1/growth/*`, а не дублюють Domain lifecycle у Web layer. `/growth/learning` також показує governed Optimization evidence/recommendation і виконує Generate / Accept / Dismiss / Materialize через canonical API; policy activation у Workspace навмисно відсутня. `/growth/experiments` і `/growth/experiments/{id}` показують experiment lifecycle, assignments та attribution; mutations ідуть через canonical Growth API, winner selection та outbound execution відсутні. `/growth/collectors` керує RSS/Atom feeds і credentialed JSON API sources через їхні canonical Growth API boundaries; SSR surface лише читає sanitized source state і не рендерить stored credential references.
 
 ### Sales
 

@@ -601,4 +601,20 @@ The provider response contract is intentionally narrow:
 
 Vendor-specific payload translation belongs outside the Growth Domain. The transport is HTTPS/443 only, resolves public IPv4, pins DNS, follows no redirects, caps the response at 2 MB and uses the canonical ExternalCall resilience runtime.
 
+V0.29 makes V0.28 operational inside the existing Collectors workspace:
+
+```text
+/growth/collectors
+  ├─ RSS / Atom feeds
+  ├─ Credentialed JSON API sources
+  ├─ create source
+  ├─ enable / disable
+  ├─ registered collectors
+  └─ run history
+```
+
+The SSR controller reads JSON source state through `GrowthJsonSignalSourceBoundary::sources()`. Browser mutations use only `/api/v1/growth/json-signal-sources/*` with the existing CSRF and idempotency contract.
+
+Stored credential references are never rendered back into the workspace. The create form accepts a new opaque reference once; subsequent rows expose only credential-configured state, auth mode/header and source mapping.
+
 Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous activation.
