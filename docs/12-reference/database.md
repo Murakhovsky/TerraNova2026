@@ -50,6 +50,7 @@ generated: true
 | `growth` | `app/migrations/20260923_000080_growth_v0160_learning_workspace.sql` | — |
 | `growth` | `app/migrations/20260923_000081_growth_v0170_learning_optimization.sql` | `tn_growth_optimization_recommendations` |
 | `growth` | `app/migrations/20260923_000081_growth_v0170_learning_optimization.sql` | `tn_growth_optimization_runs` |
+| `growth` | `app/migrations/20260923_000082_growth_v0180_optimization_workspace.sql` | — |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

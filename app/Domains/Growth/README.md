@@ -362,4 +362,23 @@ separate human activation
 
 The model does not calculate source metrics from raw rows and cannot activate a policy. Server-side validation requires a minimum terminal sample, an active target, valid complete criteria, non-no-op change and evidence ids from the deterministic learning context. Materialization reuses the existing ICP / Qualification application boundaries and creates only the next draft revision.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation/optimization.
+V0.18 exposes the V0.17 optimization runtime inside the existing `/growth/learning` workspace:
+
+```text
+Learning evidence
+        ↓
+Optimization recommendation
+        ↓
+Current criteria ↔ Proposed criteria
+Risks / assumptions / confidence
+        ↓
+Generate / Accept / Dismiss
+        ↓
+Materialize draft
+        ↓
+Activation remains separate
+```
+
+The page uses the canonical Growth API for mutations with CSRF and idempotency. It does not add a second Web mutation path and intentionally exposes no activation control.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation.

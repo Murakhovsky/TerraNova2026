@@ -519,6 +519,24 @@ Materialization не обходить Domain logic: вона викликає ч
 
 Мінімальний terminal sample для генерації recommendation — 8 Candidates. Це safety floor, а не статистична гарантія достатності; risks/assumptions і confidence залишаються first-class частиною recommendation.
 
+## Optimization Workspace
+
+V0.18 не створює нового learning lifecycle. Він робить V0.17 керованим із Workspace:
+
+```text
+/growth/learning
+  ├─ outcome KPIs
+  ├─ deterministic optimization evidence
+  ├─ latest recommendation
+  ├─ current vs proposed criteria
+  ├─ risks / assumptions / confidence
+  └─ Generate / Accept / Dismiss / Materialize
+```
+
+Усі mutation actions йдуть через canonical `/api/v1/growth/learning/optimization/*` endpoints із CSRF та idempotency. SSR controller лише читає `GrowthOptimizationBoundary::optimizationBrief()`.
+
+Workspace навмисно не має `Activate` action. Після materialization нова revision залишається `draft`, доки її окремо не активують через існуючий ICP / Qualification governance flow.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -538,9 +556,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.17
+## Статус V0.18
 
-`process_state: to-be` поки навмисний. V0.17 додає governed Learning Optimization поверх durable Growth outcomes: deterministic evidence aggregation → recommendation → Accept/Dismiss → optional materialization у draft ICP / Qualification Policy revision. Activation лишається окремою human-controlled операцією.
+`process_state: to-be` поки навмисний. V0.18 додає Optimization Workspace поверх V0.17 runtime: evidence/recommendation/diff/actions доступні в `/growth/learning`, але mutation authority та draft-only materialization semantics не змінюються.
 
 ## Карта коду
 

@@ -147,9 +147,91 @@ const initGrowthCollectors=(root)=>{
   });
 };
 
+const optimizationEndpoint=(recommendationId,suffix='')=>{
+  const base='/api/v1/growth/learning/optimization/recommendations';
+  return recommendationId
+    ? base+'/'+encodeURIComponent(recommendationId)+(suffix?'/'+suffix:'')
+    : base;
+};
+
+const initGrowthLearning=(root)=>{
+  const status=root.querySelector('[data-growth-optimization-status]');
+
+  root.querySelector('[data-growth-optimization-generate]')?.addEventListener('click',async(event)=>{
+    const button=event.currentTarget;
+    button.disabled=true;
+    setStatus(status,'Generating evidence-bound optimization…','loading');
+    try{
+      const response=await mutation(optimizationEndpoint(''),{},root,button);
+      const data=response?.data??response;
+      if(data?.run?.status==='failed'){
+        delete button.dataset.idempotencyKey;
+        throw new Error(data?.run?.error_summary||'Optimization generation failed.');
+      }
+      delete button.dataset.idempotencyKey;
+      setStatus(status,'Recommendation generated. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Optimization generation failed.','error');
+      button.disabled=false;
+    }
+  });
+
+  root.querySelectorAll('[data-growth-optimization-decision]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const decision=form.dataset.growthOptimizationDecision||'';
+      const recommendationId=form.dataset.recommendationId||'';
+      if(!recommendationId||!['accept','dismiss'].includes(decision))return;
+      const localStatus=form.querySelector('[data-growth-form-status]')||status;
+      const button=form.querySelector('button[type="submit"]');
+      const reason=String(new FormData(form).get('reason')||'').trim();
+      if(!reason){
+        setStatus(localStatus,'Decision reason is required.','error');
+        return;
+      }
+      button?.setAttribute('disabled','disabled');
+      setStatus(localStatus,decision==='accept'?'Accepting recommendation…':'Dismissing recommendation…','loading');
+      try{
+        await mutation(optimizationEndpoint(recommendationId,decision),{reason},root,form);
+        delete form.dataset.idempotencyKey;
+        setStatus(localStatus,'Decision saved. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),250);
+      }catch(error){
+        setStatus(localStatus,error.message||'Optimization decision failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
+
+  root.querySelector('[data-growth-optimization-materialize]')?.addEventListener('click',async(event)=>{
+    const button=event.currentTarget;
+    const recommendationId=button.dataset.recommendationId||'';
+    if(!recommendationId)return;
+    button.disabled=true;
+    setStatus(status,'Creating draft revision…','loading');
+    try{
+      const response=await mutation(optimizationEndpoint(recommendationId,'materialize'),{},root,button);
+      const data=response?.data??response;
+      const recommendation=data?.recommendation??{};
+      delete button.dataset.idempotencyKey;
+      if(recommendation?.status==='stale'){
+        setStatus(status,'Recommendation became stale because the base policy changed. Refreshing…','warning');
+      }else{
+        setStatus(status,'Draft revision created. Activation remains separate. Refreshing…','success');
+      }
+      window.setTimeout(()=>window.location.reload(),350);
+    }catch(error){
+      setStatus(status,error.message||'Optimization materialization failed.','error');
+      button.disabled=false;
+    }
+  });
+};
+
 const boot=()=>{
   document.querySelectorAll('[data-growth-candidate]').forEach(initGrowthCandidate);
   document.querySelectorAll('[data-growth-collectors]').forEach(initGrowthCollectors);
+  document.querySelectorAll('[data-growth-learning]').forEach(initGrowthLearning);
 };
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});

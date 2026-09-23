@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.17.0','Growth V0.17 manifest version must be 0.17.0.');
-$assert(($manifest['schema_version']??null)==='0.17.0','Growth V0.17 schema version must be 0.17.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.17.0','>='),'Growth manifest must remain V0.17+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.17.0','>='),'Growth schema must remain V0.17+.');
 $assert(in_array('growth.learning.optimize',$manifest['contributions']['capabilities']??[],true),'Growth learning optimization capability is missing.');
 
 $migration='app/migrations/20260923_000081_growth_v0170_learning_optimization.sql';

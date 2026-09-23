@@ -14,6 +14,7 @@ use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthLearningBoundary;
+use Domains\Growth\Application\Contract\GrowthOptimizationBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
@@ -43,6 +44,7 @@ final readonly class GrowthPageController
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthDecisionBoundary $decisions,
         private GrowthLearningBoundary $learning,
+        private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
     ) {}
 
@@ -129,6 +131,7 @@ final readonly class GrowthPageController
             fn(TenantContext $tenant):array=>[
                 'workspace'=>[
                     'learning'=>$this->workspace->learningOverview($tenant->organizationId()->value()),
+                    'optimization'=>$this->optimization->optimizationBrief($tenant->organizationId()->value()),
                     'outcomes'=>$this->workspace->outcomes($tenant->organizationId()->value(),[
                         'q'=>$request->query->get('q'),
                         'outcome_type'=>$request->query->get('outcome_type'),
