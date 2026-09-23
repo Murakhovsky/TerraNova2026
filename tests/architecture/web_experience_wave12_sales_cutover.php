@@ -12,6 +12,7 @@ function expectSalesCutover(bool $condition, string $message): void
 
 $routes = file_get_contents($root . '/symfony/config/routes.yaml');
 $production = file_get_contents($root . '/symfony/src/Web/Sales/SalesWorkspaceController.php');
+$dashboardController = file_get_contents($root . '/symfony/src/Web/Sales/SalesDashboardController.php');
 $legacy = file_get_contents($root . '/symfony/src/Web/Sales/SalesPageController.php');
 $services = file_get_contents($root . '/symfony/config/services.yaml');
 $leadRuntime = file_get_contents($root . '/symfony/assets/controllers/sales_lead_controller.js');
@@ -30,7 +31,7 @@ $actionService = file_get_contents($root . '/app/Kernel/Action/Service/ActionSer
 $approvalService = file_get_contents($root . '/app/Kernel/Approval/Service/ApprovalService.php');
 
 foreach ([
-    "cos_web_sales_dashboard:\n  path: /sales/dashboard\n  controller: App\\Web\\Sales\\SalesWorkspaceController::dashboard",
+    "cos_web_sales_dashboard:\n  path: /sales/dashboard\n  controller: App\\Web\\Sales\\SalesDashboardController::index",
     "cos_web_sales_leads:\n  path: /sales/leads\n  controller: App\\Web\\Sales\\SalesWorkspaceController::leads",
     "cos_web_sales_lead:\n  path: /sales/leads/{id}\n  controller: App\\Web\\Sales\\SalesWorkspaceController::lead",
 ] as $contract) {
@@ -51,6 +52,7 @@ expectSalesCutover(!is_file($root . '/app/Interfaces/Web/View/sales/leads.phtml'
 expectSalesCutover(!str_contains($legacy, 'function dashboard('), 'Legacy SalesPageController dashboard action must be removed.');
 expectSalesCutover(!str_contains($legacy, 'function leads('), 'Legacy SalesPageController leads action must be removed.');
 expectSalesCutover(str_contains($services, 'App\\Web\\Sales\\SalesWorkspaceController:'), 'Production SalesWorkspaceController service wiring is missing.');
+expectSalesCutover(str_contains($services, 'App\\Web\\Sales\\SalesDashboardController:'), 'Production SalesDashboardController service wiring is missing.');
 
 foreach ([
     '/sales/reference/dashboard',

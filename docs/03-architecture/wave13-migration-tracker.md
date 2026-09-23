@@ -13,11 +13,13 @@ kind: architecture
 | ID | Route | Surface | Domain | Archetype | Priority | Target | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | VR-001 | `/admin` | Workspace | Core | Executive Dashboard | P0 | Twig | QA |
-| VR-002 | `/sales/dashboard` | Workspace | Sales | Domain Dashboard | P0 | Twig | BACKLOG |
+| VR-002 | `/sales/dashboard` | Workspace | Sales | Domain Dashboard | P0 | Twig | QA |
 | VR-003 | `/sales/leads` | Workspace | Sales | Collection | P0 | Twig | BACKLOG |
 | VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | BACKLOG |
 
 VR-001 уже відрізаний від legacy PHTML і page-specific Vite entrypoint. Статус стане `DONE` після production CI та merge.
+
+VR-002 уже нормалізований як Domain Dashboard: окремий ViewModel/Presenter, PagePresentation contract, PageHeader і реальний KpiStrip без нового page-specific CSS.
 
 ## Зменшення legacy
 

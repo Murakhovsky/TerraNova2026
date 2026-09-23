@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use App\Web\Experience\Extension\ProviderBackedShellNavigation;
-use App\Web\Experience\Workspace\WorkspaceCompositionResolver;
-use App\Web\Sales\SalesWorkspaceController;
+use App\Web\Experience\Archetype\PagePresentationFactory;
+use App\Web\Experience\Shell\WorkspaceShellFactory;
+use App\Web\Sales\SalesDashboardController;
+use App\Web\Sales\SalesDashboardPresenter;
 use Kernel\Application\Bus\QueryBusInterface;
 use Kernel\Application\Query\QueryInterface;
 use Kernel\Identity\Model\OrganizationRole;
@@ -41,22 +42,23 @@ $queries = new class implements QueryBusInterface {
     }
 };
 
-$controllerFor = static function (?TenantContext $context) use ($queries): SalesWorkspaceController {
+$controllerFor = static function (?TenantContext $context) use ($queries): SalesDashboardController {
     $tenants = new class($context) implements TenantContextProviderInterface {
         public function __construct(private readonly ?TenantContext $context) {}
         public function current(): ?TenantContext { return $this->context; }
     };
 
-    return new SalesWorkspaceController(
+    return new SalesDashboardController(
         withoutConstructor(Environment::class),
         $queries,
         $tenants,
-        withoutConstructor(ProviderBackedShellNavigation::class),
-        withoutConstructor(WorkspaceCompositionResolver::class),
+        withoutConstructor(WorkspaceShellFactory::class),
+        withoutConstructor(PagePresentationFactory::class),
+        withoutConstructor(SalesDashboardPresenter::class),
     );
 };
 
-$anonymous = $controllerFor(null)->dashboard();
+$anonymous = $controllerFor(null)->index();
 expectSalesAccess($anonymous instanceof RedirectResponse, 'Anonymous Sales access must redirect.');
 expectSalesAccess($anonymous->getTargetUrl() === '/auth/login', 'Anonymous Sales access must redirect to canonical login.');
 expectSalesAccess($queries->calls === 0, 'Anonymous Sales access must not hit QueryBus.');
@@ -66,7 +68,7 @@ $employee = new TenantContext(
     OrganizationId::fromString('tenant-a'),
     OrganizationRole::fromString('employee'),
 );
-$forbidden = $controllerFor($employee)->dashboard();
+$forbidden = $controllerFor($employee)->index();
 expectSalesAccess($forbidden instanceof Response && $forbidden->getStatusCode() === 403, 'Non-manager Sales access must return 403.');
 expectSalesAccess($queries->calls === 0, 'Forbidden Sales access must not hit QueryBus.');
 

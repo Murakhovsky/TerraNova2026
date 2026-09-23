@@ -1482,7 +1482,7 @@ cos_web_sales_root:
 
 cos_web_sales_dashboard:
   path: /sales/dashboard
-  controller: App\Web\Sales\SalesWorkspaceController::dashboard
+  controller: App\Web\Sales\SalesDashboardController::index
   methods: [GET]
 
 cos_web_sales_today:
