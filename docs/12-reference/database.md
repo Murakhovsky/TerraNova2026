@@ -55,6 +55,7 @@ generated: true
 | `growth` | `app/migrations/20260923_000083_growth_v0190_experiments_attribution.sql` | `tn_growth_experiments` |
 | `growth` | `app/migrations/20260923_000084_growth_v0200_experiment_workspace.sql` | — |
 | `growth` | `app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql` | `tn_growth_experiment_decision_recommendations` |
+| `growth` | `app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql` | `tn_growth_experiment_decision_runs` |
 | `growth` | `app/migrations/20260923_000086_growth_v0220_engagement_execution_bridge.sql` | `tn_growth_engagement_execution_links` |
 | `growth` | `app/migrations/20260923_000087_growth_v0230_engagement_execution_workspace.sql` | — |
 | `growth` | `app/migrations/20260923_000089_growth_v0240_pre_handoff_execution.sql` | — |
@@ -63,7 +64,7 @@ generated: true
 | `growth` | `app/migrations/20260923_000092_growth_v0270_signal_feed_workspace.sql` | — |
 | `growth` | `app/migrations/20260924_000093_growth_v0280_credentialed_json_collector.sql` | `tn_growth_json_signal_sources` |
 | `growth` | `app/migrations/20260924_000094_growth_v0290_json_signal_source_workspace.sql` | — |
-| `growth` | `app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql` | `tn_growth_experiment_decision_runs` |
+| `growth` | `app/migrations/20260924_000095_growth_v0300_signal_polling_scheduler.sql` | — |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

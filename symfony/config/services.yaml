@@ -3,6 +3,11 @@ parameters:
   env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
   env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT): '100'
 
 services:
   _defaults:
@@ -205,6 +210,9 @@ services:
   App\Scheduler\CosScheduleProvider:
     arguments:
       $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
+      $growthCollectorPollingEnabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
+      $growthCollectorPollingIntervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthCollectorPollingActorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -695,6 +703,23 @@ services:
     arguments:
       $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
       $outbound: '@Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface'
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingTargetRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingTargetRepository
+
+  App\Application\Growth\Command\RunGrowthSignalPollingCommandHandler:
+    arguments:
+      $targets: '@Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface'
+      $collectors: '@Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $organizationLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
 
   Domains\Growth\Bootstrap\GrowthDomainModule:
     arguments:

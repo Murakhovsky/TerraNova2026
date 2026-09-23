@@ -2,7 +2,7 @@
 title: Зберігання даних, черги та планувальник
 description: Канонічна межа MySQL/Doctrine, Redis Messenger, Symfony Scheduler і runtime workers під час Symfony migration.
 status: active
-updated: 2026-09-18
+updated: 2026-09-24
 kind: architecture
 contract: architecture-v1
 ---
@@ -64,6 +64,8 @@ AgentRuntime / Integration port
 `CosScheduleProvider` створює schedule `cos`. Scheduler process лише визначає due messages; важка робота redispatch-иться в `async`, де її виконує звичайний worker.
 
 Цей механізм є канонічним для scheduled agents, reports, synchronization, follow-ups, diagnostics і cleanup. Domain-specific recurring messages додаються лише разом із реальним Application command/use case, а не як порожні cron-заглушки.
+
+Growth V0.30 є першим provider-monitoring прикладом цього правила: `CosScheduleProvider` створює лише recurring `RunGrowthSignalPollingCommand`, redispatch-нутий в `async`. Worker через Growth-owned target read port знаходить organizations з enabled RSS/JSON sources і викликає canonical collector boundary. Scheduler не виконує provider HTTP calls сам і не має доступу до credential material.
 
 ## Середовище виконання Docker
 

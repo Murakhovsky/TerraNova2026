@@ -822,6 +822,33 @@ V0.28 Application Boundary
 
 Existing `credential_reference` не повертається у Workspace. Create form приймає reference як write-only configuration value; після створення UI показує лише `credential_configured`, auth mode/header та source mapping.
 
+## Scheduled Signal Monitoring
+
+V0.30 перетворює configured pull sources на безперервний monitoring loop без другого ingestion path:
+
+```text
+CosScheduleProvider
+        ↓ due every configured interval
+RedispatchMessage → async
+        ↓
+RunGrowthSignalPollingCommandHandler
+        ↓
+GrowthSignalPollingTargetRepositoryInterface
+  organization + collector kinds only
+        ↓
+Growth module enabled?
+        ↓
+GrowthSignalCollectorBoundary::runCollector()
+        ↓
+existing collector run / dedupe / Signal / Event / Audit
+```
+
+Scheduler не читає URL або credentials і не виконує HTTP сам. Один collector failure ізолюється в межах конкретного target; інші organization/collectors продовжують polling.
+
+Idempotency key формується з cadence bucket + collector name. Оскільки operation receipts tenant-scoped, однаковий key для того самого collector в різних organizations не конфліктує. Source receipt лишається другим, content-level dedupe шаром.
+
+Polling default-off. Якщо scheduler enable flag увімкнено без positive system actor id, composition fail-closed.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -907,6 +934,9 @@ app/Domains/Growth/Infrastructure/Collector/CredentialedJsonSignalCollector.php
 app/Domains/Growth/Infrastructure/Feed/SafeHttpCredentialedJsonSignalReader.php
 app/Domains/Growth/Infrastructure/Feed/CredentialedJsonSignalParser.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthJsonSignalSourceRepository.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthSignalPollingTargetRepository.php
+symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommand.php
+symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommandHandler.php
 app/Domains/Growth/Automation/Event/GrowthEventType.php
 app/Domains/Growth/Bootstrap/GrowthDomainModule.php
 app/migrations/20260921_000067_growth_v020_runtime.sql
@@ -917,5 +947,6 @@ app/migrations/20260922_000071_growth_v060_decision_intelligence.sql
 app/migrations/20260922_000072_growth_v070_research_intelligence.sql
 app/migrations/20260922_000073_growth_v080_handoff_protocol.sql
 app/migrations/20260924_000093_growth_v0280_credentialed_json_collector.sql
+app/migrations/20260924_000095_growth_v0300_signal_polling_scheduler.sql
 resources/processes/growth-opportunity-candidate-to-handoff.json
 ```

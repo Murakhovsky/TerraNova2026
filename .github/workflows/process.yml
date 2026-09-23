@@ -10,6 +10,8 @@ on:
       - 'app/Infrastructure/Platform/Integration/**'
       - 'app/Kernel/Module/KernelVersion.php'
       - 'symfony/config/services.yaml'
+      - 'symfony/config/packages/messenger.yaml'
+      - 'symfony/src/Scheduler/CosScheduleProvider.php'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
       - 'symfony/src/Application/Growth/**'
@@ -60,6 +62,8 @@ on:
       - 'app/Infrastructure/Platform/Integration/**'
       - 'app/Kernel/Module/KernelVersion.php'
       - 'symfony/config/services.yaml'
+      - 'symfony/config/packages/messenger.yaml'
+      - 'symfony/src/Scheduler/CosScheduleProvider.php'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
       - 'symfony/src/Application/Growth/**'
@@ -149,6 +153,7 @@ jobs:
           php tests/architecture/growth_v0270_signal_feed_workspace.php
           php tests/architecture/growth_v0280_credentialed_json_collector.php
           php tests/architecture/growth_v0290_json_signal_source_workspace.php
+          php tests/architecture/growth_v0300_signal_polling_scheduler.php
 
       - name: Process registry invariants
         run: |
@@ -180,6 +185,7 @@ jobs:
           php tests/unit/growth_v0260_rss_atom_collector.php
           php tests/unit/growth_v0280_credentialed_json_collector.php
           php tests/unit/growth_v0270_signal_feed_workspace.php
+          php tests/unit/growth_v0300_signal_polling_scheduler.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -258,6 +264,11 @@ jobs:
           php -l tests/unit/growth_v0280_credentialed_json_collector.php
           php -l tests/architecture/growth_v0280_credentialed_json_collector.php
           php -l tests/architecture/growth_v0290_json_signal_source_workspace.php
+          php -l tests/unit/growth_v0300_signal_polling_scheduler.php
+          php -l tests/architecture/growth_v0300_signal_polling_scheduler.php
+          php -l symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommand.php
+          php -l symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommandHandler.php
+          php -l symfony/src/Scheduler/CosScheduleProvider.php
           php -l symfony/src/Web/Growth/GrowthPageController.php
           php -l app/Interfaces/Web/View/growth/collectors.phtml
           php -l app/Infrastructure/Platform/Integration/EnvironmentCredentialVault.php

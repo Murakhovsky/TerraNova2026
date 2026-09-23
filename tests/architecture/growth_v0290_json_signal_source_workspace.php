@@ -6,7 +6,7 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.29.0','Growth V0.29 manifest version must be 0.29.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.29.0','>='),'Growth manifest must remain V0.29+.');
 $assert(($manifest['schema_version']??null)==='0.28.0','Growth V0.29 must keep schema version 0.28.0.');
 $assert(in_array('growth.signal.json_source.workspace',$manifest['contributions']['capabilities']??[],true),'Growth JSON source workspace capability is missing.');
 

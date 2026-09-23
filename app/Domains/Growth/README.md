@@ -617,4 +617,26 @@ The SSR controller reads JSON source state through `GrowthJsonSignalSourceBounda
 
 Stored credential references are never rendered back into the workspace. The create form accepts a new opaque reference once; subsequent rows expose only credential-configured state, auth mode/header and source mapping.
 
-Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous activation.
+V0.30 closes the first automatic market-monitoring loop:
+
+```text
+Symfony Scheduler
+        ↓
+RunGrowthSignalPollingCommand
+        ↓ async Messenger
+worker
+        ↓
+enabled Growth source target index
+        ↓
+GrowthSignalCollectorBoundary
+        ├─ rss_atom
+        └─ credentialed_json
+        ↓
+canonical run history + source dedupe + Signal + Events/Audit
+```
+
+Polling is disabled by default. Enabling it requires an explicit system actor id. The scheduler only creates due commands; network-bound collector work runs in the normal async worker.
+
+The polling target read model reads only organization ids and collector kinds from enabled Growth sources. It does not load URLs, credential references or provider payloads. Each cadence bucket produces stable collector idempotency keys, while source receipts remain the durable content-level dedupe mechanism.
+
+Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous outreach/activation.
