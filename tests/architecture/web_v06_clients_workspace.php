@@ -19,6 +19,8 @@ $notContains = static function (string $content, string $needle, string $message
 $controller = $read('symfony/src/Web/Sales/ClientCasePageController.php');
 $inboxController = $read('symfony/src/Web/Sales/ClientCaseInboxController.php');
 $inbox = $read('symfony/templates/experience/client_case/inbox.html.twig');
+$collectionController = $read('symfony/src/Web/Sales/ClientCaseCollectionController.php');
+$collection = $read('symfony/templates/experience/client_case/index.html.twig');
 $routes = $read('symfony/config/routes.yaml');
 $layout = $read('app/Interfaces/Web/View/index.phtml');
 $managerHeader = $read('app/Interfaces/Web/View/shared/manager_header.phtml');
@@ -31,11 +33,9 @@ $assetTest = $read('tests/architecture/frontend_assets.php');
 
 foreach ([
     'final readonly class ClientCasePageController',
-    'public function index(Request $request): Response',
     'public function show(Request $request,string $id): Response',
     "'workspaceSection'=>'clients'",
     "'pageAssetEntries'=>['clients-workspace']",
-    "'client_case/index'",
     "'client_case/show'",
     '$this->manager()',
     '$this->csrf->isValid($r)',
@@ -55,7 +55,7 @@ foreach ([
 
 foreach ([
     'path: /client-case',
-    'ClientCasePageController::index',
+    'ClientCaseCollectionController::index',
     'path: /client-case/inbox',
     'ClientCaseInboxController::index',
     'path: /client-case/show/{id}',
@@ -77,7 +77,7 @@ foreach (['$layoutOwned', '$workspaceSection', 'if (!$layoutOwned && $workspaceS
     $contains($managerHeader, $needle, 'Shared manager header is missing the duplicate-shell guard.');
 }
 
-foreach (['index.phtml', 'show.phtml'] as $viewFile) {
+foreach (['show.phtml'] as $viewFile) {
     $view = $read('app/Interfaces/Web/View/client_case/' . $viewFile);
     $contains($view, "partial('shared/manager_header'", 'Client Case view must remain covered by the shared shell guard: ' . $viewFile);
     $contains($view, 'tn-client-workspace', 'Client Case view must declare canonical workspace scoping directly: ' . $viewFile);
@@ -86,6 +86,20 @@ foreach (['index.phtml', 'show.phtml'] as $viewFile) {
     $notContains($view, 'tn-empty-state', 'Client Case view must use canonical State instead of legacy empty state: ' . $viewFile);
     $notContains($view, '/assets/js/', 'Clients Workspace view must not bypass Vite: ' . $viewFile);
     $notContains($view, '/assets/css/', 'Clients Workspace view must not bypass Vite: ' . $viewFile);
+}
+
+$notContains($collectionController, 'Domains\\Clients', 'Client Case Collection presentation must not invent a Clients Domain.');
+foreach (['GetClientCaseCollectionQuery', 'PageArchetype::Collection', 'WorkspaceShellFactory', "activeSection: 'clients'"] as $needle) {
+    $contains($collectionController, $needle, 'Client Case Collection canonical controller is incomplete.');
+}
+foreach (['<twig:CosPageHeader', '<twig:CosFilterBar', '<twig:ClientCaseFunnel', '<twig:ClientCaseCollectionItem', 'data-client-case-collection'] as $needle) {
+    $contains($collection, $needle, 'Client Case Collection Twig cutover is incomplete.');
+}
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($collection, $forbidden, 'Client Case Collection must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/client_case/index.phtml')) {
+    throw new RuntimeException('Legacy Client Case Index PHTML must stay retired after VR-011.');
 }
 
 foreach (['<twig:CosPageHeader', '<twig:CosFilterBar', '<twig:ClientCaseInboxItem', 'data-client-case-inbox'] as $needle) {

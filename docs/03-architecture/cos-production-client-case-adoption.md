@@ -8,7 +8,7 @@ kind: architecture
 
 # Впровадження Client Case у production UI
 
-PHASE 12 закриває останній явно зафіксований борг WEB V0.17: server-component міграцію `client_case/index.phtml`, `inbox.phtml` та `show.phtml`.
+PHASE 12 закриває останній явно зафіксований борг WEB V0.17: server-component міграцію `symfony/templates/experience/client_case/index.html.twig`, `inbox.phtml` та `show.phtml`.
 
 Принцип той самий, що в попередніх production adoption phases: presentation geometry стає canonical, а Sales/Client Case behavior, routes, CSRF і mutation semantics не змінюються.
 
@@ -16,7 +16,7 @@ PHASE 12 закриває останній явно зафіксований б�
 
 ### Вхідні заявки (`Client Case Inbox`)
 
-`client_case/inbox.phtml`
+`symfony/templates/experience/client_case/inbox.html.twig`
 
 - legacy hero замінено на canonical PageHeader;
 - action/error/empty states використовують canonical State;
@@ -33,7 +33,7 @@ PHASE 12 закриває останній явно зафіксований б�
 
 ### Клієнтські кейси (`Client Case Index`)
 
-`client_case/index.phtml`
+`symfony/templates/experience/client_case/index.html.twig`
 
 Index уже мав значну частину canonical composition після WEB V0.17 compatibility bridge, тому хвиля не переписує його повторно.
 
@@ -44,10 +44,10 @@ Index уже мав значну частину canonical composition після
 - redundant breadcrumb прибрано, бо workspace shell + PageHeader вже задають контекст;
 - PageHeader, Tabs, FilterBar, Panel, State, Stage та canonical buttons лишаються базовою UX-мовою;
 - create-case та unlinked-inbound triage forms не змінені;
-- funnel `tn-case-funnel` збережений як domain-specific visualization;
-- post-freeze case list переведено на canonical OperationalGrid;
-- quick-update row form зберігає `client-case/quickUpdate/{id}`, CSRF, `return_url`, `stage_id`, `status`, `priority` та `assigned_user_id`;
-- Stage рендериться semantic Stage cell, workflow fields лишаються first-class editable controls;
+- funnel рендериться як Sales-specific `ClientCaseFunnel`;
+- Collection використовує стабільну комбінацію `EntityList + FilterBar`;
+- editable row належить `ClientCaseCollectionItem`, а не generic DataGrid;
+- quick-update form зберігає `client-case/quickUpdate/{id}`, CSRF, `return_url`, `stage_id`, `status`, `priority` та `assigned_user_id`;
 - row actions зберігають submit `ОК` та deep-link `Відкрити`.
 
 Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`, `linkInboundRequest` та mutation semantics не змінені.

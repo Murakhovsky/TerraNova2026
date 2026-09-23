@@ -13,7 +13,7 @@ $read = static function (string $path) use ($root): string {
 $grid = $read('app/Interfaces/Web/View/components/ui/operational_grid.phtml');
 $cos = $read('app/Interfaces/Web/View/cos/index.phtml');
 $users = $read('app/Interfaces/Web/View/admin/users.phtml');
-$clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
+$clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 $css = $read('frontend/styles/canonical-components.css');
 
 foreach ([
@@ -81,27 +81,22 @@ if (str_contains($users, '<table class="tn-listing-table tn-users-table">')) {
 }
 
 foreach ([
-    '$caseRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'client-case/quickUpdate/'",
-    "'csrf_token' => (string) (\$csrfToken ?? '')",
-    "'return_url' => 'client-case'",
-    "'kind' => 'stage'",
-    "'kind' => 'fields'",
-    "'kind' => 'submit'",
-    "'name' => 'stage_id'",
-    "'name' => 'status'",
-    "'name' => 'priority'",
-    "'name' => 'assigned_user_id'",
-    "'href' => 'client-case/show/'",
+    '/client-case/quickUpdate/',
+    'name="csrf_token"',
+    'name="return_url"',
+    'value="client-case"',
+    'name="stage_id"',
+    'name="status"',
+    'name="priority"',
+    'name="assigned_user_id"',
+    'type="submit"',
 ] as $marker) {
-    if (!str_contains($clientIndex, $marker)) {
-        throw new RuntimeException('Client Case OperationalGrid migration incomplete: ' . $marker);
+    if (!str_contains($clientCaseItem, $marker)) {
+        throw new RuntimeException('Client Case Collection item lost quick-update mutation parity: ' . $marker);
     }
 }
-if (str_contains($clientIndex, '<table')) {
-    throw new RuntimeException('Client Case raw operational table must remain retired.');
+if (str_contains($clientCaseItem, '<table') || str_contains($clientCaseItem, 'tn-')) {
+    throw new RuntimeException('Client Case Collection must not restore raw/legacy OperationalGrid presentation.');
 }
 
 foreach ([

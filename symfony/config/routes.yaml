@@ -1291,7 +1291,7 @@ cos_web_workspace_analytics:
 
 cos_web_client_cases:
   path: /client-case
-  controller: App\Web\Sales\ClientCasePageController::index
+  controller: App\Web\Sales\ClientCaseCollectionController::index
   methods: [GET, HEAD]
 
 cos_web_client_case_inbox:

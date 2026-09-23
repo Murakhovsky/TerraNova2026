@@ -56,49 +56,36 @@ foreach ([
     $contains($inboxItem, $marker, 'Client Case Inbox lost a triage mutation/navigation contract.');
 }
 
-$index = $read('app/Interfaces/Web/View/client_case/index.phtml');
+$index = $read('symfony/templates/experience/client_case/index.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/tabs'",
-    "partial('components/ui/filter_bar'",
-    'tn-ui-panel',
-    'tn-case-funnel',
-    '$caseRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'kind' => 'fields'",
-    "'kind' => 'stage'",
-    "'kind' => 'submit'",
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    '<twig:ClientCaseFunnel',
+    '<twig:ClientCaseCollectionItem',
+    'data-client-case-collection',
 ] as $marker) {
-    $contains($index, $marker, 'Client Case index must use canonical shell while retaining funnel and operational mutations.');
+    $contains($index, $marker, 'Client Case Collection must use canonical Collection composition.');
 }
-foreach ([
-    'tn-breadcrumbs',
-    'tn-ui-alert tn-ui-alert--positive',
-    'tn-ui-alert tn-ui-alert--danger',
-] as $legacyMarker) {
-    $notContains($index, $legacyMarker, 'Client Case index must not restore redundant breadcrumb/local alert composition.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($index, $legacyMarker, 'Client Case Collection must not restore legacy/local presentation.');
 }
+if (is_file($root . '/app/Interfaces/Web/View/client_case/index.phtml')) {
+    throw new RuntimeException('Legacy Client Case Index PHTML must stay retired after VR-011.');
+}
+
+$collectionItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 foreach ([
-    "'active' => \$activeTab",
-    'client-case/create',
-    'client-case/createFromInboundRequest/',
-    'client-case/linkInboundRequest',
-    'client-case/quickUpdate/',
-    'client-case/show/',
-    "'csrf_token' => (string) (\$csrfToken ?? '')",
-    "'return_url' => 'client-case'",
-    "'name' => 'stage_id'",
-    "'name' => 'status'",
-    "'name' => 'priority'",
-    "'name' => 'assigned_user_id'",
+    '/client-case/quickUpdate/',
+    'name="csrf_token"',
+    'name="return_url"',
+    'value="client-case"',
+    'name="stage_id"',
+    'name="status"',
+    'name="priority"',
+    'name="assigned_user_id"',
 ] as $marker) {
-    $contains($index, $marker, 'Client Case index lost a funnel/create/quick-update contract.');
+    $contains($collectionItem, $marker, 'Client Case Collection lost quick-update mutation parity.');
 }
-$notContains($index, '<table', 'Client Case index must not retain a raw operational table after OperationalGrid migration.');
-$notContains($index, 'tn-client-case-operational-grid', 'Client Case index must not restore retired raw-grid marker.');
-$notContains($index, 'tn-quick-case-form', 'Client Case index must not restore retired inline quick-update form.');
 
 $show = $read('app/Interfaces/Web/View/client_case/show.phtml');
 foreach ([
@@ -185,8 +172,8 @@ foreach ([
 
 $controller = $read('symfony/src/Web/Sales/ClientCasePageController.php');
 $inboxController = $read('symfony/src/Web/Sales/ClientCaseInboxController.php');
+$collectionController = $read('symfony/src/Web/Sales/ClientCaseCollectionController.php');
 foreach ([
-    'public function index(Request $request): Response',
     'public function show(Request $request,string $id): Response',
     'public function update(Request $r,string $id): Response',
     'public function activity(Request $r,string $id): Response',
@@ -213,6 +200,9 @@ foreach ([
 foreach (['GetClientCaseInboxQuery', 'PageArchetype::OperationalQueue', 'WorkspaceShellFactory'] as $marker) {
     $contains($inboxController, $marker, 'Client Case Inbox controller cutover is incomplete.');
 }
+foreach (['GetClientCaseCollectionQuery', 'PageArchetype::Collection', 'WorkspaceShellFactory'] as $marker) {
+    $contains($collectionController, $marker, 'Client Case Collection controller cutover is incomplete.');
+}
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
@@ -225,7 +215,7 @@ foreach ([
     'ClientCasePageController::activity',
     'path: /client-case/updatePropertyMatch/{id}',
     'ClientCasePageController::updatePropertyMatch',
-    'ClientCasePageController::index',
+    'ClientCaseCollectionController::index',
     'path: /client-case/create',
     'ClientCasePageController::create',
     'path: /client-case/quickUpdate/{id}',

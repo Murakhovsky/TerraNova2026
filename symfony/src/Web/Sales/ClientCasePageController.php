@@ -35,31 +35,6 @@ final readonly class ClientCasePageController
         private SessionCsrfValidator $csrf,
     ) {}
 
-    public function index(Request $request): Response
-    {
-        $tenant=$this->manager(); if($tenant instanceof Response)return $tenant;
-        $read=$this->cases->forOrganization($tenant->organizationId()->value());
-        $filters=$read->filters($request->query->all());
-        try{
-            $pipelines=$this->sales->pipelines($tenant->organizationId()->value());
-            return $this->render($request,$tenant,'Клієнтські кейси','cases','client_case/index',[
-                'filters'=>$filters,'cases'=>$read->cases($filters),'stats'=>$read->stats(),
-                'unlinkedInboundRequests'=>$read->unlinkedInboundRequests(),'openCaseOptions'=>$read->openCaseOptions(),
-                'managerOptions'=>$read->managerOptions(),'propertyTypes'=>$this->catalog->propertyTypes(),
-                'locations'=>$this->catalog->locations(),'pipelineStages'=>$pipelines[0]['stages']??[],
-                'pageStatus'=>null,'actionStatus'=>(string)$request->query->get('status_message',''),
-                'csrfToken'=>$this->csrf->token($request),
-            ]);
-        }catch(Throwable $error){
-            error_log('client-case.index.read_failed '.$error->getMessage());
-            return $this->render($request,$tenant,'Клієнтські кейси','cases','client_case/index',[
-                'filters'=>$filters,'cases'=>[],'stats'=>[],'unlinkedInboundRequests'=>[],'openCaseOptions'=>[],
-                'managerOptions'=>[],'propertyTypes'=>[],'locations'=>[],'pipelineStages'=>[],
-                'pageStatus'=>'CRM кейсів тимчасово недоступна.','actionStatus'=>'','csrfToken'=>$this->csrf->token($request),
-            ],Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
     public function show(Request $request,string $id): Response
     {
         $tenant=$this->manager(); if($tenant instanceof Response)return $tenant;

@@ -139,25 +139,21 @@ foreach ([
 }
 $notContains($users, '<table', 'Users Administration must not retain a raw table after OperationalGrid migration.');
 
-$clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
+$clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 foreach ([
-    '$caseRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'client-case/quickUpdate/'",
-    "'csrf_token' => (string) (\$csrfToken ?? '')",
-    "'return_url' => 'client-case'",
-    "'kind' => 'stage'",
-    "'kind' => 'fields'",
-    "'kind' => 'submit'",
-    "'name' => 'stage_id'",
-    "'name' => 'status'",
-    "'name' => 'priority'",
-    "'name' => 'assigned_user_id'",
+    '/client-case/quickUpdate/',
+    'name="csrf_token"',
+    'name="return_url"',
+    'value="client-case"',
+    'name="stage_id"',
+    'name="status"',
+    'name="priority"',
+    'name="assigned_user_id"',
 ] as $marker) {
-    $contains($clientIndex, $marker, 'Client Case quick-update list must use canonical OperationalGrid.');
+    $contains($clientCaseItem, $marker, 'Client Case domain Collection item lost quick-update mutation parity.');
 }
-$notContains($clientIndex, '<table', 'Client Case index must not retain a raw table after OperationalGrid migration.');
+$notContains($clientCaseItem, '<table', 'Client Case Collection item must not restore a raw table.');
+$notContains($clientCaseItem, 'tn-', 'Client Case Collection item must not restore legacy TN presentation.');
 
 $studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
 foreach ([
