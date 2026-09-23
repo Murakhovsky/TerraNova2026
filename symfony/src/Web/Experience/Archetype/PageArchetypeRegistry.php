@@ -68,10 +68,14 @@ final class PageArchetypeRegistry
                 PageArchetype::Collection,
                 'workspace',
                 'Explore, filter and act on a collection of business entities.',
-                ['PageHeader', 'Toolbar', 'DataGrid'],
-                ['SearchBar', 'FilterBar', 'SavedViews', 'ActionBar', 'EntityList', 'Pagination'],
+                ['PageHeader'],
+                ['SearchBar', 'Toolbar', 'FilterBar', 'SavedViews', 'ActionBar', 'DataGrid', 'EntityList', 'Pagination'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
+                [
+                    ['DataGrid', 'EntityList'],
+                    ['Toolbar', 'FilterBar'],
+                ],
             ),
             $this->definition(
                 PageArchetype::EntityWorkspace,
@@ -172,6 +176,7 @@ final class PageArchetypeRegistry
      * @param list<string> $optionalPatterns
      * @param list<string> $densities
      * @param list<string> $responsiveContract
+     * @param list<list<string>> $requiredPatternGroups
      */
     private function definition(
         PageArchetype $id,
@@ -181,6 +186,7 @@ final class PageArchetypeRegistry
         array $optionalPatterns,
         array $densities,
         array $responsiveContract,
+        array $requiredPatternGroups = [],
     ): PageArchetypeDefinition {
         return new PageArchetypeDefinition(
             id: $id,
@@ -188,6 +194,7 @@ final class PageArchetypeRegistry
             purpose: $purpose,
             requiredPatterns: $requiredPatterns,
             optionalPatterns: $optionalPatterns,
+            requiredPatternGroups: $requiredPatternGroups,
             states: self::STANDARD_STATES,
             densities: $densities,
             responsiveContract: $responsiveContract,

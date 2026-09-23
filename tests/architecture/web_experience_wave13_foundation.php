@@ -46,6 +46,12 @@ foreach ($definitions as $definition) {
     if ($definition->requiredPatterns === [] || $definition->responsiveContract === []) {
         throw new RuntimeException('Archetype composition contract is incomplete: ' . $definition->id->value);
     }
+
+    foreach ($definition->requiredPatternGroups as $group) {
+        if ($group === []) {
+            throw new RuntimeException('Archetype required pattern group may not be empty: ' . $definition->id->value);
+        }
+    }
 }
 
 $patterns = new PatternRegistry();
@@ -103,7 +109,12 @@ foreach ($registeredPatterns as $pattern) {
 }
 
 foreach ($definitions as $definition) {
-    foreach (array_merge($definition->requiredPatterns, $definition->optionalPatterns) as $patternName) {
+    $referenced = array_merge($definition->requiredPatterns, $definition->optionalPatterns);
+    foreach ($definition->requiredPatternGroups as $group) {
+        array_push($referenced, ...$group);
+    }
+
+    foreach (array_unique($referenced) as $patternName) {
         if (!isset($registeredPatterns[$patternName])) {
             throw new RuntimeException(sprintf(
                 'Archetype %s references an unregistered Pattern: %s',
@@ -112,6 +123,14 @@ foreach ($definitions as $definition) {
             ));
         }
     }
+}
+
+$collection = $definitions[PageArchetype::Collection->value];
+if ($collection->requiredPatternGroups !== [
+    ['DataGrid', 'EntityList'],
+    ['Toolbar', 'FilterBar'],
+]) {
+    throw new RuntimeException('Collection archetype must allow canonical projection and control-surface alternatives.');
 }
 
 foreach ([
