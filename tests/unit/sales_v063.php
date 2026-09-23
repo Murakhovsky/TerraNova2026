@@ -14,7 +14,9 @@ $today = $read('app/Interfaces/Web/View/sales/today.phtml');
 $leads = $read('symfony/templates/experience/sales/leads.html.twig');
 $leadController = $read('symfony/assets/controllers/sales_lead_controller.js');
 $pipeline = $read('app/Interfaces/Web/View/sales/pipeline.phtml');
-$deal = $read('app/Interfaces/Web/View/sales/deal.phtml');
+$deal = $read('symfony/templates/experience/sales/deal_workspace.html.twig');
+$dealHandler = $read('symfony/src/Application/Sales/Query/GetSalesDealWorkspaceQueryHandler.php');
+$dealController = $read('symfony/assets/controllers/sales_deal_controller.js');
 $deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
 $director = $read('app/Interfaces/Web/View/sales/director.phtml');
 $js = $read('frontend/features/sales/workspace.js');
@@ -27,8 +29,11 @@ foreach (['communications(', 'approvals(', 'directorAnalytics('] as $marker) {
 foreach (['attention_reason', 'days_in_stage', 'weighted_value', 'avg_days_in_stage', 'needs_approval', 'historical_stage_transitions'] as $marker) {
     $assert(str_contains($projection, $marker), 'Projection missing: ' . $marker);
 }
-foreach (['workspace->communications(', 'workspace->approvals(', 'SalesDirectorCockpitService', 'SalesWorkspaceOperationalReadModelInterface'] as $marker) {
-    $assert(str_contains($web, $marker), 'Symfony Web composition missing: ' . $marker);
+foreach (['SalesDirectorCockpitService', 'SalesWorkspaceOperationalReadModelInterface'] as $marker) {
+    $assert(str_contains($web, $marker), 'Legacy Sales page composition missing retained shared dependency: ' . $marker);
+}
+foreach (['sales->communications(', 'sales->approvals(', 'OperationsReadModelInterface', 'SalesTeamAdministrationInterface'] as $marker) {
+    $assert(str_contains($dealHandler, $marker), 'Deal Workspace query composition missing: ' . $marker);
 }
 $assert(str_contains($services, 'MysqlSalesWorkspaceOperationalReadModel'), 'Composition root must own the concrete operational read model.');
 $assert(!str_contains($web, 'new MysqlSalesWorkspaceOperationalReadModel'), 'Web controller must not construct Infrastructure projections directly.');
@@ -53,8 +58,11 @@ foreach (['name="owner_id"', 'name="priority"', 'name="source"', 'attention_reas
 foreach (['Funnel', 'Historical stage transitions', 'Pipeline health', 'Manager performance', 'Pending approvals'] as $marker) {
     $assert(str_contains($director, $marker), 'Director missing: ' . $marker);
 }
-foreach (['initLeadInbox', 'initToday', 'data-sales-approval', "operation === 'message'", '/api/v1/sales/actions/', 'data-decision="execute"', 'error.status === 409', 'concurrent_stage_change'] as $marker) {
-    $assert(str_contains($js, $marker), 'JS missing: ' . $marker);
+foreach (['initToday', 'error.status === 409', 'concurrent_stage_change'] as $marker) {
+    $assert(str_contains($js, $marker), 'Retained legacy Sales JS missing shared interaction: ' . $marker);
+}
+foreach (['/api/v1/sales/actions/', '/communications', 'refreshIntelligence', 'click->sales-deal#decision', 'X-Idempotency-Key'] as $marker) {
+    $assert(str_contains($dealController, $marker), 'Deal Stimulus controller missing: ' . $marker);
 }
 
 foreach ([
@@ -62,6 +70,9 @@ foreach ([
     'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php',
     'app/Bootstrap/SalesServices.php',
     'symfony/src/Web/Sales/SalesPageController.php',
+    'symfony/src/Application/Sales/Query/GetSalesDealWorkspaceQueryHandler.php',
+    'symfony/src/Web/Sales/SalesDealController.php',
+    'symfony/src/Web/Sales/SalesDealPresenter.php',
 ] as $file) {
     $output = [];
     $code = 0;

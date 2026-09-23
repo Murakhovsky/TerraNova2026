@@ -1,0 +1,340 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Deal Workspace | COS{% endblock %}
+
+{% block workspace_content %}
+<twig:CosWorkspace :workspace="workspace">
+    <section
+        class="cos-page__stack"
+        data-controller="sales-deal"
+        data-sales-deal-deal-id-value="{{ deal.id }}"
+        data-sales-deal-csrf-value="{{ csrfToken }}"
+        data-sales-deal-workspace
+        data-deal-id="{{ deal.id }}"
+        data-csrf="{{ csrfToken }}"
+        data-cos-archetype="{{ page.archetypeId() }}"
+        data-cos-page-state="{{ page.state }}"
+        data-cos-page-density="{{ page.density }}"
+    >
+        <twig:CosEntityHeader
+            eyebrow="Sales · Deal Workspace"
+            title="{{ deal.title }}"
+            subtitle="{{ deal.subtitle }}"
+            identity="{{ deal.identity }}"
+            statusLabel="{{ deal.statusLabel }}"
+            statusTone="{{ deal.statusTone }}"
+            :meta="deal.meta"
+        >
+            <twig:CosButton label="Pipeline" href="/sales/pipeline" variant="ghost" />
+            <twig:CosButton label="All deals" href="/sales/deals" variant="primary" />
+        </twig:CosEntityHeader>
+
+        {% if deal.error %}
+            <twig:CosAlert title="Deal Workspace недоступний" copy="{{ deal.error }}" tone="danger" />
+        {% else %}
+            <section class="cos-page__section" aria-labelledby="deal-kpis">
+                <h2 id="deal-kpis" class="cos-section-title">Deal pulse</h2>
+                <div class="cos-kpi-strip">
+                    {% for metric in deal.kpis %}
+                        <article class="cos-card">
+                            <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" />
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="cos-page__section cos-section-grid" aria-label="Deal overview">
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Next Action</p>
+                    <h2 class="cos-card__title">{{ deal.nextContact }}</h2>
+                    <p class="cos-card__copy">{{ deal.attentionReason }}</p>
+                </article>
+
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Customer</p>
+                    <h2 class="cos-card__title">{{ deal.customer ?: deal.title }}</h2>
+                    <dl class="cos-entity-summary">
+                        <div><dt>Phone</dt><dd>{{ deal.phone }}</dd></div>
+                        <div><dt>Email</dt><dd>{{ deal.email }}</dd></div>
+                        <div><dt>Telegram</dt><dd>{{ deal.telegram }}</dd></div>
+                    </dl>
+                </article>
+            </section>
+
+            <section id="work" class="cos-page__section" aria-labelledby="deal-work-title">
+                <h2 id="deal-work-title" class="cos-section-title">Що робимо далі</h2>
+
+                <div class="cos-section-grid">
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Stage</p>
+                        <form
+                            class="cos-pattern-stack"
+                            data-sales-stage-form
+                            data-action="submit->sales-deal#changeStage"
+                        >
+                            <label class="cos-field">
+                                <span>Stage</span>
+                                <select class="cos-select" name="stage_id" data-sales-stage-select>
+                                    {% for stage in deal.stages %}
+                                        <option value="{{ stage.id }}" {% if stage.selected %}selected{% endif %}>{{ stage.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Change stage</button>
+                            <span class="cos-card__copy" data-sales-stage-status aria-live="polite"></span>
+                        </form>
+                    </article>
+
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Owner</p>
+                        <form
+                            class="cos-pattern-stack"
+                            data-sales-operation-form
+                            data-operation="owner"
+                            data-action="submit->sales-deal#operation"
+                        >
+                            <label class="cos-field">
+                                <span>Owner</span>
+                                <select class="cos-select" name="owner_id">
+                                    <option value="">Choose</option>
+                                    {% for owner in deal.owners %}
+                                        <option value="{{ owner.id }}" {% if owner.selected %}selected{% endif %}>{{ owner.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Assign</button>
+                            <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
+                        </form>
+                    </article>
+
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Priority & next contact</p>
+                        <form
+                            class="cos-pattern-stack"
+                            data-sales-operation-form
+                            data-operation="quick"
+                            data-action="submit->sales-deal#operation"
+                        >
+                            <label class="cos-field">
+                                <span>Priority</span>
+                                <select class="cos-select" name="priority">
+                                    {% for value in ['low','normal','high','urgent'] %}
+                                        <option value="{{ value }}" {% if deal.priority == value %}selected{% endif %}>{{ value|capitalize }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="cos-field">
+                                <span>Next contact</span>
+                                <input class="cos-input" type="datetime-local" name="next_contact_at" value="{{ deal.nextContactInput }}">
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Save</button>
+                            <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
+                        </form>
+                    </article>
+
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Follow-up</p>
+                        <form
+                            class="cos-pattern-stack"
+                            data-sales-operation-form
+                            data-operation="followup"
+                            data-action="submit->sales-deal#operation"
+                        >
+                            <label class="cos-field">
+                                <span>Title</span>
+                                <input class="cos-input" name="title" value="Follow-up">
+                            </label>
+                            <label class="cos-field">
+                                <span>Due at</span>
+                                <input class="cos-input" type="datetime-local" name="due_at" required>
+                            </label>
+                            <label class="cos-field">
+                                <span>Note</span>
+                                <textarea class="cos-textarea" name="body" rows="2"></textarea>
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Schedule</button>
+                            <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
+                        </form>
+                    </article>
+
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Meeting</p>
+                        <form
+                            class="cos-pattern-stack"
+                            data-sales-operation-form
+                            data-operation="meeting"
+                            data-action="submit->sales-deal#operation"
+                        >
+                            <label class="cos-field">
+                                <span>Title</span>
+                                <input class="cos-input" name="title" value="Sales meeting">
+                            </label>
+                            <label class="cos-field">
+                                <span>Scheduled at</span>
+                                <input class="cos-input" type="datetime-local" name="scheduled_at" required>
+                            </label>
+                            <label class="cos-field">
+                                <span>Location / link</span>
+                                <input class="cos-input" name="location">
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Schedule</button>
+                            <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
+                        </form>
+                    </article>
+
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Log contact</p>
+                        <form
+                            class="cos-pattern-stack"
+                            data-sales-operation-form
+                            data-operation="activity"
+                            data-action="submit->sales-deal#operation"
+                        >
+                            <label class="cos-field">
+                                <span>Type</span>
+                                <select class="cos-select" name="activity_type">
+                                    <option value="note">Note</option>
+                                    <option value="call">Completed call</option>
+                                </select>
+                            </label>
+                            <label class="cos-field">
+                                <span>Title</span>
+                                <input class="cos-input" name="title" value="Нотатка">
+                            </label>
+                            <label class="cos-field">
+                                <span>Body</span>
+                                <textarea class="cos-textarea" name="body" rows="2"></textarea>
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Add</button>
+                            <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
+                        </form>
+                    </article>
+                </div>
+            </section>
+
+            <section id="communications" class="cos-page__section" aria-labelledby="communications-title">
+                <article class="cos-card">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">Communications</p>
+                            <h2 id="communications-title" class="cos-card__title">Діалог з клієнтом</h2>
+                        </div>
+                        <span class="cos-card__copy">{{ deal.communications|length }}</span>
+                    </div>
+
+                    <form
+                        class="cos-pattern-stack"
+                        data-sales-operation-form
+                        data-operation="message"
+                        data-action="submit->sales-deal#operation"
+                    >
+                        <label class="cos-field">
+                            <span>Channel</span>
+                            <select class="cos-select" name="channel">
+                                <option>WEB</option>
+                                <option>EMAIL</option>
+                                <option>TELEGRAM</option>
+                                <option>WHATSAPP</option>
+                                <option>VIBER</option>
+                            </select>
+                        </label>
+                        <label class="cos-field">
+                            <span>Message</span>
+                            <textarea class="cos-textarea" name="body" rows="3" required></textarea>
+                        </label>
+                        <button class="cos-button cos-button--primary" type="submit">Send Message</button>
+                        <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
+                    </form>
+
+                    <div class="cos-pattern-stack">
+                        {% for communication in deal.communications %}
+                            <article class="cos-card cos-sales-message" data-direction="{{ communication.direction }}">
+                                <div class="cos-card__header">
+                                    <strong>{{ communication.direction|upper }} · {{ communication.channel }}</strong>
+                                    <time>{{ communication.occurredAt }}</time>
+                                </div>
+                                <p class="cos-card__copy">{{ communication.body }}</p>
+                            </article>
+                        {% else %}
+                            <twig:CosEmptyState title="Діалог ще порожній" copy="Перше повідомлення зʼявиться тут після відправлення або отримання." />
+                        {% endfor %}
+                    </div>
+                </article>
+            </section>
+
+            {% if deal.approvals is not empty %}
+                <section class="cos-page__section" aria-labelledby="approvals-title">
+                    <h2 id="approvals-title" class="cos-section-title">Потрібне рішення менеджера</h2>
+                    <div class="cos-pattern-stack">
+                        {% for approval in deal.approvals %}
+                            <article class="cos-card" data-sales-approval data-approval-id="{{ approval.id }}">
+                                <p class="cos-card__eyebrow">Approval</p>
+                                <h3 class="cos-card__title">{{ approval.type }}</h3>
+                                <p class="cos-card__copy">{{ approval.reason }}</p>
+                                <twig:CosActionBar label="Approval decision">
+                                    <button
+                                        type="button"
+                                        class="cos-button cos-button--primary cos-button--sm"
+                                        data-decision="approve"
+                                        data-action="click->sales-deal#approval"
+                                    >Approve</button>
+                                    <button
+                                        type="button"
+                                        class="cos-button cos-button--ghost cos-button--sm"
+                                        data-decision="reject"
+                                        data-action="click->sales-deal#approval"
+                                    >Reject</button>
+                                </twig:CosActionBar>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+
+            <section id="intelligence" class="cos-page__section" aria-labelledby="intelligence-title">
+                <article class="cos-card">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">COS Intelligence</p>
+                            <h2 id="intelligence-title" class="cos-card__title">Deal intelligence cockpit</h2>
+                        </div>
+                        <button
+                            type="button"
+                            class="cos-button cos-button--ghost"
+                            data-sales-intelligence-refresh
+                            data-action="click->sales-deal#refreshIntelligence"
+                        >Оновити actions</button>
+                    </div>
+
+                    <div class="cos-kpi-strip">
+                        {% for metric in deal.intelligenceMetrics %}
+                            <article class="cos-card">
+                                <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" />
+                            </article>
+                        {% endfor %}
+                    </div>
+
+                    <div
+                        class="cos-pattern-stack"
+                        data-sales-intelligence
+                        data-sales-deal-target="intelligence"
+                        aria-live="polite"
+                    ></div>
+                </article>
+            </section>
+
+            <section id="timeline" class="cos-page__section" aria-labelledby="timeline-title">
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Timeline</p>
+                    <h2 id="timeline-title" class="cos-card__title">Історія угоди</h2>
+                    {% if deal.timeline is empty %}
+                        <twig:CosEmptyState title="Історія ще порожня" copy="Події життєвого циклу угоди зʼявляться тут." />
+                    {% else %}
+                        <twig:CosTimeline :items="deal.timeline" label="Deal history" />
+                    {% endif %}
+                </article>
+            </section>
+        {% endif %}
+    </section>
+</twig:CosWorkspace>
+{% endblock %}

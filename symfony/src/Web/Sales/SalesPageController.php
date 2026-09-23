@@ -9,7 +9,6 @@ use DateTimeImmutable;
 use Domains\Sales\Application\Contract\SalesTeamAdministrationInterface;
 use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Domains\Sales\Application\Service\SalesDirectorCockpitService;
-use Kernel\Operations\Contract\OperationsReadModelInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -25,7 +24,6 @@ final readonly class SalesPageController
         private NavigationBuilder $navigation,
         private SalesWorkspaceOperationalReadModelInterface $workspace,
         private SalesTeamAdministrationInterface $teams,
-        private OperationsReadModelInterface $operations,
         private SalesDirectorCockpitService $director,
     ) {
     }
@@ -61,39 +59,6 @@ final readonly class SalesPageController
                 'deals' => $this->workspace->deals($tenant->organizationId()->value(), $request->query->all()),
                 'owners' => $this->owners($tenant),
             ]);
-    }
-
-    public function deal(Request $request, string $id): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) {
-            return $tenant;
-        }
-
-        $dealId = (int) $id;
-        $organizationId = $tenant->organizationId()->value();
-        $deal = $this->workspace->deal($organizationId, $dealId);
-        if ($deal === null) {
-            return $this->failure($request, $tenant, 404, 'Сторінку не знайдено', 'Угоду не знайдено.');
-        }
-
-        $intelligence = $this->normalizeDealIntelligence([]);
-        try {
-            $intelligence = $this->normalizeDealIntelligence($this->operations->dealIntelligence($organizationId, $dealId));
-        } catch (Throwable) {
-        }
-
-        return $this->render($request, $tenant, 'Deal Workspace', 'deals', 'sales/deal', [
-            'workspace' => [
-                'deal' => $deal,
-                'timeline' => $this->workspace->timeline($organizationId, $dealId, 100),
-                'communications' => $this->workspace->communications($organizationId, $dealId, 50),
-                'approvals' => $this->workspace->approvals($organizationId, $dealId, null, 50),
-                'pipelines' => $this->workspace->pipelines($organizationId),
-                'owners' => $this->owners($tenant),
-                'intelligence' => $intelligence,
-            ],
-        ]);
     }
 
     public function director(Request $request): Response
@@ -213,38 +178,5 @@ final readonly class SalesPageController
         ));
     }
 
-    /** @return array<string,mixed> */
-    private function normalizeDealIntelligence(array $raw): array
-    {
-        $analysis = is_array($raw['analysis'] ?? null) ? $raw['analysis'] : [];
-        $decision = is_array($raw['decision'] ?? null) ? $raw['decision'] : [];
-        $signals = is_array($raw['signals'] ?? null) ? $raw['signals'] : [];
-        $actions = is_array($raw['actions'] ?? null) ? $raw['actions'] : [];
-        $firstAction = [];
-        foreach ($actions as $candidate) {
-            if (is_array($candidate)) {
-                $firstAction = $candidate;
-                break;
-            }
-        }
-        $pick = static function(mixed ...$values): mixed {
-            foreach ($values as $value) {
-                if ($value !== null && $value !== '' && $value !== []) {
-                    return $value;
-                }
-            }
-            return null;
-        };
 
-        return array_replace($raw, [
-            'contract_version' => 'sales.intelligence.v1',
-            'deal_health' => $pick($raw['deal_health'] ?? null, $analysis['deal_health'] ?? null, $decision['deal_health'] ?? null, $raw['health'] ?? null, $decision['risk_level'] ?? null),
-            'customer_intent' => $pick($raw['customer_intent'] ?? null, $analysis['customer_intent'] ?? null, $signals['customer_intent'] ?? null, $decision['customer_intent'] ?? null),
-            'objections' => $pick($raw['objections'] ?? null, $analysis['objections'] ?? null, $signals['objections'] ?? null),
-            'missing_information' => $pick($raw['missing_information'] ?? null, $analysis['missing_information'] ?? null, $signals['missing_information'] ?? null, $raw['missing_info'] ?? null),
-            'next_best_action' => $pick($raw['next_best_action'] ?? null, $analysis['next_best_action'] ?? null, $decision['next_best_action'] ?? null, $firstAction['reason'] ?? null, $firstAction['description'] ?? null, $firstAction['type'] ?? null),
-            'recommended_timing' => $pick($raw['recommended_timing'] ?? null, $analysis['recommended_timing'] ?? null, $decision['recommended_timing'] ?? null, $firstAction['recommended_at'] ?? null, $firstAction['execute_at'] ?? null),
-            'confidence' => $pick($raw['confidence'] ?? null, $analysis['confidence'] ?? null, $decision['confidence'] ?? null),
-        ]);
-    }
 }

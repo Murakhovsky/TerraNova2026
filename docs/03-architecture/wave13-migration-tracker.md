@@ -14,14 +14,16 @@ kind: architecture
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | VR-001 | `/admin` | Workspace | Core | Executive Dashboard | P0 | Twig | DONE |
 | VR-002 | `/sales/dashboard` | Workspace | Sales | Domain Dashboard | P0 | Twig | DONE |
-| VR-003 | `/sales/leads` | Workspace | Sales | Collection | P0 | Twig | QA |
-| VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | BACKLOG |
+| VR-003 | `/sales/leads` | Workspace | Sales | Collection | P0 | Twig | DONE |
+| VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | QA |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
 VR-002 уже нормалізований як Domain Dashboard: окремий ViewModel/Presenter, PagePresentation contract, PageHeader і реальний KpiStrip без нового page-specific CSS.
 
 VR-003 використовує Collection archetype з `EntityList + FilterBar` як валідною альтернативою `DataGrid + Toolbar`. Це зафіксовано executable required pattern groups, а не локальним винятком для Sales.
+
+VR-004 переводить Deal Workspace з PHTML на `CosWorkspace + EntityHeader`, окремий ViewModel/Presenter і Stimulus runtime, зберігаючи operational API та deep-link anchors.
 
 ## Зменшення legacy
 
