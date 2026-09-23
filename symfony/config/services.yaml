@@ -505,6 +505,11 @@ services:
       $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
       $modules: '@Kernel\Module\ActiveModuleResolver'
 
+  Domains\Growth\Infrastructure\Handoff\ServiceGrowthHandoffTarget:
+    arguments:
+      $service: '@Domains\Service\Application\Contract\ServiceApplicationBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
   Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthWorkspaceReadModel:
     arguments:
       $connection: '@cos.database.pdo'

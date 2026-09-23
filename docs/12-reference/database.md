@@ -58,6 +58,7 @@ generated: true
 | `growth` | `app/migrations/20260923_000086_growth_v0220_engagement_execution_bridge.sql` | `tn_growth_engagement_execution_links` |
 | `growth` | `app/migrations/20260923_000087_growth_v0230_engagement_execution_workspace.sql` | — |
 | `growth` | `app/migrations/20260923_000089_growth_v0240_pre_handoff_execution.sql` | — |
+| `growth` | `app/migrations/20260923_000090_growth_v0250_service_handoff_adapter.sql` | — |
 | `growth` | `app/migrations/20260923_000085_growth_v0210_experiment_decision_intelligence.sql` | `tn_growth_experiment_decision_runs` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |

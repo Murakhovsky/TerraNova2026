@@ -467,7 +467,7 @@ Target call виконується поза DB transaction. Target-side idempote
 
 Running attempt можна resume з persisted `package_json`. Resolution серіалізується Candidate row lock; concurrent resume після першого завершення повертає persisted attempt замість повторного lifecycle transition.
 
-Growth не знає persistence Sales/HR/Procurement/Service і не створює їх aggregates напряму. Конкретний target adapter реалізує Growth-owned port та повертає target-owned reference.
+Growth не знає persistence Sales/HR/Procurement/Service і не створює їх aggregates напряму. Конкретний target adapter реалізує Growth-owned port та повертає target-owned reference. V0.9 реалізує Sales target, V0.25 — Service target через його application boundary.
 
 ## Sales target adapter
 
@@ -495,6 +495,28 @@ sales_lead:<id>
 ```
 
 Sales сам створює свій execution object через власний application boundary. Growth лише передає package та стабільний Candidate-level idempotency key. Multiple champions, відсутній committee або non-email identity дають explicit target rejection замість евристичного вибору людини.
+
+## Service target adapter
+
+V0.25 додає другий concrete handoff target і підтверджує універсальність `OpportunityHandoff`:
+
+```text
+Growth OpportunityHandoff
+        ↓
+target_domain = service
+        ↓
+Service module enabled?
+  ├─ no  → explicit rejection
+  └─ yes
+        ↓
+ServiceApplicationBoundary::createRequest()
+        ↓
+service_request:<id>
+```
+
+Mapping навмисно зупиняється на Service Request. Growth передає WHY NOW, problem hypothesis, expected value, recommended play/action і Candidate provenance, але не створює Ticket, не призначає виконавця, не встановлює SLA і не керує Service lifecycle.
+
+Target-side idempotency key лишається Candidate-stable з V0.8, тому retry handoff не має створювати дубльовані Service Requests.
 
 ## Executable API V1
 

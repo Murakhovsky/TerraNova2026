@@ -511,4 +511,20 @@ The pre-handoff action targets `growth_contact`, not a synthetic Sales Deal. Con
 
 The first production pre-handoff transport is email. LinkedIn/call execution remains intentionally unavailable until a canonical transport adapter exists.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, pre-handoff LinkedIn/call execution and autonomous activation.
+V0.25 proves the handoff protocol is not Sales-specific by adding a concrete `service` target:
+
+```text
+READY_FOR_HANDOFF
+        ↓
+target_domain = service
+        ↓
+ServiceGrowthHandoffTarget
+        ↓
+ServiceApplicationBoundary::createRequest()
+        ↓
+service_request:<id>
+```
+
+Growth maps the immutable Opportunity Package into a bounded Service Request subject/summary and a `growth:<subject_type>:<subject_id>` requester reference. It does not create Tickets, set SLA, assign work or touch Service persistence. Service remains the owner of decomposition and delivery lifecycle. The adapter is optional and rejects the handoff when the Service module is disabled.
+
+Still intentionally absent: HR/Procurement target adapters, provider-specific pull collectors, pre-handoff LinkedIn/call execution and autonomous activation.

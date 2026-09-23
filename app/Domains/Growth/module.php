@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.24.0',
+    'version' => '0.25.0',
     'schema_version' => '0.22.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
@@ -45,8 +45,10 @@ return [
             'app/migrations/20260923_000086_growth_v0220_engagement_execution_bridge.sql',
             'app/migrations/20260923_000087_growth_v0230_engagement_execution_workspace.sql',
             'app/migrations/20260923_000089_growth_v0240_pre_handoff_execution.sql',
+            'app/migrations/20260923_000090_growth_v0250_service_handoff_adapter.sql',
         ],
         'capabilities' => [
+            'growth.handoff.target.service',
             'growth.engagement.pre_handoff_execution',
             'growth.engagement.execution_workspace',
             'growth.engagement.execution',

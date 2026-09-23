@@ -142,6 +142,7 @@ jobs:
           php tests/architecture/growth_v0220_engagement_execution_bridge.php
           php tests/architecture/growth_v0230_engagement_execution_workspace.php
           php tests/architecture/growth_v0240_pre_handoff_execution.php
+          php tests/architecture/growth_v0250_service_handoff_adapter.php
 
       - name: Process registry invariants
         run: |
@@ -169,6 +170,7 @@ jobs:
           php tests/unit/growth_v0220_engagement_execution_contract.php
           php tests/unit/growth_v0230_engagement_execution_workspace.php
           php tests/unit/growth_v0240_pre_handoff_execution.php
+          php tests/unit/growth_v0250_service_handoff_adapter.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -238,6 +240,8 @@ jobs:
           php -l tests/architecture/growth_v0230_engagement_execution_workspace.php
           php -l tests/unit/growth_v0240_pre_handoff_execution.php
           php -l tests/architecture/growth_v0240_pre_handoff_execution.php
+          php -l tests/unit/growth_v0250_service_handoff_adapter.php
+          php -l tests/architecture/growth_v0250_service_handoff_adapter.php
           php -l app/Interfaces/Web/View/growth/candidate.phtml
           php -l app/Interfaces/Web/View/growth/experiments.phtml
           php -l app/Interfaces/Web/View/growth/experiment.phtml
