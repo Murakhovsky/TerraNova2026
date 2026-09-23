@@ -70,6 +70,7 @@ jobs:
           php tests/architecture/web_experience_wave13_sales_director.php
           php tests/architecture/web_experience_wave13_sales_admin.php
           php tests/architecture/web_experience_wave13_sales_complete.php
+          php tests/architecture/web_experience_wave13_operational_queue_contract.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

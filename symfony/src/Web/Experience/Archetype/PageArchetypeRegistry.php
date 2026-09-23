@@ -82,7 +82,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Surface work that needs attention now.',
                 ['PageHeader', 'EntityList'],
-                ['FilterBar', 'Toolbar', 'ActionBar', 'Pagination', 'EmptyState', 'ErrorState'],
+                ['KpiStrip', 'FilterBar', 'Toolbar', 'ActionBar', 'Pagination', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),
