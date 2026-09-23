@@ -81,16 +81,16 @@ foreach ([
     $contains($cos, $marker, 'COS Proposed Actions must use canonical OperationalGrid: ' . $marker);
 }
 
-$companyHome = $read('app/Interfaces/Web/View/admin/index.phtml');
+$companyHome = $read('symfony/templates/experience/admin/dashboard.html.twig');
 foreach ([
-    '$decisionRows = [];',
-    "partial('components/ui/data_table'",
-    "'responsive' => 'cards'",
-    "'emptyMessage' => 'Немає рішень, що очікують уваги.'",
+    'dashboard.decisions',
+    '<twig:CosEntityListItem',
+    'Що чекає рішення',
 ] as $marker) {
-    $contains($companyHome, $marker, 'Company Home decision queue must use canonical DataTable.');
+    $contains($companyHome, $marker, 'Company Home decision queue must remain on canonical reusable patterns.');
 }
 $notContains($companyHome, '<table', 'Company Home must not retain a raw read-only table.');
+$notContains($companyHome, 'tn-', 'Company Home must not restore legacy TN presentation.');
 
 $canonicalTableRenderers = [
     'app/Interfaces/Web/View/components/ui/data_table.phtml' => 'canonical read-only DataTable renderer',

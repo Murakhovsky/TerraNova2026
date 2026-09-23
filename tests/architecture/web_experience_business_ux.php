@@ -84,7 +84,7 @@ foreach ([
     '.cos-activity-feed',
     '.cos-money-metric',
     '.cos-trend-metric',
-    '@media (max-width: 760px)',
+    '@media (max-width: 650px)',
 ] as $marker) {
     if (!str_contains($css, $marker)) {
         throw new RuntimeException('PHASE 7 business UX CSS is incomplete: ' . $marker);

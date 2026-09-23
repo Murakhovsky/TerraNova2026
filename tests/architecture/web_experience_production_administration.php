@@ -268,15 +268,19 @@ foreach ([
     $contains($publicScene, $marker, 'Public Spatial scene specialized surface must remain intact.');
 }
 
-$companyHome = $read('app/Interfaces/Web/View/admin/index.phtml');
+$companyHome = $read('symfony/templates/experience/admin/dashboard.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    'tn-ui-panel',
-    'data-company-home',
+    '<twig:CosPageHeader',
+    '<twig:CosMetric',
+    '<twig:CosNextAction',
+    '<twig:CosEntityListItem',
+    'data-cos-archetype',
+    'dashboard.decisions',
 ] as $marker) {
-    $contains($companyHome, $marker, 'Company Home must remain on canonical Administration/workspace composition.');
+    $contains($companyHome, $marker, 'Company Home must use the Wave 13 Executive Dashboard composition.');
+}
+foreach (['tn-', 'style=', '<script', 'PhtmlRenderer'] as $legacyMarker) {
+    $notContains($companyHome, $legacyMarker, 'Company Home must not retain legacy/local visual composition.');
 }
 
 $analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');
@@ -296,7 +300,7 @@ foreach (['tn-page-hero', 'tn-admin-metrics', 'tn-admin-card', 'tn-listing-table
 
 foreach ([
     'path: /admin',
-    'CoreWorkspacePageController::home',
+    'ExecutiveDashboardController::index',
     'path: /admin/analytics',
     'CoreWorkspacePageController::analytics',
 ] as $marker) {

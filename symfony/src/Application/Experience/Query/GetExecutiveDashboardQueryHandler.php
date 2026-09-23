@@ -1,15 +1,17 @@
 <?php
+
 declare(strict_types=1);
 
-namespace App\Web\Home;
+namespace App\Application\Experience\Query;
 
 use Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface;
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use Kernel\Application\Query\QueryHandlerInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Operations\Contract\OperationsReadModelInterface;
 use Throwable;
 
-final readonly class CompanyHomeService
+final readonly class GetExecutiveDashboardQueryHandler implements QueryHandlerInterface
 {
     public function __construct(
         private SalesWorkspaceReadModelInterface $sales,
@@ -20,22 +22,27 @@ final readonly class CompanyHomeService
     }
 
     /** @return array<string,mixed> */
-    public function snapshot(string $organizationId): array
+    public function __invoke(GetExecutiveDashboardQuery $query): array
     {
+        $organizationId = $query->organizationId->value();
         $modules = $this->moduleSnapshot($organizationId);
         $moduleIndex = [];
+
         foreach ($modules['items'] as $module) {
             $moduleIndex[(string) ($module['id'] ?? '')] = $module;
         }
 
-        $salesEnabled = (bool) ($moduleIndex['sales']['enabled'] ?? false);
-        $propertyEnabled = (bool) ($moduleIndex['property']['enabled'] ?? false);
-
         return [
             'generated_at' => date('Y-m-d H:i:s'),
             'modules' => $modules,
-            'sales' => $this->section($salesEnabled, fn (): array => $this->sales->dashboard($organizationId)),
-            'property' => $this->section($propertyEnabled, fn (): array => $this->properties->overview($organizationId, 6)),
+            'sales' => $this->section(
+                (bool) ($moduleIndex['sales']['enabled'] ?? false),
+                fn (): array => $this->sales->dashboard($organizationId),
+            ),
+            'property' => $this->section(
+                (bool) ($moduleIndex['property']['enabled'] ?? false),
+                fn (): array => $this->properties->overview($organizationId, 6),
+            ),
             'cos' => $this->section(true, fn (): array => [
                 'overview' => $this->operations->overview($organizationId, 12),
                 'health' => $this->operations->health(),
@@ -62,9 +69,20 @@ final readonly class CompanyHomeService
 
         try {
             $data = $loader();
-            return ['enabled' => true, 'available' => true, 'data' => is_array($data) ? $data : [], 'error' => null];
+
+            return [
+                'enabled' => true,
+                'available' => true,
+                'data' => is_array($data) ? $data : [],
+                'error' => null,
+            ];
         } catch (Throwable) {
-            return ['enabled' => true, 'available' => false, 'data' => [], 'error' => 'Дані цього модуля тимчасово недоступні.'];
+            return [
+                'enabled' => true,
+                'available' => false,
+                'data' => [],
+                'error' => 'Дані цього модуля тимчасово недоступні.',
+            ];
         }
     }
 }

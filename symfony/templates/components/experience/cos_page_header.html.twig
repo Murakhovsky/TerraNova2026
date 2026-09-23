@@ -1,0 +1,18 @@
+<header class="cos-page-header">
+    <div class="cos-page-header__copy">
+        {% if eyebrow %}<p class="cos-page-header__eyebrow">{{ eyebrow }}</p>{% endif %}
+        <h1 class="cos-page-header__title">{{ title }}</h1>
+        {% if subtitle %}<p class="cos-page-header__subtitle">{{ subtitle }}</p>{% endif %}
+    </div>
+    {% if metaValue or block('content')|trim is not empty %}
+        <div class="cos-page-header__side">
+            {% if metaValue %}
+                <div class="cos-page-header__meta">
+                    <strong>{{ metaValue }}</strong>
+                    {% if metaLabel %}<span>{{ metaLabel }}</span>{% endif %}
+                </div>
+            {% endif %}
+            <div class="cos-page-header__actions">{% block content %}{% endblock %}</div>
+        </div>
+    {% endif %}
+</header>

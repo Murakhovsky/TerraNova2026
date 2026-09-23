@@ -1,0 +1,189 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Огляд компанії | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Company Home"
+        title="Огляд компанії"
+        subtitle="Продажі, каталог, COS і підключені модулі в одному керівному контексті."
+        metaValue="{{ dashboard.generatedAt }}"
+        metaLabel="оновлено"
+    >
+        {% if page.state != 'permission_denied' %}
+            <twig:CosButton label="Sales Today" href="/sales/today" variant="primary" />
+            <twig:CosButton label="COS" href="/cos/control-center" variant="ghost" />
+        {% endif %}
+    </twig:CosPageHeader>
+
+    {% if page.state == 'permission_denied' %}
+        <twig:CosAlert
+            title="Недостатньо прав"
+            copy="Company Home доступний користувачам із manager/admin доступом."
+            tone="warning"
+        />
+    {% elseif dashboard.error %}
+        <twig:CosAlert title="Company Home недоступний" copy="{{ dashboard.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="executive-kpis">
+            <h2 id="executive-kpis" class="cos-section-title">Company pulse</h2>
+            {% if dashboard.metrics is empty %}
+                <twig:CosEmptyState title="Немає KPI для показу" copy="Активні модулі поки не повернули керівні метрики." />
+            {% else %}
+                <div class="cos-kpi-strip">
+                    {% for metric in dashboard.metrics %}
+                        <article class="cos-card">
+                            <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                            <twig:CosButton label="Відкрити" href="{{ metric.href }}" variant="ghost" size="sm" />
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Operational attention">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Today</p>
+                <h2 class="cos-card__title">Операційний фокус</h2>
+                {% set salesState = dashboard.sectionStates.sales %}
+                {% if salesState.state == 'normal' %}
+                    <div class="cos-pattern-stack">
+                        {% for item in dashboard.salesAttention %}
+                            <twig:CosNextAction title="{{ item.label }}" due="{{ item.value }}" href="{{ item.href }}" />
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <twig:CosAlert title="{{ salesState.title }}" copy="{{ salesState.copy }}" tone="{{ salesState.state == 'error' ? 'warning' : 'info' }}" />
+                {% endif %}
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">COS attention</p>
+                <h2 class="cos-card__title">Автоматизація та контроль</h2>
+                {% set cosState = dashboard.sectionStates.cos %}
+                {% if cosState.state == 'normal' %}
+                    <div class="cos-pattern-stack">
+                        {% for item in dashboard.cosAttention %}
+                            <twig:CosNextAction title="{{ item.label }}" due="{{ item.value }}" href="{{ item.href }}" />
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <twig:CosAlert title="{{ cosState.title }}" copy="{{ cosState.copy }}" tone="warning" />
+                {% endif %}
+            </article>
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Business pulse">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Fresh demand</p>
+                <h2 class="cos-card__title">Нові ліди</h2>
+                {% set salesState = dashboard.sectionStates.sales %}
+                {% if salesState.state != 'normal' %}
+                    <twig:CosAlert title="{{ salesState.title }}" copy="{{ salesState.copy }}" tone="{{ salesState.state == 'error' ? 'warning' : 'info' }}" />
+                {% elseif dashboard.leads is empty %}
+                    <twig:CosEmptyState title="Нових лідів немає" copy="Нові звернення зʼявляться тут після надходження в Sales." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for lead in dashboard.leads %}
+                            <twig:CosEntityListItem
+                                title="{{ lead.title }}"
+                                subtitle="{{ lead.subtitle }}"
+                                meta="{{ lead.meta }}"
+                                href="{{ lead.href }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Property pulse</p>
+                <h2 class="cos-card__title">Публічний каталог</h2>
+                {% set propertyState = dashboard.sectionStates.property %}
+                {% if propertyState.state != 'normal' %}
+                    <twig:CosAlert title="{{ propertyState.title }}" copy="{{ propertyState.copy }}" tone="{{ propertyState.state == 'error' ? 'warning' : 'info' }}" />
+                {% else %}
+                    <div class="cos-entity-summary" aria-label="Property catalog summary">
+                        <div class="cos-entity-summary__item">
+                            <span>Published</span>
+                            <strong>{{ dashboard.propertySummary.published }}</strong>
+                        </div>
+                        <div class="cos-entity-summary__item">
+                            <span>Active</span>
+                            <strong>{{ dashboard.propertySummary.active }}</strong>
+                        </div>
+                    </div>
+                    {% if dashboard.properties is empty %}
+                        <twig:CosEmptyState title="Немає активної добірки" copy="Активні обʼєкти для керівного огляду поки відсутні." />
+                    {% else %}
+                        <div class="cos-entity-list" role="list">
+                            {% for property in dashboard.properties %}
+                                <twig:CosEntityListItem
+                                    title="{{ property.title }}"
+                                    subtitle="{{ property.subtitle }}"
+                                    meta="{{ property.meta }}"
+                                    href="{{ property.href }}"
+                                />
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </article>
+        </section>
+
+        <section class="cos-page__section">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Runtime modules</p>
+                <h2 class="cos-card__title">Підключені модулі</h2>
+                {% set modulesState = dashboard.sectionStates.modules %}
+                {% if modulesState.state != 'normal' %}
+                    <twig:CosAlert title="{{ modulesState.title }}" copy="{{ modulesState.copy }}" tone="warning" />
+                {% elseif dashboard.modules is empty %}
+                    <twig:CosEmptyState title="Модулі не знайдено" copy="Runtime module registry не повернув активних записів." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for module in dashboard.modules %}
+                            <twig:CosEntityListItem
+                                title="{{ module.title }}"
+                                subtitle="{{ module.subtitle }}"
+                                meta="{{ module.meta }}"
+                                statusLabel="{{ module.status }}"
+                                statusTone="{{ module.tone }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+
+        <section class="cos-page__section">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Decision queue</p>
+                <h2 class="cos-card__title">Що чекає рішення</h2>
+                {% if dashboard.decisions is empty %}
+                    <twig:CosEmptyState title="Черга рішень порожня" copy="Немає відкритих actions або approvals, що потребують уваги." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for decision in dashboard.decisions %}
+                            <twig:CosEntityListItem
+                                title="{{ decision.title }}"
+                                subtitle="{{ decision.subtitle }}"
+                                meta="{{ decision.meta }}"
+                                statusLabel="{{ decision.status }}"
+                                statusTone="{{ decision.tone }}"
+                                href="{{ decision.href }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

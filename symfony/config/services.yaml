@@ -1660,6 +1660,10 @@ services:
   Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyWorkspaceReadModel
 
+  App\Web\Workspace\ExecutiveDashboardController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Workspace\CoreWorkspacePageController:
     public: true
     tags: ['controller.service_arguments']

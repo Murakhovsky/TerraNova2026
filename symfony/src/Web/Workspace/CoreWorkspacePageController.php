@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Web\Workspace;
 
 use App\Security\SessionCsrfValidator;
-use App\Web\Home\CompanyHomeService;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Identity\Application\Contract\AdministrationServiceInterface;
@@ -22,30 +21,10 @@ final readonly class CoreWorkspacePageController
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
         private NavigationBuilder $navigation,
-        private CompanyHomeService $home,
         private AdministrationServiceInterface $administration,
         private PropertyFunnelAnalyticsInterface $analytics,
         private SessionCsrfValidator $csrf,
     ) {
-    }
-
-    public function home(Request $request): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-
-        try {
-            return $this->render($request, $tenant, 'Company Home', 'home', 'home', 'admin/index', [
-                'home' => $this->home->snapshot($tenant->organizationId()->value()),
-                'pageStatus' => null,
-            ], ['company-home']);
-        } catch (Throwable $error) {
-            error_log('workspace.home.read_failed ' . $error->getMessage());
-            return $this->render($request, $tenant, 'Company Home', 'home', 'home', 'admin/index', [
-                'home' => [],
-                'pageStatus' => 'Огляд компанії тимчасово недоступний. Деталі записано в лог.',
-            ], ['company-home'], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
     }
 
     public function users(Request $request): Response
