@@ -12,6 +12,7 @@ final readonly class ExecutiveDashboardViewModel
      * @param list<array<string,mixed>> $cosAttention
      * @param list<array<string,mixed>> $leads
      * @param list<array<string,mixed>> $properties
+     * @param array{published:int,active:int} $propertySummary
      * @param list<array<string,mixed>> $modules
      * @param list<array<string,mixed>> $decisions
      * @param array<string,array{state:string,title:string,copy:string}> $sectionStates
@@ -23,6 +24,7 @@ final readonly class ExecutiveDashboardViewModel
         public array $cosAttention,
         public array $leads,
         public array $properties,
+        public array $propertySummary,
         public array $modules,
         public array $decisions,
         public array $sectionStates,

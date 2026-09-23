@@ -40,7 +40,7 @@ final class ExecutiveDashboardPresenter
         }
 
         $salesAttention = ($sales['available'] ?? false) ? [
-            $this->attention('Прострочені follow-ups', count($this->list($salesToday['overdue'] ?? null)), '/sales/today'),
+            $this->attention('Прострочені follow-ups', (int) ($salesKpis['followups_overdue'] ?? 0), '/sales/today'),
             $this->attention('Must do сьогодні', count($this->list($salesToday['must_do'] ?? null)), '/sales/today'),
             $this->attention('Нові відповіді', count($this->list($salesToday['new_replies'] ?? null)), '/sales/today'),
             $this->attention('AI recommendations', count($this->list($salesToday['ai_recommended'] ?? null)), '/sales/today'),
@@ -122,6 +122,10 @@ final class ExecutiveDashboardPresenter
             cosAttention: $cosAttention,
             leads: $leads,
             properties: $properties,
+            propertySummary: [
+                'published' => (int) ($propertyData['published'] ?? 0),
+                'active' => (int) ($propertyData['active'] ?? 0),
+            ],
             modules: $moduleItems,
             decisions: $decisions,
             sectionStates: [

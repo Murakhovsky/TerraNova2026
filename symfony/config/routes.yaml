@@ -1265,7 +1265,7 @@ cos_spatial_event:
 # Web routing recovery — canonical Symfony page surfaces.
 cos_web_workspace_home:
   path: /admin
-  controller: App\Web\Workspace\CoreWorkspacePageController::home
+  controller: App\Web\Workspace\ExecutiveDashboardController::index
   methods: [GET, HEAD]
 
 cos_web_workspace_users:
