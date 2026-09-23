@@ -4,8 +4,6 @@
   .tn-sales-workspace .tn-workspace-section { margin-bottom: 0; }
   .tn-sales-filter-grow { flex: 1 1 280px; }
   .tn-sales-cell-sub { display: block; margin-top: 4px; color: var(--tn-color-muted); font-size: var(--tn-font-xs); }
-  .tn-sales-click-row { cursor: pointer; }
-  .tn-sales-click-row:hover td { background: var(--tn-color-surface-subtle); }
 
   .tn-sales-list { display: grid; }
   .tn-sales-list-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: var(--tn-space-3); padding: 12px 0; color: var(--tn-color-ink); border-bottom: 1px solid var(--tn-color-border); text-decoration: none; }

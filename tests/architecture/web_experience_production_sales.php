@@ -100,16 +100,22 @@ if (is_file($root . '/app/Interfaces/Web/View/sales/deal.phtml')) {
 }
 
 
-$deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
+$deals = $read('symfony/templates/experience/sales/deals.html.twig');
 foreach ([
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/data_table'",
-    "'responsive' => 'cards'",
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosDataGrid',
+    'data-controller="sales-deals"',
+    'cos:datagrid-row-action->sales-deals#rowAction',
 ] as $marker) {
-    $contains($deals, $marker, 'Sales Deals list must use canonical FilterBar and DataTable contracts.');
+    $contains($deals, $marker, 'Sales Deals must use canonical Collection/DataGrid composition.');
 }
-$notContains($deals, '<form class="tn-ui-filter-bar', 'Sales Deals must not restore a local filter form.');
-$notContains($deals, 'class="tn-ui-table"', 'Sales Deals must not restore a local raw table.');
+foreach (['tn-', 'style=', '<script', '<table'] as $forbidden) {
+    $notContains($deals, $forbidden, 'Sales Deals page must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/deals.phtml')) {
+    throw new RuntimeException('Legacy Sales Deals PHTML must stay retired after VR-007.');
+}
 
 $today = $read('symfony/templates/experience/sales/today.html.twig');
 foreach ([

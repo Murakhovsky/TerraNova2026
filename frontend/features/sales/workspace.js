@@ -403,10 +403,6 @@ const initSalesWorkspace = () => {
   document.querySelectorAll('[data-sales-today-root]').forEach(initToday);
   document.querySelectorAll('[data-sales-lead-inbox]').forEach(initLeadInbox);
   document.querySelectorAll('[data-sales-global-search]').forEach(initSalesGlobalSearch);
-  document.querySelectorAll('.tn-sales-click-row[data-href]').forEach((row) => row.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest('a,button,input,select,label')) return;
-    window.location.assign(row.dataset.href);
-  }));
 };
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSalesWorkspace, { once: true });

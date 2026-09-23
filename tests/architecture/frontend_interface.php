@@ -49,7 +49,9 @@ foreach([
     'symfony/templates/experience/sales/leads.html.twig',
     'symfony/templates/experience/sales/lead_workspace.html.twig',
     'symfony/assets/controllers/sales_lead_controller.js',
-    'app/Interfaces/Web/View/sales/deals.phtml',
+    'symfony/src/Web/Sales/SalesDealsController.php',
+    'symfony/templates/experience/sales/deals.html.twig',
+    'symfony/assets/controllers/sales_deals_controller.js',
     'symfony/src/Web/Sales/SalesDealController.php',
     'symfony/templates/experience/sales/deal_workspace.html.twig',
     'symfony/assets/controllers/sales_deal_controller.js',
@@ -84,8 +86,8 @@ foreach(['salesNavigationContributor','propertyNavigationContributor','diagnosti
 }
 
 $sales=$read('symfony/src/Web/Sales/SalesPageController.php');
-foreach(["'workspaceSection' => 'sales'","['sales-workspace']",'public function deals('] as $needle){
-    $assert(str_contains($sales,$needle),'Sales Symfony page owner missing workspace contract: '.$needle);
+foreach(["'workspaceSection' => 'sales'","['sales-workspace']",'public function director('] as $needle){
+    $assert(str_contains($sales,$needle),'Remaining legacy Sales page owner missing Director workspace contract: '.$needle);
 }
 $diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
 $assert(str_contains($diagnostic,"['diagnostics-methodology-studio']"),'Diagnostic Symfony owner must load its Vite entrypoint.');

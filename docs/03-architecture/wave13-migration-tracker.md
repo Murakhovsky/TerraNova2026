@@ -17,8 +17,8 @@ kind: architecture
 | VR-003 | `/sales/leads` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-004 | `/sales/deals/{id}` | Workspace | Sales | Entity Workspace | P0 | Twig | DONE |
 | VR-005 | `/sales/today` | Workspace | Sales | Operational Queue | P0 | Twig | DONE |
-| VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | QA |
-| VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | BACKLOG |
+| VR-006 | `/sales/pipeline` | Workspace | Sales | Process / Pipeline | P0 | Twig | DONE |
+| VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | QA |
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | BACKLOG |
 | VR-009 | `/sales/admin` | System | Sales | System / Control Surface | P0 | Twig | BACKLOG |
 
@@ -46,3 +46,5 @@ VR-001 додатково видаляє один production PHTML screen і о�
 
 
 VR-006 переводить Sales Pipeline на Process / Pipeline archetype: canonical PageHeader/Toolbar/FilterBar обрамляють Sales-specific Kanban; drag/drop збережено, а keyboard stage mutation додано як accessibility parity.
+
+VR-007 переводить Deals на canonical Collection/DataGrid. Generic DataGrid filter отримав text-filter contract, а operational Sales read model — offset pagination без зміни filter semantics.

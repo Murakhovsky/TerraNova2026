@@ -1508,7 +1508,7 @@ cos_web_sales_lead:
 
 cos_web_sales_deals:
   path: /sales/deals
-  controller: App\Web\Sales\SalesPageController::deals
+  controller: App\Web\Sales\SalesDealsController::index
   methods: [GET]
 
 cos_web_sales_deal:

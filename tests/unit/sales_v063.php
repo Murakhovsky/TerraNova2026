@@ -20,7 +20,9 @@ $pipelineController = $read('symfony/assets/controllers/sales_pipeline_controlle
 $deal = $read('symfony/templates/experience/sales/deal_workspace.html.twig');
 $dealHandler = $read('symfony/src/Application/Sales/Query/GetSalesDealWorkspaceQueryHandler.php');
 $dealController = $read('symfony/assets/controllers/sales_deal_controller.js');
-$deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
+$deals = $read('symfony/templates/experience/sales/deals.html.twig');
+$dealsPresenter = $read('symfony/src/Web/Sales/SalesDealsPresenter.php');
+$dealsController = $read('symfony/assets/controllers/sales_deals_controller.js');
 $director = $read('app/Interfaces/Web/View/sales/director.phtml');
 $js = $read('frontend/features/sales/workspace.js');
 
@@ -55,9 +57,13 @@ foreach (['weighted_value', 'avg_days_in_stage', 'days_in_stage', 'attention_rea
 foreach (['id="communications"', 'Next Action', 'data-operation="message"', 'data-sales-approval', 'COS Intelligence'] as $marker) {
     $assert(str_contains($deal, $marker), 'Deal missing: ' . $marker);
 }
-foreach (['name="owner_id"', 'name="priority"', 'name="source"', 'attention_reason'] as $marker) {
-    $assert(str_contains($deals, $marker), 'Deals list missing: ' . $marker);
+foreach (['CosDataGrid', 'sales-deals', 'cos:datagrid-row-action->sales-deals#rowAction'] as $marker) {
+    $assert(str_contains($deals, $marker), 'Canonical Deals Collection missing: ' . $marker);
 }
+foreach (['owner_id', 'priority', 'source', 'pipeline_id', 'stage_id', 'risk'] as $marker) {
+    $assert(str_contains($dealsPresenter, $marker), 'Deals DataGrid filter projection missing: ' . $marker);
+}
+$assert(str_contains($dealsController, '/sales/deals/'), 'Deals DataGrid row action must navigate to Deal Workspace.');
 foreach (['Funnel', 'Historical stage transitions', 'Pipeline health', 'Manager performance', 'Pending approvals'] as $marker) {
     $assert(str_contains($director, $marker), 'Director missing: ' . $marker);
 }
@@ -85,6 +91,9 @@ foreach ([
     'symfony/src/Application/Sales/Query/GetSalesPipelineWorkspaceQueryHandler.php',
     'symfony/src/Web/Sales/SalesPipelineController.php',
     'symfony/src/Web/Sales/SalesPipelinePresenter.php',
+    'symfony/src/Application/Sales/Query/GetSalesDealsCollectionQueryHandler.php',
+    'symfony/src/Web/Sales/SalesDealsController.php',
+    'symfony/src/Web/Sales/SalesDealsPresenter.php',
 ] as $file) {
     $output = [];
     $code = 0;

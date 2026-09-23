@@ -94,13 +94,13 @@ Sales read model
 
 ### Список угод (`Deals`)
 
-`sales/deals.phtml`
+`symfony/templates/experience/sales/deals.html.twig`
 
-- локальний filter form замінено на shared FilterBar;
-- raw table замінено на canonical DataTable;
-- stage і risk використовують semantic presentation;
-- mobile rendering переходить на record-card contract;
-- query params і URL переходу в Deal Workspace збережені.
+- Collection використовує canonical `CosDataGrid` з search/filter/columns/pagination/mobile-card contract;
+- generic DataGrid filter підтримує select і text inputs без Sales-specific логіки;
+- legacy flat filter query params лишаються backward-compatible aliases;
+- Open row action веде в canonical Deal Workspace;
+- operational read model підтримує offset server pagination.
 
 ### Операційний inbox (`Today`)
 

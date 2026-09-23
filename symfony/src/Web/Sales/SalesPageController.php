@@ -6,8 +6,6 @@ namespace App\Web\Sales;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use DateTimeImmutable;
-use Domains\Sales\Application\Contract\SalesTeamAdministrationInterface;
-use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Domains\Sales\Application\Service\SalesDirectorCockpitService;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -22,20 +20,8 @@ final readonly class SalesPageController
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
         private NavigationBuilder $navigation,
-        private SalesWorkspaceOperationalReadModelInterface $workspace,
-        private SalesTeamAdministrationInterface $teams,
         private SalesDirectorCockpitService $director,
     ) {
-    }
-
-    public function deals(Request $request): Response
-    {
-        return $this->managerPage($request, 'Sales Deals', 'deals', 'sales/deals',
-            fn(TenantContext $tenant): array => [
-                'pipelines' => $this->workspace->pipelines($tenant->organizationId()->value()),
-                'deals' => $this->workspace->deals($tenant->organizationId()->value(), $request->query->all()),
-                'owners' => $this->owners($tenant),
-            ]);
     }
 
     public function director(Request $request): Response
@@ -145,15 +131,6 @@ final readonly class SalesPageController
             : '';
     }
 
-    /** @return list<array<string,mixed>> */
-    private function owners(TenantContext $tenant): array
-    {
-        $users = $this->teams->users($tenant->organizationId()->value());
-        return array_values(array_filter($users, static fn(array $user): bool =>
-            strtolower((string) ($user['status'] ?? '')) === 'active'
-            && in_array(strtolower((string) ($user['organization_role'] ?? $user['role'] ?? '')), ['manager', 'admin'], true)
-        ));
-    }
 
 
 }

@@ -22,11 +22,21 @@
             {% for filter in filters %}
                 <label class="cos-data-grid__filter">
                     <span class="cos-data-grid__filter-label">{{ filter.label }}</span>
-                    <select class="cos-select" name="filter[{{ filter.key }}]">
-                        {% for optionValue, optionLabel in filter.options %}
-                            <option value="{{ optionValue }}" {% if filter.value == optionValue %}selected{% endif %}>{{ optionLabel }}</option>
-                        {% endfor %}
-                    </select>
+                    {% if filter.type == 'text' %}
+                        <input
+                            class="cos-input"
+                            type="text"
+                            name="filter[{{ filter.key }}]"
+                            value="{{ filter.value ?? '' }}"
+                            placeholder="{{ filter.placeholder ?? '' }}"
+                        >
+                    {% else %}
+                        <select class="cos-select" name="filter[{{ filter.key }}]">
+                            {% for optionValue, optionLabel in filter.options %}
+                                <option value="{{ optionValue }}" {% if filter.value == optionValue %}selected{% endif %}>{{ optionLabel }}</option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
                 </label>
             {% endfor %}
         </div>
