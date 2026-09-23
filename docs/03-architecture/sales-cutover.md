@@ -2,7 +2,7 @@
 title: Перемикання Sales на канонічний Web Experience
 description: Wave 12.26 переводить Sales Dashboard, Lead List і Lead Workspace на production routes та прибирає legacy PHTML ownership.
 status: active
-updated: 2026-09-22
+updated: 2026-09-23
 kind: architecture
 ---
 
@@ -14,8 +14,8 @@ Wave 12.26 завершує production cutover референсного Sales ve
 
 Після cutover:
 
-- `/sales/dashboard` → `SalesWorkspaceController::dashboard`;
-- `/sales/leads` → `SalesWorkspaceController::leads`;
+- `/sales/dashboard` → `SalesDashboardController::index`;
+- `/sales/leads` → `SalesLeadsController::index`;
 - `/sales/leads/{id}` → `SalesWorkspaceController::lead`.
 
 Окремі `/sales/reference/*` routes видалені.
@@ -25,7 +25,7 @@ Wave 12.26 завершує production cutover референсного Sales ve
 | Критерій | Доказ |
 | --- | --- |
 | Functional parity | Lead status, owner, Lead → Opportunity і follow-up лишаються на canonical Sales commands/API; mutation-safe browser E2E перевіряє persistence після reload. |
-| Permissions | `SalesWorkspaceController` вимагає manager/admin; executable access contract перевіряє redirect і 403 до виконання QueryBus. |
+| Permissions | Production Sales controllers вимагають manager/admin; executable access contracts перевіряють redirect і 403 до виконання QueryBus. |
 | Tenant isolation | Усі reads отримують `OrganizationId` тільки з `TenantContext`; Workspace resolver звіряє organization context. |
 | Mobile | Browser E2E запускає desktop і 390×844 mobile profiles; UIAction provider має `MOBILE_PRIMARY` і `MOBILE_MENU`. |
 | Performance | Authenticated Sales E2E застосовує budgets для navigation time, transfer bytes та DOM size на Dashboard, Lead List і Lead Workspace. |

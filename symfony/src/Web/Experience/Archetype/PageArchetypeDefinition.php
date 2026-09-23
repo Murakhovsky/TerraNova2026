@@ -11,6 +11,7 @@ final readonly class PageArchetypeDefinition
     /**
      * @param list<string> $requiredPatterns
      * @param list<string> $optionalPatterns
+     * @param list<list<string>> $requiredPatternGroups
      * @param list<string> $states
      * @param list<string> $densities
      * @param list<string> $responsiveContract
@@ -21,6 +22,7 @@ final readonly class PageArchetypeDefinition
         public string $purpose,
         public array $requiredPatterns,
         public array $optionalPatterns,
+        public array $requiredPatternGroups,
         public array $states,
         public array $densities,
         public array $responsiveContract,
@@ -37,6 +39,7 @@ final readonly class PageArchetypeDefinition
             'purpose' => $this->purpose,
             'requiredPatterns' => $this->requiredPatterns,
             'optionalPatterns' => $this->optionalPatterns,
+            'requiredPatternGroups' => $this->requiredPatternGroups,
             'states' => $this->states,
             'densities' => $this->densities,
             'responsiveContract' => $this->responsiveContract,

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Web\Sales;
 
 use App\Application\Sales\Query\GetSalesLeadQuery;
-use App\Application\Sales\Query\ListSalesLeadsQuery;
 use App\Application\Sales\Admin\SalesAdminQuery;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\ProviderBackedShellNavigation;
@@ -32,32 +31,6 @@ final readonly class SalesWorkspaceController
         private ProviderBackedShellNavigation $navigation,
         private WorkspaceCompositionResolver $workspaces,
     ) {
-    }
-
-    public function leads(Request $request): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-
-        $data = $this->queries->ask(new ListSalesLeadsQuery($tenant->organizationId(), $request->query->all()));
-        $context = $this->context($tenant, 'leads');
-
-        return $this->render('experience/sales/leads.html.twig', [
-            'shell' => $this->shell($tenant, $context, 'Lead List', [
-                new ShellBreadcrumb('Workspace', '/admin'),
-                new ShellBreadcrumb('Sales', '/sales/dashboard'),
-                new ShellBreadcrumb('Leads'),
-            ]),
-            'items' => is_array($data['items'] ?? null) ? $data['items'] : [],
-            'pagination' => is_array($data['pagination'] ?? null) ? $data['pagination'] : [],
-            'filters' => [
-                'q' => trim((string) $request->query->get('q', '')),
-                'status' => trim((string) $request->query->get('status', '')),
-                'source' => trim((string) $request->query->get('source', '')),
-            ],
-            'owners' => $this->owners($tenant),
-            'csrfToken' => $this->csrf($request),
-        ]);
     }
 
     public function lead(Request $request, string $id): Response

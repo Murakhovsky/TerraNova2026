@@ -41,7 +41,7 @@ $notContains($dashboard, '/sales/reference/', 'Sales Dashboard must not retain r
 
 $leads = $read('symfony/templates/experience/sales/leads.html.twig');
 foreach ([
-    '<twig:CosEntityHeader',
+    '<twig:CosPageHeader',
     '<twig:CosFilterBar',
     '<twig:CosEntityListItem',
     'action="/sales/leads"',

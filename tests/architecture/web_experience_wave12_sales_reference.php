@@ -12,13 +12,13 @@ function expectSalesReference(bool $condition, string $message): void
 
 $controller = file_get_contents($root . '/symfony/src/Web/Sales/SalesWorkspaceController.php');
 $dashboardController = file_get_contents($root . '/symfony/src/Web/Sales/SalesDashboardController.php');
+$leadsController = file_get_contents($root . '/symfony/src/Web/Sales/SalesLeadsController.php');
 $routes = file_get_contents($root . '/symfony/config/routes.yaml');
 $services = file_get_contents($root . '/symfony/config/services.yaml');
 $provider = file_get_contents($root . '/symfony/src/Web/Experience/Extension/Provider/SalesWebProvider.php');
 
 foreach ([
     'QueryBusInterface',
-    'ListSalesLeadsQuery',
     'GetSalesLeadQuery',
     'ProviderBackedShellNavigation',
     'WorkspaceCompositionResolver',
@@ -39,6 +39,16 @@ foreach ([
 }
 
 foreach ([
+    'QueryBusInterface',
+    'ListSalesLeadsQuery',
+    'WorkspaceShellFactory',
+    'PagePresentationFactory',
+    'PageArchetype::Collection',
+] as $needle) {
+    expectSalesReference(str_contains($leadsController, $needle), 'Sales Leads controller missing canonical dependency: ' . $needle);
+}
+
+foreach ([
     'PhtmlRenderer',
     'SalesWorkspaceReadModelInterface',
     'SalesWorkspaceOperationalReadModelInterface',
@@ -46,6 +56,7 @@ foreach ([
 ] as $forbidden) {
     expectSalesReference(!str_contains($controller, $forbidden), 'Sales reference controller must not depend on legacy/direct read boundary: ' . $forbidden);
     expectSalesReference(!str_contains($dashboardController, $forbidden), 'Sales Dashboard controller must not depend on legacy/direct read boundary: ' . $forbidden);
+    expectSalesReference(!str_contains($leadsController, $forbidden), 'Sales Leads controller must not depend on legacy/direct read boundary: ' . $forbidden);
 }
 
 foreach ([
@@ -58,6 +69,7 @@ foreach ([
 
 expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesWorkspaceController:'), 'Sales reference controller service is missing.');
 expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesDashboardController:'), 'Sales Dashboard controller service is missing.');
+expectSalesReference(str_contains($services, 'App\\Web\\Sales\\SalesLeadsController:'), 'Sales Leads controller service is missing.');
 expectSalesReference(str_contains($services, "tags: ['controller.service_arguments']"), 'Sales reference controller must be a Symfony controller service.');
 
 foreach ([
@@ -91,6 +103,7 @@ expectSalesReference(str_contains($dashboard, '<twig:CosMoneyMetric'), 'Sales Da
 expectSalesReference(str_contains($dashboard, '<twig:CosTrendMetric'), 'Sales Dashboard must use canonical trend metric.');
 
 $leads = file_get_contents($root . '/symfony/templates/experience/sales/leads.html.twig');
+expectSalesReference(str_contains($leads, '<twig:CosPageHeader'), 'Lead List must use canonical page header.');
 expectSalesReference(str_contains($leads, '<twig:CosFilterBar'), 'Lead List must use canonical filter bar.');
 expectSalesReference(str_contains($leads, '<twig:CosEntityListItem'), 'Lead List must use canonical entity list items.');
 

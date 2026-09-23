@@ -1497,7 +1497,7 @@ cos_web_sales_pipeline:
 
 cos_web_sales_leads:
   path: /sales/leads
-  controller: App\Web\Sales\SalesWorkspaceController::leads
+  controller: App\Web\Sales\SalesLeadsController::index
   methods: [GET]
 
 cos_web_sales_lead:

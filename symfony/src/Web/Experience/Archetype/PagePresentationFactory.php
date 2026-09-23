@@ -40,6 +40,16 @@ final readonly class PagePresentationFactory
             ));
         }
 
+        foreach ($definition->requiredPatternGroups as $group) {
+            if (array_intersect($group, $patterns) === []) {
+                throw new InvalidArgumentException(sprintf(
+                    'Page archetype %s requires one pattern from group: %s',
+                    $definition->id->value,
+                    implode(' | ', $group),
+                ));
+            }
+        }
+
         if (!in_array($state, $definition->states, true)) {
             throw new InvalidArgumentException(sprintf(
                 'Unsupported page state %s for archetype %s.',
