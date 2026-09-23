@@ -1513,7 +1513,7 @@ cos_web_sales_deals:
 
 cos_web_sales_deal:
   path: /sales/deals/{id}
-  controller: App\Web\Sales\SalesPageController::deal
+  controller: App\Web\Sales\SalesDealController::index
   methods: [GET]
   requirements: { id: '[1-9][0-9]*' }
 

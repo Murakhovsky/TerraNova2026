@@ -165,7 +165,7 @@ try {
   await messageForm.locator('textarea[name="body"]').fill(messageBody);
   await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/communications`, () => messageForm.locator('button').filter({ hasText: 'Send Message' }).click(), 'Send Message');
   assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
-  await assertCount(page.locator('.tn-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
+  await assertCount(page.locator('.cos-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
 
   await page.locator('#intelligence').waitFor({ state: 'visible' });
   const execute = page.locator('[data-sales-action] [data-decision="execute"]').first();

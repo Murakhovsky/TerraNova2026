@@ -63,18 +63,25 @@ foreach ([
 }
 $notContains($pipeline, '<form class="tn-ui-filter-bar', 'Sales Pipeline must not restore a local filter form.');
 
-$deal = $read('app/Interfaces/Web/View/sales/deal.phtml');
+$deal = $read('symfony/templates/experience/sales/deal_workspace.html.twig');
 foreach ([
-    "partial('components/ui/entity_header'",
-    "'identity' =>",
-    "'status' =>",
-    "'meta' => \$dealMeta",
+    '<twig:CosWorkspace',
+    '<twig:CosEntityHeader',
+    'data-controller="sales-deal"',
     'data-sales-deal-workspace',
     'data-sales-stage-form',
+    'data-sales-operation-form',
+    'data-sales-intelligence',
+    '<twig:CosTimeline',
 ] as $marker) {
-    $contains($deal, $marker, 'Deal workspace must use canonical entity anatomy without losing behavior.');
+    $contains($deal, $marker, 'Deal Workspace must use canonical Entity Workspace composition without losing behavior.');
 }
-$notContains($deal, "partial('components/ui/page_header'", 'Deal workspace must not regress from EntityHeader to PageHeader.');
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($deal, $forbidden, 'Deal Workspace must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/sales/deal.phtml')) {
+    throw new RuntimeException('Legacy Deal Workspace PHTML must stay retired after VR-004.');
+}
 
 
 $deals = $read('app/Interfaces/Web/View/sales/deals.phtml');
