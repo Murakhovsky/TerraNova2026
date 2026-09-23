@@ -52,7 +52,7 @@ if (!str_contains($index, 'ADR-0011-web-platform-v1-freeze.md')) {
 $routes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 foreach ([
     'controller: App\\Web\\Sales\\SalesDashboardController::index',
-    'controller: App\\Web\\Sales\\SalesWorkspaceController::leads',
+    'controller: App\\Web\\Sales\\SalesLeadsController::index',
     'controller: App\\Web\\Sales\\SalesWorkspaceController::lead',
 ] as $marker) {
     if (!str_contains($routes, $marker)) {
