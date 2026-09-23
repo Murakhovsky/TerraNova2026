@@ -549,6 +549,25 @@ services:
 
   Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer: ~
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOptimizationRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthOptimizationRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOptimizationRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthOptimizationGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthOptimizationGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthOptimizationGateway
+
+  Domains\Growth\Application\Service\GrowthOptimizationService: ~
+
+  Domains\Growth\Application\Contract\GrowthOptimizationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthOptimizationService
+
   Domains\Growth\Bootstrap\GrowthDomainModule: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:

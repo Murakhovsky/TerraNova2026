@@ -487,6 +487,38 @@ Growth Overview
 
 Lists читаються через `GrowthWorkspaceReadModelInterface`. Detail pages складаються з існуючих application briefs. UI mutations не дублюють lifecycle: frontend викликає `/api/v1/growth/*` із CSRF та idempotency key.
 
+## Learning Optimization
+
+V0.17 переводить feedback із «видимого» в «керовано застосовний»:
+
+```text
+terminal Candidate outcomes
+        ↓
+deterministic Growth metrics
+  outcome counts / win rate
+  score dimension deltas
+  ICP fit delta
+  signal-type performance
+  loss/disqualification reasons
+  won value by currency
+        ↓
+governed optimization recommendation
+        ↓
+Accept / Dismiss
+        ↓
+Materialize
+        ↓
+new DRAFT ICP / Qualification Policy revision
+        ↓
+separate Activate operation
+```
+
+LLM не отримує mutation authority і не рахує primary metrics із raw records. Він бачить server-computed evidence objects та active target snapshots і може цитувати лише `allowed_evidence_ids`.
+
+Materialization не обходить Domain logic: вона викликає чинні `GrowthIntelligenceBoundary::reviseIcpProfile()` або `GrowthDecisionBoundary::reviseQualificationPolicy()`. Якщо base revision перестала бути active, recommendation переходить у `stale`, а не форкає застарілу policy branch.
+
+Мінімальний terminal sample для генерації recommendation — 8 Candidates. Це safety floor, а не статистична гарантія достатності; risks/assumptions і confidence залишаються first-class частиною recommendation.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -506,9 +538,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.16
+## Статус V0.17
 
-`process_state: to-be` поки навмисний. V0.16 робить closed-loop outcome feedback операційно видимим через read-only Learning Workspace та Candidate-level outcome panel; durable feedback semantics V0.15 не змінюються.
+`process_state: to-be` поки навмисний. V0.17 додає governed Learning Optimization поверх durable Growth outcomes: deterministic evidence aggregation → recommendation → Accept/Dismiss → optional materialization у draft ICP / Qualification Policy revision. Activation лишається окремою human-controlled операцією.
 
 ## Карта коду
 
@@ -531,6 +563,10 @@ app/Domains/Growth/Application/Service/GrowthResearchService.php
 app/Domains/Growth/Application/Service/GrowthHandoffService.php
 app/Domains/Growth/Application/Service/GrowthEngagementService.php
 app/Domains/Growth/Application/Service/GrowthLearningService.php
+app/Domains/Growth/Application/Service/GrowthOptimizationService.php
+app/Domains/Growth/Application/AI/GrowthOptimizationPrompt.php
+app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthOptimizationGateway.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthOptimizationRepository.php
 app/Domains/Growth/Automation/Event/GrowthOutcomeFeedbackConsumer.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthLearningRepository.php
 app/Domains/Growth/Application/AI/GrowthEngagementPrompt.php

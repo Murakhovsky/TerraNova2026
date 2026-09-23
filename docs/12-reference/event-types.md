@@ -16,7 +16,7 @@ generated: true
 
 | Модуль | Типів подій |
 | --- | ---: |
-| `growth` | 42 |
+| `growth` | 51 |
 | `property` | 17 |
 | `sales` | 16 |
 
@@ -56,6 +56,15 @@ generated: true
 | `growth` | `growth.icp.drafted` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.icp.revised` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.learning.binding_created` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.recommendation_accepted` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.recommendation_created` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.recommendation_dismissed` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.recommendation_materialized` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.recommendation_stale` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.recommendation_superseded` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.run_completed` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.run_failed` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
+| `growth` | `growth.optimization.run_started` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.outcome.recorded` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.qualification_policy.activated` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |
 | `growth` | `growth.qualification_policy.drafted` | `Domains\Growth\Automation\Event\GrowthEventType::values()` | `app/Domains/Growth/Automation/Event/GrowthEventType.php` | `app/Domains/Growth/Bootstrap/GrowthDomainModule.php` |

@@ -39,6 +39,15 @@ final class GrowthEventType
     public const ENGAGEMENT_RECOMMENDATION_SUPERSEDED = 'growth.engagement.recommendation_superseded';
     public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
     public const OUTCOME_RECORDED = 'growth.outcome.recorded';
+    public const OPTIMIZATION_RUN_STARTED = 'growth.optimization.run_started';
+    public const OPTIMIZATION_RUN_COMPLETED = 'growth.optimization.run_completed';
+    public const OPTIMIZATION_RUN_FAILED = 'growth.optimization.run_failed';
+    public const OPTIMIZATION_RECOMMENDATION_CREATED = 'growth.optimization.recommendation_created';
+    public const OPTIMIZATION_RECOMMENDATION_ACCEPTED = 'growth.optimization.recommendation_accepted';
+    public const OPTIMIZATION_RECOMMENDATION_DISMISSED = 'growth.optimization.recommendation_dismissed';
+    public const OPTIMIZATION_RECOMMENDATION_MATERIALIZED = 'growth.optimization.recommendation_materialized';
+    public const OPTIMIZATION_RECOMMENDATION_STALE = 'growth.optimization.recommendation_stale';
+    public const OPTIMIZATION_RECOMMENDATION_SUPERSEDED = 'growth.optimization.recommendation_superseded';
 
     public const SIGNAL_DETECTED = 'growth.signal.detected';
     public const CANDIDATE_DETECTED = 'growth.candidate.detected';
@@ -87,6 +96,15 @@ final class GrowthEventType
             self::ENGAGEMENT_RECOMMENDATION_SUPERSEDED,
             self::LEARNING_BINDING_CREATED,
             self::OUTCOME_RECORDED,
+            self::OPTIMIZATION_RUN_STARTED,
+            self::OPTIMIZATION_RUN_COMPLETED,
+            self::OPTIMIZATION_RUN_FAILED,
+            self::OPTIMIZATION_RECOMMENDATION_CREATED,
+            self::OPTIMIZATION_RECOMMENDATION_ACCEPTED,
+            self::OPTIMIZATION_RECOMMENDATION_DISMISSED,
+            self::OPTIMIZATION_RECOMMENDATION_MATERIALIZED,
+            self::OPTIMIZATION_RECOMMENDATION_STALE,
+            self::OPTIMIZATION_RECOMMENDATION_SUPERSEDED,
             self::SIGNAL_DETECTED,
             self::CANDIDATE_DETECTED,
             self::CANDIDATE_RESEARCHED,

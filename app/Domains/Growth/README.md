@@ -334,4 +334,32 @@ V0.16 makes the learning loop operationally visible:
 
 The Learning Workspace is read-only. It projects Growth-owned outcome observations and does not query or mutate Sales state.
 
-Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and automatic scoring/ICP optimization.
+V0.17 closes the learning loop without granting autonomous policy authority:
+
+```text
+Growth-owned terminal outcomes
++ score dimensions
++ ICP fit
++ signal performance
++ reason distribution
+        ↓ deterministic aggregation
+evidence ids + active target snapshots
+        ↓
+governed Kernel\Llm
+        ↓
+LearningOptimizationRecommendation
+  target: ICP or Qualification Policy
+  complete proposed criteria
+  rationale / evidence / risks / assumptions
+  confidence
+        ↓
+Accept / Dismiss
+        ↓ explicit Materialize
+new DRAFT revision
+        ↓
+separate human activation
+```
+
+The model does not calculate source metrics from raw rows and cannot activate a policy. Server-side validation requires a minimum terminal sample, an active target, valid complete criteria, non-no-op change and evidence ids from the deterministic learning context. Materialization reuses the existing ICP / Qualification application boundaries and creates only the next draft revision.
+
+Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation/optimization.

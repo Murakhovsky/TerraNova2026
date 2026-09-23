@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.16.0','Growth V0.16 manifest version must be 0.16.0.');
-$assert(($manifest['schema_version']??null)==='0.15.0','Growth V0.16 must keep schema version 0.15.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.16.0','>='),'Growth manifest must remain V0.16+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.15.0','>='),'Growth schema must remain V0.15+.');
 $assert(in_array('growth.learning.workspace',$manifest['contributions']['capabilities']??[],true),'Growth learning workspace capability is missing.');
 
 $migration='app/migrations/20260923_000080_growth_v0160_learning_workspace.sql';

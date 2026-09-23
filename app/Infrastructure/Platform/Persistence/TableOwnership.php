@@ -47,6 +47,7 @@ final class TableOwnership
             'tn_growth_handoff_attempts',
             'tn_growth_engagement_runs', 'tn_growth_engagement_recommendations',
             'tn_growth_learning_bindings', 'tn_growth_outcomes',
+            'tn_growth_optimization_runs', 'tn_growth_optimization_recommendations',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],

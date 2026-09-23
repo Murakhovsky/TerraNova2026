@@ -37,8 +37,8 @@ final class IcpProfile
 
     public function revise(string $name,IcpCriteria $criteria): self
     {
-        if($this->status===IcpProfileStatus::Draft){
-            throw new DomainException('Draft ICP profile must be edited before activation, not forked into a new revision.');
+        if($this->status!==IcpProfileStatus::Active){
+            throw new DomainException('Only active ICP profile can be revised into a new draft revision.');
         }
         return self::draft($this->id,$this->organizationId,$name,$criteria,$this->revision+1);
     }

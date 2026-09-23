@@ -40,8 +40,8 @@ final class QualificationPolicy
 
     public function revise(string $name,QualificationPolicyCriteria $criteria): self
     {
-        if($this->status===QualificationPolicyStatus::Draft){
-            throw new DomainException('Draft Growth qualification policy must be edited before activation, not revised.');
+        if($this->status!==QualificationPolicyStatus::Active){
+            throw new DomainException('Only active Growth qualification policy can be revised into a new draft revision.');
         }
         return self::draft($this->id,$this->organizationId,$name,$criteria,$this->revision+1);
     }

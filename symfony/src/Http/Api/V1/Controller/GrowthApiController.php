@@ -12,6 +12,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthLearningBoundary;
+use Domains\Growth\Application\Contract\GrowthOptimizationBoundary;
 use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use InvalidArgumentException;
@@ -35,6 +36,7 @@ final readonly class GrowthApiController
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
         private GrowthLearningBoundary $learning,
+        private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
@@ -325,6 +327,48 @@ final readonly class GrowthApiController
     {
         return $this->read(fn(TenantContext $tenant):array=>
             $this->learning->learningBrief($tenant->organizationId()->value(),$id));
+    }
+
+    public function generateOptimization(Request $request): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->optimization->generateRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key
+            ),202);
+    }
+
+    public function optimizationBrief(): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->optimization->optimizationBrief($tenant->organizationId()->value()));
+    }
+
+    public function acceptOptimization(Request $request,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$recommendationId):array{
+            $reason=$this->requiredString($this->input($request),'reason');
+            return $this->optimization->acceptRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$recommendationId,$reason,$key
+            );
+        });
+    }
+
+    public function dismissOptimization(Request $request,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$recommendationId):array{
+            $reason=$this->requiredString($this->input($request),'reason');
+            return $this->optimization->dismissRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$recommendationId,$reason,$key
+            );
+        });
+    }
+
+    public function materializeOptimization(Request $request,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->optimization->materializeRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$recommendationId,$key
+            ),201);
     }
 
     public function handoffTargets(): JsonResponse

@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.16.0',
-    'schema_version' => '0.15.0',
+    'version' => '0.17.0',
+    'schema_version' => '0.17.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
     'icon' => 'radar',
@@ -37,8 +37,10 @@ return [
             'app/migrations/20260922_000078_growth_v0140_engagement_intelligence.sql',
             'app/migrations/20260923_000079_growth_v0150_learning_feedback.sql',
             'app/migrations/20260923_000080_growth_v0160_learning_workspace.sql',
+            'app/migrations/20260923_000081_growth_v0170_learning_optimization.sql',
         ],
         'capabilities' => [
+            'growth.learning.optimize',
             'growth.learning.workspace',
             'growth.learning.feedback',
             'growth.learning.brief',

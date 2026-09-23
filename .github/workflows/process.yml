@@ -134,6 +134,7 @@ jobs:
           php tests/architecture/growth_v0140_engagement_intelligence.php
           php tests/architecture/growth_v0150_learning_feedback.php
           php tests/architecture/growth_v0160_learning_workspace.php
+          php tests/architecture/growth_v0170_learning_optimization.php
 
       - name: Process registry invariants
         run: |
@@ -154,6 +155,7 @@ jobs:
           php tests/unit/growth_v0140_engagement_intelligence.php
           php tests/unit/growth_v0150_learning_feedback.php
           php tests/unit/growth_v0160_learning_workspace.php
+          php tests/unit/growth_v0170_learning_optimization.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -208,6 +210,8 @@ jobs:
           php -l tests/architecture/growth_v0150_learning_feedback.php
           php -l tests/unit/growth_v0160_learning_workspace.php
           php -l tests/architecture/growth_v0160_learning_workspace.php
+          php -l tests/unit/growth_v0170_learning_optimization.php
+          php -l tests/architecture/growth_v0170_learning_optimization.php
           php -l symfony/src/Application/Growth/Integration/GrowthExternalSignalWebhook.php
           php -l symfony/src/Web/PublicEdge/PublicEdgeController.php
           php -l tests/architecture/process_v01.php
