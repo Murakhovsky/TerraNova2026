@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.22.0','Growth V0.22 manifest version must be 0.22.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.22.0','>='),'Growth manifest must remain V0.22+.');
 $assert(($manifest['schema_version']??null)==='0.22.0','Growth V0.22 schema version must be 0.22.0.');
 $assert(in_array('growth.engagement.execution',$manifest['contributions']['capabilities']??[],true),'Growth engagement execution capability is missing.');
 

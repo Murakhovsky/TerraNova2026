@@ -650,6 +650,28 @@ Growth persistence не дублює message body; зберігаються ли
 
 Поточний bridge підтримує `send_email`, `connect_linkedin`, `offer_diagnostic`, `send_case_study`, `ask_introduction`, `invite_webinar` лише для email/LinkedIn channels. Call, monitor, ignore та create_report execution лишаються поза V0.22.
 
+## Engagement Execution Workspace
+
+V0.23 робить V0.14 + V0.22 operational у Candidate Workspace без нової execution authority:
+
+```text
+Candidate Workspace
+  ↓
+Generate Next Best Action
+  ↓
+Accept / Dismiss recommendation
+  ↓
+server-side execution eligibility
+  ↓
+human-provided message body
+  ↓
+canonical V0.22 execution API
+  ↓
+Kernel Action status / target trace
+```
+
+Workspace не approve і не execute Sales Actions напряму. Він не викликає Sales approval/action endpoints і не дублює message body у Growth persistence. Якщо recommendation ще не accepted, не message-capable, channel не підтримується або немає рівно одного `sales_deal` binding, UI показує server-side eligibility reason замість імпровізації на клієнті.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -669,9 +691,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.22
+## Статус V0.23
 
-`process_state: to-be` поки навмисний. V0.22 додає governed post-handoff Engagement Execution Bridge. Accepted recommendation може породити canonical `sales.send_message` Action лише при однозначному `sales_deal` binding; виконання лишається під Kernel Action + Sales Policy authority.
+`process_state: to-be` поки навмисний. V0.23 додає Candidate Workspace surface над governed Engagement Intelligence + Execution Bridge. Mutation authority не змінюється: recommendation decisions і Action proposal йдуть через canonical Growth API, а approval/execute лишаються під Kernel/Sales authority.
 
 ## Карта коду
 

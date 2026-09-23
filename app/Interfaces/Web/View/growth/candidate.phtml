@@ -5,6 +5,12 @@ $candidate=is_array($workspace['candidate']??null)?$workspace['candidate']:[];
 $signals=is_array($workspace['signals']??null)?$workspace['signals']:[];
 $research=is_array($workspace['research']??null)?$workspace['research']:[];
 $decision=is_array($workspace['decision']??null)?$workspace['decision']:[];
+$engagement=is_array($workspace['engagement']??null)?$workspace['engagement']:[];
+$engagementExecution=is_array($workspace['engagement_execution']??null)?$workspace['engagement_execution']:[];
+$engagementRecommendation=is_array($engagement['latest_recommendation']??null)?$engagement['latest_recommendation']:null;
+$execution=is_array($engagementExecution['execution']??null)?$engagementExecution['execution']:null;
+$executionAction=is_array($engagementExecution['action']??null)?$engagementExecution['action']:null;
+$executionEligibility=is_array($engagementExecution['eligibility']??null)?$engagementExecution['eligibility']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
 $learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
@@ -81,6 +87,90 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
       <?php if(!empty($candidate['qualification_reason'])): ?><p><strong>Lifecycle reason:</strong> <?php echo $h($candidate['qualification_reason']); ?></p><?php endif; ?>
     </section>
   </div>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-engagement>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Engagement Intelligence</p><h2>Next Best Action</h2></div>
+      <?php if($engagementRecommendation): ?><span><?php echo $h(strtoupper((string)($engagementRecommendation['status']??'proposed'))); ?></span><?php endif; ?>
+    </div>
+
+    <?php if($engagementRecommendation): ?>
+      <div class="tn-ui-split">
+        <div>
+          <p><strong><?php echo $h(str_replace('_',' ',strtoupper((string)($engagementRecommendation['action_type']??'')))); ?></strong></p>
+          <p><?php echo $h($engagementRecommendation['rationale']??''); ?></p>
+          <p><strong>Message angle:</strong> <?php echo $h($engagementRecommendation['message_angle']??''); ?></p>
+        </div>
+        <div>
+          <p><strong>Channel:</strong> <?php echo $h($engagementRecommendation['channel']??'—'); ?></p>
+          <p><strong>Contact:</strong> <?php echo $h($engagementRecommendation['contact_id']??'—'); ?></p>
+          <p><strong>Confidence:</strong> <?php echo round((float)($engagementRecommendation['confidence']??0)*100); ?>%</p>
+          <?php if(!empty($engagementRecommendation['unknowns'])): ?>
+            <p><strong>Unknowns:</strong> <?php echo $h(implode(', ',array_map('strval',(array)$engagementRecommendation['unknowns']))); ?></p>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <?php $engagementStatus=strtolower((string)($engagementRecommendation['status']??'')); ?>
+      <?php if(!empty($canManageGrowth)&&$engagementStatus==='proposed'): ?>
+        <div class="tn-ui-split">
+          <form class="tn-growth-action-form" data-growth-engagement-decision="accept" data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">
+            <label class="tn-ui-field"><span>Acceptance reason</span><input class="tn-ui-input" name="reason" required placeholder="Why this action is appropriate"></label>
+            <button class="tn-ui-button tn-ui-button--primary" type="submit">Accept recommendation</button>
+            <span data-growth-form-status></span>
+          </form>
+          <form class="tn-growth-action-form" data-growth-engagement-decision="dismiss" data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">
+            <label class="tn-ui-field"><span>Dismissal reason</span><input class="tn-ui-input" name="reason" required placeholder="Why this action should not be used"></label>
+            <button class="tn-ui-button tn-ui-button--ghost" type="submit">Dismiss recommendation</button>
+            <span data-growth-form-status></span>
+          </form>
+        </div>
+      <?php endif; ?>
+
+      <?php if($engagementStatus==='accepted'): ?>
+        <hr>
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Governed execution</p><h3>Kernel Action bridge</h3></div></div>
+
+        <?php if($execution): ?>
+          <p><strong>Execution:</strong> <?php echo $h($execution['execution_id']??''); ?></p>
+          <p><strong>Target:</strong> <?php echo $h(($execution['target_reference_type']??'').' : '.($execution['target_reference_id']??'')); ?></p>
+          <?php if($executionAction): ?>
+            <p><strong>Action:</strong> <?php echo $h(($executionAction['type']??'').' · '.strtoupper((string)($executionAction['status']??''))); ?></p>
+            <p><small><?php echo $h(($executionAction['execution_mode']??'').' · risk '.($executionAction['risk_level']??'')); ?> · <?php echo $h($executionAction['action_id']??''); ?></small></p>
+          <?php else: ?>
+            <p class="tn-growth-error">Execution link exists, but the Kernel Action is not readable.</p>
+          <?php endif; ?>
+        <?php elseif(!empty($executionEligibility['can_propose'])): ?>
+          <p><?php echo $h($executionEligibility['reason']??'Eligible for governed execution.'); ?></p>
+          <p><small>Target <?php echo $h(($executionEligibility['target_reference_type']??'').' : '.($executionEligibility['target_reference_id']??'')); ?> · Action <?php echo $h($executionEligibility['action_type']??'sales.send_message'); ?></small></p>
+          <?php if(!empty($canManageGrowth)): ?>
+            <form class="tn-growth-action-form" data-growth-engagement-execution data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">
+              <label class="tn-ui-field">
+                <span>Outbound message body</span>
+                <textarea class="tn-ui-input" name="body" rows="6" maxlength="10000" required placeholder="Human-approved outbound message"></textarea>
+              </label>
+              <p class="tn-growth-muted">The message body goes to the governed Kernel Action. Growth stores only the execution link and payload fingerprint.</p>
+              <button class="tn-ui-button tn-ui-button--primary" type="submit">Propose governed Action</button>
+              <span data-growth-form-status></span>
+            </form>
+          <?php endif; ?>
+        <?php else: ?>
+          <p class="tn-growth-muted"><?php echo $h($executionEligibility['reason']??'This recommendation is not executable through the current bridge.'); ?></p>
+        <?php endif; ?>
+      <?php endif; ?>
+
+      <?php if(!empty($canManageGrowth)&&in_array($engagementStatus,['dismissed','superseded'],true)&&in_array($status,['researched','scored','qualified','ready_for_handoff','monitoring','rejected_by_target_domain'],true)): ?>
+        <button class="tn-ui-button tn-ui-button--ghost" type="button" data-growth-engagement-generate>Generate new recommendation</button>
+        <p class="tn-growth-action-status" data-growth-engagement-status></p>
+      <?php endif; ?>
+    <?php else: ?>
+      <p class="tn-growth-muted">No engagement recommendation yet.</p>
+      <?php if(!empty($canManageGrowth)&&in_array($status,['researched','scored','qualified','ready_for_handoff','monitoring','rejected_by_target_domain'],true)): ?>
+        <button class="tn-ui-button tn-ui-button--primary" type="button" data-growth-engagement-generate>Generate next best action</button>
+        <p class="tn-growth-action-status" data-growth-engagement-status></p>
+      <?php endif; ?>
+    <?php endif; ?>
+  </section>
 
   <section class="tn-ui-panel tn-workspace-section">
     <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Handoff</p><h2><?php echo $h($candidate['target_domain']??'Target Domain'); ?></h2></div></div>

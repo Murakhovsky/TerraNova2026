@@ -149,7 +149,62 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             $stored=$this->actionGateway->find($organizationId,(string)$execution['action_id']);
             $action=$stored?->toArray();
         }
-        return ['recommendation'=>$recommendation,'execution'=>$execution,'action'=>$action];
+
+        return [
+            'recommendation'=>$recommendation,
+            'execution'=>$execution,
+            'action'=>$action,
+            'eligibility'=>$this->executionEligibility($organizationId,$candidateId,$recommendation,$execution),
+        ];
+    }
+
+    /** @param array<string,mixed> $recommendation @param array<string,mixed>|null $execution @return array<string,mixed> */
+    private function executionEligibility(
+        string $organizationId,string $candidateId,array $recommendation,?array $execution
+    ):array {
+        if($execution!==null){
+            return [
+                'can_propose'=>false,
+                'code'=>'already_proposed',
+                'reason'=>'This recommendation already has a governed execution Action.',
+                'target_reference_type'=>$execution['target_reference_type']??null,
+                'target_reference_id'=>$execution['target_reference_id']??null,
+            ];
+        }
+
+        if((string)($recommendation['status']??'')!==EngagementRecommendationStatus::Accepted->value){
+            return ['can_propose'=>false,'code'=>'recommendation_not_accepted','reason'=>'Accept the recommendation before proposing execution.'];
+        }
+
+        $actionType=(string)($recommendation['action_type']??'');
+        if(!in_array($actionType,self::MESSAGE_ACTIONS,true)){
+            return ['can_propose'=>false,'code'=>'action_not_message_capable','reason'=>'This recommendation is not message-capable in the current execution bridge.'];
+        }
+
+        $channel=(string)($recommendation['channel']??'');
+        if(!in_array($channel,[EngagementChannel::Email->value,EngagementChannel::LinkedIn->value],true)){
+            return ['can_propose'=>false,'code'=>'channel_not_supported','reason'=>'Current execution bridge supports email or LinkedIn message channels only.'];
+        }
+
+        $deals=$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal');
+        if(count($deals)!==1){
+            return [
+                'can_propose'=>false,
+                'code'=>'sales_deal_binding_required',
+                'reason'=>'Execution requires exactly one bound sales_deal; found '.count($deals).'.',
+            ];
+        }
+
+        return [
+            'can_propose'=>true,
+            'code'=>'eligible',
+            'reason'=>'Accepted recommendation is eligible for governed Sales message proposal.',
+            'target_domain'=>'sales',
+            'target_reference_type'=>'sales_deal',
+            'target_reference_id'=>$deals[0],
+            'action_type'=>'sales.send_message',
+            'channel'=>$channel,
+        ];
     }
 
     private function bounded(string $value,string $field,int $limit):string

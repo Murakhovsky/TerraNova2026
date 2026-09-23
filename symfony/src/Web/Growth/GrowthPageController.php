@@ -11,6 +11,8 @@ use App\Web\Phtml\PhtmlRenderer;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
+use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
+use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
@@ -47,6 +49,8 @@ final readonly class GrowthPageController
         private GrowthResearchBoundary $research,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthDecisionBoundary $decisions,
+        private GrowthEngagementBoundary $engagement,
+        private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthExperimentBoundary $experiments,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
@@ -91,12 +95,24 @@ final readonly class GrowthPageController
                     if($signal!==null)$signals[]=$signal;
                 }
 
+                $engagement=$this->engagement->engagementBrief($organizationId,$id);
+                $execution=null;
+                $recommendation=$engagement['latest_recommendation']??null;
+                if(is_array($recommendation)){
+                    $recommendationId=$recommendation['recommendation_id']??null;
+                    if(is_string($recommendationId)&&$recommendationId!==''){
+                        $execution=$this->engagementExecution->executionBrief($organizationId,$id,$recommendationId);
+                    }
+                }
+
                 return [
                     'workspace'=>[
                         'candidate'=>$candidate,
                         'signals'=>$signals,
                         'research'=>$this->research->researchBrief($organizationId,$id),
                         'decision'=>$this->decisions->decisionBrief($organizationId,$id),
+                        'engagement'=>$engagement,
+                        'engagement_execution'=>$execution,
                         'handoff'=>$this->handoff->handoffBrief($organizationId,$id),
                         'learning'=>$this->learning->learningBrief($organizationId,$id),
                     ],

@@ -47,7 +47,7 @@ Bootstrap: корінь композиції
 повністю інтегрований домен середовища виконання
 ```
 
-Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.22.0` має installable contract, persistence/application runtime, ICP/Account/Buying Committee Intelligence, Signal/Research/Decision Intelligence, resumable Handoff, Sales target, Symfony API V1 та provider-backed SSR Workspace, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
+Installable Domains мають `module.php` та входять до згенерованого довідника модулів. Growth `0.23.0` має installable contract, persistence/application runtime, ICP/Account/Buying Committee Intelligence, Signal/Research/Decision Intelligence, resumable Handoff, Sales target, Symfony API V1 та provider-backed SSR Workspace, але лишається вимкненим за замовчуванням, доки delivery та cross-domain acceptance surfaces не пройдуть окремий cutover.
 
 Identity, Content і Spatial фізично відокремлені як обмежені області відповідальності (bounded areas), але не зобов’язані мати той самий контракт встановлюваного модуля.
 
@@ -59,7 +59,7 @@ Identity, Content і Spatial фізично відокремлені як обм
 
 ## Growth: пошук бізнес-можливостей
 
-Growth `0.22.0` володіє Signal Intake, ICP, Account/Buying Committee Intelligence, deterministic qualification policy, evidence-bound Research та explicit resumable handoff lifecycle:
+Growth `0.23.0` володіє Signal Intake, ICP, Account/Buying Committee Intelligence, deterministic qualification policy, evidence-bound Research та explicit resumable handoff lifecycle:
 
 ```text
 ICP

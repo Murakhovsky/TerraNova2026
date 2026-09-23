@@ -85,6 +85,87 @@ const runPrepare=async(root,form)=>{
   }
 };
 
+const engagementBase=(candidateId)=>'/api/v1/growth/candidates/'+encodeURIComponent(candidateId)+'/engagement/recommendations';
+
+const runEngagementGenerate=async(root,button)=>{
+  const candidateId=root.dataset.candidateId||'';
+  if(!candidateId)return;
+  const status=root.querySelector('[data-growth-engagement-status]');
+  button.disabled=true;
+  setStatus(status,'Generating next best action…','loading');
+  try{
+    const response=await mutation(engagementBase(candidateId),{},root,button);
+    const data=response?.data??response;
+    if(data?.run?.status==='failed'){
+      delete button.dataset.idempotencyKey;
+      throw new Error(data?.run?.error_summary||'Engagement recommendation generation failed.');
+    }
+    delete button.dataset.idempotencyKey;
+    setStatus(status,'Recommendation generated. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),250);
+  }catch(error){
+    setStatus(status,error.message||'Engagement recommendation generation failed.','error');
+    button.disabled=false;
+  }
+};
+
+const runEngagementDecision=async(root,form)=>{
+  const candidateId=root.dataset.candidateId||'';
+  const recommendationId=form.dataset.recommendationId||'';
+  const decision=form.dataset.growthEngagementDecision||'';
+  if(!candidateId||!recommendationId||!['accept','dismiss'].includes(decision))return;
+  const status=form.querySelector('[data-growth-form-status]');
+  const button=form.querySelector('button[type="submit"]');
+  const reason=String(new FormData(form).get('reason')||'').trim();
+  if(!reason){
+    setStatus(status,'Decision reason is required.','error');
+    return;
+  }
+  button?.setAttribute('disabled','disabled');
+  setStatus(status,decision==='accept'?'Accepting recommendation…':'Dismissing recommendation…','loading');
+  try{
+    await mutation(
+      engagementBase(candidateId)+'/'+encodeURIComponent(recommendationId)+'/'+decision,
+      {reason},root,form,
+    );
+    delete form.dataset.idempotencyKey;
+    setStatus(status,'Decision saved. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),250);
+  }catch(error){
+    setStatus(status,error.message||'Engagement decision failed.','error');
+    button?.removeAttribute('disabled');
+  }
+};
+
+const runEngagementExecution=async(root,form)=>{
+  const candidateId=root.dataset.candidateId||'';
+  const recommendationId=form.dataset.recommendationId||'';
+  if(!candidateId||!recommendationId)return;
+  const status=form.querySelector('[data-growth-form-status]');
+  const button=form.querySelector('button[type="submit"]');
+  const body=String(new FormData(form).get('body')||'').trim();
+  if(!body){
+    setStatus(status,'Outbound message body is required.','error');
+    return;
+  }
+  button?.setAttribute('disabled','disabled');
+  setStatus(status,'Proposing governed Action…','loading');
+  try{
+    const response=await mutation(
+      engagementBase(candidateId)+'/'+encodeURIComponent(recommendationId)+'/execution',
+      {body},root,form,
+    );
+    const data=response?.data??response;
+    delete form.dataset.idempotencyKey;
+    const action=data?.action??{};
+    setStatus(status,'Action '+String(action?.status||'proposed')+'. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),300);
+  }catch(error){
+    setStatus(status,error.message||'Governed Action proposal failed.','error');
+    button?.removeAttribute('disabled');
+  }
+};
+
 const initGrowthCandidate=(root)=>{
   root.querySelectorAll('[data-growth-action]').forEach((button)=>{
     button.addEventListener('click',()=>runAction(root,button));
@@ -92,6 +173,19 @@ const initGrowthCandidate=(root)=>{
   root.querySelector('[data-growth-handoff-prepare]')?.addEventListener('submit',(event)=>{
     event.preventDefault();
     runPrepare(root,event.currentTarget);
+  });
+  root.querySelectorAll('[data-growth-engagement-generate]').forEach((button)=>{
+    button.addEventListener('click',()=>runEngagementGenerate(root,button));
+  });
+  root.querySelectorAll('[data-growth-engagement-decision]').forEach((form)=>{
+    form.addEventListener('submit',(event)=>{
+      event.preventDefault();
+      runEngagementDecision(root,event.currentTarget);
+    });
+  });
+  root.querySelector('[data-growth-engagement-execution]')?.addEventListener('submit',(event)=>{
+    event.preventDefault();
+    runEngagementExecution(root,event.currentTarget);
   });
 };
 

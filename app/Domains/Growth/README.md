@@ -479,4 +479,6 @@ Growth does not execute the Action and does not dispatch a worker command. The A
 
 V0.22 supports message-capable accepted recommendations on email or LinkedIn channels. `call`, `monitor`, `ignore` and `create_report` remain non-executable through this bridge.
 
+V0.23 exposes the V0.22 execution bridge inside the Candidate Workspace. Operators can generate and decide a recommendation, inspect execution eligibility, provide the outbound body and propose the governed Action. Existing Kernel/Sales approval and execution authority is preserved; Growth UI never calls Sales approval or execute endpoints directly.
+
 Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, pre-handoff outbound execution and autonomous activation.
