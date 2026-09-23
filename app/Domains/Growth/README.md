@@ -427,4 +427,30 @@ V0.20 exposes Experiments inside the existing Growth Workspace:
 
 The SSR controller is read-only. All create / transition / assignment mutations go through the canonical V0.19 API with CSRF and idempotency. The Workspace does not select a winner and does not execute the tested channel or message.
 
+V0.21 adds governed Experiment Decision Intelligence after attribution is frozen:
+
+```text
+COMPLETED Experiment
+        ↓
+server-computed attribution
+  assigned / primary rate
+  downstream outcomes
+  won value by currency
+        ↓
+deterministic evidence ids
+        ↓
+governed Kernel\Llm
+        ↓
+ExperimentDecisionRecommendation
+  promote_variant / iterate / continue / stop / inconclusive
+        ↓
+server-side evidence / variant / sample validation
+        ↓
+Accept / Dismiss
+```
+
+The model never receives raw outcome rows and does not calculate conversion metrics. A `promote_variant` recommendation is rejected unless the experiment has at least 20 assigned Candidates in total and at least 5 assigned to every variant. This is a safety floor, not a claim of statistical significance.
+
+An accepted experiment decision remains a recommendation. V0.21 does not mutate experiment lifecycle, activate a variant, archive the experiment, change ICP/policy, or execute outreach.
+
 Still intentionally absent: HR/Procurement/Service target adapters, provider-specific pull collectors, outbound execution and autonomous activation.

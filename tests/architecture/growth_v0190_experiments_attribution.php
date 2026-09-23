@@ -68,7 +68,7 @@ foreach([
 
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===54,'Growth V0.19 must expose exactly 54 canonical Growth API routes.');
+$assert(count($matches[0])>=54,'Growth canonical API surface must not shrink below V0.19 contract.');
 foreach([
     '/api/v1/growth/experiments',
     '/api/v1/growth/experiments/{id}/start',

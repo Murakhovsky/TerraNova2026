@@ -593,6 +593,35 @@ Attribution rules:
 
 V0.19 не робить statistical winner selection і не виконує variant config. Це measurement runtime; execution та decision policy лишаються окремими шарами.
 
+## Experiment Decision Intelligence
+
+V0.21 закриває measurement loop керованим висновком:
+
+```text
+Completed Experiment
+        ↓
+Attribution Report
+        ↓
+deterministic evidence ids
+        ↓
+governed structured LLM
+        ↓
+Decision Recommendation
+  promote_variant
+  iterate
+  continue
+  stop
+  inconclusive
+        ↓
+Accept / Dismiss
+```
+
+Модель не бачить raw outcome rows і не рахує conversion самостійно. Вона може цитувати лише `allowed_evidence_ids` та вибирати variant лише з `allowed_variant_keys`.
+
+Для `promote_variant` діє server-side safety floor: щонайменше 20 assigned Candidates загалом і 5 у кожному variant. Це не statistical significance test і не подається як такий.
+
+Accepted recommendation не має execution authority. Experiment status, variant config, outreach, ICP/Qualification activation та будь-яка інша mutation лишаються поза V0.21.
+
 ## Handoff contract
 
 V0.1 формує `OpportunityHandoff` із:
@@ -612,9 +641,9 @@ V0.1 формує `OpportunityHandoff` із:
 
 Це не Sales Lead. Це **Opportunity Package**.
 
-## Статус V0.20
+## Статус V0.21
 
-`process_state: to-be` поки навмисний. V0.19 додає controlled Growth Experiments & Attribution: immutable Candidate assignment до variant і outcome attribution у bounded assignment/completion window. Experiment runtime вимірює ефект, але не виконує outreach і не оголошує winner.
+`process_state: to-be` поки навмисний. V0.21 додає governed Experiment Decision Intelligence поверх frozen attribution completed experiment. Runtime формує evidence-bound recommendation, але не мутує Experiment, не оголошує автоматичного winner і не виконує tested variant.
 
 ## Карта коду
 
@@ -642,6 +671,10 @@ app/Domains/Growth/Application/AI/GrowthOptimizationPrompt.php
 app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthOptimizationGateway.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthOptimizationRepository.php
 app/Domains/Growth/Application/Service/GrowthExperimentService.php
+app/Domains/Growth/Application/Service/GrowthExperimentDecisionService.php
+app/Domains/Growth/Application/AI/GrowthExperimentDecisionPrompt.php
+app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthExperimentDecisionGateway.php
+app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthExperimentDecisionRepository.php
 symfony/src/Web/Growth/GrowthPageController.php
 symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php
 app/Interfaces/Web/View/growth/experiments.phtml

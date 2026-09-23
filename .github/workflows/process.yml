@@ -138,6 +138,7 @@ jobs:
           php tests/architecture/growth_v0180_optimization_workspace.php
           php tests/architecture/growth_v0190_experiments_attribution.php
           php tests/architecture/growth_v0200_experiment_workspace.php
+          php tests/architecture/growth_v0210_experiment_decision_intelligence.php
 
       - name: Process registry invariants
         run: |
@@ -161,6 +162,7 @@ jobs:
           php tests/unit/growth_v0170_learning_optimization.php
           php tests/unit/growth_v0180_optimization_workspace.php
           php tests/unit/growth_v0190_experiments_attribution.php
+          php tests/unit/growth_v0210_experiment_decision_intelligence.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -222,6 +224,8 @@ jobs:
           php -l tests/unit/growth_v0190_experiments_attribution.php
           php -l tests/architecture/growth_v0190_experiments_attribution.php
           php -l tests/architecture/growth_v0200_experiment_workspace.php
+          php -l tests/unit/growth_v0210_experiment_decision_intelligence.php
+          php -l tests/architecture/growth_v0210_experiment_decision_intelligence.php
           php -l app/Interfaces/Web/View/growth/experiments.phtml
           php -l app/Interfaces/Web/View/growth/experiment.phtml
           node --check frontend/features/growth/workspace.js

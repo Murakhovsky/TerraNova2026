@@ -715,6 +715,35 @@ cos_api_v1_growth_experiment_report:
   requirements: { id: '[A-Za-z0-9_-]{8,80}' }
 
 
+cos_api_v1_growth_experiment_decision_generate:
+  path: /api/v1/growth/experiments/{id}/decision/recommendations
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateExperimentDecision
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_decision_accept:
+  path: /api/v1/growth/experiments/{id}/decision/recommendations/{recommendationId}/accept
+  controller: App\Http\Api\V1\Controller\GrowthApiController::acceptExperimentDecision
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_experiment_decision_dismiss:
+  path: /api/v1/growth/experiments/{id}/decision/recommendations/{recommendationId}/dismiss
+  controller: App\Http\Api\V1\Controller\GrowthApiController::dismissExperimentDecision
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_experiment_decision_brief:
+  path: /api/v1/growth/experiments/{id}/decision
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experimentDecisionBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
 cos_api_v1_growth_handoff_targets:
   path: /api/v1/growth/handoff/targets
   controller: App\Http\Api\V1\Controller\GrowthApiController::handoffTargets

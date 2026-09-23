@@ -10,6 +10,7 @@ use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
+use Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
 use Domains\Growth\Application\Contract\GrowthLearningBoundary;
@@ -444,6 +445,42 @@ final readonly class GrowthApiController
                 'attribution'=>$brief['attribution']??null,
             ];
         });
+    }
+
+    public function generateExperimentDecision(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->experimentDecisions->generateRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$key
+            ),202);
+    }
+
+    public function acceptExperimentDecision(Request $request,string $id,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId):array{
+            $reason=$this->requiredString($this->input($request),'reason');
+            return $this->experimentDecisions->acceptRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,
+                $id,$recommendationId,$reason,$key
+            );
+        });
+    }
+
+    public function dismissExperimentDecision(Request $request,string $id,string $recommendationId): JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId):array{
+            $reason=$this->requiredString($this->input($request),'reason');
+            return $this->experimentDecisions->dismissRecommendation(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,
+                $id,$recommendationId,$reason,$key
+            );
+        });
+    }
+
+    public function experimentDecisionBrief(string $id): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->experimentDecisions->decisionBrief($tenant->organizationId()->value(),$id));
     }
 
     public function handoffTargets(): JsonResponse

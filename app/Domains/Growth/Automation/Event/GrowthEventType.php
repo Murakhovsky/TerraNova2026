@@ -46,6 +46,13 @@ final class GrowthEventType
     public const EXPERIMENT_COMPLETED = 'growth.experiment.completed';
     public const EXPERIMENT_ARCHIVED = 'growth.experiment.archived';
     public const EXPERIMENT_CANDIDATE_ASSIGNED = 'growth.experiment.candidate_assigned';
+    public const EXPERIMENT_DECISION_RUN_STARTED = 'growth.experiment_decision.run_started';
+    public const EXPERIMENT_DECISION_RUN_COMPLETED = 'growth.experiment_decision.run_completed';
+    public const EXPERIMENT_DECISION_RUN_FAILED = 'growth.experiment_decision.run_failed';
+    public const EXPERIMENT_DECISION_RECOMMENDATION_CREATED = 'growth.experiment_decision.recommendation_created';
+    public const EXPERIMENT_DECISION_RECOMMENDATION_ACCEPTED = 'growth.experiment_decision.recommendation_accepted';
+    public const EXPERIMENT_DECISION_RECOMMENDATION_DISMISSED = 'growth.experiment_decision.recommendation_dismissed';
+    public const EXPERIMENT_DECISION_RECOMMENDATION_SUPERSEDED = 'growth.experiment_decision.recommendation_superseded';
     public const OPTIMIZATION_RUN_STARTED = 'growth.optimization.run_started';
     public const OPTIMIZATION_RUN_COMPLETED = 'growth.optimization.run_completed';
     public const OPTIMIZATION_RUN_FAILED = 'growth.optimization.run_failed';
@@ -110,6 +117,13 @@ final class GrowthEventType
             self::EXPERIMENT_COMPLETED,
             self::EXPERIMENT_ARCHIVED,
             self::EXPERIMENT_CANDIDATE_ASSIGNED,
+            self::EXPERIMENT_DECISION_RUN_STARTED,
+            self::EXPERIMENT_DECISION_RUN_COMPLETED,
+            self::EXPERIMENT_DECISION_RUN_FAILED,
+            self::EXPERIMENT_DECISION_RECOMMENDATION_CREATED,
+            self::EXPERIMENT_DECISION_RECOMMENDATION_ACCEPTED,
+            self::EXPERIMENT_DECISION_RECOMMENDATION_DISMISSED,
+            self::EXPERIMENT_DECISION_RECOMMENDATION_SUPERSEDED,
             self::OPTIMIZATION_RUN_STARTED,
             self::OPTIMIZATION_RUN_COMPLETED,
             self::OPTIMIZATION_RUN_FAILED,
