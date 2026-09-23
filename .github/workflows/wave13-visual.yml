@@ -52,6 +52,7 @@ jobs:
           php tests/architecture/web_experience_wave13_collection_contract.php
           php tests/architecture/web_experience_wave13_sales_leads.php
           php tests/architecture/web_experience_wave13_sales_deal.php
+          php tests/architecture/web_experience_wave13_golden_four_consolidation.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

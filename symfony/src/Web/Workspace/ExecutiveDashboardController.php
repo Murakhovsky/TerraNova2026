@@ -101,12 +101,9 @@ final readonly class ExecutiveDashboardController
         return [
             'PageHeader',
             'KpiStrip',
-            'ActionBar',
-            'StatGrid',
             'EntityList',
             'EmptyState',
             'ErrorState',
-            'PermissionState',
         ];
     }
 
