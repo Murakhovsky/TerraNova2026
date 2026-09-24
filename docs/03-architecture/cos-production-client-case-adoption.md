@@ -2,13 +2,13 @@
 title: "Впровадження Client Case у production UI"
 description: "Контрольована server-component міграція Client Case views без зміни workflow forms, funnel та mutation behavior."
 status: active
-updated: 2026-09-22
+updated: 2026-09-24
 kind: architecture
 ---
 
 # Впровадження Client Case у production UI
 
-PHASE 12 закриває останній явно зафіксований борг WEB V0.17: server-component міграцію `symfony/templates/experience/client_case/index.html.twig`, `inbox.phtml` та `show.phtml`.
+Wave 13 Phase 4 закриває Client Case compatibility bridge повністю: усі три production surfaces працюють через Symfony/Twig Experience Platform.
 
 Принцип той самий, що в попередніх production adoption phases: presentation geometry стає canonical, а Sales/Client Case behavior, routes, CSRF і mutation semantics не змінюються.
 
@@ -24,7 +24,7 @@ PHASE 12 закриває останній явно зафіксований б�
 - status navigation переведено на canonical Tabs;
 - локальний GET filter form замінено на shared FilterBar;
 - queue shell переведено на canonical Panel;
-- operational `tn-inbox-card` і workflow forms свідомо збережені;
+- operational item винесено у domain component `ClientCaseInboxItem`, а workflow forms лишаються server-first;
 - property/case deep links не змінені;
 - `updateInboundRequest`, `createFromInboundRequest`, `linkInboundRequest` routes не змінені;
 - `csrf_token`, `return_url` і всі triage field names не змінені.
@@ -56,7 +56,7 @@ Routes `client-case/create`, `quickUpdate/{id}`, `createFromInboundRequest/{id}`
 
 ### Робочий простір кейсу (`Client Case Workspace`)
 
-`client_case/show.phtml`
+`symfony/templates/experience/client_case/show.html.twig`
 
 - legacy case hero замінено на canonical EntityHeader;
 - entity identity поєднує case public id та person public id;
@@ -84,11 +84,11 @@ Mutation contracts `client-case/update/{id}`, `activity/{id}`, `updatePropertyMa
 PHASE 12 закриває compatibility bridge Client Case повністю:
 
 - `frontend/features/clients/workspace.js` видалено як зайвий scoping script;
-- `clients-workspace` Vite entrypoint завантажує лише domain CSS;
+- `clients-workspace` Vite entrypoint видалено повністю;
 - compatibility-only CSS для legacy hero, metrics, tabs, admin panels, breadcrumbs та empty states видалено;
 - WEB V0.6 gate переведено з bridge assumptions на canonical Client Case views;
 - WEB V0.17 gate напряму перевіряє `index/inbox/show`;
-- WEB V0.17 CI лінтить усі три canonical Client Case PHTML;
+- WEB V0.17 CI перевіряє три canonical Client Case Twig surfaces;
 - `docs/architecture/web-v0.17.md` більше не описує Client Case як тимчасовий bridge.
 
 Спільний production submit-state runtime лишається єдиним власником pending/aria-busy behavior.
@@ -115,12 +115,12 @@ Inbox card одночасно містить:
 
 ## Критерії завершення
 
-- Inbox використовує canonical PageHeader, State, KPI, Tabs, FilterBar і Panel;
-- operational cards і mutation forms зберігають існуючу семантику;
+- Inbox використовує canonical PageHeader, KPI, FilterBar, EntityList/Operational Queue patterns;
+- `ClientCaseInboxItem` і mutation forms зберігають існуючу семантику;
 - CSRF та return-url contracts не змінені;
-- Index використовує canonical PageHeader, State, Tabs, FilterBar і Panel;
-- funnel лишається domain-specific interaction boundary, а quick-update list використовує canonical OperationalGrid із row-owned mutation forms;
-- Show використовує canonical EntityHeader, State, Panel і KPI summary;
+- Index використовує canonical PageHeader, FilterBar, EntityList і `ClientCaseFunnel`;
+- funnel лишається domain-specific interaction boundary, а editable row належить `ClientCaseCollectionItem`;
+- Show використовує `CosWorkspace`, canonical EntityHeader, KPI summary, Timeline та ActionBar;
 - AI, timeline, property-match і presentation-share patterns зберігають існуючу workflow семантику;
 - read ownership розділений між `ClientCaseInboxController`, `ClientCaseCollectionController`, `ClientCaseWorkspaceController`; mutation ownership централізований у `ClientCaseMutationController`;
 - legacy Client Case PHTML/CSS/Vite bridge видалено повністю;

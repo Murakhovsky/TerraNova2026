@@ -23,7 +23,7 @@ kind: architecture
 | VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | DONE |
 | VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | DONE |
 | VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | DONE |
-| VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | QA |
+| VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -85,3 +85,20 @@ VR-011 переводить Client Case Collection на стабільний Col
 
 
 VR-012 переводить Client Case Workspace на повний `CosWorkspace` runtime через `sales.client_case`. Entity лишається `sales.deal`, тому governed Sales UIActions та extension slots перевикористовуються без нового business Domain. Legacy `ClientCasePageController`, `client_case/show.phtml` і `clients-workspace` frontend bundle видаляються.
+
+
+## Фаза 4 — завершення Clients
+
+Production migration units VR-010…VR-012 завершені.
+
+- `/client-case/inbox` використовує canonical Operational Queue;
+- `/client-case` використовує canonical Collection;
+- `/client-case/show/{id}` використовує canonical Entity Workspace;
+- Clients лишається presentation family поверх Sales, окремого `Domains\\Clients` немає;
+- Client Case visual PHTML = **0**;
+- legacy `ClientCasePageController` = **0**;
+- legacy `clients-workspace` Vite entrypoint = **0**;
+- legacy Clients workspace CSS = **0**;
+- mutation ownership централізований у `ClientCaseMutationController`.
+
+Наступна production migration family: **Phase 5 — Property Workspace**.
