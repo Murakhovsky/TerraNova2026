@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ metaTitle }}{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="{{ metaDescription }}">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="{{ metaUrl }}">
+{% endblock %}
+
+{% block body %}
+<main
+    class="cos-public-spatial cos-page__stack"
+    data-controller="property-map"
+    data-property-map
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Map"
+        title="Об’єкти на карті"
+        subtitle="Публічна Map / Spatial поверхня з координатами з canonical Property read model."
+        metaValue="{{ map.mapped }}"
+        metaLabel="об’єктів із координатами"
+    >
+        <twig:CosButton label="Каталог" href="/property/catalog" variant="ghost" />
+        <twig:CosButton label="Подати об’єкт" href="/property/submit" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Property map tools" density="compact">
+        {% block start %}
+            <a class="cos-button cos-button--primary cos-button--sm" href="/property/map" aria-current="page">Map</a>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/property/catalog">List</a>
+        {% endblock %}
+        {% block end %}
+            <span class="cos-card__copy">{{ map.total }} об’єктів у вибірці</span>
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if map.error %}
+        <twig:CosAlert title="Карта недоступна" copy="{{ map.error }}" tone="danger" />
+    {% elseif map.points is empty %}
+        <twig:CosEmptyState
+            title="Немає опублікованих об’єктів із координатами"
+            copy="Каталог продовжує працювати. Карта покаже об’єкти після додавання координат."
+        />
+    {% else %}
+        <section class="cos-property-map-layout" aria-label="Property map workspace">
+            <div class="cos-property-map__viewport" data-property-map-target="viewport" aria-label="Географічна схема об’єктів Terra Nova">
+                <div class="cos-property-map__grid" aria-hidden="true"></div>
+                {% for point in map.points %}
+                    <a
+                        class="cos-property-map__pin"
+                        href="{{ point.href }}"
+                        title="{{ point.title }}"
+                        data-property-map-target="pin"
+                        data-x="{{ point.x }}"
+                        data-y="{{ point.y }}"
+                    >
+                        <strong>{{ point.price }}</strong>
+                        <span>{{ point.city }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+
+            <twig:CosContextPanel id="property-map-context" title="Об’єкти на карті">
+                <div class="cos-entity-list" role="list">
+                    {% for point in map.points %}
+                        <twig:CosEntityListItem
+                            title="{{ point.title }}"
+                            subtitle="{{ point.city ~ (point.address ? ' · ' ~ point.address : '') }}"
+                            meta="{{ point.coordinates ~ ' · ' ~ point.price }}"
+                            href="{{ point.href }}"
+                        />
+                    {% endfor %}
+                </div>
+            </twig:CosContextPanel>
+        </section>
+    {% endif %}
+
+    {% if map.unmapped > 0 %}
+        <twig:CosAlert
+            title="{{ map.unmapped ~ ' об’єктів не показано на карті' }}"
+            copy="У них поки немає координат. Вони залишаються доступними у звичайному каталозі."
+            tone="info"
+        />
+    {% endif %}
+
+    <twig:CosActionBar label="Public property navigation" align="between">
+        <a class="cos-button cos-button--ghost" href="/">Головна</a>
+        <a class="cos-button cos-button--primary" href="/property/catalog">Переглянути каталог</a>
+    </twig:CosActionBar>
+</main>
+{% endblock %}

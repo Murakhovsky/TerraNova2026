@@ -66,7 +66,7 @@ if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml')
 
 foreach ([
     'catalog' => ['page_header', 'data-catalog-form', 'data-catalog-count'],
-    'map' => ['page_header', 'state', 'tn-map-canvas', 'tn-map-pin'],
+
     'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
     'show' => ['state', 'action_bar', 'data-request-intent', 'data-save-property', 'data-property-gallery'],
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
@@ -90,6 +90,24 @@ foreach (['$attributes', 'foreach ($attributes as $name => $value)'] as $marker)
 $favourJs = $read('frontend/features/public/interactions.js');
 foreach (['data-favourite-empty', 'data-favourite-count', 'data-favourite-item', '/api/v1/public/properties/favourites'] as $marker) {
     $contains($favourJs, $marker, 'Favourites browser contract is incomplete.');
+}
+
+$map = $read('symfony/templates/experience/property/map.html.twig');
+foreach ([
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosContextPanel',
+    '<twig:CosEntityListItem',
+    'data-controller="property-map"',
+    'data-property-map',
+] as $marker) {
+    $contains($map, $marker, 'Canonical Property map surface is incomplete.');
+}
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($map, $forbidden, 'Property map must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/map.phtml')) {
+    throw new RuntimeException('Legacy Property map PHTML restored.');
 }
 
 foreach ([

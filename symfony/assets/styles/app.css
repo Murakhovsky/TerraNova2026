@@ -8,6 +8,7 @@
 @import './business-patterns.css';
 @import './domains/sales.css';
 @import './domains/client-case.css';
+@import './domains/property.css';
 @import './stress-screens.css';
 @import './forms.css';
 @import './data-grid.css';

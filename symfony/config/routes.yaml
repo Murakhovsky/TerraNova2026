@@ -1363,7 +1363,7 @@ cos_web_property_catalog:
 
 cos_web_property_map:
   path: /property/map
-  controller: App\Web\Property\PropertyPageController::map
+  controller: App\Web\Property\PropertyMapController::index
   methods: [GET, HEAD]
 
 cos_web_property_favour:

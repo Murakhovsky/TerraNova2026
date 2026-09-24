@@ -44,19 +44,6 @@ final readonly class PropertyPageController
         return $this->html($request, 'property/catalog', $variables, (int) ($variables['_status'] ?? 200));
     }
 
-    public function map(Request $request): Response
-    {
-        $variables = $this->catalogData($request, ['page' => 1, 'per_page' => 60]);
-        $variables += [
-            'title' => 'Карта об’єктів',
-            'metaTitle' => 'Карта об’єктів | Terra Nova CLUB',
-            'metaDescription' => 'Карта об’єктів Terra Nova CLUB із фактичними географічними координатами.',
-            'interfaceSurface' => 'public',
-            'pageAssetEntries' => ['public-surface'],
-        ];
-        return $this->html($request, 'property/map', $variables, (int) ($variables['_status'] ?? 200));
-    }
-
     public function favour(Request $request): Response
     {
         $variables = $this->catalogData($request, ['page' => 1, 'per_page' => 150]);
