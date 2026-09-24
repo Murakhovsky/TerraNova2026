@@ -806,4 +806,31 @@ The organization-wide limit remains the hard ceiling across all channels. Each c
 
 Quota enforcement is still deliberately conservative and counts proposed Growth-owned execution links. A pending approval therefore consumes quota. This avoids the charmingly human loophole of queueing a thousand messages first and asking whether the daily limit mattered afterward.
 
-Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Before autonomy, concurrency-safe reservation semantics still need to make limit checks race-safe under parallel execution proposals.
+Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. V0.40 closes the concurrency blocker; execution authority remains a separate policy concern.
+
+
+V0.40 makes pre-handoff quota admission concurrency-safe instead of merely optimistic:
+
+```text
+parallel execution proposals
+        ↓
+canonical DB transaction
+        ↓
+tenant-wide Growth capacity row
+        ↓ SELECT ... FOR UPDATE
+authoritative quota + cooldown re-check
+        ↓
+Kernel Action proposal
+        ↓
+execution link + Event + Audit
+        ↓
+single atomic commit
+```
+
+The lock is tenant-wide rather than day-scoped. That deliberately serializes only the short pre-handoff admission critical section and also closes the midnight race where two different UTC-day buckets could otherwise bypass a contact cooldown.
+
+The initial eligibility check remains a fast operator hint. The check performed after the database lock is authoritative. If another proposal used the last organization or channel slot while this request was waiting, the waiting request is rejected before a Kernel Action exists.
+
+No separate durable reservation ledger is required: the canonical transaction itself is the reservation boundary. `ActionPolicyService` joins an already-active transaction, so the capacity lock, policy-governed Action, execution link, Event and Audit either commit together or roll back together. Pending approval continues to consume quota because its execution link is committed.
+
+This still does **not** enable autonomous outreach. V0.40 removes the concurrency blocker; execution authority remains `APPROVAL_REQUIRED`.

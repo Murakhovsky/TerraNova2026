@@ -140,31 +140,58 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             return ['execution'=>$existing,'action'=>$action->toArray(),'replayed'=>true];
         }
 
-        $action=match($kernelActionType){
-            'sales.send_message'=>$this->actionGateway->proposeSalesMessage(
-                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
-                $confidence,$kernelIdempotency,
-            ),
-            'growth.send_message'=>$this->actionGateway->proposeGrowthMessage(
-                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
-                $confidence,$kernelIdempotency,
-            ),
-            'growth.send_linkedin'=>$this->actionGateway->proposeGrowthLinkedIn(
-                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$body,
-                $confidence,$kernelIdempotency,
-            ),
-            'growth.place_call'=>$this->actionGateway->proposeGrowthCall(
-                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$body,
-                $confidence,$kernelIdempotency,
-            ),
-            default=>throw new InvalidArgumentException('Unsupported Growth engagement action type.'),
-        };
         $executionId='GEXE-'.strtoupper(substr(hash('sha256',$organizationId.':'.$recommendationId),0,20));
 
         return $this->transactions->transactional(function()use(
             $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetDomain,$targetReferenceType,
-            $targetReferenceId,$channel,$payloadFingerprint,$executionId,$action,$idempotencyKey
+            $targetReferenceId,$channel,$body,$confidence,$kernelIdempotency,$kernelActionType,$payloadFingerprint,
+            $executionId,$idempotencyKey
         ):array{
+            if($targetDomain==='growth'){
+                $this->executions->lockPreHandoffCapacity($organizationId);
+            }
+
+            // Re-check after the admission lock. A concurrent request may have committed
+            // while this request was waiting, so this is the authoritative replay gate.
+            $existing=$this->executions->byRecommendation($organizationId,$recommendationId);
+            if($existing!==null){
+                if((string)$existing['payload_fingerprint']!==$payloadFingerprint){
+                    throw new InvalidArgumentException('Growth engagement recommendation already has another execution payload.');
+                }
+                $storedAction=$this->actionGateway->find($organizationId,(string)$existing['action_id'])
+                    ?? throw new InvalidArgumentException('Growth engagement execution references missing Kernel Action.');
+                return ['execution'=>$existing,'action'=>$storedAction->toArray(),'replayed'=>true];
+            }
+
+            if($targetDomain==='growth'){
+                $limitDecision=$this->preHandoffLimitDecision($organizationId,$targetReferenceId,$channel);
+                if(!$limitDecision['allowed']){
+                    throw new InvalidArgumentException((string)$limitDecision['reason']);
+                }
+            }
+
+            // ActionPolicyService joins the already-active canonical transaction. Therefore
+            // capacity admission, Kernel Action, execution link, Event and Audit commit atomically.
+            $action=match($kernelActionType){
+                'sales.send_message'=>$this->actionGateway->proposeSalesMessage(
+                    $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
+                    $confidence,$kernelIdempotency,
+                ),
+                'growth.send_message'=>$this->actionGateway->proposeGrowthMessage(
+                    $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
+                    $confidence,$kernelIdempotency,
+                ),
+                'growth.send_linkedin'=>$this->actionGateway->proposeGrowthLinkedIn(
+                    $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$body,
+                    $confidence,$kernelIdempotency,
+                ),
+                'growth.place_call'=>$this->actionGateway->proposeGrowthCall(
+                    $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$body,
+                    $confidence,$kernelIdempotency,
+                ),
+                default=>throw new InvalidArgumentException('Unsupported Growth engagement action type.'),
+            };
+
             $this->executions->createOrVerify(
                 $organizationId,$executionId,$candidateId,$recommendationId,$targetDomain,$targetReferenceType,$targetReferenceId,
                 $action->id,$action->type,$channel,$payloadFingerprint,$actorId,

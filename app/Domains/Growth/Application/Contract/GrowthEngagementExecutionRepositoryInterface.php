@@ -29,6 +29,9 @@ interface GrowthEngagementExecutionRepositoryInterface
     /** @return array<string,mixed>|null */
     public function latestForCandidate(string $organizationId,string $candidateId):?array;
 
+    /** Acquire the tenant-wide pre-handoff admission lock inside the active DB transaction. */
+    public function lockPreHandoffCapacity(string $organizationId):void;
+
     public function countPreHandoffSince(string $organizationId,string $since):int;
 
     public function countPreHandoffSinceByChannel(string $organizationId,string $channel,string $since):int;

@@ -6,6 +6,7 @@ namespace Domains\Growth\Infrastructure\Persistence\MySql;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
 use InvalidArgumentException;
 use PDO;
+use RuntimeException;
 
 final readonly class MysqlGrowthEngagementExecutionRepository implements GrowthEngagementExecutionRepositoryInterface
 {
@@ -76,6 +77,31 @@ final readonly class MysqlGrowthEngagementExecutionRepository implements GrowthE
              ORDER BY created_at DESC,execution_id DESC LIMIT 1',
             ['organization_id'=>$organizationId,'candidate_id'=>$candidateId],
         );
+    }
+
+    public function lockPreHandoffCapacity(string $organizationId):void
+    {
+        if(!$this->connection->inTransaction()){
+            throw new RuntimeException('Growth pre-handoff capacity lock requires an active transaction.');
+        }
+
+        $insert=$this->connection->prepare(
+            'INSERT IGNORE INTO tn_growth_engagement_capacity_locks
+             (organization_id,created_at,updated_at)
+             VALUES(:organization_id,NOW(6),NOW(6))'
+        );
+        $insert->execute(['organization_id'=>$organizationId]);
+
+        $lock=$this->connection->prepare(
+            'SELECT organization_id
+             FROM tn_growth_engagement_capacity_locks
+             WHERE organization_id=:organization_id
+             FOR UPDATE'
+        );
+        $lock->execute(['organization_id'=>$organizationId]);
+        if($lock->fetchColumn()===false){
+            throw new RuntimeException('Growth pre-handoff capacity lock could not be acquired.');
+        }
     }
 
     public function countPreHandoffSince(string $organizationId,string $since):int
