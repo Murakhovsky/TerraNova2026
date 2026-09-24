@@ -24,6 +24,7 @@ use Domains\Growth\Automation\Policy\GrowthPolicyCatalog;
 use Domains\Growth\Bootstrap\GrowthDomainModule;
 use Domains\Growth\Domain\BuyingCommitteeAssessment;
 use Domains\Growth\Domain\ContactSnapshot;
+use Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface;
 use Domains\Growth\Domain\EngagementExecutionLimitPolicy;
 use Domains\Growth\Domain\EngagementRecommendation;
 use Domains\Growth\Domain\GrowthContact;
@@ -193,6 +194,9 @@ $deliveries=new class implements GrowthEngagementDeliveryRepositoryInterface {
     public function latestForExecution(string $organizationId,string $executionId):?array{return null;}
     public function forExecution(string $organizationId,string $executionId,int $limit=20):array{return [];}
 };
+$limitProvider=new class implements GrowthEngagementLimitProviderInterface {
+    public function policyFor(string $organizationId):EngagementExecutionLimitPolicy{return new EngagementExecutionLimitPolicy(50,24);}
+};
 $receipts=new class implements GrowthMutationReceiptInterface {
     public function claim(string $organizationId,string $operation,string $idempotencyKey,string $fingerprint):bool{return true;}
 };
@@ -217,7 +221,7 @@ $audit=new class implements AuditRepositoryInterface {
     public function append(AuditEntry $entry):void{}
 };
 $executionService=new GrowthEngagementExecutionService(
-    $engagement,$learning,$contacts,$executions,$deliveries,new EngagementExecutionLimitPolicy(50,24),$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
+    $engagement,$learning,$contacts,$executions,$deliveries,$limitProvider,$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
 );
 $linkedinBrief=$executionService->executionBrief('org-1','cand-linkedin','rec-linkedin');
 $callBrief=$executionService->executionBrief('org-1','cand-call','rec-call');

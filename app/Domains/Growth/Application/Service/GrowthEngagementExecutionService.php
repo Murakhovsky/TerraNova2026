@@ -10,12 +10,12 @@ use Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface
 use Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Domains\Growth\Domain\EngagementChannel;
-use Domains\Growth\Domain\EngagementExecutionLimitPolicy;
 use Domains\Growth\Domain\EngagementRecommendationStatus;
 use Domains\Growth\Domain\NextBestActionType;
 use InvalidArgumentException;
@@ -39,7 +39,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         private GrowthBuyingCommitteeRepositoryInterface $contacts,
         private GrowthEngagementExecutionRepositoryInterface $executions,
         private GrowthEngagementDeliveryRepositoryInterface $deliveries,
-        private EngagementExecutionLimitPolicy $limits,
+        private GrowthEngagementLimitProviderInterface $limitProvider,
         private GrowthMutationReceiptInterface $receipts,
         private GrowthActionProposalGatewayInterface $actionGateway,
         private TransactionManagerInterface $transactions,
@@ -344,7 +344,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             try{$lastAt=new DateTimeImmutable((string)$latest['created_at'],new DateTimeZone('UTC'));}
             catch(\Throwable){throw new InvalidArgumentException('Stored Growth engagement execution timestamp is invalid.');}
         }
-        return $this->limits->evaluate($count,$lastAt,$now);
+        return $this->limitProvider->policyFor($organizationId)->evaluate($count,$lastAt,$now);
     }
 
     private function assertExecutableRecommendation(string $actionType,string $channel):void

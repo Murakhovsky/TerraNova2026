@@ -40,7 +40,7 @@ foreach([
 
 $service=$read('app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php');
 foreach([
-    'EngagementExecutionLimitPolicy','preHandoffLimitDecision(',
+    'GrowthEngagementLimitProviderInterface','preHandoffLimitDecision(',
     "'pre_handoff_limits'","pre_handoff_daily_limit_reached","pre_handoff_contact_cooldown",
 ] as $needle){
     $assert(str_contains($service,$needle),'Growth execution guardrails missing: '.$needle);
@@ -52,7 +52,7 @@ foreach(['AUTO','autonomous','execute('] as $forbidden){
 $services=$read('symfony/config/services.yaml');
 foreach([
     'COS_GROWTH_OUTREACH_DAILY_LIMIT','COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS',
-    'EngagementExecutionLimitPolicy',
+    'GrowthEngagementLimitService',
 ] as $needle){
     $assert(str_contains($services,$needle),'Growth execution guardrail config missing: '.$needle);
 }

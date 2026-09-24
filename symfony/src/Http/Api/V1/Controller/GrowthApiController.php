@@ -11,6 +11,7 @@ use Domains\Growth\Application\Contract\GrowthCollectorAlertBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
+use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
@@ -45,6 +46,7 @@ final readonly class GrowthApiController
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
         private GrowthEngagementExecutionBoundary $engagementExecution,
+        private GrowthEngagementLimitBoundary $engagementLimits,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
@@ -52,6 +54,20 @@ final readonly class GrowthApiController
         private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
     ) {}
+
+    public function engagementLimits():JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->engagementLimits->view($tenant->organizationId()->value()));
+    }
+
+    public function updateEngagementLimits(Request $request):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->engagementLimits->update(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ));
+    }
 
     public function collectors(): JsonResponse
     {

@@ -660,12 +660,46 @@ const initGrowthExperiment=(root)=>{
   });
 };
 
+const initGrowthSettings=(root)=>{
+  const form=root.querySelector('[data-growth-limit-settings]');
+  if(!form)return;
+  form.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=form.querySelector('[data-growth-form-status]');
+    const button=form.querySelector('button[type="submit"]');
+    const values=new FormData(form);
+    const dailyLimit=Number.parseInt(String(values.get('daily_limit')||''),10);
+    const cooldown=Number.parseInt(String(values.get('contact_cooldown_hours')||''),10);
+    const reason=String(values.get('reason')||'').trim();
+    if(!Number.isInteger(dailyLimit)||dailyLimit<1||!Number.isInteger(cooldown)||cooldown<1||!reason){
+      setStatus(status,'Daily limit, cooldown and change reason are required.','error');
+      return;
+    }
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Saving tenant outreach limits…','loading');
+    try{
+      await mutation('/api/v1/growth/engagement/limits',{
+        daily_limit:dailyLimit,
+        contact_cooldown_hours:cooldown,
+        reason,
+      },root,form);
+      delete form.dataset.idempotencyKey;
+      setStatus(status,'Tenant limits saved. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Tenant outreach limits update failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+};
+
 const boot=()=>{
   document.querySelectorAll('[data-growth-candidate]').forEach(initGrowthCandidate);
   document.querySelectorAll('[data-growth-collectors]').forEach(initGrowthCollectors);
   document.querySelectorAll('[data-growth-learning]').forEach(initGrowthLearning);
   document.querySelectorAll('[data-growth-experiments]').forEach(initGrowthExperiments);
   document.querySelectorAll('[data-growth-experiment]').forEach(initGrowthExperiment);
+  document.querySelectorAll('[data-growth-settings]').forEach(initGrowthSettings);
 };
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});

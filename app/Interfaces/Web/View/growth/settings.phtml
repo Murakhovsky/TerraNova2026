@@ -1,0 +1,47 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$limits=is_array($workspace['engagement_limits']??null)?$workspace['engagement_limits']:[];
+$effective=is_array($limits['effective']??null)?$limits['effective']:[];
+$profile=is_array($limits['profile']??null)?$limits['profile']:null;
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-settings data-csrf="<?php echo $h($csrfToken??''); ?>">
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Governance',
+    'title'=>'Outreach limits',
+    'description'=>'Tenant-owned pre-handoff volume and contact cooldown policy. Approval remains mandatory.',
+    'actions'=>[
+      ['label'=>'Growth overview','href'=>'growth','variant'=>'ghost'],
+      ['label'=>'Opportunities','href'=>'growth/candidates','variant'=>'ghost'],
+    ],
+  ]); ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section">
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Daily limit','value'=>$effective['daily_limit']??'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Contact cooldown','value'=>isset($effective['contact_cooldown_hours'])?$effective['contact_cooldown_hours'].' h':'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Source','value'=>$limits['source']??'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Revision','value'=>$profile['revision']??'default']); ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Pre-handoff execution policy</p><h2>Tenant limits</h2></div></div>
+    <p class="tn-growth-muted">These limits are evaluated before a Growth-owned Kernel Action can be proposed. They do not bypass approval and they do not enable autonomous outreach.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-limit-settings>
+        <label class="tn-ui-field"><span>Daily pre-handoff execution limit</span><input class="tn-ui-input" name="daily_limit" type="number" min="1" max="100000" required value="<?php echo $h($effective['daily_limit']??50); ?>"></label>
+        <label class="tn-ui-field"><span>Contact cooldown, hours</span><input class="tn-ui-input" name="contact_cooldown_hours" type="number" min="1" max="8760" required value="<?php echo $h($effective['contact_cooldown_hours']??24); ?>"></label>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why these limits are appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save tenant limits</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+
+    <?php if($profile): ?>
+      <hr>
+      <p><strong>Latest revision:</strong> <?php echo $h($profile['revision']??''); ?> · <?php echo $h($profile['created_at']??''); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($profile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant override exists yet. Deployment defaults are currently effective.</p>
+    <?php endif; ?>
+  </section>
+</main>

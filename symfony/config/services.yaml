@@ -712,10 +712,23 @@ services:
   Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface:
     alias: Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway
 
-  Domains\Growth\Domain\EngagementExecutionLimitPolicy:
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementLimitProfileRepository:
     arguments:
-      $dailyLimit: '%env(int:COS_GROWTH_OUTREACH_DAILY_LIMIT)%'
-      $contactCooldownHours: '%env(int:COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS)%'
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementLimitProfileRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementLimitProfileRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementLimitService:
+    arguments:
+      $defaultDailyLimit: '%env(int:COS_GROWTH_OUTREACH_DAILY_LIMIT)%'
+      $defaultContactCooldownHours: '%env(int:COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS)%'
+
+  Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementLimitService
+
+  Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface:
+    alias: Domains\Growth\Application\Service\GrowthEngagementLimitService
 
   Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
 

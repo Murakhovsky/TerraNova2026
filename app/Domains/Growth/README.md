@@ -766,4 +766,22 @@ Limits are enforced before a new Growth-owned Action is proposed, and the same d
 
 Configuration remains deployment-owned through `COS_GROWTH_OUTREACH_DAILY_LIMIT` and `COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS`. This does **not** introduce autonomous outreach, automatic approval or background prospect blasting. Humanity survives another release.
 
-Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. The next autonomy prerequisite is a tenant-owned policy/limits surface plus channel-specific volume governance, not a magic "send everything" switch.
+V0.38 moves outreach limits from deployment-only defaults into an append-only tenant-owned profile:
+
+```text
+deployment defaults
+        ↓
+tenant Growth Settings
+        ↓ explicit managed update
+append-only limit profile revision
+        ↓
+GrowthEngagementLimitProvider
+        ↓
+pre-handoff execution eligibility / proposal
+```
+
+Each organization can set its own daily pre-handoff execution cap and contact cooldown with an explicit change reason. Every change creates a new immutable revision, Event and Audit record. Execution reads the latest tenant profile and falls back to deployment defaults only when no tenant revision exists.
+
+The canonical API is `GET/POST /api/v1/growth/engagement/limits`; the operator surface is `/growth/settings`. None of this grants `AUTO` execution authority: Kernel Action approval remains a separate mandatory gate. We have therefore achieved the rare feat of adding more settings while making the system less dangerous.
+
+Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Before autonomy, channel-specific quotas and concurrency-safe reservation semantics still need to sit above these tenant limits.
