@@ -132,11 +132,10 @@ Repository-wide gate тепер забороняє повернення таки
 `tn-breadcrumbs` дозволений лише для явно класифікованих Property discovery/rich-detail surfaces:
 
 - `property/catalog.phtml`;
-- `property/map.phtml`;
 - `property/show.phtml`;
 - `property/presentation.phtml`.
 
-Це не означає, що breadcrumbs є canonical primitive. Це означає, що вони є свідомо класифікованим залишковим navigation pattern і більше не можуть непомітно розповзатися по інших surfaces.
+`property/map` більше не входить до цього whitelist: Wave 13 перевів його на Twig Map / Spatial surface. Breadcrumb whitelist зберігається лише для ще не мігрованих public rich-detail PHTML.
 
 ### Публічний SEO-лендінг
 
@@ -184,13 +183,7 @@ PHASE 14 gate перевіряє їхні domain-specific markers окремо. 
 
 ### CSS робочого простору Property
 
-`frontend/features/property/workspace.css` скорочено до реального canonical contract:
-
-- `.tn-property-workspace` задає лише surface width/padding;
-- responsive padding збережено;
-- видалені selectors для retired page/listing heroes, admin metrics/cards, CRM filters, raw listing/manage/admin tables, old cabinet/admin grids та empty-state shell.
-
-Окремо виправлено стару помилку композиції: selector `.tn-property-workspace .tn-page` не міг спрацювати для canonical view, де `tn-page` і `tn-property-workspace` знаходяться на одному `<main>`.
+Wave 13 Phase 5 видалив dedicated `property-workspace` Vite bundle, `frontend/features/property/workspace.css` і `workspace.js`. Canonical Property Workspace використовує shared Experience Platform styles та domain `symfony/assets/styles/domains/property.css`.
 
 ### CSS робочого простору Analytics
 

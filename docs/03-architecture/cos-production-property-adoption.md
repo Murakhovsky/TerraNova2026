@@ -89,11 +89,12 @@ PHASE 10 переносить production Property surfaces на canonical COS pr
 
 ### Карта (`Map`)
 
-`property/map.phtml`
+`symfony/templates/experience/property/map.html.twig`
 
-- legacy hero замінено на canonical PageHeader;
-- unavailable/empty states переведено на canonical State;
-- geo pins, coordinate projection та catalog navigation не змінені.
+- public access і catalog navigation збережені;
+- surface переведено на Map / Spatial archetype з canonical PageHeader, Toolbar, ContextPanel та EntityList;
+- geo projection формується у typed Presenter/ViewModel, а Stimulus лише застосовує DOM-positioning;
+- inline visual styles і legacy map PHTML видалені.
 
 ### Вибране (`Favourites`)
 
@@ -170,15 +171,15 @@ PHASE 10 завершено не тільки візуально, а й на р�
 Canonical runtime тепер явно використовує:
 
 - `property/catalog.phtml`;
-- `property/map.phtml`;
+- `symfony/templates/experience/property/map.html.twig`;
 - `property/favour.phtml`;
 - `property/show.phtml`;
 - `property/presentation.phtml`;
 - `property/seo.phtml`;
 - `property/submit.phtml`;
-- `property/workspace_canonical.phtml`;
-- `property/submissions.phtml`;
-- `property/submission_canonical.phtml`.
+- `symfony/templates/experience/property/inventory.html.twig`;
+- `symfony/templates/experience/property/submissions.html.twig`;
+- `symfony/templates/experience/property/submission.html.twig`.
 
 ### Вибране (Favourites) route closure
 
@@ -199,8 +200,8 @@ Canonical runtime тепер явно використовує:
 - `property/create.phtml`;
 - `property/compare.phtml`;
 
-`/property/manage` і `/property/listing` рендерять `property/workspace_canonical.phtml`.
-`/property/submission/{id}` рендерить `property/submission_canonical.phtml`.
+`/property/manage` і `/property/listing` рендерять canonical Collection/DataGrid через `PropertyInventoryController`.
+`/property/submissions` працює як Operational Queue, а `/property/submission/{id}` — як Entity Workspace.
 `/property/create` є alias до `PropertyPageController::submit`.
 `/property/pdf/{slug}` у web runtime є redirect до presentation print flow. Водночас `property/pdf.phtml` зберігається як окремий non-web print renderer для `PropertyPresentationService` і не є compatibility web surface.
 
@@ -236,3 +237,10 @@ Canonical runtime тепер явно використовує:
 - /property/pdf/{slug} використовує presentation print flow, а `property/pdf.phtml` лишається service-level print renderer;
 - WEB V0.7 gate переведений на canonical Symfony Property runtime;
 - architecture gate виконується у CI.
+
+
+### Wave 13 — фаза 5
+
+Property Workspace більше не використовує dedicated `property-workspace` Vite bundle. Inventory, Listing, Submissions і Submission працюють через Symfony/Twig Experience Platform та shared `styles/app.css`.
+
+`/property/map` лишається публічною поверхнею, але використовує той самий Map / Spatial archetype. `/spatial/manage` використовує private Workspace shell; Spatial editor та public viewer залишаються окремими specialized сценаріями.

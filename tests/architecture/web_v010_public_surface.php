@@ -84,7 +84,7 @@ foreach ([
     'path: /property/catalog',
     'PropertyPageController::catalog',
     'path: /property/map',
-    'PropertyPageController::map',
+    'PropertyMapController::index',
     'path: /property/favour',
     'PropertyPageController::favour',
     'path: /property/show/{slug}',
@@ -110,12 +110,26 @@ foreach ([
     }
 }
 
-$map = $read('app/Interfaces/Web/View/property/map.phtml');
-foreach (["['latitude']", "['longitude']", 'tn-map-canvas--geo'] as $needle) {
-    $contains($map, $needle, 'Public map must project real geo coordinates');
+$map = $read('symfony/templates/experience/property/map.html.twig');
+foreach ([
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosContextPanel',
+    'data-controller="property-map"',
+    'data-x="{{ point.x }}"',
+    'data-y="{{ point.y }}"',
+] as $needle) {
+    $contains($map, $needle, 'Public map must use canonical Map / Spatial composition.');
 }
-foreach (['% 68', '% 58', '$index * 29', '$index * 23'] as $needle) {
-    $notContains($map, $needle, 'Public map must not fabricate pin positions');
+foreach (['tn-', 'style=', '<script'] as $legacy) {
+    $notContains($map, $legacy, 'Public map must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/map.phtml')) {
+    throw new RuntimeException('Retired public Property map PHTML restored.');
+}
+$mapAdapter=$read('symfony/assets/controllers/property_map_controller.js');
+foreach(['dataset.x','dataset.y','pin.style.left','pin.style.top'] as $needle){
+    $contains($mapAdapter,$needle,'Public map DOM positioning adapter incomplete.');
 }
 
 $header = $read('app/Interfaces/Web/View/shared/public_header.phtml');
@@ -135,7 +149,6 @@ foreach ([
     'app/Interfaces/Web/View/blog/landing.phtml',
     'app/Interfaces/Web/View/auth/login.phtml',
     'app/Interfaces/Web/View/auth/register.phtml',
-    'app/Interfaces/Web/View/property/map.phtml',
     'app/Interfaces/Web/View/property/seo.phtml',
     'app/Interfaces/Web/View/property/submit.phtml',
     'app/Interfaces/Web/View/property/presentation.phtml',

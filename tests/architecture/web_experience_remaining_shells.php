@@ -290,7 +290,6 @@ $globalForbidden = [
 ];
 $breadcrumbWhitelist = [
     'property/catalog.phtml',
-    'property/map.phtml',
     'property/show.phtml',
     'property/presentation.phtml',
 ];
@@ -315,28 +314,14 @@ foreach ($iterator as $file) {
     }
 }
 
-$propertyWorkspaceCss = $read('frontend/features/property/workspace.css');
 foreach ([
-    '@layer tn-property-workspace',
-    '.tn-property-workspace {',
-] as $marker) {
-    $contains($propertyWorkspaceCss, $marker, 'Property workspace CSS lost its live canonical shell contract.');
-}
-foreach ([
-    '.tn-property-workspace .tn-page-hero',
-    '.tn-property-workspace .tn-listing-hero',
-    '.tn-property-workspace .tn-admin-metrics',
-    '.tn-property-workspace .tn-admin-panel',
-    '.tn-property-workspace .tn-admin-card',
-    '.tn-property-workspace .tn-crm-filters',
-    '.tn-property-workspace .tn-listing-table',
-    '.tn-property-workspace .tn-manage-table',
-    '.tn-property-workspace .tn-admin-table',
-    '.tn-property-workspace .tn-cabinet-grid',
-    '.tn-property-workspace .tn-admin-grid',
-    '.tn-property-workspace .tn-empty-state',
-] as $legacySelector) {
-    $notContains($propertyWorkspaceCss, $legacySelector, 'Property workspace CSS restored a selector from retired compatibility views.');
+    'frontend/entrypoints/property-workspace.js',
+    'frontend/features/property/workspace.css',
+    'frontend/features/property/workspace.js',
+] as $retiredPropertyWorkspace) {
+    if (is_file($root . '/' . $retiredPropertyWorkspace)) {
+        throw new RuntimeException('Retired Property workspace frontend restored: ' . $retiredPropertyWorkspace);
+    }
 }
 
 $analyticsWorkspaceCss = $read('frontend/features/analytics/workspace.css');

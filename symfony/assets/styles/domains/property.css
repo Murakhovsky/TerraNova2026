@@ -71,7 +71,7 @@
   font-size: var(--cos-font-xs);
 }
 
-@media (max-width: 63.99rem) {
+@media (max-width: 1050px) {
   .cos-property-map-layout {
     grid-template-columns: 1fr;
   }
@@ -81,7 +81,7 @@
   }
 }
 
-@media (max-width: 47.99rem) {
+@media (max-width: 650px) {
   .cos-public-spatial {
     width: min(100% - (2 * var(--cos-space-3)), 90rem);
     padding-block: var(--cos-space-3) calc(var(--cos-space-8) + env(safe-area-inset-bottom));
@@ -94,5 +94,12 @@
   .cos-property-map__pin {
     max-width: 8rem;
     padding: var(--cos-space-1) var(--cos-space-2);
+  }
+}
+
+
+@media (max-width: 390px) {
+  .cos-property-map__pin {
+    max-width: 7rem;
   }
 }

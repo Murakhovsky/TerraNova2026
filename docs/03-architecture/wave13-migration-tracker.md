@@ -24,12 +24,12 @@ kind: architecture
 | VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | DONE |
 | VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | DONE |
 | VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | DONE |
-| VR-013 | `/property/manage` | Workspace | Property | Collection | P0 | Twig | QA |
-| VR-014 | `/property/listing` | Workspace | Property | Collection | P0 | Twig | QA |
-| VR-015 | `/property/submissions` | Workspace | Property | Operational Queue | P0 | Twig | QA |
-| VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | QA |
-| VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | QA |
-| VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | QA |
+| VR-013 | `/property/manage` | Workspace | Property | Collection | P0 | Twig | DONE |
+| VR-014 | `/property/listing` | Workspace | Property | Collection | P0 | Twig | DONE |
+| VR-015 | `/property/submissions` | Workspace | Property | Operational Queue | P0 | Twig | DONE |
+| VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
+| VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
+| VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -123,3 +123,20 @@ VR-017 переводить публічну Property Map на Map / Spatial arc
 
 
 VR-018 переводить Spatial Manage на Map / Spatial archetype через Application Query та canonical Workspace shell. Spatial editor/upload/publish/public viewer лишаються окремими живими сценаріями і не змішуються з цією route unit.
+
+
+## Фаза 5 — завершення Property Workspace
+
+Production migration units VR-013…VR-018 завершені.
+
+- `/property/manage` і `/property/listing` → Collection/DataGrid;
+- `/property/submissions` → Operational Queue;
+- `/property/submission/{id}` → Entity Workspace;
+- `/property/map` → public Map / Spatial без зміни access semantics;
+- `/spatial/manage` → private Map / Spatial;
+- Property workspace compatibility PHTML для цих units = **0**;
+- dedicated `property-workspace` Vite bundle = **0**;
+- map pin inline visual CSS = **0**;
+- Spatial editor/mutations/public viewer залишаються окремими specialized сценаріями.
+
+Наступна production migration family: **Phase 6 — System / Admin UI**.

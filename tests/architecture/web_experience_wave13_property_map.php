@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Web\Experience\Archetype\PageArchetype;
-use App\Web\Experience\Archetype\PageArchetypeRegistry;
-
 $root=dirname(__DIR__,2);
-require $root.'/symfony/vendor/autoload.php';
 
 $read=static function(string $path)use($root):string{
     $full=$root.'/'.ltrim($path,'/');
@@ -29,16 +25,13 @@ if(file_exists($root.'/app/Interfaces/Web/View/property/map.phtml')){
     throw new RuntimeException('VR-017 legacy Property map PHTML restored.');
 }
 
-$definition=(new PageArchetypeRegistry())->get(PageArchetype::MapSpatial);
-foreach(['PageHeader','Toolbar','ContextPanel'] as $required){
-    if(!in_array($required,$definition->requiredPatterns,true)){
-        throw new RuntimeException('Map / Spatial archetype lost required pattern: '.$required);
-    }
-}
-foreach(['EntityList','ActionBar','EmptyState','ErrorState'] as $optional){
-    if(!in_array($optional,$definition->optionalPatterns,true)){
-        throw new RuntimeException('Map / Spatial optional pattern contract incomplete: '.$optional);
-    }
+$registry=$read('symfony/src/Web/Experience/Archetype/PageArchetypeRegistry.php');
+foreach([
+    'PageArchetype::MapSpatial',
+    "['PageHeader', 'Toolbar', 'ContextPanel']",
+    "['FilterBar', 'KpiStrip', 'ActionBar', 'EntityList', 'EmptyState', 'ErrorState']",
+] as $marker){
+    if(!str_contains($registry,$marker))throw new RuntimeException('Map / Spatial archetype contract incomplete: '.$marker);
 }
 
 $controller=$read('symfony/src/Web/Property/PropertyMapController.php');

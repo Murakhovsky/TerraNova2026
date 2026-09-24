@@ -222,7 +222,6 @@ foreach (['GetSpatialManageQuery', 'PageArchetype::MapSpatial', 'WorkspaceShellF
 
 $spatialController = $read('symfony/src/Web/Spatial/SpatialPageController.php');
 foreach ([
-    'public function manage(Request $request): Response',
     'public function edit(Request $request, ?string $id = null): Response',
     'public function save(Request $request, ?string $id = null): Response',
     'public function upload(Request $request, string $id): Response',

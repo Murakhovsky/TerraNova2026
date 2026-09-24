@@ -71,3 +71,17 @@ WEB V0.7 is closed when:
 4. the Property workspace bundle builds through Vite and is covered by frontend asset validation;
 5. responsive and pending-submit behaviour is present;
 6. a dedicated WEB V0.7 architecture gate passes independently of unrelated legacy Sales checks.
+
+
+## Wave 13 Phase 5 retirement
+
+WEB V0.7 описує історичний compatibility етап. Wave 13 Phase 5 завершив його:
+
+- `/property/manage` і `/property/listing` працюють через Symfony/Twig Collection/DataGrid;
+- `/property/submissions` працює як Operational Queue;
+- `/property/submission/{id}` працює як Entity Workspace;
+- dedicated `property-workspace` Vite entrypoint, CSS і JS видалені;
+- `/property/map` переведено на public Twig Map / Spatial surface;
+- `/spatial/manage` переведено на private Twig Map / Spatial surface.
+
+Історична назва WEB V0.7 gate збережена лише як regression contract.

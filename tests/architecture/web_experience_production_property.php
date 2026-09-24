@@ -46,18 +46,26 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
-foreach (["public function favour(Request \$request): Response","'property/favour'","'property/submissions'","'property/submission_canonical'","new RedirectResponse('/property/presentation/'"] as $marker) {
+foreach (["public function favour(Request \$request): Response","'property/favour'","new RedirectResponse('/property/presentation/'"] as $marker) {
     $contains($controller,$marker,'Canonical Symfony Property controller is incomplete.');
 }
 $inventoryController=$read('symfony/src/Web/Property/PropertyInventoryController.php');
 foreach(['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery'] as $marker){$contains($inventoryController,$marker,'Property Inventory controller incomplete.');}
+$submissionsController=$read('symfony/src/Web/Property/PropertySubmissionsController.php');
+$submissionController=$read('symfony/src/Web/Property/PropertySubmissionController.php');
+$mapController=$read('symfony/src/Web/Property/PropertyMapController.php');
+foreach(['PageArchetype::OperationalQueue','GetPropertySubmissionsQueueQuery'] as $marker){$contains($submissionsController,$marker,'Property Submissions controller incomplete.');}
+foreach(['PageArchetype::EntityWorkspace','GetPropertySubmissionWorkspaceQuery'] as $marker){$contains($submissionController,$marker,'Property Submission controller incomplete.');}
+foreach(['PageArchetype::MapSpatial','GetPropertyMapQuery'] as $marker){$contains($mapController,$marker,'Property Map controller incomplete.');}
 
 $workspace=$read('symfony/templates/experience/property/inventory.html.twig');
 foreach(['<twig:CosPageHeader','<twig:CosToolbar','<twig:CosDataGrid','data-property-inventory'] as $marker){$contains($workspace,$marker,'Canonical Property inventory/listing workspace is incomplete.');}
 if(is_file($root.'/app/Interfaces/Web/View/property/workspace_canonical.phtml'))throw new RuntimeException('Legacy Property inventory PHTML restored.');
 
 $submissions=$read('symfony/templates/experience/property/submissions.html.twig');
-foreach(['<twig:CosPageHeader','class="cos-kpi-strip"','<twig:CosFilterBar','<twig:CosEntityListItem','property/submission/'] as $marker){$contains($submissions,$marker,'Canonical Property submissions queue is incomplete.');}
+foreach(['<twig:CosPageHeader','class="cos-kpi-strip"','<twig:CosFilterBar','<twig:CosEntityListItem'] as $marker){$contains($submissions,$marker,'Canonical Property submissions queue is incomplete.');}
+$submissionsPresenter=$read('symfony/src/Web/Property/PropertySubmissionsPresenter.php');
+$contains($submissionsPresenter,"'/property/submission/'",'Property submissions deep-link contract is incomplete.');
 if(is_file($root.'/app/Interfaces/Web/View/property/submissions.phtml'))throw new RuntimeException('Legacy Property submissions PHTML restored.');
 
 $submission=$read('symfony/templates/experience/property/submission.html.twig');
