@@ -1,0 +1,5 @@
+<div class="{{ this.cssClass() }}" role="group" aria-label="{{ label }}" {% if state == 'loading' %}aria-busy="true"{% endif %}>
+    <div class="cos-sticky-actions__inner">
+        {% block content %}{% endblock %}
+    </div>
+</div>

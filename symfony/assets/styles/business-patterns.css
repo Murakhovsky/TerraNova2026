@@ -752,3 +752,106 @@ a.cos-next-action:focus-visible {
     bottom: max(0px, env(safe-area-inset-bottom));
   }
 }
+
+
+.cos-form-section {
+  display: grid;
+  gap: var(--cos-space-4);
+  min-width: 0;
+  margin: 0;
+  padding: var(--cos-space-5);
+  background: var(--cos-surface-default-bg);
+  border: var(--cos-border-width) solid var(--cos-surface-border);
+  border-radius: var(--cos-radius-panel);
+}
+
+.cos-form-section__legend {
+  max-width: 100%;
+  padding: 0;
+  color: var(--cos-color-text);
+  font-size: var(--cos-font-lg);
+  font-weight: var(--cos-font-weight-strong);
+  line-height: var(--cos-line-height-tight);
+}
+
+.cos-form-section__description,
+.cos-form-section__error {
+  margin: 0;
+  font-size: var(--cos-font-sm);
+  line-height: var(--cos-line-height-copy);
+}
+
+.cos-form-section__description {
+  color: var(--cos-color-text-muted);
+}
+
+.cos-form-section__error {
+  color: var(--cos-color-danger);
+}
+
+.cos-form-section__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cos-space-4);
+  min-width: 0;
+}
+
+.cos-form-section__wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.cos-form-section--error {
+  border-color: var(--cos-state-error-border);
+}
+
+.cos-form-section--disabled {
+  opacity: 0.72;
+}
+
+.cos-sticky-actions {
+  position: sticky;
+  z-index: var(--cos-z-sticky);
+  bottom: 0;
+  padding: var(--cos-space-3) 0 max(var(--cos-space-3), env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--cos-surface-canvas-bg) 94%, transparent);
+  border-top: var(--cos-border-width) solid var(--cos-surface-border);
+  backdrop-filter: blur(10px);
+}
+
+.cos-sticky-actions__inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--cos-space-2);
+  min-width: 0;
+}
+
+.cos-sticky-actions--disabled {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.cos-sticky-actions--loading {
+  cursor: progress;
+}
+
+@media (max-width: 650px) {
+  .cos-form-section {
+    padding: var(--cos-space-4);
+  }
+
+  .cos-form-section__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cos-sticky-actions__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cos-sticky-actions .cos-button {
+    width: 100%;
+  }
+}

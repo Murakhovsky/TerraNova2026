@@ -1,0 +1,13 @@
+<fieldset class="{{ this.cssClass() }}" {% if disabled %}disabled{% endif %}>
+    <legend class="cos-form-section__legend">{{ title }}</legend>
+    {% if description %}
+        <p class="cos-form-section__description">{{ description }}</p>
+    {% endif %}
+    {% if error %}
+        <p class="cos-form-section__error" role="alert">{{ error }}</p>
+    {% endif %}
+    <div class="cos-form-section__fields">
+        {% block content %}{% endblock %}
+    </div>
+    {% block help %}{% endblock %}
+</fieldset>
