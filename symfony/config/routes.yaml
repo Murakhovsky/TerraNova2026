@@ -1436,7 +1436,7 @@ cos_web_property_listing:
 
 cos_web_property_submissions:
   path: /property/submissions
-  controller: App\Web\Property\PropertyPageController::submissions
+  controller: App\Web\Property\PropertySubmissionsController::index
   methods: [GET, HEAD]
 
 cos_web_property_submission:

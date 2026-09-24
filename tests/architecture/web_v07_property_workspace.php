@@ -61,15 +61,9 @@ foreach (['<twig:CosPageHeader','<twig:CosToolbar','<twig:CosDataGrid','data-pro
 }
 if (is_file($root . '/app/Interfaces/Web/View/property/workspace_canonical.phtml')) throw new RuntimeException('Legacy Property inventory PHTML restored.');
 
-$submissions = $read('app/Interfaces/Web/View/property/submissions.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/data_table'",
-    'property/submission/',
-] as $needle) {
-    $contains($submissions, $needle, 'Canonical Property submissions queue is incomplete');
-}
+$submissions=$read('symfony/templates/experience/property/submissions.html.twig');
+foreach(['<twig:CosPageHeader','class="cos-kpi-strip"','<twig:CosFilterBar','<twig:CosEntityListItem','property/submission/'] as $needle){$contains($submissions,$needle,'Canonical Property submissions queue is incomplete');}
+if(is_file($root.'/app/Interfaces/Web/View/property/submissions.phtml'))throw new RuntimeException('Legacy Property submissions PHTML restored.');
 
 $submission = $read('app/Interfaces/Web/View/property/submission_canonical.phtml');
 foreach ([

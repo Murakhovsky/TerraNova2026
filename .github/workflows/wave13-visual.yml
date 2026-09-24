@@ -82,6 +82,7 @@ jobs:
           php tests/architecture/web_experience_wave13_client_workspace.php
           php tests/architecture/web_experience_wave13_clients_complete.php
           php tests/architecture/web_experience_wave13_property_inventory.php
+          php tests/architecture/web_experience_wave13_property_submissions.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

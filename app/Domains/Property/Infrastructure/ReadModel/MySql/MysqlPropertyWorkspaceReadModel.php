@@ -150,11 +150,12 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
         return ['items' => $items, 'stats' => $stats, 'filters' => $normalized, 'total' => (int) ($totalRow['total'] ?? 0)];
     }
 
-    public function submissions(string $organizationId, string $status = '', int $limit = 100): array
+    public function submissions(string $organizationId, string $status = '', int $limit = 100, int $offset = 0): array
     {
         $organizationId = $this->organization($organizationId);
         $status = strtolower(trim($status));
         $limit = max(1, min(200, $limit));
+        $offset = max(0, $offset);
         $params = ['organization_id' => $organizationId];
         $where = ['organization_id = :organization_id'];
 
@@ -171,7 +172,7 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
             FROM tn_property_submissions
             WHERE ' . implode(' AND ', $where) . '
             ORDER BY created_at DESC, id DESC
-            LIMIT ' . $limit,
+            LIMIT ' . $limit . ' OFFSET ' . $offset,
             $params,
         );
 
@@ -187,7 +188,8 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
             $counts[(string) ($row['status'] ?? '')] = (int) ($row['total'] ?? 0);
         }
 
-        return ['items' => $items, 'counts' => $counts];
+        $total = $status !== '' ? (int) ($counts[$status] ?? 0) : array_sum($counts);
+        return ['items' => $items, 'counts' => $counts, 'total' => $total];
     }
 
     public function submission(string $organizationId, int $id): ?array

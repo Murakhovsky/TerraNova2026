@@ -204,25 +204,6 @@ final readonly class PropertyPageController
         return new RedirectResponse('/property/presentation/'.rawurlencode($slug));
     }
 
-    public function submissions(Request $request): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-        $status = trim((string) $request->query->get('status', ''));
-
-        try {
-            $data = $this->workspace->submissions($tenant->organizationId()->value(), $status, 100);
-            return $this->workspaceHtml($request, $tenant, 'Модерація об’єктів', 'submissions', 'property/submissions', [
-                'status'=>$status,'submissions'=>$data['items'],'counts'=>$data['counts'],'pageStatus'=>null,
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.workspace.submissions_failed ' . $error->getMessage());
-            return $this->workspaceHtml($request, $tenant, 'Модерація об’єктів', 'submissions', 'property/submissions', [
-                'status'=>$status,'submissions'=>[],'counts'=>[],'pageStatus'=>'Заявки тимчасово недоступні.',
-            ], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
     public function submission(Request $request, string $id): Response
     {
         $tenant = $this->manager();
