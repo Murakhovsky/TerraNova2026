@@ -1441,7 +1441,7 @@ cos_web_property_submissions:
 
 cos_web_property_submission:
   path: /property/submission/{id}
-  controller: App\Web\Property\PropertyPageController::submission
+  controller: App\Web\Property\PropertySubmissionController::index
   methods: [GET, HEAD]
   requirements: { id: '[1-9][0-9]*' }
 

@@ -4,10 +4,8 @@ declare(strict_types=1);
 namespace App\Web\Property;
 
 use App\Security\SessionCsrfValidator;
-use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Property\Application\Contract\PropertyCatalogInterface;
-use Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface;
 use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -21,9 +19,7 @@ final readonly class PropertyPageController
     public function __construct(
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
-        private NavigationBuilder $navigation,
         private PropertyCatalogInterface $catalog,
-        private PropertyWorkspaceReadModelInterface $workspace,
         private SalesWriteServiceFactoryInterface $writes,
         private SessionCsrfValidator $csrf,
         private string $organizationId,
@@ -204,22 +200,6 @@ final readonly class PropertyPageController
         return new RedirectResponse('/property/presentation/'.rawurlencode($slug));
     }
 
-    public function submission(Request $request, string $id): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-        try {
-            $submission = $this->workspace->submission($tenant->organizationId()->value(), (int)$id);
-            if ($submission === null) return new Response('Submission was not found.', Response::HTTP_NOT_FOUND);
-            return $this->workspaceHtml($request, $tenant, 'Заявка на об’єкт', 'submissions', 'property/submission_canonical', [
-                'submission'=>$submission,
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.workspace.submission_failed ' . $error->getMessage());
-            return new Response('Submission is temporarily unavailable.', Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
     private function seo(Request $request, array $overrides, string $kicker, string $title, string $path): Response
     {
         $variables = $this->catalogData($request, $overrides);
@@ -287,18 +267,6 @@ final readonly class PropertyPageController
         if ($tenant === null) return new RedirectResponse('/auth/login');
         if (!$tenant->isManager()) return new Response('Forbidden', Response::HTTP_FORBIDDEN);
         return $tenant;
-    }
-
-    private function workspaceHtml(Request $request, TenantContext $tenant, string $title, string $active, string $view, array $extra, int $status = 200): Response
-    {
-        $role = $tenant->role()->value();
-        return $this->html($request, $view, array_replace([
-            'title'=>$title,'metaTitle'=>$title.' | Terra Nova COS','metaRobots'=>'noindex,nofollow',
-            'interfaceSurface'=>'workspace','workspaceSection'=>'properties','workspaceActive'=>$active,
-            'workspaceActiveSection'=>$this->navigation->activeSection($active),'pageAssetEntries'=>['property-workspace'],
-            'currentUser'=>['id'=>(int)$tenant->userId()->value(),'role'=>$role],'role'=>$role,'isTeam'=>$tenant->isManager(),
-            'isAdmin'=>$tenant->isAdmin(),'workspaceNavigation'=>$this->navigation->workspace($tenant),
-        ], $extra), $status);
     }
 
     private function viewContext(Request $request): array

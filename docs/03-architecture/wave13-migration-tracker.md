@@ -27,7 +27,7 @@ kind: architecture
 | VR-013 | `/property/manage` | Workspace | Property | Collection | P0 | Twig | QA |
 | VR-014 | `/property/listing` | Workspace | Property | Collection | P0 | Twig | QA |
 | VR-015 | `/property/submissions` | Workspace | Property | Operational Queue | P0 | Twig | QA |
-| VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | BACKLOG |
+| VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | QA |
 | VR-017 | `/property/map` | Workspace/Public | Property | Map / Spatial | P0 | Twig | BACKLOG |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | BACKLOG |
 
@@ -114,3 +114,6 @@ VR-013/014 переводять Property Inventory і Listing на один cano
 
 
 VR-015 переводить Property Submissions на Operational Queue: KPI показують навантаження moderation, EntityList — записи для рішення, а pagination працює server-side через Property read model.
+
+
+VR-016 переводить Property Submission у read-only Entity Workspace `property.submission`. Intake entity не маскується під Property Asset до моменту фактичного створення asset; legacy `submission_canonical.phtml` видаляється.

@@ -65,14 +65,9 @@ $submissions=$read('symfony/templates/experience/property/submissions.html.twig'
 foreach(['<twig:CosPageHeader','class="cos-kpi-strip"','<twig:CosFilterBar','<twig:CosEntityListItem','property/submission/'] as $needle){$contains($submissions,$needle,'Canonical Property submissions queue is incomplete');}
 if(is_file($root.'/app/Interfaces/Web/View/property/submissions.phtml'))throw new RuntimeException('Legacy Property submissions PHTML restored.');
 
-$submission = $read('app/Interfaces/Web/View/property/submission_canonical.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    'Read-only canonical intake view',
-    'property/submissions',
-] as $needle) {
-    $contains($submission, $needle, 'Canonical Property submission detail is incomplete');
-}
+$submission=$read('symfony/templates/experience/property/submission.html.twig');
+foreach(['<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','property/submissions','data-property-submission'] as $needle){$contains($submission,$needle,'Canonical Property submission detail is incomplete');}
+if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml'))throw new RuntimeException('Legacy Property submission PHTML restored.');
 
 $favour = $read('app/Interfaces/Web/View/property/favour.phtml');
 foreach ([
