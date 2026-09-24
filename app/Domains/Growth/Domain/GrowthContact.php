@@ -20,8 +20,14 @@ final readonly class GrowthContact
         if(trim($id)===''||trim($fullName)===''||trim($identityType)===''||trim($identityValue)===''){
             throw new InvalidArgumentException('Growth Contact identity is incomplete.');
         }
-        if(!in_array($identityType,['email','linkedin','external_ref'],true)){
+        if(!in_array($identityType,['email','phone','linkedin','external_ref'],true)){
             throw new InvalidArgumentException('Unsupported Growth Contact identity type.');
+        }
+        if($identityType==='email'&&filter_var(trim($identityValue),FILTER_VALIDATE_EMAIL)===false){
+            throw new InvalidArgumentException('Growth Contact email identity is invalid.');
+        }
+        if($identityType==='phone'&&!preg_match('/^\+[1-9][0-9]{7,14}$/',trim($identityValue))){
+            throw new InvalidArgumentException('Growth Contact phone identity must use E.164 format.');
         }
         if($sourceReferences===[])throw new InvalidArgumentException('Growth Contact identity requires source references.');
         foreach($sourceReferences as $source){
@@ -31,8 +37,10 @@ final readonly class GrowthContact
 
     public function normalizedIdentityValue(): string
     {
-        return $this->identityType==='email'
-            ? strtolower(trim($this->identityValue))
-            : trim($this->identityValue);
+        return match($this->identityType){
+            'email'=>strtolower(trim($this->identityValue)),
+            'phone'=>preg_replace('/[\s().-]+/','',trim($this->identityValue))?:trim($this->identityValue),
+            default=>trim($this->identityValue),
+        };
     }
 }

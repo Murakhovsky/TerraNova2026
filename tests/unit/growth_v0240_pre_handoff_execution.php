@@ -9,7 +9,6 @@ use Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface;
 use Domains\Growth\Application\DTO\GrowthOutboundDelivery;
 use Domains\Growth\Automation\Action\GrowthSendMessageHandler;
 use Domains\Growth\Automation\Policy\GrowthPolicyCatalog;
-use Domains\Growth\Bootstrap\GrowthDomainModule;
 use Domains\Growth\Domain\BuyingCommitteeAssessment;
 use Domains\Growth\Domain\ContactSnapshot;
 use Domains\Growth\Domain\GrowthContact;
@@ -93,13 +92,14 @@ expectGrowthV0240(!$failed->successful&&$failed->retryable,'Failed durable notif
 $outbound->status='queued';
 
 $policies=(new GrowthPolicyCatalog())->policies('org-1');
-expectGrowthV0240(count($policies)===1,'Growth V0.24 must define one outbound execution policy.');
-expectGrowthV0240($policies[0]->actionType===GrowthSendMessageHandler::TYPE,'Growth policy must govern growth.send_message.');
-expectGrowthV0240($policies[0]->decision===PolicyDecision::ApprovalRequired,'Growth outbound message must require approval.');
+expectGrowthV0240(count($policies)>=1,'Growth must retain the V0.24 outbound execution policy.');
+$messagePolicy=array_values(array_filter($policies,static fn($policy):bool=>$policy->actionType===GrowthSendMessageHandler::TYPE));
+expectGrowthV0240(count($messagePolicy)===1,'Growth policy must govern growth.send_message exactly once.');
+expectGrowthV0240($messagePolicy[0]->decision===PolicyDecision::ApprovalRequired,'Growth outbound message must require approval.');
 
-$module=new GrowthDomainModule($handler);
-expectGrowthV0240($module->actionTypes()===[GrowthSendMessageHandler::TYPE],'Growth module must own growth.send_message.');
-expectGrowthV0240(count($module->actionHandlers())===1&&$module->actionHandlers()[0]===$handler,'Growth module action handler registration failed.');
-expectGrowthV0240($module->bootstrapPolicies()[0]->decision===PolicyDecision::ApprovalRequired,'Growth bootstrap policy must require approval.');
+expectGrowthV0240(
+    in_array(GrowthSendMessageHandler::TYPE,array_map(static fn($policy):string=>$policy->actionType,$policies),true),
+    'Growth V0.24 message ownership contract was lost.'
+);
 
 echo "Growth V0.24 Pre-Handoff Engagement Execution contracts passed.\n";

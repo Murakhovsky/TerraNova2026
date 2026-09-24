@@ -122,6 +122,13 @@ services:
     arguments:
       $connection: '@doctrine.dbal.default_connection'
 
+  Infrastructure\Platform\Integration\MysqlIntegrationOutbox:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Integration\Contract\IntegrationOutboxInterface:
+    alias: Infrastructure\Platform\Integration\MysqlIntegrationOutbox
+
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
@@ -706,6 +713,23 @@ services:
       $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
       $outbound: '@Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface'
 
+  Domains\Growth\Infrastructure\Integration\N8nGrowthExternalEngagementGateway:
+    arguments:
+      $outbox: '@Platform\Integration\Contract\IntegrationOutboxInterface'
+
+  Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Integration\N8nGrowthExternalEngagementGateway
+
+  Domains\Growth\Automation\Action\GrowthLinkedInHandler:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $outbound: '@Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface'
+
+  Domains\Growth\Automation\Action\GrowthCallHandler:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $outbound: '@Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface'
+
   Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingTargetRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -732,8 +756,27 @@ services:
   Domains\Growth\Application\Contract\GrowthSignalPollingIncidentRepositoryInterface:
     alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingIncidentRepository
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthCollectorAlertSubscriptionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthCollectorAlertSubscriptionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthCollectorAlertSubscriptionRepository
+
+  Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthCollectorIncidentAlertGateway: ~
+
+  Domains\Growth\Application\Contract\GrowthCollectorIncidentAlertGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthCollectorIncidentAlertGateway
+
+  Domains\Growth\Application\Service\GrowthCollectorAlertService: ~
+
+  Domains\Growth\Application\Contract\GrowthCollectorAlertBoundary:
+    alias: Domains\Growth\Application\Service\GrowthCollectorAlertService
+
   Domains\Growth\Application\Service\GrowthSignalPollingIncidentService:
     arguments:
+      $alertSubscriptions: '@Domains\Growth\Application\Contract\GrowthCollectorAlertSubscriptionRepositoryInterface'
+      $alerts: '@Domains\Growth\Application\Contract\GrowthCollectorIncidentAlertGatewayInterface'
       $failureThreshold: '%env(int:COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD)%'
 
   Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary:

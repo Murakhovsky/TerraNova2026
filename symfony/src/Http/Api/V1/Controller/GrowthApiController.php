@@ -7,6 +7,7 @@ use App\Security\SessionCsrfValidator;
 use DomainException;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
+use Domains\Growth\Application\Contract\GrowthCollectorAlertBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
@@ -36,6 +37,7 @@ final readonly class GrowthApiController
         private GrowthApplicationBoundary $growth,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthSignalFeedBoundary $signalFeeds,
+        private GrowthCollectorAlertBoundary $collectorAlerts,
         private GrowthJsonSignalSourceBoundary $jsonSignalSources,
         private GrowthIntelligenceBoundary $intelligence,
         private GrowthBuyingCommitteeBoundary $committee,
@@ -102,6 +104,37 @@ final readonly class GrowthApiController
     {
         return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
             $this->signalFeeds->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,false,$key
+            ));
+    }
+
+    public function collectorAlertSubscriptions(): JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>[
+            'subscriptions'=>$this->collectorAlerts->subscriptions($tenant->organizationId()->value()),
+        ]);
+    }
+
+    public function createCollectorAlertSubscription(Request $request): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->collectorAlerts->createSubscription(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ),201);
+    }
+
+    public function enableCollectorAlertSubscription(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->collectorAlerts->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,true,$key
+            ));
+    }
+
+    public function disableCollectorAlertSubscription(Request $request,string $id): JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->collectorAlerts->setEnabled(
                 $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,false,$key
             ));
     }

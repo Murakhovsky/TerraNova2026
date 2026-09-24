@@ -4,6 +4,7 @@ $workspace=is_array($workspace??null)?$workspace:[];
 $collectors=is_array($workspace['collectors']??null)?$workspace['collectors']:[];
 $feeds=is_array($workspace['feeds']??null)?$workspace['feeds']:[];
 $jsonSources=is_array($workspace['json_sources']??null)?$workspace['json_sources']:[];
+$alertSubscriptions=is_array($workspace['alert_subscriptions']??null)?$workspace['alert_subscriptions']:[];
 $polling=is_array($workspace['polling']??null)?$workspace['polling']:[];
 $pollingHealth=is_array($polling['collector_health']??null)?$polling['collector_health']:[];
 $pollingIncidents=is_array($polling['active_incidents']??null)?$polling['active_incidents']:[];
@@ -183,6 +184,54 @@ foreach($runs as $run){
       'emptyMessage'=>'No active collector incidents.',
     ]); ?>
     <p class="tn-growth-muted">An incident opens only after the configured consecutive-failure threshold and resolves automatically after the next successful provider transport, including a partial ingestion response.</p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-collector-alert-subscriptions>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Operator notifications</p><h2>Collector incident email alerts</h2></div>
+      <span><?php echo count($alertSubscriptions); ?></span>
+    </div>
+
+    <?php if(!empty($canManageGrowth)): ?>
+      <form data-growth-collector-alert-create class="tn-growth-action-form tn-growth-signal-feed-form">
+        <label class="tn-ui-field"><span>Email</span><input class="tn-ui-input" name="recipient_email" type="email" maxlength="254" required placeholder="ops@example.com"></label>
+        <label class="tn-ui-field"><span>Name</span><input class="tn-ui-input" name="recipient_name" maxlength="191" placeholder="Operations"></label>
+        <label class="tn-ui-field"><span>Locale</span><input class="tn-ui-input" name="locale" maxlength="12" value="en" required></label>
+        <label class="tn-ui-field tn-ui-field--check"><input name="enabled" type="checkbox" checked><span>Enabled</span></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Add alert recipient</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+
+    <?php if($alertSubscriptions): ?>
+      <div class="tn-growth-feed-list">
+        <?php foreach($alertSubscriptions as $subscription): ?>
+          <?php $enabled=!empty($subscription['enabled']); ?>
+          <article class="tn-growth-feed-item" data-growth-collector-alert="<?php echo $h($subscription['subscription_id']??''); ?>">
+            <div>
+              <strong><?php echo $h($subscription['recipient_name']??$subscription['recipient_email']??'Recipient'); ?></strong>
+              <div class="tn-growth-muted"><?php echo $h($subscription['recipient_email']??''); ?></div>
+              <div class="tn-growth-muted">Locale <?php echo $h($subscription['locale']??'en'); ?> · incident opened + recovered</div>
+            </div>
+            <div class="tn-growth-feed-actions">
+              <span class="tn-ui-badge tn-ui-badge--<?php echo $enabled?'positive':'neutral'; ?>"><?php echo $enabled?'ENABLED':'DISABLED'; ?></span>
+              <?php if(!empty($canManageGrowth)): ?>
+                <form data-growth-collector-alert-toggle data-subscription-id="<?php echo $h($subscription['subscription_id']??''); ?>" data-action="<?php echo $enabled?'disable':'enable'; ?>">
+                  <button class="tn-ui-button tn-ui-button--ghost" type="submit"><?php echo $enabled?'Disable':'Enable'; ?></button>
+                  <span data-growth-form-status></span>
+                </form>
+              <?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <?php $this->partial('components/ui/state',[
+        'kind'=>'empty',
+        'title'=>'No incident alert recipients',
+        'message'=>'Add an explicit operational email recipient. Growth does not guess tenant administrators or scrape Identity tables.',
+      ]); ?>
+    <?php endif; ?>
   </section>
 
   <section class="tn-ui-panel tn-workspace-section" data-growth-signal-feeds>

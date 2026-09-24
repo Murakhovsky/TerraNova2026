@@ -21,10 +21,9 @@ foreach(['CREATE TABLE','ALTER TABLE','DROP TABLE'] as $forbidden){
 
 $service=$read('app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php');
 foreach([
-    'count($deals)>1','count($deals)===1','Pre-handoff Growth execution currently supports email only.',
+    'count($deals)>1','count($deals)===1',
     "'growth_contact'","'growth.send_message'",'proposeGrowthMessage','eligible_pre_handoff','eligible_post_handoff',
-    'hasUsableEmailContact','pre_handoff_contact_email_required',
-    'ambiguous_sales_deal_binding','pre_handoff_contact_required',
+        'ambiguous_sales_deal_binding','pre_handoff_contact_required',
 ] as $needle){
     $assert(str_contains($service,$needle),'Growth V0.24 execution bridge missing: '.$needle);
 }
@@ -37,7 +36,7 @@ $assert(str_contains($gatewayContract,'proposeGrowthMessage('),'Growth action pr
 
 $gateway=$read('app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php');
 foreach([
-    "type:'growth.send_message'","targetType:'growth_contact'","sourceType:'GROWTH'",
+    "'growth.send_message'","'growth_contact'","sourceType:'GROWTH'",
     "executionMode:'APPROVAL_REQUIRED'","riskLevel:'MEDIUM'",'policies->submit',
 ] as $needle){
     $assert(str_contains($gateway,$needle),'Growth V0.24 Kernel proposal adapter missing: '.$needle);

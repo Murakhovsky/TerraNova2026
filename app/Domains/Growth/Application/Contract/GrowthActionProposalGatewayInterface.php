@@ -33,5 +33,29 @@ interface GrowthActionProposalGatewayInterface
         string $kernelIdempotencyKey,
     ):GrowthExecutionAction;
 
+    public function proposeGrowthLinkedIn(
+        string $organizationId,
+        int $actorId,
+        string $correlationId,
+        string $candidateId,
+        string $recommendationId,
+        string $contactId,
+        string $body,
+        ?float $confidence,
+        string $kernelIdempotencyKey,
+    ):GrowthExecutionAction;
+
+    public function proposeGrowthCall(
+        string $organizationId,
+        int $actorId,
+        string $correlationId,
+        string $candidateId,
+        string $recommendationId,
+        string $contactId,
+        string $callBrief,
+        ?float $confidence,
+        string $kernelIdempotencyKey,
+    ):GrowthExecutionAction;
+
     public function find(string $organizationId,string $actionId):?GrowthExecutionAction;
 }

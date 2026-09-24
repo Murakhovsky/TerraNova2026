@@ -120,3 +120,22 @@ consecutive failure count
 ```
 
 The incident threshold is deployment-owned. A unique open marker guarantees at most one active incident per tenant + collector while preserving resolved incident history. Incident events are suitable for later notification adapters, but V0.33 does not invent recipient addresses or bypass Platform Notification ownership.
+
+
+## Growth incident alert recipients
+
+V0.34 keeps operator-recipient ownership explicit. A tenant configures one or more Growth collector alert email subscriptions; Growth never derives recipients by reading Identity membership tables.
+
+```text
+incident transaction commits
+        ↓ afterCommit
+enabled tenant alert subscriptions
+        ↓
+Growth alert gateway
+        ↓
+Platform Notification
+        ↓
+email delivery adapter
+```
+
+Notification delivery failure is isolated from incident persistence. The monitoring truth remains the incident row and Growth events; email is a delivery surface, not the source of truth.

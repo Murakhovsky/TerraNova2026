@@ -691,4 +691,36 @@ RESOLVED + recovery event
 
 Only one open incident may exist for a tenant + collector. Historical resolved incidents remain immutable rows. Opening and recovery emit `growth.collector.incident_opened` / `growth.collector.incident_resolved` and Audit records. The failure threshold is deployment-owned through `COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD`.
 
-Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous outreach/activation.
+V0.34 adds explicit tenant-owned email alert subscriptions. A Growth manager provides the operational email address and may enable/disable it in the Collectors workspace. Growth deliberately does not query Identity tables to guess who an administrator might be.
+
+Incident notifications are queued only after the incident transaction commits. Delivery goes through Platform Notification using the built-in `growth.collector.incident` email template. Alert transport errors are isolated from incident persistence, so a broken mail provider cannot make the monitoring incident disappear.
+
+V0.35 extends the governed pre-handoff execution bridge to LinkedIn and phone calls without granting Growth autonomous outreach authority:
+
+```text
+Accepted EngagementRecommendation
+        ↓
+explicit channel identity on GrowthContact
+  ├─ email    → growth.send_message
+  ├─ linkedin → growth.send_linkedin
+  └─ phone    → growth.place_call
+        ↓
+Kernel ActionProposal
+        ↓
+Growth Action Policy = APPROVAL_REQUIRED
+        ↓
+approved execution
+        ↓
+channel handler resolves identity at execution time
+        ↓
+email → Platform Notification
+linkedin / call → Platform Integration outbox → n8n adapter workflow
+```
+
+LinkedIn requires an HTTPS `linkedin.com/in/*` contact identity. Calls require E.164 phone identity. Recipient identities are not copied into Kernel Action parameters or Growth execution-link persistence; the external identity is resolved only by the approved Action handler and then placed in the durable integration delivery envelope required by the transport.
+
+The LinkedIn and call adapters are provider-neutral. Growth does not embed LinkedIn scraping, browser automation or a telephony SDK. The existing n8n integration outbox emits `growth.engagement.linkedin` and `growth.engagement.call` events, allowing deployment-specific connector workflows to perform the final provider call with the same durable retry/idempotency semantics.
+
+Post-handoff phone execution remains owned by Sales. Growth refuses to route a phone recommendation through `sales.send_message`.
+
+Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Autonomous outreach remains deferred until explicit policy limits, rate/volume controls and approval-governance rules exist.

@@ -5,6 +5,8 @@ namespace Domains\Growth\Application\Service;
 
 use DateTimeImmutable;
 use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary;
+use Domains\Growth\Application\Contract\GrowthCollectorAlertSubscriptionRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthCollectorIncidentAlertGatewayInterface;
 use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentRepositoryInterface;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use InvalidArgumentException;
@@ -14,6 +16,7 @@ use Kernel\Event\DomainEvent;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
+use Throwable;
 
 final readonly class GrowthSignalPollingIncidentService implements GrowthSignalPollingIncidentBoundary
 {
@@ -22,6 +25,8 @@ final readonly class GrowthSignalPollingIncidentService implements GrowthSignalP
         private EventBus $events,
         private TransactionManagerInterface $transactions,
         private AuditRepositoryInterface $audit,
+        private GrowthCollectorAlertSubscriptionRepositoryInterface $alertSubscriptions,
+        private GrowthCollectorIncidentAlertGatewayInterface $alerts,
         private int $failureThreshold=3,
     ) {
         if($failureThreshold<1||$failureThreshold>100){
@@ -81,6 +86,7 @@ final readonly class GrowthSignalPollingIncidentService implements GrowthSignalP
                     $organizationId,$actorId,$correlationId,'growth.collector.incident_opened',
                     'growth_collector_incident',$incidentId,$payload,
                 );
+                $this->queueAlertsAfterCommit($organizationId,$incident,'opened',$correlationId);
             }
 
             return $incident;
@@ -122,6 +128,7 @@ final readonly class GrowthSignalPollingIncidentService implements GrowthSignalP
                 $organizationId,$actorId,$correlationId,'growth.collector.incident_resolved',
                 'growth_collector_incident',$incidentId,$payload,
             );
+            $this->queueAlertsAfterCommit($organizationId,$resolved,'resolved',$correlationId);
             return $resolved;
         });
     }
@@ -129,6 +136,24 @@ final readonly class GrowthSignalPollingIncidentService implements GrowthSignalP
     public function activeIncidents(string $organizationId): array
     {
         return $this->incidents->activeIncidents($this->bounded($organizationId,'organizationId',64));
+    }
+
+    /** @param array<string,mixed> $incident */
+    private function queueAlertsAfterCommit(
+        string $organizationId,array $incident,string $transition,string $correlationId
+    ):void {
+        $this->transactions->afterCommit(function()use($organizationId,$incident,$transition,$correlationId):void{
+            foreach($this->alertSubscriptions->listEnabled($organizationId,100) as $subscription){
+                try{
+                    $this->alerts->queue($organizationId,$subscription,$incident,$transition,$correlationId);
+                }catch(Throwable $error){
+                    error_log(sprintf(
+                        'Growth collector incident alert failed for %s/%s: %s',
+                        $organizationId,(string)($subscription['subscription_id']??'unknown'),$error->getMessage(),
+                    ));
+                }
+            }
+        });
     }
 
     /** @param array<string,mixed> $payload */

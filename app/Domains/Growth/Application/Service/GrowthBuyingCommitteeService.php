@@ -46,7 +46,11 @@ final readonly class GrowthBuyingCommitteeService implements GrowthBuyingCommitt
         $identityValue=$this->required($input,'identity_value',500);
         $sourceReferences=$this->stringList($input['source_references']??null,'source_references');
 
-        $normalized=$identityType==='email'?strtolower($identityValue):$identityValue;
+        $normalized=match($identityType){
+            'email'=>strtolower(trim($identityValue)),
+            'phone'=>preg_replace('/[\s().-]+/','',trim($identityValue))?:trim($identityValue),
+            default=>trim($identityValue),
+        };
         $contactId='GCNT-'.$this->stableId($organizationId.':contact:'.$identityType.':'.$normalized);
         $fingerprint=$this->fingerprint([
             'account_id'=>$accountId,'full_name'=>$fullName,'identity_type'=>$identityType,

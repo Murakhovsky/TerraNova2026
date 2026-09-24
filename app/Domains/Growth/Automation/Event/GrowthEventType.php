@@ -19,6 +19,9 @@ final class GrowthEventType
     public const COLLECTOR_RUN_FAILED = 'growth.collector.run_failed';
     public const COLLECTOR_INCIDENT_OPENED = 'growth.collector.incident_opened';
     public const COLLECTOR_INCIDENT_RESOLVED = 'growth.collector.incident_resolved';
+    public const COLLECTOR_ALERT_SUBSCRIPTION_CREATED = 'growth.collector.alert_subscription_created';
+    public const COLLECTOR_ALERT_SUBSCRIPTION_ENABLED = 'growth.collector.alert_subscription_enabled';
+    public const COLLECTOR_ALERT_SUBSCRIPTION_DISABLED = 'growth.collector.alert_subscription_disabled';
     public const SIGNAL_FEED_CREATED = 'growth.signal_feed.created';
     public const SIGNAL_FEED_ENABLED = 'growth.signal_feed.enabled';
     public const SIGNAL_FEED_DISABLED = 'growth.signal_feed.disabled';
@@ -99,6 +102,9 @@ final class GrowthEventType
             self::COLLECTOR_RUN_FAILED,
             self::COLLECTOR_INCIDENT_OPENED,
             self::COLLECTOR_INCIDENT_RESOLVED,
+            self::COLLECTOR_ALERT_SUBSCRIPTION_CREATED,
+            self::COLLECTOR_ALERT_SUBSCRIPTION_ENABLED,
+            self::COLLECTOR_ALERT_SUBSCRIPTION_DISABLED,
             self::SIGNAL_FEED_CREATED,
             self::SIGNAL_FEED_ENABLED,
             self::SIGNAL_FEED_DISABLED,

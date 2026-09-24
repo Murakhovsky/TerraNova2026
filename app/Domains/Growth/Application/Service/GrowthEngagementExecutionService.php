@@ -27,8 +27,8 @@ use Kernel\Transaction\Contract\TransactionManagerInterface;
 final readonly class GrowthEngagementExecutionService implements GrowthEngagementExecutionBoundary
 {
     /** @var list<string> */
-    private const MESSAGE_ACTIONS=[
-        'send_email','connect_linkedin','offer_diagnostic','send_case_study','ask_introduction','invite_webinar',
+    private const EXECUTABLE_ACTIONS=[
+        'send_email','connect_linkedin','call','offer_diagnostic','send_case_study','ask_introduction','invite_webinar',
     ];
 
     public function __construct(
@@ -52,7 +52,9 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         $recommendationId=$this->bounded(trim($recommendationId),'recommendationId',80);
         $idempotencyKey=$this->bounded(trim($idempotencyKey),'idempotencyKey',191);
         $body=trim($body);
-        if($body===''||mb_strlen($body)>10000)throw new InvalidArgumentException('Growth engagement execution body must be 1..10000 characters.');
+        if($body===''||mb_strlen($body)>10000){
+            throw new InvalidArgumentException('Growth engagement execution body must be 1..10000 characters.');
+        }
 
         $recommendation=$this->engagement->viewRecommendation($organizationId,$recommendationId)
             ?? throw new InvalidArgumentException('Growth engagement recommendation was not found.');
@@ -65,12 +67,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
 
         $actionType=(string)($recommendation['action_type']??'');
         $channel=(string)($recommendation['channel']??'');
-        if(!in_array($actionType,self::MESSAGE_ACTIONS,true)){
-            throw new InvalidArgumentException('Growth engagement recommendation is not executable as Sales message in V0.22.');
-        }
-        if(!in_array($channel,[EngagementChannel::Email->value,EngagementChannel::LinkedIn->value],true)){
-            throw new InvalidArgumentException('Growth engagement execution currently supports email or LinkedIn message channels only.');
-        }
+        $this->assertExecutableRecommendation($actionType,$channel);
 
         $deals=$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal');
         if(count($deals)>1){
@@ -85,31 +82,41 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         $kernelIdempotency='growth-engagement-'.substr(hash('sha256',$organizationId.':'.$recommendationId),0,40);
 
         if(count($deals)===1){
+            if($channel===EngagementChannel::Phone->value){
+                throw new InvalidArgumentException('Post-handoff call execution belongs to Sales and is not available through the Growth pre-handoff bridge.');
+            }
             $targetDomain='sales';
             $targetReferenceType='sales_deal';
             $targetReferenceId=$deals[0];
             $kernelActionType='sales.send_message';
         }else{
-            if($channel!==EngagementChannel::Email->value){
-                throw new InvalidArgumentException('Pre-handoff Growth execution currently supports email only.');
-            }
             $contactId=trim((string)($recommendation['contact_id']??''));
             if($contactId===''){
                 throw new InvalidArgumentException('Pre-handoff Growth execution requires recommendation contact_id.');
             }
-            if(!$this->hasUsableEmailContact($organizationId,$contactId)){
-                throw new InvalidArgumentException('Pre-handoff Growth execution requires a contact with valid email identity.');
+            if(!$this->hasUsableChannelIdentity($organizationId,$contactId,$channel)){
+                throw new InvalidArgumentException('Pre-handoff Growth execution requires a contact with usable '.$channel.' identity.');
             }
             $targetDomain='growth';
             $targetReferenceType='growth_contact';
             $targetReferenceId=$contactId;
-            $kernelActionType='growth.send_message';
+            $kernelActionType=match($channel){
+                EngagementChannel::Email->value=>'growth.send_message',
+                EngagementChannel::LinkedIn->value=>'growth.send_linkedin',
+                EngagementChannel::Phone->value=>'growth.place_call',
+                default=>throw new InvalidArgumentException('Unsupported pre-handoff Growth engagement channel.'),
+            };
         }
 
         $payloadFingerprint=hash('sha256',json_encode([
-            'candidate_id'=>$candidateId,'recommendation_id'=>$recommendationId,
-            'target_domain'=>$targetDomain,'target_reference_type'=>$targetReferenceType,'target_reference_id'=>$targetReferenceId,
-            'action_type'=>$kernelActionType,'channel'=>$channel,'body'=>$body,
+            'candidate_id'=>$candidateId,
+            'recommendation_id'=>$recommendationId,
+            'target_domain'=>$targetDomain,
+            'target_reference_type'=>$targetReferenceType,
+            'target_reference_id'=>$targetReferenceId,
+            'action_type'=>$kernelActionType,
+            'channel'=>$channel,
+            'body'=>$body,
         ],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
         $this->receipts->claim(
             $organizationId,'engagement_execution_payload',$recommendationId,$payloadFingerprint,
@@ -125,15 +132,25 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             return ['execution'=>$existing,'action'=>$action->toArray(),'replayed'=>true];
         }
 
-        $action=$kernelActionType==='sales.send_message'
-            ? $this->actionGateway->proposeSalesMessage(
+        $action=match($kernelActionType){
+            'sales.send_message'=>$this->actionGateway->proposeSalesMessage(
                 $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
                 $confidence,$kernelIdempotency,
-            )
-            : $this->actionGateway->proposeGrowthMessage(
+            ),
+            'growth.send_message'=>$this->actionGateway->proposeGrowthMessage(
                 $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$channel,$body,
                 $confidence,$kernelIdempotency,
-            );
+            ),
+            'growth.send_linkedin'=>$this->actionGateway->proposeGrowthLinkedIn(
+                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$body,
+                $confidence,$kernelIdempotency,
+            ),
+            'growth.place_call'=>$this->actionGateway->proposeGrowthCall(
+                $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetReferenceId,$body,
+                $confidence,$kernelIdempotency,
+            ),
+            default=>throw new InvalidArgumentException('Unsupported Growth engagement action type.'),
+        };
         $executionId='GEXE-'.strtoupper(substr(hash('sha256',$organizationId.':'.$recommendationId),0,20));
 
         return $this->transactions->transactional(function()use(
@@ -147,9 +164,14 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             $this->events->publish(new DomainEvent(
                 bin2hex(random_bytes(16)),$organizationId,GrowthEventType::ENGAGEMENT_EXECUTION_PROPOSED,
                 'growth_candidate',$candidateId,[
-                    'execution_id'=>$executionId,'recommendation_id'=>$recommendationId,
-                    'action_id'=>$action->id,'action_type'=>$action->type,'action_status'=>$action->status,
-                    'target_domain'=>$targetDomain,'target_reference_type'=>$targetReferenceType,'target_reference_id'=>$targetReferenceId,
+                    'execution_id'=>$executionId,
+                    'recommendation_id'=>$recommendationId,
+                    'action_id'=>$action->id,
+                    'action_type'=>$action->type,
+                    'action_status'=>$action->status,
+                    'target_domain'=>$targetDomain,
+                    'target_reference_type'=>$targetReferenceType,
+                    'target_reference_id'=>$targetReferenceId,
                     'channel'=>$channel,
                 ],
                 new EventMetadata($correlationId,null,'USER',(string)$actorId),$this->now(),
@@ -211,19 +233,16 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'target_reference_id'=>$execution['target_reference_id']??null,
             ];
         }
-
         if((string)($recommendation['status']??'')!==EngagementRecommendationStatus::Accepted->value){
             return ['can_propose'=>false,'code'=>'recommendation_not_accepted','reason'=>'Accept the recommendation before proposing execution.'];
         }
 
         $actionType=(string)($recommendation['action_type']??'');
-        if(!in_array($actionType,self::MESSAGE_ACTIONS,true)){
-            return ['can_propose'=>false,'code'=>'action_not_message_capable','reason'=>'This recommendation is not message-capable in the current execution bridge.'];
-        }
-
         $channel=(string)($recommendation['channel']??'');
-        if(!in_array($channel,[EngagementChannel::Email->value,EngagementChannel::LinkedIn->value],true)){
-            return ['can_propose'=>false,'code'=>'channel_not_supported','reason'=>'Current execution bridge supports email or LinkedIn message channels only.'];
+        try{
+            $this->assertExecutableRecommendation($actionType,$channel);
+        }catch(InvalidArgumentException $error){
+            return ['can_propose'=>false,'code'=>'channel_not_supported','reason'=>$error->getMessage()];
         }
 
         $deals=$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal');
@@ -234,8 +253,14 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'reason'=>'Execution has ambiguous sales_deal bindings; found '.count($deals).'.',
             ];
         }
-
         if(count($deals)===1){
+            if($channel===EngagementChannel::Phone->value){
+                return [
+                    'can_propose'=>false,
+                    'code'=>'post_handoff_call_not_supported',
+                    'reason'=>'Post-handoff call execution belongs to Sales; Growth only owns the pre-handoff call bridge.',
+                ];
+            }
             return [
                 'can_propose'=>true,
                 'code'=>'eligible_post_handoff',
@@ -248,13 +273,6 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             ];
         }
 
-        if($channel!==EngagementChannel::Email->value){
-            return [
-                'can_propose'=>false,
-                'code'=>'pre_handoff_channel_not_supported',
-                'reason'=>'Pre-handoff execution currently supports email only.',
-            ];
-        }
         $contactId=trim((string)($recommendation['contact_id']??''));
         if($contactId===''){
             return [
@@ -263,33 +281,72 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'reason'=>'Pre-handoff execution requires an explicit recommendation contact.',
             ];
         }
-        if(!$this->hasUsableEmailContact($organizationId,$contactId)){
+        if(!$this->hasUsableChannelIdentity($organizationId,$contactId,$channel)){
             return [
                 'can_propose'=>false,
-                'code'=>'pre_handoff_contact_email_required',
-                'reason'=>'Pre-handoff execution requires a Growth contact with valid email identity.',
+                'code'=>'pre_handoff_contact_identity_required',
+                'reason'=>'Pre-handoff execution requires a Growth contact with usable '.$channel.' identity.',
             ];
         }
+        $kernelActionType=match($channel){
+            EngagementChannel::Email->value=>'growth.send_message',
+            EngagementChannel::LinkedIn->value=>'growth.send_linkedin',
+            EngagementChannel::Phone->value=>'growth.place_call',
+            default=>'',
+        };
 
         return [
             'can_propose'=>true,
             'code'=>'eligible_pre_handoff',
-            'reason'=>'Accepted recommendation is eligible for governed pre-handoff Growth email proposal.',
+            'reason'=>'Accepted recommendation is eligible for governed pre-handoff '.$channel.' execution.',
             'target_domain'=>'growth',
             'target_reference_type'=>'growth_contact',
             'target_reference_id'=>$contactId,
-            'action_type'=>'growth.send_message',
+            'action_type'=>$kernelActionType,
             'channel'=>$channel,
         ];
     }
 
-    private function hasUsableEmailContact(string $organizationId,string $contactId):bool
+    private function assertExecutableRecommendation(string $actionType,string $channel):void
+    {
+        if(!in_array($actionType,self::EXECUTABLE_ACTIONS,true)){
+            throw new InvalidArgumentException('Growth engagement recommendation is not executable through the current bridge.');
+        }
+        $action=NextBestActionType::tryFrom($actionType);
+        $engagementChannel=EngagementChannel::tryFrom($channel);
+        if(
+            $action===null||
+            $engagementChannel===null||
+            !in_array($engagementChannel,[EngagementChannel::Email,EngagementChannel::LinkedIn,EngagementChannel::Phone],true)||
+            !$action->allowsChannel($engagementChannel)
+        ){
+            throw new InvalidArgumentException('Growth engagement action/channel combination is not executable.');
+        }
+    }
+
+    private function hasUsableChannelIdentity(string $organizationId,string $contactId,string $channel):bool
     {
         $contact=$this->contacts->viewContact($organizationId,$contactId);
         if($contact===null)return false;
-        if(strtolower(trim((string)($contact['identity_type']??'')))!=='email')return false;
-        $email=trim((string)($contact['identity_value']??''));
-        return filter_var($email,FILTER_VALIDATE_EMAIL)!==false;
+        $identityType=strtolower(trim((string)($contact['identity_type']??'')));
+        $identityValue=trim((string)($contact['identity_value']??''));
+        if($identityType!==$channel)return false;
+
+        return match($channel){
+            EngagementChannel::Email->value=>filter_var($identityValue,FILTER_VALIDATE_EMAIL)!==false,
+            EngagementChannel::Phone->value=>(bool)preg_match('/^\+[1-9][0-9]{7,14}$/',$identityValue),
+            EngagementChannel::LinkedIn->value=>$this->isLinkedInProfile($identityValue),
+            default=>false,
+        };
+    }
+
+    private function isLinkedInProfile(string $value):bool
+    {
+        $parts=parse_url($value);
+        if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https')return false;
+        $host=strtolower((string)($parts['host']??''));
+        if($host!=='linkedin.com'&&!str_ends_with($host,'.linkedin.com'))return false;
+        return (bool)preg_match('#^/in/[^/]+/?$#',(string)($parts['path']??''));
     }
 
     private function bounded(string $value,string $field,int $limit):string

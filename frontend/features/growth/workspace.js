@@ -145,7 +145,7 @@ const runEngagementExecution=async(root,form)=>{
   const button=form.querySelector('button[type="submit"]');
   const body=String(new FormData(form).get('body')||'').trim();
   if(!body){
-    setStatus(status,'Outbound message body is required.','error');
+    setStatus(status,'Approved message or call brief is required.','error');
     return;
   }
   button?.setAttribute('disabled','disabled');
@@ -295,6 +295,58 @@ const initGrowthCollectors=(root)=>{
         window.setTimeout(()=>window.location.reload(),250);
       }catch(error){
         setStatus(status,error.message||'Feed update failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
+
+  root.querySelector('[data-growth-collector-alert-create]')?.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const status=form.querySelector('[data-growth-form-status]');
+    const button=form.querySelector('button[type="submit"]');
+    const values=new FormData(form);
+    const payload={
+      recipient_email:String(values.get('recipient_email')||'').trim().toLowerCase(),
+      recipient_name:String(values.get('recipient_name')||'').trim()||null,
+      locale:String(values.get('locale')||'en').trim(),
+      enabled:values.get('enabled')!==null,
+    };
+    if(!payload.recipient_email||!payload.locale){
+      setStatus(status,'Email and locale are required.','error');
+      return;
+    }
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Adding incident alert recipient…','loading');
+    try{
+      await mutation('/api/v1/growth/collector-alert-subscriptions',payload,root,form);
+      delete form.dataset.idempotencyKey;
+      setStatus(status,'Alert recipient added. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Alert recipient creation failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
+  root.querySelectorAll('[data-growth-collector-alert-toggle]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const subscriptionId=form.dataset.subscriptionId||'';
+      const action=form.dataset.action||'';
+      if(!subscriptionId||!['enable','disable'].includes(action))return;
+      const status=form.querySelector('[data-growth-form-status]');
+      const button=form.querySelector('button[type="submit"]');
+      button?.setAttribute('disabled','disabled');
+      setStatus(status,action==='enable'?'Enabling alerts…':'Disabling alerts…','loading');
+      try{
+        await mutation('/api/v1/growth/collector-alert-subscriptions/'+encodeURIComponent(subscriptionId)+'/'+action,{},root,form);
+        delete form.dataset.idempotencyKey;
+        setStatus(status,'Alert recipient updated. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),250);
+      }catch(error){
+        setStatus(status,error.message||'Alert recipient update failed.','error');
         button?.removeAttribute('disabled');
       }
     });

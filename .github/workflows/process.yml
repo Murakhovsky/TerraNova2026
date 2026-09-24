@@ -157,6 +157,8 @@ jobs:
           php tests/architecture/growth_v0310_polling_operations_workspace.php
           php tests/architecture/growth_v0320_collector_health_backoff.php
           php tests/architecture/growth_v0330_collector_incidents.php
+          php tests/architecture/growth_v0340_collector_alerts.php
+          php tests/architecture/growth_v0350_linkedin_call_execution.php
 
       - name: Process registry invariants
         run: |
@@ -192,6 +194,8 @@ jobs:
           php tests/unit/growth_v0310_polling_operations_workspace.php
           php tests/unit/growth_v0320_collector_health_backoff.php
           php tests/unit/growth_v0330_collector_incidents.php
+          php tests/unit/growth_v0340_collector_alerts.php
+          php tests/unit/growth_v0350_linkedin_call_execution.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -278,6 +282,31 @@ jobs:
           php -l tests/architecture/growth_v0320_collector_health_backoff.php
           php -l tests/unit/growth_v0330_collector_incidents.php
           php -l tests/architecture/growth_v0330_collector_incidents.php
+          php -l tests/unit/growth_v0340_collector_alerts.php
+          php -l tests/architecture/growth_v0340_collector_alerts.php
+          php -l tests/unit/growth_v0350_linkedin_call_execution.php
+          php -l tests/architecture/growth_v0350_linkedin_call_execution.php
+          php -l app/Platform/Integration/Contract/IntegrationOutboxInterface.php
+          php -l app/Infrastructure/Platform/Integration/MysqlIntegrationOutbox.php
+          php -l app/Domains/Growth/Application/DTO/GrowthExternalEngagementDelivery.php
+          php -l app/Domains/Growth/Application/Contract/GrowthExternalEngagementGatewayInterface.php
+          php -l app/Domains/Growth/Infrastructure/Integration/N8nGrowthExternalEngagementGateway.php
+          php -l app/Domains/Growth/Automation/Action/GrowthLinkedInHandler.php
+          php -l app/Domains/Growth/Automation/Action/GrowthCallHandler.php
+          php -l app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php
+          php -l app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php
+          php -l app/Domains/Growth/Automation/Policy/GrowthPolicyCatalog.php
+          php -l app/Domains/Growth/Bootstrap/GrowthDomainModule.php
+          php -l app/Domains/Growth/Domain/GrowthContact.php
+          php -l app/Domains/Growth/Application/Service/GrowthBuyingCommitteeService.php
+          php -l app/Interfaces/Web/View/growth/candidate.phtml
+          php -l app/Domains/Growth/Domain/GrowthCollectorAlertSubscription.php
+          php -l app/Domains/Growth/Application/Contract/GrowthCollectorAlertSubscriptionRepositoryInterface.php
+          php -l app/Domains/Growth/Application/Contract/GrowthCollectorAlertBoundary.php
+          php -l app/Domains/Growth/Application/Contract/GrowthCollectorIncidentAlertGatewayInterface.php
+          php -l app/Domains/Growth/Application/Service/GrowthCollectorAlertService.php
+          php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthCollectorAlertSubscriptionRepository.php
+          php -l app/Domains/Growth/Infrastructure/Notification/PlatformNotificationGrowthCollectorIncidentAlertGateway.php
           php -l app/Domains/Growth/Application/Contract/GrowthSignalPollingIncidentRepositoryInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthSignalPollingIncidentBoundary.php
           php -l app/Domains/Growth/Application/Service/GrowthSignalPollingIncidentService.php

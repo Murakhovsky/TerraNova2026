@@ -68,6 +68,7 @@ generated: true
 | `growth` | `app/migrations/20260924_000096_growth_v0310_polling_operations_workspace.sql` | — |
 | `growth` | `app/migrations/20260924_000097_growth_v0320_collector_health_backoff.sql` | `tn_growth_signal_collector_health` |
 | `growth` | `app/migrations/20260924_000098_growth_v0330_collector_incidents.sql` | `tn_growth_signal_collector_incidents` |
+| `growth` | `app/migrations/20260924_000099_growth_v0340_collector_alert_subscriptions.sql` | `tn_growth_collector_alert_subscriptions` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

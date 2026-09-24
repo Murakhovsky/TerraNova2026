@@ -11,6 +11,7 @@ use App\Web\Experience\Shell\ShellNavigationItem;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
+use Domains\Growth\Application\Contract\GrowthCollectorAlertBoundary;
 use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
@@ -52,6 +53,7 @@ final readonly class GrowthPageController
         private GrowthResearchBoundary $research,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthSignalFeedBoundary $signalFeeds,
+        private GrowthCollectorAlertBoundary $collectorAlerts,
         private GrowthJsonSignalSourceBoundary $jsonSignalSources,
         private GrowthSignalPollingStatusProvider $pollingStatus,
         private GrowthDecisionBoundary $decisions,
@@ -175,6 +177,7 @@ final readonly class GrowthPageController
                 'workspace'=>[
                     'collectors'=>$this->collectors->collectors(),
                     'feeds'=>$this->signalFeeds->feeds($tenant->organizationId()->value()),
+                    'alert_subscriptions'=>$this->collectorAlerts->subscriptions($tenant->organizationId()->value()),
                     'json_sources'=>$this->jsonSignalSources->sources($tenant->organizationId()->value()),
                     'polling'=>$this->pollingStatus->status($tenant->organizationId()->value()),
                     'runs'=>$this->workspace->collectorRuns($tenant->organizationId()->value(),[

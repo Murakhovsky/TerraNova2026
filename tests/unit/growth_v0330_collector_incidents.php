@@ -5,6 +5,9 @@ require dirname(__DIR__,2).'/vendor/autoload.php';
 
 use DateTimeImmutable;
 use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthCollectorAlertSubscriptionRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthCollectorIncidentAlertGatewayInterface;
+use Domains\Growth\Domain\GrowthCollectorAlertSubscription;
 use Domains\Growth\Application\Service\GrowthSignalPollingIncidentService;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Kernel\Audit\AuditEntry;
@@ -113,7 +116,33 @@ $repository=new class implements GrowthSignalPollingIncidentRepositoryInterface 
     }
 };
 
-$service=new GrowthSignalPollingIncidentService($repository,$events,$transactions,$audit,3);
+$alertSubscriptions=new class implements GrowthCollectorAlertSubscriptionRepositoryInterface {
+    public function create(GrowthCollectorAlertSubscription $subscription,int $actorId):void{}
+    public function lock(string $organizationId,string $subscriptionId):GrowthCollectorAlertSubscription{throw new InvalidArgumentException('unused');}
+    public function update(GrowthCollectorAlertSubscription $subscription,int $actorId):void{}
+    public function view(string $organizationId,string $subscriptionId):?array{return null;}
+    public function findByEmail(string $organizationId,string $recipientEmail):?array{return null;}
+    public function listAll(string $organizationId,int $limit=100):array{return [];}
+    public function listEnabled(string $organizationId,int $limit=100):array{
+        return [[
+            'subscription_id'=>'sub-1',
+            'recipient_email'=>'ops@example.test',
+            'recipient_name'=>'Ops',
+            'locale'=>'en',
+            'enabled'=>true,
+        ]];
+    }
+};
+$alerts=new class implements GrowthCollectorIncidentAlertGatewayInterface {
+    /** @var list<array<string,mixed>> */
+    public array $queued=[];
+    public function queue(string $organizationId,array $subscription,array $incident,string $transition,string $correlationId):void
+    {
+        $this->queued[]=['organization_id'=>$organizationId,'incident'=>$incident,'transition'=>$transition];
+    }
+};
+
+$service=new GrowthSignalPollingIncidentService($repository,$events,$transactions,$audit,$alertSubscriptions,$alerts,3);
 $failedAt=new DateTimeImmutable('2026-09-24T08:00:00+00:00');
 
 expectGrowthV0330(
@@ -143,5 +172,7 @@ expectGrowthV0330($repository->activeIncidents('org-1')===[],'Resolved collector
 expectGrowthV0330(count($store->events)===2,'Recovery must emit incident resolved event.');
 expectGrowthV0330($store->events[1]->type===GrowthEventType::COLLECTOR_INCIDENT_RESOLVED,'Wrong incident resolved event.');
 expectGrowthV0330(count($audit->entries)===2,'Incident open and recovery must be audited.');
+expectGrowthV0330(count($alerts->queued)===2,'Incident open and recovery must queue operator alerts after commit.');
+expectGrowthV0330($alerts->queued[0]['transition']==='opened'&&$alerts->queued[1]['transition']==='resolved','Incident alert transitions are wrong.');
 
 echo "Growth V0.33 Collector Incidents & Recovery contracts passed.\n";

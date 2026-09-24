@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.33.0',
-    'schema_version' => '0.30.0',
+    'version' => '0.35.0',
+    'schema_version' => '0.31.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
     'icon' => 'radar',
@@ -54,8 +54,12 @@ return [
             'app/migrations/20260924_000096_growth_v0310_polling_operations_workspace.sql',
             'app/migrations/20260924_000097_growth_v0320_collector_health_backoff.sql',
             'app/migrations/20260924_000098_growth_v0330_collector_incidents.sql',
+            'app/migrations/20260924_000099_growth_v0340_collector_alert_subscriptions.sql',
+            'app/migrations/20260924_000100_growth_v0350_linkedin_call_execution.sql',
         ],
         'capabilities' => [
+            'growth.engagement.pre_handoff_linkedin_call_execution',
+            'growth.signal.polling_alerts',
             'growth.signal.polling_incidents',
             'growth.signal.polling_health',
             'growth.signal.polling_workspace',

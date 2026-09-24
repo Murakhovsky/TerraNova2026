@@ -146,10 +146,10 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
           <?php if(!empty($canManageGrowth)): ?>
             <form class="tn-growth-action-form" data-growth-engagement-execution data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">
               <label class="tn-ui-field">
-                <span>Outbound message body</span>
-                <textarea class="tn-ui-input" name="body" rows="6" maxlength="10000" required placeholder="Human-approved outbound message"></textarea>
+                <span>Approved message / call brief</span>
+                <textarea class="tn-ui-input" name="body" rows="6" maxlength="10000" required placeholder="Human-approved message or call brief"></textarea>
               </label>
-              <p class="tn-growth-muted">The message body goes to the governed Kernel Action. Growth stores only the execution link and payload fingerprint.</p>
+              <p class="tn-growth-muted">The approved content goes to the governed Kernel Action. Contact identity is resolved only at execution time; Growth stores only the execution link and payload fingerprint.</p>
               <button class="tn-ui-button tn-ui-button--primary" type="submit">Propose governed Action</button>
               <span data-growth-form-status></span>
             </form>

@@ -53,7 +53,7 @@ foreach(['PDO','Domains\\Sales\\','ActionProposal','ActionPolicyService','Action
 $gateway=$read('app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php');
 foreach([
     'GrowthActionProposalGatewayInterface','ActionPolicyService','ActionService',
-    "type:'sales.send_message'","targetType:'deal'","sourceType:'GROWTH'",
+    "'sales.send_message'","'deal'","sourceType:'GROWTH'",
     "executionMode:'APPROVAL_REQUIRED'","riskLevel:'MEDIUM'",
     'policies->submit',
 ] as $needle){
