@@ -29,16 +29,35 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
         private AuditRepositoryInterface $audit,
         private int $defaultDailyLimit,
         private int $defaultContactCooldownHours,
+        private ?int $defaultEmailDailyLimit=null,
+        private ?int $defaultLinkedInDailyLimit=null,
+        private ?int $defaultPhoneDailyLimit=null,
     ) {
-        new EngagementExecutionLimitPolicy($defaultDailyLimit,$defaultContactCooldownHours);
+        new EngagementExecutionLimitPolicy(
+            $defaultDailyLimit,
+            $defaultContactCooldownHours,
+            $this->defaultChannelDailyLimits(),
+        );
     }
 
     public function policyFor(string $organizationId):EngagementExecutionLimitPolicy
     {
         $profile=$this->profiles->latest($organizationId);
         return $profile===null
-            ? new EngagementExecutionLimitPolicy($this->defaultDailyLimit,$this->defaultContactCooldownHours)
-            : new EngagementExecutionLimitPolicy((int)$profile['daily_limit'],(int)$profile['contact_cooldown_hours']);
+            ? new EngagementExecutionLimitPolicy(
+                $this->defaultDailyLimit,
+                $this->defaultContactCooldownHours,
+                $this->defaultChannelDailyLimits(),
+            )
+            : new EngagementExecutionLimitPolicy(
+                (int)$profile['daily_limit'],
+                (int)$profile['contact_cooldown_hours'],
+                [
+                    'email'=>(int)($profile['email_daily_limit']??$profile['daily_limit']),
+                    'linkedin'=>(int)($profile['linkedin_daily_limit']??$profile['daily_limit']),
+                    'phone'=>(int)($profile['phone_daily_limit']??$profile['daily_limit']),
+                ],
+            );
     }
 
     public function view(string $organizationId):array
@@ -52,10 +71,12 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
             'effective'=>[
                 'daily_limit'=>$policy->dailyLimit,
                 'contact_cooldown_hours'=>$policy->contactCooldownHours,
+                'channel_daily_limits'=>$policy->channelDailyLimits,
             ],
             'defaults'=>[
                 'daily_limit'=>$this->defaultDailyLimit,
                 'contact_cooldown_hours'=>$this->defaultContactCooldownHours,
+                'channel_daily_limits'=>$this->defaultChannelDailyLimits(),
             ],
         ];
     }
@@ -68,16 +89,31 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
         $dailyLimit=$this->integer($input['daily_limit']??null,'daily_limit');
         $cooldown=$this->integer($input['contact_cooldown_hours']??null,'contact_cooldown_hours');
         $reason=$this->bounded((string)($input['reason']??''),'reason',1000);
-        new EngagementExecutionLimitPolicy($dailyLimit,$cooldown);
+        $current=$this->policyFor($organizationId);
+        $channelInput=$input['channel_daily_limits']??null;
+        if($channelInput!==null&&(!is_array($channelInput)||array_is_list($channelInput))){
+            throw new InvalidArgumentException('channel_daily_limits must be an object.');
+        }
+        $channelLimits=[];
+        foreach(['email','linkedin','phone'] as $channel){
+            $fallback=min($current->channelDailyLimit($channel),$dailyLimit);
+            $channelLimits[$channel]=$this->optionalInteger(
+                is_array($channelInput)?($channelInput[$channel]??null):null,
+                'channel_daily_limits.'.$channel,
+                $fallback,
+            );
+        }
+        new EngagementExecutionLimitPolicy($dailyLimit,$cooldown,$channelLimits);
 
         $fingerprint=hash('sha256',json_encode([
             'daily_limit'=>$dailyLimit,
             'contact_cooldown_hours'=>$cooldown,
+            'channel_daily_limits'=>$channelLimits,
             'reason'=>$reason,
         ],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
 
         return $this->transactions->transactional(function()use(
-            $organizationId,$actorId,$correlationId,$idempotencyKey,$dailyLimit,$cooldown,$reason,$fingerprint
+            $organizationId,$actorId,$correlationId,$idempotencyKey,$dailyLimit,$cooldown,$channelLimits,$reason,$fingerprint
         ):array{
             if(!$this->receipts->claim($organizationId,'engagement_limit_profile_update',$idempotencyKey,$fingerprint)){
                 return $this->view($organizationId)+['replayed'=>true];
@@ -88,6 +124,9 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
                 $latest!==null
                 &&(int)$latest['daily_limit']===$dailyLimit
                 &&(int)$latest['contact_cooldown_hours']===$cooldown
+                &&(int)($latest['email_daily_limit']??$latest['daily_limit'])===$channelLimits['email']
+                &&(int)($latest['linkedin_daily_limit']??$latest['daily_limit'])===$channelLimits['linkedin']
+                &&(int)($latest['phone_daily_limit']??$latest['daily_limit'])===$channelLimits['phone']
             ){
                 throw new InvalidArgumentException('Growth engagement limits are unchanged.');
             }
@@ -99,6 +138,9 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
                 'revision'=>$revision,
                 'daily_limit'=>$dailyLimit,
                 'contact_cooldown_hours'=>$cooldown,
+                'email_daily_limit'=>$channelLimits['email'],
+                'linkedin_daily_limit'=>$channelLimits['linkedin'],
+                'phone_daily_limit'=>$channelLimits['phone'],
                 'reason'=>$reason,
                 'created_by'=>$actorId,
                 'created_at'=>$this->now()->format(DATE_ATOM),
@@ -111,6 +153,7 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
                     'revision'=>$revision,
                     'daily_limit'=>$dailyLimit,
                     'contact_cooldown_hours'=>$cooldown,
+                    'channel_daily_limits'=>$channelLimits,
                 ],
                 new EventMetadata($correlationId,null,'USER',(string)$actorId),$this->now(),
             ));
@@ -123,6 +166,7 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
                         'revision'=>$revision,
                         'daily_limit'=>$dailyLimit,
                         'contact_cooldown_hours'=>$cooldown,
+                        'channel_daily_limits'=>$channelLimits,
                         'reason'=>$reason,
                     ],
                 ],$correlationId,$this->now(),
@@ -137,6 +181,22 @@ final readonly class GrowthEngagementLimitService implements GrowthEngagementLim
         if(is_int($value))return $value;
         if(is_string($value)&&ctype_digit(trim($value)))return (int)trim($value);
         throw new InvalidArgumentException($field.' must be an integer.');
+    }
+
+    private function optionalInteger(mixed $value,string $field,int $fallback):int
+    {
+        if($value===null)return $fallback;
+        return $this->integer($value,$field);
+    }
+
+    /** @return array{email:int,linkedin:int,phone:int} */
+    private function defaultChannelDailyLimits():array
+    {
+        return [
+            'email'=>$this->defaultEmailDailyLimit??$this->defaultDailyLimit,
+            'linkedin'=>$this->defaultLinkedInDailyLimit??$this->defaultDailyLimit,
+            'phone'=>$this->defaultPhoneDailyLimit??$this->defaultDailyLimit,
+        ];
     }
 
     private function bounded(string $value,string $field,int $limit):string

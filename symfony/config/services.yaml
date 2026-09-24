@@ -6,6 +6,9 @@ parameters:
   env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET): ''
   env(GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW): '300'
   env(COS_GROWTH_OUTREACH_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_EMAIL_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_LINKEDIN_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_PHONE_DAILY_LIMIT): '50'
   env(COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS): '24'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
@@ -723,6 +726,9 @@ services:
     arguments:
       $defaultDailyLimit: '%env(int:COS_GROWTH_OUTREACH_DAILY_LIMIT)%'
       $defaultContactCooldownHours: '%env(int:COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS)%'
+      $defaultEmailDailyLimit: '%env(int:COS_GROWTH_OUTREACH_EMAIL_DAILY_LIMIT)%'
+      $defaultLinkedInDailyLimit: '%env(int:COS_GROWTH_OUTREACH_LINKEDIN_DAILY_LIMIT)%'
+      $defaultPhoneDailyLimit: '%env(int:COS_GROWTH_OUTREACH_PHONE_DAILY_LIMIT)%'
 
   Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary:
     alias: Domains\Growth\Application\Service\GrowthEngagementLimitService

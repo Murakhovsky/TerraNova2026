@@ -31,6 +31,8 @@ interface GrowthEngagementExecutionRepositoryInterface
 
     public function countPreHandoffSince(string $organizationId,string $since):int;
 
+    public function countPreHandoffSinceByChannel(string $organizationId,string $channel,string $since):int;
+
     /** @return array<string,mixed>|null */
     public function latestPreHandoffForTarget(string $organizationId,string $targetReferenceId):?array;
 }

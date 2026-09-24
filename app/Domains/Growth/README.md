@@ -784,4 +784,26 @@ Each organization can set its own daily pre-handoff execution cap and contact co
 
 The canonical API is `GET/POST /api/v1/growth/engagement/limits`; the operator surface is `/growth/settings`. None of this grants `AUTO` execution authority: Kernel Action approval remains a separate mandatory gate. We have therefore achieved the rare feat of adding more settings while making the system less dangerous.
 
-Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Before autonomy, channel-specific quotas and concurrency-safe reservation semantics still need to sit above these tenant limits.
+V0.39 adds channel-specific pre-handoff quotas on top of the tenant-wide cap:
+
+```text
+tenant outreach profile
+  organization daily limit
+  contact cooldown
+  email daily quota
+  LinkedIn daily quota
+  phone daily quota
+        ↓
+execution eligibility
+  total usage today
+  channel usage today
+  last contact execution
+        ↓
+allow / block with explicit scope + next_allowed_at
+```
+
+The organization-wide limit remains the hard ceiling across all channels. Each channel quota can independently be set to `0` to block new pre-handoff execution on that transport without disabling Growth research or recommendations. Existing V0.38 API clients that omit channel quotas remain valid; missing values inherit the effective policy and are clamped when the organization-wide cap is reduced.
+
+Quota enforcement is still deliberately conservative and counts proposed Growth-owned execution links. A pending approval therefore consumes quota. This avoids the charmingly human loophole of queueing a thousand messages first and asking whether the daily limit mattered afterward.
+
+Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Before autonomy, concurrency-safe reservation semantics still need to make limit checks race-safe under parallel execution proposals.

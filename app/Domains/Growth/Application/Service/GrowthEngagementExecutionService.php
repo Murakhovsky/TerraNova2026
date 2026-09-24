@@ -101,7 +101,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             if(!$this->hasUsableChannelIdentity($organizationId,$contactId,$channel)){
                 throw new InvalidArgumentException('Pre-handoff Growth execution requires a contact with usable '.$channel.' identity.');
             }
-            $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId);
+            $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId,$channel);
             if(!$limitDecision['allowed']){
                 throw new InvalidArgumentException((string)$limitDecision['reason']);
             }
@@ -302,7 +302,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'reason'=>'Pre-handoff execution requires a Growth contact with usable '.$channel.' identity.',
             ];
         }
-        $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId);
+        $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId,$channel);
         if(!$limitDecision['allowed']){
             return [
                 'can_propose'=>false,
@@ -333,18 +333,20 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
     }
 
     /** @return array{allowed:bool,code:string,reason:string,next_allowed_at:?string} */
-    private function preHandoffLimitDecision(string $organizationId,string $contactId):array
+    private function preHandoffLimitDecision(string $organizationId,string $contactId,string $channel):array
     {
         $now=$this->now();
         $today=$now->setTime(0,0);
-        $count=$this->executions->countPreHandoffSince($organizationId,$today->format('Y-m-d H:i:s.u'));
+        $since=$today->format('Y-m-d H:i:s.u');
+        $count=$this->executions->countPreHandoffSince($organizationId,$since);
+        $channelCount=$this->executions->countPreHandoffSinceByChannel($organizationId,$channel,$since);
         $latest=$this->executions->latestPreHandoffForTarget($organizationId,$contactId);
         $lastAt=null;
         if($latest!==null&&!empty($latest['created_at'])){
             try{$lastAt=new DateTimeImmutable((string)$latest['created_at'],new DateTimeZone('UTC'));}
             catch(\Throwable){throw new InvalidArgumentException('Stored Growth engagement execution timestamp is invalid.');}
         }
-        return $this->limitProvider->policyFor($organizationId)->evaluate($count,$lastAt,$now);
+        return $this->limitProvider->policyFor($organizationId)->evaluate($count,$lastAt,$now,$channel,$channelCount);
     }
 
     private function assertExecutableRecommendation(string $actionType,string $channel):void

@@ -51,6 +51,7 @@ $executions=new class implements GrowthEngagementExecutionRepositoryInterface {
     public function createOrVerify(string $organizationId,string $executionId,string $candidateId,string $recommendationId,string $targetDomain,string $targetReferenceType,string $targetReferenceId,string $actionId,string $actionType,string $channel,string $payloadFingerprint,int $actorId):void{}
     public function latestForCandidate(string $organizationId,string $candidateId):?array{return null;}
     public function countPreHandoffSince(string $organizationId,string $since):int{return 0;}
+    public function countPreHandoffSinceByChannel(string $organizationId,string $channel,string $since):int{return 0;}
     public function latestPreHandoffForTarget(string $organizationId,string $targetReferenceId):?array{return null;}
 };
 

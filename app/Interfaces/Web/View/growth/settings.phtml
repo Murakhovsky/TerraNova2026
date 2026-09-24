@@ -4,6 +4,7 @@ $workspace=is_array($workspace??null)?$workspace:[];
 $limits=is_array($workspace['engagement_limits']??null)?$workspace['engagement_limits']:[];
 $effective=is_array($limits['effective']??null)?$limits['effective']:[];
 $profile=is_array($limits['profile']??null)?$limits['profile']:null;
+$channelLimits=is_array($effective['channel_daily_limits']??null)?$effective['channel_daily_limits']:[];
 ?>
 <main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-settings data-csrf="<?php echo $h($csrfToken??''); ?>">
   <?php $this->partial('components/ui/page_header',[
@@ -18,6 +19,9 @@ $profile=is_array($limits['profile']??null)?$limits['profile']:null;
 
   <section class="tn-ui-kpi-grid tn-workspace-section">
     <?php $this->partial('components/ui/kpi_card',['label'=>'Daily limit','value'=>$effective['daily_limit']??'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Email / day','value'=>$channelLimits['email']??'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'LinkedIn / day','value'=>$channelLimits['linkedin']??'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Phone / day','value'=>$channelLimits['phone']??'—']); ?>
     <?php $this->partial('components/ui/kpi_card',['label'=>'Contact cooldown','value'=>isset($effective['contact_cooldown_hours'])?$effective['contact_cooldown_hours'].' h':'—']); ?>
     <?php $this->partial('components/ui/kpi_card',['label'=>'Source','value'=>$limits['source']??'—']); ?>
     <?php $this->partial('components/ui/kpi_card',['label'=>'Revision','value'=>$profile['revision']??'default']); ?>
@@ -29,7 +33,11 @@ $profile=is_array($limits['profile']??null)?$limits['profile']:null;
     <?php if(!empty($canManageGrowth)): ?>
       <form class="tn-growth-action-form" data-growth-limit-settings>
         <label class="tn-ui-field"><span>Daily pre-handoff execution limit</span><input class="tn-ui-input" name="daily_limit" type="number" min="1" max="100000" required value="<?php echo $h($effective['daily_limit']??50); ?>"></label>
+        <label class="tn-ui-field"><span>Email daily quota</span><input class="tn-ui-input" name="email_daily_limit" type="number" min="0" max="100000" required value="<?php echo $h($channelLimits['email']??($effective['daily_limit']??50)); ?>"></label>
+        <label class="tn-ui-field"><span>LinkedIn daily quota</span><input class="tn-ui-input" name="linkedin_daily_limit" type="number" min="0" max="100000" required value="<?php echo $h($channelLimits['linkedin']??($effective['daily_limit']??50)); ?>"></label>
+        <label class="tn-ui-field"><span>Phone daily quota</span><input class="tn-ui-input" name="phone_daily_limit" type="number" min="0" max="100000" required value="<?php echo $h($channelLimits['phone']??($effective['daily_limit']??50)); ?>"></label>
         <label class="tn-ui-field"><span>Contact cooldown, hours</span><input class="tn-ui-input" name="contact_cooldown_hours" type="number" min="1" max="8760" required value="<?php echo $h($effective['contact_cooldown_hours']??24); ?>"></label>
+        <p class="tn-growth-muted">A channel quota of 0 blocks new pre-handoff execution on that channel. The organization-wide daily limit still applies across all channels.</p>
         <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why these limits are appropriate"></textarea></label>
         <button class="tn-ui-button tn-ui-button--primary" type="submit">Save tenant limits</button>
         <span data-growth-form-status></span>

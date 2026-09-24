@@ -14,7 +14,7 @@ final readonly class MysqlGrowthEngagementLimitProfileRepository implements Grow
     public function latest(string $organizationId):?array
     {
         $statement=$this->connection->prepare(
-            'SELECT organization_id,profile_id,revision,daily_limit,contact_cooldown_hours,reason,created_by,created_at '
+            'SELECT organization_id,profile_id,revision,daily_limit,email_daily_limit,linkedin_daily_limit,phone_daily_limit,contact_cooldown_hours,reason,created_by,created_at '
             .'FROM tn_growth_engagement_limit_profiles WHERE organization_id=:organization_id '
             .'ORDER BY revision DESC LIMIT 1'
         );
@@ -23,6 +23,9 @@ final readonly class MysqlGrowthEngagementLimitProfileRepository implements Grow
         if($row===false)return null;
         $row['revision']=(int)$row['revision'];
         $row['daily_limit']=(int)$row['daily_limit'];
+        $row['email_daily_limit']=(int)$row['email_daily_limit'];
+        $row['linkedin_daily_limit']=(int)$row['linkedin_daily_limit'];
+        $row['phone_daily_limit']=(int)$row['phone_daily_limit'];
         $row['contact_cooldown_hours']=(int)$row['contact_cooldown_hours'];
         $row['created_by']=(int)$row['created_by'];
         return $row;
@@ -32,14 +35,17 @@ final readonly class MysqlGrowthEngagementLimitProfileRepository implements Grow
     {
         $statement=$this->connection->prepare(
             'INSERT INTO tn_growth_engagement_limit_profiles '
-            .'(organization_id,profile_id,revision,daily_limit,contact_cooldown_hours,reason,created_by,created_at) '
-            .'VALUES(:organization_id,:profile_id,:revision,:daily_limit,:contact_cooldown_hours,:reason,:created_by,:created_at)'
+            .'(organization_id,profile_id,revision,daily_limit,email_daily_limit,linkedin_daily_limit,phone_daily_limit,contact_cooldown_hours,reason,created_by,created_at) '
+            .'VALUES(:organization_id,:profile_id,:revision,:daily_limit,:email_daily_limit,:linkedin_daily_limit,:phone_daily_limit,:contact_cooldown_hours,:reason,:created_by,:created_at)'
         );
         $statement->execute([
             'organization_id'=>$profile['organization_id'],
             'profile_id'=>$profile['profile_id'],
             'revision'=>$profile['revision'],
             'daily_limit'=>$profile['daily_limit'],
+            'email_daily_limit'=>$profile['email_daily_limit'],
+            'linkedin_daily_limit'=>$profile['linkedin_daily_limit'],
+            'phone_daily_limit'=>$profile['phone_daily_limit'],
             'contact_cooldown_hours'=>$profile['contact_cooldown_hours'],
             'reason'=>$profile['reason'],
             'created_by'=>$profile['created_by'],

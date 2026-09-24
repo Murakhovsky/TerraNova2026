@@ -88,6 +88,17 @@ final readonly class MysqlGrowthEngagementExecutionRepository implements GrowthE
         return (int)$statement->fetchColumn();
     }
 
+    public function countPreHandoffSinceByChannel(string $organizationId,string $channel,string $since):int
+    {
+        $statement=$this->connection->prepare(
+            "SELECT COUNT(*) FROM tn_growth_engagement_execution_links
+             WHERE organization_id=:organization_id AND target_domain='growth'
+               AND channel=:channel AND created_at>=:since"
+        );
+        $statement->execute(['organization_id'=>$organizationId,'channel'=>$channel,'since'=>$since]);
+        return (int)$statement->fetchColumn();
+    }
+
     public function latestPreHandoffForTarget(string $organizationId,string $targetReferenceId):?array
     {
         return $this->one(

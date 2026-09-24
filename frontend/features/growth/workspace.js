@@ -670,9 +670,18 @@ const initGrowthSettings=(root)=>{
     const values=new FormData(form);
     const dailyLimit=Number.parseInt(String(values.get('daily_limit')||''),10);
     const cooldown=Number.parseInt(String(values.get('contact_cooldown_hours')||''),10);
+    const emailLimit=Number.parseInt(String(values.get('email_daily_limit')||''),10);
+    const linkedInLimit=Number.parseInt(String(values.get('linkedin_daily_limit')||''),10);
+    const phoneLimit=Number.parseInt(String(values.get('phone_daily_limit')||''),10);
     const reason=String(values.get('reason')||'').trim();
-    if(!Number.isInteger(dailyLimit)||dailyLimit<1||!Number.isInteger(cooldown)||cooldown<1||!reason){
-      setStatus(status,'Daily limit, cooldown and change reason are required.','error');
+    const channelLimits=[emailLimit,linkedInLimit,phoneLimit];
+    if(
+      !Number.isInteger(dailyLimit)||dailyLimit<1||
+      !Number.isInteger(cooldown)||cooldown<1||
+      channelLimits.some((value)=>!Number.isInteger(value)||value<0)||
+      !reason
+    ){
+      setStatus(status,'Daily limit, channel quotas, cooldown and change reason are required.','error');
       return;
     }
     button?.setAttribute('disabled','disabled');
@@ -681,6 +690,11 @@ const initGrowthSettings=(root)=>{
       await mutation('/api/v1/growth/engagement/limits',{
         daily_limit:dailyLimit,
         contact_cooldown_hours:cooldown,
+        channel_daily_limits:{
+          email:emailLimit,
+          linkedin:linkedInLimit,
+          phone:phoneLimit,
+        },
         reason,
       },root,form);
       delete form.dataset.idempotencyKey;
