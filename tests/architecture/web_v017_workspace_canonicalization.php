@@ -40,18 +40,22 @@ if (is_file($root . '/app/Interfaces/Web/View/property/submissions.phtml')) {
     throw new RuntimeException('Retired Property submissions PHTML restored.');
 }
 
-$analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');
+$analytics = $read('symfony/templates/experience/admin/analytics.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/data_table'",
-    'tn-ui-panel--flush',
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    '<twig:CosMetric',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
+    'data-cos-archetype',
 ] as $needle) {
-    $requireContains($analytics, $needle, 'Analytics must use canonical UI contracts.');
+    $requireContains($analytics, $needle, 'Analytics must use canonical Executive Dashboard contracts.');
 }
-foreach (['tn-page-hero', 'tn-admin-metrics', 'tn-admin-card', 'tn-listing-table', 'tn-table-wrap'] as $legacy) {
-    $requireNotContains($analytics, $legacy, 'Analytics must not restore the legacy workspace presentation pattern.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacy) {
+    $requireNotContains($analytics, $legacy, 'Analytics must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/admin/analytics.phtml')) {
+    throw new RuntimeException('Retired Analytics PHTML restored.');
 }
 
 $diagnostic = $read('app/Interfaces/Web/View/diagnostic_report/show.phtml');

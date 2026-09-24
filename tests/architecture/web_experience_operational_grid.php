@@ -12,7 +12,6 @@ $read = static function (string $path) use ($root): string {
 
 $grid = $read('app/Interfaces/Web/View/components/ui/operational_grid.phtml');
 $cos = $read('app/Interfaces/Web/View/cos/index.phtml');
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
 $clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 $css = $read('frontend/styles/canonical-components.css');
 
