@@ -1,0 +1,6 @@
+.cos-client-case-funnel{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(15rem,18rem);gap:var(--cos-space-3);min-width:0;overflow-x:auto;padding-block-end:var(--cos-space-2);overscroll-behavior-inline:contain}
+.cos-client-case-funnel__stage{display:grid;align-content:start;gap:var(--cos-space-2);min-height:12rem;padding:var(--cos-space-3);background:var(--cos-surface-subtle-bg);border:var(--cos-border-width) solid var(--cos-surface-border);border-radius:var(--cos-radius-panel)}
+.cos-client-case-funnel__stage>header{display:flex;align-items:center;justify-content:space-between;gap:var(--cos-space-2)}
+.cos-client-case-funnel__card{color:inherit;text-decoration:none}
+.cos-client-case-funnel__card:hover,.cos-client-case-funnel__card:focus-visible{border-color:var(--cos-color-border-strong)}
+.cos-client-case-funnel__card span,.cos-client-case-funnel__card small{display:block;margin-block-start:var(--cos-space-1);color:var(--cos-color-text-muted);font-size:var(--cos-font-xs)}

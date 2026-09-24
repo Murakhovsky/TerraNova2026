@@ -16,26 +16,33 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$show = $read('app/Interfaces/Web/View/client_case/show.phtml');
+$show = $read('symfony/templates/experience/client_case/show.html.twig');
 foreach ([
-    '$inboundRows = [];',
-    "partial('components/ui/data_table'",
-    "'responsive' => 'cards'",
-    "'emptyMessage' => 'До кейсу ще не привʼязано заявок.'",
-    "'property' => [",
-    "'_href' => \$propertySlug !== '' ? 'property/show/' . \$propertySlug : ''",
+    '<twig:CosWorkspace',
+    '<twig:CosEntityHeader',
+    'request.propertyHref',
+    'match.pdfHref',
+    '/property/presentationShare',
+    '/client-case/updatePropertyMatch/',
 ] as $marker) {
-    $contains($show, $marker, 'Client Case inbound relations must use canonical DataTable and preserve property deep links.');
+    $contains($show, $marker, 'Client Case Workspace must preserve relation/matching contracts.');
 }
-$notContains($show, '<table class="tn-listing-table">', 'Client Case show must not restore the residual raw inbound table.');
+foreach (['<table', 'tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($show, $forbidden, 'Client Case Workspace must not restore residual raw/legacy presentation.');
+}
+
+$clientCasePresenter=$read('symfony/src/Web/Sales/ClientCaseWorkspacePresenter.php');
+foreach(["'/property/show/'","'/property/pdf/'"] as $marker){
+    $contains($clientCasePresenter,$marker,'Client Case presenter must preserve property deep links.');
+}
 
 $clientCaseGate = $read('tests/architecture/web_experience_production_client_case.php');
 foreach ([
-    "partial('components/ui/entity_header'",
-    'tn-match-form',
-    'property/presentationShare',
+    '<twig:CosWorkspace',
+    '/client-case/updatePropertyMatch/',
+    '/property/presentationShare',
 ] as $marker) {
-    $contains($clientCaseGate, $marker, 'PHASE 12 Client Case workflow guard must remain intact.');
+    $contains($clientCaseGate, $marker, 'Client Case production workflow guard must remain intact.');
 }
 
 $dataTable = $read('app/Interfaces/Web/View/components/ui/data_table.phtml');
@@ -139,25 +146,21 @@ foreach ([
 }
 $notContains($users, '<table', 'Users Administration must not retain a raw table after OperationalGrid migration.');
 
-$clientIndex = $read('app/Interfaces/Web/View/client_case/index.phtml');
+$clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 foreach ([
-    '$caseRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'client-case/quickUpdate/'",
-    "'csrf_token' => (string) (\$csrfToken ?? '')",
-    "'return_url' => 'client-case'",
-    "'kind' => 'stage'",
-    "'kind' => 'fields'",
-    "'kind' => 'submit'",
-    "'name' => 'stage_id'",
-    "'name' => 'status'",
-    "'name' => 'priority'",
-    "'name' => 'assigned_user_id'",
+    '/client-case/quickUpdate/',
+    'name="csrf_token"',
+    'name="return_url"',
+    'value="client-case"',
+    'name="stage_id"',
+    'name="status"',
+    'name="priority"',
+    'name="assigned_user_id"',
 ] as $marker) {
-    $contains($clientIndex, $marker, 'Client Case quick-update list must use canonical OperationalGrid.');
+    $contains($clientCaseItem, $marker, 'Client Case domain Collection item lost quick-update mutation parity.');
 }
-$notContains($clientIndex, '<table', 'Client Case index must not retain a raw table after OperationalGrid migration.');
+$notContains($clientCaseItem, '<table', 'Client Case Collection item must not restore a raw table.');
+$notContains($clientCaseItem, 'tn-', 'Client Case Collection item must not restore legacy TN presentation.');
 
 $studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
 foreach ([

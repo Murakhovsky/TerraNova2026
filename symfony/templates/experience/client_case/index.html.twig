@@ -1,0 +1,87 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Клієнтські кейси | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-page__stack" data-client-case-collection data-cos-archetype="{{ page.archetypeId() }}" data-cos-page-state="{{ page.state }}" data-cos-page-density="{{ page.density }}">
+    <twig:CosPageHeader eyebrow="Clients · Cases" title="Клієнтські кейси" subtitle="Купівля, продаж, оренда, ремонт, інвестиції й супровід в одному операційному просторі." metaValue="{{ collection.total }}" metaLabel="у роботі">
+        <twig:CosButton label="Вхідні заявки" href="/client-case/inbox" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if actionStatus %}<twig:CosAlert title="Зміни застосовано" copy="{{ actionStatus }}" tone="positive" />{% endif %}
+    {% if collection.error %}
+        <twig:CosAlert title="Клієнтські кейси недоступні" copy="{{ collection.error }}" tone="danger" />
+    {% else %}
+        <nav class="cos-action-bar cos-action-bar--start" aria-label="Етапи клієнтських кейсів">
+            {% for tab in collection.stageTabs %}<a class="cos-button {{ tab.active ? 'cos-button--primary' : 'cos-button--ghost' }} cos-button--sm" href="{{ tab.href }}" {% if tab.active %}aria-current="page"{% endif %}>{{ tab.label }}</a>{% endfor %}
+        </nav>
+
+        <twig:CosFilterBar action="/client-case" label="Фільтри клієнтських кейсів">
+            <label class="cos-field"><span>Пошук</span><input class="cos-input" type="search" name="q" value="{{ collection.filters.q }}" placeholder="Імʼя, телефон, email, номер кейсу"></label>
+            <label class="cos-field"><span>Тип</span><select class="cos-select" name="type"><option value="">Усі</option>{% for code,label in collection.typeOptions %}<option value="{{ code }}" {% if collection.filters.type == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="cos-field"><span>Статус</span><select class="cos-select" name="status"><option value="">Усі</option>{% for code,label in collection.statusOptions %}<option value="{{ code }}" {% if collection.filters.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="cos-field"><span>Пріоритет</span><select class="cos-select" name="priority"><option value="">Усі</option>{% for code,label in collection.priorityOptions %}<option value="{{ code }}" {% if collection.filters.priority == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="cos-field"><span>Відповідальний</span><select class="cos-select" name="assigned_user_id"><option value="0">Усі</option>{% for manager in collection.managerOptions %}<option value="{{ manager.id }}" {% if collection.filters.assigned_user_id == manager.id %}selected{% endif %}>{{ manager.label }}</option>{% endfor %}</select></label>
+            <label class="cos-field"><span>Сортування</span><select class="cos-select" name="sort">{% for code,label in collection.sortOptions %}<option value="{{ code }}" {% if collection.filters.sort == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <button class="cos-button cos-button--primary" type="submit">Застосувати</button><a class="cos-button cos-button--ghost" href="/client-case">Скинути</a>
+        </twig:CosFilterBar>
+
+        <section class="cos-section-grid" aria-label="Створення й triage">
+            <article class="cos-card cos-pattern-stack">
+                <div><p class="cos-card__eyebrow">Створення</p><h2 class="cos-card__title">Новий кейс</h2><p class="cos-card__copy">Швидка реєстрація нового клієнтського сценарію.</p></div>
+                <form class="cos-pattern-stack" action="/client-case/create" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <div class="cos-section-grid">
+                        <label class="cos-field"><span>Людина</span><input class="cos-input" name="full_name" type="text" maxlength="160" required></label>
+                        <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50"></label>
+                        <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" maxlength="160"></label>
+                        <label class="cos-field"><span>Тип кейсу</span><select class="cos-select" name="type">{% for code,label in collection.typeOptions %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Відповідальний</span><select class="cos-select" name="assigned_user_id"><option value="0">Поточний менеджер</option>{% for manager in collection.managerOptions %}<option value="{{ manager.id }}">{{ manager.label }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Тип обʼєкта</span><select class="cos-select" name="property_type_id"><option value="0">Не задано</option>{% for option in collection.propertyTypeOptions %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Місто</span><select class="cos-select" name="location_id"><option value="0">Не задано</option>{% for option in collection.locationOptions %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Бюджет до</span><input class="cos-input" name="budget_max" type="number" min="0" step="1000"></label>
+                        <label class="cos-field"><span>Валюта</span><select class="cos-select" name="currency"><option>USD</option><option>EUR</option><option>UAH</option></select></label>
+                    </div>
+                    <label class="cos-field"><span>Опис</span><textarea class="cos-textarea" name="description" rows="4"></textarea></label>
+                    <button class="cos-button cos-button--primary" type="submit">Створити кейс</button>
+                </form>
+            </article>
+
+            <article class="cos-card cos-pattern-stack">
+                <div><p class="cos-card__eyebrow">Inbox triage</p><h2 class="cos-card__title">Непривʼязані заявки</h2><p class="cos-card__copy">Створіть кейс або приєднайте заявку до наявного.</p></div>
+                {% for request in collection.unlinkedRequests %}
+                    <article class="cos-card cos-pattern-stack">
+                        <div><strong>{{ request.name }}</strong><p class="cos-card__copy">{{ request.intent }} · {{ request.contact }}</p>{% if request.context %}<small>{{ request.context }}</small>{% endif %}</div>
+                        <form class="cos-action-bar cos-action-bar--start" action="/client-case/createFromInboundRequest/{{ request.id }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <select class="cos-select" name="assigned_user_id" aria-label="Відповідальний"><option value="0">Поточний менеджер</option>{% for manager in collection.managerOptions %}<option value="{{ manager.id }}">{{ manager.label }}</option>{% endfor %}</select>
+                            <select class="cos-select" name="priority" aria-label="Пріоритет">{% for code,label in collection.priorityOptions %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+                            <button class="cos-button cos-button--primary cos-button--sm" type="submit">Створити кейс</button>
+                        </form>
+                        {% if collection.openCaseOptions is not empty %}
+                            <form class="cos-action-bar cos-action-bar--start" action="/client-case/linkInboundRequest" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="request_id" value="{{ request.id }}">
+                                <select class="cos-select" name="case_id" aria-label="Кейс">{% for option in collection.openCaseOptions %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select>
+                                <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Приєднати</button>
+                            </form>
+                        {% endif %}
+                    </article>
+                {% else %}<twig:CosEmptyState title="Усі заявки привʼязані" copy="Непривʼязаних вхідних заявок зараз немає." />{% endfor %}
+            </article>
+        </section>
+
+        <twig:ClientCaseFunnel :stages="collection.funnelStages" />
+
+        <section class="cos-card cos-pattern-stack" aria-labelledby="client-case-list-title">
+            <div class="cos-card__header"><div><p class="cos-card__eyebrow">Операційний список</p><h2 id="client-case-list-title" class="cos-card__title">Кейси</h2><p class="cos-card__copy">{{ collection.cases|length }} записів у поточному представленні.</p></div></div>
+            {% if collection.cases is empty %}
+                <twig:CosEmptyState title="Кейсів за цими фільтрами немає" copy="Змініть фільтри або створіть новий кейс." />
+            {% else %}
+                <div class="cos-entity-list cos-pattern-stack" role="list">
+                    {% for item in collection.cases %}
+                        <twig:ClientCaseCollectionItem :item="item" :stageOptions="collection.stageOptions" :managerOptions="collection.managerOptions" :statusOptions="collection.statusOptions" :priorityOptions="collection.priorityOptions" csrfToken="{{ csrfToken }}" />
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,23 @@
+<section class="cos-card cos-pattern-stack" aria-labelledby="client-case-funnel-title">
+    <div class="cos-card__header">
+        <div><p class="cos-card__eyebrow">Воронка</p><h2 id="client-case-funnel-title" class="cos-card__title">Рух клієнтських кейсів</h2><p class="cos-card__copy">Операційний стан кейсів за етапами.</p></div>
+        <twig:CosButton label="Найближчі контакти" href="/client-case?sort=next_contact" variant="ghost" size="sm" />
+    </div>
+    <div class="cos-client-case-funnel" aria-label="Воронка клієнтських кейсів">
+        {% for stage in stages %}
+            <section class="cos-client-case-funnel__stage">
+                <header><strong>{{ stage.label }}</strong><span class="cos-badge cos-badge--neutral">{{ stage.count }}</span></header>
+                <div class="cos-pattern-stack">
+                    {% for item in stage.items %}
+                        <a class="cos-card cos-client-case-funnel__card" href="{{ item.href }}">
+                            <strong>{{ item.title }}</strong><span>{{ item.person }} · {{ item.budget }}</span>
+                            {% if item.propertyContext %}<small>{{ item.propertyContext }}</small>{% endif %}
+                            <small>{{ item.manager }} · {{ item.nextContact }}</small>
+                        </a>
+                    {% else %}<p class="cos-card__copy">Немає кейсів</p>{% endfor %}
+                </div>
+                {% if stage.remaining > 0 %}<a class="cos-button cos-button--ghost cos-button--sm" href="{{ stage.href }}">Ще {{ stage.remaining }}</a>{% endif %}
+            </section>
+        {% endfor %}
+    </div>
+</section>

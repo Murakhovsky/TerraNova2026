@@ -21,6 +21,9 @@ kind: architecture
 | VR-007 | `/sales/deals` | Workspace | Sales | Collection | P0 | Twig | DONE |
 | VR-008 | `/sales/director` | Workspace | Sales | Executive Dashboard | P0 | Twig | DONE |
 | VR-009 | `/sales/admin/*` | System | Sales | System / Control Surface | P0 | Twig | DONE |
+| VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | DONE |
+| VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | DONE |
+| VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -73,3 +76,29 @@ Sales production visual migration units VR-005…VR-009 завершені.
 - legacy `sales-workspace` Vite entrypoint = **0**.
 
 Наступна production migration family: **Phase 4 — Clients**.
+
+
+VR-010 переводить Client Case Inbox на Operational Queue без створення окремого Clients Domain: read path проходить через Sales Application Query, triage cards лишаються domain component, mutation forms працюють server-first через існуючі Sales commands.
+
+
+VR-011 переводить Client Case Collection на стабільний Collection contract `EntityList + FilterBar`. Editable quick-update row і funnel лишаються Sales/Client Case domain components; generic DataGrid не отримує mutation semantics, яких у нього немає.
+
+
+VR-012 переводить Client Case Workspace на повний `CosWorkspace` runtime через `sales.client_case`. Entity лишається `sales.deal`, тому governed Sales UIActions та extension slots перевикористовуються без нового business Domain. Legacy `ClientCasePageController`, `client_case/show.phtml` і `clients-workspace` frontend bundle видаляються.
+
+
+## Фаза 4 — завершення Clients
+
+Production migration units VR-010…VR-012 завершені.
+
+- `/client-case/inbox` використовує canonical Operational Queue;
+- `/client-case` використовує canonical Collection;
+- `/client-case/show/{id}` використовує canonical Entity Workspace;
+- Clients лишається presentation family поверх Sales, окремого `Domains\\Clients` немає;
+- Client Case visual PHTML = **0**;
+- legacy `ClientCasePageController` = **0**;
+- legacy `clients-workspace` Vite entrypoint = **0**;
+- legacy Clients workspace CSS = **0**;
+- mutation ownership централізований у `ClientCaseMutationController`.
+
+Наступна production migration family: **Phase 5 — Property Workspace**.

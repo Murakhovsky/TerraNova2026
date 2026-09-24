@@ -78,63 +78,44 @@ foreach (['tn-listing-hero', 'tn-cos-metrics', 'tn-admin-tabs', 'tn-admin-panel'
     $requireNotContains($cos, $legacy, 'COS Control Center must not restore its legacy shell/status primitives.');
 }
 
-$clientCss = $read('frontend/features/clients/workspace.css');
-$clientEntrypoint = $read('frontend/entrypoints/clients-workspace.js');
-foreach ([
-    '.tn-client-workspace',
-    '.tn-inbox-card',
-    '.tn-case-funnel',
-    '.tn-ai-deal-card',
-    'var(--tn-color-accent)',
-    '@media (max-width: 650px)',
-] as $needle) {
-    $requireContains($clientCss, $needle, 'Client Case domain CSS must retain live specialized patterns and COS tokens.');
+$clientSurfaces = [
+    'symfony/templates/experience/client_case/inbox.html.twig' => [
+        '<twig:CosPageHeader',
+        '<twig:CosFilterBar',
+        '<twig:ClientCaseInboxItem',
+        'data-client-case-inbox',
+    ],
+    'symfony/templates/experience/client_case/index.html.twig' => [
+        '<twig:CosPageHeader',
+        '<twig:CosFilterBar',
+        '<twig:ClientCaseFunnel',
+        '<twig:ClientCaseCollectionItem',
+        'data-client-case-collection',
+    ],
+    'symfony/templates/experience/client_case/show.html.twig' => [
+        '<twig:CosWorkspace',
+        '<twig:CosEntityHeader',
+        '<twig:CosTimeline',
+        'data-client-case-workspace',
+    ],
+];
+foreach ($clientSurfaces as $path => $needles) {
+    $view=$read($path);
+    foreach($needles as $needle)$requireContains($view,$needle,'Client Case canonical Twig composition incomplete: '.$path);
+    foreach(['tn-','style=','<script'] as $legacy)$requireNotContains($view,$legacy,'Client Case Twig must not restore legacy/local presentation: '.$path);
 }
 foreach ([
-    'Compatibility bridge while Client Case PHTML moves to canonical components.',
-    'tn-listing-hero',
-    'tn-admin-metrics',
-    'tn-admin-tabs',
-    'tn-admin-panel',
-    'tn-empty-state',
-    'tn-section-heading',
-] as $legacy) {
-    $requireNotContains($clientCss, $legacy, 'Client Case CSS must not restore retired compatibility selectors.');
+    'app/Interfaces/Web/View/client_case/inbox.phtml',
+    'app/Interfaces/Web/View/client_case/index.phtml',
+    'app/Interfaces/Web/View/client_case/show.phtml',
+    'frontend/entrypoints/clients-workspace.js',
+    'frontend/features/clients/workspace.css',
+] as $retired) {
+    if (file_exists($root . '/' . $retired)) throw new RuntimeException('Retired Client Case artifact restored: ' . $retired);
 }
-$requireContains($clientEntrypoint, "../features/clients/workspace.css", 'Client Case Vite entrypoint must retain domain CSS.');
-$requireNotContains($clientEntrypoint, "../features/clients/workspace.js", 'Client Case Vite entrypoint must not restore the retired scoping script.');
-
-foreach ([
-    'app/Interfaces/Web/View/client_case/inbox.phtml' => [
-        "partial('components/ui/page_header'",
-        "partial('components/ui/state'",
-        "partial('components/ui/kpi_card'",
-        "partial('components/ui/tabs'",
-        "partial('components/ui/filter_bar'",
-    ],
-    'app/Interfaces/Web/View/client_case/index.phtml' => [
-        "partial('components/ui/page_header'",
-        "partial('components/ui/state'",
-        "partial('components/ui/tabs'",
-        "partial('components/ui/filter_bar'",
-        "$caseRows = [];",
-        "'bodyPartial' => 'components/ui/operational_grid'",
-    ],
-    'app/Interfaces/Web/View/client_case/show.phtml' => [
-        "partial('components/ui/entity_header'",
-        "partial('components/ui/state'",
-        "partial('components/ui/kpi_card'",
-        'tn-ui-panel',
-    ],
-] as $path => $needles) {
-    $view = $read($path);
-    foreach ($needles as $needle) {
-        $requireContains($view, $needle, 'Client Case view is missing canonical production composition: ' . $path);
-    }
-    foreach (['tn-listing-hero', 'tn-admin-panel', 'tn-empty-state', 'tn-breadcrumbs'] as $legacy) {
-        $requireNotContains($view, $legacy, 'Client Case view must not restore compatibility presentation primitives: ' . $path);
-    }
-}
+$clientCss=$read('symfony/assets/styles/domains/client-case.css');
+$requireContains($clientCss,'.cos-client-case-funnel','Canonical Client Case domain CSS must retain funnel visualization.');
+$requireNotContains($clientCss,'tn-','Canonical Client Case domain CSS must not restore TN selectors.');
 
 $kpi = $read('app/Interfaces/Web/View/components/ui/kpi_card.phtml');
 $components = $read('frontend/styles/components.css');
@@ -143,7 +124,7 @@ $requireContains($components, '.tn-ui-kpi--brand', 'Canonical KPI brand tone mus
 $requireContains($components, 'var(--tn-color-accent-border)', 'KPI brand tone must be owned by COS design tokens.');
 
 $docs = $read('docs/architecture/web-v0.17.md');
-foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'PHASE 12', 'Завершення WEB V0.17'] as $needle) {
+foreach (['Workspace Canonicalization', 'Property Submissions', 'Analytics', 'Diagnostic Report', 'COS Control Center', 'Client Case', 'Wave 13 Phase 4', 'Завершення WEB V0.17'] as $needle) {
     $requireContains($docs, $needle, 'WEB V0.17 documentation is incomplete.');
 }
 

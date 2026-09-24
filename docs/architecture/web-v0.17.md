@@ -78,27 +78,21 @@ Domain-specific content не штучно уніфікується. JSON details
 
 ### Client Case
 
-WEB V0.17 compatibility bridge завершено PHASE 12.
+WEB V0.17 спочатку перевів Client Case PHTML на canonical server components як проміжний compatibility етап.
 
-Canonical production views:
+Wave 13 Phase 4 завершив цей шлях повністю:
 
-- `client_case/inbox.phtml` → PageHeader, State, KPI Card, Tabs, FilterBar, Panel;
-- `client_case/index.phtml` → PageHeader, State, Tabs, FilterBar, Panel, Stage;
-- `client_case/show.phtml` → EntityHeader, State, Panel, KPI Card.
+- `/client-case/inbox` → Symfony/Twig Operational Queue;
+- `/client-case` → Symfony/Twig Collection;
+- `/client-case/show/{id}` → Symfony/Twig Entity Workspace;
+- read composition проходить через Application Queries і typed presentation ViewModels;
+- `sales.client_case` зареєстрований як окремий Workspace context поверх Sales-owned entity `sales.deal`;
+- усі Client Case POST flows централізовані у `ClientCaseMutationController`;
+- `ClientCasePageController`, три Client Case PHTML views, `clients-workspace` Vite entrypoint та legacy Clients CSS видалені;
+- canonical domain CSS лишає тільки спеціалізовану funnel geometry й використовує COS tokens.
 
-Domain-specific interaction patterns свідомо лишаються локальними там, де generic read-only primitives не покривають сценарій:
+Client Case після Wave 13 більше не має compatibility bridge. Routes, Sales write ownership, CSRF, return_url та mutation field contracts збережені.
 
-- inbound triage cards;
-- funnel;
-- inline quick-update grid;
-- AI Intelligence;
-- activity timeline;
-- property-match mutation cards;
-- presentation-share actions.
-
-`frontend/features/clients/workspace.js` видалено як зайвий: canonical views самі оголошують `tn-client-workspace`. Dedicated Vite entrypoint тепер завантажує лише живий Client Case CSS, а pending/aria-busy submit behavior централізований у shared production runtime.
-
-Routes, Sales write ownership, CSRF, return_url та mutation field contracts не змінені.
 
 ## KPI tone contract
 
@@ -149,11 +143,11 @@ tn-cos-status--*
 ```
 
 Для Client Case gate тепер фіксує:
-- canonical composition у `index`, `inbox`, `show`;
-- відсутність retired hero/admin-panel/empty-state/breadcrumb primitives;
-- відсутність compatibility-only CSS selectors;
-- dedicated CSS entrypoint без окремого scoping JS;
-- збереження specialized operational patterns без дублювання shared submit-state behavior.
+- canonical Twig composition для Operational Queue, Collection та Entity Workspace;
+- відсутність усіх трьох production PHTML views;
+- відсутність `ClientCasePageController` і dedicated `clients-workspace` bundle;
+- збереження server-first mutation contracts;
+- відсутність `tn-*`, inline visual CSS та локального browser runtime у завершених Twig surfaces.
 
 Architecture gate перевіряє не лише наявність canonical components, а й відсутність старих патернів у завершених частинах міграції.
 
