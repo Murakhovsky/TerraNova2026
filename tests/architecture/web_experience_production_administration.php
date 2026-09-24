@@ -139,7 +139,6 @@ foreach ([
 
 $contentController = $read('symfony/src/Web/Content/ContentAdminPageController.php');
 foreach ([
-    'public function manage(Request $request): Response',
     'public function edit(Request $request, string $id = \'0\'): Response',
     'public function save(Request $request, string $id = \'0\'): Response',
     '$this->manager()',
@@ -162,26 +161,24 @@ foreach ([
     $contains($routes, $marker, 'Content Administration route contract is incomplete.');
 }
 
-$spatialManage = $read('app/Interfaces/Web/View/spatial/manage.phtml');
+$spatialManage = $read('symfony/templates/experience/spatial/manage.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    'spatial/edit/',
+    '<twig:CosPageHeader',
+    'class="cos-kpi-strip"',
+    '<twig:CosToolbar',
+    '<twig:CosFilterBar',
+    '<twig:CosEntityListItem',
+    '<twig:CosContextPanel',
+    'spatial/edit',
     'id="queue"',
 ] as $marker) {
-    $contains($spatialManage, $marker, 'Spatial Administration listing must use canonical workspace composition.');
+    $contains($spatialManage, $marker, 'Spatial Administration listing must use canonical Map / Spatial composition.');
 }
-foreach ([
-    'tn-page-hero tn-page-hero--catalog',
-    '<section class="tn-admin-metrics"',
-    '<form class="tn-filter-bar"',
-    '<table class="tn-listing-table"',
-] as $legacyMarker) {
-    $notContains($spatialManage, $legacyMarker, 'Spatial Administration listing must not restore legacy shell/filter/table composition.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($spatialManage, $legacyMarker, 'Spatial Administration listing must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/spatial/manage.phtml')) {
+    throw new RuntimeException('Legacy Spatial manage PHTML restored.');
 }
 
 $spatialEdit = $read('app/Interfaces/Web/View/spatial/edit.phtml');
@@ -218,6 +215,11 @@ foreach ([
     $notContains($spatialEdit, $legacyMarker, 'Spatial editor must not restore the legacy visual shell.');
 }
 
+$spatialManageController = $read('symfony/src/Web/Spatial/SpatialManageController.php');
+foreach (['GetSpatialManageQuery', 'PageArchetype::MapSpatial', 'WorkspaceShellFactory'] as $marker) {
+    $contains($spatialManageController, $marker, 'Spatial Manage controller contract is incomplete.');
+}
+
 $spatialController = $read('symfony/src/Web/Spatial/SpatialPageController.php');
 foreach ([
     'public function manage(Request $request): Response',
@@ -230,7 +232,6 @@ foreach ([
     'public function publish(string $id): Response',
     'public function scene(Request $request, string $slug): Response',
     '$this->manager()',
-    "'spatial/manage'",
     "'spatial/edit'",
     "'spatial/scene'",
 ] as $marker) {
@@ -239,7 +240,7 @@ foreach ([
 
 foreach ([
     'path: /spatial/manage',
-    'SpatialPageController::manage',
+    'SpatialManageController::index',
     'path: /spatial/edit',
     'SpatialPageController::edit',
     'path: /spatial/save',

@@ -1824,6 +1824,11 @@ services:
     tags: ['controller.service_arguments']
 
 
+  # Wave 13 Spatial Workspace.
+  App\Web\Spatial\SpatialManageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Final Web retirement — Spatial SSR/workspace.
   App\Web\Spatial\SpatialPageController:
     public: true

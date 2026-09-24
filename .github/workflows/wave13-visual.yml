@@ -11,6 +11,8 @@ on:
       - 'symfony/src/Web/Experience/**'
       - 'symfony/src/Web/Sales/**'
       - 'symfony/src/Web/Property/**'
+      - 'symfony/src/Web/Spatial/**'
+      - 'symfony/src/Application/Spatial/**'
       - 'symfony/src/Application/Property/**'
       - 'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php'
       - 'symfony/src/Application/Sales/**'
@@ -34,6 +36,8 @@ on:
       - 'symfony/src/Web/Experience/**'
       - 'symfony/src/Web/Sales/**'
       - 'symfony/src/Web/Property/**'
+      - 'symfony/src/Web/Spatial/**'
+      - 'symfony/src/Application/Spatial/**'
       - 'symfony/src/Application/Property/**'
       - 'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php'
       - 'symfony/src/Application/Sales/**'
@@ -87,6 +91,7 @@ jobs:
           php tests/architecture/web_experience_wave13_property_submissions.php
           php tests/architecture/web_experience_wave13_property_submission.php
           php tests/architecture/web_experience_wave13_property_map.php
+          php tests/architecture/web_experience_wave13_spatial_manage.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

@@ -58,7 +58,7 @@ Controller contract лишається у `ContentAdminPageController`: manage/e
 
 ### Керування Spatial (`Spatial Administration`)
 
-`spatial/manage.phtml`
+`symfony/templates/experience/spatial/manage.html.twig`
 
 - legacy hero замінено на canonical PageHeader;
 - status feedback використовує canonical State;
@@ -81,7 +81,7 @@ Controller contract лишається у `ContentAdminPageController`: manage/e
 
 Public `spatial/scene.phtml` не канонізується під administration shell. Це specialized public Spatial Viewer surface, який навмисно зберігає `shared/spatial_viewer` та власну summary information architecture.
 
-Controller contract лишається у `SpatialPageController`: manage/edit/mutations вимагають manager context, public scene залишається session-free read surface.
+`SpatialManageController` володіє canonical read surface `/spatial/manage`; `SpatialPageController` лишається власником editor/mutations і session-free public viewer.
 
 ## Хвиля 4
 

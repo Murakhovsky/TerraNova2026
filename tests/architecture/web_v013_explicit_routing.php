@@ -17,6 +17,7 @@ if (preg_match('/new\s+Router\s*\(\s*\)/', $services) === 1) {
 $coreRoutes = (string) file_get_contents($root . '/app/Interfaces/Web/Routing/CoreWebRoutes.php');
 $symfonyRoutes = (string) file_get_contents($root . '/symfony/config/routes.yaml');
 $spatialController = (string) file_get_contents($root . '/symfony/src/Web/Spatial/SpatialPageController.php');
+$spatialManageController = (string) file_get_contents($root . '/symfony/src/Web/Spatial/SpatialManageController.php');
 
 $coreRequired = [
     '/',
@@ -99,7 +100,7 @@ foreach ([
     }
 }
 foreach ([
-    'SpatialPageController::manage',
+    'SpatialManageController::index',
     'SpatialPageController::edit',
     'SpatialPageController::scene',
 ] as $mapping) {
@@ -128,9 +129,14 @@ if (file_exists($root . '/app/Interfaces/Web/Routing/SpatialWebRoutes.php')
     || file_exists($root . '/app/Interfaces/Web/Controller/SpatialController.php')) {
     throw new RuntimeException('Retired Spatial Phalcon Web delivery was restored.');
 }
-foreach (['SpatialSceneInterface', 'public function manage(', 'public function scene('] as $needle) {
+foreach (['SpatialSceneInterface', 'public function scene('] as $needle) {
     if (!str_contains($spatialController, $needle)) {
         throw new RuntimeException('Canonical Symfony Spatial page controller is missing: ' . $needle);
+    }
+}
+foreach (['GetSpatialManageQuery','PageArchetype::MapSpatial'] as $needle) {
+    if (!str_contains($spatialManageController,$needle)) {
+        throw new RuntimeException('Canonical Spatial Manage controller is missing: '.$needle);
     }
 }
 $moduleRoutesPosition = strpos($module, '$routeRegistrar->register');

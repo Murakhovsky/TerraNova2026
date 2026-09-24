@@ -1612,7 +1612,7 @@ cos_web_diagnostic_report:
 # Final Web retirement — Spatial SSR/workspace.
 cos_web_spatial_manage:
   path: /spatial/manage
-  controller: App\Web\Spatial\SpatialPageController::manage
+  controller: App\Web\Spatial\SpatialManageController::index
   methods: [GET]
 
 cos_web_spatial_edit_new:

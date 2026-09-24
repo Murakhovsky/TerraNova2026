@@ -53,6 +53,7 @@ foreach ([
     'cos_web_spatial_upload:',
     'cos_web_spatial_scene:',
     'App\\Web\\Spatial\\SpatialPageController',
+    'App\\Web\\Spatial\\SpatialManageController',
 ] as $needle) {
     $assert(str_contains($routes, $needle), 'Canonical Symfony Spatial route missing: ' . $needle);
 }
@@ -68,6 +69,7 @@ foreach ([
     'App\\Infrastructure\\Spatial\\SpatialTokenIssuer',
     'App\\Security\\SpatialBearerAuthenticator',
     'App\\Web\\Spatial\\SpatialPageController',
+    'App\\Web\\Spatial\\SpatialManageController',
 ] as $needle) {
     $assert(str_contains($services, $needle), 'Symfony Spatial composition missing: ' . $needle);
 }

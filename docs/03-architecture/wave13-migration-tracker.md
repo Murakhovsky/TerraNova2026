@@ -29,7 +29,7 @@ kind: architecture
 | VR-015 | `/property/submissions` | Workspace | Property | Operational Queue | P0 | Twig | QA |
 | VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | QA |
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | QA |
-| VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | BACKLOG |
+| VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | QA |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -120,3 +120,6 @@ VR-016 переводить Property Submission у read-only Entity Workspace `p
 
 
 VR-017 переводить публічну Property Map на Map / Spatial archetype без зміни access semantics. Координати й нормалізовані map positions формуються у Presenter/ViewModel; Stimulus лише застосовує DOM-positioning, тому inline visual CSS видалено.
+
+
+VR-018 переводить Spatial Manage на Map / Spatial archetype через Application Query та canonical Workspace shell. Spatial editor/upload/publish/public viewer лишаються окремими живими сценаріями і не змішуються з цією route unit.
