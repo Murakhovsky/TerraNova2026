@@ -81,3 +81,21 @@ scheduler
 ```
 
 RabbitMQ, OpenSearch і Vector DB не додаються, доки немає виміряної потреби.
+
+
+## Growth collector backoff
+
+Growth scheduled polling persists tenant-scoped collector health in `tn_growth_signal_collector_health`.
+
+```text
+scheduled cadence
+  ↓
+health check
+  ├─ next_retry_at in future → skip provider call
+  └─ due → canonical collector runtime
+           ├─ completed → healthy / reset failures
+           ├─ partial   → degraded / no cooldown
+           └─ failed    → exponential cooldown
+```
+
+The backoff policy is deterministic and independent of provider credentials. Base delay equals the configured polling cadence; consecutive failures double the delay until the configured cap. This prevents a failing external provider from being hammered forever while preserving normal cadence after recovery.

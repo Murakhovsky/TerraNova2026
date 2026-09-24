@@ -5,6 +5,27 @@ $collectors=is_array($workspace['collectors']??null)?$workspace['collectors']:[]
 $feeds=is_array($workspace['feeds']??null)?$workspace['feeds']:[];
 $jsonSources=is_array($workspace['json_sources']??null)?$workspace['json_sources']:[];
 $polling=is_array($workspace['polling']??null)?$workspace['polling']:[];
+$pollingHealth=is_array($polling['collector_health']??null)?$polling['collector_health']:[];
+$pollingHealthRows=[];
+foreach($pollingHealth as $collector=>$health){
+    if(!is_array($health))continue;
+    $healthStatus=strtolower((string)($health['status']??'unknown'));
+    $healthTone=match($healthStatus){
+        'healthy'=>'positive',
+        'degraded'=>'warning',
+        'cooling_down'=>'danger',
+        default=>'neutral',
+    };
+    $pollingHealthRows[]=[
+        'collector'=>$collector,
+        'health'=>['label'=>strtoupper($healthStatus),'tone'=>$healthTone],
+        'last_run'=>$health['last_run_status']??'—',
+        'failures'=>(int)($health['consecutive_failures']??0),
+        'last_success'=>$health['last_success_at']??'—',
+        'last_failure'=>$health['last_failure_at']??'—',
+        'next_retry'=>$health['next_retry_at']??'—',
+    ];
+}
 $runs=is_array($workspace['runs']??null)?$workspace['runs']:[];
 $collectorFilter=trim((string)$this->request->getQuery('collector_name','string',''));
 $statusFilter=trim((string)$this->request->getQuery('status','string',''));
@@ -102,6 +123,30 @@ foreach($runs as $run){
       <?php endif; ?>
     </div>
     <p class="tn-growth-muted">Scheduler configuration is deployment-owned and read-only here. Provider calls execute in the async worker through the canonical collector runtime.</p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-polling-health>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Automatic monitoring</p><h2>Collector health</h2></div>
+      <span class="tn-ui-badge tn-ui-badge--<?php echo (($polling['health_status']??'unknown')==='healthy')?'positive':((($polling['health_status']??'unknown')==='degraded')?'warning':'neutral'); ?>">
+        <?php echo $h(strtoupper((string)($polling['health_status']??'unknown'))); ?>
+      </span>
+    </div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'collector','label'=>'Collector'],
+        ['key'=>'health','label'=>'Health'],
+        ['key'=>'last_run','label'=>'Last run'],
+        ['key'=>'failures','label'=>'Consecutive failures'],
+        ['key'=>'last_success','label'=>'Last success'],
+        ['key'=>'last_failure','label'=>'Last failure'],
+        ['key'=>'next_retry','label'=>'Next retry'],
+      ],
+      'rows'=>$pollingHealthRows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'Collector health will appear after the first scheduled polling result.',
+    ]); ?>
+    <p class="tn-growth-muted">Failed collectors enter exponential cooldown. Healthy or partial provider responses clear transport-failure backoff; partial item validation remains visible as degraded health.</p>
   </section>
 
   <section class="tn-ui-panel tn-workspace-section" data-growth-signal-feeds>

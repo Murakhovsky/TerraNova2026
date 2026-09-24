@@ -7,7 +7,7 @@ $assert=static function(bool $condition,string $message):void{if(!$condition)thr
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.28.0','>='),'Growth manifest must remain V0.28+.');
-$assert(($manifest['schema_version']??null)==='0.28.0','Growth V0.28 schema version must be 0.28.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.28.0','>='),'Growth schema must remain V0.28+.');
 foreach(['growth.signal.collector.credentialed_json','growth.signal.json_source.manage'] as $capability){
     $assert(in_array($capability,$manifest['contributions']['capabilities']??[],true),'Growth credentialed JSON capability missing: '.$capability);
 }

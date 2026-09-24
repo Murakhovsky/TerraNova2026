@@ -8,6 +8,7 @@ parameters:
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT): '500'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT): '100'
+  env(COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES): '360'
 
 services:
   _defaults:
@@ -711,10 +712,24 @@ services:
   Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface:
     alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingTargetRepository
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingHealthRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingHealthRepository
+
+  Domains\Growth\Domain\SignalPollingBackoffPolicy:
+    arguments:
+      $baseMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $maxMinutes: '%env(int:COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES)%'
+
   App\Application\Growth\Command\RunGrowthSignalPollingCommandHandler:
     arguments:
       $targets: '@Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface'
       $collectors: '@Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary'
+      $health: '@Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface'
+      $backoff: '@Domains\Growth\Domain\SignalPollingBackoffPolicy'
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
       $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
@@ -724,6 +739,7 @@ services:
   App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider:
     arguments:
       $targets: '@Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface'
+      $health: '@Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface'
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $enabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
       $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'

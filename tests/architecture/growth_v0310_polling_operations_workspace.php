@@ -6,8 +6,8 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.31.0','Growth V0.31 manifest version must be 0.31.0.');
-$assert(($manifest['schema_version']??null)==='0.28.0','Growth V0.31 must keep schema version 0.28.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.31.0','>='),'Growth manifest must remain V0.31+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.28.0','>='),'Growth schema must remain V0.28+.');
 $assert(in_array('growth.signal.polling_workspace',$manifest['contributions']['capabilities']??[],true),'Growth polling workspace capability is missing.');
 
 $migration='app/migrations/20260924_000096_growth_v0310_polling_operations_workspace.sql';

@@ -7,6 +7,9 @@ use App\Application\Growth\Command\RunGrowthSignalPollingCommand;
 use App\Application\Growth\Command\RunGrowthSignalPollingCommandHandler;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
+use Domains\Growth\Domain\SignalPollingBackoffPolicy;
+use DateTimeImmutable;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\Contract\ModuleStateRepositoryInterface;
 use Kernel\Module\ModuleCatalog;
@@ -69,8 +72,16 @@ $modules=new ActiveModuleResolver(new ModuleCatalog([
     new ModuleManifest('growth','Growth','0.30.0',enabledByDefault:true,schemaVersion:'0.28.0'),
 ]),$states);
 
+$health=new class implements GrowthSignalPollingHealthRepositoryInterface {
+    public function state(string $organizationId,string $collectorName):?array{return null;}
+    public function statesForOrganization(string $organizationId):array{return [];}
+    public function markHealthy(string $organizationId,string $collectorName,DateTimeImmutable $at):void{}
+    public function markDegraded(string $organizationId,string $collectorName,DateTimeImmutable $at,?string $errorSummary):void{}
+    public function markFailed(string $organizationId,string $collectorName,DateTimeImmutable $at,DateTimeImmutable $nextRetryAt,string $errorSummary):void{}
+};
+
 $handler=new RunGrowthSignalPollingCommandHandler(
-    $targets,$collectors,$modules,42,15,500,75,
+    $targets,$collectors,$health,new SignalPollingBackoffPolicy(15,360),$modules,42,15,500,75,
 );
 $at=1760000000;
 $result=$handler(new RunGrowthSignalPollingCommand('unit',$at));

@@ -658,4 +658,21 @@ current tenant only
 
 The workspace does not enumerate other organizations and never renders the configured actor id, source credentials or cross-tenant scheduler limits. Scheduler configuration remains deployment-owned; the SSR surface is read-only.
 
+V0.32 makes scheduled monitoring failure-aware:
+
+```text
+scheduled collector
+      ↓
+collector result
+  ├─ completed → healthy, failure streak reset
+  ├─ partial   → degraded, no transport cooldown
+  └─ failed    → consecutive failure + exponential backoff
+                                      ↓
+                               next_retry_at
+                                      ↓
+                         scheduler skips cooldown
+```
+
+Health is stored per tenant + collector, not per credential or provider secret. Backoff starts at the configured polling cadence, doubles on consecutive transport failures and is capped by `COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES`. The Collectors Workspace exposes only operational health: last run status, consecutive failures, last success/failure and next retry.
+
 Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous outreach/activation.

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Application\Growth\ReadModel;
 
+use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
@@ -11,6 +12,7 @@ final readonly class GrowthSignalPollingStatusProvider
 {
     public function __construct(
         private GrowthSignalPollingTargetRepositoryInterface $targets,
+        private GrowthSignalPollingHealthRepositoryInterface $health,
         private ActiveModuleResolver $modules,
         private bool $enabled=false,
         private int $intervalMinutes=15,
@@ -47,6 +49,33 @@ final readonly class GrowthSignalPollingStatusProvider
         }
         ksort($sourceCounts,SORT_STRING);
 
+        $healthRows=[];
+        foreach($this->health->statesForOrganization($organizationId) as $row){
+            $collector=trim((string)($row['collector_name']??''));
+            if($collector===''||!in_array($collector,$collectors,true))continue;
+            $healthRows[$collector]=[
+                'status'=>(string)($row['status']??'unknown'),
+                'last_run_status'=>$row['last_run_status']??null,
+                'consecutive_failures'=>(int)($row['consecutive_failures']??0),
+                'last_success_at'=>$row['last_success_at']??null,
+                'last_failure_at'=>$row['last_failure_at']??null,
+                'next_retry_at'=>$row['next_retry_at']??null,
+                'error_summary'=>$row['error_summary']??null,
+            ];
+        }
+        foreach($collectors as $collector){
+            $healthRows[$collector]??=[
+                'status'=>'unknown',
+                'last_run_status'=>null,
+                'consecutive_failures'=>0,
+                'last_success_at'=>null,
+                'last_failure_at'=>null,
+                'next_retry_at'=>null,
+                'error_summary'=>null,
+            ];
+        }
+        ksort($healthRows,SORT_STRING);
+
         $moduleEnabled=$this->modules->isEnabled($organizationId,'growth');
         $actorConfigured=$this->actorId>0;
         $hasSources=$collectors!==[];
@@ -60,10 +89,21 @@ final readonly class GrowthSignalPollingStatusProvider
             default=>'ready',
         };
 
+        $healthStatus='unknown';
+        if(!$ready){
+            $healthStatus='not_ready';
+        }elseif($healthRows!==[]){
+            $statuses=array_column($healthRows,'status');
+            $healthStatus=in_array('cooling_down',$statuses,true)||in_array('degraded',$statuses,true)
+                ?'degraded'
+                :(in_array('unknown',$statuses,true)?'unknown':'healthy');
+        }
+
         return [
             'enabled'=>$this->enabled,
             'ready'=>$ready,
             'reason'=>$reason,
+            'health_status'=>$healthStatus,
             'interval_minutes'=>$this->intervalMinutes,
             'actor_configured'=>$actorConfigured,
             'module_enabled'=>$moduleEnabled,
@@ -71,6 +111,7 @@ final readonly class GrowthSignalPollingStatusProvider
             'collectors'=>$collectors,
             'source_counts'=>$sourceCounts,
             'enabled_source_count'=>array_sum($sourceCounts),
+            'collector_health'=>$healthRows,
         ];
     }
 }

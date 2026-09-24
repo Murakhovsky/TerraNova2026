@@ -155,6 +155,7 @@ jobs:
           php tests/architecture/growth_v0290_json_signal_source_workspace.php
           php tests/architecture/growth_v0300_signal_polling_scheduler.php
           php tests/architecture/growth_v0310_polling_operations_workspace.php
+          php tests/architecture/growth_v0320_collector_health_backoff.php
 
       - name: Process registry invariants
         run: |
@@ -188,6 +189,7 @@ jobs:
           php tests/unit/growth_v0270_signal_feed_workspace.php
           php tests/unit/growth_v0300_signal_polling_scheduler.php
           php tests/unit/growth_v0310_polling_operations_workspace.php
+          php tests/unit/growth_v0320_collector_health_backoff.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -270,6 +272,12 @@ jobs:
           php -l tests/architecture/growth_v0300_signal_polling_scheduler.php
           php -l tests/unit/growth_v0310_polling_operations_workspace.php
           php -l tests/architecture/growth_v0310_polling_operations_workspace.php
+          php -l tests/unit/growth_v0320_collector_health_backoff.php
+          php -l tests/architecture/growth_v0320_collector_health_backoff.php
+          php -l app/Domains/Growth/Domain/SignalPollingHealthStatus.php
+          php -l app/Domains/Growth/Domain/SignalPollingBackoffPolicy.php
+          php -l app/Domains/Growth/Application/Contract/GrowthSignalPollingHealthRepositoryInterface.php
+          php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthSignalPollingHealthRepository.php
           php -l symfony/src/Application/Growth/ReadModel/GrowthSignalPollingStatusProvider.php
           php -l symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommand.php
           php -l symfony/src/Application/Growth/Command/RunGrowthSignalPollingCommandHandler.php

@@ -66,6 +66,7 @@ generated: true
 | `growth` | `app/migrations/20260924_000094_growth_v0290_json_signal_source_workspace.sql` | — |
 | `growth` | `app/migrations/20260924_000095_growth_v0300_signal_polling_scheduler.sql` | — |
 | `growth` | `app/migrations/20260924_000096_growth_v0310_polling_operations_workspace.sql` | — |
+| `growth` | `app/migrations/20260924_000097_growth_v0320_collector_health_backoff.sql` | `tn_growth_signal_collector_health` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

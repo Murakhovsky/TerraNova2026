@@ -7,7 +7,7 @@ $assert=static function(bool $condition,string $message):void{if(!$condition)thr
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.29.0','>='),'Growth manifest must remain V0.29+.');
-$assert(($manifest['schema_version']??null)==='0.28.0','Growth V0.29 must keep schema version 0.28.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.28.0','>='),'Growth schema must remain V0.28+.');
 $assert(in_array('growth.signal.json_source.workspace',$manifest['contributions']['capabilities']??[],true),'Growth JSON source workspace capability is missing.');
 
 $migration='app/migrations/20260924_000094_growth_v0290_json_signal_source_workspace.sql';
