@@ -17,17 +17,12 @@ $notContains = static function (string $source, string $needle, string $message)
 };
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
-foreach ([
-    'final readonly class PropertyPageController',
-    "return \$this->inventoryWorkspace(\$request, 'Inventory'",
-    "return \$this->inventoryWorkspace(\$request, 'Listing'",
-    "'property/workspace_canonical'",
-    "'property/submissions'",
-    "'property/submission_canonical'",
-    "public function favour(Request \$request): Response",
-    "'property/favour'",
-] as $needle) {
+$inventoryController = $read('symfony/src/Web/Property/PropertyInventoryController.php');
+foreach (['final readonly class PropertyPageController', "'property/submissions'", "'property/submission_canonical'", "public function favour(Request \$request): Response", "'property/favour'"] as $needle) {
     $contains($controller, $needle, 'Canonical Symfony Property controller is incomplete');
+}
+foreach (['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery','PropertyInventoryPresenter'] as $needle) {
+    $contains($inventoryController,$needle,'Canonical Property Inventory controller is incomplete');
 }
 foreach ([
     "'property/manage'",
@@ -60,15 +55,11 @@ foreach ([
     $contains($routes, $needle, 'Canonical Property route contract is incomplete');
 }
 
-$workspace = $read('app/Interfaces/Web/View/property/workspace_canonical.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/data_table'",
-    'tn-property-workspace',
-] as $needle) {
-    $contains($workspace, $needle, 'Canonical Property inventory/listing workspace is incomplete');
+$workspace = $read('symfony/templates/experience/property/inventory.html.twig');
+foreach (['<twig:CosPageHeader','<twig:CosToolbar','<twig:CosDataGrid','data-property-inventory'] as $needle) {
+    $contains($workspace,$needle,'Canonical Property inventory/listing workspace is incomplete');
 }
+if (is_file($root . '/app/Interfaces/Web/View/property/workspace_canonical.phtml')) throw new RuntimeException('Legacy Property inventory PHTML restored.');
 
 $submissions = $read('app/Interfaces/Web/View/property/submissions.phtml');
 foreach ([

@@ -204,16 +204,6 @@ final readonly class PropertyPageController
         return new RedirectResponse('/property/presentation/'.rawurlencode($slug));
     }
 
-    public function manage(Request $request): Response
-    {
-        return $this->inventoryWorkspace($request, 'Inventory', 'objects', 'manage');
-    }
-
-    public function listing(Request $request): Response
-    {
-        return $this->inventoryWorkspace($request, 'Listing', 'listing', 'listing', true);
-    }
-
     public function submissions(Request $request): Response
     {
         $tenant = $this->manager();
@@ -246,24 +236,6 @@ final readonly class PropertyPageController
         } catch (Throwable $error) {
             error_log('property.workspace.submission_failed ' . $error->getMessage());
             return new Response('Submission is temporarily unavailable.', Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
-    private function inventoryWorkspace(Request $request, string $title, string $active, string $mode, bool $listingAccess = false): Response
-    {
-        $tenant = $listingAccess ? $this->listingUser() : $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-
-        try {
-            $data = $this->workspace->inventory($tenant->organizationId()->value(), $request->query->all(), 150);
-            return $this->workspaceHtml($request, $tenant, $title, $active, 'property/workspace_canonical', [
-                'mode'=>$mode,'filters'=>$data['filters'],'items'=>$data['items'],'stats'=>$data['stats'],'pageStatus'=>null,
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.workspace.inventory_failed ' . $error->getMessage());
-            return $this->workspaceHtml($request, $tenant, $title, $active, 'property/workspace_canonical', [
-                'mode'=>$mode,'filters'=>[],'items'=>[],'stats'=>[],'pageStatus'=>'Property inventory тимчасово недоступний.',
-            ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
     }
 

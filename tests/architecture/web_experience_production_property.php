@@ -46,26 +46,15 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
-foreach ([
-    "public function favour(Request \$request): Response",
-    "'property/favour'",
-    "'property/workspace_canonical'",
-    "'property/submissions'",
-    "'property/submission_canonical'",
-    "new RedirectResponse('/property/presentation/'",
-] as $marker) {
-    $contains($controller, $marker, 'Canonical Symfony Property controller is incomplete.');
+foreach (["public function favour(Request \$request): Response","'property/favour'","'property/submissions'","'property/submission_canonical'","new RedirectResponse('/property/presentation/'"] as $marker) {
+    $contains($controller,$marker,'Canonical Symfony Property controller is incomplete.');
 }
+$inventoryController=$read('symfony/src/Web/Property/PropertyInventoryController.php');
+foreach(['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery'] as $marker){$contains($inventoryController,$marker,'Property Inventory controller incomplete.');}
 
-$workspace = $read('app/Interfaces/Web/View/property/workspace_canonical.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/data_table'",
-    'tn-property-workspace',
-] as $marker) {
-    $contains($workspace, $marker, 'Canonical Property inventory/listing workspace is incomplete.');
-}
+$workspace=$read('symfony/templates/experience/property/inventory.html.twig');
+foreach(['<twig:CosPageHeader','<twig:CosToolbar','<twig:CosDataGrid','data-property-inventory'] as $marker){$contains($workspace,$marker,'Canonical Property inventory/listing workspace is incomplete.');}
+if(is_file($root.'/app/Interfaces/Web/View/property/workspace_canonical.phtml'))throw new RuntimeException('Legacy Property inventory PHTML restored.');
 
 $submissions = $read('app/Interfaces/Web/View/property/submissions.phtml');
 foreach ([

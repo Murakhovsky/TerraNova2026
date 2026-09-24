@@ -1426,12 +1426,12 @@ cos_web_property_submit_alias:
 
 cos_web_property_manage:
   path: /property/manage
-  controller: App\Web\Property\PropertyPageController::manage
+  controller: App\Web\Property\PropertyInventoryController::manage
   methods: [GET, HEAD]
 
 cos_web_property_listing:
   path: /property/listing
-  controller: App\Web\Property\PropertyPageController::listing
+  controller: App\Web\Property\PropertyInventoryController::listing
   methods: [GET, HEAD]
 
 cos_web_property_submissions:

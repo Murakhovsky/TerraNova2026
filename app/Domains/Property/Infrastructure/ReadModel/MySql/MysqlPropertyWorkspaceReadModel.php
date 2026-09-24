@@ -53,10 +53,11 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
         ];
     }
 
-    public function inventory(string $organizationId, array $filters = [], int $limit = 100): array
+    public function inventory(string $organizationId, array $filters = [], int $limit = 100, int $offset = 0): array
     {
         $organizationId = $this->organization($organizationId);
         $limit = max(1, min(200, $limit));
+        $offset = max(0, $offset);
         $where = ['i.organization_id = :organization_id'];
         $params = ['organization_id' => $organizationId];
 
@@ -108,9 +109,28 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
               ON location.id = COALESCE(a.location_node_id, address.locality_node_id)
             WHERE ' . implode(' AND ', $where) . '
             ORDER BY i.updated_at DESC, l.updated_at DESC, a.asset_id
-            LIMIT ' . $limit,
+            LIMIT ' . $limit . ' OFFSET ' . $offset,
             $params,
         );
+
+        $totalRow = $this->database->fetchOne('
+            SELECT COUNT(*) AS total
+            FROM tn_property_inventory_items i
+            INNER JOIN tn_property_assets a
+              ON a.organization_id = i.organization_id
+             AND a.asset_id = i.asset_id
+            LEFT JOIN tn_property_asset_legacy_links legacy
+              ON legacy.organization_id = a.organization_id
+             AND legacy.asset_id = a.asset_id
+            LEFT JOIN tn_property_listings l
+              ON l.organization_id = i.organization_id
+             AND l.inventory_id = i.inventory_id
+            LEFT JOIN tn_addresses address ON address.id = a.address_id
+            LEFT JOIN tn_location_nodes location
+              ON location.id = COALESCE(a.location_node_id, address.locality_node_id)
+            WHERE ' . implode(' AND ', $where),
+            $params,
+        ) ?? [];
 
         $statusRows = $this->database->fetchAll('
             SELECT status, COUNT(*) AS total
@@ -127,7 +147,7 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
             $stats['all'] += $count;
         }
 
-        return ['items' => $items, 'stats' => $stats, 'filters' => $normalized];
+        return ['items' => $items, 'stats' => $stats, 'filters' => $normalized, 'total' => (int) ($totalRow['total'] ?? 0)];
     }
 
     public function submissions(string $organizationId, string $status = '', int $limit = 100): array

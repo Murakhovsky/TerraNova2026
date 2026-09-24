@@ -24,6 +24,12 @@ kind: architecture
 | VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | DONE |
 | VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | DONE |
 | VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | DONE |
+| VR-013 | `/property/manage` | Workspace | Property | Collection | P0 | Twig | QA |
+| VR-014 | `/property/listing` | Workspace | Property | Collection | P0 | Twig | QA |
+| VR-015 | `/property/submissions` | Workspace | Property | Operational Queue | P0 | Twig | BACKLOG |
+| VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | BACKLOG |
+| VR-017 | `/property/map` | Workspace/Public | Property | Map / Spatial | P0 | Twig | BACKLOG |
+| VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -102,3 +108,6 @@ Production migration units VR-010…VR-012 завершені.
 - mutation ownership централізований у `ClientCaseMutationController`.
 
 Наступна production migration family: **Phase 5 — Property Workspace**.
+
+
+VR-013/014 переводять Property Inventory і Listing на один canonical Collection/DataGrid runtime з реальним server-side offset/total pagination. Read ownership проходить через Application Query; legacy `workspace_canonical.phtml` видаляється.

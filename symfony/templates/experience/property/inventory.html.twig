@@ -1,0 +1,52 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}{{ inventory.title }} | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-property-inventory
+    data-property-mode="{{ inventory.mode }}"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Workspace"
+        title="{{ inventory.title }}"
+        subtitle="{{ inventory.subtitle }}"
+        metaValue="{{ inventory.page.total }}"
+        metaLabel="inventory items"
+    >
+        {% if inventory.mode == 'manage' %}
+            <twig:CosButton label="Listing" href="/property/listing" variant="ghost" />
+        {% else %}
+            <twig:CosButton label="Inventory" href="/property/manage" variant="ghost" />
+        {% endif %}
+        <twig:CosButton label="Moderation" href="/property/submissions" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Property collection tools" density="compact">
+        {% block start %}
+            <span class="cos-card__copy">Search, filters, pagination і mobile cards працюють через один DataGrid contract.</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Reset view" href="{{ inventory.baseUrl }}" variant="ghost" size="sm" />
+            <twig:CosButton label="Public catalog" href="/property/catalog" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    <twig:CosDataGrid
+        id="property-inventory-grid"
+        label="Property inventory"
+        baseUrl="{{ inventory.baseUrl }}"
+        rowIdKey="id"
+        :query="inventory.query"
+        :page="inventory.page"
+        :columns="inventory.columns"
+        :filters="inventory.filters"
+        :state="inventory.gridState"
+        errorMessage="{{ inventory.error }}"
+    />
+</section>
+{% endblock %}
