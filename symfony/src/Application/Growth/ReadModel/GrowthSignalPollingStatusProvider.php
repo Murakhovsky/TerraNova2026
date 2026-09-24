@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Application\Growth\ReadModel;
 
 use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
@@ -13,6 +14,7 @@ final readonly class GrowthSignalPollingStatusProvider
     public function __construct(
         private GrowthSignalPollingTargetRepositoryInterface $targets,
         private GrowthSignalPollingHealthRepositoryInterface $health,
+        private GrowthSignalPollingIncidentBoundary $incidents,
         private ActiveModuleResolver $modules,
         private bool $enabled=false,
         private int $intervalMinutes=15,
@@ -89,9 +91,13 @@ final readonly class GrowthSignalPollingStatusProvider
             default=>'ready',
         };
 
+        $activeIncidents=$this->incidents->activeIncidents($organizationId);
+
         $healthStatus='unknown';
         if(!$ready){
             $healthStatus='not_ready';
+        }elseif($activeIncidents!==[]){
+            $healthStatus='incident';
         }elseif($healthRows!==[]){
             $statuses=array_column($healthRows,'status');
             $healthStatus=in_array('cooling_down',$statuses,true)||in_array('degraded',$statuses,true)
@@ -112,6 +118,7 @@ final readonly class GrowthSignalPollingStatusProvider
             'source_counts'=>$sourceCounts,
             'enabled_source_count'=>array_sum($sourceCounts),
             'collector_health'=>$healthRows,
+            'active_incidents'=>$activeIncidents,
         ];
     }
 }

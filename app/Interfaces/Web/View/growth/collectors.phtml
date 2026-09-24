@@ -6,6 +6,20 @@ $feeds=is_array($workspace['feeds']??null)?$workspace['feeds']:[];
 $jsonSources=is_array($workspace['json_sources']??null)?$workspace['json_sources']:[];
 $polling=is_array($workspace['polling']??null)?$workspace['polling']:[];
 $pollingHealth=is_array($polling['collector_health']??null)?$polling['collector_health']:[];
+$pollingIncidents=is_array($polling['active_incidents']??null)?$polling['active_incidents']:[];
+$incidentRows=[];
+foreach($pollingIncidents as $incident){
+    if(!is_array($incident))continue;
+    $incidentRows[]=[
+        'collector'=>$incident['collector_name']??'Collector',
+        'status'=>['label'=>'OPEN','tone'=>'danger'],
+        'failures'=>(int)($incident['failure_count']??0),
+        'opened'=>$incident['opened_at']??'—',
+        'last_failure'=>$incident['last_failure_at']??'—',
+        'next_retry'=>$incident['next_retry_at']??'—',
+        'error'=>$incident['error_summary']??'—',
+    ];
+}
 $pollingHealthRows=[];
 foreach($pollingHealth as $collector=>$health){
     if(!is_array($health))continue;
@@ -147,6 +161,28 @@ foreach($runs as $run){
       'emptyMessage'=>'Collector health will appear after the first scheduled polling result.',
     ]); ?>
     <p class="tn-growth-muted">Failed collectors enter exponential cooldown. Healthy or partial provider responses clear transport-failure backoff; partial item validation remains visible as degraded health.</p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-polling-incidents>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Operator attention</p><h2>Active collector incidents</h2></div>
+      <span><?php echo count($incidentRows); ?></span>
+    </div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'collector','label'=>'Collector'],
+        ['key'=>'status','label'=>'Status'],
+        ['key'=>'failures','label'=>'Failure count'],
+        ['key'=>'opened','label'=>'Opened'],
+        ['key'=>'last_failure','label'=>'Last failure'],
+        ['key'=>'next_retry','label'=>'Next retry'],
+        ['key'=>'error','label'=>'Last error'],
+      ],
+      'rows'=>$incidentRows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No active collector incidents.',
+    ]); ?>
+    <p class="tn-growth-muted">An incident opens only after the configured consecutive-failure threshold and resolves automatically after the next successful provider transport, including a partial ingestion response.</p>
   </section>
 
   <section class="tn-ui-panel tn-workspace-section" data-growth-signal-feeds>

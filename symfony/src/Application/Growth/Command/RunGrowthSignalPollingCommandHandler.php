@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface;
 use Domains\Growth\Domain\SignalPollingBackoffPolicy;
 use InvalidArgumentException;
@@ -21,6 +22,7 @@ final readonly class RunGrowthSignalPollingCommandHandler implements CommandHand
         private GrowthSignalPollingTargetRepositoryInterface $targets,
         private GrowthSignalCollectorBoundary $collectors,
         private GrowthSignalPollingHealthRepositoryInterface $health,
+        private GrowthSignalPollingIncidentBoundary $incidents,
         private SignalPollingBackoffPolicy $backoff,
         private ActiveModuleResolver $modules,
         private int $actorId,
@@ -122,9 +124,17 @@ final readonly class RunGrowthSignalPollingCommandHandler implements CommandHand
                             $now,
                             max(1,(int)($state['consecutive_failures']??0)+1),
                         );
-                        if(!$replayed)$this->health->markFailed(
-                            $organizationId,$collectorName,$now,$nextRetry,$summary??'Collector returned failed status.',
-                        );
+                        if(!$replayed){
+                            $failureCount=max(1,(int)($state['consecutive_failures']??0)+1);
+                            $failureSummary=$summary??'Collector returned failed status.';
+                            $this->health->markFailed(
+                                $organizationId,$collectorName,$now,$nextRetry,$failureSummary,
+                            );
+                            $this->incidents->recordFailure(
+                                $organizationId,$this->actorId,$correlationId,$collectorName,
+                                $failureCount,$failureSummary,$now,$nextRetry,
+                            );
+                        }
                         $runs[]=[
                             'organization_id'=>$organizationId,
                             'collector'=>$collectorName,
@@ -140,9 +150,17 @@ final readonly class RunGrowthSignalPollingCommandHandler implements CommandHand
                     $completed++;
                     if($status==='partial'){
                         $degraded++;
-                        if(!$replayed)$this->health->markDegraded($organizationId,$collectorName,$now,$summary);
+                        if(!$replayed){
+                            $this->health->markDegraded($organizationId,$collectorName,$now,$summary);
+                            $this->incidents->recordRecovery(
+                                $organizationId,$this->actorId,$correlationId,$collectorName,$now,
+                            );
+                        }
                     }elseif(!$replayed){
                         $this->health->markHealthy($organizationId,$collectorName,$now);
+                        $this->incidents->recordRecovery(
+                            $organizationId,$this->actorId,$correlationId,$collectorName,$now,
+                        );
                     }
 
                     $runs[]=[
@@ -159,7 +177,12 @@ final readonly class RunGrowthSignalPollingCommandHandler implements CommandHand
                         $now,
                         max(1,(int)($state['consecutive_failures']??0)+1),
                     );
+                    $failureCount=max(1,(int)($state['consecutive_failures']??0)+1);
                     $this->health->markFailed($organizationId,$collectorName,$now,$nextRetry,$summary);
+                    $this->incidents->recordFailure(
+                        $organizationId,$this->actorId,$correlationId,$collectorName,
+                        $failureCount,$summary,$now,$nextRetry,
+                    );
                     $runs[]=[
                         'organization_id'=>$organizationId,
                         'collector'=>$collectorName,

@@ -99,3 +99,24 @@ health check
 ```
 
 The backoff policy is deterministic and independent of provider credentials. Base delay equals the configured polling cadence; consecutive failures double the delay until the configured cap. This prevents a failing external provider from being hammered forever while preserving normal cadence after recovery.
+
+
+## Growth collector incidents
+
+V0.33 separates transient health from sustained operator attention.
+
+```text
+collector failed
+   ↓
+consecutive failure count
+   ├─ below threshold → health/backoff only
+   └─ threshold reached → one OPEN incident
+                         ↓
+                  later failures update it
+                         ↓
+             completed / partial transport
+                         ↓
+                    RESOLVED incident
+```
+
+The incident threshold is deployment-owned. A unique open marker guarantees at most one active incident per tenant + collector while preserving resolved incident history. Incident events are suitable for later notification adapters, but V0.33 does not invent recipient addresses or bypass Platform Notification ownership.

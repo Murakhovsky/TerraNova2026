@@ -9,6 +9,7 @@ use App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider;
 use DateTimeImmutable;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface;
 use Domains\Growth\Domain\SignalPollingBackoffPolicy;
 use Kernel\Module\ActiveModuleResolver;
@@ -138,8 +139,24 @@ $modules=new ActiveModuleResolver(new ModuleCatalog([
     new ModuleManifest('growth','Growth','0.32.0',enabledByDefault:true,schemaVersion:'0.29.0'),
 ]),$states);
 
+$incidents=new class implements GrowthSignalPollingIncidentBoundary {
+    /** @var list<array<string,mixed>> */
+    public array $calls=[];
+    public function recordFailure(string $organizationId,int $actorId,string $correlationId,string $collectorName,int $consecutiveFailures,string $errorSummary,DateTimeImmutable $failedAt,DateTimeImmutable $nextRetryAt):?array
+    {
+        $this->calls[]=['kind'=>'failure','organization_id'=>$organizationId,'collector'=>$collectorName,'count'=>$consecutiveFailures];
+        return null;
+    }
+    public function recordRecovery(string $organizationId,int $actorId,string $correlationId,string $collectorName,DateTimeImmutable $recoveredAt):?array
+    {
+        $this->calls[]=['kind'=>'recovery','organization_id'=>$organizationId,'collector'=>$collectorName];
+        return null;
+    }
+    public function activeIncidents(string $organizationId):array{return [];}
+};
+
 $handler=new RunGrowthSignalPollingCommandHandler(
-    $targets,$collectors,$health,$policy,$modules,42,15,500,75,
+    $targets,$collectors,$health,$incidents,$policy,$modules,42,15,500,75,
 );
 $result=$handler(new RunGrowthSignalPollingCommand('unit',$at));
 
@@ -157,7 +174,7 @@ expectGrowthV0320(
     'Third consecutive failure must schedule a 60 minute retry delay.'
 );
 
-$provider=new GrowthSignalPollingStatusProvider($targets,$health,$modules,true,15,42,100);
+$provider=new GrowthSignalPollingStatusProvider($targets,$health,$incidents,$modules,true,15,42,100);
 $status=$provider->status('org-a');
 expectGrowthV0320($status['health_status']==='degraded','Cooling-down collector must degrade polling health.');
 expectGrowthV0320(

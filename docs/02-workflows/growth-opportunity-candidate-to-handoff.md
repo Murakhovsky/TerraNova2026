@@ -869,11 +869,11 @@ deployment scheduler config
 
 Projection tenant-scoped. Він не використовує global `targets()`, не показує кількість інших organizations, raw system actor id, credential references або provider URLs. Browser не може enable/disable scheduler; для цього немає нового endpoint чи SSR mutation.
 
-## Collector health & adaptive backoff
+## Collector health, adaptive backoff & incidents
 
 Automatic Signal polling persists operational health per tenant + collector. A failed collector run enters `cooling_down` with deterministic exponential retry delay; scheduled polling skips that collector until `next_retry_at`. Successful runs reset the failure streak, while partial ingestion is represented as `degraded` without transport-level cooldown.
 
-This state is operational metadata only. It does not alter Signal facts, Candidate qualification, ICP scoring or Handoff semantics.
+This state is operational metadata only. V0.33 additionally opens a single active operator incident after the configured failure threshold and resolves it on provider transport recovery. Incident lifecycle emits Growth Events/Audit but does not alter Signal facts, Candidate qualification, ICP scoring or Handoff semantics.
 
 ## Handoff contract
 

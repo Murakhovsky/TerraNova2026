@@ -8,6 +8,7 @@ use App\Application\Growth\Command\RunGrowthSignalPollingCommandHandler;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary;
 use Domains\Growth\Domain\SignalPollingBackoffPolicy;
 use DateTimeImmutable;
 use Kernel\Module\ActiveModuleResolver;
@@ -80,8 +81,14 @@ $health=new class implements GrowthSignalPollingHealthRepositoryInterface {
     public function markFailed(string $organizationId,string $collectorName,DateTimeImmutable $at,DateTimeImmutable $nextRetryAt,string $errorSummary):void{}
 };
 
+$incidents=new class implements GrowthSignalPollingIncidentBoundary {
+    public function recordFailure(string $organizationId,int $actorId,string $correlationId,string $collectorName,int $consecutiveFailures,string $errorSummary,DateTimeImmutable $failedAt,DateTimeImmutable $nextRetryAt):?array{return null;}
+    public function recordRecovery(string $organizationId,int $actorId,string $correlationId,string $collectorName,DateTimeImmutable $recoveredAt):?array{return null;}
+    public function activeIncidents(string $organizationId):array{return [];}
+};
+
 $handler=new RunGrowthSignalPollingCommandHandler(
-    $targets,$collectors,$health,new SignalPollingBackoffPolicy(15,360),$modules,42,15,500,75,
+    $targets,$collectors,$health,$incidents,new SignalPollingBackoffPolicy(15,360),$modules,42,15,500,75,
 );
 $at=1760000000;
 $result=$handler(new RunGrowthSignalPollingCommand('unit',$at));

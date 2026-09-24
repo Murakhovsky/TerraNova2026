@@ -675,4 +675,20 @@ collector result
 
 Health is stored per tenant + collector, not per credential or provider secret. Backoff starts at the configured polling cadence, doubles on consecutive transport failures and is capped by `COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES`. The Collectors Workspace exposes only operational health: last run status, consecutive failures, last success/failure and next retry.
 
+V0.33 promotes sustained transport failure into an explicit operator incident:
+
+```text
+failure streak < threshold
+        ↓
+health only
+        ↓ threshold crossed
+OPEN collector incident
+        ↓ more failures
+same incident updated
+        ↓ provider transport recovers
+RESOLVED + recovery event
+```
+
+Only one open incident may exist for a tenant + collector. Historical resolved incidents remain immutable rows. Opening and recovery emit `growth.collector.incident_opened` / `growth.collector.incident_resolved` and Audit records. The failure threshold is deployment-owned through `COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD`.
+
 Still intentionally absent: HR/Procurement target adapters, pre-handoff LinkedIn/call execution and autonomous outreach/activation.

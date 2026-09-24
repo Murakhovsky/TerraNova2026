@@ -17,6 +17,8 @@ final class GrowthEventType
     public const COLLECTOR_RUN_STARTED = 'growth.collector.run_started';
     public const COLLECTOR_RUN_COMPLETED = 'growth.collector.run_completed';
     public const COLLECTOR_RUN_FAILED = 'growth.collector.run_failed';
+    public const COLLECTOR_INCIDENT_OPENED = 'growth.collector.incident_opened';
+    public const COLLECTOR_INCIDENT_RESOLVED = 'growth.collector.incident_resolved';
     public const SIGNAL_FEED_CREATED = 'growth.signal_feed.created';
     public const SIGNAL_FEED_ENABLED = 'growth.signal_feed.enabled';
     public const SIGNAL_FEED_DISABLED = 'growth.signal_feed.disabled';
@@ -95,6 +97,8 @@ final class GrowthEventType
             self::COLLECTOR_RUN_STARTED,
             self::COLLECTOR_RUN_COMPLETED,
             self::COLLECTOR_RUN_FAILED,
+            self::COLLECTOR_INCIDENT_OPENED,
+            self::COLLECTOR_INCIDENT_RESOLVED,
             self::SIGNAL_FEED_CREATED,
             self::SIGNAL_FEED_ENABLED,
             self::SIGNAL_FEED_DISABLED,
