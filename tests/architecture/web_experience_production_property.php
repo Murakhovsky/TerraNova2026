@@ -46,49 +46,35 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
-foreach ([
-    "public function favour(Request \$request): Response",
-    "'property/favour'",
-    "'property/workspace_canonical'",
-    "'property/submissions'",
-    "'property/submission_canonical'",
-    "new RedirectResponse('/property/presentation/'",
-] as $marker) {
-    $contains($controller, $marker, 'Canonical Symfony Property controller is incomplete.');
+foreach (["public function favour(Request \$request): Response","'property/favour'","new RedirectResponse('/property/presentation/'"] as $marker) {
+    $contains($controller,$marker,'Canonical Symfony Property controller is incomplete.');
 }
+$inventoryController=$read('symfony/src/Web/Property/PropertyInventoryController.php');
+foreach(['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery'] as $marker){$contains($inventoryController,$marker,'Property Inventory controller incomplete.');}
+$submissionsController=$read('symfony/src/Web/Property/PropertySubmissionsController.php');
+$submissionController=$read('symfony/src/Web/Property/PropertySubmissionController.php');
+$mapController=$read('symfony/src/Web/Property/PropertyMapController.php');
+foreach(['PageArchetype::OperationalQueue','GetPropertySubmissionsQueueQuery'] as $marker){$contains($submissionsController,$marker,'Property Submissions controller incomplete.');}
+foreach(['PageArchetype::EntityWorkspace','GetPropertySubmissionWorkspaceQuery'] as $marker){$contains($submissionController,$marker,'Property Submission controller incomplete.');}
+foreach(['PageArchetype::MapSpatial','GetPropertyMapQuery'] as $marker){$contains($mapController,$marker,'Property Map controller incomplete.');}
 
-$workspace = $read('app/Interfaces/Web/View/property/workspace_canonical.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/data_table'",
-    'tn-property-workspace',
-] as $marker) {
-    $contains($workspace, $marker, 'Canonical Property inventory/listing workspace is incomplete.');
-}
+$workspace=$read('symfony/templates/experience/property/inventory.html.twig');
+foreach(['<twig:CosPageHeader','<twig:CosToolbar','<twig:CosDataGrid','data-property-inventory'] as $marker){$contains($workspace,$marker,'Canonical Property inventory/listing workspace is incomplete.');}
+if(is_file($root.'/app/Interfaces/Web/View/property/workspace_canonical.phtml'))throw new RuntimeException('Legacy Property inventory PHTML restored.');
 
-$submissions = $read('app/Interfaces/Web/View/property/submissions.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/data_table'",
-    'property/submission/',
-] as $marker) {
-    $contains($submissions, $marker, 'Canonical Property submissions queue is incomplete.');
-}
+$submissions=$read('symfony/templates/experience/property/submissions.html.twig');
+foreach(['<twig:CosPageHeader','class="cos-kpi-strip"','<twig:CosFilterBar','<twig:CosEntityListItem'] as $marker){$contains($submissions,$marker,'Canonical Property submissions queue is incomplete.');}
+$submissionsPresenter=$read('symfony/src/Web/Property/PropertySubmissionsPresenter.php');
+$contains($submissionsPresenter,"'/property/submission/'",'Property submissions deep-link contract is incomplete.');
+if(is_file($root.'/app/Interfaces/Web/View/property/submissions.phtml'))throw new RuntimeException('Legacy Property submissions PHTML restored.');
 
-$submission = $read('app/Interfaces/Web/View/property/submission_canonical.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    'Read-only canonical intake view',
-    'property/submissions',
-] as $marker) {
-    $contains($submission, $marker, 'Canonical Property submission detail is incomplete.');
-}
+$submission=$read('symfony/templates/experience/property/submission.html.twig');
+foreach(['<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','property/submissions','data-property-submission'] as $marker){$contains($submission,$marker,'Canonical Property submission detail is incomplete.');}
+if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml'))throw new RuntimeException('Legacy Property submission PHTML restored.');
 
 foreach ([
     'catalog' => ['page_header', 'data-catalog-form', 'data-catalog-count'],
-    'map' => ['page_header', 'state', 'tn-map-canvas', 'tn-map-pin'],
+
     'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
     'show' => ['state', 'action_bar', 'data-request-intent', 'data-save-property', 'data-property-gallery'],
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
@@ -112,6 +98,24 @@ foreach (['$attributes', 'foreach ($attributes as $name => $value)'] as $marker)
 $favourJs = $read('frontend/features/public/interactions.js');
 foreach (['data-favourite-empty', 'data-favourite-count', 'data-favourite-item', '/api/v1/public/properties/favourites'] as $marker) {
     $contains($favourJs, $marker, 'Favourites browser contract is incomplete.');
+}
+
+$map = $read('symfony/templates/experience/property/map.html.twig');
+foreach ([
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosContextPanel',
+    '<twig:CosEntityListItem',
+    'data-controller="property-map"',
+    'data-property-map',
+] as $marker) {
+    $contains($map, $marker, 'Canonical Property map surface is incomplete.');
+}
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($map, $forbidden, 'Property map must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/map.phtml')) {
+    throw new RuntimeException('Legacy Property map PHTML restored.');
 }
 
 foreach ([

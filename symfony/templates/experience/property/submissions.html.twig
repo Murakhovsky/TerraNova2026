@@ -1,0 +1,79 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Property Moderation | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-property-submissions
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Moderation"
+        title="Подані об’єкти"
+        subtitle="Operational queue заявок, які потребують перевірки та рішення."
+        metaValue="{{ queue.newCount() }}"
+        metaLabel="нових заявок"
+    >
+        <twig:CosButton label="Inventory" href="/property/manage" variant="ghost" />
+        <twig:CosButton label="Public intake" href="/property/submit" variant="primary" />
+    </twig:CosPageHeader>
+
+    <section class="cos-kpi-strip" aria-label="Стан заявок">
+        <article class="cos-card"><twig:CosMetric label="Усього" value="{{ queue.counts|reduce((sum, value) => sum + value, 0) }}" hint="усі статуси" /></article>
+        <article class="cos-card"><twig:CosMetric label="Нові" value="{{ queue.newCount() }}" hint="потребують першої перевірки" /></article>
+        <article class="cos-card"><twig:CosMetric label="На перевірці" value="{{ (queue.counts.in_review ?? 0) + (queue.counts.review ?? 0) }}" hint="активна модерація" /></article>
+        <article class="cos-card"><twig:CosMetric label="Потрібні правки" value="{{ queue.counts.needs_changes ?? 0 }}" hint="повернути автору" /></article>
+    </section>
+
+    <twig:CosFilterBar action="/property/submissions" label="Submission filters">
+        <label class="cos-field">
+            <span>Статус</span>
+            <select class="cos-select" name="status">
+                <option value="">Усі</option>
+                {% for option in queue.statusOptions %}
+                    <option value="{{ option.code }}" {% if queue.status == option.code %}selected{% endif %}>{{ option.label }} · {{ option.count }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>На сторінці</span>
+            <select class="cos-select" name="per_page">
+                {% for size in [10,25,50,100] %}
+                    <option value="{{ size }}" {% if queue.perPage == size %}selected{% endif %}>{{ size }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Застосувати</button>
+        <a class="cos-button cos-button--ghost" href="/property/submissions">Скинути</a>
+    </twig:CosFilterBar>
+
+    {% if queue.error %}
+        <twig:CosAlert title="Заявки недоступні" copy="{{ queue.error }}" tone="danger" />
+    {% elseif queue.items is empty %}
+        <twig:CosEmptyState title="У цій черзі заявок немає" copy="Змініть статус або дочекайтесь нових поданих об’єктів." />
+    {% else %}
+        <div class="cos-entity-list" role="list" aria-label="Property submission queue">
+            {% for item in queue.items %}
+                <twig:CosEntityListItem
+                    title="{{ item.title }}"
+                    subtitle="{{ item.subtitle }}"
+                    meta="{{ item.meta }}"
+                    statusLabel="{{ item.statusLabel }}"
+                    statusTone="{{ item.statusTone }}"
+                    href="{{ item.href }}"
+                />
+            {% endfor %}
+        </div>
+
+        <nav class="cos-action-bar cos-action-bar--between" aria-label="Submission pagination">
+            <span class="cos-card__copy">Сторінка {{ queue.page }} · {{ queue.total }} записів</span>
+            <div class="cos-action-bar cos-action-bar--end">
+                {% if queue.previousUrl %}<a class="cos-button cos-button--ghost cos-button--sm" href="{{ queue.previousUrl }}">Назад</a>{% endif %}
+                {% if queue.nextUrl %}<a class="cos-button cos-button--ghost cos-button--sm" href="{{ queue.nextUrl }}">Далі</a>{% endif %}
+            </div>
+        </nav>
+    {% endif %}
+</section>
+{% endblock %}

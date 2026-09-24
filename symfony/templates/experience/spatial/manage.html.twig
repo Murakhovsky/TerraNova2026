@@ -1,0 +1,108 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Spatial / 3D | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-spatial-manage
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Spatial"
+        title="3D-сцени"
+        subtitle="Скани, digital twins, AR/3D моделі, панорами та publication lifecycle."
+        metaValue="{{ spatial.scenes|length }}"
+        metaLabel="сцен у вибірці"
+    >
+        <twig:CosButton label="Property map" href="/property/map" variant="ghost" />
+        <twig:CosButton label="Нова сцена" href="/spatial/edit" variant="primary" />
+    </twig:CosPageHeader>
+
+    <section class="cos-kpi-strip" aria-label="Spatial runtime status">
+        <article class="cos-card"><twig:CosMetric label="Обробка" value="{{ spatial.stats.processing ?? 0 }}" hint="worker працює" /></article>
+        <article class="cos-card"><twig:CosMetric label="Перевірка" value="{{ spatial.stats.review ?? 0 }}" hint="готові до рішення" /></article>
+        <article class="cos-card"><twig:CosMetric label="Опубліковано" value="{{ spatial.stats.published ?? 0 }}" hint="доступно клієнтам" /></article>
+        <article class="cos-card"><twig:CosMetric label="Завдання" value="{{ spatial.stats.pending_jobs ?? 0 }}" hint="queue / retry" /></article>
+    </section>
+
+    <twig:CosToolbar label="Spatial tools" density="compact">
+        {% block start %}
+            <span class="cos-card__copy">Scene inventory та processing context в одному Map / Spatial archetype.</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Property inventory" href="/property/manage" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    <twig:CosFilterBar action="/spatial/manage" label="Spatial filters">
+        <label class="cos-field">
+            <span>Пошук</span>
+            <input class="cos-input" type="search" name="q" value="{{ spatial.filters.q }}" placeholder="Сцена або об’єкт">
+        </label>
+        <label class="cos-field">
+            <span>Статус</span>
+            <select class="cos-select" name="status">
+                <option value="">Усі</option>
+                {% for code, label in spatial.statusOptions %}
+                    <option value="{{ code }}" {% if spatial.filters.status == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Застосувати</button>
+        <a class="cos-button cos-button--ghost" href="/spatial/manage">Скинути</a>
+    </twig:CosFilterBar>
+
+    {% if spatial.statusMessage %}
+        <twig:CosAlert title="Spatial status" copy="{{ spatial.statusMessage }}" tone="info" />
+    {% endif %}
+
+    {% if spatial.error %}
+        <twig:CosAlert title="Spatial inventory недоступний" copy="{{ spatial.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-section-grid" aria-label="Spatial scene inventory">
+            <article class="cos-card cos-pattern-stack" id="queue">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Spatial inventory</p>
+                        <h2 class="cos-card__title">Сцени</h2>
+                        <p class="cos-card__copy">{{ spatial.scenes|length }} сцен у поточному представленні.</p>
+                    </div>
+                </div>
+
+                {% if spatial.scenes is empty %}
+                    <twig:CosEmptyState title="Spatial сцен ще немає" copy="Створіть першу сцену або змініть фільтри." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for scene in spatial.scenes %}
+                            <twig:CosEntityListItem
+                                title="{{ scene.title }}"
+                                subtitle="{{ scene.subtitle }}"
+                                meta="{{ scene.meta }}"
+                                statusLabel="{{ scene.statusLabel }}"
+                                statusTone="{{ scene.statusTone }}"
+                                href="{{ scene.href }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+
+            <twig:CosContextPanel id="spatial-runtime-context" title="Processing context">
+                <div class="cos-pattern-stack">
+                    <p class="cos-card__copy">Spatial лишається окремою supporting domain. Property лише посилається на scene lifecycle через явні contracts.</p>
+                    <dl class="cos-entity-summary">
+                        <div><dt>Processing</dt><dd>{{ spatial.stats.processing ?? 0 }}</dd></div>
+                        <div><dt>Review</dt><dd>{{ spatial.stats.review ?? 0 }}</dd></div>
+                        <div><dt>Failed</dt><dd>{{ spatial.stats.failed ?? 0 }}</dd></div>
+                        <div><dt>Pending jobs</dt><dd>{{ spatial.stats.pending_jobs ?? 0 }}</dd></div>
+                    </dl>
+                    <a class="cos-button cos-button--primary" href="/spatial/edit">Створити сцену</a>
+                </div>
+            </twig:CosContextPanel>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

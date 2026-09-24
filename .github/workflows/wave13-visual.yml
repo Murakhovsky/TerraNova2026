@@ -10,9 +10,15 @@ on:
       - 'symfony/templates/**'
       - 'symfony/src/Web/Experience/**'
       - 'symfony/src/Web/Sales/**'
+      - 'symfony/src/Web/Property/**'
+      - 'symfony/src/Web/Spatial/**'
+      - 'symfony/src/Application/Spatial/**'
+      - 'symfony/src/Application/Property/**'
+      - 'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php'
       - 'symfony/src/Application/Sales/**'
       - 'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php'
       - 'symfony/assets/controllers/sales_*_controller.js'
+      - 'symfony/assets/controllers/property_*_controller.js'
       - 'tests/architecture/web_experience_wave13_*.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_geometry.php'
@@ -22,6 +28,9 @@ on:
       - 'docs/11-decisions/ADR-0012-*.md'
       - 'docs/11-decisions/README.md'
       - '.github/workflows/wave13-visual.yml'
+      - 'vite.config.js'
+      - 'frontend/entrypoints/property-workspace.js'
+      - 'frontend/features/property/workspace.*'
   pull_request:
     branches: [main]
     paths:
@@ -29,9 +38,15 @@ on:
       - 'symfony/templates/**'
       - 'symfony/src/Web/Experience/**'
       - 'symfony/src/Web/Sales/**'
+      - 'symfony/src/Web/Property/**'
+      - 'symfony/src/Web/Spatial/**'
+      - 'symfony/src/Application/Spatial/**'
+      - 'symfony/src/Application/Property/**'
+      - 'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php'
       - 'symfony/src/Application/Sales/**'
       - 'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php'
       - 'symfony/assets/controllers/sales_*_controller.js'
+      - 'symfony/assets/controllers/property_*_controller.js'
       - 'tests/architecture/web_experience_wave13_*.php'
       - 'tests/architecture/web_experience_visual_foundation.php'
       - 'tests/architecture/web_experience_geometry.php'
@@ -41,6 +56,9 @@ on:
       - 'docs/11-decisions/ADR-0012-*.md'
       - 'docs/11-decisions/README.md'
       - '.github/workflows/wave13-visual.yml'
+      - 'vite.config.js'
+      - 'frontend/entrypoints/property-workspace.js'
+      - 'frontend/features/property/workspace.*'
 
 jobs:
   visual-system-contract:
@@ -75,6 +93,12 @@ jobs:
           php tests/architecture/web_experience_wave13_client_collection.php
           php tests/architecture/web_experience_wave13_client_workspace.php
           php tests/architecture/web_experience_wave13_clients_complete.php
+          php tests/architecture/web_experience_wave13_property_inventory.php
+          php tests/architecture/web_experience_wave13_property_submissions.php
+          php tests/architecture/web_experience_wave13_property_submission.php
+          php tests/architecture/web_experience_wave13_property_map.php
+          php tests/architecture/web_experience_wave13_spatial_manage.php
+          php tests/architecture/web_experience_wave13_property_workspace_complete.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

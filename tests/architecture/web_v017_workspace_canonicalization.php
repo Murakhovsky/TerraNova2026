@@ -23,17 +23,21 @@ $requireNotContains = static function (string $content, string $needle, string $
     }
 };
 
-$property = $read('app/Interfaces/Web/View/property/submissions.phtml');
+$property = $read('symfony/templates/experience/property/submissions.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/data_table'",
-    'tn-ui-panel--flush',
+    '<twig:CosPageHeader',
+    'class="cos-kpi-strip"',
+    '<twig:CosFilterBar',
+    '<twig:CosEntityListItem',
+    'data-property-submissions',
 ] as $needle) {
-    $requireContains($property, $needle, 'Property submissions must use canonical UI contracts.');
+    $requireContains($property, $needle, 'Property submissions must use canonical Operational Queue contracts.');
 }
-foreach (['tn-page-hero', 'tn-listing-table', 'tn-empty-state', 'tn-status-pill'] as $legacy) {
-    $requireNotContains($property, $legacy, 'Property submissions must not restore the legacy workspace presentation pattern.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacy) {
+    $requireNotContains($property, $legacy, 'Property submissions must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/submissions.phtml')) {
+    throw new RuntimeException('Retired Property submissions PHTML restored.');
 }
 
 $analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');

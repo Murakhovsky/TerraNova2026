@@ -1684,6 +1684,22 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Property\PropertyInventoryController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertySubmissionsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertySubmissionController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertyMapController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Property\PropertyPageController:
     public: true
     arguments:
@@ -1807,6 +1823,11 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+
+  # Wave 13 Spatial Workspace.
+  App\Web\Spatial\SpatialManageController:
+    public: true
+    tags: ['controller.service_arguments']
 
   # Final Web retirement — Spatial SSR/workspace.
   App\Web\Spatial\SpatialPageController:

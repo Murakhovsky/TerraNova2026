@@ -1,0 +1,70 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Property Submission | COS{% endblock %}
+
+{% block workspace_content %}
+<twig:CosWorkspace :workspace="workspace">
+    <section
+        class="cos-page__stack"
+        data-property-submission
+        data-submission-id="{{ submission.id }}"
+        data-cos-archetype="{{ page.archetypeId() }}"
+        data-cos-page-state="{{ page.state }}"
+        data-cos-page-density="{{ page.density }}"
+    >
+        <twig:CosEntityHeader
+            eyebrow="Property · Intake"
+            title="{{ submission.title }}"
+            subtitle="{{ submission.subtitle }}"
+            identity="{{ submission.identity }}"
+            statusLabel="{{ submission.statusLabel }}"
+            statusTone="{{ submission.statusTone }}"
+            :meta="submission.meta"
+        >
+            <twig:CosButton label="До черги" href="/property/submissions" variant="primary" />
+        </twig:CosEntityHeader>
+
+        {% if submission.error %}
+            <twig:CosAlert title="Заявка недоступна" copy="{{ submission.error }}" tone="danger" />
+        {% else %}
+            <section class="cos-page__section" aria-labelledby="property-submission-pulse">
+                <h2 id="property-submission-pulse" class="cos-section-title">Intake summary</h2>
+                <div class="cos-kpi-strip">
+                    {% for metric in submission.kpis %}
+                        <article class="cos-card">
+                            <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="cos-page__section cos-section-grid" aria-label="Property submission details">
+                <article class="cos-card cos-pattern-stack">
+                    <div>
+                        <p class="cos-card__eyebrow">Submission</p>
+                        <h2 class="cos-card__title">Деталі заявки</h2>
+                    </div>
+                    <dl class="cos-entity-summary">
+                        {% for item in submission.details %}
+                            <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                </article>
+
+                <aside class="cos-card cos-pattern-stack" aria-labelledby="property-submission-description">
+                    <div>
+                        <p class="cos-card__eyebrow">Content</p>
+                        <h2 id="property-submission-description" class="cos-card__title">Опис</h2>
+                    </div>
+                    <p class="cos-card__copy">{{ submission.description }}</p>
+                    {% if submission.reviewNote %}
+                        <div>
+                            <p class="cos-card__eyebrow">Review note</p>
+                            <p class="cos-card__copy">{{ submission.reviewNote }}</p>
+                        </div>
+                    {% endif %}
+                </aside>
+            </section>
+        {% endif %}
+    </section>
+</twig:CosWorkspace>
+{% endblock %}

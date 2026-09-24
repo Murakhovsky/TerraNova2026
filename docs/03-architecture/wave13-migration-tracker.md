@@ -24,6 +24,12 @@ kind: architecture
 | VR-010 | `/client-case/inbox` | Workspace | Sales / Clients | Operational Queue | P0 | Twig | DONE |
 | VR-011 | `/client-case` | Workspace | Sales / Clients | Collection | P0 | Twig | DONE |
 | VR-012 | `/client-case/show/{id}` | Workspace | Sales / Clients | Entity Workspace | P0 | Twig | DONE |
+| VR-013 | `/property/manage` | Workspace | Property | Collection | P0 | Twig | DONE |
+| VR-014 | `/property/listing` | Workspace | Property | Collection | P0 | Twig | DONE |
+| VR-015 | `/property/submissions` | Workspace | Property | Operational Queue | P0 | Twig | DONE |
+| VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
+| VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
+| VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -102,3 +108,35 @@ Production migration units VR-010…VR-012 завершені.
 - mutation ownership централізований у `ClientCaseMutationController`.
 
 Наступна production migration family: **Phase 5 — Property Workspace**.
+
+
+VR-013/014 переводять Property Inventory і Listing на один canonical Collection/DataGrid runtime з реальним server-side offset/total pagination. Read ownership проходить через Application Query; legacy `workspace_canonical.phtml` видаляється.
+
+
+VR-015 переводить Property Submissions на Operational Queue: KPI показують навантаження moderation, EntityList — записи для рішення, а pagination працює server-side через Property read model.
+
+
+VR-016 переводить Property Submission у read-only Entity Workspace `property.submission`. Intake entity не маскується під Property Asset до моменту фактичного створення asset; legacy `submission_canonical.phtml` видаляється.
+
+
+VR-017 переводить публічну Property Map на Map / Spatial archetype без зміни access semantics. Координати й нормалізовані map positions формуються у Presenter/ViewModel; Stimulus лише застосовує DOM-positioning, тому inline visual CSS видалено.
+
+
+VR-018 переводить Spatial Manage на Map / Spatial archetype через Application Query та canonical Workspace shell. Spatial editor/upload/publish/public viewer лишаються окремими живими сценаріями і не змішуються з цією route unit.
+
+
+## Фаза 5 — завершення Property Workspace
+
+Production migration units VR-013…VR-018 завершені.
+
+- `/property/manage` і `/property/listing` → Collection/DataGrid;
+- `/property/submissions` → Operational Queue;
+- `/property/submission/{id}` → Entity Workspace;
+- `/property/map` → public Map / Spatial без зміни access semantics;
+- `/spatial/manage` → private Map / Spatial;
+- Property workspace compatibility PHTML для цих units = **0**;
+- dedicated `property-workspace` Vite bundle = **0**;
+- map pin inline visual CSS = **0**;
+- Spatial editor/mutations/public viewer залишаються окремими specialized сценаріями.
+
+Наступна production migration family: **Phase 6 — System / Admin UI**.

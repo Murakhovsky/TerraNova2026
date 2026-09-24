@@ -1363,7 +1363,7 @@ cos_web_property_catalog:
 
 cos_web_property_map:
   path: /property/map
-  controller: App\Web\Property\PropertyPageController::map
+  controller: App\Web\Property\PropertyMapController::index
   methods: [GET, HEAD]
 
 cos_web_property_favour:
@@ -1426,22 +1426,22 @@ cos_web_property_submit_alias:
 
 cos_web_property_manage:
   path: /property/manage
-  controller: App\Web\Property\PropertyPageController::manage
+  controller: App\Web\Property\PropertyInventoryController::manage
   methods: [GET, HEAD]
 
 cos_web_property_listing:
   path: /property/listing
-  controller: App\Web\Property\PropertyPageController::listing
+  controller: App\Web\Property\PropertyInventoryController::listing
   methods: [GET, HEAD]
 
 cos_web_property_submissions:
   path: /property/submissions
-  controller: App\Web\Property\PropertyPageController::submissions
+  controller: App\Web\Property\PropertySubmissionsController::index
   methods: [GET, HEAD]
 
 cos_web_property_submission:
   path: /property/submission/{id}
-  controller: App\Web\Property\PropertyPageController::submission
+  controller: App\Web\Property\PropertySubmissionController::index
   methods: [GET, HEAD]
   requirements: { id: '[1-9][0-9]*' }
 
@@ -1612,7 +1612,7 @@ cos_web_diagnostic_report:
 # Final Web retirement — Spatial SSR/workspace.
 cos_web_spatial_manage:
   path: /spatial/manage
-  controller: App\Web\Spatial\SpatialPageController::manage
+  controller: App\Web\Spatial\SpatialManageController::index
   methods: [GET]
 
 cos_web_spatial_edit_new:

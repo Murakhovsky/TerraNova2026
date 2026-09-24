@@ -1,0 +1,105 @@
+.cos-public-spatial {
+  width: min(100% - (2 * var(--cos-space-4)), 90rem);
+  margin-inline: auto;
+  padding-block: var(--cos-space-4) var(--cos-space-8);
+}
+
+.cos-property-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(18rem, 0.8fr);
+  gap: var(--cos-space-4);
+  align-items: stretch;
+}
+
+.cos-property-map__viewport {
+  position: relative;
+  min-height: 34rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 25% 20%, var(--cos-state-selected-bg), transparent 38%),
+    linear-gradient(135deg, var(--cos-surface-subtle-bg), var(--cos-surface-default-bg));
+  border: var(--cos-border-width) solid var(--cos-surface-border);
+  border-radius: var(--cos-radius-panel);
+}
+
+.cos-property-map__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(to right, var(--cos-surface-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--cos-surface-border) 1px, transparent 1px);
+  background-size: 12.5% 12.5%;
+  pointer-events: none;
+}
+
+.cos-property-map__pin {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  gap: var(--cos-space-1);
+  max-width: 11rem;
+  padding: var(--cos-space-2) var(--cos-space-3);
+  color: var(--cos-color-text);
+  background: var(--cos-surface-default-bg);
+  border: var(--cos-border-width) solid var(--cos-color-border-strong);
+  border-radius: var(--cos-radius-control);
+  box-shadow: var(--cos-shadow-ui);
+  text-decoration: none;
+  transform: translate(-50%, -50%);
+}
+
+.cos-property-map__pin:hover,
+.cos-property-map__pin:focus-visible {
+  z-index: 2;
+  border-color: var(--cos-color-primary-strong);
+}
+
+.cos-property-map__pin strong,
+.cos-property-map__pin span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cos-property-map__pin strong {
+  font-size: var(--cos-font-xs);
+}
+
+.cos-property-map__pin span {
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-xs);
+}
+
+@media (max-width: 1050px) {
+  .cos-property-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cos-property-map__viewport {
+    min-height: 28rem;
+  }
+}
+
+@media (max-width: 650px) {
+  .cos-public-spatial {
+    width: min(100% - (2 * var(--cos-space-3)), 90rem);
+    padding-block: var(--cos-space-3) calc(var(--cos-space-8) + env(safe-area-inset-bottom));
+  }
+
+  .cos-property-map__viewport {
+    min-height: 24rem;
+  }
+
+  .cos-property-map__pin {
+    max-width: 8rem;
+    padding: var(--cos-space-1) var(--cos-space-2);
+  }
+}
+
+
+@media (max-width: 390px) {
+  .cos-property-map__pin {
+    max-width: 7rem;
+  }
+}

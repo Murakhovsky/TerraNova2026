@@ -20,16 +20,9 @@ WEB V0.17 переводить канонічну систему компоне�
 
 ### Property Submissions
 
-`app/Interfaces/Web/View/property/submissions.phtml`
+`symfony/templates/experience/property/submissions.html.twig`
 
-Заміни:
-- legacy page hero → `PageHeader`;
-- legacy empty/error blocks → `State`;
-- `tn-listing-table` → `DataTable`;
-- локальний status pill → semantic `Status` через `DataTable`;
-- таблиця на mobile переходить у record cards через канонічний responsive contract.
-
-Статуси модерації отримали семантичні tones: neutral, info, warning, positive, danger.
+Wave 13 Phase 5 завершив проміжний PHTML етап: route працює як Operational Queue через Application Query, typed ViewModel/Presenter, KPI strip, FilterBar та EntityList. Legacy submissions PHTML видалено.
 
 ### Analytics
 

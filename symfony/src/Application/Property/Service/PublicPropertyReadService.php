@@ -121,6 +121,8 @@ final readonly class PublicPropertyReadService
             'city' => (string) ($property['city'] ?? ''),
             'region' => (string) ($property['region'] ?? ''),
             'address' => (string) ($property['address'] ?? ''),
+            'latitude' => is_numeric($property['latitude'] ?? null) ? (float) $property['latitude'] : null,
+            'longitude' => is_numeric($property['longitude'] ?? null) ? (float) $property['longitude'] : null,
             'short_description' => (string) ($property['short_description'] ?? ''),
             'cover_url' => (string) ($property['cover_url'] ?? ''),
             'price_amount' => $property['price_amount'] ?? null,
