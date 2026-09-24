@@ -15,6 +15,7 @@ use Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Domains\Growth\Domain\EngagementChannel;
+use Domains\Growth\Domain\EngagementExecutionLimitPolicy;
 use Domains\Growth\Domain\EngagementRecommendationStatus;
 use Domains\Growth\Domain\NextBestActionType;
 use InvalidArgumentException;
@@ -38,6 +39,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         private GrowthBuyingCommitteeRepositoryInterface $contacts,
         private GrowthEngagementExecutionRepositoryInterface $executions,
         private GrowthEngagementDeliveryRepositoryInterface $deliveries,
+        private EngagementExecutionLimitPolicy $limits,
         private GrowthMutationReceiptInterface $receipts,
         private GrowthActionProposalGatewayInterface $actionGateway,
         private TransactionManagerInterface $transactions,
@@ -98,6 +100,10 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             }
             if(!$this->hasUsableChannelIdentity($organizationId,$contactId,$channel)){
                 throw new InvalidArgumentException('Pre-handoff Growth execution requires a contact with usable '.$channel.' identity.');
+            }
+            $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId);
+            if(!$limitDecision['allowed']){
+                throw new InvalidArgumentException((string)$limitDecision['reason']);
             }
             $targetDomain='growth';
             $targetReferenceType='growth_contact';
@@ -296,6 +302,16 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'reason'=>'Pre-handoff execution requires a Growth contact with usable '.$channel.' identity.',
             ];
         }
+        $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId);
+        if(!$limitDecision['allowed']){
+            return [
+                'can_propose'=>false,
+                'code'=>$limitDecision['code'],
+                'reason'=>$limitDecision['reason'],
+                'next_allowed_at'=>$limitDecision['next_allowed_at'],
+                'pre_handoff_limits'=>$limitDecision,
+            ];
+        }
         $kernelActionType=match($channel){
             EngagementChannel::Email->value=>'growth.send_message',
             EngagementChannel::LinkedIn->value=>'growth.send_linkedin',
@@ -312,7 +328,23 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             'target_reference_id'=>$contactId,
             'action_type'=>$kernelActionType,
             'channel'=>$channel,
+            'pre_handoff_limits'=>$limitDecision,
         ];
+    }
+
+    /** @return array{allowed:bool,code:string,reason:string,next_allowed_at:?string} */
+    private function preHandoffLimitDecision(string $organizationId,string $contactId):array
+    {
+        $now=$this->now();
+        $today=$now->setTime(0,0);
+        $count=$this->executions->countPreHandoffSince($organizationId,$today->format('Y-m-d H:i:s.u'));
+        $latest=$this->executions->latestPreHandoffForTarget($organizationId,$contactId);
+        $lastAt=null;
+        if($latest!==null&&!empty($latest['created_at'])){
+            try{$lastAt=new DateTimeImmutable((string)$latest['created_at'],new DateTimeZone('UTC'));}
+            catch(\Throwable){throw new InvalidArgumentException('Stored Growth engagement execution timestamp is invalid.');}
+        }
+        return $this->limits->evaluate($count,$lastAt,$now);
     }
 
     private function assertExecutableRecommendation(string $actionType,string $channel):void

@@ -5,6 +5,8 @@ parameters:
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
   env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET): ''
   env(GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(COS_GROWTH_OUTREACH_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS): '24'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
@@ -709,6 +711,11 @@ services:
 
   Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface:
     alias: Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway
+
+  Domains\Growth\Domain\EngagementExecutionLimitPolicy:
+    arguments:
+      $dailyLimit: '%env(int:COS_GROWTH_OUTREACH_DAILY_LIMIT)%'
+      $contactCooldownHours: '%env(int:COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS)%'
 
   Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
 

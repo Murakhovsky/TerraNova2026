@@ -24,6 +24,7 @@ use Domains\Growth\Automation\Policy\GrowthPolicyCatalog;
 use Domains\Growth\Bootstrap\GrowthDomainModule;
 use Domains\Growth\Domain\BuyingCommitteeAssessment;
 use Domains\Growth\Domain\ContactSnapshot;
+use Domains\Growth\Domain\EngagementExecutionLimitPolicy;
 use Domains\Growth\Domain\EngagementRecommendation;
 use Domains\Growth\Domain\GrowthContact;
 use Domains\Growth\Domain\GrowthOutcomeObservation;
@@ -184,6 +185,8 @@ $executions=new class implements GrowthEngagementExecutionRepositoryInterface {
     public function byActionId(string $organizationId,string $actionId):?array{return null;}
     public function createOrVerify(string $organizationId,string $executionId,string $candidateId,string $recommendationId,string $targetDomain,string $targetReferenceType,string $targetReferenceId,string $actionId,string $actionType,string $channel,string $payloadFingerprint,int $actorId):void{}
     public function latestForCandidate(string $organizationId,string $candidateId):?array{return null;}
+    public function countPreHandoffSince(string $organizationId,string $since):int{return 0;}
+    public function latestPreHandoffForTarget(string $organizationId,string $targetReferenceId):?array{return null;}
 };
 $deliveries=new class implements GrowthEngagementDeliveryRepositoryInterface {
     public function recordOrVerify(array $observation):array{return $observation+['replayed'=>false];}
@@ -214,7 +217,7 @@ $audit=new class implements AuditRepositoryInterface {
     public function append(AuditEntry $entry):void{}
 };
 $executionService=new GrowthEngagementExecutionService(
-    $engagement,$learning,$contacts,$executions,$deliveries,$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
+    $engagement,$learning,$contacts,$executions,$deliveries,new EngagementExecutionLimitPolicy(50,24),$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
 );
 $linkedinBrief=$executionService->executionBrief('org-1','cand-linkedin','rec-linkedin');
 $callBrief=$executionService->executionBrief('org-1','cand-call','rec-call');

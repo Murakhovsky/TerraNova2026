@@ -162,6 +162,9 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
           <?php endif; ?>
         <?php else: ?>
           <p class="tn-growth-muted"><?php echo $h($executionEligibility['reason']??'This recommendation is not executable through the current bridge.'); ?></p>
+          <?php if(!empty($executionEligibility['next_allowed_at'])): ?>
+            <p><small>Next allowed: <?php echo $h($executionEligibility['next_allowed_at']); ?></small></p>
+          <?php endif; ?>
         <?php endif; ?>
       <?php endif; ?>
 

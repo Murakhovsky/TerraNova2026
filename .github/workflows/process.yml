@@ -160,6 +160,7 @@ jobs:
           php tests/architecture/growth_v0340_collector_alerts.php
           php tests/architecture/growth_v0350_linkedin_call_execution.php
           php tests/architecture/growth_v0360_engagement_delivery_feedback.php
+          php tests/architecture/growth_v0370_outreach_guardrails.php
 
       - name: Process registry invariants
         run: |
@@ -198,6 +199,7 @@ jobs:
           php tests/unit/growth_v0340_collector_alerts.php
           php tests/unit/growth_v0350_linkedin_call_execution.php
           php tests/unit/growth_v0360_engagement_delivery_feedback.php
+          php tests/unit/growth_v0370_outreach_guardrails.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -290,6 +292,9 @@ jobs:
           php -l tests/architecture/growth_v0350_linkedin_call_execution.php
           php -l tests/unit/growth_v0360_engagement_delivery_feedback.php
           php -l tests/architecture/growth_v0360_engagement_delivery_feedback.php
+          php -l tests/unit/growth_v0370_outreach_guardrails.php
+          php -l tests/architecture/growth_v0370_outreach_guardrails.php
+          php -l app/Domains/Growth/Domain/EngagementExecutionLimitPolicy.php
           php -l app/Domains/Growth/Domain/EngagementDeliveryStatus.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementDeliveryRepositoryInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementDeliveryBoundary.php

@@ -746,4 +746,24 @@ The callback is HMAC-signed, timestamp-bounded and idempotent. It records normal
 
 Delivery observations intentionally persist no outbound body, email, phone number or LinkedIn profile URL. They retain execution provenance, normalized status, optional provider reference/reason and occurrence time. The Candidate Workspace can now distinguish "Kernel Action queued" from "external channel actually progressed", because apparently humans eventually notice that those are not the same thing.
 
-Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Autonomous outreach remains deferred until explicit policy limits, rate/volume controls and approval-governance rules exist.
+V0.37 adds hard pre-handoff outreach guardrails before any future autonomous mode is even considered:
+
+```text
+accepted recommendation
+        ↓
+identity + channel validation
+        ↓
+pre-handoff execution limits
+  ├─ organization daily cap
+  └─ contact cooldown
+        ↓
+Kernel ActionProposal
+        ↓
+APPROVAL_REQUIRED policy
+```
+
+Limits are enforced before a new Growth-owned Action is proposed, and the same decision is exposed through execution eligibility so the Workspace can explain why outreach is blocked and when a cooldown expires. The current guardrails count proposed pre-handoff executions, not only successfully delivered messages, which is deliberately conservative: a pile of pending approvals is still a pile of attempted outreach.
+
+Configuration remains deployment-owned through `COS_GROWTH_OUTREACH_DAILY_LIMIT` and `COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS`. This does **not** introduce autonomous outreach, automatic approval or background prospect blasting. Humanity survives another release.
+
+Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. The next autonomy prerequisite is a tenant-owned policy/limits surface plus channel-specific volume governance, not a magic "send everything" switch.

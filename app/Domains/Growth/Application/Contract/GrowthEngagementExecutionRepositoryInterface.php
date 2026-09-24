@@ -28,4 +28,9 @@ interface GrowthEngagementExecutionRepositoryInterface
 
     /** @return array<string,mixed>|null */
     public function latestForCandidate(string $organizationId,string $candidateId):?array;
+
+    public function countPreHandoffSince(string $organizationId,string $since):int;
+
+    /** @return array<string,mixed>|null */
+    public function latestPreHandoffForTarget(string $organizationId,string $targetReferenceId):?array;
 }
