@@ -34,7 +34,7 @@ kind: architecture
 | VR-020 | `/cos/architecture` | System | Visualization | System / Control Surface | P0 | Twig | BACKLOG |
 | VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig | BACKLOG |
 | VR-022 | `/admin/analytics` | Workspace | Core / Property | Executive Dashboard | P0 | Twig | DONE |
-| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | QA |
+| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | DONE |
 | VR-024 | `/admin/content` | System | Content | System / Control Surface | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
@@ -151,4 +151,4 @@ Production migration units VR-013…VR-018 завершені.
 VR-022 переводить Analytics на Executive Dashboard: Property funnel report читається через Application Query, canonical KPI/DataGrid/EntityList рендеряться Twig, а окремий `analytics-workspace` Vite bundle і PHTML surface видаляються.
 
 
-VR-023 переводить User Administration на System / Control Surface: read path проходить через Identity Application Query, create/update mutations винесені в окремий controller, mutation-heavy users рендеряться domain component, а `CoreWorkspacePageController` і `admin/users.phtml` видаляються.
+VR-023 переводить User Administration на System / Control Surface: read path проходить через Identity Application Query, create/update mutations винесені в окремий controller, mutation-heavy users рендеряться domain component, а `CoreWorkspacePageController` і `admin/users.phtml` видалені. Regression gates вирівняні з canonical Twig ownership; unit закритий як DONE.

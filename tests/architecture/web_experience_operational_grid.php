@@ -43,7 +43,7 @@ foreach ([
     "'bodyPartial' => 'components/ui/operational_grid'",
     "'kind' => 'form'",
     "'kind' => 'link'",
-    "'csrf_token' => $csrfToken",
+    '\'csrf_token\' => $csrfToken',
     'cos/action/',
     '#approval-',
 ] as $marker) {

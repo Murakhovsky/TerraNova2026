@@ -324,23 +324,28 @@ foreach ([
     }
 }
 
-$analyticsWorkspaceCss = $read('frontend/features/analytics/workspace.css');
 foreach ([
-    '@layer tn-analytics-workspace',
-    '.tn-analytics-workspace {',
-    '.tn-analytics-workspace .tn-dashboard-bars',
-] as $marker) {
-    $contains($analyticsWorkspaceCss, $marker, 'Analytics workspace CSS lost its live canonical contract.');
+    'frontend/entrypoints/analytics-workspace.js',
+    'frontend/features/analytics/workspace.css',
+    'frontend/features/analytics/workspace.js',
+    'app/Interfaces/Web/View/admin/analytics.phtml',
+] as $retiredAnalyticsArtifact) {
+    if (is_file($root . '/' . $retiredAnalyticsArtifact)) {
+        throw new RuntimeException('Retired Analytics compatibility artifact restored: ' . $retiredAnalyticsArtifact);
+    }
 }
+
+$analyticsTwig = $read('symfony/templates/experience/admin/analytics.html.twig');
 foreach ([
-    '.tn-analytics-workspace .tn-page-hero',
-    '.tn-analytics-workspace .tn-admin-metrics',
-    '.tn-analytics-workspace .tn-admin-dashboard-grid',
-    '.tn-analytics-workspace .tn-admin-card',
-    '.tn-analytics-workspace .tn-table-wrap',
-    '.tn-analytics-workspace .tn-listing-table',
-] as $legacySelector) {
-    $notContains($analyticsWorkspaceCss, $legacySelector, 'Analytics workspace CSS restored a selector from retired compatibility views.');
+    'data-cos-archetype',
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+] as $marker) {
+    $contains($analyticsTwig, $marker, 'Analytics canonical Twig contract is incomplete.');
+}
+foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+    $notContains($analyticsTwig, $legacyMarker, 'Analytics canonical Twig surface restored legacy/local presentation.');
 }
 
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
