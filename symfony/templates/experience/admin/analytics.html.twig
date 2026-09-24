@@ -1,0 +1,99 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Аналітика | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Analytics · Property funnel"
+        title="Попит і конверсії"
+        subtitle="Перегляди об’єктів, контактні дії та заявки. Джерело істини лишається в Property funnel analytics."
+        metaValue="{{ analytics.days }}"
+        metaLabel="днів у звіті"
+    >
+        <twig:CosButton label="Company Home" href="/admin" variant="ghost" />
+        <twig:CosButton label="Inbox" href="/client-case/inbox" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosFilterBar action="/admin/analytics" label="Analytics period">
+        <label class="cos-field">
+            <span>Період</span>
+            <select class="cos-select" name="days">
+                {% for value in [7, 30, 90, 365] %}
+                    <option value="{{ value }}" {% if analytics.days == value %}selected{% endif %}>{{ value }} днів</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Оновити</button>
+    </twig:CosFilterBar>
+
+    {% if analytics.error %}
+        <twig:CosAlert title="Звіт недоступний" copy="{{ analytics.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="analytics-kpis">
+            <h2 id="analytics-kpis" class="cos-section-title">Conversion pulse</h2>
+            <div class="cos-kpi-strip">
+                {% for metric in analytics.kpis %}
+                    <article class="cos-card">
+                        <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                        {% if metric.href %}
+                            <twig:CosButton label="Відкрити" href="{{ metric.href }}" variant="ghost" size="sm" />
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="cos-page__section">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Динаміка</p>
+                <h2 class="cos-card__title">Останні дні</h2>
+                <twig:CosDataGrid
+                    id="analytics-daily"
+                    label="Analytics daily funnel"
+                    baseUrl="/admin/analytics"
+                    :query="analytics.daily.query"
+                    :page="analytics.daily.page"
+                    :columns="analytics.daily.columns"
+                    :state="analytics.daily.state"
+                />
+            </article>
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Analytics context">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Джерела</p>
+                <h2 class="cos-card__title">UTM та прямі переходи</h2>
+                {% if analytics.sources is empty %}
+                    <twig:CosEmptyState title="Джерела не зафіксовані" copy="Для вибраного періоду немає source attribution." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for item in analytics.sources %}
+                            <twig:CosEntityListItem title="{{ item.title }}" subtitle="{{ item.subtitle }}" meta="{{ item.meta }}" />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Об’єкти</p>
+                <h2 class="cos-card__title">Попит за картками</h2>
+                {% if analytics.properties is empty %}
+                    <twig:CosEmptyState title="Даних по об’єктах немає" copy="Property funnel ще не накопичив вибірку." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for item in analytics.properties %}
+                            <twig:CosEntityListItem title="{{ item.title }}" subtitle="{{ item.subtitle }}" meta="{{ item.meta }}" href="{{ item.href }}" />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

@@ -30,6 +30,12 @@ kind: architecture
 | VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
+| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-020 | `/cos/architecture` | System | Visualization | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-022 | `/admin/analytics` | Workspace | Core / Property | Executive Dashboard | P0 | Twig | QA |
+| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-024 | `/admin/content` | System | Content | System / Control Surface | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -140,3 +146,6 @@ Production migration units VR-013…VR-018 завершені.
 - Spatial editor/mutations/public viewer залишаються окремими specialized сценаріями.
 
 Наступна production migration family: **Phase 6 — System / Admin UI**.
+
+
+VR-022 переводить Analytics на Executive Dashboard: Property funnel report читається через Application Query, canonical KPI/DataGrid/EntityList рендеряться Twig, а окремий `analytics-workspace` Vite bundle і PHTML surface видаляються.

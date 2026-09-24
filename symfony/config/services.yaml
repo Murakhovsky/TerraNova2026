@@ -1664,6 +1664,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Workspace\AnalyticsDashboardController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Workspace\CoreWorkspacePageController:
     public: true
     tags: ['controller.service_arguments']

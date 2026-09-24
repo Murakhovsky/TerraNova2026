@@ -81,6 +81,8 @@ foreach([
 ] as $path)$read($path);
 
 foreach([
+    'symfony/src/Web/Workspace/AnalyticsDashboardController.php',
+    'symfony/templates/experience/admin/analytics.html.twig',
     'symfony/src/Web/Sales/SalesAdminPageController.php',
     'frontend/entrypoints/sales-workspace.js',
     'frontend/features/sales/workspace.js',
@@ -91,6 +93,10 @@ foreach([
     'app/Interfaces/Web/View/client_case/inbox.phtml',
     'app/Interfaces/Web/View/client_case/index.phtml',
     'app/Interfaces/Web/View/client_case/show.phtml',
+    'app/Interfaces/Web/View/admin/analytics.phtml',
+    'frontend/entrypoints/analytics-workspace.js',
+    'frontend/features/analytics/workspace.js',
+    'frontend/features/analytics/workspace.css',
 ] as $retiredSalesSource){
     $assert(!is_file($root.'/'.$retiredSalesSource),'Retired Sales presentation source restored: '.$retiredSalesSource);
 }

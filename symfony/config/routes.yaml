@@ -1286,7 +1286,7 @@ cos_web_workspace_user_update:
 
 cos_web_workspace_analytics:
   path: /admin/analytics
-  controller: App\Web\Workspace\CoreWorkspacePageController::analytics
+  controller: App\Web\Workspace\AnalyticsDashboardController::index
   methods: [GET, HEAD]
 
 cos_web_client_cases:

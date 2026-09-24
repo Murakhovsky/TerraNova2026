@@ -63,3 +63,8 @@ WEB V0.8 is closed when:
 4. the existing server-side report and failure contract remain unchanged;
 5. the deleted `sales_v063.php` test is no longer called by the runtime workflow;
 6. a dedicated WEB V0.8 architecture gate validates the migration independently.
+
+
+## Wave 13 VR-022
+
+Wave 13 retires the temporary WEB V0.8 presentation bridge. `/admin/analytics` now renders through Symfony/Twig `ExecutiveDashboard` using `GetWorkspaceAnalyticsQuery` and the canonical Experience Platform. The historical `analytics-workspace` Vite bundle and `admin/analytics.phtml` are removed; Property funnel calculations remain unchanged.
