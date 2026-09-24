@@ -16,72 +16,57 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+$users = $read('symfony/templates/experience/admin/users.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    '$userRows = [];',
-    "'_form' => [",
-    "'kind' => 'submit'",
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosMetric',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+    '<twig:IdentityUserAdministrationItem',
+    'data-cos-archetype',
 ] as $marker) {
-    $contains($users, $marker, 'Users Administration must use canonical workspace composition.');
+    $contains($users, $marker, 'Users Administration must use canonical System Control Surface composition.');
 }
-foreach ([
-    'tn-listing-hero',
-    '<section class="tn-admin-metrics"',
-    '<form class="tn-crm-form" action="<?php echo $this->url->get(\'admin/users\'); ?>" method="get">',
-] as $legacyMarker) {
-    $notContains($users, $legacyMarker, 'Users Administration must not restore legacy shell/filter composition.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($users, $legacyMarker, 'Users Administration must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/admin/users.phtml')) {
+    throw new RuntimeException('Legacy Users PHTML restored after VR-023.');
+}
+if (is_file($root . '/symfony/src/Web/Workspace/CoreWorkspacePageController.php')) {
+    throw new RuntimeException('Retired CoreWorkspacePageController restored after VR-023.');
 }
 
+$userController = $read('symfony/src/Web/Identity/UserAdministrationController.php');
 foreach ([
-    'admin/createUser',
-    'admin/updateUser/',
-    'name="csrf_token"',
-    'name="full_name"',
-    'name="email"',
-    'name="phone"',
-    'name="password"',
-    'name="role"',
-    'name="status"',
-    'user-form-',
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
+    'GetUserAdministrationQuery',
+    'PageArchetype::SystemControlSurface',
+    'WorkspaceShellFactory',
+    'UserAdministrationPresenter',
 ] as $marker) {
-    $contains($users, $marker, 'Users Administration lost a create/update mutation contract.');
+    $contains($userController, $marker, 'Users read controller contract is incomplete.');
 }
-$notContains($users, '<table', 'Users Administration must not retain a raw editable table.');
 
-$controller = $read('symfony/src/Web/Workspace/CoreWorkspacePageController.php');
+$userMutation = $read('symfony/src/Web/Identity/UserAdministrationMutationController.php');
 foreach ([
-    'public function users(Request $request): Response',
-    'public function createUser(Request $request): Response',
-    'public function updateUser(Request $request, string $id): Response',
-    '$this->admin()',
+    'public function create(Request $request): Response',
+    'public function update(Request $request, string $id): Response',
     '$this->csrf->isValid($request)',
     '$this->administration->createUser',
     '$this->administration->updateUser',
-    "'admin/users'",
 ] as $marker) {
-    $contains($controller, $marker, 'Users Administration controller contract is incomplete.');
+    $contains($userMutation, $marker, 'Users mutation controller contract is incomplete.');
 }
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /admin/users',
-    'CoreWorkspacePageController::users',
+    'UserAdministrationController::index',
     'path: /admin/createUser',
-    'CoreWorkspacePageController::createUser',
+    'UserAdministrationMutationController::create',
     'path: /admin/updateUser/{id}',
-    'CoreWorkspacePageController::updateUser',
+    'UserAdministrationMutationController::update',
 ] as $marker) {
     $contains($routes, $marker, 'Users Administration route contract is incomplete.');
 }

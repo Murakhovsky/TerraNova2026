@@ -58,26 +58,20 @@ if (str_contains($cos, '<table class="tn-listing-table">')) {
 }
 
 
-foreach ([
-    '$userRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'admin/updateUser/'",
-    "'csrf_token' => (string) (\$csrfToken ?? '')",
-    "'kind' => 'field'",
-    "'kind' => 'submit'",
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
-] as $marker) {
+$users = $read('symfony/templates/experience/admin/users.html.twig');
+$userItem = $read('symfony/templates/components/identity/user_administration_item.html.twig');
+foreach (['<twig:IdentityUserAdministrationItem', '<twig:CosDataGrid'] as $marker) {
     if (!str_contains($users, $marker)) {
-        throw new RuntimeException('Users OperationalGrid migration incomplete: ' . $marker);
+        throw new RuntimeException('Users canonical System Control Surface incomplete: ' . $marker);
     }
 }
-if (str_contains($users, '<table class="tn-listing-table tn-users-table">')) {
-    throw new RuntimeException('Users raw editable table must remain retired.');
+foreach (['/admin/updateUser/', 'name="full_name"', 'name="phone"', 'name="role"', 'name="status"', 'name="password"', 'type="submit"'] as $marker) {
+    if (!str_contains($userItem, $marker)) {
+        throw new RuntimeException('Identity user domain component mutation parity incomplete: ' . $marker);
+    }
+}
+if (str_contains($users, '<table') || str_contains($userItem, '<table') || str_contains($users, 'tn-') || str_contains($userItem, 'tn-')) {
+    throw new RuntimeException('Users Administration must not restore raw/legacy OperationalGrid presentation.');
 }
 
 foreach ([

@@ -129,22 +129,33 @@ foreach ($classifiedTableViews as $relative => $reason) {
     }
 }
 
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+$users = $read('symfony/templates/experience/admin/users.html.twig');
+$userItem = $read('symfony/templates/components/identity/user_administration_item.html.twig');
 foreach ([
-    '$userRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'admin/updateUser/'",
-    "'kind' => 'submit'",
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
+    '<twig:CosToolbar',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+    '<twig:IdentityUserAdministrationItem',
+    '/admin/createUser',
 ] as $marker) {
-    $contains($users, $marker, 'Users must use canonical OperationalGrid editable row forms.');
+    $contains($users, $marker, 'Users System Control Surface lost canonical composition.');
 }
-$notContains($users, '<table', 'Users Administration must not retain a raw table after OperationalGrid migration.');
+foreach ([
+    '/admin/updateUser/',
+    'name="csrf_token"',
+    'name="full_name"',
+    'name="phone"',
+    'name="role"',
+    'name="status"',
+    'name="password"',
+    'type="submit"',
+] as $marker) {
+    $contains($userItem, $marker, 'Identity user domain component lost mutation parity.');
+}
+foreach (['<table', 'tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($users, $forbidden, 'Users page must not restore residual raw/legacy presentation.');
+    $notContains($userItem, $forbidden, 'Identity user component must not restore residual raw/legacy presentation.');
+}
 
 $clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 foreach ([

@@ -6,7 +6,9 @@ on:
     paths:
       - 'symfony/templates/experience/property/submissions.html.twig'
       - 'symfony/src/Web/Property/PropertySubmissionsController.php'
-      - 'app/Interfaces/Web/View/admin/analytics.phtml'
+      - 'symfony/templates/experience/admin/analytics.html.twig'
+      - 'symfony/src/Web/Workspace/AnalyticsDashboardController.php'
+      - 'symfony/src/Application/Experience/Query/GetWorkspaceAnalyticsQueryHandler.php'
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
@@ -26,7 +28,9 @@ on:
     paths:
       - 'symfony/templates/experience/property/submissions.html.twig'
       - 'symfony/src/Web/Property/PropertySubmissionsController.php'
-      - 'app/Interfaces/Web/View/admin/analytics.phtml'
+      - 'symfony/templates/experience/admin/analytics.html.twig'
+      - 'symfony/src/Web/Workspace/AnalyticsDashboardController.php'
+      - 'symfony/src/Application/Experience/Query/GetWorkspaceAnalyticsQueryHandler.php'
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'app/Interfaces/Web/View/cos/index.phtml'
       - 'app/Interfaces/Web/View/components/ui/kpi_card.phtml'
@@ -63,7 +67,9 @@ jobs:
           php -l symfony/src/Web/Property/PropertySubmissionsController.php
           php -l symfony/src/Web/Property/PropertySubmissionsPresenter.php
           php -l symfony/src/Application/Property/Query/GetPropertySubmissionsQueueQueryHandler.php
-          php -l app/Interfaces/Web/View/admin/analytics.phtml
+          php -l symfony/src/Web/Workspace/AnalyticsDashboardController.php
+          php -l symfony/src/Web/Workspace/AnalyticsDashboardPresenter.php
+          php -l symfony/src/Application/Experience/Query/GetWorkspaceAnalyticsQueryHandler.php
           php -l app/Interfaces/Web/View/diagnostic_report/show.phtml
           php -l app/Interfaces/Web/View/cos/index.phtml
           php -l symfony/src/Web/Sales/ClientCaseInboxController.php

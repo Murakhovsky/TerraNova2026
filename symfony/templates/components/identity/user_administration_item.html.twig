@@ -1,0 +1,53 @@
+<article class="cos-card" data-user-id="{{ user.id }}">
+    <header class="cos-card__header">
+        <div>
+            <p class="cos-card__eyebrow">{{ user.email }}</p>
+            <h3 class="cos-card__title">{{ user.fullName ?: user.email }}</h3>
+            <p class="cos-card__copy">{{ user.phone ?: 'Телефон не вказано' }} · останній вхід: {{ user.lastLogin }}</p>
+        </div>
+        <twig:CosStatus label="{{ user.statusLabel }}" tone="{{ user.statusTone }}" />
+    </header>
+
+    <form class="cos-form-stack" method="post" action="/admin/updateUser/{{ user.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+
+        <div class="cos-form-grid">
+            <label class="cos-field">
+                <span>Імʼя</span>
+                <input class="cos-input" name="full_name" type="text" maxlength="160" value="{{ user.fullName }}" required>
+            </label>
+            <label class="cos-field">
+                <span>Телефон</span>
+                <input class="cos-input" name="phone" type="tel" maxlength="50" value="{{ user.phone }}">
+            </label>
+            <label class="cos-field">
+                <span>Роль</span>
+                <select class="cos-select" name="role">
+                    {% for code, label in roleOptions %}
+                        {% if code %}
+                            <option value="{{ code }}" {% if user.role == code %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="cos-field">
+                <span>Статус</span>
+                <select class="cos-select" name="status">
+                    {% for code, label in statusOptions %}
+                        {% if code %}
+                            <option value="{{ code }}" {% if user.status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="cos-field">
+                <span>Новий пароль</span>
+                <input class="cos-input" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="Залиште порожнім без зміни">
+            </label>
+        </div>
+
+        <twig:CosActionBar label="User administration actions">
+            <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+        </twig:CosActionBar>
+    </form>
+</article>

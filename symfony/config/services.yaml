@@ -1668,7 +1668,11 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
-  App\Web\Workspace\CoreWorkspacePageController:
+  App\Web\Identity\UserAdministrationController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Identity\UserAdministrationMutationController:
     public: true
     tags: ['controller.service_arguments']
 

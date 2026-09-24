@@ -78,11 +78,14 @@ foreach([
     'frontend/styles/components.css',
     'frontend/styles/patterns.css',
     'frontend/styles/workspace.css',
+    'symfony/src/Web/Workspace/AnalyticsDashboardController.php',
+    'symfony/src/Web/Identity/UserAdministrationController.php',
+    'symfony/src/Web/Identity/UserAdministrationMutationController.php',
+    'symfony/templates/experience/admin/users.html.twig',
+    'symfony/templates/experience/admin/analytics.html.twig',
 ] as $path)$read($path);
 
 foreach([
-    'symfony/src/Web/Workspace/AnalyticsDashboardController.php',
-    'symfony/templates/experience/admin/analytics.html.twig',
     'symfony/src/Web/Sales/SalesAdminPageController.php',
     'frontend/entrypoints/sales-workspace.js',
     'frontend/features/sales/workspace.js',
@@ -97,8 +100,10 @@ foreach([
     'frontend/entrypoints/analytics-workspace.js',
     'frontend/features/analytics/workspace.js',
     'frontend/features/analytics/workspace.css',
-] as $retiredSalesSource){
-    $assert(!is_file($root.'/'.$retiredSalesSource),'Retired Sales presentation source restored: '.$retiredSalesSource);
+    'app/Interfaces/Web/View/admin/users.phtml',
+    'symfony/src/Web/Workspace/CoreWorkspacePageController.php',
+] as $retiredPresentationSource){
+    $assert(!is_file($root.'/'.$retiredPresentationSource),'Retired presentation source restored: '.$retiredPresentationSource);
 }
 
 $navigation=$read('symfony/src/Web/Navigation/NavigationBuilder.php');

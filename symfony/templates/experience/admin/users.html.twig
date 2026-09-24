@@ -1,0 +1,161 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Користувачі | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Administration · Identity"
+        title="Користувачі"
+        subtitle="Акаунти, ролі, статуси й доступ без ручного редагування бази."
+        metaValue="{{ users.users|length }}"
+        metaLabel="у вибірці"
+    >
+        <twig:CosButton label="Content" href="/admin/content" variant="ghost" />
+        <twig:CosButton label="Analytics" href="/admin/analytics" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Identity administration tools">
+        {% block start %}
+            <span class="cos-card__copy">Read і mutation ownership розділені; role/status зміни лишаються server-first.</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Company Home" href="/admin" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if users.actionStatus %}
+        <twig:CosAlert title="Зміни застосовано" copy="{{ users.actionStatus }}" tone="positive" />
+    {% endif %}
+
+    {% if users.error %}
+        <twig:CosAlert title="Керування користувачами недоступне" copy="{{ users.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="users-kpis">
+            <h2 id="users-kpis" class="cos-section-title">Identity pulse</h2>
+            <div class="cos-kpi-strip">
+                {% for metric in users.kpis %}
+                    <article class="cos-card">
+                        <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                        <twig:CosButton label="Відкрити" href="{{ metric.href }}" variant="ghost" size="sm" />
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <twig:CosFilterBar action="/admin/users" label="User filters">
+            <label class="cos-field">
+                <span>Пошук</span>
+                <input class="cos-input" type="search" name="q" value="{{ users.filters.q }}" placeholder="Імʼя, email, телефон">
+            </label>
+            <label class="cos-field">
+                <span>Роль</span>
+                <select class="cos-select" name="role">
+                    {% for code, label in users.roleOptions %}
+                        <option value="{{ code }}" {% if users.filters.role == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="cos-field">
+                <span>Статус</span>
+                <select class="cos-select" name="status">
+                    {% for code, label in users.statusOptions %}
+                        <option value="{{ code }}" {% if users.filters.status == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="cos-field">
+                <span>Сортування</span>
+                <select class="cos-select" name="sort">
+                    {% for code, label in users.sortOptions %}
+                        <option value="{{ code }}" {% if users.filters.sort == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="cos-button cos-button--primary" type="submit">Показати</button>
+            <a class="cos-button cos-button--ghost" href="/admin/users">Скинути</a>
+        </twig:CosFilterBar>
+
+        <section class="cos-page__section">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Рольова модель</p>
+                <h2 class="cos-card__title">Effective capabilities</h2>
+                <twig:CosDataGrid
+                    id="identity-capabilities"
+                    label="Role capability matrix"
+                    baseUrl="/admin/users"
+                    :query="users.capabilityQuery"
+                    :page="users.capabilityPage"
+                    :columns="users.capabilityColumns"
+                    :state="users.capabilityState"
+                />
+            </article>
+        </section>
+
+        <section class="cos-page__section">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Новий доступ</p>
+                <h2 class="cos-card__title">Створити користувача</h2>
+                <form class="cos-form-stack" method="post" action="/admin/createUser">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <div class="cos-form-grid">
+                        <label class="cos-field"><span>Імʼя</span><input class="cos-input" name="full_name" type="text" maxlength="160" required></label>
+                        <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" maxlength="160" required></label>
+                        <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50"></label>
+                        <label class="cos-field"><span>Пароль</span><input class="cos-input" name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+                        <label class="cos-field">
+                            <span>Роль</span>
+                            <select class="cos-select" name="role">
+                                {% for code, label in users.roleOptions %}
+                                    {% if code %}<option value="{{ code }}" {% if code == 'manager' %}selected{% endif %}>{{ label }}</option>{% endif %}
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="cos-field">
+                            <span>Статус</span>
+                            <select class="cos-select" name="status">
+                                {% for code, label in users.statusOptions %}
+                                    {% if code %}<option value="{{ code }}" {% if code == 'active' %}selected{% endif %}>{{ label }}</option>{% endif %}
+                                {% endfor %}
+                            </select>
+                        </label>
+                    </div>
+                    <twig:CosActionBar label="Create user">
+                        <button class="cos-button cos-button--primary" type="submit">Створити</button>
+                    </twig:CosActionBar>
+                </form>
+            </article>
+        </section>
+
+        <section class="cos-page__section">
+            <div class="cos-section-heading">
+                <div>
+                    <p class="cos-card__eyebrow">Список</p>
+                    <h2 class="cos-section-title">Акаунти</h2>
+                </div>
+                <span class="cos-card__copy">{{ users.users|length }} у поточній вибірці</span>
+            </div>
+
+            {% if users.users is empty %}
+                <twig:CosEmptyState title="Користувачів не знайдено" copy="Змініть фільтри або створіть новий акаунт." />
+            {% else %}
+                <div class="cos-entity-list" role="list">
+                    {% for user in users.users %}
+                        <twig:IdentityUserAdministrationItem
+                            :user="user"
+                            :roleOptions="users.roleOptions"
+                            :statusOptions="users.statusOptions"
+                            csrfToken="{{ csrfToken }}"
+                        />
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

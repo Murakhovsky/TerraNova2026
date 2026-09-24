@@ -1270,17 +1270,17 @@ cos_web_workspace_home:
 
 cos_web_workspace_users:
   path: /admin/users
-  controller: App\Web\Workspace\CoreWorkspacePageController::users
+  controller: App\Web\Identity\UserAdministrationController::index
   methods: [GET, HEAD]
 
 cos_web_workspace_user_create:
   path: /admin/createUser
-  controller: App\Web\Workspace\CoreWorkspacePageController::createUser
+  controller: App\Web\Identity\UserAdministrationMutationController::create
   methods: [POST]
 
 cos_web_workspace_user_update:
   path: /admin/updateUser/{id}
-  controller: App\Web\Workspace\CoreWorkspacePageController::updateUser
+  controller: App\Web\Identity\UserAdministrationMutationController::update
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
