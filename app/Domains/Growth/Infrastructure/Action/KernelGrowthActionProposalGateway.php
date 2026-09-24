@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Domains\Growth\Infrastructure\Action;
 
 use Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface;
+use Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface;
 use Domains\Growth\Application\DTO\GrowthExecutionAction;
+use Domains\Growth\Domain\EngagementActivationMode;
 use Kernel\Action\Action;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\Service\ActionService;
@@ -15,6 +17,7 @@ final readonly class KernelGrowthActionProposalGateway implements GrowthActionPr
     public function __construct(
         private ActionPolicyService $policies,
         private ActionService $actions,
+        private GrowthEngagementActivationProviderInterface $activation,
     ) {}
 
     public function proposeSalesMessage(
@@ -68,6 +71,9 @@ final readonly class KernelGrowthActionProposalGateway implements GrowthActionPr
         string $actionType,string $targetType,string $targetId,string $channel,string $body,?float $confidence,
         string $kernelIdempotencyKey,string $stage
     ):GrowthExecutionAction {
+        $activationMode=$stage==='pre_handoff'
+            ? $this->activation->modeFor($organizationId,$channel)
+            : EngagementActivationMode::ApprovalRequired;
         $proposal=new ActionProposal(
             type:$actionType,
             targetType:$targetType,
@@ -80,7 +86,7 @@ final readonly class KernelGrowthActionProposalGateway implements GrowthActionPr
             ],
             sourceType:'GROWTH',
             sourceId:$recommendationId,
-            executionMode:'APPROVAL_REQUIRED',
+            executionMode:$activationMode->executionMode(),
             riskLevel:'MEDIUM',
             idempotencyKey:$kernelIdempotencyKey,
             policyContext:[
@@ -92,6 +98,7 @@ final readonly class KernelGrowthActionProposalGateway implements GrowthActionPr
                     'channel'=>$channel,
                     'confidence'=>$confidence,
                     'stage'=>$stage,
+                    'activation_mode'=>$activationMode->value,
                 ],
             ],
         );

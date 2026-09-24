@@ -661,13 +661,12 @@ const initGrowthExperiment=(root)=>{
 };
 
 const initGrowthSettings=(root)=>{
-  const form=root.querySelector('[data-growth-limit-settings]');
-  if(!form)return;
-  form.addEventListener('submit',async(event)=>{
+  const limitForm=root.querySelector('[data-growth-limit-settings]');
+  if(limitForm)limitForm.addEventListener('submit',async(event)=>{
     event.preventDefault();
-    const status=form.querySelector('[data-growth-form-status]');
-    const button=form.querySelector('button[type="submit"]');
-    const values=new FormData(form);
+    const status=limitForm.querySelector('[data-growth-form-status]');
+    const button=limitForm.querySelector('button[type="submit"]');
+    const values=new FormData(limitForm);
     const dailyLimit=Number.parseInt(String(values.get('daily_limit')||''),10);
     const cooldown=Number.parseInt(String(values.get('contact_cooldown_hours')||''),10);
     const emailLimit=Number.parseInt(String(values.get('email_daily_limit')||''),10);
@@ -675,12 +674,7 @@ const initGrowthSettings=(root)=>{
     const phoneLimit=Number.parseInt(String(values.get('phone_daily_limit')||''),10);
     const reason=String(values.get('reason')||'').trim();
     const channelLimits=[emailLimit,linkedInLimit,phoneLimit];
-    if(
-      !Number.isInteger(dailyLimit)||dailyLimit<1||
-      !Number.isInteger(cooldown)||cooldown<1||
-      channelLimits.some((value)=>!Number.isInteger(value)||value<0)||
-      !reason
-    ){
+    if(!Number.isInteger(dailyLimit)||dailyLimit<1||!Number.isInteger(cooldown)||cooldown<1||channelLimits.some((value)=>!Number.isInteger(value)||value<0)||!reason){
       setStatus(status,'Daily limit, channel quotas, cooldown and change reason are required.','error');
       return;
     }
@@ -690,18 +684,42 @@ const initGrowthSettings=(root)=>{
       await mutation('/api/v1/growth/engagement/limits',{
         daily_limit:dailyLimit,
         contact_cooldown_hours:cooldown,
-        channel_daily_limits:{
-          email:emailLimit,
-          linkedin:linkedInLimit,
-          phone:phoneLimit,
-        },
+        channel_daily_limits:{email:emailLimit,linkedin:linkedInLimit,phone:phoneLimit},
         reason,
-      },root,form);
-      delete form.dataset.idempotencyKey;
+      },root,limitForm);
+      delete limitForm.dataset.idempotencyKey;
       setStatus(status,'Tenant limits saved. Refreshing…','success');
       window.setTimeout(()=>window.location.reload(),250);
     }catch(error){
       setStatus(status,error.message||'Tenant outreach limits update failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
+  const activationForm=root.querySelector('[data-growth-activation-settings]');
+  if(activationForm)activationForm.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=activationForm.querySelector('[data-growth-form-status]');
+    const button=activationForm.querySelector('button[type="submit"]');
+    const values=new FormData(activationForm);
+    const email=String(values.get('email_mode')||'').trim();
+    const linkedin=String(values.get('linkedin_mode')||'').trim();
+    const phone=String(values.get('phone_mode')||'').trim();
+    const reason=String(values.get('reason')||'').trim();
+    const allowed=new Set(['blocked','approval_required','auto']);
+    if(!allowed.has(email)||!allowed.has(linkedin)||!allowed.has(phone)||!reason){
+      setStatus(status,'Channel activation modes and change reason are required.','error');
+      return;
+    }
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Saving outreach activation policy…','loading');
+    try{
+      await mutation('/api/v1/growth/engagement/activation',{channel_modes:{email,linkedin,phone},reason},root,activationForm);
+      delete activationForm.dataset.idempotencyKey;
+      setStatus(status,'Activation policy saved. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Outreach activation policy update failed.','error');
       button?.removeAttribute('disabled');
     }
   });

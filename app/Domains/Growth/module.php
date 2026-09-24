@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'growth',
     'name' => 'Growth',
-    'version' => '0.40.0',
-    'schema_version' => '0.40.0',
+    'version' => '0.41.0',
+    'schema_version' => '0.41.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Opportunity intelligence from observable signals to qualified business opportunity handoff.',
     'icon' => 'radar',
@@ -61,8 +61,10 @@ return [
             'app/migrations/20260924_000103_growth_v0380_tenant_outreach_limits.sql',
             'app/migrations/20260924_000104_growth_v0390_channel_outreach_quotas.sql',
             'app/migrations/20260924_000105_growth_v0400_atomic_outreach_capacity.sql',
+            'app/migrations/20260924_000106_growth_v0410_outreach_activation_policy.sql',
         ],
         'capabilities' => [
+            'growth.engagement.activation_policy',
             'growth.engagement.atomic_capacity_admission',
             'growth.engagement.channel_quotas',
             'growth.engagement.limit_profile',

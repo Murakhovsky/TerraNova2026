@@ -16,6 +16,7 @@ use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
+use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
@@ -61,6 +62,7 @@ final readonly class GrowthPageController
         private GrowthEngagementBoundary $engagement,
         private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthEngagementLimitBoundary $engagementLimits,
+        private GrowthEngagementActivationBoundary $engagementActivation,
         private GrowthExperimentBoundary $experiments,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
@@ -81,6 +83,7 @@ final readonly class GrowthPageController
             fn(TenantContext $tenant):array=>[
                 'workspace'=>[
                     'engagement_limits'=>$this->engagementLimits->view($tenant->organizationId()->value()),
+                    'engagement_activation'=>$this->engagementActivation->view($tenant->organizationId()->value()),
                 ],
             ]);
     }

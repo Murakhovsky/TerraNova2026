@@ -71,10 +71,10 @@ foreach(['IntegrationOutboxInterface','tn_integration_outbox','ON DUPLICATE KEY 
 
 $proposal=$read('app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php');
 foreach([
-    "'growth.send_linkedin'","'growth.place_call'","executionMode:'APPROVAL_REQUIRED'",
-    "'growth_contact'",
+    "'growth.send_linkedin'","'growth.place_call'","executionMode:$activationMode->executionMode()",
+    "'growth_contact'","'activation_mode'=>$activationMode->value",
 ] as $needle){
-    $assert(str_contains($proposal,$needle),'Growth Kernel proposal bridge missing: '.$needle);
+    $assert(str_contains($proposal,$needle),'Growth Kernel proposal bridge missing governed execution marker: '.$needle);
 }
 foreach(['execute(','commands->dispatch'] as $forbidden){
     $assert(!str_contains($proposal,$forbidden),'Growth proposal gateway must not execute Actions directly: '.$forbidden);

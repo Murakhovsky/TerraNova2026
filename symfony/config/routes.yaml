@@ -417,6 +417,16 @@ cos_api_v1_growth_engagement_limits_update:
   controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementLimits
   methods: [POST]
 
+cos_api_v1_growth_engagement_activation:
+  path: /api/v1/growth/engagement/activation
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementActivation
+  methods: [GET]
+
+cos_api_v1_growth_engagement_activation_update:
+  path: /api/v1/growth/engagement/activation
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementActivation
+  methods: [POST]
+
 cos_api_v1_growth_collectors:
   path: /api/v1/growth/collectors
   controller: App\Http\Api\V1\Controller\GrowthApiController::collectors

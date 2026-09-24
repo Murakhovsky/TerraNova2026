@@ -51,6 +51,7 @@ final class GrowthEventType
     public const ENGAGEMENT_EXECUTION_PROPOSED = 'growth.engagement.execution_proposed';
     public const ENGAGEMENT_DELIVERY_OBSERVED = 'growth.engagement.delivery_observed';
     public const ENGAGEMENT_LIMIT_PROFILE_UPDATED = 'growth.engagement.limit_profile_updated';
+    public const ENGAGEMENT_ACTIVATION_PROFILE_UPDATED = 'growth.engagement.activation_profile_updated';
     public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
     public const OUTCOME_RECORDED = 'growth.outcome.recorded';
     public const EXPERIMENT_DRAFTED = 'growth.experiment.drafted';
@@ -136,6 +137,7 @@ final class GrowthEventType
             self::ENGAGEMENT_EXECUTION_PROPOSED,
             self::ENGAGEMENT_DELIVERY_OBSERVED,
             self::ENGAGEMENT_LIMIT_PROFILE_UPDATED,
+            self::ENGAGEMENT_ACTIVATION_PROFILE_UPDATED,
             self::LEARNING_BINDING_CREATED,
             self::OUTCOME_RECORDED,
             self::EXPERIMENT_DRAFTED,

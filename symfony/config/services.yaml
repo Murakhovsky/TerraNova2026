@@ -711,6 +711,7 @@ services:
     arguments:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
       $actions: '@Kernel\Action\Service\ActionService'
+      $activation: '@Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface'
 
   Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface:
     alias: Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway
@@ -735,6 +736,21 @@ services:
 
   Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface:
     alias: Domains\Growth\Application\Service\GrowthEngagementLimitService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementActivationProfileRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementActivationProfileRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementActivationProfileRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementActivationService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementActivationService
+
+  Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface:
+    alias: Domains\Growth\Application\Service\GrowthEngagementActivationService
 
   Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
 

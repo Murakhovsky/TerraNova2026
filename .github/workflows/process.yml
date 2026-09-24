@@ -164,6 +164,7 @@ jobs:
           php tests/architecture/growth_v0380_tenant_outreach_limits.php
           php tests/architecture/growth_v0390_channel_outreach_quotas.php
           php tests/architecture/growth_v0400_atomic_outreach_capacity.php
+          php tests/architecture/growth_v0410_outreach_activation_policy.php
 
       - name: Process registry invariants
         run: |
@@ -205,6 +206,7 @@ jobs:
           php tests/unit/growth_v0370_outreach_guardrails.php
           php tests/unit/growth_v0380_tenant_outreach_limits.php
           php tests/unit/growth_v0390_channel_outreach_quotas.php
+          php tests/unit/growth_v0410_outreach_activation_policy.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -305,6 +307,8 @@ jobs:
           php -l tests/unit/growth_v0390_channel_outreach_quotas.php
           php -l tests/architecture/growth_v0390_channel_outreach_quotas.php
           php -l tests/architecture/growth_v0400_atomic_outreach_capacity.php
+          php -l tests/unit/growth_v0410_outreach_activation_policy.php
+          php -l tests/architecture/growth_v0410_outreach_activation_policy.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php

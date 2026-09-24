@@ -11,34 +11,37 @@ final class GrowthPolicyCatalog
     /** @return list<ActionPolicy> */
     public function policies(string $organizationId):array
     {
+        return array_merge(
+            $this->activationPolicies($organizationId,'growth.send_message','growth-send-message-blocked-v1','growth-send-message-auto-v1','growth-send-message-approval-v1','Growth email'),
+            $this->activationPolicies($organizationId,'growth.send_linkedin','growth-linkedin-blocked-v1','growth-linkedin-auto-v1','growth-linkedin-approval-v1','Growth LinkedIn'),
+            $this->activationPolicies($organizationId,'growth.place_call','growth-call-blocked-v1','growth-call-auto-v1','growth-call-approval-v1','Growth call'),
+        );
+    }
+
+    /** @return list<ActionPolicy> */
+    private function activationPolicies(
+        string $organizationId,string $actionType,string $blockedCode,string $autoCode,string $approvalCode,string $label
+    ):array {
         return [
-            $this->approval(
-                $organizationId,'growth-send-message-approval-v1','growth.send_message',
-                'Growth email approval','Pre-handoff email requires explicit approval.',
-            ),
-            $this->approval(
-                $organizationId,'growth-linkedin-approval-v1','growth.send_linkedin',
-                'Growth LinkedIn approval','Pre-handoff LinkedIn engagement requires explicit approval.',
-            ),
-            $this->approval(
-                $organizationId,'growth-call-approval-v1','growth.place_call',
-                'Growth call approval','Pre-handoff call execution requires explicit approval.',
-            ),
+            $this->policy($organizationId,$blockedCode,$actionType,'blocked',PolicyDecision::Denied,10,$label.' blocked',$label.' is disabled by the tenant outreach activation profile.'),
+            $this->policy($organizationId,$autoCode,$actionType,'auto',PolicyDecision::Auto,20,$label.' auto',$label.' may queue automatically after an explicit execution proposal.'),
+            $this->policy($organizationId,$approvalCode,$actionType,'approval_required',PolicyDecision::ApprovalRequired,30,$label.' approval',$label.' requires explicit manager approval before execution.'),
         ];
     }
 
-    private function approval(
-        string $organizationId,string $code,string $actionType,string $name,string $description
+    private function policy(
+        string $organizationId,string $code,string $actionType,string $activationMode,
+        PolicyDecision $decision,int $priority,string $name,string $reason
     ):ActionPolicy {
         return new ActionPolicy(
             $this->id($organizationId,$code),
             $organizationId,
             $actionType,
-            [],
-            PolicyDecision::ApprovalRequired,
-            10,
+            [['field'=>'growth.activation_mode','operator'=>'=','value'=>$activationMode]],
+            $decision,
+            $priority,
             $name,
-            $description,
+            $reason,
         );
     }
 

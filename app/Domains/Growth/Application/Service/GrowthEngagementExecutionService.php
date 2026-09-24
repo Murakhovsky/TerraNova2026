@@ -11,6 +11,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterf
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface;
+use Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
@@ -40,6 +41,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         private GrowthEngagementExecutionRepositoryInterface $executions,
         private GrowthEngagementDeliveryRepositoryInterface $deliveries,
         private GrowthEngagementLimitProviderInterface $limitProvider,
+        private GrowthEngagementActivationProviderInterface $activationProvider,
         private GrowthMutationReceiptInterface $receipts,
         private GrowthActionProposalGatewayInterface $actionGateway,
         private TransactionManagerInterface $transactions,
@@ -101,10 +103,6 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             if(!$this->hasUsableChannelIdentity($organizationId,$contactId,$channel)){
                 throw new InvalidArgumentException('Pre-handoff Growth execution requires a contact with usable '.$channel.' identity.');
             }
-            $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId,$channel);
-            if(!$limitDecision['allowed']){
-                throw new InvalidArgumentException((string)$limitDecision['reason']);
-            }
             $targetDomain='growth';
             $targetReferenceType='growth_contact';
             $targetReferenceId=$contactId;
@@ -164,6 +162,10 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             }
 
             if($targetDomain==='growth'){
+                $activationMode=$this->activationProvider->modeFor($organizationId,$channel);
+                if(!$activationMode->canPropose()){
+                    throw new InvalidArgumentException('Pre-handoff '.$channel.' outreach is blocked by the tenant activation policy.');
+                }
                 $limitDecision=$this->preHandoffLimitDecision($organizationId,$targetReferenceId,$channel);
                 if(!$limitDecision['allowed']){
                     throw new InvalidArgumentException((string)$limitDecision['reason']);
@@ -329,6 +331,16 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
                 'reason'=>'Pre-handoff execution requires a Growth contact with usable '.$channel.' identity.',
             ];
         }
+        $activationMode=$this->activationProvider->modeFor($organizationId,$channel);
+        if(!$activationMode->canPropose()){
+            return [
+                'can_propose'=>false,
+                'code'=>'pre_handoff_channel_blocked',
+                'reason'=>'Pre-handoff '.$channel.' outreach is blocked by the tenant activation policy.',
+                'activation_mode'=>$activationMode->value,
+                'channel'=>$channel,
+            ];
+        }
         $limitDecision=$this->preHandoffLimitDecision($organizationId,$contactId,$channel);
         if(!$limitDecision['allowed']){
             return [
@@ -355,6 +367,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             'target_reference_id'=>$contactId,
             'action_type'=>$kernelActionType,
             'channel'=>$channel,
+            'activation_mode'=>$activationMode->value,
             'pre_handoff_limits'=>$limitDecision,
         ];
     }

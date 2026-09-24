@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface;
@@ -26,6 +27,7 @@ use Domains\Growth\Domain\BuyingCommitteeAssessment;
 use Domains\Growth\Domain\ContactSnapshot;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface;
 use Domains\Growth\Domain\EngagementExecutionLimitPolicy;
+use Domains\Growth\Domain\EngagementActivationMode;
 use Domains\Growth\Domain\EngagementRecommendation;
 use Domains\Growth\Domain\GrowthContact;
 use Domains\Growth\Domain\GrowthOutcomeObservation;
@@ -199,6 +201,9 @@ $deliveries=new class implements GrowthEngagementDeliveryRepositoryInterface {
 $limitProvider=new class implements GrowthEngagementLimitProviderInterface {
     public function policyFor(string $organizationId):EngagementExecutionLimitPolicy{return new EngagementExecutionLimitPolicy(50,24);}
 };
+$activationProvider=new class implements GrowthEngagementActivationProviderInterface {
+    public function modeFor(string $organizationId,string $channel):EngagementActivationMode{return EngagementActivationMode::ApprovalRequired;}
+};
 $receipts=new class implements GrowthMutationReceiptInterface {
     public function claim(string $organizationId,string $operation,string $idempotencyKey,string $fingerprint):bool{return true;}
 };
@@ -223,7 +228,7 @@ $audit=new class implements AuditRepositoryInterface {
     public function append(AuditEntry $entry):void{}
 };
 $executionService=new GrowthEngagementExecutionService(
-    $engagement,$learning,$contacts,$executions,$deliveries,$limitProvider,$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
+    $engagement,$learning,$contacts,$executions,$deliveries,$limitProvider,$activationProvider,$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
 );
 $linkedinBrief=$executionService->executionBrief('org-1','cand-linkedin','rec-linkedin');
 $callBrief=$executionService->executionBrief('org-1','cand-call','rec-call');

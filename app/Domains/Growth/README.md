@@ -834,3 +834,29 @@ The initial eligibility check remains a fast operator hint. The check performed 
 No separate durable reservation ledger is required: the canonical transaction itself is the reservation boundary. `ActionPolicyService` joins an already-active transaction, so the capacity lock, policy-governed Action, execution link, Event and Audit either commit together or roll back together. Pending approval continues to consume quota because its execution link is committed.
 
 This still does **not** enable autonomous outreach. V0.40 removes the concurrency blocker; execution authority remains `APPROVAL_REQUIRED`.
+
+
+V0.41 adds tenant-owned outreach authorization independently from volume limits:
+
+```text
+Growth Settings
+  email      → blocked | approval_required | auto
+  LinkedIn   → blocked | approval_required | auto
+  phone      → blocked | approval_required | auto
+        ↓
+append-only activation profile
+        ↓
+tenant capacity lock
+        ↓
+authoritative activation + quota/cooldown admission
+        ↓
+Kernel policy context: growth.activation_mode
+        ↓
+DENIED | APPROVAL_REQUIRED | AUTO
+```
+
+The default for every channel remains `approval_required`. A tenant may block a transport entirely, keep manager approval, or allow a user-triggered execution proposal to queue automatically. `AUTO` here does not mean background autonomous prospecting: V0.41 does not select prospects, accept recommendations, author messages or initiate execution on its own.
+
+Activation changes use the same tenant-wide database lock as pre-handoff capacity admission. Therefore an activation update and an execution proposal have a deterministic order: if the block commits first, the execution sees it; if an already-admitted execution holds the lock first, it completes under the policy that was authoritative at its admission point.
+
+Kernel governance remains authoritative. Growth passes the resolved activation mode into policy context, while `GrowthPolicyCatalog` maps that context to `DENIED`, `APPROVAL_REQUIRED` or `AUTO`. The existing approval policy identifiers are preserved so normal module upgrade provisioning converts the former unconditional approval policies into conditional ones instead of leaving duplicate policy ghosts behind.
