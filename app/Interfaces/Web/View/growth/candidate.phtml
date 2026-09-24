@@ -10,6 +10,7 @@ $engagementExecution=is_array($workspace['engagement_execution']??null)?$workspa
 $engagementRecommendation=is_array($engagement['latest_recommendation']??null)?$engagement['latest_recommendation']:null;
 $execution=is_array($engagementExecution['execution']??null)?$engagementExecution['execution']:null;
 $executionAction=is_array($engagementExecution['action']??null)?$engagementExecution['action']:null;
+$latestDelivery=is_array($engagementExecution['latest_delivery']??null)?$engagementExecution['latest_delivery']:null;
 $executionEligibility=is_array($engagementExecution['eligibility']??null)?$engagementExecution['eligibility']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
@@ -137,6 +138,11 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
           <?php if($executionAction): ?>
             <p><strong>Action:</strong> <?php echo $h(($executionAction['type']??'').' · '.strtoupper((string)($executionAction['status']??''))); ?></p>
             <p><small><?php echo $h(($executionAction['execution_mode']??'').' · risk '.($executionAction['risk_level']??'')); ?> · <?php echo $h($executionAction['action_id']??''); ?></small></p>
+            <?php if($latestDelivery): ?>
+              <p><strong>Delivery status:</strong> <?php echo $h(strtoupper((string)($latestDelivery['status']??''))); ?> · <?php echo $h($latestDelivery['channel']??''); ?></p>
+              <p><small><?php echo $h($latestDelivery['occurred_at']??''); ?><?php if(!empty($latestDelivery['provider_reference'])): ?> · <?php echo $h($latestDelivery['provider_reference']); ?><?php endif; ?></small></p>
+              <?php if(!empty($latestDelivery['reason_text'])): ?><p class="tn-growth-muted"><?php echo $h($latestDelivery['reason_text']); ?></p><?php endif; ?>
+            <?php endif; ?>
           <?php else: ?>
             <p class="tn-growth-error">Execution link exists, but the Kernel Action is not readable.</p>
           <?php endif; ?>

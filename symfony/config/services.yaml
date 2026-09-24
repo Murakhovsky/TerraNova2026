@@ -3,6 +3,8 @@ parameters:
   env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
   env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET): ''
+  env(GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW): '300'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
@@ -688,6 +690,18 @@ services:
   Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface:
     alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementExecutionRepository
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementDeliveryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementDeliveryRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementDeliveryService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementDeliveryBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementDeliveryService
+
   Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway:
     arguments:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
@@ -700,6 +714,11 @@ services:
 
   Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
     alias: Domains\Growth\Application\Service\GrowthEngagementExecutionService
+
+  App\Application\Growth\Integration\GrowthEngagementDeliveryWebhook:
+    arguments:
+      $secret: '%env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET)%'
+      $maxClockSkew: '%env(int:GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW)%'
 
   Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthOutboundMessageGateway:
     arguments:

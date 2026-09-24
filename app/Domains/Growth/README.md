@@ -723,4 +723,27 @@ The LinkedIn and call adapters are provider-neutral. Growth does not embed Linke
 
 Post-handoff phone execution remains owned by Sales. Growth refuses to route a phone recommendation through `sales.send_message`.
 
+V0.36 closes the async execution observability gap for LinkedIn and phone adapters:
+
+```text
+approved Growth Action
+        ↓
+n8n integration outbox
+        ↓
+provider / connector
+        ↓
+signed delivery callback
+POST /webhooks/growth/engagement/delivery
+        ↓
+action_id → Growth execution link
+        ↓
+append-only delivery observation
+        ↓
+Candidate Workspace latest delivery state
+```
+
+The callback is HMAC-signed, timestamp-bounded and idempotent. It records normalized provider feedback only for Growth-owned pre-handoff executions. LinkedIn accepts `accepted / sent / delivered / failed`; phone accepts `accepted / started / completed / no_answer / busy / failed`. Post-handoff Sales actions are rejected by this callback and remain Sales-owned.
+
+Delivery observations intentionally persist no outbound body, email, phone number or LinkedIn profile URL. They retain execution provenance, normalized status, optional provider reference/reason and occurrence time. The Candidate Workspace can now distinguish "Kernel Action queued" from "external channel actually progressed", because apparently humans eventually notice that those are not the same thing.
+
 Still intentionally absent: HR/Procurement target adapters and autonomous outreach/activation. Autonomous outreach remains deferred until explicit policy limits, rate/volume controls and approval-governance rules exist.

@@ -22,6 +22,17 @@ final readonly class MysqlGrowthEngagementExecutionRepository implements GrowthE
         );
     }
 
+    public function byActionId(string $organizationId,string $actionId):?array
+    {
+        return $this->one(
+            'SELECT organization_id,execution_id,candidate_id,recommendation_id,target_domain,target_reference_type,
+                    target_reference_id,action_id,action_type,channel,payload_fingerprint,created_by,created_at
+             FROM tn_growth_engagement_execution_links
+             WHERE organization_id=:organization_id AND action_id=:action_id LIMIT 1',
+            ['organization_id'=>$organizationId,'action_id'=>$actionId],
+        );
+    }
+
     public function createOrVerify(
         string $organizationId,string $executionId,string $candidateId,string $recommendationId,
         string $targetDomain,string $targetReferenceType,string $targetReferenceId,string $actionId,

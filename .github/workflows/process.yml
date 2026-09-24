@@ -159,6 +159,7 @@ jobs:
           php tests/architecture/growth_v0330_collector_incidents.php
           php tests/architecture/growth_v0340_collector_alerts.php
           php tests/architecture/growth_v0350_linkedin_call_execution.php
+          php tests/architecture/growth_v0360_engagement_delivery_feedback.php
 
       - name: Process registry invariants
         run: |
@@ -196,6 +197,7 @@ jobs:
           php tests/unit/growth_v0330_collector_incidents.php
           php tests/unit/growth_v0340_collector_alerts.php
           php tests/unit/growth_v0350_linkedin_call_execution.php
+          php tests/unit/growth_v0360_engagement_delivery_feedback.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -286,6 +288,14 @@ jobs:
           php -l tests/architecture/growth_v0340_collector_alerts.php
           php -l tests/unit/growth_v0350_linkedin_call_execution.php
           php -l tests/architecture/growth_v0350_linkedin_call_execution.php
+          php -l tests/unit/growth_v0360_engagement_delivery_feedback.php
+          php -l tests/architecture/growth_v0360_engagement_delivery_feedback.php
+          php -l app/Domains/Growth/Domain/EngagementDeliveryStatus.php
+          php -l app/Domains/Growth/Application/Contract/GrowthEngagementDeliveryRepositoryInterface.php
+          php -l app/Domains/Growth/Application/Contract/GrowthEngagementDeliveryBoundary.php
+          php -l app/Domains/Growth/Application/Service/GrowthEngagementDeliveryService.php
+          php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthEngagementDeliveryRepository.php
+          php -l symfony/src/Application/Growth/Integration/GrowthEngagementDeliveryWebhook.php
           php -l app/Platform/Integration/Contract/IntegrationOutboxInterface.php
           php -l app/Infrastructure/Platform/Integration/MysqlIntegrationOutbox.php
           php -l app/Domains/Growth/Application/DTO/GrowthExternalEngagementDelivery.php

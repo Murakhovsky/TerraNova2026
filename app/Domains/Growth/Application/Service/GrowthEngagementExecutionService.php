@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
@@ -36,6 +37,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         private GrowthLearningRepositoryInterface $learning,
         private GrowthBuyingCommitteeRepositoryInterface $contacts,
         private GrowthEngagementExecutionRepositoryInterface $executions,
+        private GrowthEngagementDeliveryRepositoryInterface $deliveries,
         private GrowthMutationReceiptInterface $receipts,
         private GrowthActionProposalGatewayInterface $actionGateway,
         private TransactionManagerInterface $transactions,
@@ -207,15 +209,21 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         }
         $execution=$this->executions->byRecommendation($organizationId,$recommendationId);
         $action=null;
+        $deliveryObservations=[];
+        $latestDelivery=null;
         if($execution!==null){
             $stored=$this->actionGateway->find($organizationId,(string)$execution['action_id']);
             $action=$stored?->toArray();
+            $deliveryObservations=$this->deliveries->forExecution($organizationId,(string)$execution['execution_id'],20);
+            $latestDelivery=$deliveryObservations[0]??null;
         }
 
         return [
             'recommendation'=>$recommendation,
             'execution'=>$execution,
             'action'=>$action,
+            'delivery_observations'=>$deliveryObservations,
+            'latest_delivery'=>$latestDelivery,
             'eligibility'=>$this->executionEligibility($organizationId,$candidateId,$recommendation,$execution),
         ];
     }

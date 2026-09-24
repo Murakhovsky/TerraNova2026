@@ -8,6 +8,9 @@ interface GrowthEngagementExecutionRepositoryInterface
     /** @return array<string,mixed>|null */
     public function byRecommendation(string $organizationId,string $recommendationId):?array;
 
+    /** @return array<string,mixed>|null */
+    public function byActionId(string $organizationId,string $actionId):?array;
+
     public function createOrVerify(
         string $organizationId,
         string $executionId,
