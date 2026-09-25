@@ -52,6 +52,9 @@ final class GrowthEventType
     public const ENGAGEMENT_DELIVERY_OBSERVED = 'growth.engagement.delivery_observed';
     public const ENGAGEMENT_LIMIT_PROFILE_UPDATED = 'growth.engagement.limit_profile_updated';
     public const ENGAGEMENT_ACTIVATION_PROFILE_UPDATED = 'growth.engagement.activation_profile_updated';
+    public const ENGAGEMENT_AUTONOMY_PROFILE_UPDATED = 'growth.engagement.autonomy_profile_updated';
+    public const ENGAGEMENT_AUTONOMY_PAYLOAD_STAGED = 'growth.engagement.autonomy_payload_staged';
+    public const ENGAGEMENT_AUTONOMOUS_TRIGGERED = 'growth.engagement.autonomous_triggered';
     public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
     public const OUTCOME_RECORDED = 'growth.outcome.recorded';
     public const EXPERIMENT_DRAFTED = 'growth.experiment.drafted';
@@ -138,6 +141,9 @@ final class GrowthEventType
             self::ENGAGEMENT_DELIVERY_OBSERVED,
             self::ENGAGEMENT_LIMIT_PROFILE_UPDATED,
             self::ENGAGEMENT_ACTIVATION_PROFILE_UPDATED,
+            self::ENGAGEMENT_AUTONOMY_PROFILE_UPDATED,
+            self::ENGAGEMENT_AUTONOMY_PAYLOAD_STAGED,
+            self::ENGAGEMENT_AUTONOMOUS_TRIGGERED,
             self::LEARNING_BINDING_CREATED,
             self::OUTCOME_RECORDED,
             self::EXPERIMENT_DRAFTED,

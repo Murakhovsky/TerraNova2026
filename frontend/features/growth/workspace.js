@@ -166,6 +166,34 @@ const runEngagementExecution=async(root,form)=>{
   }
 };
 
+const runEngagementAutonomyStage=async(root,form)=>{
+  const candidateId=root.dataset.candidateId||'';
+  const recommendationId=form.dataset.recommendationId||'';
+  const status=form.querySelector('[data-growth-form-status]');
+  const button=form.querySelector('button[type="submit"]');
+  const values=new FormData(form);
+  const body=String(values.get('body')||'').trim();
+  const reason=String(values.get('reason')||'').trim();
+  if(!candidateId||!recommendationId||!body||!reason){
+    setStatus(status,'Approved payload and staging reason are required.','error');
+    return;
+  }
+  button?.setAttribute('disabled','disabled');
+  setStatus(status,'Staging autonomous payload…','loading');
+  try{
+    await mutation(
+      engagementBase(candidateId)+'/'+encodeURIComponent(recommendationId)+'/autonomy/payload',
+      {body,reason},root,form,
+    );
+    delete form.dataset.idempotencyKey;
+    setStatus(status,'Autonomous payload staged. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),250);
+  }catch(error){
+    setStatus(status,error.message||'Autonomous payload staging failed.','error');
+    button?.removeAttribute('disabled');
+  }
+};
+
 const initGrowthCandidate=(root)=>{
   root.querySelectorAll('[data-growth-action]').forEach((button)=>{
     button.addEventListener('click',()=>runAction(root,button));
@@ -186,6 +214,10 @@ const initGrowthCandidate=(root)=>{
   root.querySelector('[data-growth-engagement-execution]')?.addEventListener('submit',(event)=>{
     event.preventDefault();
     runEngagementExecution(root,event.currentTarget);
+  });
+  root.querySelector('[data-growth-engagement-autonomy-payload]')?.addEventListener('submit',(event)=>{
+    event.preventDefault();
+    runEngagementAutonomyStage(root,event.currentTarget);
   });
 };
 
@@ -720,6 +752,41 @@ const initGrowthSettings=(root)=>{
       window.setTimeout(()=>window.location.reload(),250);
     }catch(error){
       setStatus(status,error.message||'Outreach activation policy update failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
+  const autonomyForm=root.querySelector('[data-growth-autonomy-settings]');
+  if(autonomyForm)autonomyForm.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=autonomyForm.querySelector('[data-growth-form-status]');
+    const button=autonomyForm.querySelector('button[type="submit"]');
+    const values=new FormData(autonomyForm);
+    const minConfidence=Number(String(values.get('min_confidence')||''));
+    const maxActions=Number.parseInt(String(values.get('max_actions_per_run')||''),10);
+    const allowedChannels=values.getAll('allowed_channels').map((value)=>String(value));
+    const allowedStatuses=values.getAll('allowed_statuses').map((value)=>String(value));
+    const reason=String(values.get('reason')||'').trim();
+    if(!Number.isFinite(minConfidence)||minConfidence<0||minConfidence>1||!Number.isInteger(maxActions)||maxActions<1||allowedChannels.length===0||allowedStatuses.length===0||!reason){
+      setStatus(status,'Autonomy policy requires confidence, run limit, at least one channel/state and a reason.','error');
+      return;
+    }
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Saving autonomous outreach policy…','loading');
+    try{
+      await mutation('/api/v1/growth/engagement/autonomy',{
+        enabled:values.get('enabled')!==null,
+        min_confidence:minConfidence,
+        allowed_channels:allowedChannels,
+        allowed_statuses:allowedStatuses,
+        max_actions_per_run:maxActions,
+        reason,
+      },root,autonomyForm);
+      delete autonomyForm.dataset.idempotencyKey;
+      setStatus(status,'Autonomy policy saved. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Autonomy policy update failed.','error');
       button?.removeAttribute('disabled');
     }
   });

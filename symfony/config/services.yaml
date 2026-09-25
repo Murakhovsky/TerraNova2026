@@ -10,6 +10,11 @@ parameters:
   env(COS_GROWTH_OUTREACH_LINKEDIN_DAILY_LIMIT): '50'
   env(COS_GROWTH_OUTREACH_PHONE_DAILY_LIMIT): '50'
   env(COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS): '24'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '5'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_RECOMMENDATION_LIMIT): '100'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
@@ -229,6 +234,9 @@ services:
       $growthCollectorPollingEnabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
       $growthCollectorPollingIntervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
       $growthCollectorPollingActorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
+      $growthAutonomousOutreachEnabled: '%env(bool:COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED)%'
+      $growthAutonomousOutreachIntervalMinutes: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthAutonomousOutreachActorId: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -752,6 +760,18 @@ services:
   Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface:
     alias: Domains\Growth\Application\Service\GrowthEngagementActivationService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousOutreachRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousOutreachRepository
+
+  Domains\Growth\Application\Service\GrowthAutonomousOutreachService: ~
+
+  Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary:
+    alias: Domains\Growth\Application\Service\GrowthAutonomousOutreachService
+
   Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
 
   Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
@@ -855,6 +875,15 @@ services:
       $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
       $organizationLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT)%'
       $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
+
+  App\Application\Growth\Command\RunGrowthAutonomousOutreachCommandHandler:
+    arguments:
+      $repository: '@Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface'
+      $outreach: '@Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID)%'
+      $organizationLimit: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $recommendationLimit: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_RECOMMENDATION_LIMIT)%'
 
   App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider:
     arguments:

@@ -13,6 +13,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
+use Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
@@ -49,6 +50,7 @@ final readonly class GrowthApiController
         private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthEngagementLimitBoundary $engagementLimits,
         private GrowthEngagementActivationBoundary $engagementActivation,
+        private GrowthAutonomousOutreachBoundary $autonomousOutreach,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
@@ -81,6 +83,20 @@ final readonly class GrowthApiController
     {
         return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
             $this->engagementActivation->update(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ));
+    }
+
+    public function engagementAutonomy():JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->autonomousOutreach->viewPolicy($tenant->organizationId()->value()));
+    }
+
+    public function updateEngagementAutonomy(Request $request):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->autonomousOutreach->updatePolicy(
                 $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
             ));
     }
@@ -475,6 +491,17 @@ final readonly class GrowthApiController
             $this->engagementExecution->executionBrief(
                 $tenant->organizationId()->value(),$id,$recommendationId
             ));
+    }
+
+    public function stageEngagementAutonomyPayload(Request $request,string $id,string $recommendationId):JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId):array{
+            $input=$this->input($request);
+            return $this->autonomousOutreach->stagePayload(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,
+                $this->requiredString($input,'body'),$this->requiredString($input,'reason'),$key,
+            );
+        });
     }
 
     public function learningBrief(string $id): JsonResponse

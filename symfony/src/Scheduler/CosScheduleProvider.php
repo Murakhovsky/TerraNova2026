@@ -6,6 +6,7 @@ namespace App\Scheduler;
 use App\Application\Integration\Command\SweepCrmInboxCommand;
 use App\Application\Sales\Command\RunSalesAutomationCommand;
 use App\Application\Growth\Command\RunGrowthSignalPollingCommand;
+use App\Application\Growth\Command\RunGrowthAutonomousOutreachCommand;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -25,12 +26,21 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly bool $growthCollectorPollingEnabled = false,
         private readonly int $growthCollectorPollingIntervalMinutes = 15,
         private readonly int $growthCollectorPollingActorId = 0,
+        private readonly bool $growthAutonomousOutreachEnabled = false,
+        private readonly int $growthAutonomousOutreachIntervalMinutes = 5,
+        private readonly int $growthAutonomousOutreachActorId = 0,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
         }
         if($this->growthCollectorPollingEnabled&&$this->growthCollectorPollingActorId<1){
             throw new InvalidArgumentException('Growth collector polling requires a positive system actor id.');
+        }
+        if($this->growthAutonomousOutreachIntervalMinutes<1||$this->growthAutonomousOutreachIntervalMinutes>1440){
+            throw new InvalidArgumentException('Growth autonomous outreach interval must be between 1 and 1440 minutes.');
+        }
+        if($this->growthAutonomousOutreachEnabled&&$this->growthAutonomousOutreachActorId<1){
+            throw new InvalidArgumentException('Growth autonomous outreach requires a positive system actor id.');
         }
     }
 
@@ -66,6 +76,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthCollectorPollingIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthSignalPollingCommand('scheduler'), 'async'),
+            );
+        }
+
+        if($this->growthAutonomousOutreachEnabled){
+            $messages[] = RecurringMessage::every(
+                $this->growthAutonomousOutreachIntervalMinutes.' minutes',
+                new RedispatchMessage(new RunGrowthAutonomousOutreachCommand('scheduler'), 'async'),
             );
         }
 

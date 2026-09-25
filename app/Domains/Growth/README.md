@@ -860,3 +860,36 @@ The default for every channel remains `approval_required`. A tenant may block a 
 Activation changes use the same tenant-wide database lock as pre-handoff capacity admission. Therefore an activation update and an execution proposal have a deterministic order: if the block commits first, the execution sees it; if an already-admitted execution holds the lock first, it completes under the policy that was authoritative at its admission point.
 
 Kernel governance remains authoritative. Growth passes the resolved activation mode into policy context, while `GrowthPolicyCatalog` maps that context to `DENIED`, `APPROVAL_REQUIRED` or `AUTO`. The existing approval policy identifiers are preserved so normal module upgrade provisioning converts the former unconditional approval policies into conditional ones instead of leaving duplicate policy ghosts behind.
+
+
+V0.42 adds the first controlled autonomous initiation runtime. It deliberately separates **content authorization** from **execution timing**:
+
+```text
+human/operator stages payload
+        ↓
+tenant autonomy policy (default OFF)
+        ↓
+deployment scheduler (default OFF)
+        ↓
+recommendation status + confidence + channel eligibility
+        ↓
+channel activation must be AUTO
+        ↓
+tenant capacity lock
+        ↓
+contact identity + org quota + channel quota + cooldown
+        ↓
+existing Kernel Action policy/runtime
+        ↓
+provider adapter
+```
+
+Autonomy profiles are append-only and define `enabled`, `min_confidence`, allowed channels, allowed recommendation states and `max_actions_per_run`. Safe defaults are disabled, 0.90 minimum confidence, email only, accepted recommendations only, and five actions per scheduler run.
+
+V0.42 does **not** let an LLM author final outreach copy at trigger time. The existing Engagement Intelligence contract still produces a strategic `message_angle`, not a sendable message. Autonomous execution therefore requires a separately staged, operator-approved payload. Payload revisions are append-only and auditable. This is intentionally less magical and considerably less likely to email a customer an internal reasoning note.
+
+A tenant may explicitly allow staged `proposed` recommendations. In that case the autonomous runtime records the normal recommendation acceptance first, then proceeds through execution admission. Dismissed and superseded recommendations can never be autonomously triggered.
+
+Autonomy is double opt-in: `COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED=1` is required at deployment level and the tenant's latest autonomy profile must also be enabled. The scheduler never bypasses V0.40/V0.41 controls. Profile changes, payload staging and trigger admission serialize on the same tenant-wide Growth capacity lock, so a concurrent disable/update has a deterministic order relative to an autonomous trigger.
+
+Autonomous triggering is pre-handoff only in V0.42. If the recommendation resolves to an existing Sales deal, Growth skips it rather than silently crossing domain ownership.

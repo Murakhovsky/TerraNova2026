@@ -17,6 +17,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
+use Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
@@ -63,6 +64,7 @@ final readonly class GrowthPageController
         private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthEngagementLimitBoundary $engagementLimits,
         private GrowthEngagementActivationBoundary $engagementActivation,
+        private GrowthAutonomousOutreachBoundary $autonomousOutreach,
         private GrowthExperimentBoundary $experiments,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
@@ -84,6 +86,7 @@ final readonly class GrowthPageController
                 'workspace'=>[
                     'engagement_limits'=>$this->engagementLimits->view($tenant->organizationId()->value()),
                     'engagement_activation'=>$this->engagementActivation->view($tenant->organizationId()->value()),
+                    'engagement_autonomy'=>$this->autonomousOutreach->viewPolicy($tenant->organizationId()->value()),
                 ],
             ]);
     }
@@ -120,11 +123,13 @@ final readonly class GrowthPageController
 
                 $engagement=$this->engagement->engagementBrief($organizationId,$id);
                 $execution=null;
+                $autonomy=null;
                 $recommendation=$engagement['latest_recommendation']??null;
                 if(is_array($recommendation)){
                     $recommendationId=$recommendation['recommendation_id']??null;
                     if(is_string($recommendationId)&&$recommendationId!==''){
                         $execution=$this->engagementExecution->executionBrief($organizationId,$id,$recommendationId);
+                        $autonomy=$this->autonomousOutreach->recommendationBrief($organizationId,$id,$recommendationId);
                     }
                 }
 
@@ -136,6 +141,7 @@ final readonly class GrowthPageController
                         'decision'=>$this->decisions->decisionBrief($organizationId,$id),
                         'engagement'=>$engagement,
                         'engagement_execution'=>$execution,
+                        'engagement_autonomy'=>$autonomy,
                         'handoff'=>$this->handoff->handoffBrief($organizationId,$id),
                         'learning'=>$this->learning->learningBrief($organizationId,$id),
                     ],

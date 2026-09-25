@@ -44,6 +44,7 @@ framework:
       'App\Application\System\Command\SchedulerHeartbeatCommand': async
       'App\Application\Sales\Command\RunSalesAutomationCommand': async
       'App\Application\Growth\Command\RunGrowthSignalPollingCommand': async
+      'App\Application\Growth\Command\RunGrowthAutonomousOutreachCommand': async
       'App\Application\Sales\Command\RunSalesAgentCommand': async
       'App\Application\System\Command\DrainSalesOutboxCommand': async
       'App\Application\System\Command\ExecuteSalesActionCommand': async

@@ -12,6 +12,9 @@ $execution=is_array($engagementExecution['execution']??null)?$engagementExecutio
 $executionAction=is_array($engagementExecution['action']??null)?$engagementExecution['action']:null;
 $latestDelivery=is_array($engagementExecution['latest_delivery']??null)?$engagementExecution['latest_delivery']:null;
 $executionEligibility=is_array($engagementExecution['eligibility']??null)?$engagementExecution['eligibility']:[];
+$engagementAutonomy=is_array($workspace['engagement_autonomy']??null)?$workspace['engagement_autonomy']:[];
+$autonomyPayload=is_array($engagementAutonomy['payload']??null)?$engagementAutonomy['payload']:null;
+$autonomyEligibility=is_array($engagementAutonomy['eligibility']??null)?$engagementAutonomy['eligibility']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
 $learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
@@ -126,6 +129,28 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
             <span data-growth-form-status></span>
           </form>
         </div>
+      <?php endif; ?>
+
+      <?php if(in_array($engagementStatus,['proposed','accepted'],true)&&!$execution&&in_array((string)($engagementRecommendation['channel']??''),['email','linkedin','phone'],true)): ?>
+        <hr>
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Autonomous initiation</p><h3>Staged execution payload</h3></div></div>
+        <p class="tn-growth-muted"><?php echo $h($autonomyEligibility['reason']??'Stage an approved payload before autonomous execution can be considered.'); ?></p>
+        <?php if($autonomyPayload): ?>
+          <p><strong>Staged:</strong> revision <?php echo $h($autonomyPayload['revision']??''); ?> · <?php echo $h($autonomyPayload['staged_at']??''); ?></p>
+          <p><small>Fingerprint <?php echo $h($autonomyPayload['payload_fingerprint']??''); ?></small></p>
+        <?php endif; ?>
+        <?php if(!empty($canManageGrowth)): ?>
+          <form class="tn-growth-action-form" data-growth-engagement-autonomy-payload data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">
+            <label class="tn-ui-field">
+              <span>Approved autonomous message / call brief</span>
+              <textarea class="tn-ui-input" name="body" rows="6" maxlength="10000" required placeholder="Payload the scheduler may later submit through the governed Action runtime"></textarea>
+            </label>
+            <label class="tn-ui-field"><span>Staging reason</span><input class="tn-ui-input" name="reason" maxlength="1000" required placeholder="Why this payload may be used autonomously"></label>
+            <p class="tn-growth-muted">Staging does not send anything. The scheduler still needs tenant autonomy enabled, channel activation AUTO, policy eligibility and available quota.</p>
+            <button class="tn-ui-button tn-ui-button--ghost" type="submit"><?php echo $autonomyPayload?'Stage new revision':'Stage autonomous payload'; ?></button>
+            <span data-growth-form-status></span>
+          </form>
+        <?php endif; ?>
       <?php endif; ?>
 
       <?php if($engagementStatus==='accepted'): ?>

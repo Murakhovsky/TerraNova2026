@@ -49,7 +49,7 @@ foreach(['/api/v1/growth/engagement/activation','engagementActivation','updateEn
     $assert(str_contains($routes.$api,$needle),'Growth activation API surface missing: '.$needle);
 }
 $assert(str_contains($page,'engagement_activation'),'Growth Settings must read activation profile.');
-foreach(['data-growth-activation-settings','Auto after explicit proposal','approval_required'] as $needle){
+foreach(['data-growth-activation-settings',"'auto'=>'Auto'",'approval_required'] as $needle){
     $assert(str_contains($template,$needle),'Growth activation settings UI missing: '.$needle);
 }
 foreach(["'/api/v1/growth/engagement/activation'","channel_modes"] as $needle){
