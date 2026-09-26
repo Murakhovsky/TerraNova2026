@@ -2,7 +2,7 @@
 title: "Закриття залишкових UI shells"
 description: "PHASE 14 прибирає останні legacy shell primitives з production surfaces без знищення domain-specific interaction models."
 status: active
-updated: 2026-09-22
+updated: 2026-09-26
 kind: architecture
 ---
 
@@ -240,3 +240,8 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 - repository-wide gate забороняє legacy page/admin/portal/auth shells;
 - specialized home/property/spatial/studio/failure surfaces мають явний whitelist contract;
 - Property та Analytics feature CSS не містять selectors retired compatibility views.
+
+
+### Заміщення Portal-контракту у Wave 13
+
+Wave 13 Phase 7 supersedes the PHASE 14 Cabinet presentation contract. `/cabinet` and the HTTP 410 `/cabinet/submission/{id}` compatibility route now render canonical Twig Portal surfaces through Symfony AssetMapper. `cabinet/canonical.phtml`, `cabinet/retired-submission.phtml`, `portal-cabinet` Vite entrypoint and TN Portal CSS are retired. The business behavior is unchanged: managers still redirect to `/sales`, unauthenticated users to `/auth/login`, and the retired submission route remains HTTP 410.

@@ -36,7 +36,6 @@
 
       $surfaceEntry = match ($interfaceSurface) {
           'workspace' => 'terranova-interface',
-          'portal' => 'portal-cabinet',
           default => 'public-surface',
       };
       $assetEntries = array_values(array_unique(array_filter(array_merge(

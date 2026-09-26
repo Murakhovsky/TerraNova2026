@@ -42,4 +42,31 @@ final readonly class CabinetController
             ],
         );
     }
+
+    public function retiredSubmission(string $id): Response
+    {
+        $tenant = $this->tenants->current();
+        if ($tenant === null) {
+            return new RedirectResponse('/auth/login');
+        }
+
+        $submissionId = max(1, (int) $id);
+
+        return new Response(
+            $this->twig->render('experience/portal/submission_retired.html.twig', [
+                'page' => $this->pages->create(
+                    PageArchetype::Portal,
+                    ['PageHeader'],
+                    'error',
+                ),
+                'submission' => $this->presenter->retiredSubmission($submissionId),
+            ]),
+            Response::HTTP_GONE,
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'no-store, private',
+                'X-Robots-Tag' => 'noindex, nofollow',
+            ],
+        );
+    }
 }

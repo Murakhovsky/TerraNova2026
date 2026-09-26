@@ -113,7 +113,6 @@ foreach ($libraries as $path => $needles) {
 
 foreach ([
     'frontend/entrypoints/public-surface.js',
-    'frontend/entrypoints/portal-cabinet.js',
     'frontend/entrypoints/terranova-interface.js',
 ] as $surface) {
     $source = $read($surface);

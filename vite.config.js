@@ -30,7 +30,6 @@ export default defineConfig({
       input: {
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
-        'portal-cabinet': resolve(import.meta.dirname, 'frontend/entrypoints/portal-cabinet.js'),
         'public-surface': resolve(import.meta.dirname, 'frontend/entrypoints/public-surface.js'),
 
         'terranova-catalog-api': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-catalog-api.js'),
