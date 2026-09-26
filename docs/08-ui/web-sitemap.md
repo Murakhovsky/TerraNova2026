@@ -194,7 +194,7 @@ Property   → Нерухомість
 Diagnostic → COS / Diagnostics
 ```
 
-### Growth
+### Growth: залучення та можливості
 
 `GrowthWebProvider` визначає provider-backed Workspace surface:
 

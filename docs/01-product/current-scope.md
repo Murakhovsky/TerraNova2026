@@ -28,7 +28,7 @@ kind: product
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
 
-## Growth: Opportunity Intelligence
+## Growth: інтелект можливостей
 
 Growth `0.34.0` розвиває окремий bounded context для **FIND VALUE**. Canonical runtime визначає `Signal`, `OpportunityCandidate`, `OpportunityRationale`, explainable Fit/Need/Timing/Access/Value scoring, lifecycle qualification та `OpportunityHandoff`.
 

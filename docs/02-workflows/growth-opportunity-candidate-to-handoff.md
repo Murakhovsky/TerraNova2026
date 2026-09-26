@@ -101,7 +101,7 @@ V0.1 є внутрішньодоменним процесом. Межа з Sales
 9. Усі core objects tenant-scoped через `OrganizationId`.
 10. Target Domain не отримує mutation authority над Growth state через shared таблицю або framework model.
 
-## Lifecycle
+## Життєвий цикл
 
 ```text
 DETECTED
@@ -132,7 +132,7 @@ EXPIRED
 REJECTED_BY_TARGET_DOMAIN
 ```
 
-## Growth modes
+## Режими Growth
 
 ```text
 ACQUIRE
@@ -143,7 +143,7 @@ DISCOVER
 
 Це дозволяє одному Domain шукати не лише клієнтів, а й expansion opportunities, старі можливості для reactivation, партнерів, suppliers, investors, candidates, tenders, properties, acquisitions, projects та technologies.
 
-## WHY NOW
+## WHY NOW: обґрунтування терміновості
 
 WHY NOW є частиною rationale, а не декоративним текстовим полем CRM.
 
@@ -163,7 +163,7 @@ Unknowns / counter evidence
 Qualification decision
 ```
 
-## Signal Collector runtime
+## Виконання збирача сигналів
 
 V0.5 формалізує вхід зовнішніх та внутрішніх джерел:
 
@@ -183,7 +183,7 @@ canonical Signal
 
 Collector run зберігає status, request/next cursor, collected/accepted/duplicate/failed counters та error summary. Зовнішній provider call не тримає відкриту DB transaction; кожний item ingestиться окремо, тому failure одного item не відкочує інші accepted signals.
 
-## External Signal Intake
+## Приймання зовнішніх сигналів
 
 V0.13 додає push integration path для зовнішніх джерел:
 
@@ -204,7 +204,7 @@ canonical Signal
 
 Signature: `HMAC_SHA256(timestamp + "." + raw_body, GROWTH_SIGNAL_WEBHOOK_SECRET)`. External ingress має окремий idempotency namespace, SYSTEM event/audit provenance та configured service actor. Edge не залежить від Growth repository або SQL.
 
-## Signal Operations Workspace
+## Робочий простір операцій із сигналами
 
 V0.12 робить collector runtime операційно видимим:
 
@@ -247,7 +247,7 @@ Signal / OpportunityCandidate
 
 Account enrichment зберігається append-only snapshots. Нові дані не перезаписують попередні факти заднім числом.
 
-## Buying Committee Intelligence
+## Інтелект купівельного комітету
 
 V0.4 додає people layer між Account Brief та Opportunity:
 
@@ -276,7 +276,7 @@ Opportunity research / play
 
 Committee Assessment фіксує конкретний набір required roles, snapshot ids і `model_version`, тому історичне рішення можна відтворити.
 
-## Evidence-bound Research Intelligence
+## Дослідницький інтелект на основі доказів
 
 V0.7 додає AI-assisted research без mutation authority:
 
@@ -302,7 +302,7 @@ Prompt і structured schema мають власні versions. Research run фі�
 
 LLM output не може створити або переписати Signal. Навіть після генерації proposal evidence references перевіряються server-side, а перед acceptance перевіряються повторно всередині transaction.
 
-## Decision Intelligence
+## Інтелект рішень
 
 V0.6 формалізує qualification decision:
 
@@ -327,7 +327,7 @@ QualificationEvaluation snapshot
 
 Policy не згортає dimensions в один synthetic score. Кожна evaluation зберігає exact rationale, exact score payload, policy revision, failed criteria, outcome, reason та `model_version`. Це дозволяє відтворити історичне рішення навіть після зміни ICP, policy або scoring model.
 
-## Engagement Intelligence / Next Best Action
+## Інтелект взаємодії / наступна найкраща дія
 
 V0.14 формалізує «що робити далі» окремо від execution:
 
@@ -352,7 +352,7 @@ Accept / Dismiss
 
 Recommendation не є `ActionProposal` і не має mutation authority. Поки немає concrete handler та Policy, Growth не відправляє email, LinkedIn message, call або meeting автоматично.
 
-## Outcome Feedback / Growth Learning
+## Зворотний зв’язок за результатами / навчання Growth
 
 V0.15 повертає фактичний результат назад у Growth:
 
@@ -378,7 +378,7 @@ Correlation працює через Growth-owned handoff reference та learning
 
 `deal.won` може додати `economic_value + currency`; це pipeline/business outcome, а не Finance-recognized revenue. Lost reason зберігається лише якщо Sales event його фактично передав.
 
-## Learning Workspace
+## Робочий простір навчання
 
 V0.16 додає операційну проєкцію поверх Growth-owned outcomes:
 
@@ -397,7 +397,7 @@ read-only Growth Workspace projection
 
 Workspace не читає Sales persistence і не створює Sales mutations. Його завдання — зробити feedback loop видимим для оператора та придатним для наступного Learning/Optimization cycle.
 
-## Experiment Workspace
+## Робочий простір експериментів
 
 V0.20 робить V0.19 runtime операційним:
 
@@ -417,7 +417,7 @@ operator interpretation
 
 SSR page controller лише читає `GrowthExperimentBoundary`. Browser mutations використовують `/api/v1/growth/experiments/*` з CSRF та idempotency. Workspace показує conversion rates і outcome evidence, але не має endpoint або UI action для winner selection чи automatic execution.
 
-## Governed Pre-Handoff Engagement Execution
+## Кероване виконання взаємодії до передачі
 
 V0.24 розширює V0.22 execution bridge без створення фіктивного Sales state:
 
@@ -446,7 +446,7 @@ Pre-handoff action не містить email address у Kernel Action parameters
 
 Durable queue acceptance і provider delivery не змішуються: успішний Kernel Action означає, що Platform Notification прийняла повідомлення у durable integration runtime. Фактична доставка n8n/provider має власний status/retry lifecycle.
 
-## Cross-domain Handoff Protocol
+## Міждоменний протокол передачі
 
 V0.8 робить handoff окремим resumable protocol:
 
@@ -469,7 +469,7 @@ Running attempt можна resume з persisted `package_json`. Resolution сер
 
 Growth не знає persistence Sales/HR/Procurement/Service і не створює їх aggregates напряму. Конкретний target adapter реалізує Growth-owned port та повертає target-owned reference. V0.9 реалізує Sales target, V0.25 — Service target через його application boundary.
 
-## Sales target adapter
+## Цільовий адаптер Sales
 
 V0.9 підключає перший concrete target:
 
@@ -496,7 +496,7 @@ sales_lead:<id>
 
 Sales сам створює свій execution object через власний application boundary. Growth лише передає package та стабільний Candidate-level idempotency key. Multiple champions, відсутній committee або non-email identity дають explicit target rejection замість евристичного вибору людини.
 
-## Service target adapter
+## Цільовий адаптер Service
 
 V0.25 додає другий concrete handoff target і підтверджує універсальність `OpportunityHandoff`:
 
@@ -518,7 +518,7 @@ Mapping навмисно зупиняється на Service Request. Growth п�
 
 Target-side idempotency key лишається Candidate-stable з V0.8, тому retry handoff не має створювати дубльовані Service Requests.
 
-## Tenant RSS/Atom Signal Collector
+## Тенантний збирач сигналів RSS/Atom
 
 V0.26 додає перший production-shaped pull source:
 
@@ -549,7 +549,7 @@ Feed configuration є Growth-owned і tenant-scoped. Collector не пише Sig
 
 Collector не використовує cursor. Повторний polling є нормальним режимом роботи: зовнішня entry identity нормалізується в stable external key, а duplicate payload відсікається existing source receipt runtime.
 
-## Signal Feed Workspace
+## Робочий простір стрічки сигналів
 
 V0.27 робить RSS/Atom configuration керованою з `/growth/collectors`:
 
@@ -569,7 +569,7 @@ canonical Growth API guards
 
 Page controller не викликає `createFeed()`, `setEnabled()` або `runCollector()`. Mutations залишаються API-owned, із tenant permission, CSRF, correlation та idempotency.
 
-## Executable API V1
+## Виконуваний API V1
 
 V0.10 відкриває Growth runtime через 34 canonical routes під `/api/v1/growth/*`.
 
@@ -587,7 +587,7 @@ Domain / Persistence / Events / Audit
 
 Read surface використовує `cos.tenant.access`. Mutation surface використовує `cos.tenant.manage`, CSRF, `X-Idempotency-Key` та correlation id. Web layer не залежить від Growth repositories, PDO або target-domain persistence.
 
-## Growth Workspace
+## Робочий простір Growth
 
 V0.11 додає canonical Web surface:
 
@@ -609,7 +609,7 @@ Growth Overview
 
 Lists читаються через `GrowthWorkspaceReadModelInterface`. Detail pages складаються з існуючих application briefs. UI mutations не дублюють lifecycle: frontend викликає `/api/v1/growth/*` із CSRF та idempotency key.
 
-## Learning Optimization
+## Оптимізація навчання
 
 V0.17 переводить feedback із «видимого» в «керовано застосовний»:
 
@@ -641,7 +641,7 @@ Materialization не обходить Domain logic: вона викликає ч
 
 Мінімальний terminal sample для генерації recommendation — 8 Candidates. Це safety floor, а не статистична гарантія достатності; risks/assumptions і confidence залишаються first-class частиною recommendation.
 
-## Optimization Workspace
+## Робочий простір оптимізації
 
 V0.18 не створює нового learning lifecycle. Він робить V0.17 керованим із Workspace:
 
@@ -659,7 +659,7 @@ V0.18 не створює нового learning lifecycle. Він робить V
 
 Workspace навмисно не має `Activate` action. Після materialization нова revision залишається `draft`, доки її окремо не активують через існуючий ICP / Qualification governance flow.
 
-## Experiments & Attribution
+## Експерименти та атрибуція
 
 V0.19 додає окремий measurement lifecycle:
 
@@ -695,7 +695,7 @@ Attribution rules:
 
 V0.19 не робить statistical winner selection і не виконує variant config. Це measurement runtime; execution та decision policy лишаються окремими шарами.
 
-## Experiment Decision Intelligence
+## Інтелект рішень для експериментів
 
 V0.21 закриває measurement loop керованим висновком:
 
@@ -724,7 +724,7 @@ Accept / Dismiss
 
 Accepted recommendation не має execution authority. Experiment status, variant config, outreach, ICP/Qualification activation та будь-яка інша mutation лишаються поза V0.21.
 
-## Governed post-handoff engagement execution
+## Кероване виконання взаємодії після передачі
 
 V0.22 додає execution bridge без передачі execution authority Growth:
 
@@ -752,7 +752,7 @@ Growth persistence не дублює message body; зберігаються ли
 
 Поточний bridge підтримує `send_email`, `connect_linkedin`, `offer_diagnostic`, `send_case_study`, `ask_introduction`, `invite_webinar` лише для email/LinkedIn channels. Call, monitor, ignore та create_report execution лишаються поза V0.22.
 
-## Engagement Execution Workspace
+## Робочий простір виконання взаємодії
 
 V0.23 робить V0.14 + V0.22 operational у Candidate Workspace без нової execution authority:
 
@@ -774,7 +774,7 @@ Kernel Action status / target trace
 
 Workspace не approve і не execute Sales Actions напряму. Він не викликає Sales approval/action endpoints і не дублює message body у Growth persistence. Якщо recommendation ще не accepted, не message-capable, channel не підтримується або немає рівно одного `sales_deal` binding, UI показує server-side eligibility reason замість імпровізації на клієнті.
 
-## Credentialed JSON Signal Intake
+## Приймання JSON-сигналів з обліковими даними
 
 V0.28 додає provider-neutral pull path:
 
@@ -802,7 +802,7 @@ Domain persistence містить лише opaque `credential_reference`. API re
 
 Поточний envelope: `items[]` із `id`, `occurred_at`, `source_reference`, `facts`. Collector cursorless; durable source receipts виконують dedupe між повторними polling runs.
 
-## Credentialed Source Workspace
+## Робочий простір джерел з обліковими даними
 
 V0.29 додає UI без нового mutation authority:
 
@@ -822,7 +822,7 @@ V0.28 Application Boundary
 
 Existing `credential_reference` не повертається у Workspace. Create form приймає reference як write-only configuration value; після створення UI показує лише `credential_configured`, auth mode/header та source mapping.
 
-## Scheduled Signal Monitoring
+## Планове спостереження за сигналами
 
 V0.30 перетворює configured pull sources на безперервний monitoring loop без другого ingestion path:
 
@@ -849,7 +849,7 @@ Idempotency key формується з cadence bucket + collector name. Оск�
 
 Polling default-off. Якщо scheduler enable flag увімкнено без positive system actor id, composition fail-closed.
 
-## Polling Operations Workspace
+## Робочий простір операцій опитування джерел
 
 V0.32 додає read-only operational projection поверх V0.30:
 
@@ -869,13 +869,13 @@ deployment scheduler config
 
 Projection tenant-scoped. Він не використовує global `targets()`, не показує кількість інших organizations, raw system actor id, credential references або provider URLs. Browser не може enable/disable scheduler; для цього немає нового endpoint чи SSR mutation.
 
-## Collector health, adaptive backoff & incidents
+## Стан збирачів, адаптивна затримка та інциденти
 
 Automatic Signal polling persists operational health per tenant + collector. A failed collector run enters `cooling_down` with deterministic exponential retry delay; scheduled polling skips that collector until `next_retry_at`. Successful runs reset the failure streak, while partial ingestion is represented as `degraded` without transport-level cooldown.
 
 This state is operational metadata only. V0.33 additionally opens a single active operator incident after the configured failure threshold and resolves it on provider transport recovery. V0.34 may notify only explicit tenant-owned email subscriptions after the incident transaction commits; Growth does not infer recipients from Identity. Incident/alert delivery does not alter Signal facts, Candidate qualification, ICP scoring or Handoff semantics.
 
-## Handoff contract
+## Контракт передачі
 
 V0.1 формує `OpportunityHandoff` із:
 
