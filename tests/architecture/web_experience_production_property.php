@@ -48,8 +48,12 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
-foreach (["public function favour(Request \$request): Response","'property/favour'","new RedirectResponse('/property/presentation/'"] as $marker) {
-    $contains($controller,$marker,'Canonical Symfony Property controller is incomplete.');
+foreach (['public function presentation(', 'public function pdf(', 'public function presentationShare(', "new RedirectResponse('/property/presentation/'"] as $marker) {
+    $contains($controller, $marker, 'Specialized Property compatibility controller is incomplete.');
+}
+$favouritesController = $read('symfony/src/Web/Property/PublicPropertyFavouritesController.php');
+foreach (['GetPublicPropertyFavouritesQuery', 'PageArchetype::PublicCatalog', 'experience/public/property_favourites.html.twig'] as $marker) {
+    $contains($favouritesController, $marker, 'Canonical Public Property Favourites controller is incomplete.');
 }
 $inventoryController=$read('symfony/src/Web/Property/PropertyInventoryController.php');
 foreach(['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery'] as $marker){$contains($inventoryController,$marker,'Property Inventory controller incomplete.');}
