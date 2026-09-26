@@ -57,6 +57,8 @@ kind: architecture
 | VR-043 | `/blog` | Public | Content | Public Catalog | P0 | Twig | DONE |
 | VR-044 | `/blog/{slug}` | Public | Content | Public Detail / Marketing | P0 | Twig | DONE |
 | VR-045 | `/guide/{slug}` | Public | Content | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-046 | `/cos` + `/cos/{lang}` | Public | COS | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-047 | `/cos/{lang}/domains/{slug}` | Public | COS | Public Detail / Marketing | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -290,3 +292,24 @@ Production migration units VR-043…045 завершені.
 - page-specific Content JS/CSS = **0**.
 
 Наступна production migration family: **Phase 11 — Public COS**.
+
+## Фаза 11 — Public COS
+
+VR-046 повертає public COS landing у Symfony route ownership і переносить пʼять мовних версій на canonical Public Detail / Marketing runtime. Multilingual product/domain catalog винесений із колишнього Phalcon controller у read-only Application catalog.
+
+VR-047 переводить 21 domain presentation на той самий canonical runtime: QueryBus → Presenter/ViewModel → Twig. Domain pages зберігають локалізовані titles, outcomes, signals, industry labels та featured/spotlight presentations без власного frontend stack.
+
+## Фаза 11 — завершення Public COS
+
+Production migration units VR-046…047 завершені.
+
+- `/cos` і `/cos/{lang}` → canonical Public Detail / Marketing;
+- `/cos/{lang}/domains/{slug}` → canonical Public Detail / Marketing;
+- підтримані `en/de/fr/pl/uk`;
+- збережений 21-domain public catalog;
+- old CompanyOsController data перенесено у read-only `PublicCosCatalog`;
+- legacy `company_os/*.phtml` = **0**;
+- dedicated `cos-site` Vite source/CSS = **0**;
+- нові `tn-*` primitives = **0**.
+
+Основний план Wave 13 для production page families 3–11 закритий. Далі — фінальний Wave 13 audit: specialized compatibility surfaces, dead frontend/runtime artifacts, regression gates і branch integration.
