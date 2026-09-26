@@ -113,6 +113,38 @@ services:
   Domains\Property\Application\Contract\PublicPropertyReadRepositoryInterface:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository
 
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository
+
+  Infrastructure\Media\MediaStorageService:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Property\Application\Contract\PropertySubmissionMediaInterface:
+    alias: Infrastructure\Media\MediaStorageService
+
+  Infrastructure\Platform\Analytics\MysqlPropertyAnalytics:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Domains\Property\Application\Contract\PropertyAnalyticsInterface:
+    alias: Infrastructure\Platform\Analytics\MysqlPropertyAnalytics
+
+  Domains\Property\Application\UseCase\PropertySubmissionService:
+    arguments:
+      $submissions: '@Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface'
+      $mediaStorage: '@Domains\Property\Application\Contract\PropertySubmissionMediaInterface'
+      $notifications: null
+      $analytics: '@Domains\Property\Application\Contract\PropertyAnalyticsInterface'
+
+  Domains\Property\Application\Contract\PropertySubmissionInterface:
+    alias: Domains\Property\Application\UseCase\PropertySubmissionService
+
   App\Application\Property\Service\PublicPropertyReadService:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
@@ -1753,16 +1785,11 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
-  # Final Web retirement — PHTML renderer and Sales SSR.
-  App\Web\Phtml\ViteAssetManifest:
+  # Specialized heavy-island build manifest. Canonical Web pages remain AssetMapper/Twig.
+  App\Web\Experience\Asset\ViteAssetManifest:
     arguments:
       $manifestPath: '%kernel.project_dir%/public/build/.vite/manifest.json'
       $publicPrefix: '/build/'
-
-  App\Web\Phtml\PhtmlRenderer:
-    arguments:
-      $viewRoot: '%kernel.project_dir%/../app/Interfaces/Web/View'
-      $manifest: '@App\Web\Phtml\ViteAssetManifest'
 
   App\Web\Navigation\NavigationBuilder:
     arguments:

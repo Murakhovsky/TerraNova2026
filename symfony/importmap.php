@@ -24,6 +24,10 @@ return [
         'path' => 'public_property.js',
         'entrypoint' => true,
     ],
+    'spatial_admin' => [
+        'path' => 'spatial_admin.js',
+        'entrypoint' => true,
+    ],
     '@hotwired/stimulus' => [
         'version' => '3.2.2',
     ],

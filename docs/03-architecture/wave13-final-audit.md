@@ -1,71 +1,47 @@
 ---
 title: Wave 13 — Фінальний аудит
-description: Фінальна класифікація production visual ownership після VR-001…VR-047.
+description: Фінальна класифікація production visual ownership після VR-001…VR-047 і debt closure.
 status: closed
-updated: 2026-09-26
+updated: 2026-09-27
 kind: architecture
 ---
 
 # Wave 13 — Фінальний аудит
 
-Wave 13 закриває visual migration не кількістю переписаних файлів, а ownership contract.
+Wave 13 закрита production ownership contract, а не декоративною кількістю переписаних файлів.
 
-## Результат
+## Фінальний результат
 
 - VR-001…VR-047: DONE.
-- Production families 3–11: canonical Symfony/Twig Experience Platform.
-- Dead historical homepage `app/Interfaces/Web/View/index/index.phtml`: deleted.
-- New page-level PHTML: forbidden by executable whitelist.
-- Retired page-specific Vite source entrypoints: forbidden by executable whitelist.
+- Production Web pages: canonical Symfony/Twig Experience Platform.
+- Production page-level PHTML: **0**.
+- Legacy `PhtmlRenderer`: **0** у Web runtime.
+- Generic/page Vite entrypoints: **0**.
+- Canonical browser runtime: AssetMapper / ImportMap / Stimulus / Turbo.
+- Specialized Vite runtime: тільки `frontend/spatial/spatial-viewer.js`.
+- Public Property intake: active canonical CommandBus write path.
 
-## PHTML, який свідомо лишився
+## Єдиний PHTML виняток
 
-### Канонічні surfaces входу
+`app/Interfaces/Web/View/property/pdf.phtml` лишається не Web page, а service-level print template для Dompdf.
 
-- `auth/login.phtml`
-- `auth/register.phtml`
+Він не володіє HTTP page rendering, не створює browser runtime і не є дозволом на нові PHTML pages.
 
-### Спеціалізований runtime
+## Specialized Spatial island
 
-- `diagnostic_report/show.phtml`
-- `property/presentation.phtml`
-- `property/pdf.phtml`
-- `spatial/edit.phtml`
-- `spatial/scene.phtml`
-- `error/failure.phtml`
+Spatial viewer лишається окремим Vite/Three.js build island через native JS dependencies і decoder assets. Outer shell, navigation, page composition та presentation state належать Symfony/Twig.
 
-### Не page surfaces
+## Заборонено після closure
 
-- `components/**` — shared compatibility primitives;
-- `shared/**` — shared compatibility partials;
-- `app/Interfaces/Web/View/index.phtml` — compatibility layout для whitelist surfaces.
+1. Новий page-level PHTML.
+2. Повернення `PhtmlRenderer` у Web Controller.
+3. Новий generic/page Vite entrypoint.
+4. `tn-*` markup у canonical Twig production templates.
+5. Public Property submit placeholder замість Application Command.
+6. Spatial business/navigation shell усередині JS island.
 
-Цей список закритий. Новий page-level PHTML вимагає окремого архітектурного рішення, а не тихого повернення старого renderer.
+## Release gate
 
-## Вихідні точки клієнтського коду
+Merge дозволений лише коли Wave 13 final audit, Symfony container/Twig lint, Vite build, canonical runtime tests і browser quality/accessibility gates green.
 
-Після Wave 13 дозволені:
-
-- `cos-ui-runtime.js`;
-- `public-surface.js`;
-- `terranova-copy.js`;
-- `terranova-interface.js`;
-- `terranova-media-manager.js`;
-- `terranova-spatial-admin.js`.
-
-Spatial viewer живе як specialized source `frontend/spatial/spatial-viewer.js`, а не як generic page entrypoint.
-
-## Згенерований результат збірки
-
-`public/build/**` є generated output і не визначає ownership. CI виконує `npm run build` перед frontend/runtime gates, тому source of truth — `vite.config.js` + `frontend/**`. Stale historical hashes у робочому tree не мають права відновлювати source entrypoint або route ownership.
-
-## Критерії випуску
-
-Merge у `main` дозволений лише через PR після:
-
-1. Wave 13 Visual System = green;
-2. WEB V0.14 build/frontend gates = green;
-3. Symfony Canonical Runtime = green для зміненого runtime;
-4. final audit = green.
-
-Після merge Wave 13 вважається закритим. Наступні visual зміни починаються вже як нова хвиля поверх canonical Experience Platform.
+Наступні visual зміни є новою хвилею поверх canonical Experience Platform.

@@ -1,0 +1,64 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Вхід | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="auth-login"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Terra Nova CLUB"
+        title="Вхід у кабінет"
+        subtitle="Увійдіть, щоб працювати зі своїми обʼєктами, заявками та персональними сценаріями."
+    >
+        <twig:CosButton label="Створити акаунт" href="/auth/register" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if authStatus %}
+        <twig:CosAlert title="Не вдалося увійти" copy="{{ authStatus }}" tone="danger" />
+    {% endif %}
+
+    <form class="cos-form" action="/auth/login" method="post">
+        <twig:CosFormSection
+            title="Дані акаунта"
+            description="Використайте email і пароль вашого Terra Nova CLUB акаунта."
+        >
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Email</span>
+                    <input
+                        class="cos-input"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        value="{{ formData.email|default('') }}"
+                        required
+                    >
+                </label>
+                <label class="cos-field">
+                    <span>Пароль</span>
+                    <input
+                        class="cos-input"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosStickyActions label="Login actions">
+            <a class="cos-button cos-button--ghost" href="/auth/register">Реєстрація</a>
+            <button class="cos-button cos-button--primary" type="submit">Увійти</button>
+        </twig:CosStickyActions>
+    </form>
+</section>
+{% endblock %}

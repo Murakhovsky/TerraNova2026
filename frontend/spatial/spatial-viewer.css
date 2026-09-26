@@ -1,23 +1,23 @@
-.tn-spatial-public {
+.cos-spatial-public {
   background: #f4f5f2;
   color: #101512;
 }
 
-.tn-spatial-stage {
+.cos-spatial-stage {
   position: relative;
   min-height: calc(100vh - 92px);
   overflow: hidden;
   background: #e9ece9;
 }
 
-.tn-spatial-stage--embedded {
+.cos-spatial-stage--embedded {
   min-height: 0;
   margin: 30px 0;
   aspect-ratio: 16 / 9;
   border: 1px solid rgba(16, 21, 18, .16);
 }
 
-.tn-spatial-stage__heading {
+.cos-spatial-stage__heading {
   position: absolute;
   z-index: 4;
   top: 28px;
@@ -29,23 +29,23 @@
   backdrop-filter: blur(12px);
 }
 
-.tn-spatial-stage__heading h1 {
+.cos-spatial-stage__heading h1 {
   margin: 4px 0 6px;
   font-size: clamp(28px, 4vw, 52px);
   line-height: 1.02;
   letter-spacing: 0;
 }
 
-.tn-spatial-viewer {
+.cos-spatial-viewer {
   position: absolute;
   inset: 0;
   min-width: 0;
   min-height: 520px;
 }
 
-.tn-spatial-viewer canvas,
-.tn-spatial-viewer iframe,
-.tn-spatial-viewer__poster {
+.cos-spatial-viewer canvas,
+.cos-spatial-viewer iframe,
+.cos-spatial-viewer__poster {
   width: 100%;
   height: 100%;
   display: block;
@@ -53,12 +53,12 @@
   object-fit: cover;
 }
 
-.tn-spatial-viewer.is-ready .tn-spatial-viewer__poster {
+.cos-spatial-viewer.is-ready .cos-spatial-viewer__poster {
   display: none;
 }
 
-.tn-spatial-viewer__status,
-.tn-spatial-viewer__fallback {
+.cos-spatial-viewer__status,
+.cos-spatial-viewer__fallback {
   position: absolute;
   z-index: 3;
   inset: 50% auto auto 50%;
@@ -70,27 +70,27 @@
   text-align: center;
 }
 
-.tn-spatial-viewer__fallback {
+.cos-spatial-viewer__fallback {
   display: grid;
   gap: 10px;
 }
 
-.tn-spatial-viewer__fallback a {
+.cos-spatial-viewer__fallback a {
   color: #d4a84f;
 }
 
-.tn-spatial-viewer.has-error .tn-spatial-viewer__status {
+.cos-spatial-viewer.has-error .cos-spatial-viewer__status {
   background: #721c24;
 }
 
-.tn-spatial-viewer__hotspots {
+.cos-spatial-viewer__hotspots {
   position: absolute;
   z-index: 2;
   inset: 0;
   pointer-events: none;
 }
 
-.tn-spatial-hotspot {
+.cos-spatial-hotspot {
   position: absolute;
   top: 0;
   left: 0;
@@ -107,7 +107,7 @@
   cursor: pointer;
 }
 
-.tn-spatial-hotspot::after {
+.cos-spatial-hotspot::after {
   content: "+";
   position: absolute;
   inset: 0;
@@ -117,7 +117,7 @@
   font-size: 22px;
 }
 
-.tn-spatial-hotspot.is-active {
+.cos-spatial-hotspot.is-active {
   width: auto;
   min-width: 34px;
   max-width: 220px;
@@ -127,11 +127,11 @@
   white-space: nowrap;
 }
 
-.tn-spatial-hotspot.is-active::after {
+.cos-spatial-hotspot.is-active::after {
   display: none;
 }
 
-.tn-spatial-stage__actions {
+.cos-spatial-stage__actions {
   position: absolute;
   z-index: 5;
   right: clamp(18px, 4vw, 64px);
@@ -142,8 +142,8 @@
   justify-content: flex-end;
 }
 
-.tn-spatial-stage__actions button,
-.tn-spatial-stage__actions a {
+.cos-spatial-stage__actions button,
+.cos-spatial-stage__actions a {
   min-height: 42px;
   padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, .55);
@@ -154,7 +154,7 @@
   cursor: pointer;
 }
 
-.tn-spatial-summary {
+.cos-spatial-summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
   gap: 48px;
@@ -163,52 +163,52 @@
   padding: 56px 24px 72px;
 }
 
-.tn-spatial-summary h2 {
+.cos-spatial-summary h2 {
   margin: 6px 0 12px;
   font-size: 32px;
   letter-spacing: 0;
 }
 
-.tn-spatial-summary > div:last-child {
+.cos-spatial-summary > div:last-child {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 8px 14px;
   align-content: start;
 }
 
-.tn-spatial-summary strong {
+.cos-spatial-summary strong {
   font-size: 28px;
 }
 
 @media (max-width: 760px) {
-  .tn-spatial-stage {
+  .cos-spatial-stage {
     min-height: calc(100svh - 72px);
   }
-  .tn-spatial-stage--embedded {
+  .cos-spatial-stage--embedded {
     min-height: 420px;
     aspect-ratio: auto;
   }
-  .tn-spatial-viewer {
+  .cos-spatial-viewer {
     min-height: 480px;
   }
-  .tn-spatial-stage__heading {
+  .cos-spatial-stage__heading {
     top: 12px;
     left: 12px;
     padding: 12px 14px;
   }
-  .tn-spatial-stage__heading h1 {
+  .cos-spatial-stage__heading h1 {
     font-size: 26px;
   }
-  .tn-spatial-stage__actions {
+  .cos-spatial-stage__actions {
     right: 12px;
     bottom: 12px;
     left: 12px;
   }
-  .tn-spatial-stage__actions button,
-  .tn-spatial-stage__actions a {
+  .cos-spatial-stage__actions button,
+  .cos-spatial-stage__actions a {
     flex: 1 1 auto;
   }
-  .tn-spatial-summary {
+  .cos-spatial-summary {
     grid-template-columns: 1fr;
     gap: 28px;
     padding: 36px 18px 52px;

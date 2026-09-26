@@ -16,13 +16,16 @@ final readonly class PublicPropertySubmitViewModel
         public int $yearMax,
         public ?string $submissionStatus = null,
         public ?string $error = null,
+        public bool $submissionOk = false,
     ) {
     }
 
     public function state(): string
     {
-        return ($this->error !== null || $this->submissionStatus !== null)
-            ? 'error'
-            : 'normal';
+        if ($this->error !== null || ($this->submissionStatus !== null && !$this->submissionOk)) {
+            return 'error';
+        }
+
+        return $this->submissionOk ? 'success' : 'normal';
     }
 }

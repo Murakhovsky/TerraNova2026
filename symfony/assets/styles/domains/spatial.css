@@ -1,0 +1,63 @@
+.cos-spatial-workbench {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cos-space-4);
+}
+
+.cos-spatial-dropzone {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  padding: var(--cos-space-6);
+  border: 1px dashed var(--cos-color-border-strong);
+  border-radius: var(--cos-radius-panel);
+  background: var(--cos-color-surface-raised);
+  text-align: center;
+  cursor: pointer;
+}
+
+.cos-spatial-dropzone.is-dragging,
+.cos-spatial-dropzone.has-file {
+  border-style: solid;
+  outline: 2px solid var(--cos-state-focus-border);
+  outline-offset: 2px;
+}
+
+.cos-spatial-dropzone input[type="file"] {
+  max-width: 100%;
+}
+
+.cos-spatial-upload-options,
+.cos-spatial-asset-list,
+.cos-spatial-timeline {
+  display: grid;
+  gap: var(--cos-space-3);
+}
+
+.cos-spatial-upload-progress {
+  height: .5rem;
+  overflow: hidden;
+  border-radius: var(--cos-radius-pill);
+  background: var(--cos-color-surface);
+}
+
+.cos-spatial-upload-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--cos-color-primary);
+}
+
+.cos-spatial-asset-list > *,
+.cos-spatial-timeline > * {
+  display: grid;
+  gap: var(--cos-space-1);
+  padding-block: var(--cos-space-3);
+  border-bottom: 1px solid var(--cos-color-border);
+}
+
+@media (max-width: 768px) {
+  .cos-spatial-workbench {
+    grid-template-columns: 1fr;
+  }
+}

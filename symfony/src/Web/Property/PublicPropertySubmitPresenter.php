@@ -17,6 +17,7 @@ final class PublicPropertySubmitPresenter
         array $formData,
         ?string $submissionStatus = null,
         ?string $error = null,
+        bool $submissionOk = false,
     ): PublicPropertySubmitViewModel {
         $types = is_array($data['types'] ?? null)
             ? array_values(array_filter($data['types'], 'is_array'))
@@ -28,6 +29,7 @@ final class PublicPropertySubmitPresenter
             yearMax: (int) date('Y') + 2,
             submissionStatus: $submissionStatus,
             error: $error,
+            submissionOk: $submissionOk,
         );
     }
 

@@ -266,3 +266,8 @@ Wave 13 Phase 8 переводить `/` з `HomePageController + home/canonical
 ### SEO-добірки Property у Wave 13
 
 Wave 13 Phase 8 заміщує PHASE 14 PHTML-контракт для Property SEO collections. Type, city та local landing routes тепер рендерять один canonical Twig Public Catalog surface через QueryBus; route-specific частина обмежена filter overrides, canonical URL та SEO metadata. Legacy `property/seo.phtml` видалено.
+
+
+## Final Wave 13 debt closure
+
+Compatibility shell whitelist закритий. Auth, Diagnostic Report, Property Presentation та Spatial Editor/Scene тепер належать Twig Experience Platform. `error/failure.phtml` retired як dead utility surface. Єдиний page-like PHTML виняток — `property/pdf.phtml`, класифікований як non-Web Dompdf renderer. Generic Vite entrypoints retired; важкий Spatial viewer лишається isolated island.
