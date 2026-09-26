@@ -864,6 +864,8 @@ services:
 
   Domains\Growth\Application\Service\GrowthOutreachSequenceGuard: ~
 
+  Domains\Growth\Domain\OutreachSequenceStateMachine: ~
+
   Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface:
     alias: Domains\Growth\Application\Service\GrowthOutreachSequenceGuard
 

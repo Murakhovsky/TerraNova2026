@@ -74,7 +74,7 @@ foreach([
 $assert(substr_count($routes,'App\\Http\\Api\\V1\\Controller\\GrowthApiController::')>=34,'Growth API controller route ownership must not shrink below V0.10.');
 
 $adapter=$read('app/Domains/Growth/Infrastructure/Handoff/SalesGrowthHandoffTarget.php');
-foreach(['ActiveModuleResolver',"isEnabled($handoff->organizationId,'sales')",'Sales module is disabled'] as $needle){
+foreach(['ActiveModuleResolver',"isEnabled(\$handoff->organizationId,'sales')",'Sales module is disabled'] as $needle){
     $assert(str_contains($adapter,$needle),'Growth Sales target module-state guard missing: '.$needle);
 }
 
