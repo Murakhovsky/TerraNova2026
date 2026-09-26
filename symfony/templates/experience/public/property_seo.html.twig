@@ -1,5 +1,9 @@
 {% extends 'experience/public_shell.html.twig' %}
 
+{% block javascripts %}
+    {{ importmap('public_property') }}
+{% endblock %}
+
 {% block title %}{{ seo.title }} | Terra Nova CLUB{% endblock %}
 
 {% block meta %}

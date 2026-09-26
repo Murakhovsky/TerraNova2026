@@ -75,6 +75,38 @@ foreach([
  if(!is_file($root.'/'.$specializedView))throw new RuntimeException('Specialized compatibility view unexpectedly removed during Phase 8: '.$specializedView);
 }
 
+foreach([
+ 'symfony/templates/experience/public/property_catalog.html.twig',
+ 'symfony/templates/experience/public/property_detail.html.twig',
+ 'symfony/templates/experience/public/property_seo.html.twig',
+ 'symfony/templates/experience/public/property_favourites.html.twig',
+] as $publicPropertyTemplate){
+ $source=(string)file_get_contents($root.'/'.$publicPropertyTemplate);
+ if(!str_contains($source,"importmap('public_property')")){
+  throw new RuntimeException('Phase 8 public Property surface must use the lightweight public-property runtime: '.$publicPropertyTemplate);
+ }
+}
+if(!is_file($root.'/symfony/assets/public_property.js')){
+ throw new RuntimeException('Phase 8 lightweight public-property runtime is missing.');
+}
+$publicPropertyRuntime=(string)file_get_contents($root.'/symfony/assets/public_property.js');
+foreach(['Application','public-property','public-property-gallery','initWebTelemetry'] as $marker){
+ if(!str_contains($publicPropertyRuntime,$marker)){
+  throw new RuntimeException('Phase 8 lightweight public-property runtime incomplete: '.$marker);
+ }
+}
+foreach(['stimulus_bootstrap','@hotwired/turbo',"import 'bootstrap'"] as $heavyImport){
+ if(str_contains($publicPropertyRuntime,$heavyImport)){
+  throw new RuntimeException('Phase 8 public Property restored heavy application runtime: '.$heavyImport);
+ }
+}
+$importmap=(string)file_get_contents($root.'/symfony/importmap.php');
+foreach(["'public_property' =>","'path' => 'public_property.js'"] as $marker){
+ if(!str_contains($importmap,$marker)){
+  throw new RuntimeException('Phase 8 public-property importmap contract incomplete: '.$marker);
+ }
+}
+
 $card=(string)file_get_contents($root.'/symfony/templates/components/property/public_property_card.html.twig');
 if(!str_contains($card,'href="{{ property.url }}#request"')){
  throw new RuntimeException('Phase 8 shared property-card request CTA must target the detail-page request form.');
