@@ -178,6 +178,7 @@
 
 .cos-property-card__tags span {
   padding: var(--cos-space-1) var(--cos-space-2);
+  color: var(--cos-color-text-soft);
   background: var(--cos-surface-subtle-bg);
   border-radius: var(--cos-radius-pill);
 }
