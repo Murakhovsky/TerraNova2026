@@ -1,0 +1,75 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Реєстрація | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="auth-register"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Новий акаунт"
+        title="Створіть кабінет Terra Nova"
+        subtitle="Один акаунт для заявок, власних обʼєктів і персональних сценаріїв."
+    >
+        <twig:CosButton label="Уже маю акаунт" href="/auth/login" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if authStatus %}
+        <twig:CosAlert title="Реєстрацію не завершено" copy="{{ authStatus }}" tone="danger" />
+    {% endif %}
+
+    <form class="cos-form" action="/auth/register" method="post">
+        <twig:CosFormSection title="Дані акаунта">
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Імʼя</span>
+                    <input class="cos-input" name="full_name" type="text" autocomplete="name" value="{{ formData.full_name|default('') }}" required>
+                </label>
+                <label class="cos-field">
+                    <span>Email</span>
+                    <input class="cos-input" name="email" type="email" autocomplete="email" value="{{ formData.email|default('') }}" required>
+                </label>
+                <label class="cos-field">
+                    <span>Телефон</span>
+                    <input class="cos-input" name="phone" type="tel" autocomplete="tel" value="{{ formData.phone|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Роль</span>
+                    <select class="cos-select" name="role">
+                        {% for value, label in {
+                            'buyer':'Покупець',
+                            'seller':'Власник',
+                            'investor':'Інвестор',
+                            'realtor':'Рієлтор',
+                            'developer':'Забудовник',
+                            'partner':'Партнер'
+                        } %}
+                            <option value="{{ value }}" {% if formData.role|default('buyer') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="cos-field">
+                    <span>Пароль</span>
+                    <input class="cos-input" name="password" type="password" autocomplete="new-password" minlength="8" required>
+                </label>
+                <label class="cos-field">
+                    <span>Повторіть пароль</span>
+                    <input class="cos-input" name="password_repeat" type="password" autocomplete="new-password" minlength="8" required>
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosStickyActions label="Registration actions">
+            <a class="cos-button cos-button--ghost" href="/auth/login">Вхід</a>
+            <button class="cos-button cos-button--primary" type="submit">Створити кабінет</button>
+        </twig:CosStickyActions>
+    </form>
+</section>
+{% endblock %}
