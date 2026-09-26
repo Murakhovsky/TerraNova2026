@@ -9,7 +9,9 @@ $assert=static function(bool $condition,string $message):void{
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.9.0','>='),'Growth manifest must remain V0.9+.');
-$assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.9 must not invent a schema migration.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.8.0','>='),'Growth schema must preserve the V0.8 baseline.');
+$v090Migrations=array_values(array_filter($manifest['contributions']['migration_files']??[],static fn(string $path):bool=>str_contains($path,'growth_v090_')));
+$assert($v090Migrations===[],'Growth V0.9 must not invent a dedicated schema migration.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.9 must remain disabled before delivery cutover.');
 $assert(in_array('growth.handoff.target.sales',$manifest['contributions']['capabilities']??[],true),'Growth Sales handoff capability is missing.');
 

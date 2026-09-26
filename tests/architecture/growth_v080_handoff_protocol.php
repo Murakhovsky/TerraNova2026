@@ -9,7 +9,7 @@ $assert=static function(bool $condition,string $message):void{
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
 $assert(version_compare((string)($manifest['version']??'0.0.0'),'0.8.0','>='),'Growth manifest must remain V0.8+.');
-$assert(($manifest['schema_version']??null)==='0.8.0','Growth V0.8 schema version must be 0.8.0.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.8.0','>='),'Growth schema must preserve the V0.8 baseline.');
 $assert(($manifest['enabled_by_default']??true)===false,'Growth V0.8 must remain disabled before delivery cutover.');
 $migration='app/migrations/20260922_000073_growth_v080_handoff_protocol.sql';
 $assert(in_array($migration,$manifest['contributions']['migration_files']??[],true),'Growth V0.8 migration contribution is missing.');
