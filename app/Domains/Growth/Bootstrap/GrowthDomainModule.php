@@ -8,12 +8,14 @@ use Domains\Growth\Automation\Action\GrowthLinkedInHandler;
 use Domains\Growth\Automation\Action\GrowthSendMessageHandler;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Domains\Growth\Automation\Policy\GrowthPolicyCatalog;
+use Domains\Growth\Rule\GrowthRuleContextProvider;
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Module\Contract\PolicyProvidingModuleInterface;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Policy\ActionPolicy;
+use Kernel\Rule\Contract\RuleContextProviderInterface;
 
 final readonly class GrowthDomainModule implements
     DomainModuleInterface,
@@ -32,6 +34,8 @@ final readonly class GrowthDomainModule implements
 
     /** @return list<string> */
     public function eventTypes():array{return GrowthEventType::values();}
+
+    public function ruleContextProvider():RuleContextProviderInterface{return new GrowthRuleContextProvider();}
 
     public function actionTypes():array
     {
