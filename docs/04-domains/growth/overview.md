@@ -89,7 +89,7 @@ Growth Learning
 
 **Signal != Opportunity** є базовим інваріантом. Високий ICP fit або факт із provider не створює OpportunityCandidate без канонічного Signal evidence.
 
-## Market Discovery
+## Пошук ринку
 
 V0.48–V0.50 додали Market Universe та автоматичний пошук Accounts. Перший provider adapter працює через credentialed HTTPS JSON source, Platform Credential Vault і resilience boundary.
 

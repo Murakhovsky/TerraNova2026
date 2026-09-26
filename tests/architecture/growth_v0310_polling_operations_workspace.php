@@ -48,7 +48,7 @@ foreach(['PDO','credential_reference','identity_value','actor_id','organization_
 
 $controller=$read('symfony/src/Web/Growth/GrowthPageController.php');
 foreach([
-    'GrowthSignalPollingStatusProvider',"'polling'=>$this->pollingStatus->status(",'function collectors(',
+    'GrowthSignalPollingStatusProvider',"'polling'=>\$this->pollingStatus->status(",'function collectors(',
 ] as $needle){
     $assert(str_contains($controller,$needle),'Growth V0.31 SSR polling composition missing: '.$needle);
 }

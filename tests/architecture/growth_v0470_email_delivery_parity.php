@@ -29,7 +29,7 @@ foreach(["EngagementChannel::Email=>'growth.send_message'",'EngagementDeliverySt
 }
 
 $guard=$read('app/Domains/Growth/Application/Service/GrowthOutreachSequenceGuard.php');
-foreach(["['failed','bounced','complained']","'delivery_'.$status"] as $needle){
+foreach(["['failed','bounced','complained']","'delivery_'.\$status"] as $needle){
     expectGrowthV0470Architecture(str_contains($guard,$needle),'Email failure guard invariant missing: '.$needle);
 }
 

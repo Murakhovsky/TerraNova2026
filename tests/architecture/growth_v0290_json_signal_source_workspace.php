@@ -23,7 +23,7 @@ foreach(['CREATE TABLE','ALTER TABLE','DROP TABLE'] as $forbidden){
 $controller=$read('symfony/src/Web/Growth/GrowthPageController.php');
 foreach([
     'GrowthJsonSignalSourceBoundary',
-    "'json_sources'=>$this->jsonSignalSources->sources(",
+    "'json_sources'=>\$this->jsonSignalSources->sources(",
     'function collectors(',
 ] as $needle){
     $assert(str_contains($controller,$needle),'Growth V0.29 SSR JSON source composition missing: '.$needle);

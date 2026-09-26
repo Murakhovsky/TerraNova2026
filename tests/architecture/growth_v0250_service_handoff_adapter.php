@@ -23,7 +23,7 @@ foreach(['CREATE TABLE','ALTER TABLE','DROP TABLE'] as $forbidden){
 $adapter=$read('app/Domains/Growth/Infrastructure/Handoff/ServiceGrowthHandoffTarget.php');
 foreach([
     'GrowthHandoffTargetInterface','ServiceApplicationBoundary','ActiveModuleResolver',
-    "return 'service'","isEnabled($handoff->organizationId,'service')",'createRequest(',
+    "return 'service'","isEnabled(\$handoff->organizationId,'service')",'createRequest(',
     "'requester_ref'=>"."'growth:'","'service_request'",
 ] as $needle){
     $assert(str_contains($adapter,$needle),'Growth Service handoff adapter missing: '.$needle);

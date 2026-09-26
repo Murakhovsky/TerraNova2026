@@ -38,7 +38,7 @@ foreach([
     'GrowthEngagementRepositoryInterface','GrowthLearningRepositoryInterface',
     'GrowthMutationReceiptInterface','GrowthActionProposalGatewayInterface',
     "EngagementRecommendationStatus::Accepted",
-    "externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal')",
+    "externalSubjectsForCandidate(\$organizationId,\$candidateId,'sales','sales_deal')",
     'count($deals)===1',
     "'engagement_execution_payload'",
     "'sales.send_message'",

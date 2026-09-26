@@ -36,7 +36,7 @@ $assert($lockPos!==false&&$activationPos!==false&&$activationPos>$lockPos,'Autho
 $assert($limitPos!==false&&$limitPos>$activationPos,'Quota admission must remain after activation authorization.');
 
 $gateway=$read('app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php');
-foreach(['GrowthEngagementActivationProviderInterface','executionMode:$activationMode->executionMode()',"'activation_mode'=>$activationMode->value"] as $needle){
+foreach(['GrowthEngagementActivationProviderInterface','executionMode:$activationMode->executionMode()',"'activation_mode'=>\$activationMode->value"] as $needle){
     $assert(str_contains($gateway,$needle),'Growth Action policy context missing: '.$needle);
 }
 

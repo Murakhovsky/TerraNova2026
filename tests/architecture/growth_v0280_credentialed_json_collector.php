@@ -38,7 +38,7 @@ foreach(['echo ','print_r(','var_dump(','error_log('] as $forbidden){
 $source=$read('app/Domains/Growth/Domain/GrowthJsonSignalSource.php');
 foreach([
     "AUTH_BEARER='bearer'","AUTH_API_KEY_HEADER='api_key_header'",
-    "strtolower((string)($parts['scheme']??''))!=='https'","(int)$parts['port']!==443",
+    "strtolower((string)(\$parts['scheme']??''))!=='https'","(int)\$parts['port']!==443",
     "'/^X-[A-Za-z0-9-]{1,63}$/'"
 ] as $needle){
     $assert(str_contains($source,$needle),'Growth JsonSignalSource invariant missing: '.$needle);
@@ -77,7 +77,7 @@ foreach([
     'GrowthJsonSignalSourceBoundary','GrowthJsonSignalSourceRepositoryInterface','GrowthMutationReceiptInterface',
     'create_json_signal_source','enable_json_signal_source','disable_json_signal_source',
     'SIGNAL_JSON_SOURCE_CREATED','SIGNAL_JSON_SOURCE_ENABLED','SIGNAL_JSON_SOURCE_DISABLED',
-    "unset($row['credential_reference'])",'credential_reference_hash'
+    "unset(\$row['credential_reference'])",'credential_reference_hash'
 ] as $needle){
     $assert(str_contains($service,$needle),'Growth JSON source service missing: '.$needle);
 }

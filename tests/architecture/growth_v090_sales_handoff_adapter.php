@@ -25,7 +25,7 @@ $adapter=$read('app/Domains/Growth/Infrastructure/Handoff/SalesGrowthHandoffTarg
 foreach([
     'GrowthHandoffTargetInterface','GrowthBuyingCommitteeRepositoryInterface','SalesWriteServiceFactoryInterface',
     "return 'sales'","subjectType==='contact'","subjectType!=='account'",'latestAssessment',
-    "'identity_type'","$identityType!=='email'","createLead([","'source'=>'growth-handoff'",
+    "'identity_type'","\$identityType!=='email'","createLead([","'source'=>'growth-handoff'",
     "'sales_lead'","idempotency_conflict",
 ] as $needle){
     $assert(str_contains($adapter,$needle),'Growth Sales handoff adapter missing: '.$needle);
