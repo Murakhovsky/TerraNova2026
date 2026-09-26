@@ -1,0 +1,64 @@
+<div class="cos-sales-pipeline-board" aria-label="Sales pipeline stages">
+    {% for stage in stages %}
+        <section class="cos-sales-pipeline-stage" data-sales-stage data-stage-id="{{ stage.id }}">
+            <header class="cos-sales-pipeline-stage__header">
+                <div>
+                    <h2>{{ stage.label }}</h2>
+                    <p>{{ stage.summary }}</p>
+                </div>
+                <span class="cos-badge cos-badge--neutral">{{ stage.count }}</span>
+            </header>
+
+            <div
+                class="cos-sales-pipeline-stage__body"
+                data-sales-stage-dropzone
+                data-stage-id="{{ stage.id }}"
+                data-action="dragover->sales-pipeline#dragOver dragleave->sales-pipeline#dragLeave drop->sales-pipeline#drop"
+            >
+                {% for deal in stage.deals %}
+                    <article
+                        class="cos-sales-pipeline-card"
+                        draggable="true"
+                        data-sales-deal-card
+                        data-deal-id="{{ deal.id }}"
+                        data-stage-id="{{ deal.stageId }}"
+                        data-action="dragstart->sales-pipeline#dragStart dragend->sales-pipeline#dragEnd"
+                    >
+                        <div class="cos-sales-pipeline-card__head">
+                            <a href="{{ deal.href }}" class="cos-sales-pipeline-card__title">{{ deal.customer }}</a>
+                            <twig:CosStatus label="{{ deal.riskLabel }}" tone="{{ deal.riskTone }}" />
+                        </div>
+
+                        <p class="cos-sales-pipeline-card__subtitle">{{ deal.title }}</p>
+                        <p class="cos-sales-pipeline-card__meta">
+                            {{ deal.owner }} · {{ deal.stageAgeEstimated ? '~' : '' }}{{ deal.daysInStage }}d in stage
+                        </p>
+
+                        <dl class="cos-sales-pipeline-card__metrics">
+                            <div><dt>Value</dt><dd>{{ deal.value }}</dd></div>
+                            <div><dt>Weighted</dt><dd>{{ deal.weightedValue }}</dd></div>
+                            <div><dt>Next</dt><dd>{{ deal.nextAction }}</dd></div>
+                            <div><dt>Attention</dt><dd>{{ deal.attentionReason }}</dd></div>
+                            <div><dt>AI recommendation</dt><dd>{{ deal.recommendation }}</dd></div>
+                        </dl>
+
+                        <form class="cos-sales-pipeline-card__stage-form" data-action="submit->sales-pipeline#changeStage">
+                            <input type="hidden" name="deal_id" value="{{ deal.id }}">
+                            <label class="cos-field">
+                                <span>Move to stage</span>
+                                <select class="cos-select" name="stage_id">
+                                    {% for option in stageOptions %}
+                                        <option value="{{ option.id }}" {% if option.id == deal.stageId %}selected{% endif %}>{{ option.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Move</button>
+                        </form>
+                    </article>
+                {% else %}
+                    <twig:CosEmptyState title="Stage порожній" copy="Перетягніть сюди угоду або змініть stage з картки." />
+                {% endfor %}
+            </div>
+        </section>
+    {% endfor %}
+</div>

@@ -1,0 +1,45 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Intelligence Agents | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Sales Intelligence Agents"
+        subtitle="Business-facing configuration for Sales AI. Schema, safety boundaries and Agent Runtime stay code-owned."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Rules" href="/sales/admin/rules" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Sales Intelligence Agents недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        <twig:CosToolbar label="Agent administration">
+            {% block start %}<span class="cos-card__copy">{{ (admin.data.agents ?? [])|length }} configured agents</span>{% endblock %}
+        </twig:CosToolbar>
+
+        <div class="cos-entity-list" role="list">
+            {% for agent in admin.data.agents ?? [] %}
+                <twig:CosEntityListItem
+                    title="{{ agent.agent_name ?? 'Agent' }}"
+                    subtitle="{{ (agent.profile ?? 'default') ~ ' · ' ~ (agent.model ?: 'platform model') }}"
+                    meta="{{ (agent.ownership ?? 'SYSTEM') ~ ' · cfg v' ~ (agent.configuration_version ?? 1) ~ ' · confidence ≥ ' ~ (agent.confidence_threshold ?? 0) }}"
+                    statusLabel="{{ (agent.enabled ?? false) ? 'Enabled' : 'Disabled' }}"
+                    statusTone="{{ (agent.enabled ?? false) ? 'positive' : 'neutral' }}"
+                    href="/sales/admin/agents/{{ agent.agent_name|url_encode }}"
+                />
+            {% else %}
+                <twig:CosEmptyState title="Agents не налаштовані" copy="Sales Intelligence configuration is not available." />
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

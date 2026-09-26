@@ -1,0 +1,126 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Dashboard | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-sales-surface="dashboard"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales"
+        title="Sales Dashboard"
+        subtitle="Операційний стан продажів, ризики та наступні дії в одному Domain Dashboard."
+    >
+        <twig:CosButton label="Today" href="/sales/today" variant="ghost" />
+        <twig:CosButton label="Pipeline" href="/sales/pipeline" variant="ghost" />
+        <twig:CosButton label="Leads" href="/sales/leads" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if dashboard.error %}
+        <twig:CosAlert title="Sales Dashboard недоступний" copy="{{ dashboard.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="sales-kpis">
+            <h2 id="sales-kpis" class="cos-section-title">Sales pulse</h2>
+            <div class="cos-kpi-strip">
+                <article class="cos-card">
+                    <twig:CosTrendMetric label="Активні угоди" value="{{ dashboard.activeDeals }}" period="current" />
+                </article>
+                <article class="cos-card">
+                    <twig:CosMoneyMetric label="Pipeline value" value="{{ dashboard.pipelineValue }}" />
+                </article>
+                <article class="cos-card">
+                    <twig:CosMoneyMetric label="Expected revenue" value="{{ dashboard.expectedRevenue }}" />
+                </article>
+                <article class="cos-card">
+                    <twig:CosTrendMetric label="У ризику" value="{{ dashboard.dealsAtRisk }}" direction="down" />
+                </article>
+            </div>
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Sales attention">
+            <article class="cos-card">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Risk</p>
+                        <h2 class="cos-card__title">At-risk deals</h2>
+                    </div>
+                    <twig:CosButton label="Усі угоди" href="/sales/deals?risk=high" variant="ghost" size="sm" />
+                </div>
+                {% if dashboard.atRisk is empty %}
+                    <twig:CosEmptyState title="Критичних угод немає" copy="У поточній вибірці немає угод із високим ризиком." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for deal in dashboard.atRisk %}
+                            <twig:CosEntityListItem
+                                title="{{ deal.title }}"
+                                subtitle="{{ deal.subtitle }}"
+                                meta="{{ deal.meta }}"
+                                statusLabel="{{ deal.status }}"
+                                statusTone="{{ deal.tone }}"
+                                href="{{ deal.href }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+
+            <article class="cos-card">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Today</p>
+                        <h2 class="cos-card__title">Наступні дії</h2>
+                    </div>
+                    <twig:CosButton label="Відкрити Today" href="/sales/today" variant="ghost" size="sm" />
+                </div>
+                {% if dashboard.nextActions is empty %}
+                    <twig:CosEmptyState title="На сьогодні все чисто" copy="Немає прострочених або обовʼязкових дій у поточній вибірці." />
+                {% else %}
+                    <div class="cos-pattern-stack">
+                        {% for item in dashboard.nextActions %}
+                            <twig:CosNextAction
+                                title="{{ item.title }}"
+                                copy="{{ item.copy }}"
+                                due="{{ item.due }}"
+                                tone="{{ item.tone }}"
+                                href="{{ item.href }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+
+        <section class="cos-page__section">
+            <article class="cos-card">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Fresh demand</p>
+                        <h2 class="cos-card__title">New Leads</h2>
+                    </div>
+                    <twig:CosButton label="Lead List" href="/sales/leads" variant="primary" size="sm" />
+                </div>
+                {% if dashboard.newLeads is empty %}
+                    <twig:CosEmptyState title="Нових лідів немає" copy="Нові звернення зʼявляться тут після надходження в Sales." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for lead in dashboard.newLeads %}
+                            <twig:CosEntityListItem
+                                title="{{ lead.title }}"
+                                subtitle="{{ lead.subtitle }}"
+                                meta="{{ lead.meta }}"
+                                statusLabel="{{ lead.status }}"
+                                statusTone="{{ lead.tone }}"
+                                href="{{ lead.href }}"
+                            />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

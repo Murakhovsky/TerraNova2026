@@ -206,7 +206,7 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
 
     public function extensions(WebExtensionContext $context, string $workspaceId): array
     {
-        if (!in_array($workspaceId, ['sales.lead', 'sales.deal'], true)) {
+        if (!in_array($workspaceId, ['sales.lead', 'sales.deal', 'sales.client_case'], true)) {
             return [];
         }
 
@@ -237,6 +237,7 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
         return [
             new WorkspaceDefinition('sales.lead', 'Lead Workspace', '/sales/leads', 'sales.lead', 10),
             new WorkspaceDefinition('sales.deal', 'Deal Workspace', '/sales/deals', 'sales.deal', 20),
+            new WorkspaceDefinition('sales.client_case', 'Client Case Workspace', '/client-case', 'sales.deal', 30),
         ];
     }
 }

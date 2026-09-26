@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 use Interfaces\Web\Navigation\FrontendNavigation;
@@ -8,11 +7,11 @@ $root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 
 $read = static function (string $path) use ($root): string {
-    $full = $root . '/' . $path;
-    if (!is_file($full)) {
-        throw new RuntimeException('WEB V0.10 artifact is missing: ' . $path);
-    }
-    return (string) file_get_contents($full);
+    $full = $root . '/' . ltrim($path, '/');
+    if (!is_file($full)) throw new RuntimeException('WEB V0.10 artifact is missing: ' . $path);
+    $content = file_get_contents($full);
+    if ($content === false) throw new RuntimeException('Unable to read: ' . $path);
+    return $content;
 };
 $contains = static function (string $source, string $needle, string $message): void {
     if (!str_contains($source, $needle)) throw new RuntimeException($message . ': ' . $needle);
@@ -32,80 +31,146 @@ if ($keys(FrontendNavigation::public()) !== ['catalog', 'services', 'partners', 
     throw new RuntimeException('Public main navigation must remain canonical and compact.');
 }
 
-$indexController = $read('app/Interfaces/Web/Controller/IndexController.php');
-$contains($indexController, "pick('index/public')", 'Homepage must use the canonical Public view.');
-$contains($indexController, "interfaceSurface = 'public'", 'Homepage must declare Public surface ownership.');
-$contains($indexController, "['public-surface']", 'Homepage must load the Public surface bundle.');
-
-$pageController = $read('app/Interfaces/Web/Controller/PageController.php');
-$contains($pageController, "interfaceSurface = 'public'", 'Content pages must declare Public surface ownership.');
-$contains($pageController, "['public-surface']", 'Content pages must load the Public surface bundle.');
-
-$publicController = $read('app/Interfaces/Web/Controller/PublicPropertyController.php');
-foreach (['catalogAction', 'mapAction', 'showAction', 'presentationAction', 'submitAction', "interfaceSurface = 'public'", "'public-surface'"] as $needle) {
-    $contains($publicController, $needle, 'Public Property delivery contract is incomplete.');
-}
-foreach (['clientCaseService', 'managerClientCases', 'requireManager', 'isManager', 'workspaceSection', "interfaceSurface = 'workspace'"] as $needle) {
-    $notContains($publicController, $needle, 'Public Property controller leaked Workspace/CRM behaviour.');
+$homeController = $read('symfony/src/Controller/HomePageController.php');
+foreach ([
+    "renderer->render(\$request, 'home/canonical'",
+    "'interfaceSurface' => 'public'",
+    "'pageAssetEntries' => ['public-surface']",
+] as $needle) {
+    $contains($homeController, $needle, 'Homepage must use canonical Symfony Public runtime');
 }
 
-$routes = $read('app/Interfaces/Web/Routing/PublicPropertyRoutes.php');
-$routeContract = [
-    '/property' => 'catalog',
-    '/property/catalog' => 'catalog',
-    '/property/map' => 'map',
-    '/property/show/{slug:[a-z0-9-]+}' => 'show',
-    '/property/presentation/{slug:[a-z0-9-]+}' => 'presentation',
-    '/property/submit' => 'submit',
-    '/property/create' => 'submit',
-    '/submit-property' => 'submit',
-];
-foreach ($routeContract as $pattern => $action) {
-    $contains($routes, "'" . $pattern . "'", 'Canonical Public Property route is missing.');
-    $contains($routes, "\$target('" . $action . "')", 'Canonical Public Property action mapping is missing.');
-}
-$contains($routes, "'controller' => 'public_property'", 'Public Property routes must target the dedicated delivery controller.');
-$contains($routes, "'namespace' => 'Interfaces\\\\Web\\\\Controller'", 'Public Property routes must stay in the Web delivery layer.');
-
-$contributor = $read('app/Interfaces/Web/Routing/PropertyModuleRouteContributor.php');
-$notContains($contributor, 'PropertyRuntimeRoutes', 'Retired Property runtime transport must stay deleted.');
-$contains($contributor, 'PublicPropertyRoutes::register($router)', 'Property module must register its Public projection routes.');
-
-$home = $read('app/Interfaces/Web/View/index/public.phtml');
-foreach (["partial('shared/public_header'", "partial('shared/public_footer'", 'featuredProperties', 'property/catalog', 'property/map'] as $needle) {
-    $contains($home, $needle, 'Public homepage composition is incomplete.');
-}
-foreach (['property/listing', 'tn-visual-header', 'tn-visual-footer'] as $needle) {
-    $notContains($home, $needle, 'Public homepage restored a private or local shell dependency.');
+$contentController = $read('symfony/src/Web/Content/PublicContentPageController.php');
+foreach ([
+    "public function blog(Request \$request): Response",
+    "public function article(Request \$request, string \$slug): Response",
+    "public function guide(Request \$request, string \$slug): Response",
+    "'blog/index'",
+    "'blog/show'",
+    "'blog/landing'",
+    "'interfaceSurface' => 'public'",
+] as $needle) {
+    $contains($contentController, $needle, 'Public Content Symfony delivery contract is incomplete');
 }
 
-$map = $read('app/Interfaces/Web/View/property/map.phtml');
-foreach (["['latitude']", "['longitude']", 'tn-map-canvas--geo'] as $needle) {
-    $contains($map, $needle, 'Public map must project real geo coordinates.');
+$propertyController = $read('symfony/src/Web/Property/PropertyPageController.php');
+foreach ([
+    'public function catalog(Request $request): Response',
+    'public function map(Request $request): Response',
+    'public function favour(Request $request): Response',
+    'public function show(Request $request, string $slug): Response',
+    'public function presentation(Request $request, string $slug): Response',
+    'public function submit(Request $request): Response',
+    "'property/catalog'",
+    "'property/map'",
+    "'property/favour'",
+    "'property/show'",
+    "'property/presentation'",
+    "'property/submit'",
+] as $needle) {
+    $contains($propertyController, $needle, 'Public Property Symfony delivery contract is incomplete');
 }
-foreach (['% 68', '% 58', '$index * 29', '$index * 23'] as $needle) {
-    $notContains($map, $needle, 'Public map must not fabricate pin positions.');
+
+$routes = $read('symfony/config/routes.yaml');
+foreach ([
+    'path: /',
+    'HomePageController',
+    'path: /blog',
+    'PublicContentPageController::blog',
+    'path: /blog/{slug}',
+    'PublicContentPageController::article',
+    'path: /guide/{slug}',
+    'PublicContentPageController::guide',
+    'path: /property/catalog',
+    'PropertyPageController::catalog',
+    'path: /property/map',
+    'PropertyMapController::index',
+    'path: /property/favour',
+    'PropertyPageController::favour',
+    'path: /property/show/{slug}',
+    'PropertyPageController::show',
+    'path: /property/presentation/{slug}',
+    'PropertyPageController::presentation',
+    'path: /property/submit',
+    'PropertyPageController::submit',
+] as $needle) {
+    $contains($routes, $needle, 'Canonical Public route is missing');
+}
+
+$home = $read('app/Interfaces/Web/View/home/canonical.phtml');
+foreach (['tn-public-hero', '/auth/login', '/blog', '/api/v1/status'] as $needle) {
+    $contains($home, $needle, 'Canonical Symfony home specialized marketing contract is incomplete');
+}
+
+foreach ([
+    'app/Interfaces/Web/View/index/public.phtml',
+] as $historical) {
+    if (is_file($root . '/' . $historical)) {
+        throw new RuntimeException('Historical Public renderer restored: ' . $historical);
+    }
+}
+
+$map = $read('symfony/templates/experience/property/map.html.twig');
+foreach ([
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    '<twig:CosContextPanel',
+    'data-controller="property-map"',
+    'data-x="{{ point.x }}"',
+    'data-y="{{ point.y }}"',
+] as $needle) {
+    $contains($map, $needle, 'Public map must use canonical Map / Spatial composition.');
+}
+foreach (['tn-', 'style=', '<script'] as $legacy) {
+    $notContains($map, $legacy, 'Public map must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/map.phtml')) {
+    throw new RuntimeException('Retired public Property map PHTML restored.');
+}
+$mapAdapter=$read('symfony/assets/controllers/property_map_controller.js');
+foreach(['dataset.x','dataset.y','pin.style.left','pin.style.top'] as $needle){
+    $contains($mapAdapter,$needle,'Public map DOM positioning adapter incomplete.');
 }
 
 $header = $read('app/Interfaces/Web/View/shared/public_header.phtml');
 $footer = $read('app/Interfaces/Web/View/shared/public_footer.phtml');
-$contains($header, '$publicNavigation', 'Public header must consume canonical navigation through its view model.');
-$notContains($header, 'FrontendNavigation::public()', 'Public header must not construct navigation inside the template.');
-$notContains($header, 'getDI()', 'Public header must remain container-free.');
-$notContains($header, 'di(', 'Public header must remain service-locator free.');
-$contains($header, 'data-interface-surface="public"', 'Public header must expose the surface marker.');
+$contains($header, '$publicNavigation', 'Public header must consume canonical navigation through its view model');
+$notContains($header, 'FrontendNavigation::public()', 'Public header must not construct navigation inside the template');
+$notContains($header, 'getDI()', 'Public header must remain container-free');
+$contains($header, 'data-interface-surface="public"', 'Public header must expose the surface marker');
+$contains($header, "partial('components/ui/action_bar'", 'Public header actions must use canonical ActionBar');
+$notContains($header, 'class="tn-btn ', 'Public header must not render legacy tn-btn actions');
+$notContains($header, "$action['class']", 'Public header must not consume presentation class descriptors');
+
+foreach ([
+    'app/Interfaces/Web/View/page/show.phtml',
+    'app/Interfaces/Web/View/blog/show.phtml',
+    'app/Interfaces/Web/View/blog/index.phtml',
+    'app/Interfaces/Web/View/blog/landing.phtml',
+    'app/Interfaces/Web/View/auth/login.phtml',
+    'app/Interfaces/Web/View/auth/register.phtml',
+    'app/Interfaces/Web/View/property/seo.phtml',
+    'app/Interfaces/Web/View/property/submit.phtml',
+    'app/Interfaces/Web/View/property/presentation.phtml',
+    'app/Interfaces/Web/View/property/show.phtml',
+    'app/Interfaces/Web/View/property/catalog.phtml',
+] as $publicHeaderCaller) {
+    $caller = $read($publicHeaderCaller);
+    $contains($caller, "partial('shared/public_header'", 'Public header caller contract is missing');
+    $notContains($caller, "'class' => 'tn-btn--", 'Public header caller must use semantic action variants');
+}
 foreach (['property/catalog', 'services', 'partners', 'terra-nova', 'cos/en'] as $needle) {
-    $contains($footer, $needle, 'Public footer is missing a canonical destination.');
+    $contains($footer, $needle, 'Public footer is missing a canonical destination');
 }
 
-foreach (['frontend/entrypoints/public-surface.js', 'frontend/features/public/surface.css', 'frontend/features/public/surface.js'] as $path) {
-    $read($path);
+foreach (['frontend/entrypoints/public-surface.js', 'frontend/features/public/surface.css', 'frontend/features/public/surface.js'] as $asset) {
+    $read($asset);
 }
 $vite = $read('vite.config.js');
-$contains($vite, "'public-surface':", 'Public surface entrypoint must be managed by Vite.');
+$contains($vite, "'public-surface':", 'Public surface entrypoint must be managed by Vite');
 $browser = $read('frontend/features/public/surface.js');
 foreach (['role', 'permission', 'deal_status', 'localStorage', 'sessionStorage'] as $forbidden) {
-    $notContains($browser, $forbidden, 'Public browser code must remain presentation-only.');
+    $notContains($browser, $forbidden, 'Public browser code must remain presentation-only');
 }
 
-echo "WEB V0.10 Public Surface architecture passed.\n";
+echo "WEB V0.10 native Public Surface architecture passed.\n";

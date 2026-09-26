@@ -2,133 +2,94 @@
 
 ## Purpose
 
-WEB V0.6 migrates the existing client CRM screens into the shared Company Workspace without changing Sales business rules or inventing a separate Clients Domain.
+WEB V0.6 introduced Clients as a Sales-owned Workspace projection without creating a separate Clients Domain.
 
-The migrated surface is:
-
-```text
-Clients
-├── Inbox
-├── Cases
-└── Case Workspace
-```
-
-Canonical routes remain unchanged:
+Canonical routes remain:
 
 - `/client-case/inbox`;
 - `/client-case`;
 - `/client-case/show/{id}`.
 
-This is a presentation-layer migration. Existing Sales-owned read models and command services remain the business source of truth.
+## Current canonical runtime
 
-## Runtime boundary
-
-`ClientCaseController` now declares the Workspace contract for all read screens:
+Wave 13 Phase 4 completed the original WEB V0.6 migration path:
 
 ```text
-workspaceSection = clients
-workspaceActive  = inbox | cases
-pageAssetEntries = clients-workspace
+/client-case/inbox
+  → Operational Queue
+  → ClientCaseInboxController
+  → GetClientCaseInboxQuery
+  → Twig
+
+/client-case
+  → Collection
+  → ClientCaseCollectionController
+  → GetClientCaseCollectionQuery
+  → Twig
+
+/client-case/show/{id}
+  → Entity Workspace
+  → ClientCaseWorkspaceController
+  → GetClientCaseWorkspaceQuery
+  → CosWorkspace / Twig
 ```
 
-The global Web layout owns the shared Workspace shell. Client Case views still contain their historical `shared/manager_header` partial call for compatibility with older rendering paths, but the partial suppresses that call whenever a migrated controller has declared `workspaceSection`. The layout then renders the shell exactly once with `layoutOwned=true`.
+All read composition now follows Application Query → ViewModel/Presenter → canonical archetype/patterns.
 
-This bridge is intentionally small and temporary. It prevents duplicate sidebars/topbars while avoiding a risky rewrite of large, already-functional CRM templates in the same release.
+## Domain ownership
 
-## Navigation ownership
+Clients remains a presentation family inside Sales.
 
-Clients navigation remains owned by the Sales module through `SalesNavigationContributor`:
+There is no `Domains/Clients`.
 
-- Clients -> Inbox -> `/client-case/inbox`;
-- Clients -> Cases -> `/client-case`.
+Client cases, inbound requests, pipeline stages, activities, matches and write services remain Sales-owned.
 
-WEB V0.6 does not create `Domains/Clients`. Client cases, inbound requests, pipeline stages, activities and related commands remain under the existing Sales business boundary.
+The Entity Workspace is registered as `sales.client_case`, but its underlying governed entity reference is `sales.deal`. This allows Client Case to reuse Sales UIActions and Workspace extensions without duplicating business semantics.
 
-Module-aware behavior from WEB V0.5 therefore continues to apply: disabling Sales removes the Clients section from Workspace navigation.
+## Mutation ownership
 
-## Frontend bundle
+All Client Case POST routes are centralized in:
 
-WEB V0.6 adds a dedicated Vite entrypoint:
+`App\Web\Sales\ClientCaseMutationController`
 
-```text
-frontend/entrypoints/clients-workspace.js
-    -> frontend/features/clients/workspace.css
-    -> frontend/features/clients/workspace.js
-```
+It preserves:
 
-The bundle is loaded only by Client Case read screens.
+- create/update opportunity;
+- quick update;
+- activity creation;
+- inbound request update;
+- lead → opportunity conversion;
+- request attachment;
+- property-match update;
+- CSRF and return-url contracts.
 
-The CSS adapts the existing CRM markup to the shared Workspace visual system:
+Read controllers do not own writes.
 
-- workspace density and spacing;
-- cards and panels;
-- Inbox request cards;
-- filters and forms;
-- KPI tiles;
-- pipeline/funnel columns;
-- case tables;
-- Case Workspace detail grids;
-- responsive mobile/tablet behavior.
+## Frontend ownership
 
-The browser behavior is deliberately small. It marks the Clients surface and exposes a pending/`aria-busy` submit state. Business transitions stay server-side.
+The historical dedicated bundle is retired:
 
-## Data and failure behavior
+- `frontend/entrypoints/clients-workspace.js` — deleted;
+- `frontend/features/clients/workspace.css` — deleted;
+- `ClientCasePageController` — deleted;
+- three Client Case PHTML views — deleted.
 
-WEB V0.6 does not replace `ClientCaseReadModelInterface`, `ClientCaseCommandService` or `SalesInboundService`.
-
-Existing read behavior remains:
-
-- Inbox filters and statistics;
-- case filters and statistics;
-- pipeline stages;
-- manager options;
-- property/location context;
-- inbound requests;
-- activities;
-- property matches;
-- COS intelligence projection where available.
-
-Existing partial-failure behavior also remains. A Client read failure returns the existing 503 page state; COS intelligence failure does not make the entire Case Workspace unavailable.
-
-## Compatibility debt retained intentionally
-
-`Interfaces\Web\Service\ClientCaseService` remains a deprecated compatibility facade. Removing it requires a separate delivery refactor because the current controller exposes multiple mature mutation flows through that facade.
-
-WEB V0.6 does not mix that refactor into a UI migration merely to make the directory tree look more enlightened.
-
-The historical `shared/manager_header` call also remains inside the three large PHTML views, but it becomes inert under the migrated Workspace contract. Future template cleanup may remove those calls once all legacy rendering paths are retired.
-
-## Security boundary
-
-Navigation visibility remains presentation only. Backend authentication/manager checks stay authoritative.
-
-WEB V0.6 does not claim to introduce a new authorization or CSRF model. Existing mutation security is unchanged and should be hardened as its own explicit release rather than silently changing form semantics inside a presentation migration.
+Canonical Client Case styling belongs to Symfony visual system. The only domain-specific visual code is `symfony/assets/styles/domains/client-case.css`, currently used for funnel geometry and built from COS tokens.
 
 ## Regression contract
 
 `tests/architecture/web_v06_clients_workspace.php` verifies:
 
-- Client Case read screens declare the Clients Workspace contract;
-- the shared shell is layout-owned and cannot render twice;
-- no Clients Domain is invented;
-- Sales continues to own Clients navigation;
-- the dedicated Vite bundle exists and is covered by frontend asset checks;
-- responsive Clients CSS and submit-state behavior exist;
-- Client Case PHTML does not bypass Vite with direct asset references.
-
-`.github/workflows/web-v06.yml` runs this contract independently of the larger COS Runtime Checks workflow. That matters while unrelated legacy gates can still fail before the general frontend stage is reached.
+- three canonical read controllers and archetypes;
+- Sales ownership and absence of a Clients Domain;
+- `sales.client_case` Workspace registration;
+- centralized mutation ownership;
+- canonical Twig surfaces;
+- zero Client Case PHTML;
+- zero legacy Clients Vite/CSS bundle.
 
 ## Definition of Done
 
-WEB V0.6 is complete when:
+WEB V0.6 is complete when Clients uses the shared COS Experience Platform end-to-end, retains Sales business ownership and server-side workflow semantics, and has no separate legacy presentation runtime.
 
-- Inbox, Cases and Case Workspace are rendered inside the shared Company Workspace shell;
-- Clients is still a Sales module UI projection rather than a new business Domain;
-- the shell renders once, even while legacy templates retain their historical header partial;
-- the Client screens load a dedicated `clients-workspace` Vite entrypoint;
-- existing CRM workflows remain available;
-- responsive behavior covers desktop, tablet and mobile;
-- form submission exposes an accessible pending state;
-- a dedicated architecture regression test protects the boundary;
-- a dedicated CI workflow validates the Web release without depending on unrelated Sales gates;
-- existing routes are unchanged.
+Wave 13 Phase 4 satisfies this definition.

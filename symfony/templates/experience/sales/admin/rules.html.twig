@@ -1,0 +1,66 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Business Rule Editor | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Business Rule Editor"
+        subtitle="Керуйте Sales automation як бізнес-правилами. Runtime execution, policy та approvals залишаються Kernel-owned."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Agents" href="/sales/admin/agents" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Business Rule Editor недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        <twig:CosToolbar label="Rule administration">
+            {% block start %}<span class="cos-card__copy">WHEN → IF → THEN</span>{% endblock %}
+        </twig:CosToolbar>
+
+        {% set catalog = admin.data.catalog ?? {} %}
+        {% set draftActions = catalog.actions ?? [] %}
+        <section
+            class="cos-card cos-pattern-stack"
+            data-controller="sales-admin-rules"
+            data-sales-admin-rules-csrf-value="{{ csrfToken }}"
+        >
+            <p class="cos-card__eyebrow">New automation</p>
+            <h2 class="cos-card__title">Create draft rule</h2>
+            <form data-action="submit->sales-admin-rules#create" class="cos-pattern-stack">
+                <label class="cos-field"><span>Name</span><input class="cos-input" name="name" required maxlength="220"></label>
+                <label class="cos-field"><span>Code</span><input class="cos-input" name="code" pattern="sales\.[a-z0-9_.-]{3,140}" placeholder="sales.admin.no_activity_48h"></label>
+                <label class="cos-field"><span>WHEN</span><select class="cos-select" name="trigger_key" required>{% for trigger in catalog.triggers ?? [] %}<option value="{{ trigger.key }}">{{ trigger.label }}</option>{% endfor %}</select></label>
+                <label class="cos-field"><span>Initial THEN</span><select class="cos-select" name="action_type" required>{% for action in draftActions %}{% if not (action.required ?? false) %}<option value="{{ action.type }}">{{ action.label ?? action.type }}</option>{% endif %}{% endfor %}</select></label>
+                <button class="cos-button cos-button--primary" type="submit">Create draft</button>
+                <span class="cos-card__copy" data-sales-admin-rules-target="status" aria-live="polite"></span>
+            </form>
+        </section>
+
+        <section class="cos-page__section">
+            <div class="cos-entity-list" role="list">
+                {% for rule in admin.data.rules ?? [] %}
+                    <twig:CosEntityListItem
+                        title="{{ rule.name ?? rule.code ?? 'Rule' }}"
+                        subtitle="{{ (rule.code ?? '') ~ ' · ' ~ (rule.trigger_type ?? '') }}"
+                        meta="{{ (rule.ownership ?? 'SYSTEM') ~ ' · cfg v' ~ (rule.configuration_version ?? 1) }}"
+                        statusLabel="{{ rule.status ?? 'DRAFT' }}"
+                        statusTone="{{ (rule.status ?? '') == 'ACTIVE' ? 'positive' : 'neutral' }}"
+                        href="/sales/admin/rules/{{ rule.id }}"
+                    />
+                {% else %}
+                    <twig:CosEmptyState title="Sales rules ще не provisioned" copy="Створіть перший draft rule." />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

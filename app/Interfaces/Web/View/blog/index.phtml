@@ -4,19 +4,24 @@ $blog = $blog ?? ['items' => [], 'page' => 1, 'pages' => 1, 'total' => 0];
 ?>
 
 <?php $this->partial('shared/public_header', ['active' => 'blog', 'actions' => [
-    ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-    ['href' => 'contacts', 'label' => 'Залишити запит', 'class' => 'tn-btn--dark'],
+    ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+    ['href' => 'contacts', 'label' => 'Залишити запит', 'variant' => 'primary'],
 ]]); ?>
 
 <main class="tn-page tn-blog-page">
-  <nav class="tn-breadcrumbs"><a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><span>Блог</span></nav>
-  <section class="tn-page-hero">
-    <div><p class="tn-kicker">Terra Nova Journal</p><h1>Блог про нерухомість</h1><p>Практичні матеріали про вибір, продаж, підготовку та управління об’єктами.</p></div>
-    <div class="tn-page-hero__meta"><strong><?php echo (int) $blog['total']; ?></strong><span>опублікованих матеріалів</span></div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Terra Nova Journal',
+    'title' => 'Блог про нерухомість',
+    'description' => 'Практичні матеріали про вибір, продаж, підготовку та управління об’єктами.',
+    'meta' => ['value' => (int) $blog['total'], 'label' => 'опублікованих матеріалів'],
+  ]); ?>
 
   <?php if (!$blog['items']): ?>
-    <section class="tn-empty-state"><h2>Матеріали готуються</h2><p>Нові статті з’являться після редакційної перевірки.</p></section>
+    <?php $this->partial('components/ui/state', [
+      'kind' => 'empty',
+      'title' => 'Матеріали готуються',
+      'message' => 'Нові статті з’являться після редакційної перевірки.',
+    ]); ?>
   <?php else: ?>
     <section class="tn-blog-grid">
       <?php foreach ($blog['items'] as $article): ?>

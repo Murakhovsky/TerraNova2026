@@ -1,0 +1,107 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Content Administration | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Administration · Content"
+        title="Блог і SEO"
+        subtitle="Єдина черга матеріалів, ручного редагування та синхронізації з n8n."
+        metaValue="{{ content.grid.page.total }}"
+        metaLabel="матеріалів у вибірці"
+    >
+        <twig:CosButton label="Новий матеріал" href="/admin/content/edit" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Content administration">
+        {% block start %}
+            <a class="cos-button cos-button--ghost cos-button--sm" href="#materials">Матеріали</a>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="#n8n">n8n deliveries</a>
+        {% endblock %}
+        {% block end %}
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/admin/content">Reset filters</a>
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if content.error %}
+        <twig:CosAlert title="Контент тимчасово недоступний" copy="{{ content.error }}" tone="danger" />
+    {% endif %}
+
+    <section class="cos-kpi-strip" aria-label="Статус контенту">
+        {% for metric in content.kpis %}
+            <article class="cos-card">
+                <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+            </article>
+        {% endfor %}
+    </section>
+
+    <twig:CosFilterBar action="/admin/content" label="Content filters">
+        <label class="cos-field">
+            <span>Пошук</span>
+            <input class="cos-input" type="search" name="q" value="{{ content.filters.q }}" placeholder="Назва, slug, ключове слово">
+        </label>
+        <label class="cos-field">
+            <span>Тип</span>
+            <select class="cos-select" name="type">
+                <option value="">Усі</option>
+                {% for code, label in content.typeLabels %}
+                    <option value="{{ code }}" {% if content.filters.type == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>Статус</span>
+            <select class="cos-select" name="status">
+                <option value="">Усі</option>
+                {% for code, label in content.statusLabels %}
+                    <option value="{{ code }}" {% if content.filters.status == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Застосувати</button>
+    </twig:CosFilterBar>
+
+    <section id="materials" class="cos-page__section" aria-labelledby="materials-title">
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Матеріали</p>
+            <h2 id="materials-title" class="cos-card__title">Контент</h2>
+            <p class="cos-card__copy">{{ content.grid.page.total }} записів у поточному представленні.</p>
+        </div>
+        <twig:CosDataGrid
+            id="content-administration"
+            label="Content materials"
+            baseUrl="/admin/content"
+            rowIdKey="material"
+            :query="content.grid.query"
+            :page="content.grid.page"
+            :columns="content.grid.columns"
+            :state="content.grid.state"
+        />
+    </section>
+
+    <section id="n8n" class="cos-card cos-pattern-stack" aria-labelledby="n8n-title">
+        <div class="cos-card__header">
+            <div>
+                <p class="cos-card__eyebrow">Інтеграції</p>
+                <h2 id="n8n-title" class="cos-card__title">Останні webhooks</h2>
+                <p class="cos-card__copy">{{ content.sentDeliveries }} доставлено.</p>
+            </div>
+        </div>
+        {% if content.deliveries is empty %}
+            <twig:CosEmptyState title="Викликів ще немає" copy="Webhook deliveries з’являться тут після першої синхронізації." />
+        {% else %}
+            <div class="cos-entity-list" role="list">
+                {% for delivery in content.deliveries %}
+                    <twig:CosEntityListItem title="{{ delivery.title }}" subtitle="{{ delivery.subtitle }}" meta="{{ delivery.meta }}" />
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

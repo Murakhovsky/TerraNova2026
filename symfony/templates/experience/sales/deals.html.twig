@@ -1,0 +1,48 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Deals | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-controller="sales-deals"
+    data-action="cos:datagrid-row-action->sales-deals#rowAction"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Deals"
+        title="Угоди"
+        subtitle="Collection угод з owner, source, next action та operational attention."
+        metaValue="{{ deals.page.total }}"
+        metaLabel="відомих записів"
+    >
+        <twig:CosButton label="Today" href="/sales/today" variant="ghost" />
+        <twig:CosButton label="Pipeline" href="/sales/pipeline" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Deal collection tools" density="compact">
+        {% block start %}
+            <span class="cos-card__copy">Search, filters, columns і mobile cards керуються одним DataGrid contract.</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Reset view" href="/sales/deals" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    <twig:CosDataGrid
+        id="sales-deals-grid"
+        label="Sales deals"
+        baseUrl="/sales/deals"
+        rowIdKey="id"
+        :query="deals.query"
+        :page="deals.page"
+        :columns="deals.columns"
+        :filters="deals.filters"
+        :rowActions="deals.rowActions"
+        :state="deals.gridState"
+        errorMessage="{{ deals.error }}"
+    />
+</section>
+{% endblock %}

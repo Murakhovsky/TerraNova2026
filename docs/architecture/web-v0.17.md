@@ -20,16 +20,9 @@ WEB V0.17 переводить канонічну систему компоне�
 
 ### Property Submissions
 
-`app/Interfaces/Web/View/property/submissions.phtml`
+`symfony/templates/experience/property/submissions.html.twig`
 
-Заміни:
-- legacy page hero → `PageHeader`;
-- legacy empty/error blocks → `State`;
-- `tn-listing-table` → `DataTable`;
-- локальний status pill → semantic `Status` через `DataTable`;
-- таблиця на mobile переходить у record cards через канонічний responsive contract.
-
-Статуси модерації отримали семантичні tones: neutral, info, warning, positive, danger.
+Wave 13 Phase 5 завершив проміжний PHTML етап: route працює як Operational Queue через Application Query, typed ViewModel/Presenter, KPI strip, FilterBar та EntityList. Legacy submissions PHTML видалено.
 
 ### Analytics
 
@@ -78,23 +71,21 @@ Domain-specific content не штучно уніфікується. JSON details
 
 ### Client Case
 
-`frontend/features/clients/workspace.css`
-`frontend/features/clients/workspace.js`
+WEB V0.17 спочатку перевів Client Case PHTML на canonical server components як проміжний compatibility етап.
 
-Client Case має складний operational UI: create/update forms, inbound triage, funnel, quick updates, matches, activities та AI actions. Повна механічна заміна view markup одним комітом створила б непотрібний regression risk.
+Wave 13 Phase 4 завершив цей шлях повністю:
 
-Тому хвиля 2 вводить контрольований compatibility bridge:
-- старий card-like hero візуально переходить до плоского структурного `PageHeader` pattern;
-- metrics використовують геометрію canonical KPI;
-- tabs переходять на line/navigation pattern canonical Tabs;
-- panels отримують `Calm Technical` radius, border і restrained elevation;
-- inputs/selects/textareas використовують canonical surface/focus geometry;
-- generic form actions переходять із graphite на cobalt action signal;
-- старий beige/gold form feedback прибраний;
-- local positive-green brand accents прибрані з kicker/status presentation;
-- duplicate submit-state JS видалений, Client Case покладається на спільний `initProductionUX` guard базового Workspace.
+- `/client-case/inbox` → Symfony/Twig Operational Queue;
+- `/client-case` → Symfony/Twig Collection;
+- `/client-case/show/{id}` → Symfony/Twig Entity Workspace;
+- read composition проходить через Application Queries і typed presentation ViewModels;
+- `sales.client_case` зареєстрований як окремий Workspace context поверх Sales-owned entity `sales.deal`;
+- усі Client Case POST flows централізовані у `ClientCaseMutationController`;
+- `ClientCasePageController`, три Client Case PHTML views, `clients-workspace` Vite entrypoint та legacy Clients CSS видалені;
+- canonical domain CSS лишає тільки спеціалізовану funnel geometry й використовує COS tokens.
 
-Цей bridge навмисно не оголошується фінальною server-component міграцією Client Case. Наступна контрольована хвиля повинна окремо перевести `index`, `inbox` та `show` на `PageHeader / EntityHeader / FilterBar / Panel / Status` без зміни workflow forms і funnel behavior.
+Client Case після Wave 13 більше не має compatibility bridge. Routes, Sales write ownership, CSRF, return_url та mutation field contracts збережені.
+
 
 ## KPI tone contract
 
@@ -144,11 +135,12 @@ tn-admin-panel
 tn-cos-status--*
 ```
 
-Для Client Case compatibility bridge gate фіксує:
-- відсутність старого beige/gold accent;
-- cobalt focus/action signal;
-- використання canonical COS tokens;
-- відсутність дубльованого submit-state JS.
+Для Client Case gate тепер фіксує:
+- canonical Twig composition для Operational Queue, Collection та Entity Workspace;
+- відсутність усіх трьох production PHTML views;
+- відсутність `ClientCasePageController` і dedicated `clients-workspace` bundle;
+- збереження server-first mutation contracts;
+- відсутність `tn-*`, inline visual CSS та локального browser runtime у завершених Twig surfaces.
 
 Architecture gate перевіряє не лише наявність canonical components, а й відсутність старих патернів у завершених частинах міграції.
 
@@ -165,4 +157,13 @@ Architecture gate перевіряє не лише наявність canonical 
 - окремий WEB V0.17 gate захищає мігровані surfaces від регресії;
 - зміни проходять live AWS dev deploy без зміни runtime/business behavior.
 
-Після хвилі 2 головний залишковий борг WEB V0.17: server-component міграція Client Case views, решта Property operational tables, локальні Sales Administration primitives та Content / Spatial / Users administration.
+## Завершення WEB V0.17
+
+PHASE 9–12 закрили production adoption debt, який лишався після первинної Workspace Canonicalization:
+
+- Sales production surfaces;
+- Property route/view graph;
+- Users / Content / Spatial administration;
+- Client Case `index`, `inbox`, `show`.
+
+WEB V0.17 більше не має окремого compatibility-bridge боргу. Подальші UI зміни мають бути новими product/design waves, а не продовженням старої міграції Phalcon-era presentation geometry.

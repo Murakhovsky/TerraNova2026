@@ -26,14 +26,15 @@ foreach ([
     $assert(!file_exists($root . '/' . $path), 'Retired Phalcon Sales SSR artifact restored: ' . $path);
 }
 
+$assert(!is_file($root . '/symfony/src/Web/Sales/SalesPageController.php'), 'Retired SalesPageController returned after canonical Sales surface cutover.');
+$assert(!is_file($root . '/symfony/src/Web/Sales/SalesAdminPageController.php'), 'Retired SalesAdminPageController returned after canonical Sales Admin cutover.');
+
 foreach ([
     'symfony/src/Web/Phtml/PhtmlRenderer.php',
     'symfony/src/Web/Phtml/UrlHelper.php',
     'symfony/src/Web/Phtml/RequestQueryAdapter.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
     'symfony/src/Web/Navigation/NavigationBuilder.php',
-    'symfony/src/Web/Sales/SalesPageController.php',
-    'symfony/src/Web/Sales/SalesAdminPageController.php',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, 'Phalcon\\'), 'Canonical Symfony Web layer depends on Phalcon: ' . $path);
@@ -46,13 +47,20 @@ $assert(!str_contains($layout, '$this->assets('), 'Global PHTML layout still dep
 
 foreach ([
     'app/Interfaces/Web/View/shared/manager_header.phtml',
-    'app/Interfaces/Web/View/shared/portal_header.phtml',
-    'app/Interfaces/Web/View/components/sales/navigation.phtml',
 ] as $path) {
     $source = $read($path);
     $assert(!str_contains($source, 'getDI()'), 'PHTML template still uses a service locator: ' . $path);
     $assert(!str_contains($source, 'di('), 'PHTML template still uses the legacy DI helper: ' . $path);
 }
+
+$assert(
+    !file_exists($root . '/app/Interfaces/Web/View/shared/portal_header.phtml'),
+    'Retired dedicated Portal header restored after native Cabinet shell closure.',
+);
+$assert(
+    !file_exists($root . '/frontend/features/portal/cabinet.js'),
+    'Retired Portal header/menu browser module restored.',
+);
 
 $security = $read('symfony/config/packages/security.yaml');
 $authenticator = $read('symfony/src/Security/LegacySessionAuthenticator.php');

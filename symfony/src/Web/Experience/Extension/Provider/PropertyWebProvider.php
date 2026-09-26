@@ -89,7 +89,8 @@ final class PropertyWebProvider implements NavigationProviderInterface, SearchPr
     {
         return [
             new WorkspaceDefinition('property.asset', 'Property Workspace', '/property/manage', 'property.asset', 10),
-            new WorkspaceDefinition('property.spatial', 'Spatial Workspace', '/spatial/manage', 'spatial.scene', 20),
+            new WorkspaceDefinition('property.submission', 'Property Submission', '/property/submissions', 'property.submission', 20),
+            new WorkspaceDefinition('property.spatial', 'Spatial Workspace', '/spatial/manage', 'spatial.scene', 30),
         ];
     }
 }

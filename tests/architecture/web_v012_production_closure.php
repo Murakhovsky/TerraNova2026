@@ -48,7 +48,7 @@ foreach($iterator as $file){
 $manifestPath=$root.'/public/build/.vite/manifest.json';
 if(!is_file($manifestPath))throw new RuntimeException('Vite manifest is required.');
 $manifest=json_decode((string)file_get_contents($manifestPath),true,512,JSON_THROW_ON_ERROR);
-foreach(['frontend/entrypoints/public-surface.js','frontend/entrypoints/portal-cabinet.js','frontend/entrypoints/terranova-interface.js'] as $entry){
+foreach(['frontend/entrypoints/public-surface.js','frontend/entrypoints/terranova-interface.js'] as $entry){
     if(!isset($manifest[$entry]))throw new RuntimeException('Canonical Vite entry missing: '.$entry);
 }
 

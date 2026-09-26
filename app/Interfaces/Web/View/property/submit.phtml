@@ -12,29 +12,27 @@ $pageStatus = $pageStatus ?? null;
 <?php $this->partial('shared/public_header', [
     'active' => 'submit',
     'actions' => [
-        ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-        ['href' => 'cabinet', 'label' => 'Кабінет', 'class' => 'tn-btn--dark'],
+        ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+        ['href' => 'cabinet', 'label' => 'Кабінет', 'variant' => 'primary'],
     ],
 ]); ?>
 
 <main class="tn-page">
-  <section class="tn-page-hero tn-page-hero--submit">
-    <div>
-      <p class="tn-kicker">Подати об’єкт</p>
-      <h1>Нова заявка</h1>
-      <p>Опишіть об’єкт, умови й контакт. Менеджер перевірить дані перед публікацією.</p>
-    </div>
-    <div class="tn-page-hero__meta">
-      <strong>24h</strong>
-      <span>первинна обробка заявки</span>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Property · Submission',
+    'title' => 'Нова заявка',
+    'description' => 'Опишіть об’єкт, умови й контакт. Менеджер перевірить дані перед публікацією.',
+    'meta' => ['value' => '24h', 'label' => 'первинна обробка заявки'],
+    'actions' => [['label' => 'Каталог', 'href' => 'property/catalog', 'variant' => 'ghost']],
+  ]); ?>
 
   <?php if ($pageStatus): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h2>Сторінка тимчасово недоступна</h2>
-      <p><?php echo $h($pageStatus); ?></p>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => 'error',
+        'title' => 'Сторінка тимчасово недоступна',
+        'message' => $pageStatus,
+        'action' => ['label' => 'До каталогу', 'href' => 'property/catalog'],
+    ]); ?>
   <?php else: ?>
     <section class="tn-submit-layout">
       <form class="tn-submit-form" action="<?php echo $this->url->get('property/submit'); ?>" method="post" enctype="multipart/form-data">

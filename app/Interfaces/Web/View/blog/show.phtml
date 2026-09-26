@@ -13,12 +13,11 @@ $schema = !empty($article['schema_json']) ? json_decode((string) $article['schem
 ?>
 
 <?php $this->partial('shared/public_header', ['active' => 'blog', 'actions' => [
-    ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-    ['href' => 'contacts', 'label' => 'Консультація', 'class' => 'tn-btn--dark'],
+    ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+    ['href' => 'contacts', 'label' => 'Консультація', 'variant' => 'primary'],
 ]]); ?>
 
 <main class="tn-page tn-article-page">
-  <nav class="tn-breadcrumbs"><a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><a href="<?php echo $this->url->get('blog'); ?>">Блог</a><span>/</span><span><?php echo $h($article['title']); ?></span></nav>
   <article class="tn-article">
     <header class="tn-article__header">
       <p class="tn-kicker"><?php echo $h($article['category'] ?: 'Нерухомість'); ?></p>
@@ -31,13 +30,30 @@ $schema = !empty($article['schema_json']) ? json_decode((string) $article['schem
     <?php if (!empty($article['tags'])): ?><footer class="tn-article__tags"><?php foreach ($article['tags'] as $tag): ?><span><?php echo $h($tag); ?></span><?php endforeach; ?></footer><?php endif; ?>
   </article>
 
-  <section class="tn-sales-cta">
-    <div><p class="tn-kicker">Практичний крок</p><h2>Потрібна нерухомість або консультація?</h2></div>
-    <div class="tn-hero-actions"><a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a><a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('contacts'); ?>">Залишити запит</a></div>
+  <section class="tn-ui-panel">
+    <div class="tn-ui-panel__head">
+      <div>
+        <p class="tn-ui-eyebrow">Практичний крок</p>
+        <h2>Потрібна нерухомість або консультація?</h2>
+      </div>
+      <?php $this->partial('components/ui/action_bar', [
+        'actions' => [
+          ['label' => 'Каталог', 'href' => 'property/catalog', 'variant' => 'primary'],
+          ['label' => 'Залишити запит', 'href' => 'contacts', 'variant' => 'ghost'],
+        ],
+        'align' => 'end',
+        'ariaLabel' => 'Наступний крок',
+      ]); ?>
+    </div>
   </section>
 
   <?php if ($related): ?>
-    <section class="tn-related-content"><div class="tn-section-heading"><p class="tn-kicker">Далі</p><h2>Останні матеріали</h2></div><div class="tn-blog-grid"><?php foreach ($related as $item): ?><article class="tn-blog-card"><div><p class="tn-kicker"><?php echo $h($item['category'] ?: 'Нерухомість'); ?></p><h3><a href="<?php echo $this->url->get('blog/' . $item['slug']); ?>"><?php echo $h($item['title']); ?></a></h3><p><?php echo $h($item['excerpt']); ?></p></div></article><?php endforeach; ?></div></section>
+    <section class="tn-ui-panel tn-related-content">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Далі</p><h2>Останні матеріали</h2></div></div>
+      <div class="tn-ui-panel__body">
+        <div class="tn-blog-grid"><?php foreach ($related as $item): ?><article class="tn-blog-card"><div><p class="tn-kicker"><?php echo $h($item['category'] ?: 'Нерухомість'); ?></p><h3><a href="<?php echo $this->url->get('blog/' . $item['slug']); ?>"><?php echo $h($item['title']); ?></a></h3><p><?php echo $h($item['excerpt']); ?></p></div></article><?php endforeach; ?></div>
+      </div>
+    </section>
   <?php endif; ?>
 </main>
 

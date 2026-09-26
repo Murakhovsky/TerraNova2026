@@ -17,30 +17,23 @@ $catalogStatus = $catalogStatus ?? null;
 <?php $this->partial('shared/public_header', ['active' => 'favour']); ?>
 
 <main class="tn-page">
-  <section class="tn-page-hero tn-page-hero--catalog">
-    <div>
-      <p class="tn-kicker">Добірка</p>
-      <h1>Вибрані об’єкти</h1>
-      <p>Збережені варіанти для повернення, порівняння або розмови з менеджером.</p>
-    </div>
-    <div class="tn-page-hero__meta">
-      <strong data-favourite-count>0</strong>
-      <span>у вибраному</span>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Property · Favourites',
+    'title' => 'Вибрані об’єкти',
+    'description' => 'Збережені варіанти для повернення, порівняння або розмови з менеджером.',
+    'meta' => ['value' => 0, 'label' => 'у вибраному'],
+    'metaValueAttributes' => ['data-favourite-count' => ''],
+    'actions' => [['label' => 'До каталогу', 'href' => 'property/catalog', 'variant' => 'primary']],
+  ]); ?>
 
   <section class="tn-favourite-workspace" data-favourite-list>
     <?php $this->partial('shared/catalog_viewbar', ['active' => 'favour']); ?>
 
     <?php if ($catalogStatus): ?>
-      <div class="tn-empty-state"><h2>Дані тимчасово недоступні</h2><p><?php echo $h($catalogStatus); ?></p></div>
+      <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Дані тимчасово недоступні', 'message' => $catalogStatus]); ?>
     <?php endif; ?>
 
-    <div class="tn-empty-state" data-favourite-empty>
-      <h2>У вибраному поки порожньо</h2>
-      <p>Відкрийте каталог і збережіть об’єкти, які хочете переглянути, порівняти або обговорити з менеджером.</p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Перейти в каталог</a>
-    </div>
+    <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'У вибраному поки порожньо', 'message' => 'Відкрийте каталог і збережіть об’єкти, які хочете переглянути, порівняти або обговорити з менеджером.', 'action' => ['label' => 'Перейти в каталог', 'href' => 'property/catalog'], 'attributes' => ['data-favourite-empty' => '']]); ?>
 
     <div class="tn-property-grid tn-property-grid--catalog">
       <?php foreach ($properties as $property): ?>

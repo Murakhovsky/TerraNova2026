@@ -1,0 +1,151 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Lead List | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-sales-surface="lead-list"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales"
+        title="Lead List"
+        subtitle="Кваліфікація, пріоритезація та операційні дії над вхідним попитом."
+        metaValue="{{ leads.items|length }}"
+        metaLabel="у вибірці"
+    >
+        <twig:CosButton label="Dashboard" href="/sales/dashboard" variant="ghost" />
+        <twig:CosButton label="Pipeline" href="/sales/pipeline" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if leads.error %}
+        <twig:CosAlert title="Lead List недоступний" copy="{{ leads.error }}" tone="danger" />
+    {% else %}
+        <twig:CosFilterBar action="/sales/leads" label="Lead filters">
+            <label class="cos-field">
+                <span>Пошук</span>
+                <input class="cos-input" type="search" name="q" value="{{ leads.filters.q }}" placeholder="Ім’я, телефон, email">
+            </label>
+            <label class="cos-field">
+                <span>Статус</span>
+                <select class="cos-select" name="status">
+                    <option value="">Усі</option>
+                    {% for value in ['new','contacted','qualified','disqualified'] %}
+                        <option value="{{ value }}" {% if leads.filters.status == value %}selected{% endif %}>{{ value|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="cos-field">
+                <span>Джерело</span>
+                <input class="cos-input" name="source" value="{{ leads.filters.source }}">
+            </label>
+            <button class="cos-button cos-button--primary" type="submit">Застосувати</button>
+        </twig:CosFilterBar>
+
+        <section class="cos-card">
+            <div class="cos-card__header">
+                <div>
+                    <p class="cos-card__eyebrow">Demand</p>
+                    <h2 class="cos-card__title">Leads</h2>
+                </div>
+                <span class="cos-card__copy">Page {{ leads.page }}</span>
+            </div>
+
+            {% if leads.items is empty %}
+                <twig:CosEmptyState
+                    title="Лідів не знайдено"
+                    copy="Змініть фільтри або дочекайтеся нових звернень."
+                />
+            {% else %}
+                <div class="cos-entity-list" role="list">
+                    {% for lead in leads.items %}
+                        <article
+                            class="cos-card cos-pattern-stack"
+                            data-controller="sales-lead"
+                            data-sales-lead-lead-id-value="{{ lead.id }}"
+                            data-sales-lead-csrf-value="{{ csrfToken }}"
+                            data-lead-id="{{ lead.id }}"
+                        >
+                            <twig:CosEntityListItem
+                                title="{{ lead.name }}"
+                                subtitle="{{ lead.source ~ ' · ' ~ lead.contact }}"
+                                meta="{{ lead.ownerName }}"
+                                statusLabel="{{ lead.status }}"
+                                statusTone="{{ lead.statusTone }}"
+                                href="/sales/leads/{{ lead.id }}"
+                            />
+
+                            <twig:CosActionBar label="Lead actions">
+                                {% if lead.status == 'new' %}
+                                    <button
+                                        class="cos-button cos-button--ghost cos-button--sm"
+                                        type="button"
+                                        data-sales-lead-status
+                                        data-status="contacted"
+                                        data-action="sales-lead#status"
+                                    >Contacted</button>
+                                {% endif %}
+
+                                <button
+                                    class="cos-button cos-button--primary cos-button--sm"
+                                    type="button"
+                                    data-sales-lead-status
+                                    data-status="qualified"
+                                    data-action="sales-lead#status"
+                                >Qualify</button>
+
+                                <button
+                                    class="cos-button cos-button--ghost cos-button--sm"
+                                    type="button"
+                                    data-sales-lead-status
+                                    data-status="disqualified"
+                                    data-action="sales-lead#status"
+                                >Disqualify</button>
+
+                                {% if lead.dealId %}
+                                    <a class="cos-button cos-button--primary cos-button--sm" href="/sales/deals/{{ lead.dealId }}">Open Deal</a>
+                                {% else %}
+                                    <button
+                                        class="cos-button cos-button--primary cos-button--sm"
+                                        type="button"
+                                        data-sales-lead-deal
+                                        data-action="sales-lead#convert"
+                                    >Create Deal</button>
+                                {% endif %}
+
+                                <button
+                                    class="cos-button cos-button--ghost cos-button--sm"
+                                    type="button"
+                                    data-sales-lead-followup
+                                    data-action="sales-lead#followup"
+                                >Follow-up</button>
+                            </twig:CosActionBar>
+
+                            <label class="cos-field">
+                                <span>Owner</span>
+                                <select class="cos-select" data-sales-lead-owner data-action="change->sales-lead#owner">
+                                    <option value="">Оберіть</option>
+                                    {% for owner in leads.owners %}
+                                        <option value="{{ owner.id }}" {% if lead.ownerId == owner.id %}selected{% endif %}>{{ owner.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+
+                            <p class="cos-card__copy" data-sales-lead-status-text aria-live="polite"></p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if leads.nextPageUrl() %}
+                <div class="cos-card__footer">
+                    <twig:CosButton label="Наступна сторінка" href="{{ leads.nextPageUrl() }}" variant="ghost" />
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

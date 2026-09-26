@@ -141,8 +141,8 @@ $breadcrumbJson = [
 <?php $this->partial('shared/public_header', [
     'active' => 'catalog',
     'actions' => [
-        ['href' => 'cabinet', 'label' => 'Кабінет', 'class' => 'tn-btn--ghost'],
-        ['href' => '#request', 'label' => 'Заявка на підбір', 'class' => 'tn-btn--dark'],
+        ['href' => 'cabinet', 'label' => 'Кабінет', 'variant' => 'ghost'],
+        ['href' => '#request', 'label' => 'Заявка на підбір', 'variant' => 'primary'],
     ],
 ]); ?>
 
@@ -153,29 +153,19 @@ $breadcrumbJson = [
     <span>Каталог нерухомості</span>
   </nav>
 
-  <section class="tn-page-hero tn-page-hero--catalog">
-    <div>
-      <p class="tn-kicker">Каталог Terra Nova</p>
-      <h1>Каталог об’єктів</h1>
-      <p>Фільтр за містом, бюджетом і типом. Відкрийте картку, збережіть варіант або залиште запит.</p>
-      <div class="tn-hero-search">
-        <form action="<?php echo $this->url->get('property/catalog'); ?>" method="get" data-catalog-form>
-          <input name="q" type="search" aria-label="Пошук у каталозі" value="<?php echo $h($filters['q'] ?? ''); ?>" placeholder="Пошук за містом, назвою, ID або адресою">
-          <button class="tn-btn tn-btn--dark" type="submit">Знайти</button>
-        </form>
-      </div>
-      <div class="tn-catalog-quick-links">
-        <a href="<?php echo $this->url->get('property/catalog?deal_type=sale'); ?>">Купити</a>
-        <a href="<?php echo $this->url->get('property/catalog?deal_type=rent'); ?>">Орендувати</a>
-        <a href="<?php echo $this->url->get('property/catalog?deal_type=investment'); ?>">Інвестиції</a>
-        <a href="<?php echo $this->url->get('property/map'); ?>">Дивитись на карті</a>
-      </div>
-    </div>
-    <div class="tn-page-hero__meta">
-      <strong data-catalog-count><?php echo (int) $resultCount; ?></strong>
-      <span>об’єктів доступно</span>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => 'Каталог Terra Nova',
+    'title' => 'Каталог об’єктів',
+    'description' => 'Фільтр за містом, бюджетом і типом. Відкрийте картку, збережіть варіант або залиште запит.',
+    'meta' => ['value' => (int) $resultCount, 'label' => 'об’єктів доступно'],
+    'metaValueAttributes' => ['data-catalog-count' => ''],
+    'actions' => [
+      ['label' => 'Купити', 'href' => 'property/catalog?deal_type=sale', 'variant' => 'ghost'],
+      ['label' => 'Орендувати', 'href' => 'property/catalog?deal_type=rent', 'variant' => 'ghost'],
+      ['label' => 'Інвестиції', 'href' => 'property/catalog?deal_type=investment', 'variant' => 'ghost'],
+      ['label' => 'Карта', 'href' => 'property/map', 'variant' => 'primary'],
+    ],
+  ]); ?>
 
   <section class="tn-catalog-insights" aria-label="Огляд каталогу">
     <div>

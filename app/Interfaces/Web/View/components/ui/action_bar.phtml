@@ -23,7 +23,7 @@ if ($sticky) $classes[] = 'tn-ui-action-bar--sticky';
       $attributes = is_array($action['attributes'] ?? null) ? $action['attributes'] : [];
     ?>
       <?php if (!empty($action['href'])): ?>
-        <a class="<?php echo $h($class); ?>" href="<?php echo $h($href($this, (string) $action['href'])); ?>"<?php echo $disabled ? ' aria-disabled="true" tabindex="-1"' : ''; ?>><?php echo $h($label); ?></a>
+        <a class="<?php echo $h($class); ?>" href="<?php echo $h($href($this, (string) $action['href'])); ?>"<?php echo $disabled ? ' aria-disabled="true" tabindex="-1"' : ''; ?><?php foreach ($attributes as $name => $value): ?> <?php echo $h($name); ?>="<?php echo $h($value); ?>"<?php endforeach; ?>><?php echo $h($label); ?></a>
       <?php else: ?>
         <button class="<?php echo $h($class); ?>" type="<?php echo $h($action['type'] ?? 'button'); ?>"<?php echo $disabled ? ' disabled' : ''; ?><?php foreach ($attributes as $name => $value): ?> <?php echo $h($name); ?>="<?php echo $h($value); ?>"<?php endforeach; ?>><?php echo $h($label); ?></button>
       <?php endif; ?>

@@ -1,0 +1,92 @@
+/*
+ * Wave 13 — canonical COS page composition.
+ *
+ * This layer owns page width, page padding, primary/context composition and
+ * responsive section geometry. Production pages compose these classes; they do
+ * not invent route-specific layout constants.
+ */
+
+.cos-page {
+  width: min(100%, var(--cos-layout-page-max));
+  margin-inline: auto;
+  padding-inline: var(--cos-layout-page-padding);
+}
+
+.cos-page--content {
+  max-width: var(--cos-layout-content-max);
+}
+
+.cos-page--reading {
+  max-width: var(--cos-layout-reading-max);
+}
+
+.cos-page__header {
+  margin-bottom: var(--cos-layout-section-gap);
+}
+
+.cos-page__section + .cos-page__section {
+  margin-top: var(--cos-layout-section-gap);
+}
+
+.cos-page__stack {
+  display: grid;
+  gap: var(--cos-layout-section-gap);
+  min-width: 0;
+}
+
+.cos-layout-main-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, var(--cos-layout-context-panel-width));
+  gap: var(--cos-layout-gutter);
+  align-items: start;
+  min-width: 0;
+}
+
+.cos-layout-main-context__main,
+.cos-layout-main-context__context {
+  min-width: 0;
+}
+
+.cos-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--cos-layout-grid-min-column)), 1fr));
+  gap: var(--cos-layout-gutter);
+  min-width: 0;
+}
+
+/*
+ * CSS custom properties cannot be referenced from media-query conditions.
+ * These values intentionally mirror the canonical breakpoint tokens:
+ * tablet=1050px, mobile=650px, compact-mobile=390px.
+ */
+@media (max-width: 1050px) {
+  .cos-page {
+    padding-inline: var(--cos-layout-page-padding-tablet);
+  }
+
+  .cos-layout-main-context {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .cos-page {
+    padding-inline: var(--cos-layout-page-padding-mobile);
+  }
+
+  .cos-page__header {
+    margin-bottom: var(--cos-space-4);
+  }
+
+  .cos-page__section + .cos-page__section,
+  .cos-page__stack {
+    margin-top: var(--cos-space-4);
+    gap: var(--cos-space-4);
+  }
+}
+
+@media (max-width: 390px) {
+  .cos-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

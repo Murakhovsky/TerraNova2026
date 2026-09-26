@@ -1,0 +1,97 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Integrations | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Integrations"
+        subtitle="Sales owns business routing. Platform owns provider adapters, credentials boundary, sync state and runtime transport."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Health & Audit" href="/sales/admin/health" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Integrations недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        {% set catalog = admin.data.catalog ?? {} %}
+        {% set routing = admin.data.routing ?? {} %}
+        <section
+            class="cos-page__stack"
+            data-controller="sales-admin-integrations"
+            data-sales-admin-integrations-csrf-value="{{ csrfToken }}"
+        >
+            <div class="cos-section-grid">
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Provider configuration</p>
+                    <h2 class="cos-card__title">Add integration</h2>
+                    <form class="cos-pattern-stack" data-create-integration data-action="submit->sales-admin-integrations#create">
+                        <label class="cos-field"><span>Integration</span><select class="cos-select" name="integration_key" required>{% for definition in catalog.definitions ?? [] %}<option value="{{ definition.integration_key }}">{{ definition.name ?? definition.integration_key }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Name</span><input class="cos-input" name="name" maxlength="160"></label>
+                        <label class="cos-field"><span>Credentials reference</span><input class="cos-input" name="credentials_reference" maxlength="130" placeholder="env:CRM_API_TOKEN"></label>
+                        <p class="cos-card__copy">Only an external secret reference is stored.</p>
+                        <button class="cos-button cos-button--primary" type="submit">Create draft</button>
+                    </form>
+                </article>
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Runtime boundary</p>
+                    <h2 class="cos-card__title">Routing contract</h2>
+                    <p class="cos-card__copy">Inbound: provider → verification/inbox → normalized Sales input. Outbound: Rule/Agent/User → ActionProposal → Policy → Approval → Action → provider adapter.</p>
+                </article>
+            </div>
+
+            <div class="cos-section-grid">
+                {% for integration in admin.data.integrations ?? [] %}
+                    <article class="cos-card" data-integration-id="{{ integration.id }}">
+                        <div class="cos-card__header">
+                            <div><p class="cos-card__eyebrow">{{ integration.integration_key ?? '' }}</p><h2 class="cos-card__title">{{ integration.name ?? 'Integration' }}</h2></div>
+                            <twig:CosStatus label="{{ (integration.status ?? '') ~ ' · ' ~ (integration.health_status ?? 'UNKNOWN') }}" tone="{{ (integration.health_status ?? '') == 'HEALTHY' ? 'positive' : ((integration.health_status ?? '') == 'ERROR' ? 'danger' : 'warning') }}" />
+                        </div>
+                        <p class="cos-card__copy">v{{ integration.configuration_version ?? 1 }} · {{ integration.route_count ?? 0 }} routes · credentials {{ (integration.credentials_configured ?? false) ? 'configured' : 'not configured' }}</p>
+                        {% if integration.last_error ?? false %}<twig:CosAlert title="Last error" copy="{{ integration.last_error }}" tone="warning" />{% endif %}
+
+                        <form class="cos-pattern-stack" data-update-integration data-action="submit->sales-admin-integrations#update">
+                            <input type="hidden" name="configuration_version" value="{{ integration.configuration_version ?? 1 }}">
+                            <label class="cos-field"><span>Name</span><input class="cos-input" name="name" value="{{ integration.name ?? '' }}"></label>
+                            <label class="cos-field"><span>Status</span><select class="cos-select" name="status">{% for status in catalog.lifecycle_statuses ?? [] %}<option value="{{ status }}" {% if (integration.status ?? '') == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
+                            <label class="cos-field"><span>Replace credentials reference</span><input class="cos-input" name="credentials_reference"></label>
+                            <twig:CosActionBar label="Integration actions" align="start">
+                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Save</button>
+                                <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-integrations#test">Test connection</button>
+                            </twig:CosActionBar>
+                        </form>
+
+                        <details>
+                            <summary>Routing & mapping</summary>
+                            <div class="cos-pattern-stack">
+                                {% for route in integration.routes ?? [] %}
+                                    <p class="cos-card__copy">{{ route.inbound_source ?? 'default' }} → pipeline {{ route.pipeline_id ?? 'default' }} → stage {{ route.initial_stage_id ?? 'default' }} → team {{ route.team_id ?? 'unassigned' }}</p>
+                                {% endfor %}
+                            </div>
+                            <form class="cos-pattern-stack" data-route-form data-action="submit->sales-admin-integrations#route">
+                                <label class="cos-field"><span>Inbound source</span><input class="cos-input" name="inbound_source"></label>
+                                <label class="cos-field"><span>Pipeline</span><select class="cos-select" name="pipeline_id"><option value="">Keep/default</option>{% for pipeline in routing.pipelines ?? [] %}<option value="{{ pipeline.id }}">{{ pipeline.name ?? pipeline.code }}</option>{% endfor %}</select></label>
+                                <label class="cos-field"><span>Initial stage</span><select class="cos-select" name="initial_stage_id"><option value="">Pipeline default</option>{% for stage in routing.stages ?? [] %}<option value="{{ stage.id }}">{{ stage.name ?? stage.code }}</option>{% endfor %}</select></label>
+                                <label class="cos-field"><span>Team</span><select class="cos-select" name="team_id"><option value="">Unassigned</option>{% for team in routing.teams ?? [] %}<option value="{{ team.id }}">{{ team.name ?? team.code }}</option>{% endfor %}</select></label>
+                                <label class="cos-field"><span>Assignment</span><select class="cos-select" name="assignment_strategy">{% for strategy in catalog.assignment_strategies ?? [] %}<option value="{{ strategy }}">{{ strategy }}</option>{% endfor %}</select></label>
+                                <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Add route</button>
+                            </form>
+                        </details>
+                        <span class="cos-card__copy" data-integration-status aria-live="polite"></span>
+                    </article>
+                {% else %}
+                    <twig:CosEmptyState title="Integrations не налаштовані" copy="No Sales integrations are configured for this organization." />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

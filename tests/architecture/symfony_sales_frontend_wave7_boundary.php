@@ -14,15 +14,16 @@ $assert = static function (bool $ok, string $message): void {
 };
 
 foreach ([
-    'frontend/features/sales/workspace.js',
-    'frontend/features/sales/admin.js',
-    'frontend/features/sales/rule-editor.js',
-    'app/Interfaces/Web/View/components/sales/navigation.phtml',
-    'app/Interfaces/Web/View/sales_admin/pipeline.phtml',
-    'app/Interfaces/Web/View/sales_admin/pipelines.phtml',
+    'symfony/assets/controllers/sales_lead_controller.js',
+    'symfony/assets/controllers/sales_today_controller.js',
+    'symfony/assets/controllers/sales_pipeline_controller.js',
+    'symfony/assets/controllers/sales_deal_controller.js',
+    'symfony/assets/controllers/sales_admin_pipeline_controller.js',
+    'symfony/assets/controllers/sales_admin_rule_editor_controller.js',
+    'symfony/assets/controllers/sales_admin_agent_controller.js',
 ] as $path) {
     $source = $read($path);
-    $assert(!str_contains($source, '/api/sales/'), 'Wave 7 frontend still references legacy Sales API: ' . $path);
+    $assert(!str_contains($source, '/api/sales/'), 'Canonical Sales frontend restored legacy API: ' . $path);
 }
 
 $iterator = new RecursiveIteratorIterator(
@@ -37,30 +38,29 @@ foreach ($iterator as $file) {
     $assert(!str_contains($source, "'api/sales/"), 'Wave 7 Sales view still generates legacy Sales API URL: ' . $path);
 }
 
-$workspace = $read('frontend/features/sales/workspace.js');
+$dealRuntime = $read('symfony/assets/controllers/sales_deal_controller.js');
 foreach ([
-    '/api/v1/sales/search',
     '/api/v1/sales/opportunities/',
-    '/api/v1/sales/leads/',
     '/api/v1/sales/approvals/',
     '/api/v1/sales/actions/',
     '/communications',
 ] as $needle) {
-    $assert(str_contains($workspace, $needle), 'Wave 7 workspace v1 dependency missing: ' . $needle);
+    $assert(str_contains($dealRuntime, $needle), 'Canonical Deal runtime v1 dependency missing: ' . $needle);
+}
+$leadRuntime = $read('symfony/assets/controllers/sales_lead_controller.js');
+foreach (['/api/v1/sales/leads/', '/opportunity', '/followups'] as $needle) {
+    $assert(str_contains($leadRuntime, $needle), 'Canonical Lead runtime v1 dependency missing: ' . $needle);
 }
 
-$admin = $read('frontend/features/sales/admin.js');
-foreach ([
-    '/api/v1/sales/admin/teams',
-    '/api/v1/sales/admin/agents/',
-    '/api/v1/sales/admin/policies',
-    '/api/v1/sales/integrations',
-] as $needle) {
-    $assert(str_contains($admin, $needle), 'Wave 7 admin v1 dependency missing: ' . $needle);
+$adminPipeline = $read('symfony/assets/controllers/sales_admin_pipeline_controller.js');
+$adminAgent = $read('symfony/assets/controllers/sales_admin_agent_controller.js');
+foreach (['/api/v1/sales/admin/pipelines/', '/stages', '/transitions'] as $needle) {
+    $assert(str_contains($adminPipeline, $needle), 'Canonical admin Pipeline v1 dependency missing: ' . $needle);
 }
+$assert(str_contains($adminAgent, '/api/v1/sales/admin/agents/'), 'Canonical admin Agent v1 dependency missing.');
 
-$rules = $read('frontend/features/sales/rule-editor.js');
-$assert(str_contains($rules, '/api/v1/sales/admin/rules'), 'Wave 7 rule editor is not on Symfony v1.');
+$rules = $read('symfony/assets/controllers/sales_admin_rule_editor_controller.js');
+$assert(str_contains($rules, '/api/v1/sales/admin/rules/'), 'Canonical rule editor is not on Symfony v1.');
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([

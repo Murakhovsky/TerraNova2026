@@ -9,9 +9,8 @@ use App\Web\Phtml\ViteAssetManifest;
 $root=dirname(__DIR__,2);
 $manifestPath=$root.'/public/build/.vite/manifest.json';
 $entries=[
-    'analytics-workspace','clients-workspace','company-home','cos-architecture-explorer','cos-control-center',
-    'cos-site','cos-ui-runtime','diagnostics-methodology-studio','portal-cabinet','property-workspace',
-    'public-surface','sales-workspace','terranova-catalog-api','terranova-copy','terranova-interface',
+    'cos-site','cos-ui-runtime',
+    'public-surface','terranova-catalog-api','terranova-copy','terranova-interface',
     'terranova-media-manager','terranova-property-gallery','terranova-spatial-admin','spatial-viewer',
 ];
 

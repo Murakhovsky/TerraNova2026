@@ -51,9 +51,18 @@ jobs:
 
       - name: Frontend syntax
         run: |
-          node --check frontend/features/sales/workspace.js
-          node --check frontend/features/sales/rule-editor.js
+          node --check symfony/assets/controllers/sales_lead_controller.js
+          node --check symfony/assets/controllers/sales_today_controller.js
+          node --check symfony/assets/controllers/sales_pipeline_controller.js
+          node --check symfony/assets/controllers/sales_deal_controller.js
+          node --check symfony/assets/controllers/sales_admin_pipeline_controller.js
+          node --check symfony/assets/controllers/sales_admin_rule_editor_controller.js
+          node --check symfony/assets/controllers/sales_admin_agent_controller.js
+          node --check symfony/assets/controllers/sales_admin_policies_controller.js
+          node --check symfony/assets/controllers/sales_admin_teams_controller.js
+          node --check symfony/assets/controllers/sales_admin_integrations_controller.js
           node --check tests/browser/sales_workspace.mjs
+          node --check tests/browser/golden_four_accessibility.mjs
 
   mutation-e2e:
     if: github.event_name == 'workflow_dispatch'
@@ -77,6 +86,18 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN" || { echo 'No Chrome/Chromium executable found'; exit 1; }
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: Run Golden Four accessibility evidence
+        env:
+          GOLDEN_FOUR_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          GOLDEN_FOUR_STORAGE_STATE: ${{ runner.temp }}/sales-e2e-storage.json
+        run: npm run test:golden-four-accessibility
+      - name: Upload Golden Four accessibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-four-accessibility
+          path: tmp/golden-four-accessibility
+          if-no-files-found: warn
       - name: Run mutation-safe Sales browser E2E
         env:
           SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}

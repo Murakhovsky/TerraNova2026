@@ -1,0 +1,145 @@
+name: Wave 13 Visual System
+
+on:
+  push:
+    branches:
+      - main
+      - 'visual/wave-13-*'
+    paths:
+      - 'symfony/assets/styles/**'
+      - 'symfony/templates/**'
+      - 'symfony/src/Web/Experience/**'
+      - 'symfony/src/Web/Operations/**'
+      - 'symfony/src/Web/Visualization/**'
+      - 'symfony/src/Web/Diagnostic/**'
+      - 'symfony/src/Web/Administration/**'
+      - 'symfony/src/Web/Content/**'
+      - 'symfony/src/Web/Portal/**'
+      - 'symfony/src/Application/Content/**'
+      - 'symfony/src/Application/Administration/**'
+      - 'symfony/src/Application/Diagnostic/**'
+      - 'symfony/assets/controllers/diagnostic_methodology_controller.js'
+      - 'symfony/assets/islands/diagnostic_methodology/**'
+      - 'symfony/src/Application/Visualization/**'
+      - 'symfony/assets/controllers/architecture_explorer_controller.js'
+      - 'symfony/src/Application/Operations/**'
+      - 'symfony/src/Web/Sales/**'
+      - 'symfony/src/Web/Property/**'
+      - 'symfony/src/Web/Spatial/**'
+      - 'symfony/src/Application/Spatial/**'
+      - 'symfony/src/Application/Property/**'
+      - 'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php'
+      - 'symfony/src/Application/Sales/**'
+      - 'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php'
+      - 'symfony/assets/controllers/sales_*_controller.js'
+      - 'symfony/assets/controllers/property_*_controller.js'
+      - 'tests/architecture/web_experience_wave13_*.php'
+      - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'tests/architecture/web_experience_geometry.php'
+      - 'tests/architecture/web_experience_wave12_shell.php'
+      - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'docs/03-architecture/wave13-*.md'
+      - 'docs/11-decisions/ADR-0012-*.md'
+      - 'docs/11-decisions/README.md'
+      - '.github/workflows/wave13-visual.yml'
+      - 'vite.config.js'
+      - 'frontend/entrypoints/property-workspace.js'
+      - 'frontend/features/property/workspace.*'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'symfony/assets/styles/**'
+      - 'symfony/templates/**'
+      - 'symfony/src/Web/Experience/**'
+      - 'symfony/src/Web/Operations/**'
+      - 'symfony/src/Web/Visualization/**'
+      - 'symfony/src/Web/Diagnostic/**'
+      - 'symfony/src/Web/Administration/**'
+      - 'symfony/src/Web/Content/**'
+      - 'symfony/src/Web/Portal/**'
+      - 'symfony/src/Application/Content/**'
+      - 'symfony/src/Application/Administration/**'
+      - 'symfony/src/Application/Diagnostic/**'
+      - 'symfony/assets/controllers/diagnostic_methodology_controller.js'
+      - 'symfony/assets/islands/diagnostic_methodology/**'
+      - 'symfony/src/Application/Visualization/**'
+      - 'symfony/assets/controllers/architecture_explorer_controller.js'
+      - 'symfony/src/Application/Operations/**'
+      - 'symfony/src/Web/Sales/**'
+      - 'symfony/src/Web/Property/**'
+      - 'symfony/src/Web/Spatial/**'
+      - 'symfony/src/Application/Spatial/**'
+      - 'symfony/src/Application/Property/**'
+      - 'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php'
+      - 'symfony/src/Application/Sales/**'
+      - 'app/Domains/Sales/Infrastructure/ReadModel/MySql/MysqlSalesWorkspaceOperationalReadModel.php'
+      - 'symfony/assets/controllers/sales_*_controller.js'
+      - 'symfony/assets/controllers/property_*_controller.js'
+      - 'tests/architecture/web_experience_wave13_*.php'
+      - 'tests/architecture/web_experience_visual_foundation.php'
+      - 'tests/architecture/web_experience_geometry.php'
+      - 'tests/architecture/web_experience_wave12_shell.php'
+      - 'tests/architecture/web_experience_wave12_ui_catalog.php'
+      - 'docs/03-architecture/wave13-*.md'
+      - 'docs/11-decisions/ADR-0012-*.md'
+      - 'docs/11-decisions/README.md'
+      - '.github/workflows/wave13-visual.yml'
+      - 'vite.config.js'
+      - 'frontend/entrypoints/property-workspace.js'
+      - 'frontend/features/property/workspace.*'
+
+jobs:
+  visual-system-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Wave 13 visual foundation and shell gates
+        run: |
+          php tests/architecture/web_experience_wave13_foundation.php
+          php tests/architecture/web_experience_wave13_shell.php
+          php tests/architecture/web_experience_wave13_admin_foundation.php
+          php tests/architecture/web_experience_wave13_admin_home.php
+          php tests/architecture/web_experience_wave13_sales_dashboard.php
+          php tests/architecture/web_experience_wave13_collection_contract.php
+          php tests/architecture/web_experience_wave13_sales_leads.php
+          php tests/architecture/web_experience_wave13_sales_deal.php
+          php tests/architecture/web_experience_wave13_golden_four_consolidation.php
+          php tests/architecture/web_experience_wave13_golden_four_quality.php
+          php tests/architecture/web_experience_wave13_stability.php
+          php tests/architecture/web_experience_wave13_control_center.php
+          php tests/architecture/web_experience_wave13_architecture.php
+          php tests/architecture/web_experience_wave13_methodology_studio.php
+          php tests/architecture/web_experience_wave13_analytics.php
+          php tests/architecture/web_experience_wave13_users.php
+          php tests/architecture/web_experience_wave13_content.php
+          php tests/architecture/web_experience_wave13_system_admin_complete.php
+          php tests/architecture/web_experience_wave13_portal_cabinet.php
+          php tests/architecture/web_experience_wave13_portal_complete.php
+          php tests/architecture/web_experience_wave13_sales_today.php
+          php tests/architecture/web_experience_wave13_toolbar.php
+          php tests/architecture/web_experience_wave13_sales_pipeline.php
+          php tests/architecture/web_experience_wave13_sales_deals.php
+          php tests/architecture/web_experience_wave13_sales_director.php
+          php tests/architecture/web_experience_wave13_sales_admin.php
+          php tests/architecture/web_experience_wave13_sales_complete.php
+          php tests/architecture/web_experience_wave13_operational_queue_contract.php
+          php tests/architecture/web_experience_wave13_client_inbox.php
+          php tests/architecture/web_experience_wave13_client_collection.php
+          php tests/architecture/web_experience_wave13_client_workspace.php
+          php tests/architecture/web_experience_wave13_clients_complete.php
+          php tests/architecture/web_experience_wave13_property_inventory.php
+          php tests/architecture/web_experience_wave13_property_submissions.php
+          php tests/architecture/web_experience_wave13_property_submission.php
+          php tests/architecture/web_experience_wave13_property_map.php
+          php tests/architecture/web_experience_wave13_spatial_manage.php
+          php tests/architecture/web_experience_wave13_property_workspace_complete.php
+      - name: Preserve Wave 12 visual foundation
+        run: |
+          php tests/architecture/web_experience_visual_foundation.php
+          php tests/architecture/web_experience_geometry.php
+          php tests/architecture/web_experience_wave12_design_system.php
+          php tests/architecture/web_experience_wave12_shell.php
+          php tests/architecture/web_experience_wave12_ui_catalog.php

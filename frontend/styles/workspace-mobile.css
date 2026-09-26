@@ -1,10 +1,9 @@
 /*
- * Mobile Workspace compatibility bridge.
+ * Mobile Workspace responsive contract.
  *
- * Intentionally NOT wrapped in a cascade layer. The legacy terranova-club.css
- * stylesheet is also unlayered, so a layered responsive rule can lose to old
- * desktop selectors even when it is loaded later. Keep this file narrow,
- * mobile-only and workspace-scoped until the legacy stylesheet is retired.
+ * Intentionally NOT wrapped in a cascade layer because these rules must remain
+ * authoritative over layered desktop workspace primitives at narrow widths.
+ * Keep the file mobile-only and workspace-scoped.
  */
 @media (max-width: 760px) {
   html {

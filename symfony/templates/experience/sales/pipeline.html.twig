@@ -1,0 +1,98 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Sales Pipeline | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-controller="sales-pipeline"
+    data-sales-pipeline-csrf-value="{{ csrfToken }}"
+    data-sales-pipeline-root
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Pipeline"
+        title="{{ pipeline.pipelineName }}"
+        subtitle="Stage workflow з value, weighted value, stage age та governed transitions."
+        metaValue="{{ pipeline.visibleDeals }}"
+        metaLabel="видимих угод"
+    >
+        <twig:CosButton label="Today" href="/sales/today" variant="ghost" />
+        <twig:CosButton label="Deals" href="/sales/deals" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Pipeline tools">
+        {% block start %}
+            <span class="cos-card__copy">Drag & drop або keyboard stage control на кожній Deal card.</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Lead List" href="/sales/leads" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    <twig:CosFilterBar action="/sales/pipeline" label="Pipeline filters">
+        <label class="cos-field">
+            <span>Pipeline</span>
+            <select class="cos-select" name="pipeline_id">
+                {% for option in pipeline.pipelineOptions %}
+                    <option value="{{ option.id }}" {% if option.id == pipeline.filters.pipeline_id %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>Owner</span>
+            <select class="cos-select" name="owner_id">
+                <option value="">All</option>
+                {% for option in pipeline.ownerOptions %}
+                    <option value="{{ option.id }}" {% if option.id ~ '' == pipeline.filters.owner_id %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>Risk</span>
+            <select class="cos-select" name="risk">
+                <option value="">All</option>
+                <option value="high" {% if pipeline.filters.risk == 'high' %}selected{% endif %}>High</option>
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>Priority</span>
+            <select class="cos-select" name="priority">
+                <option value="">All</option>
+                {% for value in ['low','normal','high','urgent'] %}
+                    <option value="{{ value }}" {% if pipeline.filters.priority == value %}selected{% endif %}>{{ value|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="cos-field">
+            <span>Value min</span>
+            <input class="cos-input" type="number" min="0" step="100" name="value_min" value="{{ pipeline.filters.value_min }}">
+        </label>
+        <label class="cos-field">
+            <span>Value max</span>
+            <input class="cos-input" type="number" min="0" step="100" name="value_max" value="{{ pipeline.filters.value_max }}">
+        </label>
+        <label class="cos-field">
+            <span>Source</span>
+            <input class="cos-input" name="source" value="{{ pipeline.filters.source }}">
+        </label>
+        <label class="cos-field">
+            <span>Search</span>
+            <input class="cos-input" type="search" name="q" value="{{ pipeline.filters.q }}">
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Apply</button>
+    </twig:CosFilterBar>
+
+    <p class="cos-card__copy" data-sales-pipeline-target="status" data-sales-pipeline-status aria-live="polite"></p>
+
+    {% if pipeline.error %}
+        <twig:CosAlert title="Sales Pipeline недоступний" copy="{{ pipeline.error }}" tone="danger" />
+    {% elseif pipeline.stages is empty %}
+        <twig:CosEmptyState title="Pipeline не налаштований" copy="Для вибраного pipeline немає stage configuration." />
+    {% else %}
+        <twig:SalesPipelineBoard :stages="pipeline.stages" :stageOptions="pipeline.stageOptions" />
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Pipelines | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Sales · Administration"
+        title="Pipelines"
+        subtitle="Воронки, stages, transitions та lost reasons. Runtime бачить лише валідні ACTIVE pipelines."
+    >
+        <twig:CosButton label="Sales Admin" href="/sales/admin" variant="ghost" />
+        <twig:CosButton label="Rules" href="/sales/admin/rules" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if admin.error %}
+        <twig:CosAlert title="Pipelines недоступний" copy="{{ admin.error }}" tone="danger" />
+    {% else %}
+
+        <twig:CosToolbar label="Pipeline administration">
+            {% block start %}<span class="cos-card__copy">Configuration-owned Sales lifecycle.</span>{% endblock %}
+        </twig:CosToolbar>
+
+        <section
+            class="cos-card cos-pattern-stack"
+            data-controller="sales-admin-pipelines"
+            data-sales-admin-pipelines-csrf-value="{{ csrfToken }}"
+        >
+            <div class="cos-card__header">
+                <div><p class="cos-card__eyebrow">Create</p><h2 class="cos-card__title">Нова воронка</h2></div>
+                <span class="cos-card__copy">DRAFT first</span>
+            </div>
+            <form data-action="submit->sales-admin-pipelines#create" class="cos-pattern-stack">
+                <label class="cos-field"><span>Code</span><input class="cos-input" name="code" required pattern="[a-z][a-z0-9-]+"></label>
+                <label class="cos-field"><span>Name</span><input class="cos-input" name="name" required></label>
+                <twig:CosActionBar label="Create pipeline" align="start">
+                    <button class="cos-button cos-button--primary" type="submit">Create draft</button>
+                </twig:CosActionBar>
+                <span class="cos-card__copy" data-sales-admin-pipelines-target="status" aria-live="polite"></span>
+            </form>
+        </section>
+
+        <section class="cos-page__section">
+            <div class="cos-section-grid">
+                {% for pipeline in admin.data.pipelines ?? [] %}
+                    <article class="cos-card">
+                        <div class="cos-card__header">
+                            <div>
+                                <p class="cos-card__eyebrow">{{ pipeline.code ?? '' }}</p>
+                                <h2 class="cos-card__title">{{ pipeline.name ?? pipeline.code ?? 'Pipeline' }}</h2>
+                            </div>
+                            <twig:CosStatus label="{{ pipeline.status ?? 'DRAFT' }}" tone="{{ (pipeline.status ?? '') == 'ACTIVE' ? 'positive' : 'neutral' }}" />
+                        </div>
+                        <p class="cos-card__copy">{{ pipeline.stage_count ?? 0 }} stages · {{ pipeline.active_deals ?? 0 }} active deals · cfg v{{ pipeline.configuration_version ?? 0 }}</p>
+                        <twig:CosActionBar label="Pipeline actions" align="start">
+                            <twig:CosButton label="Configure" href="/sales/admin/pipelines/{{ pipeline.id }}" variant="primary" size="sm" />
+                        </twig:CosActionBar>
+                        <form
+                            class="cos-pattern-stack"
+                            data-controller="sales-admin-pipelines"
+                            data-sales-admin-pipelines-csrf-value="{{ csrfToken }}"
+                            data-pipeline-id="{{ pipeline.id }}"
+                            data-action="submit->sales-admin-pipelines#clone"
+                        >
+                            <label class="cos-field"><span>Clone code</span><input class="cos-input" name="code" value="{{ (pipeline.code ?? 'pipeline') ~ '-draft' }}" required></label>
+                            <label class="cos-field"><span>Clone name</span><input class="cos-input" name="name" value="{{ (pipeline.name ?? 'Pipeline') ~ ' · Draft' }}" required></label>
+                            <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Clone to draft</button>
+                        </form>
+                    </article>
+                {% else %}
+                    <twig:CosEmptyState title="Pipelines ще немає" copy="Створіть першу draft configuration." />
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

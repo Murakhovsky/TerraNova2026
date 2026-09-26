@@ -92,36 +92,24 @@ foreach ($properties as $index => $property) {
 <?php $this->partial('shared/public_header', [
     'active' => 'catalog',
     'actions' => [
-        ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-        ['href' => 'cabinet', 'label' => 'Кабінет', 'class' => 'tn-btn--dark'],
+        ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+        ['href' => 'cabinet', 'label' => 'Кабінет', 'variant' => 'primary'],
     ],
 ]); ?>
 
 <main class="tn-page">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a>
-    <span>/</span>
-    <a href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-    <span>/</span>
-    <span><?php echo $h($seoTitle); ?></span>
-  </nav>
-
-  <section class="tn-page-hero tn-page-hero--catalog">
-    <div>
-      <p class="tn-kicker"><?php echo $h($seoKicker); ?></p>
-      <h1><?php echo $h($seoTitle); ?></h1>
-      <p><?php echo $h($seoDescription); ?></p>
-      <div class="tn-seo-links">
-        <a href="<?php echo $this->url->get('property/catalog?deal_type=sale'); ?>">Купити</a>
-        <a href="<?php echo $this->url->get('property/catalog?deal_type=rent'); ?>">Орендувати</a>
-        <a href="<?php echo $this->url->get('property/catalog?deal_type=investment'); ?>">Інвестиції</a>
-      </div>
-    </div>
-    <div class="tn-page-hero__meta">
-      <strong><?php echo (int) $resultCount; ?></strong>
-      <span>об’єктів у добірці</span>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => $seoKicker,
+    'title' => $seoTitle,
+    'description' => $seoDescription,
+    'meta' => ['value' => (int) $resultCount, 'label' => 'об’єктів у добірці'],
+    'actions' => [
+      ['label' => 'Купити', 'href' => 'property/catalog?deal_type=sale', 'variant' => 'ghost'],
+      ['label' => 'Орендувати', 'href' => 'property/catalog?deal_type=rent', 'variant' => 'ghost'],
+      ['label' => 'Інвестиції', 'href' => 'property/catalog?deal_type=investment', 'variant' => 'ghost'],
+      ['label' => 'Повний каталог', 'href' => 'property/catalog', 'variant' => 'primary'],
+    ],
+  ]); ?>
 
   <section class="tn-catalog-insights" aria-label="Огляд добірки">
     <div><span>Знайдено</span><strong><?php echo (int) $resultCount; ?></strong></div>
@@ -134,9 +122,9 @@ foreach ($properties as $index => $property) {
     <?php $this->partial('shared/catalog_viewbar', ['active' => 'catalog']); ?>
 
     <?php if ($catalogStatus): ?>
-      <div class="tn-empty-state"><h2>Дані тимчасово недоступні</h2><p><?php echo $h($catalogStatus); ?></p></div>
+      <?php $this->partial('components/ui/state', ['kind' => 'error', 'title' => 'Дані тимчасово недоступні', 'message' => $catalogStatus]); ?>
     <?php elseif (!$properties): ?>
-      <div class="tn-empty-state"><h2>У цій добірці поки немає об’єктів</h2><p>Перегляньте повний каталог або залиште заявку на персональний пошук.</p></div>
+      <?php $this->partial('components/ui/state', ['kind' => 'empty', 'title' => 'У цій добірці поки немає об’єктів', 'message' => 'Перегляньте повний каталог або залиште заявку на персональний пошук.', 'action' => ['label' => 'Повний каталог', 'href' => 'property/catalog']]); ?>
     <?php else: ?>
       <div class="tn-property-grid tn-property-grid--catalog">
         <?php foreach ($properties as $property): ?>
@@ -184,12 +172,14 @@ foreach ($properties as $index => $property) {
     <?php endif; ?>
   </section>
 
-  <section class="tn-seo-panel">
-    <div>
-      <p class="tn-kicker">Добірка</p>
-      <h2>Окрема сторінка для швидкого вибору</h2>
+  <section class="tn-ui-panel">
+    <div class="tn-ui-panel__head">
+      <div>
+        <p class="tn-ui-eyebrow">Добірка</p>
+        <h2>Окрема сторінка для швидкого вибору</h2>
+        <p>Тут зібрані об’єкти за конкретним типом, містом або сценарієм. Можна перейти в повну картку, зберегти варіант або повернутись до каталогу для ширшого пошуку.</p>
+      </div>
     </div>
-    <p>Тут зібрані об’єкти за конкретним типом, містом або сценарієм. Можна перейти в повну картку, зберегти варіант або повернутись до каталогу для ширшого пошуку.</p>
   </section>
 </main>
 

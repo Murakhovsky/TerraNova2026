@@ -33,6 +33,21 @@ on:
       - 'tests/architecture/web_experience_wave12_ui_catalog.php'
       - 'tests/architecture/web_experience_wave12_testing.php'
       - 'tests/architecture/web_experience_wave12_performance_observability.php'
+      - 'tests/architecture/web_experience_wave12_sales_reference.php'
+      - 'tests/architecture/web_experience_wave12_sales_cutover.php'
+      - 'tests/architecture/web_experience_wave12_closure.php'
+      - 'docs/03-architecture/wave12-closure-report.md'
+      - 'tests/architecture/web_platform_v1_freeze.php'
+      - 'tests/architecture/contracts/web_platform_v1.php'
+      - 'docs/11-decisions/ADR-0011-web-platform-v1-freeze.md'
+      - 'symfony/tests/sales_cutover_access_contract.php'
+      - 'tests/smoke/sales_workspace.php'
+      - 'tests/browser/sales_workspace.mjs'
+      - 'symfony/assets/controllers/sales_lead_controller.js'
+      - 'docs/03-architecture/sales-cutover.md'
+      - 'symfony/src/Web/Sales/SalesWorkspaceController.php'
+      - 'symfony/templates/experience/sales/**'
+      - 'docs/03-architecture/sales-reference-implementation.md'
       - 'tests/browser/web_performance_budget.mjs'
       - 'symfony/tests/http_correlation_contract.php'
       - 'symfony/tests/web_telemetry_contract.php'
@@ -40,6 +55,9 @@ on:
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
+      - 'tests/browser/web_accessibility.mjs'
+      - 'tests/architecture/web_experience_quality_closure.php'
+      - 'docs/03-architecture/cos-quality-closure.md'
       - 'symfony/tests/Panther/WebExperiencePantherTest.php'
       - 'docs/03-architecture/web-testing.md'
       - 'tests/unit/ui_catalog_registry.php'
@@ -57,12 +75,29 @@ on:
       - 'tests/architecture/web_experience_business_ux.php'
       - 'tests/architecture/web_experience_stress_screens.php'
       - 'tests/architecture/web_experience_production_sales.php'
+      - 'tests/architecture/web_experience_production_property.php'
+      - 'tests/architecture/web_experience_production_administration.php'
+      - 'tests/architecture/web_experience_production_client_case.php'
+      - 'tests/architecture/web_experience_residual_control_surfaces.php'
+      - 'tests/architecture/web_experience_operational_grid.php'
+      - 'app/Interfaces/Web/View/components/ui/operational_grid.phtml'
+      - 'docs/03-architecture/cos-operational-grid.md'
+      - 'tests/architecture/web_experience_remaining_shells.php'
+      - 'app/Interfaces/Web/View/page/show.phtml'
+      - 'app/Interfaces/Web/View/blog/index.phtml'
+      - 'app/Interfaces/Web/View/blog/show.phtml'
+      - 'app/Interfaces/Web/View/property/seo.phtml'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-business-ux.md'
       - 'docs/03-architecture/cos-stress-screens.md'
       - 'docs/03-architecture/cos-production-sales-adoption.md'
+      - 'docs/03-architecture/cos-production-property-adoption.md'
+      - 'docs/03-architecture/cos-production-administration-adoption.md'
+      - 'docs/03-architecture/cos-production-client-case-adoption.md'
+      - 'docs/03-architecture/cos-residual-control-surface-closure.md'
+      - 'docs/03-architecture/cos-remaining-shell-closure.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -102,6 +137,9 @@ on:
       - 'tests/component/web_experience_components.php'
       - 'tests/functional/web_platform_contract.sh'
       - 'tests/browser/web_platform_quality.mjs'
+      - 'tests/browser/web_accessibility.mjs'
+      - 'tests/architecture/web_experience_quality_closure.php'
+      - 'docs/03-architecture/cos-quality-closure.md'
       - 'symfony/tests/Panther/WebExperiencePantherTest.php'
       - 'docs/03-architecture/web-testing.md'
       - 'tests/unit/ui_catalog_registry.php'
@@ -119,12 +157,29 @@ on:
       - 'tests/architecture/web_experience_business_ux.php'
       - 'tests/architecture/web_experience_stress_screens.php'
       - 'tests/architecture/web_experience_production_sales.php'
+      - 'tests/architecture/web_experience_production_property.php'
+      - 'tests/architecture/web_experience_production_administration.php'
+      - 'tests/architecture/web_experience_production_client_case.php'
+      - 'tests/architecture/web_experience_residual_control_surfaces.php'
+      - 'tests/architecture/web_experience_operational_grid.php'
+      - 'app/Interfaces/Web/View/components/ui/operational_grid.phtml'
+      - 'docs/03-architecture/cos-operational-grid.md'
+      - 'tests/architecture/web_experience_remaining_shells.php'
+      - 'app/Interfaces/Web/View/page/show.phtml'
+      - 'app/Interfaces/Web/View/blog/index.phtml'
+      - 'app/Interfaces/Web/View/blog/show.phtml'
+      - 'app/Interfaces/Web/View/property/seo.phtml'
       - 'docs/03-architecture/cos-surfaces.md'
       - 'docs/03-architecture/cos-typography.md'
       - 'docs/03-architecture/cos-canonical-primitives.md'
       - 'docs/03-architecture/cos-business-ux.md'
       - 'docs/03-architecture/cos-stress-screens.md'
       - 'docs/03-architecture/cos-production-sales-adoption.md'
+      - 'docs/03-architecture/cos-production-property-adoption.md'
+      - 'docs/03-architecture/cos-production-administration-adoption.md'
+      - 'docs/03-architecture/cos-production-client-case-adoption.md'
+      - 'docs/03-architecture/cos-residual-control-surface-closure.md'
+      - 'docs/03-architecture/cos-remaining-shell-closure.md'
       - 'docs/03-architecture/cos-geometry.md'
       - 'docs/03-architecture/cos-style-lab.md'
       - 'docs/03-architecture/cos-visual-constitution.md'
@@ -264,6 +319,27 @@ jobs:
       - name: PHASE 9 Sales production adoption gate
         run: php tests/architecture/web_experience_production_sales.php
 
+      - name: PHASE 10 Property production adoption gate
+        run: php tests/architecture/web_experience_production_property.php
+
+      - name: PHASE 11 Administration production adoption gate
+        run: php tests/architecture/web_experience_production_administration.php
+
+      - name: PHASE 12 Client Case production adoption gate
+        run: php tests/architecture/web_experience_production_client_case.php
+
+      - name: PHASE 13 residual control surface closure gate
+        run: php tests/architecture/web_experience_residual_control_surfaces.php
+
+      - name: Operational Grid architecture gate
+        run: php tests/architecture/web_experience_operational_grid.php
+
+      - name: PHASE 14 remaining shell closure gate
+        run: php tests/architecture/web_experience_remaining_shells.php
+
+      - name: PHASE 15 quality closure gate
+        run: php tests/architecture/web_experience_quality_closure.php
+
 
 
 
@@ -352,8 +428,18 @@ jobs:
       - name: Wave 12.23 component contract
         run: php tests/component/web_experience_components.php
 
-      - name: Wave 12.23 Panther suite readiness
-        run: php -l symfony/tests/Panther/WebExperiencePantherTest.php
+      - name: Wave 12.23 Panther E2E
+        env:
+          PANTHER_EXTERNAL_BASE_URI: http://127.0.0.1:8081
+          PANTHER_CHROME_BINARY: /usr/bin/google-chrome
+          PANTHER_NO_SANDBOX: '1'
+          PANTHER_CHROME_ARGUMENTS: --disable-dev-shm-usage
+        run: |
+          rm -rf /tmp/cos-panther
+          mkdir -p /tmp/cos-panther
+          cp symfony/composer.json symfony/composer.lock /tmp/cos-panther/
+          composer require --working-dir=/tmp/cos-panther --dev symfony/panther:2.4.0 phpunit/phpunit:^11.5 --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies
+          /tmp/cos-panther/vendor/bin/phpunit --bootstrap /tmp/cos-panther/vendor/autoload.php symfony/tests/Panther/WebExperiencePantherTest.php
 
       - name: Wave 12.23 functional contract
         run: bash tests/functional/web_platform_contract.sh http://127.0.0.1:8081
@@ -371,6 +457,19 @@ jobs:
           path: tmp/web-quality
           if-no-files-found: warn
 
+      - name: PHASE 15 WCAG accessibility
+        env:
+          BROWSER_EXECUTABLE: /usr/bin/google-chrome
+        run: npm run test:web-accessibility -- http://127.0.0.1:8081
+
+      - name: Upload PHASE 15 accessibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-15-web-accessibility
+          path: tmp/web-accessibility
+          if-no-files-found: warn
+
       - name: Wave 12.24 architecture gate
         run: php tests/architecture/web_experience_wave12_performance_observability.php
 
@@ -384,6 +483,39 @@ jobs:
         env:
           BROWSER_EXECUTABLE: /usr/bin/google-chrome
         run: npm run test:web-performance -- http://127.0.0.1:8081
+
+      - name: Wave 12.25 Sales reference architecture gate
+        run: php tests/architecture/web_experience_wave12_sales_reference.php
+
+      - name: Wave 12.25 Sales production Twig lint
+        run: docker compose exec -T php php bin/console lint:twig templates/experience/sales
+
+      - name: Wave 12.26 Sales cutover architecture gate
+        run: php tests/architecture/web_experience_wave12_sales_cutover.php
+
+      - name: Wave 12.26 Sales access contract
+        run: docker compose exec -T php php tests/sales_cutover_access_contract.php
+
+      - name: Wave 12.26 Sales workspace smoke
+        run: php tests/smoke/sales_workspace.php
+
+      - name: Wave 12.26 Sales production routes
+        run: |
+          docker compose exec -T php php bin/console debug:router cos_web_sales_dashboard >/dev/null
+          docker compose exec -T php php bin/console debug:router cos_web_sales_leads >/dev/null
+          docker compose exec -T php php bin/console debug:router cos_web_sales_lead >/dev/null
+
+      - name: Wave 12 final acceptance gate
+        run: php tests/architecture/web_experience_wave12_closure.php
+
+      - name: Web Platform v1 freeze change-control
+        env:
+          COS_WEB_PLATFORM_FREEZE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" ] && ! printf '%s' "$COS_WEB_PLATFORM_FREEZE_BASE_SHA" | grep -Eq '^0{40}$'; then
+            git fetch --no-tags --depth=1 origin "$COS_WEB_PLATFORM_FREEZE_BASE_SHA"
+          fi
+          php tests/architecture/web_platform_v1_freeze.php
 
       - name: Web Security response headers smoke
         run: |

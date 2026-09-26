@@ -7,27 +7,21 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
 <?php $this->partial('shared/public_header', [
     'active' => $page['active'] ?? '',
     'actions' => [
-        ['href' => 'property/catalog', 'label' => 'Каталог', 'class' => 'tn-btn--ghost'],
-        ['href' => 'contacts', 'label' => 'Залишити запит', 'class' => 'tn-btn--dark'],
+        ['href' => 'property/catalog', 'label' => 'Каталог', 'variant' => 'ghost'],
+        ['href' => 'contacts', 'label' => 'Залишити запит', 'variant' => 'primary'],
     ],
 ]); ?>
 
 <main class="tn-page tn-public-page">
-  <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
-    <a href="<?php echo $this->url->get(); ?>">Головна</a><span>/</span><span><?php echo $h($page['kicker'] ?? 'Terra Nova'); ?></span>
-  </nav>
-
-  <section class="tn-page-hero">
-    <div>
-      <p class="tn-kicker"><?php echo $h($page['kicker'] ?? 'Terra Nova'); ?></p>
-      <h1><?php echo $h($page['title'] ?? 'Terra Nova CLUB'); ?></h1>
-      <p><?php echo $h($page['description'] ?? ''); ?></p>
-      <div class="tn-page-hero__actions">
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Переглянути об’єкти</a>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/submit'); ?>">Подати об’єкт</a>
-      </div>
-    </div>
-  </section>
+  <?php $this->partial('components/ui/page_header', [
+    'eyebrow' => $page['kicker'] ?? 'Terra Nova',
+    'title' => $page['title'] ?? 'Terra Nova CLUB',
+    'description' => $page['description'] ?? '',
+    'actions' => [
+      ['label' => 'Переглянути об’єкти', 'href' => 'property/catalog', 'variant' => 'primary'],
+      ['label' => 'Подати об’єкт', 'href' => 'property/submit', 'variant' => 'ghost'],
+    ],
+  ]); ?>
 
   <section class="tn-public-page__sections">
     <?php foreach (($page['sections'] ?? []) as $section): ?>
@@ -59,11 +53,17 @@ $inboundRequestStatus = $inboundRequestStatus ?? null;
       </form>
     </section>
   <?php else: ?>
-    <section class="tn-sales-cta">
-      <div><p class="tn-kicker">Наступний крок</p><h2>Перейдіть до конкретної пропозиції</h2></div>
-      <div class="tn-hero-actions">
-        <a class="tn-btn tn-btn--accent" href="<?php echo $this->url->get('property/catalog'); ?>">Каталог</a>
-        <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('contacts'); ?>">Зв’язатися</a>
+    <section class="tn-ui-panel tn-workspace-section">
+      <div class="tn-ui-panel__head">
+        <div><p class="tn-ui-eyebrow">Наступний крок</p><h2>Перейдіть до конкретної пропозиції</h2></div>
+      </div>
+      <div class="tn-ui-panel__body">
+        <?php $this->partial('components/ui/action_bar', [
+            'actions' => [
+                ['label' => 'Каталог', 'href' => 'property/catalog', 'variant' => 'primary'],
+                ['label' => 'Зв’язатися', 'href' => 'contacts', 'variant' => 'ghost'],
+            ],
+        ]); ?>
       </div>
     </section>
   <?php endif; ?>

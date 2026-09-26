@@ -32,6 +32,33 @@ const assertCount = async (locator, expected, label) => {
   if (actual !== expected) throw new Error(`${label}: expected ${expected}, got ${actual}`);
 };
 
+const salesPerformanceBudget = {
+  navigationMs: 4500,
+  transferBytes: 5 * 1024 * 1024,
+  domNodes: 5000,
+};
+
+const assertPerformance = async (page, label) => {
+  const metrics = await page.evaluate(() => {
+    const nav = performance.getEntriesByType('navigation')[0];
+    const resources = performance.getEntriesByType('resource');
+    return {
+      navigationMs: Math.round(nav?.duration || 0),
+      transferBytes: Math.round(
+        (nav?.transferSize || 0)
+        + resources.reduce((total, item) => total + (item.transferSize || 0), 0),
+      ),
+      domNodes: document.querySelectorAll('*').length,
+    };
+  });
+
+  for (const [metric, limit] of Object.entries(salesPerformanceBudget)) {
+    if (metrics[metric] > limit) {
+      throw new Error(`${label}: ${metric}=${metrics[metric]} exceeds Sales cutover budget ${limit}`);
+    }
+  }
+};
+
 try {
   for (const profile of [
     { name: 'desktop', viewport: { width: 1440, height: 1000 }, mobile: false },
@@ -39,17 +66,33 @@ try {
   ]) {
     const context = await browser.newContext({ viewport: profile.viewport, isMobile: profile.mobile, storageState });
     const page = await context.newPage();
-    for (const path of ['/sales/today', '/sales/leads', '/sales/pipeline']) {
+
+    for (const path of ['/sales/dashboard', '/sales/leads']) {
       const response = await page.goto(absolute(path), { waitUntil: 'networkidle' });
       assertOk(response, `${profile.name}: ${path}`);
-      await page.locator('[data-sales-workspace]').waitFor({ state: 'visible' });
-      await page.locator('[data-sales-global-search]').waitFor({ state: 'visible' });
+      await page.locator('.cos-shell[data-controller="workspace-shell"]').waitFor({ state: 'visible' });
+      await assertPerformance(page, `${profile.name}: ${path}`);
     }
-    const input = page.locator('[data-sales-global-search-input]').first();
-    await input.fill('test');
-    const searchResponse = await page.waitForResponse((response) => response.url().includes('/api/v1/sales/search'));
-    assertOk(searchResponse, `${profile.name}: Sales search`);
-    await page.locator('[data-sales-global-search-results]:not([hidden])').waitFor({ state: 'visible' });
+
+    for (const path of ['/sales/today', '/sales/pipeline']) {
+      const response = await page.goto(absolute(path), { waitUntil: 'networkidle' });
+      assertOk(response, `${profile.name}: ${path}`);
+      await page.locator('.cos-shell[data-controller="workspace-shell"]').waitFor({ state: 'visible' });
+      await assertPerformance(page, `${profile.name}: ${path}`);
+    }
+
+    await page.locator('[data-action="click->workspace-shell#openPalette"]').first().click();
+    const canonicalInput = page.locator('[data-workspace-shell-target="paletteInput"]').first();
+    await canonicalInput.fill('test');
+    const searchResponse = page.waitForResponse((response) => response.url().includes('/workspace/search'));
+    await canonicalInput.dispatchEvent('input');
+    assertOk(await searchResponse, `${profile.name}: canonical workspace search`);
+    await page.locator('[data-workspace-shell-target="searchFrame"]').waitFor({ state: 'visible' });
+
+    const leadsResponse = await page.goto(absolute('/sales/leads'), { waitUntil: 'networkidle' });
+    assertOk(leadsResponse, `${profile.name}: /sales/leads`);
+    await page.locator('.cos-shell[data-controller="workspace-shell"]').waitFor({ state: 'visible' });
+    await page.locator('[data-sales-surface="lead-list"]').waitFor({ state: 'visible' });
     await context.close();
   }
 
@@ -65,6 +108,10 @@ try {
   await waitMutation(page, `/api/v1/sales/leads/${leadId}`, () => leadQualify.click(), 'Qualify Lead', 'PATCH');
   assertOk(await page.goto(absolute('/sales/leads?status=qualified'), { waitUntil: 'networkidle' }), 'Qualified Lead postcondition');
   await assertCount(page.locator(`[data-lead-id="${leadId}"]`), 1, 'Qualified Lead must persist after reload');
+
+  assertOk(await page.goto(absolute(`/sales/leads/${leadId}`), { waitUntil: 'networkidle' }), 'Lead Workspace');
+  await page.locator('[data-sales-surface="lead-workspace"]').waitFor({ state: 'visible' });
+  await assertPerformance(page, 'Lead Workspace');
 
   assertOk(await page.goto(absolute('/sales/today'), { waitUntil: 'networkidle' }), 'Sales Today');
   const complete = page.locator('[data-sales-activity-complete]').first();
@@ -119,7 +166,7 @@ try {
   await messageForm.locator('textarea[name="body"]').fill(messageBody);
   await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/communications`, () => messageForm.locator('button').filter({ hasText: 'Send Message' }).click(), 'Send Message');
   assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
-  await assertCount(page.locator('.tn-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
+  await assertCount(page.locator('.cos-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
 
   await page.locator('#intelligence').waitFor({ state: 'visible' });
   const execute = page.locator('[data-sales-action] [data-decision="execute"]').first();

@@ -109,11 +109,11 @@ Feature bundles are appended and de-duplicated after the surface bundle.
 
 ## Legacy CSS extraction
 
-`terranova-club.css` is no longer a global runtime dependency. Its Public visual contract is moved under Public surface ownership. Historical source files may remain in the repository temporarily as quarantine/reference, but canonical entrypoints and the root layout may not import them.
+`terranova-club.css` is no longer a global runtime dependency. Its Public visual contract is moved under Public surface ownership. The historical source file has been removed; Git history is the archive.
 
 The old homepage bundle `terranova-home` is retired from Vite because WEB V0.10 replaced that homepage with the canonical Public surface.
 
-`interface.css` remains a compatibility source during this release but is no longer the Workspace runtime entry. `terranova-interface.js` now composes `design-system.css` and `layouts/workspace.css` directly.
+`interface.css` was a compatibility aggregate during WEB V0.11 and is now retired post-freeze. `terranova-interface.js` composes `design-system.css` and `layouts/workspace.css` directly, while `layouts/workspace.css` owns the live responsive workspace composition.
 
 ## Legacy JavaScript extraction
 
@@ -133,7 +133,7 @@ The extracted module owns only Public presentation behavior:
 
 A historical fake form-success handler that called `preventDefault()` without submitting to the backend is removed.
 
-`localStorage` / `sessionStorage` remain explicitly documented debt for WEB V0.12. They are no longer injected into Workspace or Portal.
+WEB V0.12 subsequently closed the historical `localStorage` / `sessionStorage` debt: favourites moved to the server-session `/api/v1/public/properties/favourites` contract, campaign attribution is derived from the current URL, and canonical frontend JavaScript is guarded against browser persistence.
 
 ## Vite ownership
 

@@ -25,23 +25,6 @@ final readonly class SpatialPageController
     ) {
     }
 
-    public function manage(Request $request): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) {
-            return $tenant;
-        }
-
-        return $this->workspace($request, $tenant, 'spatial/manage', [
-            'metaTitle' => 'Spatial / 3D | Terra Nova CLUB',
-            'metaRobots' => 'noindex,nofollow',
-            'filters' => $request->query->all(),
-            'scenes' => $this->scenes->managerScenes($request->query->all()),
-            'stats' => $this->scenes->stats(),
-            'pageStatus' => trim((string) $request->query->get('status_message', '')),
-        ]);
-    }
-
     public function edit(Request $request, ?string $id = null): Response
     {
         $tenant = $this->manager();

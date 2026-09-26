@@ -2,123 +2,127 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-require $root . '/vendor/autoload.php';
+$read = static function (string $path) use ($root): string {
+    $full = $root . '/' . ltrim($path, '/');
+    if (!is_file($full)) throw new RuntimeException('Missing canonical Property artifact: ' . $path);
+    $content = file_get_contents($full);
+    if ($content === false) throw new RuntimeException('Unable to read: ' . $path);
+    return $content;
+};
+$contains = static function (string $source, string $needle, string $message): void {
+    if (!str_contains($source, $needle)) throw new RuntimeException($message . ': ' . $needle);
+};
+$notContains = static function (string $source, string $needle, string $message): void {
+    if (str_contains($source, $needle)) throw new RuntimeException($message . ': ' . $needle);
+};
 
-$required = [
-    'app/Interfaces/Web/Controller/PropertyController.php',
+$controller = $read('symfony/src/Web/Property/PropertyPageController.php');
+$inventoryController = $read('symfony/src/Web/Property/PropertyInventoryController.php');
+foreach (['final readonly class PropertyPageController', "public function favour(Request \$request): Response", "'property/favour'"] as $needle) {
+    $contains($controller, $needle, 'Canonical Symfony public Property controller is incomplete');
+}
+foreach (['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery','PropertyInventoryPresenter'] as $needle) {
+    $contains($inventoryController,$needle,'Canonical Property Inventory controller is incomplete');
+}
+foreach ([
+    "'property/manage'",
+    "'property/listing'",
+    "'property/add'",
+    "'property/edit'",
+    "'property/group'",
+    "'property/submission'",
+    "'property/pdf'",
+] as $legacyView) {
+    $notContains($controller, "html(\$request, " . $legacyView, 'Canonical runtime must not render retired Property compatibility views');
+}
+
+$routes = $read('symfony/config/routes.yaml');
+foreach ([
+    'path: /property/catalog',
+    'path: /property/map',
+    'path: /property/favour',
+    'PropertyPageController::favour',
+    'PropertyInventoryController::manage',
+    'PropertyInventoryController::listing',
+    'PropertySubmissionsController::index',
+    'PropertySubmissionController::index',
+    'PropertyMapController::index',
+    'path: /property/show/{slug}',
+    'path: /property/presentation/{slug}',
+    'path: /property/submit',
+    'path: /property/create',
+    'PropertyPageController::submit',
+    'path: /property/manage',
+    'path: /property/listing',
+    'path: /property/submissions',
+    'path: /property/submission/{id}',
+] as $needle) {
+    $contains($routes, $needle, 'Canonical Property route contract is incomplete');
+}
+
+$workspace = $read('symfony/templates/experience/property/inventory.html.twig');
+foreach (['<twig:CosPageHeader','<twig:CosToolbar','<twig:CosDataGrid','data-property-inventory'] as $needle) {
+    $contains($workspace,$needle,'Canonical Property inventory/listing workspace is incomplete');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/workspace_canonical.phtml')) throw new RuntimeException('Legacy Property inventory PHTML restored.');
+
+$submissions=$read('symfony/templates/experience/property/submissions.html.twig');
+foreach(['<twig:CosPageHeader','class="cos-kpi-strip"','<twig:CosFilterBar','<twig:CosEntityListItem'] as $needle){$contains($submissions,$needle,'Canonical Property submissions queue is incomplete');}
+$submissionsPresenter=$read('symfony/src/Web/Property/PropertySubmissionsPresenter.php');
+$contains($submissionsPresenter,"'/property/submission/'",'Property submissions deep-link contract is incomplete');
+if(is_file($root.'/app/Interfaces/Web/View/property/submissions.phtml'))throw new RuntimeException('Legacy Property submissions PHTML restored.');
+
+$submission=$read('symfony/templates/experience/property/submission.html.twig');
+foreach(['<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','property/submissions','data-property-submission'] as $needle){$contains($submission,$needle,'Canonical Property submission detail is incomplete');}
+if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml'))throw new RuntimeException('Legacy Property submission PHTML restored.');
+
+$favour = $read('app/Interfaces/Web/View/property/favour.phtml');
+foreach ([
+    "partial('components/ui/page_header'",
+    "partial('components/ui/state'",
+    "'data-favourite-empty' => ''",
+    'data-favourite-list',
+    'data-favourite-item',
+] as $needle) {
+    $contains($favour, $needle, 'Property favourites surface lost its canonical or live-state contract');
+}
+
+$state = $read('app/Interfaces/Web/View/components/ui/state.phtml');
+foreach ([
+    '$attributes',
+    'foreach ($attributes as $name => $value)',
+] as $needle) {
+    $contains($state, $needle, 'Canonical State must preserve generic attributes');
+}
+
+foreach ([
     'app/Interfaces/Web/View/property/manage.phtml',
     'app/Interfaces/Web/View/property/listing.phtml',
     'app/Interfaces/Web/View/property/add.phtml',
     'app/Interfaces/Web/View/property/edit.phtml',
     'app/Interfaces/Web/View/property/group.phtml',
-    'app/Interfaces/Web/View/property/submissions.phtml',
     'app/Interfaces/Web/View/property/submission.phtml',
-    'frontend/entrypoints/property-workspace.js',
-    'frontend/features/property/workspace.css',
-    'frontend/features/property/workspace.js',
-    'docs/architecture/web-v0.7.md',
-];
-foreach ($required as $path) {
-    if (!is_file($root . '/' . $path)) {
-        throw new RuntimeException('Missing WEB V0.7 Property Workspace artifact: ' . $path);
+    'app/Interfaces/Web/View/property/create.phtml',
+    'app/Interfaces/Web/View/property/compare.phtml',
+] as $retiredView) {
+    if (is_file($root . '/' . $retiredView)) {
+        throw new RuntimeException('Retired Property compatibility view restored: ' . $retiredView);
     }
 }
 
-$controller = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/PropertyController.php');
-foreach ([
-    "\$this->prepareWorkspace('Внутрішній MLS / Listing', 'listing')",
-    "\$this->prepareWorkspace('Керування об’єктами', 'objects')",
-    "\$this->prepareWorkspace('Додати об’єкт', 'objects', ['terranova-media-manager'])",
-    "\$this->prepareWorkspace('Модерація об’єктів', 'submissions')",
-    "\$this->prepareWorkspace('Заявка на об’єкт', 'submissions')",
-    "\$this->prepareWorkspace('Локація', 'objects', ['terranova-media-manager'])",
-    "\$this->prepareWorkspace('Редагувати медіа об’єкта', 'objects', ['terranova-media-manager', 'terranova-copy'])",
-    "workspaceSection = 'properties'",
-    "array_merge(['property-workspace'], \$assets)",
-] as $needle) {
-    if (!str_contains($controller, $needle)) {
-        throw new RuntimeException('PropertyController is missing WEB V0.7 workspace contract: ' . $needle);
-    }
+$pdfService = $read('app/Domains/Property/Infrastructure/Presentation/PropertyPresentationService.php');
+$contains($pdfService, 'property/pdf.phtml', 'Property PDF service renderer must remain available.');
+$read('app/Interfaces/Web/View/property/pdf.phtml');
+
+foreach (['frontend/entrypoints/property-workspace.js','frontend/features/property/workspace.css','frontend/features/property/workspace.js'] as $retiredFrontend) {
+    if (is_file($root . '/' . $retiredFrontend)) throw new RuntimeException('Retired Property Workspace frontend restored: ' . $retiredFrontend);
 }
-if (str_contains($controller, 'Domains\\Frontend')) {
-    throw new RuntimeException('WEB V0.7 must not invent a Frontend Domain for a presentation migration.');
-}
+$vite=$read('vite.config.js');
+$notContains($vite,"'property-workspace'",'Retired Property Workspace Vite entry restored');
 
-$actionBody = static function (string $source, string $action): string {
-    $needle = 'public function ' . $action . 'Action';
-    $start = strpos($source, $needle);
-    if ($start === false) {
-        throw new RuntimeException('Property action missing from controller: ' . $action);
-    }
-
-    $tail = substr($source, $start);
-    $boundaries = [];
-    foreach (['public function ', 'protected function ', 'private function '] as $boundary) {
-        $position = strpos($tail, $boundary, strlen($needle));
-        if ($position !== false) {
-            $boundaries[] = $position;
-        }
-    }
-
-    return substr($tail, 0, $boundaries === [] ? null : min($boundaries));
-};
-foreach (['catalog', 'show', 'presentation', 'submit', 'map', 'compare', 'favour'] as $publicAction) {
-    if (str_contains($actionBody($controller, $publicAction), 'prepareWorkspace(')) {
-        throw new RuntimeException('Public/portal Property action was incorrectly pulled into Company Workspace: ' . $publicAction);
-    }
-}
-
-$layout = (string) file_get_contents($root . '/app/Interfaces/Web/View/index.phtml');
-if (!str_contains($layout, "'layoutOwned' => true")) {
-    throw new RuntimeException('Global Web layout must continue to own migrated Workspace shells.');
-}
-
-foreach (['manage.phtml', 'listing.phtml', 'add.phtml', 'edit.phtml', 'group.phtml', 'submissions.phtml', 'submission.phtml'] as $viewFile) {
-    $view = (string) file_get_contents($root . '/app/Interfaces/Web/View/property/' . $viewFile);
-    if (!str_contains($view, "partial('shared/manager_header'")) {
-        throw new RuntimeException('Legacy Property view changed unexpectedly; the layout-owned compatibility guard must cover its historical shell call: ' . $viewFile);
-    }
-    if (str_contains($view, '/assets/js/') || str_contains($view, '/assets/css/')) {
-        throw new RuntimeException('Property Workspace view bypasses Vite: ' . $viewFile);
-    }
-}
-
-$entrypoint = (string) file_get_contents($root . '/frontend/entrypoints/property-workspace.js');
-foreach (["../features/property/workspace.css", "../features/property/workspace.js"] as $needle) {
-    if (!str_contains($entrypoint, $needle)) {
-        throw new RuntimeException('Property Workspace Vite entrypoint is incomplete: ' . $needle);
-    }
-}
-
-$workspaceJs = (string) file_get_contents($root . '/frontend/features/property/workspace.js');
-foreach (["dataset.propertyWorkspace = 'true'", "addEventListener('submit'", 'aria-busy'] as $needle) {
-    if (!str_contains($workspaceJs, $needle)) {
-        throw new RuntimeException('Property Workspace progressive enhancement is incomplete: ' . $needle);
-    }
-}
-
-$workspaceCss = (string) file_get_contents($root . '/frontend/features/property/workspace.css');
-foreach (['.tn-property-workspace .tn-page', '.tn-listing-table-wrap', '@media (max-width: 650px)'] as $needle) {
-    if (!str_contains($workspaceCss, $needle)) {
-        throw new RuntimeException('Property Workspace responsive styling is incomplete: ' . $needle);
-    }
-}
-
-$vite = (string) file_get_contents($root . '/vite.config.js');
-if (!str_contains($vite, "'property-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/property-workspace.js')")) {
-    throw new RuntimeException('Vite does not expose the WEB V0.7 Property Workspace entrypoint.');
-}
-
-$assetTest = (string) file_get_contents($root . '/tests/architecture/frontend_assets.php');
-if (!str_contains($assetTest, "'property-workspace'")) {
-    throw new RuntimeException('Frontend asset architecture does not validate the Property Workspace bundle.');
-}
-
-$propertyNavigation = (string) file_get_contents($root . '/app/Interfaces/Web/Navigation/PropertyNavigationContributor.php');
+$navigation = $read('symfony/src/Web/Navigation/NavigationBuilder.php');
 foreach (["'key' => 'properties'", "'key' => 'objects'", "'key' => 'listing'", "'key' => 'submissions'"] as $needle) {
-    if (!str_contains($propertyNavigation, $needle)) {
-        throw new RuntimeException('Property module must continue to own Property Workspace navigation: ' . $needle);
-    }
+    $contains($navigation, $needle, 'Canonical Property workspace navigation is incomplete');
 }
 
-echo "WEB V0.7 Property Workspace architecture passed: Inventory, Listing, editor, locations and moderation use the shared layout-owned shell while public Property surfaces remain separate.\n";
+echo "WEB V0.7 Property Workspace canonical runtime passed.\n";

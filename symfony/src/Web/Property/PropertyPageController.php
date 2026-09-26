@@ -4,10 +4,8 @@ declare(strict_types=1);
 namespace App\Web\Property;
 
 use App\Security\SessionCsrfValidator;
-use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Property\Application\Contract\PropertyCatalogInterface;
-use Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface;
 use Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -21,9 +19,7 @@ final readonly class PropertyPageController
     public function __construct(
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
-        private NavigationBuilder $navigation,
         private PropertyCatalogInterface $catalog,
-        private PropertyWorkspaceReadModelInterface $workspace,
         private SalesWriteServiceFactoryInterface $writes,
         private SessionCsrfValidator $csrf,
         private string $organizationId,
@@ -48,17 +44,18 @@ final readonly class PropertyPageController
         return $this->html($request, 'property/catalog', $variables, (int) ($variables['_status'] ?? 200));
     }
 
-    public function map(Request $request): Response
+    public function favour(Request $request): Response
     {
-        $variables = $this->catalogData($request, ['page' => 1, 'per_page' => 60]);
+        $variables = $this->catalogData($request, ['page' => 1, 'per_page' => 150]);
         $variables += [
-            'title' => 'Карта об’єктів',
-            'metaTitle' => 'Карта об’єктів | Terra Nova CLUB',
-            'metaDescription' => 'Карта об’єктів Terra Nova CLUB із фактичними географічними координатами.',
+            'title' => 'Вибрані об’єкти',
+            'metaTitle' => 'Вибрані об’єкти | Terra Nova CLUB',
+            'metaDescription' => 'Збережені об’єкти Terra Nova CLUB.',
             'interfaceSurface' => 'public',
             'pageAssetEntries' => ['public-surface'],
         ];
-        return $this->html($request, 'property/map', $variables, (int) ($variables['_status'] ?? 200));
+
+        return $this->html($request, 'property/favour', $variables, (int) ($variables['_status'] ?? 200));
     }
 
     public function show(Request $request, string $slug): Response
@@ -190,69 +187,6 @@ final readonly class PropertyPageController
         return new RedirectResponse('/property/presentation/'.rawurlencode($slug));
     }
 
-    public function manage(Request $request): Response
-    {
-        return $this->inventoryWorkspace($request, 'Inventory', 'objects', 'manage');
-    }
-
-    public function listing(Request $request): Response
-    {
-        return $this->inventoryWorkspace($request, 'Listing', 'listing', 'listing', true);
-    }
-
-    public function submissions(Request $request): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-        $status = trim((string) $request->query->get('status', ''));
-
-        try {
-            $data = $this->workspace->submissions($tenant->organizationId()->value(), $status, 100);
-            return $this->workspaceHtml($request, $tenant, 'Модерація об’єктів', 'submissions', 'property/submissions', [
-                'status'=>$status,'submissions'=>$data['items'],'counts'=>$data['counts'],'pageStatus'=>null,
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.workspace.submissions_failed ' . $error->getMessage());
-            return $this->workspaceHtml($request, $tenant, 'Модерація об’єктів', 'submissions', 'property/submissions', [
-                'status'=>$status,'submissions'=>[],'counts'=>[],'pageStatus'=>'Заявки тимчасово недоступні.',
-            ], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
-    public function submission(Request $request, string $id): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-        try {
-            $submission = $this->workspace->submission($tenant->organizationId()->value(), (int)$id);
-            if ($submission === null) return new Response('Submission was not found.', Response::HTTP_NOT_FOUND);
-            return $this->workspaceHtml($request, $tenant, 'Заявка на об’єкт', 'submissions', 'property/submission_canonical', [
-                'submission'=>$submission,
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.workspace.submission_failed ' . $error->getMessage());
-            return new Response('Submission is temporarily unavailable.', Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
-    private function inventoryWorkspace(Request $request, string $title, string $active, string $mode, bool $listingAccess = false): Response
-    {
-        $tenant = $listingAccess ? $this->listingUser() : $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-
-        try {
-            $data = $this->workspace->inventory($tenant->organizationId()->value(), $request->query->all(), 150);
-            return $this->workspaceHtml($request, $tenant, $title, $active, 'property/workspace_canonical', [
-                'mode'=>$mode,'filters'=>$data['filters'],'items'=>$data['items'],'stats'=>$data['stats'],'pageStatus'=>null,
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.workspace.inventory_failed ' . $error->getMessage());
-            return $this->workspaceHtml($request, $tenant, $title, $active, 'property/workspace_canonical', [
-                'mode'=>$mode,'filters'=>[],'items'=>[],'stats'=>[],'pageStatus'=>'Property inventory тимчасово недоступний.',
-            ], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
     private function seo(Request $request, array $overrides, string $kicker, string $title, string $path): Response
     {
         $variables = $this->catalogData($request, $overrides);
@@ -320,18 +254,6 @@ final readonly class PropertyPageController
         if ($tenant === null) return new RedirectResponse('/auth/login');
         if (!$tenant->isManager()) return new Response('Forbidden', Response::HTTP_FORBIDDEN);
         return $tenant;
-    }
-
-    private function workspaceHtml(Request $request, TenantContext $tenant, string $title, string $active, string $view, array $extra, int $status = 200): Response
-    {
-        $role = $tenant->role()->value();
-        return $this->html($request, $view, array_replace([
-            'title'=>$title,'metaTitle'=>$title.' | Terra Nova COS','metaRobots'=>'noindex,nofollow',
-            'interfaceSurface'=>'workspace','workspaceSection'=>'properties','workspaceActive'=>$active,
-            'workspaceActiveSection'=>$this->navigation->activeSection($active),'pageAssetEntries'=>['property-workspace'],
-            'currentUser'=>['id'=>(int)$tenant->userId()->value(),'role'=>$role],'role'=>$role,'isTeam'=>$tenant->isManager(),
-            'isAdmin'=>$tenant->isAdmin(),'workspaceNavigation'=>$this->navigation->workspace($tenant),
-        ], $extra), $status);
     }
 
     private function viewContext(Request $request): array

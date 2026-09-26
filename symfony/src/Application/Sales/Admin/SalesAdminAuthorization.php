@@ -12,6 +12,8 @@ final readonly class SalesAdminAuthorization
     public const AGENTS = 'sales.admin.agents.manage';
     public const POLICIES = 'sales.admin.policies.manage';
     public const TEAMS = 'sales.admin.teams.manage';
+    public const INTEGRATIONS = 'sales.admin.integrations.manage';
+    public const AUDIT = 'sales.admin.audit.view';
 
     public function __construct(private SalesAccessControlInterface $access)
     {

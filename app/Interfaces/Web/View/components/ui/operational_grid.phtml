@@ -1,0 +1,146 @@
+<?php
+$columns = is_array($columns ?? null) ? $columns : [];
+$rows = is_array($rows ?? null) ? $rows : [];
+$responsive = in_array(($responsive ?? 'scroll'), ['cards', 'scroll'], true) ? $responsive : 'scroll';
+$emptyMessage = trim((string) ($emptyMessage ?? 'No operational items.'));
+$h = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$href = static function ($view, string $path): string {
+    if ($path === '' || str_starts_with($path, '#') || preg_match('#^(https?:|mailto:|tel:)#', $path)) return $path ?: '#';
+    return $view->url->get($path);
+};
+$variantClass = static function (mixed $value): string {
+    $variant = preg_replace('/[^a-z0-9-]/', '', strtolower((string) $value));
+    return $variant !== '' && $variant !== 'default' ? ' tn-ui-button--' . $variant : '';
+};
+$fieldType = static function (mixed $value): string {
+    $type = strtolower((string) $value);
+    return in_array($type, ['text', 'email', 'tel', 'password', 'number', 'date', 'datetime-local', 'url', 'search', 'select'], true)
+        ? $type
+        : 'text';
+};
+?>
+<div class="tn-ui-operational-grid tn-ui-table-wrap">
+  <table class="tn-ui-data-table tn-ui-operational-grid__table" data-responsive="<?php echo $h($responsive); ?>">
+    <thead>
+      <tr>
+        <?php foreach ($columns as $column): if (!is_array($column)) continue; ?>
+          <th scope="col"><?php echo $h($column['label'] ?? $column['key'] ?? ''); ?></th>
+        <?php endforeach; ?>
+        <th scope="col" class="tn-ui-operational-grid__actions-heading"><?php echo $h($actionsLabel ?? 'Actions'); ?></th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php if ($rows === []): ?>
+        <tr><td class="tn-ui-data-table__empty" colspan="<?php echo max(1, count($columns) + 1); ?>"><?php echo $h($emptyMessage); ?></td></tr>
+      <?php endif; ?>
+
+      <?php foreach ($rows as $row): if (!is_array($row)) continue;
+        $rowForm = is_array($row['_form'] ?? null) ? $row['_form'] : [];
+        $rowFormId = trim((string) ($rowForm['id'] ?? ''));
+      ?>
+        <tr>
+          <?php foreach ($columns as $column): if (!is_array($column)) continue;
+            $key = (string) ($column['key'] ?? '');
+            $label = (string) ($column['label'] ?? $key);
+            $value = $row[$key] ?? '';
+          ?>
+            <td data-label="<?php echo $h($label); ?>">
+              <?php if (is_array($value) && ($value['kind'] ?? '') === 'details'): ?>
+                <details class="tn-ui-data-table__details">
+                  <summary><?php echo $h($value['summary'] ?? 'Details'); ?></summary>
+                  <pre><?php echo $h($value['content'] ?? ''); ?></pre>
+                </details>
+              <?php elseif (is_array($value) && in_array(($value['kind'] ?? ''), ['field', 'fields'], true)): ?>
+                <?php
+                  $editableFields = ($value['kind'] ?? '') === 'fields'
+                      ? (is_array($value['items'] ?? null) ? $value['items'] : [])
+                      : [$value];
+                  $editableSecondary = trim((string) ($value['secondary'] ?? ''));
+                ?>
+                <div class="tn-ui-operational-grid__field-stack">
+                  <?php foreach ($editableFields as $field): if (!is_array($field)) continue;
+                    $name = trim((string) ($field['name'] ?? ''));
+                    if ($name === '') continue;
+                    $type = $fieldType($field['type'] ?? 'text');
+                    $fieldValue = (string) ($field['value'] ?? '');
+                    $ariaLabel = trim((string) ($field['ariaLabel'] ?? $field['label'] ?? $label));
+                  ?>
+                    <?php if ($type === 'select'): ?>
+                      <select class="tn-ui-select tn-ui-operational-grid__field" name="<?php echo $h($name); ?>"<?php echo $rowFormId !== '' ? ' form="' . $h($rowFormId) . '"' : ''; ?> aria-label="<?php echo $h($ariaLabel); ?>">
+                        <?php foreach ((array) ($field['options'] ?? []) as $optionValue => $optionLabel): ?>
+                          <option value="<?php echo $h($optionValue); ?>"<?php echo (string) $optionValue === $fieldValue ? ' selected' : ''; ?>><?php echo $h($optionLabel); ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                    <?php else: ?>
+                      <input class="tn-ui-input tn-ui-operational-grid__field" type="<?php echo $h($type); ?>" name="<?php echo $h($name); ?>" value="<?php echo $h($fieldValue); ?>"<?php echo $rowFormId !== '' ? ' form="' . $h($rowFormId) . '"' : ''; ?> aria-label="<?php echo $h($ariaLabel); ?>"<?php if (!empty($field['placeholder'])): ?> placeholder="<?php echo $h($field['placeholder']); ?>"<?php endif; ?><?php if (isset($field['min'])): ?> min="<?php echo $h($field['min']); ?>"<?php endif; ?><?php if (isset($field['max'])): ?> max="<?php echo $h($field['max']); ?>"<?php endif; ?><?php if (isset($field['step'])): ?> step="<?php echo $h($field['step']); ?>"<?php endif; ?><?php if (isset($field['minLength'])): ?> minlength="<?php echo $h($field['minLength']); ?>"<?php endif; ?><?php if (isset($field['maxLength'])): ?> maxlength="<?php echo $h($field['maxLength']); ?>"<?php endif; ?><?php if (!empty($field['autocomplete'])): ?> autocomplete="<?php echo $h($field['autocomplete']); ?>"<?php endif; ?><?php echo !empty($field['required']) ? ' required' : ''; ?>>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
+                  <?php if ($editableSecondary !== ''): ?><span class="tn-ui-data-table__secondary"><?php echo $h($editableSecondary); ?></span><?php endif; ?>
+                </div>
+              <?php elseif (is_array($value) && isset($value['label'])): ?>
+                <?php if (($value['kind'] ?? 'status') === 'stage'): ?>
+                  <?php $this->partial('components/ui/stage', [
+                      'label' => $value['label'],
+                      'tone' => $value['tone'] ?? 'neutral',
+                  ]); ?>
+                <?php else: ?>
+                  <?php $this->partial('components/ui/status_badge', [
+                      'label' => $value['label'],
+                      'tone' => $value['tone'] ?? 'neutral',
+                  ]); ?>
+                <?php endif; ?>
+                <?php if (isset($value['secondary'])): ?><span class="tn-ui-data-table__secondary"><?php echo $h($value['secondary']); ?></span><?php endif; ?>
+              <?php elseif (is_array($value)): ?>
+                <?php $primary = trim((string) ($value['primary'] ?? '')); $secondary = trim((string) ($value['secondary'] ?? '')); ?>
+                <?php if ($primary !== ''): ?><span class="tn-ui-data-table__primary"><?php echo $h($primary); ?></span><?php endif; ?>
+                <?php if ($secondary !== ''): ?><span class="tn-ui-data-table__secondary"><?php echo $h($secondary); ?></span><?php endif; ?>
+              <?php else: ?>
+                <?php echo $h($value); ?>
+              <?php endif; ?>
+            </td>
+          <?php endforeach; ?>
+
+          <td class="tn-ui-operational-grid__actions" data-label="<?php echo $h($actionsLabel ?? 'Actions'); ?>">
+            <?php if ($rowFormId !== ''):
+              $rowFormAction = trim((string) ($rowForm['action'] ?? ''));
+              $rowFormMethod = strtolower((string) ($rowForm['method'] ?? 'post')) === 'get' ? 'get' : 'post';
+            ?>
+              <form id="<?php echo $h($rowFormId); ?>" class="tn-ui-operational-grid__row-form" action="<?php echo $h($href($this, $rowFormAction)); ?>" method="<?php echo $h($rowFormMethod); ?>">
+                <?php foreach ((is_array($rowForm['hidden'] ?? null) ? $rowForm['hidden'] : []) as $name => $value): ?>
+                  <input type="hidden" name="<?php echo $h($name); ?>" value="<?php echo $h($value); ?>">
+                <?php endforeach; ?>
+              </form>
+            <?php endif; ?>
+            <?php $rowActions = is_array($row['_actions'] ?? null) ? $row['_actions'] : []; ?>
+            <?php if ($rowActions === []): ?><span class="tn-muted">—</span><?php endif; ?>
+            <?php foreach ($rowActions as $action): if (!is_array($action)) continue;
+              $label = trim((string) ($action['label'] ?? ''));
+              if ($label === '') continue;
+              $requestedKind = (string) ($action['kind'] ?? 'link');
+              $kind = in_array($requestedKind, ['form', 'submit'], true) ? $requestedKind : 'link';
+              $target = $kind === 'submit'
+                  ? $rowFormId
+                  : trim((string) ($action[$kind === 'form' ? 'action' : 'href'] ?? ''));
+              if ($target === '') continue;
+              $class = 'tn-ui-button' . $variantClass($action['variant'] ?? 'default');
+              $disabled = !empty($action['disabled']);
+            ?>
+              <?php if ($kind === 'form'): ?>
+                <form class="tn-ui-operational-grid__form" action="<?php echo $h($href($this, $target)); ?>" method="post">
+                  <?php foreach ((is_array($action['hidden'] ?? null) ? $action['hidden'] : []) as $name => $value): ?>
+                    <input type="hidden" name="<?php echo $h($name); ?>" value="<?php echo $h($value); ?>">
+                  <?php endforeach; ?>
+                  <button class="<?php echo $h($class); ?>" type="submit"<?php echo $disabled ? ' disabled' : ''; ?>><?php echo $h($label); ?></button>
+                </form>
+              <?php elseif ($kind === 'submit'): ?>
+                <button class="<?php echo $h($class); ?>" type="submit" form="<?php echo $h($target); ?>"<?php echo $disabled ? ' disabled' : ''; ?>><?php echo $h($label); ?></button>
+              <?php else: ?>
+                <a class="<?php echo $h($class); ?>" href="<?php echo $h($href($this, $target)); ?>"<?php echo $disabled ? ' aria-disabled="true" tabindex="-1"' : ''; ?>><?php echo $h($label); ?></a>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+</div>

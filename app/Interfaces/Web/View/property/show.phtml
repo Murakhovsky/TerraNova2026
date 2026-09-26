@@ -157,18 +157,19 @@ if ($property) {
 <?php $this->partial('shared/public_header', [
     'active' => 'catalog',
     'actions' => [
-        ['href' => 'property/catalog', 'label' => 'До каталогу', 'class' => 'tn-btn--ghost'],
-        ['href' => '#request', 'label' => 'Запит', 'class' => 'tn-btn--dark'],
+        ['href' => 'property/catalog', 'label' => 'До каталогу', 'variant' => 'ghost'],
+        ['href' => '#request', 'label' => 'Запит', 'variant' => 'primary'],
     ],
 ]); ?>
 
 <main class="tn-page">
   <?php if (!$property): ?>
-    <section class="tn-empty-state tn-empty-state--page">
-      <h1><?php echo $pageStatus ? 'Сторінка тимчасово недоступна' : 'Об’єкт не знайдено'; ?></h1>
-      <p><?php echo $h($pageStatus ?: 'Можливо, він ще на модерації або був знятий з публікації.'); ?></p>
-      <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/catalog'); ?>">Перейти в каталог</a>
-    </section>
+    <?php $this->partial('components/ui/state', [
+        'kind' => $pageStatus ? 'error' : 'empty',
+        'title' => $pageStatus ? 'Сторінка тимчасово недоступна' : 'Об’єкт не знайдено',
+        'message' => $pageStatus ?: 'Можливо, він ще на модерації або був знятий з публікації.',
+        'action' => ['label' => 'Перейти в каталог', 'href' => 'property/catalog'],
+    ]); ?>
   <?php else: ?>
     <nav class="tn-breadcrumbs" aria-label="Breadcrumb">
       <a href="<?php echo $this->url->get(); ?>">Головна</a>
@@ -212,15 +213,33 @@ if ($property) {
           <?php if (!empty($property['group_title'])): ?><span><?php echo $h($property['group_title']); ?></span><?php endif; ?>
           <?php if ((int) $property['has_3d_tour'] === 1): ?><span>3D tour</span><?php endif; ?>
         </div>
-        <div class="tn-hero-actions">
-          <a class="tn-btn tn-btn--dark" href="<?php echo $this->url->get('property/presentation/' . $property['slug']); ?>" data-analytics-event="presentation_request">Отримати презентацію</a>
-          <a class="tn-btn tn-btn--ghost" href="<?php echo $this->url->get('property/pdf/' . $property['slug']); ?>">Завантажити PDF</a>
-          <a class="tn-btn tn-btn--ghost" href="#request" data-request-intent="similar_search">Підібрати схожий</a>
-          <a class="tn-btn tn-btn--accent" href="#request" data-request-intent="viewing">Записатись на перегляд</a>
-          <?php if ($phoneHref): ?><a class="tn-btn tn-btn--dark" href="tel:<?php echo $h($phoneHref); ?>">Подзвонити</a><?php endif; ?>
-          <?php if ($telegramHref): ?><a class="tn-btn tn-btn--ghost" href="<?php echo $h($telegramHref); ?>">Telegram</a><?php endif; ?>
-          <button type="button" data-save-property="<?php echo $h($property['public_id']); ?>" data-toggle-text="У вибраному">Зберегти</button>
-        </div>
+        <?php
+          $heroActions = [
+              ['label' => 'Отримати презентацію', 'href' => 'property/presentation/' . (string) $property['slug'], 'variant' => 'default', 'attributes' => ['data-analytics-event' => 'presentation_request']],
+              ['label' => 'Завантажити PDF', 'href' => 'property/pdf/' . (string) $property['slug'], 'variant' => 'ghost'],
+              ['label' => 'Підібрати схожий', 'href' => '#request', 'variant' => 'ghost', 'attributes' => ['data-request-intent' => 'similar_search']],
+              ['label' => 'Записатись на перегляд', 'href' => '#request', 'variant' => 'primary', 'attributes' => ['data-request-intent' => 'viewing']],
+          ];
+          if ($phoneHref) {
+              $heroActions[] = ['label' => 'Подзвонити', 'href' => 'tel:' . $phoneHref, 'variant' => 'default'];
+          }
+          if ($telegramHref) {
+              $heroActions[] = ['label' => 'Telegram', 'href' => $telegramHref, 'variant' => 'ghost'];
+          }
+          $heroActions[] = [
+              'label' => 'Зберегти',
+              'variant' => 'ghost',
+              'attributes' => [
+                  'data-save-property' => (string) $property['public_id'],
+                  'data-toggle-text' => 'У вибраному',
+              ],
+          ];
+          $this->partial('components/ui/action_bar', [
+              'actions' => $heroActions,
+              'align' => 'start',
+              'ariaLabel' => 'Дії з об’єктом',
+          ]);
+        ?>
         <p class="tn-property-hero__note">Після запиту менеджер уточнить актуальність, деталі по документах і зручний час перегляду.</p>
         <?php if ($propertyMatchStatus): ?><p class="tn-form-status is-visible"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
         <?php if ($managerClientCases): ?>

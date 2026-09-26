@@ -1,117 +1,99 @@
 <?php
 declare(strict_types=1);
 
-$root = dirname(__DIR__, 2);
-require $root . '/vendor/autoload.php';
+$root=dirname(__DIR__,2);
+$read=static function(string $path)use($root):string{
+    $full=$root.'/'.ltrim($path,'/');
+    if(!is_file($full))throw new RuntimeException('Missing WEB V0.6 Clients artifact: '.$path);
+    return (string)file_get_contents($full);
+};
+$contains=static function(string $source,string $needle,string $message):void{
+    if(!str_contains($source,$needle))throw new RuntimeException($message.' Missing: '.$needle);
+};
+$notContains=static function(string $source,string $needle,string $message):void{
+    if(str_contains($source,$needle))throw new RuntimeException($message.' Forbidden: '.$needle);
+};
 
-$required = [
-    'app/Interfaces/Web/Controller/ClientCaseController.php',
+$inboxController=$read('symfony/src/Web/Sales/ClientCaseInboxController.php');
+$collectionController=$read('symfony/src/Web/Sales/ClientCaseCollectionController.php');
+$workspaceController=$read('symfony/src/Web/Sales/ClientCaseWorkspaceController.php');
+$mutationController=$read('symfony/src/Web/Sales/ClientCaseMutationController.php');
+$provider=$read('symfony/src/Web/Experience/Extension/Provider/SalesWebProvider.php');
+$routes=$read('symfony/config/routes.yaml');
+$vite=$read('vite.config.js');
+$assetGate=$read('tests/architecture/frontend_assets.php');
+
+foreach([
+    $inboxController=>$needles=['GetClientCaseInboxQuery','PageArchetype::OperationalQueue','WorkspaceShellFactory',"activeSection: 'clients'"],
+    $collectionController=>['GetClientCaseCollectionQuery','PageArchetype::Collection','WorkspaceShellFactory',"activeSection:'clients'"],
+    $workspaceController=>['GetClientCaseWorkspaceQuery','PageArchetype::EntityWorkspace','WorkspaceCompositionResolver',"'sales.client_case'","new EntityRef('sales.deal'"],
+] as $source=>$needles){
+    foreach($needles as $needle)$contains($source,$needle,'Canonical Clients controller contract is incomplete.');
+    $notContains($source,'Domains\\Clients','Clients presentation must not invent a Clients Domain.');
+    $notContains($source,'PhtmlRenderer','Canonical Clients read controller must not depend on PHTML.');
+}
+
+foreach([
+    'createOpportunity','updateOpportunity','quickUpdateOpportunity','addOpportunityActivity',
+    'updateLead','convertLeadToOpportunity','attachInboundRequest','updateOpportunityPropertyMatch',
+    'SessionCsrfValidator','SalesWriteServiceFactoryInterface',
+] as $needle){
+    $contains($mutationController,$needle,'Client Case mutation controller lost write parity.');
+}
+foreach(['PhtmlRenderer','NavigationBuilder','Domains\\Clients'] as $forbidden){
+    $notContains($mutationController,$forbidden,'Mutation controller leaked presentation/invalid domain dependency.');
+}
+
+foreach([
+    "new NavigationContribution('clients'",
+    "new NavigationContribution('inbox'",
+    "new NavigationContribution('cases'",
+    "new WorkspaceDefinition('sales.client_case'",
+    "'sales.client_case'",
+] as $needle){
+    $contains($provider,$needle,'Sales provider lost Clients workspace ownership.');
+}
+
+foreach([
+    'path: /client-case',
+    'ClientCaseCollectionController::index',
+    'path: /client-case/inbox',
+    'ClientCaseInboxController::index',
+    'path: /client-case/show/{id}',
+    'ClientCaseWorkspaceController::index',
+    'ClientCaseMutationController::create',
+    'ClientCaseMutationController::update',
+    'ClientCaseMutationController::quickUpdate',
+    'ClientCaseMutationController::activity',
+    'ClientCaseMutationController::updateInboundRequest',
+    'ClientCaseMutationController::createFromInboundRequest',
+    'ClientCaseMutationController::linkInboundRequest',
+    'ClientCaseMutationController::updatePropertyMatch',
+] as $needle){
+    $contains($routes,$needle,'Client Case routes are incomplete.');
+}
+
+foreach([
+    'symfony/templates/experience/client_case/inbox.html.twig',
+    'symfony/templates/experience/client_case/index.html.twig',
+    'symfony/templates/experience/client_case/show.html.twig',
+] as $path){
+    $view=$read($path);
+    foreach(['tn-','style=','<script'] as $forbidden)$notContains($view,$forbidden,'Canonical Client Case Twig restored legacy/local presentation: '.$path);
+}
+
+foreach([
     'app/Interfaces/Web/View/client_case/inbox.phtml',
     'app/Interfaces/Web/View/client_case/index.phtml',
     'app/Interfaces/Web/View/client_case/show.phtml',
+    'symfony/src/Web/Sales/ClientCasePageController.php',
     'frontend/entrypoints/clients-workspace.js',
-    'frontend/entrypoints/terranova-interface.js',
-    'frontend/core/production.js',
     'frontend/features/clients/workspace.css',
-    'frontend/features/clients/workspace.js',
-    'docs/architecture/web-v0.6.md',
-];
-foreach ($required as $path) {
-    if (!is_file($root . '/' . $path)) {
-        throw new RuntimeException('Missing WEB V0.6 Clients Workspace artifact: ' . $path);
-    }
+] as $retired){
+    if(file_exists($root.'/'.$retired))throw new RuntimeException('Retired Client Case artifact restored: '.$retired);
 }
 
-$controller = (string) file_get_contents($root . '/app/Interfaces/Web/Controller/ClientCaseController.php');
-foreach ([
-    "prepareWorkspace('Клієнтські кейси', 'cases')",
-    "prepareWorkspace('Вхідні заявки', 'inbox')",
-    "prepareWorkspace('Картка кейсу', 'cases')",
-    "workspaceSection = 'clients'",
-    "pageAssetEntries = ['clients-workspace']",
-] as $needle) {
-    if (!str_contains($controller, $needle)) {
-        throw new RuntimeException('ClientCaseController is missing WEB V0.6 workspace contract: ' . $needle);
-    }
-}
-if (str_contains($controller, 'Domains\\Clients')) {
-    throw new RuntimeException('WEB V0.6 must not invent a Clients Domain for a presentation migration.');
-}
+$notContains($vite,"'clients-workspace'","Vite must not restore retired Clients bundle.");
+$notContains($assetGate,"'clients-workspace'","Frontend asset gate must not require retired Clients bundle.");
 
-$layout = (string) file_get_contents($root . '/app/Interfaces/Web/View/index.phtml');
-if (!str_contains($layout, "'layoutOwned' => true")) {
-    throw new RuntimeException('Global Web layout must mark the shared Workspace shell as layout-owned.');
-}
-
-$managerHeader = (string) file_get_contents($root . '/app/Interfaces/Web/View/shared/manager_header.phtml');
-foreach (['$layoutOwned', '$workspaceSection', 'if (!$layoutOwned && $workspaceSection !== \'\')'] as $needle) {
-    if (!str_contains($managerHeader, $needle)) {
-        throw new RuntimeException('Shared manager header is missing the WEB V0.6 duplicate-shell guard: ' . $needle);
-    }
-}
-
-foreach (['inbox.phtml', 'index.phtml', 'show.phtml'] as $viewFile) {
-    $view = (string) file_get_contents($root . '/app/Interfaces/Web/View/client_case/' . $viewFile);
-    if (!str_contains($view, "partial('shared/manager_header'")) {
-        throw new RuntimeException('Legacy Client Case view changed unexpectedly; the V0.6 compatibility guard must cover its historical shell call: ' . $viewFile);
-    }
-    if (str_contains($view, '/assets/js/') || str_contains($view, '/assets/css/')) {
-        throw new RuntimeException('Clients Workspace view bypasses Vite: ' . $viewFile);
-    }
-}
-
-$entrypoint = (string) file_get_contents($root . '/frontend/entrypoints/clients-workspace.js');
-foreach (["../features/clients/workspace.css", "../features/clients/workspace.js"] as $needle) {
-    if (!str_contains($entrypoint, $needle)) {
-        throw new RuntimeException('Clients Workspace Vite entrypoint is incomplete: ' . $needle);
-    }
-}
-
-$clientJs = (string) file_get_contents($root . '/frontend/features/clients/workspace.js');
-if (!str_contains($clientJs, 'data-client-workspace')) {
-    throw new RuntimeException('Clients Workspace progressive enhancement must keep explicit workspace scoping.');
-}
-foreach (["addEventListener('submit'", 'dataset.submitting', "classList.add('is-pending')"] as $legacySubmitGuard) {
-    if (str_contains($clientJs, $legacySubmitGuard)) {
-        throw new RuntimeException('Clients Workspace must not duplicate shared production form behavior: ' . $legacySubmitGuard);
-    }
-}
-
-$interfaceEntrypoint = (string) file_get_contents($root . '/frontend/entrypoints/terranova-interface.js');
-$productionJs = (string) file_get_contents($root . '/frontend/core/production.js');
-foreach (["import { initProductionUX } from '../core/production.js'", 'initProductionUX();'] as $needle) {
-    if (!str_contains($interfaceEntrypoint, $needle)) {
-        throw new RuntimeException('Shared Workspace entrypoint must initialize production form behavior: ' . $needle);
-    }
-}
-foreach (["addEventListener('submit'", 'dataset.submitting', "setAttribute('aria-busy', 'true')", "classList.add('is-pending')", "addEventListener('pageshow'"] as $needle) {
-    if (!str_contains($productionJs, $needle)) {
-        throw new RuntimeException('Shared production form guard is incomplete: ' . $needle);
-    }
-}
-
-$clientCss = (string) file_get_contents($root . '/frontend/features/clients/workspace.css');
-foreach (['.tn-client-workspace', '.tn-case-funnel', '@media (max-width: 650px)'] as $needle) {
-    if (!str_contains($clientCss, $needle)) {
-        throw new RuntimeException('Clients Workspace responsive styling is incomplete: ' . $needle);
-    }
-}
-
-$vite = (string) file_get_contents($root . '/vite.config.js');
-if (!str_contains($vite, "'clients-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/clients-workspace.js')")) {
-    throw new RuntimeException('Vite does not expose the WEB V0.6 Clients Workspace entrypoint.');
-}
-
-$assetTest = (string) file_get_contents($root . '/tests/architecture/frontend_assets.php');
-if (!str_contains($assetTest, "'clients-workspace'")) {
-    throw new RuntimeException('Frontend asset architecture does not validate the Clients Workspace bundle.');
-}
-
-$salesNavigation = (string) file_get_contents($root . '/app/Interfaces/Web/Navigation/SalesNavigationContributor.php');
-foreach (['client-case/inbox', "'key' => 'clients'", "'key' => 'cases'"] as $needle) {
-    if (!str_contains($salesNavigation, $needle)) {
-        throw new RuntimeException('Sales module must continue to own Clients Workspace navigation: ' . $needle);
-    }
-}
-
-echo "WEB V0.6 Clients Workspace architecture passed: Inbox, Cases and Case Workspace use the shared layout-owned shell, dedicated Vite bundle and shared production form guard.\n";
+echo "WEB V0.6 Clients Workspace final canonical contract passed.\n";
