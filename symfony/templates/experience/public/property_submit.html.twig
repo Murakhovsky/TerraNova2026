@@ -29,7 +29,11 @@
     {% if submit.error %}
         <twig:CosAlert title="Форма тимчасово недоступна" copy="{{ submit.error }}" tone="danger" />
     {% elseif submit.submissionStatus %}
-        <twig:CosAlert title="Canonical intake ще не підключений" copy="{{ submit.submissionStatus }}" tone="warning" />
+        <twig:CosAlert
+            title="{{ submit.submissionOk ? 'Заявку прийнято' : 'Заявку не збережено' }}"
+            copy="{{ submit.submissionStatus }}"
+            tone="{{ submit.submissionOk ? 'success' : 'warning' }}"
+        />
     {% endif %}
 
     <form
@@ -193,7 +197,7 @@
 
         <twig:CosFormSection
             title="Медіа"
-            description="Файли не зберігаються, доки public intake не матиме окремого canonical write use case."
+            description="Файли проходять canonical Property intake та додаються до заявки після її створення."
         >
             <div class="cos-form__grid">
                 <label class="cos-field">
@@ -217,7 +221,7 @@
         <p class="cos-card__eyebrow">Що далі</p>
         <h2 class="cos-card__title">Модерація перед публікацією</h2>
         <ol class="cos-pattern-stack">
-            <li>Заявка має потрапити в окрему intake queue.</li>
+            <li>Заявка одразу потрапляє в canonical Property intake queue.</li>
             <li>Менеджер перевіряє контакти, параметри й матеріали.</li>
             <li>Після підтвердження дані переходять у canonical Property lifecycle.</li>
         </ol>
