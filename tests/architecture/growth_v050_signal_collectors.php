@@ -43,7 +43,7 @@ foreach(['PDO','Symfony\\','Phalcon\\','Infrastructure\\','Platform\\'] as $forb
 }
 
 $repository=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthSignalIntakeRepository.php');
-foreach(['INSERT IGNORE INTO tn_growth_signal_source_receipts','payload_fingerprint','hash_equals','status=\\'running\\'','organization_id=:organization_id'] as $needle){
+foreach(['INSERT IGNORE INTO tn_growth_signal_source_receipts','payload_fingerprint','hash_equals',"status=\\'running\\'",'organization_id=:organization_id'] as $needle){
     $assert(str_contains($repository,$needle),'Growth collector repository missing: '.$needle);
 }
 

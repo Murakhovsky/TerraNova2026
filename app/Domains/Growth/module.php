@@ -22,6 +22,43 @@ return [
             'web.commands' => ['growthNavigationContributor'],
             'web.workspace' => ['growthNavigationContributor'],
         ],
+        'cross_domain_contracts' => [
+            [
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesWriteServiceFactoryInterface',
+                'role' => 'requires',
+                'counterpart' => 'sales',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Create canonical Sales Leads from accepted Growth handoffs and authoritative conversation routes without owning Sales persistence.',
+            ],
+            [
+                'contract' => 'Domains\\Service\\Application\\Contract\\ServiceApplicationBoundary',
+                'role' => 'requires',
+                'counterpart' => 'service',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Create canonical Service requests from accepted Growth handoffs and authoritative conversation routes.',
+            ],
+            [
+                'contract' => 'Domains\\Sales\\Automation\\Event\\LeadChanged',
+                'role' => 'requires',
+                'counterpart' => 'sales',
+                'kind' => 'event_contract',
+                'purpose' => 'Normalize Sales Lead lifecycle changes into Growth learning outcomes.',
+            ],
+            [
+                'contract' => 'Domains\\Sales\\Automation\\Event\\SalesEventType',
+                'role' => 'requires',
+                'counterpart' => 'sales',
+                'kind' => 'event_contract',
+                'purpose' => 'Consume documented Sales outcome event vocabulary for Growth attribution and learning.',
+            ],
+            [
+                'contract' => 'Domains\\Sales\\Model\\LeadStatus',
+                'role' => 'requires',
+                'counterpart' => 'sales',
+                'kind' => 'vocabulary_contract',
+                'purpose' => 'Normalize canonical Sales Lead status changes without duplicating Sales status semantics inside Growth.',
+            ],
+        ],
         'migration_files' => [
             'app/migrations/20260921_000067_growth_v020_runtime.sql',
             'app/migrations/20260921_000068_growth_v030_account_intelligence.sql',
