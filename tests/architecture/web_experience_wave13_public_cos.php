@@ -42,9 +42,12 @@ foreach (['PhtmlRenderer', 'ViteAssetManifest'] as $forbidden) {
     $notContains($controller, $forbidden, 'Public COS controller must not depend on legacy rendering.');
 }
 
+$baseTemplate = $read('symfony/templates/base.html.twig');
+$contains($baseTemplate, '{% block html_lang %}uk{% endblock %}', 'Base document language must be overridable.');
+
 foreach ([
-    'symfony/templates/experience/public/cos_landing.html.twig' => ['data-cos-public="cos-landing"', '<twig:CosPageHeader', '<twig:CosActionBar'],
-    'symfony/templates/experience/public/cos_domain.html.twig' => ['data-cos-public="cos-domain"', '<twig:CosPageHeader', '<twig:CosActionBar'],
+    'symfony/templates/experience/public/cos_landing.html.twig' => ['data-cos-public="cos-landing"', '<twig:CosPageHeader', '<twig:CosActionBar', '{% block html_lang %}{{ cos.lang }}{% endblock %}'],
+    'symfony/templates/experience/public/cos_domain.html.twig' => ['data-cos-public="cos-domain"', '<twig:CosPageHeader', '<twig:CosActionBar', '{% block html_lang %}{{ cos.lang }}{% endblock %}'],
 ] as $path => $markers) {
     $source = $read($path);
     foreach ($markers as $marker) $contains($source, $marker, 'Public COS Twig contract is incomplete: ' . $path);

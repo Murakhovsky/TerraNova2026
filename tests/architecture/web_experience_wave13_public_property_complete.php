@@ -75,6 +75,14 @@ foreach([
  if(!is_file($root.'/'.$specializedView))throw new RuntimeException('Specialized compatibility view unexpectedly removed during Phase 8: '.$specializedView);
 }
 
+$card=(string)file_get_contents($root.'/symfony/templates/components/property/public_property_card.html.twig');
+if(!str_contains($card,'href="{{ property.url }}#request"')){
+ throw new RuntimeException('Phase 8 shared property-card request CTA must target the detail-page request form.');
+}
+if(str_contains($card,'href="#request"')){
+ throw new RuntimeException('Phase 8 shared property-card request CTA restored a page-local dead anchor.');
+}
+
 $vite=(string)file_get_contents($root.'/vite.config.js');
 foreach(["'terranova-catalog-api'","'terranova-property-gallery'"] as $retiredEntry){
  if(str_contains($vite,$retiredEntry))throw new RuntimeException('Phase 8 retired Vite entry remains configured: '.$retiredEntry);
