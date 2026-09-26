@@ -151,6 +151,14 @@ cos_web_public_cos_lang:
   requirements:
     lang: 'en|de|fr|pl|uk'
 
+cos_web_public_cos_domain:
+  path: /cos/{lang}/domains/{slug}
+  controller: App\Web\PublicSite\PublicCosController::domain
+  methods: [GET, HEAD]
+  requirements:
+    lang: 'en|de|fr|pl|uk'
+    slug: '[a-z0-9-]+'
+
 cos_web_cabinet:
   path: /cabinet
   controller: App\Web\Portal\CabinetController::index
