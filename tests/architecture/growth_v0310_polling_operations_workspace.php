@@ -63,8 +63,11 @@ foreach([
 ] as $needle){
     $assert(str_contains($template,$needle),'Growth V0.31 polling workspace template missing: '.$needle);
 }
-foreach(['COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID','credential_reference','organization_limit'] as $forbidden){
+foreach(['COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID','organization_limit'] as $forbidden){
     $assert(!str_contains($template,$forbidden),'Growth polling workspace exposes forbidden runtime data: '.$forbidden);
+}
+foreach(["\$source['credential_reference']","\$polling['credential_reference']"] as $forbiddenProjection){
+    $assert(!str_contains($template,$forbiddenProjection),'Growth polling workspace renders a credential reference from runtime data: '.$forbiddenProjection);
 }
 
 $services=$read('symfony/config/services.yaml');

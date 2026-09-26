@@ -103,7 +103,7 @@ final readonly class MysqlGrowthMarketDiscoveryRepository implements GrowthMarke
     public function updateRuntime(string $organizationId,string $universeId,?string $cursor):void
     {
         $statement=$this->connection->prepare(
-            'UPDATE tn_growth_market_universes SET cursor=:cursor,last_run_at=NOW(6),updated_at=NOW(6)
+            'UPDATE tn_growth_market_universes SET `cursor`=:cursor,last_run_at=NOW(6),updated_at=NOW(6)
              WHERE organization_id=:organization_id AND universe_id=:universe_id'
         );
         $statement->execute(['cursor'=>$cursor,'organization_id'=>$organizationId,'universe_id'=>$universeId]);

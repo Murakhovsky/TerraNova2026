@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS tn_growth_market_universes (
     growth_mode VARCHAR(40) NOT NULL,
     target_domain VARCHAR(80) NOT NULL,
     enabled TINYINT(1) NOT NULL DEFAULT 1,
-    cursor TEXT NULL,
+    `cursor` TEXT NULL,
     last_run_at DATETIME(6) NULL,
     created_by BIGINT UNSIGNED NOT NULL,
     updated_by BIGINT UNSIGNED NOT NULL,
