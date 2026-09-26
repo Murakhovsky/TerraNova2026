@@ -57,6 +57,7 @@ final class TableOwnership
             'tn_growth_engagement_sequence_steps',
             'tn_growth_engagement_responses', 'tn_growth_engagement_response_classifications',
             'tn_growth_conversation_routes', 'tn_growth_engagement_suppressions',
+            'tn_growth_market_universes', 'tn_growth_market_discovery_runs', 'tn_growth_market_memberships',
             'tn_growth_learning_bindings', 'tn_growth_outcomes',
             'tn_growth_optimization_runs', 'tn_growth_optimization_recommendations',
             'tn_growth_experiments', 'tn_growth_experiment_assignments',

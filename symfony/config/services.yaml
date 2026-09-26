@@ -26,6 +26,11 @@ parameters:
   env(COS_GROWTH_SEQUENCE_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID): '0'
   env(COS_GROWTH_SEQUENCE_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_MARKET_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES): '60'
+  env(COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT): '200'
+  env(COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT): '100'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
@@ -55,6 +60,9 @@ services:
     Domains\Growth\Application\Contract\GrowthHandoffTargetInterface:
       tags:
         - { name: 'growth.handoff_target' }
+    Domains\Growth\Application\Contract\GrowthMarketSourceInterface:
+      tags:
+        - { name: 'growth.market_source' }
     Domains\Growth\Application\Contract\GrowthConversationRoutingTargetInterface:
       tags:
         - { name: 'growth.conversation_routing_target' }
@@ -257,6 +265,9 @@ services:
       $growthOutreachSequenceEnabled: '%env(bool:COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED)%'
       $growthOutreachSequenceIntervalMinutes: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_INTERVAL_MINUTES)%'
       $growthOutreachSequenceActorId: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID)%'
+      $growthMarketDiscoveryEnabled: '%env(bool:COS_GROWTH_MARKET_SCHEDULER_ENABLED)%'
+      $growthMarketDiscoveryIntervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -594,6 +605,39 @@ services:
 
   Domains\Growth\Application\Contract\GrowthResearchBoundary:
     alias: Domains\Growth\Application\Service\GrowthResearchService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMarketDiscoveryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthMarketDiscoveryRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMarketDiscoveryRepository
+
+  Domains\Growth\Application\Service\GrowthMarketSourceRegistry:
+    arguments:
+      $sources: !tagged_iterator growth.market_source
+
+  Domains\Growth\Infrastructure\Market\CredentialedJsonGrowthMarketSource:
+    arguments:
+      $calls: '@Kernel\Resilience\ExternalCallExecutor'
+      $vault: '@Platform\Integration\Contract\CredentialVaultInterface'
+
+  Domains\Growth\Application\Service\GrowthMarketDiscoveryService: ~
+
+  Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary:
+    alias: Domains\Growth\Application\Service\GrowthMarketDiscoveryService
+
+  Domains\Growth\Automation\Event\GrowthMarketOpportunityConsumer: ~
+
+  App\Application\Growth\Command\RunGrowthMarketDiscoveryCommandHandler:
+    arguments:
+      $repository: '@Domains\Growth\Application\Contract\GrowthMarketDiscoveryRepositoryInterface'
+      $market: '@Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
+      $universeLimit: '%env(int:COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT)%'
+      $accountLimit: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT)%'
 
   Domains\Growth\Application\Service\GrowthHandoffTargetRegistry:
     arguments:
@@ -1687,6 +1731,7 @@ services:
         growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
         growth.response-classification.v1: '@Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer'
         growth.conversation-routing.v1: '@Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer'
+        growth.market-opportunity.v1: '@Domains\Growth\Automation\Event\GrowthMarketOpportunityConsumer'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:

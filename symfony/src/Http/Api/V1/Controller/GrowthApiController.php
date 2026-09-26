@@ -28,6 +28,7 @@ use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalFeedBoundary;
 use Domains\Growth\Application\Contract\GrowthJsonSignalSourceBoundary;
+use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
@@ -46,6 +47,7 @@ final readonly class GrowthApiController
         private GrowthSignalFeedBoundary $signalFeeds,
         private GrowthCollectorAlertBoundary $collectorAlerts,
         private GrowthJsonSignalSourceBoundary $jsonSignalSources,
+        private GrowthMarketDiscoveryBoundary $marketDiscovery,
         private GrowthIntelligenceBoundary $intelligence,
         private GrowthBuyingCommitteeBoundary $committee,
         private GrowthResearchBoundary $research,
@@ -135,6 +137,51 @@ final readonly class GrowthApiController
             $this->outreachSequences->updatePolicy(
                 $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
             ));
+    }
+
+    public function marketUniverses():JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>[
+            'universes'=>$this->marketDiscovery->universes($tenant->organizationId()->value()),
+        ]);
+    }
+
+    public function createMarketUniverse(Request $request):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->marketDiscovery->createUniverse(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ),201);
+    }
+
+    public function enableMarketUniverse(Request $request,string $id):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->marketDiscovery->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,true,$key
+            ));
+    }
+
+    public function disableMarketUniverse(Request $request,string $id):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->marketDiscovery->setEnabled(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,false,$key
+            ));
+    }
+
+    public function runMarketUniverse(Request $request,string $id):JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id):array{
+            $input=$this->input($request);
+            $limit=$input['limit']??100;
+            if(!is_int($limit)&&!(is_string($limit)&&ctype_digit(trim($limit)))){
+                throw new InvalidArgumentException('limit must be an integer.');
+            }
+            return $this->marketDiscovery->runUniverse(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$key,(int)$limit
+            );
+        },202);
     }
 
     public function collectors(): JsonResponse

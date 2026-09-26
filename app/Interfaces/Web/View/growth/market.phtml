@@ -1,0 +1,110 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$universes=is_array($workspace['universes']??null)?$workspace['universes']:[];
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-market data-csrf="<?php echo $h($csrfToken??''); ?>">
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Market Discovery',
+    'title'=>'Market Universe',
+    'description'=>'Automated account sourcing: Market Universe → enrichment → ICP match → monitoring → evidence-backed Opportunity.',
+    'actions'=>[
+      ['label'=>'Accounts','href'=>'growth/accounts','variant'=>'ghost'],
+      ['label'=>'Opportunities','href'=>'growth/candidates','variant'=>'ghost'],
+    ],
+    'meta'=>['value'=>count($universes),'label'=>'universes'],
+  ]); ?>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Discovery authority</p><h2>Create Market Universe</h2></div>
+    </div>
+    <p class="tn-growth-muted">A Universe binds one active ICP revision to a credentialed market provider. Discovery may source and enrich Accounts, but it cannot create an Opportunity until a real Growth Signal exists.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form data-growth-market-create class="tn-growth-action-form tn-growth-signal-feed-form">
+        <label class="tn-ui-field"><span>Name</span><input class="tn-ui-input" name="name" maxlength="160" required placeholder="English SaaS 30–200"></label>
+        <label class="tn-ui-field"><span>HTTPS provider endpoint</span><input class="tn-ui-input" name="url" type="url" maxlength="1000" required placeholder="https://provider.example/v1/companies"></label>
+        <label class="tn-ui-field"><span>Auth mode</span><select class="tn-ui-input" name="auth_mode" required><option value="bearer">Bearer token</option><option value="api_key_header">X-* API key header</option></select></label>
+        <label class="tn-ui-field"><span>Credential reference</span><input class="tn-ui-input" name="credential_reference" maxlength="500" required placeholder="env://GROWTH_MARKET_PROVIDER"></label>
+        <label class="tn-ui-field"><span>API key header</span><input class="tn-ui-input" name="api_key_header" maxlength="80" placeholder="X-API-Key"></label>
+        <label class="tn-ui-field"><span>Active ICP ID</span><input class="tn-ui-input" name="profile_id" maxlength="80" required placeholder="GICP-…"></label>
+        <label class="tn-ui-field"><span>ICP revision</span><input class="tn-ui-input" name="profile_revision" type="number" min="1" value="1" required></label>
+        <label class="tn-ui-field"><span>Minimum ICP fit</span><input class="tn-ui-input" name="min_icp_fit" type="number" min="0" max="100" value="70" required></label>
+        <label class="tn-ui-field"><span>Opportunity type</span><select class="tn-ui-input" name="opportunity_type" required>
+          <option value="customer_acquisition">Customer acquisition</option>
+          <option value="customer_expansion">Customer expansion</option>
+          <option value="reactivation">Reactivation</option>
+          <option value="partnership">Partnership</option>
+          <option value="supplier">Supplier</option>
+          <option value="investor">Investor</option>
+          <option value="candidate">Candidate</option>
+          <option value="tender">Tender</option>
+          <option value="property">Property</option>
+          <option value="acquisition">Acquisition</option>
+          <option value="project">Project</option>
+          <option value="technology">Technology</option>
+        </select></label>
+        <label class="tn-ui-field"><span>Growth mode</span><select class="tn-ui-input" name="growth_mode"><option value="acquire">Acquire</option><option value="expand">Expand</option><option value="reactivate">Reactivate</option><option value="discover">Discover</option></select></label>
+        <label class="tn-ui-field"><span>Target Domain</span><input class="tn-ui-input" name="target_domain" maxlength="80" value="sales" required></label>
+        <label class="tn-ui-field tn-ui-field--check"><input name="enabled" type="checkbox" checked><span>Enabled</span></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Create universe</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Automated sourcing</p><h2>Configured Universes</h2></div>
+      <span><?php echo count($universes); ?></span>
+    </div>
+    <?php if($universes): ?>
+      <div class="tn-growth-feed-list">
+        <?php foreach($universes as $universe): ?>
+          <?php $enabled=!empty($universe['enabled']); ?>
+          <article class="tn-growth-feed-item" data-growth-market-universe="<?php echo $h($universe['universe_id']??''); ?>">
+            <div>
+              <strong><?php echo $h($universe['name']??'Market Universe'); ?></strong>
+              <div class="tn-growth-muted"><?php echo $h($universe['source_url']??''); ?></div>
+              <div class="tn-growth-muted">
+                ICP <?php echo $h(($universe['profile_id']??'').' r'.($universe['profile_revision']??'')); ?>
+                · fit ≥ <?php echo $h($universe['min_icp_fit']??0); ?>%
+                · <?php echo $h($universe['growth_mode']??''); ?> → <?php echo $h($universe['target_domain']??''); ?>
+              </div>
+              <div class="tn-growth-muted">
+                Members <?php echo $h((int)($universe['member_count']??0)); ?>
+                · opportunities <?php echo $h((int)($universe['opportunity_count']??0)); ?>
+                · last run <?php echo $h($universe['latest_run_status']??'—'); ?>
+              </div>
+            </div>
+            <div class="tn-growth-feed-actions">
+              <span class="tn-ui-badge tn-ui-badge--<?php echo $enabled?'positive':'neutral'; ?>"><?php echo $enabled?'ENABLED':'DISABLED'; ?></span>
+              <?php if(!empty($canManageGrowth)): ?>
+                <form data-growth-market-run data-universe-id="<?php echo $h($universe['universe_id']??''); ?>">
+                  <input type="hidden" name="limit" value="100">
+                  <button class="tn-ui-button tn-ui-button--primary" type="submit" <?php echo $enabled?'':'disabled'; ?>>Run discovery</button>
+                  <span data-growth-form-status></span>
+                </form>
+                <form data-growth-market-toggle data-universe-id="<?php echo $h($universe['universe_id']??''); ?>" data-action="<?php echo $enabled?'disable':'enable'; ?>">
+                  <button class="tn-ui-button tn-ui-button--ghost" type="submit"><?php echo $enabled?'Disable':'Enable'; ?></button>
+                  <span data-growth-form-status></span>
+                </form>
+              <?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <?php $this->partial('components/ui/state',[
+        'kind'=>'empty','title'=>'No Market Universes configured',
+        'message'=>'Create a Universe to start provider-backed Account sourcing.',
+      ]); ?>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Provider contract</p><h2>Credentialed JSON shape</h2></div></div>
+    <pre class="tn-growth-code">{"items":[{"id":"provider-company-id","name":"Acme","canonical_domain":"acme.com","firmographics":{"industry":"saas","region":"US","employee_count":120},"technologies":["hubspot"],"hiring":["sales"],"recent_changes":["funding"],"signal_types":["hiring"],"source_references":["https://provider.example/company/acme"],"observed_at":"2026-09-26T12:00:00Z"}],"next_cursor":"optional"}</pre>
+    <p class="tn-growth-muted">Discovery facts enrich Account snapshots and ICP fit. They do not become canonical Growth Signals by magic. Opportunity creation waits for an observed Signal on the sourced Account.</p>
+  </section>
+</main>

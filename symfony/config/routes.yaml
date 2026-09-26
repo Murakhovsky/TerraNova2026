@@ -406,10 +406,43 @@ cos_growth_experiment:
   requirements: { id: '[A-Za-z0-9_-]{8,80}' }
 
 
+cos_growth_market:
+  path: /growth/market
+  controller: App\Web\Growth\GrowthPageController::market
+  methods: [GET]
+
 cos_growth_settings:
   path: /growth/settings
   controller: App\Web\Growth\GrowthPageController::settings
   methods: [GET]
+
+cos_api_v1_growth_market_universes:
+  path: /api/v1/growth/market/universes
+  controller: App\Http\Api\V1\Controller\GrowthApiController::marketUniverses
+  methods: [GET]
+
+cos_api_v1_growth_market_universe_create:
+  path: /api/v1/growth/market/universes
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createMarketUniverse
+  methods: [POST]
+
+cos_api_v1_growth_market_universe_enable:
+  path: /api/v1/growth/market/universes/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableMarketUniverse
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_market_universe_disable:
+  path: /api/v1/growth/market/universes/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableMarketUniverse
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_market_universe_run:
+  path: /api/v1/growth/market/universes/{id}/run
+  controller: App\Http\Api\V1\Controller\GrowthApiController::runMarketUniverse
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
 
 # Growth V0.10 — executable Opportunity Intelligence API
 cos_api_v1_growth_engagement_limits:

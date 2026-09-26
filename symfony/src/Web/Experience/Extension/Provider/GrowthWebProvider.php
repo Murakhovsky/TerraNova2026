@@ -30,11 +30,12 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new NavigationContribution('growth-overview','Overview','/growth',priority:10,parentKey:'growth'),
             new NavigationContribution('growth-candidates','Opportunities','/growth/candidates',priority:20,parentKey:'growth'),
             new NavigationContribution('growth-accounts','Accounts','/growth/accounts',priority:30,parentKey:'growth'),
-            new NavigationContribution('growth-signals','Signals','/growth/signals',priority:40,parentKey:'growth'),
-            new NavigationContribution('growth-collectors','Collectors','/growth/collectors',priority:50,parentKey:'growth'),
-            new NavigationContribution('growth-learning','Learning','/growth/learning',priority:60,parentKey:'growth'),
-            new NavigationContribution('growth-experiments','Experiments','/growth/experiments',priority:70,parentKey:'growth'),
-            new NavigationContribution('growth-settings','Settings','/growth/settings',priority:80,parentKey:'growth'),
+            new NavigationContribution('growth-market','Market','/growth/market',priority:40,parentKey:'growth'),
+            new NavigationContribution('growth-signals','Signals','/growth/signals',priority:50,parentKey:'growth'),
+            new NavigationContribution('growth-collectors','Collectors','/growth/collectors',priority:60,parentKey:'growth'),
+            new NavigationContribution('growth-learning','Learning','/growth/learning',priority:70,parentKey:'growth'),
+            new NavigationContribution('growth-experiments','Experiments','/growth/experiments',priority:80,parentKey:'growth'),
+            new NavigationContribution('growth-settings','Settings','/growth/settings',priority:90,parentKey:'growth'),
         ];
     }
 
@@ -44,6 +45,7 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new SearchResult('growth.search.overview','Growth Overview','/growth','workspace','Opportunity intelligence'),
             new SearchResult('growth.search.candidates','Growth Opportunities','/growth/candidates','workspace','Opportunity Candidates'),
             new SearchResult('growth.search.accounts','Growth Accounts','/growth/accounts','workspace','Account Intelligence'),
+            new SearchResult('growth.search.market','Growth Market Discovery','/growth/market','workspace','Automated account sourcing and monitoring'),
             new SearchResult('growth.search.signals','Growth Signals','/growth/signals','workspace','Evidence stream'),
             new SearchResult('growth.search.collectors','Growth Collectors','/growth/collectors','workspace','Signal ingestion operations'),
             new SearchResult('growth.search.learning','Growth Learning','/growth/learning','workspace','Outcome feedback and learning'),
@@ -58,6 +60,7 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new ShellCommandItem('growth.open','Open Growth','/growth','navigation','Growth'),
             new ShellCommandItem('growth.candidates','Open Growth Opportunities','/growth/candidates','navigation','Growth'),
             new ShellCommandItem('growth.accounts','Open Growth Accounts','/growth/accounts','navigation','Growth'),
+            new ShellCommandItem('growth.market','Open Growth Market','/growth/market','navigation','Growth'),
             new ShellCommandItem('growth.signals','Open Growth Signals','/growth/signals','navigation','Growth'),
             new ShellCommandItem('growth.collectors','Open Growth Collectors','/growth/collectors','navigation','Growth'),
             new ShellCommandItem('growth.learning','Open Growth Learning','/growth/learning','navigation','Growth'),
@@ -72,12 +75,13 @@ final readonly class GrowthWebProvider implements NavigationProviderInterface,Se
             new WorkspaceDefinition('growth.overview','Growth Overview','/growth',null,10),
             new WorkspaceDefinition('growth.candidate','Growth Opportunity','/growth/candidates','growth.candidate',20),
             new WorkspaceDefinition('growth.account','Growth Account','/growth/accounts','growth.account',30),
-            new WorkspaceDefinition('growth.signals','Growth Signals','/growth/signals',null,40),
-            new WorkspaceDefinition('growth.collectors','Growth Collectors','/growth/collectors',null,50),
-            new WorkspaceDefinition('growth.learning','Growth Learning','/growth/learning',null,60),
-            new WorkspaceDefinition('growth.experiments','Growth Experiments','/growth/experiments',null,70),
-            new WorkspaceDefinition('growth.experiment','Growth Experiment','/growth/experiments','growth.experiment',80),
-            new WorkspaceDefinition('growth.settings','Growth Settings','/growth/settings',null,90),
+            new WorkspaceDefinition('growth.market','Growth Market Discovery','/growth/market',null,40),
+            new WorkspaceDefinition('growth.signals','Growth Signals','/growth/signals',null,50),
+            new WorkspaceDefinition('growth.collectors','Growth Collectors','/growth/collectors',null,60),
+            new WorkspaceDefinition('growth.learning','Growth Learning','/growth/learning',null,70),
+            new WorkspaceDefinition('growth.experiments','Growth Experiments','/growth/experiments',null,80),
+            new WorkspaceDefinition('growth.experiment','Growth Experiment','/growth/experiments','growth.experiment',90),
+            new WorkspaceDefinition('growth.settings','Growth Settings','/growth/settings',null,100),
         ];
     }
 }

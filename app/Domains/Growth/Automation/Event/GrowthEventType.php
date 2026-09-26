@@ -14,6 +14,14 @@ final class GrowthEventType
     public const CONTACT_DISCOVERED = 'growth.contact.discovered';
     public const CONTACT_SNAPSHOT_CAPTURED = 'growth.contact.snapshot_captured';
     public const BUYING_COMMITTEE_ASSESSED = 'growth.buying_committee.assessed';
+    public const MARKET_UNIVERSE_CREATED = 'growth.market_universe.created';
+    public const MARKET_UNIVERSE_ENABLED = 'growth.market_universe.enabled';
+    public const MARKET_UNIVERSE_DISABLED = 'growth.market_universe.disabled';
+    public const MARKET_DISCOVERY_RUN_STARTED = 'growth.market_discovery.run_started';
+    public const MARKET_DISCOVERY_RUN_COMPLETED = 'growth.market_discovery.run_completed';
+    public const MARKET_DISCOVERY_RUN_FAILED = 'growth.market_discovery.run_failed';
+    public const MARKET_ACCOUNT_SOURCED = 'growth.market.account_sourced';
+    public const MARKET_OPPORTUNITY_DETECTED = 'growth.market.opportunity_detected';
     public const COLLECTOR_RUN_STARTED = 'growth.collector.run_started';
     public const COLLECTOR_RUN_COMPLETED = 'growth.collector.run_completed';
     public const COLLECTOR_RUN_FAILED = 'growth.collector.run_failed';
@@ -122,6 +130,14 @@ final class GrowthEventType
             self::CONTACT_DISCOVERED,
             self::CONTACT_SNAPSHOT_CAPTURED,
             self::BUYING_COMMITTEE_ASSESSED,
+            self::MARKET_UNIVERSE_CREATED,
+            self::MARKET_UNIVERSE_ENABLED,
+            self::MARKET_UNIVERSE_DISABLED,
+            self::MARKET_DISCOVERY_RUN_STARTED,
+            self::MARKET_DISCOVERY_RUN_COMPLETED,
+            self::MARKET_DISCOVERY_RUN_FAILED,
+            self::MARKET_ACCOUNT_SOURCED,
+            self::MARKET_OPPORTUNITY_DETECTED,
             self::COLLECTOR_RUN_STARTED,
             self::COLLECTOR_RUN_COMPLETED,
             self::COLLECTOR_RUN_FAILED,

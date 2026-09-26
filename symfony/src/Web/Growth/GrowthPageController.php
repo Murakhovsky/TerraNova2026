@@ -31,6 +31,7 @@ use Domains\Growth\Application\Contract\GrowthResearchBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary;
 use Domains\Growth\Application\Contract\GrowthSignalFeedBoundary;
 use Domains\Growth\Application\Contract\GrowthJsonSignalSourceBoundary;
+use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
 use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
 use Domains\Growth\Domain\GrowthExperimentDimension;
 use Domains\Growth\Domain\GrowthExperimentStatus;
@@ -62,6 +63,7 @@ final readonly class GrowthPageController
         private GrowthSignalFeedBoundary $signalFeeds,
         private GrowthCollectorAlertBoundary $collectorAlerts,
         private GrowthJsonSignalSourceBoundary $jsonSignalSources,
+        private GrowthMarketDiscoveryBoundary $marketDiscovery,
         private GrowthSignalPollingStatusProvider $pollingStatus,
         private GrowthDecisionBoundary $decisions,
         private GrowthEngagementBoundary $engagement,
@@ -84,6 +86,16 @@ final readonly class GrowthPageController
         return $this->page($request,'Growth Overview','growth-overview','growth/dashboard',
             fn(TenantContext $tenant):array=>[
                 'workspace'=>$this->workspace->overview($tenant->organizationId()->value()),
+            ]);
+    }
+
+    public function market(Request $request):Response
+    {
+        return $this->page($request,'Growth Market Discovery','growth-market','growth/market',
+            fn(TenantContext $tenant):array=>[
+                'workspace'=>[
+                    'universes'=>$this->marketDiscovery->universes($tenant->organizationId()->value()),
+                ],
             ]);
     }
 

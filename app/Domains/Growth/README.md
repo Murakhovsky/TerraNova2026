@@ -1142,3 +1142,60 @@ Provider callbacks correlate through the existing `kernel_action_id` and signed 
 A provider `complained` observation creates an authoritative contact suppression through the same repository used by V0.46 unsubscribe routing. `bounced`, `complained` and `failed` all stop autonomous sequence progression. A complaint additionally prevents future Growth outreach to that contact.
 
 Sequence timing remains backward compatible: an email execution with no delivery observation may still anchor to execution time. Once provider feedback exists, `queued` or `accepted` keeps the sequence waiting; `sent` or `delivered` supplies the provider timestamp anchor. This lets deployments adopt provider callbacks without waking or freezing historical sequences.
+
+
+## V0.48 — Market Discovery & Automated Account Sourcing
+
+V0.48 adds the missing top of the Growth funnel: a governed Market Universe that can source Accounts automatically without pretending that a provider record is already a business opportunity.
+
+```text
+Market Universe → Company Discovery → Enrichment → ICP Match → Monitoring → Opportunity
+```
+
+A Market Universe binds an active, immutable ICP revision to a provider source, minimum ICP-fit threshold, Growth mode, Opportunity type and target Domain. The first concrete provider is a credentialed JSON source behind the platform Credential Vault and ExternalCallExecutor. Provider calls require HTTPS, reject local/private endpoints, do not follow redirects and never persist credential material in Events, Audit or the operator workspace.
+
+Discovery follows a strict fact/authority split:
+
+```text
+provider company record
+        ↓
+GrowthAccount identity
+        ↓
+immutable AccountSnapshot
+        ↓
+deterministic ICP match
+        ↓
+below threshold | monitoring
+        ↓
+canonical account Signal arrives
+        ↓
+evidence-backed OpportunityCandidate
+```
+
+**Signal != Opportunity.** Company discovery, firmographics, technologies, hiring metadata and provider-side signal labels enrich the Account snapshot and ICP fit, but they do not automatically become canonical Growth Signals. A high-fit Account remains in monitoring until Growth owns at least one observed Signal for that Account. Only then may the durable market-opportunity consumer materialize a Candidate through the existing Growth application boundary.
+
+This preserves the V0.1 invariant that every Candidate has explicit evidence. It also prevents a prospecting provider from quietly becoming the authority that decides what counts as an opportunity. Humans have built enough software where “it appeared in a vendor API” somehow became ontology.
+
+Market discovery is resumable and idempotent:
+- Universe configuration is tenant-owned and append-safe through the normal mutation receipt boundary.
+- Provider pagination cursor is stored on the Universe runtime.
+- Every run has durable accounting for collected, existing, monitored and opportunity Accounts.
+- Account identity deduplicates by canonical domain through existing Growth Account Intelligence.
+- Snapshot and ICP-match operations use stable observation-scoped idempotency keys.
+- Candidate materialization uses a stable Universe + Account key and claims the first authoritative trigger Signal.
+- Existing matching Candidate ownership is reused instead of creating a parallel Growth opportunity.
+
+Automation is double-gated. The deployment scheduler defaults OFF with `COS_GROWTH_MARKET_SCHEDULER_ENABLED=0`; each Market Universe must also be enabled. Manual runs and scheduled runs use the same `GrowthMarketDiscoveryBoundary`, so there is no secret second implementation hiding behind cron like a small administrative goblin.
+
+The operator surface is `/growth/market`. The canonical API is:
+
+```text
+GET  /api/v1/growth/market/universes
+POST /api/v1/growth/market/universes
+POST /api/v1/growth/market/universes/{id}/enable
+POST /api/v1/growth/market/universes/{id}/disable
+POST /api/v1/growth/market/universes/{id}/run
+```
+
+V0.48 deliberately does not add provider-specific enrichment logic to the Domain model, scrape arbitrary websites, manufacture inferred Signals, auto-research/qualify every monitored Account, or bypass the existing handoff and engagement governance. It supplies Accounts and evidence-bearing opportunities to the same canonical Growth chain already built in V0.1–V0.47.
+

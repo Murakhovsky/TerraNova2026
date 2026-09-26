@@ -782,6 +782,117 @@ const initGrowthExperiment=(root)=>{
   });
 };
 
+const marketEndpoint=(universeId,suffix='')=>{
+  const base='/api/v1/growth/market/universes';
+  return universeId?base+'/'+encodeURIComponent(universeId)+(suffix?'/'+suffix:''):base;
+};
+
+const initGrowthMarket=(root)=>{
+  const createForm=root.querySelector('[data-growth-market-create]');
+  if(createForm)createForm.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=createForm.querySelector('[data-growth-form-status]');
+    const button=createForm.querySelector('button[type="submit"]');
+    const values=new FormData(createForm);
+    const authMode=String(values.get('auth_mode')||'').trim();
+    const apiKeyHeader=String(values.get('api_key_header')||'').trim();
+    const profileRevision=Number.parseInt(String(values.get('profile_revision')||''),10);
+    const minIcpFit=Number.parseInt(String(values.get('min_icp_fit')||''),10);
+    const payload={
+      name:String(values.get('name')||'').trim(),
+      source_type:'credentialed_json',
+      url:String(values.get('url')||'').trim(),
+      auth_mode:authMode,
+      credential_reference:String(values.get('credential_reference')||'').trim(),
+      api_key_header:authMode==='api_key_header'?apiKeyHeader:null,
+      profile_id:String(values.get('profile_id')||'').trim(),
+      profile_revision:profileRevision,
+      min_icp_fit:minIcpFit,
+      opportunity_type:String(values.get('opportunity_type')||'').trim(),
+      growth_mode:String(values.get('growth_mode')||'').trim(),
+      target_domain:String(values.get('target_domain')||'').trim().toLowerCase(),
+      enabled:values.get('enabled')!==null,
+    };
+    if(!payload.name||!payload.url||!payload.credential_reference||!payload.profile_id||!payload.opportunity_type||!payload.growth_mode||!payload.target_domain){
+      setStatus(status,'Universe provider, ICP and opportunity mapping are required.','error');
+      return;
+    }
+    if(!['bearer','api_key_header'].includes(authMode)){
+      setStatus(status,'Unsupported market authentication mode.','error');
+      return;
+    }
+    if(authMode==='api_key_header'&&!/^X-[A-Za-z0-9-]{1,63}$/.test(apiKeyHeader)){
+      setStatus(status,'API key header must be a safe X-* header name.','error');
+      return;
+    }
+    if(!Number.isInteger(profileRevision)||profileRevision<1||!Number.isInteger(minIcpFit)||minIcpFit<0||minIcpFit>100){
+      setStatus(status,'ICP revision and fit threshold are invalid.','error');
+      return;
+    }
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Creating Market Universe…','loading');
+    try{
+      await mutation(marketEndpoint(''),payload,root,createForm);
+      delete createForm.dataset.idempotencyKey;
+      setStatus(status,'Market Universe created. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Market Universe creation failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
+  root.querySelectorAll('[data-growth-market-run]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const universeId=form.dataset.universeId||'';
+      const status=form.querySelector('[data-growth-form-status]');
+      const button=form.querySelector('button[type="submit"]');
+      const limit=Number.parseInt(String(new FormData(form).get('limit')||'100'),10);
+      if(!universeId||!Number.isInteger(limit)||limit<1||limit>200){
+        setStatus(status,'Discovery limit must be between 1 and 200.','error');
+        return;
+      }
+      button?.setAttribute('disabled','disabled');
+      setStatus(status,'Running market discovery…','loading');
+      try{
+        const response=await mutation(marketEndpoint(universeId,'run'),{limit},root,form);
+        const run=response?.data??response;
+        delete form.dataset.idempotencyKey;
+        if(String(run?.status||'')==='failed')throw new Error(run?.error_summary||'Market discovery failed.');
+        setStatus(status,'Discovery '+String(run?.status||'completed')+'. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),350);
+      }catch(error){
+        setStatus(status,error.message||'Market discovery failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
+
+  root.querySelectorAll('[data-growth-market-toggle]').forEach((form)=>{
+    form.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const universeId=form.dataset.universeId||'';
+      const action=form.dataset.action||'';
+      if(!universeId||!['enable','disable'].includes(action))return;
+      const status=form.querySelector('[data-growth-form-status]');
+      const button=form.querySelector('button[type="submit"]');
+      button?.setAttribute('disabled','disabled');
+      setStatus(status,action==='enable'?'Enabling Universe…':'Disabling Universe…','loading');
+      try{
+        await mutation(marketEndpoint(universeId,action),{},root,form);
+        delete form.dataset.idempotencyKey;
+        setStatus(status,'Market Universe updated. Refreshing…','success');
+        window.setTimeout(()=>window.location.reload(),250);
+      }catch(error){
+        setStatus(status,error.message||'Market Universe update failed.','error');
+        button?.removeAttribute('disabled');
+      }
+    });
+  });
+};
+
 const initGrowthSettings=(root)=>{
   const sequenceForm=root.querySelector('[data-growth-sequence-settings]');
   if(sequenceForm)sequenceForm.addEventListener('submit',async(event)=>{
@@ -967,6 +1078,7 @@ const boot=()=>{
   document.querySelectorAll('[data-growth-experiments]').forEach(initGrowthExperiments);
   document.querySelectorAll('[data-growth-experiment]').forEach(initGrowthExperiment);
   document.querySelectorAll('[data-growth-settings]').forEach(initGrowthSettings);
+  document.querySelectorAll('[data-growth-market]').forEach(initGrowthMarket);
 };
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
