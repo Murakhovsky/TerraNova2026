@@ -32,7 +32,7 @@ kind: architecture
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
 | VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | QA |
 | VR-020 | `/cos/architecture` | System | COS / Visualization | System / Control Surface | P0 | Twig + JS Island | QA |
-| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Stimulus | BACKLOG |
+| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Specialized Island | QA |
 | VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | BACKLOG |
 | VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | BACKLOG |
 | VR-024 | `/admin/content` | System | Content | Collection / Control Surface | P0 | Twig | BACKLOG |
@@ -153,3 +153,5 @@ Production migration units VR-013…VR-018 завершені.
 VR-019 переводить COS Control Center з PHTML compatibility runtime на canonical System / Control Surface: Application Query → Presenter/ViewModel → Twig, з server-first execution/approval forms і без page-specific Vite bundle.
 
 VR-020 переводить Architecture Explorer на canonical System / Control Surface + Stimulus island. Graph projections/health читаються через Application Query, повний graph payload більше не вбудовується в HTML, legacy PHTML/Vite/TN runtime видалено.
+
+VR-021 переводить Methodology Studio на canonical System / Control Surface + specialized AssetMapper island. V0.5.3/0.5.4/0.5.5 editor behavior та API contracts збережені; PHTML/Vite ownership видалено, editor CSS переведено на COS tokens і canonical breakpoints.

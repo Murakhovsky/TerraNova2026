@@ -45,6 +45,7 @@ foreach([
 foreach([
     'symfony/src/Web/Visualization/ArchitecturePageController.php',
     'symfony/src/Web/Diagnostic/DiagnosticPageController.php',
+    'symfony/src/Web/Diagnostic/MethodologyStudioController.php',
     'symfony/src/Web/Spatial/SpatialPageController.php',
 ] as $path){
     $source=$read($path);
@@ -52,14 +53,28 @@ foreach([
 }
 
 $visualization=$read('symfony/src/Web/Visualization/ArchitecturePageController.php');
-foreach(['GraphProviderInterface','GraphProjectionRegistryInterface','GraphHealthAnalyzerInterface','GraphMapperInterface'] as $needle){
-    $assert(str_contains($visualization,$needle),'Visualization Web contract missing: '.$needle);
+foreach(['QueryBusInterface','GetArchitectureOverviewQuery','GetArchitectureProjectionQuery','GetArchitectureHealthQuery'] as $needle){
+    $assert(str_contains($visualization,$needle),'Visualization Web Application Query contract missing: '.$needle);
 }
-$assert(!str_contains($visualization,'Infrastructure\\Visualization'),'Visualization Web controller bypasses Kernel contracts.');
+foreach(['GraphProviderInterface','GraphProjectionRegistryInterface','GraphHealthAnalyzerInterface','GraphMapperInterface','Infrastructure\\Visualization'] as $forbidden){
+    $assert(!str_contains($visualization,$forbidden),'Visualization Web controller bypasses Application boundary: '.$forbidden);
+}
+$visualizationApplication=$read('symfony/src/Application/Visualization/Query/ArchitectureGraphQueryService.php');
+foreach(['GraphProviderInterface','GraphProjectionRegistryInterface','GraphHealthAnalyzerInterface','GraphMapperInterface'] as $needle){
+    $assert(str_contains($visualizationApplication,$needle),'Visualization Application graph contract missing: '.$needle);
+}
 
 $diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
-foreach(['DiagnosticRuntimeService','DiagnosticMethodologyAccess::VIEW','diagnostics-methodology-studio','ActiveModuleResolver','modules->isEnabled','diagnosticEnabled'] as $needle){
-    $assert(str_contains($diagnostic,$needle),'Diagnostic Web contract missing: '.$needle);
+foreach(['DiagnosticRuntimeService','ActiveModuleResolver','modules->isEnabled','diagnosticEnabled'] as $needle){
+    $assert(str_contains($diagnostic,$needle),'Diagnostic report Web contract missing: '.$needle);
+}
+$methodology=$read('symfony/src/Web/Diagnostic/MethodologyStudioController.php');
+foreach(['GetMethodologyStudioAccessQuery','PageArchetype::SystemControlSurface','WorkspaceShellFactory'] as $needle){
+    $assert(str_contains($methodology,$needle),'Methodology Studio Web contract missing: '.$needle);
+}
+$methodologyAccess=$read('symfony/src/Application/Diagnostic/Methodology/GetMethodologyStudioAccessQueryHandler.php');
+foreach(['DiagnosticMethodologyAccess::VIEW','ActiveModuleResolver',"isEnabled(\$organizationId, 'diagnostic')"] as $needle){
+    $assert(str_contains($methodologyAccess,$needle),'Methodology access boundary missing: '.$needle);
 }
 
 $spatial=$read('symfony/src/Web/Spatial/SpatialPageController.php');

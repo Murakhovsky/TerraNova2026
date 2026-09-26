@@ -254,12 +254,22 @@ foreach ([
     }
 }
 
+$methodology = $read('symfony/templates/experience/system/methodology_studio.html.twig');
+foreach (['<twig:CosPageHeader', '<twig:CosToolbar', 'data-controller="diagnostic-methodology"', 'data-editor'] as $marker) {
+    $contains($methodology, $marker, 'Methodology Studio canonical specialized-island contract is incomplete.');
+}
+foreach (['tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($methodology, $forbidden, 'Methodology Studio must not restore legacy outer-shell presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/methodology_studio/index.phtml')) {
+    throw new RuntimeException('Retired Methodology Studio PHTML restored.');
+}
+
 $specializedContracts = [
     'app/Interfaces/Web/View/home/canonical.phtml' => ['tn-public-hero', 'Company Operating System'],
     'app/Interfaces/Web/View/property/show.phtml' => ['tn-property-hero', 'application/ld+json', 'data-property-gallery'],
     'app/Interfaces/Web/View/property/presentation.phtml' => ['tn-presentation-hero', 'data-copy-value'],
     'app/Interfaces/Web/View/spatial/scene.phtml' => ['tn-spatial-public', "partial('shared/spatial_viewer'"],
-    'app/Interfaces/Web/View/methodology_studio/index.phtml' => ['data-studio', 'studio-shell', 'data-editor'],
     'app/Interfaces/Web/View/error/failure.phtml' => ['tn-failure', 'data-failure-code'],
 ];
 foreach ($specializedContracts as $path => $markers) {

@@ -31,7 +31,6 @@ export default defineConfig({
         'analytics-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/analytics-workspace.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
-        'diagnostics-methodology-studio': resolve(import.meta.dirname, 'frontend/entrypoints/diagnostics-methodology-studio.js'),
         'portal-cabinet': resolve(import.meta.dirname, 'frontend/entrypoints/portal-cabinet.js'),
         'public-surface': resolve(import.meta.dirname, 'frontend/entrypoints/public-surface.js'),
 

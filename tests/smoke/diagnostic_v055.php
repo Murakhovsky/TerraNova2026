@@ -123,7 +123,7 @@ foreach ([
 }
 v055(str_contains($repositorySource, 'You cannot remove your own methodology publish access'), 'Access Manager lacks self-lock protection.');
 
-$frontend = (string) file_get_contents($root . '/frontend/features/diagnostics/methodology-studio-v055.js');
+$frontend = (string) file_get_contents($root . '/symfony/assets/islands/diagnostic_methodology/v055.js');
 foreach ([
     'data-v055-scenario-action="edit"',
     'data-v055-scenario-action="clone"',
@@ -176,8 +176,8 @@ v055(str_contains($importer, "'-missing'"), 'Sales v0.2 recommendations are not 
 $composition = (string) file_get_contents($root . '/symfony/config/services.yaml');
 v055(str_contains($composition, 'Domains\\Diagnostic\\Application\\Service\\MethodologyWorkbenchService'), 'Methodology Workbench is not wired through the Symfony composition root.');
 
-$entrypoint = (string) file_get_contents($root . '/frontend/entrypoints/diagnostics-methodology-studio.js');
-v055(str_contains($entrypoint, 'methodology-studio-v055.js'), 'V0.5.5 frontend is not wired into the Methodology Studio entrypoint.');
+$entrypoint = (string) file_get_contents($root . '/symfony/assets/controllers/diagnostic_methodology_controller.js');
+v055(str_contains($entrypoint, "from '../islands/diagnostic_methodology/v055.js'"), 'V0.5.5 island is not wired into the Methodology Studio controller.');
 
 $ci = (string) file_get_contents($root . '/.github/workflows/diagnostic.yml');
 v055(str_contains($ci, 'diagnostic_v055.php'), 'V0.5.5 smoke contract is not part of CI.');

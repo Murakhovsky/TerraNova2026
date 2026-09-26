@@ -70,7 +70,13 @@ foreach([
     'symfony/assets/controllers/sales_admin_rule_editor_controller.js',
     'frontend/core/workspace-shell.js',
     'frontend/entrypoints/terranova-interface.js',
-    'frontend/entrypoints/diagnostics-methodology-studio.js',
+    'symfony/src/Web/Diagnostic/MethodologyStudioController.php',
+    'symfony/templates/experience/system/methodology_studio.html.twig',
+    'symfony/assets/controllers/diagnostic_methodology_controller.js',
+    'symfony/assets/islands/diagnostic_methodology/base.js',
+    'symfony/assets/islands/diagnostic_methodology/v054.js',
+    'symfony/assets/islands/diagnostic_methodology/v055.js',
+    'symfony/assets/styles/domains/diagnostic-methodology.css',
     'frontend/styles/design-system.css',
     'frontend/styles/layouts/workspace.css',
     'frontend/styles/workspace-mobile.css',
@@ -112,8 +118,11 @@ foreach(['salesNavigationContributor','propertyNavigationContributor','diagnosti
 }
 
 $assert(!is_file($root.'/symfony/src/Web/Sales/SalesPageController.php'),'Retired Sales PHTML page controller returned after VR-008.');
-$diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
-$assert(str_contains($diagnostic,"['diagnostics-methodology-studio']"),'Diagnostic Symfony owner must load its Vite entrypoint.');
+$diagnostic=$read('symfony/src/Web/Diagnostic/MethodologyStudioController.php');
+foreach(['GetMethodologyStudioAccessQuery','PageArchetype::SystemControlSurface',"experience/system/methodology_studio.html.twig"] as $needle){
+    $assert(str_contains($diagnostic,$needle),'Methodology Studio Symfony owner missing canonical contract: '.$needle);
+}
+$assert(!str_contains($diagnostic,'PhtmlRenderer'),'Methodology Studio must not restore PHTML ownership.');
 
 $routes=$read('symfony/config/routes.yaml');
 foreach(['cos_web_sales_deals:','/sales/deals','/cos/architecture','/admin/content'] as $needle){

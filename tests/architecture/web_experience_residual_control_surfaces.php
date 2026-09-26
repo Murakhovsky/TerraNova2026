@@ -150,42 +150,51 @@ foreach ([
 $notContains($clientCaseItem, '<table', 'Client Case Collection item must not restore a raw table.');
 $notContains($clientCaseItem, 'tn-', 'Client Case Collection item must not restore legacy TN presentation.');
 
-$studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
+$studio = $read('symfony/templates/experience/system/methodology_studio.html.twig');
 foreach ([
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'data-controller="diagnostic-methodology"',
+    'data-studio',
     'class="entity-grid"',
-    'class="entity-grid__head"',
-    'class="entity-grid__body"',
     'data-entities',
     'data-editor',
-    'data-action="add"',
-    'data-action="publish"',
+    'data-studio-action="add"',
+    'data-studio-action="publish"',
 ] as $marker) {
-    $contains($studio, $marker, 'Methodology Studio entity browser must retain its interactive editor surface.');
+    $contains($studio, $marker, 'Methodology Studio canonical editor surface is incomplete.');
 }
-$notContains($studio, '<table', 'Methodology Studio must not retain a raw table after entity-grid migration.');
+foreach (['tn-', 'style=', '<script', '<table'] as $forbidden) {
+    $notContains($studio, $forbidden, 'Methodology Studio must not restore legacy/local presentation.');
+}
 
-$studioJs = $read('frontend/features/diagnostics/methodology-studio.js');
+$studioJs = $read('symfony/assets/islands/diagnostic_methodology/base.js');
 foreach ([
     'entity-grid__row',
     'entity-grid__identity',
     'data-edit=',
     "q('[data-entities]').onclick",
+    'data-studio-action',
 ] as $marker) {
-    $contains($studioJs, $marker, 'Methodology Studio JS must preserve entity-grid rendering and edit delegation.');
+    $contains($studioJs, $marker, 'Methodology Studio island must preserve entity-grid rendering and edit delegation.');
 }
-$notContains($studioJs, '<tr>', 'Methodology Studio JS must not restore table-row rendering.');
+$notContains($studioJs, '<tr>', 'Methodology Studio island must not restore table-row rendering.');
 
-$studioCss = $read('frontend/features/diagnostics/methodology-studio.css');
+$studioCss = $read('symfony/assets/styles/domains/diagnostic-methodology.css');
 foreach ([
-    '.entity-grid',
-    '.entity-grid__head',
-    '.entity-grid__row',
-    '.entity-grid__identity',
-    '.entity-grid__empty',
+    '.cos-methodology-studio .entity-grid',
+    '.cos-methodology-studio .entity-grid__head',
+    '.cos-methodology-studio .entity-grid__row',
+    '.cos-methodology-studio .entity-grid__identity',
+    '.cos-methodology-studio .entity-grid__empty',
+    '@media (max-width: 1050px)',
+    '@media (max-width: 650px)',
 ] as $marker) {
-    $contains($studioCss, $marker, 'Methodology Studio entity-grid styling is incomplete.');
+    $contains($studioCss, $marker, 'Methodology Studio domain styling is incomplete.');
 }
-$notContains($studioCss, '.studio table', 'Methodology Studio must not restore table-specific styling.');
+foreach (['var(--tn-', '#17202a', '#176b4d'] as $forbidden) {
+    $notContains($studioCss, $forbidden, 'Methodology Studio CSS bypasses canonical COS tokens.');
+}
 
 $pdf = $read('app/Interfaces/Web/View/property/pdf.phtml');
 foreach ([
