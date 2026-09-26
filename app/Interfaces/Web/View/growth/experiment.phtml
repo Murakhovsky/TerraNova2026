@@ -1,0 +1,183 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$brief=is_array($workspace['brief']??null)?$workspace['brief']:[];
+$experiment=is_array($brief['experiment']??null)?$brief['experiment']:[];
+$assignments=is_array($brief['assignments']??null)?$brief['assignments']:[];
+$attribution=is_array($brief['attribution']??null)?$brief['attribution']:[];
+$variants=is_array($experiment['variants']??null)?$experiment['variants']:[];
+$attributionVariants=is_array($attribution['variants']??null)?$attribution['variants']:[];
+$status=strtolower((string)($experiment['status']??''));
+$tone=match($status){
+    'running'=>'positive',
+    'paused'=>'warning',
+    'completed'=>'info',
+    'archived'=>'neutral',
+    default=>'neutral',
+};
+$experimentId=(string)($experiment['experiment_id']??'');
+$transitionActions=match($status){
+    'draft'=>['start'=>'Start','archive'=>'Archive draft'],
+    'running'=>['pause'=>'Pause','complete'=>'Complete'],
+    'paused'=>['resume'=>'Resume','complete'=>'Complete'],
+    'completed'=>['archive'=>'Archive'],
+    default=>[],
+};
+$variantOptions=[''=>'Deterministic weighted assignment'];
+foreach($variants as $variant){
+    if(!is_array($variant))continue;
+    $key=(string)($variant['key']??'');
+    if($key==='')continue;
+    $variantOptions[$key]=(string)($variant['name']??$key).' · weight '.(int)($variant['allocation_weight']??0);
+}
+$assignmentRows=[];
+foreach($assignments as $assignment){
+    if(!is_array($assignment))continue;
+    $context=is_array($assignment['context_snapshot']??null)?$assignment['context_snapshot']:[];
+    $candidateId=(string)($assignment['candidate_id']??'');
+    $assignmentRows[]=[
+        'candidate'=>[
+            'primary'=>$context['subject_id']??$candidateId,
+            'secondary'=>$candidateId,
+        ],
+        'variant'=>$assignment['variant_key']??'—',
+        'source'=>$assignment['assignment_source']??'—',
+        'status'=>$context['status']??'—',
+        'assigned'=>$assignment['assigned_at']??'—',
+        '_href'=>'growth/candidates/'.rawurlencode($candidateId),
+    ];
+}
+?>
+<main
+  class="tn-page tn-workspace-page tn-growth-workspace"
+  data-growth-experiment
+  data-experiment-id="<?php echo $h($experimentId); ?>"
+  data-csrf="<?php echo $h($csrfToken??''); ?>"
+>
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Experiment',
+    'title'=>$experiment['name']??'Experiment',
+    'description'=>$experiment['hypothesis']??'',
+    'actions'=>[['label'=>'All experiments','href'=>'growth/experiments','variant'=>'ghost']],
+    'meta'=>['value'=>strtoupper($status?:'unknown'),'label'=>ucwords(str_replace('_',' ',(string)($experiment['dimension']??'')))],
+  ]); ?>
+
+  <section class="tn-growth-experiment-summary tn-workspace-section">
+    <?php foreach([
+      ['Status',strtoupper($status?:'unknown'),$tone],
+      ['Primary outcome',ucwords(str_replace('_',' ',(string)($experiment['primary_outcome']??'—'))),'neutral'],
+      ['Variants',count($variants),'neutral'],
+      ['Assignments',count($assignments),'neutral'],
+      ['Started',$experiment['started_at']??'—','neutral'],
+      ['Ended',$experiment['ended_at']??'—','neutral'],
+    ] as [$label,$value,$cardTone]): ?>
+      <?php $this->partial('components/ui/kpi_card',['label'=>$label,'value'=>$value,'tone'=>$cardTone]); ?>
+    <?php endforeach; ?>
+  </section>
+
+  <?php if(!empty($canManageGrowth)&&$transitionActions): ?>
+    <section class="tn-ui-panel tn-workspace-section">
+      <div class="tn-ui-panel__head">
+        <div><p class="tn-ui-eyebrow">Lifecycle</p><h2>Experiment state</h2></div>
+      </div>
+      <div class="tn-growth-experiment-actions">
+        <?php foreach($transitionActions as $transition=>$label): ?>
+          <button
+            class="tn-ui-button <?php echo $transition==='complete'?'tn-ui-button--primary':'tn-ui-button--ghost'; ?>"
+            type="button"
+            data-growth-experiment-transition="<?php echo $h($transition); ?>"
+          ><?php echo $h($label); ?></button>
+        <?php endforeach; ?>
+      </div>
+      <p class="tn-growth-action-status" data-growth-experiment-status></p>
+    </section>
+  <?php endif; ?>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Attribution</p><h2>Variant outcomes</h2></div>
+      <span><?php echo $h($attribution['attribution_rule']??''); ?></span>
+    </div>
+    <p class="tn-growth-muted">
+      Primary outcome: <?php echo $h(ucwords(str_replace('_',' ',(string)($attribution['primary_outcome']??'')))); ?>.
+      Measurement only — no automatic winner selection or outbound execution.
+    </p>
+
+    <div class="tn-growth-experiment-report">
+      <?php foreach($attributionVariants as $variant): if(!is_array($variant))continue; ?>
+        <?php
+        $wonValues=is_array($variant['won_value_by_currency']??null)?$variant['won_value_by_currency']:[];
+        $valueSummary=$wonValues
+          ? implode(' · ',array_map(static fn($currency,$value)=>$currency.' '.number_format((float)$value,0,'.',' '),array_keys($wonValues),array_values($wonValues)))
+          : '—';
+        $outcomes=is_array($variant['outcomes']??null)?$variant['outcomes']:[];
+        ?>
+        <article class="tn-growth-experiment-card">
+          <div class="tn-ui-panel__head">
+            <div>
+              <p class="tn-ui-eyebrow"><?php echo $h($variant['key']??'variant'); ?></p>
+              <h3><?php echo $h($variant['name']??'Variant'); ?></h3>
+            </div>
+            <span><?php echo round((float)($variant['primary_rate']??0)*100,1); ?>%</span>
+          </div>
+          <dl class="tn-growth-experiment-metrics">
+            <div><dt>Assigned</dt><dd><?php echo (int)($variant['assigned']??0); ?></dd></div>
+            <div><dt>Primary conversions</dt><dd><?php echo (int)($variant['primary_count']??0); ?></dd></div>
+            <div><dt>Replies</dt><dd><?php echo (int)($outcomes['reply_received']??0); ?></dd></div>
+            <div><dt>Meetings</dt><dd><?php echo (int)($outcomes['meeting_completed']??0); ?></dd></div>
+            <div><dt>Won</dt><dd><?php echo (int)($outcomes['won']??0); ?></dd></div>
+            <div><dt>Lost</dt><dd><?php echo (int)($outcomes['lost']??0); ?></dd></div>
+            <div><dt>Won value</dt><dd><?php echo $h($valueSummary); ?></dd></div>
+          </dl>
+          <details>
+            <summary>Variant configuration</summary>
+            <pre><?php echo $h(json_encode($variant['config']??[],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)); ?></pre>
+          </details>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <?php if(!empty($canManageGrowth)&&$status==='running'): ?>
+    <section class="tn-ui-panel tn-workspace-section">
+      <div class="tn-ui-panel__head">
+        <div><p class="tn-ui-eyebrow">Assignment</p><h2>Add Candidate to experiment</h2></div>
+      </div>
+      <form class="tn-growth-experiment-assign" data-growth-experiment-assign>
+        <label class="tn-ui-field">
+          <span>Candidate ID</span>
+          <input class="tn-ui-input" name="candidate_id" required maxlength="80" placeholder="GCAN-...">
+        </label>
+        <label class="tn-ui-field">
+          <span>Variant</span>
+          <select class="tn-ui-select" name="variant_key">
+            <?php foreach($variantOptions as $value=>$label): ?>
+              <option value="<?php echo $h($value); ?>"><?php echo $h($label); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Assign Candidate</button>
+        <span data-growth-form-status></span>
+      </form>
+    </section>
+  <?php endif; ?>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Assignments</p><h2>Candidate allocation</h2></div>
+      <span><?php echo count($assignments); ?></span>
+    </div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'candidate','label'=>'Candidate'],
+        ['key'=>'variant','label'=>'Variant'],
+        ['key'=>'source','label'=>'Assignment source'],
+        ['key'=>'status','label'=>'Snapshot status'],
+        ['key'=>'assigned','label'=>'Assigned'],
+      ],
+      'rows'=>$assignmentRows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No Candidates assigned to this experiment yet.',
+    ]); ?>
+  </section>
+</main>

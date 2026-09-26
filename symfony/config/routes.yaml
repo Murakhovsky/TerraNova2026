@@ -102,6 +102,21 @@ cos_web_n8n_content_webhook:
   controller: App\Web\PublicEdge\PublicEdgeController::contentWebhook
   methods: [POST]
 
+cos_web_growth_signal_webhook:
+  path: /webhooks/growth/signals
+  controller: App\Web\PublicEdge\PublicEdgeController::growthSignalWebhook
+  methods: [POST]
+
+cos_web_growth_engagement_delivery_webhook:
+  path: /webhooks/growth/engagement/delivery
+  controller: App\Web\PublicEdge\PublicEdgeController::growthEngagementDeliveryWebhook
+  methods: [POST]
+
+cos_web_growth_engagement_response_webhook:
+  path: /webhooks/growth/engagement/responses
+  controller: App\Web\PublicEdge\PublicEdgeController::growthEngagementResponseWebhook
+  methods: [POST]
+
 # Wave 14 — Manager Content/Admin SSR and write cutover.
 cos_web_content_admin:
   path: /admin/content
@@ -332,6 +347,671 @@ cos_api_v1_sales_opportunity_next_action:
   methods: [PUT]
   requirements:
     id: '[1-9][0-9]*'
+
+# Growth V0.11 — Opportunity Intelligence Workspace
+cos_growth_overview:
+  path: /growth
+  controller: App\Web\Growth\GrowthPageController::overview
+  methods: [GET]
+
+cos_growth_candidates:
+  path: /growth/candidates
+  controller: App\Web\Growth\GrowthPageController::candidates
+  methods: [GET]
+
+cos_growth_candidate:
+  path: /growth/candidates/{id}
+  controller: App\Web\Growth\GrowthPageController::candidate
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_growth_accounts:
+  path: /growth/accounts
+  controller: App\Web\Growth\GrowthPageController::accounts
+  methods: [GET]
+
+cos_growth_account:
+  path: /growth/accounts/{id}
+  controller: App\Web\Growth\GrowthPageController::account
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_growth_signals:
+  path: /growth/signals
+  controller: App\Web\Growth\GrowthPageController::signals
+  methods: [GET]
+
+cos_growth_collectors:
+  path: /growth/collectors
+  controller: App\Web\Growth\GrowthPageController::collectors
+  methods: [GET]
+
+
+cos_growth_learning:
+  path: /growth/learning
+  controller: App\Web\Growth\GrowthPageController::learning
+  methods: [GET]
+
+
+cos_growth_experiments:
+  path: /growth/experiments
+  controller: App\Web\Growth\GrowthPageController::experiments
+  methods: [GET]
+
+cos_growth_experiment:
+  path: /growth/experiments/{id}
+  controller: App\Web\Growth\GrowthPageController::experiment
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_growth_market:
+  path: /growth/market
+  controller: App\Web\Growth\GrowthPageController::market
+  methods: [GET]
+
+cos_growth_settings:
+  path: /growth/settings
+  controller: App\Web\Growth\GrowthPageController::settings
+  methods: [GET]
+
+cos_api_v1_growth_market_universes:
+  path: /api/v1/growth/market/universes
+  controller: App\Http\Api\V1\Controller\GrowthApiController::marketUniverses
+  methods: [GET]
+
+cos_api_v1_growth_market_universe_create:
+  path: /api/v1/growth/market/universes
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createMarketUniverse
+  methods: [POST]
+
+cos_api_v1_growth_market_universe_enable:
+  path: /api/v1/growth/market/universes/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableMarketUniverse
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_market_universe_disable:
+  path: /api/v1/growth/market/universes/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableMarketUniverse
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_market_universe_run:
+  path: /api/v1/growth/market/universes/{id}/run
+  controller: App\Http\Api\V1\Controller\GrowthApiController::runMarketUniverse
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+# Growth V0.10 — executable Opportunity Intelligence API
+cos_api_v1_growth_engagement_limits:
+  path: /api/v1/growth/engagement/limits
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementLimits
+  methods: [GET]
+
+cos_api_v1_growth_engagement_limits_update:
+  path: /api/v1/growth/engagement/limits
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementLimits
+  methods: [POST]
+
+cos_api_v1_growth_engagement_activation:
+  path: /api/v1/growth/engagement/activation
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementActivation
+  methods: [GET]
+
+cos_api_v1_growth_engagement_activation_update:
+  path: /api/v1/growth/engagement/activation
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementActivation
+  methods: [POST]
+
+cos_api_v1_growth_engagement_autonomy:
+  path: /api/v1/growth/engagement/autonomy
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementAutonomy
+  methods: [GET]
+
+cos_api_v1_growth_engagement_autonomy_update:
+  path: /api/v1/growth/engagement/autonomy
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementAutonomy
+  methods: [POST]
+
+cos_api_v1_growth_engagement_content_review:
+  path: /api/v1/growth/engagement/content-review
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementContentReview
+  methods: [GET]
+
+cos_api_v1_growth_engagement_content_review_update:
+  path: /api/v1/growth/engagement/content-review
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementContentReview
+  methods: [POST]
+
+cos_api_v1_growth_engagement_sequence_policy:
+  path: /api/v1/growth/engagement/sequences/policy
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementSequencePolicy
+  methods: [GET]
+
+cos_api_v1_growth_engagement_sequence_policy_update:
+  path: /api/v1/growth/engagement/sequences/policy
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementSequencePolicy
+  methods: [POST]
+
+cos_api_v1_growth_collectors:
+  path: /api/v1/growth/collectors
+  controller: App\Http\Api\V1\Controller\GrowthApiController::collectors
+  methods: [GET]
+
+cos_api_v1_growth_collector_run:
+  path: /api/v1/growth/collectors/{name}/run
+  controller: App\Http\Api\V1\Controller\GrowthApiController::runCollector
+  methods: [POST]
+  requirements: { name: '[A-Za-z0-9._:-]{1,120}' }
+
+cos_api_v1_growth_signal_feeds:
+  path: /api/v1/growth/signal-feeds
+  controller: App\Http\Api\V1\Controller\GrowthApiController::signalFeeds
+  methods: [GET]
+
+cos_api_v1_growth_signal_feed_create:
+  path: /api/v1/growth/signal-feeds
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createSignalFeed
+  methods: [POST]
+
+cos_api_v1_growth_signal_feed_enable:
+  path: /api/v1/growth/signal-feeds/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableSignalFeed
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_signal_feed_disable:
+  path: /api/v1/growth/signal-feeds/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableSignalFeed
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_collector_alert_subscriptions:
+  path: /api/v1/growth/collector-alert-subscriptions
+  controller: App\Http\Api\V1\Controller\GrowthApiController::collectorAlertSubscriptions
+  methods: [GET]
+
+cos_api_v1_growth_collector_alert_subscription_create:
+  path: /api/v1/growth/collector-alert-subscriptions
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createCollectorAlertSubscription
+  methods: [POST]
+
+cos_api_v1_growth_collector_alert_subscription_enable:
+  path: /api/v1/growth/collector-alert-subscriptions/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableCollectorAlertSubscription
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_collector_alert_subscription_disable:
+  path: /api/v1/growth/collector-alert-subscriptions/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableCollectorAlertSubscription
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_json_signal_sources:
+  path: /api/v1/growth/json-signal-sources
+  controller: App\Http\Api\V1\Controller\GrowthApiController::jsonSignalSources
+  methods: [GET]
+
+cos_api_v1_growth_json_signal_source_create:
+  path: /api/v1/growth/json-signal-sources
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createJsonSignalSource
+  methods: [POST]
+
+cos_api_v1_growth_json_signal_source_enable:
+  path: /api/v1/growth/json-signal-sources/{id}/enable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::enableJsonSignalSource
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_json_signal_source_disable:
+  path: /api/v1/growth/json-signal-sources/{id}/disable
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disableJsonSignalSource
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_signal_create:
+  path: /api/v1/growth/signals
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createSignal
+  methods: [POST]
+
+cos_api_v1_growth_signal:
+  path: /api/v1/growth/signals/{id}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::signal
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_create:
+  path: /api/v1/growth/candidates
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createCandidate
+  methods: [POST]
+
+cos_api_v1_growth_candidate:
+  path: /api/v1/growth/candidates/{id}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::candidate
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_research_manual:
+  path: /api/v1/growth/candidates/{id}/research/manual
+  controller: App\Http\Api\V1\Controller\GrowthApiController::researchCandidate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_score:
+  path: /api/v1/growth/candidates/{id}/score
+  controller: App\Http\Api\V1\Controller\GrowthApiController::scoreCandidate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_qualify:
+  path: /api/v1/growth/candidates/{id}/qualify
+  controller: App\Http\Api\V1\Controller\GrowthApiController::qualifyCandidate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_monitor:
+  path: /api/v1/growth/candidates/{id}/monitor
+  controller: App\Http\Api\V1\Controller\GrowthApiController::monitorCandidate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_disqualify:
+  path: /api/v1/growth/candidates/{id}/disqualify
+  controller: App\Http\Api\V1\Controller\GrowthApiController::disqualifyCandidate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_handoff_prepare:
+  path: /api/v1/growth/candidates/{id}/handoff/prepare
+  controller: App\Http\Api\V1\Controller\GrowthApiController::prepareHandoff
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_icp_create:
+  path: /api/v1/growth/icp
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createIcp
+  methods: [POST]
+
+cos_api_v1_growth_icp_revise:
+  path: /api/v1/growth/icp/{id}/revisions/{revision}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::reviseIcp
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    revision: '[1-9][0-9]*'
+
+cos_api_v1_growth_icp_activate:
+  path: /api/v1/growth/icp/{id}/revisions/{revision}/activate
+  controller: App\Http\Api\V1\Controller\GrowthApiController::activateIcp
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    revision: '[1-9][0-9]*'
+
+cos_api_v1_growth_account_create:
+  path: /api/v1/growth/accounts
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createAccount
+  methods: [POST]
+
+cos_api_v1_growth_account:
+  path: /api/v1/growth/accounts/{id}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::account
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_account_snapshot:
+  path: /api/v1/growth/accounts/{id}/snapshots
+  controller: App\Http\Api\V1\Controller\GrowthApiController::snapshotAccount
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_account_score:
+  path: /api/v1/growth/accounts/{id}/score
+  controller: App\Http\Api\V1\Controller\GrowthApiController::scoreAccount
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_contact_create:
+  path: /api/v1/growth/accounts/{accountId}/contacts
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createContact
+  methods: [POST]
+  requirements: { accountId: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_contact_snapshot:
+  path: /api/v1/growth/accounts/{accountId}/contacts/{contactId}/snapshots
+  controller: App\Http\Api\V1\Controller\GrowthApiController::snapshotContact
+  methods: [POST]
+  requirements:
+    accountId: '[A-Za-z0-9_-]{8,80}'
+    contactId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_committee_assess:
+  path: /api/v1/growth/accounts/{accountId}/buying-committee/assess
+  controller: App\Http\Api\V1\Controller\GrowthApiController::assessCommittee
+  methods: [POST]
+  requirements: { accountId: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_committee:
+  path: /api/v1/growth/accounts/{accountId}/buying-committee
+  controller: App\Http\Api\V1\Controller\GrowthApiController::committee
+  methods: [GET]
+  requirements: { accountId: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_research_generate:
+  path: /api/v1/growth/candidates/{id}/research/proposals
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateResearch
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_research_accept:
+  path: /api/v1/growth/candidates/{id}/research/proposals/{proposalId}/accept
+  controller: App\Http\Api\V1\Controller\GrowthApiController::acceptResearch
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    proposalId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_research_brief:
+  path: /api/v1/growth/candidates/{id}/research
+  controller: App\Http\Api\V1\Controller\GrowthApiController::researchBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_qualification_policy_create:
+  path: /api/v1/growth/qualification-policies
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createQualificationPolicy
+  methods: [POST]
+
+cos_api_v1_growth_qualification_policy_revise:
+  path: /api/v1/growth/qualification-policies/{id}/revisions/{revision}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::reviseQualificationPolicy
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    revision: '[1-9][0-9]*'
+
+cos_api_v1_growth_qualification_policy_activate:
+  path: /api/v1/growth/qualification-policies/{id}/revisions/{revision}/activate
+  controller: App\Http\Api\V1\Controller\GrowthApiController::activateQualificationPolicy
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    revision: '[1-9][0-9]*'
+
+cos_api_v1_growth_candidate_evaluate:
+  path: /api/v1/growth/candidates/{id}/evaluate
+  controller: App\Http\Api\V1\Controller\GrowthApiController::evaluateCandidate
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_decision:
+  path: /api/v1/growth/candidates/{id}/decision
+  controller: App\Http\Api\V1\Controller\GrowthApiController::decisionBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_engagement_generate:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateEngagement
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_engagement_accept:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/accept
+  controller: App\Http\Api\V1\Controller\GrowthApiController::acceptEngagement
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_dismiss:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/dismiss
+  controller: App\Http\Api\V1\Controller\GrowthApiController::dismissEngagement
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_execution_propose:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/execution
+  controller: App\Http\Api\V1\Controller\GrowthApiController::proposeEngagementExecution
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_execution:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/execution
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementExecution
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_autonomy_payload:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/autonomy/payload
+  controller: App\Http\Api\V1\Controller\GrowthApiController::stageEngagementAutonomyPayload
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementContentBrief
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content_generate:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content/drafts
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateEngagementContentDraft
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content_approve:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content/drafts/{draftId}/approve
+  controller: App\Http\Api\V1\Controller\GrowthApiController::approveEngagementContentDraft
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+    draftId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content_reject:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content/drafts/{draftId}/reject
+  controller: App\Http\Api\V1\Controller\GrowthApiController::rejectEngagementContentDraft
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+    draftId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_responses:
+  path: /api/v1/growth/candidates/{id}/engagement/responses
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementResponses
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_routing:
+  path: /api/v1/growth/candidates/{id}/engagement/routing
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementRouting
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_sequence:
+  path: /api/v1/growth/candidates/{id}/engagement/sequence
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementSequence
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_sequence_stop:
+  path: /api/v1/growth/candidates/{id}/engagement/sequence/{sequenceId}/stop
+  controller: App\Http\Api\V1\Controller\GrowthApiController::stopEngagementSequence
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    sequenceId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_brief:
+  path: /api/v1/growth/candidates/{id}/engagement
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_api_v1_growth_learning_brief:
+  path: /api/v1/growth/candidates/{id}/learning
+  controller: App\Http\Api\V1\Controller\GrowthApiController::learningBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_api_v1_growth_optimization_generate:
+  path: /api/v1/growth/learning/optimization/recommendations
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateOptimization
+  methods: [POST]
+
+cos_api_v1_growth_optimization_brief:
+  path: /api/v1/growth/learning/optimization
+  controller: App\Http\Api\V1\Controller\GrowthApiController::optimizationBrief
+  methods: [GET]
+
+cos_api_v1_growth_optimization_accept:
+  path: /api/v1/growth/learning/optimization/recommendations/{recommendationId}/accept
+  controller: App\Http\Api\V1\Controller\GrowthApiController::acceptOptimization
+  methods: [POST]
+  requirements: { recommendationId: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_optimization_dismiss:
+  path: /api/v1/growth/learning/optimization/recommendations/{recommendationId}/dismiss
+  controller: App\Http\Api\V1\Controller\GrowthApiController::dismissOptimization
+  methods: [POST]
+  requirements: { recommendationId: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_optimization_materialize:
+  path: /api/v1/growth/learning/optimization/recommendations/{recommendationId}/materialize
+  controller: App\Http\Api\V1\Controller\GrowthApiController::materializeOptimization
+  methods: [POST]
+  requirements: { recommendationId: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_api_v1_growth_experiments_create:
+  path: /api/v1/growth/experiments
+  controller: App\Http\Api\V1\Controller\GrowthApiController::createExperiment
+  methods: [POST]
+
+cos_api_v1_growth_experiments:
+  path: /api/v1/growth/experiments
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experiments
+  methods: [GET]
+
+cos_api_v1_growth_experiment:
+  path: /api/v1/growth/experiments/{id}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experiment
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_start:
+  path: /api/v1/growth/experiments/{id}/start
+  controller: App\Http\Api\V1\Controller\GrowthApiController::startExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_pause:
+  path: /api/v1/growth/experiments/{id}/pause
+  controller: App\Http\Api\V1\Controller\GrowthApiController::pauseExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_resume:
+  path: /api/v1/growth/experiments/{id}/resume
+  controller: App\Http\Api\V1\Controller\GrowthApiController::resumeExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_complete:
+  path: /api/v1/growth/experiments/{id}/complete
+  controller: App\Http\Api\V1\Controller\GrowthApiController::completeExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_archive:
+  path: /api/v1/growth/experiments/{id}/archive
+  controller: App\Http\Api\V1\Controller\GrowthApiController::archiveExperiment
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_assign:
+  path: /api/v1/growth/experiments/{id}/assignments/{candidateId}
+  controller: App\Http\Api\V1\Controller\GrowthApiController::assignExperimentCandidate
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    candidateId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_experiment_report:
+  path: /api/v1/growth/experiments/{id}/report
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experimentReport
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_api_v1_growth_experiment_decision_generate:
+  path: /api/v1/growth/experiments/{id}/decision/recommendations
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateExperimentDecision
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_experiment_decision_accept:
+  path: /api/v1/growth/experiments/{id}/decision/recommendations/{recommendationId}/accept
+  controller: App\Http\Api\V1\Controller\GrowthApiController::acceptExperimentDecision
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_experiment_decision_dismiss:
+  path: /api/v1/growth/experiments/{id}/decision/recommendations/{recommendationId}/dismiss
+  controller: App\Http\Api\V1\Controller\GrowthApiController::dismissExperimentDecision
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_experiment_decision_brief:
+  path: /api/v1/growth/experiments/{id}/decision
+  controller: App\Http\Api\V1\Controller\GrowthApiController::experimentDecisionBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+
+cos_api_v1_growth_handoff_targets:
+  path: /api/v1/growth/handoff/targets
+  controller: App\Http\Api\V1\Controller\GrowthApiController::handoffTargets
+  methods: [GET]
+
+cos_api_v1_growth_candidate_handoff:
+  path: /api/v1/growth/candidates/{id}/handoff
+  controller: App\Http\Api\V1\Controller\GrowthApiController::handoffBrief
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
+cos_api_v1_growth_candidate_handoff_dispatch:
+  path: /api/v1/growth/candidates/{id}/handoff/dispatch
+  controller: App\Http\Api\V1\Controller\GrowthApiController::dispatchHandoff
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9_-]{8,80}' }
+
 
 cos_api_v1_diagnostics_create:
   path: /api/v1/diagnostics

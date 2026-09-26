@@ -1,0 +1,427 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$collectors=is_array($workspace['collectors']??null)?$workspace['collectors']:[];
+$feeds=is_array($workspace['feeds']??null)?$workspace['feeds']:[];
+$jsonSources=is_array($workspace['json_sources']??null)?$workspace['json_sources']:[];
+$alertSubscriptions=is_array($workspace['alert_subscriptions']??null)?$workspace['alert_subscriptions']:[];
+$polling=is_array($workspace['polling']??null)?$workspace['polling']:[];
+$pollingHealth=is_array($polling['collector_health']??null)?$polling['collector_health']:[];
+$pollingIncidents=is_array($polling['active_incidents']??null)?$polling['active_incidents']:[];
+$incidentRows=[];
+foreach($pollingIncidents as $incident){
+    if(!is_array($incident))continue;
+    $incidentRows[]=[
+        'collector'=>$incident['collector_name']??'Collector',
+        'status'=>['label'=>'OPEN','tone'=>'danger'],
+        'failures'=>(int)($incident['failure_count']??0),
+        'opened'=>$incident['opened_at']??'—',
+        'last_failure'=>$incident['last_failure_at']??'—',
+        'next_retry'=>$incident['next_retry_at']??'—',
+        'error'=>$incident['error_summary']??'—',
+    ];
+}
+$pollingHealthRows=[];
+foreach($pollingHealth as $collector=>$health){
+    if(!is_array($health))continue;
+    $healthStatus=strtolower((string)($health['status']??'unknown'));
+    $healthTone=match($healthStatus){
+        'healthy'=>'positive',
+        'degraded'=>'warning',
+        'cooling_down'=>'danger',
+        default=>'neutral',
+    };
+    $pollingHealthRows[]=[
+        'collector'=>$collector,
+        'health'=>['label'=>strtoupper($healthStatus),'tone'=>$healthTone],
+        'last_run'=>$health['last_run_status']??'—',
+        'failures'=>(int)($health['consecutive_failures']??0),
+        'last_success'=>$health['last_success_at']??'—',
+        'last_failure'=>$health['last_failure_at']??'—',
+        'next_retry'=>$health['next_retry_at']??'—',
+    ];
+}
+$runs=is_array($workspace['runs']??null)?$workspace['runs']:[];
+$collectorFilter=trim((string)$this->request->getQuery('collector_name','string',''));
+$statusFilter=trim((string)$this->request->getQuery('status','string',''));
+$collectorOptions=[''=>'All collectors'];
+foreach($collectors as $collector)$collectorOptions[(string)$collector]=(string)$collector;
+$statusOptions=[''=>'All statuses','running'=>'Running','completed'=>'Completed','partial'=>'Partial','failed'=>'Failed'];
+$rows=[];
+foreach($runs as $run){
+    $status=strtolower((string)($run['status']??''));
+    $tone=match($status){
+        'completed'=>'positive',
+        'partial'=>'warning',
+        'failed'=>'danger',
+        'running'=>'info',
+        default=>'neutral',
+    };
+    $rows[]=[
+        'run'=>[
+            'primary'=>$run['collector_name']??'Collector',
+            'secondary'=>$run['run_id']??'',
+        ],
+        'status'=>['label'=>strtoupper($status?:'unknown'),'tone'=>$tone],
+        'accepted'=>(int)($run['accepted_count']??0),
+        'duplicates'=>(int)($run['duplicate_count']??0),
+        'failed'=>(int)($run['failed_count']??0),
+        'cursor'=>$run['next_cursor']??'—',
+        'started'=>$run['started_at']??'—',
+        'finished'=>$run['finished_at']??'—',
+    ];
+}
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-collectors data-csrf="<?php echo $h($csrfToken??''); ?>">
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Signal ingestion',
+    'title'=>'Collectors',
+    'description'=>'Provider-agnostic ingestion runtime with per-run accounting, dedupe, cursoring and explicit partial/failure states.',
+    'actions'=>[
+      ['label'=>'Signals','href'=>'growth/signals','variant'=>'ghost'],
+      ['label'=>'Overview','href'=>'growth','variant'=>'ghost'],
+    ],
+  ]); ?>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-polling-status>
+    <?php
+      $pollingReady=!empty($polling['ready']);
+      $pollingEnabled=!empty($polling['enabled']);
+      $actorConfigured=!empty($polling['actor_configured']);
+      $moduleEnabled=!empty($polling['module_enabled']);
+      $pollingReason=(string)($polling['reason']??'unknown');
+      $pollingCollectors=is_array($polling['collectors']??null)?$polling['collectors']:[];
+      $sourceCounts=is_array($polling['source_counts']??null)?$polling['source_counts']:[];
+    ?>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Automatic monitoring</p><h2>Scheduled Signal Polling</h2></div>
+      <span class="tn-ui-badge tn-ui-badge--<?php echo $pollingReady?'positive':($pollingEnabled?'warning':'neutral'); ?>">
+        <?php echo $pollingReady?'READY':($pollingEnabled?'ATTENTION':'DISABLED'); ?>
+      </span>
+    </div>
+
+    <div class="tn-growth-collector-grid">
+      <article>
+        <strong>Scheduler</strong>
+        <div class="tn-growth-muted"><?php echo $pollingEnabled?'Enabled':'Disabled'; ?></div>
+      </article>
+      <article>
+        <strong>Cadence</strong>
+        <div class="tn-growth-muted"><?php echo $h((int)($polling['interval_minutes']??0)); ?> min</div>
+      </article>
+      <article>
+        <strong>System actor</strong>
+        <div class="tn-growth-muted"><?php echo $actorConfigured?'Configured':'Missing'; ?></div>
+      </article>
+      <article>
+        <strong>Growth module</strong>
+        <div class="tn-growth-muted"><?php echo $moduleEnabled?'Enabled':'Disabled'; ?></div>
+      </article>
+      <article>
+        <strong>Enabled sources</strong>
+        <div class="tn-growth-muted"><?php echo $h((int)($polling['enabled_source_count']??0)); ?></div>
+      </article>
+      <article>
+        <strong>Per-run limit</strong>
+        <div class="tn-growth-muted"><?php echo $h((int)($polling['signal_limit']??0)); ?> signals</div>
+      </article>
+    </div>
+
+    <div class="tn-growth-muted">
+      Status: <strong><?php echo $h($pollingReason); ?></strong>
+      <?php if($pollingCollectors): ?>
+        · targets:
+        <?php foreach($pollingCollectors as $index=>$collector): ?>
+          <?php if($index>0): ?>, <?php endif; ?>
+          <?php echo $h($collector); ?> (<?php echo $h((int)($sourceCounts[$collector]??0)); ?>)
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+    <p class="tn-growth-muted">Scheduler configuration is deployment-owned and read-only here. Provider calls execute in the async worker through the canonical collector runtime.</p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-polling-health>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Automatic monitoring</p><h2>Collector health</h2></div>
+      <span class="tn-ui-badge tn-ui-badge--<?php echo (($polling['health_status']??'unknown')==='healthy')?'positive':((($polling['health_status']??'unknown')==='degraded')?'warning':'neutral'); ?>">
+        <?php echo $h(strtoupper((string)($polling['health_status']??'unknown'))); ?>
+      </span>
+    </div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'collector','label'=>'Collector'],
+        ['key'=>'health','label'=>'Health'],
+        ['key'=>'last_run','label'=>'Last run'],
+        ['key'=>'failures','label'=>'Consecutive failures'],
+        ['key'=>'last_success','label'=>'Last success'],
+        ['key'=>'last_failure','label'=>'Last failure'],
+        ['key'=>'next_retry','label'=>'Next retry'],
+      ],
+      'rows'=>$pollingHealthRows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'Collector health will appear after the first scheduled polling result.',
+    ]); ?>
+    <p class="tn-growth-muted">Failed collectors enter exponential cooldown. Healthy or partial provider responses clear transport-failure backoff; partial item validation remains visible as degraded health.</p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-polling-incidents>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Operator attention</p><h2>Active collector incidents</h2></div>
+      <span><?php echo count($incidentRows); ?></span>
+    </div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'collector','label'=>'Collector'],
+        ['key'=>'status','label'=>'Status'],
+        ['key'=>'failures','label'=>'Failure count'],
+        ['key'=>'opened','label'=>'Opened'],
+        ['key'=>'last_failure','label'=>'Last failure'],
+        ['key'=>'next_retry','label'=>'Next retry'],
+        ['key'=>'error','label'=>'Last error'],
+      ],
+      'rows'=>$incidentRows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No active collector incidents.',
+    ]); ?>
+    <p class="tn-growth-muted">An incident opens only after the configured consecutive-failure threshold and resolves automatically after the next successful provider transport, including a partial ingestion response.</p>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-collector-alert-subscriptions>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Operator notifications</p><h2>Collector incident email alerts</h2></div>
+      <span><?php echo count($alertSubscriptions); ?></span>
+    </div>
+
+    <?php if(!empty($canManageGrowth)): ?>
+      <form data-growth-collector-alert-create class="tn-growth-action-form tn-growth-signal-feed-form">
+        <label class="tn-ui-field"><span>Email</span><input class="tn-ui-input" name="recipient_email" type="email" maxlength="254" required placeholder="ops@example.com"></label>
+        <label class="tn-ui-field"><span>Name</span><input class="tn-ui-input" name="recipient_name" maxlength="191" placeholder="Operations"></label>
+        <label class="tn-ui-field"><span>Locale</span><input class="tn-ui-input" name="locale" maxlength="12" value="en" required></label>
+        <label class="tn-ui-field tn-ui-field--check"><input name="enabled" type="checkbox" checked><span>Enabled</span></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Add alert recipient</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+
+    <?php if($alertSubscriptions): ?>
+      <div class="tn-growth-feed-list">
+        <?php foreach($alertSubscriptions as $subscription): ?>
+          <?php $enabled=!empty($subscription['enabled']); ?>
+          <article class="tn-growth-feed-item" data-growth-collector-alert="<?php echo $h($subscription['subscription_id']??''); ?>">
+            <div>
+              <strong><?php echo $h($subscription['recipient_name']??$subscription['recipient_email']??'Recipient'); ?></strong>
+              <div class="tn-growth-muted"><?php echo $h($subscription['recipient_email']??''); ?></div>
+              <div class="tn-growth-muted">Locale <?php echo $h($subscription['locale']??'en'); ?> · incident opened + recovered</div>
+            </div>
+            <div class="tn-growth-feed-actions">
+              <span class="tn-ui-badge tn-ui-badge--<?php echo $enabled?'positive':'neutral'; ?>"><?php echo $enabled?'ENABLED':'DISABLED'; ?></span>
+              <?php if(!empty($canManageGrowth)): ?>
+                <form data-growth-collector-alert-toggle data-subscription-id="<?php echo $h($subscription['subscription_id']??''); ?>" data-action="<?php echo $enabled?'disable':'enable'; ?>">
+                  <button class="tn-ui-button tn-ui-button--ghost" type="submit"><?php echo $enabled?'Disable':'Enable'; ?></button>
+                  <span data-growth-form-status></span>
+                </form>
+              <?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <?php $this->partial('components/ui/state',[
+        'kind'=>'empty',
+        'title'=>'No incident alert recipients',
+        'message'=>'Add an explicit operational email recipient. Growth does not guess tenant administrators or scrape Identity tables.',
+      ]); ?>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-signal-feeds>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Tenant pull sources</p><h2>RSS / Atom Feeds</h2></div>
+      <span><?php echo count($feeds); ?></span>
+    </div>
+
+    <?php if(!empty($canManageGrowth)): ?>
+      <form data-growth-signal-feed-create class="tn-growth-action-form tn-growth-signal-feed-form">
+        <label class="tn-ui-field"><span>Name</span><input class="tn-ui-input" name="name" maxlength="160" required placeholder="Company newsroom"></label>
+        <label class="tn-ui-field"><span>HTTPS feed URL</span><input class="tn-ui-input" name="url" type="url" maxlength="1000" required placeholder="https://example.com/feed.xml"></label>
+        <label class="tn-ui-field"><span>Subject type</span><input class="tn-ui-input" name="subject_type" maxlength="80" required value="account"></label>
+        <label class="tn-ui-field"><span>Subject ID</span><input class="tn-ui-input" name="subject_id" maxlength="191" required placeholder="account-…"></label>
+        <label class="tn-ui-field"><span>Signal type</span><input class="tn-ui-input" name="signal_type" maxlength="120" required placeholder="company_news"></label>
+        <label class="tn-ui-field"><span>Confidence</span><input class="tn-ui-input" name="confidence" type="number" min="0" max="1" step="0.01" value="0.75" required></label>
+        <label class="tn-ui-field tn-ui-field--check"><input name="enabled" type="checkbox" checked><span>Enabled</span></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Add feed</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+
+    <?php if($feeds): ?>
+      <div class="tn-growth-feed-list">
+        <?php foreach($feeds as $feed): ?>
+          <?php $enabled=!empty($feed['enabled']); ?>
+          <article class="tn-growth-feed-item" data-growth-signal-feed="<?php echo $h($feed['feed_id']??''); ?>">
+            <div>
+              <strong><?php echo $h($feed['name']??'Feed'); ?></strong>
+              <div class="tn-growth-muted"><?php echo $h($feed['url']??''); ?></div>
+              <div class="tn-growth-muted">
+                <?php echo $h(($feed['subject_type']??'').':'.($feed['subject_id']??'')); ?>
+                → <?php echo $h($feed['signal_type']??''); ?>
+                · confidence <?php echo $h($feed['confidence']??''); ?>
+              </div>
+            </div>
+            <div class="tn-growth-feed-actions">
+              <span class="tn-ui-badge tn-ui-badge--<?php echo $enabled?'positive':'neutral'; ?>"><?php echo $enabled?'ENABLED':'DISABLED'; ?></span>
+              <?php if(!empty($canManageGrowth)): ?>
+                <form data-growth-signal-feed-toggle data-feed-id="<?php echo $h($feed['feed_id']??''); ?>" data-action="<?php echo $enabled?'disable':'enable'; ?>">
+                  <button class="tn-ui-button tn-ui-button--ghost" type="submit"><?php echo $enabled?'Disable':'Enable'; ?></button>
+                  <span data-growth-form-status></span>
+                </form>
+              <?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <?php $this->partial('components/ui/state',[
+        'kind'=>'empty',
+        'title'=>'No RSS/Atom feeds configured',
+        'message'=>'Add a tenant feed to let the rss_atom collector pull observable external signals.',
+      ]); ?>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section" data-growth-json-signal-sources>
+    <div class="tn-ui-panel__head">
+      <div><p class="tn-ui-eyebrow">Credentialed pull sources</p><h2>JSON API Sources</h2></div>
+      <span><?php echo count($jsonSources); ?></span>
+    </div>
+
+    <?php if(!empty($canManageGrowth)): ?>
+      <form data-growth-json-source-create class="tn-growth-action-form tn-growth-signal-feed-form">
+        <label class="tn-ui-field"><span>Name</span><input class="tn-ui-input" name="name" maxlength="160" required placeholder="Provider events API"></label>
+        <label class="tn-ui-field"><span>HTTPS endpoint</span><input class="tn-ui-input" name="url" type="url" maxlength="1000" required placeholder="https://api.provider.example/v1/growth-signals"></label>
+        <label class="tn-ui-field">
+          <span>Auth mode</span>
+          <select class="tn-ui-input" name="auth_mode" required>
+            <option value="bearer">Bearer token</option>
+            <option value="api_key_header">X-* API key header</option>
+          </select>
+        </label>
+        <label class="tn-ui-field"><span>Credential reference</span><input class="tn-ui-input" name="credential_reference" maxlength="500" required placeholder="env://GROWTH_PROVIDER_ACME" autocomplete="off"></label>
+        <label class="tn-ui-field"><span>API key header</span><input class="tn-ui-input" name="api_key_header" maxlength="80" placeholder="X-API-Key"></label>
+        <label class="tn-ui-field"><span>Subject type</span><input class="tn-ui-input" name="subject_type" maxlength="80" required value="account"></label>
+        <label class="tn-ui-field"><span>Subject ID</span><input class="tn-ui-input" name="subject_id" maxlength="191" required placeholder="account-…"></label>
+        <label class="tn-ui-field"><span>Signal type</span><input class="tn-ui-input" name="signal_type" maxlength="120" required placeholder="provider_event"></label>
+        <label class="tn-ui-field"><span>Confidence</span><input class="tn-ui-input" name="confidence" type="number" min="0" max="1" step="0.01" value="0.75" required></label>
+        <label class="tn-ui-field tn-ui-field--check"><input name="enabled" type="checkbox" checked><span>Enabled</span></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Add JSON source</button>
+        <span data-growth-form-status></span>
+      </form>
+      <p class="tn-growth-muted">Credential references are accepted only on create and are never rendered back into the workspace.</p>
+    <?php endif; ?>
+
+    <?php if($jsonSources): ?>
+      <div class="tn-growth-feed-list">
+        <?php foreach($jsonSources as $source): ?>
+          <?php $enabled=!empty($source['enabled']); ?>
+          <article class="tn-growth-feed-item" data-growth-json-source="<?php echo $h($source['source_id']??''); ?>">
+            <div>
+              <strong><?php echo $h($source['name']??'JSON source'); ?></strong>
+              <div class="tn-growth-muted"><?php echo $h($source['url']??''); ?></div>
+              <div class="tn-growth-muted">
+                <?php echo $h(($source['subject_type']??'').':'.($source['subject_id']??'')); ?>
+                → <?php echo $h($source['signal_type']??''); ?>
+                · confidence <?php echo $h($source['confidence']??''); ?>
+              </div>
+              <div class="tn-growth-muted">
+                auth <?php echo $h($source['auth_mode']??''); ?>
+                <?php if(!empty($source['api_key_header'])): ?>· <?php echo $h($source['api_key_header']); ?><?php endif; ?>
+                · credentials <?php echo !empty($source['credential_configured'])?'configured':'missing'; ?>
+              </div>
+            </div>
+            <div class="tn-growth-feed-actions">
+              <span class="tn-ui-badge tn-ui-badge--<?php echo $enabled?'positive':'neutral'; ?>"><?php echo $enabled?'ENABLED':'DISABLED'; ?></span>
+              <?php if(!empty($canManageGrowth)): ?>
+                <form data-growth-json-source-toggle data-source-id="<?php echo $h($source['source_id']??''); ?>" data-action="<?php echo $enabled?'disable':'enable'; ?>">
+                  <button class="tn-ui-button tn-ui-button--ghost" type="submit"><?php echo $enabled?'Disable':'Enable'; ?></button>
+                  <span data-growth-form-status></span>
+                </form>
+              <?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <?php $this->partial('components/ui/state',[
+        'kind'=>'empty',
+        'title'=>'No credentialed JSON sources configured',
+        'message'=>'Add a tenant HTTPS JSON source to let the credentialed_json collector ingest provider events.',
+      ]); ?>
+    <?php endif; ?>
+  </section>
+
+  <?php if($collectors): ?>
+    <section class="tn-growth-collector-grid tn-workspace-section">
+      <?php foreach($collectors as $collector): ?>
+        <article class="tn-ui-panel">
+          <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Registered collector</p><h2><?php echo $h($collector); ?></h2></div></div>
+          <?php if(!empty($canManageGrowth)): ?>
+            <form data-growth-collector-run data-collector-name="<?php echo $h($collector); ?>" class="tn-growth-action-form">
+              <label class="tn-ui-field"><span>Cursor</span><input class="tn-ui-input" name="cursor" placeholder="optional"></label>
+              <label class="tn-ui-field"><span>Limit</span><input class="tn-ui-input" type="number" min="1" max="500" name="limit" value="100"></label>
+              <button class="tn-ui-button tn-ui-button--primary" type="submit">Run collector</button>
+              <span data-growth-form-status></span>
+            </form>
+          <?php else: ?>
+            <p class="tn-growth-muted">Read-only access. MANAGE permission is required to run collectors.</p>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+    </section>
+  <?php else: ?>
+    <?php $this->partial('components/ui/state',[
+      'kind'=>'empty',
+      'title'=>'No collectors registered',
+      'message'=>'The provider-agnostic runtime is ready, but no concrete SignalCollectorInterface adapter is registered yet.',
+    ]); ?>
+  <?php endif; ?>
+
+  <div class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar',[
+      'action'=>'growth/collectors',
+      'method'=>'GET',
+      'fields'=>[
+        ['name'=>'collector_name','type'=>'select','label'=>'Collector','value'=>$collectorFilter,'options'=>$collectorOptions],
+        ['name'=>'status','type'=>'select','label'=>'Status','value'=>$statusFilter,'options'=>$statusOptions],
+      ],
+      'actions'=>[['label'=>'Filter','type'=>'submit','variant'=>'primary']],
+    ]); ?>
+  </div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Run history</p><h2>Signal Collector Runs</h2></div><span><?php echo count($runs); ?></span></div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'run','label'=>'Run'],
+        ['key'=>'status','label'=>'Status'],
+        ['key'=>'accepted','label'=>'Accepted'],
+        ['key'=>'duplicates','label'=>'Duplicates'],
+        ['key'=>'failed','label'=>'Failed'],
+        ['key'=>'cursor','label'=>'Next cursor'],
+        ['key'=>'started','label'=>'Started'],
+        ['key'=>'finished','label'=>'Finished'],
+      ],
+      'rows'=>$rows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No collector runs match these filters.',
+    ]); ?>
+
+    <?php foreach($runs as $run): ?>
+      <?php if(!empty($run['error_summary'])): ?>
+        <div class="tn-ui-alert tn-ui-alert--warning tn-growth-run-error">
+          <strong><?php echo $h($run['collector_name']??'Collector'); ?>:</strong>
+          <span><?php echo $h($run['error_summary']); ?></span>
+        </div>
+      <?php endif; ?>
+    <?php endforeach; ?>
+  </section>
+</main>

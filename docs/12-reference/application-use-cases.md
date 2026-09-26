@@ -19,6 +19,7 @@ generated: true
 | `construction` | 0 |
 | `diagnostic` | 10 |
 | `finance` | 0 |
+| `growth` | 1 |
 | `hr` | 0 |
 | `procurement` | 0 |
 | `property` | 2 |
@@ -48,6 +49,12 @@ generated: true
 ## Finance (`finance`)
 
 Точок входу Application UseCase не знайдено.
+
+## Growth (`growth`)
+
+| Символ | Джерело |
+| --- | --- |
+| `PrepareOpportunityHandoff` | `app/Domains/Growth/Application/UseCase/PrepareOpportunityHandoff.php` |
 
 ## HR (`hr`)
 

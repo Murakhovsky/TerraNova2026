@@ -24,6 +24,11 @@ foreach ($modules as $moduleId => $module) {
 }
 
 $routeCatalogues = [
+    'growth' => [
+        'service' => null,
+        'contributor' => null,
+        'sources' => ['symfony/config/routes.yaml'],
+    ],
     'property' => [
         'service' => null,
         'contributor' => null,

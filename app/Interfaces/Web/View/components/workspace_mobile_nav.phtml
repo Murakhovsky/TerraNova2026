@@ -3,7 +3,7 @@
 /** @var string $activeSection */
 /** @var Closure $href */
 
-$mobileKeys = ['home', 'sales', 'clients', 'properties'];
+$mobileKeys = ['home', 'growth', 'sales', 'clients', 'properties'];
 $items = [];
 foreach ($navigation['primary'] ?? [] as $section) {
     if (in_array((string) ($section['key'] ?? ''), $mobileKeys, true)) {

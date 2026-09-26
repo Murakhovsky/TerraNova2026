@@ -1,5 +1,43 @@
 parameters:
   env(N8N_WEBHOOK_SECRET): ''
+  env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
+  env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
+  env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET): ''
+  env(GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET): ''
+  env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(COS_GROWTH_OUTREACH_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_EMAIL_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_LINKEDIN_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_PHONE_DAILY_LIMIT): '50'
+  env(COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS): '24'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '5'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_AUTONOMY_SCHEDULER_RECOMMENDATION_LIMIT): '100'
+  env(COS_GROWTH_CONTENT_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES): '5'
+  env(COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_CONTENT_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_CONTENT_SCHEDULER_DRAFT_LIMIT): '20'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_MARKET_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES): '60'
+  env(COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT): '200'
+  env(COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT): '100'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT): '100'
+  env(COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES): '360'
+  env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
 
 services:
   _defaults:
@@ -16,6 +54,18 @@ services:
     Kernel\Application\Event\EventHandlerInterface:
       tags:
         - { name: 'messenger.message_handler', bus: 'event.bus' }
+    Domains\Growth\Application\Contract\SignalCollectorInterface:
+      tags:
+        - { name: 'growth.signal_collector' }
+    Domains\Growth\Application\Contract\GrowthHandoffTargetInterface:
+      tags:
+        - { name: 'growth.handoff_target' }
+    Domains\Growth\Application\Contract\GrowthMarketSourceInterface:
+      tags:
+        - { name: 'growth.market_source' }
+    Domains\Growth\Application\Contract\GrowthConversationRoutingTargetInterface:
+      tags:
+        - { name: 'growth.conversation_routing_target' }
     App\Web\Experience\Extension\Contract\WebExtensionProviderInterface:
       tags:
         - { name: 'cos.web.extension.provider' }
@@ -105,6 +155,13 @@ services:
     factory: ['@App\Infrastructure\Persistence\CanonicalPdoFactory', 'create']
     arguments:
       $connection: '@doctrine.dbal.default_connection'
+
+  Infrastructure\Platform\Integration\MysqlIntegrationOutbox:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Integration\Contract\IntegrationOutboxInterface:
+    alias: Infrastructure\Platform\Integration\MysqlIntegrationOutbox
 
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository:
     arguments:
@@ -196,6 +253,21 @@ services:
   App\Scheduler\CosScheduleProvider:
     arguments:
       $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
+      $growthCollectorPollingEnabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
+      $growthCollectorPollingIntervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthCollectorPollingActorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
+      $growthAutonomousOutreachEnabled: '%env(bool:COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED)%'
+      $growthAutonomousOutreachIntervalMinutes: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthAutonomousOutreachActorId: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID)%'
+      $growthAutonomousContentEnabled: '%env(bool:COS_GROWTH_CONTENT_SCHEDULER_ENABLED)%'
+      $growthAutonomousContentIntervalMinutes: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthAutonomousContentActorId: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID)%'
+      $growthOutreachSequenceEnabled: '%env(bool:COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED)%'
+      $growthOutreachSequenceIntervalMinutes: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthOutreachSequenceActorId: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID)%'
+      $growthMarketDiscoveryEnabled: '%env(bool:COS_GROWTH_MARKET_SCHEDULER_ENABLED)%'
+      $growthMarketDiscoveryIntervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -377,6 +449,639 @@ services:
   Domains\Service\Bootstrap\ServiceDomainModule:
     arguments:
       $ruleContextProvider: '@Domains\Service\Rule\ServiceRuleContextProvider'
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthRepository
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMutationReceipt:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthMutationReceiptInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMutationReceipt
+
+  Domains\Growth\Application\Service\GrowthWorkflowService: ~
+
+  Domains\Growth\Application\Contract\GrowthApplicationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthWorkflowService
+
+  Domains\Growth\Domain\IcpMatcher: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthIntelligenceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthIntelligenceRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthIntelligenceRepository
+
+  Domains\Growth\Application\Service\GrowthIntelligenceService: ~
+
+  Domains\Growth\Application\Contract\GrowthIntelligenceBoundary:
+    alias: Domains\Growth\Application\Service\GrowthIntelligenceService
+
+  Domains\Growth\Domain\BuyingCommitteeAnalyzer: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthBuyingCommitteeRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthBuyingCommitteeRepository
+
+  Domains\Growth\Application\Service\GrowthBuyingCommitteeService: ~
+
+  Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary:
+    alias: Domains\Growth\Application\Service\GrowthBuyingCommitteeService
+
+  Domains\Growth\Application\Service\SignalCollectorRegistry:
+    arguments:
+      $collectors: !tagged_iterator growth.signal_collector
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalIntakeRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalIntakeRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalIntakeRepository
+
+  Domains\Growth\Application\Service\GrowthSignalCollectorService: ~
+
+  Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary:
+    alias: Domains\Growth\Application\Service\GrowthSignalCollectorService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalFeedRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalFeedRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalFeedRepository
+
+  Domains\Growth\Application\Service\GrowthSignalFeedService: ~
+
+  Domains\Growth\Application\Contract\GrowthSignalFeedBoundary:
+    alias: Domains\Growth\Application\Service\GrowthSignalFeedService
+
+  Domains\Growth\Infrastructure\Feed\RssAtomFeedParser: ~
+
+  Domains\Growth\Infrastructure\Feed\SafeHttpRssAtomFeedReader:
+    arguments:
+      $calls: '@Kernel\Resilience\ExternalCallExecutor'
+      $parser: '@Domains\Growth\Infrastructure\Feed\RssAtomFeedParser'
+
+  Domains\Growth\Application\Contract\GrowthFeedReaderInterface:
+    alias: Domains\Growth\Infrastructure\Feed\SafeHttpRssAtomFeedReader
+
+  Domains\Growth\Infrastructure\Collector\RssAtomSignalCollector:
+    arguments:
+      $feeds: '@Domains\Growth\Application\Contract\GrowthSignalFeedRepositoryInterface'
+      $reader: '@Domains\Growth\Application\Contract\GrowthFeedReaderInterface'
+
+  Infrastructure\Platform\Integration\EnvironmentCredentialVault: ~
+
+  Platform\Integration\Contract\CredentialVaultInterface:
+    alias: Infrastructure\Platform\Integration\EnvironmentCredentialVault
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthJsonSignalSourceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthJsonSignalSourceRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthJsonSignalSourceRepository
+
+  Domains\Growth\Application\Service\GrowthJsonSignalSourceService: ~
+
+  Domains\Growth\Application\Contract\GrowthJsonSignalSourceBoundary:
+    alias: Domains\Growth\Application\Service\GrowthJsonSignalSourceService
+
+  Domains\Growth\Infrastructure\Feed\CredentialedJsonSignalParser: ~
+
+  Domains\Growth\Infrastructure\Feed\SafeHttpCredentialedJsonSignalReader:
+    arguments:
+      $calls: '@Kernel\Resilience\ExternalCallExecutor'
+      $vault: '@Platform\Integration\Contract\CredentialVaultInterface'
+      $parser: '@Domains\Growth\Infrastructure\Feed\CredentialedJsonSignalParser'
+
+  Domains\Growth\Application\Contract\GrowthJsonSignalReaderInterface:
+    alias: Domains\Growth\Infrastructure\Feed\SafeHttpCredentialedJsonSignalReader
+
+  Domains\Growth\Infrastructure\Collector\CredentialedJsonSignalCollector:
+    arguments:
+      $sources: '@Domains\Growth\Application\Contract\GrowthJsonSignalSourceRepositoryInterface'
+      $reader: '@Domains\Growth\Application\Contract\GrowthJsonSignalReaderInterface'
+
+  Domains\Growth\Domain\QualificationPolicyEvaluator: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthDecisionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthDecisionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthDecisionRepository
+
+  Domains\Growth\Application\Service\GrowthDecisionService: ~
+
+  Domains\Growth\Application\Contract\GrowthDecisionBoundary:
+    alias: Domains\Growth\Application\Service\GrowthDecisionService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthResearchRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthResearchRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthResearchRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResearchGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthResearchGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResearchGateway
+
+  Domains\Growth\Application\Service\GrowthResearchService: ~
+
+  Domains\Growth\Application\Contract\GrowthResearchBoundary:
+    alias: Domains\Growth\Application\Service\GrowthResearchService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMarketDiscoveryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthMarketDiscoveryRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthMarketDiscoveryRepository
+
+  Domains\Growth\Application\Service\GrowthMarketSourceRegistry:
+    arguments:
+      $sources: !tagged_iterator growth.market_source
+
+  Domains\Growth\Infrastructure\Market\CredentialedJsonGrowthMarketSource:
+    arguments:
+      $calls: '@Kernel\Resilience\ExternalCallExecutor'
+      $vault: '@Platform\Integration\Contract\CredentialVaultInterface'
+
+  Domains\Growth\Application\Service\GrowthMarketDiscoveryService: ~
+
+  Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary:
+    alias: Domains\Growth\Application\Service\GrowthMarketDiscoveryService
+
+  Domains\Growth\Automation\Event\GrowthMarketOpportunityConsumer: ~
+
+  App\Application\Growth\Command\RunGrowthMarketDiscoveryCommandHandler:
+    arguments:
+      $repository: '@Domains\Growth\Application\Contract\GrowthMarketDiscoveryRepositoryInterface'
+      $market: '@Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
+      $universeLimit: '%env(int:COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT)%'
+      $accountLimit: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT)%'
+
+  Domains\Growth\Application\Service\GrowthHandoffTargetRegistry:
+    arguments:
+      $targets: !tagged_iterator growth.handoff_target
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthHandoffRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthHandoffRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthHandoffRepository
+
+  Domains\Growth\Application\Service\GrowthHandoffService: ~
+
+  Domains\Growth\Application\Contract\GrowthHandoffBoundary:
+    alias: Domains\Growth\Application\Service\GrowthHandoffService
+
+  Domains\Growth\Infrastructure\Handoff\SalesGrowthHandoffTarget:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Growth\Infrastructure\Handoff\ServiceGrowthHandoffTarget:
+    arguments:
+      $service: '@Domains\Service\Application\Contract\ServiceApplicationBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthWorkspaceReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface:
+    alias: Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthWorkspaceReadModel
+
+  App\Web\Growth\GrowthPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthEngagementGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthEngagementGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthEngagementGateway
+
+  Domains\Growth\Application\Service\GrowthEngagementService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthLearningRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthLearningRepository
+
+  Domains\Growth\Application\Service\GrowthLearningService: ~
+
+  Domains\Growth\Application\Contract\GrowthLearningBoundary:
+    alias: Domains\Growth\Application\Service\GrowthLearningService
+
+  Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOptimizationRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthOptimizationRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOptimizationRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthOptimizationGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthOptimizationGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthOptimizationGateway
+
+  Domains\Growth\Application\Service\GrowthOptimizationService: ~
+
+  Domains\Growth\Application\Contract\GrowthOptimizationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthOptimizationService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthExperimentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthExperimentRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthExperimentRepository
+
+  Domains\Growth\Application\Service\GrowthExperimentService: ~
+
+  Domains\Growth\Application\Contract\GrowthExperimentBoundary:
+    alias: Domains\Growth\Application\Service\GrowthExperimentService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthExperimentDecisionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthExperimentDecisionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthExperimentDecisionRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthExperimentDecisionGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthExperimentDecisionGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthExperimentDecisionGateway
+
+  Domains\Growth\Application\Service\GrowthExperimentDecisionService: ~
+
+  Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary:
+    alias: Domains\Growth\Application\Service\GrowthExperimentDecisionService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementExecutionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementExecutionRepository
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementDeliveryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementDeliveryRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementDeliveryService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementDeliveryBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementDeliveryService
+
+  Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway:
+    arguments:
+      $policies: '@Kernel\Policy\Service\ActionPolicyService'
+      $actions: '@Kernel\Action\Service\ActionService'
+      $activation: '@Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface'
+
+  Domains\Growth\Application\Contract\GrowthActionProposalGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Action\KernelGrowthActionProposalGateway
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementLimitProfileRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementLimitProfileRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementLimitProfileRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementLimitService:
+    arguments:
+      $defaultDailyLimit: '%env(int:COS_GROWTH_OUTREACH_DAILY_LIMIT)%'
+      $defaultContactCooldownHours: '%env(int:COS_GROWTH_OUTREACH_CONTACT_COOLDOWN_HOURS)%'
+      $defaultEmailDailyLimit: '%env(int:COS_GROWTH_OUTREACH_EMAIL_DAILY_LIMIT)%'
+      $defaultLinkedInDailyLimit: '%env(int:COS_GROWTH_OUTREACH_LINKEDIN_DAILY_LIMIT)%'
+      $defaultPhoneDailyLimit: '%env(int:COS_GROWTH_OUTREACH_PHONE_DAILY_LIMIT)%'
+
+  Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementLimitService
+
+  Domains\Growth\Application\Contract\GrowthEngagementLimitProviderInterface:
+    alias: Domains\Growth\Application\Service\GrowthEngagementLimitService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementActivationProfileRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementActivationProfileRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementActivationProfileRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementActivationService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementActivationService
+
+  Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface:
+    alias: Domains\Growth\Application\Service\GrowthEngagementActivationService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousOutreachRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousOutreachRepository
+
+  Domains\Growth\Application\Service\GrowthAutonomousOutreachService: ~
+
+  Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary:
+    alias: Domains\Growth\Application\Service\GrowthAutonomousOutreachService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousContentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthAutonomousContentRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousContentRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthAutonomousContentGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthAutonomousContentGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthAutonomousContentGateway
+
+  Domains\Growth\Application\Service\GrowthAutonomousContentService: ~
+
+  Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary:
+    alias: Domains\Growth\Application\Service\GrowthAutonomousContentService
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOutreachSequenceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthOutreachSequenceRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOutreachSequenceRepository
+
+  Domains\Growth\Application\Service\GrowthOutreachSequenceGuard: ~
+
+  Domains\Growth\Domain\OutreachSequenceStateMachine: ~
+
+  Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface:
+    alias: Domains\Growth\Application\Service\GrowthOutreachSequenceGuard
+
+  Domains\Growth\Application\Service\GrowthOutreachSequenceService: ~
+
+  Domains\Growth\Application\Contract\GrowthOutreachSequenceBoundary:
+    alias: Domains\Growth\Application\Service\GrowthOutreachSequenceService
+
+  Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementExecutionService
+
+  App\Application\Growth\Integration\GrowthEngagementDeliveryWebhook:
+    arguments:
+      $secret: '%env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET)%'
+      $maxClockSkew: '%env(int:GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW)%'
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementResponseRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementResponseRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementResponseRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementResponseService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementResponseBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementResponseService
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResponseClassificationGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthResponseClassificationGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResponseClassificationGateway
+
+  Domains\Growth\Application\Service\GrowthResponseClassificationService: ~
+
+  Domains\Growth\Application\Contract\GrowthResponseClassificationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthResponseClassificationService
+
+  Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer: ~
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthConversationRoutingRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthConversationRoutingRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthConversationRoutingRepository
+
+  Domains\Growth\Domain\GrowthConversationRoutingPolicy: ~
+
+  Domains\Growth\Application\Service\GrowthConversationRoutingTargetRegistry:
+    arguments:
+      $targets: !tagged_iterator growth.conversation_routing_target
+
+  Domains\Growth\Infrastructure\Routing\SalesGrowthConversationRoutingTarget:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Growth\Infrastructure\Routing\ServiceGrowthConversationRoutingTarget:
+    arguments:
+      $service: '@Domains\Service\Application\Contract\ServiceApplicationBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Growth\Application\Service\GrowthConversationRoutingService: ~
+
+  Domains\Growth\Application\Contract\GrowthConversationRoutingBoundary:
+    alias: Domains\Growth\Application\Service\GrowthConversationRoutingService
+
+  Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer: ~
+
+  App\Application\Growth\Integration\GrowthEngagementResponseWebhook:
+    arguments:
+      $secret: '%env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET)%'
+      $maxClockSkew: '%env(int:GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_MAX_CLOCK_SKEW)%'
+
+  Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthOutboundMessageGateway:
+    arguments:
+      $notifications: '@Platform\Notification\Contract\NotificationDispatcherInterface'
+
+  Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthOutboundMessageGateway
+
+  Domains\Growth\Automation\Action\GrowthSendMessageHandler:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $outbound: '@Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface'
+
+  Domains\Growth\Infrastructure\Integration\N8nGrowthExternalEngagementGateway:
+    arguments:
+      $outbox: '@Platform\Integration\Contract\IntegrationOutboxInterface'
+
+  Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Integration\N8nGrowthExternalEngagementGateway
+
+  Domains\Growth\Automation\Action\GrowthLinkedInHandler:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $outbound: '@Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface'
+
+  Domains\Growth\Automation\Action\GrowthCallHandler:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $outbound: '@Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface'
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingTargetRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingTargetRepository
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingHealthRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingHealthRepository
+
+  Domains\Growth\Domain\SignalPollingBackoffPolicy:
+    arguments:
+      $baseMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $maxMinutes: '%env(int:COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES)%'
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingIncidentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthSignalPollingIncidentRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthSignalPollingIncidentRepository
+
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthCollectorAlertSubscriptionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthCollectorAlertSubscriptionRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthCollectorAlertSubscriptionRepository
+
+  Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthCollectorIncidentAlertGateway: ~
+
+  Domains\Growth\Application\Contract\GrowthCollectorIncidentAlertGatewayInterface:
+    alias: Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthCollectorIncidentAlertGateway
+
+  Domains\Growth\Application\Service\GrowthCollectorAlertService: ~
+
+  Domains\Growth\Application\Contract\GrowthCollectorAlertBoundary:
+    alias: Domains\Growth\Application\Service\GrowthCollectorAlertService
+
+  Domains\Growth\Application\Service\GrowthSignalPollingIncidentService:
+    arguments:
+      $alertSubscriptions: '@Domains\Growth\Application\Contract\GrowthCollectorAlertSubscriptionRepositoryInterface'
+      $alerts: '@Domains\Growth\Application\Contract\GrowthCollectorIncidentAlertGatewayInterface'
+      $failureThreshold: '%env(int:COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD)%'
+
+  Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary:
+    alias: Domains\Growth\Application\Service\GrowthSignalPollingIncidentService
+
+  App\Application\Growth\Command\RunGrowthSignalPollingCommandHandler:
+    arguments:
+      $targets: '@Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface'
+      $collectors: '@Domains\Growth\Application\Contract\GrowthSignalCollectorBoundary'
+      $health: '@Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface'
+      $incidents: '@Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary'
+      $backoff: '@Domains\Growth\Domain\SignalPollingBackoffPolicy'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $organizationLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
+
+  App\Application\Growth\Command\RunGrowthAutonomousOutreachCommandHandler:
+    arguments:
+      $repository: '@Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface'
+      $outreach: '@Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID)%'
+      $organizationLimit: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $recommendationLimit: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_RECOMMENDATION_LIMIT)%'
+
+  App\Application\Growth\Command\RunGrowthAutonomousContentCommandHandler:
+    arguments:
+      $autonomy: '@Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface'
+      $repository: '@Domains\Growth\Application\Contract\GrowthAutonomousContentRepositoryInterface'
+      $content: '@Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES)%'
+      $organizationLimit: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $draftLimit: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_DRAFT_LIMIT)%'
+
+  App\Application\Growth\Command\RunGrowthOutreachSequencesCommandHandler:
+    arguments:
+      $repository: '@Domains\Growth\Application\Contract\GrowthOutreachSequenceRepositoryInterface'
+      $sequences: '@Domains\Growth\Application\Contract\GrowthOutreachSequenceBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID)%'
+      $organizationLimit: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ORGANIZATION_LIMIT)%'
+
+  App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider:
+    arguments:
+      $targets: '@Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInterface'
+      $health: '@Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface'
+      $incidents: '@Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $enabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
+      $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
+      $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
+
+  Domains\Growth\Bootstrap\GrowthDomainModule:
+    arguments:
+      $sendMessage: '@Domains\Growth\Automation\Action\GrowthSendMessageHandler'
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
     arguments:
@@ -796,6 +1501,9 @@ services:
   diagnosticNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\DiagnosticWebProvider
 
+  growthNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\GrowthWebProvider
+
   App\Infrastructure\Module\PdoModuleStateRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -831,6 +1539,7 @@ services:
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
+        - '@Domains\Growth\Bootstrap\GrowthDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
@@ -1021,6 +1730,10 @@ services:
         sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
         diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
         platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
+        growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
+        growth.response-classification.v1: '@Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer'
+        growth.conversation-routing.v1: '@Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer'
+        growth.market-opportunity.v1: '@Domains\Growth\Automation\Event\GrowthMarketOpportunityConsumer'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:
@@ -1354,6 +2067,38 @@ services:
     arguments:
       $config: '@cos.database.pdo'
 
+  Infrastructure\Platform\Notification\BuiltinNotificationTemplateRepository: ~
+
+  Platform\Notification\Contract\TemplateRepositoryInterface:
+    alias: Infrastructure\Platform\Notification\BuiltinNotificationTemplateRepository
+
+  Infrastructure\Platform\Notification\SimpleNotificationTemplateRenderer: ~
+
+  Platform\Notification\Contract\TemplateRendererInterface:
+    alias: Infrastructure\Platform\Notification\SimpleNotificationTemplateRenderer
+
+  Infrastructure\Platform\Notification\MysqlNotificationDeliveryRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Notification\Contract\DeliveryRepositoryInterface:
+    alias: Infrastructure\Platform\Notification\MysqlNotificationDeliveryRepository
+
+  Infrastructure\Platform\Notification\N8nEmailNotificationChannel:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Notification\Service\NotificationDispatcher:
+    arguments:
+      $channels:
+        - '@Infrastructure\Platform\Notification\N8nEmailNotificationChannel'
+      $templates: '@Platform\Notification\Contract\TemplateRepositoryInterface'
+      $renderer: '@Platform\Notification\Contract\TemplateRendererInterface'
+      $deliveries: '@Platform\Notification\Contract\DeliveryRepositoryInterface'
+
+  Platform\Notification\Contract\NotificationDispatcherInterface:
+    alias: Platform\Notification\Service\NotificationDispatcher
+
   Infrastructure\Media\UploadQuarantineService:
     arguments:
       $rootDirectory: '%kernel.project_dir%/var/quarantine/uploads'
@@ -1494,6 +2239,14 @@ services:
 
   Domains\Content\Application\Contract\InboundContentWebhookInterface:
     alias: Infrastructure\Integration\N8n\N8nWebhookService
+
+  App\Application\Growth\Integration\GrowthExternalSignalWebhook:
+    arguments:
+      $growth: '@Domains\Growth\Application\Contract\GrowthApplicationBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $secret: '%env(GROWTH_SIGNAL_WEBHOOK_SECRET)%'
+      $actorId: '%env(int:GROWTH_SIGNAL_WEBHOOK_ACTOR_ID)%'
+      $maxClockSkew: '%env(int:GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW)%'
 
   App\Web\PublicEdge\PublicEdgeController:
     public: true

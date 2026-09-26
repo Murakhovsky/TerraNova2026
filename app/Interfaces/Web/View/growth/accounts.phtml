@@ -1,0 +1,53 @@
+<?php
+$workspace=is_array($workspace??null)?$workspace:[];
+$accounts=is_array($workspace['accounts']??null)?$workspace['accounts']:[];
+$q=trim((string)$this->request->getQuery('q','string',''));
+$rows=[];
+foreach($accounts as $account){
+    $rows[]=[
+        'account'=>['primary'=>$account['name']??'Account','secondary'=>$account['canonical_domain']??''],
+        'fit'=>$account['latest_fit_score']===null?'—':((int)$account['latest_fit_score']).'%',
+        'committee'=>$account['committee_coverage']===null?'—':((int)$account['committee_coverage']).'%',
+        'candidates'=>(int)($account['candidate_count']??0),
+        'contacts'=>(int)($account['contact_count']??0),
+        'observed'=>$account['latest_observed_at']??'—',
+        '_href'=>'growth/accounts/'.rawurlencode((string)($account['account_id']??'')),
+    ];
+}
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-workspace>
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Account Intelligence',
+    'title'=>'Accounts',
+    'description'=>'ICP fit, observed change and buying-committee context before Sales receives anything.',
+    'actions'=>[['label'=>'Overview','href'=>'growth','variant'=>'ghost']],
+    'meta'=>['value'=>count($accounts),'label'=>'in selection'],
+  ]); ?>
+
+  <div class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar',[
+      'action'=>'growth/accounts',
+      'method'=>'GET',
+      'fields'=>[
+        ['name'=>'q','type'=>'search','label'=>'Search account/domain','value'=>$q,'grow'=>true],
+      ],
+      'actions'=>[['label'=>'Filter','type'=>'submit','variant'=>'primary']],
+    ]); ?>
+  </div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'account','label'=>'Account'],
+        ['key'=>'fit','label'=>'ICP fit'],
+        ['key'=>'committee','label'=>'Committee'],
+        ['key'=>'candidates','label'=>'Candidates'],
+        ['key'=>'contacts','label'=>'Contacts'],
+        ['key'=>'observed','label'=>'Last observed'],
+      ],
+      'rows'=>$rows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No Growth accounts match this query.',
+    ]); ?>
+  </section>
+</main>

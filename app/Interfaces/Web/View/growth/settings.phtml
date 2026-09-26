@@ -1,0 +1,194 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$limits=is_array($workspace['engagement_limits']??null)?$workspace['engagement_limits']:[];
+$effective=is_array($limits['effective']??null)?$limits['effective']:[];
+$profile=is_array($limits['profile']??null)?$limits['profile']:null;
+$channelLimits=is_array($effective['channel_daily_limits']??null)?$effective['channel_daily_limits']:[];
+$activation=is_array($workspace['engagement_activation']??null)?$workspace['engagement_activation']:[];
+$activationEffective=is_array($activation['effective']??null)?$activation['effective']:[];
+$activationProfile=is_array($activation['profile']??null)?$activation['profile']:null;
+$channelModes=is_array($activationEffective['channel_modes']??null)?$activationEffective['channel_modes']:[];
+$autonomy=is_array($workspace['engagement_autonomy']??null)?$workspace['engagement_autonomy']:[];
+$autonomyEffective=is_array($autonomy['effective']??null)?$autonomy['effective']:[];
+$autonomyProfile=is_array($autonomy['profile']??null)?$autonomy['profile']:null;
+$autonomyChannels=is_array($autonomyEffective['allowed_channels']??null)?$autonomyEffective['allowed_channels']:[];
+$autonomyStatuses=is_array($autonomyEffective['allowed_statuses']??null)?$autonomyEffective['allowed_statuses']:[];
+$contentReview=is_array($workspace['engagement_content_review']??null)?$workspace['engagement_content_review']:[];
+$contentReviewEffective=is_array($contentReview['effective']??null)?$contentReview['effective']:[];
+$contentReviewProfile=is_array($contentReview['profile']??null)?$contentReview['profile']:null;
+$contentReviewModes=is_array($contentReviewEffective['channel_modes']??null)?$contentReviewEffective['channel_modes']:[];
+$contentReviewOptions=['blocked'=>'Blocked','human_review'=>'Human review','policy_auto_approve'=>'Policy auto-approve'];
+$sequencePolicy=is_array($workspace['engagement_sequence_policy']??null)?$workspace['engagement_sequence_policy']:[];
+$sequenceEffective=is_array($sequencePolicy['effective']??null)?$sequencePolicy['effective']:[];
+$sequenceProfile=is_array($sequencePolicy['profile']??null)?$sequencePolicy['profile']:null;
+$sequenceChannels=is_array($sequenceEffective['allowed_channels']??null)?$sequenceEffective['allowed_channels']:[];
+$modeLabel=static fn(string $mode):string=>match($mode){'blocked'=>'Blocked','auto'=>'Auto',default=>'Approval required'};
+$modeOptions=['blocked'=>'Blocked','approval_required'=>'Approval required','auto'=>'Auto'];
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-settings data-csrf="<?php echo $h($csrfToken??''); ?>">
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Governance',
+    'title'=>'Outreach governance',
+    'description'=>'Tenant-owned activation, autonomy, volume and cooldown policy for pre-handoff execution.',
+    'actions'=>[
+      ['label'=>'Growth overview','href'=>'growth','variant'=>'ghost'],
+      ['label'=>'Opportunities','href'=>'growth/candidates','variant'=>'ghost'],
+    ],
+  ]); ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section">
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Sequences','value'=>!empty($sequenceEffective['enabled'])?'ENABLED':'OFF']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Autonomous trigger','value'=>!empty($autonomyEffective['enabled'])?'ENABLED':'OFF']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Min autonomy confidence','value'=>isset($autonomyEffective['min_confidence'])?round((float)$autonomyEffective['min_confidence']*100).'%':'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Email mode','value'=>$modeLabel((string)($channelModes['email']??'approval_required'))]); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'LinkedIn mode','value'=>$modeLabel((string)($channelModes['linkedin']??'approval_required'))]); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Phone mode','value'=>$modeLabel((string)($channelModes['phone']??'approval_required'))]); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Daily limit','value'=>$effective['daily_limit']??'—']); ?>
+    <?php $this->partial('components/ui/kpi_card',['label'=>'Contact cooldown','value'=>isset($effective['contact_cooldown_hours'])?$effective['contact_cooldown_hours'].' h':'—']); ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Follow-up orchestration</p><h2>Outreach sequence policy</h2></div></div>
+    <p class="tn-growth-muted">Safe default is OFF. A sequence starts only from pre-handoff executions created after the current enablement window. Every follow-up still passes autonomy, AUTO activation, content review, quota and cooldown governance.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-sequence-settings>
+        <label class="tn-ui-field"><span><input type="checkbox" name="enabled" value="1" <?php echo !empty($sequenceEffective['enabled'])?'checked':''; ?>> Enable autonomous follow-up sequences</span></label>
+        <fieldset class="tn-ui-field"><legend>Allowed sequence channels</legend>
+          <?php foreach(['email'=>'Email','linkedin'=>'LinkedIn','phone'=>'Phone'] as $value=>$label): ?>
+            <label><input type="checkbox" name="allowed_channels" value="<?php echo $h($value); ?>" <?php echo in_array($value,$sequenceChannels,true)?'checked':''; ?>> <?php echo $h($label); ?></label>
+          <?php endforeach; ?>
+        </fieldset>
+        <label class="tn-ui-field"><span>Maximum touches including the first</span><input class="tn-ui-input" name="max_touches" type="number" min="1" max="20" required value="<?php echo $h($sequenceEffective['max_touches']??3); ?>"></label>
+        <label class="tn-ui-field"><span>Follow-up delay, hours</span><input class="tn-ui-input" name="follow_up_delay_hours" type="number" min="1" max="8760" required value="<?php echo $h($sequenceEffective['follow_up_delay_hours']??72); ?>"></label>
+        <label class="tn-ui-field"><span>Maximum advances per scheduler run</span><input class="tn-ui-input" name="max_advances_per_run" type="number" min="1" max="100" required value="<?php echo $h($sequenceEffective['max_advances_per_run']??10); ?>"></label>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why this follow-up authority is appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save sequence policy</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+    <?php if($sequenceProfile): ?>
+      <hr>
+      <p><strong>Latest sequence revision:</strong> <?php echo $h($sequenceProfile['revision']??''); ?> · <?php echo $h($sequenceProfile['created_at']??''); ?></p>
+      <p><strong>Enablement window:</strong> <?php echo $h($sequenceProfile['activation_started_at']??'OFF'); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($sequenceProfile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant sequence override exists. Follow-up automation is disabled.</p>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Autonomous content</p><h2>Draft & review policy</h2></div></div>
+    <p class="tn-growth-muted">Safe default is human review. Policy auto-approve only promotes drafts that meet the confidence threshold, fit the body-length guardrail and contain no declared or deterministic risk flags. Deployment auto-drafting is a separate switch and defaults OFF.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-content-review-settings>
+        <?php foreach(['email'=>'Email','linkedin'=>'LinkedIn','phone'=>'Phone'] as $channel=>$label): ?>
+          <label class="tn-ui-field"><span><?php echo $h($label); ?> content review</span>
+            <select class="tn-ui-input" name="<?php echo $h($channel); ?>_mode" required>
+              <?php foreach($contentReviewOptions as $value=>$option): ?>
+                <option value="<?php echo $h($value); ?>" <?php echo (($contentReviewModes[$channel]??'human_review')===$value)?'selected':''; ?>><?php echo $h($option); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        <?php endforeach; ?>
+        <label class="tn-ui-field"><span>Minimum draft confidence for auto-approval</span><input class="tn-ui-input" name="min_draft_confidence" type="number" min="0" max="1" step="0.01" required value="<?php echo $h($contentReviewEffective['min_draft_confidence']??0.92); ?>"></label>
+        <label class="tn-ui-field"><span>Maximum auto-approved body length</span><input class="tn-ui-input" name="max_body_chars" type="number" min="100" max="10000" required value="<?php echo $h($contentReviewEffective['max_body_chars']??3000); ?>"></label>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why this content review authority is appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save content review policy</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+    <?php if($contentReviewProfile): ?>
+      <hr>
+      <p><strong>Latest content review revision:</strong> <?php echo $h($contentReviewProfile['revision']??''); ?> · <?php echo $h($contentReviewProfile['created_at']??''); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($contentReviewProfile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant content review override exists. Every generated draft requires human review.</p>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Autonomous initiation</p><h2>Trigger policy</h2></div></div>
+    <p class="tn-growth-muted">Safe default is OFF. Enabling this tenant policy is only one gate: deployment scheduling must also be enabled, the recommendation must have a staged payload, its channel activation must be AUTO, and all capacity/cooldown rules still apply.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-autonomy-settings>
+        <label class="tn-ui-field"><span><input type="checkbox" name="enabled" value="1" <?php echo !empty($autonomyEffective['enabled'])?'checked':''; ?>> Enable tenant autonomous trigger</span></label>
+        <label class="tn-ui-field"><span>Minimum recommendation confidence</span><input class="tn-ui-input" name="min_confidence" type="number" min="0" max="1" step="0.01" required value="<?php echo $h($autonomyEffective['min_confidence']??0.90); ?>"></label>
+        <fieldset class="tn-ui-field"><legend>Allowed channels</legend>
+          <?php foreach(['email'=>'Email','linkedin'=>'LinkedIn','phone'=>'Phone'] as $value=>$label): ?>
+            <label><input type="checkbox" name="allowed_channels" value="<?php echo $h($value); ?>" <?php echo in_array($value,$autonomyChannels,true)?'checked':''; ?>> <?php echo $h($label); ?></label>
+          <?php endforeach; ?>
+        </fieldset>
+        <fieldset class="tn-ui-field"><legend>Allowed recommendation states</legend>
+          <?php foreach(['accepted'=>'Accepted','proposed'=>'Proposed (system auto-accepts before execution)'] as $value=>$label): ?>
+            <label><input type="checkbox" name="allowed_statuses" value="<?php echo $h($value); ?>" <?php echo in_array($value,$autonomyStatuses,true)?'checked':''; ?>> <?php echo $h($label); ?></label>
+          <?php endforeach; ?>
+        </fieldset>
+        <label class="tn-ui-field"><span>Maximum actions per scheduler run</span><input class="tn-ui-input" name="max_actions_per_run" type="number" min="1" max="100" required value="<?php echo $h($autonomyEffective['max_actions_per_run']??5); ?>"></label>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why this autonomy level is appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save autonomy policy</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+    <?php if($autonomyProfile): ?>
+      <hr>
+      <p><strong>Latest autonomy revision:</strong> <?php echo $h($autonomyProfile['revision']??''); ?> · <?php echo $h($autonomyProfile['created_at']??''); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($autonomyProfile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant autonomy override exists. Autonomous initiation is disabled.</p>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Execution authority</p><h2>Channel activation</h2></div></div>
+    <p class="tn-growth-muted">Blocked prevents new pre-handoff execution. Approval required creates a manager approval. Auto queues the Action without approval and is a mandatory prerequisite for autonomous initiation on that channel.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-activation-settings>
+        <?php foreach(['email'=>'Email','linkedin'=>'LinkedIn','phone'=>'Phone'] as $channel=>$label): ?>
+          <label class="tn-ui-field"><span><?php echo $h($label); ?> execution mode</span>
+            <select class="tn-ui-input" name="<?php echo $h($channel); ?>_mode" required>
+              <?php foreach($modeOptions as $value=>$option): ?>
+                <option value="<?php echo $h($value); ?>" <?php echo (($channelModes[$channel]??'approval_required')===$value)?'selected':''; ?>><?php echo $h($option); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        <?php endforeach; ?>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why this execution authority is appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save activation policy</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+    <?php if($activationProfile): ?>
+      <hr>
+      <p><strong>Latest activation revision:</strong> <?php echo $h($activationProfile['revision']??''); ?> · <?php echo $h($activationProfile['created_at']??''); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($activationProfile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant activation override exists. Safe default is approval required on every channel.</p>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Capacity policy</p><h2>Tenant limits</h2></div></div>
+    <p class="tn-growth-muted">Limits apply regardless of initiation mode. Autonomous execution still obeys organization quota, channel quota and contact cooldown.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-limit-settings>
+        <label class="tn-ui-field"><span>Daily pre-handoff execution limit</span><input class="tn-ui-input" name="daily_limit" type="number" min="1" max="100000" required value="<?php echo $h($effective['daily_limit']??50); ?>"></label>
+        <label class="tn-ui-field"><span>Email daily quota</span><input class="tn-ui-input" name="email_daily_limit" type="number" min="0" max="100000" required value="<?php echo $h($channelLimits['email']??($effective['daily_limit']??50)); ?>"></label>
+        <label class="tn-ui-field"><span>LinkedIn daily quota</span><input class="tn-ui-input" name="linkedin_daily_limit" type="number" min="0" max="100000" required value="<?php echo $h($channelLimits['linkedin']??($effective['daily_limit']??50)); ?>"></label>
+        <label class="tn-ui-field"><span>Phone daily quota</span><input class="tn-ui-input" name="phone_daily_limit" type="number" min="0" max="100000" required value="<?php echo $h($channelLimits['phone']??($effective['daily_limit']??50)); ?>"></label>
+        <label class="tn-ui-field"><span>Contact cooldown, hours</span><input class="tn-ui-input" name="contact_cooldown_hours" type="number" min="1" max="8760" required value="<?php echo $h($effective['contact_cooldown_hours']??24); ?>"></label>
+        <p class="tn-growth-muted">A channel quota of 0 blocks new pre-handoff execution on that channel. The organization-wide daily limit still applies across all channels.</p>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why these limits are appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save tenant limits</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+    <?php if($profile): ?>
+      <hr>
+      <p><strong>Latest limit revision:</strong> <?php echo $h($profile['revision']??''); ?> · <?php echo $h($profile['created_at']??''); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($profile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant limit override exists yet. Deployment defaults are currently effective.</p>
+    <?php endif; ?>
+  </section>
+</main>

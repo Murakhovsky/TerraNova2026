@@ -1,0 +1,76 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$brief=is_array($workspace['account']??null)?$workspace['account']:[];
+$account=is_array($brief['account']??null)?$brief['account']:$brief;
+$snapshot=is_array($brief['latest_snapshot']??null)?$brief['latest_snapshot']:null;
+$match=is_array($brief['icp_match']??null)?$brief['icp_match']:null;
+$committee=is_array($workspace['committee']??null)?$workspace['committee']:[];
+$assessment=is_array($committee['assessment']??null)?$committee['assessment']:null;
+$candidates=is_array($workspace['candidates']??null)?$workspace['candidates']:[];
+$rows=[];
+foreach($candidates as $candidate){
+    $status=strtolower((string)($candidate['status']??''));
+    $rows[]=[
+        'candidate'=>['primary'=>$candidate['candidate_id']??'Opportunity','secondary'=>$candidate['opportunity_type']??''],
+        'mode'=>$candidate['growth_mode']??'—',
+        'status'=>['label'=>strtoupper($status?:'unknown'),'tone'=>in_array($status,['qualified','handed_off'],true)?'positive':'neutral'],
+        'target'=>$candidate['target_domain']??'—',
+        '_href'=>'growth/candidates/'.rawurlencode((string)($candidate['candidate_id']??'')),
+    ];
+}
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace">
+  <?php $this->partial('components/ui/entity_header',[
+    'eyebrow'=>'Growth · Account Intelligence',
+    'identity'=>$account['account_id']??'',
+    'title'=>$account['name']??'Account',
+    'subtitle'=>$account['canonical_domain']??'',
+    'status'=>['label'=>$match?'ICP SCORED':'DISCOVERED','tone'=>$match?'positive':'neutral'],
+    'meta'=>[
+      ['label'=>'ICP fit','value'=>$match?((int)($match['fit_score']??0)).'%':'—'],
+      ['label'=>'Committee coverage','value'=>$assessment?((int)($assessment['coverage_score']??0)).'%':'—'],
+      ['label'=>'Candidates','value'=>count($candidates)],
+      ['label'=>'Last observed','value'=>$snapshot['observed_at']??'—'],
+    ],
+    'actions'=>[
+      ['label'=>'All accounts','href'=>'growth/accounts','variant'=>'ghost'],
+      ['label'=>'Growth overview','href'=>'growth','variant'=>'ghost'],
+    ],
+  ]); ?>
+
+  <div class="tn-ui-split tn-workspace-section">
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Observed context</p><h2>Account Snapshot</h2></div></div>
+      <?php if($snapshot): ?>
+        <p><strong>Signal types:</strong> <?php echo $h(implode(', ',(array)($snapshot['signal_types']??[]))); ?></p>
+        <p><strong>Technologies:</strong> <?php echo $h(implode(', ',(array)($snapshot['technologies']??[]))); ?></p>
+        <p><strong>Recent changes:</strong> <?php echo $h(implode(' · ',(array)($snapshot['recent_changes']??[]))); ?></p>
+      <?php else: ?><p>No account snapshot yet.</p><?php endif; ?>
+    </section>
+    <section class="tn-ui-panel">
+      <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Buying Committee</p><h2>Coverage & relationships</h2></div></div>
+      <?php if($assessment): ?>
+        <p><strong>Coverage:</strong> <?php echo (int)($assessment['coverage_score']??0); ?>%</p>
+        <p><strong>Relationship:</strong> <?php echo (int)($assessment['relationship_score']??0); ?>%</p>
+        <p><strong>Gaps:</strong> <?php echo $h(implode(', ',(array)($assessment['gaps']??[]))); ?></p>
+        <p><strong>Champions:</strong> <?php echo $h(implode(', ',(array)($assessment['champion_contact_ids']??[]))); ?></p>
+      <?php else: ?><p>No Buying Committee assessment yet.</p><?php endif; ?>
+    </section>
+  </div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Opportunity history</p><h2>Related Candidates</h2></div></div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'candidate','label'=>'Candidate'],
+        ['key'=>'mode','label'=>'Mode'],
+        ['key'=>'status','label'=>'Status'],
+        ['key'=>'target','label'=>'Target'],
+      ],
+      'rows'=>$rows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No Opportunity Candidates for this account.',
+    ]); ?>
+  </section>
+</main>

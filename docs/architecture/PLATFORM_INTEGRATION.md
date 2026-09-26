@@ -33,5 +33,6 @@ A domain service must never call Telegram, Gmail, Google, OpenAI, a marketplace,
 - `ExternalApiClientInterface`
 - `ConnectorRegistryInterface`
 - `CredentialVaultInterface`
+- `IntegrationOutboxInterface` — durable provider-neutral enqueue boundary for external integration work
 
 Vendor SDKs belong to `Infrastructure/Integration/<Provider>` adapters. Existing legacy integrations migrate behind these contracts incrementally.

@@ -86,6 +86,12 @@ foreach ($modules as $moduleId => $module) {
 
 $eventCatalogues = [
     [
+        'domain' => 'growth',
+        'class' => 'Domains\\Growth\\Automation\\Event\\GrowthEventType',
+        'method' => 'values',
+        'source' => 'app/Domains/Growth/Automation/Event/GrowthEventType.php',
+    ],
+    [
         'domain' => 'property',
         'class' => 'Domains\\Property\\Automation\\Event\\PropertyEventType',
         'method' => 'values',

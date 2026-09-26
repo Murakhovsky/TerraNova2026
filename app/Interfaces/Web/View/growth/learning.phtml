@@ -1,0 +1,294 @@
+<?php
+$h=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$workspace=is_array($workspace??null)?$workspace:[];
+$learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
+$outcomes=is_array($workspace['outcomes']??null)?$workspace['outcomes']:[];
+$counts=is_array($learning['counts']??null)?$learning['counts']:[];
+$wonValues=is_array($learning['won_value_by_currency']??null)?$learning['won_value_by_currency']:[];
+$topReasons=is_array($learning['top_reasons']??null)?$learning['top_reasons']:[];
+$optimization=is_array($workspace['optimization']??null)?$workspace['optimization']:[];
+$optimizationContext=is_array($optimization['context']??null)?$optimization['context']:[];
+$optimizationRecommendation=is_array($optimization['latest_recommendation']??null)?$optimization['latest_recommendation']:null;
+$optimizationEvidence=is_array($optimizationContext['evidence']??null)?$optimizationContext['evidence']:[];
+$optimizationTargets=is_array($optimizationContext['active_targets']??null)?$optimizationContext['active_targets']:[];
+$optimizationSample=(int)($optimizationContext['terminal_sample_size']??0);
+$optimizationMinimum=(int)($optimizationContext['minimum_terminal_sample']??8);
+$activeTargetCount=0;
+foreach(['icp_profiles','qualification_policies'] as $group){
+    if(is_array($optimizationTargets[$group]??null))$activeTargetCount+=count($optimizationTargets[$group]);
+}
+$currentOptimizationTarget=null;
+if($optimizationRecommendation){
+    $group=($optimizationRecommendation['target_type']??'')==='icp_profile'?'icp_profiles':'qualification_policies';
+    foreach(is_array($optimizationTargets[$group]??null)?$optimizationTargets[$group]:[] as $target){
+        if(
+            is_array($target)
+            &&($target['target_id']??null)===($optimizationRecommendation['target_id']??null)
+            &&(int)($target['revision']??0)===(int)($optimizationRecommendation['base_revision']??0)
+        ){
+            $currentOptimizationTarget=$target;
+            break;
+        }
+    }
+}
+$optimizationStatus=strtolower((string)($optimizationRecommendation['status']??''));
+$optimizationTone=match($optimizationStatus){
+    'accepted','materialized'=>'positive',
+    'proposed'=>'info',
+    'stale','superseded'=>'warning',
+    'dismissed'=>'neutral',
+    default=>'neutral',
+};
+$prettyJson=static function(mixed $value):string{
+    $encoded=json_encode($value,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    return is_string($encoded)?$encoded:'{}';
+};
+$q=trim((string)$this->request->getQuery('q','string',''));
+$outcomeType=trim((string)$this->request->getQuery('outcome_type','string',''));
+$currency=strtoupper(trim((string)$this->request->getQuery('currency','string','')));
+$outcomeOptions=[
+  ''=>'All outcomes','contacted'=>'Contacted','qualified'=>'Qualified','disqualified'=>'Disqualified',
+  'reply_received'=>'Reply received','meeting_completed'=>'Meeting completed','won'=>'Won','lost'=>'Lost',
+];
+$rows=[];
+foreach($outcomes as $outcome){
+    $type=strtolower((string)($outcome['outcome_type']??''));
+    $tone=match($type){
+        'won'=>'positive',
+        'lost','disqualified'=>'danger',
+        'qualified','reply_received','meeting_completed'=>'info',
+        default=>'neutral',
+    };
+    $value=$outcome['economic_value']===null?'—':trim((string)$outcome['economic_value'].' '.(string)($outcome['currency']??''));
+    $rows[]=[
+        'outcome'=>[
+            'primary'=>strtoupper($type?:'outcome'),
+            'secondary'=>$outcome['outcome_id']??'',
+        ],
+        'opportunity'=>[
+            'primary'=>$outcome['account_name']??$outcome['subject_id']??$outcome['candidate_id']??'Opportunity',
+            'secondary'=>$outcome['candidate_id']??'',
+        ],
+        'status'=>['label'=>strtoupper($type?:'unknown'),'tone'=>$tone],
+        'reference'=>[
+            'primary'=>$outcome['reference_type']??'—',
+            'secondary'=>$outcome['reference_id']??'',
+        ],
+        'reason'=>[
+            'primary'=>$outcome['reason_code']??'—',
+            'secondary'=>$outcome['reason_text']??'',
+        ],
+        'value'=>$value,
+        'observed'=>$outcome['observed_at']??'—',
+        '_href'=>'growth/candidates/'.rawurlencode((string)($outcome['candidate_id']??'')),
+    ];
+}
+$valueSummary=$wonValues
+  ? implode(' · ',array_map(static fn($currency,$value)=>$currency.' '.number_format((float)$value,0,'.',' '),array_keys($wonValues),array_values($wonValues)))
+  : '—';
+?>
+<main class="tn-page tn-workspace-page tn-growth-workspace" data-growth-learning data-csrf="<?php echo $h($csrfToken??''); ?>">
+  <?php $this->partial('components/ui/page_header',[
+    'eyebrow'=>'Growth · Closed-loop learning',
+    'title'=>'Outcomes, not vanity metrics',
+    'description'=>'Downstream Sales outcomes linked back to the Opportunity Candidate that created them. This is feedback evidence, not duplicated Sales state.',
+    'actions'=>[
+      ['label'=>'Opportunities','href'=>'growth/candidates','variant'=>'primary'],
+      ['label'=>'Overview','href'=>'growth','variant'=>'ghost'],
+    ],
+    'meta'=>['value'=>$learning['outcome_total']??0,'label'=>'observed outcomes'],
+  ]); ?>
+
+  <section class="tn-ui-kpi-grid tn-workspace-section">
+    <?php foreach([
+      ['Candidates with feedback',$learning['candidate_total']??0,'neutral'],
+      ['Contacted',$counts['contacted']??0,'neutral'],
+      ['Qualified',$counts['qualified']??0,'info'],
+      ['Replies',$counts['reply_received']??0,'info'],
+      ['Meetings',$counts['meeting_completed']??0,'info'],
+      ['Won',$counts['won']??0,'positive'],
+      ['Lost',$counts['lost']??0,'danger'],
+      ['Won value',$valueSummary,'positive'],
+    ] as [$label,$value,$tone]): ?>
+      <?php $this->partial('components/ui/kpi_card',['label'=>$label,'value'=>$value,'tone'=>$tone]); ?>
+    <?php endforeach; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head">
+      <div>
+        <p class="tn-ui-eyebrow">Closed-loop optimization</p>
+        <h2>Learning → governed draft</h2>
+      </div>
+      <?php if($optimizationRecommendation): ?>
+        <span class="tn-ui-badge tn-ui-badge--<?php echo $h($optimizationTone); ?>"><?php echo $h(strtoupper($optimizationStatus)); ?></span>
+      <?php endif; ?>
+    </div>
+
+    <p class="tn-growth-muted">
+      <?php echo $h($optimizationSample); ?> terminal Candidate outcomes in the bounded learning sample
+      · minimum <?php echo $h($optimizationMinimum); ?>
+      · <?php echo $h($activeTargetCount); ?> active optimization targets.
+      Recommendations can create a draft revision only. Activation remains a separate human-controlled operation.
+    </p>
+
+    <?php if($optimizationRecommendation): ?>
+      <div class="tn-growth-optimization-meta">
+        <span><strong>Target:</strong> <?php echo $h(($optimizationRecommendation['target_type']??'').' · '.($optimizationRecommendation['target_id']??'')); ?></span>
+        <span><strong>Base:</strong> r<?php echo $h($optimizationRecommendation['base_revision']??''); ?></span>
+        <span><strong>Confidence:</strong> <?php echo round((float)($optimizationRecommendation['confidence']??0)*100); ?>%</span>
+        <span><strong>Model:</strong> <?php echo $h(($optimizationRecommendation['provider']??'').' / '.($optimizationRecommendation['model']??'')); ?></span>
+      </div>
+
+      <h3><?php echo $h($optimizationRecommendation['proposed_name']??'Optimization draft'); ?></h3>
+      <p><?php echo $h($optimizationRecommendation['rationale']??''); ?></p>
+
+      <div class="tn-growth-optimization-grid">
+        <article class="tn-growth-optimization-card">
+          <p class="tn-ui-eyebrow">Current active criteria</p>
+          <h3><?php echo $h($currentOptimizationTarget['name']??'Base target snapshot'); ?></h3>
+          <pre><?php echo $h($prettyJson($currentOptimizationTarget['criteria']??[])); ?></pre>
+        </article>
+        <article class="tn-growth-optimization-card">
+          <p class="tn-ui-eyebrow">Proposed draft criteria</p>
+          <h3><?php echo $h($optimizationRecommendation['proposed_name']??'Proposed revision'); ?></h3>
+          <pre><?php echo $h($prettyJson($optimizationRecommendation['proposed_criteria']??[])); ?></pre>
+        </article>
+      </div>
+
+      <div class="tn-growth-optimization-grid tn-workspace-section">
+        <article class="tn-growth-optimization-card">
+          <p class="tn-ui-eyebrow">Risks</p>
+          <?php $risks=is_array($optimizationRecommendation['risks']??null)?$optimizationRecommendation['risks']:[]; ?>
+          <?php if($risks): ?><ul><?php foreach($risks as $risk): ?><li><?php echo $h($risk); ?></li><?php endforeach; ?></ul>
+          <?php else: ?><p class="tn-growth-muted">No explicit risks returned.</p><?php endif; ?>
+        </article>
+        <article class="tn-growth-optimization-card">
+          <p class="tn-ui-eyebrow">Assumptions</p>
+          <?php $assumptions=is_array($optimizationRecommendation['assumptions']??null)?$optimizationRecommendation['assumptions']:[]; ?>
+          <?php if($assumptions): ?><ul><?php foreach($assumptions as $assumption): ?><li><?php echo $h($assumption); ?></li><?php endforeach; ?></ul>
+          <?php else: ?><p class="tn-growth-muted">No explicit assumptions returned.</p><?php endif; ?>
+        </article>
+      </div>
+
+      <p><strong>Evidence:</strong>
+        <?php echo $h(implode(' · ',array_values(array_map('strval',is_array($optimizationRecommendation['evidence_ids']??null)?$optimizationRecommendation['evidence_ids']:[])))); ?>
+      </p>
+
+      <?php if(!empty($optimizationRecommendation['decision_reason'])): ?>
+        <p><strong>Decision:</strong> <?php echo $h($optimizationRecommendation['decision_reason']); ?></p>
+      <?php endif; ?>
+      <?php if(($optimizationRecommendation['materialized_revision']??null)!==null): ?>
+        <p><strong>Draft created:</strong> revision <?php echo $h($optimizationRecommendation['materialized_revision']); ?>. It is not active until separately approved and activated.</p>
+      <?php endif; ?>
+
+      <?php if(!empty($canManageGrowth)&&$optimizationStatus==='proposed'): ?>
+        <div class="tn-growth-optimization-actions">
+          <form data-growth-optimization-decision="accept" data-recommendation-id="<?php echo $h($optimizationRecommendation['recommendation_id']??''); ?>">
+            <label class="tn-ui-field"><span>Accept reason</span><input class="tn-ui-input" name="reason" required maxlength="2000" placeholder="Why this optimization should become a draft"></label>
+            <button class="tn-ui-button tn-ui-button--primary" type="submit">Accept recommendation</button>
+            <span data-growth-form-status></span>
+          </form>
+          <form data-growth-optimization-decision="dismiss" data-recommendation-id="<?php echo $h($optimizationRecommendation['recommendation_id']??''); ?>">
+            <label class="tn-ui-field"><span>Dismiss reason</span><input class="tn-ui-input" name="reason" required maxlength="2000" placeholder="Why this recommendation should not proceed"></label>
+            <button class="tn-ui-button tn-ui-button--ghost" type="submit">Dismiss</button>
+            <span data-growth-form-status></span>
+          </form>
+        </div>
+      <?php elseif(!empty($canManageGrowth)&&$optimizationStatus==='accepted'): ?>
+        <button
+          class="tn-ui-button tn-ui-button--primary"
+          type="button"
+          data-growth-optimization-materialize
+          data-recommendation-id="<?php echo $h($optimizationRecommendation['recommendation_id']??''); ?>"
+        >Create draft revision</button>
+      <?php elseif($optimizationStatus==='stale'): ?>
+        <p class="tn-growth-error">The base policy changed before materialization. Generate a fresh optimization recommendation.</p>
+      <?php endif; ?>
+    <?php else: ?>
+      <p class="tn-growth-muted">No learning optimization recommendation has been generated yet.</p>
+    <?php endif; ?>
+
+    <?php if(!empty($canManageGrowth)&&$optimizationSample>=$optimizationMinimum&&$activeTargetCount>0): ?>
+      <div class="tn-growth-optimization-actions">
+        <button class="tn-ui-button tn-ui-button--ghost" type="button" data-growth-optimization-generate>
+          <?php echo $optimizationRecommendation?'Generate fresh recommendation':'Generate optimization recommendation'; ?>
+        </button>
+      </div>
+    <?php elseif(!empty($canManageGrowth)): ?>
+      <p class="tn-growth-muted">Generation unlocks when the minimum terminal sample and at least one active ICP / Qualification Policy target are available.</p>
+    <?php endif; ?>
+    <p class="tn-growth-action-status" data-growth-optimization-status></p>
+
+    <?php if($optimizationEvidence): ?>
+      <details class="tn-workspace-section">
+        <summary>Deterministic evidence used for optimization</summary>
+        <div class="tn-growth-optimization-evidence">
+          <?php foreach($optimizationEvidence as $evidence): if(!is_array($evidence))continue; ?>
+            <article>
+              <strong><?php echo $h($evidence['id']??'evidence'); ?></strong>
+              <pre><?php echo $h($prettyJson($evidence)); ?></pre>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </details>
+    <?php endif; ?>
+  </section>
+
+  <div class="tn-workspace-section">
+    <?php $this->partial('components/ui/filter_bar',[
+      'action'=>'growth/learning',
+      'method'=>'GET',
+      'fields'=>[
+        ['name'=>'q','type'=>'search','label'=>'Candidate / account / reference / reason','value'=>$q,'grow'=>true],
+        ['name'=>'outcome_type','type'=>'select','label'=>'Outcome','value'=>$outcomeType,'options'=>$outcomeOptions],
+        ['name'=>'currency','type'=>'text','label'=>'Currency','value'=>$currency],
+      ],
+      'actions'=>[['label'=>'Filter','type'=>'submit','variant'=>'primary']],
+    ]); ?>
+  </div>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Outcome stream</p><h2>Observed feedback</h2></div><span><?php echo count($outcomes); ?></span></div>
+    <?php $this->partial('components/ui/data_table',[
+      'columns'=>[
+        ['key'=>'opportunity','label'=>'Opportunity'],
+        ['key'=>'status','label'=>'Outcome'],
+        ['key'=>'reference','label'=>'Sales reference'],
+        ['key'=>'reason','label'=>'Reason'],
+        ['key'=>'value','label'=>'Economic value'],
+        ['key'=>'observed','label'=>'Observed'],
+      ],
+      'rows'=>$rows,
+      'responsive'=>'cards',
+      'emptyMessage'=>'No downstream outcomes match these filters.',
+    ]); ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Reason evidence</p><h2>Lost / disqualified reasons</h2></div></div>
+    <?php if($topReasons): ?>
+      <?php
+      $reasonRows=[];
+      foreach($topReasons as $reason){
+          $reasonRows[]=[
+              'outcome'=>strtoupper((string)($reason['outcome_type']??'')),
+              'reason'=>$reason['reason_code']??'—',
+              'count'=>(int)($reason['total']??0),
+          ];
+      }
+      $this->partial('components/ui/data_table',[
+        'columns'=>[
+          ['key'=>'outcome','label'=>'Outcome'],
+          ['key'=>'reason','label'=>'Reason code'],
+          ['key'=>'count','label'=>'Count'],
+        ],
+        'rows'=>$reasonRows,
+        'responsive'=>'cards',
+      ]);
+      ?>
+    <?php else: ?>
+      <p class="tn-growth-muted">No explicit lost or disqualified reason codes observed yet.</p>
+    <?php endif; ?>
+  </section>
+</main>

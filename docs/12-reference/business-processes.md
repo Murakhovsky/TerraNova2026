@@ -19,6 +19,7 @@ generated: true
 | Процес | Domain | Бізнес-стан | Verification | Кроків | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
+| Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
@@ -37,6 +38,7 @@ generated: true
 | Процес | Кроків з owner | Capability mapped | Capability gaps | Cross-domain кроки | Mapped кроки | Evidence-verified кроки | Runtime-backed кроки | Critical source-verified | Critical runtime-verified |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
+| Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
@@ -72,6 +74,37 @@ generated: true
 | Record findings and recommendation | deterministic evaluation engine | `diagnostic` | gap: `missing-domain-capability` | `state` | так | use_case `RecordDiagnosticResult` [source] |
 | Complete coherent session | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `CompleteDiagnosticSession` [source] |
 | Review / accept recommendation | reviewer / decision maker | `diagnostic` | gap: `missing-domain-capability` | `decision` | так | use_case `AcceptDiagnosticRecommendation` [source] |
+
+## Signal → Qualified Opportunity Handoff
+
+- **Process ID:** `growth.opportunity-candidate-to-handoff`
+- **Schema:** `v4`
+- **Domain:** `growth`
+- **Бізнес-стан:** `to-be`
+- **Покриття capabilities:** 6/6 кроків
+- **Cross-domain кроки:** 0/6
+- **Derived verification:** `source-verified`
+- **Тригер:** An observable market or business signal may represent actionable value for the organization
+- **Workflow:** [Signal → Qualified Opportunity Handoff](../02-workflows/growth-opportunity-candidate-to-handoff.md)
+
+**Результати**
+
+- Observed facts remain separate from interpretation
+- Opportunity rationale and uncertainty are explicit
+- Fit, need, timing, access and value are scored with evidence
+- Non-actionable candidates can be monitored or disqualified
+- Qualified candidates become explicit handoff packages without creating a Sales deal inside Growth
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Detect opportunity candidate | Growth automation | `growth` | `growth.signal.detect` | `state` | так | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public static function detect(` [source] |
+| Research candidate and build rationale | growth operator | `growth` | `growth.candidate.research` | `operation` | так | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public function markResearched(` [source]<br>source `app/Domains/Growth/Domain/OpportunityRationale.php` [source] |
+| Score evidence-backed dimensions | Growth automation | `growth` | `growth.candidate.score` | `operation` | так | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public function applyScore(` [source]<br>source `app/Domains/Growth/Domain/ScoreDimension.php` [source] |
+| Qualify or monitor candidate | growth operator | `growth` | `growth.candidate.qualify` | `decision` | так | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public function qualify(` [source] |
+| Monitor until timing changes | Growth automation | `growth` | `growth.candidate.monitor` | `state` | ні | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public function monitor(` [source] |
+| Prepare opportunity handoff | growth operator | `growth` | `growth.handoff.prepare` | `outcome` | так | use_case `PrepareOpportunityHandoff` [source]<br>source `app/Domains/Growth/Application/DTO/OpportunityHandoff.php` · `public static function fromCandidate(` [source] |
 
 ## Property Submission → Publication
 
