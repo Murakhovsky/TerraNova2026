@@ -54,6 +54,9 @@ kind: architecture
 | VR-040 | `/contacts` | Public | Brand / Sales | Public Detail / Marketing + Form | P0 | Twig | DONE |
 | VR-041 | `/it` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
 | VR-042 | `/art` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-043 | `/blog` | Public | Content | Public Catalog | P0 | Twig | DONE |
+| VR-044 | `/blog/{slug}` | Public | Content | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-045 | `/guide/{slug}` | Public | Content | Public Detail / Marketing | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -264,3 +267,26 @@ Production migration units VR-033…042 завершені.
 - нові `tn-*` primitives = **0**.
 
 Наступна production migration family: **Phase 10 — Content**.
+
+## Фаза 10 — Content
+
+VR-043 переводить `/blog` на canonical Public Catalog: Application Query → Presenter/ViewModel → Twig, із server-side pagination та empty state без PHTML ownership.
+
+VR-044 переводить `/blog/{slug}` на Public Detail / Marketing: published article читається через QueryBus, metadata/schema формуються у Presenter/ViewModel, article body лишається керованим Content payload.
+
+VR-045 переводить `/guide/{slug}` на той самий canonical Public Detail / Marketing runtime для SEO landing content без окремого frontend stack.
+
+## Фаза 10 — завершення Content
+
+Production migration units VR-043…045 завершені.
+
+- `/blog` → canonical Public Catalog;
+- `/blog/{slug}` і `/guide/{slug}` → canonical Public Detail / Marketing;
+- public Content reads проходять через Application QueryBus;
+- canonical Twig templates не мають `tn-*`, inline style або browser handlers;
+- legacy `app/Interfaces/Web/View/blog/index.phtml` = **0**;
+- legacy `app/Interfaces/Web/View/blog/show.phtml` = **0**;
+- legacy `app/Interfaces/Web/View/blog/landing.phtml` = **0**;
+- page-specific Content JS/CSS = **0**.
+
+Наступна production migration family: **Phase 11 — Public COS**.

@@ -129,6 +129,7 @@ jobs:
           php tests/architecture/web_experience_wave13_property_submit.php
           php tests/architecture/web_experience_wave13_public_property_complete.php
           php tests/architecture/web_experience_wave13_public_brand.php
+          php tests/architecture/web_experience_wave13_public_content.php
           php tests/architecture/web_experience_wave13_sales_today.php
           php tests/architecture/web_experience_wave13_toolbar.php
           php tests/architecture/web_experience_wave13_sales_pipeline.php

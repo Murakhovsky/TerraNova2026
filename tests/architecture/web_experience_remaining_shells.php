@@ -48,23 +48,18 @@ if (is_file($root . '/app/Interfaces/Web/View/page/show.phtml')) {
     throw new RuntimeException('Retired Public Brand PHTML restored.');
 }
 
-$blogIndex = $read('app/Interfaces/Web/View/blog/index.phtml');
-foreach (["partial('components/ui/page_header'", "partial('components/ui/state'", "'опублікованих матеріалів'"] as $marker) {
-    $contains($blogIndex, $marker, 'Blog Index canonical shell contract is incomplete.');
+$blogIndex = $read('symfony/templates/experience/public/blog.html.twig');
+foreach (['<twig:CosPageHeader', 'data-cos-public="blog"', '<twig:CosEmptyState'] as $marker) {
+    $contains($blogIndex, $marker, 'Blog Index canonical Twig contract is incomplete.');
 }
-foreach (['tn-breadcrumbs', 'tn-page-hero', 'tn-empty-state'] as $legacyMarker) {
-    $notContains($blogIndex, $legacyMarker, 'Blog Index must not restore legacy outer shell.');
+$blogShow = $read('symfony/templates/experience/public/article.html.twig');
+foreach (['<twig:CosPageHeader', 'data-cos-public="article"', 'application/ld+json'] as $marker) {
+    $contains($blogShow, $marker, 'Blog Article canonical Twig contract is incomplete.');
 }
-
-$blogShow = $read('app/Interfaces/Web/View/blog/show.phtml');
-foreach (['tn-ui-panel', "partial('components/ui/action_bar'", 'tn-ui-eyebrow'] as $marker) {
-    $contains($blogShow, $marker, 'Blog Article canonical shell contract is incomplete.');
-}
-foreach (['tn-breadcrumbs', 'tn-sales-cta', 'tn-section-heading'] as $legacyMarker) {
-    $notContains($blogShow, $legacyMarker, 'Blog Article must not restore legacy shell primitives.');
-}
-foreach (['tn-article__header', 'tn-article__body', 'application/ld+json'] as $marker) {
-    $contains($blogShow, $marker, 'Blog Article specialized content contract must remain intact.');
+foreach ([$blogIndex, $blogShow] as $surface) {
+    foreach (['tn-', 'style=', 'onclick='] as $legacyMarker) {
+        $notContains($surface, $legacyMarker, 'Public Content must not restore legacy/local presentation.');
+    }
 }
 
 $seo = $read('symfony/templates/experience/public/property_seo.html.twig');
@@ -226,23 +221,21 @@ foreach ([
     $contains($routes, $marker, 'Auth/Cabinet route contract is incomplete.');
 }
 
-$guide = $read('app/Interfaces/Web/View/blog/landing.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/action_bar'",
-    'tn-ui-panel',
-    'tn-article__body',
-    'application/ld+json',
-] as $marker) {
-    $contains($guide, $marker, 'Guide landing canonical/content contract is incomplete.');
+$guide = $read('symfony/templates/experience/public/guide.html.twig');
+foreach (['<twig:CosPageHeader', 'data-cos-public="guide"', 'application/ld+json'] as $marker) {
+    $contains($guide, $marker, 'Guide canonical Twig contract is incomplete.');
+}
+foreach (['tn-', 'style=', 'onclick='] as $legacyMarker) {
+    $notContains($guide, $legacyMarker, 'Guide must not restore legacy/local presentation.');
 }
 foreach ([
-    'tn-breadcrumbs',
-    'tn-page-hero',
-    'tn-page-hero__actions',
-    'class="tn-sales-cta"',
-] as $legacyMarker) {
-    $notContains($guide, $legacyMarker, 'Guide landing must not restore legacy outer shell.');
+    'app/Interfaces/Web/View/blog/index.phtml',
+    'app/Interfaces/Web/View/blog/show.phtml',
+    'app/Interfaces/Web/View/blog/landing.phtml',
+] as $retiredContentView) {
+    if (is_file($root . '/' . $retiredContentView)) {
+        throw new RuntimeException('Retired Public Content PHTML restored: ' . $retiredContentView);
+    }
 }
 
 foreach ([
