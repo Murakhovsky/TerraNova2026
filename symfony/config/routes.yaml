@@ -1353,12 +1353,12 @@ cos_web_client_case_property_match_update:
 
 cos_web_property_root:
   path: /property
-  controller: App\Web\Property\PropertyPageController::catalog
+  controller: App\Web\Property\PublicPropertyCatalogController::index
   methods: [GET, HEAD]
 
 cos_web_property_catalog:
   path: /property/catalog
-  controller: App\Web\Property\PropertyPageController::catalog
+  controller: App\Web\Property\PublicPropertyCatalogController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_map:

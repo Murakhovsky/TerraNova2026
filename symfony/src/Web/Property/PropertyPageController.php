@@ -26,24 +26,6 @@ final readonly class PropertyPageController
     ) {
     }
 
-    public function catalog(Request $request): Response
-    {
-        $inboundRequestStatus=$this->publicLeadStatus($request);
-        $variables = $this->catalogData($request);
-        $variables += [
-            'title' => 'Каталог нерухомості',
-            'metaTitle' => 'Каталог нерухомості Terra Nova CLUB',
-            'metaDescription' => 'Нерухомість для купівлі, оренди та інвестицій.',
-            'metaUrl' => $request->getSchemeAndHttpHost() . '/property/catalog',
-            'interfaceSurface' => 'public',
-            'pageAssetEntries' => ['terranova-catalog-api'],
-            'inboundRequestStatus' => $inboundRequestStatus,
-            'managerClientCases' => [],
-            'propertyMatchStatus' => '',
-        ];
-        return $this->html($request, 'property/catalog', $variables, (int) ($variables['_status'] ?? 200));
-    }
-
     public function favour(Request $request): Response
     {
         $variables = $this->catalogData($request, ['page' => 1, 'per_page' => 150]);

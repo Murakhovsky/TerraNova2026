@@ -1712,6 +1712,12 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Property\PublicPropertyCatalogController:
+    public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+    tags: ['controller.service_arguments']
+
   App\Web\Property\PropertyPageController:
     public: true
     arguments:

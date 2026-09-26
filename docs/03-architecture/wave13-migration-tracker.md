@@ -38,8 +38,8 @@ kind: architecture
 | VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
 | VR-025 | `/cabinet` | Portal | Identity | Portal | P0 | Twig | DONE |
 | VR-026 | `/cabinet/submission/{id}` | Portal | Compatibility | Portal | P0 | Twig | DONE |
-| VR-027 | `/` | Public | Core | Public Detail / Marketing | P0 | Twig | QA |
-| VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
+| VR-027 | `/` | Public | Core | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | QA |
 | VR-029 | `/property/show/{slug}` | Public | Property | Public Detail / Marketing | P0 | Twig + Gallery Island | BACKLOG |
 | VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
 | VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
@@ -204,3 +204,6 @@ VR-025…026 завершені. Cabinet home і retired submission працюю
 ## Фаза 8 — Public Property
 
 VR-027 переводить root Public surface з PHTML/Public Vite ownership на Twig Public Detail / Marketing archetype. Контент і destinations не змінюються; `public-surface` Vite залишається живим для ще не мігрованих Property public routes.
+
+
+VR-028 переводить Public Property Catalog на QueryBus/CommandBus + Public Catalog archetype. Favourites залишаються browser-side projection через існуючий API, inbound lead проходить через ReceivePublicLeadCommand; legacy `property/catalog.phtml` видаляється.
