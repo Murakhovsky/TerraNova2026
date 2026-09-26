@@ -24,7 +24,7 @@ $adapter=$read('app/Domains/Growth/Infrastructure/Handoff/ServiceGrowthHandoffTa
 foreach([
     'GrowthHandoffTargetInterface','ServiceApplicationBoundary','ActiveModuleResolver',
     "return 'service'","isEnabled(\$handoff->organizationId,'service')",'createRequest(',
-    "'requester_ref'=>"."'growth:'","'service_request'",
+    'requesterRef=$this->bounded',"'growth:'.\$handoff->subjectType.':'.\$handoff->subjectId","'requester_ref'=>\$requesterRef","'service_request'",
 ] as $needle){
     $assert(str_contains($adapter,$needle),'Growth Service handoff adapter missing: '.$needle);
 }
