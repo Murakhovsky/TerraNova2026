@@ -137,6 +137,20 @@ cos_web_public_art:
   defaults: { slug: 'art' }
   methods: [GET, HEAD]
 
+# Wave 13 Phase 11 — Public COS product surface.
+cos_web_public_cos:
+  path: /cos
+  controller: App\Web\PublicSite\PublicCosController::landing
+  defaults: { lang: 'en' }
+  methods: [GET, HEAD]
+
+cos_web_public_cos_lang:
+  path: /cos/{lang}
+  controller: App\Web\PublicSite\PublicCosController::landing
+  methods: [GET, HEAD]
+  requirements:
+    lang: 'en|de|fr|pl|uk'
+
 cos_web_cabinet:
   path: /cabinet
   controller: App\Web\Portal\CabinetController::index
