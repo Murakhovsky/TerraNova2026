@@ -13,6 +13,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
+use Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Domains\Growth\Domain\AutonomousOutreachEligibilityPolicy;
 use Domains\Growth\Domain\AutonomousOutreachDeferred;
@@ -36,6 +37,7 @@ final readonly class GrowthAutonomousOutreachService implements GrowthAutonomous
         private GrowthEngagementExecutionBoundary $execution,
         private GrowthEngagementExecutionRepositoryInterface $executionRepository,
         private GrowthEngagementActivationProviderInterface $activation,
+        private GrowthOutreachSequenceGuardInterface $sequenceGuard,
         private GrowthMutationReceiptInterface $receipts,
         private TransactionManagerInterface $transactions,
         private EventBus $events,
@@ -204,8 +206,14 @@ final readonly class GrowthAutonomousOutreachService implements GrowthAutonomous
                 if($this->executionRepository->byRecommendation($organizationId,$recommendationId)!==null){
                     return ['status'=>'replayed','code'=>'already_executed','recommendation_id'=>$recommendationId];
                 }
-
                 $recommendation=$this->recommendation($organizationId,$candidateId,$recommendationId);
+                $sequenceBlock=$this->sequenceGuard->blockingForRecommendation($organizationId,$recommendation);
+                if($sequenceBlock!==null){
+                    throw new AutonomousOutreachDeferred(
+                        $sequenceBlock['code'],$sequenceBlock['reason'],$sequenceBlock
+                    );
+                }
+
                 $payload=$this->repository->latestPayload($organizationId,$recommendationId);
                 $policy=$this->policyFor($organizationId);
                 $activation=$this->activationForRecommendation($recommendation);

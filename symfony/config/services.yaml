@@ -20,6 +20,10 @@ parameters:
   env(COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID): '0'
   env(COS_GROWTH_CONTENT_SCHEDULER_ORGANIZATION_LIMIT): '500'
   env(COS_GROWTH_CONTENT_SCHEDULER_DRAFT_LIMIT): '20'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_SEQUENCE_SCHEDULER_ORGANIZATION_LIMIT): '500'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
@@ -245,6 +249,9 @@ services:
       $growthAutonomousContentEnabled: '%env(bool:COS_GROWTH_CONTENT_SCHEDULER_ENABLED)%'
       $growthAutonomousContentIntervalMinutes: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES)%'
       $growthAutonomousContentActorId: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID)%'
+      $growthOutreachSequenceEnabled: '%env(bool:COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED)%'
+      $growthOutreachSequenceIntervalMinutes: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthOutreachSequenceActorId: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -799,6 +806,23 @@ services:
   Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary:
     alias: Domains\Growth\Application\Service\GrowthAutonomousContentService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOutreachSequenceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthOutreachSequenceRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthOutreachSequenceRepository
+
+  Domains\Growth\Application\Service\GrowthOutreachSequenceGuard: ~
+
+  Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface:
+    alias: Domains\Growth\Application\Service\GrowthOutreachSequenceGuard
+
+  Domains\Growth\Application\Service\GrowthOutreachSequenceService: ~
+
+  Domains\Growth\Application\Contract\GrowthOutreachSequenceBoundary:
+    alias: Domains\Growth\Application\Service\GrowthOutreachSequenceService
+
   Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
 
   Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
@@ -922,6 +946,14 @@ services:
       $intervalMinutes: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES)%'
       $organizationLimit: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ORGANIZATION_LIMIT)%'
       $draftLimit: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_DRAFT_LIMIT)%'
+
+  App\Application\Growth\Command\RunGrowthOutreachSequencesCommandHandler:
+    arguments:
+      $repository: '@Domains\Growth\Application\Contract\GrowthOutreachSequenceRepositoryInterface'
+      $sequences: '@Domains\Growth\Application\Contract\GrowthOutreachSequenceBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ACTOR_ID)%'
+      $organizationLimit: '%env(int:COS_GROWTH_SEQUENCE_SCHEDULER_ORGANIZATION_LIMIT)%'
 
   App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider:
     arguments:

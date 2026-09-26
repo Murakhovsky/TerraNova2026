@@ -8,6 +8,7 @@ use App\Application\Sales\Command\RunSalesAutomationCommand;
 use App\Application\Growth\Command\RunGrowthSignalPollingCommand;
 use App\Application\Growth\Command\RunGrowthAutonomousOutreachCommand;
 use App\Application\Growth\Command\RunGrowthAutonomousContentCommand;
+use App\Application\Growth\Command\RunGrowthOutreachSequencesCommand;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -33,6 +34,9 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly bool $growthAutonomousContentEnabled = false,
         private readonly int $growthAutonomousContentIntervalMinutes = 5,
         private readonly int $growthAutonomousContentActorId = 0,
+        private readonly bool $growthOutreachSequenceEnabled = false,
+        private readonly int $growthOutreachSequenceIntervalMinutes = 15,
+        private readonly int $growthOutreachSequenceActorId = 0,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -51,6 +55,12 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if($this->growthAutonomousContentEnabled&&$this->growthAutonomousContentActorId<1){
             throw new InvalidArgumentException('Growth autonomous content requires a positive system actor id.');
+        }
+        if($this->growthOutreachSequenceIntervalMinutes<1||$this->growthOutreachSequenceIntervalMinutes>1440){
+            throw new InvalidArgumentException('Growth outreach sequence interval must be between 1 and 1440 minutes.');
+        }
+        if($this->growthOutreachSequenceEnabled&&$this->growthOutreachSequenceActorId<1){
+            throw new InvalidArgumentException('Growth outreach sequences require a positive system actor id.');
         }
     }
 
@@ -86,6 +96,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthCollectorPollingIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthSignalPollingCommand('scheduler'), 'async'),
+            );
+        }
+
+        if($this->growthOutreachSequenceEnabled){
+            $messages[] = RecurringMessage::every(
+                $this->growthOutreachSequenceIntervalMinutes.' minutes',
+                new RedispatchMessage(new RunGrowthOutreachSequencesCommand('scheduler'), 'async'),
             );
         }
 

@@ -20,6 +20,10 @@ $contentDraft=is_array($engagementContent['latest_draft']??null)?$engagementCont
 $contentPolicy=is_array($engagementContent['review_policy']??null)?$engagementContent['review_policy']:[];
 $contentPolicyEffective=is_array($contentPolicy['effective']??null)?$contentPolicy['effective']:[];
 $contentChannelModes=is_array($contentPolicyEffective['channel_modes']??null)?$contentPolicyEffective['channel_modes']:[];
+$engagementSequence=is_array($workspace['engagement_sequence']??null)?$workspace['engagement_sequence']:[];
+$sequence=is_array($engagementSequence['sequence']??null)?$engagementSequence['sequence']:null;
+$sequenceSteps=is_array($engagementSequence['steps']??null)?$engagementSequence['steps']:[];
+$sequencePolicyEffective=is_array($engagementSequence['policy']['effective']??null)?$engagementSequence['policy']['effective']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
 $learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
@@ -242,6 +246,32 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
         <button class="tn-ui-button tn-ui-button--primary" type="button" data-growth-engagement-generate>Generate next best action</button>
         <p class="tn-growth-action-status" data-growth-engagement-status></p>
       <?php endif; ?>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Follow-up state machine</p><h2>Outreach sequence</h2></div></div>
+    <?php if($sequence): ?>
+      <p><strong>Status:</strong> <?php echo $h(strtoupper((string)($sequence['status']??''))); ?> · touch <?php echo $h($sequence['touch_count']??''); ?> / <?php echo $h($sequencePolicyEffective['max_touches']??($sequence['max_touches']??'')); ?></p>
+      <p><small><?php echo $h($sequence['sequence_id']??''); ?> · <?php echo $h($sequence['channel']??''); ?><?php if(!empty($sequence['next_due_at'])): ?> · next due <?php echo $h($sequence['next_due_at']); ?><?php endif; ?></small></p>
+      <?php if(!empty($sequence['stop_reason'])): ?><p class="tn-growth-muted"><?php echo $h(($sequence['stop_code']??'').' · '.$sequence['stop_reason']); ?></p><?php endif; ?>
+
+      <?php foreach($sequenceSteps as $step): ?>
+        <div class="tn-ui-panel">
+          <p><strong>Touch <?php echo $h($step['touch_number']??''); ?></strong> · <?php echo $h($step['recommendation_id']??''); ?></p>
+          <p><small><?php echo $h($step['execution']['execution_id']??'awaiting execution'); ?><?php if(!empty($step['latest_delivery']['status'])): ?> · delivery <?php echo $h($step['latest_delivery']['status']); ?><?php endif; ?></small></p>
+        </div>
+      <?php endforeach; ?>
+
+      <?php if(!empty($canManageGrowth)&&($sequence['status']??'')==='active'): ?>
+        <form class="tn-growth-action-form" data-growth-sequence-stop data-sequence-id="<?php echo $h($sequence['sequence_id']??''); ?>">
+          <label class="tn-ui-field"><span>Stop reason</span><input class="tn-ui-input" name="reason" maxlength="1000" required placeholder="Why automated follow-up must stop"></label>
+          <button class="tn-ui-button tn-ui-button--ghost" type="submit">Stop sequence</button>
+          <span data-growth-form-status></span>
+        </form>
+      <?php endif; ?>
+    <?php else: ?>
+      <p class="tn-growth-muted">No outreach sequence has been opened for this Candidate.</p>
     <?php endif; ?>
   </section>
 

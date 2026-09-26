@@ -167,6 +167,7 @@ jobs:
           php tests/architecture/growth_v0410_outreach_activation_policy.php
           php tests/architecture/growth_v0420_autonomous_outreach.php
           php tests/architecture/growth_v0430_autonomous_content_review.php
+          php tests/architecture/growth_v0440_outreach_sequences.php
 
       - name: Process registry invariants
         run: |
@@ -211,6 +212,7 @@ jobs:
           php tests/unit/growth_v0410_outreach_activation_policy.php
           php tests/unit/growth_v0420_autonomous_outreach.php
           php tests/unit/growth_v0430_autonomous_content_review.php
+          php tests/unit/growth_v0440_outreach_sequences.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -331,6 +333,18 @@ jobs:
           php -l symfony/src/Application/Growth/Command/RunGrowthAutonomousContentCommandHandler.php
           php -l tests/unit/growth_v0430_autonomous_content_review.php
           php -l tests/architecture/growth_v0430_autonomous_content_review.php
+          php -l app/Domains/Growth/Domain/OutreachSequencePolicy.php
+          php -l app/Domains/Growth/Domain/OutreachSequenceStateMachine.php
+          php -l app/Domains/Growth/Application/Contract/GrowthOutreachSequenceBoundary.php
+          php -l app/Domains/Growth/Application/Contract/GrowthOutreachSequenceGuardInterface.php
+          php -l app/Domains/Growth/Application/Contract/GrowthOutreachSequenceRepositoryInterface.php
+          php -l app/Domains/Growth/Application/Service/GrowthOutreachSequenceGuard.php
+          php -l app/Domains/Growth/Application/Service/GrowthOutreachSequenceService.php
+          php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthOutreachSequenceRepository.php
+          php -l symfony/src/Application/Growth/Command/RunGrowthOutreachSequencesCommand.php
+          php -l symfony/src/Application/Growth/Command/RunGrowthOutreachSequencesCommandHandler.php
+          php -l tests/unit/growth_v0440_outreach_sequences.php
+          php -l tests/architecture/growth_v0440_outreach_sequences.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php

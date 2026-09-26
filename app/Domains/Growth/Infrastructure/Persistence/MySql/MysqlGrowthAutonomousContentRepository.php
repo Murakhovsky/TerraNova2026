@@ -239,6 +239,13 @@ final readonly class MysqlGrowthAutonomousContentRepository implements GrowthAut
                  WHERE b.organization_id=r.organization_id AND b.candidate_id=r.candidate_id
                    AND b.source_domain=\'sales\' AND b.reference_type=\'sales_deal\'
                )
+               AND NOT EXISTS (
+                 SELECT 1 FROM tn_growth_engagement_sequence_steps ss
+                 INNER JOIN tn_growth_engagement_sequences sq
+                   ON sq.organization_id=ss.organization_id AND sq.sequence_id=ss.sequence_id
+                 WHERE ss.organization_id=r.organization_id
+                   AND ss.recommendation_id=r.recommendation_id AND sq.status<>\'active\'
+               )
              ORDER BY r.created_at,r.recommendation_id
              LIMIT '.$limit
         );

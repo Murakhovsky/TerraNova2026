@@ -947,3 +947,74 @@ The V0.43 drafting context is data-minimized before it reaches the model. Candid
 
 
 The drafting payload also omits signal confidence and ICP match scoring. The model gets observable account/contact facts and the selected message angle, not the internal machinery that decided the prospect was attractive.
+
+
+## V0.44 — Autonomous Outreach Sequences & Follow-up State Machine
+
+V0.44 turns autonomous outreach from a one-shot trigger into a bounded follow-up lifecycle:
+
+```text
+initial governed execution
+        ↓
+tenant sequence policy
+        ↓
+sequence touch 1
+        ↓
+wait configured delay
+        ↓
+central Sequence Guard
+  ├─ reply / downstream outcome
+  ├─ Sales handoff
+  ├─ failed delivery
+  ├─ completed phone conversation
+  ├─ sequence/autonomy policy change
+  ├─ channel no longer AUTO
+  └─ content review blocked
+        ↓ allowed
+derived immutable recommendation
+        ↓
+V0.43 draft + review
+        ↓
+V0.42 payload + trigger
+        ↓
+V0.40 quota / cooldown admission
+        ↓
+next touch or completion
+```
+
+Each follow-up is a new immutable Engagement Recommendation and receives its own governed execution. V0.44 never reuses the first recommendation for a second Action. Sequence steps preserve root recommendation, parent recommendation and touch number so attribution and audit remain readable rather than becoming the traditional enterprise bowl of spaghetti.
+
+Sequence policy is tenant-owned and append-only. Safe defaults are OFF, email + LinkedIn allowed, 3 total touches, 72 hours between touches and 10 advances per scheduler run. `max_touches` includes the first outreach.
+
+Enabling sequences creates an `activation_started_at` window. Only pre-handoff executions created after that timestamp may bootstrap a sequence. Changing limits while still enabled preserves the window; disabling and later re-enabling creates a new one. Historical outreach therefore does not suddenly wake up because somebody found a checkbox.
+
+A central `GrowthOutreachSequenceGuard` is shared by the sequence scheduler, V0.43 content admission and V0.42 trigger admission. This closes the gap between scheduler ticks: a reply, Sales handoff, policy disable, channel block or delivery failure that arrives after a follow-up recommendation was created still prevents its content/trigger path from proceeding.
+
+Authoritative sequence stop signals are:
+- any Sales `sales_deal` binding;
+- Growth learning outcomes `reply_received`, `qualified`, `disqualified`, `meeting_completed`, `won` or `lost` observed after sequence start;
+- any sequence touch with delivery status `failed`;
+- phone delivery status `completed`;
+- sequence policy disabled or channel removed;
+- autonomy disabled / confidence or state no longer eligible;
+- channel activation no longer `AUTO`;
+- content review mode changed to `blocked`;
+- explicit operator stop.
+
+A completed phone call stops the autonomous lane because the next step belongs to conversation handling, not a blind timer. Email currently has no Growth delivery webhook, so its follow-up clock anchors to the governed execution timestamp. LinkedIn and phone use the latest delivery observation when available.
+
+Derived follow-up recommendations are deterministic. They reuse the root action, channel, contact and evidence, add `reply_status_unknown`, and explicitly instruct V0.43 not to claim that a previous message was read or remembered. The state machine itself never calls an LLM; content generation remains V0.43's job.
+
+Stopping a sequence is an execution boundary, not a cosmetic status. Pending V0.42 payload discovery excludes inactive sequence recommendations, V0.42 trigger admission uses the central guard, and V0.43 content generation/review uses the same guard.
+
+The sequence scheduler has its own deployment kill switch and defaults OFF: `COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED=0`.
+
+
+For channels with V0.36 delivery callbacks, the timer does not start merely because a Kernel Action exists. LinkedIn and phone wait for the first provider delivery observation; email remains the deliberate exception and uses execution time because Growth has no email delivery callback yet.
+
+Disabling the tenant sequence policy blocks V0.42/V0.43 admission immediately through the central guard. The sequence scheduler also continues selecting organizations that still have active sequence rows, even when their latest sequence policy is disabled, so those rows are reconciled to `stopped` instead of becoming immortal "active" ghosts.
+
+V0.43 performs the central sequence guard twice around model work: once before spending LLM budget and again under the tenant capacity lock after generation. A reply or handoff arriving while the model is drafting therefore prevents auto-approval/staging. Human rejection of an already-pending draft remains allowed after the sequence stops so operators can clean up stale review work.
+
+
+Phone provider states `accepted` and `started` are explicitly non-terminal. They keep the sequence waiting; only `no_answer` or `busy` may start another follow-up delay, while `completed` and `failed` stop the autonomous lane.

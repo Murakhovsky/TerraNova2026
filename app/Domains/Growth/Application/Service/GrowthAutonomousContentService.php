@@ -16,6 +16,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInter
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthIntelligenceRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
+use Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface;
 use Domains\Growth\Application\Contract\GrowthRepositoryInterface;
 use Domains\Growth\Application\DTO\AutonomousContentDraft;
 use Domains\Growth\Automation\Event\GrowthEventType;
@@ -43,6 +44,7 @@ final readonly class GrowthAutonomousContentService implements GrowthAutonomousC
         private GrowthAutonomousOutreachRepositoryInterface $autonomyRepository,
         private GrowthAutonomousOutreachBoundary $autonomy,
         private GrowthEngagementExecutionRepositoryInterface $executions,
+        private GrowthOutreachSequenceGuardInterface $sequenceGuard,
         private GrowthMutationReceiptInterface $receipts,
         private TransactionManagerInterface $transactions,
         private EventBus $events,
@@ -139,6 +141,7 @@ final readonly class GrowthAutonomousContentService implements GrowthAutonomousC
             }
 
             $recommendation=$this->recommendation($organizationId,$candidateId,$recommendationId);
+            $this->assertActiveSequenceRecommendation($organizationId,$recommendationId);
             $this->assertDraftableRecommendation($recommendation);
             if($this->executions->byRecommendation($organizationId,$recommendationId)!==null){
                 throw new InvalidArgumentException('Cannot generate Growth content after execution was proposed.');
@@ -182,6 +185,7 @@ final readonly class GrowthAutonomousContentService implements GrowthAutonomousC
             ):array{
                 $this->executions->lockPreHandoffCapacity($organizationId);
                 $recommendation=$this->recommendation($organizationId,$candidateId,$recommendationId);
+                $this->assertActiveSequenceRecommendation($organizationId,$recommendationId);
                 $this->assertDraftableRecommendation($recommendation);
                 if($this->executions->byRecommendation($organizationId,$recommendationId)!==null){
                     throw new InvalidArgumentException('Growth content execution appeared while the draft was being generated.');
@@ -310,6 +314,7 @@ final readonly class GrowthAutonomousContentService implements GrowthAutonomousC
                 return $this->contentBrief($organizationId,$candidateId,$recommendationId)+['replayed'=>true];
             }
             $draft=$this->repository->lockDraft($organizationId,$draftId);
+            if($approve)$this->assertActiveSequenceRecommendation($organizationId,$recommendationId);
             if((string)$draft['candidate_id']!==$candidateId||(string)$draft['recommendation_id']!==$recommendationId){
                 throw new InvalidArgumentException('Growth content draft belongs to another recommendation.');
             }
@@ -472,6 +477,16 @@ final readonly class GrowthAutonomousContentService implements GrowthAutonomousC
             throw new InvalidArgumentException('Growth engagement recommendation belongs to another Candidate.');
         }
         return $recommendation;
+    }
+
+    private function assertActiveSequenceRecommendation(string $organizationId,string $recommendationId):void
+    {
+        $recommendation=$this->engagement->viewRecommendation($organizationId,$recommendationId);
+        if($recommendation===null)return;
+        $block=$this->sequenceGuard->blockingForRecommendation($organizationId,$recommendation);
+        if($block!==null){
+            throw new InvalidArgumentException('Growth content sequence guard blocked recommendation: '.$block['code'].'. '.$block['reason']);
+        }
     }
 
     /** @param array<string,mixed> $recommendation */

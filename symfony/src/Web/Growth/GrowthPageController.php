@@ -19,6 +19,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
 use Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary;
 use Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary;
+use Domains\Growth\Application\Contract\GrowthOutreachSequenceBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Growth\Application\Contract\GrowthIntelligenceBoundary;
@@ -67,6 +68,7 @@ final readonly class GrowthPageController
         private GrowthEngagementActivationBoundary $engagementActivation,
         private GrowthAutonomousOutreachBoundary $autonomousOutreach,
         private GrowthAutonomousContentBoundary $autonomousContent,
+        private GrowthOutreachSequenceBoundary $outreachSequences,
         private GrowthExperimentBoundary $experiments,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
@@ -90,6 +92,7 @@ final readonly class GrowthPageController
                     'engagement_activation'=>$this->engagementActivation->view($tenant->organizationId()->value()),
                     'engagement_autonomy'=>$this->autonomousOutreach->viewPolicy($tenant->organizationId()->value()),
                     'engagement_content_review'=>$this->autonomousContent->viewReviewPolicy($tenant->organizationId()->value()),
+                    'engagement_sequence_policy'=>$this->outreachSequences->viewPolicy($tenant->organizationId()->value()),
                 ],
             ]);
     }
@@ -148,6 +151,7 @@ final readonly class GrowthPageController
                         'engagement_execution'=>$execution,
                         'engagement_autonomy'=>$autonomy,
                         'engagement_content'=>$content,
+                        'engagement_sequence'=>$this->outreachSequences->sequenceBrief($organizationId,$id),
                         'handoff'=>$this->handoff->handoffBrief($organizationId,$id),
                         'learning'=>$this->learning->learningBrief($organizationId,$id),
                     ],

@@ -245,6 +245,32 @@ const runEngagementAutonomyStage=async(root,form)=>{
   }
 };
 
+const runEngagementSequenceStop=async(root,form)=>{
+  const candidateId=root.dataset.candidateId||'';
+  const sequenceId=form.dataset.sequenceId||'';
+  const status=form.querySelector('[data-growth-form-status]');
+  const button=form.querySelector('button[type="submit"]');
+  const reason=String(new FormData(form).get('reason')||'').trim();
+  if(!candidateId||!sequenceId||!reason){
+    setStatus(status,'Sequence stop reason is required.','error');
+    return;
+  }
+  button?.setAttribute('disabled','disabled');
+  setStatus(status,'Stopping follow-up sequence…','loading');
+  try{
+    await mutation(
+      engagementBase(candidateId)+'/sequence/'+encodeURIComponent(sequenceId)+'/stop',
+      {reason},root,form,
+    );
+    delete form.dataset.idempotencyKey;
+    setStatus(status,'Sequence stopped. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),250);
+  }catch(error){
+    setStatus(status,error.message||'Sequence stop failed.','error');
+    button?.removeAttribute('disabled');
+  }
+};
+
 const initGrowthCandidate=(root)=>{
   root.querySelectorAll('[data-growth-action]').forEach((button)=>{
     button.addEventListener('click',()=>runAction(root,button));
@@ -278,6 +304,10 @@ const initGrowthCandidate=(root)=>{
       event.preventDefault();
       runEngagementContentDecision(root,event.currentTarget);
     });
+  });
+  root.querySelector('[data-growth-sequence-stop]')?.addEventListener('submit',(event)=>{
+    event.preventDefault();
+    runEngagementSequenceStop(root,event.currentTarget);
   });
 };
 
@@ -753,6 +783,49 @@ const initGrowthExperiment=(root)=>{
 };
 
 const initGrowthSettings=(root)=>{
+  const sequenceForm=root.querySelector('[data-growth-sequence-settings]');
+  if(sequenceForm)sequenceForm.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=sequenceForm.querySelector('[data-growth-form-status]');
+    const button=sequenceForm.querySelector('button[type="submit"]');
+    const values=new FormData(sequenceForm);
+    const allowedChannels=values.getAll('allowed_channels').map((value)=>String(value));
+    const maxTouches=Number.parseInt(String(values.get('max_touches')||''),10);
+    const delayHours=Number.parseInt(String(values.get('follow_up_delay_hours')||''),10);
+    const maxAdvances=Number.parseInt(String(values.get('max_advances_per_run')||''),10);
+    const reason=String(values.get('reason')||'').trim();
+
+    if(
+      allowedChannels.length===0||
+      !Number.isInteger(maxTouches)||maxTouches<1||maxTouches>20||
+      !Number.isInteger(delayHours)||delayHours<1||delayHours>8760||
+      !Number.isInteger(maxAdvances)||maxAdvances<1||maxAdvances>100||
+      !reason
+    ){
+      setStatus(status,'Sequence policy requires channels, touch limit, delay, run limit and reason.','error');
+      return;
+    }
+
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Saving outreach sequence policy…','loading');
+    try{
+      await mutation('/api/v1/growth/engagement/sequences/policy',{
+        enabled:values.get('enabled')!==null,
+        allowed_channels:allowedChannels,
+        max_touches:maxTouches,
+        follow_up_delay_hours:delayHours,
+        max_advances_per_run:maxAdvances,
+        reason,
+      },root,sequenceForm);
+      delete sequenceForm.dataset.idempotencyKey;
+      setStatus(status,'Sequence policy saved. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Sequence policy update failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
   const contentReviewForm=root.querySelector('[data-growth-content-review-settings]');
   if(contentReviewForm)contentReviewForm.addEventListener('submit',async(event)=>{
     event.preventDefault();

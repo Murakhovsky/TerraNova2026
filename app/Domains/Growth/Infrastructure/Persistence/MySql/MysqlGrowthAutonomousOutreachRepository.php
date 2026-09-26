@@ -137,6 +137,13 @@ final readonly class MysqlGrowthAutonomousOutreachRepository implements GrowthAu
                      ELSE \'blocked\'
                    END=\'auto\'
                AND e.execution_id IS NULL
+               AND NOT EXISTS (
+                 SELECT 1 FROM tn_growth_engagement_sequence_steps ss
+                 INNER JOIN tn_growth_engagement_sequences sq
+                   ON sq.organization_id=ss.organization_id AND sq.sequence_id=ss.sequence_id
+                 WHERE ss.organization_id=p.organization_id
+                   AND ss.recommendation_id=p.recommendation_id AND sq.status<>'active'
+               )
              ORDER BY p.staged_at,p.recommendation_id
              LIMIT '.$limit
         );

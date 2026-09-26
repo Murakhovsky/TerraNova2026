@@ -63,6 +63,12 @@ final class GrowthEventType
     public const ENGAGEMENT_CONTENT_DRAFT_APPROVED = 'growth.engagement.content_draft_approved';
     public const ENGAGEMENT_CONTENT_DRAFT_REJECTED = 'growth.engagement.content_draft_rejected';
     public const ENGAGEMENT_CONTENT_DRAFT_BLOCKED = 'growth.engagement.content_draft_blocked';
+    public const ENGAGEMENT_SEQUENCE_PROFILE_UPDATED = 'growth.engagement.sequence_profile_updated';
+    public const ENGAGEMENT_SEQUENCE_STARTED = 'growth.engagement.sequence_started';
+    public const ENGAGEMENT_SEQUENCE_DUE_SCHEDULED = 'growth.engagement.sequence_due_scheduled';
+    public const ENGAGEMENT_SEQUENCE_ADVANCED = 'growth.engagement.sequence_advanced';
+    public const ENGAGEMENT_SEQUENCE_STOPPED = 'growth.engagement.sequence_stopped';
+    public const ENGAGEMENT_SEQUENCE_COMPLETED = 'growth.engagement.sequence_completed';
     public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
     public const OUTCOME_RECORDED = 'growth.outcome.recorded';
     public const EXPERIMENT_DRAFTED = 'growth.experiment.drafted';
@@ -160,6 +166,12 @@ final class GrowthEventType
             self::ENGAGEMENT_CONTENT_DRAFT_APPROVED,
             self::ENGAGEMENT_CONTENT_DRAFT_REJECTED,
             self::ENGAGEMENT_CONTENT_DRAFT_BLOCKED,
+            self::ENGAGEMENT_SEQUENCE_PROFILE_UPDATED,
+            self::ENGAGEMENT_SEQUENCE_STARTED,
+            self::ENGAGEMENT_SEQUENCE_DUE_SCHEDULED,
+            self::ENGAGEMENT_SEQUENCE_ADVANCED,
+            self::ENGAGEMENT_SEQUENCE_STOPPED,
+            self::ENGAGEMENT_SEQUENCE_COMPLETED,
             self::LEARNING_BINDING_CREATED,
             self::OUTCOME_RECORDED,
             self::EXPERIMENT_DRAFTED,
