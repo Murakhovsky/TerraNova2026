@@ -15,6 +15,11 @@ parameters:
   env(COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID): '0'
   env(COS_GROWTH_AUTONOMY_SCHEDULER_ORGANIZATION_LIMIT): '500'
   env(COS_GROWTH_AUTONOMY_SCHEDULER_RECOMMENDATION_LIMIT): '100'
+  env(COS_GROWTH_CONTENT_SCHEDULER_ENABLED): '0'
+  env(COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES): '5'
+  env(COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID): '0'
+  env(COS_GROWTH_CONTENT_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_GROWTH_CONTENT_SCHEDULER_DRAFT_LIMIT): '20'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED): '0'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID): '0'
@@ -237,6 +242,9 @@ services:
       $growthAutonomousOutreachEnabled: '%env(bool:COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED)%'
       $growthAutonomousOutreachIntervalMinutes: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
       $growthAutonomousOutreachActorId: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID)%'
+      $growthAutonomousContentEnabled: '%env(bool:COS_GROWTH_CONTENT_SCHEDULER_ENABLED)%'
+      $growthAutonomousContentIntervalMinutes: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES)%'
+      $growthAutonomousContentActorId: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -772,6 +780,25 @@ services:
   Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary:
     alias: Domains\Growth\Application\Service\GrowthAutonomousOutreachService
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousContentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthAutonomousContentRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthAutonomousContentRepository
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthAutonomousContentGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthAutonomousContentGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthAutonomousContentGateway
+
+  Domains\Growth\Application\Service\GrowthAutonomousContentService: ~
+
+  Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary:
+    alias: Domains\Growth\Application\Service\GrowthAutonomousContentService
+
   Domains\Growth\Application\Service\GrowthEngagementExecutionService: ~
 
   Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary:
@@ -884,6 +911,17 @@ services:
       $actorId: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ACTOR_ID)%'
       $organizationLimit: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_ORGANIZATION_LIMIT)%'
       $recommendationLimit: '%env(int:COS_GROWTH_AUTONOMY_SCHEDULER_RECOMMENDATION_LIMIT)%'
+
+  App\Application\Growth\Command\RunGrowthAutonomousContentCommandHandler:
+    arguments:
+      $autonomy: '@Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface'
+      $repository: '@Domains\Growth\Application\Contract\GrowthAutonomousContentRepositoryInterface'
+      $content: '@Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $actorId: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ACTOR_ID)%'
+      $intervalMinutes: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_INTERVAL_MINUTES)%'
+      $organizationLimit: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $draftLimit: '%env(int:COS_GROWTH_CONTENT_SCHEDULER_DRAFT_LIMIT)%'
 
   App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider:
     arguments:

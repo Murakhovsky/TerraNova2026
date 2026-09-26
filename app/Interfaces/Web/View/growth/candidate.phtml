@@ -15,6 +15,11 @@ $executionEligibility=is_array($engagementExecution['eligibility']??null)?$engag
 $engagementAutonomy=is_array($workspace['engagement_autonomy']??null)?$workspace['engagement_autonomy']:[];
 $autonomyPayload=is_array($engagementAutonomy['payload']??null)?$engagementAutonomy['payload']:null;
 $autonomyEligibility=is_array($engagementAutonomy['eligibility']??null)?$engagementAutonomy['eligibility']:[];
+$engagementContent=is_array($workspace['engagement_content']??null)?$workspace['engagement_content']:[];
+$contentDraft=is_array($engagementContent['latest_draft']??null)?$engagementContent['latest_draft']:null;
+$contentPolicy=is_array($engagementContent['review_policy']??null)?$engagementContent['review_policy']:[];
+$contentPolicyEffective=is_array($contentPolicy['effective']??null)?$contentPolicy['effective']:[];
+$contentChannelModes=is_array($contentPolicyEffective['channel_modes']??null)?$contentPolicyEffective['channel_modes']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
 $learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
@@ -132,6 +137,40 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
       <?php endif; ?>
 
       <?php if(in_array($engagementStatus,['proposed','accepted'],true)&&!$execution&&in_array((string)($engagementRecommendation['channel']??''),['email','linkedin','phone'],true)): ?>
+        <hr>
+        <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Autonomous content</p><h3>Draft & review</h3></div></div>
+        <?php $contentChannel=(string)($engagementRecommendation['channel']??''); $contentMode=(string)($contentChannelModes[$contentChannel]??'human_review'); ?>
+        <p class="tn-growth-muted">Review mode: <?php echo $h(str_replace('_',' ',strtoupper($contentMode))); ?>. Generated copy is separate from the recommendation reasoning and can only reach the trigger after review policy admits it.</p>
+        <?php if($contentDraft): ?>
+          <p><strong>Draft <?php echo $h($contentDraft['draft_id']??''); ?>:</strong> <?php echo $h(strtoupper((string)($contentDraft['status']??''))); ?> · confidence <?php echo round((float)($contentDraft['confidence']??0)*100); ?>%</p>
+          <div class="tn-ui-panel"><p><?php echo nl2br($h($contentDraft['body']??'')); ?></p></div>
+          <?php if(!empty($contentDraft['risk_flags'])): ?><p class="tn-growth-error"><strong>Risk flags:</strong> <?php echo $h(implode(', ',array_map('strval',(array)$contentDraft['risk_flags']))); ?></p><?php endif; ?>
+          <?php if(!empty($contentDraft['review_code'])): ?><p><small><?php echo $h($contentDraft['review_code']); ?><?php if(!empty($contentDraft['decision_reason'])): ?> · <?php echo $h($contentDraft['decision_reason']); ?><?php endif; ?></small></p><?php endif; ?>
+          <?php if(!empty($canManageGrowth)&&($contentDraft['status']??'')==='pending_review'): ?>
+            <div class="tn-ui-split">
+              <form class="tn-growth-action-form" data-growth-content-decision="approve" data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>" data-draft-id="<?php echo $h($contentDraft['draft_id']??''); ?>">
+                <label class="tn-ui-field"><span>Approval reason</span><input class="tn-ui-input" name="reason" maxlength="1000" required placeholder="Why this exact draft is approved"></label>
+                <button class="tn-ui-button tn-ui-button--primary" type="submit">Approve & stage</button>
+                <span data-growth-form-status></span>
+              </form>
+              <form class="tn-growth-action-form" data-growth-content-decision="reject" data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>" data-draft-id="<?php echo $h($contentDraft['draft_id']??''); ?>">
+                <label class="tn-ui-field"><span>Rejection reason</span><input class="tn-ui-input" name="reason" maxlength="1000" required placeholder="What must change"></label>
+                <button class="tn-ui-button tn-ui-button--ghost" type="submit">Reject draft</button>
+                <span data-growth-form-status></span>
+              </form>
+            </div>
+          <?php endif; ?>
+          <?php if(!empty($canManageGrowth)&&in_array((string)($contentDraft['status']??''),['rejected','blocked'],true)&&$contentMode!=='blocked'&&!$autonomyPayload): ?>
+            <button class="tn-ui-button tn-ui-button--ghost" type="button" data-growth-content-generate data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">Generate new governed draft</button>
+            <p class="tn-growth-action-status" data-growth-content-status></p>
+          <?php endif; ?>
+        <?php elseif(!empty($canManageGrowth)&&$contentMode!=='blocked'&&!$autonomyPayload): ?>
+          <button class="tn-ui-button tn-ui-button--ghost" type="button" data-growth-content-generate data-recommendation-id="<?php echo $h($engagementRecommendation['recommendation_id']??''); ?>">Generate governed content draft</button>
+          <p class="tn-growth-action-status" data-growth-content-status></p>
+        <?php elseif($contentMode==='blocked'): ?>
+          <p class="tn-growth-muted">Tenant content policy blocks generated outreach copy on this channel.</p>
+        <?php endif; ?>
+
         <hr>
         <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Autonomous initiation</p><h3>Staged execution payload</h3></div></div>
         <p class="tn-growth-muted"><?php echo $h($autonomyEligibility['reason']??'Stage an approved payload before autonomous execution can be considered.'); ?></p>

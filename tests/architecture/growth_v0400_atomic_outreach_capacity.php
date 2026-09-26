@@ -6,8 +6,8 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $manifest=require $root.'/app/Domains/Growth/module.php';
-$assert(($manifest['version']??null)==='0.40.0','Growth manifest must be V0.40.');
-$assert(($manifest['schema_version']??null)==='0.40.0','Growth schema must be V0.40.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.40.0','>='),'Growth manifest must remain V0.40+.');
+$assert(version_compare((string)($manifest['schema_version']??'0.0.0'),'0.40.0','>='),'Growth schema must remain V0.40+.');
 $assert(
     in_array('growth.engagement.atomic_capacity_admission',$manifest['contributions']['capabilities']??[],true),
     'Growth atomic capacity capability missing.',

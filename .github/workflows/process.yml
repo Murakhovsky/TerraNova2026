@@ -166,6 +166,7 @@ jobs:
           php tests/architecture/growth_v0400_atomic_outreach_capacity.php
           php tests/architecture/growth_v0410_outreach_activation_policy.php
           php tests/architecture/growth_v0420_autonomous_outreach.php
+          php tests/architecture/growth_v0430_autonomous_content_review.php
 
       - name: Process registry invariants
         run: |
@@ -209,6 +210,7 @@ jobs:
           php tests/unit/growth_v0390_channel_outreach_quotas.php
           php tests/unit/growth_v0410_outreach_activation_policy.php
           php tests/unit/growth_v0420_autonomous_outreach.php
+          php tests/unit/growth_v0430_autonomous_content_review.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -315,6 +317,20 @@ jobs:
           php -l tests/architecture/growth_v0420_autonomous_outreach.php
           php -l symfony/src/Application/Growth/Command/RunGrowthAutonomousOutreachCommand.php
           php -l symfony/src/Application/Growth/Command/RunGrowthAutonomousOutreachCommandHandler.php
+          php -l app/Domains/Growth/Application/AI/GrowthAutonomousContentPrompt.php
+          php -l app/Domains/Growth/Application/Contract/GrowthAutonomousContentBoundary.php
+          php -l app/Domains/Growth/Application/Contract/GrowthAutonomousContentGatewayInterface.php
+          php -l app/Domains/Growth/Application/Contract/GrowthAutonomousContentRepositoryInterface.php
+          php -l app/Domains/Growth/Application/DTO/AutonomousContentDraft.php
+          php -l app/Domains/Growth/Domain/AutonomousContentReviewMode.php
+          php -l app/Domains/Growth/Domain/AutonomousContentReviewPolicy.php
+          php -l app/Domains/Growth/Application/Service/GrowthAutonomousContentService.php
+          php -l app/Domains/Growth/Infrastructure/AI/StructuredLlmGrowthAutonomousContentGateway.php
+          php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthAutonomousContentRepository.php
+          php -l symfony/src/Application/Growth/Command/RunGrowthAutonomousContentCommand.php
+          php -l symfony/src/Application/Growth/Command/RunGrowthAutonomousContentCommandHandler.php
+          php -l tests/unit/growth_v0430_autonomous_content_review.php
+          php -l tests/architecture/growth_v0430_autonomous_content_review.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php

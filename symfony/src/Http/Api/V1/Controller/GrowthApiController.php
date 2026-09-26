@@ -14,6 +14,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
 use Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary;
+use Domains\Growth\Application\Contract\GrowthAutonomousContentBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentBoundary;
 use Domains\Growth\Application\Contract\GrowthExperimentDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
@@ -51,6 +52,7 @@ final readonly class GrowthApiController
         private GrowthEngagementLimitBoundary $engagementLimits,
         private GrowthEngagementActivationBoundary $engagementActivation,
         private GrowthAutonomousOutreachBoundary $autonomousOutreach,
+        private GrowthAutonomousContentBoundary $autonomousContent,
         private GrowthLearningBoundary $learning,
         private GrowthOptimizationBoundary $optimization,
         private GrowthHandoffBoundary $handoff,
@@ -97,6 +99,20 @@ final readonly class GrowthApiController
     {
         return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
             $this->autonomousOutreach->updatePolicy(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
+            ));
+    }
+
+    public function engagementContentReview():JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->autonomousContent->viewReviewPolicy($tenant->organizationId()->value()));
+    }
+
+    public function updateEngagementContentReview(Request $request):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->autonomousContent->updateReviewPolicy(
                 $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$key,$this->input($request)
             ));
     }
@@ -500,6 +516,40 @@ final readonly class GrowthApiController
             return $this->autonomousOutreach->stagePayload(
                 $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,
                 $this->requiredString($input,'body'),$this->requiredString($input,'reason'),$key,
+            );
+        });
+    }
+
+    public function engagementContentBrief(string $id,string $recommendationId):JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->autonomousContent->contentBrief($tenant->organizationId()->value(),$id,$recommendationId));
+    }
+
+    public function generateEngagementContentDraft(Request $request,string $id,string $recommendationId):JsonResponse
+    {
+        return $this->mutate($request,fn(TenantContext $tenant,string $key,string $correlation):array=>
+            $this->autonomousContent->generateDraft(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,$key,'USER'
+            ),202);
+    }
+
+    public function approveEngagementContentDraft(Request $request,string $id,string $recommendationId,string $draftId):JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId,$draftId):array{
+            return $this->autonomousContent->approveDraft(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,$draftId,
+                $this->requiredString($this->input($request),'reason'),$key
+            );
+        });
+    }
+
+    public function rejectEngagementContentDraft(Request $request,string $id,string $recommendationId,string $draftId):JsonResponse
+    {
+        return $this->mutate($request,function(TenantContext $tenant,string $key,string $correlation)use($request,$id,$recommendationId,$draftId):array{
+            return $this->autonomousContent->rejectDraft(
+                $tenant->organizationId()->value(),$this->actor($tenant),$correlation,$id,$recommendationId,$draftId,
+                $this->requiredString($this->input($request),'reason'),$key
             );
         });
     }

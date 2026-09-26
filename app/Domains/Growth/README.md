@@ -893,3 +893,57 @@ A tenant may explicitly allow staged `proposed` recommendations. In that case th
 Autonomy is double opt-in: `COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED=1` is required at deployment level and the tenant's latest autonomy profile must also be enabled. The scheduler never bypasses V0.40/V0.41 controls. Profile changes, payload staging and trigger admission serialize on the same tenant-wide Growth capacity lock, so a concurrent disable/update has a deterministic order relative to an autonomous trigger.
 
 Autonomous triggering is pre-handoff only in V0.42. If the recommendation resolves to an existing Sales deal, Growth skips it rather than silently crossing domain ownership.
+
+
+## V0.43 — Autonomous Content Drafting & Review Policy
+
+V0.43 removes the mandatory manual-copy bottleneck without collapsing reasoning, content generation and execution into one opaque AI gesture.
+
+```text
+Engagement Recommendation
+        ↓
+Governed Structured LLM
+        ↓
+versioned outreach draft
+        ↓
+deterministic leak/risk checks
+        ↓
+channel Content Review Policy
+        ↓
+blocked | human_review | policy_auto_approve
+        ↓
+approved V0.42 staged payload
+        ↓
+V0.42 autonomous trigger
+```
+
+Content generation uses its own prompt/schema and the governed Kernel `StructuredLlmClientInterface`. The content model receives only the accepted/proposed recommendation, its cited Signal evidence and sanitized account/contact context. Contact delivery identities are deliberately excluded. The generated body must not expose Candidate IDs, Recommendation IDs, evidence IDs, internal confidence/score language or unsupported facts.
+
+The review profile is append-only and tenant-owned. It defines a review mode for email, LinkedIn and phone plus an auto-approval confidence threshold and maximum body length. Safe defaults are `human_review` on every channel, 0.92 minimum draft confidence and a 3000-character auto-approval limit.
+
+`policy_auto_approve` is intentionally narrow. A draft is auto-approved only when:
+- the current channel mode is `policy_auto_approve`;
+- draft confidence meets the tenant threshold;
+- the body stays within the configured limit;
+- the LLM declares no risk flags;
+- deterministic checks find no internal reference leakage.
+
+Anything else remains pending for a human review. A current `blocked` mode cannot be overridden by approving an old draft.
+
+Approved drafts are promoted through the existing V0.42 `stagePayload()` boundary rather than writing execution state directly. Therefore V0.43 does not bypass autonomy eligibility, activation mode, atomic quota admission, cooldown, Kernel policy, provider execution or delivery feedback.
+
+Automatic drafting is another explicit deployment gate: `COS_GROWTH_CONTENT_SCHEDULER_ENABLED=0` by default. The content scheduler only considers organizations whose V0.42 tenant autonomy profile is enabled, and only pre-handoff recommendations that already satisfy autonomy/channel/activation eligibility. LLM generation happens outside the database transaction; current review policy and staging eligibility are re-checked under the tenant-wide Growth capacity lock before an auto-approved draft is promoted.
+
+Human staging from V0.42 remains available as an explicit override path for operators. Generated content is a convenience layer, not a new source of execution authority.
+
+
+V0.43 preserves actor provenance through the V0.42 staging boundary: scheduler-approved content stages as `SYSTEM`, while explicit operator staging remains `USER`. Deterministic review also blocks policy auto-approval when final copy leaks delivery identities such as email addresses, E.164-style phone numbers or LinkedIn profile URLs.
+
+
+Content generation uses a single active-run lease per recommendation. The database rejects concurrent LLM generation before a second request can spend budget; a run left active by a crashed worker is released after 15 minutes. A recommendation with a `pending_review` draft cannot generate another draft until that draft is decided, preventing API callers from quietly bypassing the review queue.
+
+
+The V0.43 drafting context is data-minimized before it reaches the model. Candidate/recommendation/contact/account identifiers, recommendation confidence, expected deal value and technical snapshot metadata are excluded from the LLM payload. Internal identifiers required for deterministic leak detection are kept in a separate validation bundle and never sent to the content model.
+
+
+The drafting payload also omits signal confidence and ICP match scoring. The model gets observable account/contact facts and the selected message angle, not the internal machinery that decided the prospect was attractive.

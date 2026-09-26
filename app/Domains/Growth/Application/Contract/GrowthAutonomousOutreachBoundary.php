@@ -14,7 +14,7 @@ interface GrowthAutonomousOutreachBoundary
     /** @return array<string,mixed> */
     public function stagePayload(
         string $organizationId,int $actorId,string $correlationId,string $candidateId,string $recommendationId,
-        string $body,string $reason,string $idempotencyKey
+        string $body,string $reason,string $idempotencyKey,string $actorType='USER'
     ):array;
 
     /** @return array<string,mixed> */

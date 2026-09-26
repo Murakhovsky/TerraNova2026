@@ -55,6 +55,14 @@ final class GrowthEventType
     public const ENGAGEMENT_AUTONOMY_PROFILE_UPDATED = 'growth.engagement.autonomy_profile_updated';
     public const ENGAGEMENT_AUTONOMY_PAYLOAD_STAGED = 'growth.engagement.autonomy_payload_staged';
     public const ENGAGEMENT_AUTONOMOUS_TRIGGERED = 'growth.engagement.autonomous_triggered';
+    public const ENGAGEMENT_CONTENT_REVIEW_PROFILE_UPDATED = 'growth.engagement.content_review_profile_updated';
+    public const ENGAGEMENT_CONTENT_RUN_STARTED = 'growth.engagement.content_run_started';
+    public const ENGAGEMENT_CONTENT_RUN_COMPLETED = 'growth.engagement.content_run_completed';
+    public const ENGAGEMENT_CONTENT_RUN_FAILED = 'growth.engagement.content_run_failed';
+    public const ENGAGEMENT_CONTENT_DRAFT_CREATED = 'growth.engagement.content_draft_created';
+    public const ENGAGEMENT_CONTENT_DRAFT_APPROVED = 'growth.engagement.content_draft_approved';
+    public const ENGAGEMENT_CONTENT_DRAFT_REJECTED = 'growth.engagement.content_draft_rejected';
+    public const ENGAGEMENT_CONTENT_DRAFT_BLOCKED = 'growth.engagement.content_draft_blocked';
     public const LEARNING_BINDING_CREATED = 'growth.learning.binding_created';
     public const OUTCOME_RECORDED = 'growth.outcome.recorded';
     public const EXPERIMENT_DRAFTED = 'growth.experiment.drafted';
@@ -144,6 +152,14 @@ final class GrowthEventType
             self::ENGAGEMENT_AUTONOMY_PROFILE_UPDATED,
             self::ENGAGEMENT_AUTONOMY_PAYLOAD_STAGED,
             self::ENGAGEMENT_AUTONOMOUS_TRIGGERED,
+            self::ENGAGEMENT_CONTENT_REVIEW_PROFILE_UPDATED,
+            self::ENGAGEMENT_CONTENT_RUN_STARTED,
+            self::ENGAGEMENT_CONTENT_RUN_COMPLETED,
+            self::ENGAGEMENT_CONTENT_RUN_FAILED,
+            self::ENGAGEMENT_CONTENT_DRAFT_CREATED,
+            self::ENGAGEMENT_CONTENT_DRAFT_APPROVED,
+            self::ENGAGEMENT_CONTENT_DRAFT_REJECTED,
+            self::ENGAGEMENT_CONTENT_DRAFT_BLOCKED,
             self::LEARNING_BINDING_CREATED,
             self::OUTCOME_RECORDED,
             self::EXPERIMENT_DRAFTED,

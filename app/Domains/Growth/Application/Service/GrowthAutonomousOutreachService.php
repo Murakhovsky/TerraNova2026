@@ -108,9 +108,11 @@ final readonly class GrowthAutonomousOutreachService implements GrowthAutonomous
 
     public function stagePayload(
         string $organizationId,int $actorId,string $correlationId,string $candidateId,string $recommendationId,
-        string $body,string $reason,string $idempotencyKey
+        string $body,string $reason,string $idempotencyKey,string $actorType='USER'
     ):array {
         $organizationId=$this->bounded($organizationId,'organizationId',64);
+        $actorType=strtoupper(trim($actorType));
+        if(!in_array($actorType,['USER','SYSTEM'],true))throw new InvalidArgumentException('Growth autonomous payload actor type is invalid.');
         $candidateId=$this->bounded($candidateId,'candidateId',80);
         $recommendationId=$this->bounded($recommendationId,'recommendationId',80);
         $body=$this->bounded($body,'body',10000);
@@ -118,11 +120,11 @@ final readonly class GrowthAutonomousOutreachService implements GrowthAutonomous
         $idempotencyKey=$this->bounded($idempotencyKey,'idempotencyKey',191);
         $payloadFingerprint=hash('sha256',$body);
         $mutationFingerprint=hash('sha256',json_encode([
-            'candidate_id'=>$candidateId,'recommendation_id'=>$recommendationId,'body'=>$body,'reason'=>$reason,
+            'candidate_id'=>$candidateId,'recommendation_id'=>$recommendationId,'body'=>$body,'reason'=>$reason,'actor_type'=>$actorType,
         ],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
 
         return $this->transactions->transactional(function()use(
-            $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$body,$reason,$idempotencyKey,
+            $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$body,$reason,$idempotencyKey,$actorType,
             $payloadFingerprint,$mutationFingerprint
         ):array{
             $this->executionRepository->lockPreHandoffCapacity($organizationId);
@@ -152,10 +154,10 @@ final readonly class GrowthAutonomousOutreachService implements GrowthAutonomous
             $this->publish(
                 GrowthEventType::ENGAGEMENT_AUTONOMY_PAYLOAD_STAGED,$organizationId,'growth_candidate',$candidateId,
                 ['payload_id'=>$payloadId,'recommendation_id'=>$recommendationId,'revision'=>$revision,'payload_fingerprint'=>$payloadFingerprint],
-                $correlationId,'USER',(string)$actorId,
+                $correlationId,$actorType,(string)$actorId,
             );
             $this->audit->append(new AuditEntry(
-                bin2hex(random_bytes(16)),$organizationId,'growth.engagement_autonomy','USER',(string)$actorId,
+                bin2hex(random_bytes(16)),$organizationId,'growth.engagement_autonomy',$actorType,(string)$actorId,
                 'growth_candidate',$candidateId,null,[
                     'action'=>'growth.engagement_autonomy.payload_staged',
                     'idempotency_key_hash'=>hash('sha256',$idempotencyKey),

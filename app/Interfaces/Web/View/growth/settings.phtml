@@ -14,6 +14,11 @@ $autonomyEffective=is_array($autonomy['effective']??null)?$autonomy['effective']
 $autonomyProfile=is_array($autonomy['profile']??null)?$autonomy['profile']:null;
 $autonomyChannels=is_array($autonomyEffective['allowed_channels']??null)?$autonomyEffective['allowed_channels']:[];
 $autonomyStatuses=is_array($autonomyEffective['allowed_statuses']??null)?$autonomyEffective['allowed_statuses']:[];
+$contentReview=is_array($workspace['engagement_content_review']??null)?$workspace['engagement_content_review']:[];
+$contentReviewEffective=is_array($contentReview['effective']??null)?$contentReview['effective']:[];
+$contentReviewProfile=is_array($contentReview['profile']??null)?$contentReview['profile']:null;
+$contentReviewModes=is_array($contentReviewEffective['channel_modes']??null)?$contentReviewEffective['channel_modes']:[];
+$contentReviewOptions=['blocked'=>'Blocked','human_review'=>'Human review','policy_auto_approve'=>'Policy auto-approve'];
 $modeLabel=static fn(string $mode):string=>match($mode){'blocked'=>'Blocked','auto'=>'Auto',default=>'Approval required'};
 $modeOptions=['blocked'=>'Blocked','approval_required'=>'Approval required','auto'=>'Auto'];
 ?>
@@ -36,6 +41,36 @@ $modeOptions=['blocked'=>'Blocked','approval_required'=>'Approval required','aut
     <?php $this->partial('components/ui/kpi_card',['label'=>'Phone mode','value'=>$modeLabel((string)($channelModes['phone']??'approval_required'))]); ?>
     <?php $this->partial('components/ui/kpi_card',['label'=>'Daily limit','value'=>$effective['daily_limit']??'—']); ?>
     <?php $this->partial('components/ui/kpi_card',['label'=>'Contact cooldown','value'=>isset($effective['contact_cooldown_hours'])?$effective['contact_cooldown_hours'].' h':'—']); ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Autonomous content</p><h2>Draft & review policy</h2></div></div>
+    <p class="tn-growth-muted">Safe default is human review. Policy auto-approve only promotes drafts that meet the confidence threshold, fit the body-length guardrail and contain no declared or deterministic risk flags. Deployment auto-drafting is a separate switch and defaults OFF.</p>
+    <?php if(!empty($canManageGrowth)): ?>
+      <form class="tn-growth-action-form" data-growth-content-review-settings>
+        <?php foreach(['email'=>'Email','linkedin'=>'LinkedIn','phone'=>'Phone'] as $channel=>$label): ?>
+          <label class="tn-ui-field"><span><?php echo $h($label); ?> content review</span>
+            <select class="tn-ui-input" name="<?php echo $h($channel); ?>_mode" required>
+              <?php foreach($contentReviewOptions as $value=>$option): ?>
+                <option value="<?php echo $h($value); ?>" <?php echo (($contentReviewModes[$channel]??'human_review')===$value)?'selected':''; ?>><?php echo $h($option); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        <?php endforeach; ?>
+        <label class="tn-ui-field"><span>Minimum draft confidence for auto-approval</span><input class="tn-ui-input" name="min_draft_confidence" type="number" min="0" max="1" step="0.01" required value="<?php echo $h($contentReviewEffective['min_draft_confidence']??0.92); ?>"></label>
+        <label class="tn-ui-field"><span>Maximum auto-approved body length</span><input class="tn-ui-input" name="max_body_chars" type="number" min="100" max="10000" required value="<?php echo $h($contentReviewEffective['max_body_chars']??3000); ?>"></label>
+        <label class="tn-ui-field"><span>Change reason</span><textarea class="tn-ui-input" name="reason" rows="3" maxlength="1000" required placeholder="Why this content review authority is appropriate"></textarea></label>
+        <button class="tn-ui-button tn-ui-button--primary" type="submit">Save content review policy</button>
+        <span data-growth-form-status></span>
+      </form>
+    <?php endif; ?>
+    <?php if($contentReviewProfile): ?>
+      <hr>
+      <p><strong>Latest content review revision:</strong> <?php echo $h($contentReviewProfile['revision']??''); ?> · <?php echo $h($contentReviewProfile['created_at']??''); ?></p>
+      <p class="tn-growth-muted"><?php echo $h($contentReviewProfile['reason']??''); ?></p>
+    <?php else: ?>
+      <p class="tn-growth-muted">No tenant content review override exists. Every generated draft requires human review.</p>
+    <?php endif; ?>
   </section>
 
   <section class="tn-ui-panel tn-workspace-section">

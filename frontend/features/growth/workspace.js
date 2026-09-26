@@ -166,6 +166,57 @@ const runEngagementExecution=async(root,form)=>{
   }
 };
 
+const runEngagementContentGenerate=async(root,button)=>{
+  const candidateId=root.dataset.candidateId||'';
+  const recommendationId=button.dataset.recommendationId||'';
+  const status=root.querySelector('[data-growth-content-status]');
+  if(!candidateId||!recommendationId)return;
+  button.disabled=true;
+  setStatus(status,'Generating governed outreach draft…','loading');
+  try{
+    const response=await mutation(
+      engagementBase(candidateId)+'/'+encodeURIComponent(recommendationId)+'/content/drafts',
+      {},root,button,
+    );
+    const data=response?.data??response;
+    delete button.dataset.idempotencyKey;
+    if(data?.run?.status==='failed')throw new Error(data?.run?.error_summary||'Content draft generation failed.');
+    setStatus(status,'Content draft generated. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),250);
+  }catch(error){
+    setStatus(status,error.message||'Content draft generation failed.','error');
+    button.disabled=false;
+  }
+};
+
+const runEngagementContentDecision=async(root,form)=>{
+  const candidateId=root.dataset.candidateId||'';
+  const recommendationId=form.dataset.recommendationId||'';
+  const draftId=form.dataset.draftId||'';
+  const decision=form.dataset.growthContentDecision||'';
+  const status=form.querySelector('[data-growth-form-status]');
+  const button=form.querySelector('button[type="submit"]');
+  const reason=String(new FormData(form).get('reason')||'').trim();
+  if(!candidateId||!recommendationId||!draftId||!['approve','reject'].includes(decision)||!reason){
+    setStatus(status,'Draft decision reason is required.','error');
+    return;
+  }
+  button?.setAttribute('disabled','disabled');
+  setStatus(status,decision==='approve'?'Approving and staging draft…':'Rejecting draft…','loading');
+  try{
+    await mutation(
+      engagementBase(candidateId)+'/'+encodeURIComponent(recommendationId)+'/content/drafts/'+encodeURIComponent(draftId)+'/'+decision,
+      {reason},root,form,
+    );
+    delete form.dataset.idempotencyKey;
+    setStatus(status,'Draft decision saved. Refreshing…','success');
+    window.setTimeout(()=>window.location.reload(),250);
+  }catch(error){
+    setStatus(status,error.message||'Content draft decision failed.','error');
+    button?.removeAttribute('disabled');
+  }
+};
+
 const runEngagementAutonomyStage=async(root,form)=>{
   const candidateId=root.dataset.candidateId||'';
   const recommendationId=form.dataset.recommendationId||'';
@@ -218,6 +269,15 @@ const initGrowthCandidate=(root)=>{
   root.querySelector('[data-growth-engagement-autonomy-payload]')?.addEventListener('submit',(event)=>{
     event.preventDefault();
     runEngagementAutonomyStage(root,event.currentTarget);
+  });
+  root.querySelector('[data-growth-content-generate]')?.addEventListener('click',(event)=>{
+    runEngagementContentGenerate(root,event.currentTarget);
+  });
+  root.querySelectorAll('[data-growth-content-decision]').forEach((form)=>{
+    form.addEventListener('submit',(event)=>{
+      event.preventDefault();
+      runEngagementContentDecision(root,event.currentTarget);
+    });
   });
 };
 
@@ -693,6 +753,41 @@ const initGrowthExperiment=(root)=>{
 };
 
 const initGrowthSettings=(root)=>{
+  const contentReviewForm=root.querySelector('[data-growth-content-review-settings]');
+  if(contentReviewForm)contentReviewForm.addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const status=contentReviewForm.querySelector('[data-growth-form-status]');
+    const button=contentReviewForm.querySelector('button[type="submit"]');
+    const values=new FormData(contentReviewForm);
+    const email=String(values.get('email_mode')||'').trim();
+    const linkedin=String(values.get('linkedin_mode')||'').trim();
+    const phone=String(values.get('phone_mode')||'').trim();
+    const minDraftConfidence=Number(String(values.get('min_draft_confidence')||''));
+    const maxBodyChars=Number.parseInt(String(values.get('max_body_chars')||''),10);
+    const reason=String(values.get('reason')||'').trim();
+    const allowed=new Set(['blocked','human_review','policy_auto_approve']);
+    if(!allowed.has(email)||!allowed.has(linkedin)||!allowed.has(phone)||!Number.isFinite(minDraftConfidence)||minDraftConfidence<0||minDraftConfidence>1||!Number.isInteger(maxBodyChars)||maxBodyChars<100||maxBodyChars>10000||!reason){
+      setStatus(status,'Content review modes, confidence, body limit and reason are required.','error');
+      return;
+    }
+    button?.setAttribute('disabled','disabled');
+    setStatus(status,'Saving autonomous content review policy…','loading');
+    try{
+      await mutation('/api/v1/growth/engagement/content-review',{
+        channel_modes:{email,linkedin,phone},
+        min_draft_confidence:minDraftConfidence,
+        max_body_chars:maxBodyChars,
+        reason,
+      },root,contentReviewForm);
+      delete contentReviewForm.dataset.idempotencyKey;
+      setStatus(status,'Content review policy saved. Refreshing…','success');
+      window.setTimeout(()=>window.location.reload(),250);
+    }catch(error){
+      setStatus(status,error.message||'Content review policy update failed.','error');
+      button?.removeAttribute('disabled');
+    }
+  });
+
   const limitForm=root.querySelector('[data-growth-limit-settings]');
   if(limitForm)limitForm.addEventListener('submit',async(event)=>{
     event.preventDefault();

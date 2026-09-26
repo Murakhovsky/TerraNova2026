@@ -437,6 +437,16 @@ cos_api_v1_growth_engagement_autonomy_update:
   controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementAutonomy
   methods: [POST]
 
+cos_api_v1_growth_engagement_content_review:
+  path: /api/v1/growth/engagement/content-review
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementContentReview
+  methods: [GET]
+
+cos_api_v1_growth_engagement_content_review_update:
+  path: /api/v1/growth/engagement/content-review
+  controller: App\Http\Api\V1\Controller\GrowthApiController::updateEngagementContentReview
+  methods: [POST]
+
 cos_api_v1_growth_collectors:
   path: /api/v1/growth/collectors
   controller: App\Http\Api\V1\Controller\GrowthApiController::collectors
@@ -740,6 +750,40 @@ cos_api_v1_growth_engagement_autonomy_payload:
   requirements:
     id: '[A-Za-z0-9_-]{8,80}'
     recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementContentBrief
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content_generate:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content/drafts
+  controller: App\Http\Api\V1\Controller\GrowthApiController::generateEngagementContentDraft
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content_approve:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content/drafts/{draftId}/approve
+  controller: App\Http\Api\V1\Controller\GrowthApiController::approveEngagementContentDraft
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+    draftId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_content_reject:
+  path: /api/v1/growth/candidates/{id}/engagement/recommendations/{recommendationId}/content/drafts/{draftId}/reject
+  controller: App\Http\Api\V1\Controller\GrowthApiController::rejectEngagementContentDraft
+  methods: [POST]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
+    recommendationId: '[A-Za-z0-9_-]{8,80}'
+    draftId: '[A-Za-z0-9_-]{8,80}'
 
 cos_api_v1_growth_engagement_brief:
   path: /api/v1/growth/candidates/{id}/engagement
