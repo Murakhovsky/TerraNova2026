@@ -136,7 +136,7 @@ $pageStatus = $pageStatus ?? null;
 
         <div class="tn-submit-form__actions">
           <button class="tn-btn tn-btn--accent" type="submit">Подати на модерацію</button>
-          <?php if ($submissionStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($submissionStatus); ?></p><?php endif; ?>
+          <?php if ($submissionStatus): ?><p class="tn-ui-inline-status is-visible" role="status" aria-live="polite"><?php echo $h($submissionStatus); ?></p><?php endif; ?>
         </div>
       </form>
 

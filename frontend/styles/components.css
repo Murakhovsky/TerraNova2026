@@ -44,6 +44,19 @@
   .tn-ui-button--ghost { background: transparent; box-shadow: none; }
   .tn-ui-button--danger { color: var(--tn-color-danger); border-color: color-mix(in srgb, var(--tn-color-danger) 26%, var(--tn-color-border)); }
 
+  .tn-ui-inline-status {
+    min-height: 24px;
+    margin: 0;
+    color: var(--tn-color-positive);
+    font-size: var(--tn-font-sm);
+    font-weight: 700;
+    line-height: 1.45;
+  }
+  .tn-ui-inline-status[hidden] { display: none; }
+  .tn-ui-inline-status[data-tone="danger"] { color: var(--tn-color-danger); }
+  .tn-ui-inline-status[data-tone="warning"] { color: var(--tn-color-warning); }
+  .tn-ui-inline-status[data-tone="info"] { color: var(--tn-color-info); }
+
   .tn-ui-card,
   .tn-ui-panel {
     min-width: 0;

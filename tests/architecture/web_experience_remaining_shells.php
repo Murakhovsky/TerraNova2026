@@ -284,6 +284,7 @@ $globalForbidden = [
     'tn-auth-copy',
     'class="tn-sales-cta"',
     'tn-section-heading',
+    'tn-form-status',
 ];
 $breadcrumbWhitelist = [
     'property/catalog.phtml',
@@ -320,6 +321,20 @@ foreach ([
         throw new RuntimeException('Retired Property workspace frontend restored: ' . $retiredPropertyWorkspace);
     }
 }
+
+$componentsCss = $read('frontend/styles/components.css');
+foreach ([
+    '.tn-ui-inline-status {',
+    'color: var(--tn-color-positive);',
+    '.tn-ui-inline-status[data-tone="danger"]',
+    '.tn-ui-inline-status[data-tone="warning"]',
+] as $marker) {
+    $contains($componentsCss, $marker, 'Canonical inline feedback styling is incomplete.');
+}
+
+$publicCss = $read('frontend/styles/layouts/public.css');
+$contains($publicCss, '.tn-ui-inline-status {', 'Public form layout must place canonical inline feedback correctly.');
+$notContains($publicCss, '.tn-form-status', 'Legacy form-status CSS must remain retired.');
 
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
 foreach ([

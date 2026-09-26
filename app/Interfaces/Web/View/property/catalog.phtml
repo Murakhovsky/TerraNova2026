@@ -344,7 +344,7 @@ $breadcrumbJson = [
         </div>
       <?php endif; ?>
 
-      <?php if ($propertyMatchStatus): ?><p class="tn-form-status is-visible"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
+      <?php if ($propertyMatchStatus): ?><p class="tn-ui-inline-status is-visible" role="status" aria-live="polite"><?php echo $h($propertyMatchStatus); ?></p><?php endif; ?>
 
       <?php if (!$properties && !$catalogStatus): ?>
         <div class="tn-empty-state">
@@ -457,7 +457,7 @@ $breadcrumbJson = [
       <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
       <label class="is-wide"><span>Коментар</span><textarea name="message" rows="4" placeholder="Місто, бюджет, тип об’єкта або короткий опис задачі"></textarea></label>
       <button class="tn-btn tn-btn--dark" type="submit">Надіслати заявку</button>
-      <?php if ($inboundRequestStatus): ?><p class="tn-form-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
+      <?php if ($inboundRequestStatus): ?><p class="tn-ui-inline-status is-visible" role="status" aria-live="polite"><?php echo $h($inboundRequestStatus); ?></p><?php endif; ?>
     </form>
   </section>
 </main>
