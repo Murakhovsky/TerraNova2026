@@ -9,7 +9,7 @@ use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
-use App\Web\Phtml\ViteAssetManifest;
+use App\Web\Experience\Asset\ViteAssetManifest;
 use Domains\Spatial\Application\Contract\SpatialSceneInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;

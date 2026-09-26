@@ -329,3 +329,23 @@ Wave 13 закритий після repository-wide audit production page owners
 - фінальна інтеграція виконується одним PR із верхівки stacked migration chain.
 
 Подальший visual development не продовжує Wave 13. Нові зміни мають відбуватись поверх canonical Experience Platform і не можуть відновлювати retired route/view ownership.
+
+
+## Wave 13 — 100% debt closure
+
+Фінальний debt-closure cycle закрив compatibility whitelist, який лишався після VR-001…VR-047:
+
+- Auth login/register → canonical Twig Form Editor;
+- Diagnostic Report → Application Query + Twig System surface;
+- Property Presentation → Query/Command + Twig Public Detail runtime;
+- Public Property Submit → canonical CommandBus write замість HTTP 503 placeholder;
+- Spatial Editor → Twig + AssetMapper specialized workbench;
+- Spatial public scene → Twig shell + isolated Vite/Three.js island;
+- legacy PHTML renderer → **0** у Web runtime;
+- production page-level PHTML → **0**;
+- `property/pdf.phtml` лишається виключно non-Web service print renderer для Dompdf;
+- generic/page Vite entrypoints → **0**;
+- Vite лишається тільки для важкого `spatial-viewer` island;
+- canonical Web JS/CSS належать Symfony AssetMapper та `symfony/assets/**`.
+
+Wave 13 Master Specification виконана повністю на production runtime ownership level.
