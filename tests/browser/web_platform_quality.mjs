@@ -90,6 +90,16 @@ try {
     for (const target of pages) {
       const page = await context.newPage();
       const errors = [];
+      const cdp = await context.newCDPSession(page);
+      await cdp.send('Runtime.enable');
+      cdp.on('Runtime.exceptionThrown', ({ exceptionDetails }) => {
+        const description = exceptionDetails.exception?.description || exceptionDetails.text || 'runtime exception';
+        const location = exceptionDetails.url
+          ? `${exceptionDetails.url}:${(exceptionDetails.lineNumber ?? 0) + 1}:${(exceptionDetails.columnNumber ?? 0) + 1}`
+          : 'unknown-location';
+        const message = `runtime: ${location}: ${description}`;
+        if (!errors.includes(message)) errors.push(message);
+      });
       page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack || error.message}`));
       page.on('response', (response) => {
         if (response.status() >= 400 && response.url().startsWith(baseUrl)) {

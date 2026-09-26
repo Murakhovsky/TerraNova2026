@@ -1,12 +1,12 @@
 ---
-title: Wave 13 — Final Audit
+title: Wave 13 — Фінальний аудит
 description: Фінальна класифікація production visual ownership після VR-001…VR-047.
 status: closed
 updated: 2026-09-26
 kind: architecture
 ---
 
-# Wave 13 — Final Audit
+# Wave 13 — Фінальний аудит
 
 Wave 13 закриває visual migration не кількістю переписаних файлів, а ownership contract.
 
@@ -20,12 +20,12 @@ Wave 13 закриває visual migration не кількістю перепис
 
 ## PHTML, який свідомо лишився
 
-### Canonical compatibility entry
+### Канонічні surfaces входу
 
 - `auth/login.phtml`
 - `auth/register.phtml`
 
-### Specialized runtime
+### Спеціалізований runtime
 
 - `diagnostic_report/show.phtml`
 - `property/presentation.phtml`
@@ -42,7 +42,7 @@ Wave 13 закриває visual migration не кількістю перепис
 
 Цей список закритий. Новий page-level PHTML вимагає окремого архітектурного рішення, а не тихого повернення старого renderer.
 
-## Frontend source entrypoints
+## Вихідні точки клієнтського коду
 
 Після Wave 13 дозволені:
 
@@ -55,11 +55,11 @@ Wave 13 закриває visual migration не кількістю перепис
 
 Spatial viewer живе як specialized source `frontend/spatial/spatial-viewer.js`, а не як generic page entrypoint.
 
-## Generated build output
+## Згенерований результат збірки
 
 `public/build/**` є generated output і не визначає ownership. CI виконує `npm run build` перед frontend/runtime gates, тому source of truth — `vite.config.js` + `frontend/**`. Stale historical hashes у робочому tree не мають права відновлювати source entrypoint або route ownership.
 
-## Release gate
+## Критерії випуску
 
 Merge у `main` дозволений лише через PR після:
 
