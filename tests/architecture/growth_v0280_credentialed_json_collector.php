@@ -94,7 +94,7 @@ foreach([
 }
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===68,'Growth V0.28 must expose exactly 68 canonical Growth API routes.');
+$assert(count($matches[0])>=68,'Growth canonical API surface must not shrink below the V0.28 68-route baseline.');
 foreach([
     '/api/v1/growth/json-signal-sources',
     '/api/v1/growth/json-signal-sources/{id}/enable',

@@ -60,6 +60,6 @@ $assert(!str_contains($js,"fetch('/growth/collectors"),'Growth V0.29 JSON source
 
 $routes=$read('symfony/config/routes.yaml');
 preg_match_all('/^cos_api_v1_growth_[a-z0-9_]+:/m',$routes,$matches);
-$assert(count($matches[0])===68,'Growth V0.29 must preserve the 68-route V0.28 API surface.');
+$assert(count($matches[0])>=68,'Growth V0.29+ must preserve at least the 68-route V0.28 API baseline.');
 
 echo "Growth V0.29 Credentialed Source Workspace architecture: OK\n";

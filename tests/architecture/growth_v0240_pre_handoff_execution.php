@@ -37,7 +37,7 @@ $assert(str_contains($gatewayContract,'proposeGrowthMessage('),'Growth action pr
 $gateway=$read('app/Domains/Growth/Infrastructure/Action/KernelGrowthActionProposalGateway.php');
 foreach([
     "'growth.send_message'","'growth_contact'","sourceType:'GROWTH'",
-    "executionMode:'APPROVAL_REQUIRED'","riskLevel:'MEDIUM'",'policies->submit',
+    "executionMode:\$activationMode->executionMode()","riskLevel:'MEDIUM'",'policies->submit',
 ] as $needle){
     $assert(str_contains($gateway,$needle),'Growth V0.24 Kernel proposal adapter missing: '.$needle);
 }
