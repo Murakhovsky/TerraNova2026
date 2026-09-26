@@ -7,7 +7,6 @@ use App\Security\SessionCsrfValidator;
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Identity\Application\Contract\AdministrationServiceInterface;
-use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -22,7 +21,6 @@ final readonly class CoreWorkspacePageController
         private TenantContextProviderInterface $tenants,
         private NavigationBuilder $navigation,
         private AdministrationServiceInterface $administration,
-        private PropertyFunnelAnalyticsInterface $analytics,
         private SessionCsrfValidator $csrf,
     ) {
     }
@@ -78,26 +76,6 @@ final readonly class CoreWorkspacePageController
             'role' => $tenant->role()->value(),
         ]);
         return new RedirectResponse('/admin/users?status_message=' . rawurlencode((string) ($result['message'] ?? 'Користувача оновлено.')));
-    }
-
-    public function analytics(Request $request): Response
-    {
-        $tenant = $this->manager();
-        if ($tenant instanceof Response) return $tenant;
-        $days = max(7, min(365, (int) $request->query->get('days', 30)));
-
-        try {
-            return $this->render($request, $tenant, 'Аналітика', 'analytics', 'analytics', 'admin/analytics', [
-                'report' => $this->analytics->report($days),
-                'pageStatus' => null,
-            ], ['analytics-workspace']);
-        } catch (Throwable $error) {
-            error_log('workspace.analytics.read_failed ' . $error->getMessage());
-            return $this->render($request, $tenant, 'Аналітика', 'analytics', 'analytics', 'admin/analytics', [
-                'report' => [],
-                'pageStatus' => 'Аналітика тимчасово недоступна. Деталі записано в лог.',
-            ], ['analytics-workspace'], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
     }
 
     private function manager(): TenantContext|Response

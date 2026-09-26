@@ -2,77 +2,42 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-$read = static function (string $path) use ($root): string {
-    $full = $root . '/' . ltrim($path, '/');
-    if (!is_file($full)) throw new RuntimeException('Missing WEB V0.8 Analytics artifact: ' . $path);
-    $content = file_get_contents($full);
-    if ($content === false) throw new RuntimeException('Unable to read: ' . $path);
-    return $content;
-};
-$requireContains = static function (string $content, string $needle, string $message): void {
-    if (!str_contains($content, $needle)) throw new RuntimeException($message . ' Missing: ' . $needle);
-};
-$requireNotContains = static function (string $content, string $needle, string $message): void {
-    if (str_contains($content, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
-};
+$read = static fn(string $path): string => (string) file_get_contents($root . '/' . $path);
+$assert = static function(bool $condition, string $message): void { if (!$condition) throw new RuntimeException($message); };
 
-$controller = $read('symfony/src/Web/Workspace/CoreWorkspacePageController.php');
-$analyticsView = $read('app/Interfaces/Web/View/admin/analytics.phtml');
-$entrypoint = $read('frontend/entrypoints/analytics-workspace.js');
-$browserModule = $read('frontend/features/analytics/workspace.js');
-$styles = $read('frontend/features/analytics/workspace.css');
-$vite = $read('vite.config.js');
-$frontendAssets = $read('tests/architecture/frontend_assets.php');
-$diagnosticWorkflow = $read('.github/workflows/diagnostic.yml');
-$routes = $read('symfony/config/routes.yaml');
-
-foreach ([
-    'public function analytics(Request $request): Response',
-    '$tenant = $this->manager()',
-    '$this->render($request, $tenant, \'Аналітика\', \'analytics\', \'analytics\', \'admin/analytics\'',
-    '[\'analytics-workspace\']',
-    '\'metaRobots\' => \'noindex,nofollow\'',
-    '\'workspaceSection\' => $section',
-    '\'workspaceActive\' => $active',
-] as $needle) {
-    $requireContains($controller, $needle, 'Canonical Analytics controller contract is incomplete.');
+$controller=$read('symfony/src/Web/Administration/AdministrationAnalyticsController.php');
+foreach(['GetAdministrationAnalyticsQuery','PageArchetype::ExecutiveDashboard','WorkspaceShellFactory','AdministrationAnalyticsPresenter'] as $marker){
+    $assert(str_contains($controller,$marker),'Analytics controller missing canonical contract: '.$marker);
 }
-foreach ([
-    'path: /admin/analytics',
-    'CoreWorkspacePageController::analytics',
-] as $needle) {
-    $requireContains($routes, $needle, 'Canonical Analytics route contract is incomplete.');
+foreach(['PhtmlRenderer','NavigationBuilder','PropertyFunnelAnalyticsInterface'] as $forbidden){
+    $assert(!str_contains($controller,$forbidden),'Analytics Web controller leaked retired/direct read dependency: '.$forbidden);
 }
 
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/data_table'",
-    'tn-analytics-workspace',
-] as $needle) {
-    $requireContains($analyticsView, $needle, 'Analytics view lost canonical workspace composition.');
-}
-foreach ([
-    'tn-page-hero',
-    'tn-admin-metrics',
-    'tn-admin-card',
-    'tn-listing-table',
-    '/assets/js/',
-    '/assets/css/',
-] as $needle) {
-    $requireNotContains($analyticsView, $needle, 'Analytics view restored a retired presentation/runtime primitive.');
+$handler=$read('symfony/src/Application/Administration/Query/GetAdministrationAnalyticsQueryHandler.php');
+foreach(['PropertyFunnelAnalyticsInterface','$this->analytics->report('] as $marker){
+    $assert(str_contains($handler,$marker),'Analytics Application Query missing: '.$marker);
 }
 
-$requireContains($entrypoint, "../features/analytics/workspace.css", 'Analytics entrypoint must import feature CSS.');
-$requireContains($entrypoint, "../features/analytics/workspace.js", 'Analytics entrypoint must import feature JS.');
-$requireContains($browserModule, 'dataset.analyticsWorkspace', 'Analytics browser module must expose its migrated workspace state.');
-$requireContains($browserModule, 'aria-busy', 'Analytics browser module must expose progressive submit state.');
-$requireContains($styles, '.tn-analytics-workspace', 'Analytics feature stylesheet must be workspace-scoped.');
-$requireContains($styles, '@media (max-width: 650px)', 'Analytics feature stylesheet must cover the mobile baseline.');
-$requireContains($vite, "'analytics-workspace'", 'Vite must expose the analytics workspace entrypoint.');
-$requireContains($frontendAssets, "'analytics-workspace'", 'Frontend asset validation must include the analytics workspace entrypoint.');
-$requireNotContains($diagnosticWorkflow, 'tests/unit/sales_v063.php', 'Runtime workflow must not invoke the deleted Sales V0.6.3 unit test.');
+$view=$read('symfony/templates/experience/administration/analytics.html.twig');
+foreach(['<twig:CosPageHeader','<twig:CosFilterBar','class="cos-kpi-strip"','<twig:CosDataGrid','<twig:CosEntityListItem'] as $marker){
+    $assert(str_contains($view,$marker),'Analytics Twig missing: '.$marker);
+}
+foreach(['tn-','style=','<script'] as $forbidden){
+    $assert(!str_contains($view,$forbidden),'Analytics Twig restored legacy presentation: '.$forbidden);
+}
 
-echo "WEB V0.8 analytics workspace canonical runtime passed.\n";
+$routes=$read('symfony/config/routes.yaml');
+foreach(['path: /admin/analytics','AdministrationAnalyticsController::index'] as $marker){
+    $assert(str_contains($routes,$marker),'Analytics route missing: '.$marker);
+}
+
+foreach([
+    'app/Interfaces/Web/View/admin/analytics.phtml',
+    'frontend/entrypoints/analytics-workspace.js',
+    'frontend/features/analytics/workspace.js',
+    'frontend/features/analytics/workspace.css',
+] as $legacy){
+    $assert(!file_exists($root.'/'.$legacy),'Retired Analytics artifact restored: '.$legacy);
+}
+
+echo "WEB V0.8/Wave 13 Analytics workspace passed.\n";

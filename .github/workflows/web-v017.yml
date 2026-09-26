@@ -6,7 +6,9 @@ on:
     paths:
       - 'symfony/templates/experience/property/submissions.html.twig'
       - 'symfony/src/Web/Property/PropertySubmissionsController.php'
-      - 'app/Interfaces/Web/View/admin/analytics.phtml'
+      - 'symfony/templates/experience/administration/analytics.html.twig'
+      - 'symfony/src/Web/Administration/**'
+      - 'symfony/src/Application/Administration/**'
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'symfony/templates/experience/system/control_center.html.twig'
       - 'symfony/src/Web/Operations/**'
@@ -28,7 +30,9 @@ on:
     paths:
       - 'symfony/templates/experience/property/submissions.html.twig'
       - 'symfony/src/Web/Property/PropertySubmissionsController.php'
-      - 'app/Interfaces/Web/View/admin/analytics.phtml'
+      - 'symfony/templates/experience/administration/analytics.html.twig'
+      - 'symfony/src/Web/Administration/**'
+      - 'symfony/src/Application/Administration/**'
       - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
       - 'symfony/templates/experience/system/control_center.html.twig'
       - 'symfony/src/Web/Operations/**'
@@ -67,7 +71,9 @@ jobs:
           php -l symfony/src/Web/Property/PropertySubmissionsController.php
           php -l symfony/src/Web/Property/PropertySubmissionsPresenter.php
           php -l symfony/src/Application/Property/Query/GetPropertySubmissionsQueueQueryHandler.php
-          php -l app/Interfaces/Web/View/admin/analytics.phtml
+          php -l symfony/src/Web/Administration/AdministrationAnalyticsController.php
+          php -l symfony/src/Web/Administration/AdministrationAnalyticsPresenter.php
+          php -l symfony/src/Application/Administration/Query/GetAdministrationAnalyticsQueryHandler.php
           php -l app/Interfaces/Web/View/diagnostic_report/show.phtml
           php -l symfony/src/Web/Operations/ControlCenterPageController.php
           php -l symfony/src/Web/Operations/ControlCenterPresenter.php

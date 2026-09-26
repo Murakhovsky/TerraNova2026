@@ -326,25 +326,6 @@ foreach ([
     }
 }
 
-$analyticsWorkspaceCss = $read('frontend/features/analytics/workspace.css');
-foreach ([
-    '@layer tn-analytics-workspace',
-    '.tn-analytics-workspace {',
-    '.tn-analytics-workspace .tn-dashboard-bars',
-] as $marker) {
-    $contains($analyticsWorkspaceCss, $marker, 'Analytics workspace CSS lost its live canonical contract.');
-}
-foreach ([
-    '.tn-analytics-workspace .tn-page-hero',
-    '.tn-analytics-workspace .tn-admin-metrics',
-    '.tn-analytics-workspace .tn-admin-dashboard-grid',
-    '.tn-analytics-workspace .tn-admin-card',
-    '.tn-analytics-workspace .tn-table-wrap',
-    '.tn-analytics-workspace .tn-listing-table',
-] as $legacySelector) {
-    $notContains($analyticsWorkspaceCss, $legacySelector, 'Analytics workspace CSS restored a selector from retired compatibility views.');
-}
-
 $docs = $read('docs/03-architecture/cos-remaining-shell-closure.md');
 foreach ([
     '# Закриття залишкових UI shells',

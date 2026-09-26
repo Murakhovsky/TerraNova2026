@@ -28,7 +28,6 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       input: {
-        'analytics-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/analytics-workspace.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
         'portal-cabinet': resolve(import.meta.dirname, 'frontend/entrypoints/portal-cabinet.js'),

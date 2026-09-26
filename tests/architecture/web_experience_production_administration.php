@@ -283,26 +283,35 @@ foreach (['tn-', 'style=', '<script', 'PhtmlRenderer'] as $legacyMarker) {
     $notContains($companyHome, $legacyMarker, 'Company Home must not retain legacy/local visual composition.');
 }
 
-$analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');
+$analytics = $read('symfony/templates/experience/administration/analytics.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/data_table'",
-    'tn-ui-panel',
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    'class="cos-kpi-strip"',
+    '<twig:CosMetric',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
+    'data-cos-archetype',
 ] as $marker) {
-    $contains($analytics, $marker, 'Administration Analytics must remain canonical.');
+    $contains($analytics, $marker, 'Administration Analytics canonical Executive Dashboard is incomplete.');
 }
-foreach (['tn-page-hero', 'tn-admin-metrics', 'tn-admin-card', 'tn-listing-table'] as $legacyMarker) {
-    $notContains($analytics, $legacyMarker, 'Administration Analytics must not restore legacy presentation primitives.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($analytics, $legacyMarker, 'Administration Analytics must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/admin/analytics.phtml')) {
+    throw new RuntimeException('Legacy Administration Analytics PHTML restored.');
+}
+
+$analyticsController = $read('symfony/src/Web/Administration/AdministrationAnalyticsController.php');
+foreach (['GetAdministrationAnalyticsQuery', 'PageArchetype::ExecutiveDashboard', 'WorkspaceShellFactory', 'AdministrationAnalyticsPresenter'] as $marker) {
+    $contains($analyticsController, $marker, 'Administration Analytics controller contract is incomplete.');
 }
 
 foreach ([
     'path: /admin',
     'ExecutiveDashboardController::index',
     'path: /admin/analytics',
-    'CoreWorkspacePageController::analytics',
+    'AdministrationAnalyticsController::index',
 ] as $marker) {
     $contains($routes, $marker, 'Administration closure route contract is incomplete.');
 }

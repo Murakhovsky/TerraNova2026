@@ -1668,6 +1668,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Administration\AdministrationAnalyticsController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Sales\ClientCaseInboxController:
     public: true
     tags: ['controller.service_arguments']
