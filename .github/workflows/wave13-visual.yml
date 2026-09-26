@@ -13,6 +13,8 @@ on:
       - 'symfony/src/Web/Visualization/**'
       - 'symfony/src/Web/Diagnostic/**'
       - 'symfony/src/Web/Administration/**'
+      - 'symfony/src/Web/Content/**'
+      - 'symfony/src/Application/Content/**'
       - 'symfony/src/Application/Administration/**'
       - 'symfony/src/Application/Diagnostic/**'
       - 'symfony/assets/controllers/diagnostic_methodology_controller.js'
@@ -52,6 +54,8 @@ on:
       - 'symfony/src/Web/Visualization/**'
       - 'symfony/src/Web/Diagnostic/**'
       - 'symfony/src/Web/Administration/**'
+      - 'symfony/src/Web/Content/**'
+      - 'symfony/src/Application/Content/**'
       - 'symfony/src/Application/Administration/**'
       - 'symfony/src/Application/Diagnostic/**'
       - 'symfony/assets/controllers/diagnostic_methodology_controller.js'
@@ -108,6 +112,7 @@ jobs:
           php tests/architecture/web_experience_wave13_methodology_studio.php
           php tests/architecture/web_experience_wave13_analytics.php
           php tests/architecture/web_experience_wave13_users.php
+          php tests/architecture/web_experience_wave13_content.php
           php tests/architecture/web_experience_wave13_sales_today.php
           php tests/architecture/web_experience_wave13_toolbar.php
           php tests/architecture/web_experience_wave13_sales_pipeline.php

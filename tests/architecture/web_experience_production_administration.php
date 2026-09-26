@@ -71,33 +71,28 @@ foreach ([
     $contains($routes, $marker, 'Users Administration route contract is incomplete.');
 }
 
-$contentManage = $read('app/Interfaces/Web/View/content/manage.phtml');
+$contentManage = $read('symfony/templates/experience/content/manage.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    'admin/content/edit/',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
     'id="n8n"',
 ] as $marker) {
-    $contains($contentManage, $marker, 'Content Administration listing must use canonical workspace composition.');
+    $contains($contentManage, $marker, 'Content Administration canonical System UI is incomplete.');
 }
-foreach ([
-    'tn-page-hero tn-page-hero--catalog',
-    '<section class="tn-admin-metrics"',
-    '<form class="tn-filter-bar"',
-    '<table class="tn-listing-table"',
-] as $legacyMarker) {
-    $notContains($contentManage, $legacyMarker, 'Content Administration listing must not restore legacy shell/filter/table composition.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($contentManage, $legacyMarker, 'Content Administration listing must not restore legacy/local presentation.');
 }
 
-$contentEdit = $read('app/Interfaces/Web/View/content/edit.phtml');
+$contentEdit = $read('symfony/templates/experience/content/edit.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
+    '<twig:CosPageHeader',
+    'class="cos-form"',
+    'class="cos-form__section"',
+    'class="cos-form__actions"',
     'admin/content/save/',
     'name="csrf_token"',
     'name="content_type"',
@@ -112,27 +107,33 @@ foreach ([
     'name="og_image_url"',
     'name="schema_json"',
 ] as $marker) {
-    $contains($contentEdit, $marker, 'Content editor lost a canonical or save/SEO contract.');
+    $contains($contentEdit, $marker, 'Content editor lost canonical Form Editor or save/SEO contract.');
+}
+foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+    $notContains($contentEdit, $legacyMarker, 'Content editor must not restore legacy/local presentation.');
 }
 foreach ([
-    'tn-page-hero tn-page-hero--catalog',
-    'tn-admin-card',
-    'tn-admin-card__head',
-] as $legacyMarker) {
-    $notContains($contentEdit, $legacyMarker, 'Content editor must not restore the legacy visual shell.');
+    'app/Interfaces/Web/View/content/manage.phtml',
+    'app/Interfaces/Web/View/content/edit.phtml',
+] as $legacy) {
+    if (is_file($root . '/' . $legacy)) throw new RuntimeException('Legacy Content Administration PHTML restored: ' . $legacy);
 }
 
 $contentController = $read('symfony/src/Web/Content/ContentAdminPageController.php');
 foreach ([
-    'public function edit(Request $request, string $id = \'0\'): Response',
-    'public function save(Request $request, string $id = \'0\'): Response',
-    '$this->manager()',
-    '$this->csrf->isValid($request)',
-    '$this->content->save',
-    "'content/manage'",
-    "'content/edit'",
+    'GetContentAdministrationQuery',
+    'GetContentEditorQuery',
+    'SaveContentCommand',
+    'QueryBusInterface',
+    'CommandBusInterface',
+    'PageArchetype::SystemControlSurface',
+    'PageArchetype::FormEditor',
+    'SessionCsrfValidator',
 ] as $marker) {
     $contains($contentController, $marker, 'Content Administration controller contract is incomplete.');
+}
+foreach (['PhtmlRenderer', 'NavigationBuilder', 'ContentServiceInterface'] as $forbidden) {
+    $notContains($contentController, $forbidden, 'Content Administration Web controller leaked direct/legacy dependency.');
 }
 
 foreach ([

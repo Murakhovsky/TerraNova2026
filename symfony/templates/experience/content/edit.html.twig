@@ -1,0 +1,130 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}{{ editor.isNew() ? 'New Content' : 'Edit Content' }} | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="{{ editor.isNew() ? 'Administration · Content · Create' : 'Administration · Content · Edit' }}"
+        title="{{ editor.isNew() ? 'Новий матеріал' : (editor.item.title ?? 'Матеріал') }}"
+        subtitle="Контент, публікація та SEO-метадані в одній картці."
+        metaValue="{{ editor.item.seo_score ?? 0 }}%"
+        metaLabel="SEO готовність"
+    >
+        <twig:CosButton label="До контенту" href="/admin/content" variant="ghost" />
+        {% if editor.publicHref() %}
+            <a class="cos-button cos-button--primary" href="{{ editor.publicHref() }}" target="_blank" rel="noopener">Відкрити публічно</a>
+        {% endif %}
+    </twig:CosPageHeader>
+
+    {% if editor.actionStatus %}
+        <twig:CosAlert title="Зміни застосовано" copy="{{ editor.actionStatus }}" tone="positive" />
+    {% endif %}
+    {% if editor.notFound %}
+        <twig:CosAlert title="Матеріал не знайдено" copy="Запитаний content record відсутній або недоступний." tone="danger" />
+    {% endif %}
+
+    {% if not editor.notFound %}
+        <form class="cos-form" method="post" action="/admin/content/save/{{ editor.item.id ?? 0 }}">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="id" value="{{ editor.item.id ?? 0 }}">
+
+            <section class="cos-form__section">
+                <div>
+                    <p class="cos-card__eyebrow">Матеріал</p>
+                    <h2 class="cos-card__title">Зміст</h2>
+                </div>
+                <div class="cos-form__grid">
+                    <label class="cos-field">
+                        <span>Назва</span>
+                        <input class="cos-input" name="title" type="text" maxlength="240" value="{{ editor.item.title ?? '' }}" required>
+                    </label>
+                    <label class="cos-field">
+                        <span>Тип</span>
+                        <select class="cos-select" name="content_type">
+                            <option value="blog_post" {% if (editor.item.content_type ?? '') == 'blog_post' %}selected{% endif %}>Стаття</option>
+                            <option value="seo_landing" {% if (editor.item.content_type ?? '') == 'seo_landing' %}selected{% endif %}>SEO-лендінг</option>
+                        </select>
+                    </label>
+                    <label class="cos-field">
+                        <span>Статус</span>
+                        <select class="cos-select" name="status">
+                            {% for code, label in {'draft':'Чернетка','review':'На перевірці','published':'Опубліковано','archived':'Архів'} %}
+                                <option value="{{ code }}" {% if (editor.item.status ?? '') == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="cos-field"><span>Slug</span><input class="cos-input" name="slug" type="text" maxlength="190" value="{{ editor.item.slug ?? '' }}" placeholder="генерується автоматично"></label>
+                    <label class="cos-field"><span>Категорія</span><input class="cos-input" name="category" type="text" maxlength="120" value="{{ editor.item.category ?? '' }}"></label>
+                    <label class="cos-field"><span>Короткий опис</span><textarea class="cos-textarea" name="excerpt" rows="3" maxlength="2000">{{ editor.item.excerpt ?? '' }}</textarea></label>
+                    <label class="cos-field"><span>Дата публікації</span><input class="cos-input" name="published_at" type="datetime-local" value="{{ editor.item.published_at_input ?? '' }}"></label>
+                    <label class="cos-field"><span>Запланувати</span><input class="cos-input" name="scheduled_at" type="datetime-local" value="{{ editor.item.scheduled_at_input ?? '' }}"></label>
+                    <label class="cos-field"><span>Теги</span><input class="cos-input" name="tags" type="text" value="{{ editor.item.tags ?? '' }}"></label>
+                </div>
+                <label class="cos-field">
+                    <span>Зміст</span>
+                    <textarea class="cos-textarea" name="body_html" rows="22" required>{{ editor.item.body_html ?? '' }}</textarea>
+                </label>
+            </section>
+
+            <section class="cos-form__section">
+                <div>
+                    <p class="cos-card__eyebrow">Медіа</p>
+                    <h2 class="cos-card__title">Обкладинка</h2>
+                </div>
+                <div class="cos-form__grid">
+                    <label class="cos-field"><span>URL зображення</span><input class="cos-input" name="featured_image_url" type="url" maxlength="700" value="{{ editor.item.featured_image_url ?? '' }}"></label>
+                    <label class="cos-field"><span>Alt-текст</span><input class="cos-input" name="featured_image_alt" type="text" maxlength="240" value="{{ editor.item.featured_image_alt ?? '' }}"></label>
+                </div>
+            </section>
+
+            <section class="cos-form__section">
+                <div>
+                    <p class="cos-card__eyebrow">Пошук</p>
+                    <h2 class="cos-card__title">SEO та Open Graph</h2>
+                </div>
+                <div class="cos-form__grid">
+                    <label class="cos-field"><span>SEO title</span><input class="cos-input" name="meta_title" type="text" maxlength="240" value="{{ editor.item.meta_title ?? '' }}"></label>
+                    <label class="cos-field"><span>SEO description</span><textarea class="cos-textarea" name="meta_description" rows="3" maxlength="500">{{ editor.item.meta_description ?? '' }}</textarea></label>
+                    <label class="cos-field"><span>Ключове слово</span><input class="cos-input" name="focus_keyword" type="text" maxlength="190" value="{{ editor.item.focus_keyword ?? '' }}"></label>
+                    <label class="cos-field">
+                        <span>Robots</span>
+                        <select class="cos-select" name="robots">
+                            {% for robots in ['index,follow','noindex,follow','noindex,nofollow'] %}
+                                <option value="{{ robots }}" {% if (editor.item.robots ?? '') == robots %}selected{% endif %}>{{ robots }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="cos-field"><span>Canonical URL</span><input class="cos-input" name="canonical_url" type="url" maxlength="700" value="{{ editor.item.canonical_url ?? '' }}"></label>
+                    <label class="cos-field"><span>Open Graph image</span><input class="cos-input" name="og_image_url" type="url" maxlength="700" value="{{ editor.item.og_image_url ?? '' }}"></label>
+                </div>
+                <label class="cos-field"><span>Schema JSON</span><textarea class="cos-textarea" name="schema_json" rows="8">{{ editor.item.schema_json ?? '' }}</textarea></label>
+            </section>
+
+            {% if editor.revisions is not empty %}
+                <section class="cos-form__section">
+                    <div>
+                        <p class="cos-card__eyebrow">Історія</p>
+                        <h2 class="cos-card__title">Останні ревізії</h2>
+                    </div>
+                    <div class="cos-entity-list" role="list">
+                        {% for revision in editor.revisions %}
+                            <twig:CosEntityListItem title="{{ revision.title }}" subtitle="{{ revision.subtitle }}" meta="{{ revision.meta }}" />
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+
+            <div class="cos-form__actions">
+                <twig:CosButton label="До контенту" href="/admin/content" variant="ghost" />
+                <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+            </div>
+        </form>
+    {% endif %}
+</section>
+{% endblock %}
