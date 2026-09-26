@@ -1,0 +1,36 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Terra Nova COS | Company Operating System{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Canonical Symfony runtime for Terra Nova Company Operating System.">
+    <meta name="robots" content="index,follow">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="home"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Terra Nova COS"
+        title="Company Operating System"
+        subtitle="Єдиний canonical Symfony runtime для операцій, продажів, діагностики, документів, сервісу, spatial та AI-агентів."
+    >
+        <twig:CosButton label="Увійти" href="/auth/login" variant="primary" />
+        <twig:CosButton label="Блог" href="/blog" variant="ghost" />
+        <twig:CosButton label="API status" href="/api/v1/status" variant="ghost" />
+    </twig:CosPageHeader>
+
+    <section class="cos-page__section">
+        <twig:CosCard
+            eyebrow="Runtime"
+            title="Symfony / COS"
+            copy="Legacy Phalcon runtime завершив роботу. Усі application routes обслуговує canonical Symfony upstream."
+        />
+    </section>
+</section>
+{% endblock %}

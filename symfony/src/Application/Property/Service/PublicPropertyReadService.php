@@ -44,6 +44,17 @@ final readonly class PublicPropertyReadService
         ];
     }
 
+    /** @param list<string> $publicIds @return array{properties:list<array<string,mixed>>} */
+    public function favourites(array $publicIds): array
+    {
+        return [
+            'properties' => array_map(
+                [$this, 'propertyCardPayload'],
+                $this->properties->findByPublicIds($this->organizationId, $publicIds),
+            ),
+        ];
+    }
+
     /** @return array<string,mixed>|null */
     public function show(string $slug): ?array
     {
@@ -151,6 +162,8 @@ final readonly class PublicPropertyReadService
             'meta_title' => (string) ($property['meta_title'] ?? ''),
             'meta_description' => (string) ($property['meta_description'] ?? ''),
             'land_area' => $property['land_area'] ?? null,
+            'area_living' => $property['area_living'] ?? null,
+            'group_title' => (string) ($property['group_title'] ?? ''),
             'bedrooms' => $property['bedrooms'] ?? null,
             'bathrooms' => $property['bathrooms'] ?? null,
             'floor' => $property['floor'] ?? null,
@@ -164,6 +177,7 @@ final readonly class PublicPropertyReadService
             'agent_email' => (string) ($property['agent_email'] ?? ''),
             'agent_telegram' => (string) ($property['agent_telegram'] ?? ''),
             'agent_avatar' => (string) ($property['agent_avatar'] ?? ''),
+            'agent_bio' => (string) ($property['agent_bio'] ?? ''),
         ];
     }
 

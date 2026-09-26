@@ -13,8 +13,7 @@
     <title>{% block title %}COS{% endblock %}</title>
 
     {% block stylesheets %}
-        {{ ux_controller_link_tags() }}
-        <link rel="stylesheet" href="{{ asset('bootstrap/dist/css/bootstrap.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('vendor/bootstrap/dist/css/bootstrap.min.css') }}">
         <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     {% endblock %}
 

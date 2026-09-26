@@ -165,6 +165,60 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
         ]);
     }
 
+    public function findByPublicIds(string $organizationId, array $publicIds): array
+    {
+        $publicIds = array_values(array_slice(array_unique(array_filter(
+            $publicIds,
+            static fn (mixed $id): bool => is_string($id)
+                && $id !== ''
+                && preg_match('/^[A-Za-z0-9_-]+$/', $id) === 1,
+        )), 0, 100));
+
+        if ($publicIds === []) {
+            return [];
+        }
+
+        $params = ['organization_id' => $organizationId];
+        $placeholders = [];
+
+        foreach ($publicIds as $index => $publicId) {
+            $key = 'public_id_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $publicId;
+        }
+
+        return $this->database->fetchAll('
+            SELECT
+                p.id, p.public_id, p.slug, p.title, p.deal_type, p.status, p.source_type,
+                p.price_amount, p.price_currency, p.price_period, p.area_total, p.rooms,
+                p.address, p.short_description, p.is_featured, p.has_3d_tour, p.published_at,
+                t.name_uk AS type_name,
+                l.city, l.region,
+                (
+                    SELECT image.image_url
+                    FROM tn_property_images image
+                    WHERE image.organization_id = p.organization_id
+                      AND image.property_id = p.id
+                    ORDER BY image.is_cover DESC, image.sort_order, image.id
+                    LIMIT 1
+                ) AS cover_url,
+                (
+                    SELECT COUNT(*)
+                    FROM tn_property_images image_count
+                    WHERE image_count.organization_id = p.organization_id
+                      AND image_count.property_id = p.id
+                ) AS image_count
+            FROM tn_properties p
+            INNER JOIN tn_property_types t ON t.id = p.type_id
+            INNER JOIN tn_locations l ON l.id = p.location_id
+            WHERE p.organization_id = :organization_id
+              AND p.visibility = "public"
+              AND p.status IN ("published", "active")
+              AND p.public_id IN (' . implode(', ', $placeholders) . ')
+            ORDER BY p.is_featured DESC, p.published_at DESC, p.id DESC
+        ', $params);
+    }
+
     public function images(string $organizationId, int $propertyId): array
     {
         return $this->database->fetchAll('

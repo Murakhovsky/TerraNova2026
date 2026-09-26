@@ -158,7 +158,7 @@ if (!str_contains($app, "import 'bootstrap';")) {
 }
 
 $base = (string) file_get_contents($root . '/symfony/templates/base.html.twig');
-if (!str_contains($base, "asset('bootstrap/dist/css/bootstrap.min.css')")) {
+if (!str_contains($base, "asset('vendor/bootstrap/dist/css/bootstrap.min.css')")) {
     throw new RuntimeException('Bootstrap stylesheet is not loaded by the canonical Twig layout.');
 }
 

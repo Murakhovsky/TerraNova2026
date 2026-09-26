@@ -38,6 +38,12 @@ kind: architecture
 | VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
 | VR-025 | `/cabinet` | Portal | Identity | Portal | P0 | Twig | DONE |
 | VR-026 | `/cabinet/submission/{id}` | Portal | Compatibility | Portal | P0 | Twig | DONE |
+| VR-027 | `/` | Public | Core | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-029 | `/property/show/{slug}` | Public | Property | Public Detail / Marketing | P0 | Twig + Gallery Island | DONE |
+| VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -193,3 +199,38 @@ VR-026 зберігає `/cabinet/submission/{id}` як явний HTTP 410 comp
 ## Фаза 7 — завершення Portal
 
 VR-025…026 завершені. Cabinet home і retired submission працюють через Symfony AssetMapper + Portal archetype; Portal PHTML = 0; dedicated `portal-cabinet` Vite/CSS = 0; окремий Portal DDD Domain не створено. Наступна family: Phase 8 — Public Property.
+
+
+## Фаза 8 — Public Property
+
+VR-027 переводить root Public surface з PHTML/Public Vite ownership на Twig Public Detail / Marketing archetype. Контент і destinations не змінюються; `public-surface` Vite залишається живим для ще не мігрованих Property public routes.
+
+
+VR-028 переводить Public Property Catalog на QueryBus/CommandBus + Public Catalog archetype. Favourites залишаються browser-side projection через існуючий API, inbound lead проходить через ReceivePublicLeadCommand; legacy `property/catalog.phtml` видаляється.
+
+VR-029 переводить Public Property Detail на QueryBus/CommandBus + Public Detail / Marketing archetype. Gallery працює через Stimulus, favourites перевикористовують public-property controller, view analytics — окремий Application Command; legacy `property/show.phtml` та Vite gallery entrypoint видаляються.
+
+VR-030 переводить Property SEO collections на один canonical Public Catalog runtime. Type/City/landing routes відрізняються лише filter overrides та SEO metadata; inventory/cards/pagination не дублюються.
+
+VR-031 переводить Favourites на session IDs → canonical public read-port → Twig cards. Старий рендер до 150 карток з browser-side hiding видалено; API toggle contract збережено.
+
+VR-032 переводить Public Property Submit та aliases на canonical Form / Editor. Write parity свідомо збережена: POST повертає HTTP 503 і не створює запис, доки public intake не матиме окремого Application Command.
+
+
+## Фаза 8 — завершення Public Property
+
+Production migration units VR-027…032 завершені.
+
+- root Public surface працює через Symfony/Twig Public Detail / Marketing;
+- `/property` і `/property/catalog` використовують один canonical Public Catalog runtime;
+- `/property/show/{slug}` працює через QueryBus/CommandBus + Public Detail / Marketing + Stimulus gallery;
+- type/city/local SEO collections перевикористовують Catalog Query/ViewModel/cards/pagination;
+- `/property/favour` читає лише session-selected `public_id` через вузький public read-port;
+- `/property/submit`, `/property/create`, `/submit-property` використовують один Form / Editor runtime;
+- public submit POST свідомо лишається HTTP 503 без persistence до появи окремого public-intake Application Command;
+- legacy PHTML для VR-027…032 = **0**;
+- legacy `terranova-catalog-api` і `terranova-property-gallery` Vite source entrypoints = **0**.
+
+`/property/presentation/{slug}` і `/property/pdf/{slug}` не входять у VR-027…032. Вони залишаються спеціалізованим compatibility runtime до фінальної хвилі legacy deletion і не вважаються canonical Public Property visual surface.
+
+Наступна production migration family: **Phase 9 — Public Brand**.

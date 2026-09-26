@@ -64,12 +64,15 @@ foreach (['tn-article__header', 'tn-article__body', 'application/ld+json'] as $m
     $contains($blogShow, $marker, 'Blog Article specialized content contract must remain intact.');
 }
 
-$seo = $read('app/Interfaces/Web/View/property/seo.phtml');
-foreach (["partial('components/ui/page_header'", "partial('components/ui/state'", 'tn-ui-panel', 'BreadcrumbList', 'ItemList'] as $marker) {
-    $contains($seo, $marker, 'Property SEO landing canonical/specialized contract is incomplete.');
+$seo = $read('symfony/templates/experience/public/property_seo.html.twig');
+foreach (['<twig:CosPageHeader', 'data-cos-public="property-seo"', 'application/ld+json'] as $marker) {
+    $contains($seo, $marker, 'Property SEO collection canonical Public Catalog contract is incomplete.');
 }
-foreach (['tn-breadcrumbs', 'tn-seo-panel'] as $legacyMarker) {
-    $notContains($seo, $legacyMarker, 'Property SEO landing must not restore legacy outer shell.');
+foreach (['tn-', 'style=', 'onclick='] as $legacyMarker) {
+    $notContains($seo, $legacyMarker, 'Property SEO collection must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/seo.phtml')) {
+    throw new RuntimeException('Retired Property SEO PHTML restored.');
 }
 
 $kpi = $read('app/Interfaces/Web/View/components/ui/kpi_card.phtml');
@@ -260,9 +263,18 @@ if (is_file($root . '/app/Interfaces/Web/View/methodology_studio/index.phtml')) 
     throw new RuntimeException('Retired Methodology Studio PHTML restored.');
 }
 
+$publicHome = $read('symfony/templates/experience/public/home.html.twig');
+foreach (['<twig:CosPageHeader', '<twig:CosCard', 'Company Operating System', 'data-cos-public="home"'] as $marker) {
+    $contains($publicHome, $marker, 'Wave 13 Public home contract is incomplete.');
+}
+foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+    $notContains($publicHome, $legacyMarker, 'Wave 13 Public home must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/home/canonical.phtml')) {
+    throw new RuntimeException('Retired home PHTML restored.');
+}
+
 $specializedContracts = [
-    'app/Interfaces/Web/View/home/canonical.phtml' => ['tn-public-hero', 'Company Operating System'],
-    'app/Interfaces/Web/View/property/show.phtml' => ['tn-property-hero', 'application/ld+json', 'data-property-gallery'],
     'app/Interfaces/Web/View/property/presentation.phtml' => ['tn-presentation-hero', 'data-copy-value'],
     'app/Interfaces/Web/View/spatial/scene.phtml' => ['tn-spatial-public', "partial('shared/spatial_viewer'"],
     'app/Interfaces/Web/View/error/failure.phtml' => ['tn-failure', 'data-failure-code'],
@@ -287,7 +299,6 @@ $globalForbidden = [
 ];
 $breadcrumbWhitelist = [
     'property/catalog.phtml',
-    'property/show.phtml',
     'property/presentation.phtml',
 ];
 

@@ -1676,6 +1676,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\PublicSite\HomeController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Sales\ClientCaseInboxController:
     public: true
     tags: ['controller.service_arguments']
@@ -1705,6 +1709,30 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Property\PropertyMapController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PublicPropertyCatalogController:
+    public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PublicPropertyDetailController:
+    public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PublicPropertySeoController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PublicPropertyFavouritesController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PublicPropertySubmitController:
     public: true
     tags: ['controller.service_arguments']
 
