@@ -1,0 +1,72 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Вибрані обʼєкти | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Збережені обʼєкти Terra Nova CLUB.">
+    <meta name="robots" content="noindex,follow">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-public-property cos-page__stack"
+    data-controller="public-property"
+    data-cos-public="property-favourites"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Favourites"
+        title="Вибрані обʼєкти"
+        subtitle="Збережені варіанти для повернення, порівняння або розмови з менеджером."
+        metaValue="{{ favourites.total() }}"
+        metaLabel="у вибраному"
+    >
+        <twig:CosButton label="До каталогу" href="/property/catalog" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if favourites.error %}
+        <twig:CosAlert title="Вибране тимчасово недоступне" copy="{{ favourites.error }}" tone="danger" />
+    {% endif %}
+
+    <section class="cos-page__section">
+        <article class="cos-card">
+            <div class="cos-card__header">
+                <div>
+                    <p class="cos-card__eyebrow">Saved inventory</p>
+                    <h2 class="cos-card__title">Ваш список</h2>
+                </div>
+                <p class="cos-card__copy">
+                    <strong data-public-property-target="count">{{ favourites.total() }}</strong>
+                    збережено
+                </p>
+            </div>
+
+            <div
+                data-public-property-target="empty"
+                {% if favourites.properties is not empty %}hidden{% endif %}
+            >
+                <twig:CosEmptyState
+                    title="У вибраному поки порожньо"
+                    copy="Відкрийте каталог і збережіть обʼєкти, які хочете переглянути або обговорити."
+                />
+            </div>
+
+            <div class="cos-property-catalog-grid" role="list">
+                {% for property in favourites.properties %}
+                    <div
+                        role="listitem"
+                        data-public-property-target="item"
+                        data-public-id="{{ property.public_id }}"
+                    >
+                        {% include 'components/property/public_property_card.html.twig' with { property: property } only %}
+                    </div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <p class="cos-card__copy" data-public-property-target="status" aria-live="polite"></p>
+</section>
+{% endblock %}

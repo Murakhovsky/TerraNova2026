@@ -1,0 +1,216 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Каталог нерухомості | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Нерухомість для купівлі, оренди та інвестицій.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="/property/catalog">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-public-property cos-page__stack"
+    data-controller="public-property"
+    data-cos-public="property-catalog"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Public Catalog"
+        title="Каталог нерухомості"
+        subtitle="Актуальні обʼєкти для купівлі, оренди та інвестицій."
+        metaValue="{{ catalog.total() }}"
+        metaLabel="обʼєктів"
+    >
+        <twig:CosButton label="Карта" href="/property/map" variant="ghost" />
+        <twig:CosButton label="Вибране" href="/property/favour" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if catalog.notice %}
+        <twig:CosAlert title="Запит" copy="{{ catalog.notice }}" tone="info" />
+    {% endif %}
+
+    {% if catalog.error %}
+        <twig:CosAlert title="Каталог тимчасово недоступний" copy="{{ catalog.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section">
+            <div class="cos-kpi-strip">
+                <article class="cos-card">
+                    <twig:CosMetric label="Результати" value="{{ catalog.total() }}" />
+                </article>
+                <article class="cos-card">
+                    <twig:CosMetric label="Тип угоди" value="{{ catalog.dealLabel }}" />
+                </article>
+                <article class="cos-card">
+                    <twig:CosMetric label="Локація" value="{{ catalog.primaryLocation }}" />
+                </article>
+            </div>
+        </section>
+
+        <section class="cos-page__section cos-property-catalog-filters" aria-label="Фільтри каталогу">
+            <twig:CosFilterBar action="/property/catalog" label="Фільтри нерухомості">
+                <label class="cos-field">
+                    <span>Пошук</span>
+                    <input class="cos-input" type="search" name="q" value="{{ catalog.filters.q|default('') }}" placeholder="Назва, місто, район">
+                </label>
+
+                <label class="cos-field">
+                    <span>Угода</span>
+                    <select class="cos-select" name="deal_type">
+                        <option value="">Усі</option>
+                        {% for value, label in {'sale':'Продаж','rent':'Оренда','investment':'Інвестиція'} %}
+                            <option value="{{ value }}" {% if catalog.filters.deal_type|default('') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="cos-field">
+                    <span>Тип</span>
+                    <select class="cos-select" name="type">
+                        <option value="">Усі</option>
+                        {% for type in catalog.types %}
+                            <option value="{{ type.code }}" {% if catalog.filters.type|default('') == type.code %}selected{% endif %}>
+                                {{ type.name_uk|default(type.code) }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="cos-field">
+                    <span>Локація</span>
+                    <select class="cos-select" name="location">
+                        <option value="">Усі</option>
+                        {% for location in catalog.locations %}
+                            <option value="{{ location.slug }}" {% if catalog.filters.location|default('') == location.slug %}selected{% endif %}>
+                                {{ location.city|default(location.slug) }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="cos-field">
+                    <span>Ціна від</span>
+                    <input class="cos-input" type="number" min="0" name="price_min" value="{{ catalog.filters.price_min|default('') }}">
+                </label>
+
+                <label class="cos-field">
+                    <span>Ціна до</span>
+                    <input class="cos-input" type="number" min="0" name="price_max" value="{{ catalog.filters.price_max|default('') }}">
+                </label>
+
+                <label class="cos-field">
+                    <span>Площа від</span>
+                    <input class="cos-input" type="number" min="0" step="0.1" name="area_min" value="{{ catalog.filters.area_min|default('') }}">
+                </label>
+
+                <label class="cos-field">
+                    <span>Кімнат від</span>
+                    <input class="cos-input" type="number" min="0" step="1" name="rooms_min" value="{{ catalog.filters.rooms_min|default('') }}">
+                </label>
+
+                <label class="cos-field">
+                    <span>Сортування</span>
+                    <select class="cos-select" name="sort">
+                        <option value="">За замовчуванням</option>
+                        {% for value, label in {'newest':'Новіші','price_asc':'Ціна ↑','price_desc':'Ціна ↓','area_desc':'Площа ↓'} %}
+                            <option value="{{ value }}" {% if catalog.filters.sort|default('') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <button class="cos-button cos-button--primary" type="submit">Застосувати</button>
+            </twig:CosFilterBar>
+
+            {% if catalog.activeFilters is not empty %}
+                <div class="cos-action-bar cos-action-bar--start" aria-label="Активні фільтри">
+                    {% for filter in catalog.activeFilters %}
+                        <span class="cos-badge cos-badge--neutral">{{ filter }}</span>
+                    {% endfor %}
+                    <a class="cos-button cos-button--ghost cos-button--sm" href="/property/catalog">Очистити</a>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="cos-page__section" aria-labelledby="catalog-results">
+            <div class="cos-card__header">
+                <div>
+                    <p class="cos-card__eyebrow">Inventory</p>
+                    <h2 id="catalog-results" class="cos-card__title">Обʼєкти</h2>
+                </div>
+                <span class="cos-card__copy">{{ catalog.total() }}</span>
+            </div>
+
+            {% if catalog.properties is empty %}
+                <twig:CosEmptyState
+                    title="Обʼєктів не знайдено"
+                    copy="Змініть фільтри або залиште запит, і менеджер підготує добірку."
+                />
+            {% else %}
+                <div class="cos-property-catalog-grid" role="list">
+                    {% for property in catalog.properties %}
+                        <div role="listitem">
+                            {% include 'components/property/public_property_card.html.twig' with { property: property } only %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if catalog.pagination.total_pages|default(1) > 1 %}
+                <nav class="cos-property-catalog-pagination" aria-label="Сторінки каталогу">
+                    {% if catalog.pagination.has_previous %}
+                        <a class="cos-button cos-button--ghost" href="{{ catalog.previousUrl }}">Назад</a>
+                    {% endif %}
+                    <span class="cos-card__copy">
+                        {{ catalog.pagination.page }} / {{ catalog.pagination.total_pages }}
+                    </span>
+                    {% if catalog.pagination.has_next %}
+                        <a class="cos-button cos-button--primary" href="{{ catalog.nextUrl }}">Далі</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section id="request" class="cos-page__section cos-card">
+        <div class="cos-card__header">
+            <div>
+                <p class="cos-card__eyebrow">Запит</p>
+                <h2 class="cos-card__title">Потрібна добірка або хочете подати обʼєкт?</h2>
+                <p class="cos-card__copy">Залиште контакт і коротко опишіть задачу.</p>
+            </div>
+        </div>
+
+        <form class="cos-pattern-stack" action="/property/catalog#request" method="post">
+            <input type="hidden" name="request_intent" value="general_contact">
+            <label class="cos-visually-hidden" aria-hidden="true">
+                <span>Website</span>
+                <input name="website" type="text" tabindex="-1" autocomplete="off">
+            </label>
+            <label class="cos-field">
+                <span>Імʼя</span>
+                <input class="cos-input" name="full_name" type="text" autocomplete="name" required>
+            </label>
+            <label class="cos-field">
+                <span>Телефон</span>
+                <input class="cos-input" name="phone" type="tel" autocomplete="tel" required>
+            </label>
+            <label class="cos-field">
+                <span>Email</span>
+                <input class="cos-input" name="email" type="email" autocomplete="email">
+            </label>
+            <label class="cos-field">
+                <span>Коментар</span>
+                <textarea class="cos-textarea" name="message" rows="4" placeholder="Місто, бюджет, тип обʼєкта або короткий опис задачі"></textarea>
+            </label>
+            <button class="cos-button cos-button--primary" type="submit">Надіслати заявку</button>
+        </form>
+    </section>
+
+    <p class="cos-card__copy" data-public-property-target="status" aria-live="polite"></p>
+
+    <script type="application/ld+json">{{ catalog.breadcrumbSchema|json_encode|raw }}</script>
+    <script type="application/ld+json">{{ catalog.itemListSchema|json_encode|raw }}</script>
+</section>
+{% endblock %}

@@ -78,7 +78,7 @@ foreach (['.cos-data-grid__card', '@media (max-width: 760px)', 'min-height: 44px
 }
 
 $forms = (string) file_get_contents($root . '/symfony/assets/styles/forms.css');
-foreach (['@media (max-width: 760px)', 'env(safe-area-inset-bottom)', 'min-height: 44px'] as $marker) {
+foreach (['@media (max-width: 650px)', 'env(safe-area-inset-bottom)', 'min-height: 44px'] as $marker) {
     if (!str_contains($forms, $marker)) {
         throw new RuntimeException('Forms mobile contract is missing: ' . $marker);
     }

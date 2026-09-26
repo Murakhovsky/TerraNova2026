@@ -1,0 +1,226 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Подати обʼєкт | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Форма для власників, партнерів і рієлторів.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="/property/submit">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="property-submit"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Property · Submission"
+        title="Нова заявка"
+        subtitle="Опишіть обʼєкт, умови й контакт. Менеджер перевірить дані перед публікацією."
+        metaValue="24h"
+        metaLabel="первинна обробка"
+    >
+        <twig:CosButton label="Каталог" href="/property/catalog" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if submit.error %}
+        <twig:CosAlert title="Форма тимчасово недоступна" copy="{{ submit.error }}" tone="danger" />
+    {% elseif submit.submissionStatus %}
+        <twig:CosAlert title="Canonical intake ще не підключений" copy="{{ submit.submissionStatus }}" tone="warning" />
+    {% endif %}
+
+    <form
+        class="cos-form"
+        action="/property/submit"
+        method="post"
+        enctype="multipart/form-data"
+    >
+        <label class="cos-visually-hidden" aria-hidden="true">
+            <span>Website</span>
+            <input name="website" type="text" tabindex="-1" autocomplete="off">
+        </label>
+
+        <twig:CosFormSection
+            title="Контакт"
+            description="Хто подає обʼєкт і як з вами звʼязатися."
+        >
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Ваше імʼя</span>
+                    <input class="cos-input" name="owner_name" type="text" autocomplete="name" value="{{ submit.formData.owner_name|default('') }}" required>
+                </label>
+                <label class="cos-field">
+                    <span>Телефон</span>
+                    <input class="cos-input" name="owner_phone" type="tel" autocomplete="tel" value="{{ submit.formData.owner_phone|default('') }}" required>
+                </label>
+                <label class="cos-field">
+                    <span>Email</span>
+                    <input class="cos-input" name="owner_email" type="email" autocomplete="email" value="{{ submit.formData.owner_email|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Хто подає</span>
+                    <select class="cos-select" name="source_type">
+                        {% for value, label in {'owner':'Власник','realtor':'Рієлтор','developer':'Забудовник','partner':'Партнер','other':'Інше'} %}
+                            <option value="{{ value }}" {% if submit.formData.source_type|default('owner') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="cos-field">
+                    <span>Зручний контакт</span>
+                    <select class="cos-select" name="preferred_contact">
+                        {% for value, label in {'any':'Будь-який','phone':'Телефон','telegram':'Telegram','email':'Email'} %}
+                            <option value="{{ value }}" {% if submit.formData.preferred_contact|default('any') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection
+            title="Обʼєкт"
+            description="Основна інформація, яка потрібна для intake та первинної перевірки."
+        >
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Назва</span>
+                    <input class="cos-input" name="title" type="text" value="{{ submit.formData.title|default('') }}" placeholder="Наприклад: будинок біля Львова">
+                </label>
+                <label class="cos-field">
+                    <span>Операція</span>
+                    <select class="cos-select" name="deal_type">
+                        {% for value, label in {'sale':'Продаж','rent':'Оренда','investment':'Інвестиція'} %}
+                            <option value="{{ value }}" {% if submit.formData.deal_type|default('sale') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="cos-field">
+                    <span>Тип</span>
+                    <select class="cos-select" name="property_type" required>
+                        <option value="">Оберіть тип</option>
+                        {% for type in submit.types %}
+                            <option value="{{ type.code }}" {% if submit.formData.property_type|default('') == type.code %}selected{% endif %}>
+                                {{ type.name_uk|default(type.code) }}
+                            </option>
+                        {% endfor %}
+                        <option value="other" {% if submit.formData.property_type|default('') == 'other' %}selected{% endif %}>Інше</option>
+                    </select>
+                </label>
+                <label class="cos-field">
+                    <span>Місто</span>
+                    <input class="cos-input" name="city" type="text" value="{{ submit.formData.city|default('') }}" required>
+                </label>
+                <label class="cos-field">
+                    <span>Область</span>
+                    <input class="cos-input" name="region" type="text" value="{{ submit.formData.region|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Район</span>
+                    <input class="cos-input" name="district" type="text" value="{{ submit.formData.district|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Адреса або орієнтир</span>
+                    <input class="cos-input" name="address" type="text" value="{{ submit.formData.address|default('') }}">
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection title="Параметри">
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Ціна</span>
+                    <input class="cos-input" name="price_amount" type="number" min="0" step="100" value="{{ submit.formData.price_amount|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Валюта</span>
+                    <select class="cos-select" name="price_currency">
+                        {% for currency in ['USD','EUR','UAH'] %}
+                            <option value="{{ currency }}" {% if submit.formData.price_currency|default('USD') == currency %}selected{% endif %}>{{ currency }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="cos-field">
+                    <span>Площа, м²</span>
+                    <input class="cos-input" name="area_total" type="number" min="0" step="0.1" value="{{ submit.formData.area_total|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Ділянка, сот.</span>
+                    <input class="cos-input" name="land_area" type="number" min="0" step="0.1" value="{{ submit.formData.land_area|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Кімнат</span>
+                    <input class="cos-input" name="rooms" type="number" min="0" step="0.5" value="{{ submit.formData.rooms|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Поверх</span>
+                    <input class="cos-input" name="floor" type="number" min="0" step="1" value="{{ submit.formData.floor|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Поверхів</span>
+                    <input class="cos-input" name="floors" type="number" min="0" step="1" value="{{ submit.formData.floors|default('') }}">
+                </label>
+                <label class="cos-field">
+                    <span>Рік</span>
+                    <input class="cos-input" name="built_year" type="number" min="1800" max="{{ submit.yearMax }}" step="1" value="{{ submit.formData.built_year|default('') }}">
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection title="Опис">
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Короткий опис</span>
+                    <textarea class="cos-textarea" name="description" rows="5" required placeholder="Стан, планування, документи, переваги, умови показу">{{ submit.formData.description|default('') }}</textarea>
+                </label>
+                <label class="cos-field">
+                    <span>Особливості</span>
+                    <textarea class="cos-textarea" name="features_text" rows="4" placeholder="Паркінг, тераса, ремонт, вид, комунікації, дохідність">{{ submit.formData.features_text|default('') }}</textarea>
+                </label>
+                <label class="cos-field">
+                    <span>Посилання на фото, відео або 3D</span>
+                    <textarea class="cos-textarea" name="media_links" rows="3" placeholder="Google Drive, YouTube, Matterport або інші посилання">{{ submit.formData.media_links|default('') }}</textarea>
+                </label>
+                <label class="cos-field">
+                    <span>
+                        <input name="has_3d_tour" type="checkbox" value="1" {% if submit.formData.has_3d_tour|default('') %}checked{% endif %}>
+                        Є готовий 3D-тур або модель
+                    </span>
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection
+            title="Медіа"
+            description="Файли не зберігаються, доки public intake не матиме окремого canonical write use case."
+        >
+            <div class="cos-form__grid">
+                <label class="cos-field">
+                    <span>Основне фото до 5 MB</span>
+                    <input class="cos-input" name="main_photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+                </label>
+                <label class="cos-field">
+                    <span>Додаткові фото до 10 MB кожне</span>
+                    <input class="cos-input" name="gallery_photos[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosStickyActions label="Submission actions">
+            <a class="cos-button cos-button--ghost" href="/property/catalog">До каталогу</a>
+            <button class="cos-button cos-button--primary" type="submit">Подати на модерацію</button>
+        </twig:CosStickyActions>
+    </form>
+
+    <aside class="cos-card">
+        <p class="cos-card__eyebrow">Що далі</p>
+        <h2 class="cos-card__title">Модерація перед публікацією</h2>
+        <ol class="cos-pattern-stack">
+            <li>Заявка має потрапити в окрему intake queue.</li>
+            <li>Менеджер перевіряє контакти, параметри й матеріали.</li>
+            <li>Після підтвердження дані переходять у canonical Property lifecycle.</li>
+        </ol>
+    </aside>
+</section>
+{% endblock %}

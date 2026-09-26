@@ -1,0 +1,79 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}{{ seo.title }} | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="{{ seo.description }}">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="{{ seo.canonicalUrl }}">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-public-property cos-page__stack"
+    data-controller="public-property"
+    data-cos-public="property-seo"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="{{ seo.kicker }}"
+        title="{{ seo.title }}"
+        subtitle="{{ seo.description }}"
+        metaValue="{{ seo.catalog.total() }}"
+        metaLabel="обʼєктів у добірці"
+    >
+        <twig:CosButton label="Купити" href="/property/catalog?deal_type=sale" variant="ghost" />
+        <twig:CosButton label="Орендувати" href="/property/catalog?deal_type=rent" variant="ghost" />
+        <twig:CosButton label="Інвестиції" href="/property/catalog?deal_type=investment" variant="ghost" />
+        <twig:CosButton label="Повний каталог" href="/property/catalog" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if seo.catalog.error %}
+        <twig:CosAlert title="Добірка тимчасово недоступна" copy="{{ seo.catalog.error }}" tone="danger" />
+    {% elseif seo.catalog.properties is empty %}
+        <twig:CosEmptyState
+            title="У цій добірці поки немає обʼєктів"
+            copy="Перегляньте повний каталог або змініть критерії пошуку."
+        />
+    {% else %}
+        <section class="cos-page__section">
+            <div class="cos-property-catalog-grid" role="list">
+                {% for property in seo.catalog.properties %}
+                    <div role="listitem">
+                        {% include 'components/property/public_property_card.html.twig' with { property: property } only %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if seo.catalog.pagination.total_pages|default(1) > 1 %}
+                <nav class="cos-property-catalog-pagination" aria-label="Сторінки добірки">
+                    {% if seo.catalog.pagination.has_previous %}
+                        <a class="cos-button cos-button--ghost" href="{{ seo.catalog.previousUrl }}">Назад</a>
+                    {% endif %}
+                    <span class="cos-card__copy">
+                        {{ seo.catalog.pagination.page }} / {{ seo.catalog.pagination.total_pages }}
+                    </span>
+                    {% if seo.catalog.pagination.has_next %}
+                        <a class="cos-button cos-button--primary" href="{{ seo.catalog.nextUrl }}">Далі</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="cos-page__section">
+        <twig:CosCard
+            eyebrow="Добірка"
+            title="Окрема сторінка для швидкого вибору"
+            copy="Тут зібрані обʼєкти за конкретним типом, містом або сценарієм. Повний каталог лишається єдиним джерелом inventory."
+        />
+    </section>
+
+    <p class="cos-card__copy" data-public-property-target="status" aria-live="polite"></p>
+
+    <script type="application/ld+json">{{ seo.catalog.breadcrumbSchema|json_encode|raw }}</script>
+    <script type="application/ld+json">{{ seo.catalog.itemListSchema|json_encode|raw }}</script>
+</section>
+{% endblock %}
