@@ -1,97 +1,90 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Web\Visualization;
 
-use App\Web\Navigation\NavigationBuilder;
-use App\Web\Phtml\PhtmlRenderer;
+use App\Application\Visualization\Query\GetArchitectureHealthQuery;
+use App\Application\Visualization\Query\GetArchitectureOverviewQuery;
+use App\Application\Visualization\Query\GetArchitectureProjectionQuery;
+use App\Web\Experience\Archetype\PageArchetype;
+use App\Web\Experience\Archetype\PagePresentationFactory;
+use App\Web\Experience\Extension\Model\WebExtensionContext;
+use App\Web\Experience\Shell\ShellBreadcrumb;
+use App\Web\Experience\Shell\WorkspaceShellFactory;
+use InvalidArgumentException;
+use Kernel\Application\Bus\QueryBusInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
-use Kernel\Visualization\Graph\Graph;
-use Kernel\Visualization\Graph\GraphHealthAnalyzerInterface;
-use Kernel\Visualization\Graph\GraphMapperInterface;
-use Kernel\Visualization\Graph\GraphProjectionRegistryInterface;
-use Kernel\Visualization\Graph\GraphProviderInterface;
-use Kernel\Visualization\Graph\GraphView;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Twig\Environment;
 
 final readonly class ArchitecturePageController
 {
     public function __construct(
-        private PhtmlRenderer $renderer,
+        private Environment $twig,
         private TenantContextProviderInterface $tenants,
-        private NavigationBuilder $navigation,
-        private GraphProviderInterface $provider,
-        private GraphProjectionRegistryInterface $registry,
-        private GraphHealthAnalyzerInterface $health,
-        private GraphMapperInterface $mapper,
+        private QueryBusInterface $queries,
+        private WorkspaceShellFactory $shells,
+        private PagePresentationFactory $pages,
+        private ArchitectureOverviewPresenter $presenter,
     ) {
     }
 
-    public function index(Request $request): Response
+    public function index(): Response
     {
         $tenant = $this->manager();
         if ($tenant instanceof Response) {
             return $tenant;
         }
 
-        $variables = $this->baseVariables($tenant) + [
-            'title' => 'COS Architecture Explorer',
-            'pageAssetEntries' => ['cos-architecture-explorer'],
-            'pageStatus' => null,
-            'architectureDiagnostic' => null,
-            'architectureHealth' => null,
-        ];
+        $context = new WebExtensionContext(
+            organizationId: $tenant->organizationId()->value(),
+            role: $tenant->role()->value(),
+            surface: 'system',
+            activeSection: 'cos',
+            activeItem: 'architecture',
+        );
+        $shell = $this->shells->create($tenant, $context, 'COS Architecture Explorer', [
+            new ShellBreadcrumb('Workspace', '/admin'),
+            new ShellBreadcrumb('COS', '/cos/control-center'),
+            new ShellBreadcrumb('Architecture'),
+        ]);
 
-        $stage = 'build_canonical_graph';
         try {
-            $canonical = $this->provider->provide();
-            $stage = 'analyze_canonical_graph';
-            $variables['architectureHealth'] = $this->health->analyze($canonical);
-            $stage = 'describe_projections';
-            $descriptions = $this->registry->descriptions();
-            $stage = 'map_canonical_graph';
-            $canonicalPayload = $this->mapper->map($canonical);
-            $views = [];
+            $data = $this->queries->ask(new GetArchitectureOverviewQuery());
+            $architecture = $this->presenter->present(is_array($data) ? $data : []);
 
-            foreach ($this->registry->names() as $name) {
-                $stage = 'project_' . $name;
-                $description = $descriptions[$name] ?? ['label' => $name, 'layout' => 'auto', 'default_depth' => null];
-                $views[$name] = $this->projectionPayload(
-                    $canonical,
-                    $name,
-                    new GraphView(layout: (string) ($description['layout'] ?? 'auto')),
-                    $description,
-                );
-            }
-
-            $names = $this->registry->names();
-            $defaultView = $this->registry->has('system') ? 'system' : ($names[0] ?? '');
-            $variables['architectureGraph'] = [
-                'views' => $views,
-                'summary' => $canonicalPayload['summary'] ?? [],
-                'default_view' => $defaultView,
-            ];
-            $variables['architectureViewDescriptions'] = $descriptions;
+            return $this->render([
+                'shell' => $shell,
+                'page' => $this->pages->create(
+                    PageArchetype::SystemControlSurface,
+                    $this->patterns(),
+                    $architecture->state(),
+                ),
+                'architecture' => $architecture,
+            ]);
         } catch (Throwable $error) {
-            $diagnostic = $this->failureDiagnostic($stage, $error);
-            error_log(sprintf('[COS Visualization] Architecture Explorer index failed at %s: %s', $stage, $error->getMessage()));
-            $variables['architectureGraph'] = [
-                'views' => [],
-                'summary' => $this->emptySummary(),
-                'default_view' => '',
-            ];
-            $variables['architectureViewDescriptions'] = [];
-            $variables['architectureDiagnostic'] = $diagnostic;
-            $variables['pageStatus'] = $diagnostic['message'];
-            return $this->html($request, 'visualization/architecture', $variables, 503);
-        }
+            error_log('[COS Visualization] Architecture Explorer index failed: ' . $error->getMessage());
+            $architecture = $this->presenter->present(
+                [],
+                'Architecture Explorer тимчасово недоступний. Деталі записано в лог.',
+            );
 
-        return $this->html($request, 'visualization/architecture', $variables);
+            return $this->render([
+                'shell' => $shell,
+                'page' => $this->pages->create(
+                    PageArchetype::SystemControlSurface,
+                    $this->patterns(),
+                    'error',
+                ),
+                'architecture' => $architecture,
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
     }
 
     public function graph(Request $request): Response
@@ -101,52 +94,42 @@ final readonly class ArchitecturePageController
             return $tenant;
         }
 
-        $stage = 'build_canonical_graph';
+        $view = trim((string) $request->query->get('view', 'domain')) ?: 'domain';
+        $focus = trim((string) $request->query->get('focus', ''));
+        $depthValue = trim((string) $request->query->get('depth', ''));
+        $depth = null;
+
+        if ($depthValue === 'all') {
+            $focus = '';
+        } elseif ($depthValue !== '') {
+            if (!ctype_digit($depthValue)) {
+                return new JsonResponse(['ok' => false, 'error' => 'Depth must be a non-negative integer or all.'], Response::HTTP_BAD_REQUEST);
+            }
+            $depth = (int) $depthValue;
+            if ($depth > 6) {
+                return new JsonResponse(['ok' => false, 'error' => 'Depth cannot exceed 6 hops.'], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
         try {
-            $name = trim((string) $request->query->get('view', 'domain'));
-            if (!$this->registry->has($name)) {
-                return new JsonResponse(['ok' => false, 'error' => 'Unknown architecture projection.'], 404);
-            }
+            $payload = $this->queries->ask(new GetArchitectureProjectionQuery(
+                $view,
+                $focus !== '' ? $focus : null,
+                $depth,
+            ));
 
-            $canonical = $this->provider->provide();
-            $focus = trim((string) $request->query->get('focus', ''));
-            $depthValue = trim((string) $request->query->get('depth', ''));
-            $depth = null;
-
-            if ($depthValue === 'all') {
-                $focus = '';
-            } elseif ($depthValue !== '') {
-                if (!ctype_digit($depthValue)) {
-                    return new JsonResponse(['ok' => false, 'error' => 'Depth must be a non-negative integer or all.'], 400);
-                }
-                $depth = (int) $depthValue;
-                if ($depth > 6) {
-                    return new JsonResponse(['ok' => false, 'error' => 'Depth cannot exceed 6 hops.'], 400);
-                }
-            }
-
-            if ($focus !== '' && !$canonical->hasNode($focus)) {
-                return new JsonResponse(['ok' => false, 'error' => 'Architecture focus node was not found.'], 404);
-            }
-
-            $stage = 'project_' . $name;
-            $description = $this->registry->descriptions()[$name] ?? ['label' => $name, 'layout' => 'auto', 'default_depth' => null];
-            $payload = $this->projectionPayload(
-                $canonical,
-                $name,
-                new GraphView(
-                    focus: $focus !== '' ? $focus : null,
-                    depth: $depth,
-                    layout: (string) ($description['layout'] ?? 'auto'),
-                ),
-                $description,
-            );
-
-            return new JsonResponse(['ok' => true, 'graph' => $payload]);
+            return new JsonResponse(['ok' => true, 'graph' => is_array($payload) ? $payload : []]);
+        } catch (InvalidArgumentException $error) {
+            return new JsonResponse(['ok' => false, 'error' => $error->getMessage()], Response::HTTP_NOT_FOUND);
         } catch (Throwable $error) {
-            $diagnostic = $this->failureDiagnostic($stage, $error);
-            error_log(sprintf('[COS Visualization] Architecture Explorer graph failed at %s: %s', $stage, $error->getMessage()));
-            return new JsonResponse(['ok' => false, 'error' => $diagnostic['message'], 'diagnostic' => $diagnostic], 503);
+            $diagnostic = $this->failureDiagnostic('project_' . $view, $error);
+            error_log(sprintf('[COS Visualization] Architecture Explorer graph failed: %s', $error->getMessage()));
+
+            return new JsonResponse([
+                'ok' => false,
+                'error' => $diagnostic['message'],
+                'diagnostic' => $diagnostic,
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
     }
 
@@ -158,10 +141,17 @@ final readonly class ArchitecturePageController
         }
 
         try {
-            return new JsonResponse(['ok' => true, 'health' => $this->health->analyze($this->provider->provide())]);
+            $health = $this->queries->ask(new GetArchitectureHealthQuery());
+
+            return new JsonResponse(['ok' => true, 'health' => is_array($health) ? $health : []]);
         } catch (Throwable $error) {
             $diagnostic = $this->failureDiagnostic('analyze_canonical_graph', $error);
-            return new JsonResponse(['ok' => false, 'error' => $diagnostic['message'], 'diagnostic' => $diagnostic], 503);
+
+            return new JsonResponse([
+                'ok' => false,
+                'error' => $diagnostic['message'],
+                'diagnostic' => $diagnostic,
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
     }
 
@@ -172,52 +162,36 @@ final readonly class ArchitecturePageController
             return new RedirectResponse('/auth/login');
         }
         if (!$tenant->isManager()) {
-            return new Response('Forbidden', 403);
+            return new Response('Forbidden', Response::HTTP_FORBIDDEN);
         }
 
         return $tenant;
     }
 
-    /** @return array<string,mixed> */
-    private function baseVariables(TenantContext $tenant): array
+    /** @return list<string> */
+    private function patterns(): array
     {
-        $role = $tenant->role()->value();
         return [
-            'workspaceSection' => 'cos',
-            'workspaceActive' => 'architecture',
-            'workspaceActiveSection' => 'cos',
-            'currentUser' => ['id' => (int) $tenant->userId()->value(), 'role' => $role],
-            'role' => $role,
-            'isTeam' => true,
-            'isAdmin' => $tenant->isAdmin(),
-            'workspaceNavigation' => $this->navigation->workspace($tenant),
+            'PageHeader',
+            'Toolbar',
+            'KpiStrip',
+            'ContextPanel',
+            'ErrorState',
         ];
     }
 
     /** @param array<string,mixed> $variables */
-    private function html(Request $request, string $view, array $variables, int $status = 200): Response
+    private function render(array $variables, int $status = Response::HTTP_OK): Response
     {
         return new Response(
-            $this->renderer->render($request, $view, $variables),
+            $this->twig->render('experience/system/architecture.html.twig', $variables),
             $status,
-            ['Content-Type' => 'text/html; charset=UTF-8'],
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'no-store, private',
+                'X-Robots-Tag' => 'noindex, nofollow',
+            ],
         );
-    }
-
-    /** @param array<string,mixed> $description @return array<string,mixed> */
-    private function projectionPayload(Graph $canonical, string $name, GraphView $view, array $description): array
-    {
-        $payload = $this->mapper->map($this->registry->project($name, $canonical, $view));
-        $payload['view'] = [
-            'name' => $name,
-            'label' => (string) ($description['label'] ?? $name),
-            'layout' => (string) ($description['layout'] ?? $view->layout),
-            'focus' => $view->focus,
-            'depth' => $view->depth,
-            'default_depth' => $description['default_depth'] ?? null,
-        ];
-
-        return $payload;
     }
 
     /** @return array{stage:string,exception:string,detail:string,message:string} */
@@ -234,11 +208,5 @@ final readonly class ArchitecturePageController
             'detail' => $detail,
             'message' => sprintf('Architecture Graph failure [%s] %s: %s', $stage, $error::class, $detail),
         ];
-    }
-
-    /** @return array{nodes:int,edges:int,groups:int,node_types:array<string,int>,relations:array<string,int>,domains:array<int,mixed>} */
-    private function emptySummary(): array
-    {
-        return ['nodes' => 0, 'edges' => 0, 'groups' => 0, 'node_types' => [], 'relations' => [], 'domains' => []];
     }
 }
