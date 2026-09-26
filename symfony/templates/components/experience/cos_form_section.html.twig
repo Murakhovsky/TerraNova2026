@@ -1,0 +1,7 @@
+<fieldset class="cos-form-section">
+    {% if title %}<legend class="cos-form-section__title">{{ title }}</legend>{% endif %}
+    {% if description %}<p class="cos-form-section__description">{{ description }}</p>{% endif %}
+    <div class="cos-form-section__body">
+        {% block content %}{% endblock %}
+    </div>
+</fieldset>
