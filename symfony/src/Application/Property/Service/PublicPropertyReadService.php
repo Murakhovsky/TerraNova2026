@@ -151,6 +151,8 @@ final readonly class PublicPropertyReadService
             'meta_title' => (string) ($property['meta_title'] ?? ''),
             'meta_description' => (string) ($property['meta_description'] ?? ''),
             'land_area' => $property['land_area'] ?? null,
+            'area_living' => $property['area_living'] ?? null,
+            'group_title' => (string) ($property['group_title'] ?? ''),
             'bedrooms' => $property['bedrooms'] ?? null,
             'bathrooms' => $property['bathrooms'] ?? null,
             'floor' => $property['floor'] ?? null,
