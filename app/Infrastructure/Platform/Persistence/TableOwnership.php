@@ -41,7 +41,7 @@ final class TableOwnership
             'tn_growth_account_snapshots', 'tn_growth_account_icp_matches',
             'tn_growth_contacts', 'tn_growth_account_contacts', 'tn_growth_contact_snapshots',
             'tn_growth_buying_committee_assessments',
-            'tn_growth_signal_collector_runs', 'tn_growth_signal_source_receipts', 'tn_growth_signal_feeds',
+            'tn_growth_signal_collector_runs', 'tn_growth_signal_source_receipts', 'tn_growth_signal_feeds', 'tn_growth_json_signal_sources',
             'tn_growth_signal_collector_health', 'tn_growth_signal_collector_incidents',
             'tn_growth_collector_alert_subscriptions',
             'tn_growth_qualification_policies', 'tn_growth_candidate_evaluations',
