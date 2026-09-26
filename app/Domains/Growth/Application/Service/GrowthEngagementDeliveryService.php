@@ -8,6 +8,7 @@ use DateTimeZone;
 use Domains\Growth\Application\Contract\GrowthEngagementDeliveryBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthConversationRoutingRepositoryInterface;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Domains\Growth\Domain\EngagementChannel;
 use Domains\Growth\Domain\EngagementDeliveryStatus;
@@ -27,6 +28,7 @@ final readonly class GrowthEngagementDeliveryService implements GrowthEngagement
         private TransactionManagerInterface $transactions,
         private EventBus $events,
         private AuditRepositoryInterface $audit,
+        private ?GrowthConversationRoutingRepositoryInterface $conversationRouting=null,
     ) {}
 
     public function recordExternalStatus(
@@ -48,8 +50,8 @@ final readonly class GrowthEngagementDeliveryService implements GrowthEngagement
 
         $channelEnum=EngagementChannel::tryFrom(strtolower(trim($channel)))
             ?? throw new InvalidArgumentException('Growth delivery channel is invalid.');
-        if(!in_array($channelEnum,[EngagementChannel::LinkedIn,EngagementChannel::Phone],true)){
-            throw new InvalidArgumentException('Growth external delivery feedback supports LinkedIn or phone only.');
+        if(!in_array($channelEnum,[EngagementChannel::Email,EngagementChannel::LinkedIn,EngagementChannel::Phone],true)){
+            throw new InvalidArgumentException('Growth external delivery feedback supports email, LinkedIn or phone only.');
         }
 
         $statusEnum=EngagementDeliveryStatus::tryFrom(strtolower(trim($status)))
@@ -77,9 +79,9 @@ final readonly class GrowthEngagementDeliveryService implements GrowthEngagement
         }
 
         $expectedAction=match($channelEnum){
+            EngagementChannel::Email=>'growth.send_message',
             EngagementChannel::LinkedIn=>'growth.send_linkedin',
             EngagementChannel::Phone=>'growth.place_call',
-            default=>'',
         };
         if((string)($execution['action_type']??'')!==$expectedAction||(string)($execution['channel']??'')!==$channelEnum->value){
             throw new InvalidArgumentException('Growth delivery channel does not match the execution Action.');
@@ -103,9 +105,23 @@ final readonly class GrowthEngagementDeliveryService implements GrowthEngagement
             'occurred_at'=>$observedAt->format(DATE_ATOM),
         ];
 
-        return $this->transactions->transactional(function()use($observation,$correlationId,$statusEnum):array{
+        return $this->transactions->transactional(function()use($observation,$correlationId,$statusEnum,$execution):array{
             $stored=$this->deliveries->recordOrVerify($observation);
             if(!empty($stored['replayed']))return $stored;
+
+            if(
+                $statusEnum===EngagementDeliveryStatus::Complained
+                &&$this->conversationRouting!==null
+                &&(string)($execution['target_reference_type']??'')==='growth_contact'
+                &&trim((string)($execution['target_reference_id']??''))!==''
+            ){
+                $this->conversationRouting->suppressContact(
+                    (string)$observation['organization_id'],
+                    (string)$execution['target_reference_id'],
+                    'delivery:'.(string)$observation['observation_id'],
+                    'Email provider reported a complaint.',
+                );
+            }
 
             $this->events->publish(new DomainEvent(
                 bin2hex(random_bytes(16)),

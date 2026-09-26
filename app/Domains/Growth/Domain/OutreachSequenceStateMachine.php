@@ -39,8 +39,11 @@ final readonly class OutreachSequenceStateMachine
         if(in_array($channel,['linkedin','phone'],true)&&$deliveryStatus===''){
             return ['action'=>'wait','code'=>'delivery_observation_pending','reason'=>'Provider delivery feedback has not arrived yet.','next_due_at'=>null];
         }
-        if($deliveryStatus==='failed'){
-            return ['action'=>'stop','code'=>'delivery_failed','reason'=>'Current touch delivery failed.','next_due_at'=>null];
+        if(in_array($deliveryStatus,['failed','bounced','complained'],true)){
+            return ['action'=>'stop','code'=>'delivery_'.$deliveryStatus,'reason'=>'Current touch delivery ended with '.$deliveryStatus.'.','next_due_at'=>null];
+        }
+        if($channel==='email'&&in_array($deliveryStatus,['queued','accepted'],true)){
+            return ['action'=>'wait','code'=>'email_delivery_pending','reason'=>'Email provider has not reported sent/delivered or a terminal failure yet.','next_due_at'=>null];
         }
         if($channel==='phone'&&in_array($deliveryStatus,['accepted','started'],true)){
             return ['action'=>'wait','code'=>'phone_outcome_pending','reason'=>'Phone provider has not reported a terminal call outcome yet.','next_due_at'=>null];

@@ -137,7 +137,9 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
             $delivery=$this->deliveries->latestForExecution($organizationId,(string)$execution['execution_id']);
             if($delivery===null)continue;
             $status=strtolower((string)($delivery['status']??''));
-            if($status==='failed')return $this->block('delivery_failed','A sequence touch delivery failed.');
+            if(in_array($status,['failed','bounced','complained'],true)){
+                return $this->block('delivery_'.$status,'A sequence touch delivery ended with '.$status.'.');
+            }
             if((string)$sequence['channel']==='phone'&&$status==='completed'){
                 return $this->block('phone_completed','A phone conversation completed; follow-up must stop.');
             }

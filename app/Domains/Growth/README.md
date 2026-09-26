@@ -1112,3 +1112,33 @@ Sales / Service / Growth / Partnership / Suppression / Human Review / No Action
 ```
 
 The Candidate Workspace and `GET /api/v1/growth/candidates/{id}/engagement/routing` expose the authoritative route separately from the AI-suggested owner.
+
+
+## V0.47 — Email Delivery & Conversation Feedback Parity
+
+V0.47 removes the remaining transport asymmetry. The existing signed engagement-delivery webhook now accepts email in addition to LinkedIn and phone.
+
+```text
+governed email Action
+      ↓
+queued / accepted
+      ↓
+sent
+      ↓
+delivered
+   ┌──┴───────────────┐
+   ↓                  ↓
+reply_received     complained
+   ↓                  ↓
+V0.45 response      suppression
+   ↓                  ↓
+V0.46 routing       sequence stop
+```
+
+Email delivery observations support `queued`, `accepted`, `sent`, `delivered`, `bounced`, `complained` and `failed`. `reply_received` deliberately remains a Conversation fact in V0.45 rather than being forged into a transport-delivery status. Together the delivery and response streams provide the complete email conversation lifecycle.
+
+Provider callbacks correlate through the existing `kernel_action_id` and signed `POST /webhooks/growth/engagement/delivery` boundary. Email callbacks are accepted only for Growth-owned `growth.send_message` executions, preserving the pre-handoff ownership rule.
+
+A provider `complained` observation creates an authoritative contact suppression through the same repository used by V0.46 unsubscribe routing. `bounced`, `complained` and `failed` all stop autonomous sequence progression. A complaint additionally prevents future Growth outreach to that contact.
+
+Sequence timing remains backward compatible: an email execution with no delivery observation may still anchor to execution time. Once provider feedback exists, `queued` or `accepted` keeps the sequence waiting; `sent` or `delivered` supplies the provider timestamp anchor. This lets deployments adopt provider callbacks without waking or freezing historical sequences.

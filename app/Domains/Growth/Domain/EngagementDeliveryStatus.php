@@ -5,9 +5,12 @@ namespace Domains\Growth\Domain;
 
 enum EngagementDeliveryStatus:string
 {
+    case Queued='queued';
     case Accepted='accepted';
     case Sent='sent';
     case Delivered='delivered';
+    case Bounced='bounced';
+    case Complained='complained';
     case Failed='failed';
     case Started='started';
     case Completed='completed';
@@ -17,15 +20,15 @@ enum EngagementDeliveryStatus:string
     public function supportsChannel(EngagementChannel $channel):bool
     {
         return match($channel){
+            EngagementChannel::Email=>in_array($this,[self::Queued,self::Accepted,self::Sent,self::Delivered,self::Bounced,self::Complained,self::Failed],true),
             EngagementChannel::LinkedIn=>in_array($this,[self::Accepted,self::Sent,self::Delivered,self::Failed],true),
             EngagementChannel::Phone=>in_array($this,[self::Accepted,self::Started,self::Completed,self::NoAnswer,self::Busy,self::Failed],true),
-            default=>false,
         };
     }
 
     public function isTerminal():bool
     {
-        return in_array($this,[self::Delivered,self::Failed,self::Completed,self::NoAnswer,self::Busy],true);
+        return in_array($this,[self::Delivered,self::Bounced,self::Complained,self::Failed,self::Completed,self::NoAnswer,self::Busy],true);
     }
 
     /** @return list<string> */
