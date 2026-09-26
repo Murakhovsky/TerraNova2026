@@ -7,46 +7,43 @@ $assert = static function (bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
 };
 
-$required = [
-    'app/Kernel/Visualization/Graph/GraphProjectionRegistryInterface.php',
-    'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionDefinition.php',
-    'app/Infrastructure/Visualization/Architecture/ArchitectureGraphProjection.php',
-    'app/Infrastructure/Visualization/Architecture/ArchitectureProjectionRegistry.php',
-    'symfony/config/services.yaml',
-    'tests/unit/visualization_architecture_projections.php',
-];
-foreach ($required as $path) {
-    $assert(is_file($root . '/' . $path), 'Missing Visualization V0.4 file: ' . $path);
-}
-
-$kernelRegistry = $read('app/Kernel/Visualization/Graph/GraphProjectionRegistryInterface.php');
-$assert(!str_contains($kernelRegistry, 'Architecture'), 'Kernel projection registry contract must remain architecture-agnostic.');
-$assert(!str_contains(strtolower($kernelRegistry), 'cytoscape'), 'Kernel projection registry contract must remain renderer-independent.');
-
 $registry = $read('app/Infrastructure/Visualization/Architecture/ArchitectureProjectionRegistry.php');
 foreach (['system', 'runtime', 'domain', 'dependencies', 'events', 'actions', 'agents', 'integrations', 'code'] as $view) {
     $assert(str_contains($registry, "'{$view}'"), 'Missing canonical architecture projection: ' . $view);
 }
 $assert(str_contains($registry, 'implements GraphProjectionRegistryInterface'), 'Architecture projection registry must implement the Kernel contract.');
 
+$application = $read('symfony/src/Application/Visualization/Query/ArchitectureGraphQueryService.php');
+foreach ([
+    'GraphProjectionRegistryInterface',
+    'GraphMapperInterface',
+    '$this->registry->project(',
+    '$this->mapper->map(',
+    "$payload['view'] = [",
+] as $marker) {
+    $assert(str_contains($application, $marker), 'Application projection boundary incomplete: ' . $marker);
+}
+$assert(!str_contains($application, 'Infrastructure\\'), 'Application projection boundary must not compile against Infrastructure.');
+
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
-$assert(str_contains($controller, 'GraphProjectionRegistryInterface'), 'Explorer must depend on the Kernel projection registry contract.');
-$assert(str_contains($controller, 'private GraphProjectionRegistryInterface $registry'), 'Explorer projection registry constructor dependency is missing.');
-$assert(str_contains($controller, "'views' => \$views"), 'Explorer must publish projected view payloads.');
-$assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not depend on Infrastructure.');
+$assert(str_contains($controller, 'GetArchitectureProjectionQuery'), 'Explorer must request projections through Application Query.');
+$assert(!str_contains($controller, 'GraphProjectionRegistryInterface'), 'Projection registry must not leak into Web controller.');
 
 $bootstrap = $read('symfony/config/services.yaml');
 $assert(str_contains($bootstrap, 'Infrastructure\\Visualization\\Architecture\\ArchitectureProjectionRegistry:'), 'Projection registry Symfony composition missing.');
 $assert(str_contains($bootstrap, 'Kernel\\Visualization\\Graph\\GraphProjectionRegistryInterface:'), 'Projection registry Kernel alias missing.');
 
-$client = $read('frontend/features/cos/architecture-explorer.js');
-$assert(!str_contains($client, 'SYSTEM_TYPES'), 'System projection semantics leaked back into browser code.');
-$assert(!str_contains($client, 'RUNTIME_TYPES'), 'Runtime projection semantics leaked back into browser code.');
-$assert(str_contains($client, 'payload.views'), 'Browser must consume server-projected views.');
-$assert(str_contains($client, 'cy.add(elements)'), 'Projection switching must replace the rendered graph.');
+$client = $read('symfony/assets/controllers/architecture_explorer_controller.js');
+foreach (['loadProjection(', 'this.cy.add(this.elements)', 'endpointValue', "url.searchParams.set('view', mode)"] as $marker) {
+    $assert(str_contains($client, $marker), 'Architecture island projection switching incomplete: ' . $marker);
+}
+foreach (['SYSTEM_TYPES', 'RUNTIME_TYPES'] as $forbidden) {
+    $assert(!str_contains($client, $forbidden), 'Projection semantics leaked into browser code: ' . $forbidden);
+}
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
-$assert(str_contains($view, '$viewDescriptions'), 'Explorer must render projection controls from server descriptions.');
-$assert(str_contains($view, 'data-architecture-mode'), 'Projection controls missing from Explorer.');
+$view = $read('symfony/templates/experience/system/architecture.html.twig');
+foreach (['architecture.views', 'data-architecture-mode=', 'architecture.defaultView'] as $marker) {
+    $assert(str_contains($view, $marker), 'Explorer projection controls incomplete: ' . $marker);
+}
 
-echo "Visualization V0.4 architecture boundary passed.\n";
+echo "Visualization V0.4/Wave 13 projection boundary passed.\n";

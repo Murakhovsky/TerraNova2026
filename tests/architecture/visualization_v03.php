@@ -4,22 +4,20 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 $read = static fn (string $path): string => (string) file_get_contents($root . '/' . $path);
 $assert = static function (bool $condition, string $message): void {
-    if (!$condition) {
-        throw new RuntimeException($message);
-    }
+    if (!$condition) throw new RuntimeException($message);
 };
 
 $required = [
     'app/Infrastructure/Visualization/Cytoscape/CytoscapeGraphMapper.php',
     'symfony/config/routes.yaml',
+    'symfony/src/Application/Visualization/Query/ArchitectureGraphQueryService.php',
     'symfony/src/Web/Visualization/ArchitecturePageController.php',
-    'app/Interfaces/Web/View/visualization/architecture.phtml',
-    'frontend/entrypoints/cos-architecture-explorer.js',
-    'frontend/features/cos/architecture-explorer.js',
-    'frontend/features/cos/architecture-explorer.css',
+    'symfony/templates/experience/system/architecture.html.twig',
+    'symfony/assets/controllers/architecture_explorer_controller.js',
+    'symfony/assets/styles/domains/system-architecture.css',
 ];
 foreach ($required as $path) {
-    $assert(is_file($root . '/' . $path), 'Missing Visualization V0.3 file: ' . $path);
+    $assert(is_file($root . '/' . $path), 'Missing Visualization V0.3/Wave 13 artifact: ' . $path);
 }
 
 $kernelRoot = $root . '/app/Kernel/Visualization';
@@ -35,37 +33,52 @@ $assert(str_contains($mapper, 'namespace Infrastructure\\Visualization\\Cytoscap
 $assert(str_contains($mapper, 'public function map(Graph $graph): array'), 'Cytoscape mapper must consume the canonical Graph.');
 
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
-$assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not compile against Infrastructure implementations.');
-$assert(str_contains($controller, 'GraphProviderInterface'), 'Explorer must consume the canonical architecture graph provider contract.');
-$assert(str_contains($controller, 'GraphMapperInterface'), 'Explorer must consume the renderer mapper contract.');
+foreach (['QueryBusInterface', 'GetArchitectureOverviewQuery', 'GetArchitectureProjectionQuery', 'GetArchitectureHealthQuery'] as $marker) {
+    $assert(str_contains($controller, $marker), 'Architecture Web controller missing QueryBus boundary: ' . $marker);
+}
+foreach (['PhtmlRenderer', 'NavigationBuilder', 'GraphProviderInterface', 'GraphMapperInterface', 'GraphProjectionRegistryInterface', 'Infrastructure\\'] as $forbidden) {
+    $assert(!str_contains($controller, $forbidden), 'Architecture Web controller leaked retired/direct graph dependency: ' . $forbidden);
+}
+
+$application = $read('symfony/src/Application/Visualization/Query/ArchitectureGraphQueryService.php');
+foreach (['GraphProviderInterface', 'GraphMapperInterface', 'GraphProjectionRegistryInterface', 'GraphHealthAnalyzerInterface'] as $marker) {
+    $assert(str_contains($application, $marker), 'Architecture Application service missing Kernel graph contract: ' . $marker);
+}
+foreach (['App\\Web\\', 'Infrastructure\\'] as $forbidden) {
+    $assert(!str_contains($application, $forbidden), 'Architecture Application service leaked delivery/Infrastructure dependency: ' . $forbidden);
+}
 
 $routes = $read('symfony/config/routes.yaml');
-$assert(str_contains($routes, 'cos_web_architecture:'), 'Architecture Explorer Symfony route missing.');
-$assert(str_contains($routes, 'path: /cos/architecture'), 'Architecture Explorer path missing.');
-$services = $read('symfony/config/services.yaml');
-$assert(str_contains($services, 'Kernel\\Visualization\\Graph\\GraphMapperInterface:'), 'Cytoscape mapper must be composed behind the Kernel mapper contract.');
-
-$vite = $read('vite.config.js');
-$assert(str_contains($vite, "'cos-architecture-explorer'"), 'Architecture Explorer Vite entry missing.');
-$client = $read('frontend/features/cos/architecture-explorer.js');
-foreach (['data-architecture-search', 'data-architecture-depth', 'data-architecture-fit', 'data-architecture-reset', 'Collapse neighbors'] as $marker) {
-    $assert(str_contains($client, $marker), 'Explorer interaction marker missing: ' . $marker);
+foreach (['cos_web_architecture:', 'path: /cos/architecture', 'cos_web_architecture_graph:', 'cos_web_architecture_health:'] as $marker) {
+    $assert(str_contains($routes, $marker), 'Architecture route missing: ' . $marker);
 }
-$assert(str_contains($client, 'cytoscape@3.34.3'), 'Cytoscape browser dependency must be version-pinned.');
+$services = $read('symfony/config/services.yaml');
+$assert(str_contains($services, 'Kernel\\Visualization\\Graph\\GraphMapperInterface:'), 'Cytoscape mapper must remain composed behind the Kernel mapper contract.');
 
-$entrypoint = $read('frontend/entrypoints/cos-architecture-explorer.js');
-$assert(str_contains($entrypoint, 'hydrateArchitecturePayload'), 'Explorer entrypoint must recover an unusable embedded payload.');
-$assert(str_contains($entrypoint, "credentials: 'same-origin'"), 'Explorer hydration recovery must preserve the authenticated manager session.');
-$assert(str_contains($entrypoint, "url.searchParams.set('depth', 'all')"), 'Explorer hydration recovery must request complete server projections.');
-$assert(str_contains($entrypoint, "await import('../features/cos/architecture-explorer.js')"), 'Explorer feature must boot only after hydration recovery has run.');
+$client = $read('symfony/assets/controllers/architecture_explorer_controller.js');
+foreach (['cytoscape@3.34.3', "credentials: 'same-origin'", 'loadProjection(', 'renderTypeFilters(', 'Collapse neighbors', 'X'] as $marker) {
+    if ($marker === 'X') continue;
+    $assert(str_contains($client, $marker), 'Architecture Stimulus island missing interaction/runtime marker: ' . $marker);
+}
+$assert(!str_contains($client, 'innerHTML'), 'Architecture island must use DOM APIs instead of HTML-string rendering.');
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
-$assert(str_contains($view, 'type="application/json"'), 'Architecture payload must be embedded as non-executable JSON.');
-$assert(str_contains($view, 'data-architecture-stage'), 'Architecture graph stage missing.');
-$assert(str_contains($view, 'data-architecture-default-view='), 'Architecture shell must expose the server-selected default projection independently from JSON hydration.');
-$assert(str_contains($view, 'JSON_INVALID_UTF8_SUBSTITUTE'), 'Architecture payload serialization must survive malformed UTF-8 metadata.');
+$view = $read('symfony/templates/experience/system/architecture.html.twig');
+foreach ([
+    "extends 'experience/workspace_shell.html.twig'",
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'data-controller="architecture-explorer"',
+    'data-architecture-explorer-endpoint-value="/cos/architecture/graph"',
+    'data-architecture-explorer-default-view-value=',
+    'data-architecture-explorer-target="stage"',
+] as $marker) {
+    $assert(str_contains($view, $marker), 'Architecture Twig shell incomplete: ' . $marker);
+}
+foreach (['type="application/json"', 'cos-architecture-data', 'tn-', 'style=', '<script'] as $forbidden) {
+    $assert(!str_contains($view, $forbidden), 'Architecture Twig restored legacy/embedded runtime: ' . $forbidden);
+}
 
-$navigation = $read('symfony/src/Web/Navigation/NavigationBuilder.php');
-$assert(str_contains($navigation, "'path' => 'cos/architecture'"), 'Architecture Explorer must be discoverable from canonical Symfony navigation.');
+$navigation = $read('symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php');
+$assert(str_contains($navigation, "new NavigationContribution('architecture', 'Architecture', '/cos/architecture'"), 'Architecture Explorer must remain discoverable in canonical Shell navigation.');
 
-echo "Visualization V0.3/V0.5.1 architecture boundary passed.\n";
+echo "Visualization V0.3/Wave 13 architecture boundary passed.\n";

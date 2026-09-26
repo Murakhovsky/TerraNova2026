@@ -10,6 +10,9 @@ on:
       - 'symfony/templates/**'
       - 'symfony/src/Web/Experience/**'
       - 'symfony/src/Web/Operations/**'
+      - 'symfony/src/Web/Visualization/**'
+      - 'symfony/src/Application/Visualization/**'
+      - 'symfony/assets/controllers/architecture_explorer_controller.js'
       - 'symfony/src/Application/Operations/**'
       - 'symfony/src/Web/Sales/**'
       - 'symfony/src/Web/Property/**'
@@ -40,6 +43,9 @@ on:
       - 'symfony/templates/**'
       - 'symfony/src/Web/Experience/**'
       - 'symfony/src/Web/Operations/**'
+      - 'symfony/src/Web/Visualization/**'
+      - 'symfony/src/Application/Visualization/**'
+      - 'symfony/assets/controllers/architecture_explorer_controller.js'
       - 'symfony/src/Application/Operations/**'
       - 'symfony/src/Web/Sales/**'
       - 'symfony/src/Web/Property/**'
@@ -86,6 +92,7 @@ jobs:
           php tests/architecture/web_experience_wave13_golden_four_quality.php
           php tests/architecture/web_experience_wave13_stability.php
           php tests/architecture/web_experience_wave13_control_center.php
+          php tests/architecture/web_experience_wave13_architecture.php
           php tests/architecture/web_experience_wave13_sales_today.php
           php tests/architecture/web_experience_wave13_toolbar.php
           php tests/architecture/web_experience_wave13_sales_pipeline.php

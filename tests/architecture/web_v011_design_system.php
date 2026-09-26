@@ -124,9 +124,10 @@ foreach ([
 }
 
 $assetGate = $read('tests/architecture/frontend_assets.php');
-foreach (["'cos-architecture-explorer'", "'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $needle) {
-    $contains($assetGate, $needle, 'Frontend asset gate must cover canonical entrypoints.');
+foreach (["'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $needle) {
+    $contains($assetGate, $needle, 'Frontend asset gate must cover canonical Vite entrypoints.');
 }
+$notContains($assetGate, "'cos-architecture-explorer'", 'Architecture Explorer is now owned by Symfony AssetMapper/Stimulus, not Vite.');
 $entriesStart = strpos($assetGate, '$entries = [');
 $entriesEnd = $entriesStart === false ? false : strpos($assetGate, '];', $entriesStart);
 if ($entriesStart === false || $entriesEnd === false) {

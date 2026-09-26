@@ -16,38 +16,25 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
+$view = $read('symfony/templates/experience/system/architecture.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
-    'data-architecture-endpoint',
-    'data-architecture-default-view',
-    'data-architecture-view-label',
-    'data-architecture-node-count',
-    'data-architecture-edge-count',
-    'data-architecture-mode',
-    'data-architecture-search',
-    'data-architecture-domain',
-    'data-architecture-depth',
-    'data-architecture-types',
-    'data-architecture-stage',
-    'data-architecture-details',
-    'data-architecture-backend-diagnostic',
-    'cos-architecture-data',
-    'Architecture graph health',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    'data-controller="architecture-explorer"',
+    'data-architecture-explorer-endpoint-value="/cos/architecture/graph"',
+    'data-architecture-explorer-target="stage"',
+    'data-architecture-explorer-target="details"',
+    'cos-architecture__shell',
+    'Graph Health',
 ] as $marker) {
-    $contains($view, $marker, 'Architecture Explorer canonical shell/runtime contract is incomplete.');
+    $contains($view, $marker, 'Architecture Explorer canonical System Control Surface contract is incomplete.');
 }
-foreach ([
-    'tn-listing-hero',
-    'tn-admin-panel',
-    'tn-section-heading',
-    'tn-form-status is-visible',
-    'tn-kicker',
-] as $legacyMarker) {
-    $notContains($view, $legacyMarker, 'Architecture Explorer must not restore the legacy shell.');
+foreach (['tn-', 'style=', '<script', '<table', 'cos-architecture-data'] as $legacyMarker) {
+    $notContains($view, $legacyMarker, 'Architecture Explorer must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/visualization/architecture.phtml')) {
+    throw new RuntimeException('Retired Architecture Explorer PHTML restored.');
 }
 
 $page = $read('app/Interfaces/Web/View/page/show.phtml');
@@ -96,15 +83,20 @@ foreach ([
 
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
 foreach ([
-    'public function index(Request $request): Response',
+    'public function index(): Response',
     'public function graph(Request $request): Response',
     'public function health(): Response',
     '$this->manager()',
-    'GraphProjectionRegistryInterface',
-    'GraphHealthAnalyzerInterface',
-    "'visualization/architecture'",
+    'QueryBusInterface',
+    'GetArchitectureOverviewQuery',
+    'GetArchitectureProjectionQuery',
+    'GetArchitectureHealthQuery',
+    "experience/system/architecture.html.twig",
 ] as $marker) {
     $contains($controller, $marker, 'Architecture Explorer controller contract is incomplete.');
+}
+foreach (['GraphProjectionRegistryInterface', 'GraphHealthAnalyzerInterface', 'PhtmlRenderer', 'NavigationBuilder'] as $retired) {
+    $notContains($controller, $retired, 'Architecture Explorer controller must remain on the Application Query boundary.');
 }
 
 $routes = $read('symfony/config/routes.yaml');
