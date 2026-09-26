@@ -1,8 +1,8 @@
 ---
 title: Wave 13 — Трекер візуальної міграції
 description: Поточний стан production migration units COS Visual Rebuild із окремим відстеженням archetype, Twig cutover і legacy cleanup.
-status: active
-updated: 2026-09-23
+status: closed
+updated: 2026-09-26
 kind: architecture
 ---
 
@@ -313,3 +313,19 @@ Production migration units VR-046…047 завершені.
 - нові `tn-*` primitives = **0**.
 
 Основний план Wave 13 для production page families 3–11 закритий. Далі — фінальний Wave 13 audit: specialized compatibility surfaces, dead frontend/runtime artifacts, regression gates і branch integration.
+
+
+## Wave 13 — фінальне закриття
+
+Wave 13 закритий після repository-wide audit production page ownership.
+
+- VR-001…VR-047 мають статус `DONE`;
+- production families 3–11 належать canonical Symfony/Twig Experience Platform;
+- нові production page-level PHTML заборонені final-audit gate;
+- PHTML, що лишився, класифікований або як shared compatibility primitive/layout, або як явний specialized runtime;
+- dead legacy homepage `app/Interfaces/Web/View/index/index.phtml` видалений;
+- retired page-specific Vite source entrypoints не повертаються;
+- Wave 13 CI запускається для всіх `visual/**` branches і для PR у `main`;
+- фінальна інтеграція виконується одним PR із верхівки stacked migration chain.
+
+Подальший visual development не продовжує Wave 13. Нові зміни мають відбуватись поверх canonical Experience Platform і не можуть відновлювати retired route/view ownership.

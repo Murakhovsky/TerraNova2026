@@ -43,7 +43,8 @@ foreach(['app/Interfaces/Web/Routing/FrontendRoutes.php','app/Interfaces/Web/Con
 $catalogController=$read('symfony/src/Web/Property/PublicPropertyCatalogController.php');
 $catalogHandler=$read('symfony/src/Application/Property/Query/GetPublicPropertyCatalogQueryHandler.php');
 $catalogView=$read('symfony/templates/experience/public/property_catalog.html.twig');
-$homeView=$read('app/Interfaces/Web/View/index/index.phtml');
+$homeController=$read('symfony/src/Web/PublicSite/HomeController.php');
+$homeView=$read('symfony/templates/experience/public/home.html.twig');
 foreach(['GetPublicPropertyCatalogQuery','QueryBusInterface'] as $needle){
  $assert(str_contains($catalogController,$needle),'Catalog controller is not using canonical Application reads: '.$needle);
 }
@@ -52,6 +53,8 @@ foreach(['PublicPropertyReadService','properties->catalog'] as $needle){
 }
 $assert(str_contains($catalogView,'data-cos-public="property-catalog"'),'Catalog Twig surface is missing canonical public marker.');
 $assert(!is_file($root.'/app/Interfaces/Web/View/property/catalog.phtml'),'Retired Catalog PHTML returned.');
-$assert(str_contains($homeView,'api/v1/public/properties/featured'),'Homepage featured feed is not using canonical public reads.');
+$assert(str_contains($homeController,'PageArchetype::PublicDetailMarketing'),'Root public home is not owned by the canonical Experience Platform.');
+$assert(str_contains($homeView,'data-cos-public="home"'),'Root public home canonical marker is missing.');
+$assert(!is_file($root.'/app/Interfaces/Web/View/index/index.phtml'),'Dead legacy homepage renderer returned.');
 
 echo "Public Property Symfony read cutover boundary OK\n";
