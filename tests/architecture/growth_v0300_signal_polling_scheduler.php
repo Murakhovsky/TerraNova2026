@@ -28,7 +28,7 @@ $assert(str_contains($targetContract,'function targets('),'Growth polling target
 $targetRepo=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthSignalPollingTargetRepository.php');
 foreach([
     'tn_growth_signal_feeds','tn_growth_json_signal_sources',
-    "'rss_atom' AS collector","'credentialed_json' AS collector",'enabled=1',
+    "\\'rss_atom\\' AS collector","\\'credentialed_json\\' AS collector",'enabled=1',
 ] as $needle){
     $assert(str_contains($targetRepo,$needle),'Growth polling target repository missing: '.$needle);
 }
