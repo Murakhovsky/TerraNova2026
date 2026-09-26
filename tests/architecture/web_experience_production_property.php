@@ -20,6 +20,7 @@ $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /property',
     'path: /property/catalog',
+    'PublicPropertyCatalogController::index',
     'path: /property/map',
     'path: /property/favour',
     'PropertyPageController::favour',
@@ -72,9 +73,16 @@ $submission=$read('symfony/templates/experience/property/submission.html.twig');
 foreach(['<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','property/submissions','data-property-submission'] as $marker){$contains($submission,$marker,'Canonical Property submission detail is incomplete.');}
 if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml'))throw new RuntimeException('Legacy Property submission PHTML restored.');
 
-foreach ([
-    'catalog' => ['page_header', 'data-catalog-form', 'data-catalog-count'],
+$catalog=$read('symfony/templates/experience/public/property_catalog.html.twig');
+foreach(['<twig:CosPageHeader','<twig:CosFilterBar','cos-property-catalog-grid','data-controller="public-property"','application/ld+json'] as $marker){
+    $contains($catalog,$marker,'Canonical Public Property Catalog lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($catalog,$forbidden,'Canonical Public Property Catalog restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/catalog.phtml'))throw new RuntimeException('Legacy Property Catalog PHTML restored.');
 
+foreach ([
     'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
     'show' => ['state', 'action_bar', 'data-request-intent', 'data-save-property', 'data-property-gallery'],
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],

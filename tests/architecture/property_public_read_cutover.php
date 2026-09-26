@@ -40,11 +40,18 @@ foreach(['app/Interfaces/Web/Routing/FrontendRoutes.php','app/Interfaces/Web/Con
  $assert(!file_exists($root.'/'.$retired),'Retired Property transport returned: '.$retired);
 }
 
-$catalogJs=$read('frontend/entrypoints/terranova-catalog-api.js');
-$catalogView=$read('app/Interfaces/Web/View/property/catalog.phtml');
+$catalogController=$read('symfony/src/Web/Property/PublicPropertyCatalogController.php');
+$catalogHandler=$read('symfony/src/Application/Property/Query/GetPublicPropertyCatalogQueryHandler.php');
+$catalogView=$read('symfony/templates/experience/public/property_catalog.html.twig');
 $homeView=$read('app/Interfaces/Web/View/index/index.phtml');
-$assert(str_contains($catalogJs,'/api/v1/public/properties'),'Catalog JavaScript is not using canonical public reads.');
-$assert(str_contains($catalogView,'api/v1/public/properties'),'Catalog view is not using canonical public reads.');
+foreach(['GetPublicPropertyCatalogQuery','QueryBusInterface'] as $needle){
+ $assert(str_contains($catalogController,$needle),'Catalog controller is not using canonical Application reads: '.$needle);
+}
+foreach(['PublicPropertyReadService','properties->catalog'] as $needle){
+ $assert(str_contains($catalogHandler,$needle),'Catalog Query handler is not using canonical public reads: '.$needle);
+}
+$assert(str_contains($catalogView,'data-cos-public="property-catalog"'),'Catalog Twig surface is missing canonical public marker.');
+$assert(!is_file($root.'/app/Interfaces/Web/View/property/catalog.phtml'),'Retired Catalog PHTML returned.');
 $assert(str_contains($homeView,'api/v1/public/properties/featured'),'Homepage featured feed is not using canonical public reads.');
 
 echo "Public Property Symfony read cutover boundary OK\n";
