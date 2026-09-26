@@ -17,7 +17,7 @@ final readonly class MysqlGrowthSignalIntakeRepository implements GrowthSignalIn
         $this->execute(
             'INSERT INTO tn_growth_signal_collector_runs
              (organization_id,run_id,collector_name,status,request_cursor,requested_limit,started_at,created_by)
-             VALUES(:organization_id,:run_id,:collector_name,\\'running\\',:request_cursor,:requested_limit,NOW(6),:created_by)',
+             VALUES(:organization_id,:run_id,:collector_name,\'running\',:request_cursor,:requested_limit,NOW(6),:created_by)',
             [
                 'organization_id'=>$organizationId,'run_id'=>$runId,'collector_name'=>$collectorName,
                 'request_cursor'=>$requestCursor,'requested_limit'=>$requestedLimit,'created_by'=>$actorId,
@@ -50,7 +50,7 @@ final readonly class MysqlGrowthSignalIntakeRepository implements GrowthSignalIn
              SET status=:status,collected_count=:collected_count,accepted_count=:accepted_count,
                  duplicate_count=:duplicate_count,failed_count=:failed_count,next_cursor=:next_cursor,
                  error_summary=:error_summary,finished_at=NOW(6)
-             WHERE organization_id=:organization_id AND run_id=:run_id AND status=\\'running\\''
+             WHERE organization_id=:organization_id AND run_id=:run_id AND status=\'running\''
         );
         $statement->execute([
             'status'=>$status,'collected_count'=>$collectedCount,'accepted_count'=>$acceptedCount,
@@ -64,8 +64,8 @@ final readonly class MysqlGrowthSignalIntakeRepository implements GrowthSignalIn
     {
         $statement=$this->connection->prepare(
             'UPDATE tn_growth_signal_collector_runs
-             SET status=\\'failed\\',error_summary=:error_summary,finished_at=NOW(6)
-             WHERE organization_id=:organization_id AND run_id=:run_id AND status=\\'running\\''
+             SET status=\'failed\',error_summary=:error_summary,finished_at=NOW(6)
+             WHERE organization_id=:organization_id AND run_id=:run_id AND status=\'running\''
         );
         $statement->execute(['error_summary'=>$errorSummary,'organization_id'=>$organizationId,'run_id'=>$runId]);
         if($statement->rowCount()!==1)throw new InvalidArgumentException('Growth collector run could not be failed.');

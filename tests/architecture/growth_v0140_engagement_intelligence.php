@@ -56,7 +56,7 @@ foreach(['PDO','Symfony\\','Phalcon\\','identity_value','identity_type'] as $for
 
 $repository=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthEngagementRepository.php');
 foreach([
-    'FOR UPDATE','status=\\'proposed\\'','context_snapshot_json','supersedeProposedForCandidate',
+    'FOR UPDATE',"status=\\'proposed\\'",'context_snapshot_json','supersedeProposedForCandidate',
     'provider','model','input_tokens','output_tokens','cost_amount','organization_id=:organization_id'
 ] as $needle){
     $assert(str_contains($repository,$needle),'Growth engagement repository missing: '.$needle);

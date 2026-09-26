@@ -62,9 +62,9 @@ final readonly class MysqlGrowthDecisionRepository implements GrowthDecisionRepo
     {
         $this->execute(
             'UPDATE tn_growth_qualification_policies
-             SET status=\\'archived\\',archived_at=NOW(6),updated_by=:updated_by,updated_at=NOW(6)
+             SET status=\'archived\',archived_at=NOW(6),updated_by=:updated_by,updated_at=NOW(6)
              WHERE organization_id=:organization_id AND policy_id=:policy_id
-               AND revision<>:except_revision AND status=\\'active\\'',
+               AND revision<>:except_revision AND status=\'active\'',
             [
                 'updated_by'=>$actorId,'organization_id'=>$organizationId,
                 'policy_id'=>$policyId,'except_revision'=>$exceptRevision,

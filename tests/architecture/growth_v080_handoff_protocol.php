@@ -49,7 +49,7 @@ $setupTransaction=strpos($service,'transactions->transactional');
 $assert($targetCall!==false&&$setupTransaction!==false&&$targetCall>$setupTransaction,'Growth target call must happen outside setup transaction.');
 
 $repository=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthHandoffRepository.php');
-foreach(['package_json','status=\\'running\\'','hasRunningAttempt','target_reference_type','target_reference_id','organization_id=:organization_id'] as $needle){
+foreach(['package_json',"status=\\'running\\'",'hasRunningAttempt','target_reference_type','target_reference_id','organization_id=:organization_id'] as $needle){
     $assert(str_contains($repository,$needle),'Growth handoff repository missing: '.$needle);
 }
 

@@ -138,7 +138,7 @@ final readonly class MysqlGrowthLearningRepository implements GrowthLearningRepo
             'SELECT currency,SUM(economic_value) AS total_value
              FROM tn_growth_outcomes
              WHERE organization_id=:organization_id AND candidate_id=:candidate_id
-               AND outcome_type=\\'won\\' AND economic_value IS NOT NULL
+               AND outcome_type=\'won\' AND economic_value IS NOT NULL
              GROUP BY currency ORDER BY currency'
         );
         $valueStatement->execute(['organization_id'=>$organizationId,'candidate_id'=>$candidateId]);

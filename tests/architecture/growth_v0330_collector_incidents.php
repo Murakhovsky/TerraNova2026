@@ -37,7 +37,7 @@ foreach(['PDO','tn_growth_signal_collector_incidents','Symfony\\','Phalcon\\'] a
 
 $repository=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthSignalPollingIncidentRepository.php');
 foreach([
-    'tn_growth_signal_collector_incidents','status=\\'open\\'','FOR UPDATE','ON DUPLICATE KEY UPDATE',
+    'tn_growth_signal_collector_incidents',"status=\\'open\\'",'FOR UPDATE','ON DUPLICATE KEY UPDATE',
     'activeIncidents(','resolveOpen(',
 ] as $needle){
     $assert(str_contains($repository,$needle),'Growth collector incident repository missing: '.$needle);
