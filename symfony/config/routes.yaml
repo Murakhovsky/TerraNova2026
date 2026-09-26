@@ -1599,7 +1599,7 @@ cos_web_architecture_health:
 
 cos_web_diagnostic_methodology:
   path: /admin/diagnostics/methodology-studio
-  controller: App\Web\Diagnostic\DiagnosticPageController::methodology
+  controller: App\Web\Diagnostic\MethodologyStudioController::index
   methods: [GET]
 
 cos_web_diagnostic_report:
