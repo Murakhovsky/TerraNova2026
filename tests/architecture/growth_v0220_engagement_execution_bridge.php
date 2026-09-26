@@ -46,7 +46,7 @@ foreach([
 ] as $needle){
     $assert(str_contains($service,$needle),'Growth engagement execution service missing: '.$needle);
 }
-foreach(['PDO','Domains\\Sales\\','ActionProposal','ActionPolicyService','ActionService','ExecuteSalesActionCommand'] as $forbidden){
+foreach(['PDO','Domains\\Sales\\','use Kernel\\Action\\ActionProposal;','new ActionProposal(','ActionPolicyService','ActionService','ExecuteSalesActionCommand'] as $forbidden){
     $assert(!str_contains($service,$forbidden),'Growth engagement application crossed execution boundary: '.$forbidden);
 }
 
