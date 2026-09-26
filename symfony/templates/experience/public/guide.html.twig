@@ -1,0 +1,53 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}{{ content.metaTitle }}{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="{{ content.metaDescription }}">
+    <meta name="robots" content="{{ content.robots }}">
+    <link rel="canonical" href="{{ content.canonicalUrl }}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ content.metaTitle }}">
+    <meta property="og:description" content="{{ content.metaDescription }}">
+    <meta property="og:url" content="{{ content.canonicalUrl }}">
+    {% if content.metaImage %}<meta property="og:image" content="{{ content.metaImage }}">{% endif %}
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="guide"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="{{ content.landing.category|default('Нерухомість') }}"
+        title="{{ content.landing.title }}"
+        subtitle="{{ content.landing.excerpt|default('') }}"
+    >
+        <twig:CosButton label="Переглянути обʼєкти" href="/property/catalog" variant="primary" />
+        <twig:CosButton label="Підібрати варіанти" href="/contacts" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if content.landing.featured_image_url|default('') %}
+        <figure class="cos-card">
+            <img class="img-fluid" src="{{ content.landing.featured_image_url }}" alt="{{ content.landing.featured_image_alt|default(content.landing.title) }}">
+        </figure>
+    {% endif %}
+
+    <article class="cos-card cos-pattern-stack">
+        <div class="cos-card__copy">{{ content.landing.body_html|raw }}</div>
+    </article>
+
+    <section class="cos-card cos-pattern-stack" aria-labelledby="guide-next-step">
+        <p class="cos-card__eyebrow">Запит</p>
+        <h2 id="guide-next-step" class="cos-card__title">Отримайте актуальну добірку від менеджера</h2>
+        <twig:CosActionBar label="Guide next step" align="start">
+            <twig:CosButton label="Залишити контакт" href="/contacts" variant="primary" />
+        </twig:CosActionBar>
+    </section>
+
+    <script type="application/ld+json">{{ content.schema|json_encode|raw }}</script>
+</section>
+{% endblock %}

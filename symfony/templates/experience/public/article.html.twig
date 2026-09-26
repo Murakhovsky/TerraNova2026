@@ -1,0 +1,78 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}{{ content.metaTitle }}{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="{{ content.metaDescription }}">
+    <meta name="robots" content="{{ content.robots }}">
+    <link rel="canonical" href="{{ content.canonicalUrl }}">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ content.metaTitle }}">
+    <meta property="og:description" content="{{ content.metaDescription }}">
+    <meta property="og:url" content="{{ content.canonicalUrl }}">
+    {% if content.metaImage %}<meta property="og:image" content="{{ content.metaImage }}">{% endif %}
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="article"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="{{ content.article.category|default('Нерухомість') }}"
+        title="{{ content.article.title }}"
+        subtitle="{{ content.article.excerpt|default('') }}"
+        metaValue="{{ content.article.published_at|default(null) ? content.article.published_at|date('d.m.Y') : '' }}"
+        metaLabel="{{ content.article.author_name|default('Terra Nova CLUB') }}"
+    >
+        <twig:CosButton label="До блогу" href="/blog" variant="ghost" />
+        <twig:CosButton label="Консультація" href="/contacts" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if content.article.featured_image_url|default('') %}
+        <figure class="cos-card">
+            <img class="img-fluid" src="{{ content.article.featured_image_url }}" alt="{{ content.article.featured_image_alt|default(content.article.title) }}">
+        </figure>
+    {% endif %}
+
+    <article class="cos-card cos-pattern-stack">
+        <div class="cos-card__copy">{{ content.article.body_html|raw }}</div>
+        {% if content.article.tags|default([]) is not empty %}
+            <footer class="cos-action-bar cos-action-bar--start" aria-label="Теги">
+                {% for tag in content.article.tags %}
+                    <span class="cos-badge cos-badge--neutral">{{ tag }}</span>
+                {% endfor %}
+            </footer>
+        {% endif %}
+    </article>
+
+    <section class="cos-card cos-pattern-stack" aria-labelledby="article-next-step">
+        <p class="cos-card__eyebrow">Практичний крок</p>
+        <h2 id="article-next-step" class="cos-card__title">Потрібна нерухомість або консультація?</h2>
+        <twig:CosActionBar label="Наступний крок" align="start">
+            <twig:CosButton label="Каталог" href="/property/catalog" variant="primary" />
+            <twig:CosButton label="Залишити запит" href="/contacts" variant="ghost" />
+        </twig:CosActionBar>
+    </section>
+
+    {% if content.related is not empty %}
+        <section class="cos-page__section" aria-labelledby="article-related">
+            <div class="cos-card__header"><div><p class="cos-card__eyebrow">Далі</p><h2 id="article-related" class="cos-card__title">Останні матеріали</h2></div></div>
+            <div class="cos-section-grid">
+                {% for item in content.related %}
+                    <article class="cos-card cos-pattern-stack">
+                        <p class="cos-card__eyebrow">{{ item.category|default('Нерухомість') }}</p>
+                        <h3 class="cos-card__title"><a href="/blog/{{ item.slug }}">{{ item.title }}</a></h3>
+                        <p class="cos-card__copy">{{ item.excerpt|default('') }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    <script type="application/ld+json">{{ content.schema|json_encode|raw }}</script>
+</section>
+{% endblock %}
