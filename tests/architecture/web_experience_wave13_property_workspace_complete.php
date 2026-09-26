@@ -50,6 +50,7 @@ foreach([
 }
 if(!str_contains($routes,'PublicPropertyCatalogController::index'))throw new RuntimeException('Phase 5 retained Public Catalog route migrated to canonical owner but route is missing.');
 if(!str_contains($routes,'PublicPropertyDetailController::show'))throw new RuntimeException('Phase 5 retained Public Detail route migrated to canonical owner but route is missing.');
+if(!str_contains($routes,'PublicPropertyFavouritesController::index'))throw new RuntimeException('Phase 5 retained Favourites route migrated to canonical owner but route is missing.');
 
 foreach([
     'PropertyPageController::manage',
@@ -78,7 +79,7 @@ $vite=$read('vite.config.js');
 if(str_contains($vite,"'property-workspace'"))throw new RuntimeException('Phase 5 retired Property Vite entry restored.');
 
 $propertyPage=$read('symfony/src/Web/Property/PropertyPageController.php');
-foreach(['public function favour(','public function presentation(','public function submit('] as $retained){
+foreach(['public function presentation(','public function submit('] as $retained){
     if(!str_contains($propertyPage,$retained))throw new RuntimeException('Phase 5 accidentally removed retained public Property scenario: '.$retained);
 }
 foreach(['public function manage(','public function listing(','public function submissions(','public function submission(','public function map('] as $retired){

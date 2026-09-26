@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['button', 'status', 'intent'];
+    static targets = ['button', 'status', 'intent', 'item', 'empty', 'count'];
 
     connect() {
         this.saved = new Set();
@@ -73,6 +73,21 @@ export default class extends Controller {
             button.setAttribute('aria-pressed', String(selected));
             button.textContent = selected ? 'У вибраному' : '♡';
         });
+
+        let visible = 0;
+        this.itemTargets.forEach((item) => {
+            const publicId = item.dataset.publicId || '';
+            const selected = this.saved.has(publicId);
+            item.hidden = !selected;
+            if (selected) visible += 1;
+        });
+
+        if (this.hasCountTarget) {
+            this.countTarget.textContent = String(visible);
+        }
+        if (this.hasEmptyTarget) {
+            this.emptyTarget.hidden = visible > 0;
+        }
     }
 
     status(message) {

@@ -23,7 +23,7 @@ foreach ([
     'PublicPropertyCatalogController::index',
     'path: /property/map',
     'path: /property/favour',
-    'PropertyPageController::favour',
+    'PublicPropertyFavouritesController::index',
     'path: /property/show/{slug}',
     'path: /property/presentation/{slug}',
     'path: /property/pdf/{slug}',
@@ -119,7 +119,6 @@ foreach(['tn-','style=','onclick='] as $forbidden){
 if(is_file($root.'/app/Interfaces/Web/View/property/seo.phtml'))throw new RuntimeException('Legacy Property SEO PHTML restored.');
 
 foreach ([
-    'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
     'submit' => ['page_header', 'state', 'enctype="multipart/form-data"', 'name="owner_name"', 'name="property_type"'],
 ] as $view => $markers) {
@@ -137,9 +136,26 @@ foreach (['$attributes', 'foreach ($attributes as $name => $value)'] as $marker)
     $contains($state, $marker, 'Canonical State must support generic DOM attributes.');
 }
 
-$favourJs = $read('frontend/features/public/interactions.js');
-foreach (['data-favourite-empty', 'data-favourite-count', 'data-favourite-item', '/api/v1/public/properties/favourites'] as $marker) {
-    $contains($favourJs, $marker, 'Favourites browser contract is incomplete.');
+$favourites=$read('symfony/templates/experience/public/property_favourites.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    'data-controller="public-property"',
+    'data-cos-public="property-favourites"',
+    'data-public-property-target="item"',
+    'data-public-property-target="empty"',
+    'data-public-property-target="count"',
+    "components/property/public_property_card.html.twig",
+] as $marker){
+    $contains($favourites,$marker,'Canonical Favourites surface lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($favourites,$forbidden,'Canonical Favourites restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/favour.phtml'))throw new RuntimeException('Legacy Favourites PHTML restored.');
+
+$favourJs=$read('symfony/assets/controllers/public_property_controller.js');
+foreach(['itemTargets','emptyTarget','countTarget','/api/v1/public/properties/favourites'] as $marker){
+    $contains($favourJs,$marker,'Canonical Favourites Stimulus contract is incomplete.');
 }
 
 $map = $read('symfony/templates/experience/property/map.html.twig');

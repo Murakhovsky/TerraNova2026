@@ -73,10 +73,8 @@ foreach (['PhtmlRenderer', 'PropertyCatalogInterface', 'SalesWriteServiceFactory
 
 $propertyController = $read('symfony/src/Web/Property/PropertyPageController.php');
 foreach ([
-    'public function favour(Request $request): Response',
     'public function presentation(Request $request, string $slug): Response',
     'public function submit(Request $request): Response',
-    "'property/favour'",
     "'property/show'",
     "'property/presentation'",
     "'property/submit'",
@@ -100,7 +98,7 @@ foreach ([
     'path: /property/map',
     'PropertyMapController::index',
     'path: /property/favour',
-    'PropertyPageController::favour',
+    'PublicPropertyFavouritesController::index',
     'path: /property/show/{slug}',
     'PublicPropertyDetailController::show',
     'path: /property/type/{code}',

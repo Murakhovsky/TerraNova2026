@@ -1368,7 +1368,7 @@ cos_web_property_map:
 
 cos_web_property_favour:
   path: /property/favour
-  controller: App\Web\Property\PropertyPageController::favour
+  controller: App\Web\Property\PublicPropertyFavouritesController::index
   methods: [GET, HEAD]
 
 cos_web_property_show:

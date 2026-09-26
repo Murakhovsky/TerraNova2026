@@ -44,6 +44,17 @@ final readonly class PublicPropertyReadService
         ];
     }
 
+    /** @param list<string> $publicIds @return array{properties:list<array<string,mixed>>} */
+    public function favourites(array $publicIds): array
+    {
+        return [
+            'properties' => array_map(
+                [$this, 'propertyCardPayload'],
+                $this->properties->findByPublicIds($this->organizationId, $publicIds),
+            ),
+        ];
+    }
+
     /** @return array<string,mixed>|null */
     public function show(string $slug): ?array
     {

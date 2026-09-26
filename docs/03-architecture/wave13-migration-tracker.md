@@ -41,7 +41,7 @@ kind: architecture
 | VR-027 | `/` | Public | Core | Public Detail / Marketing | P0 | Twig | DONE |
 | VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | DONE |
 | VR-029 | `/property/show/{slug}` | Public | Property | Public Detail / Marketing | P0 | Twig + Gallery Island | DONE |
-| VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | QA |
+| VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | DONE |
 | VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
 | VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | BACKLOG |
 
@@ -211,3 +211,5 @@ VR-028 переводить Public Property Catalog на QueryBus/CommandBus + P
 VR-029 переводить Public Property Detail на QueryBus/CommandBus + Public Detail / Marketing archetype. Gallery працює через Stimulus, favourites перевикористовують public-property controller, view analytics — окремий Application Command; legacy `property/show.phtml` та Vite gallery entrypoint видаляються.
 
 VR-030 переводить Property SEO collections на один canonical Public Catalog runtime. Type/City/landing routes відрізняються лише filter overrides та SEO metadata; inventory/cards/pagination не дублюються.
+
+VR-031 переводить Favourites на session IDs → canonical public read-port → Twig cards. Старий рендер до 150 карток з browser-side hiding видалено; API toggle contract збережено.
