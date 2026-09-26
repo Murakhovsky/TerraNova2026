@@ -150,7 +150,7 @@ final readonly class MysqlGrowthMarketDiscoveryRepository implements GrowthMarke
              SET status=:status,collected_count=:collected_count,account_count=:account_count,existing_count=:existing_count,
                  monitored_count=:monitored_count,opportunity_count=:opportunity_count,next_cursor=:next_cursor,
                  error_summary=:error_summary,finished_at=NOW(6),lease_token=NULL,lease_expires_at=NULL
-             WHERE organization_id=:organization_id AND run_id=:run_id AND status='running' AND lease_token=:lease_token'
+             WHERE organization_id=:organization_id AND run_id=:run_id AND status=\'running\' AND lease_token=:lease_token'
         );
         $statement->execute([
             'status'=>$status,'collected_count'=>$collectedCount,'account_count'=>$accountCount,'existing_count'=>$existingCount,

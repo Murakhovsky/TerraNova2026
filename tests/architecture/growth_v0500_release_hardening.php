@@ -26,7 +26,7 @@ foreach(['lease_token','lease_expires_at','attempt_count','ix_growth_market_run_
 
 $repoContract=$read('app/Domains/Growth/Application/Contract/GrowthMarketDiscoveryRepositoryInterface.php');
 $repo=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMarketDiscoveryRepository.php');
-foreach(['acquireRunLease','lease_expires_at<NOW(6)',"status='running'",'lease_token=:lease_token'] as $needle){
+foreach(['acquireRunLease','lease_expires_at<NOW(6)','status=','running','lease_token=:lease_token'] as $needle){
     $assert(str_contains($repoContract.$repo,$needle),'Market discovery lease contract missing: '.$needle);
 }
 $assert(str_contains($repo,'organization_id=:organization_id'),'Market lease/runtime persistence must remain tenant-scoped.');
