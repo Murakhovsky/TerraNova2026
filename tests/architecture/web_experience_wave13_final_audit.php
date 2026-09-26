@@ -4,7 +4,7 @@ $root=dirname(__DIR__,2);
 $read=static fn(string $p):string=>is_file($root.'/'.$p)?(string)file_get_contents($root.'/'.$p):throw new RuntimeException('Missing: '.$p);
 $tracker=$read('docs/03-architecture/wave13-migration-tracker.md');
 for($i=1;$i<=47;$i++){ $id=sprintf('VR-%03d',$i); if(preg_match('/\\| '.preg_quote($id,'/').' \\|[^\\n]*\\| DONE \\|/',$tracker)!==1)throw new RuntimeException('Not DONE: '.$id); }
-foreach(['status: closed','## Wave 13 — 100% debt closure'] as $m)if(!str_contains($tracker,$m))throw new RuntimeException('Closure marker missing: '.$m);
+foreach(['status: closed','## Wave 13 — 100% закриття технічного боргу'] as $m)if(!str_contains($tracker,$m))throw new RuntimeException('Closure marker missing: '.$m);
 $viewRoot=$root.'/app/Interfaces/Web/View'; $pages=[];
 foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($viewRoot,FilesystemIterator::SKIP_DOTS)) as $f){
  if(!$f->isFile()||strtolower($f->getExtension())!=='phtml')continue;
