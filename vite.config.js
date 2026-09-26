@@ -28,19 +28,11 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       input: {
-        'analytics-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/analytics-workspace.js'),
-        'clients-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/clients-workspace.js'),
-        'company-home': resolve(import.meta.dirname, 'frontend/entrypoints/company-home.js'),
-        'cos-architecture-explorer': resolve(import.meta.dirname, 'frontend/entrypoints/cos-architecture-explorer.js'),
-        'cos-control-center': resolve(import.meta.dirname, 'frontend/entrypoints/cos-control-center.js'),
         'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
-        'diagnostics-methodology-studio': resolve(import.meta.dirname, 'frontend/entrypoints/diagnostics-methodology-studio.js'),
         'growth-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/growth-workspace.js'),
-        'portal-cabinet': resolve(import.meta.dirname, 'frontend/entrypoints/portal-cabinet.js'),
-        'property-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/property-workspace.js'),
         'public-surface': resolve(import.meta.dirname, 'frontend/entrypoints/public-surface.js'),
-        'sales-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/sales-workspace.js'),
+
         'terranova-catalog-api': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-catalog-api.js'),
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),
         'terranova-interface': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-interface.js'),

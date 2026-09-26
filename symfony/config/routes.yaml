@@ -77,12 +77,12 @@ cos_symfony_home:
 
 cos_web_cabinet:
   path: /cabinet
-  controller: App\Controller\CabinetPageController::index
+  controller: App\Web\Portal\CabinetController::index
   methods: [GET, HEAD]
 
 cos_web_cabinet_submission_retired:
   path: /cabinet/submission/{id}
-  controller: App\Controller\CabinetPageController::retiredSubmission
+  controller: App\Web\Portal\CabinetController::retiredSubmission
   methods: [GET, HEAD, POST]
   requirements:
     id: '[1-9][0-9]*'
@@ -1905,89 +1905,89 @@ cos_spatial_event:
 # Web routing recovery — canonical Symfony page surfaces.
 cos_web_workspace_home:
   path: /admin
-  controller: App\Web\Workspace\CoreWorkspacePageController::home
+  controller: App\Web\Workspace\ExecutiveDashboardController::index
   methods: [GET, HEAD]
 
 cos_web_workspace_users:
   path: /admin/users
-  controller: App\Web\Workspace\CoreWorkspacePageController::users
+  controller: App\Web\Administration\AdministrationUsersController::index
   methods: [GET, HEAD]
 
 cos_web_workspace_user_create:
   path: /admin/createUser
-  controller: App\Web\Workspace\CoreWorkspacePageController::createUser
+  controller: App\Web\Administration\AdministrationUsersController::create
   methods: [POST]
 
 cos_web_workspace_user_update:
   path: /admin/updateUser/{id}
-  controller: App\Web\Workspace\CoreWorkspacePageController::updateUser
+  controller: App\Web\Administration\AdministrationUsersController::update
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_workspace_analytics:
   path: /admin/analytics
-  controller: App\Web\Workspace\CoreWorkspacePageController::analytics
+  controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
 
 cos_web_client_cases:
   path: /client-case
-  controller: App\Web\Sales\ClientCasePageController::index
+  controller: App\Web\Sales\ClientCaseCollectionController::index
   methods: [GET, HEAD]
 
 cos_web_client_case_inbox:
   path: /client-case/inbox
-  controller: App\Web\Sales\ClientCasePageController::inbox
+  controller: App\Web\Sales\ClientCaseInboxController::index
   methods: [GET, HEAD]
 
 cos_web_client_case_show:
   path: /client-case/show/{id}
-  controller: App\Web\Sales\ClientCasePageController::show
+  controller: App\Web\Sales\ClientCaseWorkspaceController::index
   methods: [GET, HEAD]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_client_case_create:
   path: /client-case/create
-  controller: App\Web\Sales\ClientCasePageController::create
+  controller: App\Web\Sales\ClientCaseMutationController::create
   methods: [POST]
 
 cos_web_client_case_update:
   path: /client-case/update/{id}
-  controller: App\Web\Sales\ClientCasePageController::update
+  controller: App\Web\Sales\ClientCaseMutationController::update
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_client_case_quick_update:
   path: /client-case/quickUpdate/{id}
-  controller: App\Web\Sales\ClientCasePageController::quickUpdate
+  controller: App\Web\Sales\ClientCaseMutationController::quickUpdate
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_client_case_activity:
   path: /client-case/activity/{id}
-  controller: App\Web\Sales\ClientCasePageController::activity
+  controller: App\Web\Sales\ClientCaseMutationController::activity
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_client_case_inbound_update:
   path: /client-case/updateInboundRequest/{id}
-  controller: App\Web\Sales\ClientCasePageController::updateInboundRequest
+  controller: App\Web\Sales\ClientCaseMutationController::updateInboundRequest
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_client_case_from_inbound:
   path: /client-case/createFromInboundRequest/{id}
-  controller: App\Web\Sales\ClientCasePageController::createFromInboundRequest
+  controller: App\Web\Sales\ClientCaseMutationController::createFromInboundRequest
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_client_case_link_inbound:
   path: /client-case/linkInboundRequest
-  controller: App\Web\Sales\ClientCasePageController::linkInboundRequest
+  controller: App\Web\Sales\ClientCaseMutationController::linkInboundRequest
   methods: [POST]
 
 cos_web_client_case_property_match_update:
   path: /client-case/updatePropertyMatch/{id}
-  controller: App\Web\Sales\ClientCasePageController::updatePropertyMatch
+  controller: App\Web\Sales\ClientCaseMutationController::updatePropertyMatch
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
@@ -2003,7 +2003,12 @@ cos_web_property_catalog:
 
 cos_web_property_map:
   path: /property/map
-  controller: App\Web\Property\PropertyPageController::map
+  controller: App\Web\Property\PropertyMapController::index
+  methods: [GET, HEAD]
+
+cos_web_property_favour:
+  path: /property/favour
+  controller: App\Web\Property\PropertyPageController::favour
   methods: [GET, HEAD]
 
 cos_web_property_show:
@@ -2061,22 +2066,22 @@ cos_web_property_submit_alias:
 
 cos_web_property_manage:
   path: /property/manage
-  controller: App\Web\Property\PropertyPageController::manage
+  controller: App\Web\Property\PropertyInventoryController::manage
   methods: [GET, HEAD]
 
 cos_web_property_listing:
   path: /property/listing
-  controller: App\Web\Property\PropertyPageController::listing
+  controller: App\Web\Property\PropertyInventoryController::listing
   methods: [GET, HEAD]
 
 cos_web_property_submissions:
   path: /property/submissions
-  controller: App\Web\Property\PropertyPageController::submissions
+  controller: App\Web\Property\PropertySubmissionsController::index
   methods: [GET, HEAD]
 
 cos_web_property_submission:
   path: /property/submission/{id}
-  controller: App\Web\Property\PropertyPageController::submission
+  controller: App\Web\Property\PropertySubmissionController::index
   methods: [GET, HEAD]
   requirements: { id: '[1-9][0-9]*' }
 
@@ -2112,101 +2117,107 @@ cos_web_cos_approval_reject:
 # Final Web retirement — Sales SSR
 cos_web_sales_root:
   path: /sales
-  controller: App\Web\Sales\SalesPageController::today
+  controller: App\Web\Sales\SalesTodayController::index
   methods: [GET]
 
 cos_web_sales_dashboard:
   path: /sales/dashboard
-  controller: App\Web\Sales\SalesPageController::dashboard
+  controller: App\Web\Sales\SalesDashboardController::index
   methods: [GET]
 
 cos_web_sales_today:
   path: /sales/today
-  controller: App\Web\Sales\SalesPageController::today
+  controller: App\Web\Sales\SalesTodayController::index
   methods: [GET]
 
 cos_web_sales_pipeline:
   path: /sales/pipeline
-  controller: App\Web\Sales\SalesPageController::pipeline
+  controller: App\Web\Sales\SalesPipelineController::index
   methods: [GET]
 
 cos_web_sales_leads:
   path: /sales/leads
-  controller: App\Web\Sales\SalesPageController::leads
+  controller: App\Web\Sales\SalesLeadsController::index
   methods: [GET]
+
+cos_web_sales_lead:
+  path: /sales/leads/{id}
+  controller: App\Web\Sales\SalesWorkspaceController::lead
+  methods: [GET]
+  requirements: { id: '[1-9][0-9]*' }
 
 cos_web_sales_deals:
   path: /sales/deals
-  controller: App\Web\Sales\SalesPageController::deals
+  controller: App\Web\Sales\SalesDealsController::index
   methods: [GET]
 
 cos_web_sales_deal:
   path: /sales/deals/{id}
-  controller: App\Web\Sales\SalesPageController::deal
+  controller: App\Web\Sales\SalesDealController::index
   methods: [GET]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_sales_director:
   path: /sales/director
-  controller: App\Web\Sales\SalesPageController::director
+  controller: App\Web\Sales\SalesDirectorController::index
   methods: [GET]
 
 cos_web_sales_admin:
   path: /sales/admin
-  controller: App\Web\Sales\SalesAdminPageController::index
+  controller: App\Web\Sales\SalesAdminDashboardController::index
   methods: [GET]
 
 cos_web_sales_admin_pipelines_page:
   path: /sales/admin/pipelines
-  controller: App\Web\Sales\SalesAdminPageController::pipelines
+  controller: App\Web\Sales\SalesAdminControlController::pipelines
   methods: [GET]
 
 cos_web_sales_admin_pipeline_page:
   path: /sales/admin/pipelines/{id}
-  controller: App\Web\Sales\SalesAdminPageController::pipeline
+  controller: App\Web\Sales\SalesAdminControlController::pipeline
   methods: [GET]
   requirements: { id: '[A-Za-z0-9_-]{8,64}' }
 
 cos_web_sales_admin_rules_page:
   path: /sales/admin/rules
-  controller: App\Web\Sales\SalesAdminPageController::rules
+  controller: App\Web\Sales\SalesAdminControlController::rules
   methods: [GET]
 
 cos_web_sales_admin_rule_page:
   path: /sales/admin/rules/{id}
-  controller: App\Web\Sales\SalesAdminPageController::rule
+  controller: App\Web\Sales\SalesAdminControlController::rule
   methods: [GET]
   requirements: { id: '[A-Za-z0-9_.-]{8,64}' }
 
 cos_web_sales_admin_agents_page:
   path: /sales/admin/agents
-  controller: App\Web\Sales\SalesAdminPageController::agents
+  controller: App\Web\Sales\SalesAdminControlController::agents
   methods: [GET]
 
 cos_web_sales_admin_agent_page:
   path: /sales/admin/agents/{name}
-  controller: App\Web\Sales\SalesAdminPageController::agent
+  controller: App\Web\Sales\SalesAdminControlController::agent
   methods: [GET]
   requirements: { name: '[A-Za-z0-9_.-]{3,160}' }
 
 cos_web_sales_admin_actions_page:
   path: /sales/admin/actions
-  controller: App\Web\Sales\SalesAdminPageController::actions
+  controller: App\Web\Sales\SalesAdminControlController::actions
   methods: [GET]
 
 cos_web_sales_admin_teams_page:
   path: /sales/admin/teams
-  controller: App\Web\Sales\SalesAdminPageController::teams
+  controller: App\Web\Sales\SalesAdminControlController::teams
   methods: [GET]
 
 cos_web_sales_admin_integrations_page:
   path: /sales/admin/integrations
-  controller: App\Web\Sales\SalesAdminPageController::integrations
+  controller: App\Web\Sales\SalesAdminControlController::integrations
   methods: [GET]
 
 cos_web_sales_admin_health_page:
   path: /sales/admin/health
-  controller: App\Web\Sales\SalesAdminPageController::health
+  controller: App\Web\Sales\SalesAdminControlController::health
   methods: [GET]
 
 
@@ -2228,7 +2239,7 @@ cos_web_architecture_health:
 
 cos_web_diagnostic_methodology:
   path: /admin/diagnostics/methodology-studio
-  controller: App\Web\Diagnostic\DiagnosticPageController::methodology
+  controller: App\Web\Diagnostic\MethodologyStudioController::index
   methods: [GET]
 
 cos_web_diagnostic_report:
@@ -2241,7 +2252,7 @@ cos_web_diagnostic_report:
 # Final Web retirement — Spatial SSR/workspace.
 cos_web_spatial_manage:
   path: /spatial/manage
-  controller: App\Web\Spatial\SpatialPageController::manage
+  controller: App\Web\Spatial\SpatialManageController::index
   methods: [GET]
 
 cos_web_spatial_edit_new:

@@ -2331,11 +2331,51 @@ services:
   Domains\Property\Application\Contract\PropertyWorkspaceReadModelInterface:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyWorkspaceReadModel
 
-  App\Web\Workspace\CoreWorkspacePageController:
+  App\Web\Workspace\ExecutiveDashboardController:
     public: true
     tags: ['controller.service_arguments']
 
-  App\Web\Sales\ClientCasePageController:
+  App\Web\Administration\AdministrationAnalyticsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Administration\AdministrationUsersController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Portal\CabinetController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCaseInboxController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCaseCollectionController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCaseWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\ClientCaseMutationController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertyInventoryController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertySubmissionsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertySubmissionController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertyMapController:
     public: true
     tags: ['controller.service_arguments']
 
@@ -2403,7 +2443,43 @@ services:
       $operations: '@Domains\Sales\Application\Service\SalesOperationalPerformanceService'
       $forecast: '@Domains\Sales\Application\Service\SalesForecastRiskService'
 
-  App\Web\Sales\SalesPageController:
+  App\Web\Sales\SalesDashboardController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesTodayController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesPipelineController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesDealsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesDirectorController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesAdminDashboardController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesAdminControlController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesLeadsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesDealController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Sales\SalesWorkspaceController:
     public: true
     tags: ['controller.service_arguments']
 
@@ -2417,11 +2493,6 @@ services:
   Domains\Sales\Application\Contract\SalesAdministrationReadModelInterface:
     alias: Infrastructure\Platform\ReadModel\MySql\MysqlSalesAdministrationReadModel
 
-  App\Web\Sales\SalesAdminPageController:
-    public: true
-    tags: ['controller.service_arguments']
-
-
   # Final Web retirement — Visualization / Diagnostic SSR.
   App\Web\Visualization\ArchitecturePageController:
     public: true
@@ -2431,6 +2502,15 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Diagnostic\MethodologyStudioController:
+    public: true
+    tags: ['controller.service_arguments']
+
+
+  # Wave 13 Spatial Workspace.
+  App\Web\Spatial\SpatialManageController:
+    public: true
+    tags: ['controller.service_arguments']
 
   # Final Web retirement — Spatial SSR/workspace.
   App\Web\Spatial\SpatialPageController:
