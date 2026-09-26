@@ -26,6 +26,12 @@ $sequenceSteps=is_array($engagementSequence['steps']??null)?$engagementSequence[
 $sequencePolicyEffective=is_array($engagementSequence['policy']['effective']??null)?$engagementSequence['policy']['effective']:[];
 $engagementResponses=is_array($workspace['engagement_responses']??null)?$workspace['engagement_responses']:[];
 $inboundResponses=is_array($engagementResponses['responses']??null)?$engagementResponses['responses']:[];
+$conversationRouting=is_array($workspace['conversation_routing']??null)?$workspace['conversation_routing']:[];
+$conversationRoutes=is_array($conversationRouting['routes']??null)?$conversationRouting['routes']:[];
+$routeByResponse=[];
+foreach($conversationRoutes as $route){
+    if(is_array($route)&&!empty($route['response_id']))$routeByResponse[(string)$route['response_id']]=$route;
+}
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
 $learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
@@ -255,7 +261,7 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
     <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Conversation signals</p><h2>Inbound responses</h2></div><span><?php echo count($inboundResponses); ?></span></div>
     <?php if($inboundResponses): ?>
       <div class="tn-growth-signal-list">
-        <?php foreach($inboundResponses as $response): $classification=is_array($response['classification']??null)?$response['classification']:null; ?>
+        <?php foreach($inboundResponses as $response): $classification=is_array($response['classification']??null)?$response['classification']:null; $authoritativeRoute=$routeByResponse[(string)($response['response_id']??'')]??null; ?>
           <article>
             <div>
               <strong><?php echo $h(strtoupper((string)($response['channel']??'response'))); ?></strong>
@@ -267,6 +273,12 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
               <p><?php echo $h($classification['summary']??''); ?></p>
               <?php if(!empty($classification['requested_action'])): ?><p><strong>Requested:</strong> <?php echo $h($classification['requested_action']); ?></p><?php endif; ?>
               <small>Suggested owner: <?php echo $h($classification['recommended_next_owner']??'human_review'); ?> · confidence <?php echo round((float)($classification['confidence']??0)*100); ?>% · advisory only</small>
+              <?php if(is_array($authoritativeRoute)): ?>
+                <p><strong>Authoritative route:</strong> <?php echo $h(strtoupper((string)($authoritativeRoute['route']??'human_review'))); ?> · <?php echo $h($authoritativeRoute['status']??'pending'); ?></p>
+                <small><?php echo $h($authoritativeRoute['decision_reason']??''); ?><?php if(!empty($authoritativeRoute['target_reference_id'])): ?> · <?php echo $h(($authoritativeRoute['target_reference_type']??'').' : '.$authoritativeRoute['target_reference_id']); ?><?php endif; ?></small>
+              <?php else: ?>
+                <small>Authoritative routing pending deterministic policy processing.</small>
+              <?php endif; ?>
             <?php else: ?>
               <small>Classification pending durable processing.</small>
             <?php endif; ?>

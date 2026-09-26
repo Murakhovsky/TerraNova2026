@@ -1062,3 +1062,53 @@ AI classification is not required to stop outreach. Receiving the reply itself r
 
 
 V0.45 also closes the manual governed-execution gap for sequence-derived recommendations. `GrowthEngagementExecutionService` now applies the sequence hard block in eligibility, before proposal, and again after the tenant capacity lock. A human may override automation modes through an explicit governed action, but cannot use a stale follow-up recommendation after a reply, Sales handoff, operator stop, failed delivery or completed phone conversation.
+
+
+## V0.46 — Conversation Routing Authority
+
+V0.46 turns classified inbound replies into governed ownership decisions without giving the classifier execution authority.
+
+```text
+Inbound Response Fact
+        ↓
+governed AI classification
+        ↓
+advisory intent / owner / confidence
+        ↓
+deterministic Conversation Routing Policy
+        ├─ sales
+        ├─ service
+        ├─ growth queue
+        ├─ partnership queue
+        ├─ suppression
+        ├─ human review
+        └─ no action
+        ↓
+resumable route execution
+        ↓
+target reference / queue / terminal state
+```
+
+AI classification remains advisory. `GrowthConversationRoutingPolicy` is the authoritative decision layer. Low-confidence classifications cannot cross a Domain boundary. Explicit unsubscribe overrides an advisory Sales/Service owner and creates a contact-level suppression when an authoritative Growth contact is attached. Explicit `not_interested` produces `no_action`.
+
+Sales and Service are implemented through explicit routing adapters. Cross-domain calls happen outside the Growth database transaction and use a stable route idempotency key. The route is persisted before dispatch, so a worker crash after target acceptance can retry without creating a second Sales lead or Service request.
+
+Growth, human-review and Partnership ownership are durable queue states. Partnership is intentionally not faked as a Domain adapter because COS does not yet expose a canonical Partnership application boundary. The route is preserved as `partnership / queued` until that Domain exists.
+
+Raw inbound reply bodies do not cross the routing boundary. Sales/Service adapters receive the versioned classification summary, requested action and correlation references. The observed response remains owned by Growth.
+
+Suppression is an execution boundary, not decorative CRM metadata. `GrowthOutreachSequenceGuard` checks the contact suppression repository before any manual, sequence or autonomous execution can proceed. A later recommendation for the same suppressed Growth contact is therefore blocked with `contact_suppressed`.
+
+The durable chain is now:
+
+```text
+growth.engagement.response_received
+        ↓ growth.response-classification.v1
+growth.engagement.response_classified
+        ↓ growth.conversation-routing.v1
+route decision
+        ↓
+Sales / Service / Growth / Partnership / Suppression / Human Review / No Action
+```
+
+The Candidate Workspace and `GET /api/v1/growth/candidates/{id}/engagement/routing` expose the authoritative route separately from the AI-suggested owner.

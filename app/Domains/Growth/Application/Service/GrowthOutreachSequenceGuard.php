@@ -6,6 +6,7 @@ namespace Domains\Growth\Application\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use Domains\Growth\Application\Contract\GrowthAutonomousContentRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthConversationRoutingRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementDeliveryRepositoryInterface;
@@ -27,6 +28,7 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
         private GrowthLearningRepositoryInterface $learning,
         private GrowthEngagementExecutionRepositoryInterface $executions,
         private GrowthEngagementDeliveryRepositoryInterface $deliveries,
+        private GrowthConversationRoutingRepositoryInterface $conversationRouting,
     ) {}
 
     public function bootstrapBlock(string $organizationId,array $recommendation,DateTimeImmutable $startedAt):?array
@@ -34,6 +36,8 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
         $startedAt=$startedAt->setTimezone(new DateTimeZone('UTC'));
         $channel=(string)($recommendation['channel']??'');
         $candidateId=(string)($recommendation['candidate_id']??'');
+        $suppression=$this->suppressionBlock($organizationId,$recommendation);
+        if($suppression!==null)return $suppression;
 
         $sequenceProfile=$this->sequences->latestProfile($organizationId);
         if($sequenceProfile===null||empty($sequenceProfile['enabled'])){
@@ -91,6 +95,8 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
     {
         $recommendationId=(string)($recommendation['recommendation_id']??'');
         if($recommendationId==='')return $this->block('sequence_recommendation_invalid','Sequence recommendation id is missing.');
+        $suppression=$this->suppressionBlock($organizationId,$recommendation);
+        if($suppression!==null)return $suppression;
 
         $sequence=$this->sequences->sequenceForRecommendation($organizationId,$recommendationId);
         if($sequence===null)return null;
@@ -152,6 +158,16 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
         return $this->bootstrapBlock(
             $organizationId,$recommendation,new DateTimeImmutable((string)$sequence['started_at'],new DateTimeZone('UTC'))
         );
+    }
+
+    /** @return array{code:string,reason:string}|null */
+    private function suppressionBlock(string $organizationId,array $recommendation):?array
+    {
+        $contactId=trim((string)($recommendation['contact_id']??''));
+        if($contactId!==''&&$this->conversationRouting->isContactSuppressed($organizationId,$contactId)){
+            return $this->block('contact_suppressed','Growth contact is suppressed by an authoritative inbound unsubscribe.');
+        }
+        return null;
     }
 
     /** @return array{code:string,reason:string} */

@@ -169,6 +169,7 @@ jobs:
           php tests/architecture/growth_v0430_autonomous_content_review.php
           php tests/architecture/growth_v0440_outreach_sequences.php
           php tests/architecture/growth_v0450_inbound_responses.php
+          php tests/architecture/growth_v0460_conversation_routing.php
 
       - name: Process registry invariants
         run: |
@@ -215,6 +216,7 @@ jobs:
           php tests/unit/growth_v0430_autonomous_content_review.php
           php tests/unit/growth_v0440_outreach_sequences.php
           php tests/unit/growth_v0450_inbound_responses.php
+          php tests/unit/growth_v0460_conversation_routing.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -351,6 +353,8 @@ jobs:
           php -l symfony/src/Web/PublicEdge/PublicEdgeController.php
           php -l tests/unit/growth_v0450_inbound_responses.php
           php -l tests/architecture/growth_v0450_inbound_responses.php
+          php -l tests/unit/growth_v0460_conversation_routing.php
+          php -l tests/architecture/growth_v0460_conversation_routing.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php

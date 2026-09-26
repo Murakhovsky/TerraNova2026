@@ -52,6 +52,9 @@ final class GrowthEventType
     public const ENGAGEMENT_DELIVERY_OBSERVED = 'growth.engagement.delivery_observed';
     public const ENGAGEMENT_RESPONSE_RECEIVED = 'growth.engagement.response_received';
     public const ENGAGEMENT_RESPONSE_CLASSIFIED = 'growth.engagement.response_classified';
+    public const ENGAGEMENT_RESPONSE_ROUTE_DECIDED = 'growth.engagement.response_route_decided';
+    public const ENGAGEMENT_RESPONSE_ROUTED = 'growth.engagement.response_routed';
+    public const ENGAGEMENT_RESPONSE_ROUTE_FAILED = 'growth.engagement.response_route_failed';
     public const ENGAGEMENT_LIMIT_PROFILE_UPDATED = 'growth.engagement.limit_profile_updated';
     public const ENGAGEMENT_ACTIVATION_PROFILE_UPDATED = 'growth.engagement.activation_profile_updated';
     public const ENGAGEMENT_AUTONOMY_PROFILE_UPDATED = 'growth.engagement.autonomy_profile_updated';

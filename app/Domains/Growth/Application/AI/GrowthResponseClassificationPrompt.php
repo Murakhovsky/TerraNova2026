@@ -38,7 +38,10 @@ recommended_next_owner is advisory only:
 - sales for commercial interest, meeting requests, questions or objections that need commercial follow-up;
 - growth for referral, wrong-person or out-of-office research loops;
 - service only when the reply explicitly requests support/service and supplied context supports that interpretation;
+- partnership only when the reply explicitly proposes or redirects toward a partnership, reseller, integration or collaboration workflow;
 - human_review when intent/ownership is ambiguous or classification confidence is low.
+
+The recommendation is evidence for the deterministic Conversation Routing Policy. It never executes routing by itself.
 
 Summary must be factual and concise. requested_action is the concrete action requested by the respondent, or an empty string when none is stated.
 Return only the requested structured fields.

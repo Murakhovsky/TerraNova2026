@@ -12,6 +12,7 @@ use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementResponseBoundary;
+use Domains\Growth\Application\Contract\GrowthConversationRoutingBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
 use Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary;
@@ -52,6 +53,7 @@ final readonly class GrowthApiController
         private GrowthEngagementBoundary $engagement,
         private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthEngagementResponseBoundary $engagementResponses,
+        private GrowthConversationRoutingBoundary $conversationRouting,
         private GrowthEngagementLimitBoundary $engagementLimits,
         private GrowthEngagementActivationBoundary $engagementActivation,
         private GrowthAutonomousOutreachBoundary $autonomousOutreach,
@@ -576,6 +578,12 @@ final readonly class GrowthApiController
     {
         return $this->read(fn(TenantContext $tenant):array=>
             $this->engagementResponses->responseBrief($tenant->organizationId()->value(),$id));
+    }
+
+    public function engagementRouting(string $id):JsonResponse
+    {
+        return $this->read(fn(TenantContext $tenant):array=>
+            $this->conversationRouting->routingBrief($tenant->organizationId()->value(),$id));
     }
 
     public function engagementSequence(string $id):JsonResponse

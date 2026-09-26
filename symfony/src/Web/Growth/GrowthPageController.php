@@ -16,6 +16,7 @@ use Domains\Growth\Application\Contract\GrowthDecisionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementExecutionBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementResponseBoundary;
+use Domains\Growth\Application\Contract\GrowthConversationRoutingBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitBoundary;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationBoundary;
 use Domains\Growth\Application\Contract\GrowthAutonomousOutreachBoundary;
@@ -66,6 +67,7 @@ final readonly class GrowthPageController
         private GrowthEngagementBoundary $engagement,
         private GrowthEngagementExecutionBoundary $engagementExecution,
         private GrowthEngagementResponseBoundary $engagementResponses,
+        private GrowthConversationRoutingBoundary $conversationRouting,
         private GrowthEngagementLimitBoundary $engagementLimits,
         private GrowthEngagementActivationBoundary $engagementActivation,
         private GrowthAutonomousOutreachBoundary $autonomousOutreach,
@@ -154,6 +156,7 @@ final readonly class GrowthPageController
                         'engagement_autonomy'=>$autonomy,
                         'engagement_content'=>$content,
                         'engagement_responses'=>$this->engagementResponses->responseBrief($organizationId,$id),
+                        'conversation_routing'=>$this->conversationRouting->routingBrief($organizationId,$id),
                         'engagement_sequence'=>$this->outreachSequences->sequenceBrief($organizationId,$id),
                         'handoff'=>$this->handoff->handoffBrief($organizationId,$id),
                         'learning'=>$this->learning->learningBrief($organizationId,$id),

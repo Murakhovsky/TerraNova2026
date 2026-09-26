@@ -55,6 +55,9 @@ services:
     Domains\Growth\Application\Contract\GrowthHandoffTargetInterface:
       tags:
         - { name: 'growth.handoff_target' }
+    Domains\Growth\Application\Contract\GrowthConversationRoutingTargetInterface:
+      tags:
+        - { name: 'growth.conversation_routing_target' }
     App\Web\Experience\Extension\Contract\WebExtensionProviderInterface:
       tags:
         - { name: 'cos.web.extension.provider' }
@@ -861,6 +864,37 @@ services:
 
   Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer: ~
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthConversationRoutingRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthConversationRoutingRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthConversationRoutingRepository
+
+  Domains\Growth\Domain\GrowthConversationRoutingPolicy: ~
+
+  Domains\Growth\Application\Service\GrowthConversationRoutingTargetRegistry:
+    arguments:
+      $targets: !tagged_iterator growth.conversation_routing_target
+
+  Domains\Growth\Infrastructure\Routing\SalesGrowthConversationRoutingTarget:
+    arguments:
+      $contacts: '@Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface'
+      $sales: '@Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Growth\Infrastructure\Routing\ServiceGrowthConversationRoutingTarget:
+    arguments:
+      $service: '@Domains\Service\Application\Contract\ServiceApplicationBoundary'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  Domains\Growth\Application\Service\GrowthConversationRoutingService: ~
+
+  Domains\Growth\Application\Contract\GrowthConversationRoutingBoundary:
+    alias: Domains\Growth\Application\Service\GrowthConversationRoutingService
+
+  Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer: ~
+
   App\Application\Growth\Integration\GrowthEngagementResponseWebhook:
     arguments:
       $secret: '%env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET)%'
@@ -1652,6 +1686,7 @@ services:
         platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
         growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
         growth.response-classification.v1: '@Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer'
+        growth.conversation-routing.v1: '@Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:
