@@ -1215,3 +1215,13 @@ The binding is tenant-scoped, idempotent and conflict-safe. It is committed befo
 
 See `docs/architecture/growth-v0490-cos-for-cos-vertical-slice.md` for the executable acceptance contract.
 
+## V0.50 — Release Hardening
+
+V0.50 freezes the V0.x feature surface and hardens Market Discovery before Production Candidate work.
+
+Market runs now use an expiring database lease in addition to the logical idempotency receipt. A live retry cannot duplicate provider I/O while another worker owns the run; after an expired lease the same durable run can be resumed. Completion requires the current lease token, preventing a stale worker from overwriting a newer recovery attempt.
+
+Provider parsing now accounts for rejected rows instead of silently dropping them. A partial run keeps the current Universe cursor so the same provider page is retried; already accepted Accounts replay safely through stable Account, snapshot, ICP-match, membership and Candidate idempotency. Only a completed run advances the cursor.
+
+The V0.50 release gate explicitly covers tenant isolation, external-source security, idempotency, retries, observability, regression, migration continuity and documentation truth. The detailed contract is in `docs/architecture/growth-v0500-release-hardening.md`.
+

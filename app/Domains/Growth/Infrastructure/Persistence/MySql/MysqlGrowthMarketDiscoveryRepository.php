@@ -120,22 +120,42 @@ final readonly class MysqlGrowthMarketDiscoveryRepository implements GrowthMarke
         );
     }
 
+    public function acquireRunLease(string $organizationId,string $runId,string $leaseToken,int $ttlSeconds):bool
+    {
+        if(!preg_match('/^[a-f0-9]{32}$/',$leaseToken))throw new InvalidArgumentException('Growth market run lease token is invalid.');
+        if($ttlSeconds<60||$ttlSeconds>3600)throw new InvalidArgumentException('Growth market run lease TTL is invalid.');
+        $statement=$this->connection->prepare(
+            'UPDATE tn_growth_market_discovery_runs
+             SET lease_token=:lease_token,
+                 lease_expires_at=DATE_ADD(NOW(6),INTERVAL :ttl_seconds SECOND),
+                 attempt_count=attempt_count+1
+             WHERE organization_id=:organization_id AND run_id=:run_id AND status=\'running\'
+               AND (lease_expires_at IS NULL OR lease_expires_at<NOW(6))'
+        );
+        $statement->bindValue(':lease_token',$leaseToken);
+        $statement->bindValue(':ttl_seconds',$ttlSeconds,PDO::PARAM_INT);
+        $statement->bindValue(':organization_id',$organizationId);
+        $statement->bindValue(':run_id',$runId);
+        $statement->execute();
+        return $statement->rowCount()===1;
+    }
+
     public function completeRun(
         string $organizationId,string $runId,string $status,int $collectedCount,int $accountCount,
-        int $existingCount,int $monitoredCount,int $opportunityCount,?string $nextCursor,?string $errorSummary
+        int $existingCount,int $monitoredCount,int $opportunityCount,?string $nextCursor,?string $errorSummary,string $leaseToken
     ):void {
         if(!in_array($status,['completed','partial','failed'],true))throw new InvalidArgumentException('Growth market run status is invalid.');
         $statement=$this->connection->prepare(
             'UPDATE tn_growth_market_discovery_runs
              SET status=:status,collected_count=:collected_count,account_count=:account_count,existing_count=:existing_count,
                  monitored_count=:monitored_count,opportunity_count=:opportunity_count,next_cursor=:next_cursor,
-                 error_summary=:error_summary,finished_at=NOW(6)
-             WHERE organization_id=:organization_id AND run_id=:run_id'
+                 error_summary=:error_summary,finished_at=NOW(6),lease_token=NULL,lease_expires_at=NULL
+             WHERE organization_id=:organization_id AND run_id=:run_id AND status='running' AND lease_token=:lease_token'
         );
         $statement->execute([
             'status'=>$status,'collected_count'=>$collectedCount,'account_count'=>$accountCount,'existing_count'=>$existingCount,
             'monitored_count'=>$monitoredCount,'opportunity_count'=>$opportunityCount,'next_cursor'=>$nextCursor,
-            'error_summary'=>$errorSummary,'organization_id'=>$organizationId,'run_id'=>$runId,
+            'error_summary'=>$errorSummary,'organization_id'=>$organizationId,'run_id'=>$runId,'lease_token'=>$leaseToken,
         ]);
         if($statement->rowCount()!==1)throw new InvalidArgumentException('Growth market run could not be completed.');
     }

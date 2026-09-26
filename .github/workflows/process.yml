@@ -173,6 +173,7 @@ jobs:
           php tests/architecture/growth_v0470_email_delivery_parity.php
           php tests/architecture/growth_v0480_market_discovery.php
           php tests/architecture/growth_v0490_cos_for_cos_vertical_slice.php
+          php tests/architecture/growth_v0500_release_hardening.php
 
       - name: Process registry invariants
         run: |
@@ -223,6 +224,7 @@ jobs:
           php tests/unit/growth_v0470_email_delivery_parity.php
           php tests/unit/growth_v0480_market_discovery.php
           php tests/unit/growth_v0490_cos_for_cos_vertical_slice.php
+          php tests/unit/growth_v0500_release_hardening.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -381,6 +383,13 @@ jobs:
           php -l tests/architecture/growth_v0480_market_discovery.php
           php -l tests/unit/growth_v0490_cos_for_cos_vertical_slice.php
           php -l tests/architecture/growth_v0490_cos_for_cos_vertical_slice.php
+          php -l app/Domains/Growth/Application/DTO/GrowthMarketDiscoveryBatch.php
+          php -l app/Domains/Growth/Application/Contract/GrowthMarketDiscoveryRepositoryInterface.php
+          php -l app/Domains/Growth/Application/Service/GrowthMarketDiscoveryService.php
+          php -l app/Domains/Growth/Infrastructure/Market/CredentialedJsonGrowthMarketSource.php
+          php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMarketDiscoveryRepository.php
+          php -l tests/unit/growth_v0500_release_hardening.php
+          php -l tests/architecture/growth_v0500_release_hardening.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php

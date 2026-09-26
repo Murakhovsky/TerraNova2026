@@ -119,7 +119,7 @@ final readonly class CredentialedJsonGrowthMarketSource implements GrowthMarketS
         $options=[
             CURLOPT_RETURNTRANSFER=>false,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>25,
             CURLOPT_FOLLOWLOCATION=>false,CURLOPT_MAXREDIRS=>0,
-            CURLOPT_HTTPHEADER=>['Accept: application/json','User-Agent: COS-Growth-Market/0.48',$authHeader],
+            CURLOPT_HTTPHEADER=>['Accept: application/json','User-Agent: COS-Growth-Market/0.50',$authHeader],
             CURLOPT_RESOLVE=>[$host.':443:'.$ip],
             CURLOPT_WRITEFUNCTION=>static function($handle,string $chunk)use(&$body,&$tooLarge):int{
                 if(strlen($body)+strlen($chunk)>self::MAX_BODY_BYTES){$tooLarge=true;return 0;}
@@ -154,10 +154,15 @@ final readonly class CredentialedJsonGrowthMarketSource implements GrowthMarketS
         $rows=$payload['items']??null;
         if(!is_array($rows)||!array_is_list($rows))throw new InvalidArgumentException('Growth market response must contain an items list.');
         if(count($rows)>500)throw new InvalidArgumentException('Growth market response contains too many items.');
+        if(count($rows)>$limit)throw new InvalidArgumentException('Growth market provider exceeded the requested item limit.');
 
-        $items=[];$seen=[];
+        $items=[];$seen=[];$rejected=0;$errors=[];
         foreach($rows as $row){
-            if(!is_array($row)||array_is_list($row))continue;
+            if(!is_array($row)||array_is_list($row)){
+                $rejected++;
+                if(count($errors)<5)$errors[]='Provider item must be an object.';
+                continue;
+            }
             try{
                 $item=new GrowthMarketDiscoveredAccount(
                     $this->string($row['id']??null,1000,'id'),
@@ -171,7 +176,14 @@ final readonly class CredentialedJsonGrowthMarketSource implements GrowthMarketS
                     $this->requiredList($row['source_references']??null,'source_references'),
                     new DateTimeImmutable($this->string($row['observed_at']??null,100,'observed_at')),
                 );
-            }catch(Throwable){continue;}
+            }catch(Throwable $error){
+                $rejected++;
+                if(count($errors)<5){
+                    $message=trim($error->getMessage());
+                    $errors[]=mb_substr($message!==''?$message:get_class($error),0,1000);
+                }
+                continue;
+            }
             $key=hash('sha256',$item->externalKey);
             if(isset($seen[$key]))continue;
             $seen[$key]=true;$items[]=$item;
@@ -181,7 +193,7 @@ final readonly class CredentialedJsonGrowthMarketSource implements GrowthMarketS
             if(!is_string($next)||trim($next)===''||mb_strlen($next)>1000)throw new InvalidArgumentException('Growth market next_cursor is invalid.');
             $next=trim($next);
         }
-        return new GrowthMarketDiscoveryBatch(array_slice($items,0,$limit),$next);
+        return new GrowthMarketDiscoveryBatch($items,$next,$rejected,$errors);
     }
 
     /** @return array<string,scalar|null> */

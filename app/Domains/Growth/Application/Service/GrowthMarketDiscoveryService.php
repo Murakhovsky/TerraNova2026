@@ -149,29 +149,48 @@ final readonly class GrowthMarketDiscoveryService implements GrowthMarketDiscove
         if($limit<1||$limit>200)throw new InvalidArgumentException('Growth market run limit must be between 1 and 200.');
         $runId='GMRN-'.$this->stableId($organizationId.':market_run:'.$idempotencyKey);
         $fingerprint=$this->fingerprint(['universe_id'=>$universeId,'limit'=>$limit]);
+        $leaseToken=bin2hex(random_bytes(16));
+        $leaseTtlSeconds=900;
 
         $setup=$this->transactions->transactional(function()use(
-            $organizationId,$actorId,$correlationId,$universeId,$idempotencyKey,$limit,$runId,$fingerprint
+            $organizationId,$actorId,$correlationId,$universeId,$idempotencyKey,$limit,$runId,$fingerprint,$leaseToken,$leaseTtlSeconds
         ):array{
             if(!$this->receipts->claim($organizationId,'run_market_discovery',$idempotencyKey,$fingerprint)){
-                return ['replay'=>$this->repository->viewRun($organizationId,$runId)
-                    ??throw new InvalidArgumentException('Growth market run receipt exists but run was not found.')];
+                $run=$this->repository->viewRun($organizationId,$runId)
+                    ??throw new InvalidArgumentException('Growth market run receipt exists but run was not found.');
+                if((string)($run['status']??'')!=='running')return ['replay'=>$run];
+
+                if(!$this->repository->acquireRunLease($organizationId,$runId,$leaseToken,$leaseTtlSeconds)){
+                    return ['replay'=>$run+['in_progress'=>true]];
+                }
+                $universe=$this->repository->lockUniverse($organizationId,$universeId);
+                $row=$this->repository->viewUniverse($organizationId,$universeId)
+                    ??throw new InvalidArgumentException('Growth Market Universe disappeared during run recovery.');
+                return [
+                    'replay'=>null,'universe'=>$universe,'cursor'=>$row['cursor']??null,
+                    'resumed'=>true,
+                ];
             }
+
             $universe=$this->repository->lockUniverse($organizationId,$universeId);
             if(!$universe->enabled())throw new InvalidArgumentException('Growth Market Universe is disabled.');
             $this->repository->createRun($organizationId,$runId,$universeId,$limit,$actorId);
+            if(!$this->repository->acquireRunLease($organizationId,$runId,$leaseToken,$leaseTtlSeconds)){
+                throw new InvalidArgumentException('Growth market run lease could not be acquired after creation.');
+            }
             $this->publish(GrowthEventType::MARKET_DISCOVERY_RUN_STARTED,$organizationId,'growth_market_universe',$universeId,[
                 'run_id'=>$runId,'limit'=>$limit,'source_type'=>$universe->sourceType,
             ],'SYSTEM',(string)$actorId,$correlationId);
             $row=$this->repository->viewUniverse($organizationId,$universeId)
                 ??throw new InvalidArgumentException('Growth Market Universe disappeared during run setup.');
-            return ['replay'=>null,'universe'=>$universe,'cursor'=>$row['cursor']??null];
+            return ['replay'=>null,'universe'=>$universe,'cursor'=>$row['cursor']??null,'resumed'=>false];
         });
         if(is_array($setup['replay']??null))return $setup['replay']+['replayed'=>true];
 
-        $universe=$setup['universe'];
+        $universe=$setup['universe']??null;
         if(!$universe instanceof GrowthMarketUniverse)throw new InvalidArgumentException('Growth market run lost Universe configuration.');
         $cursor=is_string($setup['cursor']??null)?(string)$setup['cursor']:null;
+        $resumed=!empty($setup['resumed']);
 
         try{
             $batch=$this->sources->get($universe->sourceType)->discover($universe,$cursor,$limit);
@@ -179,11 +198,13 @@ final readonly class GrowthMarketDiscoveryService implements GrowthMarketDiscove
             $summary=$this->errorSummary($error);
             return $this->finishRun(
                 $organizationId,$actorId,$correlationId,$universeId,$runId,'failed',
-                0,0,0,0,0,$cursor,$summary
+                0,0,0,0,0,$cursor,null,$summary,$leaseToken,$resumed
             );
         }
 
-        $accounts=0;$existing=0;$monitored=0;$opportunities=0;$failed=0;$errors=[];
+        $accounts=0;$existing=0;$monitored=0;$opportunities=0;
+        $failed=$batch->rejectedCount;
+        $errors=$batch->errorSummaries;
         foreach($batch->items as $item){
             try{
                 $result=$this->processItem($organizationId,$actorId,$correlationId,$universe,$item);
@@ -197,10 +218,10 @@ final readonly class GrowthMarketDiscoveryService implements GrowthMarketDiscove
             }
         }
         $status=$failed>0?'partial':'completed';
-        $summary=$errors===[]?null:mb_substr(implode(' | ',$errors),0,2000);
+        $summary=$errors===[]?null:mb_substr(implode(' | ',array_slice($errors,0,5)),0,2000);
         return $this->finishRun(
             $organizationId,$actorId,$correlationId,$universeId,$runId,$status,
-            count($batch->items),$accounts,$existing,$monitored,$opportunities,$batch->nextCursor,$summary
+            $batch->observedCount(),$accounts,$existing,$monitored,$opportunities,$cursor,$batch->nextCursor,$summary,$leaseToken,$resumed
         );
     }
 
@@ -334,30 +355,35 @@ final readonly class GrowthMarketDiscoveryService implements GrowthMarketDiscove
 
     private function finishRun(
         string $organizationId,int $actorId,string $correlationId,string $universeId,string $runId,string $status,
-        int $collected,int $accounts,int $existing,int $monitored,int $opportunities,?string $nextCursor,?string $summary
+        int $collected,int $accounts,int $existing,int $monitored,int $opportunities,
+        ?string $currentCursor,?string $nextCursor,?string $summary,string $leaseToken,bool $resumed=false
     ):array {
         return $this->transactions->transactional(function()use(
             $organizationId,$actorId,$correlationId,$universeId,$runId,$status,$collected,$accounts,$existing,
-            $monitored,$opportunities,$nextCursor,$summary
+            $monitored,$opportunities,$currentCursor,$nextCursor,$summary,$leaseToken,$resumed
         ):array{
             $this->repository->completeRun(
-                $organizationId,$runId,$status,$collected,$accounts,$existing,$monitored,$opportunities,$nextCursor,$summary
+                $organizationId,$runId,$status,$collected,$accounts,$existing,$monitored,$opportunities,$nextCursor,$summary,$leaseToken
             );
-            if($status!=='failed')$this->repository->updateRuntime($organizationId,$universeId,$nextCursor);
+            $runtimeCursor=$status==='completed'?$nextCursor:$currentCursor;
+            $this->repository->updateRuntime($organizationId,$universeId,$runtimeCursor);
+            $cursorAdvanced=$status==='completed'&&$runtimeCursor!==$currentCursor;
             $this->publish(
                 $status==='failed'?GrowthEventType::MARKET_DISCOVERY_RUN_FAILED:GrowthEventType::MARKET_DISCOVERY_RUN_COMPLETED,
                 $organizationId,'growth_market_universe',$universeId,[
                     'run_id'=>$runId,'status'=>$status,'collected_count'=>$collected,'account_count'=>$accounts,
                     'existing_count'=>$existing,'monitored_count'=>$monitored,'opportunity_count'=>$opportunities,
-                    'next_cursor'=>$nextCursor,'error_summary'=>$summary,
+                    'next_cursor'=>$nextCursor,'cursor_advanced'=>$cursorAdvanced,'resumed'=>$resumed,'error_summary'=>$summary,
                 ],'SYSTEM',(string)$actorId,$correlationId,
             );
             $this->appendAudit($organizationId,'SYSTEM',(string)$actorId,$correlationId,'growth.market.discovery_run','growth_market_universe',$universeId,[
                 'run_id'=>$runId,'status'=>$status,'collected_count'=>$collected,'account_count'=>$accounts,
-                'monitored_count'=>$monitored,'opportunity_count'=>$opportunities,'error_summary'=>$summary,
+                'monitored_count'=>$monitored,'opportunity_count'=>$opportunities,'cursor_advanced'=>$cursorAdvanced,
+                'resumed'=>$resumed,'error_summary'=>$summary,
             ]);
-            return $this->repository->viewRun($organizationId,$runId)
+            $run=$this->repository->viewRun($organizationId,$runId)
                 ??throw new InvalidArgumentException('Completed Growth market run could not be read back.');
+            return $run+['resumed'=>$resumed,'cursor_advanced'=>$cursorAdvanced];
         });
     }
 

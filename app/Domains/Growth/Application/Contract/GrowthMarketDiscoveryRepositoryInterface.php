@@ -19,9 +19,10 @@ interface GrowthMarketDiscoveryRepositoryInterface
     public function updateRuntime(string $organizationId,string $universeId,?string $cursor):void;
 
     public function createRun(string $organizationId,string $runId,string $universeId,int $requestedLimit,int $actorId):void;
+    public function acquireRunLease(string $organizationId,string $runId,string $leaseToken,int $ttlSeconds):bool;
     public function completeRun(
         string $organizationId,string $runId,string $status,int $collectedCount,int $accountCount,
-        int $existingCount,int $monitoredCount,int $opportunityCount,?string $nextCursor,?string $errorSummary
+        int $existingCount,int $monitoredCount,int $opportunityCount,?string $nextCursor,?string $errorSummary,string $leaseToken
     ):void;
     /** @return array<string,mixed>|null */
     public function viewRun(string $organizationId,string $runId):?array;
