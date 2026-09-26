@@ -11,6 +11,7 @@ use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Property\ViewModel\PublicPropertySubmitViewModel;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
+use Kernel\Shared\Domain\OrganizationId;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +26,7 @@ final readonly class PublicPropertySubmitController
         private CommandBusInterface $commands,
         private PagePresentationFactory $pages,
         private PublicPropertySubmitPresenter $presenter,
+        private string $organizationId,
     ) {
     }
 
@@ -38,6 +40,7 @@ final readonly class PublicPropertySubmitController
         if ($request->isMethod('POST')) {
             try {
                 $result = $this->commands->dispatch(new SubmitPublicPropertyCommand(
+                    organizationId: OrganizationId::fromString($this->organizationId),
                     input: $formData,
                     sourcePage: $request->getRequestUri(),
                     files: $this->files($request),

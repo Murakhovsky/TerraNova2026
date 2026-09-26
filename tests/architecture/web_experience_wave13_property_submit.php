@@ -42,7 +42,7 @@ foreach(['PropertyCatalogInterface','PhtmlRenderer','INTAKE_UNAVAILABLE'] as $fo
 }
 
 $commandHandler=(string)file_get_contents($root.'/symfony/src/Application/Property/Command/SubmitPublicPropertyCommandHandler.php');
-foreach(['PropertySubmissionInterface','->submit(','sourcePage','files'] as $marker){
+foreach(['PropertyPublicIntakeRepositoryInterface','PropertySubmissionMediaInterface','intake->create(','storeUploadedFiles','organizationId'] as $marker){
  if(!str_contains($commandHandler,$marker))throw new RuntimeException('VR-032 canonical write handler incomplete: '.$marker);
 }
 

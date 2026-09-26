@@ -34,11 +34,11 @@ foreach ([
     'symfony/src/Web/Phtml/UrlHelper.php',
     'symfony/src/Web/Phtml/RequestQueryAdapter.php',
     'symfony/src/Web/Phtml/ViteAssetManifest.php',
-    'symfony/src/Web/Navigation/NavigationBuilder.php',
 ] as $path) {
-    $source = $read($path);
-    $assert(!str_contains($source, 'Phalcon\\'), 'Canonical Symfony Web layer depends on Phalcon: ' . $path);
+    $assert(!is_file($root . '/' . $path), 'Retired PHTML Web runtime restored: ' . $path);
 }
+$navigation = $read('symfony/src/Web/Navigation/NavigationBuilder.php');
+$assert(!str_contains($navigation, 'Phalcon\\'), 'Canonical Symfony navigation depends on Phalcon.');
 
 $layout = $read('app/Interfaces/Web/View/index.phtml');
 $assert(str_contains($layout, 'ViteAssetResolver::resolve($assetEntries)'), 'Global PHTML layout is not bound to the framework-neutral asset resolver.');

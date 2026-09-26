@@ -331,7 +331,7 @@ Wave 13 закритий після repository-wide audit production page owners
 Подальший visual development не продовжує Wave 13. Нові зміни мають відбуватись поверх canonical Experience Platform і не можуть відновлювати retired route/view ownership.
 
 
-## Wave 13 — 100% debt closure
+## Wave 13 — 100% закриття технічного боргу
 
 Фінальний debt-closure cycle закрив compatibility whitelist, який лишався після VR-001…VR-047:
 

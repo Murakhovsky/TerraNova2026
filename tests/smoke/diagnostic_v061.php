@@ -73,11 +73,13 @@ $assert(!str_contains($webServices, 'DiagnosticModuleRouteContributor'), 'Retire
 $assert(!str_contains($webServices, "setShared('diagnosticRouteContributor'"), 'Retired Diagnostic route contributor service remains registered.');
 
 $reportController = (string) file_get_contents($root . '/symfony/src/Web/Diagnostic/DiagnosticPageController.php');
-$reportView = (string) file_get_contents($root . '/app/Interfaces/Web/View/diagnostic_report/show.phtml');
-$assert(str_contains($reportController, 'DiagnosticRuntimeService'), 'HTML report is not backed by runtime report persistence.');
-$assert(str_contains($reportController, 'DiagnosticMethodologyAccess::VIEW'), 'Methodology Studio does not preserve explicit view authorization.');
-$assert(str_contains($reportView, 'overallHealth') && str_contains($reportView, 'recommendations'), 'HTML report misses core diagnostic sections.');
-$assert(str_contains($reportView, 'htmlspecialchars'), 'HTML report does not escape output.');
+$reportQuery = (string) file_get_contents($root . '/symfony/src/Application/Diagnostic/Report/GetDiagnosticReportQueryHandler.php');
+$reportView = (string) file_get_contents($root . '/symfony/templates/experience/diagnostic/report.html.twig');
+$assert(str_contains($reportController, 'GetDiagnosticReportQuery'), 'HTML report does not use the Application Query boundary.');
+$assert(str_contains($reportQuery, 'DiagnosticRuntimeService'), 'Diagnostic report query is not backed by runtime report persistence.');
+$assert(str_contains($reportQuery, 'DiagnosticMethodologyAccess::VIEW'), 'Diagnostic report query does not preserve explicit view authorization.');
+$assert(str_contains($reportView, 'report.health') && str_contains($reportView, 'report.sections'), 'Twig report misses core diagnostic presentation.');
+$assert(!str_contains($reportView, '|raw'), 'Diagnostic report must remain escaped by Twig.');
 
 $outcome = (string) file_get_contents($root . '/app/Domains/Diagnostic/Automation/Handler/DiagnosticActionOutcomeHandler.php');
 $assert(str_contains($outcome, "diagnostic.action-outcome.v1"), 'Diagnostic durable consumer name changed unexpectedly.');

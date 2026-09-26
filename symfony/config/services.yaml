@@ -113,13 +113,12 @@ services:
   Domains\Property\Application\Contract\PublicPropertyReadRepositoryInterface:
     alias: Domains\Property\Infrastructure\ReadModel\MySql\MysqlPublicPropertyReadRepository
 
-  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository:
+  Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyPublicIntakeRepository:
     arguments:
       $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
-      $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
-  Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface:
-    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository
+  Domains\Property\Application\Contract\PropertyPublicIntakeRepositoryInterface:
+    alias: Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyPublicIntakeRepository
 
   Infrastructure\Media\MediaStorageService:
     arguments:
@@ -127,23 +126,6 @@ services:
 
   Domains\Property\Application\Contract\PropertySubmissionMediaInterface:
     alias: Infrastructure\Media\MediaStorageService
-
-  Infrastructure\Platform\Analytics\MysqlPropertyAnalytics:
-    arguments:
-      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
-
-  Domains\Property\Application\Contract\PropertyAnalyticsInterface:
-    alias: Infrastructure\Platform\Analytics\MysqlPropertyAnalytics
-
-  Domains\Property\Application\UseCase\PropertySubmissionService:
-    arguments:
-      $submissions: '@Domains\Property\Application\Contract\PropertySubmissionRepositoryInterface'
-      $mediaStorage: '@Domains\Property\Application\Contract\PropertySubmissionMediaInterface'
-      $notifications: null
-      $analytics: '@Domains\Property\Application\Contract\PropertyAnalyticsInterface'
-
-  Domains\Property\Application\Contract\PropertySubmissionInterface:
-    alias: Domains\Property\Application\UseCase\PropertySubmissionService
 
   App\Application\Property\Service\PublicPropertyReadService:
     arguments:
@@ -1773,6 +1755,8 @@ services:
 
   App\Web\Property\PublicPropertySubmitController:
     public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
     tags: ['controller.service_arguments']
 
   App\Web\Property\PropertyPageController:

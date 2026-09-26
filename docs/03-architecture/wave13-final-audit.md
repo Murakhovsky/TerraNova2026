@@ -27,7 +27,7 @@ Wave 13 закрита production ownership contract, а не декоратив
 
 Він не володіє HTTP page rendering, не створює browser runtime і не є дозволом на нові PHTML pages.
 
-## Specialized Spatial island
+## Спеціалізований Spatial island
 
 Spatial viewer лишається окремим Vite/Three.js build island через native JS dependencies і decoder assets. Outer shell, navigation, page composition та presentation state належать Symfony/Twig.
 
@@ -40,7 +40,7 @@ Spatial viewer лишається окремим Vite/Three.js build island че
 5. Public Property submit placeholder замість Application Command.
 6. Spatial business/navigation shell усередині JS island.
 
-## Release gate
+## Умови випуску
 
 Merge дозволений лише коли Wave 13 final audit, Symfony container/Twig lint, Vite build, canonical runtime tests і browser quality/accessibility gates green.
 
