@@ -72,9 +72,14 @@ foreach ([
     $contains($workspaceVisual, $needle, 'Workspace shell is not fully aligned with Calm Technical');
 }
 
-$cos = $read('frontend/features/cos/control-center.css');
-foreach (['var(--tn-color-surface)', 'var(--tn-color-border)', 'var(--tn-shadow-ui)'] as $needle) {
+$cos = $read('symfony/templates/experience/system/control_center.html.twig');
+foreach (['<twig:CosPageHeader', '<twig:CosToolbar', 'class="cos-kpi-strip"', '<twig:CosEntityListItem'] as $needle) {
     $contains($cos, $needle, 'COS Control Center is not aligned with the canonical visual language');
+}
+foreach (['tn-', 'style=', '<script'] as $legacy) {
+    if (str_contains($cos, $legacy)) {
+        throw new RuntimeException('COS Control Center restored legacy/local presentation: ' . $legacy);
+    }
 }
 
 $docs = $read('docs/architecture/web-v0.15.md');

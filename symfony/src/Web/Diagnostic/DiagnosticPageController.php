@@ -5,7 +5,6 @@ namespace App\Web\Diagnostic;
 
 use App\Web\Navigation\NavigationBuilder;
 use App\Web\Phtml\PhtmlRenderer;
-use Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess;
 use Domains\Diagnostic\Application\Service\DiagnosticRuntimeService;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -21,36 +20,9 @@ final readonly class DiagnosticPageController
         private PhtmlRenderer $renderer,
         private TenantContextProviderInterface $tenants,
         private NavigationBuilder $navigation,
-        private DiagnosticMethodologyAccess $methodologyAccess,
         private DiagnosticRuntimeService $runtime,
         private ActiveModuleResolver $modules,
     ) {
-    }
-
-    public function methodology(Request $request): Response
-    {
-        $tenant = $this->authenticated();
-        if ($tenant instanceof Response) {
-            return $tenant;
-        }
-        if (!$this->diagnosticEnabled($tenant)) {
-            return new Response('Not Found', 404);
-        }
-
-        if (!$this->methodologyAccess->allows(
-            $tenant->organizationId()->value(),
-            (int) $tenant->userId()->value(),
-            DiagnosticMethodologyAccess::VIEW,
-        )) {
-            return new Response('Forbidden', 403);
-        }
-
-        return $this->render($request, $tenant, 'methodology_studio/index', [
-            'metaTitle' => 'Diagnostic Methodology Studio | COS',
-            'workspaceActive' => 'diagnostics',
-            'pageAssetEntries' => ['diagnostics-methodology-studio'],
-            'csrfToken' => $this->csrf($request),
-        ]);
     }
 
     public function report(Request $request, string $session): Response
@@ -110,9 +82,5 @@ final readonly class DiagnosticPageController
         );
     }
 
-    private function csrf(Request $request): string
-    {        return $request->hasSession()
-            ? (string) $request->getSession()->get('cos_csrf_token', '')
-            : '';
-    }
+
 }

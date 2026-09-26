@@ -30,6 +30,12 @@ kind: architecture
 | VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
+| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | DONE |
+| VR-020 | `/cos/architecture` | System | COS / Visualization | System / Control Surface | P0 | Twig + JS Island | DONE |
+| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Specialized Island | DONE |
+| VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | DONE |
+| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | DONE |
+| VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -140,3 +146,36 @@ Production migration units VR-013…VR-018 завершені.
 - Spatial editor/mutations/public viewer залишаються окремими specialized сценаріями.
 
 Наступна production migration family: **Phase 6 — System / Admin UI**.
+
+
+## Фаза 6 — System / Admin UI
+
+VR-019 переводить COS Control Center з PHTML compatibility runtime на canonical System / Control Surface: Application Query → Presenter/ViewModel → Twig, з server-first execution/approval forms і без page-specific Vite bundle.
+
+VR-020 переводить Architecture Explorer на canonical System / Control Surface + Stimulus island. Graph projections/health читаються через Application Query, повний graph payload більше не вбудовується в HTML, legacy PHTML/Vite/TN runtime видалено.
+
+VR-021 переводить Methodology Studio на canonical System / Control Surface + specialized AssetMapper island. V0.5.3/0.5.4/0.5.5 editor behavior та API contracts збережені; PHTML/Vite ownership видалено, editor CSS переведено на COS tokens і canonical breakpoints.
+
+VR-022 переводить Administration Analytics на read-only Executive Dashboard: Application Query → Presenter/ViewModel → KPI + canonical DataGrid/EntityList. Page-specific Vite bundle видалено.
+
+VR-023 переводить Users Administration на canonical System / Control Surface. Reads і create/update mutations проходять через Query/Command Bus; старий CoreWorkspace PHTML controller та users.phtml видалено.
+
+VR-024 переводить Content Administration listing на System / Control Surface, editor — на Form Editor, save — через CommandBus. `content/manage.phtml` і `content/edit.phtml` видалено.
+
+
+## Фаза 6 — завершення System / Admin UI
+
+Production migration units VR-019…VR-024 завершені.
+
+- `/cos/control-center` → canonical System / Control Surface;
+- `/cos/architecture` → System / Control Surface + specialized Architecture island;
+- `/admin/diagnostics/methodology-studio` → System / Control Surface + specialized Methodology island;
+- `/admin/analytics` → Executive Dashboard;
+- `/admin/users` → System / Control Surface;
+- `/admin/content` → System / Control Surface + Form Editor;
+- production PHTML ownership для VR-019…024 = **0**;
+- page-specific Vite entrypoints для VR-019…024 = **0**;
+- direct read composition у Web controllers для цих units = **0**;
+- specialized browser runtimes залишені лише для Architecture Explorer і Methodology Studio.
+
+Наступна production migration family: **Phase 7 — Portal**.

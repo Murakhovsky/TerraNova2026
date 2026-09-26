@@ -9,6 +9,8 @@
 @import './domains/sales.css';
 @import './domains/client-case.css';
 @import './domains/property.css';
+@import './domains/system-architecture.css';
+@import './domains/diagnostic-methodology.css';
 @import './stress-screens.css';
 @import './forms.css';
 @import './data-grid.css';

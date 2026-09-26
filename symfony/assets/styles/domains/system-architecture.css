@@ -1,0 +1,151 @@
+.cos-architecture__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cos-space-2);
+}
+
+.cos-architecture__search {
+  min-width: min(20rem, 100%);
+}
+
+.cos-architecture__shell {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr) 20rem;
+  min-height: 42rem;
+  overflow: hidden;
+  border: var(--cos-border-width) solid var(--cos-color-border);
+  border-radius: var(--cos-radius-panel);
+  background: var(--cos-color-surface);
+}
+
+.cos-architecture__sidebar,
+.cos-architecture__details {
+  min-width: 0;
+  padding: var(--cos-space-4);
+  overflow: auto;
+  background: var(--cos-color-surface-subtle);
+}
+
+.cos-architecture__sidebar {
+  border-right: var(--cos-border-width) solid var(--cos-color-border);
+}
+
+.cos-architecture__details {
+  border-left: var(--cos-border-width) solid var(--cos-color-border);
+}
+
+.cos-architecture__stage-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 42rem;
+  background: var(--cos-color-canvas);
+}
+
+.cos-architecture__stage {
+  position: absolute;
+  inset: 0;
+}
+
+.cos-architecture__loading,
+.cos-architecture__error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  max-width: min(34rem, 80%);
+  padding: var(--cos-space-3) var(--cos-space-4);
+  transform: translate(-50%, -50%);
+  border: var(--cos-border-width) solid var(--cos-color-border);
+  border-radius: var(--cos-radius-panel);
+  background: var(--cos-color-surface);
+  box-shadow: var(--cos-shadow-raised);
+}
+
+.cos-architecture__error {
+  color: var(--cos-color-danger);
+}
+
+.cos-architecture__types {
+  display: grid;
+  gap: var(--cos-space-2);
+  margin-block: var(--cos-space-3);
+}
+
+.cos-architecture__type {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--cos-space-2);
+  align-items: center;
+  padding: var(--cos-space-2);
+  border: var(--cos-border-width) solid var(--cos-color-border);
+  border-radius: var(--cos-radius-control);
+  background: var(--cos-color-surface);
+}
+
+.cos-architecture__details dl {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: var(--cos-space-2) var(--cos-space-3);
+  margin-block: var(--cos-space-4);
+}
+
+.cos-architecture__details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cos-architecture__relations {
+  display: grid;
+  gap: var(--cos-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.cos-architecture__relation {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) minmax(0, 1fr);
+  gap: var(--cos-space-2);
+  padding: var(--cos-space-2);
+  border: var(--cos-border-width) solid var(--cos-color-border);
+  border-radius: var(--cos-radius-control);
+  background: var(--cos-color-surface);
+}
+
+.cos-architecture__metadata {
+  max-height: 20rem;
+  overflow: auto;
+  padding: var(--cos-space-3);
+  border-radius: var(--cos-radius-control);
+  background: var(--cos-color-shell);
+  color: var(--cos-color-shell-text);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1050px) {
+  .cos-architecture__shell {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
+  .cos-architecture__details {
+    grid-column: 1 / -1;
+    border-top: var(--cos-border-width) solid var(--cos-color-border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 650px) {
+  .cos-architecture__shell {
+    display: block;
+  }
+
+  .cos-architecture__sidebar,
+  .cos-architecture__details {
+    border: 0;
+    border-bottom: var(--cos-border-width) solid var(--cos-color-border);
+  }
+
+  .cos-architecture__stage-wrap {
+    min-height: 34rem;
+  }
+}

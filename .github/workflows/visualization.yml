@@ -13,14 +13,15 @@ on:
       - 'app/Domains/Sales/Bootstrap/SalesDomainModule.php'
       - 'app/Infrastructure/Visualization/**'
       - 'symfony/src/Web/Visualization/**'
-      - 'app/Interfaces/Web/View/visualization/**'
+      - 'symfony/templates/experience/system/architecture.html.twig'
+      - 'symfony/src/Application/Visualization/**'
+      - 'symfony/assets/controllers/architecture_explorer_controller.js'
+      - 'symfony/assets/styles/domains/system-architecture.css'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
       - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
       - 'symfony/config/services.yaml'
       - 'deploy/dev.sh'
-      - 'frontend/entrypoints/cos-architecture-explorer.js'
-      - 'frontend/features/cos/architecture-explorer.*'
       - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
@@ -50,14 +51,15 @@ on:
       - 'app/Domains/Sales/Bootstrap/SalesDomainModule.php'
       - 'app/Infrastructure/Visualization/**'
       - 'symfony/src/Web/Visualization/**'
-      - 'app/Interfaces/Web/View/visualization/**'
+      - 'symfony/templates/experience/system/architecture.html.twig'
+      - 'symfony/src/Application/Visualization/**'
+      - 'symfony/assets/controllers/architecture_explorer_controller.js'
+      - 'symfony/assets/styles/domains/system-architecture.css'
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Command/ArchitectureGraphSmokeCommand.php'
       - 'symfony/src/Infrastructure/Visualization/ArchitectureGraphProviderFactory.php'
       - 'symfony/config/services.yaml'
       - 'deploy/dev.sh'
-      - 'frontend/entrypoints/cos-architecture-explorer.js'
-      - 'frontend/features/cos/architecture-explorer.*'
       - 'vite.config.js'
       - 'tests/unit/visualization_*.php'
       - 'tests/architecture/visualization_*.php'
@@ -120,7 +122,7 @@ jobs:
         run: npm run build
       - name: PHP syntax
         run: |
-          find app/Kernel/Visualization app/Infrastructure/Visualization symfony/src/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app/Kernel/Visualization app/Infrastructure/Visualization symfony/src/Application/Visualization symfony/src/Web/Visualization -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l app/Kernel/Module/CrossDomainContract.php
           php -l app/Kernel/Module/ModuleContributions.php
           php -l app/Kernel/Module/Contract/BootstrapRuleProvidingModuleInterface.php

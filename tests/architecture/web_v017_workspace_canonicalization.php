@@ -40,18 +40,12 @@ if (is_file($root . '/app/Interfaces/Web/View/property/submissions.phtml')) {
     throw new RuntimeException('Retired Property submissions PHTML restored.');
 }
 
-$analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');
-foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/data_table'",
-    'tn-ui-panel--flush',
-] as $needle) {
-    $requireContains($analytics, $needle, 'Analytics must use canonical UI contracts.');
+$analytics = $read('symfony/templates/experience/administration/analytics.html.twig');
+foreach (['<twig:CosPageHeader','<twig:CosFilterBar','class="cos-kpi-strip"','<twig:CosDataGrid'] as $marker) {
+    $requireContains($analytics, $marker, 'Administration Analytics Wave 13 contract is incomplete.');
 }
-foreach (['tn-page-hero', 'tn-admin-metrics', 'tn-admin-card', 'tn-listing-table', 'tn-table-wrap'] as $legacy) {
-    $requireNotContains($analytics, $legacy, 'Analytics must not restore the legacy workspace presentation pattern.');
+foreach (['tn-','style=','<script'] as $legacy) {
+    $requireNotContains($analytics, $legacy, 'Administration Analytics must not restore legacy presentation.');
 }
 
 $diagnostic = $read('app/Interfaces/Web/View/diagnostic_report/show.phtml');
@@ -67,19 +61,19 @@ foreach (['tn-page-header', 'tn-card-grid', 'class="tn-card"'] as $legacy) {
     $requireNotContains($diagnostic, $legacy, 'Diagnostic report must not restore legacy card/header primitives.');
 }
 
-$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+$cos = $read('symfony/templates/experience/system/control_center.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/tabs'",
-    "partial('components/ui/status_badge'",
-    'tn-ui-panel',
-    'tn-workspace-page--wide',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'data-cos-control-center',
 ] as $needle) {
-    $requireContains($cos, $needle, 'COS Control Center must use canonical shell contracts.');
+    $requireContains($cos, $needle, 'COS Control Center must use canonical System Control Surface contracts.');
 }
-foreach (['tn-listing-hero', 'tn-cos-metrics', 'tn-admin-tabs', 'tn-admin-panel', 'tn-cos-status--'] as $legacy) {
-    $requireNotContains($cos, $legacy, 'COS Control Center must not restore its legacy shell/status primitives.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacy) {
+    $requireNotContains($cos, $legacy, 'COS Control Center must not restore legacy/local presentation.');
 }
 
 $clientSurfaces = [

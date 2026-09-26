@@ -1664,7 +1664,11 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
-  App\Web\Workspace\CoreWorkspacePageController:
+  App\Web\Administration\AdministrationAnalyticsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Administration\AdministrationUsersController:
     public: true
     tags: ['controller.service_arguments']
 
@@ -1820,6 +1824,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Diagnostic\DiagnosticPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Diagnostic\MethodologyStudioController:
     public: true
     tags: ['controller.service_arguments']
 

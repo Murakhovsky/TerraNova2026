@@ -31,7 +31,7 @@ Controller contract лишається у `CoreWorkspacePageController`: read su
 
 ### Контент і SEO (`Content Administration`)
 
-`content/manage.phtml`
+`symfony/templates/experience/content/manage.html.twig`
 
 - legacy hero замінено на canonical PageHeader;
 - unavailable state використовує canonical State;
@@ -44,7 +44,7 @@ Controller contract лишається у `CoreWorkspacePageController`: read su
 
 ### Редактор контенту (`Content Editor`)
 
-`content/edit.phtml`
+`symfony/templates/experience/content/edit.html.twig`
 
 - legacy hero замінено на canonical PageHeader;
 - save result використовує canonical State;
@@ -52,7 +52,7 @@ Controller contract лишається у `CoreWorkspacePageController`: read su
 - public preview action зберігає `target=_blank` та `rel=noopener`;
 - save route `admin/content/save/{id}`, CSRF і всі content/SEO fields не змінені.
 
-Controller contract лишається у `ContentAdminPageController`: manage/edit потребують manager context, а save окремо перевіряє CSRF перед викликом Content service.
+`ContentAdminPageController` лишається route owner, але read/write виконуються через QueryBus/CommandBus; manage/edit потребують manager context, а save окремо перевіряє CSRF.
 
 ## Хвиля 3
 

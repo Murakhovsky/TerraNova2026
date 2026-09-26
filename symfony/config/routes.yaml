@@ -1270,23 +1270,23 @@ cos_web_workspace_home:
 
 cos_web_workspace_users:
   path: /admin/users
-  controller: App\Web\Workspace\CoreWorkspacePageController::users
+  controller: App\Web\Administration\AdministrationUsersController::index
   methods: [GET, HEAD]
 
 cos_web_workspace_user_create:
   path: /admin/createUser
-  controller: App\Web\Workspace\CoreWorkspacePageController::createUser
+  controller: App\Web\Administration\AdministrationUsersController::create
   methods: [POST]
 
 cos_web_workspace_user_update:
   path: /admin/updateUser/{id}
-  controller: App\Web\Workspace\CoreWorkspacePageController::updateUser
+  controller: App\Web\Administration\AdministrationUsersController::update
   methods: [POST]
   requirements: { id: '[1-9][0-9]*' }
 
 cos_web_workspace_analytics:
   path: /admin/analytics
-  controller: App\Web\Workspace\CoreWorkspacePageController::analytics
+  controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
 
 cos_web_client_cases:
@@ -1599,7 +1599,7 @@ cos_web_architecture_health:
 
 cos_web_diagnostic_methodology:
   path: /admin/diagnostics/methodology-studio
-  controller: App\Web\Diagnostic\DiagnosticPageController::methodology
+  controller: App\Web\Diagnostic\MethodologyStudioController::index
   methods: [GET]
 
 cos_web_diagnostic_report:

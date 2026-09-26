@@ -83,11 +83,8 @@ if (str_contains($vite, "'company-home'")) {
     throw new RuntimeException('VR-001 retains a page-specific Company Home Vite entrypoint.');
 }
 
-$core = (string) file_get_contents($root . '/symfony/src/Web/Workspace/CoreWorkspacePageController.php');
-foreach (['CompanyHomeService', 'public function home('] as $forbidden) {
-    if (str_contains($core, $forbidden)) {
-        throw new RuntimeException('VR-001 retained obsolete CoreWorkspace Company Home ownership: ' . $forbidden);
-    }
+if (is_file($root . '/symfony/src/Web/Workspace/CoreWorkspacePageController.php')) {
+    throw new RuntimeException('Retired CoreWorkspace PHTML controller returned after Administration cutover.');
 }
 
 $shell = (string) file_get_contents($root . '/symfony/templates/experience/workspace_shell.html.twig');

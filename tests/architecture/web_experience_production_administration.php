@@ -16,103 +16,83 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+$users = $read('symfony/templates/experience/administration/users.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    '$userRows = [];',
-    "'_form' => [",
-    "'kind' => 'submit'",
-] as $marker) {
-    $contains($users, $marker, 'Users Administration must use canonical workspace composition.');
-}
-foreach ([
-    'tn-listing-hero',
-    '<section class="tn-admin-metrics"',
-    '<form class="tn-crm-form" action="<?php echo $this->url->get(\'admin/users\'); ?>" method="get">',
-] as $legacyMarker) {
-    $notContains($users, $legacyMarker, 'Users Administration must not restore legacy shell/filter composition.');
-}
-
-foreach ([
-    'admin/createUser',
-    'admin/updateUser/',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'action="/admin/createUser"',
+    'action="/admin/updateUser/{{ user.id }}"',
     'name="csrf_token"',
     'name="full_name"',
-    'name="email"',
     'name="phone"',
     'name="password"',
     'name="role"',
     'name="status"',
-    'user-form-',
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
 ] as $marker) {
-    $contains($users, $marker, 'Users Administration lost a create/update mutation contract.');
+    $contains($users, $marker, 'Users Administration canonical System UI is incomplete.');
 }
-$notContains($users, '<table', 'Users Administration must not retain a raw editable table.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($users, $legacyMarker, 'Users Administration must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/admin/users.phtml')) {
+    throw new RuntimeException('Legacy Users Administration PHTML restored.');
+}
 
-$controller = $read('symfony/src/Web/Workspace/CoreWorkspacePageController.php');
+$controller = $read('symfony/src/Web/Administration/AdministrationUsersController.php');
 foreach ([
-    'public function users(Request $request): Response',
-    'public function createUser(Request $request): Response',
-    'public function updateUser(Request $request, string $id): Response',
-    '$this->admin()',
-    '$this->csrf->isValid($request)',
-    '$this->administration->createUser',
-    '$this->administration->updateUser',
-    "'admin/users'",
+    'GetAdministrationUsersQuery',
+    'CreateAdministrationUserCommand',
+    'UpdateAdministrationUserCommand',
+    'QueryBusInterface',
+    'CommandBusInterface',
+    'PageArchetype::SystemControlSurface',
+    'SessionCsrfValidator',
 ] as $marker) {
     $contains($controller, $marker, 'Users Administration controller contract is incomplete.');
+}
+foreach (['PhtmlRenderer', 'NavigationBuilder', 'AdministrationServiceInterface'] as $forbidden) {
+    $notContains($controller, $forbidden, 'Users Administration Web controller leaked direct/legacy dependency.');
 }
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /admin/users',
-    'CoreWorkspacePageController::users',
+    'AdministrationUsersController::index',
     'path: /admin/createUser',
-    'CoreWorkspacePageController::createUser',
+    'AdministrationUsersController::create',
     'path: /admin/updateUser/{id}',
-    'CoreWorkspacePageController::updateUser',
+    'AdministrationUsersController::update',
 ] as $marker) {
     $contains($routes, $marker, 'Users Administration route contract is incomplete.');
 }
 
-$contentManage = $read('app/Interfaces/Web/View/content/manage.phtml');
+$contentManage = $read('symfony/templates/experience/content/manage.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    'admin/content/edit/',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
     'id="n8n"',
 ] as $marker) {
-    $contains($contentManage, $marker, 'Content Administration listing must use canonical workspace composition.');
+    $contains($contentManage, $marker, 'Content Administration canonical System UI is incomplete.');
 }
-foreach ([
-    'tn-page-hero tn-page-hero--catalog',
-    '<section class="tn-admin-metrics"',
-    '<form class="tn-filter-bar"',
-    '<table class="tn-listing-table"',
-] as $legacyMarker) {
-    $notContains($contentManage, $legacyMarker, 'Content Administration listing must not restore legacy shell/filter/table composition.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($contentManage, $legacyMarker, 'Content Administration listing must not restore legacy/local presentation.');
 }
 
-$contentEdit = $read('app/Interfaces/Web/View/content/edit.phtml');
+$contentEdit = $read('symfony/templates/experience/content/edit.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
+    '<twig:CosPageHeader',
+    'class="cos-form"',
+    'class="cos-form__section"',
+    'class="cos-form__actions"',
     'admin/content/save/',
     'name="csrf_token"',
     'name="content_type"',
@@ -127,27 +107,33 @@ foreach ([
     'name="og_image_url"',
     'name="schema_json"',
 ] as $marker) {
-    $contains($contentEdit, $marker, 'Content editor lost a canonical or save/SEO contract.');
+    $contains($contentEdit, $marker, 'Content editor lost canonical Form Editor or save/SEO contract.');
+}
+foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+    $notContains($contentEdit, $legacyMarker, 'Content editor must not restore legacy/local presentation.');
 }
 foreach ([
-    'tn-page-hero tn-page-hero--catalog',
-    'tn-admin-card',
-    'tn-admin-card__head',
-] as $legacyMarker) {
-    $notContains($contentEdit, $legacyMarker, 'Content editor must not restore the legacy visual shell.');
+    'app/Interfaces/Web/View/content/manage.phtml',
+    'app/Interfaces/Web/View/content/edit.phtml',
+] as $legacy) {
+    if (is_file($root . '/' . $legacy)) throw new RuntimeException('Legacy Content Administration PHTML restored: ' . $legacy);
 }
 
 $contentController = $read('symfony/src/Web/Content/ContentAdminPageController.php');
 foreach ([
-    'public function edit(Request $request, string $id = \'0\'): Response',
-    'public function save(Request $request, string $id = \'0\'): Response',
-    '$this->manager()',
-    '$this->csrf->isValid($request)',
-    '$this->content->save',
-    "'content/manage'",
-    "'content/edit'",
+    'GetContentAdministrationQuery',
+    'GetContentEditorQuery',
+    'SaveContentCommand',
+    'QueryBusInterface',
+    'CommandBusInterface',
+    'PageArchetype::SystemControlSurface',
+    'PageArchetype::FormEditor',
+    'SessionCsrfValidator',
 ] as $marker) {
     $contains($contentController, $marker, 'Content Administration controller contract is incomplete.');
+}
+foreach (['PhtmlRenderer', 'NavigationBuilder', 'ContentServiceInterface'] as $forbidden) {
+    $notContains($contentController, $forbidden, 'Content Administration Web controller leaked direct/legacy dependency.');
 }
 
 foreach ([
@@ -283,26 +269,35 @@ foreach (['tn-', 'style=', '<script', 'PhtmlRenderer'] as $legacyMarker) {
     $notContains($companyHome, $legacyMarker, 'Company Home must not retain legacy/local visual composition.');
 }
 
-$analytics = $read('app/Interfaces/Web/View/admin/analytics.phtml');
+$analytics = $read('symfony/templates/experience/administration/analytics.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/data_table'",
-    'tn-ui-panel',
+    '<twig:CosPageHeader',
+    '<twig:CosFilterBar',
+    'class="cos-kpi-strip"',
+    '<twig:CosMetric',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
+    'data-cos-archetype',
 ] as $marker) {
-    $contains($analytics, $marker, 'Administration Analytics must remain canonical.');
+    $contains($analytics, $marker, 'Administration Analytics canonical Executive Dashboard is incomplete.');
 }
-foreach (['tn-page-hero', 'tn-admin-metrics', 'tn-admin-card', 'tn-listing-table'] as $legacyMarker) {
-    $notContains($analytics, $legacyMarker, 'Administration Analytics must not restore legacy presentation primitives.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($analytics, $legacyMarker, 'Administration Analytics must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/admin/analytics.phtml')) {
+    throw new RuntimeException('Legacy Administration Analytics PHTML restored.');
+}
+
+$analyticsController = $read('symfony/src/Web/Administration/AdministrationAnalyticsController.php');
+foreach (['GetAdministrationAnalyticsQuery', 'PageArchetype::ExecutiveDashboard', 'WorkspaceShellFactory', 'AdministrationAnalyticsPresenter'] as $marker) {
+    $contains($analyticsController, $marker, 'Administration Analytics controller contract is incomplete.');
 }
 
 foreach ([
     'path: /admin',
     'ExecutiveDashboardController::index',
     'path: /admin/analytics',
-    'CoreWorkspacePageController::analytics',
+    'AdministrationAnalyticsController::index',
 ] as $marker) {
     $contains($routes, $marker, 'Administration closure route contract is incomplete.');
 }

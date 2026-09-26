@@ -1,0 +1,97 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Analytics | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Administration · Analytics"
+        title="Попит і конверсії"
+        subtitle="Перегляди об’єктів, контактні дії та заявки за вибраний період."
+        metaValue="{{ analytics.days }}"
+        metaLabel="днів у звіті"
+    >
+        <twig:CosButton label="Client Cases" href="/client-case/inbox" variant="ghost" />
+        <twig:CosButton label="Property" href="/property/manage" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosFilterBar action="/admin/analytics" label="Analytics period">
+        <label class="cos-field">
+            <span>Період</span>
+            <select class="cos-select" name="days">
+                {% for value in [7, 30, 90, 365] %}
+                    <option value="{{ value }}" {% if analytics.days == value %}selected{% endif %}>{{ value }} днів</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="cos-button cos-button--primary" type="submit">Оновити</button>
+    </twig:CosFilterBar>
+
+    {% if analytics.error %}
+        <twig:CosAlert title="Звіт недоступний" copy="{{ analytics.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-kpi-strip" aria-label="Ключові показники аналітики">
+            {% for metric in analytics.kpis %}
+                <article class="cos-card">
+                    <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                </article>
+            {% endfor %}
+        </section>
+
+        <section class="cos-page__section cos-section-grid" aria-label="Analytics overview">
+            <div class="cos-pattern-stack">
+                <div class="cos-card">
+                    <p class="cos-card__eyebrow">Динаміка</p>
+                    <h2 class="cos-card__title">Останні дні</h2>
+                </div>
+                <twig:CosDataGrid
+                    id="administration-analytics-daily"
+                    label="Daily analytics"
+                    baseUrl="/admin/analytics"
+                    rowIdKey="date"
+                    :query="analytics.dailyGrid.query"
+                    :page="analytics.dailyGrid.page"
+                    :columns="analytics.dailyGrid.columns"
+                    :state="analytics.dailyGrid.state"
+                />
+            </div>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Джерела</p>
+                <h2 class="cos-card__title">UTM та прямі переходи</h2>
+                {% if analytics.sources is empty %}
+                    <twig:CosEmptyState title="Джерела ще не зафіксовані" copy="Attribution з’явиться після перших public funnel events." />
+                {% else %}
+                    <div class="cos-entity-list" role="list">
+                        {% for source in analytics.sources %}
+                            <twig:CosEntityListItem title="{{ source.title }}" subtitle="{{ source.subtitle }}" meta="{{ source.meta }}" />
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+
+        <section class="cos-page__section" aria-labelledby="analytics-properties">
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Об’єкти</p>
+                <h2 id="analytics-properties" class="cos-card__title">Попит за картками</h2>
+            </div>
+            <twig:CosDataGrid
+                id="administration-analytics-properties"
+                label="Property demand analytics"
+                baseUrl="/admin/analytics"
+                rowIdKey="property"
+                :query="analytics.propertyGrid.query"
+                :page="analytics.propertyGrid.page"
+                :columns="analytics.propertyGrid.columns"
+                :state="analytics.propertyGrid.state"
+            />
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

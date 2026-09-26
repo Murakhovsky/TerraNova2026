@@ -1,0 +1,167 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}COS Architecture Explorer | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack cos-architecture"
+    data-controller="architecture-explorer"
+    data-architecture-explorer-endpoint-value="/cos/architecture/graph"
+    data-architecture-explorer-default-view-value="{{ architecture.defaultView }}"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="COS Visualization"
+        title="Architecture Explorer"
+        subtitle="Канонічний Architecture Graph із server-side projections для runtime, domains, dependencies, events, actions, agents та integrations."
+    >
+        <twig:CosButton label="Control Center" href="/cos/control-center" variant="ghost" />
+        <twig:CosButton label="JSON health" href="/cos/architecture/health" variant="primary" />
+    </twig:CosPageHeader>
+
+    {% if architecture.error %}
+        <twig:CosAlert title="Architecture Explorer недоступний" copy="{{ architecture.error }}" tone="danger" />
+    {% endif %}
+
+    <section class="cos-kpi-strip" aria-label="Architecture graph summary">
+        <article class="cos-card">
+            <div class="cos-metric">
+                <span class="cos-metric__label">Projection</span>
+                <strong class="cos-metric__value" data-architecture-explorer-target="viewLabel">{{ architecture.defaultView }}</strong>
+                <small class="cos-metric__hint">active view</small>
+            </div>
+        </article>
+        <article class="cos-card">
+            <div class="cos-metric">
+                <span class="cos-metric__label">Nodes</span>
+                <strong class="cos-metric__value" data-architecture-explorer-target="nodeCount">{{ architecture.summary.nodes ?? 0 }}</strong>
+                <small class="cos-metric__hint">active projection</small>
+            </div>
+        </article>
+        <article class="cos-card">
+            <div class="cos-metric">
+                <span class="cos-metric__label">Edges</span>
+                <strong class="cos-metric__value" data-architecture-explorer-target="edgeCount">{{ architecture.summary.edges ?? 0 }}</strong>
+                <small class="cos-metric__hint">active projection</small>
+            </div>
+        </article>
+        <article class="cos-card">
+            <twig:CosMetric
+                label="Graph health"
+                value="{{ (architecture.health.status ?? 'unknown')|upper }}"
+                hint="{{ architecture.health.errors ?? 0 }} errors · {{ architecture.health.warnings ?? 0 }} warnings"
+            />
+        </article>
+    </section>
+
+    <twig:CosToolbar label="Architecture Explorer controls">
+        {% block start %}
+            <div class="cos-architecture__modes" role="group" aria-label="Projection">
+                {% for view in architecture.views %}
+                    <button
+                        type="button"
+                        class="cos-button cos-button--ghost cos-button--sm"
+                        data-architecture-mode="{{ view.name }}"
+                        data-action="click->architecture-explorer#switchMode"
+                        {% if view.name == architecture.defaultView %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
+                    >{{ view.label }}</button>
+                {% endfor %}
+            </div>
+        {% endblock %}
+        {% block end %}
+            <label class="cos-field cos-architecture__search">
+                <span>Search</span>
+                <input
+                    class="cos-input"
+                    type="search"
+                    placeholder="Sales, event, rule, action…"
+                    autocomplete="off"
+                    data-architecture-explorer-target="search"
+                    data-action="input->architecture-explorer#search"
+                >
+            </label>
+            <label class="cos-field">
+                <span>Domain</span>
+                <select
+                    class="cos-select"
+                    data-architecture-explorer-target="domain"
+                    data-action="change->architecture-explorer#domainChanged"
+                >
+                    {% for domain in architecture.domains %}
+                        <option value="{{ domain.id ?? '' }}">{{ domain.label ?? domain.id ?? 'Domain' }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="cos-field">
+                <span>Depth</span>
+                <select
+                    class="cos-select"
+                    data-architecture-explorer-target="depth"
+                    data-action="change->architecture-explorer#depthChanged"
+                >
+                    <option value="all">All</option>
+                    <option value="1">1 hop</option>
+                    <option value="2" selected>2 hops</option>
+                    <option value="3">3 hops</option>
+                </select>
+            </label>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="architecture-explorer#fit">Fit</button>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="architecture-explorer#reset">Reset</button>
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if architecture.health is not empty %}
+        <article class="cos-card cos-pattern-stack" aria-label="Architecture graph health">
+            <div class="cos-card__header">
+                <div>
+                    <p class="cos-card__eyebrow">Graph Health</p>
+                    <h2 class="cos-card__title">{{ (architecture.health.status ?? 'unknown')|upper }}</h2>
+                    <p class="cos-card__copy">{{ architecture.health.errors ?? 0 }} errors · {{ architecture.health.warnings ?? 0 }} warnings · {{ architecture.health.info ?? 0 }} info</p>
+                </div>
+            </div>
+            {% set issues = architecture.health.issues ?? [] %}
+            {% if issues is empty %}
+                <twig:CosEmptyState title="Graph health clean" copy="Структурних проблем Architecture Graph не виявлено." />
+            {% else %}
+                <div class="cos-entity-list" role="list">
+                    {% for issue in issues|slice(0, 5) %}
+                        <twig:CosEntityListItem
+                            title="{{ issue.severity ?? 'info' }} / {{ issue.code ?? 'unknown' }}"
+                            subtitle="{{ issue.message ?? 'Architecture health issue.' }}"
+                            statusLabel="{{ issue.severity ?? 'info' }}"
+                            statusTone="{{ (issue.severity ?? '') == 'error' ? 'danger' : ((issue.severity ?? '') == 'warning' ? 'warning' : 'info') }}"
+                        />
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </article>
+    {% endif %}
+
+    <section class="cos-architecture__shell">
+        <aside class="cos-architecture__sidebar" aria-label="Node type filters">
+            <p class="cos-card__eyebrow">Filters</p>
+            <h2 class="cos-card__title">Node types</h2>
+            <div class="cos-architecture__types" data-architecture-explorer-target="types"></div>
+            <p class="cos-card__copy">Projection semantics залишаються server-side. Локальні type/search filters лише звужують готовий Graph.</p>
+        </aside>
+
+        <div class="cos-architecture__stage-wrap">
+            <div
+                class="cos-architecture__stage"
+                data-architecture-explorer-target="stage"
+                aria-label="Interactive COS architecture graph"
+            ></div>
+            <div class="cos-architecture__loading" data-architecture-explorer-target="loading">Loading Architecture Graph…</div>
+            <p class="cos-architecture__error" data-architecture-explorer-target="error" role="alert" hidden></p>
+        </div>
+
+        <aside class="cos-architecture__details" data-architecture-explorer-target="details">
+            <p class="cos-card__eyebrow">Selection</p>
+            <h2 class="cos-card__title">Node details</h2>
+            <p class="cos-card__copy">Виберіть вузол графа, щоб побачити ownership, relations та source metadata.</p>
+        </aside>
+    </section>
+</section>
+{% endblock %}
