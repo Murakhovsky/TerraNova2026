@@ -19,7 +19,7 @@ foreach ([
     'GraphMapperInterface',
     '$this->registry->project(',
     '$this->mapper->map(',
-    "$payload['view'] = [",
+    '$payload[\'view\'] = [',
 ] as $marker) {
     $assert(str_contains($application, $marker), 'Application projection boundary incomplete: ' . $marker);
 }

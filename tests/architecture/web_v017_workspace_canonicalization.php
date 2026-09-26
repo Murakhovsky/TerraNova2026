@@ -42,10 +42,10 @@ if (is_file($root . '/app/Interfaces/Web/View/property/submissions.phtml')) {
 
 $analytics = $read('symfony/templates/experience/administration/analytics.html.twig');
 foreach (['<twig:CosPageHeader','<twig:CosFilterBar','class="cos-kpi-strip"','<twig:CosDataGrid'] as $marker) {
-    $contains($analytics, $marker, 'Administration Analytics Wave 13 contract is incomplete.');
+    $requireContains($analytics, $marker, 'Administration Analytics Wave 13 contract is incomplete.');
 }
 foreach (['tn-','style=','<script'] as $legacy) {
-    $notContains($analytics, $legacy, 'Administration Analytics must not restore legacy presentation.');
+    $requireNotContains($analytics, $legacy, 'Administration Analytics must not restore legacy presentation.');
 }
 
 $diagnostic = $read('app/Interfaces/Web/View/diagnostic_report/show.phtml');

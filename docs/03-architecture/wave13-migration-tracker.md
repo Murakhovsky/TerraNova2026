@@ -30,12 +30,12 @@ kind: architecture
 | VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
-| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | QA |
-| VR-020 | `/cos/architecture` | System | COS / Visualization | System / Control Surface | P0 | Twig + JS Island | QA |
-| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Specialized Island | QA |
-| VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | QA |
-| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | QA |
-| VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | QA |
+| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | DONE |
+| VR-020 | `/cos/architecture` | System | COS / Visualization | System / Control Surface | P0 | Twig + JS Island | DONE |
+| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Specialized Island | DONE |
+| VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | DONE |
+| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | DONE |
+| VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -161,3 +161,21 @@ VR-022 переводить Administration Analytics на read-only Executive Da
 VR-023 переводить Users Administration на canonical System / Control Surface. Reads і create/update mutations проходять через Query/Command Bus; старий CoreWorkspace PHTML controller та users.phtml видалено.
 
 VR-024 переводить Content Administration listing на System / Control Surface, editor — на Form Editor, save — через CommandBus. `content/manage.phtml` і `content/edit.phtml` видалено.
+
+
+## Фаза 6 — завершення System / Admin UI
+
+Production migration units VR-019…VR-024 завершені.
+
+- `/cos/control-center` → canonical System / Control Surface;
+- `/cos/architecture` → System / Control Surface + specialized Architecture island;
+- `/admin/diagnostics/methodology-studio` → System / Control Surface + specialized Methodology island;
+- `/admin/analytics` → Executive Dashboard;
+- `/admin/users` → System / Control Surface;
+- `/admin/content` → System / Control Surface + Form Editor;
+- production PHTML ownership для VR-019…024 = **0**;
+- page-specific Vite entrypoints для VR-019…024 = **0**;
+- direct read composition у Web controllers для цих units = **0**;
+- specialized browser runtimes залишені лише для Architecture Explorer і Methodology Studio.
+
+Наступна production migration family: **Phase 7 — Portal**.
