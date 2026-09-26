@@ -14,6 +14,7 @@ on:
       - 'symfony/src/Web/Diagnostic/**'
       - 'symfony/src/Web/Administration/**'
       - 'symfony/src/Web/Content/**'
+      - 'symfony/src/Web/Portal/**'
       - 'symfony/src/Application/Content/**'
       - 'symfony/src/Application/Administration/**'
       - 'symfony/src/Application/Diagnostic/**'
@@ -55,6 +56,7 @@ on:
       - 'symfony/src/Web/Diagnostic/**'
       - 'symfony/src/Web/Administration/**'
       - 'symfony/src/Web/Content/**'
+      - 'symfony/src/Web/Portal/**'
       - 'symfony/src/Application/Content/**'
       - 'symfony/src/Application/Administration/**'
       - 'symfony/src/Application/Diagnostic/**'
@@ -114,6 +116,7 @@ jobs:
           php tests/architecture/web_experience_wave13_users.php
           php tests/architecture/web_experience_wave13_content.php
           php tests/architecture/web_experience_wave13_system_admin_complete.php
+          php tests/architecture/web_experience_wave13_portal_cabinet.php
           php tests/architecture/web_experience_wave13_sales_today.php
           php tests/architecture/web_experience_wave13_toolbar.php
           php tests/architecture/web_experience_wave13_sales_pipeline.php

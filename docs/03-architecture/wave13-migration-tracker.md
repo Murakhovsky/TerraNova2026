@@ -36,6 +36,8 @@ kind: architecture
 | VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | DONE |
 | VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | DONE |
 | VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
+| VR-025 | `/cabinet` | Portal | Identity | Portal | P0 | Twig | QA |
+| VR-026 | `/cabinet/submission/{id}` | Portal | Compatibility | Portal | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -179,3 +181,8 @@ Production migration units VR-019…VR-024 завершені.
 - specialized browser runtimes залишені лише для Architecture Explorer і Methodology Studio.
 
 Наступна production migration family: **Phase 7 — Portal**.
+
+
+## Фаза 7 — Portal
+
+VR-025 переводить Cabinet home з PHTML/Vite presentation на canonical Portal archetype: TenantContext → Presenter/ViewModel → Twig. Manager redirect /sales і unauthenticated redirect /auth/login збережені.

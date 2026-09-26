@@ -1,0 +1,33 @@
+{% extends 'experience/portal_shell.html.twig' %}
+
+{% block title %}Кабінет | COS{% endblock %}
+
+{% block portal_content %}
+<section
+    class="cos-page__stack"
+    data-cos-portal="cabinet"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="COS Portal"
+        title="Кабінет"
+        subtitle="Ваш акаунт працює через native Symfony/COS identity та session lifecycle."
+        metaValue="{{ cabinet.role }}"
+        metaLabel="роль"
+    >
+        <twig:CosButton label="На головну" href="/" variant="ghost" />
+        <twig:CosButton label="Вийти" href="/auth/logout" variant="primary" />
+    </twig:CosPageHeader>
+
+    <section class="cos-page__section" aria-labelledby="cabinet-profile-title">
+        <h2 id="cabinet-profile-title" class="cos-section-title">Identity context</h2>
+        <div class="cos-section-grid">
+            <twig:CosCard eyebrow="User ID" title="{{ cabinet.userId }}" copy="Canonical identity identifier." />
+            <twig:CosCard eyebrow="Роль" title="{{ cabinet.role }}" copy="Поточний tenant role." />
+            <twig:CosCard eyebrow="Організація" title="{{ cabinet.organizationId }}" copy="Активний organization context." />
+        </div>
+    </section>
+</section>
+{% endblock %}

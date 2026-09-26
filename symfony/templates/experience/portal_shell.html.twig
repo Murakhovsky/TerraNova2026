@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block meta %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block body %}
+<div class="cos-surface cos-surface--canvas" data-cos-surface="portal">
+    <main class="cos-page cos-page--reading cos-page__stack" data-cos-portal-shell>
+        {% block portal_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}
