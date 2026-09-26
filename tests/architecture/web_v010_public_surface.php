@@ -74,10 +74,8 @@ foreach (['PhtmlRenderer', 'PropertyCatalogInterface', 'SalesWriteServiceFactory
 $propertyController = $read('symfony/src/Web/Property/PropertyPageController.php');
 foreach ([
     'public function presentation(Request $request, string $slug): Response',
-    'public function submit(Request $request): Response',
     "'property/show'",
     "'property/presentation'",
-    "'property/submit'",
 ] as $needle) {
     $contains($propertyController, $needle, 'Remaining Public Property compatibility delivery contract is incomplete');
 }
@@ -110,7 +108,7 @@ foreach ([
     'path: /property/presentation/{slug}',
     'PropertyPageController::presentation',
     'path: /property/submit',
-    'PropertyPageController::submit',
+    'PublicPropertySubmitController::index',
 ] as $needle) {
     $contains($routes, $needle, 'Canonical Public route is missing');
 }
@@ -241,7 +239,6 @@ foreach ([
     'app/Interfaces/Web/View/auth/login.phtml',
     'app/Interfaces/Web/View/auth/register.phtml',
     'app/Interfaces/Web/View/property/seo.phtml',
-    'app/Interfaces/Web/View/property/submit.phtml',
     'app/Interfaces/Web/View/property/presentation.phtml',
 ] as $publicHeaderCaller) {
     $caller = $read($publicHeaderCaller);

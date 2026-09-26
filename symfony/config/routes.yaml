@@ -1411,17 +1411,17 @@ cos_web_property_landing:
 
 cos_web_property_submit:
   path: /property/submit
-  controller: App\Web\Property\PropertyPageController::submit
+  controller: App\Web\Property\PublicPropertySubmitController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_create_alias:
   path: /property/create
-  controller: App\Web\Property\PropertyPageController::submit
+  controller: App\Web\Property\PublicPropertySubmitController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_submit_alias:
   path: /submit-property
-  controller: App\Web\Property\PropertyPageController::submit
+  controller: App\Web\Property\PublicPropertySubmitController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_manage:

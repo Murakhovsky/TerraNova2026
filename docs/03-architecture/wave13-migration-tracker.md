@@ -213,3 +213,5 @@ VR-029 переводить Public Property Detail на QueryBus/CommandBus + Pu
 VR-030 переводить Property SEO collections на один canonical Public Catalog runtime. Type/City/landing routes відрізняються лише filter overrides та SEO metadata; inventory/cards/pagination не дублюються.
 
 VR-031 переводить Favourites на session IDs → canonical public read-port → Twig cards. Старий рендер до 150 карток з browser-side hiding видалено; API toggle contract збережено.
+
+VR-032 переводить Public Property Submit та aliases на canonical Form / Editor. Write parity свідомо збережена: POST повертає HTTP 503 і не створює запис, доки public intake не матиме окремого Application Command.

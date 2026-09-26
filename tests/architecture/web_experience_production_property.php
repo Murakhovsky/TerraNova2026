@@ -30,6 +30,7 @@ foreach ([
     'path: /property/submit',
     'path: /property/create',
     'path: /submit-property',
+    'PublicPropertySubmitController::index',
     'path: /property/manage',
     'path: /property/listing',
     'path: /property/submissions',
@@ -120,7 +121,6 @@ if(is_file($root.'/app/Interfaces/Web/View/property/seo.phtml'))throw new Runtim
 
 foreach ([
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
-    'submit' => ['page_header', 'state', 'enctype="multipart/form-data"', 'name="owner_name"', 'name="property_type"'],
 ] as $view => $markers) {
     $source = $read('app/Interfaces/Web/View/property/' . $view . '.phtml');
     foreach ($markers as $marker) {
@@ -152,6 +152,24 @@ foreach(['tn-','style=','onclick='] as $forbidden){
     $notContains($favourites,$forbidden,'Canonical Favourites restored legacy/local presentation.');
 }
 if(is_file($root.'/app/Interfaces/Web/View/property/favour.phtml'))throw new RuntimeException('Legacy Favourites PHTML restored.');
+
+
+$submit=$read('symfony/templates/experience/public/property_submit.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    '<twig:CosFormSection',
+    '<twig:CosStickyActions',
+    'enctype="multipart/form-data"',
+    'name="owner_name"',
+    'name="property_type"',
+    'data-cos-public="property-submit"',
+] as $marker){
+    $contains($submit,$marker,'Canonical Public Property Submit lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($submit,$forbidden,'Canonical Public Property Submit restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/submit.phtml'))throw new RuntimeException('Legacy Public Property Submit PHTML restored.');
 
 $favourJs=$read('symfony/assets/controllers/public_property_controller.js');
 foreach(['itemTargets','emptyTarget','countTarget','/api/v1/public/properties/favourites'] as $marker){

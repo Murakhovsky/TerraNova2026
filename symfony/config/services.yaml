@@ -1732,6 +1732,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Property\PublicPropertySubmitController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Property\PropertyPageController:
     public: true
     arguments:
