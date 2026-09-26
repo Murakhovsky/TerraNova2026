@@ -12,7 +12,7 @@ $read = static function (string $path) use ($root): string {
 
 $grid = $read('app/Interfaces/Web/View/components/ui/operational_grid.phtml');
 $cos = $read('symfony/templates/experience/system/control_center.html.twig');
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+$users = $read('symfony/templates/experience/administration/users.html.twig');
 $clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 $css = $read('frontend/styles/canonical-components.css');
 
@@ -56,25 +56,22 @@ if (str_contains($cos, '<table') || str_contains($cos, 'tn-')) {
 
 
 foreach ([
-    '$userRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'admin/updateUser/'",
-    "'csrf_token' => (string) (\$csrfToken ?? '')",
-    "'kind' => 'field'",
-    "'kind' => 'submit'",
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'action="/admin/updateUser/{{ user.id }}"',
+    'name="csrf_token"',
+    'name="full_name"',
+    'name="phone"',
+    'name="role"',
+    'name="status"',
+    'name="password"',
 ] as $marker) {
     if (!str_contains($users, $marker)) {
-        throw new RuntimeException('Users OperationalGrid migration incomplete: ' . $marker);
+        throw new RuntimeException('Users canonical editable EntityList incomplete: ' . $marker);
     }
 }
-if (str_contains($users, '<table class="tn-listing-table tn-users-table">')) {
-    throw new RuntimeException('Users raw editable table must remain retired.');
+if (str_contains($users, '<table') || str_contains($users, 'tn-')) {
+    throw new RuntimeException('Users must not restore raw/legacy editable table presentation.');
 }
 
 foreach ([

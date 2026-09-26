@@ -34,7 +34,7 @@ kind: architecture
 | VR-020 | `/cos/architecture` | System | COS / Visualization | System / Control Surface | P0 | Twig + JS Island | QA |
 | VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Specialized Island | QA |
 | VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | QA |
-| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | QA |
 | VR-024 | `/admin/content` | System | Content | Collection / Control Surface | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
@@ -157,3 +157,5 @@ VR-020 переводить Architecture Explorer на canonical System / Contro
 VR-021 переводить Methodology Studio на canonical System / Control Surface + specialized AssetMapper island. V0.5.3/0.5.4/0.5.5 editor behavior та API contracts збережені; PHTML/Vite ownership видалено, editor CSS переведено на COS tokens і canonical breakpoints.
 
 VR-022 переводить Administration Analytics на read-only Executive Dashboard: Application Query → Presenter/ViewModel → KPI + canonical DataGrid/EntityList. Page-specific Vite bundle видалено.
+
+VR-023 переводить Users Administration на canonical System / Control Surface. Reads і create/update mutations проходять через Query/Command Bus; старий CoreWorkspace PHTML controller та users.phtml видалено.

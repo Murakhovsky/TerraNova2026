@@ -117,22 +117,23 @@ foreach ($classifiedTableViews as $relative => $reason) {
     }
 }
 
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+$users = $read('symfony/templates/experience/administration/users.html.twig');
 foreach ([
-    '$userRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_form' => [",
-    "'action' => 'admin/updateUser/'",
-    "'kind' => 'submit'",
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'action="/admin/updateUser/{{ user.id }}"',
+    'name="csrf_token"',
+    'name="full_name"',
+    'name="phone"',
+    'name="role"',
+    'name="status"',
+    'name="password"',
 ] as $marker) {
-    $contains($users, $marker, 'Users must use canonical OperationalGrid editable row forms.');
+    $contains($users, $marker, 'Users must use canonical editable EntityList forms.');
 }
-$notContains($users, '<table', 'Users Administration must not retain a raw table after OperationalGrid migration.');
+foreach (['<table', 'tn-', 'style=', '<script'] as $forbidden) {
+    $notContains($users, $forbidden, 'Users Administration must not restore legacy/local presentation.');
+}
 
 $clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 foreach ([

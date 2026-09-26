@@ -107,6 +107,7 @@ jobs:
           php tests/architecture/web_experience_wave13_architecture.php
           php tests/architecture/web_experience_wave13_methodology_studio.php
           php tests/architecture/web_experience_wave13_analytics.php
+          php tests/architecture/web_experience_wave13_users.php
           php tests/architecture/web_experience_wave13_sales_today.php
           php tests/architecture/web_experience_wave13_toolbar.php
           php tests/architecture/web_experience_wave13_sales_pipeline.php

@@ -16,72 +16,57 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$users = $read('app/Interfaces/Web/View/admin/users.phtml');
+$users = $read('symfony/templates/experience/administration/users.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/filter_bar'",
-    "partial('components/ui/panel'",
-    "'bodyPartial' => 'components/ui/data_table'",
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    '$userRows = [];',
-    "'_form' => [",
-    "'kind' => 'submit'",
-] as $marker) {
-    $contains($users, $marker, 'Users Administration must use canonical workspace composition.');
-}
-foreach ([
-    'tn-listing-hero',
-    '<section class="tn-admin-metrics"',
-    '<form class="tn-crm-form" action="<?php echo $this->url->get(\'admin/users\'); ?>" method="get">',
-] as $legacyMarker) {
-    $notContains($users, $legacyMarker, 'Users Administration must not restore legacy shell/filter composition.');
-}
-
-foreach ([
-    'admin/createUser',
-    'admin/updateUser/',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosFilterBar',
+    '<twig:CosDataGrid',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'action="/admin/createUser"',
+    'action="/admin/updateUser/{{ user.id }}"',
     'name="csrf_token"',
     'name="full_name"',
-    'name="email"',
     'name="phone"',
     'name="password"',
     'name="role"',
     'name="status"',
-    'user-form-',
-    "'name' => 'full_name'",
-    "'name' => 'phone'",
-    "'name' => 'role'",
-    "'name' => 'status'",
-    "'name' => 'password'",
 ] as $marker) {
-    $contains($users, $marker, 'Users Administration lost a create/update mutation contract.');
+    $contains($users, $marker, 'Users Administration canonical System UI is incomplete.');
 }
-$notContains($users, '<table', 'Users Administration must not retain a raw editable table.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacyMarker) {
+    $notContains($users, $legacyMarker, 'Users Administration must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/admin/users.phtml')) {
+    throw new RuntimeException('Legacy Users Administration PHTML restored.');
+}
 
-$controller = $read('symfony/src/Web/Workspace/CoreWorkspacePageController.php');
+$controller = $read('symfony/src/Web/Administration/AdministrationUsersController.php');
 foreach ([
-    'public function users(Request $request): Response',
-    'public function createUser(Request $request): Response',
-    'public function updateUser(Request $request, string $id): Response',
-    '$this->admin()',
-    '$this->csrf->isValid($request)',
-    '$this->administration->createUser',
-    '$this->administration->updateUser',
-    "'admin/users'",
+    'GetAdministrationUsersQuery',
+    'CreateAdministrationUserCommand',
+    'UpdateAdministrationUserCommand',
+    'QueryBusInterface',
+    'CommandBusInterface',
+    'PageArchetype::SystemControlSurface',
+    'SessionCsrfValidator',
 ] as $marker) {
     $contains($controller, $marker, 'Users Administration controller contract is incomplete.');
+}
+foreach (['PhtmlRenderer', 'NavigationBuilder', 'AdministrationServiceInterface'] as $forbidden) {
+    $notContains($controller, $forbidden, 'Users Administration Web controller leaked direct/legacy dependency.');
 }
 
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /admin/users',
-    'CoreWorkspacePageController::users',
+    'AdministrationUsersController::index',
     'path: /admin/createUser',
-    'CoreWorkspacePageController::createUser',
+    'AdministrationUsersController::create',
     'path: /admin/updateUser/{id}',
-    'CoreWorkspacePageController::updateUser',
+    'AdministrationUsersController::update',
 ] as $marker) {
     $contains($routes, $marker, 'Users Administration route contract is incomplete.');
 }
