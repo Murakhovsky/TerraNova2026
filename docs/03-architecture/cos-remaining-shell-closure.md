@@ -131,7 +131,6 @@ Repository-wide gate тепер забороняє повернення таки
 
 `tn-breadcrumbs` дозволений лише для явно класифікованих Property discovery/rich-detail surfaces:
 
-- `property/show.phtml`;
 - `property/presentation.phtml`.
 
 `property/map` більше не входить до цього whitelist: Wave 13 перевів його на Twig Map / Spatial surface. Breadcrumb whitelist зберігається лише для ще не мігрованих public rich-detail PHTML.
@@ -168,7 +167,6 @@ WEB V0.9 та WEB V0.10 regression gates переведені з Phalcon-era con
 Наступні surfaces навмисно не перетворюються на generic PageHeader/Card composition:
 
 - `home/canonical.phtml` — marketing/runtime hero;
-- `property/show.phtml` — rich property hero, Product/Offer schema, gallery;
 - `property/presentation.phtml` — presentation hero та share behavior;
 - `spatial/scene.phtml` — public 3D viewer runtime;
 - `methodology_studio/index.phtml` — full application/studio interaction model;

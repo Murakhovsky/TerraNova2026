@@ -74,7 +74,6 @@ foreach (['PhtmlRenderer', 'PropertyCatalogInterface', 'SalesWriteServiceFactory
 $propertyController = $read('symfony/src/Web/Property/PropertyPageController.php');
 foreach ([
     'public function favour(Request $request): Response',
-    'public function show(Request $request, string $slug): Response',
     'public function presentation(Request $request, string $slug): Response',
     'public function submit(Request $request): Response',
     "'property/favour'",
@@ -103,7 +102,7 @@ foreach ([
     'path: /property/favour',
     'PropertyPageController::favour',
     'path: /property/show/{slug}',
-    'PropertyPageController::show',
+    'PublicPropertyDetailController::show',
     'path: /property/presentation/{slug}',
     'PropertyPageController::presentation',
     'path: /property/submit',
@@ -150,6 +149,44 @@ foreach (['tn-', 'style=', 'onclick='] as $legacy) {
 }
 if (is_file($root . '/app/Interfaces/Web/View/property/catalog.phtml')) {
     throw new RuntimeException('Retired Property Catalog PHTML restored.');
+}
+
+
+$detailController = $read('symfony/src/Web/Property/PublicPropertyDetailController.php');
+foreach ([
+    'GetPublicPropertyDetailQuery',
+    'RecordPublicPropertyViewCommand',
+    'ReceivePublicLeadCommand',
+    'QueryBusInterface',
+    'CommandBusInterface',
+    'PageArchetype::PublicDetailMarketing',
+] as $needle) {
+    $contains($detailController, $needle, 'Public Property Detail canonical delivery contract is incomplete');
+}
+foreach (['PhtmlRenderer', 'PropertyCatalogInterface', 'SalesWriteServiceFactoryInterface'] as $legacy) {
+    $notContains($detailController, $legacy, 'Public Property Detail must not bypass Application boundary');
+}
+
+$detail = $read('symfony/templates/experience/public/property_detail.html.twig');
+foreach ([
+    '<twig:CosPageHeader',
+    'data-controller="public-property public-property-gallery"',
+    'data-public-property-gallery-target="main"',
+    'data-public-property-gallery-target="thumb"',
+    'data-public-property-target="intent"',
+    "components/property/public_property_card.html.twig",
+    'application/ld+json',
+] as $needle) {
+    $contains($detail, $needle, 'Wave 13 Public Property Detail composition is incomplete');
+}
+foreach (['tn-', 'style=', 'onclick='] as $legacy) {
+    $notContains($detail, $legacy, 'Wave 13 Public Property Detail restored legacy/local presentation');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/show.phtml')) {
+    throw new RuntimeException('Retired Property Detail PHTML restored.');
+}
+if (is_file($root . '/frontend/entrypoints/terranova-property-gallery.js')) {
+    throw new RuntimeException('Retired Property gallery Vite entrypoint restored.');
 }
 
 foreach ([
@@ -202,7 +239,6 @@ foreach ([
     'app/Interfaces/Web/View/property/seo.phtml',
     'app/Interfaces/Web/View/property/submit.phtml',
     'app/Interfaces/Web/View/property/presentation.phtml',
-    'app/Interfaces/Web/View/property/show.phtml',
 ] as $publicHeaderCaller) {
     $caller = $read($publicHeaderCaller);
     $contains($caller, "partial('shared/public_header'", 'Public header caller contract is missing');

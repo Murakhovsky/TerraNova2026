@@ -167,7 +167,7 @@ final class PageArchetypeRegistry
                 'public',
                 'Present one public entity, service or narrative with a clear next action.',
                 ['PageHeader'],
-                ['StatGrid', 'ActionBar'],
+                ['StatGrid', 'ActionBar', 'EmptyState', 'ErrorState'],
                 ['comfortable'],
                 $publicResponsive,
             ),

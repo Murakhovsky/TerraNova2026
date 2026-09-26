@@ -11,7 +11,7 @@ $manifestPath=$root.'/public/build/.vite/manifest.json';
 $entries=[
     'cos-site','cos-ui-runtime',
     'public-surface','terranova-catalog-api','terranova-copy','terranova-interface',
-    'terranova-media-manager','terranova-property-gallery','terranova-spatial-admin','spatial-viewer',
+    'terranova-media-manager','terranova-spatial-admin','spatial-viewer',
 ];
 
 foreach([$root.'/public/js',$root.'/public/css',$root.'/public/assets/js',$root.'/public/assets/css'] as $legacyDirectory){

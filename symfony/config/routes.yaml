@@ -1373,7 +1373,7 @@ cos_web_property_favour:
 
 cos_web_property_show:
   path: /property/show/{slug}
-  controller: App\Web\Property\PropertyPageController::show
+  controller: App\Web\Property\PublicPropertyDetailController::show
   methods: [GET, HEAD, POST]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 

@@ -1,11 +1,17 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['button', 'status'];
+    static targets = ['button', 'status', 'intent'];
 
     connect() {
         this.saved = new Set();
         this.load();
+    }
+
+    intent(event) {
+        if (!this.hasIntentTarget) return;
+        const intent = event.currentTarget.dataset.requestIntent || '';
+        if (intent) this.intentTarget.value = intent;
     }
 
     async toggle(event) {

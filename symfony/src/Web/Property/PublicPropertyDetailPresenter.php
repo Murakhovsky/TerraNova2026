@@ -182,6 +182,7 @@ final class PublicPropertyDetailPresenter
             shortDescription: (string) ($property['short_description'] ?? ''),
             description: (string) ($property['description'] ?? ''),
             dealLabel: $dealLabel,
+            dealType: (string) ($property['deal_type'] ?? ''),
             typeName: (string) ($property['type_name'] ?? ''),
             locationLabel: $locationLabel,
             priceLabel: (string) ($property['price_label'] ?? 'Ціна за запитом'),
@@ -194,6 +195,7 @@ final class PublicPropertyDetailPresenter
             features: $features,
             fitHighlights: $fitHighlights,
             groupedProperties: $this->list($data['grouped'] ?? null),
+            groupTitle: (string) ($property['group_title'] ?? ''),
             relatedProperties: $this->list($data['related'] ?? null),
             agent: [
                 'name' => (string) ($property['agent_name'] ?? ''),

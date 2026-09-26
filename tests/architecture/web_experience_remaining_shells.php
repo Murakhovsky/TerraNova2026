@@ -272,7 +272,6 @@ if (is_file($root . '/app/Interfaces/Web/View/home/canonical.phtml')) {
 }
 
 $specializedContracts = [
-    'app/Interfaces/Web/View/property/show.phtml' => ['tn-property-hero', 'application/ld+json', 'data-property-gallery'],
     'app/Interfaces/Web/View/property/presentation.phtml' => ['tn-presentation-hero', 'data-copy-value'],
     'app/Interfaces/Web/View/spatial/scene.phtml' => ['tn-spatial-public', "partial('shared/spatial_viewer'"],
     'app/Interfaces/Web/View/error/failure.phtml' => ['tn-failure', 'data-failure-code'],
@@ -297,7 +296,6 @@ $globalForbidden = [
 ];
 $breadcrumbWhitelist = [
     'property/catalog.phtml',
-    'property/show.phtml',
     'property/presentation.phtml',
 ];
 

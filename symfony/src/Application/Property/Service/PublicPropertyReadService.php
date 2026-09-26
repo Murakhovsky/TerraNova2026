@@ -166,6 +166,7 @@ final readonly class PublicPropertyReadService
             'agent_email' => (string) ($property['agent_email'] ?? ''),
             'agent_telegram' => (string) ($property['agent_telegram'] ?? ''),
             'agent_avatar' => (string) ($property['agent_avatar'] ?? ''),
+            'agent_bio' => (string) ($property['agent_bio'] ?? ''),
         ];
     }
 

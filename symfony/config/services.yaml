@@ -1718,6 +1718,12 @@ services:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
     tags: ['controller.service_arguments']
 
+  App\Web\Property\PublicPropertyDetailController:
+    public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+    tags: ['controller.service_arguments']
+
   App\Web\Property\PropertyPageController:
     public: true
     arguments:

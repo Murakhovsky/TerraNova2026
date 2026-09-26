@@ -1,0 +1,301 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}{{ detail ? detail.metaTitle : 'Обʼєкт нерухомості | Terra Nova CLUB' }}{% endblock %}
+
+{% block meta %}
+    {% if detail %}
+        <meta name="description" content="{{ detail.metaDescription }}">
+        <meta name="robots" content="index,follow">
+        <link rel="canonical" href="{{ detail.canonicalUrl }}">
+        {% if detail.metaImage %}
+            <meta property="og:image" content="{{ detail.metaImage }}">
+        {% endif %}
+        <meta property="og:title" content="{{ detail.metaTitle }}">
+        <meta property="og:description" content="{{ detail.metaDescription }}">
+        <meta property="og:type" content="article">
+        <meta property="og:url" content="{{ detail.canonicalUrl }}">
+    {% else %}
+        <meta name="robots" content="noindex,follow">
+    {% endif %}
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-property-detail cos-page__stack"
+    data-controller="public-property public-property-gallery"
+    data-cos-public="property-detail"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    {% if error %}
+        <twig:CosPageHeader
+            eyebrow="Property"
+            title="Обʼєкт тимчасово недоступний"
+            subtitle="{{ error }}"
+        >
+            <twig:CosButton label="До каталогу" href="/property/catalog" variant="primary" />
+        </twig:CosPageHeader>
+        <twig:CosAlert title="Помилка завантаження" copy="{{ error }}" tone="danger" />
+    {% elseif detail is null %}
+        <twig:CosPageHeader
+            eyebrow="Property"
+            title="Обʼєкт не знайдено"
+            subtitle="Можливо, він ще на модерації або був знятий з публікації."
+        >
+            <twig:CosButton label="До каталогу" href="/property/catalog" variant="primary" />
+        </twig:CosPageHeader>
+        <twig:CosEmptyState
+            title="Картка недоступна"
+            copy="Поверніться до каталогу й оберіть інший актуальний обʼєкт."
+        />
+    {% else %}
+        <twig:CosPageHeader
+            eyebrow="{{ detail.publicId }} · {{ detail.dealLabel }}"
+            title="{{ detail.title }}"
+            subtitle="{{ detail.shortDescription }}"
+            metaValue="{{ detail.priceLabel }}"
+            metaLabel="{{ detail.locationLabel }}"
+        >
+            <twig:CosButton label="До каталогу" href="/property/catalog" variant="ghost" />
+            <twig:CosButton label="Презентація" href="{{ detail.presentationUrl }}" variant="ghost" />
+            <twig:CosButton label="PDF" href="{{ detail.pdfUrl }}" variant="ghost" />
+            <a
+                class="cos-button cos-button--primary"
+                href="#request"
+                data-request-intent="viewing"
+                data-action="click->public-property#intent"
+            >Записатись на перегляд</a>
+            <button
+                type="button"
+                class="cos-button cos-button--ghost"
+                data-public-property-target="button"
+                data-public-id="{{ detail.publicId }}"
+                data-action="click->public-property#toggle"
+                aria-pressed="false"
+            >♡</button>
+        </twig:CosPageHeader>
+
+        {% if detail.notice %}
+            <twig:CosAlert title="Запит" copy="{{ detail.notice }}" tone="info" />
+        {% endif %}
+
+        <section class="cos-property-detail__hero" itemscope itemtype="https://schema.org/Product">
+            <div class="cos-property-detail__summary cos-pattern-stack">
+                <div class="cos-kpi-strip">
+                    {% for fact in detail.summaryFacts %}
+                        <article class="cos-card">
+                            <twig:CosMetric label="{{ fact.label }}" value="{{ fact.value }}" />
+                        </article>
+                    {% endfor %}
+                </div>
+
+                {% if detail.description %}
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Про обʼєкт</p>
+                        <h2 class="cos-card__title">Деталі</h2>
+                        <p class="cos-card__copy">{{ detail.description }}</p>
+                    </article>
+                {% endif %}
+
+                {% if detail.fitHighlights is not empty %}
+                    <article class="cos-card">
+                        <p class="cos-card__eyebrow">Швидка оцінка</p>
+                        <h2 class="cos-card__title">Що вже зрозуміло</h2>
+                        <ul class="cos-pattern-stack">
+                            {% for item in detail.fitHighlights %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </article>
+                {% endif %}
+            </div>
+
+            <div class="cos-property-detail__gallery">
+                <div class="cos-property-gallery" data-property-gallery>
+                    <div class="cos-property-gallery__stage">
+                        {% if detail.coverUrl %}
+                            <img
+                                class="cos-property-gallery__main"
+                                src="{{ detail.coverUrl }}"
+                                alt="{{ detail.title }}"
+                                itemprop="image"
+                                data-public-property-gallery-target="main"
+                            >
+                        {% else %}
+                            <div class="cos-property-gallery__placeholder">Фото готуються</div>
+                        {% endif %}
+
+                        <div class="cos-property-gallery__overlay">
+                            <span class="cos-badge cos-badge--neutral">{{ detail.imageCount() > 0 ? detail.imageCount() ~ ' фото' : 'Фото готуються' }}</span>
+                            {% if detail.coverUrl %}
+                                <a
+                                    class="cos-button cos-button--ghost cos-button--sm"
+                                    href="{{ detail.coverUrl }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    data-public-property-gallery-target="open"
+                                >Відкрити фото</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if detail.images is not empty %}
+                        <div class="cos-property-gallery__thumbs" aria-label="Галерея обʼєкта">
+                            {% for image in detail.images|slice(0, 8) %}
+                                <button
+                                    class="cos-property-gallery__thumb {{ loop.first ? 'is-active' : '' }}"
+                                    type="button"
+                                    data-public-property-gallery-target="thumb"
+                                    data-image="{{ image.url }}"
+                                    data-alt="{{ image.alt }}"
+                                    data-action="click->public-property-gallery#select"
+                                    aria-pressed="{{ loop.first ? 'true' : 'false' }}"
+                                    aria-label="Показати фото {{ loop.index }}"
+                                >
+                                    <img src="{{ image.url }}" alt="{{ image.alt }}" loading="lazy">
+                                </button>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section id="details" class="cos-page__section cos-property-detail__groups" aria-label="Характеристики">
+            {% for group in detail.characteristicGroups %}
+                <article class="cos-property-detail__group">
+                    <h2 class="cos-card__title">{{ group.title }}</h2>
+                    <div class="cos-property-detail__characteristics">
+                        {% for item in group.items %}
+                            <div class="cos-property-detail__feature">
+                                <span>{{ item.label }}</span>
+                                <strong>{{ item.value }}</strong>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+
+            {% if detail.features is not empty %}
+                <article class="cos-property-detail__group">
+                    <h2 class="cos-card__title">Особливості</h2>
+                    <div class="cos-property-detail__features">
+                        {% for feature in detail.features %}
+                            <div class="cos-property-detail__feature">
+                                <span>{{ feature.label }}</span>
+                                <strong>{{ feature.value }}</strong>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endif %}
+        </section>
+
+        {% if detail.tourUrl or detail.videoUrl %}
+            <section class="cos-page__section">
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Media</p>
+                    <h2 class="cos-card__title">Дистанційний перегляд</h2>
+                    <div class="cos-action-bar cos-action-bar--start">
+                        {% if detail.tourUrl %}
+                            <a class="cos-button cos-button--primary" href="{{ detail.tourUrl }}" target="_blank" rel="noopener">3D tour</a>
+                        {% endif %}
+                        {% if detail.videoUrl %}
+                            <a class="cos-button cos-button--ghost" href="{{ detail.videoUrl }}" target="_blank" rel="noopener">Відео</a>
+                        {% endif %}
+                    </div>
+                </article>
+            </section>
+        {% endif %}
+
+        <section class="cos-page__section cos-section-grid">
+            <aside class="cos-card">
+                <p class="cos-card__eyebrow">Контакт</p>
+                <h2 class="cos-card__title">{{ detail.agent.name ?: 'Terra Nova CLUB' }}</h2>
+                {% if detail.agent.role %}<p class="cos-card__copy">{{ detail.agent.role }}</p>{% endif %}
+                <div class="cos-action-bar cos-action-bar--start">
+                    {% if detail.agent.phoneHref %}
+                        <a class="cos-button cos-button--primary" href="{{ detail.agent.phoneHref }}">Дзвінок</a>
+                    {% endif %}
+                    {% if detail.agent.email %}
+                        <a class="cos-button cos-button--ghost" href="mailto:{{ detail.agent.email }}">Email</a>
+                    {% endif %}
+                    {% if detail.agent.telegramHref %}
+                        <a class="cos-button cos-button--ghost" href="{{ detail.agent.telegramHref }}">Telegram</a>
+                    {% endif %}
+                </div>
+            </aside>
+
+            <article class="cos-card" id="request">
+                <p class="cos-card__eyebrow">Запит</p>
+                <h2 class="cos-card__title">Отримати деталі або домовитись про перегляд</h2>
+                <form class="cos-pattern-stack" action="#request" method="post">
+                    <input type="hidden" name="property_id" value="{{ detail.id }}">
+                    <input type="hidden" name="role" value="buyer">
+                    <input type="hidden" name="deal_type" value="{{ detail.dealType ?: 'consultation' }}">
+                    <input type="hidden" name="request_intent" value="general_contact" data-public-property-target="intent">
+                    <label class="cos-visually-hidden" aria-hidden="true">
+                        <span>Website</span>
+                        <input name="website" type="text" tabindex="-1" autocomplete="off">
+                    </label>
+                    <label class="cos-field">
+                        <span>Імʼя</span>
+                        <input class="cos-input" name="full_name" type="text" autocomplete="name" required>
+                    </label>
+                    <label class="cos-field">
+                        <span>Телефон</span>
+                        <input class="cos-input" name="phone" type="tel" autocomplete="tel">
+                    </label>
+                    <label class="cos-field">
+                        <span>Email</span>
+                        <input class="cos-input" name="email" type="email" autocomplete="email">
+                    </label>
+                    <label class="cos-field">
+                        <span>Повідомлення</span>
+                        <textarea class="cos-textarea" name="message" rows="4" placeholder="Хочу переглянути обʼєкт або отримати деталі"></textarea>
+                    </label>
+                    <button class="cos-button cos-button--primary" type="submit">Надіслати запит</button>
+                </form>
+            </article>
+        </section>
+
+        {% if detail.groupedProperties is not empty %}
+            <section id="group" class="cos-page__section">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Адресна група</p>
+                        <h2 class="cos-card__title">{{ detail.groupTitle ?: 'Обʼєкти за цією адресою' }}</h2>
+                    </div>
+                </div>
+                <div class="cos-property-catalog-grid">
+                    {% for property in detail.groupedProperties %}
+                        {% include 'components/property/public_property_card.html.twig' with { property: property } only %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if detail.relatedProperties is not empty %}
+            <section id="related" class="cos-page__section">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Related</p>
+                        <h2 class="cos-card__title">Схожі обʼєкти</h2>
+                    </div>
+                </div>
+                <div class="cos-property-catalog-grid">
+                    {% for property in detail.relatedProperties %}
+                        {% include 'components/property/public_property_card.html.twig' with { property: property } only %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <p class="cos-card__copy" data-public-property-target="status" aria-live="polite"></p>
+
+        <script type="application/ld+json">{{ detail.breadcrumbSchema|json_encode|raw }}</script>
+        <script type="application/ld+json">{{ detail.productSchema|json_encode|raw }}</script>
+    {% endif %}
+</section>
+{% endblock %}

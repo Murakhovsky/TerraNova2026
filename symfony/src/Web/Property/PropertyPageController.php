@@ -40,47 +40,6 @@ final readonly class PropertyPageController
         return $this->html($request, 'property/favour', $variables, (int) ($variables['_status'] ?? 200));
     }
 
-    public function show(Request $request, string $slug): Response
-    {
-        $inboundRequestStatus=$this->publicLeadStatus($request);
-        try {
-            $property = $this->catalog->propertyBySlug($slug);
-            if ($property === null) return new Response('Property was not found.', Response::HTTP_NOT_FOUND);
-
-            $this->catalog->recordPropertyView((int) $property['id'], $this->viewContext($request));
-            $images = $this->catalog->propertyImages((int) $property['id']);
-
-            return $this->html($request, 'property/show', [
-                'title' => (string) ($property['title'] ?? 'Об’єкт'),
-                'interfaceSurface' => 'public',
-                'pageAssetEntries' => ['public-surface', 'terranova-property-gallery'],
-                'property' => $property,
-                'images' => $images,
-                'features' => $this->catalog->propertyFeatures((int) $property['id']),
-                'groupedProperties' => $this->catalog->groupedProperties($property),
-                'relatedProperties' => $this->catalog->relatedProperties($property),
-                'spatialScene' => null,
-                'pageStatus' => null,
-                'inboundRequestStatus' => null,
-                'managerClientCases' => [],
-                'propertyMatchStatus' => '',
-                'metaTitle' => (($property['meta_title'] ?? '') ?: ($property['title'] ?? 'Об’єкт')) . ' | Terra Nova CLUB',
-                'metaDescription' => (($property['meta_description'] ?? '') ?: ($property['short_description'] ?? 'Картка об’єкта Terra Nova CLUB.')),
-                'metaImage' => (string) ($images[0]['image_url'] ?? ''),
-                'metaUrl' => $request->getSchemeAndHttpHost() . '/property/show/' . rawurlencode($slug),
-                'metaType' => 'article',
-                'analyticsPropertyId' => (int) $property['id'],
-            ]);
-        } catch (Throwable $error) {
-            error_log('property.public.show_failed ' . $error->getMessage());
-            return $this->html($request, 'error/failure', [
-                'interfaceSurface' => 'public',
-                'title' => 'Об’єкт тимчасово недоступний',
-                'message' => 'Не вдалося завантажити картку об’єкта.',
-            ], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-    }
-
     public function presentation(Request $request, string $slug): Response
     {
         $inboundRequestStatus=$this->publicLeadStatus($request);

@@ -82,9 +82,28 @@ foreach(['tn-','style=','onclick='] as $forbidden){
 }
 if(is_file($root.'/app/Interfaces/Web/View/property/catalog.phtml'))throw new RuntimeException('Legacy Property Catalog PHTML restored.');
 
+
+$detail=$read('symfony/templates/experience/public/property_detail.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    'data-controller="public-property public-property-gallery"',
+    'data-public-property-gallery-target="main"',
+    'data-public-property-gallery-target="thumb"',
+    'data-public-property-target="button"',
+    'data-public-property-target="intent"',
+    'application/ld+json',
+    'id="request"',
+    'id="related"',
+] as $marker){
+    $contains($detail,$marker,'Canonical Public Property Detail lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($detail,$forbidden,'Canonical Public Property Detail restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/show.phtml'))throw new RuntimeException('Legacy Property Detail PHTML restored.');
+
 foreach ([
     'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
-    'show' => ['state', 'action_bar', 'data-request-intent', 'data-save-property', 'data-property-gallery'],
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
     'seo' => ['page_header', 'state', 'itemscope itemtype="https://schema.org/Product"'],
     'submit' => ['page_header', 'state', 'enctype="multipart/form-data"', 'name="owner_name"', 'name="property_type"'],
