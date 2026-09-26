@@ -44,6 +44,16 @@ kind: architecture
 | VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | DONE |
 | VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | DONE |
 | VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | DONE |
+| VR-033 | `/terra-nova` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-034 | `/agency` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-035 | `/services` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-036 | `/partners` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-037 | `/team` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-038 | `/cases` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-039 | `/vacancies` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-040 | `/contacts` | Public | Brand / Sales | Public Detail / Marketing + Form | P0 | Twig | DONE |
+| VR-041 | `/it` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-042 | `/art` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -234,3 +244,23 @@ Production migration units VR-027…032 завершені.
 `/property/presentation/{slug}` і `/property/pdf/{slug}` не входять у VR-027…032. Вони залишаються спеціалізованим compatibility runtime до фінальної хвилі legacy deletion і не вважаються canonical Public Property visual surface.
 
 Наступна production migration family: **Phase 9 — Public Brand**.
+
+## Фаза 9 — Public Brand
+
+VR-033…042 переводять десять статичних brand destinations із orphaned PHTML shell на один canonical Symfony runtime. Page definitions лишаються в `PublicPageCatalog`; Web читає їх через `GetPublicBrandPageQuery`, Presenter/ViewModel готують presentation state, а Twig використовує Public Detail / Marketing archetype без десяти локальних page stacks.
+
+`/contacts` зберігає робочий inbound lead flow через `ReceivePublicLeadCommand`. Решта brand pages є read-only public projections із canonical CTA до каталогу, submit та contact surfaces.
+
+## Фаза 9 — завершення Public Brand
+
+Production migration units VR-033…042 завершені.
+
+- усі 10 routes явно належать Symfony;
+- один Query/Presenter/ViewModel/Twig runtime обслуговує всю brand family;
+- `/contacts` не обходить Application Command boundary;
+- Public Brand використовує canonical PageHeader, Card, ActionBar та form components;
+- page-specific Public Brand CSS/JS = **0**;
+- legacy `app/Interfaces/Web/View/page/show.phtml` = **0**;
+- нові `tn-*` primitives = **0**.
+
+Наступна production migration family: **Phase 10 — Content**.

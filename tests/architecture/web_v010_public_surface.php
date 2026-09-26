@@ -81,6 +81,19 @@ foreach ([
 }
 $notContains($propertyController, 'public function catalog(', 'Public Property Catalog ownership must stay cut over');
 
+$brandController = $read('symfony/src/Web/PublicSite/PublicBrandController.php');
+foreach ([
+    'GetPublicBrandPageQuery',
+    'ReceivePublicLeadCommand',
+    'QueryBusInterface',
+    'CommandBusInterface',
+    'PageArchetype::PublicDetailMarketing',
+    "experience/public/brand_page.html.twig",
+] as $needle) {
+    $contains($brandController, $needle, 'Public Brand canonical delivery contract is incomplete');
+}
+$notContains($brandController, 'PhtmlRenderer', 'Public Brand must not restore PHTML ownership');
+
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /',
@@ -232,7 +245,6 @@ $notContains($header, 'class="tn-btn ', 'Public header must not render legacy tn
 $notContains($header, "$action['class']", 'Public header must not consume presentation class descriptors');
 
 foreach ([
-    'app/Interfaces/Web/View/page/show.phtml',
     'app/Interfaces/Web/View/blog/show.phtml',
     'app/Interfaces/Web/View/blog/index.phtml',
     'app/Interfaces/Web/View/blog/landing.phtml',

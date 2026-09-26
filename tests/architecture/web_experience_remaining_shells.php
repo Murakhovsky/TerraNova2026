@@ -37,12 +37,15 @@ if (is_file($root . '/app/Interfaces/Web/View/visualization/architecture.phtml')
     throw new RuntimeException('Retired Architecture Explorer PHTML restored.');
 }
 
-$page = $read('app/Interfaces/Web/View/page/show.phtml');
-foreach (["partial('components/ui/page_header'", "'Переглянути об’єкти'", "'Подати об’єкт'"] as $marker) {
-    $contains($page, $marker, 'Public Page canonical shell contract is incomplete.');
+$brandPage = $read('symfony/templates/experience/public/brand_page.html.twig');
+foreach (['<twig:CosPageHeader', '<twig:CosCard', 'data-cos-public-brand=', '<twig:CosActionBar'] as $marker) {
+    $contains($brandPage, $marker, 'Public Brand canonical shell contract is incomplete.');
 }
-foreach (['tn-breadcrumbs', 'tn-page-hero', 'tn-page-hero__actions'] as $legacyMarker) {
-    $notContains($page, $legacyMarker, 'Public Page must not restore legacy outer shell.');
+foreach (['tn-', 'style=', 'onclick=', '<script'] as $legacyMarker) {
+    $notContains($brandPage, $legacyMarker, 'Public Brand must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/page/show.phtml')) {
+    throw new RuntimeException('Retired Public Brand PHTML restored.');
 }
 
 $blogIndex = $read('app/Interfaces/Web/View/blog/index.phtml');
