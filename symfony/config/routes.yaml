@@ -75,6 +75,68 @@ cos_symfony_home:
   controller: App\Web\PublicSite\HomeController
   methods: [GET, HEAD]
 
+
+# Wave 13 Phase 9 — Public Brand. Ten brand destinations share one canonical runtime.
+cos_web_public_terra_nova:
+  path: /terra-nova
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'terra-nova' }
+  methods: [GET, HEAD]
+
+cos_web_public_agency:
+  path: /agency
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'agency' }
+  methods: [GET, HEAD]
+
+cos_web_public_services:
+  path: /services
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'services' }
+  methods: [GET, HEAD]
+
+cos_web_public_partners:
+  path: /partners
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'partners' }
+  methods: [GET, HEAD]
+
+cos_web_public_team:
+  path: /team
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'team' }
+  methods: [GET, HEAD]
+
+cos_web_public_cases:
+  path: /cases
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'cases' }
+  methods: [GET, HEAD]
+
+cos_web_public_vacancies:
+  path: /vacancies
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'vacancies' }
+  methods: [GET, HEAD]
+
+cos_web_public_contacts:
+  path: /contacts
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'contacts' }
+  methods: [GET, HEAD, POST]
+
+cos_web_public_it:
+  path: /it
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'it' }
+  methods: [GET, HEAD]
+
+cos_web_public_art:
+  path: /art
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'art' }
+  methods: [GET, HEAD]
+
 cos_web_cabinet:
   path: /cabinet
   controller: App\Web\Portal\CabinetController::index

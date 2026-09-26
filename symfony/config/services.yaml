@@ -1680,6 +1680,13 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+
+  App\Web\PublicSite\PublicBrandController:
+    public: true
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+    tags: ['controller.service_arguments']
+
   App\Web\Sales\ClientCaseInboxController:
     public: true
     tags: ['controller.service_arguments']
