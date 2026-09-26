@@ -1,0 +1,28 @@
+{% extends 'experience/portal_shell.html.twig' %}
+
+{% block title %}Редагування заявки перенесено | COS{% endblock %}
+
+{% block portal_content %}
+<section
+    class="cos-page__stack"
+    data-cos-portal="retired-submission"
+    data-submission-id="{{ submission.submissionId }}"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="COS Portal"
+        title="Заявка #{{ submission.submissionId }}"
+        subtitle="Цей compatibility route збережений навмисно, але старий редактор більше не є частиною production runtime."
+    >
+        <twig:CosButton label="До кабінету" href="/cabinet" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosAlert
+        title="{{ submission.title }}"
+        copy="{{ submission.message }}"
+        tone="warning"
+    />
+</section>
+{% endblock %}

@@ -17,7 +17,7 @@ Status vocabulary:
 | `frontend/styles/patterns.css` | USED | shared composition patterns |
 | `frontend/styles/design-system.css` | USED | canonical shared load-order entry |
 | `frontend/styles/layouts/public.css` | MIGRATED | Public visual contract now surface-owned rather than globally injected |
-| `frontend/styles/layouts/portal.css` | USED | Portal surface baseline |
+| `frontend/styles/layouts/portal.css` | DEAD | Wave 13 Phase 7 moved Portal to Symfony AssetMapper/COS styles |
 | `frontend/styles/layouts/workspace.css` | USED | Workspace surface baseline and compatibility composition |
 | `frontend/styles/terranova-club.css` | DEAD | removed; Git history is the archive and canonical runtime must not restore it |
 | `frontend/styles/terranova-home.css` | DEAD | removed after WEB V0.10 homepage replacement |
@@ -36,7 +36,7 @@ Status vocabulary:
 | `.tn-property-*`, `.tn-card-*`, catalog/presentation selectors | MIGRATED | Public surface plus live Property public patterns; canonical Property workspace feature CSS no longer carries retired admin/table selectors |
 | `.tn-ui-*` primitives | USED | shared design system |
 | `.tn-workspace-*`, `.tn-command-palette*` | USED | Workspace surface |
-| `.tn-portal-profile`, `.tn-portal-page` | USED | minimal native Cabinet presentation |
+| `.tn-portal-profile`, `.tn-portal-page` | DEAD | retired by Wave 13 canonical Portal archetype |
 | historical `.tn-portal-header*`, `.tn-portal-hero*`, `.tn-portal-card*`, `.tn-portal-state*` | DEAD | retired after native Cabinet/PHASE 14 shell closure |
 | old homepage-only `.tn-home-*` visual blocks not rendered by WEB V0.10 | DEAD | no canonical runtime owner |
 
@@ -49,7 +49,7 @@ Status vocabulary:
 | `frontend/features/public/interactions.js` | USED | Public-only favourites session sync, URL-derived attribution and analytics; no browser persistence |
 | `frontend/entrypoints/terranova-interface.js` | USED | canonical Workspace entrypoint |
 | `frontend/core/workspace-shell.js` | USED | Workspace presentation shell |
-| `frontend/entrypoints/portal-cabinet.js` | USED | canonical Portal entrypoint |
+| `frontend/entrypoints/portal-cabinet.js` | DEAD | retired by Wave 13; Portal uses Symfony AssetMapper `app` runtime |
 | `frontend/features/portal/cabinet.js` | DEAD | removed after dedicated Portal header/menu retirement; shared production UX remains authoritative |
 | `frontend/entrypoints/terranova-club.js` | DEAD | removed from source/runtime; Git history is the archive |
 | `frontend/entrypoints/terranova-home.js` | DEAD | removed from source/runtime after WEB V0.10 homepage replacement |
@@ -84,7 +84,7 @@ Canonical runtime must not:
 
 Canonical runtime must:
 
-- load one surface bundle;
+- load one applicable runtime owner; Portal is owned by Symfony AssetMapper rather than a dedicated Vite surface bundle;
 - load shared design-system primitives before the surface;
 - append feature bundles after the surface;
 - keep server/application services authoritative for permissions and business state.

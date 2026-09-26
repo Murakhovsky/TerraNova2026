@@ -150,32 +150,28 @@ foreach (['tn-auth-copy', 'tn-kicker', 'tn-form-status is-visible', 'tn-btn tn-b
     $notContains($register, $legacyMarker, 'Registration must not restore legacy shell primitives.');
 }
 
-$cabinet = $read('app/Interfaces/Web/View/cabinet/canonical.phtml');
+$cabinet = $read('symfony/templates/experience/portal/cabinet.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    'tn-ui-panel',
-    'tn-portal-profile',
-    '$currentUser',
-    '$organizationId',
-    '$portalRole',
+    '<twig:CosPageHeader',
+    '<twig:CosCard',
+    'data-cos-portal="cabinet"',
     '/auth/logout',
 ] as $marker) {
-    $contains($cabinet, $marker, 'Native Cabinet canonical/identity contract is incomplete.');
+    $contains($cabinet, $marker, 'Wave 13 Cabinet Portal contract is incomplete.');
 }
-foreach (['tn-portal-hero', 'tn-kicker', 'tn-actions'] as $legacyMarker) {
-    $notContains($cabinet, $legacyMarker, 'Native Cabinet must not restore legacy shell primitives.');
-}
-
-$retiredSubmission = $read('app/Interfaces/Web/View/cabinet/retired-submission.phtml');
+$retiredSubmission = $read('symfony/templates/experience/portal/submission_retired.html.twig');
 foreach ([
-    "partial('components/ui/state'",
-    'Старий редактор заявки закрито',
+    '<twig:CosPageHeader',
+    '<twig:CosAlert',
+    'data-cos-portal="retired-submission"',
     '/cabinet',
 ] as $marker) {
-    $contains($retiredSubmission, $marker, 'Retired cabinet submission state contract is incomplete.');
+    $contains($retiredSubmission, $marker, 'Wave 13 retired submission Portal contract is incomplete.');
 }
-foreach (['tn-portal-state', 'tn-kicker', 'tn-btn tn-btn--accent'] as $legacyMarker) {
-    $notContains($retiredSubmission, $legacyMarker, 'Retired cabinet submission must not restore legacy shell primitives.');
+foreach ([$cabinet, $retiredSubmission] as $surface) {
+    foreach (['tn-', 'style=', '<script'] as $legacyMarker) {
+        $notContains($surface, $legacyMarker, 'Wave 13 Portal must not restore legacy/local presentation.');
+    }
 }
 
 $authController = $read('symfony/src/Web/Auth/AuthPageController.php');
@@ -196,18 +192,17 @@ foreach ([
     $contains($authController, $marker, 'Native Auth controller/session contract is incomplete.');
 }
 
-$cabinetController = $read('symfony/src/Controller/CabinetPageController.php');
+$cabinetController = $read('symfony/src/Web/Portal/CabinetController.php');
 foreach ([
-    'public function index(Request $request): Response',
-    'public function retiredSubmission(Request $request, string $id): Response',
+    'public function index(): Response',
+    'public function retiredSubmission(string $id): Response',
     '$this->tenants->current()',
-    "return new RedirectResponse('/auth/login')",
-    "return new RedirectResponse('/sales')",
-    "'cabinet/canonical'",
-    "'cabinet/retired-submission'",
+    "new RedirectResponse('/auth/login')",
+    "new RedirectResponse('/sales')",
+    'PageArchetype::Portal',
     'Response::HTTP_GONE',
 ] as $marker) {
-    $contains($cabinetController, $marker, 'Native Cabinet controller contract is incomplete.');
+    $contains($cabinetController, $marker, 'Wave 13 Cabinet controller contract is incomplete.');
 }
 
 foreach ([
@@ -218,9 +213,9 @@ foreach ([
     'path: /auth/logout',
     'AuthPageController::logout',
     'path: /cabinet',
-    'CabinetPageController::index',
+    'App\\Web\\Portal\\CabinetController::index',
     'path: /cabinet/submission/{id}',
-    'CabinetPageController::retiredSubmission',
+    'App\\Web\\Portal\\CabinetController::retiredSubmission',
 ] as $marker) {
     $contains($routes, $marker, 'Auth/Cabinet route contract is incomplete.');
 }

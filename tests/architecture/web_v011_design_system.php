@@ -36,7 +36,6 @@ foreach (['app/Domains/Frontend', 'app/Domains/Public', 'app/Domains/Portal'] as
 foreach ([
     'frontend/styles/design-system.css',
     'frontend/styles/layouts/public.css',
-    'frontend/styles/layouts/portal.css',
     'frontend/styles/layouts/workspace.css',
     'frontend/features/public/interactions.js',
     'docs/architecture/web-v0.11.md',
@@ -60,7 +59,6 @@ if (!($positions['tokens.css'] < $positions['foundation.css']
 $layout = $read('app/Interfaces/Web/View/index.phtml');
 foreach ([
     "'workspace' => 'terranova-interface'",
-    "'portal' => 'portal-cabinet'",
     "default => 'public-surface'",
     'data-interface-surface="<?php echo $escape($interfaceSurface); ?>"',
     'array_unique',
@@ -75,10 +73,6 @@ $publicEntry = $read('frontend/entrypoints/public-surface.js');
 foreach (["../styles/design-system.css", "../styles/layouts/public.css", "../features/public/surface.css", 'initPublicInteractions'] as $needle) {
     $contains($publicEntry, $needle, 'Public entrypoint is missing canonical design-system/surface ownership.');
 }
-$portalEntry = $read('frontend/entrypoints/portal-cabinet.js');
-foreach (["../styles/design-system.css", "../styles/layouts/portal.css", "../features/portal/cabinet.css"] as $needle) {
-    $contains($portalEntry, $needle, 'Portal entrypoint is missing canonical design-system/surface ownership.');
-}
 $workspaceEntry = $read('frontend/entrypoints/terranova-interface.js');
 foreach (["../styles/design-system.css", "../styles/layouts/workspace.css", 'initWorkspaceShell'] as $needle) {
     $contains($workspaceEntry, $needle, 'Workspace entrypoint is missing canonical design-system/surface ownership.');
@@ -88,9 +82,12 @@ foreach (['interface.css', 'workspace-mobile.css', 'terranova-club.css'] as $leg
 }
 
 $vite = $read('vite.config.js');
-foreach (["'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $requiredEntry) {
+foreach (["'public-surface'", "'terranova-interface'"] as $requiredEntry) {
     $contains($vite, $requiredEntry, 'Vite is missing canonical surface entrypoint.');
 }
+$notContains($layout, "'portal' => 'portal-cabinet'", 'PHTML root layout must not own the Wave 13 Portal runtime.');
+$notContains($vite, "'portal-cabinet'", 'Portal must stay retired from the Vite runtime.');
+
 foreach (["'terranova-club'", "'terranova-home'"] as $retiredEntry) {
     $notContains($vite, $retiredEntry, 'Retired legacy entrypoint returned to Vite runtime.');
 }
@@ -124,7 +121,7 @@ foreach ([
 }
 
 $assetGate = $read('tests/architecture/frontend_assets.php');
-foreach (["'public-surface'", "'portal-cabinet'", "'terranova-interface'"] as $needle) {
+foreach (["'public-surface'", "'terranova-interface'"] as $needle) {
     $contains($assetGate, $needle, 'Frontend asset gate must cover canonical Vite entrypoints.');
 }
 $notContains($assetGate, "'cos-architecture-explorer'", 'Architecture Explorer is now owned by Symfony AssetMapper/Stimulus, not Vite.');

@@ -77,12 +77,12 @@ cos_symfony_home:
 
 cos_web_cabinet:
   path: /cabinet
-  controller: App\Controller\CabinetPageController::index
+  controller: App\Web\Portal\CabinetController::index
   methods: [GET, HEAD]
 
 cos_web_cabinet_submission_retired:
   path: /cabinet/submission/{id}
-  controller: App\Controller\CabinetPageController::retiredSubmission
+  controller: App\Web\Portal\CabinetController::retiredSubmission
   methods: [GET, HEAD, POST]
   requirements:
     id: '[1-9][0-9]*'
