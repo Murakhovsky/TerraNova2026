@@ -54,38 +54,26 @@ foreach ([
     $contains($dataTable, $marker, 'Canonical DataTable must support safe details cells for runtime JSON/config output.');
 }
 
-$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+$cos = $read('symfony/templates/experience/system/control_center.html.twig');
+$cosPresenter = $read('symfony/src/Web/Operations/ControlCenterPresenter.php');
 foreach ([
-    '$eventRows = [];',
-    '$ruleRows = [];',
-    '$agentRows = [];',
-    '$policyRows = [];',
-    '$integrationRows = [];',
-    '$resultRows = [];',
-    "'bodyPartial' => 'components/ui/data_table'",
-    "'kind' => 'details'",
-    'id="events"',
-    'id="rules"',
-    'id="agents"',
-    'id="policies"',
-    'id="integrations"',
-    'id="results"',
-    'id="actions"',
-    'cos/action/',
-    'cos/approval/',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'id="{{ section.id }}"',
+    'item.executeUrl',
+    'item.approveUrl',
     'name="csrf_token"',
 ] as $marker) {
-    $contains($cos, $marker, 'COS Control Center lost a canonical read-only table or operational action contract.');
+    $contains($cos, $marker, 'COS Control Center lost canonical System Control Surface composition.');
 }
-$notContains($cos, '<table class="tn-listing-table">', 'COS Control Center must not retain the retired raw Proposed Actions table.');
-foreach ([
-    '$actionRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_actions' => \$rowActions",
-    "'kind' => 'form'",
-    "'csrf_token' => \$csrfToken",
-] as $marker) {
-    $contains($cos, $marker, 'COS Proposed Actions must use canonical OperationalGrid: ' . $marker);
+foreach (['events', 'rules', 'agents', 'policies', 'integrations', 'decisions', 'actions', 'approvals', 'results', 'audit'] as $section) {
+    $contains($cosPresenter, "'".$section."'", 'COS Control Center presenter lost section: ' . $section);
+}
+foreach (['tn-', '<table', 'style=', '<script'] as $forbidden) {
+    $notContains($cos, $forbidden, 'COS Control Center must not restore legacy/local presentation.');
 }
 
 $companyHome = $read('symfony/templates/experience/admin/dashboard.html.twig');

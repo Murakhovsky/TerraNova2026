@@ -11,7 +11,7 @@ $read = static function (string $path) use ($root): string {
 };
 
 $grid = $read('app/Interfaces/Web/View/components/ui/operational_grid.phtml');
-$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+$cos = $read('symfony/templates/experience/system/control_center.html.twig');
 $users = $read('app/Interfaces/Web/View/admin/users.phtml');
 $clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 $css = $read('frontend/styles/canonical-components.css');
@@ -40,21 +40,18 @@ foreach ([
 }
 
 foreach ([
-    '$actionRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'kind' => 'form'",
-    "'kind' => 'link'",
-    "'csrf_token' => $csrfToken",
-    'cos/action/',
-    '#approval-',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'item.executeUrl',
+    'item.approveUrl',
+    'name="csrf_token"',
 ] as $marker) {
     if (!str_contains($cos, $marker)) {
-        throw new RuntimeException('COS Proposed Actions migration incomplete: ' . $marker);
+        throw new RuntimeException('COS canonical action surface incomplete: ' . $marker);
     }
 }
-
-if (str_contains($cos, '<table class="tn-listing-table">')) {
-    throw new RuntimeException('COS Proposed Actions raw table must remain retired.');
+if (str_contains($cos, '<table') || str_contains($cos, 'tn-')) {
+    throw new RuntimeException('COS Control Center must not restore raw/legacy mutation presentation.');
 }
 
 

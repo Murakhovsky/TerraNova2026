@@ -30,6 +30,12 @@ kind: architecture
 | VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
+| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | QA |
+| VR-020 | `/cos/architecture` | System | COS / Visualization | System / Control Surface | P0 | Twig + JS Island | BACKLOG |
+| VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig + Stimulus | BACKLOG |
+| VR-022 | `/admin/analytics` | System | Core / Property | Executive Dashboard | P0 | Twig | BACKLOG |
+| VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-024 | `/admin/content` | System | Content | Collection / Control Surface | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -140,3 +146,8 @@ Production migration units VR-013…VR-018 завершені.
 - Spatial editor/mutations/public viewer залишаються окремими specialized сценаріями.
 
 Наступна production migration family: **Phase 6 — System / Admin UI**.
+
+
+## Фаза 6 — System / Admin UI
+
+VR-019 переводить COS Control Center з PHTML compatibility runtime на canonical System / Control Surface: Application Query → Presenter/ViewModel → Twig, з server-first execution/approval forms і без page-specific Vite bundle.

@@ -1,0 +1,119 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}COS Control Center | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-control-center
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Company Operating System"
+        title="Control Center"
+        subtitle="Спостережуваний ланцюг рішень: від бізнес-події до результату й аудиту."
+    >
+        <twig:CosButton label="Architecture" href="/cos/architecture" variant="ghost" />
+        <twig:CosButton label="Client Cases" href="/client-case" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Control Center sections" density="compact">
+        {% block start %}
+            {% for section in control.sections %}
+                <a class="cos-button cos-button--ghost cos-button--sm" href="#{{ section.id }}">{{ section.title }}</a>
+            {% endfor %}
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if control.actionStatus %}
+        <twig:CosAlert title="Operation status" copy="{{ control.actionStatus }}" tone="positive" />
+    {% endif %}
+
+    {% if control.error %}
+        <twig:CosAlert title="COS Control Center недоступний" copy="{{ control.error }}" tone="danger" />
+    {% endif %}
+
+    <section class="cos-kpi-strip" aria-label="COS runtime summary">
+        {% for kpi in control.kpis %}
+            <article class="cos-card">
+                <twig:CosMetric
+                    label="{{ kpi.label }}"
+                    value="{{ kpi.value }}"
+                    hint="{{ kpi.hint ?? null }}"
+                />
+            </article>
+        {% endfor %}
+    </section>
+
+    {% for section in control.sections %}
+        <section id="{{ section.id }}" class="cos-card cos-pattern-stack" aria-labelledby="control-{{ section.id }}">
+            <header class="cos-card__header">
+                <div>
+                    <p class="cos-card__eyebrow">{{ section.eyebrow }}</p>
+                    <h2 id="control-{{ section.id }}" class="cos-card__title">{{ section.title }}</h2>
+                    <p class="cos-card__copy">{{ section.description }} · {{ section.items|length }}</p>
+                </div>
+            </header>
+
+            {% if section.items is empty %}
+                <twig:CosEmptyState title="Даних ще немає" copy="Runtime records з’являться тут після першої відповідної події." />
+            {% else %}
+                <div class="cos-entity-list" role="list">
+                    {% for item in section.items %}
+                        <article
+                            class="cos-pattern-stack"
+                            {% if item.anchor ?? null %}id="{{ item.anchor }}"{% endif %}
+                            role="listitem"
+                        >
+                            <twig:CosEntityListItem
+                                title="{{ item.title }}"
+                                subtitle="{{ item.subtitle }}"
+                                meta="{{ item.meta }}"
+                                statusLabel="{{ item.statusLabel }}"
+                                statusTone="{{ item.statusTone }}"
+                            />
+
+                            {% if item.details %}
+                                <details>
+                                    <summary class="cos-button cos-button--ghost cos-button--sm">Details</summary>
+                                    <pre>{{ item.details }}</pre>
+                                </details>
+                            {% endif %}
+
+                            {% if item.executeUrl ?? null %}
+                                <twig:CosActionBar label="Action controls">
+                                    <form action="{{ item.executeUrl }}" method="post">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="return_url" value="cos/control-center">
+                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">Execute</button>
+                                    </form>
+                                    {% if item.approvalHref ?? null %}
+                                        <a class="cos-button cos-button--ghost cos-button--sm" href="{{ item.approvalHref }}">Approval</a>
+                                    {% endif %}
+                                </twig:CosActionBar>
+                            {% elseif item.approveUrl ?? null %}
+                                <twig:CosActionBar label="Approval decision">
+                                    <form action="{{ item.approveUrl }}" method="post">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="return_url" value="cos/control-center">
+                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">Approve</button>
+                                    </form>
+                                    <form action="{{ item.rejectUrl }}" method="post">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="return_url" value="cos/control-center">
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Reject</button>
+                                    </form>
+                                </twig:CosActionBar>
+                            {% elseif item.approvalHref ?? null %}
+                                <a class="cos-button cos-button--ghost cos-button--sm" href="{{ item.approvalHref }}">Open approval</a>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    {% endfor %}
+</section>
+{% endblock %}

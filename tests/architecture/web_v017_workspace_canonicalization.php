@@ -67,19 +67,19 @@ foreach (['tn-page-header', 'tn-card-grid', 'class="tn-card"'] as $legacy) {
     $requireNotContains($diagnostic, $legacy, 'Diagnostic report must not restore legacy card/header primitives.');
 }
 
-$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+$cos = $read('symfony/templates/experience/system/control_center.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/tabs'",
-    "partial('components/ui/status_badge'",
-    'tn-ui-panel',
-    'tn-workspace-page--wide',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'data-cos-control-center',
 ] as $needle) {
-    $requireContains($cos, $needle, 'COS Control Center must use canonical shell contracts.');
+    $requireContains($cos, $needle, 'COS Control Center must use canonical System Control Surface contracts.');
 }
-foreach (['tn-listing-hero', 'tn-cos-metrics', 'tn-admin-tabs', 'tn-admin-panel', 'tn-cos-status--'] as $legacy) {
-    $requireNotContains($cos, $legacy, 'COS Control Center must not restore its legacy shell/status primitives.');
+foreach (['tn-', 'style=', '<script', '<table'] as $legacy) {
+    $requireNotContains($cos, $legacy, 'COS Control Center must not restore legacy/local presentation.');
 }
 
 $clientSurfaces = [
