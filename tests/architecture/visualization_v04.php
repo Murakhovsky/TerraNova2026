@@ -30,9 +30,10 @@ foreach (['system', 'runtime', 'domain', 'dependencies', 'events', 'actions', 'a
 $assert(str_contains($registry, 'implements GraphProjectionRegistryInterface'), 'Architecture projection registry must implement the Kernel contract.');
 
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
+$pageQuery = $read('symfony/src/Application/Visualization/Query/GetArchitectureExplorerQueryHandler.php');
 $assert(str_contains($controller, 'GraphProjectionRegistryInterface'), 'Explorer must depend on the Kernel projection registry contract.');
 $assert(str_contains($controller, 'private GraphProjectionRegistryInterface $registry'), 'Explorer projection registry constructor dependency is missing.');
-$assert(str_contains($controller, "'views' => \$views"), 'Explorer must publish projected view payloads.');
+$assert(str_contains($pageQuery, "'views' => \$views"), 'Explorer Application Query must publish projected view payloads.');
 $assert(!str_contains($controller, 'Infrastructure\\'), 'Web controller must not depend on Infrastructure.');
 
 $bootstrap = $read('symfony/config/services.yaml');
@@ -45,8 +46,8 @@ $assert(!str_contains($client, 'RUNTIME_TYPES'), 'Runtime projection semantics l
 $assert(str_contains($client, 'payload.views'), 'Browser must consume server-projected views.');
 $assert(str_contains($client, 'cy.add(elements)'), 'Projection switching must replace the rendered graph.');
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
-$assert(str_contains($view, '$viewDescriptions'), 'Explorer must render projection controls from server descriptions.');
+$view = $read('symfony/templates/experience/visualization/architecture.html.twig');
+$assert(str_contains($view, 'architecture.viewDescriptions'), 'Explorer must render projection controls from server descriptions.');
 $assert(str_contains($view, 'data-architecture-mode'), 'Projection controls missing from Explorer.');
 
 echo "Visualization V0.4 architecture boundary passed.\n";

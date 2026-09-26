@@ -20,7 +20,7 @@ $implementation = $read('app/Infrastructure/Visualization/Architecture/Architect
 $services = $read('symfony/config/services.yaml');
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
 $routes = $read('symfony/config/routes.yaml');
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
+$view = $read('symfony/templates/experience/visualization/architecture.html.twig');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 
 $assert(str_contains($contract, 'interface GraphHealthAnalyzerInterface'), 'Graph health Kernel contract is missing.');

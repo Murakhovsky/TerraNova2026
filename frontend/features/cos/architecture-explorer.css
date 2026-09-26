@@ -1,160 +1,160 @@
-.tn-architecture-explorer {
-  --tn-arch-border: rgba(15, 23, 42, .12);
-  --tn-arch-panel: #fff;
-  --tn-arch-soft: #f7f8fa;
-  --tn-arch-text: #172033;
-  --tn-arch-muted: #667085;
+.cos-architecture-explorer {
+  --cos-architecture-border: var(--cos-color-border);
+  --cos-architecture-panel: var(--cos-color-surface);
+  --cos-architecture-soft: var(--cos-color-surface-subtle);
+  --cos-architecture-text: var(--cos-color-text);
+  --cos-architecture-muted: var(--cos-color-text-muted);
 }
 
-.tn-architecture-hero { align-items: flex-end; }
-.tn-architecture-hero__stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.tn-architecture-hero__stats > span {
+.cos-architecture-hero { align-items: flex-end; }
+.cos-architecture-hero__stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cos-architecture-hero__stats > span {
   display: flex;
   gap: 6px;
   align-items: baseline;
   padding: 9px 12px;
-  border: 1px solid var(--tn-arch-border);
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 10px;
-  background: var(--tn-arch-panel);
+  background: var(--cos-architecture-panel);
 }
 
-.tn-architecture-toolbar {
+.cos-architecture-toolbar {
   display: grid;
-  grid-template-columns: auto minmax(220px, 1fr) minmax(160px, 220px) 120px auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) 120px;
   gap: 12px;
   align-items: end;
   margin: 18px 0;
   padding: 14px;
-  border: 1px solid var(--tn-arch-border);
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 14px;
-  background: var(--tn-arch-panel);
+  background: var(--cos-architecture-panel);
 }
-.tn-architecture-toolbar label { display: grid; gap: 5px; font-size: 12px; color: var(--tn-arch-muted); }
-.tn-architecture-toolbar input,
-.tn-architecture-toolbar select,
-.tn-architecture-toolbar button {
+.cos-architecture-toolbar label { display: grid; gap: 5px; font-size: 12px; color: var(--cos-architecture-muted); }
+.cos-architecture-toolbar input,
+.cos-architecture-toolbar select,
+.cos-architecture-toolbar button {
   min-height: 38px;
-  border: 1px solid var(--tn-arch-border);
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 9px;
-  background: #fff;
-  color: var(--tn-arch-text);
+  background: var(--cos-color-surface);
+  color: var(--cos-architecture-text);
   padding: 0 11px;
   font: inherit;
 }
-.tn-architecture-toolbar button { cursor: pointer; }
-.tn-architecture-mode { display: flex; gap: 6px; flex-wrap: wrap; }
-.tn-architecture-mode button.is-active { background: var(--tn-arch-text); color: #fff; }
-.tn-architecture-toolbar__actions { display: flex; gap: 6px; }
+.cos-architecture-toolbar button { cursor: pointer; }
+.cos-architecture-mode { display: flex; gap: 6px; flex-wrap: wrap; }
+.cos-architecture-mode button.is-active { background: var(--cos-architecture-text); color: #fff; }
+.cos-architecture-toolbar__actions { display: flex; gap: 6px; }
 
-.tn-architecture-shell {
+.cos-architecture-shell {
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr) 320px;
   min-height: 680px;
-  border: 1px solid var(--tn-arch-border);
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 16px;
   overflow: hidden;
-  background: var(--tn-arch-panel);
+  background: var(--cos-architecture-panel);
 }
-.tn-architecture-sidebar,
-.tn-architecture-details { padding: 16px; background: var(--tn-arch-soft); overflow: auto; }
-.tn-architecture-sidebar { border-right: 1px solid var(--tn-arch-border); }
-.tn-architecture-details { border-left: 1px solid var(--tn-arch-border); }
-.tn-architecture-stage-wrap { position: relative; min-width: 0; min-height: 680px; background: #fcfcfd; }
-.tn-architecture-stage { position: absolute; inset: 0; }
-.tn-architecture-loading,
-.tn-architecture-error {
+.cos-architecture-sidebar,
+.cos-architecture-details { padding: 16px; background: var(--cos-architecture-soft); overflow: auto; }
+.cos-architecture-sidebar { border-right: 1px solid var(--cos-architecture-border); }
+.cos-architecture-details { border-left: 1px solid var(--cos-architecture-border); }
+.cos-architecture-stage-wrap { position: relative; min-width: 0; min-height: 680px; background: var(--cos-color-surface-raised); }
+.cos-architecture-stage { position: absolute; inset: 0; }
+.cos-architecture-loading,
+.cos-architecture-error {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   padding: 12px 16px;
   border-radius: 10px;
-  background: #fff;
+  background: var(--cos-color-surface);
   box-shadow: 0 8px 30px rgba(15, 23, 42, .12);
   z-index: 5;
 }
-.tn-architecture-error { max-width: 70%; color: #9b1c1c; }
+.cos-architecture-error { max-width: 70%; color: var(--cos-color-danger); }
 
-.tn-architecture-types { display: grid; gap: 8px; margin-top: 12px; }
-.tn-architecture-types label {
+.cos-architecture-types { display: grid; gap: 8px; margin-top: 12px; }
+.cos-architecture-types label {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 8px;
   align-items: center;
   padding: 7px 8px;
   border-radius: 8px;
-  background: #fff;
-  border: 1px solid var(--tn-arch-border);
+  background: var(--cos-color-surface);
+  border: 1px solid var(--cos-architecture-border);
   font-size: 13px;
 }
-.tn-architecture-types strong { font-size: 11px; color: var(--tn-arch-muted); }
+.cos-architecture-types strong { font-size: 11px; color: var(--cos-architecture-muted); }
 
-.tn-architecture-details dl {
+.cos-architecture-details dl {
   display: grid;
   grid-template-columns: 82px minmax(0, 1fr);
   gap: 7px 10px;
   margin: 14px 0;
 }
-.tn-architecture-details dt { color: var(--tn-arch-muted); font-size: 12px; }
-.tn-architecture-details dd { margin: 0; word-break: break-word; font-size: 13px; }
-.tn-architecture-details pre {
+.cos-architecture-details dt { color: var(--cos-architecture-muted); font-size: 12px; }
+.cos-architecture-details dd { margin: 0; word-break: break-word; font-size: 13px; }
+.cos-architecture-details pre {
   max-height: 330px;
   overflow: auto;
   padding: 10px;
   border-radius: 9px;
-  background: #101828;
-  color: #f2f4f7;
+  background: var(--cos-color-shell);
+  color: var(--cos-color-shell-text);
   font-size: 11px;
   white-space: pre-wrap;
 }
-.tn-architecture-metadata { margin: 14px 0; }
-.tn-architecture-metadata summary { cursor: pointer; color: var(--tn-arch-muted); font-size: 12px; }
-.tn-architecture-breakdown { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 16px; }
-.tn-architecture-breakdown span {
+.cos-architecture-metadata { margin: 14px 0; }
+.cos-architecture-metadata summary { cursor: pointer; color: var(--cos-architecture-muted); font-size: 12px; }
+.cos-architecture-breakdown { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 16px; }
+.cos-architecture-breakdown span {
   padding: 6px 8px;
-  border: 1px solid var(--tn-arch-border);
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--cos-color-surface);
   font-size: 11px;
 }
-.tn-architecture-relations { display: grid; gap: 7px; margin: 8px 0 14px; padding: 0; list-style: none; }
-.tn-architecture-relations li {
+.cos-architecture-relations { display: grid; gap: 7px; margin: 8px 0 14px; padding: 0; list-style: none; }
+.cos-architecture-relations li {
   display: grid;
   grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
   gap: 8px;
   align-items: start;
   padding: 7px 8px;
-  border: 1px solid var(--tn-arch-border);
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--cos-color-surface);
   font-size: 11px;
 }
-.tn-architecture-relations code { color: var(--tn-arch-text); word-break: normal; }
-.tn-architecture-relations span { min-width: 0; word-break: break-word; }
-.tn-architecture-relations small { color: var(--tn-arch-muted); }
-.tn-architecture-details__actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.tn-architecture-details__actions button {
-  border: 1px solid var(--tn-arch-border);
+.cos-architecture-relations code { color: var(--cos-architecture-text); word-break: normal; }
+.cos-architecture-relations span { min-width: 0; word-break: break-word; }
+.cos-architecture-relations small { color: var(--cos-architecture-muted); }
+.cos-architecture-details__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cos-architecture-details__actions button {
+  border: 1px solid var(--cos-architecture-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--cos-color-surface);
   padding: 8px 10px;
   cursor: pointer;
 }
-.tn-architecture-details__actions button:first-child { background: var(--tn-arch-text); color: #fff; }
+.cos-architecture-details__actions button:first-child { background: var(--cos-architecture-text); color: #fff; }
 
-@media (max-width: 1100px) {
-  .tn-architecture-toolbar { grid-template-columns: 1fr 1fr; }
-  .tn-architecture-shell { grid-template-columns: 200px minmax(0, 1fr); }
-  .tn-architecture-details { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--tn-arch-border); }
+@media (max-width: 1050px) {
+  .cos-architecture-toolbar { grid-template-columns: 1fr 1fr; }
+  .cos-architecture-shell { grid-template-columns: 200px minmax(0, 1fr); }
+  .cos-architecture-details { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--cos-architecture-border); }
 }
 
-@media (max-width: 720px) {
-  .tn-architecture-toolbar { grid-template-columns: 1fr; }
-  .tn-architecture-mode,
-  .tn-architecture-toolbar__actions { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .tn-architecture-toolbar__actions { grid-template-columns: 1fr 1fr; }
-  .tn-architecture-shell { display: block; }
-  .tn-architecture-sidebar,
-  .tn-architecture-details { border: 0; border-bottom: 1px solid var(--tn-arch-border); }
-  .tn-architecture-stage-wrap { min-height: 560px; }
+@media (max-width: 650px) {
+  .cos-architecture-toolbar { grid-template-columns: 1fr; }
+  .cos-architecture-mode,
+  .cos-architecture-toolbar__actions { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .cos-architecture-toolbar__actions { grid-template-columns: 1fr 1fr; }
+  .cos-architecture-shell { display: block; }
+  .cos-architecture-sidebar,
+  .cos-architecture-details { border: 0; border-bottom: 1px solid var(--cos-architecture-border); }
+  .cos-architecture-stage-wrap { min-height: 560px; }
 }

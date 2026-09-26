@@ -13,7 +13,9 @@ $required = [
     'app/Infrastructure/Visualization/Cytoscape/CytoscapeGraphMapper.php',
     'symfony/config/routes.yaml',
     'symfony/src/Web/Visualization/ArchitecturePageController.php',
-    'app/Interfaces/Web/View/visualization/architecture.phtml',
+    'symfony/templates/experience/visualization/architecture.html.twig',
+    'symfony/src/Application/Visualization/Query/GetArchitectureExplorerQueryHandler.php',
+    'symfony/src/Web/Visualization/ArchitectureExplorerPresenter.php',
     'frontend/entrypoints/cos-architecture-explorer.js',
     'frontend/features/cos/architecture-explorer.js',
     'frontend/features/cos/architecture-explorer.css',
@@ -59,11 +61,12 @@ $assert(str_contains($entrypoint, "credentials: 'same-origin'"), 'Explorer hydra
 $assert(str_contains($entrypoint, "url.searchParams.set('depth', 'all')"), 'Explorer hydration recovery must request complete server projections.');
 $assert(str_contains($entrypoint, "await import('../features/cos/architecture-explorer.js')"), 'Explorer feature must boot only after hydration recovery has run.');
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
+$view = $read('symfony/templates/experience/visualization/architecture.html.twig');
+$presenter = $read('symfony/src/Web/Visualization/ArchitectureExplorerPresenter.php');
 $assert(str_contains($view, 'type="application/json"'), 'Architecture payload must be embedded as non-executable JSON.');
 $assert(str_contains($view, 'data-architecture-stage'), 'Architecture graph stage missing.');
 $assert(str_contains($view, 'data-architecture-default-view='), 'Architecture shell must expose the server-selected default projection independently from JSON hydration.');
-$assert(str_contains($view, 'JSON_INVALID_UTF8_SUBSTITUTE'), 'Architecture payload serialization must survive malformed UTF-8 metadata.');
+$assert(str_contains($presenter, 'JSON_INVALID_UTF8_SUBSTITUTE'), 'Architecture payload serialization must survive malformed UTF-8 metadata.');
 
 $navigation = $read('symfony/src/Web/Navigation/NavigationBuilder.php');
 $assert(str_contains($navigation, "'path' => 'cos/architecture'"), 'Architecture Explorer must be discoverable from canonical Symfony navigation.');

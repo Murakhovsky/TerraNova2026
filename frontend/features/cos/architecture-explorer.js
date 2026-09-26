@@ -225,7 +225,7 @@ function initialize(root, cytoscape) {
 
   const renderEmptyDetails = () => {
     if (!details) return;
-    details.innerHTML = '<p class="tn-kicker">Selection</p><h2>Node details</h2><p class="tn-muted">Виберіть вузол графа. Тут з’являться ownership, dependencies, runtime relations, source metadata та локальні дії.</p>';
+    details.innerHTML = '<p class="cos-card__eyebrow">Selection</p><h2>Node details</h2><p class="cos-card__copy">Виберіть вузол графа. Тут з’являться ownership, dependencies, runtime relations, source metadata та локальні дії.</p>';
   };
 
   const nodeLookup = () => {
@@ -271,18 +271,18 @@ function initialize(root, cytoscape) {
     const source = metadata.source_path || metadata.class || metadata.reference_source || '—';
     const version = metadata.version || metadata.schema_version || '—';
     const relationshipHtml = connections.length
-      ? `<ul class="tn-architecture-relations">${connections.slice(0, 24).map((connection) => {
+      ? `<ul class="cos-architecture-relations">${connections.slice(0, 24).map((connection) => {
           const arrow = connection.outgoing ? '→' : '←';
           const sourceHint = connection.metadata?.source ? ` <small>${escapeHtml(connection.metadata.source)}</small>` : '';
           return `<li><code>${arrow} ${escapeHtml(connection.relation)}</code><span>${escapeHtml(connection.neighbor.label || connection.neighbor.id)} <small>${escapeHtml(connection.neighbor.type || '')}</small>${sourceHint}</span></li>`;
         }).join('')}</ul>`
-      : '<p class="tn-muted">No relations in this projection.</p>';
+      : '<p class="cos-card__copy">No relations in this projection.</p>';
     const breakdownHtml = Object.keys(breakdown).length
-      ? `<div class="tn-architecture-breakdown">${Object.entries(breakdown).map(([type, count]) => `<span><strong>${count}</strong> ${escapeHtml(type)}</span>`).join('')}</div>`
+      ? `<div class="cos-architecture-breakdown">${Object.entries(breakdown).map(([type, count]) => `<span><strong>${count}</strong> ${escapeHtml(type)}</span>`).join('')}</div>`
       : '';
 
     details.innerHTML = `
-      <p class="tn-kicker">Selection</p>
+      <p class="cos-card__eyebrow">Selection</p>
       <h2>${escapeHtml(node.data('label') || node.id())}</h2>
       <dl>
         <dt>Projection</dt><dd>${escapeHtml(currentGraph?.view?.label || mode)}</dd>
@@ -293,13 +293,13 @@ function initialize(root, cytoscape) {
         <dt>Source</dt><dd><code>${escapeHtml(source)}</code></dd>
       </dl>
       ${breakdownHtml}
-      <p class="tn-kicker">Relations</p>
+      <p class="cos-card__eyebrow">Relations</p>
       ${relationshipHtml}
-      <details class="tn-architecture-metadata">
+      <details class="cos-architecture-metadata">
         <summary>Raw metadata</summary>
         <pre>${escapeHtml(safeJson(metadata))}</pre>
       </details>
-      <div class="tn-architecture-details__actions">
+      <div class="cos-architecture-details__actions">
         <button type="button" data-architecture-focus>Focus</button>
         <button type="button" data-architecture-collapse>${collapsed.has(node.id()) ? 'Expand' : 'Collapse neighbors'}</button>
       </div>`;

@@ -66,7 +66,7 @@ foreach (['fetchDomainProjection', 'data-architecture-node-count', 'renderTypeFi
 }
 $assert(!str_contains($client, 'const domainFocus'), 'Domain focus must no longer be computed from the full graph in browser code.');
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
+$view = $read('symfony/templates/experience/visualization/architecture.html.twig');
 foreach (['data-architecture-endpoint', 'data-architecture-view-label', 'data-architecture-node-count', 'data-architecture-edge-count', 'data-architecture-types'] as $marker) {
     $assert(str_contains($view, $marker), 'Explorer active-view UI marker missing: ' . $marker);
 }

@@ -14,9 +14,9 @@ PHASE 14 починається після завершення domain adoption 
 
 ### Architecture Explorer
 
-`visualization/architecture.phtml`
+`symfony/templates/experience/visualization/architecture.html.twig`
 
-Architecture Explorer лишається specialized graph application, але його outer shell переведено на canonical COS contracts:
+Wave 13 VR-020 завершує Architecture Explorer як specialized graph application усередині canonical System / Control Surface:
 
 - legacy breadcrumbs + `tn-listing-hero` замінено на canonical PageHeader;
 - active projection, nodes, edges і graph health подані через canonical KPI cards;
@@ -27,10 +27,10 @@ Architecture Explorer лишається specialized graph application, але �
 
 Graph behavior не змінюється:
 
-- server-side projections залишаються у `ArchitecturePageController`;
+- initial page projection проходить через `GetArchitectureExplorerQuery`; graph/health JSON adapters залишаються у `ArchitecturePageController`;
 - `/cos/architecture/graph` і `/cos/architecture/health` не змінені;
 - `data-architecture-mode/search/domain/depth/types/stage/details` збережені;
-- JSON bootstrap `#cos-architecture-data` збережений;
+- JSON bootstrap `#cos-architecture-data` збережений як non-executable application/json payload;
 - manager-only access лишається canonical authorization boundary.
 
 ## Хвиля 2

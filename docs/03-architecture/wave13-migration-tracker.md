@@ -31,7 +31,7 @@ kind: architecture
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
 | VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | QA |
-| VR-020 | `/cos/architecture` | System | Visualization | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-020 | `/cos/architecture` | System | Visualization | System / Control Surface | P0 | Twig | QA |
 | VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig | BACKLOG |
 | VR-022 | `/admin/analytics` | Workspace | Core / Property | Executive Dashboard | P0 | Twig | DONE |
 | VR-023 | `/admin/users` | System | Identity | System / Control Surface | P0 | Twig | DONE |
@@ -155,3 +155,6 @@ VR-023 переводить User Administration на System / Control Surface: r
 
 
 VR-019 переводить COS Control Center на System / Control Surface: read path проходить через Application Query, runtime datasets нормалізуються Presenter/ViewModel, а execute/approve/reject лишаються server-first CommandBus mutations. Legacy cos/index.phtml і dedicated cos-control-center Vite bundle видаляються.
+
+
+VR-020 переводить Architecture Explorer outer shell на System / Control Surface через Application Query + ViewModel/Presenter. Cytoscape лишається specialized JS island; graph/health routes збережені, а domain selectors переведені з tn-architecture-* на cos-architecture-*.

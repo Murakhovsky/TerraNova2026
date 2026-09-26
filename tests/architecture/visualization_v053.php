@@ -16,21 +16,22 @@ $assert = static function (bool $condition, string $message): void {
 };
 
 $controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
+$view = $read('symfony/templates/experience/visualization/architecture.html.twig');
+$pageQuery = $read('symfony/src/Application/Visualization/Query/GetArchitectureExplorerQueryHandler.php');
 $smoke = $read('symfony/src/Command/ArchitectureGraphSmokeCommand.php');
 $deploy = $read('deploy/dev.sh');
 $visualizationServices = $read('symfony/config/services.yaml');
 
 foreach ([
-    "'build_canonical_graph'",
-    "'analyze_canonical_graph'",
-    "'describe_projections'",
-    "'map_canonical_graph'",
-    "'project_' . \$name",
-    'failureDiagnostic(',
+    'provider->provide()',
+    'health->analyze(',
+    'registry->descriptions()',
+    'mapper->map(',
+    "'views' => \$views",
 ] as $marker) {
-    $assert(str_contains($controller, $marker), 'Architecture Explorer diagnostic stage is missing: ' . $marker);
+    $assert(str_contains($pageQuery, $marker), 'Architecture Explorer Application Query composition is missing: ' . $marker);
 }
+$assert(str_contains($controller, 'failureDiagnostic('), 'Architecture Explorer runtime diagnostic helper is missing.');
 
 $assert(str_contains($controller, "'diagnostic' => \$diagnostic"), 'Graph JSON endpoint must expose manager-only diagnostic payload.');
 $assert(str_contains($view, 'data-architecture-backend-diagnostic'), 'Architecture view must render backend diagnostic details for managers.');

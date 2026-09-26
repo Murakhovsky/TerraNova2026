@@ -16,12 +16,13 @@ $notContains = static function (string $source, string $needle, string $message)
     if (str_contains($source, $needle)) throw new RuntimeException($message . ' Forbidden: ' . $needle);
 };
 
-$view = $read('app/Interfaces/Web/View/visualization/architecture.phtml');
+$view = $read('symfony/templates/experience/visualization/architecture.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/kpi_card'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosStatus',
+    '<twig:CosEmptyState',
     'data-architecture-endpoint',
     'data-architecture-default-view',
     'data-architecture-view-label',
@@ -40,14 +41,38 @@ foreach ([
 ] as $marker) {
     $contains($view, $marker, 'Architecture Explorer canonical shell/runtime contract is incomplete.');
 }
+foreach (['tn-', 'style='] as $legacyMarker) {
+    $notContains($view, $legacyMarker, 'Architecture Explorer must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/visualization/architecture.phtml')) {
+    throw new RuntimeException('Retired Architecture Explorer PHTML restored.');
+}
+
+$controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
 foreach ([
-    'tn-listing-hero',
-    'tn-admin-panel',
-    'tn-section-heading',
-    'tn-form-status is-visible',
-    'tn-kicker',
-] as $legacyMarker) {
-    $notContains($view, $legacyMarker, 'Architecture Explorer must not restore the legacy shell.');
+    'public function index(Request $request): Response',
+    'public function graph(Request $request): Response',
+    'public function health(): Response',
+    'GetArchitectureExplorerQuery',
+    'PageArchetype::SystemControlSurface',
+    'WorkspaceShellFactory',
+    'GraphProjectionRegistryInterface',
+    'GraphHealthAnalyzerInterface',
+    "experience/visualization/architecture.html.twig",
+] as $marker) {
+    $contains($controller, $marker, 'Architecture Explorer controller contract is incomplete.');
+}
+
+$routes = $read('symfony/config/routes.yaml');
+foreach ([
+    'path: /cos/architecture',
+    'ArchitecturePageController::index',
+    'path: /cos/architecture/graph',
+    'ArchitecturePageController::graph',
+    'path: /cos/architecture/health',
+    'ArchitecturePageController::health',
+] as $marker) {
+    $contains($routes, $marker, 'Architecture Explorer route contract is incomplete.');
 }
 
 $page = $read('app/Interfaces/Web/View/page/show.phtml');
@@ -92,31 +117,6 @@ foreach ([
     'foreach ($valueAttributes as $name => $attributeValue)',
 ] as $marker) {
     $contains($kpi, $marker, 'Canonical KPI card must preserve live value attributes.');
-}
-
-$controller = $read('symfony/src/Web/Visualization/ArchitecturePageController.php');
-foreach ([
-    'public function index(Request $request): Response',
-    'public function graph(Request $request): Response',
-    'public function health(): Response',
-    '$this->manager()',
-    'GraphProjectionRegistryInterface',
-    'GraphHealthAnalyzerInterface',
-    "'visualization/architecture'",
-] as $marker) {
-    $contains($controller, $marker, 'Architecture Explorer controller contract is incomplete.');
-}
-
-$routes = $read('symfony/config/routes.yaml');
-foreach ([
-    'path: /cos/architecture',
-    'ArchitecturePageController::index',
-    'path: /cos/architecture/graph',
-    'ArchitecturePageController::graph',
-    'path: /cos/architecture/health',
-    'ArchitecturePageController::health',
-] as $marker) {
-    $contains($routes, $marker, 'Architecture Explorer route contract is incomplete.');
 }
 
 $login = $read('app/Interfaces/Web/View/auth/login.phtml');
