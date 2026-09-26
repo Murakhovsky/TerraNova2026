@@ -172,6 +172,7 @@ jobs:
           php tests/architecture/growth_v0460_conversation_routing.php
           php tests/architecture/growth_v0470_email_delivery_parity.php
           php tests/architecture/growth_v0480_market_discovery.php
+          php tests/architecture/growth_v0490_cos_for_cos_vertical_slice.php
 
       - name: Process registry invariants
         run: |
@@ -221,6 +222,7 @@ jobs:
           php tests/unit/growth_v0460_conversation_routing.php
           php tests/unit/growth_v0470_email_delivery_parity.php
           php tests/unit/growth_v0480_market_discovery.php
+          php tests/unit/growth_v0490_cos_for_cos_vertical_slice.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -377,6 +379,8 @@ jobs:
           php -l app/Interfaces/Web/View/growth/market.phtml
           php -l tests/unit/growth_v0480_market_discovery.php
           php -l tests/architecture/growth_v0480_market_discovery.php
+          php -l tests/unit/growth_v0490_cos_for_cos_vertical_slice.php
+          php -l tests/architecture/growth_v0490_cos_for_cos_vertical_slice.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php

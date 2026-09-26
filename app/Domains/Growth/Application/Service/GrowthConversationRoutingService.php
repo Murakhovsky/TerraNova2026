@@ -9,6 +9,7 @@ use Domains\Growth\Application\Contract\GrowthConversationRoutingBoundary;
 use Domains\Growth\Application\Contract\GrowthConversationRoutingRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementResponseRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthRepositoryInterface;
 use Domains\Growth\Application\DTO\GrowthConversationRouteRequest;
 use Domains\Growth\Automation\Event\GrowthEventType;
@@ -33,6 +34,7 @@ final readonly class GrowthConversationRoutingService implements GrowthConversat
         private GrowthEngagementResponseRepositoryInterface $responses,
         private GrowthRepositoryInterface $growth,
         private GrowthEngagementRepositoryInterface $engagement,
+        private GrowthLearningRepositoryInterface $learning,
         private GrowthConversationRoutingRepositoryInterface $repository,
         private GrowthConversationRoutingTargetRegistry $targets,
         private GrowthConversationRoutingPolicy $policy,
@@ -239,6 +241,25 @@ final readonly class GrowthConversationRoutingService implements GrowthConversat
         $this->repository->updateRouteStatus(
             $organizationId,(string)$route['route_id'],$status,$referenceType,$referenceId,$failure?$reason:null
         );
+        $sourceDomain=(string)($route['route']??'');
+        if(
+            $status==='completed'
+            &&$referenceType!==null&&trim($referenceType)!==''
+            &&$referenceId!==null&&trim($referenceId)!==''
+            &&in_array($sourceDomain,['sales','service'],true)
+        ){
+            $this->learning->bindExternalSubject(
+                $organizationId,(string)$route['candidate_id'],$sourceDomain,$referenceType,$referenceId,(string)$route['route_id']
+            );
+            $this->events->publish(new DomainEvent(
+                bin2hex(random_bytes(16)),$organizationId,GrowthEventType::LEARNING_BINDING_CREATED,
+                'growth_candidate',(string)$route['candidate_id'],[
+                    'source_domain'=>$sourceDomain,'reference_type'=>$referenceType,'reference_id'=>$referenceId,
+                    'source_event_id'=>(string)$route['route_id'],'origin'=>'conversation_routing',
+                ],
+                new EventMetadata($correlationId,null,'SYSTEM','growth-conversation-router'),$this->now(),
+            ));
+        }
         $eventType=$failure?GrowthEventType::ENGAGEMENT_RESPONSE_ROUTE_FAILED:GrowthEventType::ENGAGEMENT_RESPONSE_ROUTED;
         $payload=[
             'route_id'=>$route['route_id'],'response_id'=>$route['response_id'],'classification_id'=>$route['classification_id'],

@@ -1199,3 +1199,19 @@ POST /api/v1/growth/market/universes/{id}/run
 
 V0.48 deliberately does not add provider-specific enrichment logic to the Domain model, scrape arbitrary websites, manufacture inferred Signals, auto-research/qualify every monitored Account, or bypass the existing handoff and engagement governance. It supplies Accounts and evidence-bearing opportunities to the same canonical Growth chain already built in V0.1–V0.47.
 
+## V0.49 — COS-for-COS Closed-Loop Vertical Slice
+
+V0.49 validates the complete acquisition loop:
+
+```text
+Market → Account → Signal → WHY NOW → Opportunity → Committee → Outreach → Reply → Route → Sales → Outcome → Learning
+```
+
+COS-for-COS is the acceptance scenario; the implementation remains universal. Market Discovery supplies Accounts, immutable enrichment and ICP fit. **Signal != Opportunity** remains mandatory.
+
+V0.49 closes the reply-to-Sales attribution gap. When authoritative Conversation Routing creates a Sales or Service reference, route finalization now binds that external reference to the originating Growth Candidate through the Growth learning repository. For Sales, later qualification, meeting, win/loss and Deal conversion events can therefore resolve the Candidate directly and return to Growth Learning.
+
+The binding is tenant-scoped, idempotent and conflict-safe. It is committed before the routed event is published. Accepted handoff history remains a fallback for older Sales references.
+
+See `docs/architecture/growth-v0490-cos-for-cos-vertical-slice.md` for the executable acceptance contract.
+
