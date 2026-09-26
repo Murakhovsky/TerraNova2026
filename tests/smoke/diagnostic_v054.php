@@ -38,7 +38,7 @@ v054(str_contains($repositorySource, 'JSON_UNQUOTE(critical_row.value_json)'), '
 $evaluationSource = (string) file_get_contents($root . '/app/Domains/Diagnostic/Application/UseCase/EvaluateDiagnosticSession.php');
 v054(str_contains($evaluationSource, 'assessmentProjection?->replace'), 'Evaluation does not persist the structured assessment projection.');
 
-$hardening = (string) file_get_contents($root . '/frontend/features/diagnostics/methodology-studio-v054.js');
+$hardening = (string) file_get_contents($root . '/symfony/assets/islands/methodology_studio_v054.js');
 v054(str_contains($hardening, 'NOT accepts exactly one'), 'NOT condition cardinality is not guarded for human methodologists.');
 v054(str_contains($hardening, "['score','coverage','confidence']"), 'Visual Rule Builder is missing assessment score/coverage/confidence choices.');
 v054(str_contains($hardening, 'assessment.${row.entity_id}.${property}'), 'Visual Rule Builder does not emit assessment.* condition subjects.');

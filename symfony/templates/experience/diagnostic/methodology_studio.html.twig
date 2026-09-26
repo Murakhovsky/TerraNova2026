@@ -1,0 +1,157 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Diagnostic Methodology Studio | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <section class="studio" data-studio data-csrf="{{ csrfToken }}">
+        <twig:CosPageHeader
+            eyebrow="Diagnostics"
+            title="Methodology Studio"
+            subtitle="Versioned business methodology for human operators."
+        >
+            <twig:CosButton label="Control Center" href="/cos/control-center" variant="ghost" />
+        </twig:CosPageHeader>
+
+        <div class="studio-head">
+            <twig:CosToolbar label="Methodology Studio actions">
+                {% block start %}
+                    <span class="cos-card__copy">Human-owned methodology · versioned · validated · governed</span>
+                {% endblock %}
+                {% block end %}
+                    <div class="actions">
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="history">History</button>
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="runs">Diagnostic runs</button>
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="validate">Validate</button>
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="regression">Regression</button>
+                        <button class="cos-button cos-button--primary cos-button--sm" type="button" data-action="publish">Publish</button>
+                        <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="more" aria-label="More actions">…</button>
+                    </div>
+                {% endblock %}
+            </twig:CosToolbar>
+        </div>
+
+        <div class="studio-shell">
+            <aside>
+                <button class="cos-button cos-button--ghost" type="button" data-action="new-pack">+ New pack</button>
+                <nav data-pack-list>Loading packs...</nav>
+            </aside>
+
+            <section class="workspace">
+                <div class="packbar">
+                    <div>
+                        <strong data-pack-title>Select a methodology pack</strong>
+                        <span data-version-status>No version selected</span>
+                    </div>
+                    <select class="cos-select" data-version aria-label="Methodology version"></select>
+                    <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="clone">Clone</button>
+                </div>
+
+                <div class="tabs" role="tablist" data-tabs></div>
+
+                <div class="panel">
+                    <section class="entity-list">
+                        <div class="panel-title">
+                            <h2 data-section-title>Areas</h2>
+                            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="add">+ Add</button>
+                        </div>
+
+                        <div class="entity-grid" role="table" aria-label="Methodology entities">
+                            <div class="entity-grid__head" role="row">
+                                <span role="columnheader">Name / ID</span>
+                                <span role="columnheader">Status</span>
+                                <span role="columnheader">Order</span>
+                                <span role="columnheader">Actions</span>
+                            </div>
+                            <div class="entity-grid__body" role="rowgroup" data-entities>
+                                <div class="entity-grid__empty" role="row"><span role="cell">Choose a pack.</span></div>
+                            </div>
+                        </div>
+                        <div class="dependency-canvas" data-dependency-canvas hidden></div>
+                    </section>
+
+                    <form class="editor" data-editor>
+                        <div class="panel-title"><h2>Editor</h2><span data-edit-state>New</span></div>
+                        <div data-fields></div>
+                        <label class="toggle"><input type="checkbox" name="enabled" checked> Enabled</label>
+                        <details>
+                            <summary>Advanced / developer fields</summary>
+                            <label>Additional JSON<textarea class="cos-textarea" name="advanced" rows="6">{}</textarea></label>
+                        </details>
+                        <div class="form-actions">
+                            <button class="cos-button cos-button--primary" type="submit">Save draft</button>
+                            <button class="cos-button cos-button--ghost" type="button" data-action="delete">Delete</button>
+                        </div>
+                    </form>
+                </div>
+
+                <section class="drawer" hidden data-drawer="validation">
+                    <div class="panel-title"><h2>Validation and regression</h2><button class="cos-button cos-button--ghost cos-button--sm" type="button" data-close>Close</button></div>
+                    <div data-validation-summary></div><ul data-validation-items></ul>
+                </section>
+
+                <section class="drawer" hidden data-drawer="simulator">
+                    <div class="panel-title"><h2>Diagnostic Simulator</h2><button class="cos-button cos-button--ghost cos-button--sm" type="button" data-close>Close</button></div>
+                    <div class="generated-inputs" data-simulator-inputs></div>
+                    <details><summary>Advanced JSON input</summary><textarea class="cos-textarea" data-simulation-json rows="6">{"facts":{},"metrics":{}}</textarea></details>
+                    <button class="cos-button cos-button--primary" type="button" data-action="run-simulation">Run simulation</button>
+                    <pre data-simulation-output>Run the compiled draft to inspect scores, findings and recommendations.</pre>
+                </section>
+
+                <section class="drawer" hidden data-drawer="scenarios">
+                    <div class="panel-title"><h2>Regression scenarios</h2><button class="cos-button cos-button--ghost cos-button--sm" type="button" data-close>Close</button></div>
+                    <form data-scenario-form>
+                        <div class="form-grid">
+                            <label>ID<input class="cos-input" name="id" required pattern="[a-z][a-z0-9_.-]+"></label>
+                            <label>Name<input class="cos-input" name="name" required></label>
+                        </div>
+                        <div class="generated-inputs" data-scenario-inputs></div>
+                        <h3>Expected outcomes</h3>
+                        <div data-scenario-expected></div>
+                        <button class="cos-button cos-button--primary" type="submit">Save scenario</button>
+                    </form>
+                    <div data-scenario-list></div>
+                </section>
+
+                <section class="drawer" hidden data-drawer="history">
+                    <div class="panel-title"><h2>Methodology history</h2><button class="cos-button cos-button--ghost cos-button--sm" type="button" data-close>Close</button></div>
+                    <div data-history></div>
+                </section>
+
+                <section class="drawer" hidden data-drawer="runs">
+                    <div class="panel-title"><h2>Diagnostic runs</h2><button class="cos-button cos-button--ghost cos-button--sm" type="button" data-close>Close</button></div>
+                    <div data-runs></div>
+                </section>
+            </section>
+        </div>
+
+        <dialog data-pack-dialog>
+            <form method="dialog" data-pack-form>
+                <h2>New diagnostic pack</h2>
+                <label>Slug<input class="cos-input" name="slug" required pattern="[a-z][a-z0-9-]+"></label>
+                <label>Name<input class="cos-input" name="name" required></label>
+                <label>Domain<input class="cos-input" name="domain" required></label>
+                <label>Version<input class="cos-input" name="methodology_version" value="0.1.0" required pattern="[0-9]+\.[0-9]+\.[0-9]+"></label>
+                <label>Description<textarea class="cos-textarea" name="description"></textarea></label>
+                <div class="form-actions">
+                    <button class="cos-button cos-button--ghost" value="cancel">Cancel</button>
+                    <button class="cos-button cos-button--primary" value="default">Create</button>
+                </div>
+            </form>
+        </dialog>
+
+        <div class="menu" data-menu hidden>
+            <button class="cos-button cos-button--ghost" type="button" data-action="activate">Set active</button>
+            <button class="cos-button cos-button--ghost" type="button" data-action="archive">Archive</button>
+            <button class="cos-button cos-button--ghost" type="button" data-action="scenarios">Scenarios</button>
+            <button class="cos-button cos-button--ghost" type="button" data-action="simulate">Simulator</button>
+        </div>
+        <div class="toast" data-toast hidden></div>
+    </section>
+</section>
+{% endblock %}

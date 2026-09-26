@@ -45,6 +45,7 @@ foreach([
 foreach([
     'symfony/src/Web/Visualization/ArchitecturePageController.php',
     'symfony/src/Web/Diagnostic/DiagnosticPageController.php',
+    'symfony/src/Web/Diagnostic/MethodologyStudioController.php',
     'symfony/src/Web/Spatial/SpatialPageController.php',
 ] as $path){
     $source=$read($path);
@@ -57,10 +58,15 @@ foreach(['GraphProviderInterface','GraphProjectionRegistryInterface','GraphHealt
 }
 $assert(!str_contains($visualization,'Infrastructure\\Visualization'),'Visualization Web controller bypasses Kernel contracts.');
 
-$diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
-foreach(['DiagnosticRuntimeService','DiagnosticMethodologyAccess::VIEW','diagnostics-methodology-studio','ActiveModuleResolver','modules->isEnabled','diagnosticEnabled'] as $needle){
-    $assert(str_contains($diagnostic,$needle),'Diagnostic Web contract missing: '.$needle);
+$methodology=$read('symfony/src/Web/Diagnostic/MethodologyStudioController.php');
+foreach(['DiagnosticMethodologyAccess::VIEW','ActiveModuleResolver','modules->isEnabled','PageArchetype::SystemControlSurface','WorkspaceShellFactory','experience/diagnostic/methodology_studio.html.twig'] as $needle){
+    $assert(str_contains($methodology,$needle),'Methodology Studio Web contract missing: '.$needle);
 }
+$diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
+foreach(['DiagnosticRuntimeService','ActiveModuleResolver','modules->isEnabled','diagnosticEnabled','public function report('] as $needle){
+    $assert(str_contains($diagnostic,$needle),'Diagnostic Report Web contract missing: '.$needle);
+}
+$assert(!str_contains($diagnostic,'public function methodology('),'DiagnosticPageController restored Methodology Studio ownership.');
 
 $spatial=$read('symfony/src/Web/Spatial/SpatialPageController.php');
 foreach(['SpatialSceneInterface','public function manage(','public function upload(','public function scene('] as $needle){

@@ -1831,6 +1831,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Diagnostic\MethodologyStudioController:
+    public: true
+    tags: ['controller.service_arguments']
+
 
   # Wave 13 Spatial Workspace.
   App\Web\Spatial\SpatialManageController:

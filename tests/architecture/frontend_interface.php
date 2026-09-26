@@ -70,7 +70,12 @@ foreach([
     'symfony/assets/controllers/sales_admin_rule_editor_controller.js',
     'frontend/core/workspace-shell.js',
     'frontend/entrypoints/terranova-interface.js',
-    'frontend/entrypoints/diagnostics-methodology-studio.js',
+    'symfony/src/Web/Diagnostic/MethodologyStudioController.php',
+    'symfony/templates/experience/diagnostic/methodology_studio.html.twig',
+    'symfony/assets/islands/methodology_studio.js',
+    'symfony/assets/islands/methodology_studio_v054.js',
+    'symfony/assets/islands/methodology_studio_v055.js',
+    'symfony/assets/styles/domains/methodology-studio.css',
     'frontend/styles/design-system.css',
     'frontend/styles/layouts/workspace.css',
     'frontend/styles/workspace-mobile.css',
@@ -105,6 +110,13 @@ foreach([
     'app/Interfaces/Web/View/client_case/show.phtml',
     'app/Interfaces/Web/View/cos/index.phtml',
     'app/Interfaces/Web/View/visualization/architecture.phtml',
+    'app/Interfaces/Web/View/methodology_studio/index.phtml',
+    'frontend/entrypoints/diagnostics-methodology-studio.js',
+    'frontend/features/diagnostics/methodology-studio.js',
+    'frontend/features/diagnostics/methodology-studio-v054.js',
+    'frontend/features/diagnostics/methodology-studio-v055.js',
+    'frontend/features/diagnostics/methodology-studio.css',
+    'frontend/features/diagnostics/methodology-studio-v055.css',
     'frontend/entrypoints/cos-control-center.js',
     'frontend/features/cos/control-center.css',
     'app/Interfaces/Web/View/admin/analytics.phtml',
@@ -134,8 +146,16 @@ foreach(['salesNavigationContributor','propertyNavigationContributor','diagnosti
 }
 
 $assert(!is_file($root.'/symfony/src/Web/Sales/SalesPageController.php'),'Retired Sales PHTML page controller returned after VR-008.');
+$methodology=$read('symfony/src/Web/Diagnostic/MethodologyStudioController.php');
+foreach(['PageArchetype::SystemControlSurface','WorkspaceShellFactory','experience/diagnostic/methodology_studio.html.twig'] as $needle){
+    $assert(str_contains($methodology,$needle),'Methodology Studio canonical owner missing: '.$needle);
+}
 $diagnostic=$read('symfony/src/Web/Diagnostic/DiagnosticPageController.php');
-$assert(str_contains($diagnostic,"['diagnostics-methodology-studio']"),'Diagnostic Symfony owner must load its Vite entrypoint.');
+$assert(!str_contains($diagnostic,'public function methodology('),'DiagnosticPageController restored Methodology Studio ownership.');
+$assetRuntime=$read('symfony/assets/app.js');
+foreach(['./islands/methodology_studio.js','./islands/methodology_studio_v054.js','./islands/methodology_studio_v055.js'] as $island){
+    $assert(str_contains($assetRuntime,$island),'Methodology Studio AssetMapper island missing: '.$island);
+}
 
 $routes=$read('symfony/config/routes.yaml');
 foreach(['cos_web_sales_deals:','/sales/deals','/cos/architecture','/admin/content'] as $needle){

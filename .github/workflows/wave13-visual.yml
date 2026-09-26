@@ -19,6 +19,9 @@ on:
       - 'symfony/src/Application/Visualization/**'
       - 'frontend/features/cos/architecture-explorer.*'
       - 'symfony/src/Web/Diagnostic/**'
+      - 'symfony/assets/islands/methodology_studio*.js'
+      - 'symfony/assets/styles/domains/methodology-studio.css'
+      - 'symfony/assets/app.js'
       - 'symfony/src/Application/Experience/**'
       - 'symfony/src/Web/Sales/**'
       - 'symfony/src/Web/Property/**'
@@ -58,6 +61,9 @@ on:
       - 'symfony/src/Application/Visualization/**'
       - 'frontend/features/cos/architecture-explorer.*'
       - 'symfony/src/Web/Diagnostic/**'
+      - 'symfony/assets/islands/methodology_studio*.js'
+      - 'symfony/assets/styles/domains/methodology-studio.css'
+      - 'symfony/assets/app.js'
       - 'symfony/src/Application/Experience/**'
       - 'symfony/src/Web/Sales/**'
       - 'symfony/src/Web/Property/**'
@@ -126,6 +132,7 @@ jobs:
           php tests/architecture/web_experience_wave13_form_patterns.php
           php tests/architecture/web_experience_wave13_control_center.php
           php tests/architecture/web_experience_wave13_architecture.php
+          php tests/architecture/web_experience_wave13_methodology_studio.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

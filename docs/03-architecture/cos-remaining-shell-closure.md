@@ -172,10 +172,12 @@ WEB V0.9 та WEB V0.10 regression gates переведені з Phalcon-era con
 - `property/show.phtml` — rich property hero, Product/Offer schema, gallery;
 - `property/presentation.phtml` — presentation hero та share behavior;
 - `spatial/scene.phtml` — public 3D viewer runtime;
-- `methodology_studio/index.phtml` — full application/studio interaction model;
+- `symfony/templates/experience/diagnostic/methodology_studio.html.twig` — full Methodology Studio island inside canonical System / Control Surface;
 - `error/failure.phtml` — minimal failure utility surface.
 
 PHASE 14 gate перевіряє їхні domain-specific markers окремо. Whitelist не є дозволом на довільні legacy shells: кожен виняток має конкретну runtime причину і executable contract.
+
+Wave 13 VR-021 додатково переносить Methodology Studio island з dedicated Vite entrypoint у canonical AssetMapper runtime. API та editor interaction model не змінюються.
 
 ## Після PHASE 14: cleanup feature assets
 

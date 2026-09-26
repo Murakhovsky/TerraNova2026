@@ -175,7 +175,7 @@ foreach ([
 $notContains($clientCaseItem, '<table', 'Client Case Collection item must not restore a raw table.');
 $notContains($clientCaseItem, 'tn-', 'Client Case Collection item must not restore legacy TN presentation.');
 
-$studio = $read('app/Interfaces/Web/View/methodology_studio/index.phtml');
+$studio = $read('symfony/templates/experience/diagnostic/methodology_studio.html.twig');
 foreach ([
     'class="entity-grid"',
     'class="entity-grid__head"',
@@ -188,8 +188,11 @@ foreach ([
     $contains($studio, $marker, 'Methodology Studio entity browser must retain its interactive editor surface.');
 }
 $notContains($studio, '<table', 'Methodology Studio must not retain a raw table after entity-grid migration.');
+$notContains($studio, 'tn-', 'Methodology Studio must not restore legacy TN presentation.');
+$notContains($studio, 'style=', 'Methodology Studio must not add inline visual styles.');
+$notContains($studio, '<script', 'Methodology Studio must load through canonical AssetMapper, not inline scripts.');
 
-$studioJs = $read('frontend/features/diagnostics/methodology-studio.js');
+$studioJs = $read('symfony/assets/islands/methodology_studio.js');
 foreach ([
     'entity-grid__row',
     'entity-grid__identity',
@@ -200,7 +203,7 @@ foreach ([
 }
 $notContains($studioJs, '<tr>', 'Methodology Studio JS must not restore table-row rendering.');
 
-$studioCss = $read('frontend/features/diagnostics/methodology-studio.css');
+$studioCss = $read('symfony/assets/styles/domains/methodology-studio.css');
 foreach ([
     '.entity-grid',
     '.entity-grid__head',

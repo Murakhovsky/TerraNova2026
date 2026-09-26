@@ -62,8 +62,8 @@ if(!str_contains($authenticator,"\$path === '/api/v1/health'")){
     throw new RuntimeException('Public health probe is still intercepted by the legacy-session authenticator.');
 }
 
-foreach(['methodology-studio-v054.js','methodology-studio-v055.js'] as $asset){
-    $source=(string)file_get_contents($root.'/frontend/features/diagnostics/'.$asset);
+foreach(['methodology_studio_v054.js','methodology_studio_v055.js'] as $asset){
+    $source=(string)file_get_contents($root.'/symfony/assets/islands/'.$asset);
     if(str_contains($source,'/api/admin/diagnostics')) throw new RuntimeException('Frontend still calls retired Methodology API: '.$asset);
     if(!str_contains($source,'/api/v1/admin/diagnostics')) throw new RuntimeException('Frontend lacks canonical Methodology API: '.$asset);
 }

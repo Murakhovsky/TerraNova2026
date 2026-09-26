@@ -267,9 +267,13 @@ $specializedContracts = [
     'app/Interfaces/Web/View/property/show.phtml' => ['tn-property-hero', 'application/ld+json', 'data-property-gallery'],
     'app/Interfaces/Web/View/property/presentation.phtml' => ['tn-presentation-hero', 'data-copy-value'],
     'app/Interfaces/Web/View/spatial/scene.phtml' => ['tn-spatial-public', "partial('shared/spatial_viewer'"],
-    'app/Interfaces/Web/View/methodology_studio/index.phtml' => ['data-studio', 'studio-shell', 'data-editor'],
+    'symfony/templates/experience/diagnostic/methodology_studio.html.twig' => ['<twig:CosPageHeader', '<twig:CosToolbar', 'data-studio', 'studio-shell', 'data-editor'],
     'app/Interfaces/Web/View/error/failure.phtml' => ['tn-failure', 'data-failure-code'],
 ];
+if (is_file($root . '/app/Interfaces/Web/View/methodology_studio/index.phtml')) {
+    throw new RuntimeException('Retired Methodology Studio PHTML restored.');
+}
+
 foreach ($specializedContracts as $path => $markers) {
     $source = $read($path);
     foreach ($markers as $marker) {
