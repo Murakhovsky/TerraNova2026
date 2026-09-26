@@ -72,7 +72,7 @@ cos_web_auth_logout:
 
 cos_symfony_home:
   path: /
-  controller: App\Controller\HomePageController
+  controller: App\Web\PublicSite\HomeController
   methods: [GET, HEAD]
 
 cos_web_cabinet:

@@ -31,13 +31,16 @@ if ($keys(FrontendNavigation::public()) !== ['catalog', 'services', 'partners', 
     throw new RuntimeException('Public main navigation must remain canonical and compact.');
 }
 
-$homeController = $read('symfony/src/Controller/HomePageController.php');
+$homeController = $read('symfony/src/Web/PublicSite/HomeController.php');
 foreach ([
-    "renderer->render(\$request, 'home/canonical'",
-    "'interfaceSurface' => 'public'",
-    "'pageAssetEntries' => ['public-surface']",
+    'PageArchetype::PublicDetailMarketing',
+    'PagePresentationFactory',
+    "experience/public/home.html.twig",
 ] as $needle) {
-    $contains($homeController, $needle, 'Homepage must use canonical Symfony Public runtime');
+    $contains($homeController, $needle, 'Homepage must use the Wave 13 canonical Public runtime');
+}
+foreach (['PhtmlRenderer', 'ViteAssetManifest', 'public-surface'] as $legacy) {
+    $notContains($homeController, $legacy, 'Homepage must not restore PHTML/Vite ownership');
 }
 
 $contentController = $read('symfony/src/Web/Content/PublicContentPageController.php');
@@ -74,7 +77,7 @@ foreach ([
 $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /',
-    'HomePageController',
+    'App\Web\PublicSite\HomeController',
     'path: /blog',
     'PublicContentPageController::blog',
     'path: /blog/{slug}',
@@ -97,9 +100,23 @@ foreach ([
     $contains($routes, $needle, 'Canonical Public route is missing');
 }
 
-$home = $read('app/Interfaces/Web/View/home/canonical.phtml');
-foreach (['tn-public-hero', '/auth/login', '/blog', '/api/v1/status'] as $needle) {
-    $contains($home, $needle, 'Canonical Symfony home specialized marketing contract is incomplete');
+$home = $read('symfony/templates/experience/public/home.html.twig');
+foreach ([
+    '<twig:CosPageHeader',
+    '<twig:CosCard',
+    'Company Operating System',
+    '/auth/login',
+    '/blog',
+    '/api/v1/status',
+    'data-cos-public="home"',
+] as $needle) {
+    $contains($home, $needle, 'Wave 13 Public home composition is incomplete');
+}
+foreach (['tn-', 'style=', '<script'] as $legacy) {
+    $notContains($home, $legacy, 'Wave 13 Public home restored legacy/local presentation');
+}
+if (is_file($root . '/app/Interfaces/Web/View/home/canonical.phtml')) {
+    throw new RuntimeException('Retired home PHTML restored.');
 }
 
 foreach ([

@@ -38,6 +38,12 @@ kind: architecture
 | VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
 | VR-025 | `/cabinet` | Portal | Identity | Portal | P0 | Twig | DONE |
 | VR-026 | `/cabinet/submission/{id}` | Portal | Compatibility | Portal | P0 | Twig | DONE |
+| VR-027 | `/` | Public | Core | Public Detail / Marketing | P0 | Twig | QA |
+| VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
+| VR-029 | `/property/show/{slug}` | Public | Property | Public Detail / Marketing | P0 | Twig + Gallery Island | BACKLOG |
+| VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
+| VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
+| VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | BACKLOG |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -193,3 +199,8 @@ VR-026 зберігає `/cabinet/submission/{id}` як явний HTTP 410 comp
 ## Фаза 7 — завершення Portal
 
 VR-025…026 завершені. Cabinet home і retired submission працюють через Symfony AssetMapper + Portal archetype; Portal PHTML = 0; dedicated `portal-cabinet` Vite/CSS = 0; окремий Portal DDD Domain не створено. Наступна family: Phase 8 — Public Property.
+
+
+## Фаза 8 — Public Property
+
+VR-027 переводить root Public surface з PHTML/Public Vite ownership на Twig Public Detail / Marketing archetype. Контент і destinations не змінюються; `public-surface` Vite залишається живим для ще не мігрованих Property public routes.

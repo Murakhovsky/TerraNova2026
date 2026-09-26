@@ -245,3 +245,8 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 ### Заміщення Portal-контракту у Wave 13
 
 Wave 13 Phase 7 supersedes the PHASE 14 Cabinet presentation contract. `/cabinet` and the HTTP 410 `/cabinet/submission/{id}` compatibility route now render canonical Twig Portal surfaces through Symfony AssetMapper. `cabinet/canonical.phtml`, `cabinet/retired-submission.phtml`, `portal-cabinet` Vite entrypoint and TN Portal CSS are retired. The business behavior is unchanged: managers still redirect to `/sales`, unauthenticated users to `/auth/login`, and the retired submission route remains HTTP 410.
+
+
+### Wave 13 Public home
+
+Wave 13 Phase 8 переводить `/` з `HomePageController + home/canonical.phtml` на canonical Twig Public Detail / Marketing surface. Контент, SEO intent і destinations збережені; root page більше не завантажує dedicated Public Vite runtime лише заради статичного hero.
