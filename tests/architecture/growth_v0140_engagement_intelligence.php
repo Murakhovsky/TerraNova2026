@@ -50,9 +50,10 @@ foreach([
 ] as $needle){
     $assert(str_contains($service,$needle),'Growth engagement service missing: '.$needle);
 }
-foreach(['PDO','Symfony\\','Phalcon\\','identity_value','identity_type'] as $forbidden){
-    $assert(!str_contains($service,$forbidden),'Growth engagement application crossed boundary or leaked contact identity: '.$forbidden);
+foreach(['PDO','Symfony\\','Phalcon\\','identity_value'] as $forbidden){
+    $assert(!str_contains($service,$forbidden),'Growth engagement application crossed boundary or leaked contact identity value: '.$forbidden);
 }
+$assert(str_contains($service,'identity_type'),'Growth engagement must derive available channels from contact identity type without exposing the identity value.');
 
 $repository=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthEngagementRepository.php');
 foreach([
