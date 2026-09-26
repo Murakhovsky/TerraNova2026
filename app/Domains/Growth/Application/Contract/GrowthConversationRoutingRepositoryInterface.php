@@ -6,6 +6,9 @@ namespace Domains\Growth\Application\Contract;
 interface GrowthConversationRoutingRepositoryInterface
 {
     /** @return array<string,mixed>|null */
+    public function routeForResponse(string $organizationId,string $responseId):?array;
+
+    /** @return array<string,mixed>|null */
     public function routeForClassification(string $organizationId,string $classificationId):?array;
 
     /** @param array<string,mixed> $route */

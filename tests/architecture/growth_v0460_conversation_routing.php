@@ -23,7 +23,7 @@ expectGrowthV0460Architecture(
 );
 
 $migration=$read('app/migrations/20260926_000111_growth_v0460_conversation_routing.sql');
-foreach(['tn_growth_conversation_routes','tn_growth_engagement_suppressions',"installed_version='0.46.0'"] as $needle){
+foreach(['tn_growth_conversation_routes','tn_growth_engagement_suppressions','uq_growth_conversation_route_response',"installed_version='0.46.0'"] as $needle){
     expectGrowthV0460Architecture(str_contains($migration,$needle),'V0.46 migration invariant missing: '.$needle);
 }
 $ownership=$read('app/Infrastructure/Platform/Persistence/TableOwnership.php');
@@ -38,7 +38,7 @@ foreach(['growth-conversation-routing-v1','MIN_CONFIDENCE','Suppression','NoActi
 
 $service=$read('app/Domains/Growth/Application/Service/GrowthConversationRoutingService.php');
 foreach([
-    'GrowthConversationRoutingPolicy','routeForClassification','lockById','growth-conversation-route:',
+    'GrowthConversationRoutingPolicy','routeForResponse','routeForClassification','lockById','growth-conversation-route:',
     'ENGAGEMENT_RESPONSE_ROUTE_DECIDED','ENGAGEMENT_RESPONSE_ROUTED','ENGAGEMENT_RESPONSE_ROUTE_FAILED',
 ] as $needle){
     expectGrowthV0460Architecture(str_contains($service,$needle),'Conversation routing service missing: '.$needle);
@@ -61,6 +61,7 @@ expectGrowthV0460Architecture(str_contains($serviceTarget,'ServiceApplicationBou
 
 $prompt=$read('app/Domains/Growth/Application/AI/GrowthResponseClassificationPrompt.php');
 expectGrowthV0460Architecture(str_contains($prompt,'recommended_next_owner is advisory only'),'LLM next-owner output must remain advisory.');
+expectGrowthV0460Architecture(str_contains($prompt,'growth-response-classification-v2'),'V0.46 classifier semantics require a prompt version bump.');
 
 $services=$read('symfony/config/services.yaml');
 foreach(['growth.conversation_routing_target','GrowthConversationRoutingBoundary','growth.conversation-routing.v1'] as $needle){

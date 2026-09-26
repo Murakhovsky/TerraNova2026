@@ -47,18 +47,24 @@ final readonly class GrowthConversationRoutingService implements GrowthConversat
         $responseId=$this->bounded($responseId,'responseId',80);
         $correlationId=$this->bounded($correlationId,'correlationId',191);
 
+        $route=$this->repository->routeForResponse($organizationId,$responseId);
+        if($route!==null&&in_array((string)$route['status'],['completed','queued','rejected'],true)){
+            return $route+['replayed'=>true];
+        }
+
         $classification=$this->responses->latestClassification($organizationId,$responseId)
             ??throw new InvalidArgumentException('Growth response must be classified before routing.');
         $classificationId=(string)$classification['classification_id'];
 
-        $route=$this->repository->routeForClassification($organizationId,$classificationId);
+        $route??=$this->repository->routeForClassification($organizationId,$classificationId);
         if($route===null){
             $route=$this->transactions->transactional(function()use($organizationId,$responseId,$correlationId):array{
                 $response=$this->responses->lockById($organizationId,$responseId);
                 $classification=$this->responses->latestClassification($organizationId,$responseId)
                     ??throw new InvalidArgumentException('Growth response classification disappeared during routing.');
                 $classificationId=(string)$classification['classification_id'];
-                $existing=$this->repository->routeForClassification($organizationId,$classificationId);
+                $existing=$this->repository->routeForResponse($organizationId,$responseId)
+                    ??$this->repository->routeForClassification($organizationId,$classificationId);
                 if($existing!==null)return $existing;
 
                 $recommendation=$this->engagement->viewRecommendation(

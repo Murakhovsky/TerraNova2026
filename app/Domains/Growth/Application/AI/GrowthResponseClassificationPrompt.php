@@ -10,8 +10,8 @@ use Domains\Growth\Domain\GrowthResponseUrgency;
 
 final class GrowthResponseClassificationPrompt
 {
-    public const PROMPT_VERSION='growth-response-classification-v1';
-    public const SCHEMA_VERSION='growth-response-classification-schema-v1';
+    public const PROMPT_VERSION='growth-response-classification-v2';
+    public const SCHEMA_VERSION='growth-response-classification-schema-v2';
 
     public static function system():string
     {

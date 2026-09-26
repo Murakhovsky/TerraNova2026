@@ -11,6 +11,18 @@ final readonly class MysqlGrowthConversationRoutingRepository implements GrowthC
 {
     public function __construct(private PDO $connection){}
 
+    public function routeForResponse(string $organizationId,string $responseId):?array
+    {
+        return $this->one(
+            'SELECT organization_id,route_id,response_id,classification_id,candidate_id,recommendation_id,contact_id,
+                    route,policy_version,decision_reason,status,target_reference_type,target_reference_id,error_summary,
+                    created_at,updated_at
+             FROM tn_growth_conversation_routes
+             WHERE organization_id=:organization_id AND response_id=:response_id LIMIT 1',
+            ['organization_id'=>$organizationId,'response_id'=>$responseId],
+        );
+    }
+
     public function routeForClassification(string $organizationId,string $classificationId):?array
     {
         return $this->one(

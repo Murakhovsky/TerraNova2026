@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tn_growth_conversation_routes (
     PRIMARY KEY (id),
     UNIQUE KEY uq_growth_conversation_route (organization_id,route_id),
     UNIQUE KEY uq_growth_conversation_route_classification (organization_id,classification_id),
+    UNIQUE KEY uq_growth_conversation_route_response (organization_id,response_id),
     KEY ix_growth_conversation_route_candidate (organization_id,candidate_id,created_at),
     KEY ix_growth_conversation_route_response (organization_id,response_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
