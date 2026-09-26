@@ -93,6 +93,11 @@ foreach (['tn-', 'style=', '<script'] as $forbidden) {
 }
 
 $stimulus = (string) file_get_contents($root . '/symfony/assets/controllers/sales_today_controller.js');
+foreach (['\\`', '\\${'] as $invalidJavascriptEscape) {
+    if (str_contains($stimulus, $invalidJavascriptEscape)) {
+        throw new RuntimeException('VR-005 Stimulus contains invalid escaped template-literal syntax: ' . $invalidJavascriptEscape);
+    }
+}
 foreach ([
     '/api/v1/sales/approvals/',
     '/activities/',

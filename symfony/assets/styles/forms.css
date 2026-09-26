@@ -140,7 +140,7 @@
   border-top-color: var(--cos-color-warning);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 650px) {
   .cos-form__grid {
     grid-template-columns: 1fr;
   }
@@ -163,5 +163,69 @@
 @media (prefers-reduced-motion: reduce) {
   .cos-form * {
     scroll-behavior: auto;
+  }
+}
+
+
+/* Wave 13 — reusable Form / Editor patterns. */
+.cos-form-section {
+  display: grid;
+  gap: var(--cos-space-4);
+  min-width: 0;
+  margin: 0;
+  padding: var(--cos-density-panel-padding);
+  background: var(--cos-surface-default-bg);
+  border: var(--cos-border-width) solid var(--cos-surface-border);
+  border-radius: var(--cos-radius-panel);
+}
+
+.cos-form-section__title {
+  padding: 0;
+  color: var(--cos-color-text);
+  font-size: var(--cos-font-lg);
+  font-weight: var(--cos-font-weight-strong);
+}
+
+.cos-form-section__description {
+  margin: calc(var(--cos-space-2) * -1) 0 0;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-sm);
+  line-height: var(--cos-line-height-copy);
+}
+
+.cos-form-section__body {
+  display: grid;
+  gap: var(--cos-space-4);
+  min-width: 0;
+}
+
+.cos-sticky-actions {
+  position: sticky;
+  z-index: var(--cos-z-sticky);
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cos-space-3);
+  padding: var(--cos-space-3) var(--cos-space-4);
+  background: color-mix(in srgb, var(--cos-surface-default-bg) 94%, transparent);
+  border-top: var(--cos-border-width) solid var(--cos-surface-border);
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 650px) {
+  .cos-form-section {
+    padding: var(--cos-space-4);
+  }
+
+  .cos-sticky-actions {
+    margin-inline: calc(var(--cos-space-3) * -1);
+    padding-bottom: max(var(--cos-space-3), env(safe-area-inset-bottom));
+  }
+
+  .cos-sticky-actions .cos-button {
+    flex: 1 1 auto;
+    min-height: 44px;
   }
 }

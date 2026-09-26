@@ -1,0 +1,56 @@
+<article class="cos-property-card" itemscope itemtype="https://schema.org/Product">
+    <a class="cos-property-card__media" href="{{ property.url }}" itemprop="url">
+        {% if property.cover_url %}
+            <img src="{{ property.cover_url }}" alt="{{ property.title }}" itemprop="image" loading="lazy">
+        {% else %}
+            <div class="cos-property-card__placeholder" aria-hidden="true">Фото готується</div>
+        {% endif %}
+        <div class="cos-property-card__badges">
+            {% if property.is_featured %}<span class="cos-badge cos-badge--info">Top</span>{% endif %}
+            <span class="cos-badge cos-badge--neutral">{{ property.image_count > 0 ? property.image_count ~ ' фото' : 'фото готується' }}</span>
+        </div>
+    </a>
+
+    <div class="cos-property-card__body">
+        <div class="cos-property-card__tags">
+            <span>{{ property.deal_label }}</span>
+            <span>{{ property.type_name }}</span>
+            {% if property.has_3d_tour %}<span>3D tour</span>{% endif %}
+        </div>
+
+        <h2 class="cos-property-card__title" itemprop="name">
+            <a href="{{ property.url }}">{{ property.title }}</a>
+        </h2>
+        <p class="cos-property-card__copy" itemprop="description">{{ property.short_description }}</p>
+
+        <div class="cos-property-card__facts">
+            <span>{{ property.city }}</span>
+            {% if property.area_label %}<span>{{ property.area_label }} м²</span>{% endif %}
+            {% if property.rooms_label %}<span>{{ property.rooms_label }} кімн.</span>{% endif %}
+            <span>{{ property.status }}</span>
+        </div>
+
+        <div class="cos-property-card__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+            <strong>{{ property.price_label }}</strong>
+            {% if property.price_amount %}
+                <meta itemprop="price" content="{{ property.price_amount }}">
+                <meta itemprop="priceCurrency" content="{{ property.price_currency }}">
+            {% endif %}
+            <span>{{ property.public_id }}</span>
+        </div>
+
+        <div class="cos-action-bar cos-action-bar--start">
+            <a class="cos-button cos-button--primary cos-button--sm" href="{{ property.url }}">Відкрити</a>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="{{ property.url }}#request">Запит</a>
+            <button
+                type="button"
+                class="cos-button cos-button--ghost cos-button--sm"
+                data-public-property-target="button"
+                data-public-id="{{ property.public_id }}"
+                data-action="click->public-property#toggle"
+                aria-pressed="false"
+                aria-label="Додати у вибране"
+            >♡</button>
+        </div>
+    </div>
+</article>

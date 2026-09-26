@@ -16,7 +16,7 @@ export default class extends Controller {
 
         try {
             await this.requestJson(
-                \`/api/v1/sales/approvals/\${encodeURIComponent(approvalId)}/\${decision}\`,
+                `/api/v1/sales/approvals/${encodeURIComponent(approvalId)}/${decision}`,
                 'POST',
                 {},
             );
@@ -40,7 +40,7 @@ export default class extends Controller {
 
         try {
             await this.requestJson(
-                \`/api/v1/sales/opportunities/\${encodeURIComponent(dealId)}/activities/\${encodeURIComponent(activityId)}/complete\`,
+                `/api/v1/sales/opportunities/${encodeURIComponent(dealId)}/activities/${encodeURIComponent(activityId)}/complete`,
                 'POST',
                 {},
             );
@@ -65,7 +65,7 @@ export default class extends Controller {
 
         try {
             await this.requestJson(
-                \`/api/v1/sales/opportunities/\${encodeURIComponent(dealId)}/activities/\${encodeURIComponent(activityId)}/reschedule\`,
+                `/api/v1/sales/opportunities/${encodeURIComponent(dealId)}/activities/${encodeURIComponent(activityId)}/reschedule`,
                 'POST',
                 { due_at: dueAt },
             );
@@ -85,7 +85,7 @@ export default class extends Controller {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': this.csrfValue || '',
                 'X-Idempotency-Key': globalThis.crypto?.randomUUID?.()
-                    || \`sales-today-\${Date.now()}-\${Math.random().toString(16).slice(2)}\`,
+                    || `sales-today-${Date.now()}-${Math.random().toString(16).slice(2)}`,
             },
             body: JSON.stringify(data || {}),
         });

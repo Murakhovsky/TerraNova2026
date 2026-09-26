@@ -67,7 +67,7 @@ Wave 2 закриває outer-shell debt для Page / Blog / SEO landing без
 
 #### Property SEO Landing
 
-`property/seo.phtml`
+`symfony/templates/experience/public/property_seo.html.twig`
 
 - PageHeader/State лишаються canonical contract із PHASE 10;
 - redundant breadcrumbs видалено;
@@ -131,8 +131,6 @@ Repository-wide gate тепер забороняє повернення таки
 
 `tn-breadcrumbs` дозволений лише для явно класифікованих Property discovery/rich-detail surfaces:
 
-- `property/catalog.phtml`;
-- `property/show.phtml`;
 - `property/presentation.phtml`.
 
 `property/map` більше не входить до цього whitelist: Wave 13 перевів його на Twig Map / Spatial surface. Breadcrumb whitelist зберігається лише для ще не мігрованих public rich-detail PHTML.
@@ -166,16 +164,29 @@ WEB V0.9 та WEB V0.10 regression gates переведені з Phalcon-era con
 
 ### Whitelist спеціалізованих surfaces (`Specialized Surface Whitelist`)
 
-Наступні surfaces навмисно не перетворюються на generic PageHeader/Card composition:
+Після Wave 13 whitelist переглянутий за фактичним runtime, а не за історичним списком файлів.
 
-- `home/canonical.phtml` — marketing/runtime hero;
-- `property/show.phtml` — rich property hero, Product/Offer schema, gallery;
-- `property/presentation.phtml` — presentation hero та share behavior;
+**Canonical compatibility entry surfaces:**
+
+- `auth/login.phtml`;
+- `auth/register.phtml`.
+
+Вони використовують native Symfony auth lifecycle, але ще рендеряться через compatibility PHTML layer із canonical UI partials.
+
+**Specialized runtime surfaces:**
+
+- `diagnostic_report/show.phtml` — структурований diagnostic report із domain-heavy report anatomy;
+- `property/presentation.phtml` — rich property presentation/share runtime;
+- `property/pdf.phtml` — non-web print/PDF renderer;
+- `spatial/edit.phtml` — specialized Spatial editor/upload/publish workbench;
 - `spatial/scene.phtml` — public 3D viewer runtime;
-- `methodology_studio/index.phtml` — full application/studio interaction model;
 - `error/failure.phtml` — minimal failure utility surface.
 
-PHASE 14 gate перевіряє їхні domain-specific markers окремо. Whitelist не є дозволом на довільні legacy shells: кожен виняток має конкретну runtime причину і executable contract.
+Shared files під `components/`, `shared/` та root `index.phtml` є compatibility primitives/layouts, а не окремими production pages.
+
+Historical whitelist entries `home/canonical.phtml` і `methodology_studio/index.phtml` більше не існують: Wave 13 перевів їх на Twig/AssetMapper. Dead legacy homepage `index/index.phtml` також видалений.
+
+Final Wave 13 gate дозволяє лише цей явний набір page-level PHTML. Будь-який новий PHTML page поза whitelist ламає CI. Whitelist не є дозволом на довільні legacy shells: кожен виняток має конкретну runtime причину й executable contract.
 
 ## Після PHASE 14: cleanup feature assets
 
@@ -245,3 +256,13 @@ Architecture graph stage, projection toolbar, filters, node details та Cytosca
 ### Заміщення Portal-контракту у Wave 13
 
 Wave 13 Phase 7 supersedes the PHASE 14 Cabinet presentation contract. `/cabinet` and the HTTP 410 `/cabinet/submission/{id}` compatibility route now render canonical Twig Portal surfaces through Symfony AssetMapper. `cabinet/canonical.phtml`, `cabinet/retired-submission.phtml`, `portal-cabinet` Vite entrypoint and TN Portal CSS are retired. The business behavior is unchanged: managers still redirect to `/sales`, unauthenticated users to `/auth/login`, and the retired submission route remains HTTP 410.
+
+
+### Публічна головна у Wave 13
+
+Wave 13 Phase 8 переводить `/` з `HomePageController + home/canonical.phtml` на canonical Twig Public Detail / Marketing surface. Контент, SEO intent і destinations збережені; root page більше не завантажує dedicated Public Vite runtime лише заради статичного hero.
+
+
+### SEO-добірки Property у Wave 13
+
+Wave 13 Phase 8 заміщує PHASE 14 PHTML-контракт для Property SEO collections. Type, city та local landing routes тепер рендерять один canonical Twig Public Catalog surface через QueryBus; route-specific частина обмежена filter overrides, canonical URL та SEO metadata. Legacy `property/seo.phtml` видалено.

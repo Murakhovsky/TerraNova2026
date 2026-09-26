@@ -1,0 +1,102 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}{{ brand.title }} | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="{{ brand.description }}">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="{{ brand.canonicalPath }}">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="brand"
+    data-cos-public-brand="{{ brand.slug }}"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="{{ brand.eyebrow }}"
+        title="{{ brand.title }}"
+        subtitle="{{ brand.description }}"
+    >
+        <twig:CosButton label="Нерухомість" href="/property/catalog" variant="primary" />
+        <twig:CosButton label="Подати обʼєкт" href="/property/submit" variant="ghost" />
+        {% if brand.slug != 'contacts' %}
+            <twig:CosButton label="Контакти" href="/contacts" variant="ghost" />
+        {% endif %}
+    </twig:CosPageHeader>
+
+    {% if brand.notice %}
+        <twig:CosAlert title="Запит" copy="{{ brand.notice }}" tone="{{ brand.noticeTone }}" />
+    {% endif %}
+
+    {% if brand.error %}
+        <twig:CosAlert title="Сторінка тимчасово недоступна" copy="{{ brand.error }}" tone="danger" />
+    {% endif %}
+
+    <section class="cos-page__section cos-section-grid" aria-label="{{ brand.title }}">
+        {% for section in brand.sections %}
+            <twig:CosCard
+                eyebrow="{{ '%02d'|format(loop.index) }}"
+                title="{{ section.title }}"
+                copy="{{ section.text }}"
+                :raised="loop.first"
+            />
+        {% endfor %}
+    </section>
+
+    {% if brand.hasForm %}
+        <form id="request" class="cos-form" action="/contacts#request" method="post">
+            <input type="hidden" name="request_intent" value="general_contact">
+            <input type="hidden" name="role" value="buyer">
+            <input type="hidden" name="deal_type" value="consultation">
+            <label class="cos-visually-hidden" aria-hidden="true">
+                <span>Website</span>
+                <input name="website" type="text" tabindex="-1" autocomplete="off">
+            </label>
+
+            <twig:CosFormSection
+                title="Що потрібно зробити?"
+                description="Залиште контакт і короткий контекст. Запит потрапить у CRM та буде призначений менеджеру."
+            >
+                <div class="cos-form__grid">
+                    <label class="cos-field">
+                        <span>Імʼя</span>
+                        <input class="cos-input" name="full_name" type="text" autocomplete="name" value="{{ brand.formData.full_name|default('') }}" required>
+                    </label>
+                    <label class="cos-field">
+                        <span>Телефон</span>
+                        <input class="cos-input" name="phone" type="tel" autocomplete="tel" value="{{ brand.formData.phone|default('') }}">
+                    </label>
+                    <label class="cos-field">
+                        <span>Email</span>
+                        <input class="cos-input" name="email" type="email" autocomplete="email" value="{{ brand.formData.email|default('') }}">
+                    </label>
+                    <label class="cos-field">
+                        <span>Повідомлення</span>
+                        <textarea class="cos-textarea" name="message" rows="5" required>{{ brand.formData.message|default('') }}</textarea>
+                    </label>
+                </div>
+            </twig:CosFormSection>
+
+            <twig:CosStickyActions label="Contact actions">
+                <a class="cos-button cos-button--ghost" href="/property/catalog">До каталогу</a>
+                <button class="cos-button cos-button--primary" type="submit">Надіслати</button>
+            </twig:CosStickyActions>
+        </form>
+    {% else %}
+        <section class="cos-card cos-pattern-stack" aria-labelledby="brand-next-step">
+            <p class="cos-card__eyebrow">Наступний крок</p>
+            <h2 id="brand-next-step" class="cos-card__title">Перейдіть до конкретної пропозиції</h2>
+            <p class="cos-card__copy">Відкрийте каталог або передайте нам свій запит. Далі вже починається не маркетинговий туман, а нормальна операційна робота.</p>
+            <twig:CosActionBar label="Public brand next steps" align="start">
+                <twig:CosButton label="Каталог" href="/property/catalog" variant="primary" />
+                <twig:CosButton label="Звʼязатися" href="/contacts" variant="ghost" />
+            </twig:CosActionBar>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

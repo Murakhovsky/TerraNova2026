@@ -33,6 +33,8 @@ final class UiCatalogRegistry
             $this->entry('CosRadio', 'Forms', 'Single-choice selection control.', ['unchecked', 'checked', 'disabled'], '#catalog-form-primitives'),
             $this->entry('CosSwitch', 'Forms', 'Immediate boolean state control.', ['off', 'on', 'disabled'], '#catalog-form-primitives'),
             $this->entry('CosValidationSummary', 'Forms', 'Form-level validation summary and focus target.', ['errors'], '#forms-platform-heading'),
+            $this->entry('CosFormSection', 'Forms', 'Semantic reusable field group for Form / Editor archetypes.', ['default', 'description'], '#forms-platform-heading'),
+            $this->entry('CosStickyActions', 'Forms', 'Reachable primary form actions with mobile safe-area behavior.', ['default', 'mobile'], '#forms-platform-heading'),
 
             $this->entry('CosModal', 'Interaction', 'Blocking overlay for focused tasks.', ['closed', 'open'], '#interaction-heading'),
             $this->entry('CosDrawer', 'Interaction', 'Context-preserving side overlay.', ['closed', 'open'], '#interaction-heading'),

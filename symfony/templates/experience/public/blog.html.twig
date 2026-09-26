@@ -1,0 +1,73 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}Блог про нерухомість | Terra Nova CLUB{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Практичні матеріали Terra Nova про купівлю, продаж, підготовку та управління нерухомістю.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="{{ blog.page > 1 ? '/blog?page=' ~ blog.page : '/blog' }}">
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="blog"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Terra Nova Journal"
+        title="Блог про нерухомість"
+        subtitle="Практичні матеріали про вибір, продаж, підготовку та управління обʼєктами."
+        metaValue="{{ blog.total }}"
+        metaLabel="опублікованих матеріалів"
+    >
+        <twig:CosButton label="Каталог" href="/property/catalog" variant="ghost" />
+        <twig:CosButton label="Залишити запит" href="/contacts" variant="primary" />
+    </twig:CosPageHeader>
+
+    <section class="cos-page__section" aria-labelledby="blog-materials">
+        <div class="cos-card__header">
+            <div>
+                <p class="cos-card__eyebrow">Journal</p>
+                <h2 id="blog-materials" class="cos-card__title">Матеріали</h2>
+            </div>
+        </div>
+
+        {% if blog.items is empty %}
+            <twig:CosEmptyState title="Матеріали готуються" copy="Нові статті зʼявляться після редакційної перевірки." />
+        {% else %}
+            <div class="cos-section-grid" role="list">
+                {% for article in blog.items %}
+                    <article class="cos-card cos-pattern-stack" role="listitem">
+                        {% if article.featured_image_url|default('') %}
+                            <a href="/blog/{{ article.slug }}">
+                                <img class="img-fluid" src="{{ article.featured_image_url }}" alt="{{ article.featured_image_alt|default(article.title) }}" loading="lazy">
+                            </a>
+                        {% endif %}
+                        <p class="cos-card__eyebrow">{{ article.category|default('Нерухомість') }}</p>
+                        <h3 class="cos-card__title"><a href="/blog/{{ article.slug }}">{{ article.title }}</a></h3>
+                        <p class="cos-card__copy">{{ article.excerpt|default('') }}</p>
+                        {% if article.published_at|default(null) %}
+                            <p class="cos-card__copy">{{ article.published_at|date('d.m.Y') }}</p>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if blog.pages > 1 %}
+            <nav class="cos-action-bar cos-action-bar--start" aria-label="Сторінки блогу">
+                {% if blog.previousUrl %}
+                    <a class="cos-button cos-button--ghost" href="{{ blog.previousUrl }}">Назад</a>
+                {% endif %}
+                <span class="cos-card__copy">{{ blog.page }} / {{ blog.pages }}</span>
+                {% if blog.nextUrl %}
+                    <a class="cos-button cos-button--primary" href="{{ blog.nextUrl }}">Далі</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

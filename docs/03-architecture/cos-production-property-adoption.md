@@ -244,3 +244,8 @@ Canonical runtime тепер явно використовує:
 Property Workspace більше не використовує dedicated `property-workspace` Vite bundle. Inventory, Listing, Submissions і Submission працюють через Symfony/Twig Experience Platform та shared `styles/app.css`.
 
 `/property/map` лишається публічною поверхнею, але використовує той самий Map / Spatial archetype. `/spatial/manage` використовує private Workspace shell; Spatial editor та public viewer залишаються окремими specialized сценаріями.
+
+
+### Публічна форма подачі у Wave 13
+
+VR-032 заміщує `property/submit.phtml` canonical Twig Form / Editor surface. GET та aliases `/property/create`, `/submit-property` використовують один controller. До появи окремого public-intake Application Command POST навмисно повертає HTTP 503 і не обходить canonical Property write boundary.

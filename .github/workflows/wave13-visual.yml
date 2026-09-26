@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - 'visual/wave-13-*'
+      - 'visual/**'
     paths:
       - 'symfony/assets/styles/**'
       - 'symfony/templates/**'
@@ -15,6 +15,7 @@ on:
       - 'symfony/src/Web/Administration/**'
       - 'symfony/src/Web/Content/**'
       - 'symfony/src/Web/Portal/**'
+      - 'symfony/src/Web/PublicSite/**'
       - 'symfony/src/Application/Content/**'
       - 'symfony/src/Application/Administration/**'
       - 'symfony/src/Application/Diagnostic/**'
@@ -57,6 +58,7 @@ on:
       - 'symfony/src/Web/Administration/**'
       - 'symfony/src/Web/Content/**'
       - 'symfony/src/Web/Portal/**'
+      - 'symfony/src/Web/PublicSite/**'
       - 'symfony/src/Application/Content/**'
       - 'symfony/src/Application/Administration/**'
       - 'symfony/src/Application/Diagnostic/**'
@@ -118,6 +120,17 @@ jobs:
           php tests/architecture/web_experience_wave13_system_admin_complete.php
           php tests/architecture/web_experience_wave13_portal_cabinet.php
           php tests/architecture/web_experience_wave13_portal_complete.php
+          php tests/architecture/web_experience_wave13_public_home.php
+          php tests/architecture/web_experience_wave13_public_catalog.php
+          php tests/architecture/web_experience_wave13_public_detail.php
+          php tests/architecture/web_experience_wave13_property_seo.php
+          php tests/architecture/web_experience_wave13_property_favourites.php
+          php tests/architecture/web_experience_wave13_form_editor_patterns.php
+          php tests/architecture/web_experience_wave13_property_submit.php
+          php tests/architecture/web_experience_wave13_public_property_complete.php
+          php tests/architecture/web_experience_wave13_public_brand.php
+          php tests/architecture/web_experience_wave13_public_content.php
+          php tests/architecture/web_experience_wave13_public_cos.php
           php tests/architecture/web_experience_wave13_sales_today.php
           php tests/architecture/web_experience_wave13_toolbar.php
           php tests/architecture/web_experience_wave13_sales_pipeline.php
@@ -136,6 +149,7 @@ jobs:
           php tests/architecture/web_experience_wave13_property_map.php
           php tests/architecture/web_experience_wave13_spatial_manage.php
           php tests/architecture/web_experience_wave13_property_workspace_complete.php
+          php tests/architecture/web_experience_wave13_final_audit.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

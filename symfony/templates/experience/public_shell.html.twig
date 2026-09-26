@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="cos-surface cos-surface--canvas" data-cos-surface="public">
+    <main class="cos-page cos-page--content cos-page__stack" data-cos-public-shell>
+        {% block public_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

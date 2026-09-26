@@ -1,8 +1,8 @@
 ---
 title: Wave 13 — Трекер візуальної міграції
 description: Поточний стан production migration units COS Visual Rebuild із окремим відстеженням archetype, Twig cutover і legacy cleanup.
-status: active
-updated: 2026-09-23
+status: closed
+updated: 2026-09-26
 kind: architecture
 ---
 
@@ -38,6 +38,27 @@ kind: architecture
 | VR-024 | `/admin/content` | System | Content | System Control + Form Editor | P0 | Twig | DONE |
 | VR-025 | `/cabinet` | Portal | Identity | Portal | P0 | Twig | DONE |
 | VR-026 | `/cabinet/submission/{id}` | Portal | Compatibility | Portal | P0 | Twig | DONE |
+| VR-027 | `/` | Public | Core | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-029 | `/property/show/{slug}` | Public | Property | Public Detail / Marketing | P0 | Twig + Gallery Island | DONE |
+| VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | DONE |
+| VR-033 | `/terra-nova` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-034 | `/agency` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-035 | `/services` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-036 | `/partners` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-037 | `/team` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-038 | `/cases` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-039 | `/vacancies` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-040 | `/contacts` | Public | Brand / Sales | Public Detail / Marketing + Form | P0 | Twig | DONE |
+| VR-041 | `/it` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-042 | `/art` | Public | Brand | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-043 | `/blog` | Public | Content | Public Catalog | P0 | Twig | DONE |
+| VR-044 | `/blog/{slug}` | Public | Content | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-045 | `/guide/{slug}` | Public | Content | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-046 | `/cos` + `/cos/{lang}` | Public | COS | Public Detail / Marketing | P0 | Twig | DONE |
+| VR-047 | `/cos/{lang}/domains/{slug}` | Public | COS | Public Detail / Marketing | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -193,3 +214,118 @@ VR-026 зберігає `/cabinet/submission/{id}` як явний HTTP 410 comp
 ## Фаза 7 — завершення Portal
 
 VR-025…026 завершені. Cabinet home і retired submission працюють через Symfony AssetMapper + Portal archetype; Portal PHTML = 0; dedicated `portal-cabinet` Vite/CSS = 0; окремий Portal DDD Domain не створено. Наступна family: Phase 8 — Public Property.
+
+
+## Фаза 8 — Public Property
+
+VR-027 переводить root Public surface з PHTML/Public Vite ownership на Twig Public Detail / Marketing archetype. Контент і destinations не змінюються; `public-surface` Vite залишається живим для ще не мігрованих Property public routes.
+
+
+VR-028 переводить Public Property Catalog на QueryBus/CommandBus + Public Catalog archetype. Favourites залишаються browser-side projection через існуючий API, inbound lead проходить через ReceivePublicLeadCommand; legacy `property/catalog.phtml` видаляється.
+
+VR-029 переводить Public Property Detail на QueryBus/CommandBus + Public Detail / Marketing archetype. Gallery працює через Stimulus, favourites перевикористовують public-property controller, view analytics — окремий Application Command; legacy `property/show.phtml` та Vite gallery entrypoint видаляються.
+
+VR-030 переводить Property SEO collections на один canonical Public Catalog runtime. Type/City/landing routes відрізняються лише filter overrides та SEO metadata; inventory/cards/pagination не дублюються.
+
+VR-031 переводить Favourites на session IDs → canonical public read-port → Twig cards. Старий рендер до 150 карток з browser-side hiding видалено; API toggle contract збережено.
+
+VR-032 переводить Public Property Submit та aliases на canonical Form / Editor. Write parity свідомо збережена: POST повертає HTTP 503 і не створює запис, доки public intake не матиме окремого Application Command.
+
+
+## Фаза 8 — завершення Public Property
+
+Production migration units VR-027…032 завершені.
+
+- root Public surface працює через Symfony/Twig Public Detail / Marketing;
+- `/property` і `/property/catalog` використовують один canonical Public Catalog runtime;
+- `/property/show/{slug}` працює через QueryBus/CommandBus + Public Detail / Marketing + Stimulus gallery;
+- type/city/local SEO collections перевикористовують Catalog Query/ViewModel/cards/pagination;
+- `/property/favour` читає лише session-selected `public_id` через вузький public read-port;
+- `/property/submit`, `/property/create`, `/submit-property` використовують один Form / Editor runtime;
+- public submit POST свідомо лишається HTTP 503 без persistence до появи окремого public-intake Application Command;
+- legacy PHTML для VR-027…032 = **0**;
+- legacy `terranova-catalog-api` і `terranova-property-gallery` Vite source entrypoints = **0**.
+
+`/property/presentation/{slug}` і `/property/pdf/{slug}` не входять у VR-027…032. Вони залишаються спеціалізованим compatibility runtime до фінальної хвилі legacy deletion і не вважаються canonical Public Property visual surface.
+
+Наступна production migration family: **Phase 9 — Public Brand**.
+
+## Фаза 9 — Public Brand
+
+VR-033…042 переводять десять статичних brand destinations із orphaned PHTML shell на один canonical Symfony runtime. Page definitions лишаються в `PublicPageCatalog`; Web читає їх через `GetPublicBrandPageQuery`, Presenter/ViewModel готують presentation state, а Twig використовує Public Detail / Marketing archetype без десяти локальних page stacks.
+
+`/contacts` зберігає робочий inbound lead flow через `ReceivePublicLeadCommand`. Решта brand pages є read-only public projections із canonical CTA до каталогу, submit та contact surfaces.
+
+## Фаза 9 — завершення Public Brand
+
+Production migration units VR-033…042 завершені.
+
+- усі 10 routes явно належать Symfony;
+- один Query/Presenter/ViewModel/Twig runtime обслуговує всю brand family;
+- `/contacts` не обходить Application Command boundary;
+- Public Brand використовує canonical PageHeader, Card, ActionBar та form components;
+- page-specific Public Brand CSS/JS = **0**;
+- legacy `app/Interfaces/Web/View/page/show.phtml` = **0**;
+- нові `tn-*` primitives = **0**.
+
+Наступна production migration family: **Phase 10 — Content**.
+
+## Фаза 10 — Content
+
+VR-043 переводить `/blog` на canonical Public Catalog: Application Query → Presenter/ViewModel → Twig, із server-side pagination та empty state без PHTML ownership.
+
+VR-044 переводить `/blog/{slug}` на Public Detail / Marketing: published article читається через QueryBus, metadata/schema формуються у Presenter/ViewModel, article body лишається керованим Content payload.
+
+VR-045 переводить `/guide/{slug}` на той самий canonical Public Detail / Marketing runtime для SEO landing content без окремого frontend stack.
+
+## Фаза 10 — завершення Content
+
+Production migration units VR-043…045 завершені.
+
+- `/blog` → canonical Public Catalog;
+- `/blog/{slug}` і `/guide/{slug}` → canonical Public Detail / Marketing;
+- public Content reads проходять через Application QueryBus;
+- canonical Twig templates не мають `tn-*`, inline style або browser handlers;
+- legacy `app/Interfaces/Web/View/blog/index.phtml` = **0**;
+- legacy `app/Interfaces/Web/View/blog/show.phtml` = **0**;
+- legacy `app/Interfaces/Web/View/blog/landing.phtml` = **0**;
+- page-specific Content JS/CSS = **0**.
+
+Наступна production migration family: **Phase 11 — Public COS**.
+
+## Фаза 11 — Public COS
+
+VR-046 повертає public COS landing у Symfony route ownership і переносить пʼять мовних версій на canonical Public Detail / Marketing runtime. Multilingual product/domain catalog винесений із колишнього Phalcon controller у read-only Application catalog.
+
+VR-047 переводить 21 domain presentation на той самий canonical runtime: QueryBus → Presenter/ViewModel → Twig. Domain pages зберігають локалізовані titles, outcomes, signals, industry labels та featured/spotlight presentations без власного frontend stack.
+
+## Фаза 11 — завершення Public COS
+
+Production migration units VR-046…047 завершені.
+
+- `/cos` і `/cos/{lang}` → canonical Public Detail / Marketing;
+- `/cos/{lang}/domains/{slug}` → canonical Public Detail / Marketing;
+- підтримані `en/de/fr/pl/uk`;
+- збережений 21-domain public catalog;
+- old CompanyOsController data перенесено у read-only `PublicCosCatalog`;
+- legacy `company_os/*.phtml` = **0**;
+- dedicated `cos-site` Vite source/CSS = **0**;
+- нові `tn-*` primitives = **0**.
+
+Основний план Wave 13 для production page families 3–11 закритий. Далі — фінальний Wave 13 audit: specialized compatibility surfaces, dead frontend/runtime artifacts, regression gates і branch integration.
+
+
+## Wave 13 — фінальне закриття
+
+Wave 13 закритий після repository-wide audit production page ownership.
+
+- VR-001…VR-047 мають статус `DONE`;
+- production families 3–11 належать canonical Symfony/Twig Experience Platform;
+- нові production page-level PHTML заборонені final-audit gate;
+- PHTML, що лишився, класифікований або як shared compatibility primitive/layout, або як явний specialized runtime;
+- dead legacy homepage `app/Interfaces/Web/View/index/index.phtml` видалений;
+- retired page-specific Vite source entrypoints не повертаються;
+- Wave 13 CI запускається для всіх `visual/**` branches і для PR у `main`;
+- фінальна інтеграція виконується одним PR із верхівки stacked migration chain.
+
+Подальший visual development не продовжує Wave 13. Нові зміни мають відбуватись поверх canonical Experience Platform і не можуть відновлювати retired route/view ownership.

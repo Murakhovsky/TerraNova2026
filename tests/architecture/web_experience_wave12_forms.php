@@ -109,7 +109,7 @@ foreach ([
     '.cos-form__actions',
     'position: sticky',
     'env(safe-area-inset-bottom)',
-    '@media (max-width: 760px)',
+    '@media (max-width: 650px)',
     '.cos-validation-summary',
     '.dropzone-container',
     '.ts-control',

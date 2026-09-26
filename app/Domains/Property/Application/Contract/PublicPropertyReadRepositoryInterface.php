@@ -19,6 +19,9 @@ interface PublicPropertyReadRepositoryInterface
     /** @return array<string,mixed>|null */
     public function findBySlug(string $organizationId, string $slug): ?array;
 
+    /** @param list<string> $publicIds @return list<array<string,mixed>> */
+    public function findByPublicIds(string $organizationId, array $publicIds): array;
+
     /** @return list<array<string,mixed>> */
     public function images(string $organizationId, int $propertyId): array;
 
