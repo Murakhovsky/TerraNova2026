@@ -84,21 +84,6 @@ final readonly class PropertyPageController
         return new RedirectResponse('/property/presentation/' . rawurlencode($slug) . '?print=1', Response::HTTP_FOUND);
     }
 
-    public function type(Request $request, string $code): Response
-    {
-        return $this->seo($request, ['type' => $code], 'Категорія', 'Об’єкти категорії', '/property/type/' . $code);
-    }
-
-    public function city(Request $request, string $slug): Response
-    {
-        return $this->seo($request, ['location' => $slug], 'Місто', 'Об’єкти у місті', '/property/city/' . $slug);
-    }
-
-    public function landing(Request $request, string $location, string $type): Response
-    {
-        return $this->seo($request, ['location' => $location, 'type' => $type], 'Локальна добірка', 'Нерухомість', '/nerukhomist/' . $location . '/' . $type);
-    }
-
     public function submit(Request $request): Response
     {
         $status = null;
@@ -126,18 +111,6 @@ final readonly class PropertyPageController
         $slug=trim((string)$request->request->get('slug',''));
         if($slug===''||!preg_match('/^[A-Za-z0-9_-]+$/',$slug))return new Response('Invalid property slug.',Response::HTTP_BAD_REQUEST);
         return new RedirectResponse('/property/presentation/'.rawurlencode($slug));
-    }
-
-    private function seo(Request $request, array $overrides, string $kicker, string $title, string $path): Response
-    {
-        $variables = $this->catalogData($request, $overrides);
-        $variables += [
-            'interfaceSurface'=>'public','pageAssetEntries'=>['public-surface'],
-            'seoKicker'=>$kicker,'seoTitle'=>$title,'seoDescription'=>'Добірка актуальних об’єктів Terra Nova CLUB.',
-            'metaTitle'=>$title.' | Terra Nova CLUB','metaDescription'=>'Добірка актуальних об’єктів Terra Nova CLUB.',
-            'metaUrl'=>$request->getSchemeAndHttpHost().$path,
-        ];
-        return $this->html($request, 'property/seo', $variables, (int)($variables['_status']??200));
     }
 
     private function catalogData(Request $request, array $overrides = []): array

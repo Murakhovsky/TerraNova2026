@@ -67,7 +67,7 @@ Wave 2 закриває outer-shell debt для Page / Blog / SEO landing без
 
 #### Property SEO Landing
 
-`property/seo.phtml`
+`symfony/templates/experience/public/property_seo.html.twig`
 
 - PageHeader/State лишаються canonical contract із PHASE 10;
 - redundant breadcrumbs видалено;
@@ -247,3 +247,8 @@ Wave 13 Phase 7 supersedes the PHASE 14 Cabinet presentation contract. `/cabinet
 ### Публічна головна у Wave 13
 
 Wave 13 Phase 8 переводить `/` з `HomePageController + home/canonical.phtml` на canonical Twig Public Detail / Marketing surface. Контент, SEO intent і destinations збережені; root page більше не завантажує dedicated Public Vite runtime лише заради статичного hero.
+
+
+### SEO-добірки Property у Wave 13
+
+Wave 13 Phase 8 заміщує PHASE 14 PHTML-контракт для Property SEO collections. Type, city та local landing routes тепер рендерять один canonical Twig Public Catalog surface через QueryBus; route-specific частина обмежена filter overrides, canonical URL та SEO metadata. Legacy `property/seo.phtml` видалено.

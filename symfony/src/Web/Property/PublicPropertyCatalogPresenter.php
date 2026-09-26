@@ -20,6 +20,8 @@ final class PublicPropertyCatalogPresenter
         string $baseUrl,
         ?string $notice = null,
         ?string $error = null,
+        string $pagePath = '/property/catalog',
+        string $pageName = 'Каталог нерухомості Terra Nova CLUB',
     ): PublicPropertyCatalogViewModel {
         $filters = $this->array($data['filters'] ?? null);
         $types = $this->list($data['types'] ?? null);
@@ -66,7 +68,7 @@ final class PublicPropertyCatalogPresenter
         $itemList = [
             '@context' => 'https://schema.org',
             '@type' => 'ItemList',
-            'name' => 'Каталог нерухомості Terra Nova CLUB',
+            'name' => $pageName,
             'numberOfItems' => count($properties),
             'itemListElement' => [],
         ];
@@ -79,13 +81,22 @@ final class PublicPropertyCatalogPresenter
             ];
         }
 
+        $breadcrumbItems = [
+            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Головна', 'item' => rtrim($baseUrl, '/') . '/'],
+            ['@type' => 'ListItem', 'position' => 2, 'name' => 'Каталог', 'item' => rtrim($baseUrl, '/') . '/property/catalog'],
+        ];
+        if ($pagePath !== '/property/catalog') {
+            $breadcrumbItems[] = [
+                '@type' => 'ListItem',
+                'position' => 3,
+                'name' => $pageName,
+                'item' => rtrim($baseUrl, '/') . $pagePath,
+            ];
+        }
         $breadcrumb = [
             '@context' => 'https://schema.org',
             '@type' => 'BreadcrumbList',
-            'itemListElement' => [
-                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Головна', 'item' => rtrim($baseUrl, '/') . '/'],
-                ['@type' => 'ListItem', 'position' => 2, 'name' => 'Каталог', 'item' => rtrim($baseUrl, '/') . '/property/catalog'],
-            ],
+            'itemListElement' => $breadcrumbItems,
         ];
 
         return new PublicPropertyCatalogViewModel(
@@ -100,15 +111,15 @@ final class PublicPropertyCatalogPresenter
             itemListSchema: $itemList,
             dealLabel: self::DEAL_LABELS[$filters['deal_type'] ?? ''] ?? 'Усі обʼєкти',
             primaryLocation: $primaryLocation,
-            previousUrl: $this->pageUrl($filters, (int) ($pagination['previous_page'] ?? 1)),
-            nextUrl: $this->pageUrl($filters, (int) ($pagination['next_page'] ?? 1)),
+            previousUrl: $this->pageUrl($filters, (int) ($pagination['previous_page'] ?? 1), $pagePath),
+            nextUrl: $this->pageUrl($filters, (int) ($pagination['next_page'] ?? 1), $pagePath),
             notice: $notice,
             error: $error,
         );
     }
 
     /** @param array<string,mixed> $filters */
-    private function pageUrl(array $filters, int $page): string
+    private function pageUrl(array $filters, int $page, string $pagePath): string
     {
         $query = array_filter([
             'q' => $filters['q'] ?? '',
@@ -124,7 +135,7 @@ final class PublicPropertyCatalogPresenter
             'page' => $page > 1 ? $page : null,
         ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
-        return '/property/catalog' . ($query !== [] ? '?' . http_build_query($query) : '');
+        return $pagePath . ($query !== [] ? '?' . http_build_query($query) : '');
     }
 
     private function number(mixed $value): string

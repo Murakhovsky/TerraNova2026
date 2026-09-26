@@ -1391,19 +1391,19 @@ cos_web_property_pdf:
 
 cos_web_property_type:
   path: /property/type/{code}
-  controller: App\Web\Property\PropertyPageController::type
+  controller: App\Web\Property\PublicPropertySeoController::type
   methods: [GET, HEAD]
   requirements: { code: '[A-Za-z0-9_-]+' }
 
 cos_web_property_city:
   path: /property/city/{slug}
-  controller: App\Web\Property\PropertyPageController::city
+  controller: App\Web\Property\PublicPropertySeoController::city
   methods: [GET, HEAD]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
 cos_web_property_landing:
   path: /nerukhomist/{location}/{type}
-  controller: App\Web\Property\PropertyPageController::landing
+  controller: App\Web\Property\PublicPropertySeoController::landing
   methods: [GET, HEAD]
   requirements:
     location: '[A-Za-z0-9_-]+'

@@ -102,10 +102,25 @@ foreach(['tn-','style=','onclick='] as $forbidden){
 }
 if(is_file($root.'/app/Interfaces/Web/View/property/show.phtml'))throw new RuntimeException('Legacy Property Detail PHTML restored.');
 
+
+$seo=$read('symfony/templates/experience/public/property_seo.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    'data-controller="public-property"',
+    'data-cos-public="property-seo"',
+    "components/property/public_property_card.html.twig",
+    'application/ld+json',
+] as $marker){
+    $contains($seo,$marker,'Canonical Property SEO collections lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($seo,$forbidden,'Canonical Property SEO collections restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/seo.phtml'))throw new RuntimeException('Legacy Property SEO PHTML restored.');
+
 foreach ([
     'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
-    'seo' => ['page_header', 'state', 'itemscope itemtype="https://schema.org/Product"'],
     'submit' => ['page_header', 'state', 'enctype="multipart/form-data"', 'name="owner_name"', 'name="property_type"'],
 ] as $view => $markers) {
     $source = $read('app/Interfaces/Web/View/property/' . $view . '.phtml');
