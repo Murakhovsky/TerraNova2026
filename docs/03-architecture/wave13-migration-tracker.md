@@ -42,8 +42,8 @@ kind: architecture
 | VR-028 | `/property/catalog` | Public | Property | Public Catalog | P0 | Twig | DONE |
 | VR-029 | `/property/show/{slug}` | Public | Property | Public Detail / Marketing | P0 | Twig + Gallery Island | DONE |
 | VR-030 | `Property SEO collections` | Public | Property | Public Catalog | P0 | Twig | DONE |
-| VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | BACKLOG |
-| VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | BACKLOG |
+| VR-031 | `/property/favour` | Public | Property | Public Catalog | P0 | Twig | DONE |
+| VR-032 | `/property/submit` | Public | Property | Form / Editor | P0 | Twig | DONE |
 
 VR-001 завершений і змерджений у `main`: `/admin` більше не має legacy PHTML ownership або page-specific Vite entrypoint.
 
@@ -215,3 +215,22 @@ VR-030 переводить Property SEO collections на один canonical Pub
 VR-031 переводить Favourites на session IDs → canonical public read-port → Twig cards. Старий рендер до 150 карток з browser-side hiding видалено; API toggle contract збережено.
 
 VR-032 переводить Public Property Submit та aliases на canonical Form / Editor. Write parity свідомо збережена: POST повертає HTTP 503 і не створює запис, доки public intake не матиме окремого Application Command.
+
+
+## Фаза 8 — завершення Public Property
+
+Production migration units VR-027…032 завершені.
+
+- root Public surface працює через Symfony/Twig Public Detail / Marketing;
+- `/property` і `/property/catalog` використовують один canonical Public Catalog runtime;
+- `/property/show/{slug}` працює через QueryBus/CommandBus + Public Detail / Marketing + Stimulus gallery;
+- type/city/local SEO collections перевикористовують Catalog Query/ViewModel/cards/pagination;
+- `/property/favour` читає лише session-selected `public_id` через вузький public read-port;
+- `/property/submit`, `/property/create`, `/submit-property` використовують один Form / Editor runtime;
+- public submit POST свідомо лишається HTTP 503 без persistence до появи окремого public-intake Application Command;
+- legacy PHTML для VR-027…032 = **0**;
+- legacy `terranova-catalog-api` і `terranova-property-gallery` Vite source entrypoints = **0**.
+
+`/property/presentation/{slug}` і `/property/pdf/{slug}` не входять у VR-027…032. Вони залишаються спеціалізованим compatibility runtime до фінальної хвилі legacy deletion і не вважаються canonical Public Property visual surface.
+
+Наступна production migration family: **Phase 9 — Public Brand**.

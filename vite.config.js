@@ -32,7 +32,6 @@ export default defineConfig({
         'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
         'public-surface': resolve(import.meta.dirname, 'frontend/entrypoints/public-surface.js'),
 
-        'terranova-catalog-api': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-catalog-api.js'),
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),
         'terranova-interface': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-interface.js'),
         'terranova-media-manager': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-media-manager.js'),
