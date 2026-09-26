@@ -54,7 +54,7 @@ $gateway=$read('app/Domains/Growth/Infrastructure/Action/KernelGrowthActionPropo
 foreach([
     'GrowthActionProposalGatewayInterface','ActionPolicyService','ActionService',
     "'sales.send_message'","'deal'","sourceType:'GROWTH'",
-    "executionMode:'APPROVAL_REQUIRED'","riskLevel:'MEDIUM'",
+    "executionMode:\$activationMode->executionMode()","riskLevel:'MEDIUM'",
     'policies->submit',
 ] as $needle){
     $assert(str_contains($gateway,$needle),'Growth Kernel action proposal adapter missing: '.$needle);
