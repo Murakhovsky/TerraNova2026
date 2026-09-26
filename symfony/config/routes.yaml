@@ -112,6 +112,11 @@ cos_web_growth_engagement_delivery_webhook:
   controller: App\Web\PublicEdge\PublicEdgeController::growthEngagementDeliveryWebhook
   methods: [POST]
 
+cos_web_growth_engagement_response_webhook:
+  path: /webhooks/growth/engagement/responses
+  controller: App\Web\PublicEdge\PublicEdgeController::growthEngagementResponseWebhook
+  methods: [POST]
+
 # Wave 14 — Manager Content/Admin SSR and write cutover.
 cos_web_content_admin:
   path: /admin/content
@@ -794,6 +799,13 @@ cos_api_v1_growth_engagement_content_reject:
     id: '[A-Za-z0-9_-]{8,80}'
     recommendationId: '[A-Za-z0-9_-]{8,80}'
     draftId: '[A-Za-z0-9_-]{8,80}'
+
+cos_api_v1_growth_engagement_responses:
+  path: /api/v1/growth/candidates/{id}/engagement/responses
+  controller: App\Http\Api\V1\Controller\GrowthApiController::engagementResponses
+  methods: [GET]
+  requirements:
+    id: '[A-Za-z0-9_-]{8,80}'
 
 cos_api_v1_growth_engagement_sequence:
   path: /api/v1/growth/candidates/{id}/engagement/sequence

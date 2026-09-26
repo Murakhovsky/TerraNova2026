@@ -5,6 +5,8 @@ parameters:
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
   env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET): ''
   env(GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW): '300'
+  env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET): ''
+  env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_MAX_CLOCK_SKEW): '300'
   env(COS_GROWTH_OUTREACH_DAILY_LIMIT): '50'
   env(COS_GROWTH_OUTREACH_EMAIL_DAILY_LIMIT): '50'
   env(COS_GROWTH_OUTREACH_LINKEDIN_DAILY_LIMIT): '50'
@@ -833,6 +835,37 @@ services:
       $secret: '%env(GROWTH_ENGAGEMENT_WEBHOOK_SECRET)%'
       $maxClockSkew: '%env(int:GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW)%'
 
+  Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementResponseRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthEngagementResponseRepositoryInterface:
+    alias: Domains\Growth\Infrastructure\Persistence\MySql\MysqlGrowthEngagementResponseRepository
+
+  Domains\Growth\Application\Service\GrowthEngagementResponseService: ~
+
+  Domains\Growth\Application\Contract\GrowthEngagementResponseBoundary:
+    alias: Domains\Growth\Application\Service\GrowthEngagementResponseService
+
+  Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResponseClassificationGateway:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Domains\Growth\Application\Contract\GrowthResponseClassificationGatewayInterface:
+    alias: Domains\Growth\Infrastructure\AI\StructuredLlmGrowthResponseClassificationGateway
+
+  Domains\Growth\Application\Service\GrowthResponseClassificationService: ~
+
+  Domains\Growth\Application\Contract\GrowthResponseClassificationBoundary:
+    alias: Domains\Growth\Application\Service\GrowthResponseClassificationService
+
+  Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer: ~
+
+  App\Application\Growth\Integration\GrowthEngagementResponseWebhook:
+    arguments:
+      $secret: '%env(GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET)%'
+      $maxClockSkew: '%env(int:GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_MAX_CLOCK_SKEW)%'
+
   Domains\Growth\Infrastructure\Notification\PlatformNotificationGrowthOutboundMessageGateway:
     arguments:
       $notifications: '@Platform\Notification\Contract\NotificationDispatcherInterface'
@@ -1618,6 +1651,7 @@ services:
         diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
         platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
         growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
+        growth.response-classification.v1: '@Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer'
 
   Kernel\Event\Service\OutboxPublisher:
     arguments:

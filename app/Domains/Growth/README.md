@@ -1018,3 +1018,47 @@ V0.43 performs the central sequence guard twice around model work: once before s
 
 
 Phone provider states `accepted` and `started` are explicitly non-terminal. They keep the sequence waiting; only `no_answer` or `busy` may start another follow-up delay, while `completed` and `failed` stop the autonomous lane.
+
+
+## V0.45 — Inbound Response & Conversation Signals
+
+V0.45 closes the return path of autonomous outreach. Growth observes a real reply before it tries to interpret what the reply means.
+
+```text
+provider reply
+  ↓ signed response webhook
+kernel_action_id correlation
+  ↓ tenant pre-handoff capacity lock
+append-only Engagement Response fact
+  ↓ reply_received outcome
+Event + Audit + commit
+  ↓ V0.44 Sequence Guard
+further follow-up blocked
+  ↓ durable Event Outbox
+structured response classification
+  ↓
+intent / sentiment / urgency / requested action / advisory next owner
+```
+
+The canonical edge is `POST /webhooks/growth/engagement/responses`. It uses a dedicated HMAC secret, timestamp window and idempotency key. A response must correlate to an existing Growth-owned pre-handoff Kernel Action. Email maps to `growth.send_message`, LinkedIn to `growth.send_linkedin`, and phone to `growth.place_call`. Sales-owned executions are rejected because post-handoff conversation ownership belongs to Sales.
+
+Response ingestion is deliberately independent from AI availability. The response fact and `reply_received` outcome commit first under the same tenant-wide admission lock used by V0.40–V0.44. This gives a reply and a concurrent autonomous trigger a deterministic order.
+
+Observed response content and interpretation are stored separately:
+- `tn_growth_engagement_responses` owns the factual inbound body, provider/thread references, correlation and timestamp;
+- `tn_growth_engagement_response_classifications` owns versioned AI interpretation.
+
+The raw response body is not copied into Event or Audit payloads. Those surfaces receive references, hashes and normalized metadata. The classifier receives the response body plus limited prior message angle and Candidate business context, without contact delivery identities or internal ids.
+
+Classification runs through the governed structured LLM boundary from durable consumer `growth.response-classification.v1`. Provider, model, prompt/schema versions and usage metadata are persisted. A future prompt/schema can create another immutable interpretation without rewriting the observed response.
+
+Classification vocabulary includes interested, question, meeting_request, objection, not_interested, unsubscribe, referral, wrong_person, out_of_office and other; sentiment is positive/neutral/negative/mixed/unclear; urgency is low/normal/high.
+
+`recommended_next_owner` is advisory only. V0.45 does not dispatch a handoff, send an automatic reply or mutate Sales/Service state from model output. Those actions require a separate conversation-routing authority policy.
+
+The Candidate Workspace and `GET /api/v1/growth/candidates/{id}/engagement/responses` expose observed replies with the latest classification. An unclassified response remains a valid visible fact while durable classification retries.
+
+AI classification is not required to stop outreach. Receiving the reply itself records `reply_received`, so V0.44's central Sequence Guard blocks content generation and trigger admission immediately.
+
+
+V0.45 also closes the manual governed-execution gap for sequence-derived recommendations. `GrowthEngagementExecutionService` now applies the sequence hard block in eligibility, before proposal, and again after the tenant capacity lock. A human may override automation modes through an explicit governed action, but cannot use a stale follow-up recommendation after a reply, Sales handoff, operator stop, failed delivery or completed phone conversation.

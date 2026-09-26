@@ -15,6 +15,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterf
 use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
+use Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface;
 use Domains\Growth\Automation\Event\GrowthEventType;
 use Domains\Growth\Domain\EngagementChannel;
 use Domains\Growth\Domain\EngagementRecommendationStatus;
@@ -42,6 +43,7 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
         private GrowthEngagementDeliveryRepositoryInterface $deliveries,
         private GrowthEngagementLimitProviderInterface $limitProvider,
         private GrowthEngagementActivationProviderInterface $activationProvider,
+        private GrowthOutreachSequenceGuardInterface $sequenceGuard,
         private GrowthMutationReceiptInterface $receipts,
         private GrowthActionProposalGatewayInterface $actionGateway,
         private TransactionManagerInterface $transactions,
@@ -124,10 +126,6 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             'channel'=>$channel,
             'body'=>$body,
         ],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-        $this->receipts->claim(
-            $organizationId,'engagement_execution_payload',$recommendationId,$payloadFingerprint,
-        );
-
         $existing=$this->executions->byRecommendation($organizationId,$recommendationId);
         if($existing!==null){
             if((string)$existing['payload_fingerprint']!==$payloadFingerprint){
@@ -138,12 +136,20 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             return ['execution'=>$existing,'action'=>$action->toArray(),'replayed'=>true];
         }
 
+        $hardBlock=$this->sequenceGuard->hardBlockForRecommendation($organizationId,$recommendation);
+        if($hardBlock!==null){
+            throw new InvalidArgumentException('Growth outreach sequence blocked execution: '.$hardBlock['code'].'. '.$hardBlock['reason']);
+        }
+        $this->receipts->claim(
+            $organizationId,'engagement_execution_payload',$recommendationId,$payloadFingerprint,
+        );
+
         $executionId='GEXE-'.strtoupper(substr(hash('sha256',$organizationId.':'.$recommendationId),0,20));
 
         return $this->transactions->transactional(function()use(
             $organizationId,$actorId,$correlationId,$candidateId,$recommendationId,$targetDomain,$targetReferenceType,
             $targetReferenceId,$channel,$body,$confidence,$kernelIdempotency,$kernelActionType,$payloadFingerprint,
-            $executionId,$idempotencyKey
+            $executionId,$idempotencyKey,$recommendation
         ):array{
             if($targetDomain==='growth'){
                 $this->executions->lockPreHandoffCapacity($organizationId);
@@ -162,6 +168,10 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             }
 
             if($targetDomain==='growth'){
+                $hardBlock=$this->sequenceGuard->hardBlockForRecommendation($organizationId,$recommendation);
+                if($hardBlock!==null){
+                    throw new InvalidArgumentException('Growth outreach sequence blocked execution: '.$hardBlock['code'].'. '.$hardBlock['reason']);
+                }
                 $activationMode=$this->activationProvider->modeFor($organizationId,$channel);
                 if(!$activationMode->canPropose()){
                     throw new InvalidArgumentException('Pre-handoff '.$channel.' outreach is blocked by the tenant activation policy.');
@@ -286,6 +296,13 @@ final readonly class GrowthEngagementExecutionService implements GrowthEngagemen
             $this->assertExecutableRecommendation($actionType,$channel);
         }catch(InvalidArgumentException $error){
             return ['can_propose'=>false,'code'=>'channel_not_supported','reason'=>$error->getMessage()];
+        }
+        $hardBlock=$this->sequenceGuard->hardBlockForRecommendation($organizationId,$recommendation);
+        if($hardBlock!==null){
+            return [
+                'can_propose'=>false,'code'=>$hardBlock['code'],'reason'=>$hardBlock['reason'],
+                'sequence_hard_block'=>true,
+            ];
         }
 
         $deals=$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal');

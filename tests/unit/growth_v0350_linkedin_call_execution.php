@@ -13,6 +13,7 @@ use Domains\Growth\Application\Contract\GrowthEngagementRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthExternalEngagementGatewayInterface;
 use Domains\Growth\Application\Contract\GrowthLearningRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
+use Domains\Growth\Application\Contract\GrowthOutreachSequenceGuardInterface;
 use Domains\Growth\Application\Contract\GrowthOutboundMessageGatewayInterface;
 use Domains\Growth\Application\DTO\GrowthExecutionAction;
 use Domains\Growth\Application\DTO\GrowthExternalEngagementDelivery;
@@ -214,6 +215,11 @@ $actionGateway=new class implements GrowthActionProposalGatewayInterface {
     public function proposeGrowthCall(string $organizationId,int $actorId,string $correlationId,string $candidateId,string $recommendationId,string $contactId,string $callBrief,?float $confidence,string $kernelIdempotencyKey):GrowthExecutionAction{throw new InvalidArgumentException('unused');}
     public function find(string $organizationId,string $actionId):?GrowthExecutionAction{return null;}
 };
+$sequenceGuard=new class implements GrowthOutreachSequenceGuardInterface {
+    public function bootstrapBlock(string $organizationId,array $recommendation,DateTimeImmutable $startedAt):?array{return null;}
+    public function hardBlockForRecommendation(string $organizationId,array $recommendation):?array{return null;}
+    public function blockingForRecommendation(string $organizationId,array $recommendation):?array{return null;}
+};
 $transactions=new class implements TransactionManagerInterface {
     public function transactional(callable $operation):mixed{return $operation();}
     public function isActive():bool{return false;}
@@ -228,7 +234,7 @@ $audit=new class implements AuditRepositoryInterface {
     public function append(AuditEntry $entry):void{}
 };
 $executionService=new GrowthEngagementExecutionService(
-    $engagement,$learning,$contacts,$executions,$deliveries,$limitProvider,$activationProvider,$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
+    $engagement,$learning,$contacts,$executions,$deliveries,$limitProvider,$activationProvider,$sequenceGuard,$receipts,$actionGateway,$transactions,new EventBus($eventStore,$transactions),$audit,
 );
 $linkedinBrief=$executionService->executionBrief('org-1','cand-linkedin','rec-linkedin');
 $callBrief=$executionService->executionBrief('org-1','cand-call','rec-call');

@@ -224,8 +224,8 @@ final readonly class GrowthOutreachSequenceService implements GrowthOutreachSequ
                 return ['status'=>'ineligible','code'=>'sequence_activation_window_missing'];
             }
 
-            $executionAt=new DateTimeImmutable((string)$execution['created_at']);
-            if($executionAt<new DateTimeImmutable((string)$profile['activation_started_at'])){
+            $executionAt=new DateTimeImmutable((string)$execution['created_at'],new DateTimeZone('UTC'));
+            if($executionAt<new DateTimeImmutable((string)$profile['activation_started_at'],new DateTimeZone('UTC'))){
                 return ['status'=>'before_enablement_window'];
             }
 

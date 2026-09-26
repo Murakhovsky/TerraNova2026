@@ -50,6 +50,8 @@ final class GrowthEventType
     public const ENGAGEMENT_RECOMMENDATION_SUPERSEDED = 'growth.engagement.recommendation_superseded';
     public const ENGAGEMENT_EXECUTION_PROPOSED = 'growth.engagement.execution_proposed';
     public const ENGAGEMENT_DELIVERY_OBSERVED = 'growth.engagement.delivery_observed';
+    public const ENGAGEMENT_RESPONSE_RECEIVED = 'growth.engagement.response_received';
+    public const ENGAGEMENT_RESPONSE_CLASSIFIED = 'growth.engagement.response_classified';
     public const ENGAGEMENT_LIMIT_PROFILE_UPDATED = 'growth.engagement.limit_profile_updated';
     public const ENGAGEMENT_ACTIVATION_PROFILE_UPDATED = 'growth.engagement.activation_profile_updated';
     public const ENGAGEMENT_AUTONOMY_PROFILE_UPDATED = 'growth.engagement.autonomy_profile_updated';
@@ -153,6 +155,8 @@ final class GrowthEventType
             self::ENGAGEMENT_RECOMMENDATION_SUPERSEDED,
             self::ENGAGEMENT_EXECUTION_PROPOSED,
             self::ENGAGEMENT_DELIVERY_OBSERVED,
+            self::ENGAGEMENT_RESPONSE_RECEIVED,
+            self::ENGAGEMENT_RESPONSE_CLASSIFIED,
             self::ENGAGEMENT_LIMIT_PROFILE_UPDATED,
             self::ENGAGEMENT_ACTIVATION_PROFILE_UPDATED,
             self::ENGAGEMENT_AUTONOMY_PROFILE_UPDATED,

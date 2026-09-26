@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\Growth\Application\Service;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Domains\Growth\Application\Contract\GrowthAutonomousContentRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthAutonomousOutreachRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthEngagementActivationProviderInterface;
@@ -30,6 +31,7 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
 
     public function bootstrapBlock(string $organizationId,array $recommendation,DateTimeImmutable $startedAt):?array
     {
+        $startedAt=$startedAt->setTimezone(new DateTimeZone('UTC'));
         $channel=(string)($recommendation['channel']??'');
         $candidateId=(string)($recommendation['candidate_id']??'');
 
@@ -76,7 +78,7 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
             foreach($this->learning->outcomesForCandidate($organizationId,$candidateId,100) as $outcome){
                 $type=(string)($outcome['outcome_type']??'');
                 if(!in_array($type,self::STOP_OUTCOMES,true)||empty($outcome['observed_at']))continue;
-                $observedAt=new DateTimeImmutable((string)$outcome['observed_at']);
+                $observedAt=new DateTimeImmutable((string)$outcome['observed_at'],new DateTimeZone('UTC'));
                 if($observedAt<$startedAt)continue;
                 return $this->block('outcome_'.$type,'Growth learning observed '.$type.' after sequence start.');
             }
@@ -85,7 +87,7 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
         return null;
     }
 
-    public function blockingForRecommendation(string $organizationId,array $recommendation):?array
+    public function hardBlockForRecommendation(string $organizationId,array $recommendation):?array
     {
         $recommendationId=(string)($recommendation['recommendation_id']??'');
         if($recommendationId==='')return $this->block('sequence_recommendation_invalid','Sequence recommendation id is missing.');
@@ -96,12 +98,31 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
             return $this->block('sequence_not_active','Outreach sequence is no longer active.');
         }
 
-        $policyBlock=$this->bootstrapBlock($organizationId,$recommendation,new DateTimeImmutable((string)$sequence['started_at']));
-        if($policyBlock!==null)return $policyBlock;
-
+        $channel=(string)($recommendation['channel']??$sequence['channel']??'');
         $profile=$this->sequences->latestProfile($organizationId);
-        if($profile!==null&&(int)$sequence['touch_count']>(int)($profile['max_touches']??0)){
+        if($profile===null||empty($profile['enabled'])){
+            return $this->block('sequence_policy_disabled','Tenant sequence policy is disabled.');
+        }
+        if(!in_array($channel,array_map('strval',$profile['allowed_channels']??[]),true)){
+            return $this->block('sequence_channel_not_allowed','Sequence channel is no longer allowed.');
+        }
+        if((int)$sequence['touch_count']>(int)($profile['max_touches']??0)){
             return $this->block('sequence_touch_budget_reduced','Current tenant policy reduced the sequence touch budget below this touch.');
+        }
+
+        $candidateId=(string)($recommendation['candidate_id']??$sequence['candidate_id']??'');
+        if($candidateId!==''&&$this->learning->externalSubjectsForCandidate($organizationId,$candidateId,'sales','sales_deal')!==[]){
+            return $this->block('sales_handoff','Candidate has been handed off to Sales.');
+        }
+        if($candidateId!==''){
+            $startedAt=new DateTimeImmutable((string)$sequence['started_at'],new DateTimeZone('UTC'));
+            foreach($this->learning->outcomesForCandidate($organizationId,$candidateId,100) as $outcome){
+                $type=(string)($outcome['outcome_type']??'');
+                if(!in_array($type,self::STOP_OUTCOMES,true)||empty($outcome['observed_at']))continue;
+                $observedAt=new DateTimeImmutable((string)$outcome['observed_at']);
+                if($observedAt<$startedAt)continue;
+                return $this->block('outcome_'.$type,'Growth learning observed '.$type.' after sequence start.');
+            }
         }
 
         foreach($this->sequences->steps($organizationId,(string)$sequence['sequence_id']) as $step){
@@ -112,11 +133,25 @@ final readonly class GrowthOutreachSequenceGuard implements GrowthOutreachSequen
             $status=strtolower((string)($delivery['status']??''));
             if($status==='failed')return $this->block('delivery_failed','A sequence touch delivery failed.');
             if((string)$sequence['channel']==='phone'&&$status==='completed'){
-                return $this->block('phone_completed','A phone conversation completed; autonomous follow-up must stop.');
+                return $this->block('phone_completed','A phone conversation completed; follow-up must stop.');
             }
         }
 
         return null;
+    }
+
+    public function blockingForRecommendation(string $organizationId,array $recommendation):?array
+    {
+        $hardBlock=$this->hardBlockForRecommendation($organizationId,$recommendation);
+        if($hardBlock!==null)return $hardBlock;
+
+        $recommendationId=(string)($recommendation['recommendation_id']??'');
+        $sequence=$this->sequences->sequenceForRecommendation($organizationId,$recommendationId);
+        if($sequence===null)return null;
+
+        return $this->bootstrapBlock(
+            $organizationId,$recommendation,new DateTimeImmutable((string)$sequence['started_at'],new DateTimeZone('UTC'))
+        );
     }
 
     /** @return array{code:string,reason:string} */

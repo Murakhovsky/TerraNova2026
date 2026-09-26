@@ -24,6 +24,8 @@ $engagementSequence=is_array($workspace['engagement_sequence']??null)?$workspace
 $sequence=is_array($engagementSequence['sequence']??null)?$engagementSequence['sequence']:null;
 $sequenceSteps=is_array($engagementSequence['steps']??null)?$engagementSequence['steps']:[];
 $sequencePolicyEffective=is_array($engagementSequence['policy']['effective']??null)?$engagementSequence['policy']['effective']:[];
+$engagementResponses=is_array($workspace['engagement_responses']??null)?$workspace['engagement_responses']:[];
+$inboundResponses=is_array($engagementResponses['responses']??null)?$engagementResponses['responses']:[];
 $handoff=is_array($workspace['handoff']??null)?$workspace['handoff']:[];
 $learning=is_array($workspace['learning']??null)?$workspace['learning']:[];
 $learningSummary=is_array($learning['summary']??null)?$learning['summary']:[];
@@ -246,6 +248,33 @@ $score=is_array($candidate['score']??null)?$candidate['score']:[];
         <button class="tn-ui-button tn-ui-button--primary" type="button" data-growth-engagement-generate>Generate next best action</button>
         <p class="tn-growth-action-status" data-growth-engagement-status></p>
       <?php endif; ?>
+    <?php endif; ?>
+  </section>
+
+  <section class="tn-ui-panel tn-workspace-section">
+    <div class="tn-ui-panel__head"><div><p class="tn-ui-eyebrow">Conversation signals</p><h2>Inbound responses</h2></div><span><?php echo count($inboundResponses); ?></span></div>
+    <?php if($inboundResponses): ?>
+      <div class="tn-growth-signal-list">
+        <?php foreach($inboundResponses as $response): $classification=is_array($response['classification']??null)?$response['classification']:null; ?>
+          <article>
+            <div>
+              <strong><?php echo $h(strtoupper((string)($response['channel']??'response'))); ?></strong>
+              <small><?php echo $h($response['occurred_at']??''); ?></small>
+            </div>
+            <p><?php echo nl2br($h($response['body']??'')); ?></p>
+            <?php if($classification): ?>
+              <p><strong><?php echo $h(strtoupper((string)($classification['intent']??'other'))); ?></strong> · <?php echo $h($classification['sentiment']??'unclear'); ?> · urgency <?php echo $h($classification['urgency']??'normal'); ?></p>
+              <p><?php echo $h($classification['summary']??''); ?></p>
+              <?php if(!empty($classification['requested_action'])): ?><p><strong>Requested:</strong> <?php echo $h($classification['requested_action']); ?></p><?php endif; ?>
+              <small>Suggested owner: <?php echo $h($classification['recommended_next_owner']??'human_review'); ?> · confidence <?php echo round((float)($classification['confidence']??0)*100); ?>% · advisory only</small>
+            <?php else: ?>
+              <small>Classification pending durable processing.</small>
+            <?php endif; ?>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="tn-growth-muted">No inbound Growth responses have been observed yet.</p>
     <?php endif; ?>
   </section>
 
