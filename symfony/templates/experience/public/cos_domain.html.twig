@@ -1,0 +1,92 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block html_lang %}{{ cos.lang }}{% endblock %}
+{% block title %}{{ cos.metaTitle }}{% endblock %}
+{% block meta %}
+<meta name="description" content="{{ cos.metaDescription }}">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="{{ cos.canonicalPath }}">
+{% for lang in cos.languages %}<link rel="alternate" hreflang="{{ lang }}" href="/cos/{{ lang }}/domains/{{ cos.slug }}">{% endfor %}
+{% endblock %}
+
+{% block public_content %}
+<section class="cos-page__stack" data-cos-public="cos-domain" data-cos-domain="{{ cos.slug }}" data-cos-lang="{{ cos.lang }}" data-cos-archetype="{{ page.archetypeId() }}">
+    <twig:CosPageHeader
+        eyebrow="{{ (cos.domain.industry_labels|default([])|first)|default('COS') }} · {{ cos.domain.id|default('') }}"
+        title="{{ cos.domain.title|default('COS') }}"
+        subtitle="{{ cos.domain.summary|default('') }}"
+    >
+        <twig:CosButton label="{{ cos.copy.back|default('All domains') }}" href="/cos/{{ cos.lang }}#domains" variant="ghost" />
+        <twig:CosButton label="{{ cos.copy.cta|default('Contact') }}" href="/contacts" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosActionBar label="COS domain languages" align="start">
+        {% for lang in cos.languages %}
+            <twig:CosButton label="{{ lang|upper }}" href="/cos/{{ lang }}/domains/{{ cos.slug }}" variant="{{ lang == cos.lang ? 'primary' : 'ghost' }}" size="sm" />
+        {% endfor %}
+    </twig:CosActionBar>
+
+    {% if cos.presentation %}
+        <section class="cos-card cos-pattern-stack">
+            <p class="cos-card__eyebrow">{{ cos.presentationLabel }}</p>
+            <h2 class="cos-card__title">{{ cos.presentation.headline|default(cos.domain.title) }}</h2>
+            <p class="cos-card__copy">{{ cos.presentation.promise|default('') }}</p>
+            {% if cos.presentation.problem|default('') %}<p class="cos-card__copy">{{ cos.presentation.problem }}</p>{% endif %}
+            {% if cos.presentation.pillars|default([]) is not empty %}
+                <div class="cos-section-grid">
+                    {% for pillar in cos.presentation.pillars %}
+                        <article class="cos-card"><p class="cos-card__eyebrow">{{ '%02d'|format(loop.index) }}</p><h3 class="cos-card__title">{{ pillar }}</h3></article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="cos-card cos-pattern-stack">
+        <p class="cos-card__eyebrow">{{ cos.detail.problem|default(cos.copy.not_crm|default('Problem')) }}</p>
+        <h2 class="cos-card__title">{{ cos.domain.title }} · {{ cos.copy.not_crm|default('Operational context') }}</h2>
+        <p class="cos-card__copy">{{ cos.domain.problem|default('') }}</p>
+    </section>
+
+    <section class="cos-page__section">
+        <div class="cos-card__header"><div><p class="cos-card__eyebrow">{{ cos.copy.domain_cycle|default('Operating cycle') }}</p><h2 class="cos-card__title">{{ cos.detail.scenario|default(cos.domain.title) }}</h2></div></div>
+        {% set labels = [cos.copy.event|default('Event'), cos.copy.decision|default('Decision'), cos.copy.action|default('Action'), cos.copy.result|default('Result')] %}
+        <div class="cos-section-grid">
+            {% for step in cos.domain.scenario|default([]) %}
+                <article class="cos-card"><p class="cos-card__eyebrow">{{ labels[loop.index0]|default('Step') }}</p><h3 class="cos-card__title">{{ step }}</h3></article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="cos-page__section">
+        <div class="cos-card__header"><div><p class="cos-card__eyebrow">{{ cos.copy.outcomes|default('Outcomes') }}</p><h2 class="cos-card__title">{{ cos.copy.outcomes_title|default('Measured outcomes') }}</h2></div></div>
+        <div class="cos-section-grid">
+            {% for outcome in cos.domain.outcomes|default([]) %}
+                <article class="cos-card"><p class="cos-card__eyebrow">{{ '%02d'|format(loop.index) }}</p><h3 class="cos-card__title">{{ outcome }}</h3></article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="cos-page__section">
+        <div class="cos-card__header"><div><p class="cos-card__eyebrow">{{ cos.copy.signals|default('Signals') }}</p><h2 class="cos-card__title">{{ cos.copy.signals_title|default('Operational signals') }}</h2></div></div>
+        <div class="cos-section-grid">
+            {% for signal in cos.domain.signals|default([]) %}<article class="cos-card"><h3 class="cos-card__title">{{ signal }}</h3></article>{% endfor %}
+        </div>
+    </section>
+
+    <section class="cos-section-grid">
+        <article class="cos-card"><p class="cos-card__eyebrow">{{ cos.detail.metrics_title|default('Metrics') }}</p><ul>{% for metric in cos.domain.metrics|default([]) %}<li>{{ metric }}</li>{% endfor %}</ul></article>
+        <article class="cos-card"><p class="cos-card__eyebrow">{{ cos.detail.controls_title|default('Controls') }}</p><ul>{% for control in cos.domain.controls|default([]) %}<li>{{ control }}</li>{% endfor %}</ul></article>
+    </section>
+
+    <section class="cos-card cos-pattern-stack">
+        <p class="cos-card__eyebrow">{{ cos.copy.start_domain|default('Start with this domain') }}</p>
+        <h2 class="cos-card__title">{{ cos.copy.start_title|default('Start small') }}</h2>
+        <p class="cos-card__copy">{{ cos.copy.start_copy|default('') }}</p>
+        <twig:CosActionBar label="COS domain next steps" align="start">
+            <twig:CosButton label="{{ cos.copy.cta|default('Contact') }}" href="/contacts" variant="primary" />
+            <twig:CosButton label="{{ cos.copy.back|default('All domains') }}" href="/cos/{{ cos.lang }}#domains" variant="ghost" />
+        </twig:CosActionBar>
+    </section>
+</section>
+{% endblock %}

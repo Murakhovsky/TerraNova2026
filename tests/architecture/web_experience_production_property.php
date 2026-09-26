@@ -20,15 +20,17 @@ $routes = $read('symfony/config/routes.yaml');
 foreach ([
     'path: /property',
     'path: /property/catalog',
+    'PublicPropertyCatalogController::index',
     'path: /property/map',
     'path: /property/favour',
-    'PropertyPageController::favour',
+    'PublicPropertyFavouritesController::index',
     'path: /property/show/{slug}',
     'path: /property/presentation/{slug}',
     'path: /property/pdf/{slug}',
     'path: /property/submit',
     'path: /property/create',
     'path: /submit-property',
+    'PublicPropertySubmitController::index',
     'path: /property/manage',
     'path: /property/listing',
     'path: /property/submissions',
@@ -46,8 +48,12 @@ foreach ([
 }
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
-foreach (["public function favour(Request \$request): Response","'property/favour'","new RedirectResponse('/property/presentation/'"] as $marker) {
-    $contains($controller,$marker,'Canonical Symfony Property controller is incomplete.');
+foreach (['public function presentation(', 'public function pdf(', 'public function presentationShare(', "new RedirectResponse('/property/presentation/'"] as $marker) {
+    $contains($controller, $marker, 'Specialized Property compatibility controller is incomplete.');
+}
+$favouritesController = $read('symfony/src/Web/Property/PublicPropertyFavouritesController.php');
+foreach (['GetPublicPropertyFavouritesQuery', 'PageArchetype::PublicCatalog', 'experience/public/property_favourites.html.twig'] as $marker) {
+    $contains($favouritesController, $marker, 'Canonical Public Property Favourites controller is incomplete.');
 }
 $inventoryController=$read('symfony/src/Web/Property/PropertyInventoryController.php');
 foreach(['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery'] as $marker){$contains($inventoryController,$marker,'Property Inventory controller incomplete.');}
@@ -72,14 +78,53 @@ $submission=$read('symfony/templates/experience/property/submission.html.twig');
 foreach(['<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','property/submissions','data-property-submission'] as $marker){$contains($submission,$marker,'Canonical Property submission detail is incomplete.');}
 if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml'))throw new RuntimeException('Legacy Property submission PHTML restored.');
 
-foreach ([
-    'catalog' => ['page_header', 'data-catalog-form', 'data-catalog-count'],
+$catalog=$read('symfony/templates/experience/public/property_catalog.html.twig');
+foreach(['<twig:CosPageHeader','<twig:CosFilterBar','cos-property-catalog-grid','data-controller="public-property"','application/ld+json'] as $marker){
+    $contains($catalog,$marker,'Canonical Public Property Catalog lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($catalog,$forbidden,'Canonical Public Property Catalog restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/catalog.phtml'))throw new RuntimeException('Legacy Property Catalog PHTML restored.');
 
-    'favour' => ['page_header', 'state', 'data-favourite-empty', 'data-favourite-list', 'data-favourite-item'],
-    'show' => ['state', 'action_bar', 'data-request-intent', 'data-save-property', 'data-property-gallery'],
+
+$detail=$read('symfony/templates/experience/public/property_detail.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    'data-controller="public-property public-property-gallery"',
+    'data-public-property-gallery-target="main"',
+    'data-public-property-gallery-target="thumb"',
+    'data-public-property-target="button"',
+    'data-public-property-target="intent"',
+    'application/ld+json',
+    'id="request"',
+    'id="related"',
+] as $marker){
+    $contains($detail,$marker,'Canonical Public Property Detail lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($detail,$forbidden,'Canonical Public Property Detail restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/show.phtml'))throw new RuntimeException('Legacy Property Detail PHTML restored.');
+
+
+$seo=$read('symfony/templates/experience/public/property_seo.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    'data-controller="public-property"',
+    'data-cos-public="property-seo"',
+    "components/property/public_property_card.html.twig",
+    'application/ld+json',
+] as $marker){
+    $contains($seo,$marker,'Canonical Property SEO collections lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($seo,$forbidden,'Canonical Property SEO collections restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/seo.phtml'))throw new RuntimeException('Legacy Property SEO PHTML restored.');
+
+foreach ([
     'presentation' => ['state', 'action_bar', 'data-request-intent', 'data-copy-value'],
-    'seo' => ['page_header', 'state', 'itemscope itemtype="https://schema.org/Product"'],
-    'submit' => ['page_header', 'state', 'enctype="multipart/form-data"', 'name="owner_name"', 'name="property_type"'],
 ] as $view => $markers) {
     $source = $read('app/Interfaces/Web/View/property/' . $view . '.phtml');
     foreach ($markers as $marker) {
@@ -95,9 +140,44 @@ foreach (['$attributes', 'foreach ($attributes as $name => $value)'] as $marker)
     $contains($state, $marker, 'Canonical State must support generic DOM attributes.');
 }
 
-$favourJs = $read('frontend/features/public/interactions.js');
-foreach (['data-favourite-empty', 'data-favourite-count', 'data-favourite-item', '/api/v1/public/properties/favourites'] as $marker) {
-    $contains($favourJs, $marker, 'Favourites browser contract is incomplete.');
+$favourites=$read('symfony/templates/experience/public/property_favourites.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    'data-controller="public-property"',
+    'data-cos-public="property-favourites"',
+    'data-public-property-target="item"',
+    'data-public-property-target="empty"',
+    'data-public-property-target="count"',
+    "components/property/public_property_card.html.twig",
+] as $marker){
+    $contains($favourites,$marker,'Canonical Favourites surface lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($favourites,$forbidden,'Canonical Favourites restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/favour.phtml'))throw new RuntimeException('Legacy Favourites PHTML restored.');
+
+
+$submit=$read('symfony/templates/experience/public/property_submit.html.twig');
+foreach([
+    '<twig:CosPageHeader',
+    '<twig:CosFormSection',
+    '<twig:CosStickyActions',
+    'enctype="multipart/form-data"',
+    'name="owner_name"',
+    'name="property_type"',
+    'data-cos-public="property-submit"',
+] as $marker){
+    $contains($submit,$marker,'Canonical Public Property Submit lost behavior/presentation contract.');
+}
+foreach(['tn-','style=','onclick='] as $forbidden){
+    $notContains($submit,$forbidden,'Canonical Public Property Submit restored legacy/local presentation.');
+}
+if(is_file($root.'/app/Interfaces/Web/View/property/submit.phtml'))throw new RuntimeException('Legacy Public Property Submit PHTML restored.');
+
+$favourJs=$read('symfony/assets/controllers/public_property_controller.js');
+foreach(['itemTargets','emptyTarget','countTarget','/api/v1/public/properties/favourites'] as $marker){
+    $contains($favourJs,$marker,'Canonical Favourites Stimulus contract is incomplete.');
 }
 
 $map = $read('symfony/templates/experience/property/map.html.twig');

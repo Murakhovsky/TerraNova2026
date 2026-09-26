@@ -28,15 +28,12 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       input: {
-        'cos-site': resolve(import.meta.dirname, 'frontend/entrypoints/cos-site.js'),
         'cos-ui-runtime': resolve(import.meta.dirname, 'frontend/entrypoints/cos-ui-runtime.js'),
         'public-surface': resolve(import.meta.dirname, 'frontend/entrypoints/public-surface.js'),
 
-        'terranova-catalog-api': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-catalog-api.js'),
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),
         'terranova-interface': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-interface.js'),
         'terranova-media-manager': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-media-manager.js'),
-        'terranova-property-gallery': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-property-gallery.js'),
         'terranova-spatial-admin': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-spatial-admin.js'),
         'spatial-viewer': resolve(import.meta.dirname, 'frontend/spatial/spatial-viewer.js'),
       },

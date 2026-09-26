@@ -119,8 +119,8 @@ if (!str_contains($base, "importmap('app')") || !str_contains($base, "asset('sty
     throw new RuntimeException('Canonical Twig base layout is not AssetMapper-enabled.');
 }
 
-if (!str_contains($base, 'ux_controller_link_tags()')) {
-    throw new RuntimeException('Stimulus controller CSS autoimports are not rendered by the base layout.');
+if (str_contains($base, 'ux_controller_link_tags()')) {
+    throw new RuntimeException('AssetMapper runtime must not restore the legacy Stimulus CSS link helper.');
 }
 
 $dockerfile = (string) file_get_contents($root . '/docker/symfony/php/Dockerfile');

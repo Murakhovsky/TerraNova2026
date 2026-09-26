@@ -16,6 +16,14 @@ return [
         'path' => 'app.js',
         'entrypoint' => true,
     ],
+    'public_home' => [
+        'path' => 'public_home.js',
+        'entrypoint' => true,
+    ],
+    'public_property' => [
+        'path' => 'public_property.js',
+        'entrypoint' => true,
+    ],
     '@hotwired/stimulus' => [
         'version' => '3.2.2',
     ],

@@ -61,14 +61,14 @@ body {
 
 .cos-button--primary {
   color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary);
-  border-color: var(--cos-color-primary);
+  background: var(--cos-color-primary-hover);
+  border-color: var(--cos-color-primary-hover);
 }
 
 .cos-button--primary:hover {
   color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary-hover);
-  border-color: var(--cos-color-primary-hover);
+  background: var(--cos-color-primary-strong);
+  border-color: var(--cos-color-primary-strong);
 }
 
 .cos-button--ghost {
@@ -101,7 +101,7 @@ body {
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--cos-color-border);
   border-radius: var(--cos-radius-pill);
-  color: var(--cos-color-text-muted);
+  color: var(--cos-color-text-soft);
   background: var(--cos-color-surface-subtle);
   font-size: var(--cos-font-xs);
   font-weight: 720;
@@ -288,8 +288,8 @@ body {
 
 .cos-icon-button--primary {
   color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary);
-  border-color: var(--cos-color-primary);
+  background: var(--cos-color-primary-hover);
+  border-color: var(--cos-color-primary-hover);
 }
 
 .cos-icon-button--danger {
@@ -584,8 +584,8 @@ body {
 .cos-button--primary[data-cos-state="hover"],
 .cos-icon-button--primary[data-cos-state="hover"] {
   color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary-hover);
-  border-color: var(--cos-color-primary-hover);
+  background: var(--cos-color-primary-strong);
+  border-color: var(--cos-color-primary-strong);
 }
 
 .cos-button--primary:active,

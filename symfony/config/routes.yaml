@@ -72,8 +72,92 @@ cos_web_auth_logout:
 
 cos_symfony_home:
   path: /
-  controller: App\Controller\HomePageController
+  controller: App\Web\PublicSite\HomeController
   methods: [GET, HEAD]
+
+
+# Wave 13 Phase 9 — Public Brand. Ten brand destinations share one canonical runtime.
+cos_web_public_terra_nova:
+  path: /terra-nova
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'terra-nova' }
+  methods: [GET, HEAD]
+
+cos_web_public_agency:
+  path: /agency
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'agency' }
+  methods: [GET, HEAD]
+
+cos_web_public_services:
+  path: /services
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'services' }
+  methods: [GET, HEAD]
+
+cos_web_public_partners:
+  path: /partners
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'partners' }
+  methods: [GET, HEAD]
+
+cos_web_public_team:
+  path: /team
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'team' }
+  methods: [GET, HEAD]
+
+cos_web_public_cases:
+  path: /cases
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'cases' }
+  methods: [GET, HEAD]
+
+cos_web_public_vacancies:
+  path: /vacancies
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'vacancies' }
+  methods: [GET, HEAD]
+
+cos_web_public_contacts:
+  path: /contacts
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'contacts' }
+  methods: [GET, HEAD, POST]
+
+cos_web_public_it:
+  path: /it
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'it' }
+  methods: [GET, HEAD]
+
+cos_web_public_art:
+  path: /art
+  controller: App\Web\PublicSite\PublicBrandController::show
+  defaults: { slug: 'art' }
+  methods: [GET, HEAD]
+
+# Wave 13 Phase 11 — Public COS product surface.
+cos_web_public_cos:
+  path: /cos
+  controller: App\Web\PublicSite\PublicCosController::landing
+  defaults: { lang: 'en' }
+  methods: [GET, HEAD]
+
+cos_web_public_cos_lang:
+  path: /cos/{lang}
+  controller: App\Web\PublicSite\PublicCosController::landing
+  methods: [GET, HEAD]
+  requirements:
+    lang: 'en|de|fr|pl|uk'
+
+cos_web_public_cos_domain:
+  path: /cos/{lang}/domains/{slug}
+  controller: App\Web\PublicSite\PublicCosController::domain
+  methods: [GET, HEAD]
+  requirements:
+    lang: 'en|de|fr|pl|uk'
+    slug: '[a-z0-9-]+'
 
 cos_web_cabinet:
   path: /cabinet
@@ -1353,12 +1437,12 @@ cos_web_client_case_property_match_update:
 
 cos_web_property_root:
   path: /property
-  controller: App\Web\Property\PropertyPageController::catalog
+  controller: App\Web\Property\PublicPropertyCatalogController::index
   methods: [GET, HEAD]
 
 cos_web_property_catalog:
   path: /property/catalog
-  controller: App\Web\Property\PropertyPageController::catalog
+  controller: App\Web\Property\PublicPropertyCatalogController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_map:
@@ -1368,12 +1452,12 @@ cos_web_property_map:
 
 cos_web_property_favour:
   path: /property/favour
-  controller: App\Web\Property\PropertyPageController::favour
+  controller: App\Web\Property\PublicPropertyFavouritesController::index
   methods: [GET, HEAD]
 
 cos_web_property_show:
   path: /property/show/{slug}
-  controller: App\Web\Property\PropertyPageController::show
+  controller: App\Web\Property\PublicPropertyDetailController::show
   methods: [GET, HEAD, POST]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
@@ -1391,19 +1475,19 @@ cos_web_property_pdf:
 
 cos_web_property_type:
   path: /property/type/{code}
-  controller: App\Web\Property\PropertyPageController::type
+  controller: App\Web\Property\PublicPropertySeoController::type
   methods: [GET, HEAD]
   requirements: { code: '[A-Za-z0-9_-]+' }
 
 cos_web_property_city:
   path: /property/city/{slug}
-  controller: App\Web\Property\PropertyPageController::city
+  controller: App\Web\Property\PublicPropertySeoController::city
   methods: [GET, HEAD]
   requirements: { slug: '[A-Za-z0-9_-]+' }
 
 cos_web_property_landing:
   path: /nerukhomist/{location}/{type}
-  controller: App\Web\Property\PropertyPageController::landing
+  controller: App\Web\Property\PublicPropertySeoController::landing
   methods: [GET, HEAD]
   requirements:
     location: '[A-Za-z0-9_-]+'
@@ -1411,17 +1495,17 @@ cos_web_property_landing:
 
 cos_web_property_submit:
   path: /property/submit
-  controller: App\Web\Property\PropertyPageController::submit
+  controller: App\Web\Property\PublicPropertySubmitController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_create_alias:
   path: /property/create
-  controller: App\Web\Property\PropertyPageController::submit
+  controller: App\Web\Property\PublicPropertySubmitController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_submit_alias:
   path: /submit-property
-  controller: App\Web\Property\PropertyPageController::submit
+  controller: App\Web\Property\PublicPropertySubmitController::index
   methods: [GET, HEAD, POST]
 
 cos_web_property_manage:
