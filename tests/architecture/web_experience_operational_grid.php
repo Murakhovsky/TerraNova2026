@@ -11,7 +11,6 @@ $read = static function (string $path) use ($root): string {
 };
 
 $grid = $read('app/Interfaces/Web/View/components/ui/operational_grid.phtml');
-$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
 $clientCaseItem = $read('symfony/templates/components/client_case/client_case_collection_item.html.twig');
 $css = $read('frontend/styles/canonical-components.css');
 
@@ -38,23 +37,6 @@ foreach ([
     }
 }
 
-foreach ([
-    '$actionRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'kind' => 'form'",
-    "'kind' => 'link'",
-    '\'csrf_token\' => $csrfToken',
-    'cos/action/',
-    '#approval-',
-] as $marker) {
-    if (!str_contains($cos, $marker)) {
-        throw new RuntimeException('COS Proposed Actions migration incomplete: ' . $marker);
-    }
-}
-
-if (str_contains($cos, '<table class="tn-listing-table">')) {
-    throw new RuntimeException('COS Proposed Actions raw table must remain retired.');
-}
 
 
 $users = $read('symfony/templates/experience/admin/users.html.twig');

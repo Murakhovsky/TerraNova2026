@@ -54,38 +54,40 @@ foreach ([
     $contains($dataTable, $marker, 'Canonical DataTable must support safe details cells for runtime JSON/config output.');
 }
 
-$cos = $read('app/Interfaces/Web/View/cos/index.phtml');
+$cos = $read('symfony/templates/experience/operations/control_center.html.twig');
+$cosPresenter = $read('symfony/src/Web/Operations/ControlCenterPresenter.php');
+$cosController = $read('symfony/src/Web/Operations/ControlCenterPageController.php');
 foreach ([
-    '$eventRows = [];',
-    '$ruleRows = [];',
-    '$agentRows = [];',
-    '$policyRows = [];',
-    '$integrationRows = [];',
-    '$resultRows = [];',
-    "'bodyPartial' => 'components/ui/data_table'",
-    "'kind' => 'details'",
-    'id="events"',
-    'id="rules"',
-    'id="agents"',
-    'id="policies"',
-    'id="integrations"',
-    'id="results"',
+    '<twig:CosPageHeader',
+    '<twig:CosToolbar',
+    'class="cos-kpi-strip"',
+    '<twig:CosEntityListItem',
+    '<twig:CosActionBar',
+    'id="{{ group.key }}"',
     'id="actions"',
-    'cos/action/',
-    'cos/approval/',
+    'id="approvals"',
+    '/cos/action/',
+    '/cos/approval/',
     'name="csrf_token"',
 ] as $marker) {
-    $contains($cos, $marker, 'COS Control Center lost a canonical read-only table or operational action contract.');
+    $contains($cos, $marker, 'COS Control Center lost canonical read/mutation contract.');
 }
-$notContains($cos, '<table class="tn-listing-table">', 'COS Control Center must not retain the retired raw Proposed Actions table.');
+foreach (['tn-', '<table', 'style=', '<script'] as $legacy) {
+    $notContains($cos, $legacy, 'COS Control Center restored legacy/local presentation.');
+}
+foreach (["'events'","'rules'","'agents'","'policies'","'integrations'","'decisions'","'results'","'audit'"] as $marker) {
+    $contains($cosPresenter, $marker, 'COS presenter lost runtime projection: ' . $marker);
+}
 foreach ([
-    '$actionRows = [];',
-    "'bodyPartial' => 'components/ui/operational_grid'",
-    "'_actions' => \$rowActions",
-    "'kind' => 'form'",
-    "'csrf_token' => \$csrfToken",
+    'OperationsMutationCommand::EXECUTE_ACTION',
+    'OperationsMutationCommand::APPROVE',
+    'OperationsMutationCommand::REJECT',
+    'SessionCsrfValidator',
 ] as $marker) {
-    $contains($cos, $marker, 'COS Proposed Actions must use canonical OperationalGrid: ' . $marker);
+    $contains($cosController, $marker, 'COS controller lost governed mutation behavior: ' . $marker);
+}
+if (is_file($root . '/app/Interfaces/Web/View/cos/index.phtml')) {
+    throw new RuntimeException('Retired COS Control Center PHTML restored.');
 }
 
 $companyHome = $read('symfony/templates/experience/admin/dashboard.html.twig');

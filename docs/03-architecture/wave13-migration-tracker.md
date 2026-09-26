@@ -30,7 +30,7 @@ kind: architecture
 | VR-016 | `/property/submission/{id}` | Workspace | Property | Entity Workspace | P0 | Twig | DONE |
 | VR-017 | `/property/map` | Public | Property | Map / Spatial | P0 | Twig | DONE |
 | VR-018 | `/spatial/manage` | Workspace | Property / Spatial | Map / Spatial | P0 | Twig | DONE |
-| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | BACKLOG |
+| VR-019 | `/cos/control-center` | System | COS | System / Control Surface | P0 | Twig | QA |
 | VR-020 | `/cos/architecture` | System | Visualization | System / Control Surface | P0 | Twig | BACKLOG |
 | VR-021 | `/admin/diagnostics/methodology-studio` | System | Diagnostic | System / Control Surface | P0 | Twig | BACKLOG |
 | VR-022 | `/admin/analytics` | Workspace | Core / Property | Executive Dashboard | P0 | Twig | DONE |
@@ -152,3 +152,6 @@ VR-022 переводить Analytics на Executive Dashboard: Property funnel 
 
 
 VR-023 переводить User Administration на System / Control Surface: read path проходить через Identity Application Query, create/update mutations винесені в окремий controller, mutation-heavy users рендеряться domain component, а `CoreWorkspacePageController` і `admin/users.phtml` видалені. Regression gates вирівняні з canonical Twig ownership; unit закритий як DONE.
+
+
+VR-019 переводить COS Control Center на System / Control Surface: read path проходить через Application Query, runtime datasets нормалізуються Presenter/ViewModel, а execute/approve/reject лишаються server-first CommandBus mutations. Legacy cos/index.phtml і dedicated cos-control-center Vite bundle видаляються.

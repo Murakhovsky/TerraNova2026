@@ -14,6 +14,7 @@ on:
       - 'symfony/src/Application/Identity/**'
       - 'symfony/src/Web/Content/**'
       - 'symfony/src/Web/Operations/**'
+      - 'symfony/src/Application/Operations/**'
       - 'symfony/src/Web/Visualization/**'
       - 'symfony/src/Web/Diagnostic/**'
       - 'symfony/src/Application/Experience/**'
@@ -50,6 +51,7 @@ on:
       - 'symfony/src/Application/Identity/**'
       - 'symfony/src/Web/Content/**'
       - 'symfony/src/Web/Operations/**'
+      - 'symfony/src/Application/Operations/**'
       - 'symfony/src/Web/Visualization/**'
       - 'symfony/src/Web/Diagnostic/**'
       - 'symfony/src/Application/Experience/**'
@@ -118,6 +120,7 @@ jobs:
           php tests/architecture/web_experience_wave13_admin_analytics.php
           php tests/architecture/web_experience_wave13_admin_users.php
           php tests/architecture/web_experience_wave13_form_patterns.php
+          php tests/architecture/web_experience_wave13_control_center.php
       - name: Preserve Wave 12 visual foundation
         run: |
           php tests/architecture/web_experience_visual_foundation.php

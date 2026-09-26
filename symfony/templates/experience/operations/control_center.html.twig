@@ -1,0 +1,171 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}COS Control Center{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Company Operating System"
+        title="Control Center"
+        subtitle="Спостережуваний ланцюг рішень: від бізнес-події до результату, human control і аудиту."
+    >
+        <twig:CosButton label="Architecture" href="/cos/architecture" variant="ghost" />
+        <twig:CosButton label="Client Cases" href="/client-case" variant="primary" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="COS control sections">
+        {% block start %}
+            <span class="cos-card__copy">System control surface · governed runtime</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Events" href="#events" variant="ghost" size="sm" />
+            <twig:CosButton label="Actions" href="#actions" variant="ghost" size="sm" />
+            <twig:CosButton label="Approvals" href="#approvals" variant="ghost" size="sm" />
+            <twig:CosButton label="Audit" href="#audit" variant="ghost" size="sm" />
+        {% endblock %}
+    </twig:CosToolbar>
+
+    {% if control.actionStatus %}
+        <twig:CosAlert title="COS operation" copy="{{ control.actionStatus }}" tone="positive" />
+    {% endif %}
+
+    {% if control.error %}
+        <twig:CosAlert title="COS Control Center недоступний" copy="{{ control.error }}" tone="danger" />
+    {% else %}
+        <section class="cos-page__section" aria-labelledby="cos-runtime-kpis">
+            <h2 id="cos-runtime-kpis" class="cos-section-title">Runtime pulse</h2>
+            <div class="cos-kpi-strip">
+                {% for metric in control.kpis %}
+                    <article class="cos-card">
+                        <twig:CosMetric label="{{ metric.label }}" value="{{ metric.value }}" hint="{{ metric.hint }}" />
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% for group in control.groups %}
+            <section id="{{ group.key }}" class="cos-page__section" aria-labelledby="cos-{{ group.key }}-title">
+                <article class="cos-card">
+                    <div class="cos-card__header">
+                        <div>
+                            <p class="cos-card__eyebrow">{{ group.eyebrow }}</p>
+                            <h2 id="cos-{{ group.key }}-title" class="cos-card__title">{{ group.label }}</h2>
+                            <p class="cos-card__copy">{{ group.description }} · {{ group.items|length }}</p>
+                        </div>
+                    </div>
+
+                    {% if group.items is empty %}
+                        <twig:CosEmptyState title="{{ group.label }} порожній" copy="Runtime ще не повернув записів для цієї секції." />
+                    {% else %}
+                        <div class="cos-entity-list" role="list">
+                            {% for item in group.items %}
+                                <twig:CosEntityListItem
+                                    title="{{ item.title }}"
+                                    subtitle="{{ item.subtitle }}"
+                                    meta="{{ item.meta }}"
+                                    statusLabel="{{ item.statusLabel }}"
+                                    statusTone="{{ item.statusTone }}"
+                                />
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </article>
+            </section>
+        {% endfor %}
+
+        <section id="actions" class="cos-page__section" aria-labelledby="cos-actions-title">
+            <article class="cos-card">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Execution intent</p>
+                        <h2 id="cos-actions-title" class="cos-card__title">Proposed Actions</h2>
+                        <p class="cos-card__copy">{{ control.actions|length }} останніх.</p>
+                    </div>
+                </div>
+
+                {% if control.actions is empty %}
+                    <twig:CosEmptyState title="Actions ще немає" copy="Нові governed actions зʼявляться після runtime proposals." />
+                {% else %}
+                    <div class="cos-pattern-stack">
+                        {% for action in control.actions %}
+                            <article class="cos-card">
+                                <div class="cos-card__header">
+                                    <div>
+                                        <p class="cos-card__eyebrow">{{ action.target }}</p>
+                                        <h3 class="cos-card__title">{{ action.title }}</h3>
+                                    </div>
+                                    <twig:CosStatus label="{{ action.status }}" tone="{{ action.tone }}" />
+                                </div>
+                                <p class="cos-card__copy">Risk: {{ action.risk ?: '—' }}</p>
+                                <twig:CosActionBar label="Action controls" align="start">
+                                    {% if action.canExecute %}
+                                        <form action="/cos/action/{{ action.id }}/execute" method="post">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <input type="hidden" name="return_url" value="cos/control-center">
+                                            <button class="cos-button cos-button--primary cos-button--sm" type="submit">Execute</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if action.approvalId and action.approvalStatus == 'PENDING' %}
+                                        <a class="cos-button cos-button--ghost cos-button--sm" href="#approval-{{ action.approvalId }}">Open approval</a>
+                                    {% endif %}
+                                </twig:CosActionBar>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+
+        <section id="approvals" class="cos-page__section" aria-labelledby="cos-approvals-title">
+            <article class="cos-card">
+                <div class="cos-card__header">
+                    <div>
+                        <p class="cos-card__eyebrow">Human control</p>
+                        <h2 id="cos-approvals-title" class="cos-card__title">Approvals</h2>
+                        <p class="cos-card__copy">{{ control.approvals|length }} останніх.</p>
+                    </div>
+                </div>
+
+                {% if control.approvals is empty %}
+                    <twig:CosEmptyState title="Approvals порожній" copy="Немає actions, які зараз потребують human approval." />
+                {% else %}
+                    <div class="cos-pattern-stack">
+                        {% for approval in control.approvals %}
+                            <article class="cos-card" id="approval-{{ approval.id }}">
+                                <div class="cos-card__header">
+                                    <div>
+                                        <p class="cos-card__eyebrow">{{ approval.target }}</p>
+                                        <h3 class="cos-card__title">{{ approval.title }}</h3>
+                                    </div>
+                                    <twig:CosStatus label="{{ approval.status }}" tone="{{ approval.tone }}" />
+                                </div>
+                                <p class="cos-card__copy">{{ approval.reason }}</p>
+                                <p class="cos-card__copy">Risk: {{ approval.risk ?: '—' }}</p>
+                                {% if approval.canDecide %}
+                                    <twig:CosActionBar label="Approval decision" align="start">
+                                        <form action="/cos/approval/{{ approval.id }}/approve" method="post">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <input type="hidden" name="return_url" value="cos/control-center">
+                                            <button class="cos-button cos-button--primary cos-button--sm" type="submit">Approve</button>
+                                        </form>
+                                        <form action="/cos/approval/{{ approval.id }}/reject" method="post">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <input type="hidden" name="return_url" value="cos/control-center">
+                                            <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Reject</button>
+                                        </form>
+                                    </twig:CosActionBar>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

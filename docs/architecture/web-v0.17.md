@@ -54,9 +54,9 @@ Wave 13 Phase 5 завершив проміжний PHTML етап: route пра
 
 ### COS Control Center
 
-`app/Interfaces/Web/View/cos/index.phtml`
+`symfony/templates/experience/operations/control_center.html.twig`
 
-Control Center переведений із власної паралельної admin-мови на канонічний Workspace shell:
+Wave 13 VR-019 завершує міграцію Control Center на канонічний System / Control Surface:
 - `tn-listing-hero` → `PageHeader`;
 - `tn-cos-metrics` → `KPI Card`;
 - `tn-admin-tabs` → canonical `Tabs`;
@@ -67,7 +67,7 @@ Control Center переведений із власної паралельної
 
 Domain-specific content не штучно уніфікується. JSON details, decision cards, approval cards та audit list лишаються COS feature-patterns усередині канонічного shell. Це важливе правило: компонентна система стандартизує повторювану UX-мову, а не стирає доменну специфіку.
 
-Щільні таблиці Control Center поки зберігають спеціалізовану markup-структуру, оскільки містять `details`, execution forms і approval anchors, які поточний `DataTable` contract не повинен симулювати сирим HTML.
+Runtime datasets рендеряться через canonical EntityList/Card patterns; execute/approve/reject лишаються server-first POST forms із CSRF. Dedicated cos-control-center Vite/CSS bundle більше не потрібен.
 
 ### Client Case
 
