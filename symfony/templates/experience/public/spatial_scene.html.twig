@@ -1,0 +1,66 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block title %}{{ scene.title }} | 3D Terra Nova CLUB{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% for href in islandAssets.styles %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% for src in islandAssets.scripts %}<script type="module" src="{{ src }}"></script>{% endfor %}
+{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="{{ scene.description ?: 'Інтерактивна 3D-презентація обʼєкта Terra Nova CLUB.' }}">
+    <link rel="canonical" href="{{ canonicalUrl }}">
+    {% if scene.viewer.poster_url|default('') %}<meta property="og:image" content="{{ scene.viewer.poster_url }}">{% endif %}
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack"
+    data-cos-public="spatial-scene"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Spatial presentation"
+        title="{{ scene.title }}"
+        subtitle="{{ scene.description ?: 'Інтерактивна просторова презентація обʼєкта.' }}"
+        metaValue="{{ scene.scene_type|default('model') }}"
+        metaLabel="{{ scene.provider|default('native') }}"
+    />
+
+    <section class="cos-spatial-stage" id="tour">
+        <div
+            class="cos-spatial-viewer"
+            data-spatial-viewer
+            data-scene="{{ scene.public_id }}"
+            data-endpoint="/api/spatial/scenes/{{ scene.public_id }}"
+        >
+            {% if scene.viewer.poster_url|default('') %}
+                <img class="cos-spatial-viewer__poster" src="{{ scene.viewer.poster_url }}" alt="{{ scene.title }}">
+            {% endif %}
+            <div class="cos-spatial-viewer__status" data-spatial-status>Завантаження 3D-сцени</div>
+            <div class="cos-spatial-viewer__hotspots" data-spatial-hotspots></div>
+        </div>
+        <div class="cos-action-bar cos-action-bar--start">
+            <button class="cos-button cos-button--ghost" type="button" data-spatial-reset>Початковий ракурс</button>
+            <button class="cos-button cos-button--primary" type="button" data-spatial-fullscreen>На весь екран</button>
+            {% if scene.viewer.ar_url|default('') %}<a class="cos-button cos-button--ghost" href="{{ scene.viewer.ar_url }}" rel="ar">Відкрити в AR</a>{% endif %}
+        </div>
+    </section>
+
+    <section class="cos-card">
+        <p class="cos-card__eyebrow">Scene summary</p>
+        <h2 class="cos-card__title">{{ scene.title }}</h2>
+        <p class="cos-card__copy">{{ scene.description ?: 'Інтерактивна просторова презентація обʼєкта.' }}</p>
+        <div class="cos-kpi-strip">
+            <article class="cos-card"><twig:CosMetric label="Hotspots" value="{{ scene.hotspots|default([])|length }}" /></article>
+            <article class="cos-card"><twig:CosMetric label="Assets" value="{{ scene.assets|default([])|length }}" /></article>
+        </div>
+    </section>
+</section>
+{% endblock %}

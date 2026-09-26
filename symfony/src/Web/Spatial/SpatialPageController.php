@@ -1,10 +1,15 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Web\Spatial;
 
-use App\Web\Navigation\NavigationBuilder;
-use App\Web\Phtml\PhtmlRenderer;
+use App\Web\Experience\Archetype\PageArchetype;
+use App\Web\Experience\Archetype\PagePresentationFactory;
+use App\Web\Experience\Extension\Model\WebExtensionContext;
+use App\Web\Experience\Shell\ShellBreadcrumb;
+use App\Web\Experience\Shell\WorkspaceShellFactory;
+use App\Web\Phtml\ViteAssetManifest;
 use Domains\Spatial\Application\Contract\SpatialSceneInterface;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -14,28 +19,29 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Twig\Environment;
 
 final readonly class SpatialPageController
 {
     public function __construct(
-        private PhtmlRenderer $renderer,
+        private Environment $twig,
         private TenantContextProviderInterface $tenants,
-        private NavigationBuilder $navigation,
+        private WorkspaceShellFactory $shells,
+        private PagePresentationFactory $pages,
         private SpatialSceneInterface $scenes,
+        private ViteAssetManifest $vite,
     ) {
     }
 
     public function edit(Request $request, ?string $id = null): Response
     {
         $tenant = $this->manager();
-        if ($tenant instanceof Response) {
-            return $tenant;
-        }
+        if ($tenant instanceof Response) return $tenant;
 
         $sceneId = max(0, (int) ($id ?? 0));
         $scene = $sceneId > 0 ? $this->scenes->scene($sceneId) : null;
         if ($sceneId > 0 && $scene === null) {
-            return new Response('Spatial scene was not found.', 404);
+            return new Response('Spatial scene was not found.', Response::HTTP_NOT_FOUND);
         }
 
         $scene ??= [
@@ -46,22 +52,45 @@ final readonly class SpatialPageController
             'versions' => [], 'captures' => [], 'jobs' => [],
         ];
 
-        return $this->workspace($request, $tenant, 'spatial/edit', [
-            'metaTitle' => ((string) ($scene['title'] ?: 'Нова 3D-сцена')) . ' | Terra Nova CLUB',
-            'metaRobots' => 'noindex,nofollow',
-            'pageAssetEntries' => ['terranova-spatial-admin'],
-            'scene' => $scene,
-            'properties' => $this->scenes->propertyOptions(),
-            'actionStatus' => trim((string) $request->query->get('status_message', '')),
+        $context = new WebExtensionContext(
+            organizationId: $tenant->organizationId()->value(),
+            role: $tenant->role()->value(),
+            surface: 'workspace',
+            activeSection: 'properties',
+            activeItem: 'spatial',
+        );
+        $shell = $this->shells->create($tenant, $context, 'Spatial Editor', [
+            new ShellBreadcrumb('Workspace', '/admin'),
+            new ShellBreadcrumb('Properties', '/property/manage'),
+            new ShellBreadcrumb('Spatial', '/spatial/manage'),
+            new ShellBreadcrumb($sceneId > 0 ? (string) ($scene['title'] ?? 'Scene') : 'New scene'),
         ]);
+
+        return new Response(
+            $this->twig->render('experience/spatial/edit.html.twig', [
+                'shell' => $shell,
+                'page' => $this->pages->create(
+                    PageArchetype::FormEditor,
+                    ['PageHeader', 'FormSection', 'StickyActions', 'EntityList'],
+                    'normal',
+                ),
+                'scene' => $scene,
+                'properties' => $this->scenes->propertyOptions(),
+                'actionStatus' => trim((string) $request->query->get('status_message', '')),
+            ]),
+            Response::HTTP_OK,
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'no-store, private',
+                'X-Robots-Tag' => 'noindex, nofollow',
+            ],
+        );
     }
 
     public function save(Request $request, ?string $id = null): Response
     {
         $tenant = $this->manager();
-        if ($tenant instanceof Response) {
-            return $tenant;
-        }
+        if ($tenant instanceof Response) return $tenant;
 
         $input = $request->request->all();
         $input['id'] = max(0, (int) ($id ?? ($input['id'] ?? 0)));
@@ -74,9 +103,7 @@ final readonly class SpatialPageController
     public function upload(Request $request, string $id): Response
     {
         $tenant = $this->manager();
-        if ($tenant instanceof Response) {
-            return $tenant;
-        }
+        if ($tenant instanceof Response) return $tenant;
 
         $sceneId = (int) $id;
         try {
@@ -88,13 +115,13 @@ final readonly class SpatialPageController
             );
 
             if ($this->wantsJson($request)) {
-                return new JsonResponse(['ok' => true, 'message' => 'Asset завантажено та поставлено в обробку.', 'asset' => $asset], 201);
+                return new JsonResponse(['ok' => true, 'message' => 'Asset завантажено та поставлено в обробку.', 'asset' => $asset], Response::HTTP_CREATED);
             }
 
             return $this->redirectStatus('/spatial/edit/' . $sceneId, 'Asset завантажено та поставлено в обробку.');
         } catch (Throwable $error) {
             if ($this->wantsJson($request)) {
-                return new JsonResponse(['ok' => false, 'message' => $error->getMessage()], 422);
+                return new JsonResponse(['ok' => false, 'message' => $error->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
             return $this->redirectStatus('/spatial/edit/' . $sceneId, $error->getMessage());
@@ -152,6 +179,7 @@ final readonly class SpatialPageController
         if ($tenant instanceof Response) return $tenant;
 
         $result = $this->scenes->publish((int) $id);
+
         return $this->redirectStatus('/spatial/edit/' . (int) $id, (string) ($result['message'] ?? 'Spatial scene updated.'));
     }
 
@@ -159,61 +187,35 @@ final readonly class SpatialPageController
     {
         $scene = $this->scenes->publicScene($slug);
         if ($scene === null) {
-            return new Response('Spatial scene was not found.', 404);
-        }
-
-        $variables = [
-            'interfaceSurface' => 'public',
-            'pageAssetEntries' => ['spatial-viewer'],
-            'scene' => $scene,
-            'metaTitle' => (string) $scene['title'] . ' | 3D Terra Nova CLUB',
-            'metaDescription' => (string) ($scene['description'] ?: 'Інтерактивна 3D-презентація об’єкта Terra Nova CLUB.'),
-            'metaUrl' => $request->getSchemeAndHttpHost() . '/spatial/scene/' . rawurlencode((string) $scene['slug']),
-        ];
-        if (!empty($scene['viewer']['poster_url'])) {
-            $variables['metaImage'] = $scene['viewer']['poster_url'];
+            return new Response('Spatial scene was not found.', Response::HTTP_NOT_FOUND);
         }
 
         return new Response(
-            $this->renderer->render($request, 'spatial/scene', $variables),
-            200,
-            ['Content-Type' => 'text/html; charset=UTF-8'],
+            $this->twig->render('experience/public/spatial_scene.html.twig', [
+                'page' => $this->pages->create(
+                    PageArchetype::MapSpatial,
+                    ['PageHeader', 'Toolbar'],
+                    'normal',
+                ),
+                'scene' => $scene,
+                'islandAssets' => $this->vite->assets(['spatial-viewer']),
+                'canonicalUrl' => $request->getSchemeAndHttpHost() . '/spatial/scene/' . rawurlencode((string) $scene['slug']),
+            ]),
+            Response::HTTP_OK,
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'public, max-age=60',
+            ],
         );
     }
 
     private function manager(): TenantContext|Response
     {
         $tenant = $this->tenants->current();
-        if ($tenant === null) {
-            return new RedirectResponse('/auth/login');
-        }
-        if (!$tenant->isManager()) {
-            return new Response('Forbidden', 403);
-        }
+        if ($tenant === null) return new RedirectResponse('/auth/login');
+        if (!$tenant->isManager()) return new Response('Forbidden', Response::HTTP_FORBIDDEN);
 
         return $tenant;
-    }
-
-    /** @param array<string,mixed> $extra */
-    private function workspace(Request $request, TenantContext $tenant, string $view, array $extra): Response
-    {
-        $role = $tenant->role()->value();
-        $variables = array_replace([
-            'workspaceSection' => 'properties',
-            'workspaceActive' => 'spatial',
-            'workspaceActiveSection' => 'properties',
-            'currentUser' => ['id' => (int) $tenant->userId()->value(), 'role' => $role],
-            'role' => $role,
-            'isTeam' => true,
-            'isAdmin' => $tenant->isAdmin(),
-            'workspaceNavigation' => $this->navigation->workspace($tenant),
-        ], $extra);
-
-        return new Response(
-            $this->renderer->render($request, $view, $variables),
-            200,
-            ['Content-Type' => 'text/html; charset=UTF-8'],
-        );
     }
 
     /** @return array{id:int,organization_id:string,role:string,email:string,full_name:string} */

@@ -34,7 +34,6 @@ export default defineConfig({
         'terranova-copy': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-copy.js'),
         'terranova-interface': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-interface.js'),
         'terranova-media-manager': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-media-manager.js'),
-        'terranova-spatial-admin': resolve(import.meta.dirname, 'frontend/entrypoints/terranova-spatial-admin.js'),
         'spatial-viewer': resolve(import.meta.dirname, 'frontend/spatial/spatial-viewer.js'),
       },
       output: {
