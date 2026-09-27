@@ -67,8 +67,8 @@ foreach([
     $assert(str_contains($frontend,$needle),'Growth collector frontend contract missing: '.$needle);
 }
 
-foreach(['growth/signals.phtml','growth/collectors.phtml'] as $view){
-    $assert(is_file($root.'/app/Interfaces/Web/View/'.$view),'Growth Signal Operations view missing: '.$view);
+foreach(['components/growth/signals.phtml','components/growth/collectors.phtml'] as $view){
+    $assert(is_file($root.'/app/Interfaces/Web/View/'.$view),'Growth Signal Operations fragment missing: '.$view);
 }
 
 echo "Growth V0.12 Signal Operations architecture: OK\n";
