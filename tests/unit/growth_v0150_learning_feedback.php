@@ -101,6 +101,17 @@ $learning=new class implements GrowthLearningRepositoryInterface {
     {
         return $this->bindings[$organizationId.':'.$sourceDomain.':'.$referenceType.':'.$referenceId]??null;
     }
+    public function externalSubjectsForCandidate(string $organizationId,string $candidateId,string $sourceDomain,string $referenceType):array
+    {
+        $prefix=$organizationId.':'.$sourceDomain.':'.$referenceType.':';
+        $references=[];
+        foreach($this->bindings as $key=>$boundCandidateId){
+            if($boundCandidateId!==$candidateId||!str_starts_with($key,$prefix))continue;
+            $references[]=substr($key,strlen($prefix));
+        }
+        sort($references,SORT_STRING);
+        return $references;
+    }
     public function recordOutcome(GrowthOutcomeObservation $outcome):void{$this->outcomes[$outcome->sourceEventId]=$outcome;}
     public function outcomesForCandidate(string $organizationId,string $candidateId,int $limit=100):array
     {
