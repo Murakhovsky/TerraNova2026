@@ -156,7 +156,7 @@ AI не створює канонічну «істину» без evidence та 
 
 ## Межа runtime
 
-Diagnostic `0.7.0` має runtime module service `diagnosticDomainModule`, API route contribution, `diagnosticActionOutcomeHandler`, Web navigation та Diagnostic migration contribution.
+Diagnostic `1.0.0` має runtime module service `diagnosticDomainModule`, API route contribution, `diagnosticActionOutcomeHandler`, Web navigation та Diagnostic migration contribution.
 
 Тому стара модель «partial runtime integration без runtime module» більше не є актуальною.
 
