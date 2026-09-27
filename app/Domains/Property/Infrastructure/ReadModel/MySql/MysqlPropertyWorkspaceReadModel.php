@@ -26,7 +26,7 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
                 SUM(status = "active") AS active,
                 SUM(status = "reserved") AS reserved,
                 SUM(status IN ("published", "active")) AS catalog_total
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE organization_id = :organization_id
         ', $params) ?? [];
 
@@ -35,7 +35,7 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
                 p.id, p.public_id, p.slug, p.title, p.status, p.updated_at,
                 t.name_uk AS type_name,
                 l.city
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.organization_id = :organization_id
