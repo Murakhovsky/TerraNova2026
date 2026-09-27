@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'diagnostic',
     'name' => 'Diagnostics',
-    'version' => '0.7.0',
-    'schema_version' => '0.7.0',
+    'version' => '1.0.0',
+    'schema_version' => '1.0.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Business diagnostics, methodology, interviews, reporting and closed-loop recommendations.',
     'icon' => 'scan-search',
@@ -34,6 +34,7 @@ return [
             'diagnostic.state.rebuild',
             'diagnostic.traceability',
             'diagnostic.semantic.v1',
+            'diagnostic.v1',
         ],
     ],
 ];
