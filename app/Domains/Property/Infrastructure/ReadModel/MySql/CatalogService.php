@@ -44,7 +44,7 @@ class CatalogService implements PropertyCatalogInterface
                 l.city, l.region,
                 (SELECT image.image_url FROM tn_property_images image WHERE image.property_id = p.id
                  ORDER BY image.is_cover DESC, image.sort_order, image.id LIMIT 1) AS cover_url
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.status IN ("published", "active")
@@ -85,7 +85,7 @@ class CatalogService implements PropertyCatalogInterface
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE ' . implode(' AND ', $where) . '
@@ -102,7 +102,7 @@ class CatalogService implements PropertyCatalogInterface
 
         $row = $this->database->fetchOne('
             SELECT COUNT(DISTINCT p.id) AS total
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE ' . implode(' AND ', $where),
@@ -124,7 +124,7 @@ class CatalogService implements PropertyCatalogInterface
                 MIN(p.price_amount) AS price_min,
                 MAX(p.price_amount) AS price_max,
                 ROUND(AVG(p.area_total), 1) AS area_avg
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE ' . implode(' AND ', $where),
@@ -168,7 +168,7 @@ class CatalogService implements PropertyCatalogInterface
                 a.public_name AS agent_name, a.role AS agent_role, a.phone AS agent_phone,
                 a.email AS agent_email, a.telegram AS agent_telegram, a.avatar_url AS agent_avatar,
                 a.bio AS agent_bio
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_groups g ON g.id = p.property_group_id
@@ -187,7 +187,7 @@ class CatalogService implements PropertyCatalogInterface
         try {
             $pdo = $this->database->connection();
             $pdo->prepare('
-                UPDATE tn_properties
+                UPDATE tn_property_public_read_model
                 SET view_count = view_count + 1
                 WHERE id = :id
                 LIMIT 1
@@ -225,7 +225,7 @@ class CatalogService implements PropertyCatalogInterface
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.status IN ("published", "active")
@@ -249,7 +249,7 @@ class CatalogService implements PropertyCatalogInterface
                    SUM(p.status IN ("published", "active")) AS published_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
-            LEFT JOIN tn_properties p ON p.property_group_id = g.id
+            LEFT JOIN tn_property_public_read_model p ON p.property_group_id = g.id
             WHERE g.slug = :slug AND g.status = "active"
             GROUP BY g.id
             LIMIT 1
@@ -282,7 +282,7 @@ class CatalogService implements PropertyCatalogInterface
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.status IN ("published", "active")
@@ -334,7 +334,7 @@ class CatalogService implements PropertyCatalogInterface
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.status IN ("published", "active")
@@ -376,7 +376,7 @@ class CatalogService implements PropertyCatalogInterface
                     SELECT COUNT(*) FROM tn_property_images image_count
                     WHERE image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.status IN ("published", "active") AND p.id <> :id
@@ -425,7 +425,7 @@ class CatalogService implements PropertyCatalogInterface
     {
         return $this->database->fetchAll('
             SELECT slug, updated_at
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE status IN ("published", "active")
             ORDER BY updated_at DESC, id DESC
         ');
@@ -435,7 +435,7 @@ class CatalogService implements PropertyCatalogInterface
     {
         return $this->database->fetchAll('
             SELECT l.slug AS location_slug, t.code AS type_code, COUNT(*) AS property_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_locations l ON l.id = p.location_id
             INNER JOIN tn_property_types t ON t.id = p.type_id
             WHERE p.status IN ("published", "active")
