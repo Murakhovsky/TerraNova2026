@@ -24,7 +24,7 @@ generated: true
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `diagnostic` · Diagnostics | `0.6.1` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
+| `diagnostic` · Diagnostics | `0.7.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
