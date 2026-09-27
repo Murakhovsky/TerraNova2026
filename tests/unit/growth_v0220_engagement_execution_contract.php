@@ -32,8 +32,8 @@ foreach(['monitor','ignore','create_report'] as $forbidden){
         "'".$forbidden."'"
     ),'Growth execution must keep '.$forbidden.' non-executable.');
 }
-expectGrowthV0220(str_contains($service,"count($deals)>1"),'Growth execution must reject ambiguous sales_deal bindings.');
-expectGrowthV0220(str_contains($service,"count($deals)===1"),'Growth execution must preserve the post-handoff sales_deal branch.');
+expectGrowthV0220(str_contains($service,'count($deals)>1'),'Growth execution must reject ambiguous sales_deal bindings.');
+expectGrowthV0220(str_contains($service,'count($deals)===1'),'Growth execution must preserve the post-handoff sales_deal branch.');
 expectGrowthV0220(str_contains($service,'Post-handoff call execution belongs to Sales'),'Growth must not route post-handoff calls through sales.send_message.');
 expectGrowthV0220(str_contains($service,"EngagementRecommendationStatus::Accepted"),'Growth execution must require accepted recommendation.');
 expectGrowthV0220(str_contains($service,"'engagement_execution_payload'"),'Growth execution payload lock is missing.');
