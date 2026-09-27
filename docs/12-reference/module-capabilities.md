@@ -21,7 +21,7 @@ generated: true
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
-| `diagnostic` | Diagnostics | `0.7.0` | `0.7.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
@@ -61,6 +61,7 @@ Manifest capabilities не задекларовані.
 - `diagnostic.semantic.v1`;
 - `diagnostic.state.rebuild`;
 - `diagnostic.traceability`;
+- `diagnostic.v1`;
 
 ## Finance (`finance`)
 
