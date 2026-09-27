@@ -127,7 +127,6 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
 
             $typeId = $this->propertyTypeId($pdo, (string) $submission['property_type']);
             $agentId = $this->defaultAgentId($pdo);
-            $publicId = $this->nextPublicId($pdo);
             $slug = $this->uniqueSlug($pdo, (string) $submission['title']);
             $mediaLinks = $this->extractUrls((string) ($submission['media_links'] ?? ''));
             $coverUrl = $mediaLinks[0] ?? null;
