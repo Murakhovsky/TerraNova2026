@@ -47,7 +47,7 @@ foreach ([
     'app/Domains/Property/Model/PropertyWorkflowPolicy.php',
     'app/Domains/Spatial/Application/Contract/SpatialSceneRepositoryInterface.php',
     'app/Domains/Content/Infrastructure/Persistence/MySql/MysqlContentRepository.php',
-    'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyManagementRepository.php',
+    'app/Domains/Property/Infrastructure/Persistence/MySql/Management/ComposedPropertyManagementRepository.php',
     'app/Domains/Spatial/Infrastructure/Persistence/MySql/MysqlSpatialSceneRepository.php',
     'app/Infrastructure/Platform/Analytics/MysqlPropertyAnalytics.php',
     'app/Infrastructure/Platform/Analytics/MysqlPropertyFunnelAnalytics.php',
