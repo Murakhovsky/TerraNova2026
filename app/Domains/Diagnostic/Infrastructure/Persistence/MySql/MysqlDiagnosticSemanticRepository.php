@@ -102,6 +102,28 @@ final readonly class MysqlDiagnosticSemanticRepository implements DiagnosticSema
         ]);
     }
 
+    public function latestAssessmentStatuses(string $organizationId, string $sessionId): array
+    {
+        $statement = $this->connection->prepare(
+            'SELECT a.criterion_id, a.status FROM diagnostic_assessment_revisions a '
+            . 'INNER JOIN (SELECT criterion_id, MAX(revision) AS revision '
+            . 'FROM diagnostic_assessment_revisions WHERE organization_id=:organization_id_sub AND session_id=:session_id_sub GROUP BY criterion_id) latest '
+            . 'ON latest.criterion_id=a.criterion_id AND latest.revision=a.revision '
+            . 'WHERE a.organization_id=:organization_id AND a.session_id=:session_id'
+        );
+        $statement->execute([
+            'organization_id_sub'=>$organizationId,
+            'session_id_sub'=>$sessionId,
+            'organization_id'=>$organizationId,
+            'session_id'=>$sessionId,
+        ]);
+        $out=[];
+        foreach($statement->fetchAll(PDO::FETCH_ASSOC) as $row){
+            $out[(string)$row['criterion_id']] = (string)$row['status'];
+        }
+        return $out;
+    }
+
     private function format(DateTimeImmutable $value): string { return $value->format('Y-m-d H:i:s.u'); }
 
     private function json(mixed $value): string
