@@ -1,5 +1,6 @@
 import '../styles/design-system.css';
 import '../styles/layouts/workspace.css';
+import '../features/growth/workspace.js';
 import { initProductionUX } from '../core/production.js';
 import { initInterfaceComponents } from '../components/interactive.js';
 import { initWorkspaceShell } from '../core/workspace-shell.js';

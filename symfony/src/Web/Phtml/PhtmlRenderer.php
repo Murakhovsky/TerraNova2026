@@ -32,6 +32,14 @@ final class PhtmlRenderer
     }
 
     /** @param array<string,mixed> $variables */
+    public function fragment(Request $request, string $view, array $variables = []): string
+    {
+        $this->request = new RequestQueryAdapter($request);
+
+        return $this->capture($view, $variables);
+    }
+
+    /** @param array<string,mixed> $variables */
     public function partial(string $view, array $variables = []): void
     {
         $inherited = $this->contextStack !== [] ? $this->contextStack[array_key_last($this->contextStack)] : [];

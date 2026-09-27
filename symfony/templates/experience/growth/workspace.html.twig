@@ -1,0 +1,23 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% for href in growthAssets.styles %}
+        <link rel="stylesheet" href="{{ href }}">
+    {% endfor %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% for src in growthAssets.scripts %}
+        <script type="module" src="{{ src }}"></script>
+    {% endfor %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="cos-page__stack" data-growth-canonical-shell>
+    {{ growthFragment|replace({'<main ': '<div ', '</main>': '</div>'})|raw }}
+</div>
+{% endblock %}

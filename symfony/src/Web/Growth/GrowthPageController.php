@@ -6,8 +6,8 @@ namespace App\Web\Growth;
 use App\Security\SessionCsrfValidator;
 use App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
-use App\Web\Experience\Extension\ProviderBackedShellNavigation;
-use App\Web\Experience\Shell\ShellNavigationItem;
+use App\Web\Experience\Shell\ShellBreadcrumb;
+use App\Web\Experience\Shell\WorkspaceShellFactory;
 use App\Web\Phtml\PhtmlRenderer;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
@@ -36,6 +36,7 @@ use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
 use Domains\Growth\Domain\GrowthExperimentDimension;
 use Domains\Growth\Domain\GrowthExperimentStatus;
 use Domains\Growth\Domain\GrowthOutcomeType;
+use Infrastructure\Web\Assets\ViteAssetResolver;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -45,14 +46,16 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Twig\Environment;
 
 final readonly class GrowthPageController
 {
     public function __construct(
         private PhtmlRenderer $renderer,
+        private Environment $twig,
         private TenantContextProviderInterface $tenants,
         private ActiveModuleResolver $modules,
-        private ProviderBackedShellNavigation $shell,
+        private WorkspaceShellFactory $shells,
         private SessionCsrfValidator $csrf,
         private GrowthWorkspaceReadModelInterface $workspace,
         private GrowthApplicationBoundary $growth,
@@ -349,55 +352,46 @@ final readonly class GrowthPageController
         Request $request,TenantContext $tenant,string $title,string $active,string $view,array $extra=[],int $status=200
     ): Response {
         $role=$tenant->role()->value();
-        $context=new WebExtensionContext(
-            $tenant->organizationId()->value(),$role,'workspace','growth',$active,
-        );
-        $navigation=$this->navigation($this->shell->compose($context));
-
         $variables=array_replace([
             'title'=>$title,
             'metaTitle'=>$title.' | Terra Nova COS',
             'metaRobots'=>'noindex,nofollow',
-            'interfaceSurface'=>'workspace',
-            'workspaceSection'=>'growth',
-            'workspaceActive'=>$active,
-            'workspaceActiveSection'=>'growth',
-            'pageAssetEntries'=>['growth-workspace'],
             'csrfToken'=>$this->csrf->token($request),
             'currentUser'=>['id'=>(int)$tenant->userId()->value(),'role'=>$role],
             'role'=>$role,
             'isTeam'=>true,
             'isAdmin'=>$tenant->isAdmin(),
             'canManageGrowth'=>$tenant->allows(TenantPermissions::MANAGE),
-            'workspaceNavigation'=>$navigation,
         ],$extra);
 
+        if($view==='error/failure'){
+            return new Response(
+                $this->renderer->render($request,$view,$variables),
+                $status,
+                ['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
+            );
+        }
+
+        $context=new WebExtensionContext(
+            $tenant->organizationId()->value(),$role,'workspace','growth',$active,
+        );
+        $shell=$this->shells->create($tenant,$context,$title,[
+            new ShellBreadcrumb('Workspace','/admin'),
+            new ShellBreadcrumb('Growth','/growth'),
+            new ShellBreadcrumb($title),
+        ]);
+        $fragment=$this->renderer->fragment($request,'components/'.$view,$variables);
+
         return new Response(
-            $this->renderer->render($request,$view,$variables),
+            $this->twig->render('experience/growth/workspace.html.twig',[
+                'shell'=>$shell,
+                'pageTitle'=>$title,
+                'growthFragment'=>$fragment,
+                'growthAssets'=>ViteAssetResolver::resolve(['terranova-interface']),
+            ]),
             $status,
-            ['Content-Type'=>'text/html; charset=UTF-8'],
+            ['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
         );
     }
 
-    /** @param array{primary:list<ShellNavigationItem>,utility:list<ShellNavigationItem>,commands:array} $navigation */
-    private function navigation(array $navigation): array
-    {
-        return [
-            'surface'=>'workspace',
-            'primary'=>array_map($this->navigationItem(...),$navigation['primary']),
-            'utility'=>array_map($this->navigationItem(...),$navigation['utility']),
-        ];
-    }
-
-    /** @return array<string,mixed> */
-    private function navigationItem(ShellNavigationItem $item): array
-    {
-        return [
-            'key'=>$item->key,
-            'label'=>$item->label,
-            'path'=>ltrim($item->path,'/'),
-            'glyph'=>$item->glyph,
-            'children'=>array_map($this->navigationItem(...),$item->children),
-        ];
-    }
 }
