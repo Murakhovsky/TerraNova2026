@@ -46,7 +46,7 @@ $views=[
     'growth/account.phtml',
 ];
 foreach($views as $view){
-    expectGrowthV0110(is_file(dirname(__DIR__,2).'/app/Interfaces/Web/View/'.$view),'Growth Workspace view missing: '.$view);
+    expectGrowthV0110(is_file(dirname(__DIR__,2).'/app/Interfaces/Web/View/components/'.$view),'Growth Workspace view missing: '.$view);
 }
 
 echo "Growth V0.11 Workspace contracts passed.\n";
