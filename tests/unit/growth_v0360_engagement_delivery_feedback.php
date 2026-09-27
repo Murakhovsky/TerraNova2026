@@ -66,7 +66,8 @@ $deliveries=new class implements GrowthEngagementDeliveryRepositoryInterface {
             }
             return $this->rows[$key]+['replayed'=>true];
         }
-        return $this->rows[$key]=$observation+['replayed'=>false];
+        $this->rows[$key]=$observation;
+        return $observation+['replayed'=>false];
     }
     public function latestForExecution(string $organizationId,string $executionId):?array{
         $rows=$this->forExecution($organizationId,$executionId,1);
