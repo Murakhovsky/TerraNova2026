@@ -1,5 +1,7 @@
 # WEB V0.14 — Frontend Standard Stack
 
+> **Історичний baseline.** Цей документ фіксує стан WEB V0.14 до переходу на Symfony Experience Platform. У поточному canonical runtime HTMX і Bootstrap Icons виведені з dependencies; partial interactions належать Turbo/Live Components, а іконки — Symfony UX Icons. Запис нижче збережено як історію архітектурної еволюції.
+
 WEB V0.14 фіксує стандартний набір frontend-інструментів COS. Це не перехід до SPA і не заміна поточної моделі `Public | Portal | Workspace`.
 
 Основний принцип залишається **server-first, progressively enhanced**:

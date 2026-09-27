@@ -2,7 +2,7 @@
 title: Закриття безпеки вебплатформи
 description: Канонічні правила CSRF, авторизації, tenant isolation, sessions, uploads, CSP, downloads, rate limits, idempotency та locking для Web Platform COS.
 status: active
-updated: 2026-09-21
+updated: 2026-09-27
 kind: architecture
 ---
 
@@ -86,7 +86,7 @@ Symfony responses отримують централізовано:
 - Cross-Origin-Opener-Policy;
 - HSTS на HTTPS.
 
-Поточний CSP ще містить `unsafe-inline` та `unsafe-eval` для сумісності з існуючими browser islands і htmx runtime. Це свідомий compatibility debt, а не цільовий стан. Після reference Sales cutover його треба звузити через nonce/hash policy та видалення eval-залежності.
+HTMX runtime повністю виведений із canonical Web stack. Поточний CSP все ще містить `unsafe-inline` та `unsafe-eval` лише як compatibility debt для окремих browser/island сценаріїв. Це не цільовий стан; подальше звуження CSP виконується окремо через nonce/hash policy та усунення eval-залежностей.
 
 ## Обмеження частоти
 

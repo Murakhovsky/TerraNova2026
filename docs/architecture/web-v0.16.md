@@ -1,5 +1,7 @@
 # WEB V0.16 — Канонічна система UI-компонентів COS
 
+> **Історичний baseline.** V0.16 описує PHTML-era component system. Поточна Web Experience Platform використовує Twig Components + Turbo/Live Components + Stimulus; HTMX більше не входить до canonical runtime.
+
 WEB V0.16 переводить `Calm Technical` з візуальної мови у повторно використовувані UX-контракти. Компонент у COS є не окремим шматком HTML/CSS, а узгодженим набором семантики, вигляду, поведінки, станів, адаптивності та серверного API.
 
 ## Принцип
