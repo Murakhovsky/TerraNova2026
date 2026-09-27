@@ -382,7 +382,7 @@ final readonly class DiagnosticRuntimeService
             $metricInput[$code]=new ObservedValue((float)$metric['value'],$signals);
         }
         $result=$this->engine->evaluate(new DiagnosticInput($factInput,$metricInput,new DateTimeImmutable()),$pack->pack);
-        return $this->states->build($sessionId,$pack,$facts,$evidence,$result,[],[],[],(int)($runtime['revision']??0)+1);
+        return $this->states->build($sessionId,$pack,$facts,$evidence,$result,[],[],[],max(1,(int)($runtime['revision']??0)));
     }
 
     private function facts(string $sessionId,array $runtime):array
