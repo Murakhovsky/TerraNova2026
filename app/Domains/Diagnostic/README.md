@@ -68,9 +68,9 @@ The migration is `20260830_000020_diagnostic_domain.sql`. The real-MySQL verific
 The executable Phase 2 file contract is documented by `docs/diagnostic/methodology-pack-phase2.schema.json`. JSON and YAML sources compile to the same immutable model and canonical content hash. Required criterion inputs may carry individual weights; both coverage and confidence thresholds gate findings and every score level. A missing criterion score blocks its section and pack score instead of being silently omitted.
 
 
-## V0.7 -> V1 convergence status
+## Diagnostic V1.0
 
-V0.7 establishes the semantic boundary required for V1:
+V1.0 establishes the normative semantic runtime boundary:
 
 - assessment status is independent from score, severity, confidence and coverage;
 - fact changes are append-only revisions with truth level, evidence and supersession;
@@ -79,4 +79,4 @@ V0.7 establishes the semantic boundary required for V1:
 - semantic persistence is append-only and session/tenant scoped;
 - PackCompiler + PackValidator + CompiledDiagnosticPack remain the required publication pipeline.
 
-Still required before declaring Diagnostic V1.0: retire generic DiagnosticRecord as a business-authoritative write model, persist/rebuild the full typed state through the runtime repository, enforce deterministic root-cause confirmation policy end-to-end, and pass representative integration traffic for compile -> publish -> diagnose -> complete -> rebuild.
+The canonical runtime evaluates typed facts/metrics directly, persists append-only semantic revisions and state snapshots, confirms root causes deterministically, and validates session completion from typed assessment conclusions. `DiagnosticRecord` remains only as a compatibility persistence/event shape for older callers and is not the canonical runtime decision model.
