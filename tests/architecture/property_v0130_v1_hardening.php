@@ -23,6 +23,7 @@ foreach([
     'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyModerationRepository.php',
     'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyIdentityWorkflowRepository.php',
     'app/Domains/Identity/Infrastructure/ReadModel/MySql/AdminDashboardService.php',
+    'app/Infrastructure/Identity/SessionAuthService.php',
     'app/Infrastructure/Platform/Analytics/MysqlPropertyFunnelAnalytics.php',
     'app/Infrastructure/Integration/Telegram/TelegramAutomationService.php',
     'app/Domains/Spatial/Infrastructure/Persistence/MySql/MysqlSpatialSceneRepository.php',
