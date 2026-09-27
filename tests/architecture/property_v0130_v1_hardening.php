@@ -52,4 +52,15 @@ foreach([
     $assert(!str_contains($source,'PropertyProjectionInterface $projection'),'Ambiguous projection dependency returned: '.$path);
 }
 
+
+$legacyManagement=$read('app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyManagementRepository.php');
+$assert(!str_contains($legacyManagement,'tn_properties'),'Legacy management backend must not read or write tn_properties directly.');
+foreach([
+    'app/Domains/Property/Infrastructure/Persistence/MySql/Management/CanonicalPropertyManagementWriteRepository.php',
+    'app/Domains/Property/Infrastructure/Persistence/MySql/Management/CanonicalPropertyManagementWorkflowRepository.php',
+] as $path){
+    $source=$read($path);
+    $assert(!str_contains($source,'MysqlPropertyManagementRepository'),'Canonical management adapter depends on retired legacy backend: '.$path);
+}
+
 echo "Property V0.13 V1 hardening boundary: OK\n";
