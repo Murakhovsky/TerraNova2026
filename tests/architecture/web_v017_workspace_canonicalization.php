@@ -48,17 +48,20 @@ foreach (['tn-','style=','<script'] as $legacy) {
     $requireNotContains($analytics, $legacy, 'Administration Analytics must not restore legacy presentation.');
 }
 
-$diagnostic = $read('app/Interfaces/Web/View/diagnostic_report/show.phtml');
+$diagnostic = $read('symfony/templates/experience/diagnostic/report.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/kpi_card'",
-    'tn-ui-panel',
-    'tn-ui-panel__head',
+    '<twig:CosPageHeader',
+    'class="cos-kpi-strip"',
+    '<twig:CosMetric',
+    'data-cos-system="diagnostic-report"',
 ] as $needle) {
-    $requireContains($diagnostic, $needle, 'Diagnostic report must use canonical UI contracts.');
+    $requireContains($diagnostic, $needle, 'Diagnostic report must use canonical Twig UI contracts.');
 }
-foreach (['tn-page-header', 'tn-card-grid', 'class="tn-card"'] as $legacy) {
-    $requireNotContains($diagnostic, $legacy, 'Diagnostic report must not restore legacy card/header primitives.');
+foreach (['tn-', 'style=', '<script'] as $legacy) {
+    $requireNotContains($diagnostic, $legacy, 'Diagnostic report must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/diagnostic_report/show.phtml')) {
+    throw new RuntimeException('Retired Diagnostic Report PHTML restored.');
 }
 
 $cos = $read('symfony/templates/experience/system/control_center.html.twig');

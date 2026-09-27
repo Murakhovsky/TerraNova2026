@@ -25,5 +25,3 @@
 :root {
   font-family: var(--cos-font-sans);
 }
-
-@import './domains/growth.css';

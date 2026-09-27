@@ -1,0 +1,62 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}{{ report.title }} | Diagnostic Report | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-system="diagnostic-report"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+>
+    <twig:CosPageHeader
+        eyebrow="Diagnostic report"
+        title="{{ report.title }}"
+        subtitle="{{ report.executiveSummary }}"
+        metaValue="{{ report.reportVersion }}"
+        metaLabel="версія звіту"
+    />
+
+    <div class="cos-kpi-strip" aria-label="Diagnostic summary">
+        <article class="cos-card">
+            <twig:CosMetric label="Health" value="{{ report.health }}" />
+            <twig:CosStatus label="{{ report.health }}" tone="{{ report.healthTone }}" />
+        </article>
+        <article class="cos-card"><twig:CosMetric label="Coverage" value="{{ report.coverage }}" /></article>
+        <article class="cos-card"><twig:CosMetric label="Confidence" value="{{ report.confidence }}" /></article>
+        <article class="cos-card"><twig:CosMetric label="Report version" value="{{ report.reportVersion }}" /></article>
+    </div>
+
+    {% for section in report.sections %}
+        <section class="cos-card">
+            <p class="cos-card__eyebrow">{{ section.eyebrow }}</p>
+            <h2 class="cos-card__title">{{ section.title }}</h2>
+            <div class="cos-pattern-stack">
+                {% for item in section.items %}
+                    <article class="cos-entity-list__item">
+                        {% for label, value in item %}
+                            <div><strong>{{ label }}:</strong> {{ value }}</div>
+                        {% endfor %}
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endfor %}
+
+    {% if report.measurements is not empty %}
+        <section class="cos-card">
+            <p class="cos-card__eyebrow">Outcomes</p>
+            <h2 class="cos-card__title">Measured outcomes</h2>
+            <div class="cos-pattern-stack">
+                {% for measurement in report.measurements %}
+                    <article class="cos-entity-list__item">
+                        <strong>{{ measurement.code }}</strong>
+                        <span>{{ measurement.value }}</span>
+                        <small>{{ measurement.measuredAt }}</small>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}
