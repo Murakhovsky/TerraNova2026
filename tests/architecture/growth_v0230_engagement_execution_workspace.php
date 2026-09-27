@@ -26,7 +26,7 @@ foreach(['GrowthEngagementBoundary','GrowthEngagementExecutionBoundary',"'engage
     $assert(str_contains($controller,$needle),'Growth V0.23 candidate workspace wiring missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
 foreach(['data-growth-engagement','data-growth-engagement-generate','data-growth-engagement-decision','data-growth-engagement-execution','Kernel Action bridge'] as $needle){
     $assert(str_contains($template,$needle),'Growth V0.23 candidate template missing: '.$needle);
 }
