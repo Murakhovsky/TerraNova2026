@@ -37,7 +37,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                    l.city, l.region,
                    g.title AS group_title, g.slug AS group_slug, g.group_type, g.address AS group_address,
                    a.public_name AS agent_name
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_groups g
@@ -162,7 +162,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                    COUNT(p.id) AS property_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
-            LEFT JOIN tn_properties p
+            LEFT JOIN tn_property_public_read_model p
               ON p.property_group_id = g.id
              AND p.organization_id = g.organization_id
             WHERE ' . implode(' AND ', $where) . '
@@ -183,7 +183,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                    SUM(p.status = "sold") AS sold_count
             FROM tn_property_groups g
             INNER JOIN tn_locations l ON l.id = g.location_id
-            LEFT JOIN tn_properties p
+            LEFT JOIN tn_property_public_read_model p
               ON p.property_group_id = g.id
              AND p.organization_id = g.organization_id
             WHERE g.id = :id
@@ -454,7 +454,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                     WHERE inbound_request_count.property_id = p.id
                       AND inbound_request_count.organization_id = :organization_id
                 ) AS inbound_request_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_groups g
@@ -529,7 +529,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
     {
         $rows = $this->database->fetchAll('
             SELECT status, COUNT(*) AS total
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE organization_id = :organization_id
             GROUP BY status
         ', ['organization_id' => $this->organizationId]);
@@ -565,7 +565,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
         foreach ($this->database->fetchAll('
             SELECT visibility, COUNT(*) AS total
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE organization_id = :organization_id
             GROUP BY visibility
         ', ['organization_id' => $this->organizationId]) as $row) {
@@ -685,7 +685,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             }
 
             $statement = $pdo->prepare('
-                INSERT INTO tn_properties (
+                INSERT INTO tn_property_public_read_model (
                     organization_id,
                     public_id, slug, title, deal_type, type_id, status, source_type, location_id, agent_id,
                     property_group_id,
@@ -799,7 +799,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                 : ($property['status_changed_at'] ?? null);
 
             $statement = $pdo->prepare('
-                UPDATE tn_properties
+                UPDATE tn_property_public_read_model
                 SET status = :status,
                     status_note = :status_note,
                     status_changed_at = :status_changed_at,
@@ -991,7 +991,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             }
 
             $statement = $pdo->prepare('
-                UPDATE tn_properties
+                UPDATE tn_property_public_read_model
                 SET slug = :slug,
                     title = :title,
                     deal_type = :deal_type,
@@ -1142,7 +1142,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             $this->ensureCover($pdo, $propertyId, $coverId);
 
             $touch = $pdo->prepare('
-                UPDATE tn_properties
+                UPDATE tn_property_public_read_model
                 SET updated_at = NOW()
                 WHERE id = :id
                   AND organization_id = :organization_id
@@ -1207,7 +1207,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             );
 
             $touch = $pdo->prepare('
-                UPDATE tn_properties
+                UPDATE tn_property_public_read_model
                 SET updated_at = NOW()
                 WHERE id = :id
                   AND organization_id = :organization_id
@@ -1263,7 +1263,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                 );
 
                 $touch = $pdo->prepare('
-                    UPDATE tn_properties
+                    UPDATE tn_property_public_read_model
                     SET updated_at = NOW()
                     WHERE id = :id
                       AND organization_id = :organization_id
@@ -1287,7 +1287,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
                 }
 
                 $statement = $pdo->prepare('
-                    UPDATE tn_properties
+                    UPDATE tn_property_public_read_model
                     SET next_action_title = :next_action_title,
                         next_action_due_at = :next_action_due_at,
                         next_action_note = :next_action_note,
@@ -1354,7 +1354,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
             }
 
             $statement = $pdo->prepare('
-                UPDATE tn_properties
+                UPDATE tn_property_public_read_model
                 SET operational_stage = :operational_stage,
                     next_action_title = :next_action_title,
                     next_action_due_at = :next_action_due_at,
@@ -1420,7 +1420,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
         return $this->database->fetchOne('
             SELECT id
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE id = :id
               AND organization_id = :organization_id
             LIMIT 1
@@ -1431,7 +1431,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
     {
         $statement = $pdo->prepare('
             SELECT *
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE id = :id
               AND organization_id = :organization_id
             LIMIT 1
@@ -1704,7 +1704,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
 
     private function nextPublicId(PDO $pdo): string
     {
-        $statement = $pdo->prepare('SELECT id FROM tn_properties WHERE public_id = :public_id LIMIT 1');
+        $statement = $pdo->prepare('SELECT id FROM tn_property_public_read_model WHERE public_id = :public_id LIMIT 1');
 
         do {
             $publicId = 'TN-' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
@@ -1720,7 +1720,7 @@ final class MysqlPropertyManagementRepository implements PropertyManagementRepos
         $candidate = $base;
         $counter = 2;
 
-        $statement = $pdo->prepare('SELECT id FROM tn_properties WHERE slug = :slug AND id <> :id LIMIT 1');
+        $statement = $pdo->prepare('SELECT id FROM tn_property_public_read_model WHERE slug = :slug AND id <> :id LIMIT 1');
 
         while (true) {
             $statement->execute(['slug' => $candidate, 'id' => $propertyId]);
