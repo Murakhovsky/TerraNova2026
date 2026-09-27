@@ -68,7 +68,7 @@ $assert(
     str_contains($outreach,'GrowthOutreachSequenceGuardInterface')&&str_contains($outreach,'blockingForRecommendation'),
     'V0.42 trigger must use the central sequence guard.'
 );
-$assert(str_contains($outreachRepo,"sq.status<>'active'"),'V0.42 pending payload discovery must exclude inactive sequence recommendations.');
+$assert(str_contains($outreachRepo,"sq.status<>\\'active\\'"),'V0.42 pending payload discovery must exclude inactive sequence recommendations.');
 $assert(
     str_contains($content,'GrowthOutreachSequenceGuardInterface')
     &&str_contains($content,'assertActiveSequenceRecommendation')
