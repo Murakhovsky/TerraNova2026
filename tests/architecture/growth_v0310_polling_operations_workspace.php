@@ -56,7 +56,7 @@ foreach(['pollingStatus->set','RunGrowthSignalPollingCommand','dispatch('] as $f
     $assert(!str_contains($controller,$forbidden),'Growth polling workspace must remain read-only: '.$forbidden);
 }
 
-$template=$read('app/Interfaces/Web/View/components/growth/collectors.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
 foreach([
     'data-growth-polling-status','Scheduled Signal Polling','Automatic monitoring',
     'System actor','Enabled sources','Per-run limit','Scheduler configuration is deployment-owned and read-only here.',
