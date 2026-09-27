@@ -15,7 +15,7 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
     public function __construct(
         private PropertyCanonicalRuntimeService $runtime,
         private MysqlPropertyManagementRepository $legacyOperations,
-        private PropertyProjectionInterface $projection,
+        private PropertyProjectionInterface $compatibility,
         private PDO $connection,
         private string $organizationId,
     ) {}
