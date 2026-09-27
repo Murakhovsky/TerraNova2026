@@ -91,4 +91,4 @@ CREATE TABLE IF NOT EXISTS diagnostic_state_snapshots (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO tn_migrations (migration)
-VALUES ('20260928_000064_diagnostic_v070_semantic_convergence');
+VALUES ('20260928_000116_diagnostic_v070_semantic_convergence');
