@@ -6,6 +6,7 @@ namespace Domains\Property\Infrastructure\Persistence\MySql;
 use Domains\Property\Application\Contract\PropertyModerationRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyMediaStorageInterface;
 use Domains\Property\Application\Contract\LocationReferenceInterface;
+use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use InvalidArgumentException;
 use PDO;
@@ -17,6 +18,7 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
         private PdoConnection $database,
         private PropertyMediaStorageInterface $mediaStorage,
         private LocationReferenceInterface $locations,
+        private PropertyCanonicalRuntimeService $runtime,
         private string $organizationId,
     ) {
         if (trim($this->organizationId) === '') {
@@ -149,58 +151,73 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
                 return ['ok' => false, 'message' => 'Перед публікацією додайте хоча б одне фото обʼєкта.'];
             }
 
-            $statement = $pdo->prepare('
-                INSERT INTO tn_properties (
-                    organization_id,
-                    public_id, slug, title, deal_type, type_id, status, source_type, location_id, agent_id,
-                    price_amount, price_currency, price_period, area_total, land_area, rooms, floor, floors, built_year,
-                    address, short_description, description, features_json, is_featured, has_3d_tour, tour_url,
-                    meta_title, meta_description, published_at
-                ) VALUES (
-                    :organization_id,
-                    :public_id, :slug, :title, :deal_type, :type_id, "active", :source_type, :location_id, :agent_id,
-                    :price_amount, :price_currency, "total", :area_total, :land_area, :rooms, :floor, :floors, :built_year,
-                    :address, :short_description, :description, :features_json, 0, :has_3d_tour, :tour_url,
-                    :meta_title, :meta_description, NOW()
-                )
-            ');
-            $statement->execute([
-                'organization_id' => $this->organizationId,
-                'public_id' => $publicId,
-                'slug' => $slug,
-                'title' => $this->limit((string) $submission['title'], 220),
-                'deal_type' => $this->dealType((string) $submission['deal_type']),
-                'type_id' => $typeId,
-                'source_type' => $this->propertySource((string) $submission['source_type']),
-                'location_id' => $locationId,
-                'agent_id' => $agentId,
-                'price_amount' => $this->decimal($submission['price_amount']),
-                'price_currency' => $this->currency((string) $submission['price_currency']),
-                'area_total' => $this->decimal($submission['area_total']),
-                'land_area' => $this->decimal($submission['land_area']),
-                'rooms' => $this->decimal($submission['rooms']),
-                'floor' => $this->positiveInt($submission['floor']),
-                'floors' => $this->positiveInt($submission['floors']),
-                'built_year' => $this->positiveInt($submission['built_year']),
-                'address' => $this->nullable((string) ($submission['address'] ?? ''), 255),
-                'short_description' => $this->limit((string) $submission['description'], 500),
-                'description' => $this->limit((string) $submission['description'], 5000),
-                'features_json' => json_encode([
-                    'submission_ref' => $submission['submission_ref'],
-                    'features_text' => $submission['features_text'],
-                    'owner_contact' => [
-                        'name' => $submission['owner_name'],
-                        'phone' => $submission['owner_phone'],
-                        'email' => $submission['owner_email'],
-                    ],
-                ], JSON_UNESCAPED_UNICODE),
-                'has_3d_tour' => (int) $submission['has_3d_tour'],
-                'tour_url' => (int) $submission['has_3d_tour'] === 1 ? $coverUrl : null,
-                'meta_title' => $this->limit((string) $submission['title'] . ' | Terra Nova CLUB', 220),
-                'meta_description' => $this->limit((string) $submission['description'], 500),
-            ]);
+            $features = [
+                'submission_ref' => $submission['submission_ref'],
+                'features_text' => $submission['features_text'],
+                'owner_contact' => [
+                    'name' => $submission['owner_name'],
+                    'phone' => $submission['owner_phone'],
+                    'email' => $submission['owner_email'],
+                ],
+            ];
+            if ((int) $submission['has_3d_tour'] === 1) {
+                $features['tour_url'] = $coverUrl;
+            }
 
-            $propertyId = (int) $pdo->lastInsertId();
+            $bundle = $this->runtime->createBundle(
+                $this->organizationId,
+                [
+                    'type_code' => (string) $submission['property_type'],
+                    'type_reference_id' => $typeId,
+                    'lifecycle' => 'existing',
+                    'country_code' => 'UA',
+                    'region' => (string) ($submission['region'] ?? ''),
+                    'city' => (string) $submission['city'],
+                    'district' => (string) ($submission['district'] ?? ''),
+                    'address' => $this->nullable((string) ($submission['address'] ?? ''), 255),
+                    'area_total' => $this->decimal($submission['area_total']),
+                    'land_area' => $this->decimal($submission['land_area']),
+                    'rooms' => $this->decimal($submission['rooms']),
+                    'floor' => $this->positiveInt($submission['floor']),
+                    'floors' => $this->positiveInt($submission['floors']),
+                    'built_year' => $this->positiveInt($submission['built_year']),
+                ],
+                [
+                    'transaction_type' => $this->dealType((string) $submission['deal_type']),
+                    'status' => 'available',
+                    'price_amount' => $this->decimal($submission['price_amount']),
+                    'price_currency' => $this->currency((string) $submission['price_currency']),
+                    'price_period' => 'total',
+                    'responsible_party_reference' => $agentId ? 'LEGACY:agent:' . $agentId : null,
+                ],
+                [
+                    'status' => 'published',
+                    'title' => $this->limit((string) $submission['title'], 220),
+                    'description' => $this->limit((string) $submission['description'], 5000),
+                    'presentation_price_amount' => $this->decimal($submission['price_amount']),
+                    'presentation_price_currency' => $this->currency((string) $submission['price_currency']),
+                    'slug' => $slug,
+                    'visibility' => 'public',
+                    'seo_title' => $this->limit((string) $submission['title'] . ' | Terra Nova CLUB', 220),
+                    'seo_description' => $this->limit((string) $submission['description'], 500),
+                    'public_features' => $features,
+                ],
+                null,
+                'property-submission:' . $id,
+            );
+            $propertyId = (int) ($bundle['legacy_property_id'] ?? 0);
+            if ($propertyId <= 0) {
+                throw new \RuntimeException('Canonical Property projection did not return a compatibility id.');
+            }
+            $this->runtime->applyLegacyStatus(
+                $this->organizationId,
+                $propertyId,
+                'published',
+                $note,
+                null,
+                'property-submission:' . $id,
+            );
+
 
             if ($coverUrl) {
                 $this->insertImage($pdo, $propertyId, $coverUrl, (string) $submission['title']);
