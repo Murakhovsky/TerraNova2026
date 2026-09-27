@@ -27,6 +27,7 @@ jobs:
           php tests/architecture/persistence_boundaries.php
           php tests/architecture/table_ownership.php
           php tests/architecture/domain_module_contract.php
+          php tests/architecture/diagnostic_v070_v1_convergence.php
 
       - name: Final frontend architecture
         run: |
