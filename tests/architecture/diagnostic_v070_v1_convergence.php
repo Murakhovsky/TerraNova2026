@@ -45,7 +45,7 @@ foreach (['PackLoader', 'PackValidator', 'CompiledDiagnosticPack'] as $needle) {
     $assert(str_contains($compiler, $needle), 'Compiler pipeline missing: ' . $needle);
 }
 
-$migration = 'app/migrations/20260928_000064_diagnostic_v070_semantic_convergence.sql';
+$migration = 'app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql';
 $assert(in_array($migration, $manifest['contributions']['migration_files'] ?? [], true), 'Diagnostic V0.7 migration is not owned by the manifest.');
 $sql = $read($migration);
 foreach ([
