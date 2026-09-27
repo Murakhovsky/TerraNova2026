@@ -62,14 +62,17 @@ foreach(['GrowthEngagementDeliveryRepositoryInterface',"'delivery_observations'"
 
 $webhook=$read('symfony/src/Application/Growth/Integration/GrowthEngagementDeliveryWebhook.php');
 foreach([
-    'GrowthEngagementDeliveryBoundary','X-TN-Idempotency-Key','hash_hmac',
-    'X-TN-Signature','kernel_action_id','organization_id','recordExternalStatus(',
+    'GrowthEngagementDeliveryBoundary','hash_hmac',
+    'kernel_action_id','organization_id','recordExternalStatus(',
 ] as $needle){
     $assert(str_contains($webhook,$needle),'Growth delivery webhook missing: '.$needle);
 }
 
 $publicEdge=$read('symfony/src/Web/PublicEdge/PublicEdgeController.php');
-foreach(['GrowthEngagementDeliveryWebhook','growthEngagementDeliveryWebhook'] as $needle){
+foreach([
+    'GrowthEngagementDeliveryWebhook','growthEngagementDeliveryWebhook',
+    'X-TN-Signature','X-TN-Timestamp','X-TN-Idempotency-Key',
+] as $needle){
     $assert(str_contains($publicEdge,$needle),'Public edge delivery callback missing: '.$needle);
 }
 
