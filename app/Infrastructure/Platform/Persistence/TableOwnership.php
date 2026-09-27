@@ -64,7 +64,13 @@ final class TableOwnership
             'tn_growth_experiment_decision_runs', 'tn_growth_experiment_decision_recommendations',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
-        'Diagnostic' => ['diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records'],
+        'Diagnostic' => [
+            'diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records',
+            'diagnostic_runtime_sessions', 'diagnostic_reports', 'diagnostic_runtime_recommendations',
+            'diagnostic_measurements', 'diagnostic_rediagnostic_schedules',
+            'diagnostic_fact_revisions', 'diagnostic_assessment_revisions', 'diagnostic_hypothesis_revisions',
+            'diagnostic_recommendation_transitions', 'diagnostic_state_snapshots',
+        ],
         'Spatial' => [
             'tn_spatial_assets', 'tn_spatial_captures', 'tn_spatial_events', 'tn_spatial_hotspots',
             'tn_spatial_processing_jobs', 'tn_spatial_relations', 'tn_spatial_scenes', 'tn_spatial_versions',

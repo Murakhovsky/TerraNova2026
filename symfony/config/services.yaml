@@ -1783,6 +1783,11 @@ services:
   Domains\Diagnostic\Application\Contract\DiagnosticRuntimeRepositoryInterface:
     alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticRuntimeRepository
 
+  Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSemanticRepository:
+    arguments: ['@cos.database.pdo']
+  Domains\Diagnostic\Application\Contract\DiagnosticSemanticRepositoryInterface:
+    alias: Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSemanticRepository
+
   Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticAssessmentProjection:
     arguments: ['@cos.database.pdo']
   Domains\Diagnostic\Application\Contract\DiagnosticAssessmentProjectionInterface:

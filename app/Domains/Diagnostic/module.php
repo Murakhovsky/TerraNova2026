@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'diagnostic',
     'name' => 'Diagnostics',
-    'version' => '0.6.1',
-    'schema_version' => '0.6.0',
+    'version' => '1.0.0',
+    'schema_version' => '1.0.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Business diagnostics, methodology, interviews, reporting and closed-loop recommendations.',
     'icon' => 'scan-search',
@@ -27,7 +27,14 @@ return [
         ],
         'migration_files' => [
             'app/migrations/20260914_000049_diagnostic_runtime_v060.sql',
+            'app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql',
         ],
-        'capabilities' => [],
+        'capabilities' => [
+            'diagnostic.methodology.compile',
+            'diagnostic.state.rebuild',
+            'diagnostic.traceability',
+            'diagnostic.semantic.v1',
+            'diagnostic.v1',
+        ],
     ],
 ];

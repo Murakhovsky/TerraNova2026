@@ -10,5 +10,6 @@ final readonly class DiagnosticState
         public array $assessments, public array $findings, public array $hypotheses, public array $rootCauses, public array $recommendations,
         public array $unresolvedQuestions, public array $coverage, public float $confidence, public array $scores,
         public array $blockedNodes, public array $applicableNodes, public array $inputIds,
+        public array $evidenceGaps = [],
     ) {}
 }

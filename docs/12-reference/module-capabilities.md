@@ -21,7 +21,7 @@ generated: true
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
-| `diagnostic` | Diagnostics | `0.6.1` | `0.6.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
@@ -53,11 +53,15 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`.
+- міграції: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`, `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql`.
 
 ### Задекларовані capabilities
 
-Manifest capabilities не задекларовані.
+- `diagnostic.methodology.compile`;
+- `diagnostic.semantic.v1`;
+- `diagnostic.state.rebuild`;
+- `diagnostic.traceability`;
+- `diagnostic.v1`;
 
 ## Finance (`finance`)
 

@@ -12,9 +12,30 @@ final readonly class Fact
         if ($status===FactStatus::Known && $value===null) throw new InvalidArgumentException('A known fact requires a value.');
     }
     /** @param list<string> $evidenceIds */
-    public function revise(mixed $value, FactStatus $status, float $confidence, string $reason, string $source, array $evidenceIds, DateTimeImmutable $at): self
-    {
-        $revision=new FactRevision($this->id,count($this->revisions)+1,$this->value,$value,$reason,$source,$evidenceIds,$at);
+    public function revise(
+        mixed $value,
+        FactStatus $status,
+        float $confidence,
+        string $reason,
+        string $source,
+        array $evidenceIds,
+        DateTimeImmutable $at,
+        TruthLevel $truthLevel = TruthLevel::Reported,
+    ): self {
+        $nextRevision = count($this->revisions) + 1;
+        $revision = new FactRevision(
+            $this->id,
+            $nextRevision,
+            $this->value,
+            $value,
+            $reason,
+            $source,
+            $evidenceIds,
+            $at,
+            $truthLevel,
+            $confidence,
+            $nextRevision > 1 ? $nextRevision - 1 : null,
+        );
         return new self($this->id,$this->diagnosticId,$this->key,$value,$this->valueType,$status,$confidence,$source,$evidenceIds,$this->createdAt,$at,[...$this->revisions,$revision]);
     }
 }

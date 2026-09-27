@@ -11,8 +11,8 @@ $assert = static function (bool $condition, string $message): void {
 };
 
 $manifest = require $root . '/app/Domains/Diagnostic/module.php';
-$assert(($manifest['version'] ?? null) === '0.6.1', 'Diagnostic module version must be 0.6.1.');
-$assert(($manifest['schema_version'] ?? null) === '0.6.0', 'Diagnostic schema version must remain 0.6.0.');
+$assert(version_compare((string)($manifest['version'] ?? '0.0.0'), '0.6.1', '>='), 'Diagnostic module version must be V0.6.1+.');
+$assert(version_compare((string)($manifest['schema_version'] ?? '0.0.0'), '0.6.0', '>='), 'Diagnostic schema version must be V0.6.0+.');
 $assert(($manifest['contributions']['runtime_module_service'] ?? null) === 'diagnosticDomainModule', 'Diagnostic runtime module is not declared.');
 $assert(($manifest['contributions']['api_route_contributor_services'] ?? []) === [], 'Diagnostic module must not restore Phalcon Web route contributions.');
 $assert(in_array('diagnosticActionOutcomeHandler', $manifest['contributions']['extension_services']['event.consumers'] ?? [], true), 'Diagnostic action outcome consumer is not declared.');

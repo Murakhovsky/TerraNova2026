@@ -9,7 +9,12 @@ final readonly class CompiledDiagnosticPack
     public array $benchmarksById; public array $metricToBenchmarks;
     public array $dependenciesUpstream; public array $dependenciesDownstream; public array $criterionToFacts; public array $criterionToMetrics; public array $criterionToRules;
     public array $criterionToQuestions; public array $criterionToRecommendations; public array $criterionToEvidenceRequirements;
-    public function __construct(public MethodologyPack $pack, public string $compilerVersion='1.0.0')
+    public function __construct(
+        public MethodologyPack $pack,
+        public string $compilerVersion='1.0.0',
+        public string $schemaVersion='diagnostic-pack-schema:1.0',
+        public string $contentHash='',
+    )
     {
         $index=static fn(array $items):array=>array_column($items,null,'id');
         $this->sectionsById=$index($pack->sections); $this->criteriaById=$index($pack->criteria); $this->factsById=$index($pack->facts); $this->metricsById=$index($pack->metrics); $this->rulesById=$index($pack->rules);
