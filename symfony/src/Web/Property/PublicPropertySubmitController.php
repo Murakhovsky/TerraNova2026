@@ -13,6 +13,7 @@ use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Bus\QueryBusInterface;
 use Kernel\Shared\Domain\OrganizationId;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -33,8 +34,8 @@ final readonly class PublicPropertySubmitController
     public function index(Request $request): Response
     {
         $formData = $request->request->all();
-        $submissionStatus = null;
-        $submissionOk = false;
+        $submissionStatus = trim((string) $request->query->get('submission_status', '')) ?: null;
+        $submissionOk = $request->query->getBoolean('submitted');
         $status = Response::HTTP_OK;
 
         if ($request->isMethod('POST')) {
@@ -54,7 +55,7 @@ final readonly class PublicPropertySubmitController
                         : Response::HTTP_UNPROCESSABLE_ENTITY;
 
                     if ($submissionOk) {
-                        $formData = [];
+                        return new RedirectResponse('/property/submit?submitted=1&submission_status=' . rawurlencode($submissionStatus), Response::HTTP_SEE_OTHER);
                     }
                 } else {
                     $submissionStatus = 'Обʼєкт не вдалося зберегти.';
