@@ -256,12 +256,13 @@ final readonly class DiagnosticRuntimeService
             $supported[]=$support>=2?$h->transition(HypothesisStatus::Supported,min(.95,max(.75,.72+.05*$support))):$h;
         }
         $findingIds=array_map(fn($f)=>$f->ruleId,$result->findings);
-        $rootCauses=$this->rootCauses->analyze($supported,$findingIds,$result->coverage->ratio);
+        $confirmedHypotheses=$this->rootCauses->confirm($supported,$result->coverage->ratio);
+        $rootCauses=$this->rootCauses->analyze($confirmedHypotheses,$findingIds,$result->coverage->ratio);
         $templates=$this->recommendationTemplates($pack);
         $recommendations=$this->recommendations->generate($templates,$findingIds,array_map(fn($r)=>$r->id,$rootCauses));
-        $final=$this->states->build($sessionId,$pack,$facts,$session->evidence(),$result,$supported,$rootCauses,$recommendations,(int)$row['state_revision']+1,$now);
+        $final=$this->states->build($sessionId,$pack,$facts,$session->evidence(),$result,$confirmedHypotheses,$rootCauses,$recommendations,(int)$row['state_revision']+1,$now);
         $this->semantic?->saveStateSnapshot($organizationId,$final);
-        foreach($supported as $hypothesis){
+        foreach($confirmedHypotheses as $hypothesis){
             if($hypothesis instanceof Hypothesis){
                 $this->semantic?->appendHypothesisRevision($organizationId,$sessionId,$hypothesis,1,['session:'.$sessionId,'hypothesis:'.$hypothesis->id],null,$now);
             }
