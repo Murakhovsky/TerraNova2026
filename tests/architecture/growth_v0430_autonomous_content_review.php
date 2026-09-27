@@ -47,7 +47,7 @@ $assert(!str_contains($service,'latestIcpMatch($organizationId,$subjectId)'),'Co
 
 
 $repo=$read('app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthAutonomousContentRepository.php');
-foreach(['autonomy.enabled=1',"END='auto'","'human_review'","source_domain=\\'sales\\'","tn_growth_engagement_autonomy_payloads"] as $needle){
+foreach(['autonomy.enabled=1',"END=\\'auto\\'","'human_review'","source_domain=\\'sales\\'","tn_growth_engagement_autonomy_payloads"] as $needle){
     $assert(str_contains($repo,$needle),'Content scheduler candidate query missing: '.$needle);
 }
 $assert(str_contains($repo,'active_key=NULL'),'Completed or failed content runs must release the active generation guard.');
