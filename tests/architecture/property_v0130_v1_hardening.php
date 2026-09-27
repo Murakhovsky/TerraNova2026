@@ -53,8 +53,7 @@ foreach([
 }
 
 
-$legacyManagement=$read('app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyManagementRepository.php');
-$assert(!str_contains($legacyManagement,'tn_properties'),'Legacy management backend must not read or write tn_properties directly.');
+$assert(!is_file($root.'/app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyManagementRepository.php'),'Legacy MysqlPropertyManagementRepository returned.');
 foreach([
     'app/Domains/Property/Infrastructure/Persistence/MySql/Management/CanonicalPropertyManagementWriteRepository.php',
     'app/Domains/Property/Infrastructure/Persistence/MySql/Management/CanonicalPropertyManagementWorkflowRepository.php',
