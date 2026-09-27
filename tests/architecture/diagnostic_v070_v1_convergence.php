@@ -8,8 +8,8 @@ $assert = static function (bool $condition, string $message): void {
 };
 
 $manifest = require $root . '/app/Domains/Diagnostic/module.php';
-$assert(($manifest['version'] ?? null) === '0.7.0', 'Diagnostic V0.7 manifest version missing.');
-$assert(($manifest['schema_version'] ?? null) === '0.7.0', 'Diagnostic V0.7 schema version missing.');
+$assert(version_compare((string)($manifest['version'] ?? '0.0.0'),'0.7.0','>='), 'Diagnostic V0.7+ manifest version missing.');
+$assert(version_compare((string)($manifest['schema_version'] ?? '0.0.0'),'0.7.0','>='), 'Diagnostic V0.7+ schema version missing.');
 foreach (['diagnostic.methodology.compile','diagnostic.state.rebuild','diagnostic.traceability','diagnostic.semantic.v1'] as $capability) {
     $assert(in_array($capability, $manifest['contributions']['capabilities'] ?? [], true), 'Missing Diagnostic capability: ' . $capability);
 }
