@@ -17,9 +17,17 @@ $notContains = static function (string $source, string $needle, string $message)
 };
 
 $controller = $read('symfony/src/Web/Property/PropertyPageController.php');
+$favouritesController = $read('symfony/src/Web/Property/PublicPropertyFavouritesController.php');
+$submitController = $read('symfony/src/Web/Property/PublicPropertySubmitController.php');
 $inventoryController = $read('symfony/src/Web/Property/PropertyInventoryController.php');
-foreach (['final readonly class PropertyPageController', "public function favour(Request \$request): Response", "'property/favour'"] as $needle) {
-    $contains($controller, $needle, 'Canonical Symfony public Property controller is incomplete');
+foreach (['final readonly class PropertyPageController', 'GetPublicPropertyPresentationQuery', 'ReceivePublicLeadCommand'] as $needle) {
+    $contains($controller, $needle, 'Canonical Symfony Property presentation controller is incomplete');
+}
+foreach (['GetPublicPropertyFavouritesQuery', 'PageArchetype::PublicCatalog', "experience/public/property_favourites.html.twig"] as $needle) {
+    $contains($favouritesController, $needle, 'Canonical Symfony Property favourites controller is incomplete');
+}
+foreach (['SubmitPublicPropertyCommand', 'CommandBusInterface', 'PageArchetype::FormEditor'] as $needle) {
+    $contains($submitController, $needle, 'Canonical Symfony Property public intake controller is incomplete');
 }
 foreach (['GetPropertyInventoryCollectionQuery','PageArchetype::Collection','DataGridQuery','PropertyInventoryPresenter'] as $needle) {
     $contains($inventoryController,$needle,'Canonical Property Inventory controller is incomplete');
@@ -41,7 +49,7 @@ foreach ([
     'path: /property/catalog',
     'path: /property/map',
     'path: /property/favour',
-    'PropertyPageController::favour',
+    'PublicPropertyFavouritesController::index',
     'PropertyInventoryController::manage',
     'PropertyInventoryController::listing',
     'PropertySubmissionsController::index',
@@ -51,7 +59,7 @@ foreach ([
     'path: /property/presentation/{slug}',
     'path: /property/submit',
     'path: /property/create',
-    'PropertyPageController::submit',
+    'PublicPropertySubmitController::index',
     'path: /property/manage',
     'path: /property/listing',
     'path: /property/submissions',
@@ -76,23 +84,35 @@ $submission=$read('symfony/templates/experience/property/submission.html.twig');
 foreach(['<twig:CosWorkspace','<twig:CosEntityHeader','class="cos-kpi-strip"','property/submissions','data-property-submission'] as $needle){$contains($submission,$needle,'Canonical Property submission detail is incomplete');}
 if(is_file($root.'/app/Interfaces/Web/View/property/submission_canonical.phtml'))throw new RuntimeException('Legacy Property submission PHTML restored.');
 
-$favour = $read('app/Interfaces/Web/View/property/favour.phtml');
+$favour = $read('symfony/templates/experience/public/property_favourites.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    "'data-favourite-empty' => ''",
-    'data-favourite-list',
-    'data-favourite-item',
+    '<twig:CosPageHeader',
+    'data-controller="public-property"',
+    'data-cos-public="property-favourites"',
+    'data-public-property-target="item"',
+    'data-public-property-target="empty"',
+    'data-public-property-target="count"',
+    "components/property/public_property_card.html.twig",
 ] as $needle) {
     $contains($favour, $needle, 'Property favourites surface lost its canonical or live-state contract');
 }
+foreach (['tn-', 'style=', 'onclick='] as $legacy) {
+    $notContains($favour, $legacy, 'Property favourites must not restore legacy/local presentation');
+}
+if (is_file($root . '/app/Interfaces/Web/View/property/favour.phtml')) {
+    throw new RuntimeException('Retired Property favourites PHTML restored.');
+}
 
-$state = $read('app/Interfaces/Web/View/components/ui/state.phtml');
+$submit = $read('symfony/templates/experience/public/property_submit.html.twig');
 foreach ([
-    '$attributes',
-    'foreach ($attributes as $name => $value)',
+    '<twig:CosPageHeader',
+    '<twig:CosFormSection',
+    '<twig:CosStickyActions',
+    'data-cos-public="property-submit"',
+    'name="owner_name"',
+    'name="property_type"',
 ] as $needle) {
-    $contains($state, $needle, 'Canonical State must preserve generic attributes');
+    $contains($submit, $needle, 'Property public intake surface lost its canonical Form Editor contract');
 }
 
 foreach ([

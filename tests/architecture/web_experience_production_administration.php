@@ -167,11 +167,11 @@ if (is_file($root . '/app/Interfaces/Web/View/spatial/manage.phtml')) {
     throw new RuntimeException('Legacy Spatial manage PHTML restored.');
 }
 
-$spatialEdit = $read('app/Interfaces/Web/View/spatial/edit.phtml');
+$spatialEdit = $read('symfony/templates/experience/spatial/edit.html.twig');
 foreach ([
-    "partial('components/ui/page_header'",
-    "partial('components/ui/state'",
-    'tn-ui-panel',
+    '<twig:CosPageHeader',
+    '<twig:CosFormSection',
+    '<twig:CosStickyActions',
     'spatial/save/',
     'spatial/upload/',
     'spatial/external/',
@@ -190,15 +190,15 @@ foreach ([
     'name="provider"',
     'name="external_url"',
     'name="hotspot_type"',
+    "importmap('spatial_admin')",
 ] as $marker) {
     $contains($spatialEdit, $marker, 'Spatial editor lost a canonical or mutation/browser contract.');
 }
-foreach ([
-    'tn-page-hero tn-page-hero--catalog',
-    'tn-admin-card',
-    'tn-admin-card__head',
-] as $legacyMarker) {
-    $notContains($spatialEdit, $legacyMarker, 'Spatial editor must not restore the legacy visual shell.');
+foreach (['tn-', 'style=', 'onclick='] as $legacyMarker) {
+    $notContains($spatialEdit, $legacyMarker, 'Spatial editor must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/spatial/edit.phtml')) {
+    throw new RuntimeException('Legacy Spatial editor PHTML restored.');
 }
 
 $spatialManageController = $read('symfony/src/Web/Spatial/SpatialManageController.php');
@@ -217,11 +217,13 @@ foreach ([
     'public function publish(string $id): Response',
     'public function scene(Request $request, string $slug): Response',
     '$this->manager()',
-    "'spatial/edit'",
-    "'spatial/scene'",
+    "experience/spatial/edit.html.twig",
+    "experience/public/spatial_scene.html.twig",
+    'ViteAssetManifest',
 ] as $marker) {
     $contains($spatialController, $marker, 'Spatial Administration controller contract is incomplete.');
 }
+$notContains($spatialController, 'PhtmlRenderer', 'Spatial controller must not restore PHTML ownership.');
 
 foreach ([
     'path: /spatial/manage',
@@ -246,12 +248,20 @@ foreach ([
     $contains($routes, $marker, 'Spatial Administration route contract is incomplete.');
 }
 
-$publicScene = $read('app/Interfaces/Web/View/spatial/scene.phtml');
+$publicScene = $read('symfony/templates/experience/public/spatial_scene.html.twig');
 foreach ([
-    "partial('shared/spatial_viewer'",
-    'tn-spatial-summary',
+    '<twig:CosPageHeader',
+    'data-spatial-viewer',
+    'data-endpoint="/api/spatial/scenes/',
+    'islandAssets.scripts',
 ] as $marker) {
-    $contains($publicScene, $marker, 'Public Spatial scene specialized surface must remain intact.');
+    $contains($publicScene, $marker, 'Public Spatial scene specialized Twig island must remain intact.');
+}
+foreach (['tn-', 'style=', 'onclick='] as $legacyMarker) {
+    $notContains($publicScene, $legacyMarker, 'Public Spatial scene must not restore legacy/local presentation.');
+}
+if (is_file($root . '/app/Interfaces/Web/View/spatial/scene.phtml')) {
+    throw new RuntimeException('Legacy Spatial scene PHTML restored.');
 }
 
 $companyHome = $read('symfony/templates/experience/admin/dashboard.html.twig');

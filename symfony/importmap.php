@@ -20,8 +20,16 @@ return [
         'path' => 'public_home.js',
         'entrypoint' => true,
     ],
+    'public_auth' => [
+        'path' => 'public_auth.js',
+        'entrypoint' => true,
+    ],
     'public_property' => [
         'path' => 'public_property.js',
+        'entrypoint' => true,
+    ],
+    'spatial_admin' => [
+        'path' => 'spatial_admin.js',
         'entrypoint' => true,
     ],
     '@hotwired/stimulus' => [

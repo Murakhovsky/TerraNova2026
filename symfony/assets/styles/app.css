@@ -11,6 +11,7 @@
 @import './domains/property.css';
 @import './domains/system-architecture.css';
 @import './domains/diagnostic-methodology.css';
+@import './domains/spatial.css';
 @import './stress-screens.css';
 @import './forms.css';
 @import './data-grid.css';

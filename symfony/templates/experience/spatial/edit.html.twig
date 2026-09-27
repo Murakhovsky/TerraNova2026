@@ -1,0 +1,172 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ importmap('spatial_admin') }}
+{% endblock %}
+
+{% block title %}{{ scene.id ? scene.title : 'Нова 3D-сцена' }} | Spatial | COS{% endblock %}
+
+{% block workspace_content %}
+{% set statusLabels = {'draft':'Чернетка','processing':'Обробка','review':'Перевірка','published':'Опубліковано','failed':'Помилка','archived':'Архів'} %}
+<section
+    class="cos-page__stack"
+    data-cos-system="spatial-editor"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+>
+    <twig:CosPageHeader
+        eyebrow="{{ scene.id ? 'Administration · Spatial · Edit' : 'Administration · Spatial · Create' }}"
+        title="{{ scene.id ? scene.title : 'Нова 3D-сцена' }}"
+        subtitle="Одна сцена для web, native shell, AR та зовнішніх провайдерів."
+        metaValue="{{ statusLabels[scene.status|default('draft')]|default(scene.status|default('draft')) }}"
+        metaLabel="{{ scene.id ? scene.public_id|default('') : 'спочатку збережіть' }}"
+    >
+        <twig:CosButton label="До сцен" href="/spatial/manage" variant="ghost" />
+        {% if scene.status|default('') == 'published' and scene.slug|default('') %}
+            <twig:CosButton label="Переглянути" href="/spatial/scene/{{ scene.slug }}" variant="primary" />
+        {% endif %}
+    </twig:CosPageHeader>
+
+    {% if actionStatus %}
+        <twig:CosAlert title="Spatial оновлено" copy="{{ actionStatus }}" tone="positive" />
+    {% endif %}
+
+    <form class="cos-form" method="post" action="/spatial/save/{{ scene.id|default(0) }}">
+        <input type="hidden" name="id" value="{{ scene.id|default(0) }}">
+        <twig:CosFormSection title="Конфігурація" description="Identity, renderer, provider та базова camera configuration.">
+            <div class="cos-form__grid">
+                <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" type="text" maxlength="220" value="{{ scene.title|default('') }}" required></label>
+                <label class="cos-field"><span>Slug</span><input class="cos-input" name="slug" type="text" maxlength="190" value="{{ scene.slug|default('') }}" placeholder="генерується"></label>
+                <label class="cos-field"><span>Обʼєкт</span><select class="cos-select" name="property_id"><option value="0">Не привʼязано</option>{% for property in properties %}<option value="{{ property.id }}" {% if scene.property_id|default(0) == property.id %}selected{% endif %}>{{ property.public_id }} / {{ property.city }} / {{ property.title }}</option>{% endfor %}</select></label>
+                <label class="cos-field"><span>Тип сцени</span><select class="cos-select" name="scene_type">{% for code,label in {'model':'3D-модель','digital_twin':'Digital twin','roomplan':'RoomPlan','panorama':'360° panorama','gaussian_splat':'Gaussian splat','mixed':'Mixed'} %}<option value="{{ code }}" {% if scene.scene_type|default('model') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+                <label class="cos-field"><span>Viewer</span><select class="cos-select" name="viewer_type">{% for code,label in {'threejs':'Three.js','external':'External embed/link','panorama':'360°','gaussian_splat':'Gaussian splat'} %}<option value="{{ code }}" {% if scene.viewer_type|default('threejs') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+                <label class="cos-field"><span>Джерело</span><select class="cos-select" name="provider">{% for code in ['native','roomplan','polycam','matterport','canvas','scaniverse','blender','bim','other'] %}<option value="{{ code }}" {% if scene.provider|default('native') == code %}selected{% endif %}>{{ code|capitalize }}</option>{% endfor %}</select></label>
+                <label class="cos-field"><span>Зовнішній URL</span><input class="cos-input" name="external_url" type="url" maxlength="700" value="{{ scene.external_url|default('') }}"></label>
+                <label class="cos-field"><span>Опис</span><textarea class="cos-textarea" name="description" rows="4">{{ scene.description|default('') }}</textarea></label>
+                <label class="cos-field"><span>Camera JSON</span><textarea class="cos-textarea" name="default_camera_json" rows="3">{{ scene.default_camera_json|default('') }}</textarea></label>
+                <label class="cos-field"><span>Viewer settings JSON</span><textarea class="cos-textarea" name="settings_json" rows="3">{{ scene.settings_json|default('') }}</textarea></label>
+            </div>
+        </twig:CosFormSection>
+        <twig:CosStickyActions label="Spatial scene actions">
+            <a class="cos-button cos-button--ghost" href="/spatial/manage">Скасувати</a>
+            <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+        </twig:CosStickyActions>
+    </form>
+
+    {% if scene.id|default(0) %}
+        <section class="cos-spatial-workbench">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Файли</p>
+                <h2 class="cos-card__title">Drag & Drop</h2>
+                <form action="/spatial/upload/{{ scene.id }}" method="post" enctype="multipart/form-data" data-spatial-upload>
+                    <div class="cos-spatial-dropzone" data-spatial-dropzone tabindex="0">
+                        <input name="asset_file" type="file" accept=".glb,.gltf,.usdz,.obj,.fbx,.ply,.splat,.zip,.dxf,.pdf,.jpg,.jpeg,.png,.webp,.mp4" required data-spatial-file>
+                        <strong>Перетягніть 3D-файл сюди</strong>
+                        <span>GLB, glTF, USDZ, OBJ, FBX, PLY, Splat, ZIP, plan, poster або video</span>
+                        <small data-spatial-file-name>Файл не вибрано</small>
+                    </div>
+                    <div class="cos-spatial-upload-options">
+                        <label class="cos-field"><span>Роль</span><select class="cos-select" name="asset_type"><option value="">Автоматично</option>{% for type in ['source','model_web','model_ar','texture','point_cloud','gaussian_splat','panorama','floorplan','poster','video','other'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Версія</span><select class="cos-select" name="version_id"><option value="0">Остання</option>{% for version in scene.versions|default([]) %}<option value="{{ version.id }}">v{{ version.version_number }} / {{ version.label }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span><input name="is_primary" type="checkbox" value="1" checked> Основний asset</span></label>
+                        <button class="cos-button cos-button--primary" type="submit">Завантажити</button>
+                    </div>
+                    <div class="cos-spatial-upload-progress" hidden data-spatial-progress><span></span><strong>0%</strong></div>
+                    <p data-spatial-upload-status role="status"></p>
+                </form>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Provider</p>
+                <h2 class="cos-card__title">Зовнішній asset</h2>
+                <form class="cos-form" method="post" action="/spatial/external/{{ scene.id }}">
+                    <div class="cos-form__grid">
+                        <label class="cos-field"><span>HTTPS URL</span><input class="cos-input" name="uri" type="url" required></label>
+                        <label class="cos-field"><span>Тип</span><select class="cos-select" name="asset_type">{% for type in ['model_web','model_ar','gaussian_splat','panorama','floorplan','video','other'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Формат</span><input class="cos-input" name="format" type="text" maxlength="30" placeholder="external"></label>
+                        <label class="cos-field"><span><input name="is_primary" type="checkbox" value="1" checked> Основний</span></label>
+                    </div>
+                    <button class="cos-button cos-button--primary" type="submit">Підключити</button>
+                </form>
+            </article>
+        </section>
+
+        <section class="cos-card">
+            <p class="cos-card__eyebrow">Assets</p>
+            <h2 class="cos-card__title">Склад сцени</h2>
+            {% if scene.status != 'published' %}
+                <form method="post" action="/spatial/publish/{{ scene.id }}"><button class="cos-button cos-button--primary" type="submit">Опублікувати</button></form>
+            {% endif %}
+            <div class="cos-spatial-asset-list">
+                {% for asset in scene.assets|default([]) %}
+                    <div>
+                        <strong>{{ asset.asset_type }}{% if asset.is_primary %} / primary{% endif %}</strong>
+                        <span>{{ asset.format }} / {{ asset.status }} / {{ (asset.size_bytes / 1048576)|number_format(1) }} MB</span>
+                        <a href="{{ asset.uri }}" target="_blank" rel="noopener">Відкрити</a>
+                        {% if asset.error_message %}<small>{{ asset.error_message }}</small>{% endif %}
+                    </div>
+                {% else %}
+                    <p>Ще немає assets.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="cos-spatial-workbench">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Capture</p>
+                <h2 class="cos-card__title">Нова версія</h2>
+                <form class="cos-form" method="post" action="/spatial/capture/{{ scene.id }}">
+                    <div class="cos-form__grid">
+                        <label class="cos-field"><span>Метод</span><select class="cos-select" name="capture_type">{% for type in ['lidar','roomplan','photogrammetry','bim','cad','manual','provider'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Назва версії</span><input class="cos-input" name="label" type="text" maxlength="160"></label>
+                        <label class="cos-field"><span>Пристрій</span><input class="cos-input" name="device_name" type="text" maxlength="160"></label>
+                        <label class="cos-field"><span>Дата</span><input class="cos-input" name="captured_at" type="datetime-local"></label>
+                        <label class="cos-field"><span>Примітка</span><textarea class="cos-textarea" name="notes" rows="3"></textarea></label>
+                    </div>
+                    <button class="cos-button cos-button--primary" type="submit">Створити capture</button>
+                </form>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Hotspot</p>
+                <h2 class="cos-card__title">Точка сцени</h2>
+                <form class="cos-form" method="post" action="/spatial/hotspot/{{ scene.id }}">
+                    <div class="cos-form__grid">
+                        <label class="cos-field"><span>Тип</span><select class="cos-select" name="hotspot_type">{% for type in ['info','room','feature','cta','link','media','measurement','navigation'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" type="text" maxlength="180" required></label>
+                        <label class="cos-field"><span>X</span><input class="cos-input" name="position_x" type="number" step="0.01" value="0"></label>
+                        <label class="cos-field"><span>Y</span><input class="cos-input" name="position_y" type="number" step="0.01" value="1"></label>
+                        <label class="cos-field"><span>Z</span><input class="cos-input" name="position_z" type="number" step="0.01" value="0"></label>
+                        <label class="cos-field"><span>Опис</span><textarea class="cos-textarea" name="body" rows="3"></textarea></label>
+                        <label class="cos-field"><span>Action URL</span><input class="cos-input" name="action_url" type="url"></label>
+                    </div>
+                    <input type="hidden" name="is_active" value="1">
+                    <button class="cos-button cos-button--primary" type="submit">Додати hotspot</button>
+                </form>
+            </article>
+        </section>
+
+        <section class="cos-spatial-workbench">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Версії</p>
+                <h2 class="cos-card__title">Capture history</h2>
+                <div class="cos-spatial-timeline">
+                    {% for version in scene.versions|default([]) %}
+                        <div><strong>v{{ version.version_number }} / {{ version.label }}</strong><span>{{ version.capture_method }} / {{ version.status }}{% if version.captured_at %} / {{ version.captured_at }}{% endif %}</span></div>
+                    {% else %}<p>Історія порожня.</p>{% endfor %}
+                </div>
+            </article>
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Worker</p>
+                <h2 class="cos-card__title">Processing jobs</h2>
+                <div class="cos-spatial-timeline">
+                    {% for job in scene.jobs|default([]) %}
+                        <div><strong>{{ job.job_type }} / {{ job.status }}</strong><span>{{ job.progress }}% / {{ job.attempts }} спроб</span>{% if job.error_message %}<small>{{ job.error_message }}</small>{% endif %}</div>
+                    {% else %}<p>Черга порожня.</p>{% endfor %}
+                </div>
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

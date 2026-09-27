@@ -1,0 +1,178 @@
+{% extends 'experience/public_shell.html.twig' %}
+
+{% block javascripts %}
+    {{ importmap('public_property') }}
+{% endblock %}
+
+{% block title %}
+    {% if detail %}{{ detail.title }} | Презентація Terra Nova CLUB
+    {% elseif group %}{{ group.title }} | Terra Nova CLUB
+    {% else %}Презентація | Terra Nova CLUB{% endif %}
+{% endblock %}
+
+{% block meta %}
+    {% if detail %}
+        <meta name="description" content="{{ detail.metaDescription }}">
+        <link rel="canonical" href="{{ detail.presentationUrl }}">
+        {% if detail.metaImage %}<meta property="og:image" content="{{ detail.metaImage }}">{% endif %}
+    {% elseif group %}
+        <meta name="description" content="{{ group.description ?: 'Добірка опублікованих обʼєктів Terra Nova CLUB.' }}">
+        <link rel="canonical" href="{{ group.canonicalUrl }}">
+    {% else %}
+        <meta name="robots" content="noindex,follow">
+    {% endif %}
+{% endblock %}
+
+{% block public_content %}
+<section
+    class="cos-page__stack{% if printMode %} cos-page--print{% endif %}"
+    data-cos-public="property-presentation"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+>
+    {% if error %}
+        <twig:CosPageHeader eyebrow="Property · Presentation" title="Презентація недоступна" subtitle="{{ error }}">
+            <twig:CosButton label="До каталогу" href="/property/catalog" variant="primary" />
+        </twig:CosPageHeader>
+        <twig:CosAlert title="Помилка" copy="{{ error }}" tone="danger" />
+    {% elseif detail %}
+        <twig:CosPageHeader
+            eyebrow="{{ detail.publicId }} · {{ detail.dealLabel }}"
+            title="{{ detail.title }}"
+            subtitle="{{ detail.shortDescription ?: detail.description }}"
+            metaValue="{{ detail.priceLabel }}"
+            metaLabel="{{ detail.locationLabel }}"
+        >
+            <twig:CosButton label="Повна картка" href="/property/show/{{ detail.slug }}" variant="ghost" />
+            <twig:CosButton label="PDF" href="{{ detail.pdfUrl }}" variant="ghost" />
+            <twig:CosButton label="До каталогу" href="/property/catalog" variant="ghost" />
+            <a class="cos-button cos-button--primary" href="#request">Отримати презентацію</a>
+        </twig:CosPageHeader>
+
+        {% if detail.notice %}
+            <twig:CosAlert title="Запит" copy="{{ detail.notice }}" tone="info" />
+        {% endif %}
+
+        {% if detail.coverUrl %}
+            <figure class="cos-property-gallery">
+                <img class="cos-property-gallery__main" src="{{ detail.coverUrl }}" alt="{{ detail.title }}">
+            </figure>
+        {% endif %}
+
+        <div class="cos-kpi-strip">
+            {% for fact in detail.summaryFacts %}
+                <article class="cos-card"><twig:CosMetric label="{{ fact.label }}" value="{{ fact.value }}" /></article>
+            {% endfor %}
+        </div>
+
+        {% if detail.description %}
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Опис</p>
+                <h2 class="cos-card__title">Про обʼєкт</h2>
+                <p class="cos-card__copy">{{ detail.description }}</p>
+            </article>
+        {% endif %}
+
+        {% if detail.features is not empty %}
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Деталі</p>
+                <h2 class="cos-card__title">Особливості</h2>
+                <div class="cos-kpi-strip">
+                    {% for feature in detail.features %}
+                        <article class="cos-card">
+                            <strong>{{ feature.label }}</strong>
+                            <span>{{ feature.value }}</span>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if detail.images|length > 1 %}
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Медіа</p>
+                <h2 class="cos-card__title">Фото обʼєкта</h2>
+                <div class="cos-property-gallery__thumbs">
+                    {% for image in detail.images|slice(1, 8) %}
+                        <img src="{{ image.url }}" alt="{{ image.alt }}" loading="lazy">
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="cos-card" id="request">
+            <p class="cos-card__eyebrow">Запит</p>
+            <h2 class="cos-card__title">Отримати презентацію або домовитись про перегляд</h2>
+            <p class="cos-card__copy">Залиште контакт, і менеджер повернеться з актуальністю, документами та наступним кроком.</p>
+            <form class="cos-form" action="#request" method="post">
+                <input type="hidden" name="property_id" value="{{ detail.id }}">
+                <input type="hidden" name="role" value="buyer">
+                <input type="hidden" name="deal_type" value="{{ detail.dealType ?: 'consultation' }}">
+                <input type="hidden" name="request_intent" value="presentation">
+                <label class="cos-visually-hidden" aria-hidden="true"><span>Website</span><input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+                <div class="cos-form__grid">
+                    <label class="cos-field"><span>Імʼя</span><input class="cos-input" name="full_name" type="text" autocomplete="name" required></label>
+                    <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" autocomplete="tel"></label>
+                    <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" autocomplete="email"></label>
+                    <label class="cos-field"><span>Повідомлення</span><textarea class="cos-textarea" name="message" rows="4">Хочу отримати презентацію цього обʼєкта</textarea></label>
+                </div>
+                <twig:CosStickyActions label="Presentation request">
+                    <button class="cos-button cos-button--primary" type="submit">Надіслати запит</button>
+                </twig:CosStickyActions>
+            </form>
+        </section>
+
+        {% if detail.relatedProperties is not empty %}
+            <section class="cos-card">
+                <p class="cos-card__eyebrow">Альтернативи</p>
+                <h2 class="cos-card__title">Схожі обʼєкти</h2>
+                <div class="cos-property-catalog-grid">
+                    {% for item in detail.relatedProperties %}
+                        <article class="cos-property-card">
+                            {% if item.cover_url|default('') %}
+                                <a class="cos-property-card__media" href="/property/presentation/{{ item.slug }}">
+                                    <img src="{{ item.cover_url }}" alt="{{ item.title|default('Обʼєкт') }}" loading="lazy">
+                                </a>
+                            {% endif %}
+                            <div class="cos-property-card__body">
+                                <h3 class="cos-property-card__title"><a href="/property/presentation/{{ item.slug }}">{{ item.title|default('Обʼєкт') }}</a></h3>
+                                <p class="cos-property-card__copy">{{ item.short_description|default('') }}</p>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    {% elseif group %}
+        <twig:CosPageHeader
+            eyebrow="Property · Group Presentation"
+            title="{{ group.title }}"
+            subtitle="{{ group.location ?: group.description }}"
+            metaValue="{{ group.properties|length }}"
+            metaLabel="доступних обʼєктів"
+        >
+            <twig:CosButton label="PDF" href="/property/pdf/{{ group.slug }}" variant="primary" />
+            <twig:CosButton label="Каталог" href="/property/catalog" variant="ghost" />
+        </twig:CosPageHeader>
+
+        {% if notice %}
+            <twig:CosAlert title="Запит" copy="{{ notice }}" tone="info" />
+        {% endif %}
+
+        {% if group.properties is empty %}
+            <twig:CosEmptyState title="Опублікованих обʼєктів поки немає" copy="Менеджер додасть варіанти після перевірки карток." />
+        {% else %}
+            <div class="cos-property-catalog-grid">
+                {% for property in group.properties %}
+                    {% include 'components/property/public_property_card.html.twig' with {property: property} %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% else %}
+        <twig:CosPageHeader eyebrow="Property · Presentation" title="Презентацію не знайдено" subtitle="Можливо, посилання змінилося або обʼєкт ще не опублікований.">
+            <twig:CosButton label="До каталогу" href="/property/catalog" variant="primary" />
+        </twig:CosPageHeader>
+        <twig:CosEmptyState title="Презентація недоступна" copy="Поверніться до каталогу й оберіть інший актуальний обʼєкт." />
+    {% endif %}
+</section>
+{% endblock %}

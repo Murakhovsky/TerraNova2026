@@ -9,7 +9,9 @@ on:
       - 'symfony/templates/experience/administration/analytics.html.twig'
       - 'symfony/src/Web/Administration/**'
       - 'symfony/src/Application/Administration/**'
-      - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
+      - 'symfony/templates/experience/diagnostic/report.html.twig'
+      - 'symfony/src/Web/Diagnostic/**'
+      - 'symfony/src/Application/Diagnostic/Report/**'
       - 'symfony/templates/experience/system/control_center.html.twig'
       - 'symfony/src/Web/Operations/**'
       - 'symfony/src/Application/Operations/Query/**'
@@ -33,7 +35,9 @@ on:
       - 'symfony/templates/experience/administration/analytics.html.twig'
       - 'symfony/src/Web/Administration/**'
       - 'symfony/src/Application/Administration/**'
-      - 'app/Interfaces/Web/View/diagnostic_report/show.phtml'
+      - 'symfony/templates/experience/diagnostic/report.html.twig'
+      - 'symfony/src/Web/Diagnostic/**'
+      - 'symfony/src/Application/Diagnostic/Report/**'
       - 'symfony/templates/experience/system/control_center.html.twig'
       - 'symfony/src/Web/Operations/**'
       - 'symfony/src/Application/Operations/Query/**'
@@ -74,7 +78,9 @@ jobs:
           php -l symfony/src/Web/Administration/AdministrationAnalyticsController.php
           php -l symfony/src/Web/Administration/AdministrationAnalyticsPresenter.php
           php -l symfony/src/Application/Administration/Query/GetAdministrationAnalyticsQueryHandler.php
-          php -l app/Interfaces/Web/View/diagnostic_report/show.phtml
+          php -l symfony/src/Web/Diagnostic/DiagnosticPageController.php
+          php -l symfony/src/Web/Diagnostic/DiagnosticReportPresenter.php
+          php -l symfony/src/Application/Diagnostic/Report/GetDiagnosticReportQueryHandler.php
           php -l symfony/src/Web/Operations/ControlCenterPageController.php
           php -l symfony/src/Web/Operations/ControlCenterPresenter.php
           php -l symfony/src/Application/Operations/Query/GetControlCenterQueryHandler.php

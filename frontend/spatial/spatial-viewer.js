@@ -196,7 +196,7 @@ class SpatialViewer {
     hotspots.forEach((data) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'tn-spatial-hotspot';
+      button.className = 'cos-spatial-hotspot';
       button.textContent = data.title;
       button.title = data.body || data.title;
       button.addEventListener('click', () => {
@@ -223,7 +223,7 @@ class SpatialViewer {
   }
 
   bindActions() {
-    const scope = this.element.closest('.tn-spatial-stage') || document;
+    const scope = this.element.closest('.cos-spatial-stage') || document;
     scope.querySelector('[data-spatial-reset]')?.addEventListener('click', () => this.reset());
     scope.querySelector('[data-spatial-fullscreen]')?.addEventListener('click', () => this.element.requestFullscreen?.());
   }
