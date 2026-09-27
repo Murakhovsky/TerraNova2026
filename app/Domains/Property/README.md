@@ -150,15 +150,30 @@ V0.12 adds canonical Asset/Inventory/Listing/Publication write services, canonic
 
 The compatibility bridge may still materialize operational metadata, activity log entries and legacy media bookkeeping required by existing screens. Those writes are explicitly non-authoritative and cannot define canonical Asset, Inventory or Listing state.
 
-## Current architectural debt
+### Property V0.13 — V1 Hardening
 
-The canonical direction is stable, but Property is not declared V1.0 yet.
+Closed the remaining legacy read/write ownership gap:
 
-- `MysqlPropertyManagementRepository` is still a large compatibility-heavy read/group/media backend and should be retired or decomposed further as canonical product surfaces replace it.
-- Legacy `tn_properties`/Telegram models still exist for compatibility. New canonical runtime and cross-domain code are prohibited from depending on them as business truth.
-- Public catalog/workspace/presentation reads still include legacy compatibility projections; V0.12 primarily closes the authoritative write side.
-- V0.8 demand currently represents explicit Sales property matches, not full latent demand.
-- V0.10 provides the federation boundary and durable synchronization lifecycle; additional concrete marketplace/developer connectors remain integration adapters outside the domain core.
-- Reference location materialization remains owned by Reference and is accessed through `LocationReferenceInterface`; Property must not write `tn_locations` directly.
+```text
+PropertyAsset + Inventory + Listing + Publication
+        ↓
+canonical runtime / canonical business decisions
+        ↓
+dedicated compatibility read projection
+        ↓
+tn_property_public_read_model
+```
 
-V1.0 should only be declared after canonical registry usage, Inventory/Listing separation, stable cross-domain contracts and External Network boundaries have survived real integration traffic without requiring core-model rewrites, and after the main legacy Property read surfaces have been retired or reduced to isolated compatibility projections.
+`tn_properties` is no longer consumed by Property catalog, workspace, presentation, moderation, Identity, Analytics, Telegram or Spatial business reads. Moderated intake publishes through `PropertyCanonicalRuntimeService`. The monolithic `MysqlPropertyManagementRepository` and legacy `MysqlPropertyTourPublisher` are retired. Compatibility projection code may still materialize `tn_properties` for migration/legacy interoperability, but canonical decisions must not read it.
+
+## V1 readiness / remaining operational proof
+
+The architectural V1 boundary is now enforced in code and CI. Before changing the public lifecycle label to V1.0, the remaining requirement is operational evidence rather than another model rewrite:
+
+- run representative create/update/publish/reserve/moderation/Spatial integration traffic against the canonical runtime;
+- verify projection lag/failure recovery and migration/bootstrap behavior on production-like data;
+- keep `tn_properties` isolated as compatibility output only and remove it entirely when no external legacy consumer remains;
+- expand concrete External Network adapters as integrations are onboarded.
+
+V0.8 demand remains intentionally limited to explicit Sales property matches. Reference location materialization remains owned by Reference through `LocationReferenceInterface`.
+
