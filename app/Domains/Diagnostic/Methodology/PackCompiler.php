@@ -3,16 +3,24 @@ declare(strict_types=1);
 namespace Domains\Diagnostic\Methodology;
 use Domains\Diagnostic\Methodology\Loader\PackLoader;
 use Domains\Diagnostic\Methodology\Model\MethodologyPack;
+use Domains\Diagnostic\Methodology\Serialization\MethodologyPackSerializer;
 use Domains\Diagnostic\Methodology\Validation\PackValidator;
 use InvalidArgumentException;
 final class PackCompiler
 {
-    public function __construct(private readonly PackLoader $loader=new PackLoader(),private readonly PackValidator $validator=new PackValidator()){}
+    public const COMPILER_VERSION = '1.1.0';
+    public const SCHEMA_VERSION = 'diagnostic-pack-schema:1.0';
+
+    public function __construct(
+        private readonly PackLoader $loader = new PackLoader(),
+        private readonly PackValidator $validator = new PackValidator(),
+        private readonly MethodologyPackSerializer $serializer = new MethodologyPackSerializer(),
+    ) {}
     /** @param array<string,mixed>|string|MethodologyPack $source */
     public function compile(array|string|MethodologyPack $source): CompiledDiagnosticPack
     {
         $pack=$source instanceof MethodologyPack?$source:$this->loader->load($source); $validation=$this->validator->validate($pack);
         if(!$validation->isValid()) throw new InvalidArgumentException('Diagnostic pack compilation failed: '.implode('; ',array_map(fn($i)=>$i->code.' at '.$i->path,$validation->errors)));
-        return new CompiledDiagnosticPack($pack);
+        return new CompiledDiagnosticPack($pack, self::COMPILER_VERSION, self::SCHEMA_VERSION, $this->serializer->hash($pack));
     }
 }
