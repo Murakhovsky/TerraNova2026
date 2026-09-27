@@ -25,7 +25,13 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
     }
 
     public function operationalStageRules(): array { return $this->workflow->stageRules(); }
-    public function operationalStageCheck(int $propertyId): array { return $this->reads->operationalStageCheck($propertyId); }
+    public function operationalStageCheck(int $propertyId): array
+    {
+        $property = $this->reads->property($propertyId);
+        if ($property === null) return ['ok' => false, 'issues' => ['Обʼєкт не знайдено.']];
+        $issues = $this->workflow->stageIssues($property, count($this->reads->images($propertyId)));
+        return ['ok' => $issues === [], 'issues' => $issues];
+    }
 
     public function quickAction(int $propertyId, string $action, array $input = [], ?int $userId = null): array
     {
@@ -96,7 +102,13 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
         }
     }
 
-    public function readiness(int $propertyId): array { return $this->reads->readiness($propertyId); }
+    public function readiness(int $propertyId): array
+    {
+        $property = $this->reads->property($propertyId);
+        if ($property === null) return ['ready' => false, 'missing' => ['Обʼєкт не знайдено.']];
+        $issues = $this->workflow->stageIssues($property, count($this->reads->images($propertyId)));
+        return ['ready' => $issues === [], 'missing' => $issues];
+    }
 
     private function actor(?int $userId): ?string
     {
