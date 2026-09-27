@@ -174,7 +174,7 @@ class SessionAuthService implements AuthenticatedUserContextInterface
                 SELECT DISTINCT p.id, p.public_id, p.slug, p.title, p.status, p.price_amount, p.price_currency,
                        p.updated_at, l.city, t.name_uk AS type_name
                 FROM tn_property_submissions s
-                INNER JOIN tn_properties p ON p.id = s.property_id
+                INNER JOIN tn_property_public_read_model p ON p.id = s.property_id
                 INNER JOIN tn_locations l ON l.id = p.location_id
                 INNER JOIN tn_property_types t ON t.id = p.type_id
                 WHERE s.owner_email = :email
@@ -185,7 +185,7 @@ class SessionAuthService implements AuthenticatedUserContextInterface
                 SELECT s.id, s.submission_ref, s.title, s.status, s.city, s.property_id, s.created_at,
                        p.slug AS property_slug, p.title AS property_title
                 FROM tn_property_submissions s
-                LEFT JOIN tn_properties p ON p.id = s.property_id
+                LEFT JOIN tn_property_public_read_model p ON p.id = s.property_id
                 WHERE s.owner_email = :email
                 ORDER BY s.created_at DESC, s.id DESC
                 LIMIT 20
@@ -194,7 +194,7 @@ class SessionAuthService implements AuthenticatedUserContextInterface
                 SELECT l.id, l.role, l.deal_type, l.message, l.status, l.source_page, l.created_at,
                        p.slug AS property_slug, p.title AS property_title
                 FROM tn_leads l
-                LEFT JOIN tn_properties p ON p.id = l.property_id
+                LEFT JOIN tn_property_public_read_model p ON p.id = l.property_id
                 WHERE l.organization_id = :organization_id AND l.email = :email
                 ORDER BY l.created_at DESC, l.id DESC
                 LIMIT 20
