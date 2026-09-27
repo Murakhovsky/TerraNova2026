@@ -5,7 +5,6 @@ namespace Domains\Property\Infrastructure\Persistence\MySql;
 
 use Domains\Property\Application\Contract\PropertyModerationRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyMediaStorageInterface;
-use Domains\Property\Application\Contract\LocationReferenceInterface;
 use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
 use Infrastructure\Platform\Persistence\Pdo\PdoConnection;
 use InvalidArgumentException;
@@ -17,7 +16,6 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
     public function __construct(
         private PdoConnection $database,
         private PropertyMediaStorageInterface $mediaStorage,
-        private LocationReferenceInterface $locations,
         private PropertyCanonicalRuntimeService $runtime,
         private string $organizationId,
     ) {
@@ -53,7 +51,7 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
         return $this->database->fetchOne('
             SELECT s.*, p.public_id, p.slug AS property_slug, p.status AS property_status
             FROM tn_property_submissions s
-            LEFT JOIN tn_properties p
+            LEFT JOIN tn_property_public_read_model p
               ON p.id = s.property_id
              AND p.organization_id = s.organization_id
             WHERE s.id = :id
@@ -128,11 +126,6 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
             }
 
             $typeId = $this->propertyTypeId($pdo, (string) $submission['property_type']);
-            $locationId = $this->locations->resolveOrCreate(
-                (string) $submission['city'],
-                (string) ($submission['region'] ?? ''),
-                (string) ($submission['district'] ?? ''),
-            );
             $agentId = $this->defaultAgentId($pdo);
             $publicId = $this->nextPublicId($pdo);
             $slug = $this->uniqueSlug($pdo, (string) $submission['title']);
@@ -306,7 +299,7 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
 
     private function nextPublicId(PDO $pdo): string
     {
-        $number = (int) $pdo->query("SELECT COALESCE(MAX(CAST(SUBSTRING(public_id, 4) AS UNSIGNED)), 0) + 1 FROM tn_properties WHERE public_id LIKE 'TN-%'")->fetchColumn();
+        $number = (int) $pdo->query("SELECT COALESCE(MAX(CAST(SUBSTRING(public_id, 4) AS UNSIGNED)), 0) + 1 FROM tn_property_public_read_model WHERE public_id LIKE 'TN-%'")->fetchColumn();
 
         return 'TN-' . str_pad((string) $number, 4, '0', STR_PAD_LEFT);
     }
@@ -317,7 +310,7 @@ final class MysqlPropertyModerationRepository implements PropertyModerationRepos
         $slug = $base;
         $index = 2;
 
-        $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_properties WHERE slug = :slug');
+        $statement = $pdo->prepare('SELECT COUNT(*) FROM tn_property_public_read_model WHERE slug = :slug');
         while (true) {
             $statement->execute(['slug' => $slug]);
             if ((int) $statement->fetchColumn() === 0) {
