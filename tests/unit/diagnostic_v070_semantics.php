@@ -9,6 +9,7 @@ use Domains\Diagnostic\Model\Hypothesis;
 use Domains\Diagnostic\Model\HypothesisStatus;
 use Domains\Diagnostic\Model\Severity;
 use Domains\Diagnostic\Model\TruthLevel;
+use Domains\Diagnostic\Methodology\PackCompiler;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
@@ -38,5 +39,12 @@ $hypothesis = $hypothesis->transition(HypothesisStatus::Supported,.8);
 $hypothesis = $hypothesis->transition(HypothesisStatus::StronglySupported,.9);
 $hypothesis = $hypothesis->transition(HypothesisStatus::ConfirmedRootCause,.94);
 $assert($hypothesis->isConfirmedRootCause(), 'Normative root-cause lifecycle failed.');
+
+$packPath = dirname(__DIR__, 2) . '/resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json';
+$compiledA = (new PackCompiler())->compile($packPath);
+$compiledB = (new PackCompiler())->compile($packPath);
+$assert($compiledA->contentHash !== '' && $compiledA->contentHash === $compiledB->contentHash, 'Compiled pack hash must be canonical and reproducible.');
+$assert($compiledA->compilerVersion === PackCompiler::COMPILER_VERSION, 'Compiler version metadata missing.');
+$assert($compiledA->schemaVersion === PackCompiler::SCHEMA_VERSION, 'Schema version metadata missing.');
 
 echo "Diagnostic V0.7 semantic model contract passed.\n";
