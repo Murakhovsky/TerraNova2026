@@ -54,4 +54,7 @@ interface DiagnosticSemanticRepositoryInterface
     ): void;
 
     public function saveStateSnapshot(string $organizationId, DiagnosticState $state): void;
+
+    /** @return array<string,string> criterion_id => status */
+    public function latestAssessmentStatuses(string $organizationId, string $sessionId): array;
 }
