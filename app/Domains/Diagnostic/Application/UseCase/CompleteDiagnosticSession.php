@@ -6,6 +6,7 @@ namespace Domains\Diagnostic\Application\UseCase;
 use DateTimeImmutable;
 use Domains\Diagnostic\Application\Contract\DiagnosticPackRepositoryInterface;
 use Domains\Diagnostic\Application\Contract\DiagnosticSessionRepositoryInterface;
+use Domains\Diagnostic\Application\Contract\DiagnosticSemanticRepositoryInterface;
 use Domains\Diagnostic\Application\Support\DiagnosticEvents;
 use Domains\Diagnostic\Automation\Event\DiagnosticSessionCompleted;
 use DomainException;
@@ -19,6 +20,7 @@ final readonly class CompleteDiagnosticSession
         private DiagnosticSessionRepositoryInterface $sessions,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
+        private ?DiagnosticSemanticRepositoryInterface $semantic = null,
     ) {
     }
 
@@ -35,7 +37,19 @@ final readonly class CompleteDiagnosticSession
             $pack = $this->packs->get($organizationId, $session->packId(), $session->packVersion())
                 ?? throw new DomainException('Pinned diagnostic pack was not found.');
             $expectedLockVersion = $session->lockVersion();
-            $session->complete($now, $pack);
+            if ($this->semantic !== null) {
+                $statuses = $this->semantic->latestAssessmentStatuses($organizationId, $sessionId);
+                $conclusive = ['ASSESSED','GOOD','WARNING','CRITICAL','NOT_APPLICABLE','INSUFFICIENT_DATA','CONTRADICTORY'];
+                foreach ($pack->methodology()->criteria as $criterion) {
+                    $status = $statuses[$criterion->id] ?? null;
+                    if ($status === null || !in_array($status, $conclusive, true)) {
+                        throw new DomainException('Criterion has no typed semantic conclusion: ' . $criterion->id);
+                    }
+                }
+                $session->completeValidated($now);
+            } else {
+                $session->complete($now, $pack);
+            }
             $this->sessions->save($organizationId, $session, $expectedLockVersion);
             $this->events->publish(DiagnosticSessionCompleted::create(
                 DiagnosticEvents::id(),
