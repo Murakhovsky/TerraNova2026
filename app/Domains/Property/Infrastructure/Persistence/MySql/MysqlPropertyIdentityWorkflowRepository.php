@@ -26,7 +26,7 @@ final readonly class MysqlPropertyIdentityWorkflowRepository implements Property
                 p.floors AS legacy_floors,p.built_year AS legacy_built_year,
                 t.code AS legacy_type_code,l.id AS legacy_location_id,l.city,l.region
             FROM tn_property_submissions s
-            INNER JOIN tn_properties p
+            INNER JOIN tn_property_public_read_model p
               ON p.id=:legacy_property_id
              AND p.organization_id=s.organization_id
             LEFT JOIN tn_property_types t ON t.id=p.type_id
