@@ -130,6 +130,12 @@ final class DiagnosticSession
     {
         $this->assertInProgress();
         $policy->assertSatisfied($this, $pack);
+        $this->completeValidated($completedAt);
+    }
+
+    public function completeValidated(DateTimeImmutable $completedAt): void
+    {
+        $this->assertInProgress();
         $this->status = DiagnosticSessionStatus::Completed;
         $this->completedAt = $completedAt;
         $this->lockVersion++;
