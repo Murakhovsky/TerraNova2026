@@ -93,9 +93,12 @@ $outbound->status='queued';
 
 $policies=(new GrowthPolicyCatalog())->policies('org-1');
 expectGrowthV0240(count($policies)>=1,'Growth must retain the V0.24 outbound execution policy.');
-$messagePolicy=array_values(array_filter($policies,static fn($policy):bool=>$policy->actionType===GrowthSendMessageHandler::TYPE));
-expectGrowthV0240(count($messagePolicy)===1,'Growth policy must govern growth.send_message exactly once.');
-expectGrowthV0240($messagePolicy[0]->decision===PolicyDecision::ApprovalRequired,'Growth outbound message must require approval.');
+$messagePolicies=array_values(array_filter($policies,static fn($policy):bool=>$policy->actionType===GrowthSendMessageHandler::TYPE));
+expectGrowthV0240(count($messagePolicies)===3,'Growth send_message must retain blocked, auto and approval activation policies.');
+$decisions=array_map(static fn($policy):PolicyDecision=>$policy->decision,$messagePolicies);
+expectGrowthV0240(in_array(PolicyDecision::Denied,$decisions,true),'Growth send_message blocked activation policy is missing.');
+expectGrowthV0240(in_array(PolicyDecision::Auto,$decisions,true),'Growth send_message auto activation policy is missing.');
+expectGrowthV0240(in_array(PolicyDecision::ApprovalRequired,$decisions,true),'Growth outbound message approval policy is missing.');
 
 expectGrowthV0240(
     in_array(GrowthSendMessageHandler::TYPE,array_map(static fn($policy):string=>$policy->actionType,$policies),true),
