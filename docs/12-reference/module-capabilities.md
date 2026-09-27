@@ -53,7 +53,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`, `app/migrations/20260928_000064_diagnostic_v070_semantic_convergence.sql`.
+- міграції: `app/migrations/20260914_000049_diagnostic_runtime_v060.sql`, `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql`.
 
 ### Задекларовані capabilities
 
