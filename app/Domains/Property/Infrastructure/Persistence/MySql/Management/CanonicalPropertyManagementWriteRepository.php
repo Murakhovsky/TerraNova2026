@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Domains\Property\Infrastructure\Persistence\MySql\Management;
 
 use Domains\Property\Application\Contract\PropertyProjectionInterface;
-use Domains\Property\Application\Contract\PropertyManagementReadRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyManagementWriteRepositoryInterface;
 use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
 use PDO;
@@ -14,7 +13,6 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
 {
     public function __construct(
         private PropertyCanonicalRuntimeService $runtime,
-        private PropertyManagementReadRepositoryInterface $reads,
         private PropertyProjectionInterface $compatibility,
         private PDO $connection,
         private string $organizationId,
