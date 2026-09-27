@@ -49,7 +49,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                     WHERE image_count.organization_id = p.organization_id
                       AND image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE ' . implode(' AND ', $conditions['where']) . '
@@ -64,7 +64,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
         $conditions = $this->conditions($organizationId, $filters);
         $row = $this->database->fetchOne('
             SELECT COUNT(DISTINCT p.id) AS total
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE ' . implode(' AND ', $conditions['where']),
@@ -83,7 +83,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                 MIN(p.price_amount) AS price_min,
                 MAX(p.price_amount) AS price_max,
                 ROUND(AVG(p.area_total), 1) AS area_avg
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE ' . implode(' AND ', $conditions['where']),
@@ -123,7 +123,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                     WHERE image_count.organization_id = p.organization_id
                       AND image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.organization_id = :organization_id
@@ -147,7 +147,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                 a.public_name AS agent_name, a.role AS agent_role, a.phone AS agent_phone,
                 a.email AS agent_email, a.telegram AS agent_telegram, a.avatar_url AS agent_avatar,
                 a.bio AS agent_bio
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_groups g
@@ -208,7 +208,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                     WHERE image_count.organization_id = p.organization_id
                       AND image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.organization_id = :organization_id
@@ -272,7 +272,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                     WHERE image_count.organization_id = p.organization_id
                       AND image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.organization_id = :organization_id
@@ -329,7 +329,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
                     WHERE image_count.organization_id = p.organization_id
                       AND image_count.property_id = p.id
                 ) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.organization_id = :organization_id
@@ -352,7 +352,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
         return $this->database->fetchAll('
             SELECT t.code
             FROM tn_property_types t
-            INNER JOIN tn_properties p ON p.type_id = t.id
+            INNER JOIN tn_property_public_read_model p ON p.type_id = t.id
             WHERE t.is_active = 1
               AND p.organization_id = :organization_id
               AND p.visibility = "public"
@@ -367,7 +367,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
         return $this->database->fetchAll('
             SELECT l.slug
             FROM tn_locations l
-            INNER JOIN tn_properties p ON p.location_id = l.id
+            INNER JOIN tn_property_public_read_model p ON p.location_id = l.id
             WHERE l.is_active = 1
               AND p.organization_id = :organization_id
               AND p.visibility = "public"
@@ -381,7 +381,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
     {
         return $this->database->fetchAll('
             SELECT l.slug AS location_slug, t.code AS type_code
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_locations l ON l.id = p.location_id
             INNER JOIN tn_property_types t ON t.id = p.type_id
             WHERE p.organization_id = :organization_id
@@ -396,7 +396,7 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
     {
         return $this->database->fetchAll('
             SELECT slug, updated_at
-            FROM tn_properties
+            FROM tn_property_public_read_model
             WHERE organization_id = :organization_id
               AND visibility = "public"
               AND status IN ("published", "active")

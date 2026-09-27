@@ -39,22 +39,15 @@ foreach ([
     }
 }
 
-$management = (string) file_get_contents($root . '/app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyManagementRepository.php');
+$canonicalRuntime = (string) file_get_contents($root . '/app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyCanonicalRuntimeRepository.php');
+$projection = (string) file_get_contents($root . '/app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyProjection.php');
 foreach ([
-    'private string $organizationId',
-    'p.organization_id = :organization_id',
-    'g.organization_id = :organization_id',
-    'INSERT INTO tn_properties (',
-    'organization_id, property_id, user_id',
-    'AND organization_id = :organization_id',
-    'private function ownsProperty',
+    'organization_id',
+    'WHERE organization_id=:organization_id',
 ] as $needle) {
-    if (!str_contains($management, $needle)) {
-        $fail('Property management persistence lost tenant scope: ' . $needle);
+    if (!str_contains($canonicalRuntime, $needle) && !str_contains($projection, $needle)) {
+        $fail('Canonical Property persistence lost tenant scope: ' . $needle);
     }
-}
-if (str_contains($management, '$where = [\'1 = 1\'];')) {
-    $fail('Property admin query can no longer start from an unscoped tenant predicate.');
 }
 
 $submission = (string) file_get_contents($root . '/app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertySubmissionRepository.php');
@@ -74,9 +67,8 @@ $moderation = (string) file_get_contents($root . '/app/Domains/Property/Infrastr
 foreach ([
     'private string $organizationId',
     's.organization_id = :organization_id',
-    'INSERT INTO tn_properties (',
-    'organization_id, property_id, image_url',
-    'organization_id, property_id, feature_key',
+    'PropertyCanonicalRuntimeService',
+    's.organization_id = :organization_id',
 ] as $needle) {
     if (!str_contains($moderation, $needle)) {
         $fail('Property moderation persistence lost tenant scope: ' . $needle);

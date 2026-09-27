@@ -18,7 +18,7 @@ kind: product
 | Sales | `0.8.6` | повний модуль середовища виконання та еталонний домен |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `0.6.1` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
-| Property | `0.12.0` | встановлюваний модуль із канонічними записами Asset/Inventory/Listing, сумісним представленням, аналітикою, інтелектом і зовнішньою взаємодією |
+| Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `0.2.0` | активний runtime Request → Ticket → Assignment/SLA → Escalation → Resolution → Close; Symfony API, persistence, events, audit та idempotency |
@@ -82,7 +82,7 @@ Sales-specific methodology та benchmark entrypoints живуть у Sales Diag
 
 ## Property: нерухомість
 
-Property `0.12.0` є канонічним середовищем виконання для активів нерухомості.
+Property `1.0.0` є канонічним середовищем виконання для активів нерухомості.
 
 ```text
 Property Asset — актив нерухомості

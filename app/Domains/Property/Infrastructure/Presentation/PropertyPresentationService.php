@@ -281,7 +281,7 @@ class PropertyPresentationService implements PropertyPresentationInterface
                 p.commission_type, p.commission_value, p.area_total, p.rooms,
                 p.short_description, t.name_uk AS type_name, l.city,
                 COALESCE(cover.image_url, first_image.image_url) AS cover_url
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_images cover ON cover.property_id = p.id AND cover.is_cover = 1

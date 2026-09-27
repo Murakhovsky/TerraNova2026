@@ -6,7 +6,7 @@ use Domains\Spatial\Application\Service\SpatialSceneService;
 use Infrastructure\Media\SpatialAssetService;
 use Infrastructure\Media\UploadQuarantineService;
 use Domains\Spatial\Infrastructure\Persistence\MySql\MysqlSpatialSceneRepository;
-use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyTourPublisher;
+use Domains\Spatial\Application\Contract\PropertyTourPublisherInterface;
 use Infrastructure\Spatial\SpatialProcessingService;
 
 define('BASE_PATH', dirname(__DIR__, 2));
@@ -43,8 +43,16 @@ $assets = new SpatialAssetService(
     new UploadQuarantineService(sys_get_temp_dir() . '/cos-spatial-quarantine-test'),
     5 * 1024 * 1024,
 );
+$tourPublisher = new class implements PropertyTourPublisherInterface {
+    public array $published = [];
+
+    public function publishTour(int $propertyId, string $url): void
+    {
+        $this->published[$propertyId] = $url;
+    }
+};
 $scenes = new SpatialSceneService(new MysqlSpatialSceneRepository(
-    $database, $assets, new MysqlPropertyTourPublisher($database),
+    $database, $assets, $tourPublisher,
 ));
 $processor = new SpatialProcessingService($database);
 $sceneId = 0;

@@ -6,7 +6,7 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $module=require $root.'/app/Domains/Property/module.php';
-$assert(($module['version']??null)==='0.12.0','Property manifest must declare V0.12.0.');
+$assert(version_compare((string)($module['version']??'0.0.0'),'0.12.0','>='),'Property manifest must retain the V0.12 canonical runtime baseline.');
 $assert(in_array('property.runtime.canonical',$module['contributions']['capabilities']??[],true),'Canonical runtime capability is missing.');
 
 $services=$read('symfony/config/services.yaml');

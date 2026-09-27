@@ -380,7 +380,7 @@ services:
   Domains\Property\Application\Service\PropertyCanonicalRuntimeService:
     arguments:
       $repository: '@Domains\Property\Application\Contract\PropertyCanonicalRuntimeRepositoryInterface'
-      $projection: '@Domains\Property\Application\Contract\PropertyProjectionInterface'
+      $compatibility: '@Domains\Property\Application\Contract\PropertyProjectionInterface'
       $events: '@Kernel\Event\EventBus'
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
 

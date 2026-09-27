@@ -47,7 +47,7 @@ final readonly class MysqlPropertySubmissionRepository implements PropertySubmis
         return $this->database->fetchOne('
             SELECT s.*, p.slug AS property_slug, p.title AS property_title
             FROM tn_property_submissions s
-            LEFT JOIN tn_properties p
+            LEFT JOIN tn_property_public_read_model p
               ON p.id = s.property_id
              AND p.organization_id = s.organization_id
             WHERE s.id = :id

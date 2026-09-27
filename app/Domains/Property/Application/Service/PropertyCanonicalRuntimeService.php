@@ -31,7 +31,7 @@ final readonly class PropertyCanonicalRuntimeService
 {
     public function __construct(
         private PropertyCanonicalRuntimeRepositoryInterface $repository,
-        private PropertyProjectionInterface $projection,
+        private PropertyProjectionInterface $compatibility,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
     ) {}

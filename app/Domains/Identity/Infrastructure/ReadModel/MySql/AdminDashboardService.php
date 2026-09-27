@@ -25,7 +25,7 @@ class AdminDashboardService implements AdministrationServiceInterface
                 SUM(status IN ("reserved", "sold")) AS closed_flow,
                 SUM(price_amount IS NULL OR price_amount <= 0) AS without_price,
                 SUM(agent_id IS NULL OR agent_id = 0) AS without_agent
-            FROM tn_properties
+            FROM tn_property_public_read_model
         ') ?? [];
 
         $submission = $this->database->fetchOne('
@@ -60,7 +60,7 @@ class AdminDashboardService implements AdministrationServiceInterface
             SELECT COUNT(*) AS without_cover
             FROM (
                 SELECT p.id
-                FROM tn_properties p
+                FROM tn_property_public_read_model p
                 LEFT JOIN tn_property_images i ON i.property_id = p.id
                 WHERE p.status IN ("published", "active")
                 GROUP BY p.id
@@ -119,7 +119,7 @@ class AdminDashboardService implements AdministrationServiceInterface
 
     public function propertyStatus(): array
     {
-        return $this->countBy('tn_properties', 'status');
+        return $this->countBy('tn_property_public_read_model', 'status');
     }
 
     public function submissionStatus(): array
@@ -159,7 +159,7 @@ class AdminDashboardService implements AdministrationServiceInterface
                 c.public_id AS case_public_id,
                 c.title AS case_title
             FROM tn_leads l
-            LEFT JOIN tn_properties p ON p.id = l.property_id
+            LEFT JOIN tn_property_public_read_model p ON p.id = l.property_id
             LEFT JOIN tn_client_cases c ON c.id = l.client_case_id
             ORDER BY FIELD(l.status, "new", "contacted", "qualified", "viewing_planned", "viewing", "negotiation", "won", "lost", "spam", "closed"), l.created_at DESC, l.id DESC
             LIMIT ' . max(1, min(20, $limit))
@@ -187,7 +187,7 @@ class AdminDashboardService implements AdministrationServiceInterface
             SELECT p.id, p.public_id, p.slug, p.title, p.status, p.updated_at,
                    p.price_amount, p.agent_id, t.name_uk AS type_name, l.city,
                    COUNT(i.id) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_images i ON i.property_id = p.id
@@ -219,7 +219,7 @@ class AdminDashboardService implements AdministrationServiceInterface
                    p.public_id, p.slug, p.title AS property_title,
                    u.full_name AS user_name
             FROM tn_property_activities a
-            INNER JOIN tn_properties p ON p.id = a.property_id
+            INNER JOIN tn_property_public_read_model p ON p.id = a.property_id
             LEFT JOIN tn_users u ON u.id = a.user_id
             ORDER BY a.created_at DESC, a.id DESC
             LIMIT ' . max(1, min(20, $limit))
@@ -412,7 +412,7 @@ class AdminDashboardService implements AdministrationServiceInterface
                    p.price_amount, p.price_currency, p.price_period,
                    t.name_uk AS type_name, l.city,
                    COUNT(i.id) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_images i ON i.property_id = p.id
@@ -443,7 +443,7 @@ class AdminDashboardService implements AdministrationServiceInterface
                    p.price_amount, p.price_currency, p.price_period,
                    t.name_uk AS type_name, l.city,
                    COUNT(i.id) AS image_count
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             INNER JOIN tn_property_types t ON t.id = p.type_id
             INNER JOIN tn_locations l ON l.id = p.location_id
             LEFT JOIN tn_property_images i ON i.property_id = p.id

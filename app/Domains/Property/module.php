@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'property',
     'name' => 'Property',
-    'version' => '0.12.0',
-    'schema_version' => '0.12.0',
+    'version' => '1.0.0',
+    'schema_version' => '1.0.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Canonical registry for Property with tenant-safe Asset, Inventory and Listing runtime, Symfony business read/write cutover, history, intelligence, network interoperability and canonical public projection.',
     'icon' => 'building',
@@ -50,11 +50,12 @@ return [
             'app/migrations/20260914_000057_property_v0100_external_network.sql',
             'app/migrations/20260914_000058_property_v0110_hardening.sql',
             'app/migrations/20260915_000059_property_v0120_runtime_cutover.sql',
+            'app/migrations/20260928_000117_property_v100_hardening.sql',
         ],
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
             'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
-            'property.intelligence','property.network','property.identity.review','property.runtime.canonical','property.api.v1','property.business.cutover',
+            'property.intelligence','property.network','property.identity.review','property.runtime.canonical','property.api.v1','property.business.cutover','property.read.canonical','property.v1',
         ],
     ],
 ];

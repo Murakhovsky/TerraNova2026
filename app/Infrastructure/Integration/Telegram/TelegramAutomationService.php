@@ -189,7 +189,7 @@ class TelegramAutomationService implements
                        l.client_case_id, c.assigned_user_id, p.title AS property_title
                 FROM tn_leads l
                 LEFT JOIN tn_client_cases c ON c.id = l.client_case_id
-                LEFT JOIN tn_properties p ON p.id = l.property_id
+                LEFT JOIN tn_property_public_read_model p ON p.id = l.property_id
                 WHERE l.id = :id LIMIT 1
             ', ['id' => $requestId]);
             if (!$request) {
@@ -260,7 +260,7 @@ class TelegramAutomationService implements
                 FROM tn_property_submissions s
                 LEFT JOIN tn_users u ON LOWER(u.email) = LOWER(s.owner_email) AND u.status = "active"
                 LEFT JOIN tn_people pe ON LOWER(pe.email) = LOWER(s.owner_email)
-                LEFT JOIN tn_properties pr ON pr.id = s.property_id
+                LEFT JOIN tn_property_public_read_model pr ON pr.id = s.property_id
                 WHERE s.id = :id LIMIT 1
             ', ['id' => $submissionId]);
             if (!$submission) {
@@ -298,7 +298,7 @@ class TelegramAutomationService implements
         $this->quietly(function () use ($propertyId, $status, $note): void {
             $property = $this->database->fetchOne('
                 SELECT p.title, p.slug, u.id AS user_id
-                FROM tn_properties p
+                FROM tn_property_public_read_model p
                 LEFT JOIN tn_agents a ON a.id = p.agent_id
                 LEFT JOIN tn_users u ON LOWER(u.email) = LOWER(a.email) AND u.status = "active"
                 WHERE p.id = :id LIMIT 1
@@ -331,7 +331,7 @@ class TelegramAutomationService implements
             return;
         }
         $this->quietly(function () use ($propertyId, $userId, $channel, $variant): void {
-            $property = $this->database->fetchOne('SELECT title FROM tn_properties WHERE id = :id LIMIT 1', ['id' => $propertyId]);
+            $property = $this->database->fetchOne('SELECT title FROM tn_property_public_read_model WHERE id = :id LIMIT 1', ['id' => $propertyId]);
             if (!$property) {
                 return;
             }
@@ -378,7 +378,7 @@ class TelegramAutomationService implements
 
         $properties = $this->database->fetchAll('
             SELECT p.id, p.title, p.next_action_title, p.next_action_due_at, u.id AS user_id
-            FROM tn_properties p
+            FROM tn_property_public_read_model p
             LEFT JOIN tn_agents a ON a.id = p.agent_id
             LEFT JOIN tn_users u ON LOWER(u.email) = LOWER(a.email) AND u.status = "active"
             WHERE p.status NOT IN ("sold", "archived") AND p.next_action_due_at IS NOT NULL
@@ -409,7 +409,7 @@ class TelegramAutomationService implements
                 (SELECT COUNT(*) FROM tn_leads WHERE status = "new") AS new_requests,
                 (SELECT COUNT(*) FROM tn_property_submissions WHERE status IN ("new", "submitted", "review", "in_review")) AS moderation,
                 (SELECT COUNT(*) FROM tn_client_cases WHERE status = "active" AND next_contact_at <= NOW()) AS overdue_cases,
-                (SELECT COUNT(*) FROM tn_properties WHERE status NOT IN ("sold", "archived") AND next_action_due_at <= NOW()) AS overdue_properties
+                (SELECT COUNT(*) FROM tn_property_public_read_model WHERE status NOT IN ("sold", "archived") AND next_action_due_at <= NOW()) AS overdue_properties
         ') ?: [];
         $users = $this->database->fetchAll('SELECT id FROM tn_users WHERE status = "active" AND role IN ("manager", "admin")');
         $queued = 0;

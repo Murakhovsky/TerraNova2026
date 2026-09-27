@@ -6,7 +6,6 @@ namespace Domains\Property\Infrastructure\Persistence\MySql\Management;
 use Domains\Property\Application\Contract\PropertyProjectionInterface;
 use Domains\Property\Application\Contract\PropertyManagementWriteRepositoryInterface;
 use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
-use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
 use PDO;
 use Throwable;
 
@@ -14,14 +13,16 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
 {
     public function __construct(
         private PropertyCanonicalRuntimeService $runtime,
-        private MysqlPropertyManagementRepository $legacyOperations,
-        private PropertyProjectionInterface $projection,
+        private PropertyProjectionInterface $compatibility,
         private PDO $connection,
         private string $organizationId,
     ) {}
 
     public function createDraft(array $input, ?int $userId = null, array $files = []): array
     {
+        if ($files !== []) {
+            return ['ok' => false, 'message' => 'Медіа завантажуються окремим canonical media workflow після створення об’єкта.'];
+        }
         try {
             $normalized = $this->canonicalInput($input, true);
             $title = trim((string) ($input['title'] ?? ''));
@@ -57,11 +58,6 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
             if ($legacyId <= 0) throw new \RuntimeException('Canonical Property projection did not return a compatibility id.');
             $this->compatibility->syncOperationalMetadata($this->organizationId, $legacyId, $input);
             $this->compatibility->recordActivity($this->organizationId, $legacyId, $userId, 'system', 'Чернетку об’єкта створено', 'Створено через canonical Property runtime.');
-            if ($files !== []) {
-                $media = $this->legacyOperations->update($legacyId, ['property_title' => $title], $files, $userId);
-                if (empty($media['ok'])) return $media;
-            }
-
             return [
                 'ok' => true,
                 'message' => 'Чернетку об’єкта створено через canonical Property runtime.',
@@ -119,9 +115,11 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
 
     public function update(int $propertyId, array $input, array $files, ?int $userId = null): array
     {
-        // Media storage is still a compatibility surface in V0.12. It does not own Asset,
-        // Inventory or Listing state and may only touch legacy media bookkeeping.
-        return $this->legacyOperations->update($propertyId, $input, $files, $userId);
+        if ($files !== [] || isset($input['images']) || isset($input['delete_images']) || isset($input['cover_image_id'])) {
+            return ['ok' => false, 'message' => 'Legacy media mutation retired. Use the canonical media workflow.'];
+        }
+
+        return $this->updateDetails($propertyId, $input, $userId);
     }
 
     public function addActivityNote(int $propertyId, array $input, ?int $userId = null): array

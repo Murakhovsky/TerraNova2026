@@ -125,6 +125,9 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
             );
         }
 
+        $data['id'] = $legacyId;
+        $this->syncPublicReadModel($data);
+
         $fingerprint = hash('sha256', json_encode(
             [$asset, $inventory, $listing, $publication],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
@@ -170,6 +173,10 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
             'UPDATE tn_properties SET ' . implode(',', $set) . ' WHERE id=:id AND organization_id=:organization_id LIMIT 1',
             $params,
         );
+        $this->exec(
+            'UPDATE tn_property_public_read_model SET ' . implode(',', $set) . ' WHERE id=:id AND organization_id=:organization_id LIMIT 1',
+            $params,
+        );
     }
 
     public function recordActivity(
@@ -197,9 +204,33 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
                 'new_value' => $newValue,
             ],
         );
+        $params = ['id' => $legacyPropertyId, 'organization_id' => $organizationId];
+        $this->exec('UPDATE tn_properties SET updated_at=NOW() WHERE id=:id AND organization_id=:organization_id LIMIT 1', $params);
+        $this->exec('UPDATE tn_property_public_read_model SET updated_at=NOW() WHERE id=:id AND organization_id=:organization_id LIMIT 1', $params);
+    }
+
+    private function syncPublicReadModel(array $data): void
+    {
         $this->exec(
-            'UPDATE tn_properties SET updated_at=NOW() WHERE id=:id AND organization_id=:organization_id LIMIT 1',
-            ['id' => $legacyPropertyId, 'organization_id' => $organizationId],
+            'INSERT INTO tn_property_public_read_model (
+                id,organization_id,public_id,slug,title,deal_type,type_id,status,source_type,location_id,agent_id,
+                price_amount,price_currency,price_period,area_total,area_living,land_area,rooms,floor,floors,built_year,address,latitude,longitude,
+                short_description,description,features_json,visibility,is_featured,has_3d_tour,tour_url,video_url,meta_title,meta_description,published_at
+            ) VALUES (
+                :id,:organization_id,:public_id,:slug,:title,:deal_type,:type_id,:status,:source_type,:location_id,:agent_id,
+                :price_amount,:price_currency,:price_period,:area_total,:area_living,:land_area,:rooms,:floor,:floors,:built_year,:address,:latitude,:longitude,
+                :short_description,:description,:features_json,:visibility,:is_featured,:has_3d_tour,:tour_url,:video_url,:meta_title,:meta_description,:published_at
+            )
+            ON DUPLICATE KEY UPDATE
+                public_id=VALUES(public_id),slug=VALUES(slug),title=VALUES(title),deal_type=VALUES(deal_type),type_id=VALUES(type_id),status=VALUES(status),
+                source_type=VALUES(source_type),location_id=VALUES(location_id),agent_id=VALUES(agent_id),price_amount=VALUES(price_amount),
+                price_currency=VALUES(price_currency),price_period=VALUES(price_period),area_total=VALUES(area_total),area_living=VALUES(area_living),
+                land_area=VALUES(land_area),rooms=VALUES(rooms),floor=VALUES(floor),floors=VALUES(floors),built_year=VALUES(built_year),
+                address=VALUES(address),latitude=VALUES(latitude),longitude=VALUES(longitude),short_description=VALUES(short_description),
+                description=VALUES(description),features_json=VALUES(features_json),visibility=VALUES(visibility),is_featured=VALUES(is_featured),
+                has_3d_tour=VALUES(has_3d_tour),tour_url=VALUES(tour_url),video_url=VALUES(video_url),meta_title=VALUES(meta_title),
+                meta_description=VALUES(meta_description),published_at=VALUES(published_at),updated_at=NOW()',
+            $data,
         );
     }
 
@@ -377,7 +408,7 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
     {
         if ($legacyId !== null) {
             $row = $this->one(
-                'SELECT public_id FROM tn_properties WHERE id=:id AND organization_id=:organization_id LIMIT 1',
+                'SELECT public_id FROM tn_property_public_read_model WHERE id=:id AND organization_id=:organization_id LIMIT 1',
                 ['id' => $legacyId, 'organization_id' => $organizationId],
             );
             if ($row !== null && trim((string) $row['public_id']) !== '') return (string) $row['public_id'];
@@ -389,7 +420,7 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
     {
         $slug = mb_substr($this->slug($slug), 0, 160);
         if ($slug === '') $slug = 'property-' . substr(sha1($assetId), 0, 12);
-        $row = $this->one('SELECT id FROM tn_properties WHERE slug=:slug LIMIT 1', ['slug' => $slug]);
+        $row = $this->one('SELECT id FROM tn_property_public_read_model WHERE slug=:slug LIMIT 1', ['slug' => $slug]);
         if ($row === null || ($legacyId !== null && (int) $row['id'] === $legacyId)) return $slug;
         return mb_substr($slug, 0, 148) . '-' . substr(sha1($organizationId . ':' . $assetId), 0, 10);
     }

@@ -132,10 +132,12 @@ generated: true
 | `property` | `property.network` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.publish` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.read` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.read.canonical` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.reference` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.registry` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.runtime.canonical` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.write` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.v1` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `real_estate` | `real_estate.api.v1` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `real_estate` | `real_estate.brokerage` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `real_estate` | `real_estate.offer` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |

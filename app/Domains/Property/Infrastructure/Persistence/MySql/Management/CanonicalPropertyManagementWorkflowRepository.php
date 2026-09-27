@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Domains\Property\Infrastructure\Persistence\MySql\Management;
 
 use Domains\Property\Application\Contract\PropertyProjectionInterface;
+use Domains\Property\Application\Contract\PropertyManagementReadRepositoryInterface;
 use Domains\Property\Application\Contract\PropertyManagementWorkflowRepositoryInterface;
 use Domains\Property\Application\Service\PropertyCanonicalRuntimeService;
-use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
 use Domains\Property\Model\PropertyWorkflowPolicy;
 use Throwable;
 
@@ -16,8 +16,8 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
 
     public function __construct(
         private PropertyCanonicalRuntimeService $runtime,
-        private MysqlPropertyManagementRepository $legacyOperations,
-        private PropertyProjectionInterface $projection,
+        private PropertyManagementReadRepositoryInterface $reads,
+        private PropertyProjectionInterface $compatibility,
         private string $organizationId,
         ?PropertyWorkflowPolicy $workflow = null,
     ) {
@@ -25,7 +25,13 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
     }
 
     public function operationalStageRules(): array { return $this->workflow->stageRules(); }
-    public function operationalStageCheck(int $propertyId): array { return $this->legacyOperations->operationalStageCheck($propertyId); }
+    public function operationalStageCheck(int $propertyId): array
+    {
+        $property = $this->reads->property($propertyId);
+        if ($property === null) return ['ok' => false, 'issues' => ['Обʼєкт не знайдено.']];
+        $issues = $this->workflow->stageIssues($property, count($this->reads->images($propertyId)));
+        return ['ok' => $issues === [], 'issues' => $issues];
+    }
 
     public function quickAction(int $propertyId, string $action, array $input = [], ?int $userId = null): array
     {
@@ -64,7 +70,7 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
             }
 
             if ($action === 'next_stage') {
-                $property = $this->legacyOperations->property($propertyId);
+                $property = $this->reads->property($propertyId);
                 if ($property === null) return ['ok' => false, 'message' => 'Обʼєкт не знайдено.'];
                 $current = $this->workflow->stage((string) ($property['operational_stage'] ?? 'intake')) ?: 'intake';
                 $next = $this->workflow->nextStage($current);
@@ -78,7 +84,7 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
                     'next_action_due_at' => $input['next_action_due_at'] ?? ($property['next_action_due_at'] ?? null),
                     'next_action_note' => $input['next_action_note'] ?? ($property['next_action_note'] ?? null),
                 ]);
-                $issues = $this->workflow->stageIssues($candidate, count($this->legacyOperations->images($propertyId)));
+                $issues = $this->workflow->stageIssues($candidate, count($this->reads->images($propertyId)));
                 if ($issues !== []) return ['ok' => false, 'message' => 'Наступний етап поки недоступний: ' . implode(', ', $issues) . '.'];
                 $this->compatibility->syncOperationalMetadata($this->organizationId, $propertyId, [
                     'operational_stage' => $next,
@@ -96,7 +102,13 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
         }
     }
 
-    public function readiness(int $propertyId): array { return $this->legacyOperations->readiness($propertyId); }
+    public function readiness(int $propertyId): array
+    {
+        $property = $this->reads->property($propertyId);
+        if ($property === null) return ['ready' => false, 'missing' => ['Обʼєкт не знайдено.']];
+        $issues = $this->workflow->stageIssues($property, count($this->reads->images($propertyId)));
+        return ['ready' => $issues === [], 'missing' => $issues];
+    }
 
     private function actor(?int $userId): ?string
     {

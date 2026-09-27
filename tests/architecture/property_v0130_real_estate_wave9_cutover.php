@@ -8,8 +8,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $property=require $root.'/app/Domains/Property/module.php';
-$assert(($property['version']??null)==='0.12.0','Wave 9 must not bump Property lifecycle version without an explicit tenant upgrade.');
-$assert(($property['schema_version']??null)==='0.12.0','Wave 9 keeps the current Property schema version.');
+$assert(version_compare((string)($property['version']??'0.0.0'),'0.12.0','>='),'Wave 9 requires Property V0.12.0+ canonical runtime.');
+$assert(version_compare((string)($property['schema_version']??'0.0.0'),'0.12.0','>='),'Wave 9 requires Property schema V0.12.0+.');
 foreach(['property.api.v1','property.business.cutover'] as $capability){
     $assert(in_array($capability,$property['contributions']['capabilities']??[],true),'Missing Property Wave 9 capability: '.$capability);
 }

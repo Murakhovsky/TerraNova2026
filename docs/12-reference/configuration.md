@@ -20,7 +20,7 @@ generated: true
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
-| `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 18 |
+| `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 20 |
 | `real_estate` | `0.2.0` | — | 6 |
 | `sales` | `0.8.6` | `salesModuleConfigurationProvisioner` | 10 |
 | `service` | `0.2.0` | — | 7 |
@@ -65,7 +65,7 @@ generated: true
 
 - manifest: `app/Domains/Property/module.php`;
 - configuration provisioners: `propertyModuleConfigurationProvisioner`;
-- capabilities: `property.registry`, `property.read`, `property.write`, `property.intake`, `property.media`, `property.catalog`, `property.inventory`, `property.listing`, `property.publish`, `property.history`, `property.reference`, `property.analytics`, `property.intelligence`, `property.network`, `property.identity.review`, `property.runtime.canonical`, `property.api.v1`, `property.business.cutover`.
+- capabilities: `property.registry`, `property.read`, `property.write`, `property.intake`, `property.media`, `property.catalog`, `property.inventory`, `property.listing`, `property.publish`, `property.history`, `property.reference`, `property.analytics`, `property.intelligence`, `property.network`, `property.identity.review`, `property.runtime.canonical`, `property.api.v1`, `property.business.cutover`, `property.read.canonical`, `property.v1`.
 
 ## `real_estate`
 
