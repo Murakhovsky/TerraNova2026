@@ -49,7 +49,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
                    COUNT(DISTINCT h.id) AS hotspot_count
             FROM tn_spatial_scenes s
             LEFT JOIN tn_spatial_relations r ON r.scene_id = s.id AND r.entity_type = "property" AND r.role = "primary"
-            LEFT JOIN tn_properties p ON p.id = r.entity_id
+            LEFT JOIN tn_property_public_read_model p ON p.id = r.entity_id
             LEFT JOIN tn_spatial_assets a ON a.scene_id = s.id AND a.status <> "archived"
             LEFT JOIN tn_spatial_hotspots h ON h.scene_id = s.id AND h.is_active = 1
             ' . ($where ? 'WHERE ' . implode(' AND ', $where) : '') . '
@@ -75,7 +75,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
     {
         return $this->database->fetchAll('
             SELECT p.id, p.public_id, p.title, p.status, l.city
-            FROM tn_properties p INNER JOIN tn_locations l ON l.id = p.location_id
+            FROM tn_property_public_read_model p INNER JOIN tn_locations l ON l.id = p.location_id
             WHERE p.status <> "archived" ORDER BY p.updated_at DESC, p.id DESC LIMIT 500
         ');
     }
@@ -161,7 +161,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
                    pm.public_url AS poster_url
             FROM tn_spatial_scenes s
             LEFT JOIN tn_spatial_relations r ON r.scene_id = s.id AND r.entity_type = "property" AND r.role = "primary"
-            LEFT JOIN tn_properties p ON p.id = r.entity_id
+            LEFT JOIN tn_property_public_read_model p ON p.id = r.entity_id
             LEFT JOIN tn_media_assets pm ON pm.id = s.poster_media_id
             WHERE s.id = :id LIMIT 1
         ', ['id' => $id]);
@@ -446,7 +446,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
     {
         $pdo->prepare('DELETE FROM tn_spatial_relations WHERE scene_id = :scene_id AND entity_type = "property" AND role = "primary"')
             ->execute(['scene_id' => $sceneId]);
-        if ($propertyId > 0 && $this->database->fetchOne('SELECT id FROM tn_properties WHERE id = :id LIMIT 1', ['id' => $propertyId])) {
+        if ($propertyId > 0 && $this->database->fetchOne('SELECT id FROM tn_property_public_read_model WHERE id = :id LIMIT 1', ['id' => $propertyId])) {
             $pdo->prepare('INSERT INTO tn_spatial_relations (scene_id, entity_type, entity_id, role, sort_order) VALUES (:scene_id, "property", :entity_id, "primary", 10)')
                 ->execute(['scene_id' => $sceneId, 'entity_id' => $propertyId]);
         }
