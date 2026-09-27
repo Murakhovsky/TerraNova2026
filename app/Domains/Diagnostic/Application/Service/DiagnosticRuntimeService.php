@@ -26,6 +26,8 @@ use Domains\Diagnostic\Methodology\Engine\MethodologyEngine;
 use Domains\Diagnostic\Methodology\Input\DiagnosticInput;
 use Domains\Diagnostic\Methodology\Input\EvidenceSignal;
 use Domains\Diagnostic\Methodology\Input\ObservedValue;
+use Domains\Diagnostic\Model\Assessment;
+use Domains\Diagnostic\Model\AssessmentStatus;
 use Domains\Diagnostic\Model\DiagnosticRecord;
 use Domains\Diagnostic\Model\DiagnosticRecordType;
 use Domains\Diagnostic\Model\DiagnosticState;
@@ -40,6 +42,7 @@ use Domains\Diagnostic\Model\TruthLevel;
 use Domains\Diagnostic\Model\Hypothesis;
 use Domains\Diagnostic\Model\HypothesisStatus;
 use Domains\Diagnostic\Model\Recommendation;
+use Domains\Diagnostic\Model\Severity;
 use Domains\Diagnostic\Report\DiagnosticReportBuilder;
 use Domains\Diagnostic\Report\RecommendationGenerationService;
 use Domains\Diagnostic\Report\RecommendationStatus;
@@ -206,6 +209,40 @@ final readonly class DiagnosticRuntimeService
         $result=$this->evaluateSession->execute($organizationId,$sessionId,$now,'USER',$actorId);
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session disappeared after evaluation.');
         $pack=$this->compiled($organizationId,$row);
+        $semanticRevision=(int)$row['state_revision']+1;
+        foreach($result->assessments as $criterionId=>$criterionAssessment){
+            $criterion=$pack->criteriaById[$criterionId]??null;
+            if($criterion===null) continue;
+            $coverage=(float)$criterionAssessment->coverage->ratio;
+            $confidence=(float)$criterionAssessment->confidence;
+            $status=AssessmentStatus::Assessed;
+            if(!$criterionAssessment->applicable){
+                $status=AssessmentStatus::NotApplicable;
+            }elseif($coverage<(float)$criterion->minimumCoverage || $confidence<(float)$criterion->minimumConfidence){
+                $status=AssessmentStatus::InsufficientData;
+            }elseif($criterionAssessment->score!==null){
+                $severities=array_map(static fn($finding)=>strtolower((string)$finding->severity),$criterionAssessment->findings);
+                $status=in_array('critical',$severities,true)?AssessmentStatus::Critical
+                    :(array_intersect($severities,['high','medium'])!==[]?AssessmentStatus::Warning:AssessmentStatus::Good);
+            }
+            $severity=Severity::None;
+            foreach(['critical'=>Severity::Critical,'high'=>Severity::High,'medium'=>Severity::Medium,'low'=>Severity::Low,'info'=>Severity::Info] as $label=>$candidateSeverity){
+                if(in_array($label,array_map(static fn($finding)=>strtolower((string)$finding->severity),$criterionAssessment->findings),true)){
+                    $severity=$candidateSeverity; break;
+                }
+            }
+            $assessment=new Assessment(
+                $criterionId,
+                $status,
+                in_array($status,[AssessmentStatus::InsufficientData,AssessmentStatus::NotApplicable,AssessmentStatus::Contradictory,AssessmentStatus::NotStarted],true)?null:$criterionAssessment->score,
+                $confidence,
+                $criterionAssessment->evidenceIds,
+                'deterministic_methodology_engine',
+                $severity,
+                $coverage,
+            );
+            $this->semantic?->appendAssessmentRevision($organizationId,$sessionId,'assessment:'.$criterionId,$semanticRevision,$assessment,$criterionAssessment->evidenceIds,$now);
+        }
         $facts=$this->facts($sessionId,$row['state']);
         $base=$this->states->build($sessionId,$pack,$facts,$session->evidence(),$result,[],[],[],(int)$row['state_revision']+1,$now);
 
