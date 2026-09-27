@@ -8,7 +8,6 @@ use App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
-use App\Web\Phtml\PhtmlRenderer;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeBoundary;
 use Domains\Growth\Application\Contract\GrowthCollectorAlertBoundary;
@@ -36,7 +35,6 @@ use Domains\Growth\Application\Contract\GrowthWorkspaceReadModelInterface;
 use Domains\Growth\Domain\GrowthExperimentDimension;
 use Domains\Growth\Domain\GrowthExperimentStatus;
 use Domains\Growth\Domain\GrowthOutcomeType;
-use Infrastructure\Web\Assets\ViteAssetResolver;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -51,7 +49,6 @@ use Twig\Environment;
 final readonly class GrowthPageController
 {
     public function __construct(
-        private PhtmlRenderer $renderer,
         private Environment $twig,
         private TenantContextProviderInterface $tenants,
         private ActiveModuleResolver $modules,
@@ -364,14 +361,6 @@ final readonly class GrowthPageController
             'canManageGrowth'=>$tenant->allows(TenantPermissions::MANAGE),
         ],$extra);
 
-        if($view==='error/failure'){
-            return new Response(
-                $this->renderer->render($request,$view,$variables),
-                $status,
-                ['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
-            );
-        }
-
         $context=new WebExtensionContext(
             $tenant->organizationId()->value(),$role,'workspace','growth',$active,
         );
@@ -380,15 +369,13 @@ final readonly class GrowthPageController
             new ShellBreadcrumb('Growth','/growth'),
             new ShellBreadcrumb($title),
         ]);
-        $fragment=$this->renderer->fragment($request,'components/'.$view,$variables);
-
         return new Response(
-            $this->twig->render('experience/growth/workspace.html.twig',[
+            $this->twig->render('experience/growth/workspace.html.twig',array_replace($variables,[
                 'shell'=>$shell,
                 'pageTitle'=>$title,
-                'growthFragment'=>$fragment,
-                'growthAssets'=>ViteAssetResolver::resolve(['terranova-interface']),
-            ]),
+                'growthView'=>$view,
+                'query'=>$request->query->all(),
+            ])),
             $status,
             ['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
         );
