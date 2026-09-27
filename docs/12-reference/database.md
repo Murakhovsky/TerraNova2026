@@ -20,6 +20,12 @@ generated: true
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_runtime_recommendations` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_runtime_sessions` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_sessions` |
+| `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_assessment_revisions` |
+| `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_fact_revisions` |
+| `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_hypothesis_revisions` |
+| `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_recommendation_transitions` |
+| `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_sessions` |
+| `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_state_snapshots` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_candidate_signals` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_candidates` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_operation_receipts` |
