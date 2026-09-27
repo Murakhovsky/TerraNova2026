@@ -125,6 +125,8 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
             );
         }
 
+        $this->syncPublicReadModel($organizationId, $legacyId);
+
         $fingerprint = hash('sha256', json_encode(
             [$asset, $inventory, $listing, $publication],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
@@ -170,6 +172,7 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
             'UPDATE tn_properties SET ' . implode(',', $set) . ' WHERE id=:id AND organization_id=:organization_id LIMIT 1',
             $params,
         );
+        $this->syncPublicReadModel($organizationId, $legacyPropertyId);
     }
 
     public function recordActivity(
@@ -200,6 +203,16 @@ final readonly class MysqlPropertyProjection implements PropertyProjectionInterf
         $this->exec(
             'UPDATE tn_properties SET updated_at=NOW() WHERE id=:id AND organization_id=:organization_id LIMIT 1',
             ['id' => $legacyPropertyId, 'organization_id' => $organizationId],
+        );
+        $this->syncPublicReadModel($organizationId, $legacyPropertyId);
+    }
+
+    private function syncPublicReadModel(string $organizationId, int $legacyPropertyId): void
+    {
+        if ($legacyPropertyId <= 0) return;
+        $this->exec(
+            'REPLACE INTO tn_property_public_read_model SELECT * FROM tn_properties WHERE organization_id=:organization_id AND id=:id',
+            ['organization_id' => $organizationId, 'id' => $legacyPropertyId],
         );
     }
 
