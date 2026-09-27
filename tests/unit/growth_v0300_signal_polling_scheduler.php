@@ -16,7 +16,6 @@ use Domains\Growth\Application\Contract\GrowthSignalPollingTargetRepositoryInter
 use Domains\Growth\Application\Contract\GrowthSignalPollingHealthRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthSignalPollingIncidentBoundary;
 use Domains\Growth\Domain\SignalPollingBackoffPolicy;
-use DateTimeImmutable;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\Contract\ModuleStateRepositoryInterface;
 use Kernel\Module\ModuleCatalog;
@@ -35,6 +34,16 @@ $targets=new class implements GrowthSignalPollingTargetRepositoryInterface {
             ['organization_id'=>'org-b','collectors'=>['rss_atom']],
             ['organization_id'=>'org-c','collectors'=>['rss_atom']],
         ];
+    }
+
+    public function targetForOrganization(string $organizationId):array
+    {
+        foreach($this->targets() as $target){
+            if($target['organization_id']===$organizationId){
+                return $target+['source_counts'=>array_fill_keys($target['collectors'],1)];
+            }
+        }
+        return ['organization_id'=>$organizationId,'collectors'=>[],'source_counts'=>[]];
     }
 };
 
