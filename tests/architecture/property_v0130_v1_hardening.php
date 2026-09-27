@@ -9,7 +9,7 @@ $module=require $root.'/app/Domains/Property/module.php';
 $assert(($module['version']??null)==='0.13.0','Property V0.13 hardening manifest missing.');
 $assert(in_array('property.read.canonical',$module['contributions']['capabilities']??[],true),'Canonical Property read capability missing.');
 
-$migration=$read('app/migrations/20260927_000063_property_v0130_v1_hardening.sql');
+$migration=$read('app/migrations/20260928_000117_property_v100_hardening.sql');
 foreach(['tn_property_public_read_model','CREATE TABLE IF NOT EXISTS','INSERT IGNORE'] as $needle){
     $assert(str_contains($migration,$needle),'V0.13 public read projection migration missing: '.$needle);
 }
