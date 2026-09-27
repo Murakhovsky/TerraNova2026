@@ -17,7 +17,7 @@ final readonly class CanonicalPropertyManagementWorkflowRepository implements Pr
     public function __construct(
         private PropertyCanonicalRuntimeService $runtime,
         private MysqlPropertyManagementRepository $legacyOperations,
-        private PropertyProjectionInterface $projection,
+        private PropertyProjectionInterface $compatibility,
         private string $organizationId,
         ?PropertyWorkflowPolicy $workflow = null,
     ) {
