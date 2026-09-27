@@ -28,7 +28,7 @@ foreach(['createFeed(','setEnabled(','runCollector('] as $forbidden){
     $assert(!str_contains($controller,$forbidden),'Growth SSR controller must not execute feed/collector mutations: '.$forbidden);
 }
 
-$template=$read('app/Interfaces/Web/View/components/growth/collectors.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
 foreach([
     'data-growth-signal-feeds','data-growth-signal-feed-create','data-growth-signal-feed-toggle',
     'RSS / Atom Feeds','HTTPS feed URL','Signal type','Confidence'
