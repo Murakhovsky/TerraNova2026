@@ -207,9 +207,7 @@ final readonly class PropertyPageController
             $status,
             [
                 'Content-Type' => 'text/html; charset=UTF-8',
-                'Cache-Control' => $request->isMethod('GET')
-                    ? 'public, max-age=60'
-                    : 'no-store, private',
+                'Cache-Control' => 'no-store, private',
             ],
         );
     }
