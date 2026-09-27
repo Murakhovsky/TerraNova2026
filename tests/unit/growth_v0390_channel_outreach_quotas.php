@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 require dirname(__DIR__,2).'/vendor/autoload.php';
 
-use DateTimeImmutable;
 use Domains\Growth\Application\Contract\GrowthEngagementLimitProfileRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMutationReceiptInterface;
 use Domains\Growth\Application\Service\GrowthEngagementLimitService;
@@ -75,8 +74,12 @@ $receipts=new class implements GrowthMutationReceiptInterface {
     }
 };
 $transactions=new class implements TransactionManagerInterface {
-    public function transactional(callable $operation):mixed{return $operation();}
-    public function isActive():bool{return false;}
+    private bool $active=false;
+    public function transactional(callable $operation):mixed{
+        $previous=$this->active;$this->active=true;
+        try{return $operation();}finally{$this->active=$previous;}
+    }
+    public function isActive():bool{return $this->active;}
     public function afterCommit(callable $callback):void{$callback();}
 };
 $events=new class implements EventStoreInterface {
