@@ -11,9 +11,19 @@ use Domains\Diagnostic\Application\UseCase\RecordDiagnosticResult;
 use Domains\Diagnostic\Application\UseCase\StartDiagnosticSession;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository;
+use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSemanticRepository;
 use Domains\Diagnostic\Methodology\Loader\PackLoader;
 use Domains\Diagnostic\Methodology\Serialization\MethodologyPackSerializer;
+use Domains\Diagnostic\Model\Assessment;
+use Domains\Diagnostic\Model\AssessmentStatus;
 use Domains\Diagnostic\Model\DiagnosticConcurrencyException;
+use Domains\Diagnostic\Model\DiagnosticState;
+use Domains\Diagnostic\Model\FactRevision;
+use Domains\Diagnostic\Model\Hypothesis;
+use Domains\Diagnostic\Model\HypothesisStatus;
+use Domains\Diagnostic\Model\Severity;
+use Domains\Diagnostic\Model\TruthLevel;
+use Domains\Diagnostic\Report\RecommendationStatus;
 use Domains\Diagnostic\Model\DiagnosticRecord;
 use Domains\Diagnostic\Model\DiagnosticRecordType;
 use Domains\Diagnostic\Model\DiagnosticSessionStatus;
@@ -47,11 +57,14 @@ $pdo = new PDO(
 
 $migration = $pdo->query("SELECT COUNT(*) FROM tn_migrations WHERE migration = '20260830_000020_diagnostic_domain'")->fetchColumn();
 diagnosticPersistenceEnsure((int) $migration === 1, 'Diagnostic migration is not applied.');
+$semanticMigration = $pdo->query("SELECT COUNT(*) FROM tn_migrations WHERE migration = '20260928_000116_diagnostic_v070_semantic_convergence'")->fetchColumn();
+diagnosticPersistenceEnsure((int) $semanticMigration === 1, 'Diagnostic semantic V1 migration is not applied.');
 
 $transactions = new TransactionManager($pdo);
 $eventBus = new EventBus(new MysqlEventStore($pdo), $transactions);
 $packs = new MysqlDiagnosticPackRepository($pdo);
 $sessions = new MysqlDiagnosticSessionRepository($pdo);
+$semantic = new MysqlDiagnosticSemanticRepository($pdo);
 $organizationId = 'default';
 $suffix = bin2hex(random_bytes(6));
 $packId = 'sales-integration-' . $suffix;
@@ -148,6 +161,40 @@ try {
         'Completed session did not survive persistence round-trip.',
     );
 
+    $semantic->appendFactRevision(
+        $organizationId,
+        $sessionId,
+        new FactRevision('lead_response_time', 1, null, 75, 'integration observation', 'crm', ['crm-export'], $now, TruthLevel::Observed, .95),
+        'number',
+    );
+    $semantic->appendAssessmentRevision(
+        $organizationId,
+        $sessionId,
+        'assessment:lead-processing',
+        1,
+        new Assessment('lead-processing', AssessmentStatus::Critical, 20.0, .95, ['crm-export'], 'deterministic integration evaluation', Severity::Critical, 1.0),
+        ['lead_response_time'],
+        $now->modify('+1 hour'),
+    );
+    $confirmed = (new Hypothesis('hypothesis:routing','Routing ownership delays response',HypothesisStatus::Unverified,.9,['crm-export']))
+        ->transition(HypothesisStatus::Supported,.9)
+        ->transition(HypothesisStatus::StronglySupported,.9)
+        ->transition(HypothesisStatus::ConfirmedRootCause,.9);
+    $semantic->appendHypothesisRevision($organizationId,$sessionId,$confirmed,1,['assessment:lead-processing'],'routing-policy',$now->modify('+1 hour'));
+    $semantic->appendRecommendationTransition(
+        $organizationId,$sessionId,'recommendation:routing',1,null,RecommendationStatus::Proposed,
+        'system:integration','derived from confirmed root cause',$now->modify('+1 hour')
+    );
+    $semanticState = new DiagnosticState(
+        $sessionId,$packId,1,1,$now->modify('+1 hour'),
+        [],[],[],[],[],[],[$confirmed],[],[],[],['pack'=>1.0],.95,['pack'=>20.0],[],[],['crm-export','lead_response_time'],[]
+    );
+    $semantic->saveStateSnapshot($organizationId,$semanticState);
+    diagnosticPersistenceEnsure(
+        ($semantic->latestAssessmentStatuses($organizationId,$sessionId)['lead-processing'] ?? null) === AssessmentStatus::Critical->value,
+        'Typed semantic assessment did not survive persistence round-trip.',
+    );
+
     $eventCount = $pdo->prepare(
         "SELECT COUNT(*) FROM cos_events WHERE organization_id = :organization_id AND aggregate_id IN (:pack_aggregate, :session_id) AND type LIKE 'diagnostic.%'"
     );
@@ -171,4 +218,4 @@ try {
     if ($pdo->inTransaction()) $pdo->rollBack();
 }
 
-echo "Diagnostic MySQL persistence passed: tenant scope, hashes, optimistic locking, traceability and atomic Event/Outbox.\n";
+echo "Diagnostic MySQL persistence passed: tenant scope, hashes, optimistic locking, typed semantic revisions/state, traceability and atomic Event/Outbox.\n";
