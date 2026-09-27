@@ -43,7 +43,7 @@ foreach(['GrowthEngagementActivationProviderInterface','executionMode:$activatio
 $routes=$read('symfony/config/routes.yaml');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
-$template=$read('app/Interfaces/Web/View/growth/settings.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/settings.phtml');
 $js=$read('frontend/features/growth/workspace.js');
 foreach(['/api/v1/growth/engagement/activation','engagementActivation','updateEngagementActivation'] as $needle){
     $assert(str_contains($routes.$api,$needle),'Growth activation API surface missing: '.$needle);

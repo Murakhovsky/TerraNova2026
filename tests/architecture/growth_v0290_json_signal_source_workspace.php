@@ -32,7 +32,7 @@ foreach(['jsonSignalSources->createSource(','jsonSignalSources->setEnabled('] as
     $assert(!str_contains($controller,$forbidden),'Growth SSR controller must not execute JSON source mutations: '.$forbidden);
 }
 
-$template=$read('app/Interfaces/Web/View/growth/collectors.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/collectors.phtml');
 foreach([
     'data-growth-json-signal-sources','data-growth-json-source-create','data-growth-json-source-toggle',
     'JSON API Sources','Credential reference','credential_configured','Bearer token','X-* API key header',

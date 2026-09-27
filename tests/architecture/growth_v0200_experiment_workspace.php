@@ -42,7 +42,7 @@ foreach(['createExperiment(','startExperiment(','pauseExperiment(','resumeExperi
     $assert(!str_contains($controller,$forbidden),'Growth SSR controller must remain read-only and use API for experiment mutations: '.$forbidden);
 }
 
-$listView=$read('app/Interfaces/Web/View/growth/experiments.phtml');
+$listView=$read('app/Interfaces/Web/View/components/growth/experiments.phtml');
 foreach([
     'data-growth-experiments','Create experiment','data-growth-experiment-create',
     'data-growth-experiment-variant','data-growth-experiment-variant-add',
@@ -51,7 +51,7 @@ foreach([
     $assert(str_contains($listView,$needle),'Growth Experiments list view missing: '.$needle);
 }
 
-$detailView=$read('app/Interfaces/Web/View/growth/experiment.phtml');
+$detailView=$read('app/Interfaces/Web/View/components/growth/experiment.phtml');
 foreach([
     'data-growth-experiment','data-experiment-id','Variant outcomes',
     'data-growth-experiment-transition','data-growth-experiment-assign',

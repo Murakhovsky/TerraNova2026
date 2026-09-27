@@ -59,7 +59,7 @@ foreach([
     $assert(str_contains($provider,$needle),'Growth polling health status projection missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/growth/collectors.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/collectors.phtml');
 foreach([
     'data-growth-polling-health','Collector health','Consecutive failures','Next retry',
 ] as $needle){

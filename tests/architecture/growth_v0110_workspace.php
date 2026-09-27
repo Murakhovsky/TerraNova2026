@@ -41,10 +41,10 @@ foreach(['PDO','RepositoryInterface','HttpClientInterface','fetch(','/api/v1/'] 
 
 $controller=$read('symfony/src/Web/Growth/GrowthPageController.php');
 foreach([
-    'ProviderBackedShellNavigation','WebExtensionContext','GrowthWorkspaceReadModelInterface',
+    'WorkspaceShellFactory','WebExtensionContext','GrowthWorkspaceReadModelInterface',
     'GrowthApplicationBoundary','GrowthIntelligenceBoundary','GrowthBuyingCommitteeBoundary',
     'GrowthResearchBoundary','GrowthDecisionBoundary','GrowthHandoffBoundary',
-    "isEnabled(\$tenant->organizationId()->value(),'growth')",'growth-workspace',
+    "isEnabled(\$tenant->organizationId()->value(),'growth')",'ViteAssetResolver','fragment(',
 ] as $needle){
     $assert(str_contains($controller,$needle),'Growth Workspace controller missing: '.$needle);
 }
@@ -75,7 +75,13 @@ foreach([
 $assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=5,'Growth V0.11 core SSR routes must remain available.');
 
 $vite=$read('vite.config.js');
-$assert(str_contains($vite,"'growth-workspace': resolve(import.meta.dirname, 'frontend/entrypoints/growth-workspace.js')"),'Growth Vite entry is missing.');
+$assert(!str_contains($vite,"'growth-workspace':"),'Growth must not restore a dedicated Wave 13 Vite source entrypoint.');
+$interface=$read('frontend/entrypoints/terranova-interface.js');
+$assert(str_contains($interface,"../features/growth/workspace.js"),'Growth client runtime must be composed through the canonical interface entrypoint.');
+$twig=$read('symfony/templates/experience/growth/workspace.html.twig');
+foreach(['experience/workspace_shell.html.twig','growthFragment','growthAssets'] as $needle){
+    $assert(str_contains($twig,$needle),'Growth canonical Twig shell missing: '.$needle);
+}
 
 $services=$read('symfony/config/services.yaml');
 foreach([

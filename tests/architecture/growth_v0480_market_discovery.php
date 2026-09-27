@@ -48,7 +48,7 @@ $routes=$read('symfony/config/routes.yaml');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
 $web=$read('symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php');
-$template=$read('app/Interfaces/Web/View/growth/market.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/market.phtml');
 $js=$read('frontend/features/growth/workspace.js');
 foreach(['/growth/market','/api/v1/growth/market/universes','createMarketUniverse','runMarketUniverse'] as $needle){
     $assert(str_contains($routes.$api,$needle),'Market API/page surface missing: '.$needle);

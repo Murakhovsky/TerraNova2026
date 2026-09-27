@@ -97,7 +97,7 @@ foreach([
     $assert(str_contains($services,$needle),'Growth V0.35 DI missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/growth/candidate.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
 $assert(str_contains($template,'Approved message / call brief'),'Growth workspace execution copy was not generalized for call execution.');
 
 echo "Growth V0.35 Governed LinkedIn and Call Execution architecture: OK\n";

@@ -58,7 +58,7 @@ foreach([
     $assert(str_contains($provider,$needle),'Growth polling status incident projection missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/growth/collectors.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/collectors.phtml');
 foreach([
     'data-growth-polling-incidents','Active collector incidents','Failure count','Opened','Last failure',
 ] as $needle){

@@ -27,7 +27,7 @@ foreach(['GrowthOptimizationBoundary',"'optimization'=>\$this->optimization->opt
     $assert(str_contains($controller,$needle),'Growth Optimization Workspace controller missing: '.$needle);
 }
 
-$view=$read('app/Interfaces/Web/View/growth/learning.phtml');
+$view=$read('app/Interfaces/Web/View/components/growth/learning.phtml');
 foreach([
     'data-growth-learning','Learning → governed draft','terminal Candidate outcomes',
     'Current active criteria','Proposed draft criteria','Risks','Assumptions',

@@ -54,7 +54,7 @@ foreach(['GrowthEngagementLimitBoundary','function settings(','engagement_limits
     $assert(str_contains($page,$needle),'Growth settings workspace wiring missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/growth/settings.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/settings.phtml');
 foreach(['data-growth-settings','data-growth-limit-settings','Daily pre-handoff execution limit','Contact cooldown'] as $needle){
     $assert(str_contains($template,$needle),'Growth tenant limit workspace missing: '.$needle);
 }

@@ -82,8 +82,8 @@ foreach(['enabledOrganizations(','draftCandidates(','scheduled-content:','genera
 $routes=$read('symfony/config/routes.yaml');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
-$settings=$read('app/Interfaces/Web/View/growth/settings.phtml');
-$candidate=$read('app/Interfaces/Web/View/growth/candidate.phtml');
+$settings=$read('app/Interfaces/Web/View/components/growth/settings.phtml');
+$candidate=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
 $js=$read('frontend/features/growth/workspace.js');
 foreach(['/api/v1/growth/engagement/content-review','/content/drafts','approveEngagementContentDraft','rejectEngagementContentDraft'] as $needle){
     $assert(str_contains($routes.$api,$needle),'Content API surface missing: '.$needle);

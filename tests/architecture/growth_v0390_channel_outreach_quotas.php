@@ -60,7 +60,7 @@ foreach(['email_daily_limit','linkedin_daily_limit','phone_daily_limit'] as $nee
     $assert(str_contains($profileRepo,$needle),'Growth channel quota persistence missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/growth/settings.phtml');
+$template=$read('app/Interfaces/Web/View/components/growth/settings.phtml');
 foreach(['Email daily quota','LinkedIn daily quota','Phone daily quota','quota of 0 blocks'] as $needle){
     $assert(str_contains($template,$needle),'Growth settings channel quota UI missing: '.$needle);
 }
