@@ -64,8 +64,8 @@ Diagnostic володіє:
 
 ```text
 id: diagnostic
-version: 0.7.0
-schema: 0.7.0
+version: 1.0.0
+schema: 1.0.0
 kernel: >=0.11.0 <0.12.0
 ```
 
