@@ -6,6 +6,7 @@ namespace Domains\Diagnostic\Application\Service;
 use DateTimeImmutable;
 use DomainException;
 use Domains\Diagnostic\Application\Contract\DiagnosticRuntimeRepositoryInterface;
+use Domains\Diagnostic\Application\Contract\DiagnosticSemanticRepositoryInterface;
 use Domains\Diagnostic\Application\Contract\DiagnosticSessionRepositoryInterface;
 use Domains\Diagnostic\Application\DTO\StartDiagnosticSessionCommand;
 use Domains\Diagnostic\Application\UseCase\AcceptDiagnosticRecommendation;
@@ -33,7 +34,9 @@ use Domains\Diagnostic\Model\DiagnosticTarget;
 use Domains\Diagnostic\Model\Evidence;
 use Domains\Diagnostic\Model\EvidenceType;
 use Domains\Diagnostic\Model\Fact;
+use Domains\Diagnostic\Model\FactRevision;
 use Domains\Diagnostic\Model\FactStatus;
+use Domains\Diagnostic\Model\TruthLevel;
 use Domains\Diagnostic\Model\Hypothesis;
 use Domains\Diagnostic\Model\HypothesisStatus;
 use Domains\Diagnostic\Model\Recommendation;
@@ -61,6 +64,7 @@ final readonly class DiagnosticRuntimeService
         private DiagnosticReportBuilder $reports = new DiagnosticReportBuilder(),
         private MethodologyEngine $engine = new MethodologyEngine(),
         private DiagnosticStateBuilder $states = new DiagnosticStateBuilder(),
+        private ?DiagnosticSemanticRepositoryInterface $semantic = null,
     ) {}
 
     public function start(string $organizationId, array $input, string $actorId): array
@@ -153,7 +157,23 @@ final readonly class DiagnosticRuntimeService
             if($old!==null && ($old['value']??null)!==$candidate->value){
                 $runtimeState['contradictions'][]=['fact'=>$candidate->key,'before'=>$old['value']??null,'after'=>$candidate->value,'question_id'=>$decision->questionId];
             }
-            $runtimeState['facts'][$candidate->key]=['value'=>$candidate->value,'value_type'=>$candidate->valueType,'confidence'=>(float)$candidate->confidence,'source'=>$candidate->provenance,'evidence_ids'=>$refs,'updated_at'=>$now->format(DATE_ATOM)];
+            $factRevision = (int)($old['revision'] ?? 0) + 1;
+            $truthLevel = TruthLevel::tryFrom(strtoupper((string)$candidate->provenance)) ?? TruthLevel::Reported;
+            $semanticRevision = new FactRevision(
+                $candidate->key,
+                $factRevision,
+                $old['value'] ?? null,
+                $candidate->value,
+                'interview_answer',
+                (string)$candidate->provenance,
+                $refs,
+                $now,
+                $truthLevel,
+                (float)$candidate->confidence,
+                $factRevision > 1 ? $factRevision - 1 : null,
+            );
+            $this->semantic?->appendFactRevision($organizationId,$sessionId,$semanticRevision,$candidate->valueType);
+            $runtimeState['facts'][$candidate->key]=['value'=>$candidate->value,'value_type'=>$candidate->valueType,'confidence'=>(float)$candidate->confidence,'source'=>$candidate->provenance,'evidence_ids'=>$refs,'revision'=>$factRevision,'truth_level'=>$truthLevel->value,'updated_at'=>$now->format(DATE_ATOM)];
         }
         foreach($extracted->metricInputs as $metric){
             $key=(string)($metric['key']??'');
@@ -170,6 +190,7 @@ final readonly class DiagnosticRuntimeService
 
         $nextState=$this->stateFromRuntime($sessionId,$pack,$session->evidence(),$runtimeState);
         $next=$this->questions->decide($nextState,$pack,$runtimeState['history'],DiagnosticMode::from((string)$row['mode']),(int)$runtimeState['remaining_questions'],(int)$runtimeState['remaining_minutes']);
+        $this->semantic?->saveStateSnapshot($organizationId,$nextState);
         $this->runtime->saveState($organizationId,$sessionId,$runtimeState,$next?->questionId,(int)$runtimeState['revision']);
         $fresh=$this->runtime->get($organizationId,$sessionId)??$row;
         return $this->snapshot($fresh,$this->sessions->get($organizationId,$sessionId)??$session,$nextState,$next)+['replayed'=>false];
@@ -202,6 +223,15 @@ final readonly class DiagnosticRuntimeService
         $templates=$this->recommendationTemplates($pack);
         $recommendations=$this->recommendations->generate($templates,$findingIds,array_map(fn($r)=>$r->id,$rootCauses));
         $final=$this->states->build($sessionId,$pack,$facts,$session->evidence(),$result,$supported,$rootCauses,$recommendations,(int)$row['state_revision']+1,$now);
+        $this->semantic?->saveStateSnapshot($organizationId,$final);
+        foreach($supported as $hypothesis){
+            if($hypothesis instanceof Hypothesis){
+                $this->semantic?->appendHypothesisRevision($organizationId,$sessionId,$hypothesis,1,['session:'.$sessionId,'hypothesis:'.$hypothesis->id],null,$now);
+            }
+        }
+        foreach($recommendations as $recommendation){
+            $this->semantic?->appendRecommendationTransition($organizationId,$sessionId,$recommendation->id,1,null,RecommendationStatus::Proposed,'system:diagnostic-runtime','generated from validated diagnostic findings',$now);
+        }
         $report=$this->reports->build($final,$row['state']['metrics']??[],sprintf('Diagnostic %s completed with %.1f%% coverage and %.1f/100 health score.',$sessionId,$result->coverage->ratio*100,$result->score));
         $reportArray=json_decode(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),true,512,JSON_THROW_ON_ERROR);
         $version=$this->runtime->saveReport($organizationId,$sessionId,$reportArray,(int)$row['state_revision']+1,$now);
