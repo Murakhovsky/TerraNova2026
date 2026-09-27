@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $root=dirname(__DIR__,2);
-$template=(string)file_get_contents($root.'/app/Interfaces/Web/View/growth/collectors.phtml');
+$template=(string)file_get_contents($root.'/app/Interfaces/Web/View/components/growth/collectors.phtml');
 $js=(string)file_get_contents($root.'/frontend/features/growth/workspace.js');
 
 function expectGrowthV0270(bool $condition,string $message):void
