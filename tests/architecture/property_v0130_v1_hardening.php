@@ -6,7 +6,7 @@ $read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path)
 $assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 
 $module=require $root.'/app/Domains/Property/module.php';
-$assert(($module['version']??null)==='0.13.0','Property V0.13 hardening manifest missing.');
+$assert(version_compare((string)($module['version']??'0.0.0'),'0.13.0','>='),'Property V0.13+ hardening manifest missing.');
 $assert(in_array('property.read.canonical',$module['contributions']['capabilities']??[],true),'Canonical Property read capability missing.');
 
 $migration=$read('app/migrations/20260928_000117_property_v100_hardening.sql');
@@ -40,7 +40,9 @@ $assert(!is_file($root.'/app/Domains/Property/Infrastructure/Persistence/MySql/M
 
 $projection=$read('app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyProjection.php');
 $assert(str_contains($projection,'syncPublicReadModel'),'Canonical projection must refresh the isolated public read model.');
-$assert(str_contains($projection,'REPLACE INTO tn_property_public_read_model'),'Canonical public projection refresh missing.');
+$assert(str_contains($projection,'INSERT INTO tn_property_public_read_model'),'Canonical public projection refresh missing.');
+$assert(!str_contains($projection,'SELECT * FROM tn_properties'),'Public read model must not be copied from tn_properties.');
+$assert(!str_contains($projection,'FROM tn_properties'),'Canonical projection must not make decisions by reading tn_properties.');
 
 foreach([
     'app/Domains/Property/Application/Service/PropertyCanonicalRuntimeService.php',
