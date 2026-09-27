@@ -67,8 +67,9 @@ foreach([
     $assert(str_contains($frontend,$needle),'Growth collector frontend contract missing: '.$needle);
 }
 
-foreach(['growth/signals','growth/collectors'] as $view){
-    $assert(is_file($root.'/app/Interfaces/Web/View/'.$view),'Growth Signal Operations fragment missing: '.$view);
+$twig=$read('symfony/templates/experience/growth/workspace.html.twig');
+foreach(["v=='growth/signals'","v=='growth/collectors'"] as $surface){
+    $assert(str_contains($twig,$surface),'Growth canonical Twig surface missing: '.$surface);
 }
 
 echo "Growth V0.12 Signal Operations architecture: OK\n";
