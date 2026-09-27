@@ -5,8 +5,14 @@ on:
     branches: [main, migration/symfony, migration/platform-notification]
     paths:
       - 'app/Platform/Notification/**'
+      - 'app/Infrastructure/Platform/Notification/**'
+      - 'app/Infrastructure/Platform/Persistence/TableOwnership.php'
+      - 'app/migrations/20260923_000088_platform_notification_runtime.sql'
+      - 'symfony/config/services.yaml'
       - 'tests/unit/platform_notification_foundation.php'
+      - 'tests/unit/platform_notification_runtime.php'
       - 'tests/architecture/platform_notification_boundaries.php'
+      - 'tests/architecture/platform_notification_runtime.php'
       - '.github/workflows/platform-notification.yml'
   pull_request:
     branches: [main, migration/symfony, migration/platform-audit]
@@ -28,5 +34,7 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: php tests/architecture/platform_notification_boundaries.php
+      - run: php tests/architecture/platform_notification_runtime.php
       - run: php tests/unit/platform_notification_foundation.php
-      - run: find app/Platform/Notification -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: php tests/unit/platform_notification_runtime.php
+      - run: find app/Platform/Notification app/Infrastructure/Platform/Notification -type f -name '*.php' -print0 | xargs -0 -n1 php -l

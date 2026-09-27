@@ -13,7 +13,7 @@
       $pageUrl = $metaUrl ?? $pageRoot;
       $pageType = $metaType ?? 'website';
       $requestPath = '/' . ltrim((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/');
-      $isPrivatePage = preg_match('#^/(admin|auth|cabinet|client-case|sales)(/|$)|^/cos/control-center(/|$)|^/property/(manage|listing|edit|add|submissions|submission|group|moderate|media|note)(/|$)#', $requestPath) === 1;
+      $isPrivatePage = preg_match('#^/(admin|auth|cabinet|client-case|sales|growth)(/|$)|^/cos/control-center(/|$)|^/property/(manage|listing|edit|add|submissions|submission|group|moderate|media|note)(/|$)#', $requestPath) === 1;
       $pageRobots = $metaRobots ?? ($isPrivatePage ? 'noindex,nofollow' : 'index,follow');
       $analyticsPropertyId = (int) ($analyticsPropertyId ?? 0);
       $pageAssetEntries = is_array($pageAssetEntries ?? null) ? $pageAssetEntries : [];
@@ -25,7 +25,7 @@
           $interfaceSurface = 'workspace';
       }
       if (!in_array($interfaceSurface, ['public', 'portal', 'workspace'], true)) {
-          if (preg_match('#^/(admin|client-case|sales)(/|$)|^/cos/control-center(/|$)|^/property/(manage|listing|edit|add|submissions|submission|group|moderate|media|note)(/|$)#', $requestPath) === 1) {
+          if (preg_match('#^/(admin|client-case|sales|growth)(/|$)|^/cos/control-center(/|$)|^/property/(manage|listing|edit|add|submissions|submission|group|moderate|media|note)(/|$)#', $requestPath) === 1) {
               $interfaceSurface = 'workspace';
           } elseif (preg_match('#^/cabinet(/|$)#', $requestPath) === 1) {
               $interfaceSurface = 'portal';

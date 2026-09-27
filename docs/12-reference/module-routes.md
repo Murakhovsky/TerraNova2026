@@ -17,12 +17,18 @@ generated: true
 | `construction` | — | 0 |
 | `diagnostic` | — | 0 |
 | `finance` | — | 0 |
+| `growth` | — | 1 |
 | `hr` | — | 0 |
 | `procurement` | — | 0 |
 | `property` | — | 1 |
 | `real_estate` | — | 0 |
 | `sales` | — | 0 |
 | `service` | — | 0 |
+
+## `growth`
+
+- ownership: Symfony route configuration;
+- джерело маршрутів: `symfony/config/routes.yaml`;
 
 ## `property`
 

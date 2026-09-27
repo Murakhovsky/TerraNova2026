@@ -37,7 +37,7 @@ $assert(!is_file($root.'/app/Bootstrap/ProcessServices.php'), 'Retired Process b
 $assert(str_contains($read('app/Kernel/Module/KernelVersion.php'), "VERSION = '0.11.9'"), 'KernelVersion must expose additive Process contract revision.');
 
 $definitions = glob($root . '/resources/processes/*.json') ?: [];
-$assert(count($definitions) === 6, 'Canonical Process Registry source must contain six current definitions.');
+$assert(count($definitions) === 7, 'Canonical Process Registry source must contain seven current definitions.');
 $schemas = [];
 foreach ($definitions as $path) {
     $definition = json_decode((string)file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
@@ -88,6 +88,17 @@ $serviceCapabilities = array_values(array_filter(
     static fn (mixed $capability): bool => is_string($capability) && $capability !== '',
 ));
 $assert(count($serviceCapabilities) === count($service['steps'] ?? []), 'Every Service process step must map to a Service capability.');
+
+$growth = json_decode((string)file_get_contents($root . '/resources/processes/growth-opportunity-candidate-to-handoff.json'), true, flags: JSON_THROW_ON_ERROR);
+$assert(($growth['schema_version'] ?? null) === 4, 'Growth Opportunity Candidate → Handoff must use schema v4 until a real cross-domain acceptance step exists.');
+$assert(($growth['domain'] ?? null) === 'growth', 'Growth process must be owned by growth.');
+$assert(($growth['state'] ?? null) === 'to-be', 'Growth V0.1 process must remain explicitly to-be until persistence and delivery surfaces are implemented.');
+$assert(count($growth['steps'] ?? []) === 6, 'Growth V0.1 process must preserve its six-step opportunity intelligence flow.');
+foreach ($growth['steps'] ?? [] as $step) {
+    $capability = $step['capability'] ?? null;
+    $assert(is_string($capability) && str_starts_with($capability, 'growth.'), 'Every Growth V0.1 process step must map to a Growth capability.');
+}
+$assert(($growth['steps'][5]['capability'] ?? null) === 'growth.handoff.prepare', 'Growth process must stop at a Growth-owned handoff package.');
 
 $consumers = [
     'docs/.vitepress/check-processes.mjs',

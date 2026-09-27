@@ -21,6 +21,7 @@ generated: true
 | `construction` | 0 |
 | `diagnostic` | 1 |
 | `finance` | 0 |
+| `growth` | 0 |
 | `hr` | 0 |
 | `procurement` | 0 |
 | `property` | 4 |
@@ -39,6 +40,10 @@ generated: true
 | `StartDiagnosticSessionCommand` | `app/Domains/Diagnostic/Application/DTO/StartDiagnosticSessionCommand.php` |
 
 ## Finance (`finance`)
+
+Явних `*Command` DTO contracts не знайдено.
+
+## Growth (`growth`)
 
 Явних `*Command` DTO contracts не знайдено.
 

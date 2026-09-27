@@ -17,6 +17,7 @@ generated: true
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `0.6.1` | — | 0 |
 | `finance` | `0.1.0` | — | 0 |
+| `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `0.12.0` | `propertyModuleConfigurationProvisioner` | 18 |
@@ -41,6 +42,12 @@ generated: true
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `growth`
+
+- manifest: `app/Domains/Growth/module.php`;
+- configuration provisioners: —;
+- capabilities: `growth.market.resumable_discovery`, `growth.market.partial_retry`, `growth.learning.conversation_binding`, `growth.market.workspace`, `growth.market.universe.manage`, `growth.market.discovery`, `growth.market.automated_sourcing`, `growth.market.monitoring`, `growth.market.opportunity_detection`, `growth.engagement.email_delivery_feedback`, `growth.engagement.email_complaint_suppression`, `growth.engagement.email_conversation_feedback`, `growth.engagement.conversation_routing`, `growth.engagement.contact_suppression`, `growth.engagement.routing_target.sales`, `growth.engagement.routing_target.service`, `growth.engagement.response_classification`, `growth.engagement.inbound_response`, `growth.engagement.response_webhook`, `growth.engagement.sequence_scheduler`, `growth.engagement.sequence_state_machine`, `growth.engagement.sequence_policy`, `growth.engagement.autonomous_content_scheduler`, `growth.engagement.autonomous_content_review`, `growth.engagement.autonomous_content_drafting`, `growth.engagement.autonomous_trigger`, `growth.engagement.autonomy_payload_staging`, `growth.engagement.autonomy_policy`, `growth.engagement.activation_policy`, `growth.engagement.atomic_capacity_admission`, `growth.engagement.channel_quotas`, `growth.engagement.limit_profile`, `growth.engagement.execution_limits`, `growth.engagement.delivery_feedback`, `growth.engagement.pre_handoff_linkedin_call_execution`, `growth.signal.polling_alerts`, `growth.signal.polling_incidents`, `growth.signal.polling_health`, `growth.signal.polling_workspace`, `growth.signal.scheduled_polling`, `growth.signal.json_source.workspace`, `growth.signal.collector.credentialed_json`, `growth.signal.json_source.manage`, `growth.signal.feed.workspace`, `growth.signal.collector.rss_atom`, `growth.signal.feed.manage`, `growth.handoff.target.service`, `growth.engagement.pre_handoff_execution`, `growth.engagement.execution_workspace`, `growth.engagement.execution`, `growth.experiments.decision`, `growth.experiments.workspace`, `growth.experiments`, `growth.attribution`, `growth.learning.optimization_workspace`, `growth.learning.optimize`, `growth.learning.workspace`, `growth.learning.feedback`, `growth.learning.brief`, `growth.engagement.intelligence`, `growth.signal.external_webhook`, `growth.workspace`, `growth.signal.operations`, `growth.api.v1`, `growth.handoff.target.sales`, `growth.handoff.dispatch`, `growth.handoff.brief`, `growth.handoff.targets`, `growth.research.accept`, `growth.research.brief`, `growth.research.generate`, `growth.qualification.policy`, `growth.candidate.evaluate`, `growth.candidate.decision_brief`, `growth.signal.collect`, `growth.signal.dedupe`, `growth.signal.ingest`, `growth.buying_committee.assess`, `growth.buying_committee.brief`, `growth.contact.discover`, `growth.contact.enrich`, `growth.icp.manage`, `growth.account.discover`, `growth.account.enrich`, `growth.account.score`, `growth.account.brief`, `growth.signal.detect`, `growth.candidate.research`, `growth.candidate.score`, `growth.candidate.qualify`, `growth.handoff.prepare`, `growth.candidate.monitor`.
 
 ## `hr`
 

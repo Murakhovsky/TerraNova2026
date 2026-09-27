@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Web\PublicEdge;
 
+use App\Application\Growth\Integration\GrowthEngagementDeliveryWebhook;
+use App\Application\Growth\Integration\GrowthEngagementResponseWebhook;
+use App\Application\Growth\Integration\GrowthExternalSignalWebhook;
 use Domains\Content\Application\Contract\InboundContentWebhookInterface;
 use Domains\Property\Application\Contract\PropertyFunnelAnalyticsInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,6 +17,9 @@ final readonly class PublicEdgeController
     public function __construct(
         private PropertyFunnelAnalyticsInterface $analytics,
         private InboundContentWebhookInterface $contentWebhook,
+        private GrowthExternalSignalWebhook $growthSignalWebhook,
+        private GrowthEngagementDeliveryWebhook $growthEngagementWebhook,
+        private GrowthEngagementResponseWebhook $growthEngagementResponseWebhook,
     ) {
     }
 
@@ -44,6 +50,42 @@ final readonly class PublicEdgeController
         );
 
         return new JsonResponse((array) $result['payload'], (int) $result['status']);
+    }
+
+    public function growthSignalWebhook(Request $request): JsonResponse
+    {
+        $result=$this->growthSignalWebhook->handle(
+            $request->getContent(),
+            (string)$request->headers->get('X-TN-Signature',''),
+            (string)$request->headers->get('X-TN-Timestamp',''),
+            (string)$request->headers->get('X-TN-Idempotency-Key',''),
+        );
+
+        return new JsonResponse((array)$result['payload'],(int)$result['status']);
+    }
+
+    public function growthEngagementDeliveryWebhook(Request $request):JsonResponse
+    {
+        $result=$this->growthEngagementWebhook->handle(
+            $request->getContent(),
+            (string)$request->headers->get('X-TN-Signature',''),
+            (string)$request->headers->get('X-TN-Timestamp',''),
+            (string)$request->headers->get('X-TN-Idempotency-Key',''),
+        );
+
+        return new JsonResponse((array)$result['payload'],(int)$result['status']);
+    }
+
+    public function growthEngagementResponseWebhook(Request $request):JsonResponse
+    {
+        $result=$this->growthEngagementResponseWebhook->handle(
+            $request->getContent(),
+            (string)$request->headers->get('X-TN-Signature',''),
+            (string)$request->headers->get('X-TN-Timestamp',''),
+            (string)$request->headers->get('X-TN-Idempotency-Key',''),
+        );
+
+        return new JsonResponse((array)$result['payload'],(int)$result['status']);
     }
 
     private function sameOrigin(Request $request): bool

@@ -60,6 +60,10 @@ $providerExpectations = [
         'service' => 'diagnosticNavigationContributor',
         'class' => 'DiagnosticWebProvider',
     ],
+    'Growth' => [
+        'service' => 'growthNavigationContributor',
+        'class' => 'GrowthWebProvider',
+    ],
 ];
 
 foreach ($providerExpectations as $domain => $expectation) {
@@ -119,6 +123,7 @@ foreach ([
     'salesNavigationContributor:',
     'propertyNavigationContributor:',
     'diagnosticNavigationContributor:',
+    'growthNavigationContributor:',
 ] as $wiring) {
     if (!str_contains($services, $wiring)) {
         throw new RuntimeException('Web extension DI wiring is missing: ' . $wiring);

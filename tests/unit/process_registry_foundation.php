@@ -11,7 +11,7 @@ use Kernel\Process\ProcessStep;
 use Kernel\Process\RuntimeMapping;
 
 $registry = new JsonProcessRegistry($root . '/resources/processes');
-if (count($registry->all()) !== 6) throw new RuntimeException('Canonical Process Registry must expose six current processes.');
+if (count($registry->all()) !== 7) throw new RuntimeException('Canonical Process Registry must expose seven current processes.');
 
 $property = $registry->get('property.submission-to-publication');
 if (!$property instanceof ProcessDefinition || $property->schemaVersion !== 4 || count($property->steps) !== 6) {
@@ -60,6 +60,14 @@ if (!$service instanceof ProcessDefinition || $service->schemaVersion !== 4 || $
 }
 if ($service->steps[0]->capability !== 'service.request' || $service->steps[6]->capability !== 'service.ticket') {
     throw new RuntimeException('Service process capability bridge was not preserved.');
+}
+
+$growth = $registry->get('growth.opportunity-candidate-to-handoff');
+if (!$growth instanceof ProcessDefinition || $growth->schemaVersion !== 4 || $growth->domain !== 'growth' || count($growth->steps) !== 6) {
+    throw new RuntimeException('Growth Opportunity Candidate → Handoff process was not hydrated.');
+}
+if ($growth->steps[0]->capability !== 'growth.signal.detect' || $growth->steps[5]->capability !== 'growth.handoff.prepare') {
+    throw new RuntimeException('Growth process capability bridge was not preserved.');
 }
 
 if (!$registry->has('diagnostic.session-to-recommendation') || $registry->has('missing.process')) {

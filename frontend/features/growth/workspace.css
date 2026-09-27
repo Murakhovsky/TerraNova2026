@@ -1,0 +1,50 @@
+.tn-growth-workspace .tn-ui-panel h3{margin:.75rem 0 .4rem}
+.tn-growth-muted{color:var(--tn-text-muted,#6b746f)}
+.tn-growth-error{color:var(--tn-danger,#a33)}
+.tn-growth-action-form{display:grid;gap:.8rem;max-width:48rem}
+.tn-growth-action-status,[data-growth-form-status]{display:block;margin-top:.65rem;min-height:1.2em}
+.tn-growth-action-status[data-state="success"],[data-growth-form-status][data-state="success"]{color:var(--tn-success,#286846)}
+.tn-growth-action-status[data-state="error"],[data-growth-form-status][data-state="error"]{color:var(--tn-danger,#a33)}
+.tn-growth-signal-list{display:grid;gap:.65rem}
+.tn-growth-signal-list article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem 1rem;padding:.8rem 0;border-bottom:1px solid var(--tn-border,#d9dedb)}
+.tn-growth-signal-list article:last-child{border-bottom:0}
+.tn-growth-signal-list article p{grid-column:1/-1;margin:0;overflow-wrap:anywhere}
+.tn-growth-signal-list article small{color:var(--tn-text-muted,#6b746f)}
+
+.tn-growth-action-status[data-state="warning"],[data-growth-form-status][data-state="warning"]{color:var(--tn-warning,#8a6116)}
+.tn-growth-collector-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:1rem}
+.tn-growth-run-error{margin-top:.75rem}
+
+.tn-growth-optimization-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(20rem,1fr));gap:1rem}
+.tn-growth-optimization-card{padding:1rem;border:1px solid var(--tn-border,#d9dedb);border-radius:.75rem;background:var(--tn-surface,#fff)}
+.tn-growth-optimization-card h3{margin:.1rem 0 .65rem}
+.tn-growth-optimization-card pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font-size:.82rem}
+.tn-growth-optimization-meta{display:flex;flex-wrap:wrap;gap:.5rem 1rem;color:var(--tn-text-muted,#6b746f);font-size:.9rem}
+.tn-growth-optimization-actions{display:flex;flex-wrap:wrap;gap:.8rem;align-items:flex-end;margin-top:1rem}
+.tn-growth-optimization-actions form{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end}
+.tn-growth-optimization-evidence{display:grid;gap:.55rem;margin-top:.75rem}
+.tn-growth-optimization-evidence article{padding:.7rem .8rem;border:1px solid var(--tn-border,#d9dedb);border-radius:.65rem}
+.tn-growth-optimization-evidence article p{margin:.3rem 0 0}
+.tn-growth-optimization-evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:.35rem 0 0;font-size:.82rem}
+
+
+.tn-growth-experiment-form{display:grid;gap:1rem}
+.tn-growth-experiment-fields{display:grid;grid-template-columns:minmax(16rem,2fr) repeat(2,minmax(10rem,1fr));gap:.8rem}
+.tn-growth-experiment-variants{display:grid;gap:.75rem}
+.tn-growth-experiment-variant{display:grid;grid-template-columns:minmax(8rem,1fr) minmax(12rem,1.5fr) 7rem minmax(18rem,2fr) auto;gap:.75rem;align-items:end;padding:.9rem;border:1px solid var(--tn-border,#d9dedb);border-radius:.75rem;background:var(--tn-surface,#fff)}
+.tn-growth-experiment-config{min-width:0}
+.tn-growth-experiment-actions{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}
+.tn-growth-experiment-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:1rem}
+.tn-growth-experiment-report{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:1rem;margin-top:1rem}
+.tn-growth-experiment-card{padding:1rem;border:1px solid var(--tn-border,#d9dedb);border-radius:.75rem;background:var(--tn-surface,#fff)}
+.tn-growth-experiment-card h3{margin:.15rem 0 .65rem}
+.tn-growth-experiment-card pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.82rem}
+.tn-growth-experiment-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem .8rem;margin:0 0 .8rem}
+.tn-growth-experiment-metrics div{display:flex;justify-content:space-between;gap:.75rem;padding:.45rem 0;border-bottom:1px solid var(--tn-border,#d9dedb)}
+.tn-growth-experiment-metrics dt{color:var(--tn-text-muted,#6b746f)}
+.tn-growth-experiment-metrics dd{margin:0;font-weight:700;text-align:right}
+.tn-growth-experiment-assign{display:grid;grid-template-columns:minmax(16rem,2fr) minmax(15rem,1fr) auto;gap:.8rem;align-items:end}
+@media(max-width:900px){
+  .tn-growth-experiment-fields,.tn-growth-experiment-variant,.tn-growth-experiment-assign{grid-template-columns:1fr}
+  .tn-growth-experiment-variant .tn-ui-button{justify-self:start}
+}

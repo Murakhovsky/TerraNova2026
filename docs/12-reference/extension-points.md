@@ -18,10 +18,10 @@ generated: true
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
 | `web.actions` | module-defined | 1 |
-| `web.commands` | module-defined | 3 |
-| `web.navigation` | module-defined | 3 |
-| `web.search` | module-defined | 3 |
-| `web.workspace` | module-defined | 3 |
+| `web.commands` | module-defined | 4 |
+| `web.navigation` | module-defined | 4 |
+| `web.search` | module-defined | 4 |
+| `web.workspace` | module-defined | 4 |
 | `web.workspace.extensions` | module-defined | 1 |
 
 ## `api.routes`
@@ -63,6 +63,7 @@ generated: true
 | Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -73,6 +74,7 @@ generated: true
 | Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -83,6 +85,7 @@ generated: true
 | Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -93,6 +96,7 @@ generated: true
 | Модуль | Service |
 | --- | --- |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
