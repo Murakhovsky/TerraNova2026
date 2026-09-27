@@ -50,7 +50,7 @@ return [
             'app/migrations/20260914_000057_property_v0100_external_network.sql',
             'app/migrations/20260914_000058_property_v0110_hardening.sql',
             'app/migrations/20260915_000059_property_v0120_runtime_cutover.sql',
-            'app/migrations/20260927_000063_property_v0130_v1_hardening.sql',
+            'app/migrations/20260928_000117_property_v100_hardening.sql',
         ],
         'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
