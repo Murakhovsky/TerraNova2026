@@ -19,6 +19,7 @@ foreach(['symfony/templates/experience/public/auth_login.html.twig','symfony/tem
 }
 foreach(['symfony/src/Web/Auth/AuthPageController.php','symfony/src/Web/Diagnostic/DiagnosticPageController.php','symfony/src/Web/Property/PropertyPageController.php','symfony/src/Web/Spatial/SpatialPageController.php'] as $p)if(str_contains($read($p),'PhtmlRenderer'))throw new RuntimeException('PHTML ownership restored: '.$p);
 $vite=$read('vite.config.js'); if(!str_contains($vite,"'spatial-viewer':")||str_contains($vite,'frontend/entrypoints/'))throw new RuntimeException('Vite must own only specialized Spatial viewer.');
-$import=$read('symfony/importmap.php'); foreach(["'app' =>","'public_property' =>","'spatial_admin' =>"] as $m)if(!str_contains($import,$m))throw new RuntimeException('ImportMap missing: '.$m);
+$import=$read('symfony/importmap.php'); foreach(["'app' =>","'public_auth' =>","'public_property' =>","'spatial_admin' =>"] as $m)if(!str_contains($import,$m))throw new RuntimeException('ImportMap missing: '.$m);
+$framework=$read('symfony/config/packages/framework.yaml'); if(!str_contains($framework,"public_prefix: '/assets/'"))throw new RuntimeException('AssetMapper public prefix must stay absolute.');
 $submit=$read('symfony/src/Web/Property/PublicPropertySubmitController.php'); foreach(['CommandBusInterface','SubmitPublicPropertyCommand','HTTP_CREATED'] as $m)if(!str_contains($submit,$m))throw new RuntimeException('Public intake incomplete: '.$m);
 echo "Wave 13 final audit: 100% canonical Web ownership passed.\n";

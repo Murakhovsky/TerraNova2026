@@ -6,6 +6,10 @@
     <meta name="robots" content="noindex,nofollow">
 {% endblock %}
 
+{% block javascripts %}
+    {{ importmap('public_auth') }}
+{% endblock %}
+
 {% block public_content %}
 <section
     class="cos-page__stack"
