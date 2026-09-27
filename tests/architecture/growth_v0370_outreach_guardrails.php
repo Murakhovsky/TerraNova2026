@@ -41,9 +41,9 @@ foreach([
 $service=$read('app/Domains/Growth/Application/Service/GrowthEngagementExecutionService.php');
 foreach([
     'GrowthEngagementLimitProviderInterface','preHandoffLimitDecision(',
-    "'pre_handoff_limits'","pre_handoff_daily_limit_reached","pre_handoff_contact_cooldown",
+    "'pre_handoff_limits'","limitDecision['code']","limitDecision['reason']",
 ] as $needle){
-    $assert(str_contains($service,$needle),'Growth execution guardrails missing: '.$needle);
+    $assert(str_contains($service,$needle),'Growth execution guardrail integration missing: '.$needle);
 }
 foreach(['AUTO','autonomous','execute('] as $forbidden){
     $assert(!str_contains($service,$forbidden),'Growth V0.37 must not introduce autonomous outreach: '.$forbidden);
