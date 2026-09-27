@@ -205,8 +205,8 @@ final readonly class DiagnosticRuntimeService
         if($row['status']==='completed') return $this->report($organizationId,$sessionId)+['replayed'=>true];
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session was not found.');
         $now=new DateTimeImmutable();
-        $this->materializeInputs($organizationId,$sessionId,$row['state'],$session->records(),$now,$actorId);
-        $result=$this->evaluateSession->execute($organizationId,$sessionId,$now,'USER',$actorId);
+        $canonicalInput=$this->inputFromRuntime($session->evidence(),$row['state'],$now);
+        $result=$this->evaluateSession->execute($organizationId,$sessionId,$now,'USER',$actorId,$canonicalInput,false);
         $session=$this->sessions->get($organizationId,$sessionId)??throw new DomainException('Diagnostic session disappeared after evaluation.');
         $pack=$this->compiled($organizationId,$row);
         $semanticRevision=(int)$row['state_revision']+1;
@@ -370,20 +370,26 @@ final readonly class DiagnosticRuntimeService
 
     private function stateFromRuntime(string $sessionId,CompiledDiagnosticPack $pack,array $evidence,array $runtime):DiagnosticState
     {
-        $facts=$this->facts($sessionId,$runtime); $factInput=[];$metricInput=[];$byEvidence=[];
+        $facts=$this->facts($sessionId,$runtime);
+        $result=$this->engine->evaluate($this->inputFromRuntime($evidence,$runtime,new DateTimeImmutable()),$pack->pack);
+        return $this->states->build($sessionId,$pack,$facts,$evidence,$result,[],[],[],max(1,(int)($runtime['revision']??0)));
+    }
+
+    private function inputFromRuntime(array $evidence,array $runtime,DateTimeImmutable $at): DiagnosticInput
+    {
+        $factInput=[];$metricInput=[];$byEvidence=[];
         foreach($evidence as $e)$byEvidence[$e->id]=$e;
-        foreach($facts as $fact){
-            if($fact->status!==FactStatus::Known)continue; $signals=[];
-            foreach($fact->evidenceIds as $id)if(isset($byEvidence[$id]))$signals[]=new EvidenceSignal($id,$byEvidence[$id]->type->value,$byEvidence[$id]->reliability??.6,$byEvidence[$id]->directness??.8,$byEvidence[$id]->capturedAt,$fact->value);
-            $factInput[$fact->key]=new ObservedValue($fact->value,$signals);
+        foreach($runtime['facts']??[] as $code=>$fact){
+            $signals=[];
+            foreach($fact['evidence_ids']??[] as $id)if(isset($byEvidence[$id]))$signals[]=new EvidenceSignal($id,$byEvidence[$id]->type->value,$byEvidence[$id]->reliability??.6,$byEvidence[$id]->directness??.8,$byEvidence[$id]->capturedAt,$fact['value']??null);
+            $factInput[(string)$code]=new ObservedValue($fact['value']??null,$signals);
         }
         foreach($runtime['metrics']??[] as $code=>$metric){
             if(!is_numeric($metric['value']??null))continue; $signals=[];
             foreach($metric['evidence_ids']??[] as $id)if(isset($byEvidence[$id]))$signals[]=new EvidenceSignal($id,$byEvidence[$id]->type->value,.7,.8,$byEvidence[$id]->capturedAt,(float)$metric['value']);
-            $metricInput[$code]=new ObservedValue((float)$metric['value'],$signals);
+            $metricInput[(string)$code]=new ObservedValue((float)$metric['value'],$signals);
         }
-        $result=$this->engine->evaluate(new DiagnosticInput($factInput,$metricInput,new DateTimeImmutable()),$pack->pack);
-        return $this->states->build($sessionId,$pack,$facts,$evidence,$result,[],[],[],max(1,(int)($runtime['revision']??0)));
+        return new DiagnosticInput($factInput,$metricInput,$at);
     }
 
     private function facts(string $sessionId,array $runtime):array
