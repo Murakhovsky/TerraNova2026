@@ -44,7 +44,7 @@ $assert(!str_contains($service,'StructuredLlmClientInterface'),'Sequence state m
 
 $guard=$read('app/Domains/Growth/Application/Service/GrowthOutreachSequenceGuard.php');
 foreach([
-    'sales_handoff','outcome_','phone_completed','delivery_failed','sequence_policy_disabled',
+    'sales_handoff','outcome_','phone_completed',"'delivery_'.\$status",'sequence_policy_disabled',
     'sequence_content_blocked','sequence_channel_not_auto','autonomy_disabled','autonomy_channel_not_allowed',
     'autonomy_accepted_status_not_allowed','autonomy_confidence_below_threshold',
 ] as $needle){
