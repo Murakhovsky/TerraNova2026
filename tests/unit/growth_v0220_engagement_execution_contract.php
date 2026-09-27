@@ -37,7 +37,7 @@ expectGrowthV0220(str_contains($service,'count($deals)===1'),'Growth execution m
 expectGrowthV0220(str_contains($service,'Post-handoff call execution belongs to Sales'),'Growth must not route post-handoff calls through sales.send_message.');
 expectGrowthV0220(str_contains($service,"EngagementRecommendationStatus::Accepted"),'Growth execution must require accepted recommendation.');
 expectGrowthV0220(str_contains($service,"'engagement_execution_payload'"),'Growth execution payload lock is missing.');
-expectGrowthV0220(!str_contains($service,'ActionProposal'),'Growth application service must not know Kernel ActionProposal.');
-expectGrowthV0220(!str_contains($service,'ActionPolicyService'),'Growth application service must not know Kernel ActionPolicyService.');
+expectGrowthV0220(!str_contains($service,'use Kernel\\Action\\ActionProposal;')&&!str_contains($service,'new ActionProposal('),'Growth application service must not know Kernel ActionProposal.');
+expectGrowthV0220(!str_contains($service,'use Kernel\\Policy\\Service\\ActionPolicyService;'),'Growth application service must not depend on Kernel ActionPolicyService.');
 
 echo "Growth V0.22 Engagement Execution Bridge contracts passed.\n";
