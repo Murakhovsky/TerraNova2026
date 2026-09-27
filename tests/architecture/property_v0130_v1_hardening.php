@@ -17,11 +17,25 @@ foreach(['tn_property_public_read_model','CREATE TABLE IF NOT EXISTS','INSERT IG
 foreach([
     'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPublicPropertyReadRepository.php',
     'app/Domains/Property/Infrastructure/ReadModel/MySql/CatalogService.php',
+    'app/Domains/Property/Infrastructure/ReadModel/MySql/MysqlPropertyWorkspaceReadModel.php',
+    'app/Domains/Property/Infrastructure/Presentation/PropertyPresentationService.php',
+    'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertySubmissionRepository.php',
+    'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyModerationRepository.php',
+    'app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyIdentityWorkflowRepository.php',
+    'app/Domains/Identity/Infrastructure/ReadModel/MySql/AdminDashboardService.php',
+    'app/Infrastructure/Platform/Analytics/MysqlPropertyFunnelAnalytics.php',
+    'app/Infrastructure/Integration/Telegram/TelegramAutomationService.php',
+    'app/Domains/Spatial/Infrastructure/Persistence/MySql/MysqlSpatialSceneRepository.php',
 ] as $path){
     $source=$read($path);
     $assert(str_contains($source,'tn_property_public_read_model'),'Canonical public read model not used: '.$path);
     $assert(!str_contains($source,'tn_properties'),'Legacy tn_properties still drives public business reads: '.$path);
 }
+
+$moderation=$read('app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyModerationRepository.php');
+$assert(str_contains($moderation,'PropertyCanonicalRuntimeService'),'Moderation must publish through canonical Property runtime.');
+$assert(!str_contains($moderation,'INSERT INTO tn_properties'),'Moderation legacy Property writer returned.');
+$assert(!is_file($root.'/app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyTourPublisher.php'),'Legacy Spatial Property tour writer returned.');
 
 $projection=$read('app/Domains/Property/Infrastructure/Persistence/MySql/MysqlPropertyProjection.php');
 $assert(str_contains($projection,'syncPublicReadModel'),'Canonical projection must refresh the isolated public read model.');
