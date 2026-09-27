@@ -29,7 +29,7 @@ final class MysqlPropertyFunnelAnalytics implements PropertyFunnelAnalyticsInter
 
         $propertyId = max(0, (int) ($input['property_id'] ?? 0));
         if ($propertyId > 0 && !$this->database->fetchOne(
-            'SELECT id FROM tn_properties WHERE id = :id AND status IN ("published", "active") LIMIT 1',
+            'SELECT id FROM tn_property_public_read_model WHERE id = :id AND status IN ("published", "active") LIMIT 1',
             ['id' => $propertyId]
         )) {
             $propertyId = 0;
@@ -130,7 +130,7 @@ final class MysqlPropertyFunnelAnalytics implements PropertyFunnelAnalyticsInter
                        SUM(e.event_type = "presentation_share") AS presentation_shares,
                        SUM(e.event_type = "lead_submit") AS leads
                 FROM tn_analytics_events e
-                INNER JOIN tn_properties p ON p.id = e.property_id
+                INNER JOIN tn_property_public_read_model p ON p.id = e.property_id
                 WHERE ' . str_replace('created_at', 'e.created_at', $period) . '
                 GROUP BY p.id
                 ORDER BY leads DESC, presentation_shares DESC, cta DESC, property_views DESC
