@@ -44,7 +44,7 @@ foreach([
     'WorkspaceShellFactory','WebExtensionContext','GrowthWorkspaceReadModelInterface',
     'GrowthApplicationBoundary','GrowthIntelligenceBoundary','GrowthBuyingCommitteeBoundary',
     'GrowthResearchBoundary','GrowthDecisionBoundary','GrowthHandoffBoundary',
-    "isEnabled(\$tenant->organizationId()->value(),'growth')",'ViteAssetResolver','fragment(',
+    "isEnabled(\$tenant->organizationId()->value(),'growth')",'growthView','query',
 ] as $needle){
     $assert(str_contains($controller,$needle),'Growth Workspace controller missing: '.$needle);
 }
@@ -76,10 +76,10 @@ $assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=5,'Gro
 
 $vite=$read('vite.config.js');
 $assert(!str_contains($vite,"'growth-workspace':"),'Growth must not restore a dedicated Wave 13 Vite source entrypoint.');
-$interface=$read('frontend/entrypoints/terranova-interface.js');
-$assert(str_contains($interface,"../features/growth/workspace.js"),'Growth client runtime must be composed through the canonical interface entrypoint.');
+$stimulus=$read('symfony/assets/stimulus_bootstrap.js');
+$assert(str_contains($stimulus,'GrowthController'),'Growth client runtime must be composed through canonical Symfony Stimulus.');
 $twig=$read('symfony/templates/experience/growth/workspace.html.twig');
-foreach(['experience/workspace_shell.html.twig','growthFragment','growthAssets'] as $needle){
+foreach(['experience/workspace_shell.html.twig','growthView','data-controller="growth"'] as $needle){
     $assert(str_contains($twig,$needle),'Growth canonical Twig shell missing: '.$needle);
 }
 
