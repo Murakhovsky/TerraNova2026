@@ -15,7 +15,7 @@ generated: true
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
 | `construction` | `0.1.0` | — | 0 |
-| `diagnostic` | `0.6.1` | — | 0 |
+| `diagnostic` | `0.7.0` | — | 4 |
 | `finance` | `0.1.0` | — | 0 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
