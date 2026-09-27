@@ -60,4 +60,19 @@ foreach ([
     $assert(str_contains($sql, $needle), 'Diagnostic V0.7 migration missing: ' . $needle);
 }
 
+
+$semanticPort = $read('app/Domains/Diagnostic/Application/Contract/DiagnosticSemanticRepositoryInterface.php');
+$semanticRepo = $read('app/Domains/Diagnostic/Infrastructure/Persistence/MySql/MysqlDiagnosticSemanticRepository.php');
+$runtime = $read('app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeService.php');
+foreach (['appendFactRevision','appendAssessmentRevision','appendHypothesisRevision','appendRecommendationTransition','saveStateSnapshot'] as $needle) {
+    $assert(str_contains($semanticPort, $needle), 'Semantic persistence port missing: ' . $needle);
+    $assert(str_contains($semanticRepo, $needle), 'Semantic MySQL adapter missing: ' . $needle);
+    $assert(str_contains($runtime, $needle), 'Diagnostic runtime is not using semantic persistence: ' . $needle);
+}
+
+$rootCause = $read('app/Domains/Diagnostic/Interview/RootCauseAnalysisService.php');
+foreach (['StronglySupported','ConfirmedRootCause','maximumContradiction','minimumCoverage'] as $needle) {
+    $assert(str_contains($rootCause, $needle), 'Deterministic root-cause policy missing: ' . $needle);
+}
+
 echo "Diagnostic V0.7 normative convergence architecture: OK\n";
