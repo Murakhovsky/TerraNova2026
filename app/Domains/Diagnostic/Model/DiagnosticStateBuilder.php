@@ -16,11 +16,18 @@ final class DiagnosticStateBuilder
             if ($fact->status===FactStatus::Contradicted) $contradictions[$fact->key]=$fact;
         }
         $missing=array_values(array_diff(array_keys($pack->factsById),array_keys($known)));
+        $evidenceGaps = [];
+        foreach ($missing as $factId) {
+            $evidenceGaps[] = ['fact_id' => $factId, 'reason' => 'missing_fact'];
+        }
+        foreach ($contradictions as $factId => $fact) {
+            $evidenceGaps[] = ['fact_id' => $factId, 'reason' => 'contradictory_fact'];
+        }
         $blocked=[]; $applicable=[];
         foreach ($result->dependencies as $dependency) {
             if (($dependency->status ?? null)==='BLOCKED') $blocked[]=$dependency->node;
             elseif (($dependency->status ?? null)==='SATISFIED') $applicable[]=$dependency->node;
         }
-        return new DiagnosticState($diagnosticId,$pack->pack->id,$pack->pack->version,$revision,$computedAt??new DateTimeImmutable(),$known,$missing,$contradictions,$evidence,$result->assessments,$result->findings,$hypotheses,$rootCauses,$recommendations,[] ,['pack'=>$result->coverage->ratio],$result->confidence,['pack'=>$result->score,'sections'=>$result->sectionScores],array_values(array_unique($blocked)),array_values(array_unique($applicable)),array_values(array_unique([...array_map(fn($f)=>$f->id,$facts),...array_map(fn($e)=>$e->id,$evidence)])));
+        return new DiagnosticState($diagnosticId,$pack->pack->id,$pack->pack->version,$revision,$computedAt??new DateTimeImmutable(),$known,$missing,$contradictions,$evidence,$result->assessments,$result->findings,$hypotheses,$rootCauses,$recommendations,[] ,['pack'=>$result->coverage->ratio],$result->confidence,['pack'=>$result->score,'sections'=>$result->sectionScores],array_values(array_unique($blocked)),array_values(array_unique($applicable)),array_values(array_unique([...array_map(fn($f)=>$f->id,$facts),...array_map(fn($e)=>$e->id,$evidence)])),$evidenceGaps);
     }
 }
