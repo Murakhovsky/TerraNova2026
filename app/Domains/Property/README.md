@@ -150,7 +150,7 @@ V0.12 adds canonical Asset/Inventory/Listing/Publication write services, canonic
 
 The compatibility bridge may still materialize operational metadata, activity log entries and legacy media bookkeeping required by existing screens. Those writes are explicitly non-authoritative and cannot define canonical Asset, Inventory or Listing state.
 
-### Property V0.13 — V1 Hardening
+### Property V1.0 — Canonical Runtime
 
 Closed the remaining legacy read/write ownership gap:
 
@@ -166,14 +166,18 @@ tn_property_public_read_model
 
 `tn_properties` is no longer consumed by Property catalog, workspace, presentation, moderation, Identity, Analytics, Telegram or Spatial business reads. Moderated intake publishes through `PropertyCanonicalRuntimeService`. The monolithic `MysqlPropertyManagementRepository` and legacy `MysqlPropertyTourPublisher` are retired. Compatibility projection code may still materialize `tn_properties` for migration/legacy interoperability, but canonical decisions must not read it.
 
-## V1 readiness / remaining operational proof
+## Property V1 guarantees
 
-The architectural V1 boundary is now enforced in code and CI. Before changing the public lifecycle label to V1.0, the remaining requirement is operational evidence rather than another model rewrite:
+Property V1 makes `Asset + Inventory + Listing + Publication` authoritative for canonical business state.
 
-- run representative create/update/publish/reserve/moderation/Spatial integration traffic against the canonical runtime;
-- verify projection lag/failure recovery and migration/bootstrap behavior on production-like data;
-- keep `tn_properties` isolated as compatibility output only and remove it entirely when no external legacy consumer remains;
-- expand concrete External Network adapters as integrations are onboarded.
+- canonical writes go through `PropertyCanonicalRuntimeService`;
+- canonical public reads use `tn_property_public_read_model`;
+- the public read model is materialized directly from the same canonical Asset/Inventory/Listing/Publication state, not copied from `tn_properties`;
+- `tn_properties` is compatibility output only and is not used for canonical business decisions;
+- the legacy management monolith and legacy Spatial writer are retired;
+- legacy media mutation is rejected before canonical object creation, preventing partial success/failure semantics;
+- V1 architecture gates protect the compatibility boundary and migration ownership.
+
+Remaining work is operational rather than architectural: production-like traffic, projection lag/failure recovery, and eventual physical removal of `tn_properties` once no external compatibility consumer remains.
 
 V0.8 demand remains intentionally limited to explicit Sales property matches. Reference location materialization remains owned by Reference through `LocationReferenceInterface`.
-
