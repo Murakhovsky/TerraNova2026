@@ -20,6 +20,9 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
 
     public function createDraft(array $input, ?int $userId = null, array $files = []): array
     {
+        if ($files !== []) {
+            return ['ok' => false, 'message' => 'Медіа завантажуються окремим canonical media workflow після створення об’єкта.'];
+        }
         try {
             $normalized = $this->canonicalInput($input, true);
             $title = trim((string) ($input['title'] ?? ''));
@@ -55,10 +58,6 @@ final readonly class CanonicalPropertyManagementWriteRepository implements Prope
             if ($legacyId <= 0) throw new \RuntimeException('Canonical Property projection did not return a compatibility id.');
             $this->compatibility->syncOperationalMetadata($this->organizationId, $legacyId, $input);
             $this->compatibility->recordActivity($this->organizationId, $legacyId, $userId, 'system', 'Чернетку об’єкта створено', 'Створено через canonical Property runtime.');
-            if ($files !== []) {
-                return ['ok' => false, 'message' => 'Медіа завантажуються окремим canonical media workflow після створення об’єкта.'];
-            }
-
             return [
                 'ok' => true,
                 'message' => 'Чернетку об’єкта створено через canonical Property runtime.',
