@@ -75,7 +75,8 @@ $responses=new class implements GrowthEngagementResponseRepositoryInterface {
             }
             return $this->rows[$key]+['replayed'=>true];
         }
-        return $this->rows[$key]=$response+['replayed'=>false];
+        $this->rows[$key]=$response;
+        return $response+['replayed'=>false];
     }
     public function byId(string $organizationId,string $responseId):?array{
         foreach($this->rows as $row)if(($row['response_id']??null)===$responseId)return $row;
