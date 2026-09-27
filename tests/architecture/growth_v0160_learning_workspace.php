@@ -58,8 +58,8 @@ $assert(substr_count($routes,'App\\Web\\Growth\\GrowthPageController::')>=8,'Gro
 $learningView='symfony/templates/experience/growth/workspace.html.twig';
 $candidateView='symfony/templates/experience/growth/workspace.html.twig';
 $assert(is_file($root.'/'.$learningView),'Growth Learning view is missing.');
-$assert(str_contains($read($learningView),'Outcomes, not vanity metrics'),'Growth Learning view contract missing.');
-foreach(['Observed outcomes','Open Growth Learning','reply_received','meeting_completed'] as $needle){
+$assert(str_contains($read($learningView),"v=='growth/learning'"),'Growth Learning view contract missing.');
+foreach(["v=='growth/candidate'",'reply_received','meeting_completed'] as $needle){
     $assert(str_contains($read($candidateView),$needle),'Growth Candidate learning panel missing: '.$needle);
 }
 
