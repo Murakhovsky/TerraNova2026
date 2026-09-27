@@ -10,7 +10,7 @@ use Domains\Diagnostic\Application\UseCase\EvaluateDiagnosticSession;
 use Domains\Diagnostic\Application\UseCase\PublishDiagnosticPack;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticPackRepository;
 use Domains\Diagnostic\Infrastructure\Persistence\MySql\MysqlDiagnosticSessionRepository;
-use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyManagementRepository;
+use Domains\Property\Infrastructure\Persistence\MySql\Management\ComposedPropertyManagementRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertyModerationRepository;
 use Domains\Property\Infrastructure\Persistence\MySql\MysqlPropertySubmissionRepository;
 use Infrastructure\Platform\Analytics\MysqlPropertyAnalytics;
@@ -37,7 +37,7 @@ $expected = [
     'frontendPropertySubmissionService' => PropertySubmissionService::class,
     'propertyModerationRepository' => MysqlPropertyModerationRepository::class,
     'frontendPropertyModerationService' => PropertyModerationService::class,
-    'propertyManagementRepository' => MysqlPropertyManagementRepository::class,
+    'propertyManagementRepository' => ComposedPropertyManagementRepository::class,
     'frontendPropertyMediaService' => PropertyManagementService::class,
     'propertyAnalytics' => MysqlPropertyAnalytics::class,
     'frontendAnalyticsService' => MysqlPropertyFunnelAnalytics::class,
