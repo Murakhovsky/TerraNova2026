@@ -28,7 +28,7 @@ generated: true
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
-| `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
+| `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
 | `service` | Service | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
 
 ## Construction (`construction`)
@@ -270,7 +270,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: `salesCrmInboxJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`.
 
 ### Задекларовані capabilities
 
