@@ -114,7 +114,7 @@ $assert(str_contains($docker,'GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET'),'Respo
 
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
-$template=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
 $assert(str_contains($page,"'engagement_responses'=>"),'Candidate SSR must include response brief.');
 $assert(str_contains($api,'engagementResponses('),'Growth API must expose candidate responses.');
 foreach(['Conversation signals','Inbound responses','Classification pending durable processing.','advisory only'] as $needle){

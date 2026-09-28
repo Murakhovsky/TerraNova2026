@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $root=dirname(__DIR__,2);
-$template=(string)file_get_contents($root.'/app/Interfaces/Web/View/components/growth/candidate.phtml');
+$template=(string)file_get_contents($root.'/symfony/templates/experience/growth/workspace.html.twig');
 $js=(string)file_get_contents($root.'/frontend/features/growth/workspace.js');
 
 function expectGrowthV0230(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);}

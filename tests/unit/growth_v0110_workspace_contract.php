@@ -38,15 +38,17 @@ foreach(['growth.overview','growth.candidate','growth.account'] as $workspaceId)
 $search=$provider->search($context,'growth',10);
 expectGrowthV0110($search!==[],'Growth provider search should resolve Growth workspace navigation.');
 
-$views=[
-    'growth/dashboard.phtml',
-    'growth/candidates.phtml',
-    'growth/candidate.phtml',
-    'growth/accounts.phtml',
-    'growth/account.phtml',
-];
-foreach($views as $view){
-    expectGrowthV0110(is_file(dirname(__DIR__,2).'/app/Interfaces/Web/View/components/'.$view),'Growth Workspace view missing: '.$view);
+$templatePath=dirname(__DIR__,2).'/symfony/templates/experience/growth/workspace.html.twig';
+expectGrowthV0110(is_file($templatePath),'Growth canonical Twig workspace is missing.');
+$template=(string)file_get_contents($templatePath);
+foreach([
+    "v=='growth/dashboard'",
+    "v=='growth/candidates'",
+    "v=='growth/candidate'",
+    "v=='growth/accounts'",
+    "v=='growth/account'",
+] as $surface){
+    expectGrowthV0110(str_contains($template,$surface),'Growth canonical Twig surface missing: '.$surface);
 }
 
 echo "Growth V0.11 Workspace contracts passed.\n";

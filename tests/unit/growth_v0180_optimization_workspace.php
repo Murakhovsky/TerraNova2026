@@ -5,7 +5,7 @@ require dirname(__DIR__,2).'/vendor/autoload.php';
 
 $root=dirname(__DIR__,2);
 $controller=(string)file_get_contents($root.'/symfony/src/Web/Growth/GrowthPageController.php');
-$view=(string)file_get_contents($root.'/app/Interfaces/Web/View/components/growth/learning.phtml');
+$view=(string)file_get_contents($root.'/symfony/templates/experience/growth/workspace.html.twig');
 $js=(string)file_get_contents($root.'/frontend/features/growth/workspace.js');
 
 function expectGrowthV0180(bool $condition,string $message):void

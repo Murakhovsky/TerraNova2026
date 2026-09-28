@@ -56,8 +56,8 @@ foreach(['enabledOrganizations(','pendingPayloads(','isEnabled($organizationId,\
 $routes=$read('symfony/config/routes.yaml');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
-$template=$read('app/Interfaces/Web/View/components/growth/settings.phtml');
-$candidate=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
+$candidate=$read('symfony/templates/experience/growth/workspace.html.twig');
 $js=$read('frontend/features/growth/workspace.js');
 foreach(['/api/v1/growth/engagement/autonomy','/autonomy/payload','stageEngagementAutonomyPayload'] as $needle){
     $assert(str_contains($routes.$api,$needle),'Autonomy API surface missing: '.$needle);

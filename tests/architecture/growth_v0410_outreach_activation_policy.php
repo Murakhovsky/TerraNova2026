@@ -43,13 +43,13 @@ foreach(['GrowthEngagementActivationProviderInterface','executionMode:$activatio
 $routes=$read('symfony/config/routes.yaml');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
-$template=$read('app/Interfaces/Web/View/components/growth/settings.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
 $js=$read('frontend/features/growth/workspace.js');
 foreach(['/api/v1/growth/engagement/activation','engagementActivation','updateEngagementActivation'] as $needle){
     $assert(str_contains($routes.$api,$needle),'Growth activation API surface missing: '.$needle);
 }
 $assert(str_contains($page,'engagement_activation'),'Growth Settings must read activation profile.');
-foreach(['data-growth-activation-settings',"'auto'=>'Auto'",'approval_required'] as $needle){
+foreach(['data-growth-activation-settings','value="auto"','>Auto</option>','approval_required'] as $needle){
     $assert(str_contains($template,$needle),'Growth activation settings UI missing: '.$needle);
 }
 foreach(["'/api/v1/growth/engagement/activation'","channel_modes"] as $needle){
