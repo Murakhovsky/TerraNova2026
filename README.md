@@ -50,6 +50,12 @@ docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integr
 
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:validate --organization=default
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:provision --organization=default --actor=cos-bootstrap
+
+# Growth production cutover: status → enable → live verify → rollback
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover status --organization=default
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover enable --organization=default --actor=<user-id> --confirm=ENABLE_GROWTH
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover verify --organization=default --candidate=<GCND-id>
+docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover rollback --organization=default --actor=<user-id> --confirm=DISABLE_GROWTH
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:outbox:run
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:outbox:replay --organization=default --event-id=<event-id>
 docker compose -f docker-compose.symfony.yml exec php php bin/console cos:queue:replay-dead --organization=default --job-id=<job-id>

@@ -389,6 +389,107 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
         return $rows;
     }
 
+    public function productionEvidence(string $organizationId,string $candidateId): array
+    {
+        $candidateId=trim($candidateId);
+        if($candidateId==='')return ['candidate_id'=>'','exists'=>false];
+
+        $statement=$this->connection->prepare(
+            'SELECT candidate_id,status,subject_type,subject_id,target_domain,opportunity_type,growth_mode
+             FROM tn_growth_candidates
+             WHERE organization_id=:organization_id AND candidate_id=:candidate_id
+             LIMIT 1'
+        );
+        $statement->execute(['organization_id'=>$organizationId,'candidate_id'=>$candidateId]);
+        $candidate=$statement->fetch(PDO::FETCH_ASSOC);
+        if($candidate===false)return ['candidate_id'=>$candidateId,'exists'=>false];
+
+        $params=['organization_id'=>$organizationId,'candidate_id'=>$candidateId];
+        $subjectType=(string)$candidate['subject_type'];
+        $subjectId=(string)$candidate['subject_id'];
+
+        $accountExists=$subjectType!=='account' ? null : (int)$this->scalar(
+            'SELECT COUNT(*) FROM tn_growth_accounts
+             WHERE organization_id=:organization_id AND account_id=:subject_id',
+            ['organization_id'=>$organizationId,'subject_id'=>$subjectId],
+        )>0;
+        $committeeAssessments=$subjectType!=='account' ? 0 : (int)$this->scalar(
+            'SELECT COUNT(*) FROM tn_growth_buying_committee_assessments
+             WHERE organization_id=:organization_id AND account_id=:subject_id',
+            ['organization_id'=>$organizationId,'subject_id'=>$subjectId],
+        );
+
+        return [
+            'candidate_id'=>$candidateId,
+            'exists'=>true,
+            'status'=>(string)$candidate['status'],
+            'subject_type'=>$subjectType,
+            'subject_id'=>$subjectId,
+            'target_domain'=>(string)$candidate['target_domain'],
+            'opportunity_type'=>(string)$candidate['opportunity_type'],
+            'growth_mode'=>(string)$candidate['growth_mode'],
+            'account_exists'=>$accountExists,
+            'signal_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_candidate_signals
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'market_membership_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_market_memberships
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'committee_assessment_count'=>$committeeAssessments,
+            'recommendation_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_engagement_recommendations
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'accepted_recommendation_count'=>(int)$this->scalar(
+                "SELECT COUNT(*) FROM tn_growth_engagement_recommendations
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id AND status='accepted'",$params,
+            ),
+            'execution_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_engagement_execution_links
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'response_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_engagement_responses
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'route_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_conversation_routes
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'sales_route_count'=>(int)$this->scalar(
+                "SELECT COUNT(*) FROM tn_growth_conversation_routes
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id
+                   AND status='completed' AND route='sales'
+                   AND target_reference_id IS NOT NULL",$params,
+            ),
+            'accepted_sales_handoff_count'=>(int)$this->scalar(
+                "SELECT COUNT(*) FROM tn_growth_handoff_attempts
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id
+                   AND status='accepted' AND target_domain='sales'",$params,
+            ),
+            'outcome_count'=>(int)$this->scalar(
+                'SELECT COUNT(*) FROM tn_growth_outcomes
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id',$params,
+            ),
+            'reply_outcome_count'=>(int)$this->scalar(
+                "SELECT COUNT(*) FROM tn_growth_outcomes
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id AND outcome_type='reply_received'",$params,
+            ),
+            'sales_outcome_count'=>(int)$this->scalar(
+                "SELECT COUNT(*) FROM tn_growth_outcomes
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id
+                   AND source_domain='sales'",$params,
+            ),
+            'terminal_outcome_count'=>(int)$this->scalar(
+                "SELECT COUNT(*) FROM tn_growth_outcomes
+                 WHERE organization_id=:organization_id AND candidate_id=:candidate_id
+                   AND outcome_type IN ('qualified','meeting_completed','won','lost','disqualified')",$params,
+            ),
+        ];
+    }
+
     private function scalar(string $sql,array $params): string|int|false
     {
         $statement=$this->connection->prepare($sql);

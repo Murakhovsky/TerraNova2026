@@ -15,6 +15,7 @@ on:
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
       - 'symfony/src/Application/Growth/**'
+      - 'symfony/src/Command/GrowthProductionCutoverCommand.php'
       - 'symfony/src/Web/PublicEdge/PublicEdgeController.php'
       - 'symfony/src/Web/Growth/**'
       - 'symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php'
@@ -67,6 +68,7 @@ on:
       - 'symfony/config/routes.yaml'
       - 'symfony/src/Http/Api/V1/Controller/GrowthApiController.php'
       - 'symfony/src/Application/Growth/**'
+      - 'symfony/src/Command/GrowthProductionCutoverCommand.php'
       - 'symfony/src/Web/PublicEdge/PublicEdgeController.php'
       - 'symfony/src/Web/Growth/**'
       - 'symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php'
@@ -174,6 +176,7 @@ jobs:
           php tests/architecture/growth_v0480_market_discovery.php
           php tests/architecture/growth_v0490_cos_for_cos_vertical_slice.php
           php tests/architecture/growth_v0500_release_hardening.php
+          php tests/architecture/growth_production_cutover.php
 
       - name: Process registry invariants
         run: |
@@ -225,6 +228,7 @@ jobs:
           php tests/unit/growth_v0480_market_discovery.php
           php tests/unit/growth_v0490_cos_for_cos_vertical_slice.php
           php tests/unit/growth_v0500_release_hardening.php
+          php tests/unit/growth_production_smoke.php
 
       - name: Process evidence and schema-v5 compatibility
         run: |
@@ -390,6 +394,10 @@ jobs:
           php -l app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthMarketDiscoveryRepository.php
           php -l tests/unit/growth_v0500_release_hardening.php
           php -l tests/architecture/growth_v0500_release_hardening.php
+          php -l symfony/src/Application/Growth/Operations/GrowthProductionSmokeService.php
+          php -l symfony/src/Command/GrowthProductionCutoverCommand.php
+          php -l tests/unit/growth_production_smoke.php
+          php -l tests/architecture/growth_production_cutover.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProviderInterface.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitBoundary.php
           php -l app/Domains/Growth/Application/Contract/GrowthEngagementLimitProfileRepositoryInterface.php
