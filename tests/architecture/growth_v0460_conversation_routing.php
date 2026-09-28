@@ -71,7 +71,7 @@ foreach(['growth.conversation_routing_target','GrowthConversationRoutingBoundary
 $routes=$read('symfony/config/routes.yaml');
 $api=$read('symfony/src/Http/Api/V1/Controller/GrowthApiController.php');
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
-$view=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
+$view=$read('symfony/templates/experience/growth/workspace.html.twig');
 expectGrowthV0460Architecture(str_contains($routes,'/engagement/routing'),'Conversation routing API route missing.');
 expectGrowthV0460Architecture(str_contains($api,'engagementRouting'),'Conversation routing API method missing.');
 expectGrowthV0460Architecture(str_contains($page,'conversation_routing'),'Candidate SSR routing projection missing.');

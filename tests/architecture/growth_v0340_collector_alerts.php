@@ -76,7 +76,7 @@ foreach([
 $page=$read('symfony/src/Web/Growth/GrowthPageController.php');
 $assert(str_contains($page,'alert_subscriptions'),'Growth collector workspace subscription projection is missing.');
 
-$view=$read('app/Interfaces/Web/View/components/growth/collectors.phtml');
+$view=$read('symfony/templates/experience/growth/workspace.html.twig');
 foreach([
     'data-growth-collector-alert-subscriptions','Collector incident email alerts','data-growth-collector-alert-create',
     'data-growth-collector-alert-toggle',

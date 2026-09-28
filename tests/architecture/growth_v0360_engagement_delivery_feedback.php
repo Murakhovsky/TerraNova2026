@@ -88,7 +88,7 @@ foreach([
     $assert(str_contains($services,$needle),'Growth delivery DI/config missing: '.$needle);
 }
 
-$template=$read('app/Interfaces/Web/View/components/growth/candidate.phtml');
+$template=$read('symfony/templates/experience/growth/workspace.html.twig');
 foreach(['latest_delivery','Delivery status'] as $needle){
     $assert(str_contains($template,$needle),'Growth candidate workspace missing delivery feedback: '.$needle);
 }
