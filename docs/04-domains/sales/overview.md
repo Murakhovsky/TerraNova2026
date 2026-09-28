@@ -2,14 +2,14 @@
 title: Огляд домену Sales
 description: Відповідальність, внески в середовище виконання, варіанти використання та межі домену Sales.
 status: active
-updated: 2026-09-16
+updated: 2026-09-28
 kind: domain
 contract: domain-v1
 ---
 
 # Огляд домену Sales
 
-Sales є еталонним обмеженим контекстом COS і найповнішою реалізацією шаблону домену та модуля в поточному `main`.
+Sales `1.0.0` є стабілізованим еталонним bounded context COS. V1 фіксує перевірений runtime/API/UI contract без переписування persistence, тому schema свідомо лишається на `0.8.6`.
 
 ## Призначення
 
@@ -38,7 +38,7 @@ Sales володіє **життєвим циклом попиту та прод�
 
 ```text
 id: sales
-version: 0.8.6
+version: 1.0.0
 schema: 0.8.6
 kernel: >=0.11.0 <0.12.0
 ```

@@ -1,6 +1,6 @@
 # RealEstate Domain
 
-RealEstate V0.2 owns brokerage orchestration over the canonical Property registry.
+RealEstate `1.0.0` owns stabilized brokerage orchestration over the canonical Property registry. The persistence schema remains `0.2.0`.
 
 ## Business flow
 
@@ -32,7 +32,7 @@ RealEstate does **not** read Sales tables. Sales opportunity existence is checke
 
 ## Runtime
 
-The V0.2 runtime contributes `realEstateDomainModule`, tenant-scoped MySQL persistence and canonical domain events.
+The V1 runtime contributes `realEstateDomainModule`, tenant-scoped MySQL persistence and canonical domain events.
 
 Consequential writes are retry-safe:
 

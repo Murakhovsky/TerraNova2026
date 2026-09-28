@@ -2,20 +2,21 @@
 title: Огляд домену Service
 description: Виконуваний домен Service для звернень, кейсів, тікетів, SLA, призначень, ескалацій і вирішення.
 status: active
-updated: 2026-09-19
+updated: 2026-09-28
 kind: domain
 contract: domain-v1
 ---
 
 # Огляд домену Service
 
-Service `0.2.0` є активним runtime-domain COS для сервісних операцій.
+Service `1.0.0` є стабілізованим runtime-domain COS для сервісних операцій. V1 фіксує executable Wave 11 contract; persistence schema лишається `0.2.0`.
 
 ## Runtime
 
 ```text
 id: service
-version: 0.2.0
+version: 1.0.0
+schema: 0.2.0
 dependencies: —
 runtime: serviceDomainModule
 persistence: tn_service_*
