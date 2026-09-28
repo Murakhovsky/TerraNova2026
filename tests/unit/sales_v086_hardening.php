@@ -56,12 +56,12 @@ $migration = file_get_contents($root . '/app/migrations/20260913_000047_sales_v0
 $runbook = file_get_contents($root . '/docs/sales/EPIC4_RUNBOOK.md');
 $module = require $root . '/app/Domains/Sales/module.php';
 $assert(is_string($task) && str_contains($task, "name: 'cos:sales:history:rebuild'"), 'Tenant history rebuild Symfony command is required.');
-$assert(is_string($task) && str_contains($task, 'historyHealthAction'), 'History health CLI is required.');
+$assert(is_string($task) && str_contains($task, '$this->health->check($organizationId)'), 'History rebuild command must finish with the canonical health check.');
 $assert(is_string($migration) && str_contains($migration, 'idx_sales_director_open_v086'), 'Director current-snapshot index is required.');
 $assert(is_string($migration) && str_contains($migration, 'idx_sales_stage_current_v086'), 'Stage current-history index is required.');
 $assert(is_string($migration) && str_contains($migration, 'idx_sales_owner_current_v086'), 'Owner current-history index is required.');
 $assert(is_string($runbook) && str_contains($runbook, 'Never rebuild by deleting canonical `cos_events`'), 'Runbook must protect canonical history.');
-$assert(($module['version'] ?? null) === '0.8.6', 'Sales module must be V0.8.6.');
-$assert(($module['schema_version'] ?? null) === '0.8.6', 'Sales schema must be V0.8.6 after performance indexes.');
+$assert(version_compare((string)($module['version'] ?? '0.0.0'), '0.8.6', '>='), 'Sales module must preserve the V0.8.6 hardening baseline.');
+$assert(($module['schema_version'] ?? null) === '0.8.6', 'Sales persistence schema must preserve the V0.8.6 hardening baseline.');
 
 fwrite(STDOUT, "Sales V0.8.6 hardening: OK\n");

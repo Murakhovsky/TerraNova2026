@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'real_estate',
     'name' => 'Real Estate',
-    'version' => '0.2.0',
+    'version' => '1.0.0',
     'schema_version' => '0.2.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Brokerage orchestration over canonical Property assets: Opportunity → Property Match → Offer → Viewing → Reservation.',
@@ -42,6 +42,7 @@ return [
         ],
         'migration_files' => [
             'app/migrations/20260918_000062_real_estate_wave9_cutover.sql',
+            'app/migrations/20260928_000120_real_estate_v100_release.sql',
         ],
         'capabilities' => [
             'real_estate.brokerage',

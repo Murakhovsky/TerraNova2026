@@ -21,9 +21,9 @@ generated: true
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 20 |
-| `real_estate` | `0.2.0` | — | 6 |
-| `sales` | `0.8.6` | `salesModuleConfigurationProvisioner` | 10 |
-| `service` | `0.2.0` | — | 7 |
+| `real_estate` | `1.0.0` | — | 6 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 10 |
+| `service` | `1.0.0` | — | 7 |
 
 ## `construction`
 
@@ -35,7 +35,7 @@ generated: true
 
 - manifest: `app/Domains/Diagnostic/module.php`;
 - configuration provisioners: —;
-- capabilities: —.
+- capabilities: `diagnostic.methodology.compile`, `diagnostic.state.rebuild`, `diagnostic.traceability`, `diagnostic.semantic.v1`, `diagnostic.v1`.
 
 ## `finance`
 

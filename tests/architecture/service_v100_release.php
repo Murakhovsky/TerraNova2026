@@ -1,0 +1,22 @@
+<?php
+declare(strict_types=1);
+$root=dirname(__DIR__,2);
+$read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path);
+$assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
+$module=require $root.'/app/Domains/Service/module.php';
+$assert(($module['version']??null)==='1.0.0','Service V1 release requires module version 1.0.0.');
+$assert(($module['schema_version']??null)==='0.2.0','Service V1 must preserve the proven V0.2.0 persistence schema.');
+$assert(($module['enabled_by_default']??false)===true,'Service V1 must remain enabled by default.');
+$migration='app/migrations/20260928_000119_service_v100_release.sql';
+$assert(in_array($migration,$module['contributions']['migration_files']??[],true),'Service V1 lifecycle migration is missing.');
+$sql=$read($migration);
+foreach(["module_id='service'","installed_version='1.0.0'","installed_version='0.2.0'","schema_version='0.2.0'"] as $needle)$assert(str_contains($sql,$needle),'Service V1 lifecycle migration missing: '.$needle);
+$workflow=$read('app/Domains/Service/Application/Service/ServiceWorkflowService.php');
+foreach(['transactions->transactional','receipts->claim','lockRequest(','lockTicket(','events->publish','appendAudit'] as $needle)$assert(str_contains($workflow,$needle),'Service V1 workflow guarantee missing: '.$needle);
+$repository=$read('app/Domains/Service/Infrastructure/Persistence/MySql/MysqlServiceRepository.php');
+foreach(['organization_id=:organization_id','FOR UPDATE',"status=\\'resolved\\'","status=\\'closed\\'"] as $needle)$assert(str_contains($repository,$needle),'Service V1 persistence guarantee missing: '.$needle);
+$receipt=$read('app/Domains/Service/Infrastructure/Persistence/MySql/MysqlServiceMutationReceipt.php');
+foreach(['INSERT IGNORE INTO tn_service_operation_receipts','payload_fingerprint','hash_equals'] as $needle)$assert(str_contains($receipt,$needle),'Service V1 idempotency guarantee missing: '.$needle);
+$ci=$read('.github/workflows/service.yml');
+foreach(['branches: [main, migration/symfony]','service_wave11_cutover.php','service_v100_release.php','service_wave11_runtime.php'] as $needle)$assert(str_contains($ci,$needle),'Service V1 CI gate missing: '.$needle);
+echo "Service V1 release architecture: OK\\n";

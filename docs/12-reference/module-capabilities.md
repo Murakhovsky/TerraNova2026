@@ -27,9 +27,9 @@ generated: true
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
-| `real_estate` | Real Estate | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
-| `sales` | Sales | `0.8.6` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
-| `service` | Service | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
+| `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
+| `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
+| `service` | Service | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
 
 ## Construction (`construction`)
 
@@ -218,7 +218,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: `propertyModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260914_000048_web_v041_property_tenancy.sql`, `app/migrations/20260914_000050_property_v022_tenant_boundary.sql`, `app/migrations/20260914_000051_property_v030_asset_registry.sql`, `app/migrations/20260914_000052_property_v040_identity_provenance.sql`, `app/migrations/20260914_000053_property_v050_inventory.sql`, `app/migrations/20260914_000054_property_v060_listings_publication.sql`, `app/migrations/20260914_000055_property_v070_history_contracts.sql`, `app/migrations/20260914_000056_property_v090_intelligence.sql`, `app/migrations/20260914_000057_property_v0100_external_network.sql`, `app/migrations/20260914_000058_property_v0110_hardening.sql`, `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql`., `app/migrations/20260928_000117_property_v100_hardening.sql`.
+- міграції: `app/migrations/20260914_000048_web_v041_property_tenancy.sql`, `app/migrations/20260914_000050_property_v022_tenant_boundary.sql`, `app/migrations/20260914_000051_property_v030_asset_registry.sql`, `app/migrations/20260914_000052_property_v040_identity_provenance.sql`, `app/migrations/20260914_000053_property_v050_inventory.sql`, `app/migrations/20260914_000054_property_v060_listings_publication.sql`, `app/migrations/20260914_000055_property_v070_history_contracts.sql`, `app/migrations/20260914_000056_property_v090_intelligence.sql`, `app/migrations/20260914_000057_property_v0100_external_network.sql`, `app/migrations/20260914_000058_property_v0110_hardening.sql`, `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql`, `app/migrations/20260928_000117_property_v100_hardening.sql`.
 
 ### Задекларовані capabilities
 
@@ -240,8 +240,8 @@ Manifest capabilities не задекларовані.
 - `property.reference`;
 - `property.registry`;
 - `property.runtime.canonical`;
-- `property.write`;
 - `property.v1`;
+- `property.write`;
 
 ## Real Estate (`real_estate`)
 
@@ -251,7 +251,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260918_000062_real_estate_wave9_cutover.sql`.
+- міграції: `app/migrations/20260918_000062_real_estate_wave9_cutover.sql`, `app/migrations/20260928_000120_real_estate_v100_release.sql`.
 
 ### Задекларовані capabilities
 
@@ -270,7 +270,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: `salesCrmInboxJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`.
 
 ### Задекларовані capabilities
 
@@ -293,7 +293,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260919_000064_service_wave11_cutover.sql`.
+- міграції: `app/migrations/20260919_000064_service_wave11_cutover.sql`, `app/migrations/20260928_000119_service_v100_release.sql`.
 
 ### Задекларовані capabilities
 

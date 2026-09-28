@@ -84,6 +84,12 @@ final readonly class RealEstateWorkflowService
             'subject'=>$case->subject,
         ]);
 
+        $existing=$this->repository->findMatch($organizationId,$opportunityId,$propertyId);
+        if($existing!==null){
+            $this->assertMatchReplay($existing,$case);
+            return $this->view($organizationId,$caseId)+['replayed'=>true];
+        }
+
         $created=$this->transactions->transactional(function()use($case,$actorId,$metadata,$idempotencyKey,$fingerprint):bool{
             if(!$this->receipts->claim($case->organizationId->value(),'property_match',$idempotencyKey,$fingerprint))return false;
             if(!$this->repository->createCase($case,$actorId))return false;
@@ -103,6 +109,11 @@ final readonly class RealEstateWorkflowService
             return true;
         });
 
+        if(!$created){
+            $existing=$this->repository->findMatch($organizationId,$opportunityId,$propertyId);
+            if($existing===null)throw new InvalidArgumentException('Property match idempotency race could not be resolved.');
+            $this->assertMatchReplay($existing,$case);
+        }
         return $this->view($organizationId,$caseId)+($created?[]:['replayed'=>true]);
     }
 
@@ -239,7 +250,9 @@ final readonly class RealEstateWorkflowService
         $expectedStatus=$case->status;
         $result=$this->transactions->transactional(function()use($case,$expectedStatus,$input,$actorId,$correlationId,$metadata,$reservationId,$idempotencyKey,$fingerprint):?array{
             if(!$this->receipts->claim($case->organizationId->value(),'reservation',$idempotencyKey,$fingerprint))return null;
-            if($case->status===BrokerageProcess::RESERVED)return null;
+            if($case->status===BrokerageProcess::RESERVED){
+                throw new InvalidArgumentException('Reserved RealEstate case cannot accept a new reservation operation.');
+            }
             $next=$case->transitionTo(BrokerageProcess::RESERVED);
             if(!$this->repository->transitionCase($next,$actorId,$expectedStatus)){
                 throw new InvalidArgumentException('RealEstate transition is not allowed because the brokerage case changed concurrently.');
@@ -287,6 +300,18 @@ final readonly class RealEstateWorkflowService
     {
         return $this->repository->findCase($organizationId,$caseId)
             ??throw new InvalidArgumentException('RealEstate brokerage case was not found.');
+    }
+
+    private function assertMatchReplay(BrokerageProcess $existing,BrokerageProcess $candidate):void
+    {
+        if($existing->id!==$candidate->id
+            ||$existing->organizationId->value()!==$candidate->organizationId->value()
+            ||$existing->opportunityId!==$candidate->opportunityId
+            ||$existing->propertyId!==$candidate->propertyId
+            ||$existing->inventoryId!==$candidate->inventoryId
+            ||$existing->subject!==$candidate->subject){
+            throw new InvalidArgumentException('Canonical Property Match already exists with a different RealEstate payload.');
+        }
     }
 
     /** @param array<string,mixed> $existing */

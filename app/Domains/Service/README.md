@@ -1,6 +1,10 @@
 # Service Domain
 
-Service owns the operational lifecycle of service requests and tickets.
+Service `1.0.0` owns the operational lifecycle of service requests and tickets.
+
+## V1 release status
+
+V1 stabilizes the executable Wave 11 runtime rather than replacing it. The proven persistence schema remains `0.2.0`; a forward-only lifecycle migration advances installed module state to `1.0.0`. The release gate freezes tenant scoping, row-lock serialization, idempotency fingerprint conflicts, transaction-bound Event/Audit writes and the Request → Ticket → Resolution → Close contract.
 
 Canonical Wave 11 flow:
 

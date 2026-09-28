@@ -2,6 +2,10 @@
 
 `Sales` is the reference COS bounded context. It owns the lifecycle from an inbound lead to a managed client case/deal, its activities, property matches, follow-ups, Sales decisions and external CRM synchronization.
 
+## V1 release status
+
+Sales `1.0.0` freezes the proven runtime contract after the Symfony API/UI cutover and V0.8.6 historical-intelligence hardening. The persistence schema intentionally remains `0.8.6`; V1 advances the installed module version through a forward-only lifecycle migration rather than inventing a database schema change. Release CI gates readiness, runtime contracts, historical recovery and deterministic automation on canonical `main`.
+
 ## Ownership
 
 Sales owns:

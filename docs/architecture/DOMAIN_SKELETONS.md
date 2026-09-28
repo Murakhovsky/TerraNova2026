@@ -16,7 +16,7 @@ Finance, Procurement, HR та Construction залишаються installable CO
 
 ## Домени, що вийшли зі skeleton-стану
 
-- **Real Estate `0.2.0`**: brokerage orchestration runtime поверх Sales + Property.
-- **Service `0.2.0`**: Request/Ticket/SLA/Assignment/Escalation/Resolution runtime.
+- **Real Estate `1.0.0`**: V1-stable brokerage orchestration runtime поверх Sales + Property; persistence schema `0.2.0`.
+- **Service `1.0.0`**: V1-stable Request/Ticket/SLA/Assignment/Escalation/Resolution runtime; persistence schema `0.2.0`.
 
 Ці skeletons фіксують мову та module boundaries. Вони не вважаються завершеними business capabilities, доки окремо не реалізовані Application use cases, persistence adapters, permissions, workflows і public interfaces.

@@ -1,15 +1,15 @@
 ---
 title: Огляд домену Real Estate
-description: Runtime V0.2 для брокерського lifecycle поверх канонічного Property registry.
+description: V1-stable brokerage runtime поверх канонічного Property registry.
 status: active
-updated: 2026-09-18
+updated: 2026-09-28
 kind: domain
 contract: domain-v1
 ---
 
 # Огляд домену Real Estate
 
-Real Estate `0.2.0` є orchestration Domain для брокерських процесів. Він не створює другого реєстру нерухомості і не дублює Property inventory.
+Real Estate `1.0.0` є стабілізованим orchestration Domain для брокерських процесів. Він не створює другого реєстру нерухомості і не дублює Property inventory.
 
 ## Канонічний сценарій Wave 9
 
@@ -31,7 +31,8 @@ Reservation
 
 ```text
 id: real_estate
-version: 0.2.0
+version: 1.0.0
+schema: 0.2.0
 dependencies: property, sales
 runtime: realEstateDomainModule
 persistence: tn_real_estate_cases / offers / showings

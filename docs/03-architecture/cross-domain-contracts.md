@@ -106,7 +106,7 @@ Kernel зберігає typed declaration через `CrossDomainContract`; mani
 
 ### Sales → Property
 
-Sales `0.8.6` декларує:
+Sales `1.0.0` декларує:
 
 ```text
 Domains\Property\Contract\PropertyReferencePort

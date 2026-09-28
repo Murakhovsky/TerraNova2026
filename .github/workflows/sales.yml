@@ -2,9 +2,9 @@ name: Sales CI
 
 on:
   push:
-    branches: [COS]
+    branches: [main]
   pull_request:
-    branches: [COS]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -23,31 +23,26 @@ jobs:
       - name: Sales architecture contracts
         run: |
           php tests/architecture/domain_module_contract.php
-          php tests/architecture/sales_v071_configuration.php
-          php tests/architecture/sales_v072_pipeline_admin.php
-          php tests/architecture/sales_v074_agent_admin.php
-          php tests/architecture/sales_v075_policy_admin.php
-          php tests/architecture/sales_v076_users_teams_authority.php
-          php tests/architecture/table_ownership.php
-          php tests/architecture/symfony_sales_integrations_wave6_boundary.php
-          php tests/architecture/symfony_sales_frontend_wave7_boundary.php
-          php tests/architecture/sales_legacy_api_retirement.php
+          php tests/architecture/sales_domain_boundaries.php
+          php tests/architecture/sales_diagnostics_boundaries.php
+          php tests/architecture/property_v071_sales_boundary.php
+          php tests/architecture/web_experience_wave13_sales_complete.php
+          php tests/architecture/sales_v100_release.php
 
       - name: Sales behavioral contracts
         run: |
-          php tests/unit/sales_v073_rule_editor.php
-          php tests/unit/sales_v074_agent_runtime.php
-          php tests/unit/sales_v075_policy_engine.php
-          php tests/unit/sales_v076_authority.php
-          php tests/unit/sales_v077_integrations.php
-          php tests/unit/sales_v078_health_classifier.php
+          php tests/unit/sales_domain_foundation.php
+          php tests/unit/sales_diagnostics_foundation.php
+          php tests/unit/sales_v086_hardening.php
+          php tests/unit/sales_runtime_contract.php
 
       - name: Sales smoke tests
         run: |
           php tests/smoke/crm_webhook.php
           php tests/smoke/crm_routing.php
           php tests/smoke/crm_inbox_processing.php
-          php tests/smoke/sales_composition_root.php
+          php tests/smoke/sales_vocabulary.php
+          php tests/smoke/deterministic_sales_processes.php
 
       - name: Frontend syntax
         run: |

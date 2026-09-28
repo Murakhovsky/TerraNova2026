@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'id' => 'service',
     'name' => 'Service',
-    'version' => '0.2.0',
+    'version' => '1.0.0',
     'schema_version' => '0.2.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Executable service operations runtime for Request → Ticket → Assignment/SLA → Escalation → Resolution → Close.',
@@ -19,6 +19,7 @@ return [
         'extension_services' => [],
         'migration_files' => [
             'app/migrations/20260919_000064_service_wave11_cutover.sql',
+            'app/migrations/20260928_000119_service_v100_release.sql',
         ],
         'capabilities' => [
             'service.request',
