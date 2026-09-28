@@ -2,7 +2,7 @@
 title: Огляд домену Growth
 description: Канонічний Growth Operating System для пошуку ринку, Opportunity Intelligence, керованої взаємодії, маршрутизації відповідей і навчання за результатами.
 status: active
-updated: 2026-09-26
+updated: 2026-09-28
 kind: domain
 contract: domain-v1
 ---
@@ -141,12 +141,20 @@ Growth не має права писати в таблиці Sales або Servic
 
 ## Поточний production gate
 
-V0.50 означає функціонально замкнений Growth runtime, але ще не V1 production cutover. До V1 залишаються:
+V0.50 означає функціонально замкнений Growth runtime. Production cutover має окремий executable gate `cos:growth:cutover`, але **production acceptance не вважається завершеним лише через наявність tooling**. Для конкретної organization потрібен фактичний canary на production data.
 
-1. повністю зелений інтеграційний CI на актуальному `main`;
-2. install → migrate → configure → enable → smoke acceptance;
-3. rollback strategy;
-4. явне рішення щодо `enabled_by_default`.
+Канонічна V1 acceptance-послідовність:
+
+1. deployment migrations застосовані, dependencies/queues/workers healthy;
+2. tenant activation через audited module lifecycle;
+3. basic smoke одразу після activation; failure автоматично вимикає Growth для tenant;
+4. один реальний Sales golden path `Market → Account → Signal → Opportunity → Committee → Outreach → Reply → Sales → Outcome → Learning`;
+5. `cos:growth:cutover verify --candidate=<id>` повертає всі checks green;
+6. rollback перевірений як tenant-level disable без down-migration та без втрати evidence.
+
+`enabled_by_default=false` лишається свідомою multi-tenant safety policy. Це не blocker production readiness: production activation є explicit per-tenant operation. Зміна default має бути окремим продуктовим рішенням після production canary.
+
+Детальна процедура: [Growth production cutover](../../10-operations/growth-production-cutover.md).
 
 ## Пов’язані матеріали
 

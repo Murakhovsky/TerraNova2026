@@ -40,4 +40,7 @@ interface GrowthWorkspaceReadModelInterface
      * @return list<array<string,mixed>>
      */
     public function outcomes(string $organizationId,array $filters=[],int $limit=100): array;
+
+    /** @return array<string,mixed> */
+    public function productionEvidence(string $organizationId,string $candidateId): array;
 }

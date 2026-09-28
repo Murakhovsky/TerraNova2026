@@ -66,7 +66,7 @@ Growth Learning / Experiments / Optimization
 
 V0.35–V0.47 додали pre-handoff LinkedIn/call/email execution, delivery feedback, tenant limits, channel quotas, atomic capacity admission, activation policy, controlled autonomous outreach, governed content drafting/review, outreach sequences, inbound replies, AI classification, deterministic Conversation Routing та email delivery parity. V0.48 додав Market Universe та automated Account sourcing через credentialed HTTPS JSON provider. V0.49 закрив COS-for-COS golden path `Market → Account → Signal → WHY NOW → Opportunity → Committee → Outreach → Reply → Route → Sales → Outcome → Learning`. V0.50 додав resumable Market Discovery, run leases, partial retry semantics, rejected-row accounting, cursor safety та повний release-hardening gate.
 
-Модуль усе ще має `enabled_by_default=false`. Це свідомий production gate: перед V1 потрібні production cutover, smoke/rollback процедура та підтвердження повного інтеграційного CI.
+Модуль має `enabled_by_default=false` як свідому multi-tenant safety policy. Для production cutover додано окремий tenant-scoped gate `cos:growth:cutover`: audited activation, basic smoke з автоматичним disable при failure, live verification за реальним Sales Candidate та runtime rollback без down-migration. Статус production acceptance стає підтвердженим лише після успішного live Sales golden path у цільовому середовищі.
 
 ## Sales: продажі та попит
 
