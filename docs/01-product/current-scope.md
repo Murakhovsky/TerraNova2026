@@ -2,7 +2,7 @@
 title: Поточний стан COS
 description: Фактичний продуктовий та архітектурний обсяг поточного main.
 status: active
-updated: 2026-09-26
+updated: 2026-09-28
 kind: product
 ---
 
@@ -15,16 +15,16 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Sales | `0.8.6` | повний модуль середовища виконання та еталонний домен |
+| Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `0.6.1` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
-| Service | `0.2.0` | активний runtime Request → Ticket → Assignment/SLA → Escalation → Resolution → Close; Symfony API, persistence, events, audit та idempotency |
+| Service | `1.0.0` | V1-stable Request → Ticket → Assignment/SLA → Escalation → Resolution → Close runtime; schema `0.2.0`; lifecycle/idempotency/locking/event/audit release gates |
 | Construction | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Hr | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
-| Real_estate | `0.2.0` | активний brokerage runtime поверх Property: Opportunity → Property Match → Offer → Viewing → Reservation; Symfony API, persistence, events, audit та idempotency |
+| Real_estate | `1.0.0` | V1-stable brokerage runtime поверх Property: Opportunity → Property Match → Offer → Viewing → Reservation; schema `0.2.0`; conflict-safe replay semantics |
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
 
@@ -122,7 +122,7 @@ Finance, Procurement, HR і Construction залишаються installable skel
 
 ## Service: сервісні операції
 
-Service `0.2.0` володіє життєвим циклом `Request → Ticket → Assignment/SLA → Escalation → Resolution → Close`. Assignment, SLA, Escalation і Resolution зберігаються як історичні записи; concurrent Ticket mutations серіалізуються row lock-ом; Request і ServiceCase закриваються автоматично після закриття останніх Tickets.
+Service `1.0.0` володіє життєвим циклом `Request → Ticket → Assignment/SLA → Escalation → Resolution → Close`. Assignment, SLA, Escalation і Resolution зберігаються як історичні записи; concurrent Ticket mutations серіалізуються row lock-ом; Request і ServiceCase закриваються автоматично після закриття останніх Tickets.
 
 ## Платформні документи
 

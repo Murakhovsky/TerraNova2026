@@ -27,7 +27,7 @@ generated: true
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
-| `real_estate` | Real Estate | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
+| `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
 | `service` | Service | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
 
@@ -251,7 +251,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20260918_000062_real_estate_wave9_cutover.sql`.
+- міграції: `app/migrations/20260918_000062_real_estate_wave9_cutover.sql`, `app/migrations/20260928_000120_real_estate_v100_release.sql`.
 
 ### Задекларовані capabilities
 

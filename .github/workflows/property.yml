@@ -78,6 +78,7 @@ jobs:
           php tests/architecture/property_v0130_v1_hardening.php
           php tests/architecture/property_v100_release.php
           php tests/architecture/property_v0130_real_estate_wave9_cutover.php
+          php tests/architecture/property_v0140_real_estate_v100_release.php
           php tests/architecture/property_public_read_cutover.php
 
       - name: Property core model

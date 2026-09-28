@@ -1,0 +1,22 @@
+<?php
+declare(strict_types=1);
+$root=dirname(__DIR__,2);
+$read=static fn(string $path):string=>(string)file_get_contents($root.'/'.$path);
+$assert=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
+$module=require $root.'/app/Domains/RealEstate/module.php';
+$assert(($module['version']??null)==='1.0.0','RealEstate V1 release requires module version 1.0.0.');
+$assert(($module['schema_version']??null)==='0.2.0','RealEstate V1 must preserve the proven V0.2.0 persistence schema.');
+foreach(['property','sales'] as $dependency)$assert(in_array($dependency,$module['dependencies']??[],true),'RealEstate V1 dependency missing: '.$dependency);
+$migration='app/migrations/20260928_000120_real_estate_v100_release.sql';
+$assert(in_array($migration,$module['contributions']['migration_files']??[],true),'RealEstate V1 lifecycle migration is missing.');
+$sql=$read($migration);
+foreach(["module_id='real_estate'","installed_version='1.0.0'","installed_version='0.2.0'","schema_version='0.2.0'"] as $needle)$assert(str_contains($sql,$needle),'RealEstate V1 lifecycle migration missing: '.$needle);
+$workflow=$read('app/Domains/RealEstate/Application/Service/RealEstateWorkflowService.php');
+foreach(['findMatch($organizationId,$opportunityId,$propertyId)','assertMatchReplay($existing,$case)','Property match idempotency race could not be resolved.','Reserved RealEstate case cannot accept a new reservation operation.','transactions->transactional','receipts->claim'] as $needle)$assert(str_contains($workflow,$needle),'RealEstate V1 workflow hardening missing: '.$needle);
+$repository=$read('app/Domains/RealEstate/Infrastructure/Persistence/MySql/MysqlRealEstateRepository.php');
+foreach(['organization_id=:organization_id','expected_status','INSERT IGNORE INTO tn_real_estate_offers','INSERT IGNORE INTO tn_real_estate_showings'] as $needle)$assert(str_contains($repository,$needle),'RealEstate V1 persistence guarantee missing: '.$needle);
+$receipt=$read('app/Domains/RealEstate/Infrastructure/Persistence/MySql/MysqlRealEstateMutationReceipt.php');
+foreach(['payload_fingerprint','hash_equals'] as $needle)$assert(str_contains($receipt,$needle),'RealEstate V1 idempotency guarantee missing: '.$needle);
+$ci=$read('.github/workflows/property.yml');
+$assert(str_contains($ci,'property_v0140_real_estate_v100_release.php'),'RealEstate V1 release gate is not wired into Property/RealEstate CI.');
+echo "RealEstate V1 release architecture: OK\\n";

@@ -15,7 +15,7 @@ foreach(['property.api.v1','property.business.cutover'] as $capability){
 }
 
 $realEstate=require $root.'/app/Domains/RealEstate/module.php';
-$assert(($realEstate['version']??null)==='0.2.0','Wave 9 requires RealEstate V0.2.0.');
+$assert(version_compare((string)($realEstate['version']??'0.0.0'),'0.2.0','>='),'Wave 9 requires RealEstate V0.2.0+ runtime.');
 $assert(($realEstate['schema_version']??null)==='0.2.0','RealEstate schema must advertise V0.2.0.');
 $assert(($realEstate['enabled_by_default']??false)===true,'RealEstate Wave 9 runtime must be active by default.');
 foreach(['property','sales'] as $dependency){
