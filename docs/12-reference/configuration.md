@@ -23,7 +23,7 @@ generated: true
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 20 |
 | `real_estate` | `0.2.0` | — | 6 |
 | `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 10 |
-| `service` | `0.2.0` | — | 7 |
+| `service` | `1.0.0` | — | 7 |
 
 ## `construction`
 

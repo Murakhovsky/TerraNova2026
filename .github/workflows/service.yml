@@ -54,6 +54,7 @@ jobs:
       - name: Service architecture
         run: |
           php tests/architecture/service_wave11_cutover.php
+          php tests/architecture/service_v100_release.php
           php tests/architecture/process_v01.php
       - name: Service runtime contracts
         run: |

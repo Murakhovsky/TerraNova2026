@@ -8,7 +8,7 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $manifest=require $root.'/app/Domains/Service/module.php';
-$assert(($manifest['version']??null)==='0.2.0','Service Wave 11 manifest version must be 0.2.0.');
+$assert(version_compare((string)($manifest['version']??'0.0.0'),'0.2.0','>='),'Service must preserve the Wave 11 V0.2 runtime baseline.');
 $assert(($manifest['schema_version']??null)==='0.2.0','Service Wave 11 schema version must be 0.2.0.');
 $assert(($manifest['enabled_by_default']??false)===true,'Service Wave 11 must be enabled by default.');
 $assert(($manifest['contributions']['runtime_module_service']??null)==='serviceDomainModule','Service runtime module contribution is missing.');
