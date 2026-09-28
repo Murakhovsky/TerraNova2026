@@ -55,7 +55,7 @@ Property `0.12.0` охоплює:
 
 ```text
 id: property
-version: 0.12.0
+version: 1.0.0
 schema: 0.12.0
 kernel: >=0.11.0 <0.12.0
 enabled_by_default: true

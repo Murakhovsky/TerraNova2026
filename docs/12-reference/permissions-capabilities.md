@@ -20,12 +20,17 @@ generated: true
 | --- | ---: | --- |
 | `both` | 10 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 123 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
 | Модуль | Capability | Runtime | Manifest | Класифікація | Runtime source | Manifest source |
 | --- | --- | --- | --- | --- | --- | --- |
+| `diagnostic` | `diagnostic.methodology.compile` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | `diagnostic.semantic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | `diagnostic.state.rebuild` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | `diagnostic.traceability` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | `diagnostic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `growth` | `growth.account.brief` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.discover` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.enrich` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
@@ -136,8 +141,8 @@ generated: true
 | `property` | `property.reference` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.registry` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.runtime.canonical` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
-| `property` | `property.write` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.v1` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.write` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `real_estate` | `real_estate.api.v1` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `real_estate` | `real_estate.brokerage` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `real_estate` | `real_estate.offer` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |

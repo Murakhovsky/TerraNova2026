@@ -35,7 +35,7 @@ generated: true
 
 - manifest: `app/Domains/Diagnostic/module.php`;
 - configuration provisioners: —;
-- capabilities: —.
+- capabilities: `diagnostic.methodology.compile`, `diagnostic.state.rebuild`, `diagnostic.traceability`, `diagnostic.semantic.v1`, `diagnostic.v1`.
 
 ## `finance`
 

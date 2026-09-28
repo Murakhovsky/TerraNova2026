@@ -11,9 +11,10 @@ $assert(($manifest['schema_version']??null)==='1.0.0','Diagnostic V1 release req
 $assert(in_array('diagnostic.v1',$manifest['contributions']['capabilities']??[],true),'Diagnostic V1 capability missing.');
 
 $runtime=$read('app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeService.php');
-foreach(['inputFromRuntime','writeCompatibilityRecords','false','appendFactRevision','appendAssessmentRevision','appendHypothesisRevision','appendRecommendationTransition','saveStateSnapshot'] as $needle){
+foreach(['inputFromRuntime','appendFactRevision','appendAssessmentRevision','appendHypothesisRevision','appendRecommendationTransition','saveStateSnapshot'] as $needle){
     $assert(str_contains($runtime,$needle),'Diagnostic V1 runtime missing canonical semantic boundary: '.$needle);
 }
+$assert(str_contains($runtime,'$canonicalInput,false'),'Diagnostic V1 runtime must explicitly disable compatibility writes for canonical evaluation.');
 $assert(!str_contains($runtime,'materializeInputs($organizationId,$sessionId'),'Canonical Diagnostic runtime must not materialize generic DiagnosticRecord inputs before evaluation.');
 
 $evaluate=$read('app/Domains/Diagnostic/Application/UseCase/EvaluateDiagnosticSession.php');

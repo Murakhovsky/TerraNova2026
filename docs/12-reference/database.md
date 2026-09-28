@@ -156,13 +156,12 @@ generated: true
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_assets` |
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_compatibility_projection_state` |
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_residential_specs` |
-| `property` | `app/migrations/20260928_000117_property_v100_hardening.sql` | `tn_migrations` |
-| `property` | `app/migrations/20260928_000117_property_v100_hardening.sql` | `tn_properties` |
 | `property` | `app/migrations/20260928_000117_property_v100_hardening.sql` | `tn_property_public_read_model` |
 | `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_cases` |
 | `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_offers` |
 | `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_operation_receipts` |
 | `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_showings` |
+| `real_estate` | `app/migrations/20260928_000120_real_estate_v100_release.sql` | — |
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_configuration_revisions` |
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_organizations` |
 | `sales` | `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql` | `cos_policies` |
@@ -181,6 +180,7 @@ generated: true
 | `sales` | `app/migrations/20260913_000047_sales_v086_hardening.sql` | `sales_deal_owner_history` |
 | `sales` | `app/migrations/20260913_000047_sales_v086_hardening.sql` | `sales_deal_stage_history` |
 | `sales` | `app/migrations/20260913_000047_sales_v086_hardening.sql` | `tn_client_cases` |
+| `sales` | `app/migrations/20260928_000118_sales_v100_release.sql` | — |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_escalations` |
@@ -189,3 +189,4 @@ generated: true
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_resolutions` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_slas` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_tickets` |
+| `service` | `app/migrations/20260928_000119_service_v100_release.sql` | — |

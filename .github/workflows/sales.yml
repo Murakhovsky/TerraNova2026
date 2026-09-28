@@ -23,35 +23,16 @@ jobs:
       - name: Sales architecture contracts
         run: |
           php tests/architecture/domain_module_contract.php
-          php tests/architecture/sales_v071_configuration.php
-          php tests/architecture/sales_v072_pipeline_admin.php
-          php tests/architecture/sales_v074_agent_admin.php
-          php tests/architecture/sales_v075_policy_admin.php
-          php tests/architecture/sales_v076_users_teams_authority.php
-          php tests/architecture/table_ownership.php
-          php tests/architecture/symfony_sales_integrations_wave6_boundary.php
-          php tests/architecture/symfony_sales_frontend_wave7_boundary.php
-          php tests/architecture/sales_legacy_api_retirement.php
-          php tests/architecture/sales_readiness.php
+          php tests/architecture/sales_domain_boundaries.php
+          php tests/architecture/sales_diagnostics_boundaries.php
+          php tests/architecture/property_v071_sales_boundary.php
+          php tests/architecture/web_experience_wave13_sales_complete.php
           php tests/architecture/sales_v100_release.php
 
       - name: Sales behavioral contracts
         run: |
-          php tests/unit/sales_v073_rule_editor.php
-          php tests/unit/sales_v074_agent_runtime.php
-          php tests/unit/sales_v075_policy_engine.php
-          php tests/unit/sales_v076_authority.php
-          php tests/unit/sales_v077_integrations.php
-          php tests/unit/sales_v078_health_classifier.php
-          php tests/unit/sales_v081_history_contract.php
-          php tests/unit/sales_v081_stage_history.php
-          php tests/unit/sales_v082_metric_dictionary.php
-          php tests/unit/sales_v082_metrics_contract.php
-          php tests/unit/sales_v082_metrics_service.php
-          php tests/unit/sales_v083_history_contract.php
-          php tests/unit/sales_v083_operational_performance.php
-          php tests/unit/sales_v084_forecast_contract.php
-          php tests/unit/sales_v084_forecast_risk.php
+          php tests/unit/sales_domain_foundation.php
+          php tests/unit/sales_diagnostics_foundation.php
           php tests/unit/sales_v086_hardening.php
           php tests/unit/sales_runtime_contract.php
 
@@ -60,7 +41,6 @@ jobs:
           php tests/smoke/crm_webhook.php
           php tests/smoke/crm_routing.php
           php tests/smoke/crm_inbox_processing.php
-          php tests/smoke/sales_composition_root.php
           php tests/smoke/sales_vocabulary.php
           php tests/smoke/deterministic_sales_processes.php
 
