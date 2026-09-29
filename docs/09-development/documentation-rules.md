@@ -1,6 +1,6 @@
 ---
 title: Правила документації
-description: Documentation Framework V2: current truth, generated reference, ADR та архів історичних матеріалів.
+description: Каркас документації V2: поточна правда, згенерований довідник, ADR та архів історичних матеріалів.
 status: active
 updated: 2026-09-29
 kind: development
@@ -10,31 +10,31 @@ kind: development
 
 ## Основне правило
 
-Active `docs/` відповідає на питання **«як COS працює зараз?»**.
+Активний `docs/` відповідає на питання **«як COS працює зараз?»**.
 
 Git та `archive/documentation/` відповідають на питання **«як ми сюди прийшли?»**.
 
 Не змішуйте ці два завдання.
 
-## Source of truth
+## Джерело правди
 
 ```text
-code + active tests
+код + активні тести
   ↓
-manifests / processes
+декларації / процеси
   ↓
-generated reference
+згенерований довідник
   ↓
-narrative docs
+пояснювальна документація
   ↓
 ADR
 ```
 
-Наративний Markdown не є dependency application test.
+Наративний Markdown не є залежністю прикладного тесту.
 
 ## Заборонений патерн
 
-Не створюйте нові active сторінки на кшталт:
+Не створюйте нові активні сторінки на кшталт:
 
 ```text
 web-v0.18.md
@@ -43,15 +43,15 @@ wave15-final.md
 phase-4-closure.md
 ```
 
-Якщо змінився current architecture document, оновіть його. Якщо прийнято довгоживуче рішення, створіть ADR. Якщо це одноразовий звіт міграції, він не належить до canonical docs.
+Якщо змінився поточний архітектурний документ, оновіть його. Якщо прийнято довгоживуче рішення, створіть ADR. Якщо це одноразовий звіт міграції, він не належить до канонічної документації.
 
 ## Типи сторінок
 
-Canonical contracts залишаються: `concept-v1`, `workflow-v2`, `architecture-v1`, `domain-v1`, `how-to-v1`, `reference-v1`.
+Канонічні контракти залишаються: `concept-v1`, `workflow-v2`, `architecture-v1`, `domain-v1`, `how-to-v1`, `reference-v1`.
 
 Workflow використовує `process_state: as-is|to-be`. Runtime evidence визначається tooling, а не заявою автора.
 
-## Generated reference
+## Згенерований довідник
 
 `docs/12-reference` генерується з executable source і не редагується вручну.
 
@@ -60,7 +60,7 @@ Workflow використовує `process_state: as-is|to-be`. Runtime evidence
 ADR зберігає рішення, а не snapshot реалізації:
 
 ```text
-Context → Decision → Rationale → Alternatives → Consequences → Verification
+Контекст → Рішення → Обґрунтування → Альтернативи → Наслідки → Перевірка
 ```
 
 ## CI
@@ -71,4 +71,4 @@ npm run docs:check
 npm run docs:build
 ```
 
-Application tests не повинні шукати речення у Markdown або перевіряти конкретний GitHub workflow YAML.
+Прикладні тести не повинні шукати речення у Markdown або перевіряти конкретний GitHub workflow YAML.
