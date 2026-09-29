@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'symfony/src/**'
+      - 'symfony/config/**'
+      - 'tests/**'
+      - 'bin/verify'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cos-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax
+        run: |
+          find app symfony/src tests/architecture tests/unit -type f -name '*.php' ! -path 'tests/history/*' -print0 | xargs -0 -n1 php -l
+      - name: Current contracts and unit behavior
+        run: bash bin/verify fast

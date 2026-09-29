@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+suite="${1:-fast}"
+
+run_files() {
+  local label="$1"; shift
+  local count=0
+  echo "==> $label"
+  for pattern in "$@"; do
+    while IFS= read -r file; do
+      [ -n "$file" ] || continue
+      count=$((count + 1))
+      case "$file" in
+        *.php) php "$file" ;;
+        *.sh) bash "$file" ;;
+        *.mjs) node "$file" ;;
+      esac
+    done < <(find $pattern -maxdepth 1 -type f \( -name '*.php' -o -name '*.sh' -o -name '*.mjs' \) ! -path '*/history/*' | sort)
+  done
+  echo "<== $label: $count files"
+}
+
+contract() {
+  run_files "Current architecture/contracts" tests/architecture
+}
+
+unit() {
+  run_files "Unit behavior" tests/unit
+}
+
+smoke() {
+  run_files "Smoke vertical slices" tests/smoke
+}
+
+integration() {
+  run_files "Integration" tests/integration
+}
+
+case "$suite" in
+  contract) contract ;;
+  unit) unit ;;
+  smoke) smoke ;;
+  integration) integration ;;
+  fast) contract; unit ;;
+  full) contract; unit; smoke ;;
+  *)
+    echo "Usage: bash bin/verify {fast|full|contract|unit|smoke|integration}" >&2
+    exit 64
+    ;;
+esac

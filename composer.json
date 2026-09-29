@@ -31,5 +31,13 @@
       "php": "8.2.33"
     },
     "sort-packages": true
+  },
+  "scripts": {
+    "verify:fast": "bash bin/verify fast",
+    "verify:full": "bash bin/verify full",
+    "verify:contract": "bash bin/verify contract",
+    "verify:unit": "bash bin/verify unit",
+    "verify:smoke": "bash bin/verify smoke",
+    "verify:integration": "bash bin/verify integration"
   }
 }

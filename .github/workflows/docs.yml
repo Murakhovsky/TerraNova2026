@@ -1,4 +1,4 @@
-name: COS Documentation
+name: Documentation
 
 on:
   push:
@@ -18,7 +18,8 @@ on:
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
       - '.github/workflows/docs.yml'
-      - '.github/workflows/diagnostic.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/runtime.yml'
   pull_request:
     branches: [main]
     paths:
@@ -36,7 +37,8 @@ on:
       - 'deploy/configure-dev-tls.sh'
       - 'package.json'
       - '.github/workflows/docs.yml'
-      - '.github/workflows/diagnostic.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/runtime.yml'
   workflow_dispatch:
 
 permissions:

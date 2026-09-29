@@ -37,7 +37,7 @@ Target-specific packs remain separate data. The executable Sales fixture demonst
 
 ## Normative design
 
-The formal domain semantics, state transitions, deterministic/AI boundary and compiler contract are defined in [`docs/architecture/diagnostic-domain-model.md`](../../../docs/architecture/diagnostic-domain-model.md). The machine-readable methodology contract is [`docs/diagnostic/diagnostic-pack.schema.json`](../../../docs/diagnostic/diagnostic-pack.schema.json).
+The formal domain semantics, state transitions, deterministic/AI boundary and compiler contract are defined in [`docs/04-domains/diagnostic/domain-model.md`](../../../docs/04-domains/diagnostic/domain-model.md). The machine-readable methodology contract is [`docs/diagnostic/diagnostic-pack.schema.json`](../../../docs/diagnostic/diagnostic-pack.schema.json).
 
 V1.0 completes the explicit convergence of the canonical PHP runtime on that normative model. Typed `TruthLevel`, `Severity`, normative assessment states, append-only `FactRevision` provenance, typed `Observation` / `MetricResult`, evidence-gap state and semantic persistence are now first-class runtime concepts.
 
