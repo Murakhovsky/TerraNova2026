@@ -5,7 +5,7 @@ $root=dirname(__DIR__,2);
 require $root.'/vendor/autoload.php';
 
 use Kernel\Action\{Action,ActionExecutionClaim,ActionProposal,ActionStatus,ExecutionResult};
-use Kernel\Action\Contract\{ActionHandlerInterface,ActionRepositoryInterface};
+use Kernel\Action\Contract\{ActionExecutionGateInterface,ActionHandlerInterface,ActionRepositoryInterface};
 use Kernel\Action\Service\{ActionExecutor,ActionService};
 use Kernel\Approval\{Approval,ApprovalStatus};
 use Kernel\Approval\Contract\ApprovalRepositoryInterface;
@@ -69,14 +69,21 @@ $tx=new class implements TransactionManagerInterface{
     public function afterCommit(callable $c):void{$c();}
 };
 
+$executionGate=new class implements ActionExecutionGateInterface{
+    public function assertExecutable(Action $action):void{}
+};
+
 $actionService=new ActionService(
     $actions,
-    new ActionExecutor([
-        new class implements ActionHandlerInterface{
-            public function supports(string $t):bool{return true;}
-            public function execute(Action $a):ExecutionResult{return ExecutionResult::success();}
-        }
-    ])
+    new ActionExecutor(
+        [
+            new class implements ActionHandlerInterface{
+                public function supports(string $t):bool{return true;}
+                public function execute(Action $a):ExecutionResult{return ExecutionResult::success();}
+            }
+        ],
+        $executionGate
+    )
 );
 
 $service=new ActionPolicyService(
