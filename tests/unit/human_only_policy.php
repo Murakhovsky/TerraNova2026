@@ -109,8 +109,8 @@ $human=$service->submit(
     new ActionProposal('sales.delete_deal','deal','1',[],'USER','7','HUMAN_ONLY','HIGH','human-key'),
     'c2'
 );
-if($human->status!==ActionStatus::Queued){
-    throw new RuntimeException('Human-originated HUMAN_ONLY action was not permitted.');
+if($human->status!==ActionStatus::Rejected){
+    throw new RuntimeException('HUMAN_ONLY action entered the executable queue.');
 }
 
 if(count($evaluations->items)!==2||$evaluations->items[0]->decision!==PolicyDecision::HumanOnly){
