@@ -1,6 +1,6 @@
 ---
 title: Тестування COS
-description: Verification Framework V2 для поточних контрактів, поведінки, інтеграцій і production-like сценаріїв.
+description: Каркас перевірки V2 для поточних контрактів, поведінки, інтеграцій і production-like сценаріїв.
 status: active
 updated: 2026-09-29
 kind: how-to
@@ -26,31 +26,29 @@ CI викликає ті самі команди. Тестова логіка н
 
 ## Активні рівні
 
-### Contract / architecture
+### Контракти та архітектура
 
-`tests/architecture` містить лише довгоживучі системні інваріанти: dependency direction, Domain ownership, tenant isolation boundaries, persistence ownership, module contracts, cross-domain contracts і zero-legacy gate.
+`tests/architecture` містить лише довгоживучі системні інваріанти: напрям залежностей, володіння доменів, межі ізоляції організацій, володіння persistence, контракти модулів, міждоменні контракти й zero-legacy gate.
 
-Тест не повинен існувати лише тому, що колись був Wave 13 або V0.38.
-
-### Unit
+### Модульні тести
 
 `tests/unit` перевіряє бізнес-поведінку, value objects, policies, services та deterministic semantics.
 
 Назва тесту описує поведінку, а не реліз, у якому вона з'явилася.
 
-### Integration
+### Інтеграційні тести
 
-`tests/integration` перевіряє властивості, які неможливо довести читанням source: MySQL transactions, locking, migrations, Outbox, adapters і tenant isolation.
+`tests/integration` перевіряє властивості, які неможливо довести читанням source: MySQL transactions, locking, migrations, Outbox, adapters та tenant isolation.
 
-### Smoke
+### Димові перевірки
 
 `tests/smoke` містить короткі вертикальні сценарії, що відповідають на питання «чи COS живий як система?».
 
-### Browser / E2E
+### Браузерні та наскрізні перевірки
 
 Browser та accessibility перевірки запускаються окремим workflow проти production-like HTTP boundary.
 
-## Historical tests
+## Історичні тести
 
 Version/Wave checks перенесені до `tests/history/`. Вони не запускаються активним runner.
 
