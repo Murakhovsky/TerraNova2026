@@ -66,7 +66,10 @@ $event = DealStageChanged::create(
     'event-001',
     'organization-001',
     '184',
+    'pipeline-main',
+    'stage-qualification',
     'qualification',
+    'stage-negotiation',
     'negotiation',
     new EventMetadata('correlation-001', null, 'USER', 'manager-001'),
 );
@@ -89,7 +92,10 @@ $rolledBackEvent = DealStageChanged::create(
     'event-rollback',
     'organization-001',
     '185',
+    'pipeline-main',
+    'stage-new',
     'new',
+    'stage-qualification',
     'qualification',
     new EventMetadata('correlation-rollback', null, 'USER', 'manager-001'),
 );
