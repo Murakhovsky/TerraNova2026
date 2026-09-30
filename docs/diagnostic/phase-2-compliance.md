@@ -5,7 +5,7 @@ Status: complete for the deterministic Phase 2 contract.
 | Requirement | Implementation | Deterministic verification |
 |---|---|---|
 | Pack schema | `methodology-pack-phase2.schema.json`; immutable definitions under `Methodology/Model` | JSON/YAML fixtures compile to the same canonical hash |
-| JSON/YAML loader | `PackLoader`; safe dependency-free YAML fallback with no tags, anchors or aliases | `diagnostic_methodology_contract.php` |
+| JSON/YAML loader | `PackLoader`; safe dependency-free YAML fallback with no tags, anchors or aliases | `tests/smoke/diagnostic_methodology.php` |
 | Pack validator | IDs, references, types, operators, ranges, weights, score bands, dependency targets/cycles | Negative contract scenarios for unknown IDs, duplicates, empty groups, overlaps and cycles |
 | Metric registry | `MetricRegistry::get/has/all` | Known and unknown lookup scenarios |
 | Rule engine | Facts, metrics and assessments only; comparison/existence operators plus AND/OR/NOT | Every Phase 2 operator and combinator is exercised |
