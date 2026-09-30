@@ -2,8 +2,10 @@
 declare(strict_types=1);
 
 use Kernel\Action\Action;
+use Kernel\Action\ActionExecutionClaim;
 use Kernel\Action\ActionProposal;
 use Kernel\Action\ActionStatus;
+use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\ActionHandlerInterface;
 use Kernel\Action\Contract\ActionRepositoryInterface;
 use Kernel\Action\ExecutionResult;
@@ -50,21 +52,25 @@ $repository = new class implements ActionRepositoryInterface {
         if (!$action || $action->organizationId !== $organizationId || $action->status !== $from) return false;
         $action->transitionTo($to); return true;
     }
-    public function claimNext(string $workerId): ?Action {
+    public function claimNext(string $workerId): ?ActionExecutionClaim {
         foreach ($this->items as $action) {
-            if ($action->status === ActionStatus::Queued) { $action->transitionTo(ActionStatus::Running); return $action; }
-        }
-        return null;
-    }
-    public function claim(string $organizationId, string $id, string $workerId): ?Action {
-        foreach ($this->items as $action) {
-            if ($action->organizationId === $organizationId && $action->id === $id && $action->status === ActionStatus::Queued) {
-                $action->transitionTo(ActionStatus::Running); return $action;
+            if ($action->status === ActionStatus::Queued) {
+                $action->transitionTo(ActionStatus::Running);
+                return new ActionExecutionClaim($action, 1, $workerId);
             }
         }
         return null;
     }
-    public function finish(Action $action, ExecutionResult $result): void {}
+    public function claim(string $organizationId, string $id, string $workerId): ?ActionExecutionClaim {
+        foreach ($this->items as $action) {
+            if ($action->organizationId === $organizationId && $action->id === $id && $action->status === ActionStatus::Queued) {
+                $action->transitionTo(ActionStatus::Running);
+                return new ActionExecutionClaim($action, 1, $workerId);
+            }
+        }
+        return null;
+    }
+    public function finish(ActionExecutionClaim $claim, ExecutionResult $result): void {}
     public function requeueStale(int $olderThanSeconds): int { return 0; }
 };
 $executions = 0;
@@ -73,7 +79,10 @@ $handler = new class($executions) implements ActionHandlerInterface {
     public function supports(string $actionType): bool { return $actionType === 'sales.send_message'; }
     public function execute(Action $action): ExecutionResult { $this->executions++; return ExecutionResult::success(['sent' => true]); }
 };
-$service = new ActionService($repository, new ActionExecutor([$handler]));
+$executionGate = new class implements ActionExecutionGateInterface {
+    public function assertExecutable(Action $action): void {}
+};
+$service = new ActionService($repository, new ActionExecutor([$handler], $executionGate));
 $proposal = new ActionProposal(
     'sales.send_message', 'deal', '184', ['channel' => 'telegram'],
     'AGENT', 'run-1', 'AUTO', 'MEDIUM', 'deal-184-financing-followup',

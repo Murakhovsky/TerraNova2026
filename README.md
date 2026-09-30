@@ -1,76 +1,76 @@
 # TerraNova COS
 
-TerraNova is a modular-monolith implementation of the Company Operating System kernel. The runtime turns business events into deterministic or agent-assisted decisions, passes every proposed mutation through policy, executes it through a Domain-owned adapter, and records the result.
+TerraNova COS is a modular-monolith Company Operating System. **Symfony 7.4 is the canonical application runtime**; business code remains framework-independent under `app/`.
+
+The current production baseline is PHP 8.3, MySQL, Symfony Messenger/Scheduler, Twig/UX and the COS Kernel/Domain runtime.
 
 ```text
 Business transaction
-  -> Event + Outbox
-  -> durable consumer
-  -> Rule or Agent
-  -> Action
-  -> Policy (AUTO / APPROVAL_REQUIRED / DENIED)
-  -> durable Job
-  -> Domain handler
-  -> CRM/MySQL adapter
-  -> Result Event + Audit + Metric
+  → Domain use case
+  → State change + Event + Outbox
+  → Rule / Agent when needed
+  → Policy / Approval
+  → durable execution
+  → Domain-owned port / adapter
+  → Result Event + Audit + Metrics
 ```
 
-The Kernel contains reusable mechanisms only. `Domains/Sales` supplies Sales vocabulary and use cases through composition; it does not inherit from the Kernel. Symfony is the canonical runtime for business and control-plane APIs. Phalcon is retained only for the remaining server-rendered/compatibility surfaces while those are retired slice by slice.
-
-The supported runtime baseline is PHP 8.2 or newer with Phalcon 5.9 or newer. The production image currently uses PHP 8.3 and Phalcon 5.19; the same codebase and Composer lock also work with the prepared native PHP 8.2 runtime.
-
-## Production start
-
-1. Copy `.env.docker.example` to `.env.docker` and replace every placeholder/secret.
-2. Start the compatibility/SSR stack:
+## Start
 
 ```bash
+cp .env.docker.example .env.docker
 docker compose --env-file .env.docker up -d --build
+docker compose exec php php bin/console cos:schema:migrate
+docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 ```
 
-3. Start the canonical Symfony API runtime after the compatibility stack exists:
-
-```bash
-bash deploy/symfony-dev.sh
-```
-
-The compatibility stack remains responsible only for the shrinking SSR surface and the framework-neutral schema bootstrap. Canonical business/control-plane HTTP under `/api/v1/*`, Kernel queue/outbox processing, Spatial processing, n8n outbox processing, Messenger and Scheduler run on Symfony. Host Nginx routes canonical APIs to Symfony and leaves only the remaining web surface on the compatibility host. Database schema changes remain deployment-owned; the Symfony application account has DML privileges only.
-
-Useful endpoints and commands:
+Health:
 
 ```text
-GET  /api/v1/health
-GET  /cos/control-center
-POST /api/integrations/{organization}/crm/{provider}/webhook
-
-php bin/migrate.php status
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:legacy-schema:status
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:spatial:process --limit=10
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:integration:n8n:process --schedule-content --limit=25
-
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:validate --organization=default
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:config:provision --organization=default --actor=cos-bootstrap
-
-# Growth production cutover: status → enable → live verify → rollback
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover status --organization=default
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover enable --organization=default --actor=<user-id> --confirm=ENABLE_GROWTH
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover verify --organization=default --candidate=<GCND-id>
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:growth:cutover rollback --organization=default --actor=<user-id> --confirm=DISABLE_GROWTH
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:outbox:run
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:outbox:replay --organization=default --event-id=<event-id>
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:queue:replay-dead --organization=default --job-id=<job-id>
-docker compose -f docker-compose.symfony.yml exec php php bin/console cos:agent:purge-inputs
+GET /health/dependencies
+GET /api/v1/health
 ```
 
-For a native development server without Docker, configure the extensions used by the project, apply migrations with `php bin/migrate.php up`, and run `php -S 127.0.0.1:8080 -t public public/router.php`. MySQL remains the only required durable service.
+## Verification
 
-CRM webhooks require `X-CRM-Event-Id` and `X-CRM-Signature: sha256=<HMAC>`. Store the secret in the environment variable referenced by `cos_integrations.credentials_reference` (`env:VARIABLE_NAME`) or in a fallback such as `CRM_WEBHOOK_SECRET_DEFAULT_AIDA`. Providers send canonical external event names (`deal.updated`, `deal.stage_changed`, `lead.updated`, `lead.changed`); the inbound adapter maps them to Domain-owned Sales events instead of trusting callers to name internal events.
+COS V1 uses one verification entrypoint:
 
-## Architecture and verification
+```bash
+bash bin/verify fast
+bash bin/verify smoke
+bash bin/verify full
+bash bin/verify integration
+```
 
-- Canonical architecture: [`docs/architecture/cos-kernel.md`](docs/architecture/cos-kernel.md)
-- Domain boundary audit: [`docs/architecture/domain-boundaries.md`](docs/architecture/domain-boundaries.md)
-- Diagnostic domain model and methodology contract: [`docs/architecture/diagnostic-domain-model.md`](docs/architecture/diagnostic-domain-model.md)
-- Sales development guide: [`app/Domains/Sales/README.md`](app/Domains/Sales/README.md)
-- Implementation report: [`docs/architecture/implementation-report-2026-08-26.md`](docs/architecture/implementation-report-2026-08-26.md)
-- Automated checks: `tests/architecture`, `tests/smoke`, and `tests/integration`
+Historical Wave/version tests are retained under `tests/history/` as migration evidence and are **not part of the active suite**.
+
+## Documentation
+
+Canonical documentation lives in `docs/`.
+
+- Current product state: [docs/01-product/current-scope.md](docs/01-product/current-scope.md)
+- System architecture: [docs/03-architecture/system-map.md](docs/03-architecture/system-map.md)
+- Kernel: [docs/03-architecture/kernel-overview.md](docs/03-architecture/kernel-overview.md)
+- Domain map: [docs/03-architecture/domain-map.md](docs/03-architecture/domain-map.md)
+- Testing and verification: [docs/09-development/testing.md](docs/09-development/testing.md)
+- Operations: [docs/10-operations/deployment-and-health.md](docs/10-operations/deployment-and-health.md)
+- Generated executable reference: [docs/12-reference/README.md](docs/12-reference/README.md)
+- ADRs: [docs/11-decisions/README.md](docs/11-decisions/README.md)
+
+Historical migration/release documentation is outside the published knowledge surface under `archive/documentation/`.
+
+## Source-of-truth order
+
+```text
+current code + tests
+        ↓
+machine-readable manifests / process definitions
+        ↓
+generated reference
+        ↓
+current narrative documentation
+        ↓
+ADR for durable decisions
+```
+
+Git history and `archive/` preserve migration evidence. Active documentation describes the current system, not every step used to reach it.

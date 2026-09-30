@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+suite="${1:-fast}"
+
+run_list() {
+  local label="$1"; shift
+  echo "==> $label"
+  local file
+  local count=0
+  for file in "$@"; do
+    test -f "$file" || { echo "Missing verification file: $file" >&2; exit 66; }
+    count=$((count + 1))
+    case "$file" in
+      *.php) php "$file" ;;
+      *.sh) bash "$file" ;;
+      *.mjs) node "$file" ;;
+    esac
+  done
+  echo "<== $label: $count files"
+}
+
+contract() {
+  mapfile -t files < <(find tests/architecture -maxdepth 1 -type f -name '*.php' | sort)
+  run_list "Current architecture/contracts" "${files[@]}"
+}
+
+unit() {
+  mapfile -t files < <(find tests/unit -maxdepth 1 -type f -name '*.php' | sort)
+  run_list "Unit behavior" "${files[@]}"
+}
+
+smoke() {
+  run_list "Smoke vertical slices" \
+    tests/smoke/action_engine.php \
+    tests/smoke/agent_runtime.php \
+    tests/smoke/agent_safety.php \
+    tests/smoke/configuration.php \
+    tests/smoke/durable_outbox.php \
+    tests/smoke/event_bus.php \
+    tests/smoke/queue_retry.php \
+    tests/smoke/public_lead.php \
+    tests/smoke/crm_webhook.php \
+    tests/smoke/crm_routing.php \
+    tests/smoke/crm_inbox_processing.php \
+    tests/smoke/deterministic_sales_processes.php \
+    tests/smoke/diagnostic_domain.php \
+    tests/smoke/diagnostic_methodology.php \
+    tests/smoke/property_workflow.php \
+    tests/smoke/sales_workspace.php
+}
+
+integration() {
+  mapfile -t files < <(find tests/integration -maxdepth 1 -type f \( -name '*.php' -o -name '*.sh' \) | sort)
+  run_list "Integration" "${files[@]}"
+}
+
+case "$suite" in
+  contract) contract ;;
+  unit) unit ;;
+  smoke) smoke ;;
+  integration) integration ;;
+  fast) contract; unit ;;
+  full) contract; unit; smoke ;;
+  *)
+    echo "Usage: bash bin/verify {fast|full|contract|unit|smoke|integration}" >&2
+    exit 64
+    ;;
+esac

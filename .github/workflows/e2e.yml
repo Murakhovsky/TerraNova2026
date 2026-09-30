@@ -1,0 +1,40 @@
+name: E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sales-browser:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Prepare browser credentials
+        env:
+          SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          SALES_E2E_STORAGE_STATE_JSON: ${{ secrets.SALES_E2E_STORAGE_STATE_JSON }}
+        run: |
+          test -n "$SALES_E2E_BASE_URL"
+          test -n "$SALES_E2E_STORAGE_STATE_JSON"
+          printf '%s' "$SALES_E2E_STORAGE_STATE_JSON" > "$RUNNER_TEMP/sales-e2e-storage.json"
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: Accessibility
+        env:
+          GOLDEN_FOUR_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          GOLDEN_FOUR_STORAGE_STATE: ${{ runner.temp }}/sales-e2e-storage.json
+        run: npm run test:golden-four-accessibility
+      - name: Mutation-safe Sales E2E
+        env:
+          SALES_E2E_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
+          SALES_E2E_STORAGE_STATE: ${{ runner.temp }}/sales-e2e-storage.json
+          SALES_E2E_MUTATION_SAFE: '1'
+        run: npm run test:sales-browser

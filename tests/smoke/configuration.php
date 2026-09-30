@@ -11,6 +11,10 @@ use Kernel\Configuration\Service\ConfigurationValidator;
 use Kernel\Event\DomainEvent;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Module\DomainModuleRegistry;
+use Kernel\Module\Contract\ActionOwningModuleInterface;
+use Kernel\Module\Contract\EventOwningModuleInterface;
+use Kernel\Module\Contract\PolicyProvidingModuleInterface;
+use Kernel\Module\Contract\RuleProvidingModuleInterface;
 use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\PolicyDecision;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
@@ -24,7 +28,7 @@ spl_autoload_register(static function (string $class) use ($root): void {
     }
 });
 
-$module = new class implements DomainModuleInterface {
+$module = new class implements DomainModuleInterface, EventOwningModuleInterface, ActionOwningModuleInterface, RuleProvidingModuleInterface, PolicyProvidingModuleInterface {
     public function name(): string { return 'sample'; }
     public function eventTypes(): array { return ['sample.changed']; }
     public function actionTypes(): array { return ['sample.review']; }

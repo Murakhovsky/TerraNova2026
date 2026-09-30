@@ -263,6 +263,13 @@ if (!fs.existsSync(docsRoot)) {
 }
 
 const markdownFiles = walk(docsRoot);
+
+for (const file of markdownFiles) {
+  const relative = relativeToDocs(file);
+  if (/^03-architecture\/.+(?:wave\d+|v0\.\d+|cutover|closure|migration-tracker|retirement|adoption)/i.test(relative)) {
+    errors.push(`${relative}: historical migration/version document must live outside active docs`);
+  }
+}
 for (const file of markdownFiles) {
   const content = fs.readFileSync(file, 'utf8');
   const frontmatter = parseFrontmatter(file, content);

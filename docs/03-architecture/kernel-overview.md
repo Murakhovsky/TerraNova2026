@@ -12,7 +12,7 @@ kind: architecture
 
 Поточний executable Kernel contract: **`0.11.9`**. Це службовий маркер версії, тобто поточний **виконуваний контракт ядра**.
 
-Детальний канонічний документ: [`docs/architecture/cos-kernel.md`](../architecture/cos-kernel.md).
+Пов'язані current-state документи: [System Map](system-map.md), [Execution lifecycle](../05-runtime/execution-lifecycle.md) та [Module lifecycle](../05-runtime/module-lifecycle.md).
 
 ## Чим володіє ядро
 
@@ -109,7 +109,7 @@ Bootstrap      → усі конкретні шари
 
 ## Модель розширень
 
-Починаючи з Kernel V0.9, нова поверхня розширення не вимагає жорстко прописувати кожен домен у спільному Bootstrap.
+Поточна поверхня розширення не вимагає жорстко прописувати кожен домен у спільному Bootstrap.
 
 ```text
 module.php
@@ -129,7 +129,7 @@ ModuleExtensionRegistry — реєстр розширень
 
 ## Керована модель мовних моделей
 
-Kernel V0.10 зробив структурований доступ до LLM керованим механізмом середовища виконання:
+Поточний Kernel надає структурований керований доступ до LLM:
 
 ```text
 StructuredLlmRequest — структурований запит

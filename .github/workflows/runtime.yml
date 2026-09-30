@@ -1,0 +1,134 @@
+name: Runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'symfony/**'
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - 'deploy/**'
+      - 'tests/smoke/**'
+      - 'bin/verify'
+      - '.github/workflows/runtime.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    env:
+      MYSQL_DATABASE: cos
+      MYSQL_USER: cos
+      MYSQL_PASSWORD: ci-cos-password
+      MYSQL_ROOT_PASSWORD: ci-root-password
+      SYMFONY_APP_SECRET: ci-app-secret-0123456789abcdef
+      COS_ORGANIZATION_ID: default
+      COS_AGENT_LLM_MODE: fixture
+      LLM_PROVIDER: fixture
+      LLM_MODEL: ci-fixture
+      SPATIAL_JWT_SECRET: ci-spatial-secret-0123456789abcdef
+      N8N_WEBHOOK_SECRET: ci-n8n-secret
+      MERCURE_JWT_SECRET: ci-mercure-secret-0123456789abcdef
+      MERCURE_PUBLIC_URL: http://127.0.0.1:8081/.well-known/mercure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci
+      - run: npm run build
+      - name: Current verification
+        run: bash bin/verify fast
+      - name: Compose validation
+        run: docker compose config --quiet
+      - name: Build runtime
+        run: docker compose build php nginx
+      - name: Start dependencies
+        run: docker compose up -d --wait mysql redis mercure
+      - name: Apply schema
+        run: |
+          docker compose run --rm --no-deps php php bin/console cos:schema:migrate
+          docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Start runtime
+        run: docker compose up -d --remove-orphans
+      - name: Container and routes
+        run: |
+          docker compose exec -T php php bin/console lint:container
+          docker compose exec -T php php bin/console debug:router > /tmp/routes.txt
+          grep -q 'cos_symfony_home' /tmp/routes.txt
+      - name: Health
+        run: |
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:8081/health/dependencies && exit 0
+            sleep 2
+          done
+          docker compose ps -a
+          docker compose logs --no-color --tail=250 nginx php mysql redis
+          exit 1
+      - name: Runtime contracts
+        run: |
+          docker compose exec -T php php bin/console cos:architecture:smoke
+          docker compose exec -T php php bin/console cos:web:experience:smoke
+          docker compose exec -T php php bin/console cos:web:toolkit:smoke
+          docker compose exec -T php php bin/console cos:web:design-system:smoke
+      - name: Smoke vertical slices
+        run: bash bin/verify smoke
+
+  deploy-dev:
+    name: Deploy main to AWS dev
+    needs: runtime
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      COMPANY_OS_DOMAIN: company-os.shop
+      COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/health/dependencies
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci && npm run build
+      - name: Configure SSH
+        run: |
+          test -n "$DEV_HOST" && test -n "$DEV_USER" && test -n "$DEV_PORT" && test -n "$DEV_SSH_KEY" && test -n "$DEV_PATH"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/dev_deploy_key
+          chmod 600 ~/.ssh/dev_deploy_key
+          ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
+      - name: Sync repository
+        run: |
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- '$DEV_PATH'"
+          rsync -az --delete \
+            --exclude='.git/' --exclude='.env' --exclude='.env.docker' \
+            --exclude='vendor/' --exclude='node_modules/' --exclude='tmp/' \
+            --exclude='public/uploads/' --exclude='public/docs/' \
+            -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
+            ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "cd '$DEV_PATH' && bash deploy/dev.sh && bash deploy/configure-company-os-http.sh '$COMPANY_OS_DOMAIN' 127.0.0.1:8081 && bash deploy/configure-dev-tls.sh '$COMPANY_OS_DOMAIN' 127.0.0.1:8081"
+      - name: External health
+        run: curl --fail --show-error --silent --location --retry 3 --retry-delay 2 --retry-connrefused "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
