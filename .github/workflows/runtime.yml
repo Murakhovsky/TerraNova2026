@@ -91,7 +91,15 @@ jobs:
           UI_AUDIT_EMAIL: ui-audit@example.test
           UI_AUDIT_PASSWORD: UiAudit-CI-Temporary-Ab9!
         run: |
-          docker compose run --rm --no-deps -v "$PWD:/var/www/html" -w /var/www/html -e COS_ADMIN_PASSWORD="$UI_AUDIT_PASSWORD" php php bin/create-admin.php "$UI_AUDIT_EMAIL" "UI Route Audit"
+          AUDIT_HASH="$(php -r 'echo password_hash(getenv("UI_AUDIT_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('default','$UI_AUDIT_EMAIL','$AUDIT_HASH','UI Route Audit','admin','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='admin',status='active';
+            INSERT INTO cos_organization_memberships (organization_id,user_id,role,status)
+            SELECT 'default',id,'admin','ACTIVE' FROM tn_users WHERE email='$UI_AUDIT_EMAIL'
+            ON DUPLICATE KEY UPDATE role='admin',status='ACTIVE';
+          "
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/ui_route_audit.mjs
