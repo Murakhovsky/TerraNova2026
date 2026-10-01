@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 
 const baseUrl = process.env.UI_AUDIT_BASE_URL || process.env.SALES_E2E_BASE_URL || 'https://company-os.shop';
 const storageStatePath = process.env.UI_AUDIT_STORAGE_STATE || '';
+const auditEmail = process.env.UI_AUDIT_EMAIL || '';
+const auditPassword = process.env.UI_AUDIT_PASSWORD || '';
 const outputDir = resolve('tmp/ui-route-audit');
 await mkdir(outputDir, { recursive: true });
 
@@ -47,6 +49,7 @@ const publicPrefixes = [
   '/property/create', '/submit-property', '/cos/'
 ];
 
+const publicExact = new Set(['/', '/cos', '/property', '/sitemap.xml', '/robots.txt']);
 const privateExact = new Set([
   '/admin', '/cabinet', '/property/map', '/cos/control-center',
   '/cos/architecture', '/cos/architecture/graph', '/cos/architecture/health'
@@ -69,7 +72,7 @@ function isPrivate(path) {
     path.startsWith('/property/submission') ||
     path.startsWith('/dev/')
   ) return true;
-  if (path === '/') return false;
+  if (publicExact.has(path)) return false;
   return !publicPrefixes.some((prefix) => path.startsWith(prefix));
 }
 
@@ -97,9 +100,35 @@ if (storageStatePath) {
 
 const browser = await chromium.launch({ headless: true, executablePath });
 const publicContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const privateContext = authState
-  ? await browser.newContext({ viewport: { width: 1440, height: 1000 }, storageState: storageStatePath })
-  : null;
+
+let privateContext = null;
+if (authState) {
+  privateContext = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+    storageState: storageStatePath
+  });
+} else if (auditEmail && auditPassword) {
+  privateContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const loginPage = await privateContext.newPage();
+  const loginResponse = await loginPage.goto(new URL('/auth/login', baseUrl).toString(), {
+    waitUntil: 'domcontentloaded',
+    timeout: 25000
+  });
+  if (!loginResponse || loginResponse.status() >= 400) {
+    throw new Error('Audit login page is unavailable.');
+  }
+  await loginPage.locator('input[name="email"]').fill(auditEmail);
+  await loginPage.locator('input[name="password"]').fill(auditPassword);
+  await Promise.all([
+    loginPage.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
+    loginPage.locator('button[type="submit"]').click()
+  ]);
+  if (new URL(loginPage.url()).pathname === '/auth/login') {
+    throw new Error('Disposable audit admin failed to authenticate.');
+  }
+  authState = true;
+  await loginPage.close();
+}
 
 const hrefs = new Set();
 const results = [];
