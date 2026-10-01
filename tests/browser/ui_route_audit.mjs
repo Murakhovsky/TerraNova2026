@@ -132,6 +132,13 @@ if (authState) {
 
 const hrefs = new Set();
 const results = [];
+const explicitDynamicPaths = new Map([
+  ['/cos/{lang}', '/cos/en'],
+  ['/cos/{lang}/domains/{slug}', '/cos/en/domains/sales'],
+  ['/property/type/{code}', '/property/type/apartment'],
+  ['/property/city/{slug}', '/property/city/kyiv'],
+  ['/nerukhomist/{location}/{type}', '/nerukhomist/kyiv/apartment'],
+]);
 const absolute = (path) => new URL(path, baseUrl).toString();
 
 function escapeRegex(value) {
@@ -293,7 +300,7 @@ try {
 
   for (const route of routes.filter((r) => isDynamic(r.path))) {
     const rx = templateRegex(route.path);
-    const candidate = [...hrefs]
+    const candidate = explicitDynamicPaths.get(route.path) || [...hrefs]
       .map((href) => {
         try { return new URL(href, baseUrl).pathname; } catch { return href; }
       })
