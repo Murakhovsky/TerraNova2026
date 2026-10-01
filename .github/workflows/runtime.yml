@@ -85,6 +85,23 @@ jobs:
           docker compose exec -T php php bin/console cos:web:design-system:smoke
       - name: Smoke vertical slices
         run: bash bin/verify smoke
+      - name: Authenticated UI route audit
+        env:
+          UI_AUDIT_BASE_URL: http://127.0.0.1:8081
+          UI_AUDIT_EMAIL: ui-audit@example.test
+          UI_AUDIT_PASSWORD: UiAudit-CI-Temporary-Ab9!
+        run: |
+          docker compose exec -T -e COS_ADMIN_PASSWORD="$UI_AUDIT_PASSWORD" php php bin/create-admin.php "$UI_AUDIT_EMAIL" "UI Route Audit"
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" node tests/browser/ui_route_audit.mjs
+      - name: Upload authenticated UI audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authenticated-ui-route-audit
+          path: tmp/ui-route-audit/
+          if-no-files-found: warn
 
   deploy-dev:
     name: Deploy main to AWS dev
