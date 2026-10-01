@@ -1,113 +1,89 @@
-import { buildSidebar, buildEnglishSidebar } from './sidebar.mjs';
+import { buildSidebar } from './sidebar.mjs';
+import { LOCALES, getLocale, localizedRoute, localizedUrl } from './locales.mjs';
 import { buildSystemStatus } from './system-status.mjs';
 import { installMermaidMarkdown } from './mermaid-markdown.mjs';
 
 const docsBase = process.env.COS_DOCS_BASE || '/docs/';
 const cosSystemStatus = buildSystemStatus();
 
-const ukrainianSearch = {
-  provider: 'local',
-  options: {
-    translations: {
-      button: {
-        buttonText: 'Пошук',
-        buttonAriaLabel: 'Пошук у документації',
-      },
-      modal: {
-        noResultsText: 'Нічого не знайдено',
-        resetButtonTitle: 'Очистити',
-        footer: {
-          selectText: 'вибрати',
-          navigateText: 'перейти',
-          closeText: 'закрити',
+function searchFor(locale) {
+  if (locale.id !== 'uk') return { provider: 'local' };
+
+  return {
+    provider: 'local',
+    options: {
+      translations: {
+        button: {
+          buttonText: 'Пошук',
+          buttonAriaLabel: 'Пошук у документації',
+        },
+        modal: {
+          noResultsText: 'Нічого не знайдено',
+          resetButtonTitle: 'Очистити',
+          footer: {
+            selectText: 'вибрати',
+            navigateText: 'перейти',
+            closeText: 'закрити',
+          },
         },
       },
     },
-  },
-};
+  };
+}
 
-const ukrainianTheme = {
-  siteTitle: 'COS',
-  nav: [
-    { text: 'Для бізнесу', link: '/for-business/' },
-    { text: 'Можливості', link: '/for-business/capabilities' },
-    { text: 'Для впровадження', link: '/for-integrators/' },
-    { text: 'Для розробників', link: '/for-developers/' },
-    { text: 'GitHub', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
-  ],
-  sidebar: buildSidebar(),
-  sidebarMenuLabel: 'Навігація',
-  returnToTopLabel: 'На початок',
-  darkModeSwitchLabel: 'Тема',
-  langMenuLabel: 'Змінити мову',
-  outline: { level: [2, 3], label: 'На цій сторінці' },
-  search: ukrainianSearch,
-  editLink: {
-    pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/main/docs/:path',
-    text: 'Редагувати сторінку',
-  },
-  lastUpdated: { text: 'Оновлено', formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
-  docFooter: { prev: 'Попередня сторінка', next: 'Наступна сторінка' },
-  socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' }],
-  footer: {
-    message: 'Канонічна гілка: main · Джерело правди: поточний код, тести, декларації та документація.',
-    copyright: 'Terra Nova · COS',
-  },
-};
+function themeFor(locale) {
+  return {
+    siteTitle: 'COS',
+    nav: [
+      { text: locale.ui.business, link: localizedUrl(locale.id, 'for-business') },
+      { text: locale.ui.implementation, link: localizedUrl(locale.id, 'for-integrators') },
+      { text: locale.ui.developers, link: localizedUrl(locale.id, 'for-developers') },
+      { text: locale.ui.github, link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
+    ],
+    sidebar: buildSidebar(locale.id),
+    sidebarMenuLabel: locale.ui.sidebarMenuLabel,
+    returnToTopLabel: locale.ui.returnToTopLabel,
+    darkModeSwitchLabel: locale.ui.darkModeSwitchLabel,
+    langMenuLabel: locale.ui.langMenuLabel,
+    outline: { level: [2, 3], label: locale.ui.outlineLabel },
+    search: searchFor(locale),
+    editLink: {
+      pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/main/docs/:path',
+      text: locale.ui.editPage,
+    },
+    lastUpdated: { text: locale.ui.updated, formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
+    docFooter: { prev: locale.ui.previous, next: locale.ui.next },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' }],
+    footer: {
+      message: locale.ui.footer,
+      copyright: 'Terra Nova · COS',
+    },
+  };
+}
 
-const englishTheme = {
-  siteTitle: 'COS',
-  nav: [
-    { text: 'For business', link: '/en/for-business/' },
-    { text: 'For implementation', link: '/en/for-integrators/' },
-    { text: 'For developers', link: '/en/for-developers/' },
-    { text: 'GitHub', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' },
-  ],
-  sidebar: buildEnglishSidebar(),
-  sidebarMenuLabel: 'Navigation',
-  returnToTopLabel: 'Back to top',
-  darkModeSwitchLabel: 'Theme',
-  langMenuLabel: 'Change language',
-  outline: { level: [2, 3], label: 'On this page' },
-  search: { provider: 'local' },
-  editLink: {
-    pattern: 'https://github.com/Murakhovsky/TerraNova2026/edit/main/docs/:path',
-    text: 'Edit this page',
-  },
-  lastUpdated: { text: 'Updated', formatOptions: { dateStyle: 'medium', timeStyle: 'short' } },
-  docFooter: { prev: 'Previous page', next: 'Next page' },
-  socialLinks: [{ icon: 'github', link: 'https://github.com/Murakhovsky/TerraNova2026/tree/main' }],
-  footer: {
-    message: 'Canonical branch: main · Source of truth: current code, tests, manifests and documentation.',
-    copyright: 'Terra Nova · COS',
-  },
-};
+const vitepressLocales = Object.fromEntries(
+  LOCALES.map((locale) => [
+    locale.viteKey,
+    {
+      label: locale.label,
+      lang: locale.lang,
+      ...(locale.prefix ? { link: '/' + locale.prefix + '/' } : {}),
+      title: 'COS',
+      description: locale.description,
+      themeConfig: themeFor(locale),
+    },
+  ]),
+);
 
 export default {
   title: 'COS',
-  description: 'Документація операційної системи компанії COS.',
+  description: 'COS documentation.',
   base: docsBase,
   outDir: '../public/docs',
   cleanUrls: false,
   lastUpdated: true,
   appearance: true,
-  locales: {
-    root: {
-      label: 'Українська',
-      lang: 'uk-UA',
-      title: 'COS',
-      description: 'Операційна система компанії: можливості, впровадження та розробка.',
-      themeConfig: ukrainianTheme,
-    },
-    en: {
-      label: 'English',
-      lang: 'en-US',
-      link: '/en/',
-      title: 'COS',
-      description: 'Company Operating System: product, implementation and development documentation.',
-      themeConfig: englishTheme,
-    },
-  },
+  locales: vitepressLocales,
   markdown: {
     lineNumbers: true,
     config(md) {
@@ -122,22 +98,8 @@ export default {
   themeConfig: {
     cosSystemStatus,
     i18nRouting(data, route, targetLocale) {
-      const relativePath = route.data.relativePath.replace(/\.md$/, '');
-
-      if (targetLocale === 'en') {
-        if (relativePath === 'index') return '/en/';
-        if (relativePath.startsWith('for-business/')) return '/en/for-business/';
-        if (relativePath.startsWith('for-integrators/')) return '/en/for-integrators/';
-        if (relativePath.startsWith('for-developers/')) return '/en/for-developers/';
-        return '/en/for-developers/';
-      }
-
-      if (relativePath === 'en/index') return '/';
-      if (relativePath.startsWith('en/for-business/')) return '/for-business/';
-      if (relativePath.startsWith('en/for-integrators/')) return '/for-integrators/';
-      if (relativePath.startsWith('en/for-developers/')) return '/for-developers/';
-      if (relativePath.startsWith('en/')) return '/for-developers/';
-      return `/${relativePath}/`;
+      getLocale(targetLocale);
+      return localizedRoute(route.data.relativePath, targetLocale);
     },
   },
 };
