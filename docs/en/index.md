@@ -29,7 +29,11 @@ features:
   <section class="cos-home-section cos-home-section--first">
     <div class="cos-home-section__head">
       <div>
-        <div class="cos-home-kicker">One product · three reading paths</div>
+        <div class="cos-home-kicker">One product · three reading paths  <div class="cos-home-footer-note">
+    <span>Ukrainian and English share the same three-audience structure. Additional locales can be added without changing the information architecture.</span>
+    <span>COS · Terra Nova</span>
+  </div>
+</div>
         <h2>Start with what you need from COS</h2>
       </div>
       <p>Business readers, implementation professionals and developers use the same knowledge base, but they do not need the same level of detail.</p>
