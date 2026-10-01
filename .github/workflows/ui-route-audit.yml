@@ -24,7 +24,7 @@ jobs:
       - run: npm ci
       - name: Prepare browser state
         env:
-          STORAGE_JSON: \${{ secrets.SALES_E2E_STORAGE_STATE_JSON }}
+          STORAGE_JSON: ${{ secrets.SALES_E2E_STORAGE_STATE_JSON }}
         run: |
           if [ -n "$STORAGE_JSON" ]; then
             printf '%s' "$STORAGE_JSON" > "$RUNNER_TEMP/ui-audit-storage.json"
@@ -35,7 +35,7 @@ jobs:
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
       - name: Audit live Web routes
         env:
-          UI_AUDIT_BASE_URL: \${{ secrets.SALES_E2E_BASE_URL }}
+          UI_AUDIT_BASE_URL: ${{ secrets.SALES_E2E_BASE_URL }}
         run: |
           if [ -z "$UI_AUDIT_BASE_URL" ]; then
             export UI_AUDIT_BASE_URL="https://company-os.shop"
