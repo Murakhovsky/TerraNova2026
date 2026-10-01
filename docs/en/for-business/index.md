@@ -1,33 +1,35 @@
 ---
 title: COS for business
 status: active
-updated: 2026-09-15
+updated: 2026-10-01
 kind: concept
 ---
 
 # COS for business
 
-**COS is a Company Operating System.** It connects business processes, responsibility, data, automation and AI into one controlled operational model.
+**COS is a Company Operating System.** It connects people, processes, data, software, automation and AI so a company can work as one controlled system instead of a collection of disconnected tools.
 
-The goal is not to replace every CRM, accounting product, messenger or document system. COS coordinates work across them and keeps the business process, current state, authority and execution history visible.
+In simple terms, COS should help answer five questions: **What is happening now? Who is responsible? What should happen next? What information is needed? Where must a person make the decision?**
 
-## What problem it solves
+## Start here
 
-Companies usually accumulate separate tools faster than they accumulate a shared operating model. Data becomes fragmented, work depends on individual employees, managers reconstruct reality manually, and automation handles isolated actions without understanding the whole process.
+- [What COS gives a company](./capabilities.md)
+- [Use cases](./use-cases.md)
+- [How implementation works](./implementation.md)
+- [Frequently asked questions](./faq.md)
 
-COS provides the coordination layer between people and systems.
+## COS is not another app for every problem
 
-## What a company gains
+A company may already use CRM, accounting software, messengers, file storage and other services. COS does not need to replace all of them.
 
-- one view of operational state;
-- explicit processes and responsibility;
-- controlled automation;
-- AI with business context and bounded authority;
-- traceable decisions and execution history;
-- a foundation for connecting multiple business domains without turning them into one monolith.
+Its job is to coordinate work across those systems and keep the business process visible.
 
-## Typical use cases
+## A simple example
 
-Sales, property operations, business diagnostics, customer support, internal approvals, documents, procurement, finance, construction and other domains can be connected incrementally.
+A customer sends a request.
 
-For implementation, continue to the [implementation route](../for-integrators/).
+Without a shared operating system, the request may move through a form, chat, spreadsheet, CRM and several people. Nobody has a complete picture.
+
+With COS, the company can define who owns the request, what information is required, what should happen next, which steps can be automated and when a manager must intervene.
+
+That is the basic idea of COS.
