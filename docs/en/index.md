@@ -14,14 +14,14 @@ hero:
       text: Implementation guide
       link: /en/for-integrators/
 features:
-  - title: For business and users
+  - title: For business and partners
     details: Understand the product, its practical value, use cases and boundaries without reading technical architecture.
     link: /en/for-business/
-  - title: For implementation professionals
+  - title: For implementation
     details: Model processes, connect data and services, define authority and verify readiness for real operations.
     link: /en/for-integrators/
   - title: For developers
-    details: Architecture, domains, runtime, contracts, integrations, testing and the technical source of truth.
+    details: Architecture, domains, runtime, contracts and verification for engineers extending COS.
     link: /en/for-developers/
 ---
 
@@ -32,7 +32,7 @@ features:
         <div class="cos-home-kicker">One product · three reading paths</div>
         <h2>Start with what you need from COS</h2>
       </div>
-      <p>Business readers, implementation professionals and developers use the same knowledge base, but they do not need the same level of detail.</p>
+      <p>Business readers, implementation professionals and developers use the same knowledge base, but they need different levels of detail.</p>
     </div>
 
     <div class="cos-home-route-grid">
@@ -49,8 +49,13 @@ features:
       <a class="cos-home-route" href="./for-developers/">
         <small>03 / DEVELOPMENT</small>
         <strong>I want to extend the system</strong>
-        <span>Architecture, code boundaries, contracts, tests and technical reference.</span>
+        <span>Architecture, code boundaries, runtime, contracts and verification.</span>
       </a>
     </div>
   </section>
+
+  <div class="cos-home-footer-note">
+    <span>Ukrainian and English share the same three-audience structure. Additional locales can be added without changing the information architecture.</span>
+    <span>COS · Terra Nova</span>
+  </div>
 </div>

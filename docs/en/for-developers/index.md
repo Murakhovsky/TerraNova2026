@@ -1,25 +1,37 @@
 ---
 title: COS for developers
+description: "Technical entry point to COS architecture, domains, runtime and the development and verification model."
 status: active
-updated: 2026-09-15
+updated: 2026-10-01
 kind: development
 ---
 
 # COS for developers
 
-This is the English entry point to the COS technical model.
+This is the technical entry point for engineers who need to understand, change or extend COS safely.
 
-COS separates domain-owned business meaning from generic execution mechanisms. Domains own vocabulary, state and business rules. The Kernel provides reusable execution, event, policy, extension and observability mechanisms.
+## Recommended route
 
-## Core technical areas
+1. [Architecture](./architecture.md)
+2. [Domains and boundaries](./domains.md)
+3. [Runtime](./runtime.md)
+4. [Development and verification](./development.md)
 
-- system and domain architecture;
-- execution lifecycle;
-- module and extension runtime;
-- events, commands and policies;
-- integration boundaries;
-- AI agent governance;
-- testing and operational readiness;
-- generated executable reference.
+## Core principle
 
-The full English technical corpus is being migrated. Until that migration is complete, the Ukrainian developer section remains the canonical narrative documentation and the generated reference remains the canonical executable fact source.
+COS separates domain-owned business meaning from generic execution mechanisms.
+
+Domains own vocabulary, state and business rules. Kernel and Platform provide reusable mechanisms for execution, events, policies, integrations, automation and observability.
+
+## Before changing code
+
+Identify:
+
+- the semantic owner of the behavior;
+- the business process or use case that changes;
+- the data and state transitions involved;
+- external contracts that may change;
+- tenant and authorization implications;
+- the tests that prove the new behavior.
+
+The English developer guide provides a complete architectural orientation. The deeper Ukrainian technical corpus and executable source remain available for implementation-level details while additional technical translations can be added through the same locale structure.

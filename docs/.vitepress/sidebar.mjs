@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AUDIENCE_STRUCTURE, getLocale, localizedUrl, translated } from './locales.mjs';
 
 const docsRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -121,7 +122,26 @@ function itemsForDirectory(path) {
     .filter(Boolean);
 }
 
-export function buildSidebar() {
+function audienceSidebar(localeId) {
+  return AUDIENCE_STRUCTURE.map((audience) => ({
+    text: translated(audience.labels, localeId),
+    collapsed: false,
+    items: audience.pages.map((page) => {
+      const semantic = audience.directory + (page.slug === 'index' ? '' : '/' + page.slug);
+      return {
+        text: translated(page.labels, localeId),
+        link: localizedUrl(localeId, semantic),
+      };
+    }),
+  }));
+}
+
+export function buildSidebar(localeReference) {
+  const locale = getLocale(localeReference);
+  const audience = audienceSidebar(locale.id);
+
+  if (locale.id !== 'uk') return audience;
+
   const technicalBase = developerSections.map(([directory, text]) => ({
     text,
     collapsed: true,
@@ -129,55 +149,11 @@ export function buildSidebar() {
   }));
 
   return [
+    ...audience,
     {
-      text: 'Для бізнесу та користувачів',
-      collapsed: false,
-      items: [
-        { text: 'Що таке COS', link: '/for-business/' },
-        { text: 'Що COS дає компанії', link: '/for-business/capabilities' },
-        { text: 'Сценарії використання', link: '/for-business/use-cases' },
-        { text: 'Як відбувається впровадження', link: '/for-business/implementation' },
-        { text: 'Часті запитання', link: '/for-business/faq' },
-      ],
-    },
-    {
-      text: 'Для фахівців із впровадження',
-      collapsed: false,
-      items: [
-        { text: 'Маршрут впровадження', link: '/for-integrators/' },
-        { text: 'Дослідження процесу', link: '/for-integrators/discovery' },
-        { text: 'Дані та інтеграції', link: '/for-integrators/data-and-integrations' },
-        { text: 'Автоматизація і ШІ', link: '/for-integrators/automation-and-ai' },
-        { text: 'Перевірка готовності', link: '/for-integrators/readiness' },
-      ],
-    },
-    {
-      text: 'Для розробників',
-      collapsed: false,
-      items: [
-        { text: 'Вхід для розробника', link: '/for-developers/' },
-        ...technicalBase,
-      ],
-    },
-  ];
-}
-
-export function buildEnglishSidebar() {
-  return [
-    {
-      text: 'For business and users',
-      collapsed: false,
-      items: [{ text: 'What COS is', link: '/en/for-business/' }],
-    },
-    {
-      text: 'For implementation professionals',
-      collapsed: false,
-      items: [{ text: 'Implementation route', link: '/en/for-integrators/' }],
-    },
-    {
-      text: 'For developers',
-      collapsed: false,
-      items: [{ text: 'Developer entry point', link: '/en/for-developers/' }],
+      text: locale.ui.technicalCorpus,
+      collapsed: true,
+      items: technicalBase,
     },
   ];
 }
