@@ -79,5 +79,5 @@ Installable Domain описує себе через module declaration. Базо
 - [Архітектура COS](./architecture.md)
 - [Середовище виконання](./runtime.md)
 - [Карта доменів](../03-architecture/domain-map.md)
-- [Правила залежностей](../03-architecture/system-boundaries.md)
+- [Правила залежностей](../01-product/system-boundaries.md)
 - [Як додати домен](../09-development/adding-a-domain.md)

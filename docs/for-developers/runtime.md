@@ -83,6 +83,6 @@ Runtime розрізняє щонайменше:
 ## Куди йти далі
 
 - [Життєвий цикл виконання](../05-runtime/execution-lifecycle.md)
-- [Події та outbox](../05-runtime/event-bus-and-outbox.md)
+- [Події та outbox](../05-runtime/events-and-outbox.md)
 - [Архітектура COS](./architecture.md)
 - [Розробка і перевірка](./development.md)
