@@ -1,0 +1,49 @@
+name: UI Route Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/browser/ui_route_audit.mjs'
+      - '.github/workflows/ui-route-audit.yml'
+      - 'symfony/config/routes.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-ui-route-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Prepare browser state
+        env:
+          STORAGE_JSON: \${{ secrets.SALES_E2E_STORAGE_STATE_JSON }}
+        run: |
+          if [ -n "$STORAGE_JSON" ]; then
+            printf '%s' "$STORAGE_JSON" > "$RUNNER_TEMP/ui-audit-storage.json"
+            echo "UI_AUDIT_STORAGE_STATE=$RUNNER_TEMP/ui-audit-storage.json" >> "$GITHUB_ENV"
+          fi
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: Audit live Web routes
+        env:
+          UI_AUDIT_BASE_URL: \${{ secrets.SALES_E2E_BASE_URL }}
+        run: |
+          if [ -z "$UI_AUDIT_BASE_URL" ]; then
+            export UI_AUDIT_BASE_URL="https://company-os.shop"
+          fi
+          node tests/browser/ui_route_audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-route-audit
+          path: tmp/ui-route-audit/
+          if-no-files-found: error
