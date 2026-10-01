@@ -1,6 +1,6 @@
 ---
 title: COS for developers
-description: Technical entry point to COS architecture, domains, runtime and the development and verification model.
+description: "Technical entry point to COS architecture, domains, runtime and the development and verification model."
 status: active
 updated: 2026-10-01
 kind: development

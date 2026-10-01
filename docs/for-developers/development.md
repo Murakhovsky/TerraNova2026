@@ -1,6 +1,6 @@
 ---
 title: Розробка і перевірка COS
-description: Практичний цикл зміни COS від визначення власника поведінки до тестів, документації, pull request і production readiness.
+description: "Практичний цикл зміни COS від визначення власника поведінки до тестів, документації, pull request і production readiness."
 status: active
 updated: 2026-10-01
 kind: development

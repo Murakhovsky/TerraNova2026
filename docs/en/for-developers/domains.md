@@ -1,6 +1,6 @@
 ---
 title: Domains and boundaries
-description: How COS assigns business ownership to domains, controls dependencies and coordinates cross-domain behavior.
+description: "How COS assigns business ownership to domains, controls dependencies and coordinates cross-domain behavior."
 status: active
 updated: 2026-10-01
 kind: architecture

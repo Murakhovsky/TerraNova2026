@@ -1,6 +1,6 @@
 ---
 title: COS runtime
-description: Technical overview of COS execution context, actions, events, outbox, workers, retries, persistence and failure behavior.
+description: "Technical overview of COS execution context, actions, events, outbox, workers, retries, persistence and failure behavior."
 status: active
 updated: 2026-10-01
 kind: architecture

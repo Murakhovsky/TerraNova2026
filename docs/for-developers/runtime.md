@@ -1,6 +1,6 @@
 ---
 title: Середовище виконання COS
-description: Технічний огляд runtime COS: контекст, дії, події, outbox, workers, помилки, повтори та спостереження.
+description: "Технічний огляд runtime COS: контекст, дії, події, outbox, workers, помилки, повтори та спостереження."
 status: active
 updated: 2026-10-01
 kind: architecture

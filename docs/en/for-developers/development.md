@@ -1,6 +1,6 @@
 ---
 title: Development and verification
-description: Practical COS change workflow from ownership and contracts to tests, documentation, pull requests and production readiness.
+description: "Practical COS change workflow from ownership and contracts to tests, documentation, pull requests and production readiness."
 status: active
 updated: 2026-10-01
 kind: development

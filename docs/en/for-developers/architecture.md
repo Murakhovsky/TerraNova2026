@@ -1,6 +1,6 @@
 ---
 title: COS architecture
-description: Developer overview of COS layers, boundaries, dependency direction, execution, tenant isolation and sources of truth.
+description: "Developer overview of COS layers, boundaries, dependency direction, execution, tenant isolation and sources of truth."
 status: active
 updated: 2026-10-01
 kind: architecture
