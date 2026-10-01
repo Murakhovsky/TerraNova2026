@@ -56,7 +56,7 @@ Cross-domain взаємодія відбувається через явні к�
 
 Інший домен може отримувати копію, projection або read model, але не повинен непомітно ставати другим власником того самого стану.
 
-## Module contract
+## Контракт модуля (module contract)
 
 Installable Domain описує себе через module declaration. Базовий контракт ідентифікує модуль, а додаткові capability interfaces оголошують те, що модуль реально надає: події, дії, правила, політики або інші extension points.
 
