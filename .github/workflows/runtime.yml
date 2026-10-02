@@ -103,6 +103,11 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/ui_route_audit.mjs
+      - name: UI blocker diagnostics
+        if: always()
+        run: |
+          echo "=== PHP/Nginx errors around audited blockers ==="
+          docker compose logs --no-color --tail=1200 php nginx 2>&1 | grep -E -i 'public\.cos|sales\.pipeline|sales\.director|sales\.admin\.agents|spatial|critical|uncaught|exception|error' | tail -n 400 || true
       - name: Upload authenticated UI audit
         if: always()
         uses: actions/upload-artifact@v4
