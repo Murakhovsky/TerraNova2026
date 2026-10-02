@@ -24,10 +24,10 @@ final readonly class MysqlSalesForecastRiskReadModel implements SalesForecastRis
             . 'c.last_activity_at,c.next_contact_at,c.expected_close_at,'
             . 'h.entered_at,h.history_quality,t.stuck_after_seconds '
             . 'FROM tn_client_cases c '
-            . 'INNER JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id '
-            . 'LEFT JOIN sales_stage_metric_thresholds t ON t.organization_id=c.organization_id AND t.stage_id=c.stage_id '
+            . 'INNER JOIN sales_pipeline_stages s ON CONVERT(s.id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND CONVERT(s.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci '
+            . 'LEFT JOIN sales_stage_metric_thresholds t ON CONVERT(t.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND CONVERT(t.stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci '
             . 'LEFT JOIN sales_deal_stage_history h ON h.id=(SELECT h2.id FROM sales_deal_stage_history h2 '
-            . 'WHERE h2.organization_id=c.organization_id AND h2.deal_id=CAST(c.id AS CHAR) AND h2.left_at IS NULL '
+            . 'WHERE CONVERT(h2.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND CONVERT(h2.deal_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(CAST(c.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci AND h2.left_at IS NULL '
             . 'ORDER BY COALESCE(h2.entered_at,h2.projected_at) DESC,h2.id DESC LIMIT 1) '
             . 'WHERE c.organization_id=:organization_id AND c.status IN ("active","paused") AND s.is_terminal=0';
         $params = ['organization_id' => $organizationId];

@@ -21,7 +21,7 @@ final readonly class MysqlSalesOperationalPerformanceReadModel implements SalesO
     ): array {
         $periodSql = $this->communicationSelect('c')
             . ' FROM sales_communications c '
-            . 'INNER JOIN tn_client_cases d ON d.id=c.deal_id AND d.organization_id=c.organization_id '
+            . 'INNER JOIN tn_client_cases d ON d.id=c.deal_id AND CONVERT(d.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci '
             . 'WHERE c.organization_id=:organization_id AND c.occurred_at>=:from_at AND c.occurred_at<:to_at';
         $periodParams = [
             'organization_id' => $organizationId,
@@ -38,7 +38,7 @@ final readonly class MysqlSalesOperationalPerformanceReadModel implements SalesO
 
         $previousSql = $this->communicationSelect('c')
             . ' FROM sales_communications c '
-            . 'INNER JOIN tn_client_cases d ON d.id=c.deal_id AND d.organization_id=c.organization_id '
+            . 'INNER JOIN tn_client_cases d ON d.id=c.deal_id AND CONVERT(d.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci '
             . 'WHERE c.organization_id=:organization_id AND c.occurred_at<:from_at '
             . 'AND NOT EXISTS (SELECT 1 FROM sales_communications later '
             . 'WHERE later.organization_id=c.organization_id AND later.deal_id=c.deal_id AND later.channel=c.channel '
@@ -77,7 +77,7 @@ final readonly class MysqlSalesOperationalPerformanceReadModel implements SalesO
         $sql = 'SELECT a.id AS activity_id,CAST(a.client_case_id AS CHAR) AS deal_id,a.due_at,a.completed_at,'
             . $this->ownerAtSql('a.organization_id', 'CAST(a.client_case_id AS CHAR)', 'a.due_at') . ' AS owner_id '
             . 'FROM tn_client_case_activities a '
-            . 'INNER JOIN tn_client_cases d ON d.id=a.client_case_id AND d.organization_id=a.organization_id '
+            . 'INNER JOIN tn_client_cases d ON d.id=a.client_case_id AND CONVERT(d.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(a.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci '
             . 'WHERE a.organization_id=:organization_id AND a.activity_type="followup" '
             . 'AND a.due_at>=:from_at AND a.due_at<:to_at';
         $params = [
@@ -142,7 +142,8 @@ final readonly class MysqlSalesOperationalPerformanceReadModel implements SalesO
     private function ownerAtSql(string $organizationExpression, string $dealExpression, string $timeExpression): string
     {
         return '(SELECT h.owner_user_id FROM sales_deal_owner_history h '
-            . 'WHERE h.organization_id=' . $organizationExpression . ' AND h.deal_id=' . $dealExpression . ' '
+            . 'WHERE CONVERT(h.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(' . $organizationExpression . ' USING utf8mb4) COLLATE utf8mb4_unicode_ci '
+            . 'AND CONVERT(h.deal_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(' . $dealExpression . ' USING utf8mb4) COLLATE utf8mb4_unicode_ci '
             . 'AND h.history_quality IN ("COMPLETE","PARTIAL") AND h.assigned_at IS NOT NULL '
             . 'AND h.assigned_at<=' . $timeExpression . ' '
             . 'AND (h.unassigned_at IS NULL OR h.unassigned_at>' . $timeExpression . ') '
