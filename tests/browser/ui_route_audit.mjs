@@ -1,3 +1,4 @@
+// Live recheck trigger after production-cutover blocker deploy.
 import { chromium } from 'playwright-core';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
