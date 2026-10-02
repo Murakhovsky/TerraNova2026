@@ -85,6 +85,24 @@ jobs:
           docker compose exec -T php php bin/console cos:web:design-system:smoke
       - name: Smoke vertical slices
         run: bash bin/verify smoke
+      - name: Production cutover Web routes
+        env:
+          COS_WEB_SMOKE_BASE_URL: http://127.0.0.1:8081
+          COS_WEB_SMOKE_EMAIL: production-cutover-web@example.test
+          COS_WEB_SMOKE_PASSWORD: Production-Cutover-Web-CI-Ab9!
+        run: |
+          WEB_HASH="$(php -r 'echo password_hash(getenv("COS_WEB_SMOKE_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('default','$COS_WEB_SMOKE_EMAIL','$WEB_HASH','Production Cutover Web','admin','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='admin',status='active';
+            INSERT INTO cos_organization_memberships (organization_id,user_id,role,status)
+            SELECT 'default',id,'admin','ACTIVE' FROM tn_users WHERE email='$COS_WEB_SMOKE_EMAIL'
+            ON DUPLICATE KEY UPDATE role='admin',status='ACTIVE';
+          "
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_routes.mjs
 
   deploy-dev:
     name: Deploy main to AWS dev
