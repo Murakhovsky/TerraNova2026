@@ -82,7 +82,7 @@ final readonly class MysqlSalesAgentAdministration implements SalesAgentAdminist
         $statement = $this->connection->prepare(
             'UPDATE cos_agent_configurations SET enabled=:enabled,profile=:profile,model=:model,business_instructions=:business_instructions,'
             . 'context_sources=:context_sources,allowed_actions=:allowed_actions,confidence_threshold=:confidence_threshold,ownership="ADMIN",'
-            . 'configuration_version=:next_version,system_update_available=0,admin_modified_at=:now,updated_at=:now '
+            . 'configuration_version=:next_version,system_update_available=0,admin_modified_at=:admin_modified_at,updated_at=:updated_at '
             . 'WHERE organization_id=:organization_id AND domain_name=:domain_name AND agent_name=:agent_name AND configuration_version=:expected_version'
         );
 
@@ -97,7 +97,8 @@ final readonly class MysqlSalesAgentAdministration implements SalesAgentAdminist
                 'allowed_actions' => json_encode($configuration['allowed_actions'], JSON_THROW_ON_ERROR),
                 'confidence_threshold' => $configuration['confidence_threshold'],
                 'next_version' => $nextVersion,
-                'now' => $now,
+                'admin_modified_at' => $now,
+                'updated_at' => $now,
                 'organization_id' => $organizationId,
                 'domain_name' => self::DOMAIN,
                 'agent_name' => $agentName,
@@ -209,7 +210,7 @@ final readonly class MysqlSalesAgentAdministration implements SalesAgentAdminist
                 'INSERT INTO cos_agent_configurations (organization_id,domain_name,agent_name,enabled,profile,model,business_instructions,context_sources,allowed_actions,'
                 . 'confidence_threshold,ownership,configuration_version,system_fingerprint,system_definition,system_update_available,admin_modified_at,created_at,updated_at) '
                 . 'VALUES (:organization_id,:domain_name,:agent_name,:enabled,:profile,:model,:business_instructions,:context_sources,:allowed_actions,:confidence_threshold,"SYSTEM",1,'
-                . ':system_fingerprint,:system_definition,0,NULL,:now,:now)'
+                . ':system_fingerprint,:system_definition,0,NULL,:created_at,:updated_at)'
             );
             $this->connection->beginTransaction();
             try {
@@ -226,7 +227,8 @@ final readonly class MysqlSalesAgentAdministration implements SalesAgentAdminist
                     'confidence_threshold' => $defaults['confidence_threshold'],
                     'system_fingerprint' => $fingerprint,
                     'system_definition' => json_encode($systemDefinition, JSON_THROW_ON_ERROR),
-                    'now' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]);
                 $created = $this->row($organizationId, $definition->name) ?? [];
                 $this->revision($organizationId, $definition->name, 1, 'CREATE', 'SYSTEM', self::SYSTEM_ACTOR, null, $created);
