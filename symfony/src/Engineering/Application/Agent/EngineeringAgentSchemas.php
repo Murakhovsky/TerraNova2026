@@ -168,12 +168,25 @@ final class EngineeringAgentSchemas
     {
         return [
             'type' => 'object',
-            'required' => ['status','tested_revision','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations'],
+            'required' => ['status','tested_revision','test_plan','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations'],
             'properties' => [
                 'status' => self::baseStatus(['PASS','FAIL','BLOCKED']),
                 'tested_revision' => ['type' => 'string'],
                 'test_plan_version' => ['type' => ['string','integer','null']],
-                'acceptance_criteria' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'test_plan' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'acceptance_criteria' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','result','evidence'],
+                        'properties' => [
+                            'id' => ['type' => 'string'],
+                            'result' => self::baseStatus(['PASS','FAIL','BLOCKED']),
+                            'evidence' => ['type' => ['string','array','object']],
+                        ],
+                        'additionalProperties' => true,
+                    ],
+                ],
                 'tests_total' => ['type' => 'integer', 'minimum' => 0],
                 'tests_passed' => ['type' => 'integer', 'minimum' => 0],
                 'tests_failed' => ['type' => 'integer', 'minimum' => 0],

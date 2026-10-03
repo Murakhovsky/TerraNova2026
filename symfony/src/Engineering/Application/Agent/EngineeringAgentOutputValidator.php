@@ -81,12 +81,19 @@ final class EngineeringAgentOutputValidator
 
     private function qa(array $output): void
     {
-        $this->required($output, ['status','tested_revision','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations']);
+        $this->required($output, ['status','tested_revision','test_plan','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations']);
         if (($output['status'] ?? null) === 'PASS' && (int) ($output['tests_failed'] ?? 0) > 0) {
             throw new EngineeringAgentOutputValidationException('QA cannot PASS with failed tests.');
         }
         if ((int) ($output['tests_passed'] ?? 0) + (int) ($output['tests_failed'] ?? 0) > (int) ($output['tests_total'] ?? 0)) {
             throw new EngineeringAgentOutputValidationException('QA test totals are inconsistent.');
+        }
+        foreach ($output['acceptance_criteria'] as $criterion) {
+            if (!is_array($criterion)) throw new EngineeringAgentOutputValidationException('QA acceptance criterion must be an object.');
+            $this->required($criterion, ['id','result','evidence']);
+            if (!in_array((string) $criterion['result'], ['PASS','FAIL','BLOCKED'], true)) {
+                throw new EngineeringAgentOutputValidationException('QA acceptance criterion result is invalid.');
+            }
         }
     }
 

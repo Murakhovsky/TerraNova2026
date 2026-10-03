@@ -23,4 +23,7 @@ interface EngineeringRepositoryGatewayInterface
 
     /** @return list<array{path:string,status:string,additions:int,deletions:int,patch:?string}> */
     public function pullRequestFiles(int $pullRequestNumber): array;
+
+    /** @return array{state:string,total:int,passed:int,failed:int,pending:int,checks:list<array<string,mixed>>} */
+    public function commitChecks(string $revision): array;
 }

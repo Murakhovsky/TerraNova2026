@@ -149,6 +149,59 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return $result;
     }
 
+    public function commitChecks(string $revision): array
+    {
+        $this->assertAvailable();
+        $revision = trim($revision);
+        if ($revision === '') throw new RuntimeException('Commit revision is required for CI checks.');
+
+        $checksResponse = $this->request('GET', '/commits/'.rawurlencode($revision).'/check-runs?per_page=100', null, [200]);
+        $runs = is_array($checksResponse['check_runs'] ?? null) ? $checksResponse['check_runs'] : [];
+        $checks = [];
+        $passed = 0;
+        $failed = 0;
+        $pending = 0;
+
+        foreach ($runs as $run) {
+            if (!is_array($run)) continue;
+            $status = (string) ($run['status'] ?? '');
+            $conclusion = isset($run['conclusion']) ? (string) $run['conclusion'] : null;
+            if ($status !== 'completed') {
+                ++$pending;
+            } elseif (in_array($conclusion, ['success','neutral','skipped'], true)) {
+                ++$passed;
+            } else {
+                ++$failed;
+            }
+            $checks[] = [
+                'name' => (string) ($run['name'] ?? ''),
+                'status' => $status,
+                'conclusion' => $conclusion,
+                'url' => (string) ($run['html_url'] ?? ''),
+            ];
+        }
+
+        $combined = $this->request('GET', '/commits/'.rawurlencode($revision).'/status', null, [200]);
+        foreach (is_array($combined['statuses'] ?? null) ? $combined['statuses'] : [] as $status) {
+            if (!is_array($status)) continue;
+            $state = (string) ($status['state'] ?? 'pending');
+            if ($state === 'success') ++$passed;
+            elseif (in_array($state, ['failure','error'], true)) ++$failed;
+            else ++$pending;
+            $checks[] = [
+                'name' => (string) ($status['context'] ?? 'commit-status'),
+                'status' => $state === 'pending' ? 'in_progress' : 'completed',
+                'conclusion' => $state,
+                'url' => (string) ($status['target_url'] ?? ''),
+            ];
+        }
+
+        $total = count($checks);
+        $state = $failed > 0 ? 'FAILED' : (($pending > 0 || $total === 0) ? 'PENDING' : 'SUCCESS');
+
+        return compact('state','total','passed','failed','pending','checks');
+    }
+
     private function ensureBranch(string $branch, string $baseRevision): string
     {
         $existing = $this->requestNullable('GET', '/git/ref/heads/'.rawurlencode($branch), [200, 404]);
