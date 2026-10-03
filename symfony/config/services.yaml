@@ -1255,6 +1255,18 @@ services:
   App\Engineering\Application\Context\RepositoryDiscoveryInterface:
     alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
 
+  App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFeatureStore
+
+  App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringWorkflowStore
+
+  App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringArtifactStore
+
+  App\Engineering\Application\Persistence\EngineeringTaskStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringTaskStore
+
   App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery:
     arguments:
       $repositoryRoot: '%kernel.project_dir%/..'

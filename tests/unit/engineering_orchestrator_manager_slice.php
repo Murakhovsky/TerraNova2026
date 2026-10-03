@@ -9,7 +9,7 @@ foreach ([
     'ArtifactType::FEATURE_SPEC',
     'ArtifactType::CONTEXT_MAP',
     'createFromManager',
-    'ARCHITECTURE',
+    'AgentRole::ENGINEERING_MANAGER',
     'persistTransitions',
 ] as $needle) {
     if (!str_contains($orchestrator, $needle)) {
