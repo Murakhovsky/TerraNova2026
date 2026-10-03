@@ -96,6 +96,28 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
         ];
     }
 
+    public function recentForOrganization(string $organizationId, int $limit = 50): array
+    {
+        $records = $this->entityManager->getRepository(EngineeringFeatureRecord::class)->findBy(
+            ['organizationId' => $organizationId],
+            ['updatedAt' => 'DESC'],
+            max(1, min(100, $limit)),
+        );
+
+        return array_map(static fn (EngineeringFeatureRecord $record): array => [
+            'id' => $record->id(),
+            'title' => $record->title(),
+            'type' => $record->type(),
+            'status' => $record->status(),
+            'priority' => $record->priority(),
+            'complexity' => $record->complexity(),
+            'external_issue_id' => $record->externalIssueId(),
+            'repository_revision' => $record->repositoryRevision(),
+            'created_at' => $record->createdAt()->format(DATE_ATOM),
+            'updated_at' => $record->updatedAt()->format(DATE_ATOM),
+        ], $records);
+    }
+
     private function record(string $featureId): EngineeringFeatureRecord
     {
         $record = $this->entityManager->find(EngineeringFeatureRecord::class, $featureId);
