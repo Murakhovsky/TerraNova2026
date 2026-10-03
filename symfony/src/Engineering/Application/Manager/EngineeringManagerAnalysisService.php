@@ -20,12 +20,8 @@ final readonly class EngineeringManagerAnalysisService
     ) {
     }
 
-    public function analyze(
-        string $featureId,
-        EngineeringRequest $request,
-        string $organizationId,
-        string $correlationId,
-    ): ManagerAnalysisResult {
+    public function prepare(string $featureId, EngineeringRequest $request): ManagerAnalysisPlan
+    {
         EngineeringId::assert($featureId);
         $contextMap = $this->repository->discover($request);
 
@@ -76,7 +72,12 @@ final readonly class EngineeringManagerAnalysisService
             ],
         );
 
-        $run = $this->agents->run($task, $organizationId, $correlationId);
+        return new ManagerAnalysisPlan($contextMap, $task);
+    }
+
+    public function execute(ManagerAnalysisPlan $plan, string $organizationId, string $correlationId): ManagerAnalysisResult
+    {
+        $run = $this->agents->run($plan->task, $organizationId, $correlationId);
         if ($run->status !== 'completed') {
             throw new \RuntimeException('Engineering Manager Agent did not complete successfully: '.($run->error ?? $run->status));
         }
@@ -84,10 +85,15 @@ final readonly class EngineeringManagerAnalysisService
         $this->validator->validate(AgentRole::ENGINEERING_MANAGER, $run->structuredOutput);
 
         return new ManagerAnalysisResult(
-            contextMap: $contextMap,
-            task: $task,
+            contextMap: $plan->contextMap,
+            task: $plan->task,
             run: $run,
             featureSpecification: $run->structuredOutput,
         );
+    }
+
+    public function analyze(string $featureId, EngineeringRequest $request, string $organizationId, string $correlationId): ManagerAnalysisResult
+    {
+        return $this->execute($this->prepare($featureId, $request), $organizationId, $correlationId);
     }
 }

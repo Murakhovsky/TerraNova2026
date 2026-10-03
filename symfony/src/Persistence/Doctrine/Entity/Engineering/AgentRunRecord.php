@@ -67,4 +67,29 @@ class AgentRunRecord
     public function idempotencyKey(): string { return $this->idempotencyKey; }
     public function status(): string { return $this->status; }
     public function output(): ?array { return $this->output; }
+    public function modelProvider(): string { return $this->modelProvider; }
+    public function model(): string { return $this->model; }
+
+    public function complete(
+        string $status,
+        array $output,
+        string $provider,
+        string $model,
+        ?int $tokensInput,
+        ?int $tokensOutput,
+        ?string $estimatedCost,
+        ?string $errorType,
+        ?string $errorMessage,
+    ): void {
+        $this->status = $status;
+        $this->output = $output;
+        $this->modelProvider = $provider;
+        $this->model = $model;
+        $this->tokensInput = $tokensInput;
+        $this->tokensOutput = $tokensOutput;
+        $this->estimatedCost = $estimatedCost;
+        $this->errorType = $errorType;
+        $this->errorMessage = $errorMessage;
+        $this->finishedAt = new DateTimeImmutable();
+    }
 }

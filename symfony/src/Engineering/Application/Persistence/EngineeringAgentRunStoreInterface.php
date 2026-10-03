@@ -8,14 +8,12 @@ use App\Engineering\Domain\Agent\EngineeringAgentTask;
 
 interface EngineeringAgentRunStoreInterface
 {
-    public function recordCompleted(
-        string $workflowId,
-        EngineeringAgentTask $task,
-        EngineeringAgentRunResult $result,
-        string $traceId,
-    ): void;
-
+    public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string;
+    public function complete(string $engineeringRunId, EngineeringAgentRunResult $result): void;
     public function existsByIdempotencyKey(string $idempotencyKey): bool;
+
+    /** @return array<string,mixed>|null */
+    public function byIdempotencyKey(string $idempotencyKey): ?array;
 
     /** @return list<array<string,mixed>> */
     public function forFeature(string $featureId): array;
