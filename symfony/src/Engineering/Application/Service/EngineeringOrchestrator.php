@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\DTO\EngineeringRequest;
+use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Manager\EngineeringManagerAnalysisService;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
@@ -11,6 +12,7 @@ use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
+use App\Engineering\Application\Workflow\WorkflowAlreadyRunningException;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Artifact\ArtifactType;
 use App\Engineering\Domain\Workflow\EngineeringId;
@@ -26,6 +28,7 @@ final readonly class EngineeringOrchestrator
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringManagerAnalysisService $manager,
+        private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {
     }
@@ -39,18 +42,27 @@ final readonly class EngineeringOrchestrator
 
     public function start(string $featureId, string $organizationId, string $correlationId): EngineeringStartResult
     {
-        $workflow = new WorkflowExecution(
-            EngineeringId::generate(),
-            $featureId,
-            EngineeringWorkflowState::NEW,
-            $correlationId,
-        );
-        $this->workflows->create($workflow);
+        /** @var WorkflowExecution $workflow */
+        $workflow = $this->lock->synchronized($featureId, function () use ($featureId, $correlationId): WorkflowExecution {
+            $active = $this->workflows->activeIdForFeature($featureId);
+            if ($active !== null) {
+                throw new WorkflowAlreadyRunningException('Engineering feature already has active workflow '.$active);
+            }
 
-        $start = $this->coordinator->startAnalysis($workflow);
-        $this->persistTransitions($workflow, $start->transitions);
-        $this->features->updateStatus($featureId, $workflow->currentState()->value);
+            $workflow = new WorkflowExecution(
+                EngineeringId::generate(),
+                $featureId,
+                EngineeringWorkflowState::NEW,
+                $correlationId,
+            );
+            $this->workflows->create($workflow);
+            $start = $this->coordinator->startAnalysis($workflow);
+            $this->persistTransitions($workflow, $start->transitions);
+            $this->features->updateStatus($featureId, $workflow->currentState()->value);
+            return $workflow;
+        });
 
+        // External LLM work deliberately runs outside the feature lock.
         $analysis = $this->manager->analyze(
             featureId: $featureId,
             request: $this->features->request($featureId),
@@ -58,8 +70,14 @@ final readonly class EngineeringOrchestrator
             correlationId: $correlationId,
         );
 
-        $this->agentRuns->recordCompleted(
-            workflowId: $workflow->id(),
+        $next = $this->lock->synchronized($featureId, function () use ($featureId, $workflow, $analysis, $correlationId) {
+            $current = $this->workflows->get($workflow->id());
+            if ($current->currentState() !== EngineeringWorkflowState::ANALYSIS) {
+                throw new WorkflowAlreadyRunningException('Engineering workflow changed while Manager analysis was running.');
+            }
+
+            $this->agentRuns->recordCompleted(
+            workflowId: $current->id(),
             task: $analysis->task,
             result: $analysis->run,
             traceId: $correlationId,
@@ -90,18 +108,21 @@ final readonly class EngineeringOrchestrator
             $analysis->contextMap->repositoryRevision,
         );
 
-        $next = $this->coordinator->acceptAgentResult(
-            $workflow,
-            AgentRole::ENGINEERING_MANAGER,
-            $analysis->run->structuredOutput,
-        );
-        $this->persistTransitions($workflow, $next->transitions);
-        $this->features->updateStatus($featureId, $workflow->currentState()->value);
+            $next = $this->coordinator->acceptAgentResult(
+                $current,
+                AgentRole::ENGINEERING_MANAGER,
+                $analysis->run->structuredOutput,
+            );
+            $this->persistTransitions($current, $next->transitions);
+            $this->features->updateStatus($featureId, $current->currentState()->value);
+            return $next;
+        });
 
+        $finalWorkflow = $this->workflows->get($workflow->id());
         return new EngineeringStartResult(
             $featureId,
             $workflow->id(),
-            $workflow->currentState()->value,
+            $finalWorkflow->currentState()->value,
             $next,
         );
     }
