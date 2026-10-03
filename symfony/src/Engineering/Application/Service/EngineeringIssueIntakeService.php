@@ -52,7 +52,7 @@ final readonly class EngineeringIssueIntakeService
             ],
         ), $organizationId, 'github-issue');
 
-        $this->repository->addIssueLabels($issueNumber, ['cos-engineering']);
+        $this->repository->addIssueLabels($issueNumber, ['cos:engineering']);
         $this->repository->commentIssue(
             $issueNumber,
             "COS Engineering feature created: `".$featureId."`."
