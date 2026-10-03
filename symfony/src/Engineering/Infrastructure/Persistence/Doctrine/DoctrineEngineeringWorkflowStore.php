@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Workflow\EngineeringTransitionObserverInterface;
 use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
 use App\Engineering\Domain\Workflow\WorkflowExecution;
 use App\Engineering\Domain\Workflow\WorkflowTransition;
@@ -14,8 +15,10 @@ use RuntimeException;
 
 final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWorkflowStoreInterface
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private EngineeringTransitionObserverInterface $observer,
+    ) {
     }
 
     public function create(WorkflowExecution $workflow): void
@@ -121,6 +124,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             humanDecisionId: $context->humanDecisionId,
         ));
         $this->entityManager->flush();
+        $this->observer->afterPersisted($transition);
     }
 
     private function statusFor(EngineeringWorkflowState $state): string
