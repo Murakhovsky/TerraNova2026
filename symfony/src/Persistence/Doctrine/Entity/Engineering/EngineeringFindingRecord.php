@@ -41,4 +41,17 @@ class EngineeringFindingRecord
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
         private ?DateTimeImmutable $resolvedAt = null,
     ) {}
+
+    public function id(): string { return $this->id; }
+    public function featureId(): string { return $this->featureId; }
+    public function sourceRole(): string { return $this->sourceRole; }
+    public function severity(): string { return $this->severity; }
+    public function status(): string { return $this->status; }
+
+    public function resolve(string $resolvedByRunId, DateTimeImmutable $at): void
+    {
+        $this->status = 'RESOLVED';
+        $this->resolvedByRunId = $resolvedByRunId;
+        $this->resolvedAt = $at;
+    }
 }

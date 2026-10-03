@@ -9,6 +9,7 @@ use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringFindingStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
@@ -27,6 +28,7 @@ final readonly class EngineeringReviewerStageExecutor
 {
     public function __construct(
         private EngineeringFeatureStoreInterface $features,
+        private EngineeringFindingStoreInterface $findings,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringAgentRunStoreInterface $agentRuns,
@@ -132,6 +134,15 @@ final readonly class EngineeringReviewerStageExecutor
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
+            if (($run->structuredOutput['status'] ?? null) === 'APPROVED') {
+                $this->findings->resolveOpenForSource($featureId, AgentRole::REVIEWER, $engineeringRunId);
+            }
+            $this->findings->recordFindings(
+                featureId: $featureId,
+                sourceRole: AgentRole::REVIEWER,
+                findings: is_array($run->structuredOutput['findings'] ?? null) ? $run->structuredOutput['findings'] : [],
+                agentRunId: $engineeringRunId,
+            );
             $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::REVIEW_REPORT,
