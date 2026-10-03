@@ -7,7 +7,7 @@ CREATE TEMPORARY TABLE tmp_sales_latest_transition_revisions (
     pipeline_id VARCHAR(40) NOT NULL,
     revision_id BIGINT UNSIGNED NOT NULL,
     PRIMARY KEY (organization_id, pipeline_id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_sales_latest_transition_revisions (organization_id, pipeline_id, revision_id)
 SELECT organization_id, entity_id, MAX(id)
@@ -24,7 +24,7 @@ CREATE TEMPORARY TABLE tmp_sales_transition_revision_policy (
     requires_approval TINYINT(1) NOT NULL,
     conditions JSON NOT NULL,
     PRIMARY KEY (organization_id, pipeline_id, from_stage_id, to_stage_id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_sales_transition_revision_policy (
     organization_id,
