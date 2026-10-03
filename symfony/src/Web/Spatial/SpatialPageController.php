@@ -77,6 +77,9 @@ final readonly class SpatialPageController
                 'scene' => $scene,
                 'properties' => $this->scenes->propertyOptions(),
                 'actionStatus' => trim((string) $request->query->get('status_message', '')),
+                'csrfToken' => $request->hasSession()
+                    ? (string) $request->getSession()->get('cos_csrf_token', '')
+                    : '',
             ]),
             Response::HTTP_OK,
             [
