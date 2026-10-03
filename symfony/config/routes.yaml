@@ -265,6 +265,13 @@ cos_api_v1_status:
   controller: App\Http\Api\V1\Controller\ApiStatusController
   methods: [GET]
 
+cos_api_v1_engineering_feature:
+  path: /api/v1/engineering/features/{id}
+  controller: App\Http\Api\V1\Controller\EngineeringReadController::status
+  methods: [GET]
+  requirements:
+    id: '[0-9a-fA-F-]{36}'
+
 cos_dependency_health:
   path: /health/dependencies
   controller: App\Controller\DependencyHealthController
