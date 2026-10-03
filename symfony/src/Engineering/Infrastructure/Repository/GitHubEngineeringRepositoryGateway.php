@@ -149,6 +149,23 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return $result;
     }
 
+    public function pullRequest(int $pullRequestNumber): array
+    {
+        $this->assertAvailable();
+        if ($pullRequestNumber <= 0) throw new RuntimeException('Pull request number must be positive.');
+        $pr = $this->request('GET', '/pulls/'.$pullRequestNumber, null, [200]);
+
+        return [
+            'number' => (int) ($pr['number'] ?? $pullRequestNumber),
+            'url' => (string) ($pr['html_url'] ?? ''),
+            'state' => (string) ($pr['state'] ?? ''),
+            'merged' => (bool) ($pr['merged'] ?? false),
+            'merge_revision' => isset($pr['merge_commit_sha']) && is_string($pr['merge_commit_sha'])
+                ? $pr['merge_commit_sha']
+                : null,
+        ];
+    }
+
     public function commitChecks(string $revision): array
     {
         $this->assertAvailable();

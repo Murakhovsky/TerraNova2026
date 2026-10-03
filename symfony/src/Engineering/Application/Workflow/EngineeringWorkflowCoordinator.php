@@ -100,6 +100,38 @@ final readonly class EngineeringWorkflowCoordinator
         return $this->human($workflow, $reason);
     }
 
+    public function completeAfterHumanApproval(
+        WorkflowExecution $workflow,
+        string $actorId,
+        string $mergeRevision,
+    ): WorkflowDirective {
+        if ($workflow->currentState() !== EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL) {
+            throw new LogicException('Engineering workflow is not ready for human approval.');
+        }
+        if (trim($actorId) === '' || trim($mergeRevision) === '') {
+            throw new LogicException('Human approval requires actor and merge revision evidence.');
+        }
+
+        $transition = $this->engine->transition(
+            $workflow,
+            EngineeringWorkflowState::DONE,
+            new WorkflowTransitionContext(
+                trigger: 'HUMAN_MERGE_CONFIRMED',
+                reason: 'Human merge confirmed in GitHub.',
+                initiatedByType: 'HUMAN',
+                initiatedById: $actorId,
+                metadata: ['merge_revision' => $mergeRevision],
+            ),
+        );
+
+        return new WorkflowDirective(
+            WorkflowDirectiveType::STOP,
+            null,
+            'Engineering workflow completed after verified human merge.',
+            [$transition],
+        );
+    }
+
     public function acceptAgentResult(
         WorkflowExecution $workflow,
         AgentRole $role,

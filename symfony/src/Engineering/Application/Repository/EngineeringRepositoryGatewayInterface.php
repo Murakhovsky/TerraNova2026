@@ -26,4 +26,7 @@ interface EngineeringRepositoryGatewayInterface
 
     /** @return array{state:string,total:int,passed:int,failed:int,pending:int,checks:list<array<string,mixed>>} */
     public function commitChecks(string $revision): array;
+
+    /** @return array{number:int,url:string,state:string,merged:bool,merge_revision:?string} */
+    public function pullRequest(int $pullRequestNumber): array;
 }

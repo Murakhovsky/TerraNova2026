@@ -1310,6 +1310,8 @@ services:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
+  App\Command\EngineeringFinalizeCommand: ~
+
   App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommandHandler:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
