@@ -20,7 +20,7 @@ final readonly class EngineeringManagerAnalysisService
     ) {
     }
 
-    public function prepare(string $featureId, EngineeringRequest $request): ManagerAnalysisPlan
+    public function prepare(string $featureId, EngineeringRequest $request, int $logicalAttempt = 1): ManagerAnalysisPlan
     {
         EngineeringId::assert($featureId);
         $contextMap = $this->repository->discover($request);
@@ -64,11 +64,12 @@ final readonly class EngineeringManagerAnalysisService
                 'Tasks and dependencies are defined.',
                 'Next action is explicit.',
             ],
-            idempotencyKey: $featureId.':manager:1:'.$contextMap->repositoryRevision,
+            idempotencyKey: $featureId.':manager:'.$logicalAttempt.':'.$contextMap->repositoryRevision,
             inputSnapshot: [
                 'feature_id' => $featureId,
                 'repository_revision' => $contextMap->repositoryRevision,
                 'request_id' => $request->requestId,
+                'logical_attempt' => $logicalAttempt,
             ],
         );
 
