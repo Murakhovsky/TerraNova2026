@@ -43,8 +43,11 @@ const assertOk = (response, label) => {
 const waitMutation = (page, fragment, action, label, method = 'POST') => Promise.all([
   page.waitForResponse((response) => response.url().includes(fragment) && response.request().method() === method),
   action(),
-]).then(([response]) => {
-  assertOk(response, label);
+]).then(async ([response]) => {
+  if (!response || response.status() >= 400) {
+    const body = response ? await response.text().catch(() => '') : '';
+    throw new Error(`${label} returned ${response?.status() ?? 'no response'}: ${body.slice(0, 2000)}`);
+  }
   return response;
 });
 const assertCount = async (locator, expected, label) => {
