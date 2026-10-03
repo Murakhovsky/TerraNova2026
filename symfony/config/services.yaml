@@ -1270,6 +1270,9 @@ services:
   App\Engineering\Application\Persistence\EngineeringTaskStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringTaskStore
 
+  App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringHumanDecisionStore
+
   App\Engineering\Application\Lock\EngineeringWorkflowLockInterface:
     alias: App\Engineering\Infrastructure\Lock\MySqlEngineeringWorkflowLock
 

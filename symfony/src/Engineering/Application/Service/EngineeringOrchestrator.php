@@ -9,10 +9,12 @@ use App\Engineering\Application\Manager\EngineeringManagerAnalysisService;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
 use App\Engineering\Application\Workflow\WorkflowAlreadyRunningException;
+use App\Engineering\Application\Workflow\WorkflowDirectiveType;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Artifact\ArtifactType;
 use App\Engineering\Domain\Workflow\EngineeringId;
@@ -27,6 +29,7 @@ final readonly class EngineeringOrchestrator
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
+        private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringManagerAnalysisService $manager,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -121,6 +124,26 @@ final readonly class EngineeringOrchestrator
                 );
                 $this->persistTransitions($current, $next->transitions);
                 $this->features->updateStatus($featureId, $current->currentState()->value);
+
+                if ($next->type === WorkflowDirectiveType::REQUEST_HUMAN_DECISION) {
+                    $questions = is_array($analysis->featureSpecification['open_questions'] ?? null)
+                        ? $analysis->featureSpecification['open_questions']
+                        : [];
+                    $this->humanDecisions->create(
+                        featureId: $featureId,
+                        workflowId: $current->id(),
+                        type: 'PRODUCT_AMBIGUITY',
+                        question: 'Engineering Manager requires a human decision before workflow continuation.',
+                        reason: $next->reason,
+                        options: $questions,
+                        evidence: [
+                            'manager_decision' => $analysis->featureSpecification['decision'] ?? [],
+                            'risks' => $analysis->featureSpecification['risks'] ?? [],
+                        ],
+                        blocking: true,
+                    );
+                }
+
                 return $next;
             },
         );
