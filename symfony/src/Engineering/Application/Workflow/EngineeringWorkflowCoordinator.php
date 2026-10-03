@@ -1,0 +1,151 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Engineering\Application\Workflow;
+
+use App\Engineering\Domain\Agent\AgentRole;
+use App\Engineering\Domain\Workflow\EngineeringRetryPolicy;
+use App\Engineering\Domain\Workflow\EngineeringWorkflowEngine;
+use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
+use App\Engineering\Domain\Workflow\ReadyForHumanApprovalEvidence;
+use App\Engineering\Domain\Workflow\ReadyForHumanApprovalGuard;
+use App\Engineering\Domain\Workflow\WorkflowExecution;
+use App\Engineering\Domain\Workflow\WorkflowTransitionContext;
+use LogicException;
+
+final readonly class EngineeringWorkflowCoordinator
+{
+    public function __construct(
+        private EngineeringWorkflowEngine $engine = new EngineeringWorkflowEngine(),
+        private EngineeringRetryPolicy $retries = new EngineeringRetryPolicy(),
+        private ReadyForHumanApprovalGuard $ready = new ReadyForHumanApprovalGuard(),
+    ) {
+    }
+
+    public function startAnalysis(WorkflowExecution $workflow): WorkflowDirective
+    {
+        $this->transition($workflow, EngineeringWorkflowState::ANALYSIS, 'START_ANALYSIS');
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::ENGINEERING_MANAGER, 'Engineering request requires formal analysis.');
+    }
+
+    public function acceptAgentResult(
+        WorkflowExecution $workflow,
+        AgentRole $role,
+        array $output,
+        WorkflowCounters $counters = new WorkflowCounters(),
+        ?ReadyForHumanApprovalEvidence $readyEvidence = null,
+    ): WorkflowDirective {
+        return match ($role) {
+            AgentRole::ENGINEERING_MANAGER => $this->afterManager($workflow, $output),
+            AgentRole::PRINCIPAL_ARCHITECT => $this->afterArchitect($workflow, $output),
+            AgentRole::DEVELOPER => $this->afterDeveloper($workflow, $output),
+            AgentRole::REVIEWER => $this->afterReviewer($workflow, $output, $counters),
+            AgentRole::QA => $this->afterQa($workflow, $output, $counters, $readyEvidence),
+        };
+    }
+
+    private function afterManager(WorkflowExecution $workflow, array $output): WorkflowDirective
+    {
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'HUMAN_DECISION_REQUIRED') return $this->human($workflow, 'Manager found a blocking product decision.');
+        if ($status === 'BLOCKED' || $status === 'FAILED') return $this->block($workflow, 'Manager analysis could not complete.');
+        if ($status !== 'SPECIFICATION_READY') throw new LogicException('Unexpected Engineering Manager status: '.$status);
+
+        $this->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, 'MANAGER_SPECIFICATION_READY');
+        $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'SCHEDULE_ARCHITECT');
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Architecture is mandatory for V0.1.');
+    }
+
+    private function afterArchitect(WorkflowExecution $workflow, array $output): WorkflowDirective
+    {
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'NEEDS_PRODUCT_DECISION') return $this->human($workflow, 'Architect requires a product decision.');
+        if ($status === 'BLOCKED' || $status === 'REJECTED') return $this->block($workflow, 'Architecture stage blocked the feature.');
+        if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) throw new LogicException('Unexpected Architect status: '.$status);
+
+        $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_APPROVED, 'ARCHITECTURE_APPROVED');
+        $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_PENDING, 'SCHEDULE_DEVELOPER');
+        $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'DEVELOPER_STARTED');
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Approved architecture is ready for implementation.');
+    }
+
+    private function afterDeveloper(WorkflowExecution $workflow, array $output): WorkflowDirective
+    {
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'BLOCKED') return $this->block($workflow, 'Developer reported a non-retryable blocker.');
+        if ($status === 'FAILED') return $this->block($workflow, 'Developer failed without a retryable runtime classification.');
+        if ($status !== 'COMPLETED') throw new LogicException('Unexpected Developer status: '.$status);
+
+        $this->transition($workflow, EngineeringWorkflowState::REVIEW_PENDING, 'DEVELOPMENT_COMPLETED');
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::REVIEWER, 'Completed implementation requires review.');
+    }
+
+    private function afterReviewer(WorkflowExecution $workflow, array $output, WorkflowCounters $counters): WorkflowDirective
+    {
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'BLOCKED') return $this->block($workflow, 'Reviewer reported a blocker.');
+        if ($status === 'APPROVED') {
+            $this->transition($workflow, EngineeringWorkflowState::QA_PENDING, 'REVIEW_APPROVED');
+            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Reviewed implementation requires final QA.');
+        }
+        if ($status !== 'CHANGES_REQUESTED') throw new LogicException('Unexpected Reviewer status: '.$status);
+
+        if (!$this->retries->mayRunReview($counters->reviewCycles) || !$this->retries->mayRunDevelopmentFix($counters->developmentFixLoops)) {
+            $this->transition($workflow, EngineeringWorkflowState::ESCALATED, 'REVIEW_LOOP_LIMIT');
+            return $this->human($workflow, 'Review/development loop limit exceeded.');
+        }
+
+        $this->transition($workflow, EngineeringWorkflowState::CHANGES_REQUESTED, 'REVIEW_CHANGES_REQUESTED');
+        $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'DEVELOPER_FIX_STARTED');
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Reviewer requested implementation changes.');
+    }
+
+    private function afterQa(
+        WorkflowExecution $workflow,
+        array $output,
+        WorkflowCounters $counters,
+        ?ReadyForHumanApprovalEvidence $readyEvidence,
+    ): WorkflowDirective {
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'BLOCKED') return $this->block($workflow, 'QA reported a blocker.');
+        if ($status === 'PASS') {
+            if ($readyEvidence === null) throw new LogicException('QA PASS requires READY gate evidence.');
+            $this->ready->assert($readyEvidence);
+            $this->transition($workflow, EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL, 'QA_AND_READY_GATE_PASSED');
+            return new WorkflowDirective(WorkflowDirectiveType::READY_FOR_HUMAN_APPROVAL, null, 'All deterministic completion gates passed.');
+        }
+        if ($status !== 'FAIL') throw new LogicException('Unexpected QA status: '.$status);
+
+        if (!$this->retries->mayRunQa($counters->qaCycles) || !$this->retries->mayRunDevelopmentFix($counters->developmentFixLoops)) {
+            $this->transition($workflow, EngineeringWorkflowState::ESCALATED, 'QA_LOOP_LIMIT');
+            return $this->human($workflow, 'QA/development loop limit exceeded.');
+        }
+
+        $this->transition($workflow, EngineeringWorkflowState::QA_FAILED, 'QA_FAILED');
+        $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'DEVELOPER_QA_FIX_STARTED');
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'QA defects require development fixes and a new review.');
+    }
+
+    private function human(WorkflowExecution $workflow, string $reason): WorkflowDirective
+    {
+        if ($workflow->currentState() !== EngineeringWorkflowState::HUMAN_DECISION_REQUIRED) {
+            $this->transition($workflow, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, 'HUMAN_DECISION_REQUIRED');
+        }
+        return new WorkflowDirective(WorkflowDirectiveType::REQUEST_HUMAN_DECISION, null, $reason);
+    }
+
+    private function block(WorkflowExecution $workflow, string $reason): WorkflowDirective
+    {
+        $this->transition($workflow, EngineeringWorkflowState::BLOCKED, 'BLOCKED');
+        return new WorkflowDirective(WorkflowDirectiveType::BLOCK, null, $reason);
+    }
+
+    private function transition(WorkflowExecution $workflow, EngineeringWorkflowState $target, string $trigger): void
+    {
+        $this->engine->transition(
+            $workflow,
+            $target,
+            new WorkflowTransitionContext($trigger, $trigger, 'SYSTEM', 'engineering-workflow-coordinator'),
+        );
+    }
+}
