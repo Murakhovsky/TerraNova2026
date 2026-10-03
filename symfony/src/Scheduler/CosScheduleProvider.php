@@ -10,6 +10,7 @@ use App\Application\Growth\Command\RunGrowthAutonomousOutreachCommand;
 use App\Application\Growth\Command\RunGrowthAutonomousContentCommand;
 use App\Application\Growth\Command\RunGrowthOutreachSequencesCommand;
 use App\Application\Growth\Command\RunGrowthMarketDiscoveryCommand;
+use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -41,6 +42,8 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly bool $growthMarketDiscoveryEnabled = false,
         private readonly int $growthMarketDiscoveryIntervalMinutes = 60,
         private readonly int $growthMarketDiscoveryActorId = 0,
+        private readonly bool $engineeringAutonomyEnabled = false,
+        private readonly int $engineeringAutonomyIntervalMinutes = 2,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -71,6 +74,9 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if($this->growthMarketDiscoveryEnabled&&$this->growthMarketDiscoveryActorId<1){
             throw new InvalidArgumentException('Growth market discovery requires a positive system actor id.');
+        }
+        if($this->engineeringAutonomyIntervalMinutes<1||$this->engineeringAutonomyIntervalMinutes>60){
+            throw new InvalidArgumentException('Engineering autonomy interval must be between 1 and 60 minutes.');
         }
     }
 
@@ -127,6 +133,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthAutonomousContentIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthAutonomousContentCommand('scheduler'), 'async'),
+            );
+        }
+
+        if($this->engineeringAutonomyEnabled){
+            $messages[] = RecurringMessage::every(
+                $this->engineeringAutonomyIntervalMinutes.' minutes',
+                new RedispatchMessage(new ContinueEngineeringWorkflowsCommand('scheduler'), 'async'),
             );
         }
 

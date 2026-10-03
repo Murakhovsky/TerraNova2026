@@ -48,6 +48,28 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         return in_array($record->status(), ['COMPLETED','CANCELLED','FAILED'], true) ? null : $record->id();
     }
 
+    public function resumable(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+        $records = $this->entityManager->getRepository(WorkflowExecutionRecord::class)->findBy(
+            ['currentState' => [
+                'ANALYSIS',
+                'ARCHITECTURE_PENDING',
+                'DEVELOPMENT_RUNNING',
+                'REVIEW_PENDING',
+                'QA_PENDING',
+            ]],
+            ['lastActivityAt' => 'ASC'],
+            $limit,
+        );
+
+        return array_map(static fn (WorkflowExecutionRecord $record): array => [
+            'feature_id' => $record->featureId(),
+            'workflow_id' => $record->id(),
+            'state' => $record->currentState(),
+        ], $records);
+    }
+
     public function get(string $workflowId): WorkflowExecution
     {
         $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);

@@ -38,6 +38,8 @@ parameters:
   env(COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT): '100'
   env(COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES): '360'
   env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
+  env(COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED): '0'
+  env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
 
 services:
   _defaults:
@@ -283,6 +285,8 @@ services:
       $growthMarketDiscoveryEnabled: '%env(bool:COS_GROWTH_MARKET_SCHEDULER_ENABLED)%'
       $growthMarketDiscoveryIntervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
       $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
+      $engineeringAutonomyEnabled: '%env(bool:COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED)%'
+      $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -1303,6 +1307,10 @@ services:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   App\Command\EngineeringContinueCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommandHandler:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
