@@ -81,6 +81,7 @@ CREATE TABLE cos_engineering_workflows (
     status VARCHAR(32) NOT NULL,
     current_task_id CHAR(36) NULL,
     current_agent_run_id CHAR(36) NULL,
+    resume_state VARCHAR(64) NULL,
     started_at DATETIME(6) NOT NULL,
     finished_at DATETIME(6) NULL,
     last_activity_at DATETIME(6) NOT NULL,

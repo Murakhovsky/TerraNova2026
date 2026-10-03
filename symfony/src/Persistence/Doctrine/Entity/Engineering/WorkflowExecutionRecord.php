@@ -36,6 +36,8 @@ class WorkflowExecutionRecord
         private ?string $currentTaskId = null,
         #[ORM\Column(type: Types::STRING, length: 36, nullable: true)]
         private ?string $currentAgentRunId = null,
+        #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+        private ?string $resumeState = null,
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
         private ?DateTimeImmutable $finishedAt = null,
     ) {}
