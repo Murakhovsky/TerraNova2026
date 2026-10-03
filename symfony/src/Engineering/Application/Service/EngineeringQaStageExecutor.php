@@ -213,7 +213,7 @@ final readonly class EngineeringQaStageExecutor
                 allBlockingAcceptanceCriteriaVerified: $this->acceptanceCriteriaVerified($featureSpec['content'], $run->structuredOutput),
                 hasOpenCriticalFinding: $this->findings->hasOpenCritical($featureId),
                 hasBlockingHumanDecision: $this->humanDecisions->openForFeature($featureId) !== [],
-                hasRunningTask: $this->hasRunningTask($featureId),
+                hasRunningTask: $this->tasks->hasIncomplete($featureId),
             );
 
             $next = $this->coordinator->acceptAgentResult(
@@ -260,14 +260,6 @@ final readonly class EngineeringQaStageExecutor
             if ($blocking && ($id === '' || ($results[$id] ?? null) !== 'PASS')) return false;
         }
         return true;
-    }
-
-    private function hasRunningTask(string $featureId): bool
-    {
-        foreach ($this->tasks->forFeature($featureId) as $task) {
-            if (($task['status'] ?? null) === 'RUNNING') return true;
-        }
-        return false;
     }
 
     private function counters(string $featureId): WorkflowCounters

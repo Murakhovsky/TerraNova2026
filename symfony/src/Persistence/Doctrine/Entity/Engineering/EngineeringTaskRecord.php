@@ -50,6 +50,14 @@ class EngineeringTaskRecord
     public function status(): string { return $this->status; }
     public function assignedRole(): string { return $this->assignedRole; }
 
+    public function setStatus(string $status, ?array $result = null): void
+    {
+        $this->status = $status;
+        if ($status === 'RUNNING') ++$this->attempt;
+        if ($result !== null) $this->result = $result;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
     public function refresh(
         string $type,
         string $title,

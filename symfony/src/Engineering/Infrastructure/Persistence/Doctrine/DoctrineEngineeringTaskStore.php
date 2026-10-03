@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
+use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Persistence\Doctrine\Entity\Engineering\EngineeringTaskRecord;
 use DateTimeImmutable;
@@ -26,7 +27,8 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
             $type = strtoupper((string) ($task['type'] ?? 'RESEARCH'));
             $title = trim((string) ($task['title'] ?? $externalKey));
             $description = trim((string) ($task['description'] ?? $task['title'] ?? $externalKey));
-            $assignedRole = strtoupper((string) ($task['assigned_role'] ?? 'DEVELOPER'));
+            $candidateRole = strtoupper((string) ($task['assigned_role'] ?? 'DEVELOPER'));
+            $assignedRole = AgentRole::tryFrom($candidateRole)?->value ?? AgentRole::DEVELOPER->value;
             $dependencies = is_array($task['dependencies'] ?? null) ? $task['dependencies'] : [];
             $acceptanceCriteria = is_array($task['acceptance_criteria'] ?? null) ? $task['acceptance_criteria'] : [];
 
@@ -57,6 +59,26 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
             ));
         }
         $this->entityManager->flush();
+    }
+
+    public function markRole(string $featureId, AgentRole $role, string $status, ?array $result = null): void
+    {
+        $records = $this->entityManager->getRepository(EngineeringTaskRecord::class)->findBy([
+            'featureId' => $featureId,
+            'assignedRole' => $role->value,
+        ]);
+        foreach ($records as $record) {
+            if ($record instanceof EngineeringTaskRecord) $record->setStatus($status, $result);
+        }
+        $this->entityManager->flush();
+    }
+
+    public function hasIncomplete(string $featureId): bool
+    {
+        foreach ($this->forFeature($featureId) as $task) {
+            if (!in_array((string) ($task['status'] ?? ''), ['COMPLETED','CANCELLED'], true)) return true;
+        }
+        return false;
     }
 
     public function forFeature(string $featureId): array
