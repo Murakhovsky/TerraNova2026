@@ -44,14 +44,21 @@ final readonly class EngineeringHumanDecisionService
             throw new \LogicException('Engineering human decision request is not open.');
         }
 
+        $isCancel = strtoupper(trim($selectedOption)) === 'CANCEL';
+        if ($isCancel && !$this->offersOption(is_array($request['options'] ?? null) ? $request['options'] : [], 'CANCEL')) {
+            throw new \LogicException('CANCEL is not an offered option for this human decision.');
+        }
+
         $answer = $this->humanDecisions->answer($requestId, $selectedOption, $comment, $decidedBy);
         $featureId = $answer['feature_id'];
         $workflowId = $answer['workflow_id'];
         $decisionId = $answer['decision_id'];
 
-        $next = $this->lock->synchronized($featureId, function () use ($workflowId, $decisionId, $featureId) {
+        $next = $this->lock->synchronized($featureId, function () use ($workflowId, $decisionId, $featureId, $isCancel, $decidedBy) {
             $workflow = $this->workflows->get($workflowId);
-            $directive = $this->coordinator->resumeAfterHumanDecision($workflow, $decisionId);
+            $directive = $isCancel
+                ? $this->coordinator->cancel($workflow, $decidedBy, 'Human decision selected CANCEL.')
+                : $this->coordinator->resumeAfterHumanDecision($workflow, $decisionId);
             $this->persistTransitions($workflow, $directive->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
             return $directive;
@@ -115,6 +122,20 @@ final readonly class EngineeringHumanDecisionService
             state: $workflow->currentState()->value,
             next: $next,
         );
+    }
+
+    private function offersOption(array $options, string $selected): bool
+    {
+        foreach ($options as $option) {
+            if (is_scalar($option) && strtoupper(trim((string) $option)) === $selected) return true;
+            if (!is_array($option)) continue;
+
+            foreach (['id', 'value', 'option'] as $key) {
+                if (isset($option[$key]) && strtoupper(trim((string) $option[$key])) === $selected) return true;
+            }
+            if (is_array($option['options'] ?? null) && $this->offersOption($option['options'], $selected)) return true;
+        }
+        return false;
     }
 
     private function persistTransitions(WorkflowExecution $workflow, array $transitions): void
