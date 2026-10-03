@@ -3,12 +3,14 @@ import { chromium } from 'playwright-core';
 // EPIC 2 browser contract. This suite intentionally mutates Sales state and must
 // run only against a disposable, mutation-safe fixture environment.
 const baseUrl = process.argv[2] || process.env.SALES_E2E_BASE_URL || '';
-const storageState = process.argv[3] || process.env.SALES_E2E_STORAGE_STATE || '';
+const storageStatePath = process.argv[3] || process.env.SALES_E2E_STORAGE_STATE || '';
+const email = process.env.SALES_E2E_EMAIL || '';
+const password = process.env.SALES_E2E_PASSWORD || '';
 const executablePath = process.env.CHROME_PATH || '';
 const mutationSafe = process.env.SALES_E2E_MUTATION_SAFE === '1';
 
 if (!baseUrl) throw new Error('SALES_E2E_BASE_URL is required. Browser E2E must not silently SKIP.');
-if (!storageState) throw new Error('SALES_E2E_STORAGE_STATE is required for authenticated Sales E2E.');
+if (!storageStatePath && (!email || !password)) throw new Error('Provide SALES_E2E_STORAGE_STATE or SALES_E2E_EMAIL + SALES_E2E_PASSWORD.');
 if (!mutationSafe) throw new Error('Set SALES_E2E_MUTATION_SAFE=1 only for a disposable Sales fixture environment.');
 
 const browser = await chromium.launch({
@@ -17,19 +19,53 @@ const browser = await chromium.launch({
 });
 
 const absolute = (path) => new URL(path, baseUrl).toString();
+
+let storageState = storageStatePath || null;
+if (!storageStatePath) {
+  const loginContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const loginPage = await loginContext.newPage();
+  const loginResponse = await loginPage.goto(absolute('/auth/login'), { waitUntil: 'domcontentloaded' });
+  if (!loginResponse || loginResponse.status() >= 400) {
+    throw new Error(`Sales E2E login page returned ${loginResponse?.status() ?? 'no response'}`);
+  }
+  await loginPage.locator('input[name="email"]').fill(email);
+  await loginPage.locator('input[name="password"]').fill(password);
+  await Promise.all([
+    loginPage.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
+    loginPage.locator('button[type="submit"]').click(),
+  ]);
+  storageState = await loginContext.storageState();
+  await loginContext.close();
+}
 const assertOk = (response, label) => {
   if (!response || response.status() >= 400) throw new Error(`${label} returned ${response?.status() ?? 'no response'}`);
 };
 const waitMutation = (page, fragment, action, label, method = 'POST') => Promise.all([
   page.waitForResponse((response) => response.url().includes(fragment) && response.request().method() === method),
   action(),
-]).then(([response]) => {
-  assertOk(response, label);
+]).then(async ([response]) => {
+  if (!response || response.status() >= 400) {
+    const body = response ? await response.text().catch(() => '') : '';
+    throw new Error(`${label} returned ${response?.status() ?? 'no response'}: ${body.slice(0, 2000)}`);
+  }
   return response;
 });
 const assertCount = async (locator, expected, label) => {
   const actual = await locator.count();
   if (actual !== expected) throw new Error(`${label}: expected ${expected}, got ${actual}`);
+};
+const eventually = async (check, label, timeoutMs = 20000, intervalMs = 500) => {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    try {
+      if (await check()) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(label + (lastError ? ': ' + lastError.message : ''));
 };
 
 const salesPerformanceBudget = {
@@ -139,12 +175,17 @@ try {
   const sourceStage = await card.getAttribute('data-stage-id');
   if (!dealId || !sourceStage) throw new Error('Deal card must expose deal and stage ids.');
   const zones = page.locator('[data-sales-stage-dropzone]');
-  let targetZone = null;
+  let sourceIndex = -1;
   for (let index = 0; index < await zones.count(); index += 1) {
-    const zone = zones.nth(index);
-    if ((await zone.getAttribute('data-stage-id')) !== sourceStage) { targetZone = zone; break; }
+    if ((await zones.nth(index).getAttribute('data-stage-id')) === sourceStage) {
+      sourceIndex = index;
+      break;
+    }
   }
-  if (!targetZone) throw new Error('Mutation fixture requires at least two Pipeline stages.');
+  if (sourceIndex < 0 || sourceIndex + 1 >= await zones.count()) {
+    throw new Error('Mutation fixture requires a non-terminal Deal stage with a next Pipeline stage.');
+  }
+  const targetZone = zones.nth(sourceIndex + 1);
   const targetStage = await targetZone.getAttribute('data-stage-id');
   if (!targetStage) throw new Error('Target Pipeline stage must expose data-stage-id.');
   await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/stage`, () => card.dragTo(targetZone), 'Change Deal stage');
@@ -155,7 +196,7 @@ try {
     throw new Error(`Deal ${dealId} did not persist target stage ${targetStage}.`);
   }
 
-  const dealHref = await movedCard.getAttribute('href');
+  const dealHref = await movedCard.locator('a[href^="/sales/deals/"]').first().getAttribute('href');
   if (!dealHref) throw new Error('Mutation fixture requires a Deal workspace link.');
   assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Deal workspace');
   await page.locator('[data-sales-deal-workspace]').waitFor({ state: 'visible' });
@@ -165,8 +206,10 @@ try {
   await messageForm.locator('select[name="channel"]').selectOption('WEB');
   await messageForm.locator('textarea[name="body"]').fill(messageBody);
   await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/communications`, () => messageForm.locator('button').filter({ hasText: 'Send Message' }).click(), 'Send Message');
-  assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
-  await assertCount(page.locator('.cos-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
+  await eventually(async () => {
+    assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
+    return await page.locator('.cos-sales-message').filter({ hasText: messageBody }).count() === 1;
+  }, 'Sent canonical WEB message must persist after async projection');
 
   await page.locator('#intelligence').waitFor({ state: 'visible' });
   const execute = page.locator('[data-sales-action] [data-decision="execute"]').first();
@@ -176,11 +219,13 @@ try {
   const actionId = await actionPanel.getAttribute('data-action-id');
   if (!actionId) throw new Error('Executable COS action must expose data-action-id.');
   await waitMutation(page, `/api/v1/sales/actions/${actionId}/execute`, () => execute.click(), 'Execute COS action');
-  const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/sales/opportunities/${dealId}/intelligence`) && response.request().method() === 'GET');
-  assertOk(await page.goto(absolute(dealHref), { waitUntil: 'domcontentloaded' }), 'COS action postcondition');
-  assertOk(await intelligenceResponse, 'Reloaded Deal intelligence');
-  await page.locator('[data-sales-intelligence]').waitFor({ state: 'visible' });
-  await assertCount(page.locator(`[data-sales-action][data-action-id="${actionId}"] [data-decision="execute"]`), 0, 'Executed COS action must not remain executable after reload');
+  await eventually(async () => {
+    const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/sales/opportunities/${dealId}/intelligence`) && response.request().method() === 'GET');
+    assertOk(await page.goto(absolute(dealHref), { waitUntil: 'domcontentloaded' }), 'COS action postcondition');
+    assertOk(await intelligenceResponse, 'Reloaded Deal intelligence');
+    await page.locator('[data-sales-intelligence]').waitFor({ state: 'visible' });
+    return await page.locator(`[data-sales-action][data-action-id="${actionId}"] [data-decision="execute"]`).count() === 0;
+  }, 'Executed COS action must not remain executable after async execution', 30000, 750);
 
   await context.close();
   console.log(JSON.stringify({ ok: true, suite: 'Sales V0.6.8 Epic 2 Closure mutation E2E' }, null, 2));

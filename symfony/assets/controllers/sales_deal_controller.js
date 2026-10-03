@@ -121,7 +121,12 @@ export default class extends Controller {
         this.status(status, 'Зберігаю…', 'loading');
 
         try {
-            await this.requestJson(endpoint, method, data);
+            const result = await this.requestJson(endpoint, method, data);
+            if (result?.accepted === true) {
+                this.status(status, 'Прийнято в обробку. Результат зʼявиться після виконання.', 'loading');
+                window.setTimeout(() => window.location.reload(), 1500);
+                return;
+            }
             this.status(status, 'Готово.', 'success');
             window.setTimeout(() => window.location.reload(), 250);
         } catch (error) {
