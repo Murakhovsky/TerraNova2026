@@ -66,7 +66,7 @@ final readonly class EngineeringFeatureController
                 'shell' => $shell,
                 'page' => $this->pages->create(
                     PageArchetype::SystemControlSurface,
-                    ['PageHeader', 'KpiStrip', 'EntityList', 'EmptyState', 'Alert'],
+                    ['PageHeader', 'KpiStrip', 'EntityList', 'EmptyState', 'ErrorState'],
                     'ready',
                 ),
                 'engineering' => $data,
