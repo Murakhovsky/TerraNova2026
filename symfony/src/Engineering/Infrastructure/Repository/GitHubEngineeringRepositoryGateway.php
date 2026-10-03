@@ -186,7 +186,21 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
             $labels,
         ), static fn (string $label): bool => $label !== '')));
         if ($issueNumber <= 0 || $labels === []) return;
-        $this->request('POST', '/issues/'.$issueNumber.'/labels', ['labels' => $labels], [200]);
+
+        try {
+            foreach ($labels as $label) {
+                $existing = $this->requestNullable('GET', '/labels/'.rawurlencode($label), [200, 404]);
+                if ($existing !== null) continue;
+                $this->request('POST', '/labels', [
+                    'name' => $label,
+                    'color' => '1d76db',
+                    'description' => 'COS Engineering workflow label.',
+                ], [201, 422]);
+            }
+            $this->request('POST', '/issues/'.$issueNumber.'/labels', ['labels' => $labels], [200]);
+        } catch (RuntimeException) {
+            // Labels improve operations but must not block feature intake.
+        }
     }
 
     public function pullRequest(int $pullRequestNumber): array
