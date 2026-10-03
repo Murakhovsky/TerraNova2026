@@ -1,0 +1,323 @@
+{
+  "dataset": "engineering-agent-output-v0.1",
+  "version": "0.1.0",
+  "agent_version": "0.1.0",
+  "prompt_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "cases": [
+    {
+      "id": "manager-valid-minimal",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": true,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "manager-empty-tasks-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Empty plan",
+          "type": "FEATURE",
+          "business_goal": "Do something.",
+          "expected_behavior": "Behavior changes.",
+          "scope": [
+            "One thing"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Observable result.",
+              "verification_type": "unit"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {},
+        "tasks": [],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Ready."
+        }
+      }
+    },
+    {
+      "id": "manager-bad-acceptance-id-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Bad AC",
+          "type": "FEATURE",
+          "business_goal": "Validate ids.",
+          "expected_behavior": "Valid acceptance criteria.",
+          "scope": [
+            "Validation"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "whatever",
+              "description": "Observable result.",
+              "verification_type": "unit"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {},
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Ready."
+        }
+      }
+    },
+    {
+      "id": "architect-valid",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": true,
+      "output": {
+        "status": "APPROVED",
+        "decision_summary": "Use existing bounded context.",
+        "implementation_plan": [
+          "Change service",
+          "Add test"
+        ],
+        "risks": [],
+        "open_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "architect-missing-plan-rejected",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "decision_summary": "Missing plan.",
+        "risks": [],
+        "open_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "developer-safe-change",
+      "role": "DEVELOPER",
+      "expected_valid": true,
+      "output": {
+        "status": "COMPLETED",
+        "changed_files": [
+          "symfony/src/Example.php"
+        ],
+        "implementation_summary": "Implemented bounded change.",
+        "tests_added": [
+          "tests/unit/example.php"
+        ],
+        "tests_run": [],
+        "known_limitations": [],
+        "findings": [],
+        "changes": [
+          {
+            "path": "symfony/src/Example.php",
+            "operation": "UPDATE",
+            "content": "<?php\\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "developer-path-traversal-rejected",
+      "role": "DEVELOPER",
+      "expected_valid": false,
+      "output": {
+        "status": "COMPLETED",
+        "changed_files": [
+          "../.env"
+        ],
+        "implementation_summary": "Unsafe.",
+        "tests_added": [],
+        "tests_run": [],
+        "known_limitations": [],
+        "findings": [],
+        "changes": [
+          {
+            "path": "../.env",
+            "operation": "UPDATE",
+            "content": "SECRET=x"
+          }
+        ]
+      }
+    },
+    {
+      "id": "reviewer-critical-approval-rejected",
+      "role": "REVIEWER",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "reviewed_revision": "abc123",
+        "findings": [
+          {
+            "severity": "CRITICAL",
+            "title": "Tenant leak"
+          }
+        ],
+        "acceptance_criteria": [],
+        "architecture_compliance": true,
+        "security_notes": [],
+        "recommendation": "merge"
+      }
+    },
+    {
+      "id": "reviewer-changes-requested-valid",
+      "role": "REVIEWER",
+      "expected_valid": true,
+      "output": {
+        "status": "CHANGES_REQUESTED",
+        "reviewed_revision": "abc123",
+        "findings": [
+          {
+            "severity": "HIGH",
+            "title": "Missing guard"
+          }
+        ],
+        "acceptance_criteria": [],
+        "architecture_compliance": false,
+        "security_notes": [
+          "Add guard"
+        ],
+        "recommendation": "fix"
+      }
+    },
+    {
+      "id": "qa-false-pass-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "status": "PASS",
+        "tested_revision": "abc123",
+        "test_plan": [
+          "run integration"
+        ],
+        "acceptance_criteria": [],
+        "tests_total": 2,
+        "tests_passed": 1,
+        "tests_failed": 1,
+        "defects": [],
+        "regressions": [],
+        "known_limitations": []
+      }
+    },
+    {
+      "id": "qa-fail-valid",
+      "role": "QA",
+      "expected_valid": true,
+      "output": {
+        "status": "FAIL",
+        "tested_revision": "abc123",
+        "test_plan": [
+          "run integration"
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "FAIL",
+            "evidence": "test failed"
+          }
+        ],
+        "tests_total": 1,
+        "tests_passed": 0,
+        "tests_failed": 1,
+        "defects": [
+          {
+            "severity": "HIGH",
+            "title": "Regression"
+          }
+        ],
+        "regressions": [
+          "Regression"
+        ],
+        "known_limitations": []
+      }
+    }
+  ]
+}
