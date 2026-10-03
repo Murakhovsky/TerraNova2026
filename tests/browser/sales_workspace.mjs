@@ -162,12 +162,17 @@ try {
   const sourceStage = await card.getAttribute('data-stage-id');
   if (!dealId || !sourceStage) throw new Error('Deal card must expose deal and stage ids.');
   const zones = page.locator('[data-sales-stage-dropzone]');
-  let targetZone = null;
+  let sourceIndex = -1;
   for (let index = 0; index < await zones.count(); index += 1) {
-    const zone = zones.nth(index);
-    if ((await zone.getAttribute('data-stage-id')) !== sourceStage) { targetZone = zone; break; }
+    if ((await zones.nth(index).getAttribute('data-stage-id')) === sourceStage) {
+      sourceIndex = index;
+      break;
+    }
   }
-  if (!targetZone) throw new Error('Mutation fixture requires at least two Pipeline stages.');
+  if (sourceIndex < 0 || sourceIndex + 1 >= await zones.count()) {
+    throw new Error('Mutation fixture requires a non-terminal Deal stage with a next Pipeline stage.');
+  }
+  const targetZone = zones.nth(sourceIndex + 1);
   const targetStage = await targetZone.getAttribute('data-stage-id');
   if (!targetStage) throw new Error('Target Pipeline stage must expose data-stage-id.');
   await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/stage`, () => card.dragTo(targetZone), 'Change Deal stage');
