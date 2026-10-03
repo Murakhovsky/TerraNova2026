@@ -23,6 +23,14 @@ ON DUPLICATE KEY UPDATE full_name=VALUES(full_name),phone=VALUES(phone),email=VA
 SET @e2e_person_id := (
     SELECT id FROM tn_people WHERE organization_id='default' AND public_id='PN-UI-ACCEPT' LIMIT 1
 );
+
+INSERT INTO sales_user_capabilities
+    (organization_id,user_id,capability,status,granted_by,created_at,updated_at)
+VALUES
+    ('default',@e2e_user_id,'sales.deal.assign','ACTIVE','ui-functional-acceptance',NOW(6),NOW(6)),
+    ('default',@e2e_user_id,'sales.approval.decide','ACTIVE','ui-functional-acceptance',NOW(6),NOW(6)),
+    ('default',@e2e_user_id,'sales.approval.any_team','ACTIVE','ui-functional-acceptance',NOW(6),NOW(6))
+ON DUPLICATE KEY UPDATE status='ACTIVE',granted_by=VALUES(granted_by),updated_at=NOW(6);
 SET @e2e_pipeline_id := (
     SELECT id FROM sales_pipelines
     WHERE organization_id='default' AND code='default-sales' AND status='ACTIVE'
