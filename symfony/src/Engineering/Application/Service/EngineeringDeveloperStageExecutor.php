@@ -231,7 +231,7 @@ final readonly class EngineeringDeveloperStageExecutor
             }
             $this->validator->validate(AgentRole::DEVELOPER, $run->structuredOutput);
 
-            if (($run->structuredOutput['status'] ?? null) === 'COMPLETED') {
+            if (in_array((string) ($run->structuredOutput['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true)) {
                 $branch = 'engineering/'.$featureId;
                 $developerChanges = is_array($run->structuredOutput['changes'] ?? null) ? $run->structuredOutput['changes'] : [];
                 $this->assertDeveloperChangeEvidence($developerChanges, $implementation['content'], $repositoryFiles);
@@ -301,7 +301,7 @@ final readonly class EngineeringDeveloperStageExecutor
             $this->tasks->markRole(
                 $featureId,
                 AgentRole::DEVELOPER,
-                $developerStatus === 'COMPLETED' ? 'COMPLETED' : ($developerStatus === 'BLOCKED' ? 'BLOCKED' : 'FAILED'),
+                in_array($developerStatus, ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true) ? 'COMPLETED' : ($developerStatus === 'BLOCKED' ? 'BLOCKED' : 'FAILED'),
                 ['status' => $developerStatus, 'revision' => $run->structuredOutput['repository_revision'] ?? null],
             );
             $this->artifacts->createVersion(
