@@ -233,7 +233,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             'SELECT ap.id approval_id,ap.action_id,ap.approver_type,ap.approver_id,ap.reason approval_reason,'
             . 'a.type action_type,a.target_id deal_id,a.status action_status,a.risk_level,a.parameters,a.created_at,'
             . 'c.public_id,c.title,p.full_name customer FROM cos_approvals ap INNER JOIN cos_actions a ON a.id=ap.action_id '
-            . 'LEFT JOIN tn_client_cases c ON CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(ap.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND c.id=CAST(a.target_id AS UNSIGNED) '
+            . 'LEFT JOIN tn_client_cases c ON c.organization_id=ap.organization_id AND c.id=CAST(a.target_id AS UNSIGNED) '
             . 'LEFT JOIN tn_people p ON p.organization_id=c.organization_id AND p.id=c.person_id '
             . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY a.created_at DESC LIMIT ' . $this->limit($limit),
             $params,
