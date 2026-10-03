@@ -10,6 +10,7 @@ final readonly class EngineeringAutonomousProgressionService
 {
     public function __construct(
         private EngineeringArchitectStageExecutor $architect,
+        private EngineeringDeveloperStageExecutor $developer,
     ) {}
 
     public function continue(
@@ -20,7 +21,16 @@ final readonly class EngineeringAutonomousProgressionService
         string $correlationId,
     ): WorkflowDirective {
         if ($directive->agent === AgentRole::PRINCIPAL_ARCHITECT) {
-            return $this->architect->execute(
+            $directive = $this->architect->execute(
+                featureId: $featureId,
+                workflowId: $workflowId,
+                organizationId: $organizationId,
+                correlationId: $correlationId,
+            );
+        }
+
+        if ($directive->agent === AgentRole::DEVELOPER) {
+            $directive = $this->developer->execute(
                 featureId: $featureId,
                 workflowId: $workflowId,
                 organizationId: $organizationId,

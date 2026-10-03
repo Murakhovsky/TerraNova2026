@@ -95,6 +95,11 @@ final readonly class EngineeringWorkflowCoordinator
         };
     }
 
+    public function requireHumanDecision(WorkflowExecution $workflow, string $reason): WorkflowDirective
+    {
+        return $this->human($workflow, $reason);
+    }
+
     public function acceptAgentResult(
         WorkflowExecution $workflow,
         AgentRole $role,
