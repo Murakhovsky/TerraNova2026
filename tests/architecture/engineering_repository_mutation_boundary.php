@@ -9,12 +9,18 @@ foreach ([
     "str_contains(\$path, '..')",
     "['.git/','.env','vendor/','node_modules/','var/']",
     "'force' => false",
+    'advanced from expected revision',
+    'rerun Developer with fresh repository context',
     "'draft' => false",
     'count($changes) > 20',
+    'filesAtRevision',
+    'compareRevisions',
+    "'/contents/'",
+    "'/compare/'",
 ] as $needle) {
     if (!str_contains($gateway, $needle)) throw new RuntimeException('Repository mutation boundary missing '.$needle);
 }
-foreach (["'changes'", "'CREATE','UPDATE','DELETE'", "'maxItems' => 20"] as $needle) {
+foreach (["'changes'", "'CREATE','UPDATE','DELETE'", "'maxItems' => 20", "'documentation_changes'", "'maxItems' => 5"] as $needle) {
     if (!str_contains($schema, $needle)) throw new RuntimeException('Developer schema missing '.$needle);
 }
 

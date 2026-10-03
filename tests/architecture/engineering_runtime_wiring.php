@@ -10,6 +10,7 @@ $required = [
     'Kernel\\Agent\\Contract\\AgentRuntimeInterface:',
     'App\\Engineering\\Application\\Agent\\EngineeringAgentRunnerInterface:',
     'App\\Engineering\\Application\\Context\\RepositoryDiscoveryInterface:',
+    'App\\Engineering\\Application\\Context\\EngineeringDatabaseSchemaProviderInterface:',
     "\$repositoryRoot: '%kernel.project_dir%/..'",
 ];
 

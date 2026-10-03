@@ -54,6 +54,7 @@ final readonly class EngineeringReviewerStageExecutor
 
         $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
         $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
+        $developerHandoff = $this->requiredArtifact($featureId, ArtifactType::DEVELOPER_HANDOFF);
         $development = $this->requiredArtifact($featureId, ArtifactType::DEVELOPMENT_RESULT);
         $pullRequest = (int) ($development['content']['pull_request'] ?? 0);
         $revision = trim((string) ($development['content']['repository_revision'] ?? ''));
@@ -70,12 +71,14 @@ final readonly class EngineeringReviewerStageExecutor
             inputs: [
                 'feature_spec' => $featureSpec['content'],
                 'architecture_decision' => $architecture['content'],
+                'developer_handoff' => $developerHandoff['content'],
                 'development_result' => $development['content'],
                 'pull_request_files' => $diff,
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],
                 'artifact:'.$architecture['id'],
+                'artifact:'.$developerHandoff['id'],
                 'artifact:'.$development['id'],
                 'pull_request:'.$pullRequest,
             ],
@@ -90,7 +93,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'Reviewed revision equals Developer revision.',
                 'Findings have category, severity, location, evidence and suggested fix.',
                 'Acceptance criteria are individually evaluated.',
-                'Architecture compliance is explicit.',
+                'Architecture Decision and Developer Handoff compliance are explicit.',
             ],
             idempotencyKey: $featureId.':reviewer:'.$logicalAttempt.':'.$revision,
             inputSnapshot: [
@@ -99,6 +102,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'pull_request' => $pullRequest,
                 'feature_spec_hash' => $featureSpec['content_hash'],
                 'architecture_hash' => $architecture['content_hash'],
+                'developer_handoff_hash' => $developerHandoff['content_hash'],
                 'development_result_hash' => $development['content_hash'],
                 'logical_attempt' => $logicalAttempt,
             ],

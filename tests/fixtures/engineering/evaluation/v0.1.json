@@ -158,13 +158,90 @@
       "expected_valid": true,
       "output": {
         "status": "APPROVED",
-        "decision_summary": "Use existing bounded context.",
-        "implementation_plan": [
-          "Change service",
-          "Add test"
-        ],
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {
+            "scope": "SYSTEM"
+          },
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "implementation_plan": {
+          "steps": [
+            {
+              "id": "ARCH-1"
+            }
+          ],
+          "files_to_create": [],
+          "files_to_modify": [],
+          "services": [],
+          "controllers": [],
+          "commands": [],
+          "entities": [],
+          "repositories": [],
+          "frontend_components": [],
+          "migrations": [],
+          "tests_required": [
+            "unit"
+          ],
+          "documentation_updates": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [
+            "unit"
+          ],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [],
+        "conditions": [],
         "risks": [],
-        "open_questions": [],
+        "unresolved_questions": [],
         "required_human_decisions": []
       }
     },
@@ -174,9 +251,67 @@
       "expected_valid": false,
       "output": {
         "status": "APPROVED",
-        "decision_summary": "Missing plan.",
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {
+            "scope": "SYSTEM"
+          },
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [
+            "unit"
+          ],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [],
+        "conditions": [],
         "risks": [],
-        "open_questions": [],
+        "unresolved_questions": [],
         "required_human_decisions": []
       }
     },

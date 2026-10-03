@@ -67,7 +67,13 @@ final readonly class EngineeringReportBuilder
                 'number' => $developmentContent['pull_request'] ?? null,
                 'url' => $developmentContent['pull_request_url'] ?? null,
             ],
-            'architecture' => ['status' => $architectureContent['status'] ?? null],
+            'architecture' => [
+                'status' => $architectureContent['gate_status'] ?? $architectureContent['status'] ?? null,
+                'repository_revision' => $architectureContent['repository_revision'] ?? null,
+                'primary_owner_domain' => $architectureContent['primary_owner_domain'] ?? null,
+                'conditions' => is_array($architectureContent['conditions'] ?? null) ? $architectureContent['conditions'] : [],
+                'decision' => $architectureContent['decision'] ?? null,
+            ],
             'development' => ['status' => $developmentContent['status'] ?? null],
             'review' => [
                 'status' => $reviewContent['status'] ?? null,

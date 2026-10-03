@@ -200,3 +200,36 @@ Retryable помилка LLM provider може привести до configured 
 ## Інваріант
 
 > Agent має право міркувати в межах контракту контексту. Право діяти визначає Kernel Policy runtime.
+
+
+## Інженерна оркестрація: Principal Architect
+
+Інженерна автоматизація використовує той самий Kernel Agent runtime, а не окремий паралельний фреймворк для агентів.
+
+Обов’язковий шлях V0.1:
+
+```text
+Engineering Manager
+→ FEATURE_SPEC + CONTEXT_MAP
+→ Principal Architect
+→ ARCHITECTURE_DECISION
+→ IMPLEMENTATION_PLAN
+→ DEVELOPER_HANDOFF
+→ Architecture Gate
+→ Developer
+```
+
+Principal Architect отримує обмежений набір доказів із repository, read-only snapshot схеми бази даних і, коли ревізія контексту Manager відрізняється від поточного `main`, порівняння ревізій. Runtime сам проставляє в Architecture Decision авторитетні `feature_id` та repository revision, замість того щоб довіряти LLM механічне копіювання цих ідентифікаторів.
+
+Значення Architecture Gate обмежені чотирма варіантами:
+
+- `APPROVED`;
+- `APPROVED_WITH_CONDITIONS`;
+- `REJECTED`;
+- `NEEDS_HUMAN_DECISION`.
+
+Тільки перші два дозволяють перейти до Development. Перед першим запуском Developer повторно перевіряє, що затверджена repository revision усе ще є актуальною. Якщо `main` змінився, orchestration повертає роботу Principal Architect для revalidation замість реалізації за застарілим планом.
+
+Engineering roles можуть мати окремі model hints через `COS_ENGINEERING_MANAGER_MODEL`, `COS_ENGINEERING_ARCHITECT_MODEL`, `COS_ENGINEERING_DEVELOPER_MODEL`, `COS_ENGINEERING_REVIEWER_MODEL` і `COS_ENGINEERING_QA_MODEL`. Порожнє значення означає використання загального LLM routing/default model. Docker runtime передає ці змінні явно, тому production deployment не втрачає role-specific routing.
+
+Principal Architect може підготувати зміни архітектурної документації та ADR лише в межах `docs/`. Ці зміни зберігаються як керовані artifacts і застосовуються разом зі змінами Developer, тому repository не отримує окремий технічний commit лише заради документації, а авторство та audit trail залишаються явними.

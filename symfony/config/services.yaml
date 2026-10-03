@@ -1275,6 +1275,9 @@ services:
   App\Engineering\Application\Context\RepositoryFileReaderInterface:
     alias: App\Engineering\Infrastructure\Repository\LocalRepositoryFileReader
 
+  App\Engineering\Application\Context\EngineeringDatabaseSchemaProviderInterface:
+    alias: App\Engineering\Infrastructure\Database\DoctrineEngineeringDatabaseSchemaProvider
+
   App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFeatureStore
 

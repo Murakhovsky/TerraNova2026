@@ -25,4 +25,10 @@ class HumanDecisionRecord
         #[ORM\Column(type: Types::TEXT, nullable: true)]
         private ?string $comment = null,
     ) {}
+
+    public function requestId(): string { return $this->requestId; }
+    public function selectedOption(): string { return $this->selectedOption; }
+    public function decidedBy(): string { return $this->decidedBy; }
+    public function comment(): ?string { return $this->comment; }
+    public function createdAt(): DateTimeImmutable { return $this->createdAt; }
 }

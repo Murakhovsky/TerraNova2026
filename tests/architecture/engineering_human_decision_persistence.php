@@ -10,6 +10,10 @@ foreach ([
     'WorkflowDirectiveType::REQUEST_HUMAN_DECISION',
     'humanDecisions->create',
     "'status' => 'OPEN'",
+    'historyForFeature',
+    'HumanDecisionRecord',
+    'findOneBy',
+    "'selected_option'",
 ] as $needle) {
     if (!str_contains($managerStage.$architectStage.$store, $needle)) {
         throw new RuntimeException('Human decision persistence missing '.$needle);

@@ -95,6 +95,34 @@ final readonly class DoctrineEngineeringHumanDecisionStore implements Engineerin
         return array_map(fn (HumanDecisionRequestRecord $record): array => $this->view($record), $records);
     }
 
+    public function historyForFeature(string $featureId): array
+    {
+        $requests = $this->entityManager->getRepository(HumanDecisionRequestRecord::class)->findBy(
+            ['featureId' => $featureId],
+            ['createdAt' => 'ASC'],
+        );
+        $answers = $this->entityManager->getRepository(HumanDecisionRecord::class);
+
+        $history = [];
+        foreach ($requests as $request) {
+            if (!$request instanceof HumanDecisionRequestRecord) continue;
+
+            $item = $this->view($request);
+            $answer = $answers->findOneBy(['requestId' => $request->id()]);
+            $item['answer'] = $answer instanceof HumanDecisionRecord
+                ? [
+                    'selected_option' => $answer->selectedOption(),
+                    'comment' => $answer->comment(),
+                    'decided_by' => $answer->decidedBy(),
+                    'created_at' => $answer->createdAt()->format(DATE_ATOM),
+                ]
+                : null;
+            $history[] = $item;
+        }
+
+        return $history;
+    }
+
     private function view(HumanDecisionRequestRecord $record): array
     {
         return [

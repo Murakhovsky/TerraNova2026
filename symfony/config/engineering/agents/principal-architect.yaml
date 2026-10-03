@@ -11,6 +11,15 @@ permissions:
   repository:
     read: true
     write: false
+  architecture_docs:
+    read: true
+    write: true
+    roots:
+      - docs/03-architecture/
+      - docs/04-domains/
+      - docs/06-ai-agents/
+      - docs/10-operations/
+      - docs/11-decisions/
   workflow:
     read: true
     propose_transition: true
