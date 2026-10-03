@@ -1,0 +1,40 @@
+id: engineering-manager
+version: 0.1.0
+role: ENGINEERING_MANAGER
+type: orchestrator
+domain: engineering
+runtime: kernel-agent-runtime
+model:
+  tier: strong
+  reasoning: high
+permissions:
+  repository:
+    read: true
+    write: false
+  github:
+    issue_read: true
+    issue_write: true
+    pr_read: true
+    pr_write: false
+  workflow:
+    read: true
+    propose_transition: true
+  agents:
+    delegate: true
+  production:
+    access: false
+  merge: false
+  deploy: false
+tools:
+  - repository.search
+  - repository.read
+  - repository.symbols
+  - git.history
+  - github.issue.read
+  - github.issue.create
+  - github.issue.update
+  - github.pr.read
+  - ci.status
+  - workflow.read
+  - artifact.read
+  - artifact.create

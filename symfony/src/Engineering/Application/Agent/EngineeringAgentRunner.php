@@ -11,7 +11,7 @@ use Kernel\Agent\Model\AgentInstance;
 use Kernel\Agent\Model\AgentRunStatus;
 use Kernel\Shared\Domain\OrganizationId;
 
-final readonly class EngineeringAgentRunner
+final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInterface
 {
     public function __construct(
         private AgentRuntimeInterface $runtime,
