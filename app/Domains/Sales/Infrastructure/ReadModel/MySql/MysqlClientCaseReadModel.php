@@ -38,8 +38,14 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         $where = ['1 = 1'];
         $params = ['organization_id' => $this->organizationId];
         if (($filters['q'] ?? '') !== '') {
-            $where[] = '(c.public_id LIKE :q OR c.title LIKE :q OR p.full_name LIKE :q OR p.phone LIKE :q OR p.email LIKE :q OR p.telegram LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $where[] = '(c.public_id LIKE :q_public_id OR c.title LIKE :q_title OR p.full_name LIKE :q_name OR p.phone LIKE :q_phone OR p.email LIKE :q_email OR p.telegram LIKE :q_telegram)';
+            $search = '%' . $filters['q'] . '%';
+            $params['q_public_id'] = $search;
+            $params['q_title'] = $search;
+            $params['q_name'] = $search;
+            $params['q_phone'] = $search;
+            $params['q_email'] = $search;
+            $params['q_telegram'] = $search;
         }
         if (($filters['stage'] ?? '') !== '') {
             $where[] = 'COALESCE(ps.code, UPPER(c.stage)) = :stage';
