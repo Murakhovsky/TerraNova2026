@@ -6,6 +6,7 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Manager\EngineeringManagerAnalysisService;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
@@ -22,6 +23,7 @@ final readonly class EngineeringOrchestrator
         private EngineeringFeatureStoreInterface $features,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringArtifactStoreInterface $artifacts,
+        private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringManagerAnalysisService $manager,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -54,6 +56,13 @@ final readonly class EngineeringOrchestrator
             request: $this->features->request($featureId),
             organizationId: $organizationId,
             correlationId: $correlationId,
+        );
+
+        $this->agentRuns->recordCompleted(
+            workflowId: $workflow->id(),
+            task: $analysis->task,
+            result: $analysis->run,
+            traceId: $correlationId,
         );
 
         $this->artifacts->createVersion(

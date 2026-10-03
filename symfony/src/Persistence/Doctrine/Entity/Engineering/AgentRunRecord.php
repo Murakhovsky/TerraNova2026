@@ -61,5 +61,10 @@ class AgentRunRecord
     ) {}
 
     public function id(): string { return $this->id; }
+    public function featureId(): string { return $this->featureId; }
+    public function workflowExecutionId(): string { return $this->workflowExecutionId; }
+    public function agentRole(): string { return $this->agentRole; }
     public function idempotencyKey(): string { return $this->idempotencyKey; }
+    public function status(): string { return $this->status; }
+    public function output(): ?array { return $this->output; }
 }
