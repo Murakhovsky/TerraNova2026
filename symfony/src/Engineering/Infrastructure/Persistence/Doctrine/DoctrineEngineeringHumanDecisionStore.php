@@ -5,6 +5,7 @@ namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Domain\Workflow\EngineeringId;
+use App\Persistence\Doctrine\Entity\Engineering\HumanDecisionRecord;
 use App\Persistence\Doctrine\Entity\Engineering\HumanDecisionRequestRecord;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,6 +44,47 @@ final readonly class DoctrineEngineeringHumanDecisionStore implements Engineerin
         return $id;
     }
 
+    public function get(string $requestId): array
+    {
+        $record = $this->entityManager->find(HumanDecisionRequestRecord::class, $requestId);
+        if (!$record instanceof HumanDecisionRequestRecord) {
+            throw new \RuntimeException('Engineering human decision request not found: '.$requestId);
+        }
+        return $this->view($record);
+    }
+
+    public function answer(string $requestId, string $selectedOption, ?string $comment, string $decidedBy): array
+    {
+        $record = $this->entityManager->find(HumanDecisionRequestRecord::class, $requestId);
+        if (!$record instanceof HumanDecisionRequestRecord) {
+            throw new \RuntimeException('Engineering human decision request not found: '.$requestId);
+        }
+        if ($record->status() !== 'OPEN') {
+            throw new \LogicException('Engineering human decision request is not open.');
+        }
+        if (trim($selectedOption) === '' || trim($decidedBy) === '') {
+            throw new \InvalidArgumentException('Human decision option and actor are required.');
+        }
+
+        $decisionId = EngineeringId::generate();
+        $this->entityManager->persist(new HumanDecisionRecord(
+            id: $decisionId,
+            requestId: $requestId,
+            selectedOption: $selectedOption,
+            decidedBy: $decidedBy,
+            createdAt: new DateTimeImmutable(),
+            comment: $comment,
+        ));
+        $record->markAnswered(new DateTimeImmutable());
+        $this->entityManager->flush();
+
+        return [
+            'feature_id' => $record->featureId(),
+            'workflow_id' => $record->workflowExecutionId(),
+            'decision_id' => $decisionId,
+        ];
+    }
+
     public function openForFeature(string $featureId): array
     {
         $records = $this->entityManager->getRepository(HumanDecisionRequestRecord::class)->findBy(
@@ -50,15 +92,23 @@ final readonly class DoctrineEngineeringHumanDecisionStore implements Engineerin
             ['createdAt' => 'ASC'],
         );
 
-        return array_map(static fn (HumanDecisionRequestRecord $record): array => [
+        return array_map(fn (HumanDecisionRequestRecord $record): array => $this->view($record), $records);
+    }
+
+    private function view(HumanDecisionRequestRecord $record): array
+    {
+        return [
             'id' => $record->id(),
+            'feature_id' => $record->featureId(),
             'workflow_id' => $record->workflowExecutionId(),
+            'type' => $record->type(),
             'question' => $record->question(),
             'reason' => $record->reason(),
             'options' => $record->options(),
+            'evidence' => $record->evidence(),
             'blocking' => $record->blocking(),
             'status' => $record->status(),
             'recommended_option' => $record->recommendedOption(),
-        ], $records);
+        ];
     }
 }

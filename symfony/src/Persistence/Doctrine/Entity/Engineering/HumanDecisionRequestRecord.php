@@ -43,9 +43,11 @@ class HumanDecisionRequestRecord
     public function id(): string { return $this->id; }
     public function featureId(): string { return $this->featureId; }
     public function workflowExecutionId(): string { return $this->workflowExecutionId; }
+    public function type(): string { return $this->type; }
     public function question(): string { return $this->question; }
     public function reason(): string { return $this->reason; }
     public function options(): array { return $this->options; }
+    public function evidence(): array { return $this->evidence; }
     public function blocking(): bool { return $this->blocking; }
     public function status(): string { return $this->status; }
     public function recommendedOption(): ?string { return $this->recommendedOption; }
