@@ -39,8 +39,12 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
             $params['status'] = $status;
         }
         if ($search !== '') {
-            $where[] = '(s.title LIKE :search OR s.slug LIKE :search OR p.title LIKE :search OR p.public_id LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $where[] = '(s.title LIKE :search_title OR s.slug LIKE :search_slug OR p.title LIKE :search_property_title OR p.public_id LIKE :search_property_public_id)';
+            $value = '%' . $search . '%';
+            $params['search_title'] = $value;
+            $params['search_slug'] = $value;
+            $params['search_property_title'] = $value;
+            $params['search_property_public_id'] = $value;
         }
         return $this->database->fetchAll('
             SELECT s.*, p.id AS property_id, p.title AS property_title, p.slug AS property_slug,
