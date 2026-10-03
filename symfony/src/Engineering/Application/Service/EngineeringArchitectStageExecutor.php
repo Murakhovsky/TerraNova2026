@@ -93,11 +93,12 @@ final readonly class EngineeringArchitectStageExecutor
             ],
         );
 
-        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $task, $correlationId): string {
+        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $task, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
                 throw new WorkflowAlreadyRunningException('Architect stage can run only from ARCHITECTURE_PENDING.');
             }
+            $this->tasks->markRole($featureId, AgentRole::PRINCIPAL_ARCHITECT, 'RUNNING');
             return $this->agentRuns->start($workflowId, $task, $correlationId);
         });
 
@@ -110,7 +111,10 @@ final readonly class EngineeringArchitectStageExecutor
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
-                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage()),
+                function () use ($featureId, $engineeringRunId, $error): void {
+                    $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage());
+                    $this->tasks->markRole($featureId, AgentRole::PRINCIPAL_ARCHITECT, 'FAILED', ['error' => $error->getMessage()]);
+                },
             );
             throw $error;
         }
@@ -122,6 +126,15 @@ final readonly class EngineeringArchitectStageExecutor
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
+            $architectStatus = (string) ($run->structuredOutput['status'] ?? '');
+            $this->tasks->markRole(
+                $featureId,
+                AgentRole::PRINCIPAL_ARCHITECT,
+                in_array($architectStatus, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)
+                    ? 'COMPLETED'
+                    : ($architectStatus === 'NEEDS_PRODUCT_DECISION' ? 'PENDING' : 'BLOCKED'),
+                ['status' => $architectStatus],
+            );
             $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::ARCHITECTURE_DECISION,

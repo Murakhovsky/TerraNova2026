@@ -10,6 +10,7 @@ use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFindingStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
@@ -29,6 +30,7 @@ final readonly class EngineeringReviewerStageExecutor
     public function __construct(
         private EngineeringFeatureStoreInterface $features,
         private EngineeringFindingStoreInterface $findings,
+        private EngineeringTaskStoreInterface $tasks,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringAgentRunStoreInterface $agentRuns,
@@ -102,11 +104,12 @@ final readonly class EngineeringReviewerStageExecutor
             ],
         );
 
-        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $task, $correlationId): string {
+        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $task, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::REVIEW_PENDING) {
                 throw new WorkflowAlreadyRunningException('Reviewer stage can run only from REVIEW_PENDING.');
             }
+            $this->tasks->markRole($featureId, AgentRole::REVIEWER, 'RUNNING');
             return $this->agentRuns->start($workflowId, $task, $correlationId);
         });
 
@@ -122,7 +125,10 @@ final readonly class EngineeringReviewerStageExecutor
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
-                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage()),
+                function () use ($featureId, $engineeringRunId, $error): void {
+                    $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage());
+                    $this->tasks->markRole($featureId, AgentRole::REVIEWER, 'FAILED', ['error' => $error->getMessage()]);
+                },
             );
             throw $error;
         }
@@ -134,6 +140,13 @@ final readonly class EngineeringReviewerStageExecutor
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
+            $reviewStatus = (string) ($run->structuredOutput['status'] ?? '');
+            $this->tasks->markRole(
+                $featureId,
+                AgentRole::REVIEWER,
+                $reviewStatus === 'BLOCKED' ? 'BLOCKED' : 'COMPLETED',
+                ['status' => $reviewStatus],
+            );
             if (($run->structuredOutput['status'] ?? null) === 'APPROVED') {
                 $this->findings->resolveOpenForSource($featureId, AgentRole::REVIEWER, $engineeringRunId);
             }

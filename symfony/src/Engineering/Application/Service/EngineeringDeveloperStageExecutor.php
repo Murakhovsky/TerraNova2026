@@ -109,11 +109,12 @@ final readonly class EngineeringDeveloperStageExecutor
             ],
         );
 
-        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $task, $correlationId): string {
+        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $task, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
                 throw new WorkflowAlreadyRunningException('Developer stage can run only from DEVELOPMENT_RUNNING.');
             }
+            $this->tasks->markRole($featureId, AgentRole::DEVELOPER, 'RUNNING');
             return $this->agentRuns->start($workflowId, $task, $correlationId);
         });
 
@@ -167,7 +168,10 @@ final readonly class EngineeringDeveloperStageExecutor
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
-                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage()),
+                function () use ($featureId, $engineeringRunId, $error): void {
+                    $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage());
+                    $this->tasks->markRole($featureId, AgentRole::DEVELOPER, 'FAILED', ['error' => $error->getMessage()]);
+                },
             );
             throw $error;
         }
@@ -179,6 +183,13 @@ final readonly class EngineeringDeveloperStageExecutor
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
+            $developerStatus = (string) ($run->structuredOutput['status'] ?? '');
+            $this->tasks->markRole(
+                $featureId,
+                AgentRole::DEVELOPER,
+                $developerStatus === 'COMPLETED' ? 'COMPLETED' : ($developerStatus === 'BLOCKED' ? 'BLOCKED' : 'FAILED'),
+                ['status' => $developerStatus, 'revision' => $run->structuredOutput['repository_revision'] ?? null],
+            );
             $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::DEVELOPMENT_RESULT,

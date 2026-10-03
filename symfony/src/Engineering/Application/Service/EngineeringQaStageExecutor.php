@@ -118,11 +118,12 @@ final readonly class EngineeringQaStageExecutor
             ],
         );
 
-        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $task, $correlationId): string {
+        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $task, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::QA_PENDING) {
                 throw new WorkflowAlreadyRunningException('QA stage can run only from QA_PENDING.');
             }
+            $this->tasks->markRole($featureId, AgentRole::QA, 'RUNNING');
             return $this->agentRuns->start($workflowId, $task, $correlationId);
         });
 
@@ -168,7 +169,10 @@ final readonly class EngineeringQaStageExecutor
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
-                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage()),
+                function () use ($featureId, $engineeringRunId, $error): void {
+                    $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage());
+                    $this->tasks->markRole($featureId, AgentRole::QA, 'FAILED', ['error' => $error->getMessage()]);
+                },
             );
             throw $error;
         }
@@ -180,6 +184,13 @@ final readonly class EngineeringQaStageExecutor
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
+            $qaStatus = (string) ($run->structuredOutput['status'] ?? '');
+            $this->tasks->markRole(
+                $featureId,
+                AgentRole::QA,
+                $qaStatus === 'BLOCKED' ? 'BLOCKED' : 'COMPLETED',
+                ['status' => $qaStatus],
+            );
             if (($run->structuredOutput['status'] ?? null) === 'PASS') {
                 $this->findings->resolveOpenForSource($featureId, AgentRole::QA, $engineeringRunId);
             }
