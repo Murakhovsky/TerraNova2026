@@ -3,12 +3,14 @@ import { chromium } from 'playwright-core';
 // EPIC 2 browser contract. This suite intentionally mutates Sales state and must
 // run only against a disposable, mutation-safe fixture environment.
 const baseUrl = process.argv[2] || process.env.SALES_E2E_BASE_URL || '';
-const storageState = process.argv[3] || process.env.SALES_E2E_STORAGE_STATE || '';
+const storageStatePath = process.argv[3] || process.env.SALES_E2E_STORAGE_STATE || '';
+const email = process.env.SALES_E2E_EMAIL || '';
+const password = process.env.SALES_E2E_PASSWORD || '';
 const executablePath = process.env.CHROME_PATH || '';
 const mutationSafe = process.env.SALES_E2E_MUTATION_SAFE === '1';
 
 if (!baseUrl) throw new Error('SALES_E2E_BASE_URL is required. Browser E2E must not silently SKIP.');
-if (!storageState) throw new Error('SALES_E2E_STORAGE_STATE is required for authenticated Sales E2E.');
+if (!storageStatePath && (!email || !password)) throw new Error('Provide SALES_E2E_STORAGE_STATE or SALES_E2E_EMAIL + SALES_E2E_PASSWORD.');
 if (!mutationSafe) throw new Error('Set SALES_E2E_MUTATION_SAFE=1 only for a disposable Sales fixture environment.');
 
 const browser = await chromium.launch({
@@ -17,6 +19,21 @@ const browser = await chromium.launch({
 });
 
 const absolute = (path) => new URL(path, baseUrl).toString();
+
+let storageState = storageStatePath || null;
+if (!storageStatePath) {
+  const loginContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const loginPage = await loginContext.newPage();
+  assertOk(await loginPage.goto(absolute('/auth/login'), { waitUntil: 'domcontentloaded' }), 'Sales E2E login page');
+  await loginPage.locator('input[name="email"]').fill(email);
+  await loginPage.locator('input[name="password"]').fill(password);
+  await Promise.all([
+    loginPage.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
+    loginPage.locator('button[type="submit"]').click(),
+  ]);
+  storageState = await loginContext.storageState();
+  await loginContext.close();
+}
 const assertOk = (response, label) => {
   if (!response || response.status() >= 400) throw new Error(`${label} returned ${response?.status() ?? 'no response'}`);
 };
