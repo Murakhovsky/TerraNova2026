@@ -62,6 +62,7 @@
                 <p class="cos-card__eyebrow">Файли</p>
                 <h2 class="cos-card__title">Drag & Drop</h2>
                 <form action="/spatial/upload/{{ scene.id }}" method="post" enctype="multipart/form-data" data-spatial-upload>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-spatial-dropzone" data-spatial-dropzone tabindex="0">
                         <input name="asset_file" type="file" accept=".glb,.gltf,.usdz,.obj,.fbx,.ply,.splat,.zip,.dxf,.pdf,.jpg,.jpeg,.png,.webp,.mp4" required data-spatial-file>
                         <strong>Перетягніть 3D-файл сюди</strong>
@@ -100,7 +101,7 @@
             <p class="cos-card__eyebrow">Assets</p>
             <h2 class="cos-card__title">Склад сцени</h2>
             {% if scene.status != 'published' %}
-                <form method="post" action="/spatial/publish/{{ scene.id }}"><button class="cos-button cos-button--primary" type="submit">Опублікувати</button></form>
+                <form method="post" action="/spatial/publish/{{ scene.id }}"><input type="hidden" name="csrf_token" value="{{ csrfToken }}"><button class="cos-button cos-button--primary" type="submit">Опублікувати</button></form>
             {% endif %}
             <div class="cos-spatial-asset-list">
                 {% for asset in scene.assets|default([]) %}
