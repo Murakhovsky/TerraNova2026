@@ -28,6 +28,73 @@ final readonly class EngineeringWorkflowCoordinator
         return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::ENGINEERING_MANAGER, 'Engineering request requires formal analysis.', [$transition]);
     }
 
+    public function resumeAfterHumanDecision(
+        WorkflowExecution $workflow,
+        string $humanDecisionId,
+    ): WorkflowDirective {
+        if ($workflow->currentState() !== EngineeringWorkflowState::HUMAN_DECISION_REQUIRED) {
+            throw new LogicException('Engineering workflow is not waiting for a human decision.');
+        }
+
+        $resume = $workflow->resumeState();
+        if ($resume === null) {
+            throw new LogicException('Engineering workflow has no persisted resume state.');
+        }
+
+        $transition = $this->engine->transition(
+            $workflow,
+            $resume,
+            new WorkflowTransitionContext(
+                trigger: 'HUMAN_DECISION_ANSWERED',
+                reason: 'Human decision answered; resume persisted workflow state.',
+                initiatedByType: 'HUMAN',
+                initiatedById: 'decision:'.$humanDecisionId,
+                humanDecisionId: $humanDecisionId,
+            ),
+        );
+
+        return match ($resume) {
+            EngineeringWorkflowState::ANALYSIS => new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::ENGINEERING_MANAGER,
+                'Human decision supplied; rerun Manager analysis with the decision in context.',
+                [$transition],
+            ),
+            EngineeringWorkflowState::ARCHITECTURE_PENDING => new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::PRINCIPAL_ARCHITECT,
+                'Human decision supplied; resume architecture.',
+                [$transition],
+            ),
+            EngineeringWorkflowState::DEVELOPMENT_RUNNING,
+            EngineeringWorkflowState::CHANGES_REQUESTED,
+            EngineeringWorkflowState::QA_FAILED => new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::DEVELOPER,
+                'Human decision supplied; resume development.',
+                [$transition],
+            ),
+            EngineeringWorkflowState::REVIEW_PENDING => new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::REVIEWER,
+                'Human decision supplied; resume review.',
+                [$transition],
+            ),
+            EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::QA,
+                'Human decision supplied; resume QA.',
+                [$transition],
+            ),
+            default => new WorkflowDirective(
+                WorkflowDirectiveType::STOP,
+                null,
+                'Human decision recorded. Workflow resumed to '.$resume->value.' and requires explicit orchestration.',
+                [$transition],
+            ),
+        };
+    }
+
     public function acceptAgentResult(
         WorkflowExecution $workflow,
         AgentRole $role,
