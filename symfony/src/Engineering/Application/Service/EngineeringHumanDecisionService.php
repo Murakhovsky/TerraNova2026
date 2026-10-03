@@ -22,6 +22,7 @@ final readonly class EngineeringHumanDecisionService
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringManagerStageExecutor $managerStage,
+        private EngineeringAutonomousProgressionService $progression,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
 
@@ -92,6 +93,14 @@ final readonly class EngineeringHumanDecisionService
                 logicalAttempt: $logicalAttempt,
             );
         }
+
+        $next = $this->progression->continue(
+            featureId: $featureId,
+            workflowId: $workflowId,
+            directive: $next,
+            organizationId: $organizationId,
+            correlationId: $correlationId,
+        );
 
         $workflow = $this->workflows->get($workflowId);
         return new EngineeringHumanDecisionResult(

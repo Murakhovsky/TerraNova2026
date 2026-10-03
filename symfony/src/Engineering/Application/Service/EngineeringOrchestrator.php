@@ -20,6 +20,7 @@ final readonly class EngineeringOrchestrator
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringManagerStageExecutor $managerStage,
+        private EngineeringAutonomousProgressionService $progression,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {
     }
@@ -60,6 +61,14 @@ final readonly class EngineeringOrchestrator
             organizationId: $organizationId,
             correlationId: $correlationId,
             logicalAttempt: 1,
+        );
+
+        $next = $this->progression->continue(
+            featureId: $featureId,
+            workflowId: $workflow->id(),
+            directive: $next,
+            organizationId: $organizationId,
+            correlationId: $correlationId,
         );
 
         $finalWorkflow = $this->workflows->get($workflow->id());
