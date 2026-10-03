@@ -283,7 +283,8 @@ class AdminDashboardService implements AdministrationServiceInterface
                 SUM(status = "blocked") AS blocked_items,
                 SUM(role IN ("manager", "admin")) AS team_items
             FROM tn_users
-        ') ?? [];
+            WHERE organization_id = :organization_id
+        ', ['organization_id' => $organizationId]) ?? [];
 
         $stats = [
             'total' => (int) ($summary['total'] ?? 0),
