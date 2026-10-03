@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Sales\Query;
 
-use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Kernel\Application\Query\QueryHandlerInterface;
 
 final readonly class GetSalesTodayQueryHandler implements QueryHandlerInterface
 {
-    public function __construct(private SalesWorkspaceReadModelInterface $sales)
+    public function __construct(private SalesWorkspaceOperationalReadModelInterface $sales)
     {
     }
 
