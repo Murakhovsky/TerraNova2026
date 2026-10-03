@@ -39,6 +39,7 @@ final readonly class EngineeringQaStageExecutor
         private EngineeringFindingStoreInterface $findings,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringTaskStoreInterface $tasks,
+        private EngineeringReportBuilder $reports,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
@@ -224,6 +225,22 @@ final readonly class EngineeringQaStageExecutor
             );
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
+
+            if ($workflow->currentState() === EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL) {
+                $this->artifacts->createVersion(
+                    $featureId,
+                    ArtifactType::FINAL_REPORT,
+                    $this->reports->build(
+                        featureId: $featureId,
+                        workflowId: $workflowId,
+                        status: EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL->value,
+                        recommendation: EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL->value,
+                    ),
+                    agentRunId: $engineeringRunId,
+                    createdByAgent: AgentRole::QA->value,
+                );
+            }
+
             return $next;
         });
     }

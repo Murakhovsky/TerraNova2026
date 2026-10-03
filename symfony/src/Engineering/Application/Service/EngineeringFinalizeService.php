@@ -24,6 +24,7 @@ final readonly class EngineeringFinalizeService
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
+        private EngineeringReportBuilder $reports,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -62,25 +63,18 @@ final readonly class EngineeringFinalizeService
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
 
-            $review = $this->artifacts->latest($featureId, ArtifactType::REVIEW_REPORT);
-            $qa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
             $final = $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::FINAL_REPORT,
-                [
-                    'feature' => $this->features->view($featureId),
-                    'workflow_id' => $workflowId,
-                    'status' => 'DONE',
-                    'pull_request' => $pr,
-                    'development_result' => $development['content'],
-                    'review_report' => $review['content'] ?? null,
-                    'qa_report' => $qa['content'] ?? null,
-                    'agent_runs' => $this->agentRuns->forFeature($featureId),
-                    'tasks' => $this->tasks->forFeature($featureId),
-                    'approved_by' => $actorId,
-                    'merge_revision' => $pr['merge_revision'],
-                    'completed_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
-                ],
+                $this->reports->build(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    status: EngineeringWorkflowState::DONE->value,
+                    recommendation: EngineeringWorkflowState::DONE->value,
+                    pullRequest: $pr,
+                    approvedBy: $actorId,
+                    mergeRevision: (string) $pr['merge_revision'],
+                ),
                 createdByAgent: 'HUMAN',
             );
 

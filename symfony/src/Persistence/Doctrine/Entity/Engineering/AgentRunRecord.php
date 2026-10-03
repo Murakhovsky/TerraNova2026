@@ -69,6 +69,13 @@ class AgentRunRecord
     public function output(): ?array { return $this->output; }
     public function modelProvider(): string { return $this->modelProvider; }
     public function model(): string { return $this->model; }
+    public function tokensInput(): ?int { return $this->tokensInput; }
+    public function tokensOutput(): ?int { return $this->tokensOutput; }
+    public function estimatedCost(): ?string { return $this->estimatedCost; }
+    public function startedAt(): DateTimeImmutable { return $this->startedAt; }
+    public function finishedAt(): ?DateTimeImmutable { return $this->finishedAt; }
+    public function errorType(): ?string { return $this->errorType; }
+    public function errorMessage(): ?string { return $this->errorMessage; }
 
     public function complete(
         string $status,

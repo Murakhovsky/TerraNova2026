@@ -61,6 +61,10 @@ class EngineeringFeatureRecord
     public function requestPayload(): array { return $this->requestPayload; }
     public function externalIssueId(): ?string { return $this->externalIssueId; }
     public function repositoryRevision(): ?string { return $this->repositoryRevision; }
+    public function complexity(): ?string { return $this->complexity; }
+    public function businessGoal(): ?string { return $this->businessGoal; }
+    public function risks(): array { return $this->risks ?? []; }
+    public function assumptions(): array { return $this->assumptions ?? []; }
     public function setStatus(string $status): void { $this->status = $status; $this->updatedAt = new DateTimeImmutable(); }
 
     public function applyAnalysis(array $specification, array $contextMap, ?string $repositoryRevision): void

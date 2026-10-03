@@ -108,6 +108,13 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             'provider' => $record->modelProvider(),
             'model' => $record->model(),
             'output' => $record->output(),
+            'tokens_input' => $record->tokensInput(),
+            'tokens_output' => $record->tokensOutput(),
+            'cost' => $record->estimatedCost() !== null ? (float) $record->estimatedCost() : null,
+            'started_at' => $record->startedAt()->format(DATE_ATOM),
+            'finished_at' => $record->finishedAt()?->format(DATE_ATOM),
+            'error_type' => $record->errorType(),
+            'error_message' => $record->errorMessage(),
         ];
     }
 }

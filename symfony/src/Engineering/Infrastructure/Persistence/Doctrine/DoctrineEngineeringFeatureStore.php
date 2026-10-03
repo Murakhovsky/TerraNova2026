@@ -87,6 +87,10 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
             'priority' => $record->priority(),
             'external_issue_id' => $record->externalIssueId(),
             'repository_revision' => $record->repositoryRevision(),
+            'complexity' => $record->complexity(),
+            'business_goal' => $record->businessGoal(),
+            'risks' => $record->risks(),
+            'assumptions' => $record->assumptions(),
         ];
     }
 
