@@ -103,6 +103,23 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_routes.mjs
+      - name: Administration users functional acceptance
+        env:
+          ADMIN_E2E_BASE_URL: http://127.0.0.1:8081
+          ADMIN_E2E_EMAIL: production-cutover-web@example.test
+          ADMIN_E2E_PASSWORD: Production-Cutover-Web-CI-Ab9!
+        run: |
+          FOREIGN_HASH="$(php -r 'echo password_hash("Foreign-Tenant-Ab9!", PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('foreign-tenant','foreign-tenant-user@example.test','$FOREIGN_HASH','Foreign Tenant User','manager','active')
+            ON DUPLICATE KEY UPDATE organization_id='foreign-tenant',full_name='Foreign Tenant User',role='manager',status='active';
+          "
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" node tests/browser/administration_users.mjs
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT organization_id FROM tn_users WHERE email='ui-created-user@example.test' LIMIT 1")" = "default"
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT full_name FROM tn_users WHERE email='foreign-tenant-user@example.test' LIMIT 1")" = "Foreign Tenant User"
       - name: Seed Sales functional acceptance
         env:
           SALES_E2E_EMAIL: sales-functional-acceptance@example.test
