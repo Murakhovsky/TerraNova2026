@@ -10,6 +10,7 @@ interface EngineeringAgentRunStoreInterface
 {
     public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string;
     public function complete(string $engineeringRunId, EngineeringAgentRunResult $result): void;
+    public function fail(string $engineeringRunId, string $errorType, string $errorMessage): void;
     public function existsByIdempotencyKey(string $idempotencyKey): bool;
 
     /** @return array<string,mixed>|null */

@@ -62,6 +62,14 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         $this->entityManager->flush();
     }
 
+    public function fail(string $engineeringRunId, string $errorType, string $errorMessage): void
+    {
+        $record = $this->entityManager->find(AgentRunRecord::class, $engineeringRunId);
+        if (!$record instanceof AgentRunRecord) throw new RuntimeException('Engineering AgentRun not found: '.$engineeringRunId);
+        $record->fail($errorType, $errorMessage);
+        $this->entityManager->flush();
+    }
+
     public function existsByIdempotencyKey(string $idempotencyKey): bool
     {
         return $this->recordByIdempotencyKey($idempotencyKey) instanceof AgentRunRecord;

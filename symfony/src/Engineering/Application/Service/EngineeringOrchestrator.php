@@ -69,7 +69,15 @@ final readonly class EngineeringOrchestrator
         );
 
         // External LLM work deliberately runs outside the feature lock.
-        $analysis = $this->manager->execute($plan, $organizationId, $correlationId);
+        try {
+            $analysis = $this->manager->execute($plan, $organizationId, $correlationId);
+        } catch (\Throwable $error) {
+            $this->lock->synchronized(
+                $featureId,
+                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage()),
+            );
+            throw $error;
+        }
 
         $next = $this->lock->synchronized(
             $featureId,

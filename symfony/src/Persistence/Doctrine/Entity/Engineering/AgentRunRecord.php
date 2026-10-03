@@ -92,4 +92,12 @@ class AgentRunRecord
         $this->errorMessage = $errorMessage;
         $this->finishedAt = new DateTimeImmutable();
     }
+
+    public function fail(string $errorType, string $errorMessage): void
+    {
+        $this->status = 'FAILED';
+        $this->errorType = $errorType;
+        $this->errorMessage = $errorMessage;
+        $this->finishedAt = new DateTimeImmutable();
+    }
 }
