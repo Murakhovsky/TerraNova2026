@@ -6,6 +6,7 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
+use App\Engineering\Application\Context\RepositoryFileReaderInterface;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
@@ -34,6 +35,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
+        private RepositoryFileReaderInterface $repositoryFiles,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
@@ -58,6 +60,16 @@ final readonly class EngineeringDeveloperStageExecutor
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
         $previousReview = $this->artifacts->latest($featureId, ArtifactType::REVIEW_REPORT);
         $previousQa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
+        $previousDevelopment = $this->artifacts->latest($featureId, ArtifactType::DEVELOPMENT_RESULT);
+
+        $contextPaths = [];
+        foreach (is_array($contextMap['content']['files'] ?? null) ? $contextMap['content']['files'] : [] as $file) {
+            if (is_array($file) && isset($file['path'])) $contextPaths[] = (string) $file['path'];
+        }
+        foreach (is_array($previousDevelopment['content']['changed_files'] ?? null) ? $previousDevelopment['content']['changed_files'] : [] as $path) {
+            if (is_string($path)) $contextPaths[] = $path;
+        }
+        $repositoryFiles = $this->repositoryFiles->readMany($contextPaths);
 
         $baseRevision = trim((string) ($contextMap['content']['repository_revision'] ?? ''));
         if ($baseRevision === '' || $baseRevision === 'unknown') {
@@ -74,6 +86,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'architecture_decision' => $architecture['content'],
                 'implementation_plan' => $implementation['content'],
                 'context_map' => $contextMap['content'],
+                'repository_files' => $repositoryFiles,
                 'tasks' => $this->tasks->forFeature($featureId),
                 'previous_review' => $previousReview['content'] ?? null,
                 'previous_qa' => $previousQa['content'] ?? null,
@@ -87,6 +100,7 @@ final readonly class EngineeringDeveloperStageExecutor
             constraints: [
                 'Implement only approved scope.',
                 'Return complete file content for CREATE/UPDATE operations.',
+                'Do not UPDATE a repository file when repository_files marks complete=false; return BLOCKED because the source context is incomplete.',
                 'Do not modify .git, .env, vendor, node_modules or runtime var directories.',
                 'Do not claim tests were executed by the runtime; CI is authoritative.',
                 'Do not merge or deploy.',
