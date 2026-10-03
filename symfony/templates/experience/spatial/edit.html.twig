@@ -32,7 +32,9 @@
         <twig:CosAlert title="Spatial оновлено" copy="{{ actionStatus }}" tone="positive" />
     {% endif %}
 
-    <form class="cos-form" method="post" action="/spatial/save/{{ scene.id|default(0) }}">
+    <form class="cos-form" method="post"
+        data-csrf-protected="true" action="/spatial/save/{{ scene.id|default(0) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         <input type="hidden" name="id" value="{{ scene.id|default(0) }}">
         <twig:CosFormSection title="Конфігурація" description="Identity, renderer, provider та базова camera configuration.">
             <div class="cos-form__grid">
@@ -80,7 +82,9 @@
             <article class="cos-card">
                 <p class="cos-card__eyebrow">Provider</p>
                 <h2 class="cos-card__title">Зовнішній asset</h2>
-                <form class="cos-form" method="post" action="/spatial/external/{{ scene.id }}">
+                <form class="cos-form" method="post"
+        data-csrf-protected="true" action="/spatial/external/{{ scene.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field"><span>HTTPS URL</span><input class="cos-input" name="uri" type="url" required></label>
                         <label class="cos-field"><span>Тип</span><select class="cos-select" name="asset_type">{% for type in ['model_web','model_ar','gaussian_splat','panorama','floorplan','video','other'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
@@ -116,7 +120,9 @@
             <article class="cos-card">
                 <p class="cos-card__eyebrow">Capture</p>
                 <h2 class="cos-card__title">Нова версія</h2>
-                <form class="cos-form" method="post" action="/spatial/capture/{{ scene.id }}">
+                <form class="cos-form" method="post"
+        data-csrf-protected="true" action="/spatial/capture/{{ scene.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field"><span>Метод</span><select class="cos-select" name="capture_type">{% for type in ['lidar','roomplan','photogrammetry','bim','cad','manual','provider'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
                         <label class="cos-field"><span>Назва версії</span><input class="cos-input" name="label" type="text" maxlength="160"></label>
@@ -131,7 +137,9 @@
             <article class="cos-card">
                 <p class="cos-card__eyebrow">Hotspot</p>
                 <h2 class="cos-card__title">Точка сцени</h2>
-                <form class="cos-form" method="post" action="/spatial/hotspot/{{ scene.id }}">
+                <form class="cos-form" method="post"
+        data-csrf-protected="true" action="/spatial/hotspot/{{ scene.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field"><span>Тип</span><select class="cos-select" name="hotspot_type">{% for type in ['info','room','feature','cta','link','media','measurement','navigation'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
                         <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" type="text" maxlength="180" required></label>
