@@ -13,6 +13,7 @@ final readonly class EngineeringAutonomousProgressionService
         private EngineeringArchitectStageExecutor $architect,
         private EngineeringDeveloperStageExecutor $developer,
         private EngineeringReviewerStageExecutor $reviewer,
+        private EngineeringQaStageExecutor $qa,
         private EngineeringAgentRunStoreInterface $agentRuns,
     ) {}
 
@@ -23,37 +24,48 @@ final readonly class EngineeringAutonomousProgressionService
         string $organizationId,
         string $correlationId,
     ): WorkflowDirective {
-        if ($directive->agent === AgentRole::PRINCIPAL_ARCHITECT) {
-            $directive = $this->architect->execute(
-                featureId: $featureId,
-                workflowId: $workflowId,
-                organizationId: $organizationId,
-                correlationId: $correlationId,
-                logicalAttempt: $this->nextAttempt($featureId, AgentRole::PRINCIPAL_ARCHITECT),
-            );
+        for ($step = 0; $step < 12; ++$step) {
+            $role = $directive->agent;
+            if ($role === null) return $directive;
+
+            $directive = match ($role) {
+                AgentRole::PRINCIPAL_ARCHITECT => $this->architect->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::PRINCIPAL_ARCHITECT),
+                ),
+                AgentRole::DEVELOPER => $this->developer->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::DEVELOPER),
+                ),
+                AgentRole::REVIEWER => $this->reviewer->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::REVIEWER),
+                ),
+                AgentRole::QA => $this->qa->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA),
+                ),
+                default => $directive,
+            };
+
+            if ($directive->agent === $role) {
+                return $directive;
+            }
         }
 
-        if ($directive->agent === AgentRole::DEVELOPER) {
-            $directive = $this->developer->execute(
-                featureId: $featureId,
-                workflowId: $workflowId,
-                organizationId: $organizationId,
-                correlationId: $correlationId,
-                logicalAttempt: $this->nextAttempt($featureId, AgentRole::DEVELOPER),
-            );
-        }
-
-        if ($directive->agent === AgentRole::REVIEWER) {
-            $directive = $this->reviewer->execute(
-                featureId: $featureId,
-                workflowId: $workflowId,
-                organizationId: $organizationId,
-                correlationId: $correlationId,
-                logicalAttempt: $this->nextAttempt($featureId, AgentRole::REVIEWER),
-            );
-        }
-
-        return $directive;
+        throw new \RuntimeException('Engineering autonomous progression exceeded the V0.1 safety step limit.');
     }
 
     private function nextAttempt(string $featureId, AgentRole $role): int
