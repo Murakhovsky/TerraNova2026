@@ -7,6 +7,7 @@ use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringFindingStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Artifact\ArtifactType;
@@ -19,13 +20,14 @@ final readonly class EngineeringStatusService
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringArtifactStoreInterface $artifacts,
+        private EngineeringFindingStoreInterface $findings,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
     ) {}
 
     public function status(string $featureId): array
     {
         $feature = $this->features->view($featureId);
-        $workflowId = $this->workflows->activeIdForFeature($featureId);
+        $workflowId = $this->workflows->latestIdForFeature($featureId);
         $workflow = null;
         if ($workflowId !== null) {
             $current = $this->workflows->get($workflowId);
@@ -54,6 +56,7 @@ final readonly class EngineeringStatusService
             'tasks' => $this->tasks->forFeature($featureId),
             'agent_runs' => $this->agentRuns->forFeature($featureId),
             'artifacts' => $artifactViews,
+            'findings' => $this->findings->forFeature($featureId),
             'open_human_decisions' => $this->humanDecisions->openForFeature($featureId),
         ];
     }

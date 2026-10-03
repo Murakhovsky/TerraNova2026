@@ -46,7 +46,16 @@ class EngineeringFindingRecord
     public function featureId(): string { return $this->featureId; }
     public function sourceRole(): string { return $this->sourceRole; }
     public function severity(): string { return $this->severity; }
+    public function category(): string { return $this->category; }
+    public function title(): string { return $this->title; }
+    public function description(): string { return $this->description; }
+    public function evidence(): array { return $this->evidence; }
     public function status(): string { return $this->status; }
+    public function createdAt(): DateTimeImmutable { return $this->createdAt; }
+    public function taskId(): ?string { return $this->taskId; }
+    public function agentRunId(): ?string { return $this->agentRunId; }
+    public function resolvedByRunId(): ?string { return $this->resolvedByRunId; }
+    public function resolvedAt(): ?DateTimeImmutable { return $this->resolvedAt; }
 
     public function resolve(string $resolvedByRunId, DateTimeImmutable $at): void
     {

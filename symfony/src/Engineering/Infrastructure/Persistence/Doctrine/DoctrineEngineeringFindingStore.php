@@ -72,6 +72,30 @@ final readonly class DoctrineEngineeringFindingStore implements EngineeringFindi
         ]) > 0;
     }
 
+    public function forFeature(string $featureId): array
+    {
+        $records = $this->entityManager->getRepository(EngineeringFindingRecord::class)->findBy(
+            ['featureId' => $featureId],
+            ['createdAt' => 'ASC'],
+        );
+
+        return array_map(static fn (EngineeringFindingRecord $record): array => [
+            'id' => $record->id(),
+            'source_role' => $record->sourceRole(),
+            'category' => $record->category(),
+            'severity' => $record->severity(),
+            'title' => $record->title(),
+            'description' => $record->description(),
+            'evidence' => $record->evidence(),
+            'status' => $record->status(),
+            'task_id' => $record->taskId(),
+            'agent_run_id' => $record->agentRunId(),
+            'resolved_by_run_id' => $record->resolvedByRunId(),
+            'created_at' => $record->createdAt()->format(DATE_ATOM),
+            'resolved_at' => $record->resolvedAt()?->format(DATE_ATOM),
+        ], $records);
+    }
+
     private function severity(string $value): string
     {
         $value = strtoupper(trim($value));
