@@ -24,14 +24,9 @@ INNER JOIN sales_pipeline_stages target
     AND target.code='QUALIFIED'
     AND target.status='ACTIVE'
 WHERE p.status='ACTIVE'
-  AND NOT EXISTS (
-      SELECT 1
-      FROM sales_pipeline_transitions existing_transition
-      WHERE existing_transition.organization_id=p.organization_id
-        AND existing_transition.pipeline_id=p.id
-        AND existing_transition.from_stage_id=source.id
-        AND existing_transition.to_stage_id=target.id
-  );
+ON DUPLICATE KEY UPDATE
+    requires_approval=VALUES(requires_approval),
+    conditions=VALUES(conditions);
 
 INSERT IGNORE INTO tn_migrations (migration)
 VALUES ('20261003_000121_sales_lead_qualification_transition');

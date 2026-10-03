@@ -91,6 +91,7 @@ return [
             'app/migrations/20260928_000118_sales_v100_release.sql',
             'app/migrations/20261003_000121_sales_lead_qualification_transition.sql',
             'app/migrations/20261003_000122_sales_followup_activity_type.sql',
+            'app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql',
         ],
         'capabilities' => [
             'sales.workspace.use',
