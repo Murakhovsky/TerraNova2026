@@ -12,7 +12,7 @@ final class EngineeringAgentOutputValidator
         match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->manager($output),
             AgentRole::PRINCIPAL_ARCHITECT => $this->required($output, ['status','decision_summary','implementation_plan','risks','open_questions','required_human_decisions']),
-            AgentRole::DEVELOPER => $this->required($output, ['status','changed_files','implementation_summary','tests_added','tests_run','known_limitations','findings']),
+            AgentRole::DEVELOPER => $this->developer($output),
             AgentRole::REVIEWER => $this->reviewer($output),
             AgentRole::QA => $this->qa($output),
         };
@@ -51,6 +51,30 @@ final class EngineeringAgentOutputValidator
         foreach ($output['findings'] as $finding) {
             if (is_array($finding) && strtolower((string) ($finding['severity'] ?? '')) === 'critical') {
                 throw new EngineeringAgentOutputValidationException('Reviewer cannot APPROVE with a critical finding.');
+            }
+        }
+    }
+
+    private function developer(array $output): void
+    {
+        $this->required($output, ['status','changed_files','implementation_summary','tests_added','tests_run','known_limitations','findings','changes']);
+        if (($output['status'] ?? null) !== 'COMPLETED') return;
+        if (!is_array($output['changes'] ?? null) || $output['changes'] === []) {
+            throw new EngineeringAgentOutputValidationException('Developer COMPLETED requires at least one repository change.');
+        }
+        foreach ($output['changes'] as $change) {
+            if (!is_array($change)) throw new EngineeringAgentOutputValidationException('Developer change must be an object.');
+            $this->required($change, ['path','operation']);
+            $path = trim((string) $change['path']);
+            $operation = (string) $change['operation'];
+            if ($path === '' || str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\\0")) {
+                throw new EngineeringAgentOutputValidationException('Developer change path is unsafe.');
+            }
+            if (!in_array($operation, ['CREATE','UPDATE','DELETE'], true)) {
+                throw new EngineeringAgentOutputValidationException('Developer change operation is invalid.');
+            }
+            if ($operation !== 'DELETE' && !is_string($change['content'] ?? null)) {
+                throw new EngineeringAgentOutputValidationException('Developer CREATE/UPDATE requires content.');
             }
         }
     }

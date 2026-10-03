@@ -1282,6 +1282,15 @@ services:
       $maxFiles: 20
       $maxFileBytes: 131072
 
+  App\Engineering\Infrastructure\Repository\GitHubEngineeringRepositoryGateway:
+    arguments:
+      $repositoryFullName: '%env(COS_ENGINEERING_GITHUB_REPOSITORY)%'
+      $token: '%env(COS_ENGINEERING_GITHUB_TOKEN)%'
+      $baseBranch: '%env(COS_ENGINEERING_GITHUB_BASE_BRANCH)%'
+
+  App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface:
+    alias: App\Engineering\Infrastructure\Repository\GitHubEngineeringRepositoryGateway
+
   App\Command\EngineeringStartCommand:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'

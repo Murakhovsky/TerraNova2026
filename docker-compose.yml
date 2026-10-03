@@ -91,6 +91,9 @@ services:
     environment:
       <<: *app-environment
       MESSENGER_CONSUMER_NAME: http
+      COS_ENGINEERING_GITHUB_REPOSITORY: ${COS_ENGINEERING_GITHUB_REPOSITORY:-}
+      COS_ENGINEERING_GITHUB_TOKEN: ${COS_ENGINEERING_GITHUB_TOKEN:-}
+      COS_ENGINEERING_GITHUB_BASE_BRANCH: ${COS_ENGINEERING_GITHUB_BASE_BRANCH:-main}
     command: ["sh", "-c", "rm -rf public/assets/* && php bin/console asset-map:compile && exec php-fpm"]
     volumes:
       - symfony_sessions:/var/www/html/symfony/var/sessions

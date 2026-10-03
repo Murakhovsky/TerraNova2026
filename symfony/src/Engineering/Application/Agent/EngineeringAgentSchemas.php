@@ -109,7 +109,7 @@ final class EngineeringAgentSchemas
     {
         return [
             'type' => 'object',
-            'required' => ['status','repository_revision','changed_files','implementation_summary','acceptance_criteria_evidence','tests_added','tests_run','known_limitations','findings'],
+            'required' => ['status','repository_revision','changed_files','implementation_summary','acceptance_criteria_evidence','tests_added','tests_run','known_limitations','findings','changes'],
             'properties' => [
                 'status' => self::baseStatus(['COMPLETED','FAILED','BLOCKED']),
                 'repository_revision' => ['type' => ['string','null']],
@@ -122,6 +122,23 @@ final class EngineeringAgentSchemas
                 'tests_run' => ['type' => 'array'],
                 'known_limitations' => ['type' => 'array'],
                 'findings' => ['type' => 'array'],
+                'changes' => [
+                    'type' => 'array',
+                    'maxItems' => 20,
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['path','operation'],
+                        'properties' => [
+                            'path' => ['type' => 'string', 'minLength' => 1],
+                            'operation' => self::baseStatus(['CREATE','UPDATE','DELETE']),
+                            'content' => ['type' => ['string','null'], 'maxLength' => 250000],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'commit_message' => ['type' => ['string','null']],
+                'pull_request_title' => ['type' => ['string','null']],
+                'pull_request_body' => ['type' => ['string','null']],
             ],
             'additionalProperties' => false,
         ];
