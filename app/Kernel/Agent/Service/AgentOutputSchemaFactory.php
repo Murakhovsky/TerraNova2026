@@ -10,6 +10,10 @@ final class AgentOutputSchemaFactory
     /** @return array<string, mixed> */
     public function create(AgentDefinition $agent): array
     {
+        if ($agent->outputSchema !== null) {
+            return $agent->outputSchema;
+        }
+
         return [
             'type' => 'object',
             'required' => ['decision', 'reason', 'confidence', 'proposed_actions'],
