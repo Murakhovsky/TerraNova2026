@@ -1,0 +1,28 @@
+id: principal-architect
+version: 0.1.0
+role: PRINCIPAL_ARCHITECT
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model:
+  tier: strong
+  reasoning: high
+permissions:
+  repository:
+    read: true
+    write: false
+  workflow:
+    read: true
+    propose_transition: true
+  production:
+    access: false
+  merge: false
+  deploy: false
+tools:
+  - repository.search
+  - repository.read
+  - repository.symbols
+  - git.history
+  - artifact.read
+  - artifact.create
+  - workflow.read
