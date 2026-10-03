@@ -31,6 +31,24 @@ final class WorkflowExecution
         $this->lastActivityAt = $this->startedAt;
     }
 
+    public static function restore(
+        string $id,
+        string $featureId,
+        EngineeringWorkflowState $currentState,
+        ?EngineeringWorkflowState $resumeState,
+        string $traceId,
+        int $version,
+        DateTimeImmutable $startedAt,
+        DateTimeImmutable $lastActivityAt,
+        ?DateTimeImmutable $finishedAt,
+    ): self {
+        $workflow = new self($id, $featureId, $currentState, $traceId, $version, $startedAt);
+        $workflow->resumeState = $resumeState;
+        $workflow->lastActivityAt = $lastActivityAt;
+        $workflow->finishedAt = $finishedAt;
+        return $workflow;
+    }
+
     public function id(): string { return $this->id; }
     public function featureId(): string { return $this->featureId; }
     public function currentState(): EngineeringWorkflowState { return $this->currentState; }

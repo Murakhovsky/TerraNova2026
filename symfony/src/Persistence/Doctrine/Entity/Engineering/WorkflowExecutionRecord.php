@@ -43,6 +43,24 @@ class WorkflowExecutionRecord
     ) {}
 
     public function id(): string { return $this->id; }
+    public function featureId(): string { return $this->featureId; }
+    public function workflowType(): string { return $this->workflowType; }
     public function currentState(): string { return $this->currentState; }
-    public function moveTo(string $state): void { $this->currentState = $state; $this->lastActivityAt = new DateTimeImmutable(); }
+    public function status(): string { return $this->status; }
+    public function traceId(): string { return $this->traceId; }
+    public function lockKey(): string { return $this->lockKey; }
+    public function version(): int { return $this->version; }
+    public function startedAt(): DateTimeImmutable { return $this->startedAt; }
+    public function lastActivityAt(): DateTimeImmutable { return $this->lastActivityAt; }
+    public function finishedAt(): ?DateTimeImmutable { return $this->finishedAt; }
+    public function resumeState(): ?string { return $this->resumeState; }
+
+    public function syncState(string $currentState, ?string $resumeState, ?DateTimeImmutable $finishedAt, string $status): void
+    {
+        $this->currentState = $currentState;
+        $this->resumeState = $resumeState;
+        $this->finishedAt = $finishedAt;
+        $this->status = $status;
+        $this->lastActivityAt = new DateTimeImmutable();
+    }
 }

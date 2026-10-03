@@ -37,4 +37,13 @@ class AgentArtifactRecord
         #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
         private ?string $createdByAgent = null,
     ) {}
+
+    public function id(): string { return $this->id; }
+    public function featureId(): string { return $this->featureId; }
+    public function type(): string { return $this->type; }
+    public function version(): int { return $this->version; }
+    public function status(): string { return $this->status; }
+    public function content(): array { return $this->content; }
+    public function contentHash(): string { return $this->contentHash; }
+    public function supersede(): void { $this->status = 'SUPERSEDED'; }
 }
