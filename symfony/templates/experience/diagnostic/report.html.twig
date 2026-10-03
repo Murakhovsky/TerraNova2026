@@ -17,6 +17,16 @@
         metaLabel="версія звіту"
     />
 
+    <twig:CosToolbar label="Diagnostic report navigation">
+        {% block start %}
+            <span class="cos-card__copy">Session · {{ report.sessionId }}</span>
+        {% endblock %}
+        {% block end %}
+            <twig:CosButton label="Diagnostics" href="/admin/diagnostics/methodology-studio" variant="ghost" />
+            <twig:CosButton label="Control Center" href="/cos/control-center" variant="ghost" />
+        {% endblock %}
+    </twig:CosToolbar>
+
     <div class="cos-kpi-strip" aria-label="Diagnostic summary">
         <article class="cos-card">
             <twig:CosMetric label="Health" value="{{ report.health }}" />

@@ -80,7 +80,7 @@ final readonly class DiagnosticPageController
                 'shell' => $shell,
                 'page' => $this->pages->create(
                     PageArchetype::SystemControlSurface,
-                    ['PageHeader', 'KpiStrip', 'EntityList'],
+                    ['PageHeader', 'Toolbar', 'KpiStrip', 'EntityList'],
                     'normal',
                 ),
                 'report' => $report,
