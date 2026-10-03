@@ -2120,6 +2120,12 @@ cos_web_workspace_analytics:
   controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
 
+cos_web_engineering_feature:
+  path: /admin/engineering/{id}
+  controller: App\Web\Engineering\EngineeringFeatureController::show
+  methods: [GET, HEAD]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_client_cases:
   path: /client-case
   controller: App\Web\Sales\ClientCaseCollectionController::index
