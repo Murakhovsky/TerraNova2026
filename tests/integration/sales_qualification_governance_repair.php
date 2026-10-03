@@ -4,13 +4,15 @@ declare(strict_types=1);
 use Infrastructure\Platform\Persistence\MySql\Migration\SqlStatementSplitter;
 
 $root=dirname(__DIR__,2);
-foreach(file($root.'/.env',FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)?:[] as $line){
+$autoload=(string)(getenv('COS_TEST_AUTOLOAD')?:$root.'/vendor/autoload.php');
+$migrationRoot=(string)(getenv('COS_TEST_MIGRATIONS')?:$root.'/app/migrations');
+foreach(is_file($root.'/.env')?(file($root.'/.env',FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)?:[]):[] as $line){
     $line=trim($line);
     if($line===''||str_starts_with($line,'#')||!str_contains($line,'='))continue;
     [$key,$value]=array_map('trim',explode('=',$line,2));
     if(getenv($key)===false)putenv($key.'='.trim($value,"\"'"));
 }
-require $root.'/vendor/autoload.php';
+require $autoload;
 
 $pdo=new PDO(
     sprintf(
@@ -144,7 +146,7 @@ try{
         'after_payload'=>'[]',
     ]);
 
-    $sql=(string)file_get_contents($root.'/app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql');
+    $sql=(string)file_get_contents($migrationRoot.'/20261003_000123_sales_lead_qualification_governance_repair.sql');
     foreach((new SqlStatementSplitter())->split($sql) as $statement){
         $query=$pdo->prepare($statement);
         $query->execute();
