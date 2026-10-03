@@ -22,7 +22,7 @@ class WorkflowTransitionRecord
         private string $fromState,
         #[ORM\Column(type: Types::STRING, length: 64)]
         private string $toState,
-        #[ORM\Column(type: Types::STRING, length: 64)]
+        #[ORM\Column(name: 'transition_trigger', type: Types::STRING, length: 64)]
         private string $trigger,
         #[ORM\Column(type: Types::TEXT)]
         private string $reason,

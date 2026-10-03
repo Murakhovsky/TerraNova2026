@@ -225,7 +225,7 @@ CREATE TABLE cos_engineering_transitions (
     feature_id CHAR(36) NOT NULL,
     from_state VARCHAR(64) NOT NULL,
     to_state VARCHAR(64) NOT NULL,
-    trigger VARCHAR(64) NOT NULL,
+    transition_trigger VARCHAR(64) NOT NULL,
     reason LONGTEXT NOT NULL,
     initiated_by_type VARCHAR(32) NOT NULL,
     initiated_by_id VARCHAR(128) NOT NULL,
