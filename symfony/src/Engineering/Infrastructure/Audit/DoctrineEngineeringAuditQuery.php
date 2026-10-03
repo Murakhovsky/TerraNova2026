@@ -29,6 +29,9 @@ final readonly class DoctrineEngineeringAuditQuery implements EngineeringAuditQu
                 'to' => $row['to_state'],
                 'trigger' => $row['transition_trigger'],
                 'reason' => $row['reason'],
+                'what' => $row['transition_trigger'],
+                'why' => $row['reason'],
+                'result' => $row['to_state'],
                 'who' => [
                     'type' => $row['initiated_by_type'],
                     'id' => $row['initiated_by_id'],

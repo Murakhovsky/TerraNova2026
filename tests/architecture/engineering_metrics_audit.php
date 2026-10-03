@@ -13,8 +13,7 @@ foreach ([
 ] as $needle) {
     if (!str_contains($metrics, $needle)) throw new RuntimeException('Engineering metrics missing '.$needle);
 }
-foreach (['who','what', 'when', 'based_on'] as $needle) {
-    if ($needle === 'what') continue;
+foreach (['who','what','when','why','based_on','result'] as $needle) {
     if (!str_contains($audit, "'".$needle."'")) throw new RuntimeException('Engineering audit projection missing '.$needle);
 }
 foreach (['/api/engineering/metrics','/api/engineering/features/{id}/audit'] as $needle) {
