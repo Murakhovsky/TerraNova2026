@@ -41,11 +41,41 @@ async function goto200(page, path, marker = null) {
 }
 
 async function submitAndWait(page, form, urlPredicate) {
-  const beforeUrl = page.url();
-  await Promise.all([
-    page.waitForURL((url) => url.href !== beforeUrl && urlPredicate(url), { timeout: 30000 }),
-    form.locator('button[type="submit"]').first().click(),
-  ]);
+  const action = await form.getAttribute('action');
+  const method = (await form.getAttribute('method') || 'GET').toUpperCase();
+  const actionUrl = new URL(action || page.url(), page.url());
+
+  const responsePromise = page.waitForResponse((response) => {
+    const responseUrl = new URL(response.url());
+    return response.request().method() === method
+      && responseUrl.origin === actionUrl.origin
+      && responseUrl.pathname === actionUrl.pathname;
+  }, { timeout: 30000 });
+
+  await form.locator('button[type="submit"]').first().click();
+  const response = await responsePromise;
+  assert(
+    response.status() >= 200 && response.status() < 400,
+    `Form ${method} ${actionUrl.pathname} failed with HTTP ${response.status()}.`,
+  );
+
+  const location = response.headers()['location'];
+  const redirectUrl = location ? new URL(location, response.url()) : null;
+
+  await eventually(
+    () => {
+      const currentUrl = new URL(page.url());
+      if (!urlPredicate(currentUrl)) return false;
+      if (!redirectUrl) return true;
+      return currentUrl.origin === redirectUrl.origin
+        && currentUrl.pathname === redirectUrl.pathname
+        && currentUrl.search === redirectUrl.search;
+    },
+    'Form navigation did not reach the expected URL'
+      + (redirectUrl ? ': ' + redirectUrl.toString() : ': ' + page.url()),
+    30000,
+  );
+
   assert(urlPredicate(new URL(page.url())), 'Form navigation ended at unexpected URL: ' + page.url());
   await page.waitForLoadState('networkidle');
 }
