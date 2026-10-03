@@ -89,7 +89,7 @@ VALUES
      JSON_OBJECT('title','Approved acceptance task','due_in_minutes',60),'USER',CAST(@e2e_user_id AS CHAR),
      'PENDING_APPROVAL','APPROVAL_REQUIRED','LOW','ui-acceptance-approval-action','11111111111111111111111111111111'),
     ('33333333333333333333333333333333','default','sales.create_followup','deal',CAST(@e2e_deal_id AS CHAR),
-     JSON_OBJECT('title','Executed acceptance follow-up','due_in_minutes',90),'USER',CAST(@e2e_user_id AS CHAR),
+     JSON_OBJECT('title','Executed acceptance follow-up','due_in_minutes',90),'AGENT','ui-acceptance-agent-run',
      'PROPOSED','MANUAL','LOW','ui-acceptance-execute-action','33333333333333333333333333333333');
 
 INSERT INTO cos_approvals
