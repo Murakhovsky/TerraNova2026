@@ -1,3 +1,52 @@
+
+# Engineering Manager V0.1 API
+cos_engineering_feature_create:
+  path: /api/engineering/features
+  controller: App\Http\Api\V1\Controller\EngineeringController::create
+  methods: [POST]
+
+cos_engineering_feature_get:
+  path: /api/engineering/features/{id}
+  controller: App\Http\Api\V1\Controller\EngineeringController::get
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_run:
+  path: /api/engineering/features/{id}/run
+  controller: App\Http\Api\V1\Controller\EngineeringController::run
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_resume:
+  path: /api/engineering/features/{id}/resume
+  controller: App\Http\Api\V1\Controller\EngineeringController::resume
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_cancel:
+  path: /api/engineering/features/{id}/cancel
+  controller: App\Http\Api\V1\Controller\EngineeringController::cancel
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_runs:
+  path: /api/engineering/features/{id}/runs
+  controller: App\Http\Api\V1\Controller\EngineeringController::runs
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_artifacts:
+  path: /api/engineering/features/{id}/artifacts
+  controller: App\Http\Api\V1\Controller\EngineeringController::artifacts
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_human_decision:
+  path: /api/engineering/features/{id}/human-decision
+  controller: App\Http\Api\V1\Controller\EngineeringController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_global_search:
   path: /workspace/search
   controller: App\Web\Experience\Search\GlobalSearchController
