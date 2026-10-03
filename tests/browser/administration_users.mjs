@@ -36,7 +36,10 @@ try {
     page.waitForURL((url) => url.pathname === '/admin/users', { timeout: 25000 }),
     create.locator('button[type="submit"]').click(),
   ]);
-  if (!await page.getByText(createdEmail, { exact: true }).count()) throw new Error('Created tenant user is not visible after create.');
+  if (!await page.getByText(createdEmail, { exact: true }).count()) {
+    const body = (await page.locator('body').innerText()).slice(0, 5000);
+    throw new Error('Created tenant user is not visible after create. Page: ' + body);
+  }
 
   const card = page.getByText(createdEmail, { exact: true }).locator('xpath=ancestor::article[1]');
   const update = card.locator('form[action^="/admin/updateUser/"]');
