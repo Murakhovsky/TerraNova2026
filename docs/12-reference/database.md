@@ -181,6 +181,8 @@ generated: true
 | `sales` | `app/migrations/20260913_000047_sales_v086_hardening.sql` | `sales_deal_stage_history` |
 | `sales` | `app/migrations/20260913_000047_sales_v086_hardening.sql` | `tn_client_cases` |
 | `sales` | `app/migrations/20260928_000118_sales_v100_release.sql` | — |
+| `sales` | `app/migrations/20261003_000121_sales_lead_qualification_transition.sql` | — |
+| `sales` | `app/migrations/20261003_000122_sales_followup_activity_type.sql` | `tn_client_case_activities` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_escalations` |
