@@ -103,6 +103,7 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_routes.mjs
+          CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_functional.mjs
       - name: Seed Sales functional acceptance
         env:
           SALES_E2E_EMAIL: sales-functional-acceptance@example.test

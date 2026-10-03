@@ -242,8 +242,11 @@ class AdminDashboardService implements AdministrationServiceInterface
         $params = [];
 
         if (($filters['q'] ?? '') !== '') {
-            $where[] = '(email LIKE :q OR full_name LIKE :q OR phone LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $where[] = '(email LIKE :q_email OR full_name LIKE :q_name OR phone LIKE :q_phone)';
+            $search = '%' . $filters['q'] . '%';
+            $params['q_email'] = $search;
+            $params['q_name'] = $search;
+            $params['q_phone'] = $search;
         }
 
         if (($filters['role'] ?? '') !== '') {

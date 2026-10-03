@@ -26,6 +26,8 @@ final readonly class PublicPropertySubmitViewModel
             return 'error';
         }
 
-        return $this->submissionOk ? 'success' : 'normal';
+        // A successful submission is feedback within the normal FormEditor state.
+        // PageArchetype::FormEditor does not define a separate "success" page state.
+        return 'normal';
     }
 }
