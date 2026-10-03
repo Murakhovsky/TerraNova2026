@@ -63,6 +63,18 @@ jobs:
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Sales governance remediation integration
+        run: |
+          docker compose cp tests/integration/sales_qualification_governance_repair.php php:/tmp/sales_qualification_governance_repair.php
+          docker compose exec -T \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            -e COS_TEST_MIGRATIONS=/var/www/html/app/migrations \
+            -e DB_HOST=mysql \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE="$MYSQL_DATABASE" \
+            -e DB_USERNAME="$MYSQL_USER" \
+            -e DB_PASSWORD="$MYSQL_PASSWORD" \
+            php php /tmp/sales_qualification_governance_repair.php
       - name: Container and routes
         run: |
           docker compose exec -T php php bin/console lint:container

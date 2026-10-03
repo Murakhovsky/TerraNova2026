@@ -69,8 +69,13 @@ final readonly class MysqlPropertyWorkspaceReadModel implements PropertyWorkspac
         ];
 
         if ($normalized['q'] !== '') {
-            $where[] = '(a.asset_id LIKE :q OR l.title LIKE :q OR l.slug LIKE :q OR location.name LIKE :q OR address.formatted_address LIKE :q)';
-            $params['q'] = '%' . $normalized['q'] . '%';
+            $search = '%' . $normalized['q'] . '%';
+            $where[] = '(a.asset_id LIKE :q_asset OR l.title LIKE :q_title OR l.slug LIKE :q_slug OR location.name LIKE :q_location OR address.formatted_address LIKE :q_address)';
+            $params['q_asset'] = $search;
+            $params['q_title'] = $search;
+            $params['q_slug'] = $search;
+            $params['q_location'] = $search;
+            $params['q_address'] = $search;
         }
         if ($normalized['status'] !== '') {
             $where[] = 'i.status = :status';

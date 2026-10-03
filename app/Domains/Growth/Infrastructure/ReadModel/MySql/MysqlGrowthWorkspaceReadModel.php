@@ -104,8 +104,12 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
         }
         $query=$this->filter($filters,'q',191);
         if($query!==null){
-            $where[]='(c.candidate_id LIKE :q OR c.subject_id LIKE :q OR c.opportunity_type LIKE :q OR c.recommended_play LIKE :q)';
-            $params['q']='%'.$this->like($query).'%';
+            $search='%'.$this->like($query).'%';
+            $where[]='(c.candidate_id LIKE :q_candidate_id OR c.subject_id LIKE :q_subject_id OR c.opportunity_type LIKE :q_opportunity_type OR c.recommended_play LIKE :q_recommended_play)';
+            $params['q_candidate_id']=$search;
+            $params['q_subject_id']=$search;
+            $params['q_opportunity_type']=$search;
+            $params['q_recommended_play']=$search;
         }
 
         $sql='SELECT c.candidate_id,c.opportunity_type,c.growth_mode,c.subject_type,c.subject_id,c.target_domain,
@@ -155,8 +159,11 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
 
         $query=$this->filter($filters,'q',191);
         if($query!==null){
-            $where[]='(a.name LIKE :q OR a.canonical_domain LIKE :q OR a.account_id LIKE :q)';
-            $params['q']='%'.$this->like($query).'%';
+            $search='%'.$this->like($query).'%';
+            $where[]='(a.name LIKE :q_name OR a.canonical_domain LIKE :q_domain OR a.account_id LIKE :q_account_id)';
+            $params['q_name']=$search;
+            $params['q_domain']=$search;
+            $params['q_account_id']=$search;
         }
 
         $sql='SELECT a.account_id,a.name,a.canonical_domain,a.created_at,a.updated_at,
@@ -218,8 +225,12 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
         }
         $query=$this->filter($filters,'q',191);
         if($query!==null){
-            $where[]='(s.signal_id LIKE :q OR s.subject_id LIKE :q OR s.signal_type LIKE :q OR s.source_reference LIKE :q)';
-            $params['q']='%'.$this->like($query).'%';
+            $search='%'.$this->like($query).'%';
+            $where[]='(s.signal_id LIKE :q_signal_id OR s.subject_id LIKE :q_subject_id OR s.signal_type LIKE :q_signal_type OR s.source_reference LIKE :q_source_reference)';
+            $params['q_signal_id']=$search;
+            $params['q_subject_id']=$search;
+            $params['q_signal_type']=$search;
+            $params['q_source_reference']=$search;
         }
 
         $sql='SELECT s.signal_id,s.subject_type,s.subject_id,s.signal_type,s.source_reference,s.confidence,
@@ -362,8 +373,13 @@ final readonly class MysqlGrowthWorkspaceReadModel implements GrowthWorkspaceRea
         }
         $query=$this->filter($filters,'q',191);
         if($query!==null){
-            $where[]='(o.candidate_id LIKE :q OR o.reference_id LIKE :q OR o.reason_code LIKE :q OR c.subject_id LIKE :q OR a.name LIKE :q)';
-            $params['q']='%'.$this->like($query).'%';
+            $search='%'.$this->like($query).'%';
+            $where[]='(o.candidate_id LIKE :q_candidate_id OR o.reference_id LIKE :q_reference_id OR o.reason_code LIKE :q_reason_code OR c.subject_id LIKE :q_subject_id OR a.name LIKE :q_account_name)';
+            $params['q_candidate_id']=$search;
+            $params['q_reference_id']=$search;
+            $params['q_reason_code']=$search;
+            $params['q_subject_id']=$search;
+            $params['q_account_name']=$search;
         }
 
         $sql='SELECT o.outcome_id,o.candidate_id,o.source_domain,o.source_event_id,o.reference_type,o.reference_id,

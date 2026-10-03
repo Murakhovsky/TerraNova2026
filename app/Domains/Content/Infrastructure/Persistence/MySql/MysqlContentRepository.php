@@ -105,8 +105,11 @@ final class MysqlContentRepository implements ContentRepositoryInterface
             $params['status'] = $status;
         }
         if ($search !== '') {
-            $where[] = '(c.title LIKE :search OR c.slug LIKE :search OR c.focus_keyword LIKE :search)';
-            $params['search'] = '%' . mb_substr($search, 0, 120) . '%';
+            $value = '%' . mb_substr($search, 0, 120) . '%';
+            $where[] = '(c.title LIKE :search_title OR c.slug LIKE :search_slug OR c.focus_keyword LIKE :search_keyword)';
+            $params['search_title'] = $value;
+            $params['search_slug'] = $value;
+            $params['search_keyword'] = $value;
         }
 
         $items = $this->database->fetchAll('
