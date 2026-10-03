@@ -70,6 +70,13 @@ final readonly class StructuredLlmAgentProvider implements LlmProviderInterface
 
     private function useCase(AgentDefinition $definition): string
     {
+        // Preserve the stable provider-neutral contract for existing agents.
+        // Engineering roles may opt into role-aware routing without changing
+        // the behavior of Sales/Kernel agents that depend on "agent.run".
+        if ($definition->domainName !== 'engineering') {
+            return 'agent.run';
+        }
+
         $name = strtolower((string) preg_replace('/[^A-Za-z0-9_.:-]+/', '_', trim($definition->name)));
         if ($name === '' || !ctype_alpha($name[0])) {
             $name = 'runtime_' . ltrim($name, '_.:-0123456789');
