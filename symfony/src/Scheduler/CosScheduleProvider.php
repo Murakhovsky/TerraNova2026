@@ -139,7 +139,7 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         if($this->engineeringAutonomyEnabled){
             $messages[] = RecurringMessage::every(
                 $this->engineeringAutonomyIntervalMinutes.' minutes',
-                new RedispatchMessage(new ContinueEngineeringWorkflowsCommand('scheduler'), 'async'),
+                new RedispatchMessage(new ContinueEngineeringWorkflowsCommand('scheduler'), 'engineering'),
             );
         }
 

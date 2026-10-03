@@ -17,6 +17,19 @@ framework:
           max_delay: 60000
           jitter: 0.1
 
+      engineering:
+        dsn: '%env(MESSENGER_ENGINEERING_TRANSPORT_DSN)%'
+        options:
+          group: cos_engineering_workers
+          consumer: '%env(MESSENGER_CONSUMER_NAME)%'
+          delete_after_ack: true
+        retry_strategy:
+          max_retries: 2
+          delay: 5000
+          multiplier: 2
+          max_delay: 30000
+          jitter: 0.1
+
       failed:
         dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
         options:
@@ -41,6 +54,7 @@ framework:
           allow_no_senders: true
 
     routing:
+      'App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand': engineering
       'App\Application\System\Command\SchedulerHeartbeatCommand': async
       'App\Application\Sales\Command\RunSalesAutomationCommand': async
       'App\Application\Growth\Command\RunGrowthSignalPollingCommand': async
