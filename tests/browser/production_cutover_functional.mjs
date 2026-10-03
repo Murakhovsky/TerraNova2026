@@ -340,7 +340,19 @@ try {
   const sceneTitle = `Functional Spatial ${suffix}`;
   await spatialForm.locator('input[name="title"]').fill(sceneTitle);
   await spatialForm.locator('select[name="viewer_type"]').selectOption('external');
-  await submitAndWait(page, spatialForm, (url) => url.pathname === '/spatial/edit' && url.searchParams.has('status_message'));
+  const [spatialValidationResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes('/spatial/save')
+      && response.request().method() === 'POST'
+    , { timeout: 30000 }),
+    spatialForm.locator('button[type="submit"]').first().click(),
+  ]);
+  assert([302, 303].includes(spatialValidationResponse.status()),
+    'Spatial validation expected redirect, received ' + spatialValidationResponse.status());
+  const spatialValidationLocation = spatialValidationResponse.headers()['location'] || '';
+  assert(spatialValidationLocation.includes('/spatial/edit') && spatialValidationLocation.includes('status_message='),
+    'Spatial validation redirect Location is invalid: ' + spatialValidationLocation);
+  await goto200(page, spatialValidationLocation);
   assert((await page.locator('body').innerText()).includes('потрібен URL'), 'Spatial external-viewer validation message is missing.');
 
   spatialForm = page.locator('form[action^="/spatial/save"]').first();
