@@ -54,6 +54,27 @@ class EngineeringFeatureRecord
     ) {}
 
     public function id(): string { return $this->id; }
+    public function title(): string { return $this->title; }
+    public function type(): string { return $this->type; }
     public function status(): string { return $this->status; }
+    public function priority(): string { return $this->priority; }
+    public function requestPayload(): array { return $this->requestPayload; }
+    public function externalIssueId(): ?string { return $this->externalIssueId; }
+    public function repositoryRevision(): ?string { return $this->repositoryRevision; }
     public function setStatus(string $status): void { $this->status = $status; $this->updatedAt = new DateTimeImmutable(); }
+
+    public function applyAnalysis(array $specification, array $contextMap, ?string $repositoryRevision): void
+    {
+        $feature = is_array($specification['feature'] ?? null) ? $specification['feature'] : [];
+        $this->businessGoal = isset($feature['business_goal']) ? (string) $feature['business_goal'] : $this->businessGoal;
+        $this->complexity = isset($feature['complexity']) ? (string) $feature['complexity'] : $this->complexity;
+        $this->specificationSummary = $feature;
+        $this->acceptanceCriteria = is_array($feature['acceptance_criteria'] ?? null) ? $feature['acceptance_criteria'] : [];
+        $this->contextMap = $contextMap;
+        $this->risks = is_array($specification['risks'] ?? null) ? $specification['risks'] : [];
+        $this->assumptions = is_array($specification['assumptions'] ?? null) ? $specification['assumptions'] : [];
+        $this->openQuestions = is_array($specification['open_questions'] ?? null) ? $specification['open_questions'] : [];
+        $this->repositoryRevision = $repositoryRevision;
+        $this->updatedAt = new DateTimeImmutable();
+    }
 }

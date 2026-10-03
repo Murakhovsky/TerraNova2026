@@ -11,6 +11,8 @@ final readonly class WorkflowDirective
         public WorkflowDirectiveType $type,
         public ?AgentRole $agent = null,
         public string $reason = '',
+        /** @var list<\App\Engineering\Domain\Workflow\WorkflowTransition> */
+        public array $transitions = [],
     ) {
     }
 }
