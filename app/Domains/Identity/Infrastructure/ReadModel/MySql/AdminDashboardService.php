@@ -74,7 +74,8 @@ class AdminDashboardService implements AdministrationServiceInterface
                 SUM(status = "active") AS active_items,
                 SUM(role IN ("manager", "admin")) AS team_items
             FROM tn_users
-        ') ?? [];
+            WHERE organization_id = :organization_id
+        ', ['organization_id' => $organizationId]) ?? [];
 
         return [
             'properties' => [
@@ -236,10 +237,10 @@ class AdminDashboardService implements AdministrationServiceInterface
         ];
     }
 
-    public function users(array $filters): array
+    public function users(array $filters, string $organizationId): array
     {
-        $where = ['1 = 1'];
-        $params = [];
+        $where = ['organization_id = :organization_id'];
+        $params = ['organization_id' => $organizationId];
 
         if (($filters['q'] ?? '') !== '') {
             $where[] = '(email LIKE :q OR full_name LIKE :q OR phone LIKE :q)';
@@ -272,7 +273,7 @@ class AdminDashboardService implements AdministrationServiceInterface
         ', $params);
     }
 
-    public function userStats(): array
+    public function userStats(string $organizationId): array
     {
         $summary = $this->database->fetchOne('
             SELECT
@@ -293,14 +294,14 @@ class AdminDashboardService implements AdministrationServiceInterface
             'roles' => array_fill_keys($this->userRoles(), 0),
         ];
 
-        foreach ($this->database->fetchAll('SELECT role, COUNT(*) AS total FROM tn_users GROUP BY role') as $row) {
+        foreach ($this->database->fetchAll('SELECT role, COUNT(*) AS total FROM tn_users WHERE organization_id = :organization_id GROUP BY role', ['organization_id' => $organizationId]) as $row) {
             $stats['roles'][(string) $row['role']] = (int) $row['total'];
         }
 
         return $stats;
     }
 
-    public function createUser(array $input): array
+    public function createUser(array $input, string $organizationId): array
     {
         $email = mb_strtolower(trim((string) ($input['email'] ?? '')));
         $name = trim((string) ($input['full_name'] ?? ''));
@@ -323,9 +324,10 @@ class AdminDashboardService implements AdministrationServiceInterface
 
         try {
             $this->database->connection()->prepare('
-                INSERT INTO tn_users (email, password_hash, full_name, phone, role, status)
-                VALUES (:email, :password_hash, :full_name, :phone, :role, :status)
+                INSERT INTO tn_users (organization_id, email, password_hash, full_name, phone, role, status)
+                VALUES (:organization_id, :email, :password_hash, :full_name, :phone, :role, :status)
             ')->execute([
+                'organization_id' => $organizationId,
                 'email' => $email,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 'full_name' => mb_substr($name, 0, 160),
@@ -346,9 +348,9 @@ class AdminDashboardService implements AdministrationServiceInterface
         }
     }
 
-    public function updateUser(int $id, array $input, ?array $actor = null): array
+    public function updateUser(int $id, array $input, string $organizationId, ?array $actor = null): array
     {
-        $user = $this->database->fetchOne('SELECT id, email, role, status FROM tn_users WHERE id = :id LIMIT 1', ['id' => $id]);
+        $user = $this->database->fetchOne('SELECT id, email, role, status FROM tn_users WHERE id = :id AND organization_id = :organization_id LIMIT 1', ['id' => $id, 'organization_id' => $organizationId]);
         if (!$user) {
             return ['ok' => false, 'message' => 'Користувача не знайдено.'];
         }
@@ -375,6 +377,7 @@ class AdminDashboardService implements AdministrationServiceInterface
         try {
             $params = [
                 'id' => $id,
+                'organization_id' => $organizationId,
                 'full_name' => mb_substr($name, 0, 160),
                 'phone' => $phone !== '' ? mb_substr($phone, 0, 50) : null,
                 'role' => $role,
@@ -393,7 +396,7 @@ class AdminDashboardService implements AdministrationServiceInterface
                     phone = :phone,
                     role = :role,
                     status = :status' . $passwordSql . '
-                WHERE id = :id
+                WHERE id = :id AND organization_id = :organization_id
                 LIMIT 1
             ')->execute($params);
 
