@@ -24,7 +24,10 @@ let storageState = storageStatePath || null;
 if (!storageStatePath) {
   const loginContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const loginPage = await loginContext.newPage();
-  assertOk(await loginPage.goto(absolute('/auth/login'), { waitUntil: 'domcontentloaded' }), 'Sales E2E login page');
+  const loginResponse = await loginPage.goto(absolute('/auth/login'), { waitUntil: 'domcontentloaded' });
+  if (!loginResponse || loginResponse.status() >= 400) {
+    throw new Error(`Sales E2E login page returned ${loginResponse?.status() ?? 'no response'}`);
+  }
   await loginPage.locator('input[name="email"]').fill(email);
   await loginPage.locator('input[name="password"]').fill(password);
   await Promise.all([
