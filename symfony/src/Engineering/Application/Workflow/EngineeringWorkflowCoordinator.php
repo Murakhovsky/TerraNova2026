@@ -100,6 +100,37 @@ final readonly class EngineeringWorkflowCoordinator
         return $this->human($workflow, $reason);
     }
 
+    public function cancel(
+        WorkflowExecution $workflow,
+        string $actorId,
+        string $reason = 'Cancelled by human operator.',
+    ): WorkflowDirective {
+        if ($workflow->currentState()->isTerminal()) {
+            throw new LogicException('Terminal engineering workflow cannot be cancelled.');
+        }
+        if (trim($actorId) === '') {
+            throw new LogicException('Engineering workflow cancellation requires an actor.');
+        }
+
+        $transition = $this->engine->transition(
+            $workflow,
+            EngineeringWorkflowState::CANCELLED,
+            new WorkflowTransitionContext(
+                trigger: 'HUMAN_CANCELLED',
+                reason: $reason,
+                initiatedByType: 'HUMAN',
+                initiatedById: $actorId,
+            ),
+        );
+
+        return new WorkflowDirective(
+            WorkflowDirectiveType::STOP,
+            null,
+            'Engineering workflow cancelled.',
+            [$transition],
+        );
+    }
+
     public function completeAfterHumanApproval(
         WorkflowExecution $workflow,
         string $actorId,
