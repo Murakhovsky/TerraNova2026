@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Web\Engineering;
 
+use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Service\EngineeringStatusService;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Web\Experience\Archetype\PageArchetype;
@@ -24,9 +25,49 @@ final readonly class EngineeringFeatureController
         private Environment $twig,
         private TenantContextProviderInterface $tenants,
         private EngineeringStatusService $engineering,
+        private EngineeringFeatureStoreInterface $features,
         private WorkspaceShellFactory $shells,
         private PagePresentationFactory $pages,
     ) {}
+
+    public function index(Request $request): Response
+    {
+        $tenant = $this->tenants->current();
+        if ($tenant === null) return new RedirectResponse('/auth/login');
+        if (!$tenant->isManager() || !$tenant->allows(TenantPermissions::MANAGE)) {
+            return new Response('Forbidden', Response::HTTP_FORBIDDEN);
+        }
+
+        $context = new WebExtensionContext(
+            organizationId: $tenant->organizationId()->value(),
+            role: $tenant->role()->value(),
+            surface: 'workspace',
+            activeSection: 'administration',
+            activeItem: 'engineering',
+        );
+        $shell = $this->shells->create($tenant, $context, 'Engineering', [
+            new ShellBreadcrumb('Workspace', '/admin'),
+            new ShellBreadcrumb('Engineering'),
+        ]);
+
+        return new Response(
+            $this->twig->render('experience/engineering/index.html.twig', [
+                'shell' => $shell,
+                'page' => $this->pages->create(
+                    PageArchetype::Collection,
+                    ['PageHeader', 'EntityList', 'EmptyState', 'ErrorState'],
+                    'ready',
+                ),
+                'features' => $this->features->recentForOrganization($tenant->organizationId()->value(), 50),
+            ]),
+            Response::HTTP_OK,
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'no-store, private',
+                'X-Robots-Tag' => 'noindex, nofollow',
+            ],
+        );
+    }
 
     public function show(Request $request, string $id): Response
     {
