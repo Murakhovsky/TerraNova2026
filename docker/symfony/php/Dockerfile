@@ -55,7 +55,7 @@ RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=de
     MERCURE_JWT_SECRET="build-only-mercure-secret-0123456789abcdef" \
     TELEGRAM_BOT_TOKEN="" \
     TELEGRAM_BOT_NAME="" \
-    sh -c 'php bin/console cache:warmup && php bin/console importmap:install && php bin/console asset-map:compile'
+    sh -c 'php -d memory_limit=512M bin/console cache:warmup && php -d memory_limit=512M bin/console importmap:install && php -d memory_limit=512M bin/console asset-map:compile'
 
 EXPOSE 9000
 

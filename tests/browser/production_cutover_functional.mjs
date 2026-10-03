@@ -150,6 +150,24 @@ try {
   await submitAndWait(page, duplicateUser, (url) => url.pathname === '/admin/users' && url.searchParams.has('status_message'));
   assert((await page.locator('body').innerText()).includes('Користувач із таким email уже існує'), 'Duplicate-user validation message is missing.');
 
+  // 1b. Cabinet is a role-aware hub, not an identity-only redirect.
+  await goto200(page, '/cabinet', '[data-cos-portal="cabinet"]');
+  assert(await page.locator('[data-cabinet-primary-actions] a[href="/sales/today"]').count() === 1, 'Manager Cabinet must expose Sales Today.');
+  assert(await page.locator('[data-cabinet-workspaces] a[href="/admin/engineering"]').count() === 1, 'Admin Cabinet must expose Engineering workspace.');
+
+  // 1c. Engineering feature can be created from the browser.
+  await goto200(page, '/admin/engineering', '[data-cos-engineering="index"]');
+  const engineeringTitle = `UI acceptance ${suffix}`;
+  const engineeringForm = page.locator('form[data-engineering-create]');
+  await engineeringForm.locator('input[name="title"]').fill(engineeringTitle);
+  await engineeringForm.locator('textarea[name="description"]').fill('Browser-created Engineering feature for production cutover acceptance.');
+  await engineeringForm.locator('select[name="priority"]').selectOption('P2');
+  await engineeringForm.locator('input[name="start"]').uncheck();
+  await submitAndWait(page, engineeringForm, (url) => /^\/admin\/engineering\/[0-9a-fA-F-]{36}$/.test(url.pathname) && url.searchParams.has('status_message'));
+  assert((await page.locator('body').innerText()).includes(engineeringTitle), 'Browser-created Engineering feature did not render in its workspace.');
+  await goto200(page, '/admin/engineering', '[data-cos-engineering="index"]');
+  assert((await page.locator('body').innerText()).includes(engineeringTitle), 'Browser-created Engineering feature did not persist in the collection.');
+
   // 2. Client Case: create -> detail -> edit -> activity -> collection search.
   await goto200(page, '/client-case', '[data-client-case-collection]');
   const caseName = `Acceptance Client ${suffix}`;
@@ -402,13 +420,57 @@ try {
   await submitAndWait(page, spatialForm, (url) => url.pathname === `/spatial/edit/${sceneId}` && url.searchParams.has('status_message'));
   assert(await page.locator(`form[action="/spatial/save/${sceneId}"] input[name="title"]`).inputValue() === updatedSceneTitle, 'Spatial edit did not persist.');
 
+  // Force a canonical reload before the next independent mutation. This proves
+  // the persisted edit state and prevents any future Turbo transition from
+  // racing the next form interaction.
+  await goto200(page, `/spatial/edit/${sceneId}`, '[data-spatial-capture-form]');
+
   const captureForm = page.locator(`form[action="/spatial/capture/${sceneId}"]`);
   const captureLabel = `Acceptance capture ${suffix}`;
   await captureForm.locator('select[name="capture_type"]').selectOption('manual');
-  await captureForm.locator('input[name="label"]').fill(captureLabel);
+  await captureForm.locator('input[name="version_label"]').fill(captureLabel);
   await captureForm.locator('input[name="device_name"]').fill('CI Browser');
+  const serializedCapture = await captureForm.evaluate((form) => Object.fromEntries(new FormData(form).entries()));
+  assert(
+    serializedCapture.capture_type === 'manual'
+      && serializedCapture.version_label === captureLabel
+      && serializedCapture.device_name === 'CI Browser',
+    'Spatial capture FormData does not contain edited values: ' + JSON.stringify(serializedCapture),
+  );
+  const captureRequestPromise = page.waitForRequest((request) =>
+    new URL(request.url()).pathname === `/spatial/capture/${sceneId}`
+      && request.method() === 'POST'
+  , { timeout: 30000 });
   await submitAndWait(page, captureForm, (url) => url.pathname === `/spatial/edit/${sceneId}` && url.searchParams.has('status_message'));
-  assert((await page.locator('body').innerText()).includes(captureLabel), 'Spatial capture did not persist.');
+  const captureRequest = await captureRequestPromise;
+  const capturePostData = captureRequest.postData() || '';
+  const capturePost = new URLSearchParams(capturePostData);
+  assert(
+    capturePost.get('capture_type') === 'manual'
+      && capturePost.get('version_label') === captureLabel
+      && capturePost.get('device_name') === 'CI Browser',
+    'Spatial capture POST body lost edited values: ' + capturePostData,
+  );
+  const captureStatus = new URL(page.url()).searchParams.get('status_message') || '';
+  assert(!captureStatus.startsWith('ERROR:'), 'Spatial capture failed: ' + captureStatus + '; postData=' + capturePostData);
+  const captureIdMatch = captureStatus.match(/SPC-[0-9]{14}-[A-F0-9]{10}/);
+  assert(captureIdMatch, 'Spatial capture response is missing canonical public id: ' + captureStatus);
+  const capturePublicId = captureIdMatch[0];
+  await goto200(page, `/spatial/edit/${sceneId}`, '[data-spatial-capture-history]');
+  const persistedCapture = page.locator(`[data-spatial-capture-public-id="${capturePublicId}"]`);
+  const captureHistoryText = await page.locator('[data-spatial-capture-history]').innerText();
+  const versionHistoryText = await page.locator('[data-spatial-version-history]').innerText();
+  assert(
+    await persistedCapture.count() === 1,
+    'Spatial capture did not persist after canonical reload: ' + capturePublicId
+      + '; captureHistory=' + captureHistoryText
+      + '; versionHistory=' + versionHistoryText,
+  );
+  assert(
+    versionHistoryText.includes(captureLabel),
+    'Spatial capture version label did not persist after canonical reload: ' + captureLabel
+      + '; versionHistory=' + versionHistoryText,
+  );
 
   const hotspotForm = page.locator(`form[action="/spatial/hotspot/${sceneId}"]`);
   const hotspotTitle = `Acceptance hotspot ${suffix}`;

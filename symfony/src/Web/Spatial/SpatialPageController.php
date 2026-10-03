@@ -127,7 +127,7 @@ final readonly class SpatialPageController
                 return new JsonResponse(['ok' => false, 'message' => $error->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            return $this->redirectStatus('/spatial/edit/' . $sceneId, $error->getMessage());
+            return $this->redirectStatus('/spatial/edit/' . $sceneId, 'ERROR: ' . $error->getMessage());
         }
     }
 
@@ -140,7 +140,7 @@ final readonly class SpatialPageController
             $this->scenes->externalAsset((int) $id, $request->request->all());
             $message = 'Зовнішній asset підключено.';
         } catch (Throwable $error) {
-            $message = $error->getMessage();
+            $message = 'ERROR: ' . $error->getMessage();
         }
 
         return $this->redirectStatus('/spatial/edit/' . (int) $id, $message);
@@ -152,10 +152,15 @@ final readonly class SpatialPageController
         if ($tenant instanceof Response) return $tenant;
 
         try {
-            $this->scenes->capture((int) $id, $request->request->all(), $this->actor($tenant));
-            $message = 'Нову версію capture зареєстровано.';
+            $capture = $this->scenes->capture((int) $id, $request->request->all(), $this->actor($tenant));
+            $label = trim((string) ($capture['version_label'] ?? ''));
+            $publicId = trim((string) ($capture['public_id'] ?? ''));
+            $message = 'Capture зареєстровано'
+                . ($publicId !== '' ? ' · ' . $publicId : '')
+                . ($label !== '' ? ' · ' . $label : '')
+                . '.';
         } catch (Throwable $error) {
-            $message = $error->getMessage();
+            $message = 'ERROR: ' . $error->getMessage();
         }
 
         return $this->redirectStatus('/spatial/edit/' . (int) $id, $message);
@@ -170,7 +175,7 @@ final readonly class SpatialPageController
             $this->scenes->saveHotspot((int) $id, $request->request->all());
             $message = 'Hotspot збережено.';
         } catch (Throwable $error) {
-            $message = $error->getMessage();
+            $message = 'ERROR: ' . $error->getMessage();
         }
 
         return $this->redirectStatus('/spatial/edit/' . (int) $id, $message);
@@ -183,7 +188,12 @@ final readonly class SpatialPageController
 
         $result = $this->scenes->publish((int) $id);
 
-        return $this->redirectStatus('/spatial/edit/' . (int) $id, (string) ($result['message'] ?? 'Spatial scene updated.'));
+        $message = (string) ($result['message'] ?? 'Spatial scene updated.');
+        if (($result['ok'] ?? false) !== true) {
+            $message = 'ERROR: ' . $message;
+        }
+
+        return $this->redirectStatus('/spatial/edit/' . (int) $id, $message);
     }
 
     public function scene(Request $request, string $slug): Response

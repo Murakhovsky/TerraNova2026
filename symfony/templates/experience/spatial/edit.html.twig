@@ -1,8 +1,7 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
 {% block javascripts %}
-    {{ parent() }}
-    {{ importmap('spatial_admin') }}
+    {{ importmap(['app', 'spatial_admin']) }}
 {% endblock %}
 
 {% block title %}{{ scene.id ? scene.title : 'Нова 3D-сцена' }} | Spatial | COS{% endblock %}
@@ -29,10 +28,16 @@
     </twig:CosPageHeader>
 
     {% if actionStatus %}
-        <twig:CosAlert title="Spatial оновлено" copy="{{ actionStatus }}" tone="positive" />
+        <twig:CosAlert
+            title="{{ actionStatus starts with 'ERROR:' ? 'Spatial action failed' : 'Spatial оновлено' }}"
+            copy="{{ actionStatus }}"
+            tone="{{ actionStatus starts with 'ERROR:' ? 'danger' : 'positive' }}"
+        />
     {% endif %}
 
     <form class="cos-form" method="post"
+        data-turbo="false"
+        data-spatial-save-form
         data-csrf-protected="true" action="/spatial/save/{{ scene.id|default(0) }}">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         <input type="hidden" name="id" value="{{ scene.id|default(0) }}">
@@ -84,6 +89,8 @@
                 <p class="cos-card__eyebrow">Provider</p>
                 <h2 class="cos-card__title">Зовнішній asset</h2>
                 <form class="cos-form" method="post"
+        data-turbo="false"
+        data-spatial-external-form
         data-csrf-protected="true" action="/spatial/external/{{ scene.id }}">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
@@ -101,7 +108,7 @@
             <p class="cos-card__eyebrow">Assets</p>
             <h2 class="cos-card__title">Склад сцени</h2>
             {% if scene.status != 'published' %}
-                <form method="post" action="/spatial/publish/{{ scene.id }}"><input type="hidden" name="csrf_token" value="{{ csrfToken }}"><button class="cos-button cos-button--primary" type="submit">Опублікувати</button></form>
+                <form method="post" action="/spatial/publish/{{ scene.id }}" data-turbo="false" data-spatial-publish-form><input type="hidden" name="csrf_token" value="{{ csrfToken }}"><button class="cos-button cos-button--primary" type="submit">Опублікувати</button></form>
             {% endif %}
             <div class="cos-spatial-asset-list">
                 {% for asset in scene.assets|default([]) %}
@@ -122,11 +129,13 @@
                 <p class="cos-card__eyebrow">Capture</p>
                 <h2 class="cos-card__title">Нова версія</h2>
                 <form class="cos-form" method="post"
+        data-turbo="false"
+        data-spatial-capture-form
         data-csrf-protected="true" action="/spatial/capture/{{ scene.id }}">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field"><span>Метод</span><select class="cos-select" name="capture_type">{% for type in ['lidar','roomplan','photogrammetry','bim','cad','manual','provider'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
-                        <label class="cos-field"><span>Назва версії</span><input class="cos-input" name="label" type="text" maxlength="160"></label>
+                        <label class="cos-field"><span>Назва версії</span><input class="cos-input" name="version_label" type="text" maxlength="160"></label>
                         <label class="cos-field"><span>Пристрій</span><input class="cos-input" name="device_name" type="text" maxlength="160"></label>
                         <label class="cos-field"><span>Дата</span><input class="cos-input" name="captured_at" type="datetime-local"></label>
                         <label class="cos-field"><span>Примітка</span><textarea class="cos-textarea" name="notes" rows="3"></textarea></label>
@@ -139,6 +148,8 @@
                 <p class="cos-card__eyebrow">Hotspot</p>
                 <h2 class="cos-card__title">Точка сцени</h2>
                 <form class="cos-form" method="post"
+        data-turbo="false"
+        data-spatial-hotspot-form
         data-csrf-protected="true" action="/spatial/hotspot/{{ scene.id }}">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
@@ -156,11 +167,53 @@
             </article>
         </section>
 
+        <section class="cos-card" aria-labelledby="spatial-hotspot-list-title">
+            <p class="cos-card__eyebrow">Hotspots</p>
+            <h2 id="spatial-hotspot-list-title" class="cos-card__title">Точки сцени</h2>
+            <div class="cos-spatial-timeline" data-spatial-hotspot-list>
+                {% for hotspot in scene.hotspots|default([]) %}
+                    <div data-spatial-hotspot="{{ hotspot.id }}" data-spatial-hotspot-public-id="{{ hotspot.public_id }}">
+                        <strong>{{ hotspot.title }}</strong>
+                        <span>
+                            {{ hotspot.hotspot_type }}
+                            {% if hotspot.position is defined %}
+                                / x={{ hotspot.position.x|default(0) }}, y={{ hotspot.position.y|default(0) }}, z={{ hotspot.position.z|default(0) }}
+                            {% endif %}
+                            {% if hotspot.is_active %} / active{% endif %}
+                        </span>
+                        {% if hotspot.body %}<small>{{ hotspot.body }}</small>{% endif %}
+                    </div>
+                {% else %}
+                    <p>Hotspots ще не додані.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="cos-card" aria-labelledby="spatial-capture-history-title">
+            <p class="cos-card__eyebrow">Captures</p>
+            <h2 id="spatial-capture-history-title" class="cos-card__title">Capture history</h2>
+            <div class="cos-spatial-timeline" data-spatial-capture-history>
+                {% for capture in scene.captures|default([]) %}
+                    <div data-spatial-capture="{{ capture.id }}" data-spatial-capture-public-id="{{ capture.public_id }}">
+                        <strong>{{ capture.version_label|default('Capture #' ~ capture.id) }}</strong>
+                        <span>
+                            {% if capture.version_number %}v{{ capture.version_number }} / {% endif %}
+                            {{ capture.capture_type }} / {{ capture.status }}
+                            {% if capture.device_name %} / {{ capture.device_name }}{% endif %}
+                            {% if capture.captured_at %} / {{ capture.captured_at }}{% endif %}
+                        </span>
+                    </div>
+                {% else %}
+                    <p>Captures ще не зареєстровані.</p>
+                {% endfor %}
+            </div>
+        </section>
+
         <section class="cos-spatial-workbench">
             <article class="cos-card">
                 <p class="cos-card__eyebrow">Версії</p>
                 <h2 class="cos-card__title">Capture history</h2>
-                <div class="cos-spatial-timeline">
+                <div class="cos-spatial-timeline" data-spatial-version-history>
                     {% for version in scene.versions|default([]) %}
                         <div><strong>v{{ version.version_number }} / {{ version.label }}</strong><span>{{ version.capture_method }} / {{ version.status }}{% if version.captured_at %} / {{ version.captured_at }}{% endif %}</span></div>
                     {% else %}<p>Історія порожня.</p>{% endfor %}

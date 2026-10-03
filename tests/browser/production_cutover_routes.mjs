@@ -31,7 +31,10 @@ async function expect200(path, marker = null) {
     throw new Error(path + ' expected HTTP 200, received ' + status);
   }
   if (marker && await page.locator(marker).count() === 0) {
-    throw new Error(path + ' is missing expected UI marker ' + marker);
+    const finalUrl = page.url();
+    const title = await page.title().catch(() => '');
+    const body = (await page.locator('body').innerText().catch(() => '')).slice(0, 1200).replace(/\s+/g, ' ');
+    throw new Error(path + ' is missing expected UI marker ' + marker + '; final=' + finalUrl + '; title=' + title + '; body=' + body);
   }
 }
 
@@ -47,6 +50,24 @@ try {
   await expect200('/cos', '[data-cos-public="cos-landing"]');
   await expect200('/cos/en', '[data-cos-public="cos-landing"]');
   await expect200('/cos/en/domains/sales', '[data-cos-public="cos-domain"]');
+
+  await expect200('/cabinet', '[data-cos-portal="cabinet"]');
+  await expect200('/workspace/ai', '[data-cos-ai-center]');
+  await expect200('/admin/engineering', '[data-cos-engineering="index"]');
+
+  for (const path of [
+    '/growth',
+    '/growth/candidates',
+    '/growth/accounts',
+    '/growth/signals',
+    '/growth/collectors',
+    '/growth/learning',
+    '/growth/experiments',
+    '/growth/market',
+    '/growth/settings',
+  ]) {
+    await expect200(path, '.cos-growth-workspace');
+  }
 
   await expect200('/sales/pipeline', '[data-sales-pipeline-root]');
   await expect200('/sales/director', '[data-cos-archetype]');

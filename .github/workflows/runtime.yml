@@ -100,6 +100,13 @@ jobs:
             SELECT 'default',id,'admin','ACTIVE' FROM tn_users WHERE email='$COS_WEB_SMOKE_EMAIL'
             ON DUPLICATE KEY UPDATE role='admin',status='ACTIVE';
           "
+          WEB_USER_ID="$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT id FROM tn_users WHERE email='$COS_WEB_SMOKE_EMAIL' LIMIT 1;")"
+          test -n "$WEB_USER_ID"
+          docker compose exec -T php php bin/console cos:growth:cutover enable \
+            --organization=default \
+            --actor="$WEB_USER_ID" \
+            --confirm=ENABLE_GROWTH \
+            --reason="UI cutover browser acceptance"
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_routes.mjs

@@ -2125,6 +2125,23 @@ cos_web_engineering:
   controller: App\Web\Engineering\EngineeringFeatureController::index
   methods: [GET, HEAD]
 
+cos_web_engineering_create:
+  path: /admin/engineering/create
+  controller: App\Web\Engineering\EngineeringFeatureController::create
+  methods: [POST]
+
+cos_web_engineering_run:
+  path: /admin/engineering/{id}/run
+  controller: App\Web\Engineering\EngineeringFeatureController::run
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_human_decision:
+  path: /admin/engineering/{id}/human-decision
+  controller: App\Web\Engineering\EngineeringFeatureController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_feature:
   path: /admin/engineering/{id}
   controller: App\Web\Engineering\EngineeringFeatureController::show

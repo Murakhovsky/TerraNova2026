@@ -84,3 +84,53 @@ document.querySelectorAll('[data-spatial-upload]').forEach((form) => {
     request.send(new FormData(form));
   });
 });
+
+
+document.querySelectorAll('[data-spatial-capture-form]').forEach((form) => {
+  const button = form.querySelector('button[type="submit"]');
+  if (!button) return;
+
+  button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!form.reportValidity() || form.dataset.submitting === 'true') return;
+
+    const body = new URLSearchParams();
+    for (const [name, value] of new FormData(form).entries()) {
+      if (typeof value === 'string') body.append(name, value);
+    }
+
+    form.dataset.submitting = 'true';
+    form.setAttribute('aria-busy', 'true');
+    button.disabled = true;
+    button.classList.add('is-pending');
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        redirect: 'follow',
+        headers: {
+          'Accept': 'text/html',
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        },
+        body,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Spatial capture failed with HTTP ${response.status}.`);
+      }
+
+      window.location.assign(response.url);
+    } catch (error) {
+      delete form.dataset.submitting;
+      form.removeAttribute('aria-busy');
+      button.disabled = false;
+      button.classList.remove('is-pending');
+
+      const message = error instanceof Error ? error.message : 'Spatial capture failed.';
+      window.alert(message);
+    }
+  });
+});

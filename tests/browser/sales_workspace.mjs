@@ -169,7 +169,7 @@ try {
   await assertCount(page.locator(`[data-sales-approval][data-approval-id="${approvalId}"]`), 0, 'Approved action must leave pending approvals after reload');
 
   assertOk(await page.goto(absolute('/sales/pipeline'), { waitUntil: 'networkidle' }), 'Sales Pipeline');
-  const card = page.locator('[data-sales-deal-card]').first();
+  const card = page.locator('[data-sales-deal-card]').filter({ hasText: 'UI Acceptance Deal' }).first();
   if (!await card.count()) throw new Error('Mutation fixture requires at least one Deal card.');
   const dealId = await card.getAttribute('data-deal-id');
   const sourceStage = await card.getAttribute('data-stage-id');
