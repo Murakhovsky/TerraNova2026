@@ -1286,6 +1286,10 @@ services:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
+  App\Command\EngineeringDecisionCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
     arguments:
       $mode: '%env(COS_AGENT_LLM_MODE)%'

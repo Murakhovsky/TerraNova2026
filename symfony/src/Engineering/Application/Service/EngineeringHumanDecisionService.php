@@ -1,0 +1,112 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Engineering\Application\Service;
+
+use App\Engineering\Application\DTO\EngineeringRequest;
+use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
+use App\Engineering\Domain\Agent\AgentRole;
+use App\Engineering\Domain\Workflow\WorkflowExecution;
+
+final readonly class EngineeringHumanDecisionService
+{
+    public function __construct(
+        private EngineeringHumanDecisionStoreInterface $humanDecisions,
+        private EngineeringWorkflowStoreInterface $workflows,
+        private EngineeringFeatureStoreInterface $features,
+        private EngineeringAgentRunStoreInterface $agentRuns,
+        private EngineeringWorkflowLockInterface $lock,
+        private EngineeringManagerStageExecutor $managerStage,
+        private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
+    ) {}
+
+    public function answerAndResume(
+        string $requestId,
+        string $selectedOption,
+        ?string $comment,
+        string $decidedBy,
+        string $organizationId,
+        string $correlationId,
+    ): EngineeringHumanDecisionResult {
+        $request = $this->humanDecisions->get($requestId);
+        if (($request['status'] ?? null) !== 'OPEN') {
+            throw new \LogicException('Engineering human decision request is not open.');
+        }
+
+        $answer = $this->humanDecisions->answer($requestId, $selectedOption, $comment, $decidedBy);
+        $featureId = $answer['feature_id'];
+        $workflowId = $answer['workflow_id'];
+        $decisionId = $answer['decision_id'];
+
+        $next = $this->lock->synchronized($featureId, function () use ($workflowId, $decisionId, $featureId) {
+            $workflow = $this->workflows->get($workflowId);
+            $directive = $this->coordinator->resumeAfterHumanDecision($workflow, $decisionId);
+            $this->persistTransitions($workflow, $directive->transitions);
+            $this->features->updateStatus($featureId, $workflow->currentState()->value);
+            return $directive;
+        });
+
+        if ($next->agent === AgentRole::ENGINEERING_MANAGER) {
+            $base = $this->features->request($featureId);
+            $history = $base->previousContext;
+            $history[] = [
+                'human_decision' => [
+                    'request_id' => $requestId,
+                    'decision_id' => $decisionId,
+                    'question' => $request['question'] ?? null,
+                    'reason' => $request['reason'] ?? null,
+                    'selected_option' => $selectedOption,
+                    'comment' => $comment,
+                    'decided_by' => $decidedBy,
+                ],
+            ];
+
+            $managerRuns = array_values(array_filter(
+                $this->agentRuns->forFeature($featureId),
+                static fn (array $run): bool => ($run['role'] ?? null) === AgentRole::ENGINEERING_MANAGER->value,
+            ));
+            $logicalAttempt = count($managerRuns) + 1;
+
+            $next = $this->managerStage->execute(
+                featureId: $featureId,
+                workflowId: $workflowId,
+                request: new EngineeringRequest(
+                    requestId: $base->requestId,
+                    description: $base->description,
+                    title: $base->title,
+                    sourceType: $base->sourceType,
+                    sourceReference: $base->sourceReference,
+                    priority: $base->priority,
+                    metadata: $base->metadata,
+                    constraints: $base->constraints,
+                    attachments: $base->attachments,
+                    previousContext: $history,
+                ),
+                organizationId: $organizationId,
+                correlationId: $correlationId,
+                logicalAttempt: $logicalAttempt,
+            );
+        }
+
+        $workflow = $this->workflows->get($workflowId);
+        return new EngineeringHumanDecisionResult(
+            featureId: $featureId,
+            workflowId: $workflowId,
+            decisionId: $decisionId,
+            state: $workflow->currentState()->value,
+            next: $next,
+        );
+    }
+
+    private function persistTransitions(WorkflowExecution $workflow, array $transitions): void
+    {
+        foreach ($transitions as $transition) {
+            $this->workflows->saveTransition($workflow, $transition);
+        }
+    }
+}
