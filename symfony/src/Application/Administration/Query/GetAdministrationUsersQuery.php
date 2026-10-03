@@ -9,7 +9,7 @@ use Kernel\Application\Query\QueryInterface;
 final readonly class GetAdministrationUsersQuery implements QueryInterface
 {
     /** @param array<string,mixed> $filters */
-    public function __construct(public array $filters = [])
+    public function __construct(public array $filters = [], public string $organizationId = '')
     {
     }
 }
