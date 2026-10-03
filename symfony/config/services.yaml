@@ -1264,6 +1264,9 @@ services:
   App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringArtifactStore
 
+  App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringAgentRunStore
+
   App\Engineering\Application\Persistence\EngineeringTaskStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringTaskStore
 
