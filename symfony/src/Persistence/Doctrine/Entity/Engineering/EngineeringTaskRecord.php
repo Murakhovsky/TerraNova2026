@@ -46,4 +46,7 @@ class EngineeringTaskRecord
 
     public function id(): string { return $this->id; }
     public function featureId(): string { return $this->featureId; }
+    public function externalKey(): string { return $this->externalKey; }
+    public function status(): string { return $this->status; }
+    public function assignedRole(): string { return $this->assignedRole; }
 }
