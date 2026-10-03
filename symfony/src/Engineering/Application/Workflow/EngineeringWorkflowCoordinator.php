@@ -231,12 +231,34 @@ final readonly class EngineeringWorkflowCoordinator
     private function afterDeveloper(WorkflowExecution $workflow, array $output): WorkflowDirective
     {
         $status = (string) ($output['status'] ?? '');
+
+        if ($status === 'ARCHITECTURE_REVIEW_REQUIRED') {
+            return $this->revalidateArchitecture(
+                $workflow,
+                'Developer preflight found an architecture/implementation-plan conflict that requires Principal Architect review.',
+            );
+        }
+        if ($status === 'SPECIFICATION_REVIEW_REQUIRED') {
+            return $this->human($workflow, 'Developer found a specification/acceptance-criteria conflict that requires product clarification.');
+        }
+        if ($status === 'SECURITY_REVIEW_REQUIRED') {
+            return $this->human($workflow, 'Developer found a security decision outside the approved implementation contract.');
+        }
         if ($status === 'BLOCKED') return $this->block($workflow, 'Developer reported a non-retryable blocker.');
         if ($status === 'FAILED') return $this->block($workflow, 'Developer failed without a retryable runtime classification.');
-        if ($status !== 'COMPLETED') throw new LogicException('Unexpected Developer status: '.$status);
+        if (!in_array($status, ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true)) {
+            throw new LogicException('Unexpected Developer status: '.$status);
+        }
 
         $transition = $this->transition($workflow, EngineeringWorkflowState::REVIEW_PENDING, 'DEVELOPMENT_COMPLETED');
-        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::REVIEWER, 'Completed implementation requires review.', [$transition]);
+        return new WorkflowDirective(
+            WorkflowDirectiveType::RUN_AGENT,
+            AgentRole::REVIEWER,
+            $status === 'COMPLETED_WITH_LIMITATIONS'
+                ? 'Implementation completed with explicit limitations and requires review.'
+                : 'Completed implementation requires review.',
+            [$transition],
+        );
     }
 
     private function afterReviewer(WorkflowExecution $workflow, array $output, WorkflowCounters $counters): WorkflowDirective

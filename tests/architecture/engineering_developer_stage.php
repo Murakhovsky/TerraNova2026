@@ -24,6 +24,10 @@ foreach ([
     'DEVELOPMENT_RUNNING',
     'tests_run',
     'requireRepositoryConfiguration',
+    'ARCHITECTURE_REVIEW_REQUIRED',
+    'SPECIFICATION_REVIEW_REQUIRED',
+    'SECURITY_REVIEW_REQUIRED',
+    'COMPLETED_WITH_LIMITATIONS',
 ] as $needle) {
     if (!str_contains($stage, $needle)) throw new RuntimeException('Developer stage missing '.$needle);
 }
