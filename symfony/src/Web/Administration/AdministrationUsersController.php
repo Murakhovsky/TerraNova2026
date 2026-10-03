@@ -57,7 +57,7 @@ final readonly class AdministrationUsersController
         $actionStatus = trim((string) $request->query->get('status_message', ''));
 
         try {
-            $data = $this->queries->ask(new GetAdministrationUsersQuery($request->query->all()));
+            $data = $this->queries->ask(new GetAdministrationUsersQuery($request->query->all(), $tenant->organizationId()->value()));
             $users = $this->presenter->present(is_array($data) ? $data : [], $actionStatus);
 
             return $this->render($shell, $users, $users->state(), $this->csrf->token($request));
@@ -85,7 +85,7 @@ final readonly class AdministrationUsersController
         if ($tenant instanceof Response) return $tenant;
 
         try {
-            $result = $this->commands->dispatch(new CreateAdministrationUserCommand($request->request->all()));
+            $result = $this->commands->dispatch(new CreateAdministrationUserCommand($request->request->all(), $tenant->organizationId()->value()));
             return $this->redirect($result, 'Користувача оброблено.');
         } catch (Throwable $error) {
             return $this->redirect(['message' => 'Помилка: ' . $error->getMessage()], 'Не вдалося створити користувача.');
@@ -101,6 +101,7 @@ final readonly class AdministrationUsersController
             $result = $this->commands->dispatch(new UpdateAdministrationUserCommand(
                 (int) $id,
                 $request->request->all(),
+                $tenant->organizationId()->value(),
                 [
                     'id' => (int) $tenant->userId()->value(),
                     'role' => $tenant->role()->value(),
