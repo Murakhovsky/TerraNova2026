@@ -23,17 +23,33 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
             $externalKey = trim((string) ($task['id'] ?? ''));
             if ($externalKey === '') $externalKey = sprintf('TASK-%03d', $index + 1);
 
+            $type = strtoupper((string) ($task['type'] ?? 'RESEARCH'));
+            $title = trim((string) ($task['title'] ?? $externalKey));
+            $description = trim((string) ($task['description'] ?? $task['title'] ?? $externalKey));
+            $assignedRole = strtoupper((string) ($task['assigned_role'] ?? 'DEVELOPER'));
+            $dependencies = is_array($task['dependencies'] ?? null) ? $task['dependencies'] : [];
+            $acceptanceCriteria = is_array($task['acceptance_criteria'] ?? null) ? $task['acceptance_criteria'] : [];
+
+            $existing = $this->entityManager->getRepository(EngineeringTaskRecord::class)->findOneBy([
+                'featureId' => $featureId,
+                'externalKey' => $externalKey,
+            ]);
+            if ($existing instanceof EngineeringTaskRecord) {
+                $existing->refresh($type, $title, $description, $assignedRole, $dependencies, $acceptanceCriteria);
+                continue;
+            }
+
             $this->entityManager->persist(new EngineeringTaskRecord(
                 id: EngineeringId::generate(),
                 featureId: $featureId,
                 externalKey: $externalKey,
-                type: strtoupper((string) ($task['type'] ?? 'RESEARCH')),
-                title: trim((string) ($task['title'] ?? $externalKey)),
-                description: trim((string) ($task['description'] ?? $task['title'] ?? $externalKey)),
+                type: $type,
+                title: $title,
+                description: $description,
                 status: strtoupper((string) ($task['status'] ?? 'PENDING')),
-                assignedRole: strtoupper((string) ($task['assigned_role'] ?? 'DEVELOPER')),
-                dependencies: is_array($task['dependencies'] ?? null) ? $task['dependencies'] : [],
-                acceptanceCriteria: is_array($task['acceptance_criteria'] ?? null) ? $task['acceptance_criteria'] : [],
+                assignedRole: $assignedRole,
+                dependencies: $dependencies,
+                acceptanceCriteria: $acceptanceCriteria,
                 attempt: 0,
                 maxAttempts: 3,
                 createdAt: $now,

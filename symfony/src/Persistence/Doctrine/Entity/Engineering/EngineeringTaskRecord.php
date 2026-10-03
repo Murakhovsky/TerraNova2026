@@ -49,4 +49,21 @@ class EngineeringTaskRecord
     public function externalKey(): string { return $this->externalKey; }
     public function status(): string { return $this->status; }
     public function assignedRole(): string { return $this->assignedRole; }
+
+    public function refresh(
+        string $type,
+        string $title,
+        string $description,
+        string $assignedRole,
+        array $dependencies,
+        array $acceptanceCriteria,
+    ): void {
+        $this->type = $type;
+        $this->title = $title;
+        $this->description = $description;
+        $this->assignedRole = $assignedRole;
+        $this->dependencies = $dependencies;
+        $this->acceptanceCriteria = $acceptanceCriteria;
+        $this->updatedAt = new DateTimeImmutable();
+    }
 }
