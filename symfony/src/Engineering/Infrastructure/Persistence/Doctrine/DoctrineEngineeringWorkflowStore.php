@@ -38,6 +38,16 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         $this->entityManager->flush();
     }
 
+    public function activeIdForFeature(string $featureId): ?string
+    {
+        $record = $this->entityManager->getRepository(WorkflowExecutionRecord::class)->findOneBy(
+            ['featureId' => $featureId],
+            ['startedAt' => 'DESC'],
+        );
+        if (!$record instanceof WorkflowExecutionRecord) return null;
+        return in_array($record->status(), ['COMPLETED','CANCELLED','FAILED'], true) ? null : $record->id();
+    }
+
     public function get(string $workflowId): WorkflowExecution
     {
         $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
