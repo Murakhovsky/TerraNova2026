@@ -13,21 +13,70 @@
     <twig:CosPageHeader
         eyebrow="COS Portal"
         title="Кабінет"
-        subtitle="Ваш акаунт працює через native Symfony/COS identity та session lifecycle."
+        subtitle="Особиста точка входу до ваших сервісів, робочих просторів і поточного tenant context."
         metaValue="{{ cabinet.role }}"
         metaLabel="роль"
     >
+        {% if cabinet.manager %}
+            <twig:CosButton label="До роботи" href="/sales/today" variant="primary" />
+        {% else %}
+            <twig:CosButton label="Каталог" href="/property/catalog" variant="primary" />
+        {% endif %}
         <twig:CosButton label="На головну" href="/" variant="ghost" />
-        <twig:CosButton label="Вийти" href="/auth/logout" variant="primary" />
+        <twig:CosButton label="Вийти" href="/auth/logout" variant="ghost" />
     </twig:CosPageHeader>
 
+    <section class="cos-page__section" aria-labelledby="cabinet-actions-title">
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Next step</p>
+            <h2 id="cabinet-actions-title" class="cos-card__title">Швидкі дії</h2>
+            <p class="cos-card__copy">Не шукайте потрібний модуль по меню. Людство вже достатньо страждало від ERP-навігації.</p>
+        </div>
+        <div class="cos-section-grid" data-cabinet-primary-actions>
+            {% for action in cabinet.primaryActions %}
+                <article class="cos-card">
+                    <h3 class="cos-card__title">{{ action.label }}</h3>
+                    <p class="cos-card__copy">{{ action.description }}</p>
+                    <twig:CosButton label="Відкрити" href="{{ action.href }}" variant="ghost" size="sm" />
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="cabinet-workspaces-title">
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">COS</p>
+            <h2 id="cabinet-workspaces-title" class="cos-card__title">Доступні робочі простори</h2>
+        </div>
+        <div class="cos-entity-list" role="list" data-cabinet-workspaces>
+            {% for workspace in cabinet.workspaces %}
+                <a class="cos-entity-list__item" href="{{ workspace.href }}" role="listitem">
+                    <span>
+                        <strong>{{ workspace.label }}</strong>
+                        <small>{{ workspace.description }}</small>
+                    </span>
+                    <span aria-hidden="true">→</span>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
     <section class="cos-page__section" aria-labelledby="cabinet-profile-title">
-        <h2 id="cabinet-profile-title" class="cos-section-title">Identity context</h2>
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Account</p>
+            <h2 id="cabinet-profile-title" class="cos-card__title">Поточний контекст</h2>
+        </div>
         <div class="cos-section-grid">
             <twig:CosCard eyebrow="User ID" title="{{ cabinet.userId }}" copy="Canonical identity identifier." />
-            <twig:CosCard eyebrow="Роль" title="{{ cabinet.role }}" copy="Поточний tenant role." />
+            <twig:CosCard eyebrow="Роль" title="{{ cabinet.role }}" copy="Поточна роль у цій організації." />
             <twig:CosCard eyebrow="Організація" title="{{ cabinet.organizationId }}" copy="Активний organization context." />
         </div>
+        {% if cabinet.permissions is not empty %}
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Permissions</p>
+                <p class="cos-card__copy">{{ cabinet.permissions|join(' · ') }}</p>
+            </div>
+        {% endif %}
     </section>
 </section>
 {% endblock %}

@@ -1,9 +1,9 @@
 <turbo-frame id="cos-ai-panel-frame">
-    <div class="cos-ai-panel__body">
+    <div class="cos-ai-panel__body" data-cos-ai-center>
         <header class="cos-ai-panel__header">
             <div>
                 <p class="cos-ai-panel__eyebrow">COS AI</p>
-                <h2>Agent UI</h2>
+                <h2>AI & Agent Center</h2>
             </div>
             <button
                 class="cos-shell__icon-button"
@@ -13,11 +13,32 @@
             >×</button>
         </header>
 
+        <section class="cos-ai-context-card" aria-labelledby="cos-ai-context-selector">
+            <div class="cos-ai-context-card__head">
+                <div>
+                    <small>Context selector</small>
+                    <strong id="cos-ai-context-selector">Що аналізуємо</strong>
+                </div>
+            </div>
+            <form method="get" action="/workspace/ai" data-turbo-frame="cos-ai-panel-frame" class="cos-pattern-stack">
+                <label class="cos-field">
+                    <span>Workspace</span>
+                    <input class="cos-input" name="workspace" value="{{ workspaceId }}" placeholder="sales.deal, sales.lead…">
+                </label>
+                <label class="cos-field">
+                    <span>Entity</span>
+                    <input class="cos-input" name="entity" value="{{ entity ? entity.key() : '' }}" placeholder="deal:123">
+                </label>
+                <button class="cos-button cos-button--primary" type="submit">Завантажити контекст</button>
+            </form>
+            <p class="cos-card__copy">Цей surface показує контекст, доступні керовані actions та результати агентів. Він не маскується під універсальний чат, якщо такого workflow ще немає.</p>
+        </section>
+
         {% if uiContext %}
             <section class="cos-ai-context-card">
                 <div class="cos-ai-context-card__head">
                     <div>
-                        <small>Headless UIContext</small>
+                        <small>Active UIContext</small>
                         <strong>{{ uiContext.workspace }}</strong>
                     </div>
                     {% if uiContext.entity %}<code>{{ uiContext.entity.key() }}</code>{% endif %}
@@ -47,13 +68,15 @@
                             </li>
                         {% endfor %}
                     </ul>
+                {% else %}
+                    <p class="cos-ai-panel__hint">Для цього context немає доступних керованих actions.</p>
                 {% endif %}
             </section>
         {% elseif contextError %}
             <div class="cos-agent-warning" role="status">{{ contextError }}</div>
         {% else %}
             <p class="cos-ai-panel__hint">
-                No Workspace context is active. Showing recent organization Agent runs.
+                Workspace context не вибрано. Нижче показано останні Agent runs організації.
             </p>
         {% endif %}
 
@@ -67,9 +90,23 @@
                 <twig:CosAgentRun :run="run" />
             {% else %}
                 <div class="cos-ai-panel__empty">
-                    No Agent runs are available for this context.
+                    Для цього контексту ще немає Agent runs.
                 </div>
             {% endfor %}
+        </section>
+
+        <section class="cos-ai-context-card" aria-label="AI workspaces">
+            <div class="cos-ai-context-card__head">
+                <div>
+                    <small>Operate</small>
+                    <strong>Керування AI</strong>
+                </div>
+            </div>
+            <div class="cos-pattern-inline">
+                <a class="cos-button cos-button--ghost" href="/sales/admin/agents" data-turbo-frame="_top">Sales Agents</a>
+                <a class="cos-button cos-button--ghost" href="/admin/engineering" data-turbo-frame="_top">Engineering Agents</a>
+                <a class="cos-button cos-button--ghost" href="/cos/control-center" data-turbo-frame="_top">Control Center</a>
+            </div>
         </section>
     </div>
 </turbo-frame>

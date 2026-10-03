@@ -3,7 +3,7 @@
 {% block title %}Terra Nova COS | Company Operating System{% endblock %}
 
 {% block meta %}
-    <meta name="description" content="Canonical Symfony runtime for Terra Nova Company Operating System.">
+    <meta name="description" content="Terra Nova COS об’єднує продажі, нерухомість, операції та AI-агентів у керований Company Operating System.">
     <meta name="robots" content="index,follow">
 {% endblock %}
 
@@ -22,19 +22,50 @@
     <twig:CosPageHeader
         eyebrow="Terra Nova COS"
         title="Company Operating System"
-        subtitle="Єдиний canonical Symfony runtime для операцій, продажів, діагностики, документів, сервісу, spatial та AI-агентів."
+        subtitle="Одна система для клієнтів, продажів, нерухомості, операцій та контрольованої AI-автоматизації."
     >
-        <twig:CosButton label="Увійти" href="/auth/login" variant="primary" />
-        <twig:CosButton label="Блог" href="/blog" variant="ghost" />
-        <twig:CosButton label="API status" href="/api/v1/status" variant="ghost" />
+        <twig:CosButton label="Відкрити COS" href="/cos" variant="primary" />
+        <twig:CosButton label="Нерухомість" href="/property/catalog" variant="ghost" />
+        <twig:CosButton label="Увійти" href="/auth/login" variant="ghost" />
     </twig:CosPageHeader>
 
+    <section class="cos-page__section cos-section-grid" aria-label="Основні можливості">
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Real Estate</p>
+            <h2 class="cos-card__title">Знайти або продати нерухомість</h2>
+            <p class="cos-card__copy">Публічний каталог, презентації об’єктів і передача власної нерухомості на модерацію.</p>
+            <div class="cos-pattern-inline">
+                <twig:CosButton label="Каталог" href="/property/catalog" variant="ghost" size="sm" />
+                <twig:CosButton label="Запропонувати об’єкт" href="/property/submit" variant="ghost" size="sm" />
+            </div>
+        </article>
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Company Operating System</p>
+            <h2 class="cos-card__title">Керувати процесами, а не вкладками</h2>
+            <p class="cos-card__copy">Events, decisions, actions, approvals, outcomes та AI agents працюють через спільний runtime.</p>
+            <twig:CosButton label="Як працює COS" href="/cos" variant="ghost" size="sm" />
+        </article>
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Terra Nova</p>
+            <h2 class="cos-card__title">Послуги та партнерство</h2>
+            <p class="cos-card__copy">Продаж, підбір, супровід угод і співпраця з власниками, агентами та забудовниками.</p>
+            <div class="cos-pattern-inline">
+                <twig:CosButton label="Послуги" href="/services" variant="ghost" size="sm" />
+                <twig:CosButton label="Партнерам" href="/partners" variant="ghost" size="sm" />
+            </div>
+        </article>
+    </section>
+
     <section class="cos-page__section">
-        <twig:CosCard
-            eyebrow="Runtime"
-            title="Symfony / COS"
-            copy="Legacy Phalcon runtime завершив роботу. Усі application routes обслуговує canonical Symfony upstream."
-        />
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">For existing users</p>
+            <h2 class="cos-card__title">Ваш робочий простір</h2>
+            <p class="cos-card__copy">Після входу Кабінет показує доступні саме вашій ролі сервіси та наступні робочі дії.</p>
+            <div class="cos-pattern-inline">
+                <twig:CosButton label="Кабінет" href="/cabinet" variant="primary" size="sm" />
+                <twig:CosButton label="Блог" href="/blog" variant="ghost" size="sm" />
+            </div>
+        </article>
     </section>
 </section>
 {% endblock %}

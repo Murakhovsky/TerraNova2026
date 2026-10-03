@@ -227,49 +227,101 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
         if (!$this->sceneReference($sceneId)) {
             throw new RuntimeException('Spatial сцену не знайдено.');
         }
+
         $method = $this->allowed((string) ($input['capture_type'] ?? ''), self::CAPTURE_METHODS, 'manual');
         $pdo = $this->database->connection();
-        $versionId = (int) ($input['version_id'] ?? 0);
-        if ($versionId <= 0) {
-            $next = (int) ($this->database->fetchOne('SELECT COALESCE(MAX(version_number), 0) + 1 AS next FROM tn_spatial_versions WHERE scene_id = :scene_id', ['scene_id' => $sceneId])['next'] ?? 1);
-            $pdo->prepare('
-                INSERT INTO tn_spatial_versions (
-                    scene_id, version_number, label, capture_method, status, device_name, captured_at, notes, created_by_user_id
-                ) VALUES (:scene_id, :version, :label, :method, "draft", :device, :captured_at, :notes, :user_id)
-            ')->execute([
-                'scene_id' => $sceneId,
-                'version' => $next,
-                'label' => $this->nullable((string) ($input['label'] ?? 'Версія ' . $next), 160),
-                'method' => $method,
-                'device' => $this->nullable((string) ($input['device_name'] ?? ''), 160),
-                'captured_at' => $this->dateTime($input['captured_at'] ?? null),
-                'notes' => $this->nullable((string) ($input['notes'] ?? ''), 10000),
-                'user_id' => (int) $user['id'],
-            ]);
-            $versionId = (int) $pdo->lastInsertId();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
         }
-        $statement = $pdo->prepare('
-            INSERT INTO tn_spatial_captures (
-                public_id, scene_id, version_id, capture_type, provider, external_id, device_name,
-                status, source_payload, captured_by_user_id, captured_at
-            ) VALUES (
-                :public_id, :scene_id, :version_id, :capture_type, :provider, :external_id, :device_name,
-                "received", :source_payload, :user_id, :captured_at
-            )
-        ');
-        $statement->execute([
-            'public_id' => $this->publicId('SPC'),
-            'scene_id' => $sceneId,
-            'version_id' => $versionId,
-            'capture_type' => $method,
-            'provider' => $this->nullable((string) ($input['provider'] ?? ''), 80),
-            'external_id' => $this->nullable((string) ($input['external_id'] ?? ''), 190),
-            'device_name' => $this->nullable((string) ($input['device_name'] ?? ''), 160),
-            'source_payload' => $this->jsonObject($input['source_payload'] ?? null),
-            'user_id' => (int) $user['id'],
-            'captured_at' => $this->dateTime($input['captured_at'] ?? null),
-        ]);
-        return $this->database->fetchOne('SELECT * FROM tn_spatial_captures WHERE id = :id', ['id' => (int) $pdo->lastInsertId()]) ?? [];
+
+        try {
+            // Serialize capture/version creation per scene so two browser submissions cannot
+            // allocate the same version_number.
+            $lock = $pdo->prepare('SELECT id FROM tn_spatial_scenes WHERE id = :scene_id FOR UPDATE');
+            $lock->execute(['scene_id' => $sceneId]);
+            if (!$lock->fetchColumn()) {
+                throw new RuntimeException('Spatial сцену не знайдено.');
+            }
+
+            $versionId = (int) ($input['version_id'] ?? 0);
+            if ($versionId <= 0) {
+                $nextStatement = $pdo->prepare(
+                    'SELECT COALESCE(MAX(version_number), 0) + 1 AS next FROM tn_spatial_versions WHERE scene_id = :scene_id'
+                );
+                $nextStatement->execute(['scene_id' => $sceneId]);
+                $next = (int) (($nextStatement->fetch(\PDO::FETCH_ASSOC)['next'] ?? 1));
+
+                $label = trim((string) ($input['version_label'] ?? $input['label'] ?? ''));
+                if ($label === '') {
+                    $label = 'Версія ' . $next;
+                }
+
+                $pdo->prepare('
+                    INSERT INTO tn_spatial_versions (
+                        scene_id, version_number, label, capture_method, status, device_name, captured_at, notes, created_by_user_id
+                    ) VALUES (:scene_id, :version, :label, :method, "draft", :device, :captured_at, :notes, :user_id)
+                ')->execute([
+                    'scene_id' => $sceneId,
+                    'version' => $next,
+                    'label' => mb_substr($label, 0, 160),
+                    'method' => $method,
+                    'device' => $this->nullable((string) ($input['device_name'] ?? ''), 160),
+                    'captured_at' => $this->dateTime($input['captured_at'] ?? null),
+                    'notes' => $this->nullable((string) ($input['notes'] ?? ''), 10000),
+                    'user_id' => (int) $user['id'],
+                ]);
+                $versionId = (int) $pdo->lastInsertId();
+            } else {
+                $version = $pdo->prepare(
+                    'SELECT id FROM tn_spatial_versions WHERE id = :id AND scene_id = :scene_id LIMIT 1'
+                );
+                $version->execute(['id' => $versionId, 'scene_id' => $sceneId]);
+                if (!$version->fetchColumn()) {
+                    throw new RuntimeException('Spatial version не належить цій сцені.');
+                }
+            }
+
+            $statement = $pdo->prepare('
+                INSERT INTO tn_spatial_captures (
+                    public_id, scene_id, version_id, capture_type, provider, external_id, device_name,
+                    status, source_payload, captured_by_user_id, captured_at
+                ) VALUES (
+                    :public_id, :scene_id, :version_id, :capture_type, :provider, :external_id, :device_name,
+                    "received", :source_payload, :user_id, :captured_at
+                )
+            ');
+            $statement->execute([
+                'public_id' => $this->publicId('SPC'),
+                'scene_id' => $sceneId,
+                'version_id' => $versionId,
+                'capture_type' => $method,
+                'provider' => $this->nullable((string) ($input['provider'] ?? ''), 80),
+                'external_id' => $this->nullable((string) ($input['external_id'] ?? ''), 190),
+                'device_name' => $this->nullable((string) ($input['device_name'] ?? ''), 160),
+                'source_payload' => $this->jsonObject($input['source_payload'] ?? null),
+                'user_id' => (int) $user['id'],
+                'captured_at' => $this->dateTime($input['captured_at'] ?? null),
+            ]);
+            $captureId = (int) $pdo->lastInsertId();
+
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+
+            return $this->database->fetchOne('
+                SELECT c.*, v.version_number, v.label AS version_label
+                FROM tn_spatial_captures c
+                LEFT JOIN tn_spatial_versions v ON v.id = c.version_id
+                WHERE c.id = :id
+                LIMIT 1
+            ', ['id' => $captureId]) ?? [];
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
+        }
     }
 
     public function saveHotspot(int $sceneId, array $input): array
@@ -383,7 +435,14 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
         ', ['scene_id' => $scene['id']]);
         $scene['versions'] = $this->database->fetchAll('SELECT * FROM tn_spatial_versions WHERE scene_id = :scene_id ORDER BY version_number DESC', ['scene_id' => $scene['id']]);
         if (!$public) {
-            $scene['captures'] = $this->database->fetchAll('SELECT * FROM tn_spatial_captures WHERE scene_id = :scene_id ORDER BY id DESC LIMIT 50', ['scene_id' => $scene['id']]);
+            $scene['captures'] = $this->database->fetchAll('
+                SELECT c.*, v.version_number, v.label AS version_label
+                FROM tn_spatial_captures c
+                LEFT JOIN tn_spatial_versions v ON v.id = c.version_id
+                WHERE c.scene_id = :scene_id
+                ORDER BY c.id DESC
+                LIMIT 50
+            ', ['scene_id' => $scene['id']]);
             $scene['jobs'] = $this->database->fetchAll('SELECT * FROM tn_spatial_processing_jobs WHERE scene_id = :scene_id ORDER BY id DESC LIMIT 50', ['scene_id' => $scene['id']]);
         }
         $scene['default_camera'] = $this->decoded((string) ($scene['default_camera_json'] ?? ''));

@@ -25,13 +25,14 @@ final readonly class CabinetController
         if ($tenant === null) {
             return new RedirectResponse('/auth/login');
         }
-        if ($tenant->isManager()) {
-            return new RedirectResponse('/sales');
-        }
 
         return new Response(
             $this->twig->render('experience/portal/cabinet.html.twig', [
-                'page' => $this->pages->create(PageArchetype::Portal, ['PageHeader']),
+                'page' => $this->pages->create(
+                    PageArchetype::Portal,
+                    ['PageHeader', 'EntityList'],
+                    'normal',
+                ),
                 'cabinet' => $this->presenter->present($tenant),
             ]),
             Response::HTTP_OK,

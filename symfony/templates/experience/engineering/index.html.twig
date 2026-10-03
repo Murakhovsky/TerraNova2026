@@ -5,6 +5,7 @@
 {% block workspace_content %}
 <section
     class="cos-page__stack"
+    data-cos-engineering="index"
     data-cos-archetype="{{ page.archetypeId() }}"
     data-cos-page-state="{{ page.state }}"
     data-cos-page-density="{{ page.density }}"
@@ -12,31 +13,45 @@
     <twig:CosPageHeader
         eyebrow="COS · Engineering"
         title="Engineering workflows"
-        subtitle="Останні автономні розробки, їхній стан та контрольні точки."
+        subtitle="Створення, запуск і контроль автономної розробки без переходу в CLI."
         metaValue="{{ features|length }}"
         metaLabel="recent features"
     />
 
-    <section class="cos-page__section" aria-labelledby="engineering-feature-list">
-        <div class="cos-card">
-            <p class="cos-card__eyebrow">Workspace</p>
-            <h2 id="engineering-feature-list" class="cos-card__title">Recent features</h2>
-        </div>
+    {% if statusMessage %}
+        <twig:CosAlert
+            title="{{ statusMessage starts with 'ERROR:' ? 'Engineering action failed' : 'Engineering updated' }}"
+            copy="{{ statusMessage }}"
+            tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}"
+        />
+    {% endif %}
 
+    <section class="cos-page__section" aria-labelledby="engineering-create-title">
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">New request</p>
+            <h2 id="engineering-create-title" class="cos-card__title">Створити Engineering feature</h2>
+            <p class="cos-card__copy">Web UI використовує той самий Application Layer, що API та CLI.</p>
+            <form class="cos-form" method="post" action="/admin/engineering/create" data-engineering-create>
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <div class="cos-form__grid">
+                    <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" maxlength="255" placeholder="Наприклад: Закрити UI cutover"></label>
+                    <label class="cos-field"><span>Priority</span><select class="cos-select" name="priority">{% for priority in ['P0','P1','P2','P3'] %}<option value="{{ priority }}" {{ priority == 'P2' ? 'selected' : '' }}>{{ priority }}</option>{% endfor %}</select></label>
+                    <label class="cos-field" style="grid-column: 1 / -1"><span>Що потрібно зробити</span><textarea class="cos-textarea" name="description" rows="5" required placeholder="Опис результату, обмежень і критеріїв приймання."></textarea></label>
+                    <label class="cos-field"><span><input type="checkbox" name="start" value="1" checked> Одразу запустити workflow</span></label>
+                </div>
+                <button class="cos-button cos-button--primary" type="submit">Створити feature</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="engineering-feature-list">
+        <div class="cos-card"><p class="cos-card__eyebrow">Workspace</p><h2 id="engineering-feature-list" class="cos-card__title">Recent features</h2></div>
         {% if features is empty %}
-            <twig:CosEmptyState
-                title="Engineering feature-ів ще немає"
-                copy="Створіть feature через API, CLI або імпортуйте GitHub Issue."
-            />
+            <twig:CosEmptyState title="Engineering feature-ів ще немає" copy="Створіть перший request у формі вище." />
         {% else %}
             <div class="cos-entity-list" role="list">
                 {% for feature in features %}
-                    <twig:CosEntityListItem
-                        title="{{ feature.title }}"
-                        subtitle="{{ feature.status }} · {{ feature.priority }} · {{ feature.complexity|default('n/a') }}"
-                        meta="{{ feature.updated_at }}"
-                        href="/admin/engineering/{{ feature.id }}"
-                    />
+                    <twig:CosEntityListItem title="{{ feature.title }}" subtitle="{{ feature.status }} · {{ feature.priority }} · {{ feature.complexity|default('n/a') }}" meta="{{ feature.updated_at }}" href="/admin/engineering/{{ feature.id }}" />
                 {% endfor %}
             </div>
         {% endif %}
