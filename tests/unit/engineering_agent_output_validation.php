@@ -41,6 +41,14 @@ $valid = [
 ];
 $validator->validate(AgentRole::ENGINEERING_MANAGER, $valid);
 
+$noTasks = $valid;
+$noTasks['tasks'] = [];
+try {
+    $validator->validate(AgentRole::ENGINEERING_MANAGER, $noTasks);
+    throw new RuntimeException('Manager specification without engineering tasks was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
 $invalid = $valid;
 $invalid['feature']['acceptance_criteria'] = [['id' => 'whatever', 'description' => '', 'verification_type' => 'manual']];
 try {

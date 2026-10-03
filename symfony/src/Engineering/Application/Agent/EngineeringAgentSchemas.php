@@ -60,7 +60,7 @@ final class EngineeringAgentSchemas
                     'additionalProperties' => true,
                 ],
                 'context_map' => ['type' => 'object'],
-                'tasks' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'tasks' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object']],
                 'risks' => ['type' => 'array', 'items' => ['type' => 'object']],
                 'assumptions' => ['type' => 'array', 'items' => ['type' => ['string','object']]],
                 'open_questions' => ['type' => 'array', 'items' => ['type' => 'object']],

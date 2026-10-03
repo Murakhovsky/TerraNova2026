@@ -29,6 +29,17 @@ final class EngineeringAgentOutputValidator
         if (trim((string) $output['feature']['business_goal']) === '') throw new EngineeringAgentOutputValidationException('Manager business goal cannot be empty.');
         if (!is_array($output['feature']['scope']) || $output['feature']['scope'] === []) throw new EngineeringAgentOutputValidationException('Manager scope cannot be empty.');
         if (!is_array($output['feature']['acceptance_criteria']) || $output['feature']['acceptance_criteria'] === []) throw new EngineeringAgentOutputValidationException('Manager acceptance criteria cannot be empty.');
+        if (!is_array($output['tasks']) || $output['tasks'] === []) throw new EngineeringAgentOutputValidationException('Manager must create at least one engineering task.');
+
+        foreach ($output['tasks'] as $index => $task) {
+            if (!is_array($task)) throw new EngineeringAgentOutputValidationException('Engineering task must be an object.');
+            if (trim((string) ($task['id'] ?? '')) === '') {
+                throw new EngineeringAgentOutputValidationException(sprintf('Engineering task %d requires a stable id.', $index));
+            }
+            if (isset($task['assigned_role']) && !in_array(strtoupper((string) $task['assigned_role']), ['PRINCIPAL_ARCHITECT','DEVELOPER','REVIEWER','QA'], true)) {
+                throw new EngineeringAgentOutputValidationException(sprintf('Engineering task %d has an invalid assigned role.', $index));
+            }
+        }
 
         foreach ($output['feature']['acceptance_criteria'] as $index => $criterion) {
             if (!is_array($criterion)) throw new EngineeringAgentOutputValidationException('Acceptance criterion must be an object.');
