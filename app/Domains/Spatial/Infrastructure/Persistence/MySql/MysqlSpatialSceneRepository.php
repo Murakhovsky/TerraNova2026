@@ -151,7 +151,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
                 $pdo->rollBack();
             }
             $this->logError('scene-save', $e);
-            return ['ok' => false, 'message' => 'Не вдалося зберегти Spatial сцену: ' . $e->getMessage(), 'id' => $id];
+            return ['ok' => false, 'message' => 'Не вдалося зберегти Spatial сцену.', 'id' => $id];
         }
     }
 
@@ -517,7 +517,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
             return null;
         }
         $decoded = is_array($value) ? $value : json_decode((string) $value, true, 512, JSON_THROW_ON_ERROR);
-        if (!is_array($decoded) || array_is_list($decoded)) {
+        if (!is_array($decoded) || ($decoded !== [] && array_is_list($decoded))) {
             throw new RuntimeException('JSON value must be an object.');
         }
         return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
