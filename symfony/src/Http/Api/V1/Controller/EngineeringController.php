@@ -61,6 +61,7 @@ final readonly class EngineeringController
                     attachments: is_array($input['attachments'] ?? null) ? $input['attachments'] : [],
                     previousContext: [],
                 ),
+                $tenant->organizationId()->value(),
                 'user:'.$tenant->userId()->value(),
             );
 
@@ -74,7 +75,9 @@ final readonly class EngineeringController
     {
         if (($denied = $this->authorize($request, false)) !== null) return $denied;
         try {
-            return new JsonResponse(['ok' => true, 'data' => $this->status->status(EngineeringId::assert($id))]);
+            $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
+            return new JsonResponse(['ok' => true, 'data' => $this->status->status($featureId)]);
         } catch (Throwable $e) {
             return $this->exception($e);
         }
@@ -84,6 +87,7 @@ final readonly class EngineeringController
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
         $featureId = EngineeringId::assert($id);
+        $this->assertTenantFeature($featureId);
         $tenant = $this->tenants->current();
         $correlationId = $this->correlationId($request, 'run', $featureId);
 
@@ -110,6 +114,7 @@ final readonly class EngineeringController
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
         $featureId = EngineeringId::assert($id);
+        $this->assertTenantFeature($featureId);
         $tenant = $this->tenants->current();
 
         try {
@@ -136,10 +141,12 @@ final readonly class EngineeringController
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
         $tenant = $this->tenants->current();
         $input = $this->input($request);
+        $featureId = EngineeringId::assert($id);
+        $this->assertTenantFeature($featureId);
 
         try {
             return new JsonResponse(['ok' => true, 'data' => $this->cancel->cancel(
-                EngineeringId::assert($id),
+                $featureId,
                 'user:'.$tenant->userId()->value(),
                 trim((string) ($input['reason'] ?? 'Cancelled through Engineering API.')),
             )]);
@@ -152,7 +159,9 @@ final readonly class EngineeringController
     {
         if (($denied = $this->authorize($request, false)) !== null) return $denied;
         try {
-            $status = $this->status->status(EngineeringId::assert($id));
+            $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
+            $status = $this->status->status($featureId);
             return new JsonResponse(['ok' => true, 'data' => $status['agent_runs'] ?? []]);
         } catch (Throwable $e) {
             return $this->exception($e);
@@ -174,7 +183,8 @@ final readonly class EngineeringController
     {
         if (($denied = $this->authorize($request, false)) !== null) return $denied;
         try {
-            return new JsonResponse(['ok' => true, 'data' => $this->metrics->summary()]);
+            $tenant = $this->tenants->current();
+            return new JsonResponse(['ok' => true, 'data' => $this->metrics->summary($tenant->organizationId()->value())]);
         } catch (Throwable $e) {
             return $this->exception($e);
         }
@@ -185,6 +195,7 @@ final readonly class EngineeringController
         if (($denied = $this->authorize($request, false)) !== null) return $denied;
         try {
             $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
             $this->status->status($featureId);
             return new JsonResponse(['ok' => true, 'data' => $this->audit->forFeature($featureId)]);
         } catch (Throwable $e) {
@@ -196,6 +207,7 @@ final readonly class EngineeringController
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
         $featureId = EngineeringId::assert($id);
+        $this->assertTenantFeature($featureId);
         $input = $this->input($request);
         $requestId = trim((string) ($input['request_id'] ?? ''));
         $option = trim((string) ($input['option'] ?? ''));
@@ -231,6 +243,15 @@ final readonly class EngineeringController
             ]], 202);
         } catch (Throwable $e) {
             return $this->exception($e);
+        }
+    }
+
+    private function assertTenantFeature(string $featureId): void
+    {
+        $tenant = $this->tenants->current();
+        $feature = $this->status->status($featureId)['feature'] ?? [];
+        if (($feature['organization_id'] ?? null) !== $tenant?->organizationId()->value()) {
+            throw new \RuntimeException('Engineering feature does not belong to the current organization.');
         }
     }
 

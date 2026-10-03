@@ -6,5 +6,5 @@ namespace App\Engineering\Application\Metrics;
 interface EngineeringMetricsProviderInterface
 {
     /** @return array<string,int|float|null> */
-    public function summary(): array;
+    public function summary(string $organizationId): array;
 }

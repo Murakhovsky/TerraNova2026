@@ -35,6 +35,11 @@ final readonly class EngineeringHumanDecisionService
         string $correlationId,
     ): EngineeringHumanDecisionResult {
         $request = $this->humanDecisions->get($requestId);
+        $requestFeatureId = (string) ($request['feature_id'] ?? '');
+        $feature = $this->features->view($requestFeatureId);
+        if (($feature['organization_id'] ?? null) !== $organizationId) {
+            throw new \RuntimeException('Engineering human decision does not belong to the current organization.');
+        }
         if (($request['status'] ?? null) !== 'OPEN') {
             throw new \LogicException('Engineering human decision request is not open.');
         }

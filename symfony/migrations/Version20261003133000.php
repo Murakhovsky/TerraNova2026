@@ -24,6 +24,7 @@ final class Version20261003133000 extends AbstractMigration
         $this->addSql(<<<'SQL'
 CREATE TABLE cos_engineering_features (
     id CHAR(36) NOT NULL,
+    organization_id VARCHAR(64) NOT NULL,
     external_issue_id VARCHAR(64) NULL,
     title VARCHAR(255) NOT NULL,
     type VARCHAR(32) NOT NULL,
@@ -43,6 +44,7 @@ CREATE TABLE cos_engineering_features (
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
+    KEY idx_cos_eng_feature_org (organization_id),
     KEY idx_cos_eng_feature_status (status, priority),
     KEY idx_cos_eng_feature_issue (external_issue_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

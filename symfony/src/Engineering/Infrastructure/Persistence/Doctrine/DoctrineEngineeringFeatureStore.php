@@ -16,11 +16,12 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
     {
     }
 
-    public function create(string $featureId, EngineeringRequest $request, ?string $createdBy = null): void
+    public function create(string $featureId, string $organizationId, EngineeringRequest $request, ?string $createdBy = null): void
     {
         $now = new DateTimeImmutable();
         $this->entityManager->persist(new EngineeringFeatureRecord(
             id: $featureId,
+            organizationId: $organizationId,
             title: $request->title ?? mb_substr($request->description, 0, 255),
             type: 'FEATURE',
             status: 'NEW',
@@ -81,6 +82,7 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
         $record = $this->record($featureId);
         return [
             'id' => $record->id(),
+            'organization_id' => $record->organizationId(),
             'title' => $record->title(),
             'type' => $record->type(),
             'status' => $record->status(),

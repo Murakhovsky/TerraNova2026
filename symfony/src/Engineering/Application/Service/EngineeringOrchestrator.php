@@ -25,15 +25,21 @@ final readonly class EngineeringOrchestrator
     ) {
     }
 
-    public function create(EngineeringRequest $request, ?string $createdBy = null): string
+    public function create(EngineeringRequest $request, string $organizationId, ?string $createdBy = null): string
     {
+        if (trim($organizationId) === '') throw new \InvalidArgumentException('Engineering organization id is required.');
         $featureId = EngineeringId::generate();
-        $this->features->create($featureId, $request, $createdBy);
+        $this->features->create($featureId, $organizationId, $request, $createdBy);
         return $featureId;
     }
 
     public function start(string $featureId, string $organizationId, string $correlationId): EngineeringStartResult
     {
+        $feature = $this->features->view($featureId);
+        if (($feature['organization_id'] ?? null) !== $organizationId) {
+            throw new \RuntimeException('Engineering feature does not belong to the current organization.');
+        }
+
         /** @var WorkflowExecution $workflow */
         $workflow = $this->lock->synchronized($featureId, function () use ($featureId, $correlationId): WorkflowExecution {
             $active = $this->workflows->activeIdForFeature($featureId);

@@ -1317,6 +1317,10 @@ services:
   App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface:
     alias: App\Engineering\Infrastructure\Repository\GitHubEngineeringRepositoryGateway
 
+  App\Command\EngineeringCreateCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Command\EngineeringStartCommand:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'

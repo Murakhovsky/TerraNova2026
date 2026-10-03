@@ -50,7 +50,7 @@ final readonly class EngineeringIssueIntakeService
                 'github_issue_url' => $issue['url'],
                 'github_labels' => $issue['labels'],
             ],
-        ), 'github-issue');
+        ), $organizationId, 'github-issue');
 
         $this->repository->addIssueLabels($issueNumber, ['cos-engineering']);
         $this->repository->commentIssue(

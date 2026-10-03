@@ -16,8 +16,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'cos:engineering:create', description: 'Create a persistent COS engineering feature request.')]
 final class EngineeringCreateCommand extends Command
 {
-    public function __construct(private readonly EngineeringOrchestrator $engineering)
-    {
+    public function __construct(
+        private readonly EngineeringOrchestrator $engineering,
+        private readonly string $organizationId,
+    ) {
         parent::__construct();
     }
 
@@ -47,7 +49,7 @@ final class EngineeringCreateCommand extends Command
             priority: $priority,
         );
 
-        $featureId = $this->engineering->create($request, 'cli');
+        $featureId = $this->engineering->create($request, $this->organizationId, 'cli');
         $output->writeln($featureId);
         return Command::SUCCESS;
     }

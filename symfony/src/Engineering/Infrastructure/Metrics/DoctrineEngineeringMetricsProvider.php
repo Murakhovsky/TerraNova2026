@@ -10,30 +10,32 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
 {
     public function __construct(private EntityManagerInterface $entityManager) {}
 
-    public function summary(): array
+    public function summary(string $organizationId): array
     {
         $db = $this->entityManager->getConnection();
+        $params = ['organization_id' => $organizationId];
 
-        $featuresStarted = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_features');
-        $featuresCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_features WHERE status='DONE'");
-        $failedWorkflows = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_workflows WHERE status='FAILED'");
-        $featuresEscalated = (int) $db->fetchOne("SELECT COUNT(DISTINCT feature_id) FROM cos_engineering_transitions WHERE to_state='ESCALATED'");
-        $humanInterventions = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_human_decisions');
+        $featuresStarted = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_features WHERE organization_id=:organization_id', $params);
+        $featuresCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_features WHERE organization_id=:organization_id AND status='DONE'", $params);
+        $failedWorkflows = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_workflows w JOIN cos_engineering_features f ON f.id=w.feature_id WHERE f.organization_id=:organization_id AND w.status='FAILED'", $params);
+        $featuresEscalated = (int) $db->fetchOne("SELECT COUNT(DISTINCT t.feature_id) FROM cos_engineering_transitions t JOIN cos_engineering_features f ON f.id=t.feature_id WHERE f.organization_id=:organization_id AND t.to_state='ESCALATED'", $params);
+        $humanInterventions = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_human_decisions d JOIN cos_engineering_human_decision_requests r ON r.id=d.request_id JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params);
 
-        $agentRuns = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_agent_runs');
-        $reviewRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs WHERE agent_role='REVIEWER'");
-        $qaRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs WHERE agent_role='QA'");
+        $agentRuns = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params);
+        $reviewRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='REVIEWER'", $params);
+        $qaRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='QA'", $params);
 
-        $managerTotal = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs WHERE agent_role='ENGINEERING_MANAGER' AND status <> 'RUNNING'");
-        $managerCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs WHERE agent_role='ENGINEERING_MANAGER' AND status='COMPLETED'");
+        $managerTotal = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status <> 'RUNNING'", $params);
+        $managerCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status='COMPLETED'", $params);
 
-        $totalCost = (float) ($db->fetchOne('SELECT COALESCE(SUM(estimated_cost),0) FROM cos_engineering_agent_runs') ?: 0);
+        $totalCost = (float) ($db->fetchOne('SELECT COALESCE(SUM(r.estimated_cost),0) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params) ?: 0);
         $avgTimeToReady = $db->fetchOne("
             SELECT AVG(TIMESTAMPDIFF(SECOND, w.started_at, t.created_at))
             FROM cos_engineering_workflows w
             JOIN cos_engineering_transitions t ON t.workflow_execution_id = w.id
-            WHERE t.to_state='READY_FOR_HUMAN_APPROVAL'
-        ");
+            JOIN cos_engineering_features f ON f.id=w.feature_id
+            WHERE f.organization_id=:organization_id AND t.to_state='READY_FOR_HUMAN_APPROVAL'
+        ", $params);
 
         return [
             'features_started' => $featuresStarted,

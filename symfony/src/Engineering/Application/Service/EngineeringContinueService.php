@@ -27,6 +27,11 @@ final readonly class EngineeringContinueService
         string $organizationId,
         string $correlationId,
     ): EngineeringStartResult {
+        $feature = $this->features->view($featureId);
+        if (($feature['organization_id'] ?? null) !== $organizationId) {
+            throw new RuntimeException('Engineering feature does not belong to the current organization.');
+        }
+
         $workflowId = $this->workflows->activeIdForFeature($featureId);
         if ($workflowId === null) throw new RuntimeException('Engineering feature has no active workflow.');
         $workflow = $this->workflows->get($workflowId);

@@ -15,6 +15,8 @@ class EngineeringFeatureRecord
         #[ORM\Id]
         #[ORM\Column(type: Types::STRING, length: 36)]
         private string $id,
+        #[ORM\Column(type: Types::STRING, length: 64)]
+        private string $organizationId,
         #[ORM\Column(type: Types::STRING, length: 255)]
         private string $title,
         #[ORM\Column(type: Types::STRING, length: 32)]
@@ -54,6 +56,7 @@ class EngineeringFeatureRecord
     ) {}
 
     public function id(): string { return $this->id; }
+    public function organizationId(): string { return $this->organizationId; }
     public function title(): string { return $this->title; }
     public function type(): string { return $this->type; }
     public function status(): string { return $this->status; }
