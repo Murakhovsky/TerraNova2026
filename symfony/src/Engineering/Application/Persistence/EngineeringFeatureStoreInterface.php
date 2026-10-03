@@ -14,4 +14,7 @@ interface EngineeringFeatureStoreInterface
 
     /** @return array<string,mixed> */
     public function view(string $featureId): array;
+
+    /** @return list<array<string,mixed>> */
+    public function recentForOrganization(string $organizationId, int $limit = 50): array;
 }
